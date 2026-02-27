@@ -3958,10 +3958,18 @@ function closeDelModal() {
 }
 function confirmDelete() {
   if (!deletingId) return;
-  watches = watches.filter(x => x.id !== deletingId);
-  logs    = logs.filter(l => l.watchId !== deletingId);
-  if (selWatchId === deletingId) selWatchId = null;
+  const id = deletingId;
+  watches = watches.filter(x => x.id !== id);
+  logs    = logs.filter(l => l.watchId !== id);
+  if (selWatchId === id) selWatchId = null;
   save();
+  // Hard-delete from Supabase (upsert only writes, never removes rows)
+  if (currentUser) {
+    db.from('watches').delete().eq('id', id).eq('user_id', currentUser.id)
+      .then(({ error }) => { if (error) console.error('[WristLog] Delete watch error:', error.message); });
+    db.from('logs').delete().eq('watch_id', id).eq('user_id', currentUser.id)
+      .then(({ error }) => { if (error) console.error('[WristLog] Delete logs error:', error.message); });
+  }
   closeDelModal();
   renderCollection();
   toast('Watch deleted');
@@ -5337,7 +5345,13 @@ function closeDelWlModal() {
 }
 function confirmDeleteWishlist() {
   if (!deletingWlId) return;
-  wishlist = wishlist.filter(x => x.id !== deletingWlId);
+  const id = deletingWlId;
+  wishlist = wishlist.filter(x => x.id !== id);
+  // Hard-delete from Supabase
+  if (currentUser) {
+    db.from('wishlist').delete().eq('id', id).eq('user_id', currentUser.id)
+      .then(({ error }) => { if (error) console.error('[WristLog] Delete wishlist error:', error.message); });
+  }
   saveWishlist();
   closeDelWlModal();
   renderWishlist();
@@ -6029,15 +6043,27 @@ function initApp() {
   });
 }
 
+// Wipe all per-user data from memory and localStorage (called on sign-out and before new sign-in)
+function clearUserState() {
+  watches = []; logs = []; wishlist = []; eloRatings = {};
+  localStorage.removeItem(STORE_W);
+  localStorage.removeItem(STORE_L);
+  localStorage.removeItem(STORE_WL);
+  localStorage.removeItem(STORE_ELO);
+}
+
 // Auth state listener — drives the whole show
 db.auth.onAuthStateChange(async (event, session) => {
   if (session?.user) {
+    // Clear any stale data from a previous session before loading the new user's data
+    clearUserState();
     currentUser = session.user;
     await loadUserData();
     document.getElementById('auth-screen').style.display = 'none';
     initApp();
   } else {
     currentUser = null;
+    clearUserState();
     feedItems = []; feedLikes = {}; feedCommentCounts = {}; feedComments = {};
     expandedComments.clear(); following.clear(); myProfile = null;
     document.getElementById('auth-screen').style.display = 'flex';
