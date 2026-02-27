@@ -987,6 +987,129 @@
       .nav-emoji { font-size: 1.3rem; }
       nav button { padding: .55rem .1rem calc(.5rem + env(safe-area-inset-bottom, 0)); }
     }
+
+    /* ── PROFILE BUTTON (header) ───────────────── */
+    .profile-btn {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--gold); color: #000; border: none;
+      font-weight: 700; font-size: .72rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: opacity .15s;
+    }
+    .profile-btn:hover { opacity: .85; }
+
+    /* ── FEED ──────────────────────────────────── */
+    .feed-card {
+      background: var(--card); border-radius: 14px;
+      margin-bottom: 1rem; overflow: hidden;
+    }
+    .feed-card-header {
+      display: flex; align-items: center; gap: .75rem;
+      padding: .9rem 1rem .55rem;
+    }
+    .feed-user-avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--gold); color: #000;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: .82rem; flex-shrink: 0; overflow: hidden;
+    }
+    .feed-user-name  { font-weight: 700; font-size: .9rem; line-height: 1.2; }
+    .feed-meta       { font-size: .72rem; color: var(--muted); }
+    .feed-watch-row  {
+      display: flex; align-items: center; gap: .75rem;
+      padding: .3rem 1rem .55rem;
+    }
+    .feed-watch-name  { font-weight: 600; font-size: .88rem; }
+    .feed-watch-brand { font-size: .74rem; color: var(--muted); }
+    .feed-notes       {
+      font-size: .82rem; color: var(--muted);
+      padding: 0 1rem .6rem; line-height: 1.5;
+    }
+    .feed-actions {
+      display: flex; gap: .25rem; padding: .35rem .65rem .55rem;
+      border-top: 1px solid var(--border);
+    }
+    .feed-action-btn {
+      background: none; border: none; color: var(--muted);
+      cursor: pointer; font-size: .82rem; padding: .35rem .6rem;
+      border-radius: 8px; font-family: inherit;
+      display: flex; align-items: center; gap: .3rem;
+      transition: all .15s;
+    }
+    .feed-action-btn:hover { background: var(--hover); color: var(--text); }
+    .feed-action-btn.liked  { color: #f87171; }
+
+    /* ── COMMENTS ──────────────────────────────── */
+    .feed-comments-section {
+      padding: .55rem 1rem .8rem;
+      border-top: 1px solid var(--border);
+    }
+    .comment-item  { display: flex; gap: .6rem; margin-bottom: .55rem; }
+    .comment-avatar {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: var(--gold); color: #000; font-size: .6rem;
+      font-weight: 700; display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0; margin-top: .1rem;
+    }
+    .comment-body {
+      font-size: .8rem; background: var(--hover);
+      border-radius: 10px; padding: .35rem .65rem;
+      line-height: 1.45; word-break: break-word;
+    }
+    .comment-username { font-weight: 700; }
+    .comment-input-row { display: flex; gap: .5rem; margin-top: .65rem; }
+    .comment-input {
+      flex: 1; background: var(--hover); border: 1px solid var(--border);
+      border-radius: 20px; padding: .4rem .9rem; font-size: .82rem;
+      color: var(--text); font-family: inherit;
+    }
+    .comment-input:focus { outline: none; border-color: var(--gold); }
+    .comment-send-btn {
+      background: var(--gold); border: none; color: #000;
+      border-radius: 50%; width: 32px; height: 32px; font-size: .9rem;
+      cursor: pointer; display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0;
+    }
+
+    /* ── FOLLOW BUTTON ─────────────────────────── */
+    .follow-btn {
+      padding: .28rem .85rem; border-radius: 20px;
+      font-size: .74rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .follow-btn.follow    { background: var(--gold); color: #000; border: none; }
+    .follow-btn.following {
+      background: none; color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .follow-btn.following:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* ── FEED EMPTY STATE ──────────────────────── */
+    .feed-empty-state  { text-align: center; padding: 3.5rem 1.5rem; color: var(--muted); }
+    .feed-empty-icon   { font-size: 3rem; margin-bottom: .75rem; }
+
+    /* ── DISCOVER / USER CARDS ─────────────────── */
+    .user-card {
+      display: flex; align-items: center; gap: .75rem;
+      padding: .7rem 0; border-bottom: 1px solid var(--border);
+    }
+    .user-card:last-child { border-bottom: none; }
+    .user-card-name     { font-weight: 700; font-size: .88rem; }
+    .user-card-username { font-size: .74rem; color: var(--muted); }
+
+    /* ── PROFILE MODAL ─────────────────────────── */
+    .profile-stat        { text-align: center; }
+    .profile-stat-value  { font-size: 1.4rem; font-weight: 700; line-height: 1.1; }
+    .profile-stat-label  {
+      font-size: .68rem; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .06em;
+    }
+    .profile-bio-edit {
+      width: 100%; background: var(--hover); border: 1px solid var(--border);
+      border-radius: 8px; padding: .5rem .75rem; font-size: .85rem;
+      color: var(--text); font-family: inherit; resize: none; box-sizing: border-box;
+    }
+    .profile-bio-edit:focus { outline: none; border-color: var(--gold); }
   </style>
 </head>
 <body>
@@ -1023,6 +1146,7 @@
     <button class="logo" onclick="goHome()" title="Back to Collection">WRIST<sup>LOG</sup></button>
     <nav>
       <button class="active" data-page="collection"  onclick="nav(this)"><span class="nav-emoji">📦</span><span class="nav-label">Collection</span></button>
+      <button               data-page="feed"         onclick="nav(this)"><span class="nav-emoji">🏠</span><span class="nav-label">Feed</span></button>
       <button               data-page="track"        onclick="nav(this)"><span class="nav-emoji">⌚</span><span class="nav-label">Track</span></button>
       <button               data-page="reports"      onclick="nav(this)"><span class="nav-emoji">📊</span><span class="nav-label">Reports</span></button>
       <button               data-page="wishlist"     onclick="nav(this)"><span class="nav-emoji">🌟</span><span class="nav-label">Wishlist</span></button>
@@ -1034,6 +1158,7 @@
       <button class="btn-data" onclick="exportData()" title="Download a backup JSON file">↑ Export</button>
       <button class="btn-data" onclick="importData()" title="Restore from a backup JSON file">↓ Import</button>
       <span id="app-ver" class="app-ver"></span>
+      <button class="profile-btn" id="profile-btn" onclick="openProfileModal()" style="display:none;" title="My Profile">?</button>
       <button class="btn-signout" id="signout-btn" onclick="signOut()" style="display:none;">Sign out</button>
     </div>
   </div>
@@ -1147,6 +1272,15 @@
     <div id="coll-sort-bar"></div>
     <div id="coll-tag-filter-bar"></div>
     <div id="watches-grid" class="watches-grid"></div>
+  </div>
+
+  <!-- ════ FEED PAGE ════ -->
+  <div id="page-feed" class="page">
+    <div class="page-header">
+      <div class="page-title">🏠 Feed</div>
+      <button class="btn btn-ghost" onclick="openDiscover()">🔍 Find People</button>
+    </div>
+    <div id="feed-list"></div>
   </div>
 
   <!-- ════ HELP PAGE ════ -->
@@ -1702,6 +1836,36 @@
 
 </div>
 
+<!-- ════ DISCOVER / FIND PEOPLE MODAL ════ -->
+<div id="discover-modal" class="overlay hidden">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title">🔍 Find People</div>
+    <div class="form-group" style="margin-bottom:1rem;">
+      <input type="text" id="discover-search" placeholder="Search by username or name…" oninput="debounceSearch(this.value)" autocomplete="off">
+    </div>
+    <div id="discover-results"></div>
+    <div style="margin-top:1.25rem;">
+      <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin-bottom:.65rem;">People You Follow</div>
+      <div id="following-list"></div>
+    </div>
+    <div class="modal-actions" style="margin-top:1.25rem;">
+      <button class="btn btn-ghost" onclick="closeDiscover()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MY PROFILE MODAL ════ -->
+<div id="profile-modal" class="overlay hidden">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-title">👤 My Profile</div>
+    <div id="profile-content"></div>
+    <div class="modal-actions" style="margin-top:1rem;">
+      <button class="btn btn-ghost" onclick="closeProfileModal()">Close</button>
+      <button class="btn btn-ghost" style="color:var(--danger);" onclick="closeProfileModal();signOut();">↩ Sign Out</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ FEEDBACK MODAL ════ -->
 <div id="feedback-modal" class="overlay hidden">
   <div class="modal" style="max-width:420px;">
@@ -1922,7 +2086,404 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '1.1';
+const APP_VERSION = '1.2';
+
+// ══════════════════════════════════════════
+//  SOCIAL — profile · follow · feed · likes · comments
+// ══════════════════════════════════════════
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function profileInitials(p) {
+  if (!p) return '?';
+  const name = (p.display_name || p.username || '').trim();
+  const parts = name.split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase() || '?';
+}
+function escHtml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatFeedDate(dateStr) {
+  if (!dateStr) return '';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = new Date(dateStr + 'T00:00:00');
+  const diff = Math.round((today - d) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  if (diff < 7)  return `${diff} days ago`;
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+}
+
+// ── My Profile ────────────────────────────────────────────────────────────
+async function loadMyProfile() {
+  if (!currentUser) return;
+  let { data } = await db.from('profiles').select('*').eq('user_id', currentUser.id).single();
+  if (!data) {
+    // Auto-create profile for Google OAuth users (trigger may not have fired)
+    const email       = currentUser.email || '';
+    const googleName  = currentUser.user_metadata?.full_name || email.split('@')[0];
+    const username    = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 30);
+    const { data: created } = await db.from('profiles').upsert(
+      { user_id: currentUser.id, username, display_name: googleName },
+      { onConflict: 'user_id' }
+    ).select().single();
+    data = created;
+  }
+  myProfile = data;
+  const btn = document.getElementById('profile-btn');
+  if (btn) { btn.textContent = profileInitials(myProfile); btn.style.display = 'flex'; }
+}
+
+function openProfileModal() {
+  renderMyProfile();
+  document.getElementById('profile-modal').classList.remove('hidden');
+}
+function closeProfileModal() {
+  document.getElementById('profile-modal').classList.add('hidden');
+}
+function renderMyProfile() {
+  if (!myProfile) return;
+  const p = myProfile;
+  const logsCount = logs.filter(l => l.isPublic !== false).length;
+  document.getElementById('profile-content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">
+      <div style="width:56px;height:56px;border-radius:50%;background:var(--gold);color:#000;font-size:1.15rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${profileInitials(p)}</div>
+      <div>
+        <div style="font-weight:700;font-size:1.05rem;">${escHtml(p.display_name || p.username || '—')}</div>
+        <div style="font-size:.78rem;color:var(--muted);">@${escHtml(p.username || '—')}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:2rem;margin-bottom:1.5rem;justify-content:center;">
+      <div class="profile-stat"><div class="profile-stat-value">${watches.length}</div><div class="profile-stat-label">Watches</div></div>
+      <div class="profile-stat"><div class="profile-stat-value">${logsCount}</div><div class="profile-stat-label">Public&nbsp;Logs</div></div>
+      <div class="profile-stat"><div class="profile-stat-value">${following.size}</div><div class="profile-stat-label">Following</div></div>
+    </div>
+    <div class="form-group"><label>Display Name</label>
+      <input type="text" id="edit-display-name" value="${escHtml(p.display_name || '')}" placeholder="Your name">
+    </div>
+    <div class="form-group"><label>Bio</label>
+      <textarea id="edit-bio" class="profile-bio-edit" rows="3" placeholder="Tell people about your collection…">${escHtml(p.bio || '')}</textarea>
+    </div>
+    <button class="btn btn-primary" style="width:100%;" onclick="saveProfile()">Save Profile</button>
+  `;
+}
+async function saveProfile() {
+  const name = (document.getElementById('edit-display-name')?.value || '').trim();
+  const bio  = (document.getElementById('edit-bio')?.value || '').trim();
+  const { error } = await db.from('profiles').upsert(
+    { user_id: currentUser.id, display_name: name, bio },
+    { onConflict: 'user_id' }
+  );
+  if (!error) {
+    myProfile = { ...myProfile, display_name: name, bio };
+    const btn = document.getElementById('profile-btn');
+    if (btn) btn.textContent = profileInitials(myProfile);
+    closeProfileModal();
+    toast('Profile updated!');
+  } else {
+    toast('Save failed — ' + error.message, 'error');
+  }
+}
+
+// ── Following ─────────────────────────────────────────────────────────────
+async function loadFollowing() {
+  if (!currentUser) return;
+  const { data } = await db.from('follows').select('following_id').eq('follower_id', currentUser.id);
+  following = new Set((data || []).map(r => r.following_id));
+}
+async function followUser(userId) {
+  if (!currentUser || userId === currentUser.id) return;
+  const { error } = await db.from('follows').insert({ follower_id: currentUser.id, following_id: userId });
+  if (!error) {
+    following.add(userId);
+    toast('Following! Their logs will appear in your feed 🎉');
+    renderDiscoverUsers();
+    renderFollowingList();
+    loadFeed();
+  } else { toast('Could not follow — ' + error.message, 'error'); }
+}
+async function unfollowUser(userId) {
+  if (!currentUser) return;
+  const { error } = await db.from('follows').delete()
+    .eq('follower_id', currentUser.id).eq('following_id', userId);
+  if (!error) {
+    following.delete(userId);
+    toast('Unfollowed');
+    renderDiscoverUsers();
+    renderFollowingList();
+    loadFeed();
+  }
+}
+
+// ── Feed ──────────────────────────────────────────────────────────────────
+async function loadFeed() {
+  if (feedLoading || !currentUser) return;
+  feedLoading = true;
+  const listEl = document.getElementById('feed-list');
+  if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--muted);">Loading…</div>';
+  try {
+    const allUserIds = [...following, currentUser.id];
+    // Logs + nested watch data
+    const { data: rawLogs, error: logsErr } = await db
+      .from('logs')
+      .select('*, watches!watch_id(id, brand, name, color, image)')
+      .in('user_id', allUserIds)
+      .eq('is_public', true)
+      .order('date', { ascending: false })
+      .limit(50);
+    if (logsErr) { console.warn('Feed logs error:', logsErr.message); feedItems = []; renderFeed(); return; }
+    if (!rawLogs || rawLogs.length === 0) { feedItems = []; renderFeed(); return; }
+
+    // Profiles for authors
+    const userIds = [...new Set(rawLogs.map(l => l.user_id))];
+    const { data: profileRows } = await db
+      .from('profiles').select('user_id, username, display_name, avatar_url').in('user_id', userIds);
+    const profileMap = {};
+    (profileRows || []).forEach(p => profileMap[p.user_id] = p);
+
+    // Likes
+    const logIds = rawLogs.map(l => l.id);
+    const { data: likesData } = await db.from('likes').select('log_id, user_id').in('log_id', logIds);
+    feedLikes = {};
+    logIds.forEach(id => feedLikes[id] = { count: 0, liked: false });
+    (likesData || []).forEach(l => {
+      feedLikes[l.log_id].count++;
+      if (l.user_id === currentUser.id) feedLikes[l.log_id].liked = true;
+    });
+
+    // Comment counts
+    const { data: commentData } = await db.from('comments').select('log_id').in('log_id', logIds);
+    feedCommentCounts = {};
+    (commentData || []).forEach(c => { feedCommentCounts[c.log_id] = (feedCommentCounts[c.log_id] || 0) + 1; });
+
+    feedItems = rawLogs.map(l => ({ ...l, profile: profileMap[l.user_id] || null, watch: l.watches || null }));
+  } catch(e) { console.warn('Feed error:', e.message); }
+  finally { feedLoading = false; }
+  renderFeed();
+}
+
+function renderFeed() {
+  const el = document.getElementById('feed-list');
+  if (!el) return;
+  if (feedItems.length === 0) {
+    el.innerHTML = `
+      <div class="feed-empty-state">
+        <div class="feed-empty-icon">${following.size === 0 ? '👀' : '🤫'}</div>
+        <div style="font-weight:700;margin-bottom:.5rem;color:var(--text);">
+          ${following.size === 0 ? "You're not following anyone yet" : "Nothing new yet"}
+        </div>
+        <div style="font-size:.82rem;margin-bottom:1.25rem;">
+          ${following.size === 0
+            ? 'Follow other watch enthusiasts to see their daily wears here.'
+            : 'Check back later — or follow more people!'}
+        </div>
+        <button class="btn btn-primary" onclick="openDiscover()">🔍 Find People to Follow</button>
+      </div>`;
+    return;
+  }
+  el.innerHTML = feedItems.map(item => renderFeedCard(item)).join('');
+}
+
+function renderFeedCard(item) {
+  const isMe     = item.user_id === currentUser?.id;
+  const p        = item.profile;
+  const w        = item.watch;
+  const likes    = feedLikes[item.id]  || { count: 0, liked: false };
+  const cCount   = feedCommentCounts[item.id] || 0;
+  const expanded = expandedComments.has(item.id);
+
+  const ucMap  = { work:'💼', leisure:'🛋️', dinner:'🍽️', travel:'✈️' };
+  const ucIcon = ucMap[item.use_case] || '';
+  const metaParts = [formatFeedDate(item.date), ucIcon ? `${ucIcon} ${item.use_case}` : ''].filter(Boolean);
+  const metaStr   = metaParts.join(' · ');
+
+  const watchImg = w?.image
+    ? `<img src="${escHtml(w.image)}" style="width:42px;height:42px;border-radius:8px;object-fit:cover;" onerror="this.style.display='none'">`
+    : `<div class="avatar" style="width:42px;height:42px;font-size:.7rem;background:${w?.color||'#c9a84c'};flex-shrink:0;">${initials(w?.brand||'',w?.name||'')}</div>`;
+
+  const followBtnHtml = isMe ? '' : `
+    <button class="follow-btn ${following.has(item.user_id) ? 'following' : 'follow'}"
+      onclick="event.stopPropagation();${following.has(item.user_id)
+        ? `unfollowUser('${item.user_id}')`
+        : `followUser('${item.user_id}')`}">
+      ${following.has(item.user_id) ? 'Following' : 'Follow'}
+    </button>`;
+
+  let commentsHtml = '';
+  if (expanded) {
+    const cached = feedComments[item.id];
+    if (!cached) {
+      commentsHtml = `<div class="feed-comments-section"><div style="color:var(--muted);font-size:.8rem;">Loading…</div></div>`;
+    } else {
+      const commentItems = cached.map(c => `
+        <div class="comment-item">
+          <div class="comment-avatar">${profileInitials(c.profile)}</div>
+          <div class="comment-body">
+            <span class="comment-username">${escHtml(c.profile?.display_name || c.profile?.username || 'User')}</span>
+            <span> ${escHtml(c.content)}</span>
+          </div>
+        </div>`).join('');
+      commentsHtml = `
+        <div class="feed-comments-section">
+          ${commentItems}
+          <div class="comment-input-row">
+            <input class="comment-input" id="comment-input-${item.id}" placeholder="Add a comment…"
+              onkeydown="if(event.key==='Enter')postComment('${item.id}')">
+            <button class="comment-send-btn" onclick="postComment('${item.id}')">↑</button>
+          </div>
+        </div>`;
+    }
+  }
+
+  return `
+    <div class="feed-card" id="feedcard-${item.id}">
+      <div class="feed-card-header">
+        <div class="feed-user-avatar">${profileInitials(p)}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="feed-user-name">${escHtml(p?.display_name || p?.username || 'User')}</div>
+          <div class="feed-meta">${metaStr}</div>
+        </div>
+        ${followBtnHtml}
+      </div>
+      <div class="feed-watch-row">
+        ${watchImg}
+        <div style="min-width:0;">
+          <div class="feed-watch-name">${escHtml((w?.brand || '') + ' ' + (w?.name || 'Unknown watch'))}</div>
+          ${item.notes ? `<div style="font-size:.8rem;color:var(--muted);margin-top:.15rem;">${escHtml(item.notes)}</div>` : ''}
+        </div>
+      </div>
+      <div class="feed-actions">
+        <button class="feed-action-btn${likes.liked ? ' liked' : ''}" onclick="toggleLike('${item.id}')">
+          ${likes.liked ? '❤️' : '🤍'} <span>${likes.count || ''}</span>
+        </button>
+        <button class="feed-action-btn" onclick="toggleComments('${item.id}')">
+          💬 <span>${cCount || ''}</span>
+        </button>
+      </div>
+      ${commentsHtml}
+    </div>`;
+}
+
+// ── Likes ─────────────────────────────────────────────────────────────────
+async function toggleLike(logId) {
+  if (!currentUser) return;
+  const cur = feedLikes[logId] || { count: 0, liked: false };
+  // Optimistic update
+  feedLikes[logId] = cur.liked
+    ? { count: Math.max(0, cur.count - 1), liked: false }
+    : { count: cur.count + 1, liked: true };
+  refreshFeedCard(logId);
+  if (cur.liked) {
+    await db.from('likes').delete().eq('log_id', logId).eq('user_id', currentUser.id);
+  } else {
+    await db.from('likes').insert({ log_id: logId, user_id: currentUser.id });
+  }
+}
+
+function refreshFeedCard(logId) {
+  const item = feedItems.find(i => i.id === logId);
+  if (!item) return;
+  const el = document.getElementById(`feedcard-${logId}`);
+  if (el) el.outerHTML = renderFeedCard(item);
+}
+
+// ── Comments ──────────────────────────────────────────────────────────────
+async function toggleComments(logId) {
+  if (expandedComments.has(logId)) {
+    expandedComments.delete(logId);
+    refreshFeedCard(logId);
+    return;
+  }
+  expandedComments.add(logId);
+  refreshFeedCard(logId); // shows loading state
+  if (!feedComments[logId]) await fetchComments(logId);
+  refreshFeedCard(logId);
+}
+async function fetchComments(logId) {
+  const { data } = await db.from('comments').select('*').eq('log_id', logId).order('created_at', { ascending: true });
+  if (!data || !data.length) { feedComments[logId] = []; return; }
+  const uids = [...new Set(data.map(c => c.user_id))];
+  const { data: profiles } = await db.from('profiles').select('user_id, username, display_name').in('user_id', uids);
+  const pm = {};
+  (profiles || []).forEach(p => pm[p.user_id] = p);
+  feedComments[logId] = data.map(c => ({ ...c, profile: pm[c.user_id] || null }));
+  feedCommentCounts[logId] = data.length;
+}
+async function postComment(logId) {
+  const input = document.getElementById(`comment-input-${logId}`);
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  const { error } = await db.from('comments').insert({ log_id: logId, user_id: currentUser.id, content: text });
+  if (!error) {
+    await fetchComments(logId);
+    feedCommentCounts[logId] = (feedComments[logId] || []).length;
+    refreshFeedCard(logId);
+  } else { toast('Comment failed — ' + error.message, 'error'); }
+}
+
+// ── Discover ──────────────────────────────────────────────────────────────
+function openDiscover() {
+  discoverUsers = [];
+  document.getElementById('discover-search').value = '';
+  document.getElementById('discover-results').innerHTML = '';
+  renderFollowingList();
+  document.getElementById('discover-modal').classList.remove('hidden');
+}
+function closeDiscover() {
+  document.getElementById('discover-modal').classList.add('hidden');
+}
+function debounceSearch(val) {
+  clearTimeout(searchDebounce);
+  document.getElementById('discover-results').innerHTML = '';
+  if (!val.trim()) { discoverUsers = []; return; }
+  searchDebounce = setTimeout(() => doSearchUsers(val.trim()), 350);
+}
+async function doSearchUsers(query) {
+  const { data } = await db
+    .from('profiles')
+    .select('user_id, username, display_name, avatar_url')
+    .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
+    .neq('user_id', currentUser.id)
+    .limit(10);
+  discoverUsers = data || [];
+  renderDiscoverUsers();
+}
+function renderDiscoverUsers() {
+  const el = document.getElementById('discover-results');
+  if (!el) return;
+  if (!discoverUsers.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin-bottom:.65rem;">Search Results</div>
+    ${discoverUsers.map(u => userCardHtml(u)).join('')}`;
+}
+async function renderFollowingList() {
+  const el = document.getElementById('following-list');
+  if (!el) return;
+  const ids = [...following];
+  if (!ids.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">You\'re not following anyone yet.</div>';
+    return;
+  }
+  const { data } = await db.from('profiles').select('user_id, username, display_name, avatar_url').in('user_id', ids);
+  el.innerHTML = (data || []).map(u => userCardHtml(u)).join('');
+}
+function userCardHtml(u) {
+  const isFollowing = following.has(u.user_id);
+  return `
+    <div class="user-card">
+      <div class="feed-user-avatar">${profileInitials(u)}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="user-card-name">${escHtml(u.display_name || u.username || '—')}</div>
+        <div class="user-card-username">${u.username ? '@' + escHtml(u.username) : ''}</div>
+      </div>
+      <button class="follow-btn ${isFollowing ? 'following' : 'follow'}"
+        onclick="${isFollowing ? `unfollowUser('${u.user_id}')` : `followUser('${u.user_id}')`}">
+        ${isFollowing ? 'Following' : 'Follow'}
+      </button>
+    </div>`;
+}
 
 // ══════════════════════════════════════════
 //  STATE & STORAGE
@@ -1950,6 +2511,17 @@ let owners         = JSON.parse(localStorage.getItem(STORE_O)  || 'null') || [];
 let ownerFilter    = localStorage.getItem(STORE_OF) || 'all'; // persisted across refreshes
 let eloRatings     = JSON.parse(localStorage.getItem(STORE_ELO) || '{}'); // {watchId: score}
 
+// ── SOCIAL STATE ────────────────────────────────────────────────────────────
+let feedItems         = [];        // enriched log rows for feed
+let feedLikes         = {};        // logId → {count, liked}
+let feedCommentCounts = {};        // logId → count
+let feedComments      = {};        // logId → [{...}] (loaded on demand)
+let expandedComments  = new Set(); // logIds currently showing comments
+let following         = new Set(); // user_ids current user follows
+let feedLoading       = false;
+let myProfile         = null;      // current user's profile row
+let discoverUsers     = [];        // search results in discover modal
+let searchDebounce    = null;
 
 
 
@@ -2081,7 +2653,8 @@ function nav(btn) {
   if (page === 'collection') renderCollection();
   if (page === 'track')    renderTrack();
   if (page === 'wishlist') renderWishlist();
-  if (page === 'reports') renderReports();
+  if (page === 'reports')  renderReports();
+  if (page === 'feed')     loadFeed();
 }
 
 // ══════════════════════════════════════════
@@ -4647,6 +5220,7 @@ function setOwnerFilter(o) {
   else if (page === 'track')    renderTrack();
   else if (page === 'reports')  renderReports();
   else if (page === 'wishlist') renderWishlist();
+  else if (page === 'feed')     loadFeed();
 }
 
 // Legacy alias (called by addOwner)
@@ -5471,12 +6045,14 @@ function initApp() {
   renderCollection();
   fetchWeather();
   initReminder();
-  // Show sign-out button with username
+  // Show header buttons
   const signoutBtn = document.getElementById('signout-btn');
-  if (signoutBtn && currentUser) {
-    signoutBtn.style.display = '';
-    signoutBtn.textContent   = 'Sign out';
-  }
+  if (signoutBtn && currentUser) { signoutBtn.style.display = ''; signoutBtn.textContent = 'Sign out'; }
+  // Load social data (non-blocking)
+  Promise.all([loadMyProfile(), loadFollowing()]).then(() => {
+    // Pre-load feed in background so it's ready when user taps the tab
+    loadFeed();
+  });
 }
 
 // Auth state listener — drives the whole show
@@ -5488,8 +6064,12 @@ db.auth.onAuthStateChange(async (event, session) => {
     initApp();
   } else {
     currentUser = null;
+    feedItems = []; feedLikes = {}; feedCommentCounts = {}; feedComments = {};
+    expandedComments.clear(); following.clear(); myProfile = null;
     document.getElementById('auth-screen').style.display = 'flex';
     document.getElementById('signout-btn').style.display = 'none';
+    const profileBtn = document.getElementById('profile-btn');
+    if (profileBtn) profileBtn.style.display = 'none';
   }
 });
 
