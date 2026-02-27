@@ -130,6 +130,7 @@
       cursor: pointer; transition: all .15s; white-space: nowrap; font-family: inherit;
     }
     .btn-data:hover { border-color: var(--gold); color: var(--gold); }
+    .app-ver { font-size: .6rem; color: var(--muted); opacity: .5; letter-spacing: .06em; white-space: nowrap; user-select: none; }
     .server-dot {
       width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
       background: var(--success); box-shadow: 0 0 6px var(--success);
@@ -469,6 +470,27 @@
     .game-rank-num    { font-size: 1.05rem; font-weight: 800; min-width: 2rem; text-align: center; }
     .game-result-watch { font-size: .88rem; font-weight: 600; }
     .game-result-brand { font-size: .7rem; color: var(--muted); margin-top: .05rem; }
+
+    /* ── HELP PAGE ── */
+    .help-wrap { max-width: 720px; }
+    .help-intro { color: var(--muted); font-size: .9rem; line-height: 1.6; margin-bottom: 2rem; padding: 1rem 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); border-left: 3px solid var(--gold); }
+    .help-section { margin-bottom: 2.25rem; }
+    .help-section-title { font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); margin-bottom: .9rem; display: flex; align-items: center; gap: .5rem; }
+    .help-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem 1.25rem; margin-bottom: .6rem; }
+    .help-step { display: flex; gap: .8rem; padding: .55rem 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+    .help-step:last-child { border-bottom: none; padding-bottom: 0; }
+    .help-step-num { font-size: .72rem; font-weight: 800; color: var(--gold); background: var(--gold-dim); border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: .1rem; }
+    .help-step-body { flex: 1; }
+    .help-step-title { font-size: .88rem; font-weight: 600; margin-bottom: .15rem; }
+    .help-step-desc { font-size: .8rem; color: var(--muted); line-height: 1.55; }
+    .help-tip { background: rgba(201,168,76,.07); border: 1px solid rgba(201,168,76,.22); border-radius: 8px; padding: .7rem 1rem; font-size: .82rem; color: var(--gold-lt); line-height: 1.5; margin-top: .5rem; }
+    .help-tip strong { color: var(--gold); }
+    .help-kbd { display: inline-block; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: .05rem .4rem; font-size: .75rem; font-family: monospace; color: var(--text); }
+    .help-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+    @media (max-width: 640px) { .help-grid2 { grid-template-columns: 1fr; } }
+    .help-mini-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .9rem 1rem; }
+    .help-mini-title { font-size: .8rem; font-weight: 700; margin-bottom: .3rem; }
+    .help-mini-desc { font-size: .78rem; color: var(--muted); line-height: 1.5; }
 
     /* ── STRAP TRACKER (Edit Watch modal) ── */
     .strap-section-divider { margin-top: .9rem; padding-top: .9rem; border-top: 1px solid var(--border); }
@@ -928,12 +950,14 @@
       <button               data-page="track"        onclick="nav(this)"><span class="nav-emoji">⌚</span><span class="nav-label">Track</span></button>
       <button               data-page="reports"      onclick="nav(this)"><span class="nav-emoji">📊</span><span class="nav-label">Reports</span></button>
       <button               data-page="wishlist"     onclick="nav(this)"><span class="nav-emoji">🌟</span><span class="nav-label">Wishlist</span></button>
+      <button               data-page="help"         onclick="nav(this)"><span class="nav-emoji">❓</span><span class="nav-label">Help</span></button>
     </nav>
     <div class="header-owner-pills" id="header-owner-pills"></div>
     <div class="header-data">
       <div id="server-dot" class="server-dot" title="Saving to local file"></div>
       <button class="btn-data" onclick="exportData()" title="Download a backup JSON file">↑ Export</button>
       <button class="btn-data" onclick="importData()" title="Restore from a backup JSON file">↓ Import</button>
+      <span id="app-ver" class="app-ver"></span>
     </div>
   </div>
 </header>
@@ -1046,6 +1070,192 @@
     <div id="coll-sort-bar"></div>
     <div id="coll-tag-filter-bar"></div>
     <div id="watches-grid" class="watches-grid"></div>
+  </div>
+
+  <!-- ════ HELP PAGE ════ -->
+  <div id="page-help" class="page">
+    <div class="page-header" style="margin-bottom:1.5rem;">
+      <div class="page-title">Help &amp; Guide</div>
+    </div>
+    <div class="help-wrap">
+
+      <div class="help-intro">
+        <strong style="color:var(--text)">Welcome to WristLog.</strong> This guide covers everything you need to know to get the most out of the app.
+        Your watch data is stored privately in your own browser — nothing is sent to any server.
+      </div>
+
+      <!-- ── ADDING WATCHES ── -->
+      <div class="help-section">
+        <div class="help-section-title">📦 Building Your Collection</div>
+        <div class="help-card">
+          <div class="help-step">
+            <div class="help-step-num">1</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Go to Collection → "+ Add Watch"</div>
+              <div class="help-step-desc">This opens the add watch form. You can fill everything manually, or use the URL shortcut below.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">2</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Paste the manufacturer's product page URL and tap 🔍 Fetch</div>
+              <div class="help-step-desc">Go to the brand's website (e.g. rolex.com, omegawatches.com, seikowatches.com), open the exact watch page, copy the URL from your browser, and paste it into the URL field. Tap Fetch — the app fills in brand, name, reference number, and often pulls a photo automatically.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">3</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Fill in price, purchase date, and condition</div>
+              <div class="help-step-desc">These power the Cost-per-Wear metric in Reports. Purchase date is also used to sort your collection.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">4</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Add straps if the watch has more than one</div>
+              <div class="help-step-desc">Expand the <strong>⌚ Straps</strong> section. Add each strap with a name (e.g. "NATO Black", "Oyster Bracelet"). Toggle which one is currently on the watch — the app will ask which strap you wore each time you log.</div>
+            </div>
+          </div>
+          <div class="help-tip">💡 <strong>Best URL sources:</strong> Brand websites, Hodinkee shop, WatchCharts listings — these tend to auto-fill the most fields. Avoid marketplace URLs (eBay, Chrono24) as they rarely work with Fetch.</div>
+        </div>
+      </div>
+
+      <!-- ── LOGGING WEAR ── -->
+      <div class="help-section">
+        <div class="help-section-title">⌚ Logging a Wear</div>
+        <div class="help-card">
+          <div class="help-step">
+            <div class="help-step-num">1</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Go to the Track tab</div>
+              <div class="help-step-desc">The date defaults to today. You can tap any past date on the calendar to log retroactively.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">2</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Select the watch you wore</div>
+              <div class="help-step-desc">Tap the watch from the list. If it has multiple straps, a strap selector appears — pick which one was on the watch.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">3</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Choose a use case (optional)</div>
+              <div class="help-step-desc">Work, Leisure, Dinner, or Travel. This lets you see wear patterns in Reports — e.g. which watch you reach for on weekdays vs. weekends.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">4</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Add notes and tap "Log This Wear"</div>
+              <div class="help-step-desc">Notes are optional — great for occasion details ("Wedding of John & Sara"), outfit pairings, or quick impressions.</div>
+            </div>
+          </div>
+          <div class="help-tip">💡 Already logged but picked the wrong watch or use case? Tap the <strong>✎ pencil icon</strong> in the Wear History table to edit any past entry.</div>
+        </div>
+      </div>
+
+      <!-- ── COLLECTION FEATURES ── -->
+      <div class="help-section">
+        <div class="help-section-title">📦 Collection Features</div>
+        <div class="help-grid2">
+          <div class="help-mini-card">
+            <div class="help-mini-title">🎮 Ranking Game</div>
+            <div class="help-mini-desc">Tap <strong>🎮 Rank</strong> in the Collection header. You'll see head-to-head match-ups — tap the watch you prefer within 3 seconds. After all rounds, save your ranking to sort the collection by personal preference. Elo scores accumulate over multiple sessions, so the ranking gets more accurate over time.</div>
+          </div>
+          <div class="help-mini-card">
+            <div class="help-mini-title">🏷 Tag Filtering</div>
+            <div class="help-mini-desc">Add tags to watches when editing (Chronograph, Dress Watch, Diver, etc.). Tag chips appear above the collection grid — tap one to filter. Tap again to clear.</div>
+          </div>
+          <div class="help-mini-card">
+            <div class="help-mini-title">📈 Market Prices</div>
+            <div class="help-mini-desc">Paste a WatchCharts URL when editing a watch, then tap <strong>🔄 Update All Prices</strong> in the Collection header to pull current market values. The app tracks price history so you can see how values trend over time.</div>
+          </div>
+          <div class="help-mini-card">
+            <div class="help-mini-title">👥 Multiple Owners</div>
+            <div class="help-mini-desc">Add owner names in the Collection header pills (tap the + pill). Each watch can be assigned to an owner. Filter the collection by tapping the owner pill — great for couples sharing one app.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── WISHLIST ── -->
+      <div class="help-section">
+        <div class="help-section-title">🌟 Wishlist</div>
+        <div class="help-card">
+          <div class="help-step">
+            <div class="help-step-num">1</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Add watches you want to buy</div>
+              <div class="help-step-desc">Paste the manufacturer or listing URL and Fetch auto-fills the details. Track asking price vs. current market price to spot the right moment to buy.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">2</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Move to Collection when purchased</div>
+              <div class="help-step-desc">Edit the wishlist item and tap <strong>"Move to Collection"</strong> — it transfers all the details so you don't have to re-enter anything.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── REPORTS ── -->
+      <div class="help-section">
+        <div class="help-section-title">📊 Reports</div>
+        <div class="help-card">
+          <div class="help-step">
+            <div class="help-step-num">—</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Wear frequency &amp; streaks</div>
+              <div class="help-step-desc">See how often you wear each watch, your longest streak, and which days of the week you wear each piece most.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">—</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Cost per wear</div>
+              <div class="help-step-desc">Divides the purchase price by total wears. A great way to see which watches deliver the most value per outing.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">—</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Year in Review</div>
+              <div class="help-step-desc">A full-year heat-map calendar showing every day you logged a watch. Scroll to the bottom of the Reports page and select the year.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── BACKUP ── -->
+      <div class="help-section">
+        <div class="help-section-title">💾 Backup &amp; Restore</div>
+        <div class="help-card">
+          <div class="help-step">
+            <div class="help-step-num">↑</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Export — download a backup</div>
+              <div class="help-step-desc">Tap <span class="help-kbd">↑ Export</span> in the top-right header. Saves a <code>.json</code> file with all your watches and logs. Keep a copy before clearing browser data or switching devices.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">↓</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Import — restore a backup</div>
+              <div class="help-step-desc">Tap <span class="help-kbd">↓ Import</span> and select a previously exported <code>.json</code> file. This merges the backup with any existing data — watches and logs are matched by ID, so there are no duplicates.</div>
+            </div>
+          </div>
+          <div class="help-tip">💡 <strong>Switching phones?</strong> Export on the old phone, open the app on the new phone, then Import the file. All your data transfers instantly.</div>
+        </div>
+      </div>
+
+      <!-- ── VERSION ── -->
+      <div style="text-align:center;color:var(--muted);font-size:.75rem;padding:1.5rem 0 .5rem;">
+        WristLog <span id="help-ver"></span> · All data stored locally in your browser
+      </div>
+
+    </div>
   </div>
 
   <!-- ════ WISHLIST PAGE ════ -->
@@ -1444,6 +1654,11 @@
 <div id="toast" class="toast"></div>
 
 <script>
+// ══════════════════════════════════════════
+//  APP VERSION  ← bump this on every release
+// ══════════════════════════════════════════
+const APP_VERSION = '1.0';
+
 // ══════════════════════════════════════════
 //  STATE & STORAGE
 // ══════════════════════════════════════════
@@ -4933,6 +5148,8 @@ if (ownerFilter !== 'all' && !owners.includes(ownerFilter)) ownerFilter = 'all';
 renderOwnerPills(); // populate header owner pills
 initOEMStraps();    // pre-populate OEM straps for watches that have none
 renderCollection(); // landing page
+document.getElementById('app-ver').textContent  = 'v' + APP_VERSION;
+document.getElementById('help-ver').textContent = 'v' + APP_VERSION;
 fetchWeather();     // async — populates weatherData, then re-renders recommendation
 initReminder();
 initServerData(); // async: loads from local server if running, re-renders, enables server sync
