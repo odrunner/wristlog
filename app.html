@@ -3136,12 +3136,19 @@ function renderCollection() {
     el.innerHTML = renderCollectionList(visible, today);  // list does its own sort
   } else {
     el.className = 'watches-grid';
+    // Only add market-price placeholder when collection is mixed (some have it, some don't)
+    const anyHasMarket = sorted.some(w => w.marketPrice);
     el.innerHTML = sorted.map((w, idx) => {
       const wears = logs.filter(l => l.watchId === w.id).length;
       const cpu   = w.price && wears ? fmtMoney(Math.round(w.price/wears)) : '—';
       const wornToday = logs.some(l => l.watchId === w.id && l.date === today);
       const rankBadge = collGridSort === 'ranking' && (eloRatings[w.id] != null)
         ? `<span class="rank-badge-card" title="${eloRatings[w.id]} pts">${medals[idx] || '#'+(idx+1)}</span>` : '';
+      // When some cards have a market price row and others don't, insert an invisible
+      // same-height placeholder so the stats always align across all cards in the grid row
+      const mpHTML = w.marketPrice
+        ? marketPriceRowHTML(w)
+        : (anyHasMarket ? '<div class="market-price-row" style="visibility:hidden" aria-hidden="true"><span class="mp-label">—</span></div>' : '');
       return `<div class="watch-card">
         ${rankBadge}
         ${w.image ? `<img src="${w.image}" alt="${w.brand} ${w.name}" class="watch-card-img" onerror="this.style.display='none'">` : ''}
@@ -3172,7 +3179,7 @@ function renderCollection() {
             <div class="meta-val">${cpu}</div>
           </div>
         </div>
-        ${marketPriceRowHTML(w)}
+        ${mpHTML}
         <div class="watch-card-actions">
           ${wornToday
             ? `<button class="btn-quicklog logged" disabled>✓ Today</button>`
