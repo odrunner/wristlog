@@ -1,0 +1,6 @@
+# Local dev server files — not needed for the hosted app
+server.js
+server.py
+start.command
+wristlog-data.json
+.DS_Store
