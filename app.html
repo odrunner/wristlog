@@ -2117,15 +2117,15 @@ function formatFeedDate(dateStr) {
 // ── My Profile ────────────────────────────────────────────────────────────
 async function loadMyProfile() {
   if (!currentUser) return;
-  let { data } = await db.from('profiles').select('*').eq('user_id', currentUser.id).single();
+  let { data } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
   if (!data) {
     // Auto-create profile for Google OAuth users (trigger may not have fired)
     const email       = currentUser.email || '';
     const googleName  = currentUser.user_metadata?.full_name || email.split('@')[0];
     const username    = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 30);
     const { data: created } = await db.from('profiles').upsert(
-      { user_id: currentUser.id, username, display_name: googleName },
-      { onConflict: 'user_id' }
+      { id: currentUser.id, username, display_name: googleName },
+      { onConflict: 'id' }
     ).select().single();
     data = created;
   }
@@ -2171,8 +2171,8 @@ async function saveProfile() {
   const name = (document.getElementById('edit-display-name')?.value || '').trim();
   const bio  = (document.getElementById('edit-bio')?.value || '').trim();
   const { error } = await db.from('profiles').upsert(
-    { user_id: currentUser.id, display_name: name, bio },
-    { onConflict: 'user_id' }
+    { id: currentUser.id, display_name: name, bio },
+    { onConflict: 'id' }
   );
   if (!error) {
     myProfile = { ...myProfile, display_name: name, bio };
@@ -2237,9 +2237,9 @@ async function loadFeed() {
     // Profiles for authors
     const userIds = [...new Set(rawLogs.map(l => l.user_id))];
     const { data: profileRows } = await db
-      .from('profiles').select('user_id, username, display_name, avatar_url').in('user_id', userIds);
+      .from('profiles').select('id, username, display_name, avatar_url').in('id', userIds);
     const profileMap = {};
-    (profileRows || []).forEach(p => profileMap[p.user_id] = p);
+    (profileRows || []).forEach(p => profileMap[p.id] = p);
 
     // Likes
     const logIds = rawLogs.map(l => l.id);
@@ -2320,7 +2320,7 @@ function renderFeedCard(item) {
           <div class="comment-avatar">${profileInitials(c.profile)}</div>
           <div class="comment-body">
             <span class="comment-username">${escHtml(c.profile?.display_name || c.profile?.username || 'User')}</span>
-            <span> ${escHtml(c.content)}</span>
+            <span> ${escHtml(c.body)}</span>
           </div>
         </div>`).join('');
       commentsHtml = `
@@ -2403,9 +2403,9 @@ async function fetchComments(logId) {
   const { data } = await db.from('comments').select('*').eq('log_id', logId).order('created_at', { ascending: true });
   if (!data || !data.length) { feedComments[logId] = []; return; }
   const uids = [...new Set(data.map(c => c.user_id))];
-  const { data: profiles } = await db.from('profiles').select('user_id, username, display_name').in('user_id', uids);
+  const { data: profiles } = await db.from('profiles').select('id, username, display_name').in('id', uids);
   const pm = {};
-  (profiles || []).forEach(p => pm[p.user_id] = p);
+  (profiles || []).forEach(p => pm[p.id] = p);
   feedComments[logId] = data.map(c => ({ ...c, profile: pm[c.user_id] || null }));
   feedCommentCounts[logId] = data.length;
 }
@@ -2415,7 +2415,7 @@ async function postComment(logId) {
   const text = input.value.trim();
   if (!text) return;
   input.value = '';
-  const { error } = await db.from('comments').insert({ log_id: logId, user_id: currentUser.id, content: text });
+  const { error } = await db.from('comments').insert({ log_id: logId, user_id: currentUser.id, body: text });
   if (!error) {
     await fetchComments(logId);
     feedCommentCounts[logId] = (feedComments[logId] || []).length;
@@ -2443,9 +2443,9 @@ function debounceSearch(val) {
 async function doSearchUsers(query) {
   const { data } = await db
     .from('profiles')
-    .select('user_id, username, display_name, avatar_url')
+    .select('id, username, display_name, avatar_url')
     .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
-    .neq('user_id', currentUser.id)
+    .neq('id', currentUser.id)
     .limit(10);
   discoverUsers = data || [];
   renderDiscoverUsers();
@@ -2466,11 +2466,11 @@ async function renderFollowingList() {
     el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">You\'re not following anyone yet.</div>';
     return;
   }
-  const { data } = await db.from('profiles').select('user_id, username, display_name, avatar_url').in('user_id', ids);
+  const { data } = await db.from('profiles').select('id, username, display_name, avatar_url').in('id', ids);
   el.innerHTML = (data || []).map(u => userCardHtml(u)).join('');
 }
 function userCardHtml(u) {
-  const isFollowing = following.has(u.user_id);
+  const isFollowing = following.has(u.id);
   return `
     <div class="user-card">
       <div class="feed-user-avatar">${profileInitials(u)}</div>
@@ -2479,7 +2479,7 @@ function userCardHtml(u) {
         <div class="user-card-username">${u.username ? '@' + escHtml(u.username) : ''}</div>
       </div>
       <button class="follow-btn ${isFollowing ? 'following' : 'follow'}"
-        onclick="${isFollowing ? `unfollowUser('${u.user_id}')` : `followUser('${u.user_id}')`}">
+        onclick="${isFollowing ? `unfollowUser('${u.id}')` : `followUser('${u.id}')`}">
         ${isFollowing ? 'Following' : 'Follow'}
       </button>
     </div>`;
