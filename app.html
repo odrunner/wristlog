@@ -39,7 +39,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { overflow-x: hidden; }
+    /* Prevent the header (not body) from creating horizontal scroll */
+    header { overflow: hidden; }
 
     :root {
       --bg:        #0b0b10;
@@ -78,7 +79,8 @@
       padding: 0 1.25rem;
       display: flex;
       align-items: stretch;
-      gap: 2rem;
+      gap: .75rem;           /* tighter than before so 6 tabs fit */
+      flex-wrap: wrap;       /* allow pills to drop to second row on mobile */
     }
     .logo {
       font-size: 1.15rem;
@@ -96,26 +98,31 @@
     }
     .logo:hover { color: var(--gold-lt); }
     .logo sup { color: var(--muted); font-size: .55rem; font-weight: 400; letter-spacing: .1em; }
-    nav { display: flex; gap: 0; }
+    nav { display: flex; gap: 0; flex-shrink: 1; min-width: 0; }
     nav button {
-      background: none;
-      border: none;
+      background: none; border: none;
       color: var(--muted);
-      padding: .95rem 1.1rem;
-      font-size: .85rem;
-      font-weight: 500;
+      padding: .95rem .65rem;  /* tighter so 6 tabs fit */
+      font-size: .82rem; font-weight: 500;
       cursor: pointer;
-      border-bottom: 2px solid transparent;
-      white-space: nowrap;
+      border-bottom: 2px solid transparent; white-space: nowrap;
       transition: color .15s, border-color .15s;
-      font-family: inherit;
-      letter-spacing: .02em;
+      font-family: inherit; letter-spacing: .02em;
+      display: flex; align-items: center; gap: .3rem;
     }
     nav button:hover { color: var(--text); }
     nav button.active { color: var(--gold); border-bottom-color: var(--gold); }
 
+    /* Mid-width (641–1060px): show emoji only, no text labels */
+    @media (min-width: 641px) and (max-width: 1060px) {
+      .nav-label { display: none; }
+      nav button { padding: .95rem .6rem; }
+    }
+
     /* ── HEADER OWNER PILLS ── */
-    .header-owner-pills { display: flex; align-items: center; gap: .3rem; margin-left: 1rem; }
+    .header-owner-pills {
+      display: flex; align-items: center; gap: .3rem; margin-left: .5rem;
+    }
     .owner-hdr-pill {
       background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
       font-size: .72rem; font-weight: 600; padding: .24rem .7rem; border-radius: 20px;
@@ -125,7 +132,11 @@
     .owner-hdr-pill.active { background: var(--gold-dim); border-color: var(--gold); color: var(--gold); }
 
     /* ── HEADER DATA BUTTONS ── */
-    .header-data { display: flex; align-items: center; gap: .45rem; margin-left: auto; padding: 0 .25rem; }
+    .header-data {
+      display: flex; align-items: center; gap: .45rem;
+      margin-left: auto; padding: 0 .25rem;
+      flex-shrink: 0;  /* sign-out is never pushed off */
+    }
     .btn-data {
       background: transparent; border: 1px solid var(--border); color: var(--muted);
       font-size: .72rem; font-weight: 500; padding: .28rem .6rem; border-radius: 6px;
@@ -188,6 +199,7 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 1.25rem;
+      min-width: 0;   /* prevent grid/flex item from forcing parent wider than viewport */
     }
     .card-label {
       font-size: .72rem;
@@ -926,10 +938,24 @@
 
     /* ── MOBILE: bottom tab nav + touch UX (≤ 640px) ── */
     @media (max-width: 640px) {
-      /* Compact header */
-      .header-inner { padding: 0 .75rem; gap: .4rem; }
-      .logo { font-size: 1rem; padding: .7rem 0; }
+      /* Compact header — two rows: [logo · buttons] then [owner pills] */
+      .header-inner { padding: 0 .75rem; gap: .35rem; align-items: center; }
+      .logo { font-size: 1rem; padding: .65rem 0; }
       .btn-data { font-size: .65rem; padding: .22rem .48rem; }
+
+      /* Owner pills drop to their own full-width row below logo/buttons */
+      .header-owner-pills {
+        order: 10;           /* last flex item → new row */
+        width: 100%;
+        margin-left: 0;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding: .3rem 0 .35rem;
+        border-top: 1px solid var(--border);
+        gap: .35rem;
+      }
+      .header-owner-pills::-webkit-scrollbar { display: none; }
 
       /* Fixed bottom tab bar */
       nav {
