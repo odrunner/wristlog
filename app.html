@@ -2130,10 +2130,11 @@ async function loadMyProfile() {
     const email       = currentUser.email || '';
     const googleName  = currentUser.user_metadata?.full_name || email.split('@')[0];
     const username    = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 30);
-    const { data: created } = await db.from('profiles').upsert(
+    const { data: created, error: createErr } = await db.from('profiles').upsert(
       { id: currentUser.id, username, display_name: googleName },
       { onConflict: 'id' }
     ).select().single();
+    if (createErr) console.error('[WristLog] Profile create error:', createErr.message, createErr);
     data = created;
   }
   myProfile = data;
@@ -2436,6 +2437,7 @@ function openDiscover() {
   document.getElementById('discover-search').value = '';
   document.getElementById('discover-results').innerHTML = '';
   renderFollowingList();
+  loadSuggestedUsers();
   document.getElementById('discover-modal').classList.remove('hidden');
 }
 function closeDiscover() {
@@ -2444,26 +2446,61 @@ function closeDiscover() {
 function debounceSearch(val) {
   clearTimeout(searchDebounce);
   document.getElementById('discover-results').innerHTML = '';
-  if (!val.trim()) { discoverUsers = []; return; }
+  if (!val.trim()) { discoverUsers = []; loadSuggestedUsers(); return; }
   searchDebounce = setTimeout(() => doSearchUsers(val.trim()), 350);
 }
 async function doSearchUsers(query) {
-  const { data } = await db
+  const el = document.getElementById('discover-results');
+  if (el) el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">Searching…</div>';
+  const { data, error } = await db
     .from('profiles')
     .select('id, username, display_name, avatar_url')
     .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
     .neq('id', currentUser.id)
     .limit(10);
+  if (error) {
+    console.error('[WristLog] Search error:', error.message, error);
+    if (el) el.innerHTML = `<div style="color:var(--danger);font-size:.82rem;padding:.4rem 0;">Search failed: ${escHtml(error.message)}</div>`;
+    return;
+  }
   discoverUsers = data || [];
   renderDiscoverUsers();
 }
 function renderDiscoverUsers() {
   const el = document.getElementById('discover-results');
   if (!el) return;
-  if (!discoverUsers.length) { el.innerHTML = ''; return; }
+  if (!discoverUsers.length) {
+    const query = document.getElementById('discover-search').value.trim();
+    el.innerHTML = query ? '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">No users found for that search.</div>' : '';
+    return;
+  }
   el.innerHTML = `
     <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin-bottom:.65rem;">Search Results</div>
     ${discoverUsers.map(u => userCardHtml(u)).join('')}`;
+}
+async function loadSuggestedUsers() {
+  if (!currentUser) return;
+  const el = document.getElementById('discover-results');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">Loading…</div>';
+  const { data, error } = await db
+    .from('profiles')
+    .select('id, username, display_name, avatar_url')
+    .neq('id', currentUser.id)
+    .limit(20);
+  if (error) {
+    console.error('[WristLog] loadSuggestedUsers error:', error.message, error);
+    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem;padding:.4rem 0;">Could not load users: ${escHtml(error.message)}</div>`;
+    return;
+  }
+  if (!data || !data.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">No other users yet.</div>';
+    return;
+  }
+  discoverUsers = data;
+  el.innerHTML = `
+    <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin-bottom:.65rem;">All Users</div>
+    ${data.map(u => userCardHtml(u)).join('')}`;
 }
 async function renderFollowingList() {
   const el = document.getElementById('following-list');
