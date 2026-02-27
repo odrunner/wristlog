@@ -492,6 +492,17 @@
     .help-mini-title { font-size: .8rem; font-weight: 700; margin-bottom: .3rem; }
     .help-mini-desc { font-size: .78rem; color: var(--muted); line-height: 1.5; }
 
+    /* ── FEEDBACK ── */
+    .feedback-type-row { display: flex; gap: .6rem; margin-bottom: 1rem; }
+    .feedback-type-btn {
+      flex: 1; padding: .65rem .5rem; border-radius: 10px; border: 2px solid var(--border);
+      background: var(--surface2); color: var(--muted); font-size: .82rem; font-weight: 600;
+      cursor: pointer; transition: all .15s; font-family: inherit; text-align: center;
+    }
+    .feedback-type-btn:hover { border-color: var(--gold); color: var(--text); }
+    .feedback-type-btn.active.bug  { border-color: var(--danger); background: rgba(224,85,85,.1); color: var(--danger); }
+    .feedback-type-btn.active.feat { border-color: #818cf8; background: rgba(129,140,248,.1); color: #818cf8; }
+
     /* ── STRAP TRACKER (Edit Watch modal) ── */
     .strap-section-divider { margin-top: .9rem; padding-top: .9rem; border-top: 1px solid var(--border); }
     .strap-section-title   { font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: .5rem; }
@@ -1084,6 +1095,13 @@
         Your watch data is stored privately in your own browser — nothing is sent to any server.
       </div>
 
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:2rem;">
+        <div style="font-size:.82rem;color:var(--muted);line-height:1.5;">
+          Found a bug? Have an idea? Let us know 👇
+        </div>
+        <button class="btn btn-primary" onclick="openFeedback()" style="white-space:nowrap;">💬 Send Feedback</button>
+      </div>
+
       <!-- ── ADDING WATCHES ── -->
       <div class="help-section">
         <div class="help-section-title">📦 Building Your Collection</div>
@@ -1616,6 +1634,47 @@
     </div>
   </div>
 
+</div>
+
+<!-- ════ FEEDBACK MODAL ════ -->
+<div id="feedback-modal" class="overlay hidden">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title">💬 Send Feedback</div>
+    <p style="font-size:.83rem;color:var(--muted);margin-bottom:1.1rem;line-height:1.55;">
+      Your feedback goes straight to the developer as a GitHub issue.
+      You'll need a free <a href="https://github.com/join" target="_blank" rel="noopener" style="color:var(--gold);">GitHub account</a> to submit.
+    </p>
+
+    <!-- Type selector -->
+    <div class="form-group" style="margin-bottom:.85rem;">
+      <label>What kind of feedback?</label>
+      <div class="feedback-type-row">
+        <button class="feedback-type-btn bug active" id="fb-type-bug" onclick="setFeedbackType('bug')">
+          🐛 Bug Report<br><span style="font-size:.7rem;font-weight:400;opacity:.8">Something isn't working</span>
+        </button>
+        <button class="feedback-type-btn feat" id="fb-type-feat" onclick="setFeedbackType('feat')">
+          ✨ Feature Request<br><span style="font-size:.7rem;font-weight:400;opacity:.8">An idea or improvement</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Title -->
+    <div class="form-group">
+      <label>Short title</label>
+      <input type="text" id="fb-title" placeholder="e.g. Calendar doesn't show May logs">
+    </div>
+
+    <!-- Description -->
+    <div class="form-group">
+      <label>Details <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional but helpful)</span></label>
+      <textarea id="fb-desc" placeholder="Steps to reproduce, what you expected, what happened instead…" style="height:90px;"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="submitFeedback()">Open on GitHub →</button>
+      <button class="btn btn-ghost"   onclick="closeFeedback()">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <!-- ════ EDIT LOG MODAL ════ -->
@@ -5137,6 +5196,58 @@ function importData() {
     reader.readAsText(file);
   };
   input.click();
+}
+
+// ══════════════════════════════════════════
+//  FEEDBACK
+// ══════════════════════════════════════════
+// GitHub repo for issue submission — update if repo changes
+const FEEDBACK_REPO = 'odrunner/wristlog';
+
+let feedbackType = 'bug'; // 'bug' | 'feat'
+
+function openFeedback() {
+  feedbackType = 'bug';
+  document.getElementById('fb-title').value = '';
+  document.getElementById('fb-desc').value  = '';
+  setFeedbackType('bug');
+  document.getElementById('feedback-modal').classList.remove('hidden');
+}
+
+function closeFeedback() {
+  document.getElementById('feedback-modal').classList.add('hidden');
+}
+
+function setFeedbackType(type) {
+  feedbackType = type;
+  document.getElementById('fb-type-bug').className  = 'feedback-type-btn bug'  + (type === 'bug'  ? ' active' : '');
+  document.getElementById('fb-type-feat').className = 'feedback-type-btn feat' + (type === 'feat' ? ' active' : '');
+}
+
+function submitFeedback() {
+  const title = document.getElementById('fb-title').value.trim();
+  if (!title) { toast('Please enter a short title', 'error'); return; }
+  const desc  = document.getElementById('fb-desc').value.trim();
+  const label = feedbackType === 'bug' ? 'bug' : 'enhancement';
+  const emoji = feedbackType === 'bug' ? '🐛' : '✨';
+
+  const body = [
+    desc || '_No additional details provided._',
+    '',
+    '---',
+    `**App Version:** v${APP_VERSION}`,
+    `**Browser:** ${navigator.userAgent.match(/(Chrome|Safari|Firefox|Edge)\/[\d.]+/)?.[0] ?? 'unknown'}`,
+    `**Submitted via:** WristLog in-app feedback`,
+  ].join('\n');
+
+  const url = `https://github.com/${FEEDBACK_REPO}/issues/new`
+    + `?title=${encodeURIComponent(emoji + ' ' + title)}`
+    + `&body=${encodeURIComponent(body)}`
+    + `&labels=${encodeURIComponent(label)}`;
+
+  window.open(url, '_blank', 'noopener');
+  closeFeedback();
+  toast('Opening GitHub — sign in and click Submit to file your report!');
 }
 
 // ══════════════════════════════════════════
