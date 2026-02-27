@@ -79,8 +79,7 @@
       padding: 0 1.25rem;
       display: flex;
       align-items: stretch;
-      gap: .75rem;           /* tighter than before so 6 tabs fit */
-      flex-wrap: wrap;       /* allow pills to drop to second row on mobile */
+      gap: .75rem;
     }
     .logo {
       font-size: 1.15rem;
@@ -118,18 +117,6 @@
       .nav-label { display: none; }
       nav button { padding: .95rem .6rem; }
     }
-
-    /* ── HEADER OWNER PILLS ── */
-    .header-owner-pills {
-      display: flex; align-items: center; gap: .3rem; margin-left: .5rem;
-    }
-    .owner-hdr-pill {
-      background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
-      font-size: .72rem; font-weight: 600; padding: .24rem .7rem; border-radius: 20px;
-      cursor: pointer; transition: all .15s; font-family: inherit; white-space: nowrap; line-height: 1.4;
-    }
-    .owner-hdr-pill:hover { border-color: var(--gold); color: var(--text); }
-    .owner-hdr-pill.active { background: var(--gold-dim); border-color: var(--gold); color: var(--gold); }
 
     /* ── HEADER DATA BUTTONS ── */
     .header-data {
@@ -741,13 +728,6 @@
     select.filter-select { width: auto; min-width: 150px; }
     .reports-filters { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
 
-    /* Owner filter pills */
-    .owner-filter-bar { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
-    .owner-pill { padding: .32rem .85rem; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: .8rem; font-weight: 500; cursor: pointer; transition: all .15s; white-space: nowrap; }
-    .owner-pill:hover { border-color: var(--gold); color: var(--gold); }
-    .owner-pill.active { background: var(--gold); border-color: var(--gold); color: #111; font-weight: 600; }
-    .owner-badge { flex-shrink: 0; align-self: flex-start; padding: .18rem .55rem; border-radius: 99px; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-size: .7rem; white-space: nowrap; margin-top: .15rem; }
-
     /* Empty state */
     .empty {
       text-align: center; padding: 2.5rem 1rem; color: var(--muted);
@@ -856,22 +836,6 @@
     }
     .btn-rec-skip:hover { color: var(--text); }
 
-    /* ── CALENDAR HEATMAP ── */
-    .cal-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:.55rem; }
-    .cal-nav-btn { background:none; border:none; color:var(--muted); cursor:pointer; font-size:1rem; padding:.15rem .4rem; border-radius:5px; font-family:inherit; }
-    .cal-nav-btn:hover { color:var(--text); }
-    .cal-month-label { font-size:.8rem; font-weight:700; }
-    .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
-    .cal-dow { font-size:.62rem; font-weight:700; color:var(--muted); text-align:center; padding:.2rem 0; }
-    .cal-cell { aspect-ratio:1; border-radius:6px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; font-size:.72rem; gap:2px; padding:2px 0; transition:background .12s; }
-    .cal-cell:hover { background:var(--surface2); }
-    .cal-cell.other-month { opacity:.25; pointer-events:none; }
-    .cal-cell.today { box-shadow:inset 0 0 0 1px var(--gold); }
-    .cal-cell.selected { background:var(--gold-dim); }
-    .cal-cell-day { font-size:.7rem; line-height:1; }
-    .cal-dots { display:flex; gap:2px; flex-wrap:wrap; justify-content:center; }
-    .cal-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
-
     /* ── COMPACT COLLECTION LIST VIEW ── */
     .coll-list { width:100%; border-collapse:collapse; font-size:.84rem; }
     .coll-list th { text-align:left; color:var(--muted); font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; padding:.5rem .7rem; border-bottom:1px solid var(--border); white-space:nowrap; }
@@ -938,24 +902,10 @@
 
     /* ── MOBILE: bottom tab nav + touch UX (≤ 640px) ── */
     @media (max-width: 640px) {
-      /* Compact header — two rows: [logo · buttons] then [owner pills] */
+      /* Compact header */
       .header-inner { padding: 0 .75rem; gap: .35rem; align-items: center; }
       .logo { font-size: 1rem; padding: .65rem 0; }
       .btn-data { font-size: .65rem; padding: .22rem .48rem; }
-
-      /* Owner pills drop to their own full-width row below logo/buttons */
-      .header-owner-pills {
-        order: 10;           /* last flex item → new row */
-        width: 100%;
-        margin-left: 0;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-        padding: .3rem 0 .35rem;
-        border-top: 1px solid var(--border);
-        gap: .35rem;
-      }
-      .header-owner-pills::-webkit-scrollbar { display: none; }
 
       /* Fixed bottom tab bar */
       nav {
@@ -1188,7 +1138,6 @@
       <button               data-page="wishlist"     onclick="nav(this)"><span class="nav-emoji">🌟</span><span class="nav-label">Wishlist</span></button>
       <button               data-page="help"         onclick="nav(this)"><span class="nav-emoji">❓</span><span class="nav-label">Help</span></button>
     </nav>
-    <div class="header-owner-pills" id="header-owner-pills"></div>
     <div class="header-data">
       <div id="server-dot" class="server-dot" title="Saving to local file"></div>
       <button class="btn-data" onclick="exportData()" title="Download a backup JSON file">↑ Export</button>
@@ -1266,10 +1215,6 @@
       </div>
 
       <div style="display:flex;flex-direction:column;gap:1.25rem;">
-        <div class="card">
-          <div class="card-label">Calendar</div>
-          <div id="cal-container"></div>
-        </div>
         <div class="card">
           <div class="card-label">Wear History</div>
           <div class="table-wrap" style="max-height:360px;">
@@ -1425,10 +1370,6 @@
           <div class="help-mini-card">
             <div class="help-mini-title">📈 Market Prices</div>
             <div class="help-mini-desc">Paste a WatchCharts URL when editing a watch, then tap <strong>🔄 Update All Prices</strong> in the Collection header to pull current market values. The app tracks price history so you can see how values trend over time.</div>
-          </div>
-          <div class="help-mini-card">
-            <div class="help-mini-title">👥 Multiple Owners</div>
-            <div class="help-mini-desc">Add owner names in the Collection header pills (tap the + pill). Each watch can be assigned to an owner. Filter the collection by tapping the owner pill — great for couples sharing one app.</div>
           </div>
         </div>
       </div>
@@ -1609,14 +1550,6 @@
       <div class="form-group">
         <label>Purchase Date</label>
         <input type="date" id="w-date">
-      </div>
-      <div class="form-group">
-        <label>Owner</label>
-        <select id="w-owner" onchange="onOwnerChange()"></select>
-        <div id="owner-add-row" class="brand-add-row" style="display:none;">
-          <input type="text" id="w-owner-new" placeholder="Enter owner name…">
-          <button class="btn btn-primary btn-sm" onclick="addNewOwner()">Add</button>
-        </div>
       </div>
     </div>
     <!-- ── Condition & Docs (collapsible) ── -->
@@ -1801,10 +1734,6 @@
     </div>
 
     <div class="form-row">
-      <div class="form-group">
-        <label>For</label>
-        <select id="wl-owner"></select>
-      </div>
       <div class="form-group">
         <label>Date Added to Wishlist</label>
         <input type="date" id="wl-date">
@@ -2036,7 +1965,7 @@ async function signInWithGoogle() {
 
 async function signOut() {
   await db.auth.signOut();
-  watches = []; logs = []; wishlist = []; owners = []; brands = [...DEFAULT_BRANDS];
+  watches = []; logs = []; wishlist = []; brands = [...DEFAULT_BRANDS];
   eloRatings = {};
   currentUser = null;
   document.getElementById('auth-screen').style.display = 'flex';
@@ -2557,8 +2486,6 @@ const STORE_W   = 'wristlog_watches';
 const STORE_L   = 'wristlog_logs';
 const STORE_B   = 'wristlog_brands';
 const STORE_WL  = 'wristlog_wishlist';
-const STORE_O   = 'wristlog_owners';
-const STORE_OF  = 'wristlog_owner_filter';
 const STORE_ELO = 'wristlog_elo';
 
 const DEFAULT_BRANDS = [
@@ -2572,8 +2499,6 @@ let watches        = JSON.parse(localStorage.getItem(STORE_W)  || '[]');
 let logs           = JSON.parse(localStorage.getItem(STORE_L)  || '[]');
 let brands         = JSON.parse(localStorage.getItem(STORE_B)  || 'null') || [...DEFAULT_BRANDS];
 let wishlist       = JSON.parse(localStorage.getItem(STORE_WL) || '[]');
-let owners         = JSON.parse(localStorage.getItem(STORE_O)  || 'null') || [];
-let ownerFilter    = localStorage.getItem(STORE_OF) || 'all'; // persisted across refreshes
 let eloRatings     = JSON.parse(localStorage.getItem(STORE_ELO) || '{}'); // {watchId: score}
 
 // ── SOCIAL STATE ────────────────────────────────────────────────────────────
@@ -2622,13 +2547,11 @@ let gameTimerStart = 0;
 const GAME_MS      = 3000;  // ms per match
 const ELO_K        = 32;
 const ELO_DEFAULT  = 1000;
-let calYear      = new Date().getFullYear();
-let calMonth     = new Date().getMonth();   // 0-based
 let yirYear      = new Date().getFullYear();
 let monthRevYear  = new Date().getFullYear();
 let monthRevMonth = new Date().getMonth();  // 0-based
 let weatherData  = null; // { condition, desc, tempC } — populated async
-let recSkips     = {};   // { [owner]: Set<watchId> } — session skips for "try another"
+let recSkips     = new Set(); // session skips for "try another" (watchIds)
 let wEditStraps  = [];   // temp straps array while Edit Watch modal is open
 
 const WATCH_TAGS = ['Daily Beater','Dress','Dive','Chronograph','GMT','Pilot','Field','Sport','Sport-Luxury','Vintage','Complication','Skeleton'];
@@ -2733,13 +2656,6 @@ function setToday() {
 function onDateChange() {
   renderWornNotice();
   renderWatchSelector();
-  // Sync calendar display to selected date's month
-  const v = document.getElementById('track-date').value;
-  if (v) {
-    const [y, m] = v.split('-').map(Number);
-    calYear = y; calMonth = m - 1;
-  }
-  renderCalendar();
 }
 
 function renderTrack() {
@@ -2747,89 +2663,7 @@ function renderTrack() {
   renderWornNotice();
   renderWatchSelector();
   renderStrapSelector();
-  renderCalendar();
   renderTrackHistory();
-}
-
-// ── CALENDAR HEATMAP ──
-function renderCalendar() {
-  const container = document.getElementById('cal-container');
-  if (!container) return;
-  const MONTHS = ['January','February','March','April','May','June',
-                  'July','August','September','October','November','December'];
-  const DOW    = ['Su','Mo','Tu','We','Th','Fr','Sa'];
-  const today  = todayStr();
-  const selVal = document.getElementById('track-date') ? document.getElementById('track-date').value : '';
-
-  // Build map: date -> [useCase, ...]
-  const dayMap = {};
-  logs.forEach(l => {
-    if (!dayMap[l.date]) dayMap[l.date] = [];
-    dayMap[l.date].push(l.useCase);
-  });
-
-  // Calendar grid for calYear / calMonth
-  const firstDay = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
-  const daysInMon = new Date(calYear, calMonth+1, 0).getDate();
-  // Prev month padding
-  const prevMonDays = new Date(calYear, calMonth, 0).getDate();
-  const totalCells = Math.ceil((firstDay + daysInMon) / 7) * 7;
-
-  let cells = '';
-  for (let i = 0; i < totalCells; i++) {
-    let day, month, year, isOther = false;
-    if (i < firstDay) {
-      day = prevMonDays - firstDay + 1 + i;
-      month = calMonth - 1; year = calYear;
-      if (month < 0) { month = 11; year--; }
-      isOther = true;
-    } else if (i >= firstDay + daysInMon) {
-      day = i - firstDay - daysInMon + 1;
-      month = calMonth + 1; year = calYear;
-      if (month > 11) { month = 0; year++; }
-      isOther = true;
-    } else {
-      day = i - firstDay + 1;
-      month = calMonth; year = calYear;
-    }
-    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    const isToday   = ds === today;
-    const isSel     = ds === selVal;
-    const useCases  = dayMap[ds] || [];
-    const dots = useCases.map(uc =>
-      `<div class="cal-dot" style="background:${UC_COL[uc]||'#888'}"></div>`
-    ).join('');
-    const cls = ['cal-cell', isOther?'other-month':'', isToday?'today':'', isSel?'selected':''].filter(Boolean).join(' ');
-    cells += `<div class="${cls}" onclick="calSelectDay('${ds}')">
-      <span class="cal-cell-day">${day}</span>
-      ${useCases.length ? `<div class="cal-dots">${dots}</div>` : ''}
-    </div>`;
-  }
-
-  const dows = DOW.map(d => `<div class="cal-dow">${d}</div>`).join('');
-  container.innerHTML = `
-    <div class="cal-nav">
-      <button class="cal-nav-btn" onclick="calNav(-1)">‹</button>
-      <span class="cal-month-label">${MONTHS[calMonth]} ${calYear}</span>
-      <button class="cal-nav-btn" onclick="calNav(1)">›</button>
-    </div>
-    <div class="cal-grid">${dows}${cells}</div>`;
-}
-
-function calNav(dir) {
-  calMonth += dir;
-  if (calMonth < 0)  { calMonth = 11; calYear--; }
-  if (calMonth > 11) { calMonth = 0;  calYear++; }
-  renderCalendar();
-}
-
-function calSelectDay(ds) {
-  const dateInput = document.getElementById('track-date');
-  if (dateInput) { dateInput.value = ds; onDateChange(); }
-  // Sync calendar month to the selected date
-  const [y, m] = ds.split('-').map(Number);
-  calYear = y; calMonth = m - 1;
-  renderCalendar();
 }
 
 function renderWornNotice() {
@@ -2856,9 +2690,8 @@ function renderWatchSelector() {
     return;
   }
   const wornToday = new Set(logs.filter(l => l.date === date).map(l => l.watchId));
-  const visibleWatches = ownerFilter === 'all' ? watches : watches.filter(w => w.owner === ownerFilter);
   el.innerHTML = `<div class="watch-list">${
-    visibleWatches.map(w => {
+    watches.map(w => {
       const cnt    = logs.filter(l => l.watchId === w.id).length;
       const isSel  = selWatchId === w.id;
       const isWorn = wornToday.has(w.id);
@@ -3055,7 +2888,7 @@ function buildGameQueue(watchList) {
 }
 
 function startGame() {
-  const pool = ownerFilter === 'all' ? watches : watches.filter(w => w.owner === ownerFilter);
+  const pool = watches;
   if (pool.length < 2) { toast('Need at least 2 watches to play!', 'error'); return; }
   // Seed Elo for any new watches
   pool.forEach(w => { if (!(w.id in eloRatings)) eloRatings[w.id] = ELO_DEFAULT; });
@@ -3157,8 +2990,7 @@ function showGameResults() {
   clearGameTimer();
   document.getElementById('game-play-screen').style.display   = 'none';
   document.getElementById('game-result-screen').style.display = 'flex';
-  const pool = ownerFilter === 'all' ? watches : watches.filter(w => w.owner === ownerFilter);
-  const ranked = [...pool].sort((a, b) =>
+  const ranked = [...watches].sort((a, b) =>
     (eloRatings[b.id] ?? ELO_DEFAULT) - (eloRatings[a.id] ?? ELO_DEFAULT)
   );
   const medals = ['🥇','🥈','🥉'];
@@ -3243,9 +3075,8 @@ function setTagFilter(tag) {
 function renderTagFilterBar() {
   const bar = document.getElementById('coll-tag-filter-bar');
   if (!bar) return;
-  const base = ownerFilter === 'all' ? watches : watches.filter(w => w.owner === ownerFilter);
   const tagSet = new Set();
-  base.forEach(w => (w.tags || []).forEach(t => tagSet.add(t)));
+  watches.forEach(w => (w.tags || []).forEach(t => tagSet.add(t)));
   if (tagSet.size === 0) { bar.innerHTML = ''; return; }
   // Sort by canonical WATCH_TAGS order, then any custom tags alphabetically
   const sorted = WATCH_TAGS.filter(t => tagSet.has(t)).concat([...tagSet].filter(t => !WATCH_TAGS.includes(t)).sort());
@@ -3261,14 +3092,13 @@ function renderCollection() {
   renderCollSortBar();
   renderTagFilterBar();
   const el = document.getElementById('watches-grid');
-  const base = ownerFilter === 'all' ? watches : watches.filter(w => w.owner === ownerFilter);
-  const visible = collTagFilter ? base.filter(w => (w.tags || []).includes(collTagFilter)) : base;
+  const visible = collTagFilter ? watches.filter(w => (w.tags || []).includes(collTagFilter)) : watches;
   if (visible.length === 0) {
     el.className = 'watches-grid';
     el.innerHTML = `<div style="grid-column:1/-1"><div class="empty">
       <div class="empty-icon">📦</div>
-      <div class="empty-text">${watches.length === 0 ? 'Your collection is empty' : collTagFilter ? `No ${collTagFilter} watches` : 'No watches for this owner'}</div>
-      <div class="empty-sub">${watches.length === 0 ? 'Add your first watch to get started' : collTagFilter ? `Clear the filter to see all watches` : 'Try selecting a different owner or add a watch'}</div>
+      <div class="empty-text">${watches.length === 0 ? 'Your collection is empty' : `No ${collTagFilter} watches`}</div>
+      <div class="empty-sub">${watches.length === 0 ? 'Add your first watch to get started' : 'Clear the filter to see all watches'}</div>
     </div></div>`;
     return;
   }
@@ -3308,7 +3138,6 @@ function renderCollection() {
             <div class="watch-card-brand">${w.brand}${w.ref ? ' · '+w.ref : ''}</div>
             ${watchCardTagsHTML(w)}
           </div>
-          ${w.owner ? `<span class="owner-badge">${w.owner}</span>` : ''}
         </div>
         <div class="wc-spacer"></div>
         <div class="watch-card-meta">
@@ -3417,7 +3246,7 @@ function renderCollectionList(visible, today) {
       <td style="text-align:right;color:var(--muted)">${cpwNum != null ? fmtMoney(cpwNum) : na}</td>
       <td style="text-align:right">${paid != null ? fmtMoney(paid) : na}</td>
       <td style="text-align:right">${market != null ? fmtMoney(market) : na}</td>
-      ${w.owner ? `<td style="text-align:right"><span class="owner-badge">${w.owner}</span></td>` : '<td></td>'}
+      <td></td>
       <td style="text-align:center">${quickBtn}</td>
     </tr>`;
   }).join('');
@@ -3706,7 +3535,6 @@ function openAddWatch() {
   document.getElementById('modal-title').textContent = 'Add Watch';
   document.getElementById('modal-delete-btn').style.display = 'none';
   buildBrandSelect();
-  buildOwnerSelect();
   renderTagPicker([], []);
   wEditStraps = [];
   renderStrapList();
@@ -3726,7 +3554,6 @@ function openEditWatch(id) {
   document.getElementById('modal-title').textContent    = 'Edit Watch';
   document.getElementById('modal-delete-btn').style.display = '';
   buildBrandSelect(w.brand);
-  buildOwnerSelect(w.owner || owners[0] || '');
   document.getElementById('w-name').value               = w.name;
   document.getElementById('w-ref').value                = w.ref || '';
   setPriceInput('w-price', w.price || '');
@@ -3999,7 +3826,6 @@ function saveWatch() {
   if (!brand || brand === '__new__') { toast('Please select or add a brand', 'error'); return; }
   if (!name) { toast('Model name is required', 'error'); return; }
 
-  const ownerVal  = document.getElementById('w-owner').value;
   const insStatus = document.getElementById('w-insurance').value;
   const wcUrl     = document.getElementById('w-wc-url').value.trim();
   const manualMp  = readPrice('w-manual-mp');
@@ -4011,7 +3837,6 @@ function saveWatch() {
     purchaseDate:   document.getElementById('w-date').value,
     url:            document.getElementById('w-url').value.trim(),
     color:          selColor,
-    owner:          ownerVal !== '__new__' ? ownerVal : (owners[0] || ''),
     insurance:      insStatus,
     insuredValue:   insStatus === 'insured'     ? readPrice('w-ins-value')                              : null,
     insuranceNotes: insStatus === 'not_insured' ? document.getElementById('w-ins-notes').value.trim() : '',
@@ -4096,10 +3921,6 @@ function filteredLogs() {
     const cs = cutoff.toISOString().split('T')[0];
     result = result.filter(l => l.date >= cs);
   }
-  if (ownerFilter !== 'all') {
-    const ownerIds = new Set(watches.filter(w => w.owner === ownerFilter).map(w => w.id));
-    result = result.filter(l => ownerIds.has(l.watchId));
-  }
   return result;
 }
 
@@ -4115,25 +3936,21 @@ function renderYearInReview() {
   const el = document.getElementById('year-in-review');
   if (!el) return;
   const yr  = String(yirYear);
-  const owner = ownerFilter;
   const curYear = new Date().getFullYear();
+  const watchIds = new Set(watches.map(w => w.id));
 
-  // Owner-scoped watches
-  const ownedWatches = owner === 'all' ? watches : watches.filter(w => w.owner === owner);
-  const ownedIds     = new Set(ownedWatches.map(w => w.id));
-
-  // Logs for this year, scoped to owned watches
-  const yLogs = logs.filter(l => l.date.startsWith(yr) && ownedIds.has(l.watchId));
+  // Logs for this year
+  const yLogs = logs.filter(l => l.date.startsWith(yr) && watchIds.has(l.watchId));
 
   // Total wears
   const totalWears = yLogs.length;
   // Unique days with at least one wear
   const wearDays = new Set(yLogs.map(l => l.date)).size;
-  // New watches added this year (by purchaseDate), scoped to owner
-  const newWatches = ownedWatches.filter(w => w.purchaseDate && w.purchaseDate.startsWith(yr)).length;
-  // Unworn watches (no log this year), scoped to owner
+  // New watches added this year (by purchaseDate)
+  const newWatches = watches.filter(w => w.purchaseDate && w.purchaseDate.startsWith(yr)).length;
+  // Unworn watches (no log this year)
   const wornSet = new Set(yLogs.map(l => l.watchId));
-  const unworn  = ownedWatches.filter(w => !wornSet.has(w.id)).length;
+  const unworn  = watches.filter(w => !wornSet.has(w.id)).length;
 
   // Most worn watch
   const wearMap = {};
@@ -4155,13 +3972,10 @@ function renderYearInReview() {
   const na = '<span style="color:var(--muted)">—</span>';
   const canPrev = yirYear > 2020;
   const canNext = yirYear < curYear;
-  const ownerTag = owner !== 'all'
-    ? `<span style="font-size:.72rem;font-weight:500;color:var(--muted);margin-left:.5rem;text-transform:none;letter-spacing:0">${owner}</span>`
-    : '';
 
   const yirHeader = `
     <div class="yir-header">
-      <div class="yir-title">📅 Year in Review${ownerTag}</div>
+      <div class="yir-title">📅 Year in Review</div>
       <div class="yir-year-nav">
         <button class="yir-year-btn" onclick="yirNav(-1)" ${canPrev?'':'disabled style="opacity:.3"'}>‹</button>
         <span class="yir-year-label">${yirYear}</span>
@@ -4171,7 +3985,7 @@ function renderYearInReview() {
 
   if (totalWears === 0 && newWatches === 0) {
     el.innerHTML = `<div class="yir-card">${yirHeader}
-      <div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No wear data for ${yirYear}${owner !== 'all' ? ' · '+owner : ''}.</div>
+      <div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No wear data for ${yirYear}.</div>
     </div>`;
     return;
   }
@@ -4231,18 +4045,14 @@ function renderMonthlyReview() {
   const MONTHS = ['January','February','March','April','May','June',
                   'July','August','September','October','November','December'];
   const DOW_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const owner = ownerFilter;
-  const ownedWatches = owner === 'all' ? watches : watches.filter(w => w.owner === owner);
-  const ownedIds = new Set(ownedWatches.map(w => w.id));
+  const watchIds = new Set(watches.map(w => w.id));
   const prefix = `${monthRevYear}-${String(monthRevMonth+1).padStart(2,'0')}`;
-  const mLogs = logs.filter(l => l.date.startsWith(prefix) && ownedIds.has(l.watchId));
+  const mLogs = logs.filter(l => l.date.startsWith(prefix) && watchIds.has(l.watchId));
   const now = new Date();
   const canPrev = !(monthRevYear === 2020 && monthRevMonth === 0);
   const canNext = !(monthRevYear === now.getFullYear() && monthRevMonth === now.getMonth());
-  const ownerTag = owner !== 'all'
-    ? `<span style="font-size:.72rem;font-weight:500;color:var(--muted);margin-left:.5rem;text-transform:none;letter-spacing:0">${owner}</span>` : '';
   const hdr = `<div class="yir-header">
-    <div class="yir-title">📆 Monthly Review${ownerTag}</div>
+    <div class="yir-title">📆 Monthly Review</div>
     <div class="yir-year-nav">
       <button class="yir-year-btn" onclick="monthRevNav(-1)" ${canPrev?'':'disabled style="opacity:.3"'}>‹</button>
       <span class="yir-year-label" style="min-width:7.5rem;font-size:.8rem">${MONTHS[monthRevMonth]} ${monthRevYear}</span>
@@ -4250,7 +4060,7 @@ function renderMonthlyReview() {
     </div>
   </div>`;
   if (!mLogs.length) {
-    el.innerHTML = `<div class="yir-card">${hdr}<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No wears logged in ${MONTHS[monthRevMonth]} ${monthRevYear}${owner !== 'all' ? ' · '+owner : ''}.</div></div>`;
+    el.innerHTML = `<div class="yir-card">${hdr}<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No wears logged in ${MONTHS[monthRevMonth]} ${monthRevYear}.</div></div>`;
     return;
   }
   const totalWears   = mLogs.length;
@@ -4289,14 +4099,10 @@ function renderMonthlyReview() {
 function renderDowReport() {
   const el = document.getElementById('dow-report');
   if (!el) return;
-  const owner   = ownerFilter;
-  const ownedIds = new Set((owner === 'all' ? watches : watches.filter(w => w.owner === owner)).map(w => w.id));
-  const fLogs = logs.filter(l => ownedIds.has(l.watchId));
+  const fLogs = logs;
   if (!fLogs.length) { el.innerHTML = ''; return; }
   const DOW_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const todayDow  = new Date().getDay();
-  const ownerTag  = owner !== 'all'
-    ? `<span style="font-size:.72rem;font-weight:500;color:var(--muted);margin-left:.5rem;text-transform:none;letter-spacing:0">${owner}</span>` : '';
   const cells = DOW_NAMES.map((dayName, dow) => {
     const dayLogs = fLogs.filter(l => new Date(l.date+'T12:00:00').getDay() === dow);
     if (!dayLogs.length) return { dayName, dow, w: null, cnt: 0, total: 0 };
@@ -4306,7 +4112,7 @@ function renderDowReport() {
   });
   el.innerHTML = `<div class="yir-card">
     <div class="yir-header" style="margin-bottom:.75rem">
-      <div class="yir-title">📅 By Day of Week${ownerTag}</div>
+      <div class="yir-title">📅 By Day of Week</div>
     </div>
     <div class="dow-grid">${cells.map(({ dayName, dow, w, cnt, total }) => {
       const thumb = w
@@ -4347,11 +4153,8 @@ async function fetchWeather() {
   renderWatchRecommendation();
 }
 
-function computeWatchRec(owner, skipSet) {
-  // owner: specific owner string — only consider their watches
-  // skipSet: optional Set of watchIds to exclude (for "try another")
-  const ownerWatches = watches.filter(w => w.owner === owner);
-  if (!ownerWatches.length) return null;
+function computeWatchRec(skipSet) {
+  if (!watches.length) return null;
   const now      = new Date();
   const today    = todayStr();
   const todayDOW = now.getDay();
@@ -4359,7 +4162,7 @@ function computeWatchRec(owner, skipSet) {
   const COOL = new Set(['#38bdf8','#818cf8','#a78bfa','#34d399','#4caf7d']);
   const DARK = new Set(['#94a3b8']);
   const isWeekend = todayDOW === 0 || todayDOW === 6;
-  const candidates = ownerWatches.map(w => {
+  const candidates = watches.map(w => {
     if (skipSet && skipSet.has(w.id)) return null; // skipped by user
     const wLogs = logs.filter(l => l.watchId === w.id);
     if (wLogs.some(l => l.date === today)) return null; // worn today → skip
@@ -4391,24 +4194,20 @@ function computeWatchRec(owner, skipSet) {
   return candidates[0];
 }
 
-function skipRec(owner) {
-  // Add the current top pick to skips, then re-render
-  if (!recSkips[owner]) recSkips[owner] = new Set();
-  const current = computeWatchRec(owner, recSkips[owner]);
-  if (current) recSkips[owner].add(current.w.id);
-  // If we've exhausted all candidates, clear skips and start fresh
-  const next = computeWatchRec(owner, recSkips[owner]);
-  if (!next) recSkips[owner] = new Set();
+function skipRec() {
+  const current = computeWatchRec(recSkips);
+  if (current) recSkips.add(current.w.id);
+  // If exhausted all candidates, clear skips and start fresh
+  if (!computeWatchRec(recSkips)) recSkips = new Set();
   renderWatchRecommendation();
 }
 
-function recCardHTML(owner, rec) {
+function recCardHTML(rec) {
   const DOW_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const todayDOW  = new Date().getDay();
-  const ownerLabel = `<span style="font-size:.68rem;font-weight:500;color:var(--muted);margin-left:.45rem;text-transform:none;letter-spacing:0">${owner}</span>`;
   if (!rec) {
     return `<div class="rec-card">
-      <div class="rec-label">⭐ Today's Pick${ownerLabel}</div>
+      <div class="rec-label">⭐ Today's Pick</div>
       <div style="color:var(--muted);font-size:.85rem">All watches worn today — great rotation!</div>
     </div>`;
   }
@@ -4436,7 +4235,7 @@ function recCardHTML(owner, rec) {
   if (weekendReason) explain += ` ${weekendReason}.`;
   const wornToday = logs.some(l => l.watchId === w.id && l.date === todayStr());
   return `<div class="rec-card">
-    <div class="rec-label">⭐ Today's Pick${ownerLabel}</div>
+    <div class="rec-label">⭐ Today's Pick</div>
     <div class="rec-body">
       <div class="rec-thumb">${thumb}</div>
       <div class="rec-info">
@@ -4448,7 +4247,7 @@ function recCardHTML(owner, rec) {
           ${wornToday
             ? `<span style="font-size:.78rem;color:var(--success)">✓ Already logged today</span>`
             : `<button class="btn-quicklog" onclick="openRecLog('${w.id}')">⌚ Log This Wear</button>`}
-          <button class="btn-rec-skip" onclick="skipRec('${owner}')" title="Try another suggestion">↻ Try another</button>
+          <button class="btn-rec-skip" onclick="skipRec()" title="Try another suggestion">↻ Try another</button>
         </div>
       </div>
     </div>
@@ -4458,11 +4257,8 @@ function recCardHTML(owner, rec) {
 function renderWatchRecommendation() {
   const el = document.getElementById('rec-container');
   if (!el) return;
-  const allOwners = [...new Set(watches.map(w => w.owner).filter(Boolean))].sort();
-  if (!allOwners.length) { el.innerHTML = ''; return; }
-  // If a specific owner is selected, show only their card; otherwise show one per owner
-  const targets = ownerFilter === 'all' ? allOwners : [ownerFilter];
-  el.innerHTML = targets.map(owner => recCardHTML(owner, computeWatchRec(owner, recSkips[owner]))).join('');
+  if (!watches.length) { el.innerHTML = ''; return; }
+  el.innerHTML = recCardHTML(computeWatchRec(recSkips));
 }
 
 function quickLogAndRefreshRec(watchId) {
@@ -4493,16 +4289,13 @@ function renderStats(fl) {
   const favId = Object.keys(wm).sort((a,b)=>wm[b]-wm[a])[0];
   const fav   = favId ? watches.find(x=>x.id===favId) : null;
 
-  // collection stats scoped to owner filter
-  const o = ownerFilter;
-  const ownedWatches = o === 'all' ? watches : watches.filter(w => w.owner === o);
-  const val       = ownedWatches.reduce((s,w)=>s+(w.price||0), 0);
+  const val = watches.reduce((s,w)=>s+(w.price||0), 0);
 
   el.innerHTML = `
     <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-lbl">Total Wears</div></div>
     <div class="stat-card"><div class="stat-val">${days}</div><div class="stat-lbl">Days Logged</div></div>
     <div class="stat-card"><div class="stat-val">${unique}</div><div class="stat-lbl">Watches Worn</div></div>
-    <div class="stat-card"><div class="stat-val">${ownedWatches.length}</div><div class="stat-lbl">In Collection</div></div>
+    <div class="stat-card"><div class="stat-val">${watches.length}</div><div class="stat-lbl">In Collection</div></div>
     <div class="stat-card">
       <div class="stat-lbl" style="margin-bottom:.3rem">Most Worn</div>
       <div class="stat-sub">${fav ? fav.brand+' '+fav.name : '—'}</div>
@@ -4588,9 +4381,7 @@ function renderChCollectionValue() {
   if (chCollValue) { chCollValue.destroy(); chCollValue = null; }
   const pts = [];
   let cum = 0;
-  const o = ownerFilter;
-  const watchPool = o === 'all' ? watches : watches.filter(w => w.owner === o);
-  const wWithDate = watchPool
+  const wWithDate = watches
     .filter(w => w.purchaseDate && w.price)
     .sort((a,b) => a.purchaseDate.localeCompare(b.purchaseDate));
   wWithDate.forEach(w => {
@@ -4651,12 +4442,10 @@ function renderChCollectionValue() {
 }
 
 function renderCollectionReport(fl) {
-  const o = ownerFilter;
   // Wears within the filtered period
   const wm = {};
   fl.forEach(l => { wm[l.watchId] = (wm[l.watchId]||0) + 1; });
-  // All owned watches (0-wear ones included)
-  const owned = o === 'all' ? watches : watches.filter(w => w.owner === o);
+  const owned = watches;
 
   // Build row data
   let rows = owned.map(w => {
@@ -5310,74 +5099,6 @@ function addNewBrand() {
 }
 
 // ══════════════════════════════════════════
-//  OWNER SELECT
-// ══════════════════════════════════════════
-function saveOwners() { localStorage.setItem(STORE_O, JSON.stringify(owners)); syncToServer(); }
-
-function buildOwnerSelect(selected = '') {
-  const sel = selected || owners[0] || '';
-  document.getElementById('w-owner').innerHTML = [
-    ...owners.map(o => `<option value="${o}" ${o === sel ? 'selected' : ''}>${o}</option>`),
-    `<option value="__new__">➕  Add new owner…</option>`
-  ].join('');
-  document.getElementById('owner-add-row').style.display = 'none';
-  document.getElementById('w-owner-new').value = '';
-}
-
-function onOwnerChange() {
-  const show = document.getElementById('w-owner').value === '__new__';
-  document.getElementById('owner-add-row').style.display = show ? 'flex' : 'none';
-  if (show) document.getElementById('w-owner-new').focus();
-}
-
-function addNewOwner() {
-  const input = document.getElementById('w-owner-new');
-  const name  = input.value.trim();
-  if (!name) { toast('Enter an owner name', 'error'); return; }
-  const normalised = name.charAt(0).toUpperCase() + name.slice(1);
-  if (owners.map(o => o.toLowerCase()).includes(normalised.toLowerCase())) {
-    toast('Owner already exists', 'error'); return;
-  }
-  owners.push(normalised);
-  saveOwners();
-  buildOwnerSelect(normalised);
-  buildReportOwnerSelect();
-  toast(`"${normalised}" added as owner!`);
-}
-
-// Global owner pills rendered in the header
-function renderOwnerPills() {
-  const bar  = document.getElementById('header-owner-pills');
-  if (!bar) return;
-  if (!owners.length) { bar.innerHTML = ''; return; }
-  const list = ['all', ...owners];
-  bar.innerHTML = list.map(o => {
-    const label  = o === 'all' ? 'All' : o;
-    const active = ownerFilter === o ? ' active' : '';
-    return `<button class="owner-hdr-pill${active}" onclick="setOwnerFilter('${o}')">${label}</button>`;
-  }).join('');
-}
-
-function setOwnerFilter(o) {
-  ownerFilter = o;
-  collTagFilter = null; // clear tag filter when switching owner
-  localStorage.setItem(STORE_OF, o);
-  renderOwnerPills();
-  // Re-render whichever page is currently active
-  const active = document.querySelector('.page.active');
-  if (!active) return;
-  const page = active.id.replace('page-', '');
-  if (page === 'collection') renderCollection();
-  else if (page === 'track')    renderTrack();
-  else if (page === 'reports')  renderReports();
-  else if (page === 'wishlist') renderWishlist();
-  else if (page === 'feed')     loadFeed();
-}
-
-// Legacy alias (called by addOwner)
-function buildReportOwnerSelect() { renderOwnerPills(); }
-
-// ══════════════════════════════════════════
 //  WISHLIST PAGE
 // ══════════════════════════════════════════
 const WL_BRAND_MAP = {
@@ -5400,16 +5121,12 @@ const WL_BRAND_MAP = {
 
 function renderWishlist() {
   const el = document.getElementById('wishlist-grid');
-  // Show items belonging to the selected owner OR unassigned items (no owner set yet)
-  // Only hide items explicitly assigned to a *different* owner
-  const visible = ownerFilter === 'all'
-    ? wishlist
-    : wishlist.filter(w => !w.owner || w.owner === ownerFilter);
+  const visible = wishlist;
   if (visible.length === 0) {
     el.className = '';
     el.innerHTML = `<div class="empty">
       <div class="empty-icon">🌟</div>
-      <div class="empty-text">${ownerFilter === 'all' ? 'Your wishlist is empty' : `No wishlist items for ${ownerFilter}`}</div>
+      <div class="empty-text">Your wishlist is empty</div>
       <div class="empty-sub">Add watches you'd love to own</div>
     </div>`;
     return;
@@ -5425,8 +5142,6 @@ function renderWishlist() {
       w.ref   ? w.ref : '',
       w.addedDate ? fmtDate(w.addedDate) : ''
     ].filter(Boolean).join(' · ');
-    const ownerTag = (ownerFilter === 'all' && w.owner)
-      ? `<span class="card-tag" style="margin-top:.3rem">${w.owner}</span>` : '';
     return `<div class="wl-card" data-id="${w.id}" draggable="true"
       ondragstart="wlDragStart(event,'${w.id}')"
       ondragover="wlDragOver(event)"
@@ -5439,7 +5154,6 @@ function renderWishlist() {
         <div class="wl-name">${w.name}</div>
         <div class="wl-brand">${w.brand}</div>
         ${meta ? `<div class="wl-meta">${meta}</div>` : ''}
-        ${ownerTag}
       </div>
       <div class="wl-actions">
         ${w.url ? `<a href="${w.url}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm" style="text-decoration:none;" title="Open listing">🔗</a>` : ''}
@@ -5499,7 +5213,6 @@ function openAddWishlist() {
   document.getElementById('wl-date').value = todayStr();
   document.getElementById('wl-modal-title').textContent = 'Add to Wishlist';
   buildWlBrandSelect();
-  buildWlOwnerSelect(ownerFilter !== 'all' ? ownerFilter : owners[0] || '');
   updateWlUrlBtn();
   document.getElementById('wishlist-modal').classList.remove('hidden');
 }
@@ -5511,7 +5224,6 @@ function openEditWishlist(id) {
   wlPendingImage = null;
   document.getElementById('wl-modal-title').textContent = 'Edit Wishlist Item';
   buildWlBrandSelect(w.brand);
-  buildWlOwnerSelect(w.owner || owners[0] || '');
   document.getElementById('wl-name').value  = w.name;
   document.getElementById('wl-ref').value   = w.ref   || '';
   setPriceInput('wl-price', w.price || '');
@@ -5530,7 +5242,6 @@ function saveWishlistItem() {
   if (!name) { toast('Model name is required', 'error'); return; }
   const data = {
     brand, name,
-    owner:     document.getElementById('wl-owner').value,
     ref:       document.getElementById('wl-ref').value.trim(),
     price:     readPrice('wl-price'),
     addedDate: document.getElementById('wl-date').value,
@@ -5569,11 +5280,6 @@ function confirmDeleteWishlist() {
 }
 
 // ── Wishlist brand select (mirrors collection brand select) ─────────────────
-function buildWlOwnerSelect(selected = '') {
-  document.getElementById('wl-owner').innerHTML =
-    owners.map(o => `<option value="${o}" ${o === selected ? 'selected' : ''}>${o}</option>`).join('');
-}
-
 function buildWlBrandSelect(selected = '') {
   const sorted = [...brands].sort((a, b) => a.localeCompare(b));
   document.getElementById('wl-brand').innerHTML = [
@@ -6046,7 +5752,7 @@ function syncToServer() {
   fetch('/api/save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ watches, logs, owners, wishlist, brands, seeds }),
+    body: JSON.stringify({ watches, logs, wishlist, brands, seeds }),
   }).catch(() => {}); // silent — localStorage is always the backup
 }
 
@@ -6060,7 +5766,6 @@ async function initServerData() {
       // Server has data — use it as source of truth
       watches  = d.watches;
       logs     = d.logs     || [];
-      owners   = d.owners   || owners;
       wishlist = d.wishlist || [];
       brands   = d.brands   || brands;
       // Restore seed-guard flags so seed functions don't re-run in this browser
@@ -6068,11 +5773,9 @@ async function initServerData() {
       // Mirror to localStorage as a crash-safe local cache
       localStorage.setItem(STORE_W,  JSON.stringify(watches));
       localStorage.setItem(STORE_L,  JSON.stringify(logs));
-      localStorage.setItem(STORE_O,  JSON.stringify(owners));
       localStorage.setItem(STORE_WL, JSON.stringify(wishlist));
       localStorage.setItem(STORE_B,  JSON.stringify(brands));
       initOEMStraps();    // add OEM straps to any watches that don't have them yet
-      renderOwnerPills(); // re-populate pills with server owners
       renderCollection(); // re-render with fresh server data
     }
     // Show the green dot in the header
@@ -6089,7 +5792,7 @@ async function initServerData() {
 function exportData() {
   const payload = {
     exported: new Date().toISOString(),
-    watches, logs, owners, wishlist, brands,
+    watches, logs, wishlist, brands,
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
@@ -6117,10 +5820,9 @@ function importData() {
         }
         watches  = d.watches;
         logs     = d.logs;
-        owners   = d.owners   || owners;
         wishlist = d.wishlist || [];
         brands   = d.brands   || brands;
-        save(); saveWishlist(); saveOwners(); saveBrands();
+        save(); saveWishlist(); saveBrands();
         renderTrack();
         toast(`Imported ${d.watches.length} watches · ${d.logs.length} logs`);
       } catch { toast('Could not read file', 'error'); }
@@ -6190,8 +5892,6 @@ document.getElementById('help-ver').textContent = 'v' + APP_VERSION;
 
 function initApp() {
   document.getElementById('track-date').value = todayStr();
-  if (ownerFilter !== 'all' && !owners.includes(ownerFilter)) ownerFilter = 'all';
-  renderOwnerPills();
   initOEMStraps();
   renderCollection();
   fetchWeather();
