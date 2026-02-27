@@ -39,6 +39,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { overflow-x: hidden; }
 
     :root {
       --bg:        #0b0b10;
@@ -977,8 +978,17 @@
       /* Track form */
       .track-form { max-width: 100%; }
 
-      /* Save bar: normal flow on mobile so it doesn't overlap chips above */
-      .save-bar { position: static; }
+      /* Save bar: fixed above tab bar so it's always visible */
+      .save-bar {
+        position: fixed;
+        left: 0; right: 0;
+        bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+        z-index: 200;
+        padding: .55rem .85rem;
+        background: linear-gradient(transparent, var(--bg) 30%);
+      }
+      /* Pad bottom of form so last input isn't hidden behind the fixed button */
+      .track-form { padding-bottom: 80px; }
     }
 
     /* Very small screens: hide nav labels */
@@ -1862,6 +1872,35 @@
     <div class="modal-actions" style="margin-top:1rem;">
       <button class="btn btn-ghost" onclick="closeProfileModal()">Close</button>
       <button class="btn btn-ghost" style="color:var(--danger);" onclick="closeProfileModal();signOut();">↩ Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ TODAY'S PICK — LOG MODAL ════ -->
+<div id="rec-log-modal" class="overlay hidden">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-title" id="rec-log-title">⌚ Log This Wear</div>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:1.1rem;">Today's date will be recorded automatically.</p>
+
+    <div class="form-group" id="rec-log-strap-group" style="display:none;">
+      <label>Strap / Bracelet</label>
+      <div class="chips" id="rec-log-strap-chips"></div>
+    </div>
+
+    <div class="form-group">
+      <label>Occasion</label>
+      <div class="chips" id="rec-log-uc-chips">
+        <div class="chip selected" data-ruc="unspecified" onclick="selRecLogUC('unspecified')">— Unspecified</div>
+        <div class="chip" data-ruc="work"     onclick="selRecLogUC('work')">💼 Work</div>
+        <div class="chip" data-ruc="leisure"  onclick="selRecLogUC('leisure')">🛋️ Leisure</div>
+        <div class="chip" data-ruc="dinner"   onclick="selRecLogUC('dinner')">🍽️ Dinner</div>
+        <div class="chip" data-ruc="travel"   onclick="selRecLogUC('travel')">✈️ Travel</div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="confirmRecLog()">✓ Log Wear</button>
+      <button class="btn btn-ghost"   onclick="closeRecLog()">Cancel</button>
     </div>
   </div>
 </div>
@@ -3810,7 +3849,7 @@ function watchCardTagsHTML(w) {
   }).join('')}</div>`;
 }
 
-// ── Quick-log (wear today) ────────────────────────────────────────────────────
+// ── Quick-log (wear today) — used from Collection cards ──────────────────────
 function quickLog(watchId) {
   const today = todayStr();
   const alreadyWorn = logs.some(l => l.watchId === watchId && l.date === today);
@@ -3820,6 +3859,92 @@ function quickLog(watchId) {
   if (document.getElementById('page-collection').classList.contains('active')) renderCollection();
   dismissReminder();
   toast('Wear logged!');
+}
+
+// ── Today's Pick log modal ────────────────────────────────────────────────────
+let recLogWatchId = null;
+let recLogUseCase = 'unspecified';
+let recLogStrapId = null;
+
+function openRecLog(watchId) {
+  const w = watches.find(w => w.id === watchId);
+  if (!w) return;
+  recLogWatchId = watchId;
+  recLogUseCase = 'unspecified';
+  recLogStrapId = null;
+
+  // Title
+  document.getElementById('rec-log-title').textContent = `⌚ ${w.brand} ${w.name}`;
+
+  // Strap chips
+  const straps = (w.straps || []).filter(s => !s.archived);
+  const strapGroup = document.getElementById('rec-log-strap-group');
+  if (straps.length > 1) {
+    const onWrist = straps.find(s => s.isOn) || straps[0];
+    recLogStrapId = onWrist.id;
+    renderRecLogStrapChips(w);
+    strapGroup.style.display = '';
+  } else {
+    recLogStrapId = straps[0]?.id || null;
+    strapGroup.style.display = 'none';
+  }
+
+  // Reset use case chips to unspecified
+  document.querySelectorAll('#rec-log-uc-chips [data-ruc]').forEach(c => {
+    c.classList.toggle('selected', c.dataset.ruc === 'unspecified');
+  });
+
+  document.getElementById('rec-log-modal').classList.remove('hidden');
+}
+
+function renderRecLogStrapChips(w) {
+  const straps = (w.straps || []).filter(s => !s.archived);
+  document.getElementById('rec-log-strap-chips').innerHTML = straps.map(s =>
+    `<div class="chip${s.id === recLogStrapId ? ' selected' : ''}" onclick="selRecLogStrap('${s.id}')">${s.name}</div>`
+  ).join('');
+}
+
+function selRecLogStrap(strapId) {
+  recLogStrapId = strapId;
+  const w = watches.find(w => w.id === recLogWatchId);
+  if (w) renderRecLogStrapChips(w);
+}
+
+function selRecLogUC(uc) {
+  recLogUseCase = uc;
+  document.querySelectorAll('#rec-log-uc-chips [data-ruc]').forEach(c => {
+    c.classList.toggle('selected', c.dataset.ruc === uc);
+  });
+}
+
+function closeRecLog() {
+  document.getElementById('rec-log-modal').classList.add('hidden');
+}
+
+function confirmRecLog() {
+  if (!recLogWatchId) return;
+  const today = todayStr();
+  if (logs.some(l => l.watchId === recLogWatchId && l.date === today)) {
+    toast('Already logged today!'); closeRecLog(); return;
+  }
+  const entry = {
+    id: uid(), watchId: recLogWatchId,
+    date: today, useCase: recLogUseCase,
+    notes: '', source: 'recommendation',
+  };
+  if (recLogStrapId) {
+    entry.strapId = recLogStrapId;
+    // Update which strap is "on wrist"
+    const wIdx = watches.findIndex(w => w.id === recLogWatchId);
+    if (wIdx >= 0) watches[wIdx].straps = watches[wIdx].straps.map(s => ({ ...s, isOn: s.id === recLogStrapId }));
+  }
+  logs.push(entry);
+  save();
+  closeRecLog();
+  renderWatchRecommendation();
+  if (document.getElementById('page-collection').classList.contains('active')) renderCollection();
+  dismissReminder();
+  toast('Wear logged! ⌚');
 }
 
 // ── Market price card row ────────────────────────────────────────────────────
@@ -4296,7 +4421,7 @@ function recCardHTML(owner, rec) {
         <div style="display:flex;gap:.55rem;align-items:center;margin-top:.65rem;flex-wrap:wrap;">
           ${wornToday
             ? `<span style="font-size:.78rem;color:var(--success)">✓ Already logged today</span>`
-            : `<button class="btn-quicklog" onclick="quickLogAndRefreshRec('${w.id}')">⌚ Log This Wear</button>`}
+            : `<button class="btn-quicklog" onclick="openRecLog('${w.id}')">⌚ Log This Wear</button>`}
           <button class="btn-rec-skip" onclick="skipRec('${owner}')" title="Try another suggestion">↻ Try another</button>
         </div>
       </div>
