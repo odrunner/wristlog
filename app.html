@@ -1740,6 +1740,19 @@
       </div>
     </div>
 
+    <!-- Photo -->
+    <div class="form-group">
+      <label>Photo</label>
+      <div id="wl-img-preview" style="display:none;align-items:center;gap:.65rem;">
+        <img id="wl-img-el" src="" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;gap:.35rem;">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="pickWlModalImage()">↺ Replace</button>
+          <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="clearWlModalImg()">✕ Remove</button>
+        </div>
+      </div>
+      <button type="button" id="wl-img-upload-btn" class="btn btn-ghost btn-sm" onclick="pickWlModalImage()">📷 Upload photo</button>
+    </div>
+
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="saveWishlistItem()">Save</button>
       <button class="btn btn-ghost"   onclick="closeWishlistModal()">Cancel</button>
@@ -2528,7 +2541,8 @@ let wPendingImage    = null;  // image fetched during Fetch, applied on Save
 let modalFetchedPrice = null; // market price fetched during modal session, applied on Save
 let editingWlId    = null;
 let deletingWlId   = null;
-let wlPendingImage = null;   // base64 image fetched during Fetch, applied on Save
+let wlPendingImage = null;   // base64 image fetched/picked during modal session, applied on Save
+let wlRemoveImage  = false;  // true when user explicitly removes the image in the modal
 
 let chUsecase = null, chCollValue = null;
 let collSort     = 'wears-desc';  // unified collection report sort: field-dir
@@ -5209,11 +5223,13 @@ function wlDragEnd(e) {
 function openAddWishlist() {
   editingWlId    = null;
   wlPendingImage = null;
+  wlRemoveImage  = false;
   ['wl-name','wl-ref','wl-price','wl-url'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('wl-date').value = todayStr();
   document.getElementById('wl-modal-title').textContent = 'Add to Wishlist';
   buildWlBrandSelect();
   updateWlUrlBtn();
+  renderWlModalImg(null);
   document.getElementById('wishlist-modal').classList.remove('hidden');
 }
 
@@ -5222,6 +5238,7 @@ function openEditWishlist(id) {
   if (!w) return;
   editingWlId    = id;
   wlPendingImage = null;
+  wlRemoveImage  = false;
   document.getElementById('wl-modal-title').textContent = 'Edit Wishlist Item';
   buildWlBrandSelect(w.brand);
   document.getElementById('wl-name').value  = w.name;
@@ -5230,6 +5247,7 @@ function openEditWishlist(id) {
   document.getElementById('wl-date').value  = w.addedDate || '';
   document.getElementById('wl-url').value   = w.url   || '';
   updateWlUrlBtn();
+  renderWlModalImg(w.image || null);
   document.getElementById('wishlist-modal').classList.remove('hidden');
 }
 
@@ -5251,12 +5269,15 @@ function saveWishlistItem() {
   wlPendingImage = null;
   if (editingWlId) {
     const idx = wishlist.findIndex(x => x.id === editingWlId);
-    wishlist[idx] = { ...wishlist[idx], ...data };
+    const updated = { ...wishlist[idx], ...data };
+    if (wlRemoveImage) delete updated.image;
+    wishlist[idx] = updated;
     toast('Wishlist item updated!');
   } else {
     wishlist.push({ id: 'wl_' + uid(), ...data });
     toast('Added to wishlist!');
   }
+  wlRemoveImage = false;
   saveWishlist();
   closeWishlistModal();
   renderWishlist();
@@ -5448,6 +5469,7 @@ async function fetchWishlistDetails() {
     }
 
     const filled = [detectedBrand && 'brand', name && 'name', ref && 'ref', price && 'price', wlPendingImage && 'photo'].filter(Boolean);
+    if (wlPendingImage) { wlRemoveImage = false; renderWlModalImg(); }
     toast(`Fetched: ${filled.join(', ') || 'no data found'}`);
 
   } catch (e) {
@@ -5620,6 +5642,63 @@ async function fetchWishlistImage(itemId) {
   }
 }
 
+// ── Wishlist modal image helpers ─────────────────────────────────────────────
+function renderWlModalImg(existingSrc) {
+  // If called without arg, derive existingSrc from the item being edited
+  if (existingSrc === undefined) {
+    const w = editingWlId ? wishlist.find(x => x.id === editingWlId) : null;
+    existingSrc = w?.image || null;
+  }
+  // If user explicitly removed the image, show nothing regardless of existing
+  const src = wlRemoveImage ? null : (wlPendingImage || existingSrc);
+  const preview   = document.getElementById('wl-img-preview');
+  const uploadBtn = document.getElementById('wl-img-upload-btn');
+  if (!preview || !uploadBtn) return;
+  if (src) {
+    document.getElementById('wl-img-el').src = src;
+    preview.style.display   = 'flex';
+    uploadBtn.style.display = 'none';
+  } else {
+    preview.style.display   = 'none';
+    uploadBtn.style.display = '';
+  }
+}
+
+async function pickWlModalImage() {
+  if (navigator.clipboard && navigator.clipboard.read) {
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imageType = item.types.find(t => t.startsWith('image/'));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          wlPendingImage = await blobToResizedBase64(blob);
+          wlRemoveImage  = false;
+          renderWlModalImg(); return;
+        }
+      }
+    } catch (_) {}
+  }
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*';
+  input.onchange = async () => {
+    if (!input.files[0]) return;
+    try {
+      wlPendingImage = await blobToResizedBase64(input.files[0]);
+      wlRemoveImage  = false;
+      renderWlModalImg();
+    } catch { toast('Could not read image file', 'error'); }
+  };
+  input.click();
+}
+
+function clearWlModalImg() {
+  wlPendingImage = null;
+  wlRemoveImage  = true;
+  renderWlModalImg();
+}
+
+// ── Wishlist card image helpers ──────────────────────────────────────────────
 async function pasteWishlistImage(itemId) {
   if (navigator.clipboard && navigator.clipboard.read) {
     try {
