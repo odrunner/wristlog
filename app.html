@@ -995,8 +995,15 @@
       main { padding: 1.1rem .85rem 86px; }
 
       /* Modals: bottom-sheet style */
-      .overlay { align-items: flex-end; padding: 0; padding-top: 2.5rem; }
+      .overlay { align-items: flex-end; padding: 0; padding-top: 2.5rem; overflow-x: hidden; }
       .modal { border-radius: 16px 16px 0 0; max-height: 88vh; max-width: 100%; padding: 1.4rem 1rem 1.2rem; }
+
+      /* Prevent horizontal overflow in modal rows */
+      .url-row { flex-wrap: wrap; }
+      .wc-url-row { flex-wrap: wrap; }
+      .wc-url-row input { width: 100%; flex: unset; }
+      .modal-actions { flex-wrap: wrap; gap: .5rem; }
+      .modal-actions > div { flex-wrap: wrap; }
 
       /* Prevent iOS zoom on focus */
       input[type=text], input[type=number], input[type=date],
