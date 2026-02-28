@@ -964,7 +964,7 @@
       /* Wishlist cards: wrap actions onto their own row */
       .wl-card { flex-wrap: wrap; padding: .75rem .9rem; gap: .5rem .75rem; }
       .wl-card-img, .wl-card-avatar { width: 52px; height: 52px; font-size: .95rem; }
-      .drag-handle { display: none; } /* not usable on touch */
+      .drag-handle { touch-action: none; } /* keep visible; touch drag handled in JS */
       .wl-actions { flex-basis: 100%; justify-content: flex-start; margin-top: .1rem; }
     }
 
@@ -5277,7 +5277,7 @@ function renderWishlist() {
       ondragover="wlDragOver(event)"
       ondrop="wlDrop(event,'${w.id}')"
       ondragend="wlDragEnd(event)">
-      <span class="drag-handle" title="Drag to reorder">⠿</span>
+      <span class="drag-handle" title="Drag to reorder" ontouchstart="wlTouchStart(event,'${w.id}')">⠿</span>
       <div class="wl-rank ${rankCls}">#${i+1}</div>
       ${thumb}
       <div class="wl-info">
@@ -5333,6 +5333,90 @@ function wlDragEnd(e) {
     c.classList.remove('drag-over');
     c.classList.remove('dragging');
   });
+}
+
+// ── Wishlist touch drag-and-drop (mobile) ────────────────────────────────────
+let wlTouchId     = null;
+let wlTouchGhost  = null;
+let wlTouchOffset = 0;   // finger Y offset from card top, keeps grab point stable
+
+function wlTouchStart(e, id) {
+  const card = e.currentTarget.closest('.wl-card');
+  if (!card) return;
+  e.preventDefault();              // prevent page scroll while dragging
+  wlTouchId = id;
+  card.classList.add('dragging');
+
+  const touch = e.touches[0];
+  const rect  = card.getBoundingClientRect();
+  wlTouchOffset = touch.clientY - rect.top;
+
+  // Clone the card as a floating ghost that follows the finger
+  wlTouchGhost = card.cloneNode(true);
+  Object.assign(wlTouchGhost.style, {
+    position:      'fixed',
+    left:          rect.left  + 'px',
+    top:           rect.top   + 'px',
+    width:         rect.width + 'px',
+    zIndex:        '9999',
+    opacity:       '0.9',
+    pointerEvents: 'none',
+    boxShadow:     '0 8px 32px rgba(0,0,0,.55)',
+    transform:     'scale(1.03)',
+    transition:    'none',
+    borderRadius:  '10px',
+  });
+  document.body.appendChild(wlTouchGhost);
+
+  document.addEventListener('touchmove',   wlTouchMove, { passive: false });
+  document.addEventListener('touchend',    wlTouchEnd,  { once: true });
+  document.addEventListener('touchcancel', wlTouchEnd,  { once: true });
+}
+
+function wlTouchMove(e) {
+  if (!wlTouchId || !wlTouchGhost) return;
+  e.preventDefault();
+
+  const touch = e.touches[0];
+  // Move ghost with the finger
+  wlTouchGhost.style.top = (touch.clientY - wlTouchOffset) + 'px';
+
+  // Find the card currently under the finger (hide ghost briefly so it doesn't block)
+  wlTouchGhost.style.visibility = 'hidden';
+  const under = document.elementFromPoint(touch.clientX, touch.clientY);
+  wlTouchGhost.style.visibility = '';
+
+  document.querySelectorAll('.wl-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+  const targetCard = under?.closest('.wl-card');
+  if (targetCard && targetCard.dataset.id !== wlTouchId) {
+    targetCard.classList.add('drag-over');
+  }
+}
+
+function wlTouchEnd() {
+  document.removeEventListener('touchmove',   wlTouchMove);
+  document.removeEventListener('touchcancel', wlTouchEnd);
+
+  const targetCard = document.querySelector('.wl-card.drag-over');
+  const targetId   = targetCard?.dataset.id;
+
+  // Clean up visual state
+  document.querySelectorAll('.wl-card').forEach(c => c.classList.remove('dragging', 'drag-over'));
+  wlTouchGhost?.remove();
+  wlTouchGhost = null;
+
+  // Reorder if dropped on a different card
+  if (targetId && wlTouchId && targetId !== wlTouchId) {
+    const fromIdx = wishlist.findIndex(x => x.id === wlTouchId);
+    const toIdx   = wishlist.findIndex(x => x.id === targetId);
+    if (fromIdx >= 0 && toIdx >= 0) {
+      const [item] = wishlist.splice(fromIdx, 1);
+      wishlist.splice(toIdx, 0, item);
+      saveWishlist();
+      renderWishlist();
+    }
+  }
+  wlTouchId = null;
 }
 
 // ── Wishlist CRUD ───────────────────────────────────────────────────────────
