@@ -2917,7 +2917,7 @@ async function loadAndRenderProfile(userId) {
   // Wishlist (respects wishlist_visibility setting)
   let wishlistItems = [];
   const wlVis = profile.wishlist_visibility || 'private';
-  const showWishlist = isOwn || wlVis === 'public' || (wlVis === 'friends_only' && isFriend);
+  const showWishlist = isOwn || wlVis === 'public' || (wlVis === 'friends' && isFriend);
   if (showWishlist) {
     const { data: wlData } = await db.from('wishlist')
       .select('id, brand, name, ref, price, image, color')
@@ -3016,11 +3016,9 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         <div style="font-size:.73rem;color:var(--muted);margin-top:.3rem;">New posts will default to this setting. You can change each post individually.</div>
       </div>
       <div class="form-group"><label>Wishlist Visibility</label>
-        <select id="pp-wishlist-visibility">
-          <option value="private"      ${wlVis === 'private'      ? 'selected' : ''}>Private — only you</option>
-          <option value="friends_only" ${wlVis === 'friends_only' ? 'selected' : ''}>Friends Only</option>
-          <option value="public"       ${wlVis === 'public'       ? 'selected' : ''}>Public — anyone can see</option>
-        </select>
+        <div class="chips" id="pp-wishlist-vis-chips">
+          ${visChipsHtml('pp-wishlist-vis-chips', wlVis || 'private')}
+        </div>
       </div>
       <div style="display:flex;gap:.65rem;margin-top:.1rem;">
         <button class="btn btn-primary" id="profile-save-btn" style="flex:1;">Save Profile</button>
@@ -3075,7 +3073,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     if (wishlistItems.length === 0) {
       wishlistHtml = `
         <div class="profile-page-card">
-          <div class="profile-page-section-title">Wishlist <span style="font-size:.7rem;color:var(--muted);font-weight:400;">(${wlVis === 'public' ? 'Public' : wlVis === 'friends_only' ? 'Friends Only' : 'Private'})</span></div>
+          <div class="profile-page-section-title">Wishlist <span style="font-size:.7rem;color:var(--muted);font-weight:400;">(${wlVis === 'public' ? 'Public' : wlVis === 'friends' ? 'Friends Only' : 'Private'})</span></div>
           <div style="color:var(--muted);font-size:.84rem;">Your wishlist is empty — add watches in the Wishlist tab.</div>
         </div>`;
     } else {
@@ -3089,7 +3087,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           <div class="showcase-name">${escHtml(w.name||'')}</div>
         </div>`;
       }).join('');
-      const visLabel = isOwn ? ` <span style="font-size:.7rem;color:var(--muted);font-weight:400;">(${wlVis === 'public' ? 'Public' : wlVis === 'friends_only' ? 'Friends Only' : 'Private'})</span>` : '';
+      const visLabel = isOwn ? ` <span style="font-size:.7rem;color:var(--muted);font-weight:400;">(${wlVis === 'public' ? 'Public' : wlVis === 'friends' ? 'Friends Only' : 'Private'})</span>` : '';
       wishlistHtml = `
         <div class="profile-page-card">
           <div class="profile-page-section-title">Wishlist${visLabel}</div>
@@ -3175,7 +3173,7 @@ async function saveProfileFromPage() {
 
   const defaultVis = getVisChip('pp-default-vis-chips');
   setDefaultVis(defaultVis);
-  const wishlistVis = document.getElementById('pp-wishlist-visibility')?.value || 'private';
+  const wishlistVis = getVisChip('pp-wishlist-vis-chips') || 'private';
 
   const updateData = { display_name: name, bio, profile_privacy: priv, wishlist_visibility: wishlistVis };
   if (usernameChanged) updateData.username = rawUsername;
