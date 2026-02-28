@@ -3360,7 +3360,6 @@ function renderCollectionList(visible, today) {
       <td style="text-align:right;color:var(--muted)">${cpwNum != null ? fmtMoney(cpwNum) : na}</td>
       <td style="text-align:right">${paid != null ? fmtMoney(paid) : na}</td>
       <td style="text-align:right">${market != null ? fmtMoney(market) : na}</td>
-      <td></td>
       <td style="text-align:center">${quickBtn}</td>
     </tr>`;
   }).join('');
@@ -3373,7 +3372,6 @@ function renderCollectionList(visible, today) {
       ${th('cpu',    'Cost/Wear')}
       ${th('paid',   'Paid')}
       ${th('market', 'Market')}
-      <th style="text-align:right">Owner</th>
       <th style="text-align:center">Log</th>
     </tr></thead>
     <tbody>${rows}</tbody>
