@@ -1,7 +1,7 @@
 // WristLog — Service Worker
 // Enables "Add to Home Screen" (PWA) and offline fallback
 
-const CACHE = 'wristlog-v5';
+const CACHE = 'wristlog-v6';
 const PRECACHE = ['/wristlog/app.html', '/wristlog/manifest.json', '/wristlog/icon.svg'];
 
 self.addEventListener('install', e => {
@@ -23,8 +23,13 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Never intercept API calls — always go to the network
-  if (e.request.url.includes('/api/')) return;
+  const url = new URL(e.request.url);
+
+  // Only cache same-origin requests (odrunner.github.io).
+  // Everything else — Supabase API/auth, CDN scripts, Google OAuth —
+  // must always go to the network. Caching Supabase responses causes
+  // stale data and broken auth after page refresh.
+  if (url.hostname !== self.location.hostname) return;
 
   e.respondWith(
     caches.match(e.request).then(cached => {

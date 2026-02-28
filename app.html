@@ -1996,12 +1996,15 @@ async function signInWithGoogle() {
 }
 
 async function signOut() {
-  await db.auth.signOut();
+  try { await db.auth.signOut(); } catch(e) { console.warn('[WristLog] signOut error (ignored):', e.message); }
   watches = []; logs = []; wishlist = []; brands = [...DEFAULT_BRANDS];
   eloRatings = {};
   currentUser = null;
+  clearUserState();
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('signout-btn').style.display = 'none';
+  const profileBtn = document.getElementById('profile-btn');
+  if (profileBtn) profileBtn.style.display = 'none';
 }
 
 // ══════════════════════════════════════════
