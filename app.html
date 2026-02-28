@@ -136,7 +136,7 @@
     #auth-screen {
       position: fixed; inset: 0; z-index: 500;
       background: var(--bg);
-      display: none; /* hidden by default — shown only when confirmed no session */
+      display: flex; /* shown by default — JS hides immediately for returning users */
       align-items: center; justify-content: center;
       padding: 1.5rem;
     }
@@ -1951,6 +1951,24 @@
 <div id="toast" class="toast"></div>
 
 <script>
+// ══════════════════════════════════════════
+//  FAST SESSION PRE-CHECK
+//  Synchronously hide auth screen if a Supabase token exists in localStorage.
+//  Runs before any async code so returning users never see the login screen flash.
+// ══════════════════════════════════════════
+(function() {
+  try {
+    const key = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+    if (key) {
+      const val = JSON.parse(localStorage.getItem(key));
+      if (val?.access_token || val?.session?.access_token) {
+        const el = document.getElementById('auth-screen');
+        if (el) el.style.display = 'none';
+      }
+    }
+  } catch(_) {}
+})();
+
 // ══════════════════════════════════════════
 //  SUPABASE
 // ══════════════════════════════════════════
