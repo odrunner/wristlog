@@ -4192,6 +4192,7 @@ function openAddWatch() {
   wEditStraps = [];
   wEditingStrapIdx = null;
   renderStrapList();
+  hideAddStrapRow();
   updateUrlBtn();
   updateWcUrlBtn();
   // All sections collapsed for a fresh add
@@ -4245,6 +4246,7 @@ function openEditWatch(id) {
   wEditStraps = JSON.parse(JSON.stringify(w.straps || []));
   wEditingStrapIdx = null;
   renderStrapList();
+  hideAddStrapRow();
   updateUrlBtn();
   updateWcUrlBtn();
   // Auto-open sections that have data; collapse empty ones
