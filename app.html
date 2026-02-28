@@ -4256,7 +4256,7 @@ function renderDiscoverUsers() {
 async function renderFollowingList() {
   const el = document.getElementById('following-list');
   if (!el) return;
-  const ids = [...following];
+  const ids = [...new Set([...following, ...friends])];
   if (!ids.length) {
     el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">You\'re not following anyone yet.</div>';
     return;
