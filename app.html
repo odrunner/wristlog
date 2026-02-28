@@ -2299,12 +2299,24 @@
 
 <script>
 // ══════════════════════════════════════════
-//  FAST SESSION PRE-CHECK
-//  GIS flow never redirects back to the app with tokens in the URL,
-//  so we only need to check localStorage for an existing session.
+//  FAST SESSION PRE-CHECK + REDIRECT ERROR HANDLER
+//  Primary flow is GIS popup (no URL tokens). Fallback still uses a redirect,
+//  so we check for ?error= in case that fires and fails.
 // ══════════════════════════════════════════
 (function() {
   try {
+    // If fallback redirect returned an error, show it and keep auth screen visible.
+    const params = new URLSearchParams(window.location.search);
+    const oauthErr = params.get('error_description') || params.get('error');
+    if (oauthErr) {
+      window.history.replaceState(null, '', window.location.pathname);
+      const el = document.getElementById('auth-error');
+      if (el) {
+        el.textContent = 'Sign-in failed — please try again.';
+        el.style.display = 'block';
+      }
+      return;
+    }
     // Synchronously hide auth screen for returning users who already have a session.
     const hasSession = Object.keys(localStorage).some(k => {
       if (!k.startsWith('sb-') || !k.endsWith('-auth-token')) return false;
@@ -2355,18 +2367,28 @@ async function devLogin() {
 
 // ── Google Identity Services (GIS) ────────────────────────────────────────────
 // Primary sign-in path: GIS popup → ID token → db.auth.signInWithIdToken
-// This avoids OAuth redirects and Supabase server-side state entirely.
-// Fallback: direct authorize redirect (shown only if GIS script fails to load).
+// Nonce is required by Supabase's Google provider (prevents ID-token replay attacks).
+// We generate a random nonce, pass the SHA-256 hash to GIS, and the raw value to Supabase.
+
+// Generate raw nonce synchronously; hash it async (resolves in < 1 ms)
+const _gsiNonce = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+  .map(b => b.toString(16).padStart(2, '0')).join('');
+const _gsiHashedNonceP = crypto.subtle
+  .digest('SHA-256', new TextEncoder().encode(_gsiNonce))
+  .then(buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''));
 
 let _gsiReady = false;
 
-function _initGSI() {
+async function _initGSI() {
   if (typeof google === 'undefined' || !google?.accounts?.id || _gsiReady) return;
   _gsiReady = true;
+
+  const hashedNonce = await _gsiHashedNonceP;
 
   google.accounts.id.initialize({
     client_id: GOOGLE_CLIENT_ID,
     callback: _handleGoogleToken,
+    nonce: hashedNonce,          // SHA-256 hash — Google embeds this in the ID token
     auto_select: false,
     cancel_on_tap_outside: true,
     context: 'use',
@@ -2390,22 +2412,26 @@ function _initGSI() {
 }
 
 async function _handleGoogleToken(response) {
-  const { error } = await db.auth.signInWithIdToken({
-    provider: 'google',
-    token: response.credential,
-  });
-  if (error) showAuthError(error.message);
+  try {
+    const { error } = await db.auth.signInWithIdToken({
+      provider: 'google',
+      token: response.credential,
+      nonce: _gsiNonce,          // raw nonce — Supabase hashes and compares to the token claim
+    });
+    if (error) showAuthError('Sign-in failed: ' + error.message);
+  } catch(e) {
+    showAuthError('Sign-in error: ' + (e.message || 'please try again'));
+  }
 }
 
-// Fallback: Supabase OAuth redirect — used only if GIS doesn't load.
-// Still subject to bad_oauth_state on some Supabase projects; GIS is preferred.
+// Fallback: Supabase OAuth redirect — used only if GIS script fails to load within 3 s.
 function signInWithGoogle() {
   const redirectTo = encodeURIComponent('https://odrunner.github.io/wristlog/app.html');
   window.location.href =
     `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${redirectTo}`;
 }
 
-// Poll until GIS script loads (it's async; usually < 500 ms)
+// Poll until GIS script loads (it's async; usually < 500 ms on first load)
 let _gsiPollCount = 0;
 function _pollGSI() {
   if (_gsiReady) return;
@@ -2415,7 +2441,7 @@ function _pollGSI() {
     _gsiPollCount++;
     setTimeout(_pollGSI, 200);
   }
-  // After 3 s, GIS failed to load — fallback button stays visible
+  // After 3 s with no GIS, fallback button stays visible
 }
 _pollGSI();
 
