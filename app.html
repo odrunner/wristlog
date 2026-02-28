@@ -1504,7 +1504,6 @@
                 <tr>
                   <th>Date</th>
                   <th>Watch</th>
-                  <th>Use Case</th>
                   <th></th>
                 </tr>
               </thead>
@@ -3903,7 +3902,7 @@ function renderTrackHistory() {
   if (!tbody) return;
   const sorted = [...logs].sort((a, b) => b.date.localeCompare(a.date));
   if (!sorted.length) {
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:2rem">No wear logs yet</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:2rem">No wear logs yet</td></tr>`;
     return;
   }
   tbody.innerHTML = sorted.map(log => {
@@ -3920,10 +3919,6 @@ function renderTrackHistory() {
         <div style="display:flex;align-items:center;gap:.5rem">
           ${thumb}<span>${w.brand} ${w.name}</span>
         </div>
-      </td>
-      <td>
-        <span class="uc-badge uc-${log.useCase}">${log.useCase}</span>
-        ${strapLabel}
       </td>
       <td style="white-space:nowrap">
         <button class="btn-icon" title="Edit" onclick="openEditLog('${log.id}')">✎</button>
