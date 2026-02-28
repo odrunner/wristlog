@@ -4565,8 +4565,16 @@ const INLINE_FIELDS = [
   { id: 'w-date',  fmt: v => v ? fmtDate(v) : null },
 ];
 
-function setupInlineEdits() {
-  INLINE_FIELDS.forEach(({ id, fmt }) => {
+const WL_INLINE_FIELDS = [
+  { id: 'wl-name',  fmt: v => v || null },
+  { id: 'wl-ref',   fmt: v => v || null },
+  { id: 'wl-price', fmt: v => { const n = parseFloat((v||'').toString().replace(/,/g,'')); return n ? fmtMoney(n) : null; } },
+  { id: 'wl-date',  fmt: v => v ? fmtDate(v) : null },
+];
+
+function setupInlineEdits(fields) {
+  fields = fields || INLINE_FIELDS;
+  fields.forEach(({ id, fmt }) => {
     const input = document.getElementById(id);
     if (!input) return;
     // Remove any previous inline-val
@@ -4578,18 +4586,19 @@ function setupInlineEdits() {
     const span = document.createElement('span');
     span.className = 'inline-val';
     span.innerHTML = display ? `<span>${escHtml(display)}</span>` : `<span class="empty">—</span>`;
-    span.onclick = () => activateInline(id);
+    span.onclick = () => activateInline(id, fields);
     input.parentElement.insertBefore(span, input);
     input.style.display = 'none';
 
-    const onBlur = () => { setTimeout(() => { if (document.activeElement !== input) deactivateInline(id); }, 150); };
+    const onBlur = () => { setTimeout(() => { if (document.activeElement !== input) deactivateInline(id, fields); }, 150); };
     input._inlineBlur = onBlur;
     input.addEventListener('blur', onBlur);
   });
 }
 
-function clearInlineEdits() {
-  INLINE_FIELDS.forEach(({ id }) => {
+function clearInlineEdits(fields) {
+  fields = fields || INLINE_FIELDS;
+  fields.forEach(({ id }) => {
     const input = document.getElementById(id);
     if (!input) return;
     const span = input.parentElement.querySelector('.inline-val');
@@ -4599,7 +4608,7 @@ function clearInlineEdits() {
   });
 }
 
-function activateInline(id) {
+function activateInline(id, fields) {
   const input = document.getElementById(id);
   const span = input.parentElement.querySelector('.inline-val');
   if (span) span.style.display = 'none';
@@ -4607,8 +4616,9 @@ function activateInline(id) {
   input.focus();
 }
 
-function deactivateInline(id) {
-  const field = INLINE_FIELDS.find(f => f.id === id);
+function deactivateInline(id, fields) {
+  fields = fields || INLINE_FIELDS;
+  const field = fields.find(f => f.id === id);
   const input = document.getElementById(id);
   const span = input.parentElement.querySelector('.inline-val');
   if (!span || !field) return;
@@ -6754,6 +6764,7 @@ function openAddWishlist() {
   buildWlBrandSelect();
   updateWlUrlBtn();
   renderWlModalImg(null);
+  clearInlineEdits(WL_INLINE_FIELDS);
   document.getElementById('wishlist-modal').classList.remove('hidden');
 }
 
@@ -6772,10 +6783,11 @@ function openEditWishlist(id) {
   document.getElementById('wl-url').value   = w.url   || '';
   updateWlUrlBtn();
   renderWlModalImg(w.image || null);
+  setupInlineEdits(WL_INLINE_FIELDS);
   document.getElementById('wishlist-modal').classList.remove('hidden');
 }
 
-function closeWishlistModal() { document.getElementById('wishlist-modal').classList.add('hidden'); }
+function closeWishlistModal() { clearInlineEdits(WL_INLINE_FIELDS); document.getElementById('wishlist-modal').classList.add('hidden'); }
 
 function saveWishlistItem() {
   const brand = document.getElementById('wl-brand').value;
