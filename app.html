@@ -2369,15 +2369,14 @@ async function devLogin() {
   if (error) showAuthError('Dev login failed: ' + error.message);
 }
 
-async function signInWithGoogle() {
-  const { error } = await db.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: 'https://odrunner.github.io/wristlog/app.html',
-      queryParams: { prompt: 'select_account' }, // always show Google account picker
-    }
-  });
-  if (error) showAuthError(error.message);
+function signInWithGoogle() {
+  // Bypass db.auth.signInWithOAuth entirely to avoid Supabase JS PKCE state
+  // being stored in localStorage and then lost/mismatched between tab navigations.
+  // Redirecting straight to the Supabase authorize endpoint means Supabase manages
+  // state server-side — nothing to lose on the client.
+  const redirectTo = encodeURIComponent('https://odrunner.github.io/wristlog/app.html');
+  window.location.href =
+    `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${redirectTo}&prompt=select_account`;
 }
 
 async function signOut() {
