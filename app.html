@@ -2870,7 +2870,7 @@ async function loadAndRenderProfile(userId) {
   const isOwn = userId === currentUser?.id;
 
   const { data: profile } = await db.from('profiles')
-    .select('id, username, display_name, bio, avatar_url, collection_visibility, profile_privacy')
+    .select('id, username, display_name, bio, avatar_url, collection_visibility, profile_privacy, wishlist_visibility')
     .eq('id', userId).single();
   if (!profile) {
     el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Profile not found.</div>';
@@ -2914,7 +2914,18 @@ async function loadAndRenderProfile(userId) {
     showcase = data || [];
   }
 
-  el.innerHTML = renderProfilePageHTML(profile, isOwn, isFollowing, logCount || 0, recentLogs || [], showcase, visibility, privacy, isFriend);
+  // Wishlist (respects wishlist_visibility setting)
+  let wishlistItems = [];
+  const wlVis = profile.wishlist_visibility || 'private';
+  const showWishlist = isOwn || wlVis === 'public' || (wlVis === 'friends_only' && isFriend);
+  if (showWishlist) {
+    const { data: wlData } = await db.from('wishlist')
+      .select('id, brand, name, ref, price, image, color')
+      .eq('user_id', userId);
+    wishlistItems = wlData || [];
+  }
+
+  el.innerHTML = renderProfilePageHTML(profile, isOwn, isFollowing, logCount || 0, recentLogs || [], showcase, visibility, privacy, isFriend, wishlistItems);
 
   if (isOwn) {
     document.getElementById('profile-save-btn')?.addEventListener('click', saveProfileFromPage);
@@ -2939,8 +2950,9 @@ function renderPrivateProfileHTML(profile, privacy, userId) {
     </div>`;
 }
 
-function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs, showcase, visibility, privacy, isFriend) {
+function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs, showcase, visibility, privacy, isFriend, wishlistItems = []) {
   const heroInitials = profileInitials(profile);
+  const wlVis = profile.wishlist_visibility || 'private';
   const name     = escHtml(profile.display_name || profile.username || '—');
   const uname    = profile.username ? '@' + escHtml(profile.username) : '';
   const bio      = profile.bio ? `<div class="profile-bio-text">${escHtml(profile.bio)}</div>` : '';
@@ -3003,6 +3015,13 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         </div>
         <div style="font-size:.73rem;color:var(--muted);margin-top:.3rem;">New posts will default to this setting. You can change each post individually.</div>
       </div>
+      <div class="form-group"><label>Wishlist Visibility</label>
+        <select id="pp-wishlist-visibility">
+          <option value="private"      ${wlVis === 'private'      ? 'selected' : ''}>Private — only you</option>
+          <option value="friends_only" ${wlVis === 'friends_only' ? 'selected' : ''}>Friends Only</option>
+          <option value="public"       ${wlVis === 'public'       ? 'selected' : ''}>Public — anyone can see</option>
+        </select>
+      </div>
       <div style="display:flex;gap:.65rem;margin-top:.1rem;">
         <button class="btn btn-primary" id="profile-save-btn" style="flex:1;">Save Profile</button>
         <button class="btn btn-ghost" style="color:var(--danger);white-space:nowrap;" onclick="goBackFromProfile();signOut();">↩ Sign Out</button>
@@ -3050,6 +3069,35 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       </div>`;
   }
 
+  // Wishlist section
+  let wishlistHtml = '';
+  if (isOwn || wishlistItems.length > 0) {
+    if (wishlistItems.length === 0) {
+      wishlistHtml = `
+        <div class="profile-page-card">
+          <div class="profile-page-section-title">Wishlist <span style="font-size:.7rem;color:var(--muted);font-weight:400;">(${wlVis === 'public' ? 'Public' : wlVis === 'friends_only' ? 'Friends Only' : 'Private'})</span></div>
+          <div style="color:var(--muted);font-size:.84rem;">Your wishlist is empty — add watches in the Wishlist tab.</div>
+        </div>`;
+    } else {
+      const wlCards = wishlistItems.slice(0, 6).map(w => {
+        const thumb = w.image
+          ? `<img src="${escHtml(w.image)}" class="showcase-card-img" alt="" onerror="this.style.display='none'">`
+          : `<div class="showcase-card-avatar" style="background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand||'', w.name||'')}</div>`;
+        return `<div class="showcase-card">
+          ${thumb}
+          <div class="showcase-brand">${escHtml(w.brand||'')}</div>
+          <div class="showcase-name">${escHtml(w.name||'')}</div>
+        </div>`;
+      }).join('');
+      const visLabel = isOwn ? ` <span style="font-size:.7rem;color:var(--muted);font-weight:400;">(${wlVis === 'public' ? 'Public' : wlVis === 'friends_only' ? 'Friends Only' : 'Private'})</span>` : '';
+      wishlistHtml = `
+        <div class="profile-page-card">
+          <div class="profile-page-section-title">Wishlist${visLabel}</div>
+          <div class="showcase-grid">${wlCards}</div>
+        </div>`;
+    }
+  }
+
   // Recent logs mini-feed
   let logsHtml = '';
   if (recentLogs.length > 0) {
@@ -3090,6 +3138,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     ${statsHtml}
     ${editHtml}
     ${showcaseHtml}
+    ${wishlistHtml}
     ${logsHtml}`;
 }
 
@@ -3126,8 +3175,9 @@ async function saveProfileFromPage() {
 
   const defaultVis = getVisChip('pp-default-vis-chips');
   setDefaultVis(defaultVis);
+  const wishlistVis = document.getElementById('pp-wishlist-visibility')?.value || 'private';
 
-  const updateData = { display_name: name, bio, profile_privacy: priv };
+  const updateData = { display_name: name, bio, profile_privacy: priv, wishlist_visibility: wishlistVis };
   if (usernameChanged) updateData.username = rawUsername;
 
   const { error } = await db.from('profiles')
