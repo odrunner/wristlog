@@ -37,8 +37,6 @@
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- Google Identity Services — delivers ID token directly to JS (no OAuth redirect, no Supabase state) -->
-  <script src="https://accounts.google.com/gsi/client" async></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     /* Prevent the header (not body) from creating horizontal scroll */
@@ -1305,11 +1303,7 @@
 
     <div id="auth-error" class="auth-error"></div>
 
-    <!-- GIS renders its button here once the script loads; falls back to custom button below -->
-    <div id="gsi-btn" style="display:none;justify-content:center;margin-bottom:.5rem;"></div>
-
-    <!-- Fallback custom button — shown only if GIS fails to load within 3 s -->
-    <button id="google-fallback-btn" class="btn-google" onclick="signInWithGoogle()">
+    <button class="btn-google" onclick="signInWithGoogle()">
       <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
         <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
         <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
@@ -1409,23 +1403,77 @@
   <!-- ════ TRACK PAGE ════ -->
   <div id="page-track" class="page">
     <div id="rec-container"></div>
+    <div class="track-grid">
 
-    <div class="page-header" style="margin-bottom:1rem;">
-      <div style="font-size:.95rem;font-weight:600;">Tap a watch to log a wear</div>
-    </div>
+      <div class="track-form">
+        <div class="card">
+          <div class="card-label">Date</div>
+          <input type="date" id="track-date" oninput="onDateChange()">
+          <div id="date-log-indicator" style="margin-top:.5rem;font-size:.78rem;color:var(--success);min-height:1.1em;"></div>
+        </div>
 
-    <div id="watch-selector" style="margin-bottom:1.75rem;"></div>
+        <div class="card">
+          <div class="card-label">Select Watch</div>
+          <div id="watch-selector"></div>
+        </div>
 
-    <div class="card">
-      <div class="card-label">Wear History</div>
-      <div class="table-wrap" style="max-height:360px;">
-        <table>
-          <thead>
-            <tr><th>Date</th><th>Watch</th><th>Occasion</th><th></th></tr>
-          </thead>
-          <tbody id="track-history-tbody"></tbody>
-        </table>
+        <div class="card" id="strap-selector-card" style="display:none;">
+          <div class="card-label">Strap / Bracelet</div>
+          <div class="chips" id="strap-chips"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Use Case</div>
+          <div class="chips" id="usecase-chips">
+            <div class="chip selected" data-uc="unspecified">— Unspecified</div>
+            <div class="chip" data-uc="work">💼 Work</div>
+            <div class="chip" data-uc="leisure">🛋️ Leisure</div>
+            <div class="chip" data-uc="dinner">🍽️ Dinner</div>
+            <div class="chip" data-uc="travel">✈️ Travel</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Notes <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
+          <textarea id="track-notes" placeholder="Any occasion, outfit, thoughts…"></textarea>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Photo <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
+          <div id="track-photo-area" class="log-photo-area" onclick="document.getElementById('track-photo-input').click()">
+            <div id="track-photo-placeholder" class="log-photo-placeholder">📷 Tap to add a photo</div>
+            <img id="track-photo-preview" class="log-photo-preview" style="display:none;" alt="">
+            <button type="button" id="track-photo-clear" class="log-photo-clear" style="display:none;"
+              onclick="event.stopPropagation();clearTrackPhoto()">✕</button>
+          </div>
+          <input type="file" id="track-photo-input" accept="image/*" capture="environment"
+            style="display:none" onchange="handleTrackPhoto(this)">
+        </div>
+
+        <div class="save-bar">
+          <button class="btn btn-primary" id="save-btn" onclick="saveLog()">Log This Wear</button>
+        </div>
       </div>
+
+      <div style="display:flex;flex-direction:column;gap:1.25rem;">
+        <div class="card">
+          <div class="card-label">Wear History</div>
+          <div class="table-wrap" style="max-height:360px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Watch</th>
+                  <th>Use Case</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="track-history-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -2206,63 +2254,6 @@
 </div>
 
 <!-- ════ EDIT LOG MODAL ════ -->
-<!-- ════ LOG WEAR MODAL ════ -->
-<div id="log-wear-modal" class="overlay hidden">
-  <div class="modal" style="max-width:420px;">
-    <!-- Watch header -->
-    <div style="display:flex;align-items:center;gap:.85rem;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--border);">
-      <div id="lw-watch-thumb"></div>
-      <div>
-        <div id="lw-watch-brand" style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;"></div>
-        <div id="lw-watch-name" style="font-size:1.1rem;font-weight:700;"></div>
-      </div>
-    </div>
-    <div class="form-group">
-      <label>Date</label>
-      <input type="date" id="lw-date">
-    </div>
-    <div class="form-group">
-      <label>Occasion</label>
-      <div class="chips" id="lw-uc-chips">
-        <div class="chip selected" data-uc="unspecified" onclick="selLwUC('unspecified')">— Any</div>
-        <div class="chip" data-uc="work"    onclick="selLwUC('work')">💼 Work</div>
-        <div class="chip" data-uc="leisure" onclick="selLwUC('leisure')">🛋️ Leisure</div>
-        <div class="chip" data-uc="dinner"  onclick="selLwUC('dinner')">🍽️ Dinner</div>
-        <div class="chip" data-uc="travel"  onclick="selLwUC('travel')">✈️ Travel</div>
-      </div>
-    </div>
-    <div class="form-group" id="lw-strap-group" style="display:none;">
-      <label>Strap</label>
-      <div class="chips" id="lw-strap-chips"></div>
-    </div>
-    <div class="form-group">
-      <label>Caption <span style="font-weight:400;color:var(--muted);">(shown on feed)</span></label>
-      <textarea id="lw-caption" rows="2" placeholder="What's the occasion?" style="resize:none;"></textarea>
-    </div>
-    <div class="form-group">
-      <label>Private notes <span style="font-weight:400;color:var(--muted);">(just for you)</span></label>
-      <textarea id="lw-private" rows="2" placeholder="Condition, outfit, thoughts…" style="resize:none;"></textarea>
-    </div>
-    <div class="form-group">
-      <label style="font-size:.78rem;color:var(--muted);">Who can see this?</label>
-      <div class="chips" id="lw-vis-chips"></div>
-    </div>
-    <div class="form-group">
-      <div id="lw-photo-area" class="log-photo-area" onclick="document.getElementById('lw-photo-input').click()">
-        <div id="lw-photo-placeholder" class="log-photo-placeholder">📷 Add a photo (optional)</div>
-        <img id="lw-photo-preview" class="log-photo-preview" style="display:none;" alt="">
-        <button type="button" id="lw-photo-clear" class="log-photo-clear" style="display:none;"
-          onclick="event.stopPropagation();clearLwPhoto()">✕</button>
-      </div>
-      <input type="file" id="lw-photo-input" accept="image/*" style="display:none" onchange="handleLwPhoto(this)">
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-primary" onclick="saveLogFromModal()">Log Wear</button>
-      <button class="btn btn-ghost"   onclick="closeLogWearModal()">Cancel</button>
-    </div>
-  </div>
-</div>
-
 <div id="edit-log-modal" class="overlay hidden">
   <div class="modal" style="max-width:380px;">
     <div class="modal-title">✏️ Edit Log Entry</div>
@@ -2299,53 +2290,45 @@
 
 <script>
 // ══════════════════════════════════════════
-//  FAST SESSION PRE-CHECK + REDIRECT ERROR HANDLER
-//  Primary flow is GIS popup (no URL tokens). Fallback still uses a redirect,
-//  so we check for ?error= in case that fires and fails.
+//  FAST SESSION PRE-CHECK + OAUTH ERROR HANDLER
 // ══════════════════════════════════════════
 (function() {
   try {
-    // If fallback redirect returned an error, show it and keep auth screen visible.
+    // If Supabase redirected back with ?error=... (e.g. bad_oauth_state),
+    // show the error to the user and clean the URL — don't try to hide the auth screen.
     const params = new URLSearchParams(window.location.search);
     const oauthErr = params.get('error_description') || params.get('error');
     if (oauthErr) {
       window.history.replaceState(null, '', window.location.pathname);
       const el = document.getElementById('auth-error');
-      if (el) {
-        el.textContent = 'Sign-in failed — please try again.';
-        el.style.display = 'block';
-      }
-      return;
+      if (el) { el.textContent = oauthErr.replace(/\+/g, ' '); el.style.display = 'block'; }
+      return; // leave auth screen visible so user can try again
     }
-    // Synchronously hide auth screen for returning users who already have a session.
-    const hasSession = Object.keys(localStorage).some(k => {
-      if (!k.startsWith('sb-') || !k.endsWith('-auth-token')) return false;
-      try {
-        const val = JSON.parse(localStorage.getItem(k));
-        return !!(val?.access_token || val?.session?.access_token);
-      } catch { return false; }
-    });
-    if (hasSession) {
-      const el = document.getElementById('auth-screen');
-      if (el) el.style.display = 'none';
+    // Synchronously hide auth screen for returning users who already have a session,
+    // so they never see a flash of the login screen on refresh.
+    const key = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+    if (key) {
+      const val = JSON.parse(localStorage.getItem(key));
+      if (val?.access_token || val?.session?.access_token) {
+        const el = document.getElementById('auth-screen');
+        if (el) el.style.display = 'none';
+      }
     }
   } catch(_) {}
 })();
 
 // ══════════════════════════════════════════
 //  SUPABASE
-//  Auth uses Google Identity Services (GIS) id-token flow — no OAuth redirect,
-//  no server-side state, no PKCE. GIS delivers an ID token to JS directly via
-//  a popup, which we exchange with Supabase via signInWithIdToken.
+//  Use implicit flow — correct for a static GitHub Pages app (no server).
+//  PKCE (the newer default) requires the OAuth state to survive the redirect,
+//  which is unreliable in this environment and causes bad_oauth_state errors.
 // ══════════════════════════════════════════
 const SUPABASE_URL = 'https://xnzweevzrojmouzhpwzv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs';
-const GOOGLE_CLIENT_ID = '947103258481-ssae8fdvogpoqratf5h5h3gsdbhq1138.apps.googleusercontent.com';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
-    storage: window.localStorage,
-    detectSessionInUrl: false, // GIS flow never puts tokens in the URL
-    persistSession: true,
+    flowType: 'implicit',      // token returned in URL hash — no server-side exchange needed
+    detectSessionInUrl: true,  // auto-process #access_token on redirect
   }
 });
 
@@ -2365,85 +2348,16 @@ async function devLogin() {
   if (error) showAuthError('Dev login failed: ' + error.message);
 }
 
-// ── Google Identity Services (GIS) ────────────────────────────────────────────
-// Primary sign-in path: GIS popup → ID token → db.auth.signInWithIdToken
-// Nonce is required by Supabase's Google provider (prevents ID-token replay attacks).
-// We generate a random nonce, pass the SHA-256 hash to GIS, and the raw value to Supabase.
-
-// Generate raw nonce synchronously; hash it async (resolves in < 1 ms)
-const _gsiNonce = Array.from(crypto.getRandomValues(new Uint8Array(32)))
-  .map(b => b.toString(16).padStart(2, '0')).join('');
-const _gsiHashedNonceP = crypto.subtle
-  .digest('SHA-256', new TextEncoder().encode(_gsiNonce))
-  .then(buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''));
-
-let _gsiReady = false;
-
-async function _initGSI() {
-  if (typeof google === 'undefined' || !google?.accounts?.id || _gsiReady) return;
-  _gsiReady = true;
-
-  const hashedNonce = await _gsiHashedNonceP;
-
-  google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
-    callback: _handleGoogleToken,
-    nonce: hashedNonce,          // SHA-256 hash — Google embeds this in the ID token
-    auto_select: false,
-    cancel_on_tap_outside: true,
-    context: 'use',
+async function signInWithGoogle() {
+  const { error } = await db.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: 'https://odrunner.github.io/wristlog/app.html',
+      queryParams: { prompt: 'select_account' }, // always show Google account picker
+    }
   });
-
-  const gsiDiv = document.getElementById('gsi-btn');
-  if (gsiDiv) {
-    google.accounts.id.renderButton(gsiDiv, {
-      type: 'standard',
-      theme: 'filled_black',
-      size: 'large',
-      text: 'continue_with',
-      shape: 'pill',
-      width: 264,
-    });
-    gsiDiv.style.display = 'flex';
-    // Hide the fallback redirect button now that GIS is ready
-    const fb = document.getElementById('google-fallback-btn');
-    if (fb) fb.style.display = 'none';
-  }
+  if (error) showAuthError(error.message);
 }
-
-async function _handleGoogleToken(response) {
-  try {
-    const { error } = await db.auth.signInWithIdToken({
-      provider: 'google',
-      token: response.credential,
-      nonce: _gsiNonce,          // raw nonce — Supabase hashes and compares to the token claim
-    });
-    if (error) showAuthError('Sign-in failed: ' + error.message);
-  } catch(e) {
-    showAuthError('Sign-in error: ' + (e.message || 'please try again'));
-  }
-}
-
-// Fallback: Supabase OAuth redirect — used only if GIS script fails to load within 3 s.
-function signInWithGoogle() {
-  const redirectTo = encodeURIComponent('https://odrunner.github.io/wristlog/app.html');
-  window.location.href =
-    `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${redirectTo}`;
-}
-
-// Poll until GIS script loads (it's async; usually < 500 ms on first load)
-let _gsiPollCount = 0;
-function _pollGSI() {
-  if (_gsiReady) return;
-  if (typeof google !== 'undefined' && google?.accounts?.id) {
-    _initGSI();
-  } else if (_gsiPollCount < 15) { // up to 3 seconds
-    _gsiPollCount++;
-    setTimeout(_pollGSI, 200);
-  }
-  // After 3 s with no GIS, fallback button stays visible
-}
-_pollGSI();
 
 async function signOut() {
   try { await db.auth.signOut(); } catch(e) { console.warn('[WristLog] signOut error (ignored):', e.message); }
@@ -2453,8 +2367,6 @@ async function signOut() {
   document.getElementById('signout-btn').style.display = 'none';
   const profileBtn = document.getElementById('profile-btn');
   if (profileBtn) profileBtn.style.display = 'none';
-  const bellBtn = document.getElementById('bell-btn');
-  if (bellBtn) bellBtn.style.display = 'none';
 }
 
 // ══════════════════════════════════════════
@@ -4068,48 +3980,94 @@ function setToday() {
   onDateChange();
 }
 
-function onDateChange() {}  // no-op: date input removed from track page
+function onDateChange() {
+  renderWornNotice();
+  renderWatchSelector();
+}
 
 function renderTrack() {
   renderWatchRecommendation();
+  renderWornNotice();
   renderWatchSelector();
+  renderStrapSelector();
   renderTrackHistory();
 }
 
-function renderWornNotice() {} // no-op: replaced by worn-today badge on watch items
+function renderWornNotice() {
+  const date = document.getElementById('track-date').value;
+  const ind  = document.getElementById('date-log-indicator');
+  if (!ind) return;
+  if (!date) { ind.textContent = ''; return; }
+  const worn = logs.filter(l => l.date === date);
+  if (worn.length === 0) { ind.textContent = ''; return; }
+  const names = worn.map(l => {
+    const w = watches.find(x => x.id === l.watchId);
+    return w ? w.name : '';
+  }).filter(Boolean);
+  ind.textContent = `✓ ${names.join(', ')} logged`;
+}
 
 function renderWatchSelector() {
-  const el      = document.getElementById('watch-selector');
-  if (!el) return;
-  const today   = todayStr();
+  const el   = document.getElementById('watch-selector');
+  const date = document.getElementById('track-date').value;
   if (watches.length === 0) {
     el.innerHTML = `<div class="empty"><div class="empty-icon">⌚</div>
       <div class="empty-text">No watches yet</div>
       <div class="empty-sub">Add watches in the Collection tab</div></div>`;
     return;
   }
-  const wornToday = new Set(logs.filter(l => l.date === today).map(l => l.watchId));
+  const wornToday = new Set(logs.filter(l => l.date === date).map(l => l.watchId));
   el.innerHTML = `<div class="watch-list">${
     watches.map(w => {
       const cnt    = logs.filter(l => l.watchId === w.id).length;
+      const isSel  = selWatchId === w.id;
       const isWorn = wornToday.has(w.id);
       const thumb = w.image
-        ? `<img src="${escHtml(w.image)}" alt="" style="width:42px;height:42px;border-radius:10px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-        : `<div class="avatar" style="width:42px;height:42px;border-radius:10px;background:${w.color||'#c9a84c'}">${initials(w.brand,w.name)}</div>`;
-      return `<div class="watch-option${isWorn ? ' worn-today' : ''}" onclick="selWatch('${w.id}')">
+        ? `<img src="${w.image}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
+        : `<div class="avatar" style="width:36px;height:36px;background:${w.color}">${initials(w.brand,w.name)}</div>`;
+      return `<div class="watch-option ${isSel?'selected':''} ${isWorn&&!isSel?'worn-today':''}"
+                   onclick="selWatch('${w.id}')">
         ${thumb}
         <div style="flex:1;min-width:0;">
-          <div class="watch-info-name">${escHtml(w.brand||'')} ${escHtml(w.name||'')}</div>
+          <div class="watch-info-name">${w.brand} ${w.name}</div>
           <div class="watch-info-sub">${cnt} wear${cnt!==1?'s':''}</div>
         </div>
-        ${isWorn ? `<span class="watch-worn-badge">✓ worn</span>` : '<span style="font-size:.78rem;color:var(--muted);">Tap to log →</span>'}
+        ${isWorn ? `<span class="watch-worn-badge">worn</span>` : ''}
       </div>`;
     }).join('')
   }</div>`;
 }
 
 function selWatch(id) {
-  openLogWearModal(id);
+  selWatchId = id;
+  const w = watches.find(x => x.id === id);
+  const onWrist = (w?.straps || []).find(s => s.isOn);
+  selStrapId = onWrist?.id || w?.straps?.[0]?.id || null;
+  renderWatchSelector();
+  renderStrapSelector();
+  requestAnimationFrame(() => {
+    const hasMultiStraps = (w?.straps || []).length >= 2;
+    if (hasMultiStraps) {
+      // Scroll page so strap selector is visible (scrollIntoView unreliable; use scrollTo)
+      const strapCard = document.getElementById('strap-selector-card');
+      if (strapCard) {
+        const absTop    = strapCard.getBoundingClientRect().top + window.scrollY;
+        const saveBarH  = document.querySelector('.save-bar')?.offsetHeight || 0;
+        // Align card bottom above the sticky save-bar with a small gap
+        window.scrollTo({ top: Math.max(0, absTop - window.innerHeight + strapCard.offsetHeight + saveBarH + 16), behavior: 'smooth' });
+      }
+    } else {
+      // Scroll selected watch into view within the .watch-list scroll container
+      const list = document.querySelector('#watch-selector .watch-list');
+      const el   = document.querySelector('#watch-selector .watch-option.selected');
+      if (list && el) {
+        const elTop   = el.getBoundingClientRect().top;
+        const listTop = list.getBoundingClientRect().top;
+        const target  = list.scrollTop + (elTop - listTop) - (list.clientHeight / 2) + (el.clientHeight / 2);
+        list.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+      }
+    }
+  });
 }
 
 function renderTrackHistory() {
@@ -4147,136 +4105,56 @@ function renderTrackHistory() {
   }).join('');
 }
 
-// ── Log Wear Modal ─────────────────────────────────────────────────────────
-let lwWatchId  = null;
-let lwStrapId  = null;
-let lwUseCase  = 'unspecified';
-let lwPhoto    = null;
-
-function openLogWearModal(watchId) {
-  const w = watches.find(x => x.id === watchId);
-  if (!w) return;
-  lwWatchId = watchId;
-  lwUseCase = 'unspecified';
-  lwPhoto   = null;
-
-  // Watch header
-  const thumb = w.image
-    ? `<img src="${escHtml(w.image)}" style="width:52px;height:52px;border-radius:10px;object-fit:cover;" onerror="this.style.display='none'">`
-    : `<div class="avatar" style="width:52px;height:52px;border-radius:10px;font-size:.95rem;background:${w.color||'#c9a84c'}">${initials(w.brand||'',w.name||'')}</div>`;
-  document.getElementById('lw-watch-thumb').innerHTML = thumb;
-  document.getElementById('lw-watch-brand').textContent = w.brand || '';
-  document.getElementById('lw-watch-name').textContent  = w.name  || '';
-
-  // Date — today by default
-  document.getElementById('lw-date').value = todayStr();
-
-  // Reset use case chips
-  document.querySelectorAll('#lw-uc-chips .chip')
-    .forEach(c => c.classList.toggle('selected', c.dataset.uc === 'unspecified'));
-
-  // Strap selector
-  const straps  = w.straps || [];
-  const onWrist = straps.find(s => s.isOn);
-  lwStrapId = onWrist?.id || straps[0]?.id || null;
-  const strapGroup = document.getElementById('lw-strap-group');
-  if (straps.length >= 2) {
-    strapGroup.style.display = '';
-    _renderLwStraps(straps);
-  } else {
-    strapGroup.style.display = 'none';
-  }
-
-  // Clear text + photo
-  document.getElementById('lw-caption').value = '';
-  document.getElementById('lw-private').value = '';
-  document.getElementById('lw-vis-chips').innerHTML = visChipsHtml('lw-vis-chips', getDefaultVis());
-  clearLwPhoto();
-
-  document.getElementById('log-wear-modal').classList.remove('hidden');
-}
-
-function _renderLwStraps(straps) {
-  document.getElementById('lw-strap-chips').innerHTML = straps.map(s =>
-    `<div class="chip${lwStrapId === s.id ? ' selected' : ''}" onclick="selLwStrap('${s.id}')">
-      ${escHtml(s.name)}${s.material ? ' · ' + escHtml(s.material) : ''}
-    </div>`
-  ).join('');
-}
-
-function selLwUC(uc) {
-  lwUseCase = uc;
-  document.querySelectorAll('#lw-uc-chips .chip')
-    .forEach(c => c.classList.toggle('selected', c.dataset.uc === uc));
-}
-
-function selLwStrap(id) {
-  lwStrapId = id;
-  const w = watches.find(x => x.id === lwWatchId);
-  if (w) _renderLwStraps(w.straps || []);
-}
-
-function closeLogWearModal() {
-  document.getElementById('log-wear-modal').classList.add('hidden');
-  lwWatchId = null; lwPhoto = null;
-}
-
-async function handleLwPhoto(input) {
-  const file = input.files[0]; if (!file) return; input.value = '';
-  try {
-    lwPhoto = await blobToResizedBase64(file);
-    document.getElementById('lw-photo-preview').src = lwPhoto;
-    document.getElementById('lw-photo-preview').style.display = 'block';
-    document.getElementById('lw-photo-placeholder').style.display = 'none';
-    document.getElementById('lw-photo-clear').style.display = '';
-    document.getElementById('lw-photo-area').classList.add('has-photo');
-  } catch(e) { toast('Could not load photo', 'error'); }
-}
-
-function clearLwPhoto() {
-  lwPhoto = null;
-  const preview = document.getElementById('lw-photo-preview');
-  if (!preview) return;
-  preview.style.display = 'none'; preview.src = '';
-  document.getElementById('lw-photo-placeholder').style.display = '';
-  document.getElementById('lw-photo-clear').style.display = 'none';
-  document.getElementById('lw-photo-area').classList.remove('has-photo');
-}
-
-function saveLogFromModal() {
-  if (!lwWatchId) return;
-  const date = document.getElementById('lw-date').value;
-  if (!date) { toast('Please select a date', 'error'); return; }
-  if (logs.some(l => l.watchId === lwWatchId && l.date === date)) {
-    toast('Already logged this watch today!', 'error'); return;
-  }
-  const caption = (document.getElementById('lw-caption').value || '').trim();
-  const privateNotes = (document.getElementById('lw-private').value || '').trim();
-  const vis = getVisChip('lw-vis-chips');
-  const logEntry = {
-    id: uid(), watchId: lwWatchId, date, useCase: lwUseCase,
-    notes: caption || null,
-    privateNotes: privateNotes || null,
-    photoUrl: lwPhoto || null,
-    visibility: vis, isPublic: vis !== 'private',
-  };
-  if (lwStrapId) {
-    logEntry.strapId = lwStrapId;
-    const wIdx = watches.findIndex(x => x.id === lwWatchId);
-    if (wIdx !== -1) watches[wIdx].straps = watches[wIdx].straps.map(s => ({ ...s, isOn: s.id === lwStrapId }));
-  }
+function saveLog() {
+  const date = document.getElementById('track-date').value;
+  if (!date)       { toast('Please select a date', 'error'); return; }
+  if (!selWatchId) { toast('Please select a watch', 'error'); return; }
+  const notes = document.getElementById('track-notes').value.trim();
+  const vis = getDefaultVis();
+  const logEntry = { id: uid(), watchId: selWatchId, date, useCase: selUseCase, notes,
+                     photoUrl: trackPhoto || null, visibility: vis, isPublic: vis !== 'private' };
+  if (selStrapId) logEntry.strapId = selStrapId;
   logs.push(logEntry);
+  // Update "on wrist" strap status on the watch
+  if (selStrapId) {
+    const wIdx = watches.findIndex(x => x.id === selWatchId);
+    if (wIdx !== -1 && (watches[wIdx].straps || []).length) {
+      watches[wIdx].straps = watches[wIdx].straps.map(s => ({ ...s, isOn: s.id === selStrapId }));
+    }
+  }
   save();
+  document.getElementById('track-notes').value = '';
+  clearTrackPhoto();
   if (date === todayStr()) dismissReminder();
-  closeLogWearModal();
   renderTrack();
-  toast('Wear logged! ⌚');
+  toast('Wear logged!');
 }
 
-// Legacy stub kept so existing references don't throw
-function saveLog() { toast('Please tap a watch to log a wear.', 'error'); }
-function handleTrackPhoto() {}
-function clearTrackPhoto() {}
+async function handleTrackPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    trackPhoto = await blobToResizedBase64(file);
+    const preview = document.getElementById('track-photo-preview');
+    preview.src = trackPhoto;
+    preview.style.display = 'block';
+    document.getElementById('track-photo-placeholder').style.display = 'none';
+    document.getElementById('track-photo-clear').style.display = '';
+    document.getElementById('track-photo-area').classList.add('has-photo');
+  } catch(e) { toast('Could not load photo', 'error'); }
+  input.value = '';
+}
+
+function clearTrackPhoto() {
+  trackPhoto = null;
+  const preview = document.getElementById('track-photo-preview');
+  if (!preview) return;
+  preview.style.display = 'none';
+  preview.src = '';
+  document.getElementById('track-photo-placeholder').style.display = '';
+  document.getElementById('track-photo-clear').style.display = 'none';
+  document.getElementById('track-photo-area').classList.remove('has-photo');
+}
 
 function deleteLog(id) {
   logs = logs.filter(l => l.id !== id);
