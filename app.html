@@ -591,6 +591,8 @@
     .meta-lbl { font-size: .65rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
     .meta-val { font-size: .85rem; font-weight: 600; margin-top: .1rem; }
     .meta-val.gold { color: var(--gold); }
+    .meta-val.clickable { cursor: pointer; border-bottom: 1px dotted var(--muted); padding-bottom: 1px; display: inline-block; }
+    .meta-val.clickable:hover { color: var(--gold); border-bottom-color: var(--gold); }
     .wc-spacer { flex: 1; min-height: 0; }
     .watch-card-actions { display: flex; gap: .4rem; flex-wrap: nowrap; padding-top: .1rem; align-items: center; overflow: hidden; }
     .btn-loading { opacity: .6; cursor: not-allowed; }
@@ -694,8 +696,8 @@
     .strap-del-btn:hover   { color: var(--danger); }
     .strap-edit-btn        { background: none; border: none; color: var(--muted); cursor: pointer; font-size: .75rem; padding: .1rem .3rem; flex-shrink: 0; opacity: 0; transition: opacity .15s; }
     .strap-row:hover .strap-edit-btn { opacity: 1; }
-    .strap-name.clickable  { cursor: pointer; }
-    .strap-name.clickable:hover { color: var(--gold); }
+    .strap-name.clickable  { cursor: pointer; border-bottom: 1px dotted var(--muted); padding-bottom: 1px; }
+    .strap-name.clickable:hover { color: var(--gold); border-bottom-color: var(--gold); }
     .strap-empty           { font-size: .78rem; color: var(--muted); padding: .3rem 0; }
     .add-strap-row         { display: flex; gap: .4rem; margin-top: .5rem; flex-wrap: wrap; align-items: center; }
     .add-strap-row.hidden  { display: none; }
@@ -4771,11 +4773,11 @@ function renderCollection() {
         <div class="watch-card-meta">
           <div class="meta-box">
             <div class="meta-lbl">Purchased</div>
-            <div class="meta-val">${w.purchaseDate ? fmtDate(w.purchaseDate) : '—'}</div>
+            <div class="meta-val clickable" onclick="openEditWatch('${w.id}')">${w.purchaseDate ? fmtDate(w.purchaseDate) : '—'}</div>
           </div>
           <div class="meta-box">
             <div class="meta-lbl">Paid</div>
-            <div class="meta-val">${fmtMoney(w.price)}</div>
+            <div class="meta-val clickable" onclick="openEditWatch('${w.id}')">${fmtMoney(w.price)}</div>
           </div>
           <div class="meta-box">
             <div class="meta-lbl">Total Wears</div>
@@ -6845,7 +6847,6 @@ function renderWishlist() {
       </div>
       <div class="wl-actions">
         <button class="btn btn-ghost btn-sm" onclick="openEditWishlist('${w.id}')">Edit</button>
-        <button class="btn btn-ghost btn-sm" onclick="openWlMoreMenu(event,'${w.id}')" title="More">⋯</button>
       </div>
     </div>`;
   }).join('');
