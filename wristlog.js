@@ -52,6 +52,18 @@ export function formatFeedDate(dateStr, today = new Date()) {
 }
 
 // ══════════════════════════════════════════
+//  USERNAME VALIDATION
+// ══════════════════════════════════════════
+
+export function validateUsername(raw) {
+  const val = raw.toLowerCase().replace(/[^a-z0-9_]/g, '');
+  if (val.length < 3) return { valid: false, clean: val, error: 'At least 3 characters' };
+  if (val.length > 30) return { valid: false, clean: val, error: 'Max 30 characters' };
+  if (!/^[a-z][a-z0-9_]*$/.test(val)) return { valid: false, clean: val, error: 'Must start with a letter' };
+  return { valid: true, clean: val, error: null };
+}
+
+// ══════════════════════════════════════════
 //  PRICE FORMATTING
 // ══════════════════════════════════════════
 

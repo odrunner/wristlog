@@ -172,6 +172,22 @@
     }
     .server-dot.on { display: block; }
 
+    /* ── USERNAME FIELD ── */
+    .username-field { position: relative; }
+    .username-field .username-prefix {
+      position: absolute; left: .85rem; top: 50%; transform: translateY(-50%);
+      color: var(--muted); font-size: .9rem; pointer-events: none; user-select: none;
+    }
+    .username-field input { padding-left: 1.85rem; }
+    .username-status {
+      font-size: .73rem; margin-top: .3rem; min-height: 1.1em;
+      transition: color .15s;
+    }
+    .username-status.available { color: var(--success); }
+    .username-status.taken { color: var(--danger); }
+    .username-status.checking { color: var(--muted); }
+    .username-status.invalid { color: var(--danger); }
+
     /* ── LAYOUT ── */
     main { max-width: 1160px; margin: 0 auto; padding: 1.75rem 1.25rem; }
     .page { display: none; }
@@ -1276,6 +1292,27 @@
 
     <div class="auth-divider"><span>First time? Just sign in — account created automatically.</span></div>
 
+  </div>
+</div>
+
+<!-- ════ USERNAME ONBOARDING MODAL ════ -->
+<div id="username-modal" class="overlay hidden">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title">Choose your username</div>
+    <p style="color:var(--muted);font-size:.85rem;margin-bottom:1.25rem;">
+      Pick a unique username so others can find and follow you.
+    </p>
+    <div class="username-field">
+      <span class="username-prefix">@</span>
+      <input type="text" id="onboard-username" placeholder="username" maxlength="30"
+        oninput="onUsernameInput(this, 'onboard-username-status')">
+    </div>
+    <div id="onboard-username-status" class="username-status"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="onboard-username-btn" style="flex:1;" onclick="saveOnboardUsername()" disabled>
+        Continue
+      </button>
+    </div>
   </div>
 </div>
 
@@ -2392,6 +2429,7 @@ function formatFeedDate(dateStr) {
 async function loadMyProfile() {
   if (!currentUser) return;
   let { data } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
+  let isNewUser = false;
   if (!data) {
     // Auto-create profile for Google OAuth users (trigger may not have fired)
     const email       = currentUser.email || '';
@@ -2403,10 +2441,132 @@ async function loadMyProfile() {
     ).select().single();
     if (createErr) console.error('[WristLog] Profile create error:', createErr.message, createErr);
     data = created;
+    isNewUser = true;
   }
   myProfile = data;
   const btn = document.getElementById('profile-btn');
   if (btn) { btn.textContent = profileInitials(myProfile); btn.style.display = 'flex'; }
+  // Show username picker for brand-new sign-ups
+  if (isNewUser && myProfile) {
+    showUsernameOnboarding(myProfile.username || '');
+  }
+}
+
+// ── Username validation & availability ────────────────────────────────────
+let _usernameCheckTimer = null;
+let _lastCheckedUsername = '';
+let _usernameAvailable   = false;
+
+function validateUsername(raw) {
+  const val = raw.toLowerCase().replace(/[^a-z0-9_]/g, '');
+  if (val.length < 3) return { valid: false, clean: val, error: 'At least 3 characters' };
+  if (val.length > 30) return { valid: false, clean: val, error: 'Max 30 characters' };
+  if (!/^[a-z][a-z0-9_]*$/.test(val)) return { valid: false, clean: val, error: 'Must start with a letter' };
+  return { valid: true, clean: val, error: null };
+}
+
+function onUsernameInput(inputEl, statusElId) {
+  const statusEl = document.getElementById(statusElId);
+  const raw = inputEl.value.trim();
+  // Auto-clean the value to lowercase alphanumeric + underscore
+  const cleaned = raw.toLowerCase().replace(/[^a-z0-9_]/g, '');
+  if (cleaned !== raw) inputEl.value = cleaned;
+
+  const { valid, clean, error } = validateUsername(cleaned);
+
+  // If it matches the user's current username, skip check
+  const original = inputEl.dataset?.original || '';
+  if (clean === original && valid) {
+    statusEl.textContent = 'Your current username';
+    statusEl.className = 'username-status available';
+    _usernameAvailable = true;
+    _enableUsernameBtn(statusElId);
+    return;
+  }
+
+  if (!valid) {
+    statusEl.textContent = error;
+    statusEl.className = 'username-status invalid';
+    _usernameAvailable = false;
+    _enableUsernameBtn(statusElId);
+    return;
+  }
+
+  // Debounce availability check
+  statusEl.textContent = 'Checking…';
+  statusEl.className = 'username-status checking';
+  _usernameAvailable = false;
+  _enableUsernameBtn(statusElId);
+  clearTimeout(_usernameCheckTimer);
+  _usernameCheckTimer = setTimeout(() => checkUsernameAvailability(clean, statusElId), 400);
+}
+
+async function checkUsernameAvailability(username, statusElId) {
+  const statusEl = document.getElementById(statusElId);
+  if (!statusEl) return;
+  _lastCheckedUsername = username;
+  const { data, error } = await db.from('profiles')
+    .select('id')
+    .eq('username', username)
+    .neq('id', currentUser.id)
+    .limit(1);
+  // Guard: user may have typed more while we were waiting
+  if (_lastCheckedUsername !== username) return;
+  if (error) {
+    statusEl.textContent = 'Could not check — try again';
+    statusEl.className = 'username-status invalid';
+    _usernameAvailable = false;
+  } else if (data && data.length > 0) {
+    statusEl.textContent = 'Already taken';
+    statusEl.className = 'username-status taken';
+    _usernameAvailable = false;
+  } else {
+    statusEl.textContent = 'Available!';
+    statusEl.className = 'username-status available';
+    _usernameAvailable = true;
+  }
+  _enableUsernameBtn(statusElId);
+}
+
+function _enableUsernameBtn(statusElId) {
+  // Enable/disable the relevant submit button
+  if (statusElId === 'onboard-username-status') {
+    const btn = document.getElementById('onboard-username-btn');
+    if (btn) btn.disabled = !_usernameAvailable;
+  }
+}
+
+// ── Username onboarding (first sign-up) ───────────────────────────────────
+function showUsernameOnboarding(suggestedUsername) {
+  const input = document.getElementById('onboard-username');
+  if (input) {
+    input.value = suggestedUsername;
+    input.dataset.original = ''; // no original — this is a new user
+    onUsernameInput(input, 'onboard-username-status');
+  }
+  document.getElementById('username-modal').classList.remove('hidden');
+}
+
+async function saveOnboardUsername() {
+  const input = document.getElementById('onboard-username');
+  const username = (input?.value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+  const { valid } = validateUsername(username);
+  if (!valid || !_usernameAvailable) { toast('Please choose a valid available username', 'error'); return; }
+
+  const btn = document.getElementById('onboard-username-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+  const { error } = await db.from('profiles')
+    .update({ username })
+    .eq('id', currentUser.id);
+  if (!error) {
+    myProfile = { ...myProfile, username };
+    document.getElementById('username-modal').classList.add('hidden');
+    toast('Username set! Welcome to WristLog.');
+  } else {
+    toast('Could not save — ' + error.message, 'error');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Continue'; }
 }
 
 function openProfileModal() {
@@ -2538,6 +2698,14 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <div class="form-group"><label>Display Name</label>
         <input type="text" id="pp-display-name" value="${escHtml(profile.display_name || '')}" placeholder="Your name">
       </div>
+      <div class="form-group"><label>Username</label>
+        <div class="username-field">
+          <span class="username-prefix">@</span>
+          <input type="text" id="pp-username" value="${escHtml(profile.username || '')}" placeholder="username" maxlength="30"
+            oninput="onUsernameInput(this, 'pp-username-status')" data-original="${escHtml(profile.username || '')}">
+        </div>
+        <div id="pp-username-status" class="username-status"></div>
+      </div>
       <div class="form-group"><label>Bio</label>
         <textarea id="pp-bio" rows="3" placeholder="Tell people about your collection…">${escHtml(profile.bio || '')}</textarea>
       </div>
@@ -2643,17 +2811,38 @@ async function saveProfileFromPage() {
   const name  = (document.getElementById('pp-display-name')?.value || '').trim();
   const bio   = (document.getElementById('pp-bio')?.value || '').trim();
   const priv  = document.getElementById('pp-profile-privacy')?.value || 'public';
+
+  // Username validation
+  const usernameInput = document.getElementById('pp-username');
+  const rawUsername    = (usernameInput?.value || '').trim();
+  const original      = usernameInput?.dataset?.original || '';
+  const usernameChanged = rawUsername !== original;
+
+  if (usernameChanged) {
+    const { valid, error: valErr } = validateUsername(rawUsername);
+    if (!valid) { toast(valErr, 'error'); return; }
+    if (!_usernameAvailable) { toast('Username is not available', 'error'); return; }
+  }
+
+  const updateData = { display_name: name, bio, profile_privacy: priv };
+  if (usernameChanged) updateData.username = rawUsername;
+
   const { error } = await db.from('profiles')
-    .update({ display_name: name, bio, profile_privacy: priv })
+    .update(updateData)
     .eq('id', currentUser.id);
   if (!error) {
-    myProfile = { ...myProfile, display_name: name, bio, profile_privacy: priv };
+    myProfile = { ...myProfile, ...updateData };
     const btn = document.getElementById('profile-btn');
     if (btn) btn.textContent = profileInitials(myProfile);
     toast('Profile saved!');
     loadAndRenderProfile(currentUser.id);
   } else {
-    toast('Save failed — ' + error.message, 'error');
+    // Handle unique constraint violation from DB
+    if (error.message && error.message.includes('username')) {
+      toast('Username is already taken', 'error');
+    } else {
+      toast('Save failed — ' + error.message, 'error');
+    }
   }
 }
 
