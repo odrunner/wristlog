@@ -3068,30 +3068,55 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <div class="form-group"><label>Bio</label>
         <textarea id="pp-bio" rows="3" placeholder="Tell people about your collection…">${escHtml(profile.bio || '')}</textarea>
       </div>
-      <div class="form-group"><label>Profile Privacy</label>
-        <select id="pp-profile-privacy">
-          <option value="public"       ${(privacy||'public') === 'public'       ? 'selected' : ''}>Public — anyone can view</option>
-          <option value="friends_only" ${(privacy||'public') === 'friends_only' ? 'selected' : ''}>Friends Only — send request to view</option>
-          <option value="private"      ${(privacy||'public') === 'private'      ? 'selected' : ''}>Private — hidden from search</option>
-        </select>
-        <div style="font-size:.73rem;color:var(--muted);margin-top:.3rem;">Changing to Friends Only or Private does not remove existing followers.</div>
-      </div>
       <div class="form-group"><label>Default Post Visibility</label>
         <div class="chips" id="pp-default-vis-chips">
           ${visChipsHtml('pp-default-vis-chips', getDefaultVis())}
         </div>
         <div style="font-size:.73rem;color:var(--muted);margin-top:.3rem;">New posts will default to this setting. You can change each post individually.</div>
       </div>
-      <div class="form-group"><label>Wishlist Visibility</label>
-        <div class="chips" id="pp-wishlist-vis-chips">
-          ${visChipsHtml('pp-wishlist-vis-chips', wlVis || 'private')}
-        </div>
-      </div>
       <div style="display:flex;gap:.65rem;margin-top:.1rem;">
         <button class="btn btn-primary" id="profile-save-btn" style="flex:1;">Save Profile</button>
         <button class="btn btn-ghost" style="color:var(--danger);white-space:nowrap;" onclick="goBackFromProfile();signOut();">↩ Sign Out</button>
       </div>
     </div>` : '';
+
+  // Always-visible Privacy section (own profile only)
+  const privacyHtml = isOwn ? (() => {
+    const pChip = (cId, val, label, current, field) =>
+      `<div class="chip${current === val ? ' selected' : ''}" data-vis="${val}"
+        onclick="selVisChip('${cId}','${val}');savePrivacyField('${field}','${val}')">${label}</div>`;
+    const cur = privacy || 'public';
+    const curCol = visibility || 'public';
+    return `
+    <div class="profile-page-card">
+      <div class="profile-page-section-title">Privacy</div>
+      <div class="form-group" style="margin-bottom:.75rem;">
+        <label style="font-size:.78rem;">Profile</label>
+        <div class="chips" id="prv-profile-chips">
+          ${pChip('prv-profile-chips','public','🌐 Public',cur,'profile_privacy')}
+          ${pChip('prv-profile-chips','friends_only','👥 Friends Only',cur,'profile_privacy')}
+          ${pChip('prv-profile-chips','private','🔒 Private',cur,'profile_privacy')}
+        </div>
+        <div style="font-size:.71rem;color:var(--muted);margin-top:.25rem;">Friends Only or Private does not remove existing followers.</div>
+      </div>
+      <div class="form-group" style="margin-bottom:.75rem;">
+        <label style="font-size:.78rem;">Collection</label>
+        <div class="chips" id="prv-collection-chips">
+          ${pChip('prv-collection-chips','public','🌐 Public',curCol,'collection_visibility')}
+          ${pChip('prv-collection-chips','friends','👥 Friends',curCol,'collection_visibility')}
+          ${pChip('prv-collection-chips','private','🔒 Private',curCol,'collection_visibility')}
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label style="font-size:.78rem;">Wishlist</label>
+        <div class="chips" id="prv-wishlist-chips">
+          ${pChip('prv-wishlist-chips','public','🌐 Public',wlVis,'wishlist_visibility')}
+          ${pChip('prv-wishlist-chips','friends','👥 Friends',wlVis,'wishlist_visibility')}
+          ${pChip('prv-wishlist-chips','private','🔒 Private',wlVis,'wishlist_visibility')}
+        </div>
+      </div>
+    </div>`;
+  })() : '';
 
   // Collection showcase
   let showcaseHtml = '';
@@ -3212,6 +3237,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     ${statsHtml}
     ${profileNudge}
     ${editHtml}
+    ${privacyHtml}
     ${showcaseHtml}
     ${wishlistHtml}
     ${logsHtml}`;
@@ -3234,7 +3260,6 @@ async function cycleWatchPrivacy(watchId) {
 async function saveProfileFromPage() {
   const name  = (document.getElementById('pp-display-name')?.value || '').trim();
   const bio   = (document.getElementById('pp-bio')?.value || '').trim();
-  const priv  = document.getElementById('pp-profile-privacy')?.value || 'public';
 
   // Username validation
   const usernameInput = document.getElementById('pp-username');
@@ -3250,9 +3275,8 @@ async function saveProfileFromPage() {
 
   const defaultVis = getVisChip('pp-default-vis-chips');
   setDefaultVis(defaultVis);
-  const wishlistVis = getVisChip('pp-wishlist-vis-chips') || 'private';
 
-  const updateData = { display_name: name, bio, profile_privacy: priv, wishlist_visibility: wishlistVis };
+  const updateData = { display_name: name, bio };
   if (usernameChanged) updateData.username = rawUsername;
 
   const { error } = await db.from('profiles')
@@ -3375,6 +3399,28 @@ async function followUser(userId) {
     renderFollowingList();
     loadFeed();
   } else { toast('Could not follow — ' + error.message, 'error'); }
+}
+function confirmUnfollow(userId, btn) {
+  if (btn.dataset.confirming) {
+    delete btn.dataset.confirming;
+    btn.textContent = 'Following';
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    unfollowUser(userId);
+  } else {
+    btn.dataset.confirming = '1';
+    btn.textContent = 'Unfollow?';
+    btn.style.borderColor = 'var(--danger)';
+    btn.style.color = 'var(--danger)';
+    setTimeout(() => {
+      if (btn.dataset.confirming) {
+        delete btn.dataset.confirming;
+        btn.textContent = 'Following';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+      }
+    }, 3000);
+  }
 }
 async function unfollowUser(userId) {
   if (!currentUser) return;
@@ -4198,7 +4244,7 @@ function friendActionBtn(u) {
 
   if (priv === 'public') {
     return `<button class="follow-btn ${isFlw ? 'following' : 'follow'}"
-      onclick="${isFlw ? `unfollowUser('${u.id}')` : `followUser('${u.id}')`}">
+      onclick="${isFlw ? `confirmUnfollow('${u.id}',this)` : `followUser('${u.id}')`}">
       ${isFlw ? 'Following' : 'Follow'}</button>`;
   }
   // friends_only or private
@@ -4252,6 +4298,12 @@ function selVisChip(cId, val) {
 }
 function getVisChip(cId) {
   return document.querySelector(`#${cId} .chip.selected`)?.dataset.vis || 'public';
+}
+async function savePrivacyField(field, value) {
+  if (!currentUser) return;
+  const { error } = await db.from('profiles').update({ [field]: value }).eq('id', currentUser.id);
+  if (!error && window.myProfile) window.myProfile[field] = value;
+  if (error) toast('Could not save — ' + error.message, 'error');
 }
 
 const DEFAULT_BRANDS = [
