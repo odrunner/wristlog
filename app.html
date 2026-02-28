@@ -1099,6 +1099,15 @@
       background: var(--surface2); border-radius: 20px; padding: .22rem .65rem;
     }
 
+    /* Add-photo button inside watch banner (own cards, no photo) */
+    .feed-add-photo-btn {
+      background: none; border: 1px solid var(--border); color: var(--muted);
+      border-radius: 20px; padding: .28rem .8rem; font-size: .74rem;
+      cursor: pointer; margin-top: .4rem; font-family: inherit;
+      transition: border-color .15s, color .15s;
+    }
+    .feed-add-photo-btn:hover { border-color: var(--gold); color: var(--gold); }
+
     /* Log photo upload area */
     .log-photo-area {
       position: relative; width: 100%; aspect-ratio: 4/3; border-radius: 10px;
@@ -2033,6 +2042,9 @@
       </div>
       <input type="file" id="rec-log-photo-input" accept="image/*" capture="environment"
         style="display:none" onchange="handleRecLogPhoto(this)">
+<!-- Shared hidden input for adding a photo to an existing feed card -->
+<input type="file" id="feed-photo-input" accept="image/*" capture="environment"
+  style="display:none" onchange="handleFeedPhoto(this)">
     </div>
 
     <div class="form-group">
@@ -2920,11 +2932,15 @@ function renderFeedCard(item) {
     const thumb = w?.image
       ? `<img class="feed-watch-banner-thumb" src="${escHtml(w.image)}" onerror="this.style.display='none'">`
       : `<div class="feed-watch-banner-avatar" style="background:${w?.color||'#c9a84c'}">${initials(w?.brand||'',w?.name||'')}</div>`;
+    const addPhotoBtn = isMe
+      ? `<button class="feed-add-photo-btn" onclick="addFeedPhoto('${item.id}')">📷 Add photo</button>`
+      : '';
     heroHtml = `
       <div class="feed-watch-banner">
         ${thumb}
         <div class="feed-watch-banner-brand">${escHtml(w?.brand || '')}</div>
         <div class="feed-watch-banner-name">${escHtml(w?.name || 'Unknown watch')}</div>
+        ${addPhotoBtn}
       </div>`;
   }
 
@@ -2984,6 +3000,39 @@ function renderFeedCard(item) {
       ${watchChip}
       ${commentsHtml}
     </div>`;
+}
+
+// ── Feed photo (add after logging) ────────────────────────────────────────
+let feedPhotoLogId = null;
+
+function addFeedPhoto(logId) {
+  feedPhotoLogId = logId;
+  document.getElementById('feed-photo-input').click();
+}
+
+async function handleFeedPhoto(input) {
+  const file = input.files[0];
+  if (!file || !feedPhotoLogId) return;
+  const logId = feedPhotoLogId;
+  feedPhotoLogId = null;
+  input.value = '';
+  try {
+    const base64 = await blobToResizedBase64(file);
+    // Update local log
+    const log = logs.find(l => l.id === logId);
+    if (log) { log.photoUrl = base64; save(); }
+    // Update feedItems so refreshFeedCard picks it up
+    const fi = feedItems.find(i => i.id === logId);
+    if (fi) fi.photo_url = base64;
+    // Hard-update Supabase
+    if (currentUser) {
+      const { error } = await db.from('logs').update({ photo_url: base64 })
+        .eq('id', logId).eq('user_id', currentUser.id);
+      if (error) console.error('[WristLog] feed photo update error:', error.message);
+    }
+    refreshFeedCard(logId);
+    toast('Photo added! 📷');
+  } catch(e) { toast('Could not load photo', 'error'); }
 }
 
 // ── Likes ─────────────────────────────────────────────────────────────────
