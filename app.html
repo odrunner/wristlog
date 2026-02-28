@@ -1403,77 +1403,23 @@
   <!-- ════ TRACK PAGE ════ -->
   <div id="page-track" class="page">
     <div id="rec-container"></div>
-    <div class="track-grid">
 
-      <div class="track-form">
-        <div class="card">
-          <div class="card-label">Date</div>
-          <input type="date" id="track-date" oninput="onDateChange()">
-          <div id="date-log-indicator" style="margin-top:.5rem;font-size:.78rem;color:var(--success);min-height:1.1em;"></div>
-        </div>
+    <div class="page-header" style="margin-bottom:1rem;">
+      <div style="font-size:.95rem;font-weight:600;">Tap a watch to log a wear</div>
+    </div>
 
-        <div class="card">
-          <div class="card-label">Select Watch</div>
-          <div id="watch-selector"></div>
-        </div>
+    <div id="watch-selector" style="margin-bottom:1.75rem;"></div>
 
-        <div class="card" id="strap-selector-card" style="display:none;">
-          <div class="card-label">Strap / Bracelet</div>
-          <div class="chips" id="strap-chips"></div>
-        </div>
-
-        <div class="card">
-          <div class="card-label">Use Case</div>
-          <div class="chips" id="usecase-chips">
-            <div class="chip selected" data-uc="unspecified">— Unspecified</div>
-            <div class="chip" data-uc="work">💼 Work</div>
-            <div class="chip" data-uc="leisure">🛋️ Leisure</div>
-            <div class="chip" data-uc="dinner">🍽️ Dinner</div>
-            <div class="chip" data-uc="travel">✈️ Travel</div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-label">Notes <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
-          <textarea id="track-notes" placeholder="Any occasion, outfit, thoughts…"></textarea>
-        </div>
-
-        <div class="card">
-          <div class="card-label">Photo <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
-          <div id="track-photo-area" class="log-photo-area" onclick="document.getElementById('track-photo-input').click()">
-            <div id="track-photo-placeholder" class="log-photo-placeholder">📷 Tap to add a photo</div>
-            <img id="track-photo-preview" class="log-photo-preview" style="display:none;" alt="">
-            <button type="button" id="track-photo-clear" class="log-photo-clear" style="display:none;"
-              onclick="event.stopPropagation();clearTrackPhoto()">✕</button>
-          </div>
-          <input type="file" id="track-photo-input" accept="image/*" capture="environment"
-            style="display:none" onchange="handleTrackPhoto(this)">
-        </div>
-
-        <div class="save-bar">
-          <button class="btn btn-primary" id="save-btn" onclick="saveLog()">Log This Wear</button>
-        </div>
+    <div class="card">
+      <div class="card-label">Wear History</div>
+      <div class="table-wrap" style="max-height:360px;">
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Watch</th><th>Occasion</th><th></th></tr>
+          </thead>
+          <tbody id="track-history-tbody"></tbody>
+        </table>
       </div>
-
-      <div style="display:flex;flex-direction:column;gap:1.25rem;">
-        <div class="card">
-          <div class="card-label">Wear History</div>
-          <div class="table-wrap" style="max-height:360px;">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Watch</th>
-                  <th>Use Case</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="track-history-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
 
@@ -2254,6 +2200,63 @@
 </div>
 
 <!-- ════ EDIT LOG MODAL ════ -->
+<!-- ════ LOG WEAR MODAL ════ -->
+<div id="log-wear-modal" class="overlay hidden">
+  <div class="modal" style="max-width:420px;">
+    <!-- Watch header -->
+    <div style="display:flex;align-items:center;gap:.85rem;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--border);">
+      <div id="lw-watch-thumb"></div>
+      <div>
+        <div id="lw-watch-brand" style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;"></div>
+        <div id="lw-watch-name" style="font-size:1.1rem;font-weight:700;"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Date</label>
+      <input type="date" id="lw-date">
+    </div>
+    <div class="form-group">
+      <label>Occasion</label>
+      <div class="chips" id="lw-uc-chips">
+        <div class="chip selected" data-uc="unspecified" onclick="selLwUC('unspecified')">— Any</div>
+        <div class="chip" data-uc="work"    onclick="selLwUC('work')">💼 Work</div>
+        <div class="chip" data-uc="leisure" onclick="selLwUC('leisure')">🛋️ Leisure</div>
+        <div class="chip" data-uc="dinner"  onclick="selLwUC('dinner')">🍽️ Dinner</div>
+        <div class="chip" data-uc="travel"  onclick="selLwUC('travel')">✈️ Travel</div>
+      </div>
+    </div>
+    <div class="form-group" id="lw-strap-group" style="display:none;">
+      <label>Strap</label>
+      <div class="chips" id="lw-strap-chips"></div>
+    </div>
+    <div class="form-group">
+      <label>Caption <span style="font-weight:400;color:var(--muted);">(shown on feed)</span></label>
+      <textarea id="lw-caption" rows="2" placeholder="What's the occasion?" style="resize:none;"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Private notes <span style="font-weight:400;color:var(--muted);">(just for you)</span></label>
+      <textarea id="lw-private" rows="2" placeholder="Condition, outfit, thoughts…" style="resize:none;"></textarea>
+    </div>
+    <div class="form-group">
+      <label style="font-size:.78rem;color:var(--muted);">Who can see this?</label>
+      <div class="chips" id="lw-vis-chips"></div>
+    </div>
+    <div class="form-group">
+      <div id="lw-photo-area" class="log-photo-area" onclick="document.getElementById('lw-photo-input').click()">
+        <div id="lw-photo-placeholder" class="log-photo-placeholder">📷 Add a photo (optional)</div>
+        <img id="lw-photo-preview" class="log-photo-preview" style="display:none;" alt="">
+        <button type="button" id="lw-photo-clear" class="log-photo-clear" style="display:none;"
+          onclick="event.stopPropagation();clearLwPhoto()">✕</button>
+      </div>
+      <input type="file" id="lw-photo-input" accept="image/*" style="display:none" onchange="handleLwPhoto(this)">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveLogFromModal()">Log Wear</button>
+      <button class="btn btn-ghost"   onclick="closeLogWearModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div id="edit-log-modal" class="overlay hidden">
   <div class="modal" style="max-width:380px;">
     <div class="modal-title">✏️ Edit Log Entry</div>
@@ -3980,94 +3983,48 @@ function setToday() {
   onDateChange();
 }
 
-function onDateChange() {
-  renderWornNotice();
-  renderWatchSelector();
-}
+function onDateChange() {}  // no-op: date input removed from track page
 
 function renderTrack() {
   renderWatchRecommendation();
-  renderWornNotice();
   renderWatchSelector();
-  renderStrapSelector();
   renderTrackHistory();
 }
 
-function renderWornNotice() {
-  const date = document.getElementById('track-date').value;
-  const ind  = document.getElementById('date-log-indicator');
-  if (!ind) return;
-  if (!date) { ind.textContent = ''; return; }
-  const worn = logs.filter(l => l.date === date);
-  if (worn.length === 0) { ind.textContent = ''; return; }
-  const names = worn.map(l => {
-    const w = watches.find(x => x.id === l.watchId);
-    return w ? w.name : '';
-  }).filter(Boolean);
-  ind.textContent = `✓ ${names.join(', ')} logged`;
-}
+function renderWornNotice() {} // no-op: replaced by worn-today badge on watch items
 
 function renderWatchSelector() {
-  const el   = document.getElementById('watch-selector');
-  const date = document.getElementById('track-date').value;
+  const el      = document.getElementById('watch-selector');
+  if (!el) return;
+  const today   = todayStr();
   if (watches.length === 0) {
     el.innerHTML = `<div class="empty"><div class="empty-icon">⌚</div>
       <div class="empty-text">No watches yet</div>
       <div class="empty-sub">Add watches in the Collection tab</div></div>`;
     return;
   }
-  const wornToday = new Set(logs.filter(l => l.date === date).map(l => l.watchId));
+  const wornToday = new Set(logs.filter(l => l.date === today).map(l => l.watchId));
   el.innerHTML = `<div class="watch-list">${
     watches.map(w => {
       const cnt    = logs.filter(l => l.watchId === w.id).length;
-      const isSel  = selWatchId === w.id;
       const isWorn = wornToday.has(w.id);
       const thumb = w.image
-        ? `<img src="${w.image}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-        : `<div class="avatar" style="width:36px;height:36px;background:${w.color}">${initials(w.brand,w.name)}</div>`;
-      return `<div class="watch-option ${isSel?'selected':''} ${isWorn&&!isSel?'worn-today':''}"
-                   onclick="selWatch('${w.id}')">
+        ? `<img src="${escHtml(w.image)}" alt="" style="width:42px;height:42px;border-radius:10px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
+        : `<div class="avatar" style="width:42px;height:42px;border-radius:10px;background:${w.color||'#c9a84c'}">${initials(w.brand,w.name)}</div>`;
+      return `<div class="watch-option${isWorn ? ' worn-today' : ''}" onclick="selWatch('${w.id}')">
         ${thumb}
         <div style="flex:1;min-width:0;">
-          <div class="watch-info-name">${w.brand} ${w.name}</div>
+          <div class="watch-info-name">${escHtml(w.brand||'')} ${escHtml(w.name||'')}</div>
           <div class="watch-info-sub">${cnt} wear${cnt!==1?'s':''}</div>
         </div>
-        ${isWorn ? `<span class="watch-worn-badge">worn</span>` : ''}
+        ${isWorn ? `<span class="watch-worn-badge">✓ worn</span>` : '<span style="font-size:.78rem;color:var(--muted);">Tap to log →</span>'}
       </div>`;
     }).join('')
   }</div>`;
 }
 
 function selWatch(id) {
-  selWatchId = id;
-  const w = watches.find(x => x.id === id);
-  const onWrist = (w?.straps || []).find(s => s.isOn);
-  selStrapId = onWrist?.id || w?.straps?.[0]?.id || null;
-  renderWatchSelector();
-  renderStrapSelector();
-  requestAnimationFrame(() => {
-    const hasMultiStraps = (w?.straps || []).length >= 2;
-    if (hasMultiStraps) {
-      // Scroll page so strap selector is visible (scrollIntoView unreliable; use scrollTo)
-      const strapCard = document.getElementById('strap-selector-card');
-      if (strapCard) {
-        const absTop    = strapCard.getBoundingClientRect().top + window.scrollY;
-        const saveBarH  = document.querySelector('.save-bar')?.offsetHeight || 0;
-        // Align card bottom above the sticky save-bar with a small gap
-        window.scrollTo({ top: Math.max(0, absTop - window.innerHeight + strapCard.offsetHeight + saveBarH + 16), behavior: 'smooth' });
-      }
-    } else {
-      // Scroll selected watch into view within the .watch-list scroll container
-      const list = document.querySelector('#watch-selector .watch-list');
-      const el   = document.querySelector('#watch-selector .watch-option.selected');
-      if (list && el) {
-        const elTop   = el.getBoundingClientRect().top;
-        const listTop = list.getBoundingClientRect().top;
-        const target  = list.scrollTop + (elTop - listTop) - (list.clientHeight / 2) + (el.clientHeight / 2);
-        list.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
-      }
-    }
-  });
+  openLogWearModal(id);
 }
 
 function renderTrackHistory() {
@@ -4105,56 +4062,136 @@ function renderTrackHistory() {
   }).join('');
 }
 
-function saveLog() {
-  const date = document.getElementById('track-date').value;
-  if (!date)       { toast('Please select a date', 'error'); return; }
-  if (!selWatchId) { toast('Please select a watch', 'error'); return; }
-  const notes = document.getElementById('track-notes').value.trim();
-  const vis = getDefaultVis();
-  const logEntry = { id: uid(), watchId: selWatchId, date, useCase: selUseCase, notes,
-                     photoUrl: trackPhoto || null, visibility: vis, isPublic: vis !== 'private' };
-  if (selStrapId) logEntry.strapId = selStrapId;
-  logs.push(logEntry);
-  // Update "on wrist" strap status on the watch
-  if (selStrapId) {
-    const wIdx = watches.findIndex(x => x.id === selWatchId);
-    if (wIdx !== -1 && (watches[wIdx].straps || []).length) {
-      watches[wIdx].straps = watches[wIdx].straps.map(s => ({ ...s, isOn: s.id === selStrapId }));
-    }
+// ── Log Wear Modal ─────────────────────────────────────────────────────────
+let lwWatchId  = null;
+let lwStrapId  = null;
+let lwUseCase  = 'unspecified';
+let lwPhoto    = null;
+
+function openLogWearModal(watchId) {
+  const w = watches.find(x => x.id === watchId);
+  if (!w) return;
+  lwWatchId = watchId;
+  lwUseCase = 'unspecified';
+  lwPhoto   = null;
+
+  // Watch header
+  const thumb = w.image
+    ? `<img src="${escHtml(w.image)}" style="width:52px;height:52px;border-radius:10px;object-fit:cover;" onerror="this.style.display='none'">`
+    : `<div class="avatar" style="width:52px;height:52px;border-radius:10px;font-size:.95rem;background:${w.color||'#c9a84c'}">${initials(w.brand||'',w.name||'')}</div>`;
+  document.getElementById('lw-watch-thumb').innerHTML = thumb;
+  document.getElementById('lw-watch-brand').textContent = w.brand || '';
+  document.getElementById('lw-watch-name').textContent  = w.name  || '';
+
+  // Date — today by default
+  document.getElementById('lw-date').value = todayStr();
+
+  // Reset use case chips
+  document.querySelectorAll('#lw-uc-chips .chip')
+    .forEach(c => c.classList.toggle('selected', c.dataset.uc === 'unspecified'));
+
+  // Strap selector
+  const straps  = w.straps || [];
+  const onWrist = straps.find(s => s.isOn);
+  lwStrapId = onWrist?.id || straps[0]?.id || null;
+  const strapGroup = document.getElementById('lw-strap-group');
+  if (straps.length >= 2) {
+    strapGroup.style.display = '';
+    _renderLwStraps(straps);
+  } else {
+    strapGroup.style.display = 'none';
   }
-  save();
-  document.getElementById('track-notes').value = '';
-  clearTrackPhoto();
-  if (date === todayStr()) dismissReminder();
-  renderTrack();
-  toast('Wear logged!');
+
+  // Clear text + photo
+  document.getElementById('lw-caption').value = '';
+  document.getElementById('lw-private').value = '';
+  document.getElementById('lw-vis-chips').innerHTML = visChipsHtml('lw-vis-chips', getDefaultVis());
+  clearLwPhoto();
+
+  document.getElementById('log-wear-modal').classList.remove('hidden');
 }
 
-async function handleTrackPhoto(input) {
-  const file = input.files[0];
-  if (!file) return;
+function _renderLwStraps(straps) {
+  document.getElementById('lw-strap-chips').innerHTML = straps.map(s =>
+    `<div class="chip${lwStrapId === s.id ? ' selected' : ''}" onclick="selLwStrap('${s.id}')">
+      ${escHtml(s.name)}${s.material ? ' · ' + escHtml(s.material) : ''}
+    </div>`
+  ).join('');
+}
+
+function selLwUC(uc) {
+  lwUseCase = uc;
+  document.querySelectorAll('#lw-uc-chips .chip')
+    .forEach(c => c.classList.toggle('selected', c.dataset.uc === uc));
+}
+
+function selLwStrap(id) {
+  lwStrapId = id;
+  const w = watches.find(x => x.id === lwWatchId);
+  if (w) _renderLwStraps(w.straps || []);
+}
+
+function closeLogWearModal() {
+  document.getElementById('log-wear-modal').classList.add('hidden');
+  lwWatchId = null; lwPhoto = null;
+}
+
+async function handleLwPhoto(input) {
+  const file = input.files[0]; if (!file) return; input.value = '';
   try {
-    trackPhoto = await blobToResizedBase64(file);
-    const preview = document.getElementById('track-photo-preview');
-    preview.src = trackPhoto;
-    preview.style.display = 'block';
-    document.getElementById('track-photo-placeholder').style.display = 'none';
-    document.getElementById('track-photo-clear').style.display = '';
-    document.getElementById('track-photo-area').classList.add('has-photo');
+    lwPhoto = await blobToResizedBase64(file);
+    document.getElementById('lw-photo-preview').src = lwPhoto;
+    document.getElementById('lw-photo-preview').style.display = 'block';
+    document.getElementById('lw-photo-placeholder').style.display = 'none';
+    document.getElementById('lw-photo-clear').style.display = '';
+    document.getElementById('lw-photo-area').classList.add('has-photo');
   } catch(e) { toast('Could not load photo', 'error'); }
-  input.value = '';
 }
 
-function clearTrackPhoto() {
-  trackPhoto = null;
-  const preview = document.getElementById('track-photo-preview');
+function clearLwPhoto() {
+  lwPhoto = null;
+  const preview = document.getElementById('lw-photo-preview');
   if (!preview) return;
-  preview.style.display = 'none';
-  preview.src = '';
-  document.getElementById('track-photo-placeholder').style.display = '';
-  document.getElementById('track-photo-clear').style.display = 'none';
-  document.getElementById('track-photo-area').classList.remove('has-photo');
+  preview.style.display = 'none'; preview.src = '';
+  document.getElementById('lw-photo-placeholder').style.display = '';
+  document.getElementById('lw-photo-clear').style.display = 'none';
+  document.getElementById('lw-photo-area').classList.remove('has-photo');
 }
+
+function saveLogFromModal() {
+  if (!lwWatchId) return;
+  const date = document.getElementById('lw-date').value;
+  if (!date) { toast('Please select a date', 'error'); return; }
+  if (logs.some(l => l.watchId === lwWatchId && l.date === date)) {
+    toast('Already logged this watch today!', 'error'); return;
+  }
+  const caption = (document.getElementById('lw-caption').value || '').trim();
+  const privateNotes = (document.getElementById('lw-private').value || '').trim();
+  const vis = getVisChip('lw-vis-chips');
+  const logEntry = {
+    id: uid(), watchId: lwWatchId, date, useCase: lwUseCase,
+    notes: caption || null,
+    privateNotes: privateNotes || null,
+    photoUrl: lwPhoto || null,
+    visibility: vis, isPublic: vis !== 'private',
+  };
+  if (lwStrapId) {
+    logEntry.strapId = lwStrapId;
+    const wIdx = watches.findIndex(x => x.id === lwWatchId);
+    if (wIdx !== -1) watches[wIdx].straps = watches[wIdx].straps.map(s => ({ ...s, isOn: s.id === lwStrapId }));
+  }
+  logs.push(logEntry);
+  save();
+  if (date === todayStr()) dismissReminder();
+  closeLogWearModal();
+  renderTrack();
+  toast('Wear logged! ⌚');
+}
+
+// Legacy stub kept so existing references don't throw
+function saveLog() { toast('Please tap a watch to log a wear.', 'error'); }
+function handleTrackPhoto() {}
+function clearTrackPhoto() {}
 
 function deleteLog(id) {
   logs = logs.filter(l => l.id !== id);
