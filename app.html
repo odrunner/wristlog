@@ -6136,38 +6136,52 @@ function clearUserState() {
   localStorage.removeItem(STORE_ELO);
 }
 
-// Auth state listener — drives the whole show
-db.auth.onAuthStateChange(async (event, session) => {
+// ── APP BOOT ──────────────────────────────────────────────────────────────
+// Single entry point for initialising the app once we have a confirmed user.
+// Guard: if we're already booted for this user, do nothing.
+async function bootApp(user) {
+  if (currentUser?.id === user.id) return; // already running for this user
+  console.log('[WristLog] bootApp →', user.email);
+  clearUserState();
+  currentUser = user;
+  // Show app controls immediately so the user always has a sign-out escape hatch
+  document.getElementById('auth-screen').style.display = 'none';
+  const signoutBtn = document.getElementById('signout-btn');
+  if (signoutBtn) { signoutBtn.style.display = ''; signoutBtn.textContent = 'Sign out'; }
+  const profileBtn = document.getElementById('profile-btn');
+  if (profileBtn) profileBtn.style.display = '';
+  try {
+    await loadUserData();
+    initApp();
+  } catch(e) {
+    console.error('[WristLog] bootApp error:', e.message, e);
+    try { renderCollection(); } catch(_) {}
+  }
+}
+
+// ── PRIMARY: explicit getSession() on every page load ─────────────────────
+// Reads directly from localStorage — the reliable path for the refresh case.
+// onAuthStateChange alone is not sufficient because event ordering varies.
+db.auth.getSession().then(({ data: { session }, error }) => {
+  console.log('[WristLog] getSession →', session?.user?.email || 'no session',
+              error ? '| error: ' + error.message : '');
   if (session?.user) {
-    const isNewUser = !currentUser || currentUser.id !== session.user.id;
-    if (isNewUser) {
-      // Switching users (or first load): wipe any stale state from the previous user
-      clearUserState();
-      currentUser = session.user;
-
-      // ── Immediately show the app shell and hide login ──
-      // Do this BEFORE loadUserData/initApp so the user always has controls
-      // even if something later throws.
-      document.getElementById('auth-screen').style.display = 'none';
-      const signoutBtn = document.getElementById('signout-btn');
-      if (signoutBtn) { signoutBtn.style.display = ''; signoutBtn.textContent = 'Sign out'; }
-      const profileBtn = document.getElementById('profile-btn');
-      if (profileBtn) profileBtn.style.display = '';
-
-      // ── Load data and boot the app ──
-      try {
-        await loadUserData();
-        initApp();
-      } catch (e) {
-        console.error('[WristLog] Init error after sign-in:', e.message, e);
-        // Attempt a graceful render with whatever data loaded
-        try { renderCollection(); } catch(_) {}
-      }
-    } else {
-      // TOKEN_REFRESHED / minor update for the same user — just keep token current
-      currentUser = session.user;
-    }
+    bootApp(session.user);
   } else {
+    // No stored session — make sure login screen is visible
+    document.getElementById('auth-screen').style.display = 'flex';
+  }
+});
+
+// ── SECONDARY: react to live auth changes ─────────────────────────────────
+// Handles: OAuth redirect returning access_token (SIGNED_IN),
+//          explicit sign-out (SIGNED_OUT), and hourly token refresh.
+// INITIAL_SESSION is intentionally ignored — getSession() above covers it.
+db.auth.onAuthStateChange((event, session) => {
+  console.log('[WristLog] auth event:', event, session?.user?.email || '—');
+  if (event === 'SIGNED_IN' && session?.user) {
+    bootApp(session.user); // guard prevents double-boot if getSession already ran
+  } else if (event === 'SIGNED_OUT') {
     currentUser = null;
     clearUserState();
     feedItems = []; feedLikes = {}; feedCommentCounts = {}; feedComments = {};
@@ -6176,6 +6190,8 @@ db.auth.onAuthStateChange(async (event, session) => {
     document.getElementById('signout-btn').style.display = 'none';
     const profileBtn = document.getElementById('profile-btn');
     if (profileBtn) profileBtn.style.display = 'none';
+  } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+    currentUser = session.user; // keep token current, no re-boot needed
   }
 });
 
