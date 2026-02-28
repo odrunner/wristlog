@@ -2320,29 +2320,36 @@
     }
     // Synchronously hide auth screen for returning users who already have a session,
     // so they never see a flash of the login screen on refresh.
-    const key = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
-    if (key) {
-      const val = JSON.parse(localStorage.getItem(key));
-      if (val?.access_token || val?.session?.access_token) {
-        const el = document.getElementById('auth-screen');
-        if (el) el.style.display = 'none';
-      }
+    // Check all Supabase auth-token keys (the key format varies by version).
+    const hasSession = Object.keys(localStorage).some(k => {
+      if (!k.startsWith('sb-') || !k.endsWith('-auth-token')) return false;
+      try {
+        const val = JSON.parse(localStorage.getItem(k));
+        return !!(val?.access_token || val?.session?.access_token);
+      } catch { return false; }
+    });
+    if (hasSession) {
+      const el = document.getElementById('auth-screen');
+      if (el) el.style.display = 'none';
     }
   } catch(_) {}
 })();
 
 // ══════════════════════════════════════════
 //  SUPABASE
-//  Use implicit flow — correct for a static GitHub Pages app (no server).
-//  PKCE (the newer default) requires the OAuth state to survive the redirect,
-//  which is unreliable in this environment and causes bad_oauth_state errors.
+//  PKCE flow with localStorage storage — correct for a static GitHub Pages app.
+//  We store auth state (including the PKCE code verifier) in localStorage so it
+//  survives cross-site redirects (GitHub Pages → Google → GitHub Pages).
+//  Without this, browsers that clear sessionStorage on cross-site navigation
+//  lose the verifier and throw "OAuth state not found or expired".
 // ══════════════════════════════════════════
 const SUPABASE_URL = 'https://xnzweevzrojmouzhpwzv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
-    flowType: 'implicit',      // token returned in URL hash — no server-side exchange needed
-    detectSessionInUrl: true,  // auto-process #access_token on redirect
+    storage: window.localStorage,  // keep PKCE verifier in localStorage, not sessionStorage
+    detectSessionInUrl: true,      // auto-process ?code= on redirect
+    persistSession: true,
   }
 });
 
