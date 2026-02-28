@@ -2140,8 +2140,7 @@
   <div class="modal" style="max-width:420px;">
     <div class="modal-title">💬 Send Feedback</div>
     <p style="font-size:.83rem;color:var(--muted);margin-bottom:1.1rem;line-height:1.55;">
-      Your feedback goes straight to the developer as a GitHub issue.
-      You'll need a free <a href="https://github.com/join" target="_blank" rel="noopener" style="color:var(--gold);">GitHub account</a> to submit.
+      Your feedback goes straight to the developer. No account needed — just describe the issue or idea.
     </p>
 
     <!-- Type selector -->
@@ -2169,8 +2168,14 @@
       <textarea id="fb-desc" placeholder="Steps to reproduce, what you expected, what happened instead…" style="height:90px;"></textarea>
     </div>
 
+    <!-- Contact email (optional) -->
+    <div class="form-group">
+      <label>Your email <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — for follow-up)</span></label>
+      <input type="email" id="fb-email" placeholder="you@example.com">
+    </div>
+
     <div class="modal-actions">
-      <button class="btn btn-primary" onclick="submitFeedback()">Open on GitHub →</button>
+      <button class="btn btn-primary" id="fb-submit-btn" onclick="submitFeedback()">Submit Feedback</button>
       <button class="btn btn-ghost"   onclick="closeFeedback()">Cancel</button>
     </div>
   </div>
@@ -7145,8 +7150,28 @@ async function initServerData() {
 // ══════════════════════════════════════════
 //  FEEDBACK
 // ══════════════════════════════════════════
-// GitHub repo for issue submission — update if repo changes
-const FEEDBACK_REPO = 'odrunner/wristlog';
+// Feedback is stored in the Supabase `feedback` table.
+//
+// To create the table, run this SQL in the Supabase SQL Editor:
+//
+//   create table feedback (
+//     id         uuid primary key default gen_random_uuid(),
+//     created_at timestamptz default now(),
+//     user_id    uuid references auth.users(id),
+//     type       text not null check (type in ('bug', 'feature')),
+//     title      text not null,
+//     details    text,
+//     email      text,
+//     status     text not null default 'new' check (status in ('new', 'in_progress', 'resolved', 'wontfix')),
+//     app_version text,
+//     browser    text
+//   );
+//
+//   -- Allow authenticated users to insert feedback
+//   alter table feedback enable row level security;
+//   create policy "Users can insert feedback" on feedback for insert with check (true);
+//   -- Allow anon inserts too (for signed-out users)
+//   create policy "Anon can insert feedback" on feedback for insert to anon with check (true);
 
 let feedbackType = 'bug'; // 'bug' | 'feat'
 
@@ -7154,7 +7179,10 @@ function openFeedback() {
   feedbackType = 'bug';
   document.getElementById('fb-title').value = '';
   document.getElementById('fb-desc').value  = '';
+  document.getElementById('fb-email').value = '';
   setFeedbackType('bug');
+  document.getElementById('fb-submit-btn').disabled = false;
+  document.getElementById('fb-submit-btn').textContent = 'Submit Feedback';
   document.getElementById('feedback-modal').classList.remove('hidden');
 }
 
@@ -7168,30 +7196,37 @@ function setFeedbackType(type) {
   document.getElementById('fb-type-feat').className = 'feedback-type-btn feat' + (type === 'feat' ? ' active' : '');
 }
 
-function submitFeedback() {
+async function submitFeedback() {
   const title = document.getElementById('fb-title').value.trim();
   if (!title) { toast('Please enter a short title', 'error'); return; }
-  const desc  = document.getElementById('fb-desc').value.trim();
-  const label = feedbackType === 'bug' ? 'bug' : 'enhancement';
-  const emoji = feedbackType === 'bug' ? '🐛' : '✨';
 
-  const body = [
-    desc || '_No additional details provided._',
-    '',
-    '---',
-    `**App Version:** v${APP_VERSION}`,
-    `**Browser:** ${navigator.userAgent.match(/(Chrome|Safari|Firefox|Edge)\/[\d.]+/)?.[0] ?? 'unknown'}`,
-    `**Submitted via:** WristLog in-app feedback`,
-  ].join('\n');
+  const btn = document.getElementById('fb-submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
 
-  const url = `https://github.com/${FEEDBACK_REPO}/issues/new`
-    + `?title=${encodeURIComponent(emoji + ' ' + title)}`
-    + `&body=${encodeURIComponent(body)}`
-    + `&labels=${encodeURIComponent(label)}`;
+  const details = document.getElementById('fb-desc').value.trim() || null;
+  const email   = document.getElementById('fb-email').value.trim() || null;
+  const browser = navigator.userAgent.match(/(Chrome|Safari|Firefox|Edge)\/[\d.]+/)?.[0] ?? 'unknown';
 
-  window.open(url, '_blank', 'noopener');
+  const { error } = await db.from('feedback').insert({
+    user_id:     currentUser?.id || null,
+    type:        feedbackType === 'bug' ? 'bug' : 'feature',
+    title,
+    details,
+    email,
+    app_version: APP_VERSION,
+    browser,
+  });
+
+  if (error) {
+    toast('Could not send feedback — please try again', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Submit Feedback';
+    return;
+  }
+
   closeFeedback();
-  toast('Opening GitHub — sign in and click Submit to file your report!');
+  toast('Thanks! Your feedback has been submitted.');
 }
 
 // ══════════════════════════════════════════
