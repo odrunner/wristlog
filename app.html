@@ -594,6 +594,10 @@
     .strap-on-btn.active   { border-color: var(--gold); color: var(--gold); }
     .strap-del-btn         { background: none; border: none; color: var(--muted); cursor: pointer; font-size: .8rem; padding: .1rem .3rem; flex-shrink: 0; }
     .strap-del-btn:hover   { color: var(--danger); }
+    .strap-edit-btn        { background: none; border: none; color: var(--muted); cursor: pointer; font-size: .75rem; padding: .1rem .3rem; flex-shrink: 0; opacity: 0; transition: opacity .15s; }
+    .strap-row:hover .strap-edit-btn { opacity: 1; }
+    .strap-name.clickable  { cursor: pointer; }
+    .strap-name.clickable:hover { color: var(--gold); }
     .strap-empty           { font-size: .78rem; color: var(--muted); padding: .3rem 0; }
     .add-strap-row         { display: flex; gap: .4rem; margin-top: .5rem; flex-wrap: wrap; align-items: center; }
     .add-strap-row input   { flex: 1; min-width: 110px; }
@@ -2433,13 +2437,6 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <div class="form-group"><label>Bio</label>
         <textarea id="pp-bio" rows="3" placeholder="Tell people about your collection…">${escHtml(profile.bio || '')}</textarea>
       </div>
-      <div class="form-group"><label>Show my collection to visitors</label>
-        <select id="pp-collection-vis">
-          <option value="all"         ${visibility === 'all'          ? 'selected' : ''}>Show full collection</option>
-          <option value="public_only" ${visibility === 'public_only'  ? 'selected' : ''}>Show only public watches</option>
-          <option value="none"        ${visibility === 'none'         ? 'selected' : ''}>Don't show collection</option>
-        </select>
-      </div>
       <div class="form-group"><label>Profile Privacy</label>
         <select id="pp-profile-privacy">
           <option value="public"       ${(privacy||'public') === 'public'       ? 'selected' : ''}>Public — anyone can view</option>
@@ -2541,13 +2538,12 @@ async function cycleWatchPrivacy(watchId) {
 async function saveProfileFromPage() {
   const name  = (document.getElementById('pp-display-name')?.value || '').trim();
   const bio   = (document.getElementById('pp-bio')?.value || '').trim();
-  const vis   = document.getElementById('pp-collection-vis')?.value || 'public_only';
   const priv  = document.getElementById('pp-profile-privacy')?.value || 'public';
   const { error } = await db.from('profiles')
-    .update({ display_name: name, bio, collection_visibility: vis, profile_privacy: priv })
+    .update({ display_name: name, bio, profile_privacy: priv })
     .eq('id', currentUser.id);
   if (!error) {
-    myProfile = { ...myProfile, display_name: name, bio, collection_visibility: vis, profile_privacy: priv };
+    myProfile = { ...myProfile, display_name: name, bio, profile_privacy: priv };
     const btn = document.getElementById('profile-btn');
     if (btn) btn.textContent = profileInitials(myProfile);
     toast('Profile saved!');
@@ -3172,7 +3168,8 @@ let monthRevYear  = new Date().getFullYear();
 let monthRevMonth = new Date().getMonth();  // 0-based
 let weatherData  = null; // { condition, desc, tempC } — populated async
 let recSkips     = new Set(); // session skips for "try another" (watchIds)
-let wEditStraps  = [];   // temp straps array while Edit Watch modal is open
+let wEditStraps      = [];   // temp straps array while Edit Watch modal is open
+let wEditingStrapIdx = null; // index of strap currently being edited inline
 
 const WATCH_TAGS = ['Daily Beater','Dress','Dive','Chronograph','GMT','Pilot','Field','Sport','Sport-Luxury','Vintage','Complication','Skeleton'];
 
@@ -4012,13 +4009,44 @@ function renderStrapList() {
     el.innerHTML = '<div class="strap-empty">No straps tracked yet</div>';
     return;
   }
-  el.innerHTML = wEditStraps.map((s, i) => `
-    <div class="strap-row${s.isOn ? ' strap-on' : ''}">
-      <span class="strap-name">${s.name}</span>
-      ${s.material ? `<span class="strap-mat">${s.material}</span>` : ''}
-      <button type="button" class="strap-on-btn${s.isOn ? ' active' : ''}" onclick="setStrapOn(${i})">${s.isOn ? '● On Wrist' : '○ Set on'}</button>
-      <button type="button" class="strap-del-btn" onclick="removeStrap(${i})" title="Remove">✕</button>
-    </div>`).join('');
+  el.innerHTML = wEditStraps.map((s, i) => {
+    if (i === wEditingStrapIdx) {
+      return `
+        <div class="strap-row add-strap-row" style="margin-top:0;border-bottom:1px solid var(--border);padding:.3rem 0;">
+          <input type="text" id="strap-edit-name" value="${escHtml(s.name)}" placeholder="Name" style="flex:1;min-width:80px;">
+          <input type="text" id="strap-edit-mat"  value="${escHtml(s.material||'')}" placeholder="Material" style="flex:1;min-width:80px;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="saveStrapEdit(${i})">Save</button>
+          <button type="button" class="btn btn-ghost btn-sm"   onclick="cancelStrapEdit()">Cancel</button>
+        </div>`;
+    }
+    return `
+      <div class="strap-row${s.isOn ? ' strap-on' : ''}">
+        <span class="strap-name clickable" onclick="editStrap(${i})">${escHtml(s.name)}</span>
+        ${s.material ? `<span class="strap-mat">${escHtml(s.material)}</span>` : ''}
+        <button type="button" class="strap-edit-btn" onclick="editStrap(${i})" title="Edit">✏</button>
+        <button type="button" class="strap-on-btn${s.isOn ? ' active' : ''}" onclick="setStrapOn(${i})">${s.isOn ? '● On Wrist' : '○ Set on'}</button>
+        <button type="button" class="strap-del-btn" onclick="removeStrap(${i})" title="Remove">✕</button>
+      </div>`;
+  }).join('');
+  if (wEditingStrapIdx !== null) {
+    document.getElementById('strap-edit-name')?.focus();
+  }
+}
+function editStrap(idx) {
+  wEditingStrapIdx = idx;
+  renderStrapList();
+}
+function saveStrapEdit(idx) {
+  const name = document.getElementById('strap-edit-name').value.trim();
+  if (!name) { toast('Name is required', 'error'); return; }
+  const material = document.getElementById('strap-edit-mat').value.trim();
+  wEditStraps[idx] = { ...wEditStraps[idx], name, material };
+  wEditingStrapIdx = null;
+  renderStrapList();
+}
+function cancelStrapEdit() {
+  wEditingStrapIdx = null;
+  renderStrapList();
 }
 function setStrapOn(idx) {
   wEditStraps = wEditStraps.map((s, i) => ({ ...s, isOn: i === idx }));
@@ -4162,6 +4190,7 @@ function openAddWatch() {
   buildBrandSelect();
   renderTagPicker([], []);
   wEditStraps = [];
+  wEditingStrapIdx = null;
   renderStrapList();
   updateUrlBtn();
   updateWcUrlBtn();
@@ -4214,6 +4243,7 @@ function openEditWatch(id) {
   // Tags & Straps
   renderTagPicker(w.tags || [], autoSuggestTags(w.brand, w.name, w.ref));
   wEditStraps = JSON.parse(JSON.stringify(w.straps || []));
+  wEditingStrapIdx = null;
   renderStrapList();
   updateUrlBtn();
   updateWcUrlBtn();
