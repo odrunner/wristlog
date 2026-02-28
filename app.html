@@ -3896,8 +3896,7 @@ async function toggleLike(logId) {
     // Notify the post author (skip if liking own post)
     const item = feedItems.find(i => i.id === logId);
     if (item && item.user_id !== currentUser.id) {
-      db.from('notifications').insert({ user_id: item.user_id, type: 'like', actor_id: currentUser.id, ref_id: logId })
-        .then(({ error }) => { if (error) console.error('[WristLog] like notif:', error.code, error.message, error.details, error.hint); });
+      db.from('notifications').insert({ id: uid(), user_id: item.user_id, type: 'like', actor_id: currentUser.id, ref_id: logId }).then();
     }
   }
 }
@@ -3945,8 +3944,7 @@ async function postComment(logId) {
     // Notify the post author (skip if commenting on own post)
     const item = feedItems.find(i => i.id === logId);
     if (item && item.user_id !== currentUser.id) {
-      db.from('notifications').insert({ user_id: item.user_id, type: 'comment', actor_id: currentUser.id, ref_id: logId })
-        .then(({ error }) => { if (error) console.error('[WristLog] comment notif:', error.code, error.message, error.details, error.hint); });
+      db.from('notifications').insert({ id: uid(), user_id: item.user_id, type: 'comment', actor_id: currentUser.id, ref_id: logId }).then();
     }
   } else { toast('Comment failed — ' + error.message, 'error'); }
 }
