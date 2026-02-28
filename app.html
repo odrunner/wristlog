@@ -3380,8 +3380,11 @@ function renderNotificationPanel() {
         <button class="btn btn-ghost"   style="font-size:.74rem;padding:.28rem .7rem;"
           onclick="event.stopPropagation();declineFriendRequest('${n.actor_id}')">Decline</button>
       </div>` : '';
+    const notifClick = (n.type === 'like' || n.type === 'comment')
+      ? `toggleNotifPanel();nav(document.querySelector('nav button[data-page=\\'feed\\']'))`
+      : `viewUserProfile('${n.actor_id}')`;
     return `
-      <div class="notif-item ${n.is_read ? '' : 'notif-unread'}" onclick="viewUserProfile('${n.actor_id}')">
+      <div class="notif-item ${n.is_read ? '' : 'notif-unread'}" onclick="${notifClick}">
         <div class="feed-user-avatar" style="width:36px;height:36px;font-size:.76rem;flex-shrink:0;">${profileInitials(n.actor)}</div>
         <div style="flex:1;min-width:0;">
           <div class="notif-body">${body}</div>
@@ -3945,8 +3948,7 @@ async function postComment(logId) {
     // Notify the post author (skip if commenting on own post)
     const item = feedItems.find(i => i.id === logId);
     if (item && item.user_id !== currentUser.id) {
-      const { data: nd, error: ne } = await db.from('notifications').insert({ user_id: item.user_id, type: 'comment', actor_id: currentUser.id });
-      console.log('[WristLog] comment notif result:', JSON.stringify({ data: nd, error: ne }));
+      db.from('notifications').insert({ user_id: item.user_id, type: 'comment', actor_id: currentUser.id }).then();
     }
   } else { toast('Comment failed — ' + error.message, 'error'); }
 }
