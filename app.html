@@ -367,6 +367,7 @@
     .brand-ac-list { position: absolute; left: 0; right: 0; top: calc(100% + 2px);
       background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
       max-height: 200px; overflow-y: auto; z-index: 200; box-shadow: 0 4px 16px rgba(0,0,0,.35); }
+    .brand-ac-list.hidden { display: none !important; }
     .brand-ac-item { padding: .45rem .75rem; cursor: pointer; font-size: .875rem; }
     .brand-ac-item:hover, .brand-ac-item.ac-focused { background: var(--primary); color: var(--bg); border-radius: 6px; }
     .brand-ac-request { padding: .45rem .75rem; cursor: pointer; font-size: .82rem;
@@ -1878,7 +1879,7 @@
             onblur="setTimeout(hideBrandAC,150)"
             onkeydown="brandKeyNav(event)">
           <input type="hidden" id="w-brand">
-          <div id="brand-ac-list" class="brand-ac-list hidden"></div>
+          <div id="brand-ac-list" class="brand-ac-list hidden" onmousedown="event.preventDefault()"></div>
         </div>
       </div>
       <div class="form-group">
@@ -2081,7 +2082,7 @@
             onblur="setTimeout(hideWlBrandAC,150)"
             onkeydown="wlBrandKeyNav(event)">
           <input type="hidden" id="wl-brand">
-          <div id="wl-brand-ac-list" class="brand-ac-list hidden"></div>
+          <div id="wl-brand-ac-list" class="brand-ac-list hidden" onmousedown="event.preventDefault()"></div>
         </div>
       </div>
       <div class="form-group">
