@@ -2,7 +2,7 @@
 // Enables "Add to Home Screen" (PWA) and offline fallback
 
 const CACHE = 'wristlog-v3';
-const PRECACHE = ['/', '/manifest.json', '/icon.svg'];
+const PRECACHE = ['/wristlog/app.html', '/wristlog/manifest.json', '/wristlog/icon.svg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(

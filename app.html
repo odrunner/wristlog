@@ -7,7 +7,7 @@
   <link rel="icon" id="favicon" type="image/svg+xml" href="">
   <link rel="apple-touch-icon" id="touch-icon" href="">
   <meta name="theme-color" content="#0b0b10">
-  <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="manifest.json">
   <script>
     (function(){
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
@@ -6064,6 +6064,10 @@ document.getElementById('app-ver').textContent  = 'v' + APP_VERSION;
 document.getElementById('help-ver').textContent = 'v' + APP_VERSION;
 
 function initApp() {
+  // Strip OAuth tokens from the URL bar after Google sign-in redirect
+  if (window.location.hash.includes('access_token')) {
+    window.history.replaceState(null, '', window.location.pathname);
+  }
   document.getElementById('track-date').value = todayStr();
   initOEMStraps();
   renderCollection();
@@ -6118,7 +6122,7 @@ db.auth.onAuthStateChange(async (event, session) => {
 // ── PWA: register service worker ────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
   });
 }
 </script>
