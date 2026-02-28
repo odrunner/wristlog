@@ -115,7 +115,7 @@
     nav button:hover { color: var(--text); }
     nav button.active { color: var(--gold); border-bottom-color: var(--gold); }
 
-    /* Mid-width (641–1060px): show emoji only, no text labels */
+    /* Mid-width (641–1060px): show icons only, no text labels */
     @media (min-width: 641px) and (max-width: 1060px) {
       .nav-label { display: none; }
       nav button { padding: .95rem .6rem; }
@@ -844,9 +844,10 @@
     .warranty-expiring { color: #ef7942; }
     .warranty-expired  { color: var(--muted); opacity: .5; }
 
-    /* ── NAV EMOJI / LABEL ── */
+    /* ── NAV ICONS / LABEL ── */
     nav button { display: flex; align-items: center; gap: .35rem; }
-    .nav-emoji { line-height: 1; }
+    .nav-icon { line-height: 1; display: inline-flex; align-items: center; }
+    .nav-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
     .nav-label { }
 
     /* ── 3-COLUMN FORM ROW ── */
@@ -988,7 +989,7 @@
       }
       nav button.active { color: var(--gold); border-top-color: var(--gold); border-bottom-color: transparent; }
       nav button:hover { color: var(--text); }
-      .nav-emoji { font-size: 1.15rem; }
+      .nav-icon svg { width: 20px; height: 20px; }
 
       /* Main: pad bottom for tab bar */
       main { padding: 1.1rem .85rem 86px; }
@@ -1040,7 +1041,7 @@
     /* Very small screens: hide nav labels */
     @media (max-width: 375px) {
       .nav-label { display: none; }
-      .nav-emoji { font-size: 1.3rem; }
+      .nav-icon svg { width: 22px; height: 22px; }
       nav button { padding: .55rem .1rem calc(.5rem + env(safe-area-inset-bottom, 0)); }
     }
 
@@ -1320,12 +1321,12 @@
   <div class="header-inner">
     <button class="logo" onclick="goHome()" title="Back to Collection">WRIST<sup>LOG</sup></button>
     <nav>
-      <button class="active" data-page="collection"  onclick="nav(this)"><span class="nav-emoji">📦</span><span class="nav-label">Collection</span></button>
-      <button               data-page="feed"         onclick="nav(this)"><span class="nav-emoji">🏠</span><span class="nav-label">Feed</span></button>
-      <button               data-page="track"        onclick="nav(this)"><span class="nav-emoji">⌚</span><span class="nav-label">Track</span></button>
-      <button               data-page="reports"      onclick="nav(this)"><span class="nav-emoji">📊</span><span class="nav-label">Reports</span></button>
-      <button               data-page="wishlist"     onclick="nav(this)"><span class="nav-emoji">🌟</span><span class="nav-label">Wishlist</span></button>
-      <button               data-page="help"         onclick="nav(this)"><span class="nav-emoji">❓</span><span class="nav-label">Help</span></button>
+      <button class="active" data-page="collection"  onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="nav-label">Collection</span></button>
+      <button               data-page="feed"         onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12h-6v-6h-4v6z"/></svg></span><span class="nav-label">Feed</span></button>
+      <button               data-page="track"        onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg></span><span class="nav-label">Track</span></button>
+      <button               data-page="reports"      onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 20h16"/><rect x="4" y="13" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/></svg></span><span class="nav-label">Reports</span></button>
+      <button               data-page="wishlist"     onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></span><span class="nav-label">Wishlist</span></button>
+      <button               data-page="help"         onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4.9.5c0 1.5-2.4 2-2.4 3.5"/><circle cx="12" cy="17" r=".5" fill="currentColor" stroke="none"/></svg></span><span class="nav-label">Help</span></button>
     </nav>
     <div class="header-data">
       <div id="server-dot" class="server-dot" title="Saving to local file"></div>
