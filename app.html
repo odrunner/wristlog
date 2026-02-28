@@ -5966,11 +5966,25 @@ function importData() {
         if (!Array.isArray(d.watches) || !Array.isArray(d.logs)) {
           toast('Invalid backup file', 'error'); return;
         }
-        watches  = d.watches;
-        logs     = d.logs;
-        wishlist = d.wishlist || [];
-        brands   = d.brands   || brands;
+        // Reassign fresh IDs to every imported item so they never collide with
+        // another user's existing rows in Supabase. Without this, upsert
+        // onConflict:'id' is blocked by RLS when the same ID belongs to a
+        // different user, causing the import to silently fail to persist.
+        const idMap = {};
+        watches = d.watches.map(w => {
+          const newId = uid();
+          idMap[w.id] = newId;
+          return { ...w, id: newId };
+        });
+        logs = d.logs.map(l => ({
+          ...l,
+          id: uid(),
+          watchId: idMap[l.watchId] || l.watchId,
+        }));
+        wishlist = (d.wishlist || []).map(w => ({ ...w, id: uid() }));
+        brands   = d.brands || brands;
         save(); saveWishlist(); saveBrands();
+        renderCollection();
         renderTrack();
         toast(`Imported ${d.watches.length} watches · ${d.logs.length} logs`);
       } catch { toast('Could not read file', 'error'); }
