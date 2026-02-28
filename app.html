@@ -1504,17 +1504,32 @@
       <div style="font-size:2.5rem;margin-bottom:.75rem;">📦</div>
       <div class="modal-title" style="font-size:1.2rem;">Add your first watch</div>
       <p style="color:var(--muted);font-size:.9rem;line-height:1.55;margin:.5rem 0 1.5rem;">Your collection is the heart of WristLog. Add the watches you own to start tracking.</p>
-      <button class="btn btn-primary" style="width:100%;margin-bottom:.6rem;" onclick="closeWelcome();openAddWatch()">➕ Add a Watch</button>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:.6rem;" onclick="pauseWelcome(3);openAddWatch()">➕ Add a Watch</button>
       <button class="btn btn-ghost" style="width:100%;" onclick="welcomeStep(3)">Skip for now</button>
     </div>
     <div class="welcome-step hidden" id="ws-3">
       <div style="font-size:2.5rem;margin-bottom:.75rem;">👥</div>
       <div class="modal-title" style="font-size:1.2rem;">Find people to follow</div>
       <p style="color:var(--muted);font-size:.9rem;line-height:1.55;margin:.5rem 0 1.5rem;">See what other watch enthusiasts are wearing every day. Follow them to fill your feed.</p>
-      <button class="btn btn-primary" style="width:100%;margin-bottom:.6rem;" onclick="closeWelcome();openDiscover()">🔍 Find People</button>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:.6rem;" onclick="pauseWelcome(4);openDiscover()">🔍 Find People</button>
       <button class="btn btn-ghost" style="width:100%;" onclick="welcomeStep(4)">Skip for now</button>
     </div>
     <div class="welcome-step hidden" id="ws-4">
+      <div style="font-size:2.5rem;margin-bottom:.75rem;">👤</div>
+      <div class="modal-title" style="font-size:1.2rem;">Complete your profile</div>
+      <p style="color:var(--muted);font-size:.9rem;line-height:1.55;margin:.5rem 0 1rem;">Add your name and a short bio so others know who you are.</p>
+      <div class="form-group" style="text-align:left;margin-bottom:.75rem;">
+        <label style="font-size:.8rem;margin-bottom:.3rem;display:block;">Display Name</label>
+        <input type="text" id="ws-display-name" placeholder="Your name" autocomplete="off">
+      </div>
+      <div class="form-group" style="text-align:left;margin-bottom:1rem;">
+        <label style="font-size:.8rem;margin-bottom:.3rem;display:block;">Bio</label>
+        <textarea id="ws-bio" rows="2" placeholder="A short bio..." style="resize:none;"></textarea>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:.6rem;" onclick="saveWelcomeProfile()">Save & Continue →</button>
+      <button class="btn btn-ghost" style="width:100%;" onclick="welcomeStep(5)">Skip for now</button>
+    </div>
+    <div class="welcome-step hidden" id="ws-5">
       <div style="font-size:2.5rem;margin-bottom:.75rem;">🎉</div>
       <div class="modal-title" style="font-size:1.2rem;">You're all set!</div>
       <p style="color:var(--muted);font-size:.9rem;line-height:1.55;margin:.5rem 0 1.5rem;">Track wears on the <b>Track</b> tab · Browse your collection · Share wears on the <b>Feed</b>.</p>
@@ -1525,6 +1540,7 @@
       <div class="welcome-dot" id="wd-2"></div>
       <div class="welcome-dot" id="wd-3"></div>
       <div class="welcome-dot" id="wd-4"></div>
+      <div class="welcome-dot" id="wd-5"></div>
     </div>
   </div>
 </div>
@@ -4069,8 +4085,21 @@ function maybeShowWelcome() {
   if (watches.length > 0 || following.size > 0) return;
   document.getElementById('welcome-modal').classList.remove('hidden');
 }
+let _welcomePendingStep = null;
+function pauseWelcome(nextStep) {
+  _welcomePendingStep = nextStep;
+  document.getElementById('welcome-modal').classList.add('hidden');
+}
+function resumeWelcome() {
+  if (_welcomePendingStep !== null) {
+    const step = _welcomePendingStep;
+    _welcomePendingStep = null;
+    document.getElementById('welcome-modal').classList.remove('hidden');
+    welcomeStep(step);
+  }
+}
 function welcomeStep(n) {
-  [1,2,3,4].forEach(i => {
+  [1,2,3,4,5].forEach(i => {
     document.getElementById(`ws-${i}`).classList.toggle('hidden', i !== n);
     document.getElementById(`wd-${i}`).classList.toggle('active', i === n);
   });
@@ -4078,6 +4107,21 @@ function welcomeStep(n) {
 function closeWelcome() {
   document.getElementById('welcome-modal').classList.add('hidden');
   localStorage.setItem('wristlog_onboarded', '1');
+}
+async function saveWelcomeProfile() {
+  const name = (document.getElementById('ws-display-name').value || '').trim();
+  const bio  = (document.getElementById('ws-bio').value || '').trim();
+  if ((name || bio) && currentUser) {
+    const updateData = {};
+    if (name) updateData.display_name = name;
+    if (bio)  updateData.bio = bio;
+    await db.from('profiles').update(updateData).eq('id', currentUser.id);
+    if (window.myProfile) {
+      if (name) window.myProfile.display_name = name;
+      if (bio)  window.myProfile.bio = bio;
+    }
+  }
+  welcomeStep(5);
 }
 
 // ── Discover ──────────────────────────────────────────────────────────────
@@ -4091,6 +4135,7 @@ function openDiscover() {
 }
 function closeDiscover() {
   document.getElementById('discover-modal').classList.add('hidden');
+  resumeWelcome();
 }
 function debounceSearch(val) {
   clearTimeout(searchDebounce);
@@ -5590,7 +5635,7 @@ function openEditWatch(id) {
   document.getElementById('watch-modal').classList.remove('hidden');
 }
 
-function closeWatchModal() { clearInlineEdits(); document.getElementById('watch-modal').classList.add('hidden'); }
+function closeWatchModal() { clearInlineEdits(); document.getElementById('watch-modal').classList.add('hidden'); resumeWelcome(); }
 
 function onInsuranceChange() {
   const v = document.getElementById('w-insurance').value;
