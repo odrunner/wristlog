@@ -3945,8 +3945,8 @@ async function postComment(logId) {
     // Notify the post author (skip if commenting on own post)
     const item = feedItems.find(i => i.id === logId);
     if (item && item.user_id !== currentUser.id) {
-      db.from('notifications').insert({ user_id: item.user_id, type: 'comment', actor_id: currentUser.id })
-        .then(({ error }) => { if (error) console.error('[WristLog] comment notif:', error.code, error.message, error.details, error.hint); });
+      const { data: nd, error: ne } = await db.from('notifications').insert({ user_id: item.user_id, type: 'comment', actor_id: currentUser.id });
+      console.log('[WristLog] comment notif result:', JSON.stringify({ data: nd, error: ne }));
     }
   } else { toast('Comment failed — ' + error.message, 'error'); }
 }
