@@ -2575,6 +2575,8 @@ function openProfileModal() {
 
 // ── Profile Page ──────────────────────────────────────────────────────────
 function viewUserProfile(userId) {
+  // Close any open overlays (discover modal, etc.) so the profile page is visible
+  document.querySelectorAll('.overlay:not(.hidden)').forEach(o => o.classList.add('hidden'));
   const active = document.querySelector('.page.active');
   profilePagePrev   = active?.id || 'page-feed';
   profilePageUserId = userId;
@@ -2677,10 +2679,10 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   const uname    = profile.username ? '@' + escHtml(profile.username) : '';
   const bio      = profile.bio ? `<div class="profile-bio-text">${escHtml(profile.bio)}</div>` : '';
 
-  // Action button (other users only) — privacy-aware
+  // Action button — Edit for own profile, follow/friend for others
   const followBtn = !isOwn
     ? `<div style="margin-top:.75rem;">${friendActionBtn({ id: profile.id, profile_privacy: privacy || 'public' })}</div>`
-    : '';
+    : `<div style="margin-top:.75rem;"><button class="btn btn-ghost" style="font-size:.82rem;" onclick="document.getElementById('pp-display-name')?.focus();document.getElementById('pp-display-name')?.scrollIntoView({behavior:'smooth',block:'center'})">Edit Profile</button></div>`;
 
   // Stats
   const watchCount = isOwn ? watches.length : (showcase.length || '—');
