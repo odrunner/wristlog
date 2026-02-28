@@ -1128,6 +1128,12 @@
     }
     .feed-edit-btn:hover { color: var(--gold); background: var(--hover); }
 
+    /* Post visibility badge */
+    .vis-badge { display:inline-flex; align-items:center; gap:.25rem; font-size:.68rem;
+      padding:.15rem .5rem; border-radius:20px; font-weight:600; margin: 0 1rem .6rem; }
+    .vis-badge.friends { background:rgba(201,168,76,.15); color:var(--gold); }
+    .vis-badge.private { background:rgba(224,85,85,.12); color:var(--danger); }
+
     /* Inline caption editing area */
     .feed-caption-edit { padding: .4rem 1rem .5rem; }
     .feed-caption-textarea {
@@ -2158,6 +2164,10 @@
     <div class="form-group">
       <textarea id="np-body" rows="3" placeholder="What's on your mind?" style="resize:none;"></textarea>
     </div>
+    <div class="form-group">
+      <label style="font-size:.78rem;color:var(--muted);">Who can see this?</label>
+      <div class="chips" id="np-vis-chips"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="saveNewPost()">Post</button>
       <button class="btn btn-ghost"   onclick="closeNewPost()">Cancel</button>
@@ -2181,6 +2191,10 @@
     </div>
     <div class="form-group">
       <textarea id="ep-body" rows="3" placeholder="What's on your mind?" style="resize:none;"></textarea>
+    </div>
+    <div class="form-group">
+      <label style="font-size:.78rem;color:var(--muted);">Who can see this?</label>
+      <div class="chips" id="ep-vis-chips"></div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="saveEditPost()">Save</button>
@@ -2392,11 +2406,13 @@ function rowToWatch(r) {
   };
 }
 function logToRow(l) {
+  const vis = l.visibility || 'public';
   return {
     id: l.id, user_id: currentUser.id, watch_id: l.watchId,
     date: l.date, use_case: l.useCase||'unspecified',
     notes: l.notes||null, strap_id: l.strapId||null,
-    photo_url: l.photoUrl||null, is_public: l.isPublic !== false,
+    photo_url: l.photoUrl||null, is_public: vis !== 'private',
+    visibility: vis,
   };
 }
 function rowToLog(r) {
@@ -2405,6 +2421,7 @@ function rowToLog(r) {
     useCase: r.use_case||'unspecified', notes: r.notes||null,
     strapId: r.strap_id||null, photoUrl: r.photo_url||null,
     isPublic: r.is_public !== false,
+    visibility: r.visibility || (r.is_public !== false ? 'public' : 'private'),
   };
 }
 function wishToRow(w) {
@@ -2801,6 +2818,12 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         </select>
         <div style="font-size:.73rem;color:var(--muted);margin-top:.3rem;">Changing to Friends Only or Private does not remove existing followers.</div>
       </div>
+      <div class="form-group"><label>Default Post Visibility</label>
+        <div class="chips" id="pp-default-vis-chips">
+          ${visChipsHtml('pp-default-vis-chips', getDefaultVis())}
+        </div>
+        <div style="font-size:.73rem;color:var(--muted);margin-top:.3rem;">New posts will default to this setting. You can change each post individually.</div>
+      </div>
       <div style="display:flex;gap:.65rem;margin-top:.1rem;">
         <button class="btn btn-primary" id="profile-save-btn" style="flex:1;">Save Profile</button>
         <button class="btn btn-ghost" style="color:var(--danger);white-space:nowrap;" onclick="goBackFromProfile();signOut();">↩ Sign Out</button>
@@ -2907,6 +2930,9 @@ async function saveProfileFromPage() {
     if (!valid) { toast(valErr, 'error'); return; }
     if (!_usernameAvailable) { toast('Username is not available', 'error'); return; }
   }
+
+  const defaultVis = getVisChip('pp-default-vis-chips');
+  setDefaultVis(defaultVis);
 
   const updateData = { display_name: name, bio, profile_privacy: priv };
   if (usernameChanged) updateData.username = rawUsername;
@@ -3145,14 +3171,27 @@ async function loadFeed() {
   if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--muted);">Loading…</div>';
   try {
     const allUserIds = [...new Set([...following, ...friends, currentUser.id])];
-    // Logs (standalone posts have watch_id = null — fetch watches separately to avoid inner-join dropping them)
-    const { data: rawLogs, error: logsErr } = await db
-      .from('logs')
-      .select('*')
-      .in('user_id', allUserIds)
-      .eq('is_public', true)
-      .order('date', { ascending: false })
-      .limit(50);
+    // Logs — filter by visibility:
+    //   'public'  → show to all followers
+    //   'friends' → show only to mutual friends
+    //   'private' → only owner sees it
+    const friendIds = [...friends];
+    let visOr = `visibility.eq.public,user_id.eq.${currentUser.id}`;
+    if (friendIds.length) visOr += `,and(visibility.eq.friends,user_id.in.(${friendIds.join(',')}))`;
+
+    let rawLogs, logsErr;
+    try {
+      const res = await db.from('logs').select('*')
+        .in('user_id', allUserIds).or(visOr)
+        .order('date', { ascending: false }).limit(50);
+      rawLogs = res.data; logsErr = res.error;
+    } catch {
+      // visibility column not yet migrated — fall back to is_public
+      const res = await db.from('logs').select('*')
+        .in('user_id', allUserIds).eq('is_public', true)
+        .order('date', { ascending: false }).limit(50);
+      rawLogs = res.data; logsErr = res.error;
+    }
     if (logsErr) { console.warn('Feed logs error:', logsErr.message); feedItems = []; renderFeed(); return; }
     if (!rawLogs || rawLogs.length === 0) { feedItems = []; renderFeed(); return; }
 
@@ -3281,6 +3320,12 @@ function renderFeedCard(item) {
     ? `<div class="feed-watch-chip">⌚ ${escHtml((w.brand||'') + ' ' + (w.name||''))}</div>`
     : '';
 
+  // Visibility badge — only shown to the author on non-public posts
+  const vis = item.visibility || 'public';
+  const visBadge = (isMe && vis !== 'public')
+    ? `<div class="vis-badge ${vis}">${vis === 'friends' ? '👥 Friends only' : '🔒 Only you'}</div>`
+    : '';
+
   let commentsHtml = '';
   if (expanded) {
     const cached = feedComments[item.id];
@@ -3328,6 +3373,7 @@ function renderFeedCard(item) {
       </div>
       ${captionHtml}
       ${watchChip}
+      ${visBadge}
       ${commentsHtml}
     </div>`;
 }
@@ -3378,6 +3424,7 @@ function openEditPost(logId) {
   editPostLogId    = logId;
   editPostNewPhoto = null;
   document.getElementById('ep-body').value = fi.notes || '';
+  document.getElementById('ep-vis-chips').innerHTML = visChipsHtml('ep-vis-chips', fi.visibility || 'public');
   // Populate photo
   if (fi.photo_url) {
     document.getElementById('ep-photo-preview').src = fi.photo_url;
@@ -3426,17 +3473,18 @@ async function saveEditPost() {
   const fi  = feedItems.find(i => i.id === editPostLogId);
   const log = logs.find(l => l.id === editPostLogId);
   const newNotes = (document.getElementById('ep-body').value || '').trim();
+  const vis = getVisChip('ep-vis-chips');
   // Resolve final photo
   let finalPhoto = fi?.photo_url ?? null;
   if (editPostNewPhoto === 'REMOVE') finalPhoto = null;
   else if (editPostNewPhoto)         finalPhoto = editPostNewPhoto;
   // Update local state
-  if (fi)  { fi.notes  = newNotes || null; fi.photo_url = finalPhoto; }
-  if (log) { log.notes = newNotes || null; log.photoUrl = finalPhoto; save(); }
+  if (fi)  { fi.notes = newNotes || null; fi.photo_url = finalPhoto; fi.visibility = vis; }
+  if (log) { log.notes = newNotes || null; log.photoUrl = finalPhoto; log.visibility = vis; log.isPublic = vis !== 'private'; save(); }
   // Persist to Supabase
   if (currentUser) {
     const { error } = await db.from('logs')
-      .update({ notes: newNotes || null, photo_url: finalPhoto })
+      .update({ notes: newNotes || null, photo_url: finalPhoto, visibility: vis, is_public: vis !== 'private' })
       .eq('id', editPostLogId).eq('user_id', currentUser.id);
     if (error) { toast('Save failed — ' + error.message, 'error'); return; }
   }
@@ -3467,6 +3515,7 @@ function openNewPost() {
   newPostPhoto = null;
   clearNewPostPhoto();
   document.getElementById('np-body').value = '';
+  document.getElementById('np-vis-chips').innerHTML = visChipsHtml('np-vis-chips', getDefaultVis());
   document.getElementById('new-post-modal').classList.remove('hidden');
   setTimeout(() => document.getElementById('np-body').focus(), 50);
 }
@@ -3506,10 +3555,12 @@ function clearNewPostPhoto() {
 async function saveNewPost() {
   const body = (document.getElementById('np-body')?.value || '').trim();
   if (!body && !newPostPhoto) { toast('Add a photo or write something', 'error'); return; }
+  const vis = getVisChip('np-vis-chips');
   const entry = {
     id: uid(), watchId: null, date: todayStr(),
     useCase: 'unspecified', notes: body || null,
-    photoUrl: newPostPhoto || null, isPublic: true,
+    photoUrl: newPostPhoto || null, isPublic: vis !== 'private',
+    visibility: vis,
   };
   logs.push(entry);
   localStorage.setItem(STORE_L, JSON.stringify(logs));
@@ -3517,7 +3568,8 @@ async function saveNewPost() {
     const { error } = await db.from('logs').upsert({
       id: entry.id, user_id: currentUser.id, watch_id: null,
       date: entry.date, use_case: 'unspecified',
-      notes: entry.notes, photo_url: entry.photoUrl, is_public: true,
+      notes: entry.notes, photo_url: entry.photoUrl,
+      is_public: vis !== 'private', visibility: vis,
     }, { onConflict: 'id' });
     if (error) { toast('Post failed — ' + error.message, 'error'); return; }
   }
@@ -3727,6 +3779,25 @@ const STORE_L   = 'wristlog_logs';
 const STORE_B   = 'wristlog_brands';
 const STORE_WL  = 'wristlog_wishlist';
 const STORE_ELO = 'wristlog_elo';
+const STORE_VIS = 'wristlog_default_vis'; // 'public' | 'friends' | 'private'
+
+// ── Visibility helpers ──────────────────────────────────────────────────────
+function getDefaultVis() { return localStorage.getItem(STORE_VIS) || 'public'; }
+function setDefaultVis(v) { localStorage.setItem(STORE_VIS, v); }
+
+function visChipsHtml(cId, selected) {
+  return ['public','friends','private'].map(v => {
+    const label = v === 'public' ? '🌐 Public' : v === 'friends' ? '👥 Friends' : '🔒 Private';
+    return `<div class="chip${v === selected ? ' selected' : ''}" data-vis="${v}"
+      onclick="selVisChip('${cId}','${v}')">${label}</div>`;
+  }).join('');
+}
+function selVisChip(cId, val) {
+  document.querySelectorAll(`#${cId} .chip`).forEach(c => c.classList.toggle('selected', c.dataset.vis === val));
+}
+function getVisChip(cId) {
+  return document.querySelector(`#${cId} .chip.selected`)?.dataset.vis || 'public';
+}
 
 const DEFAULT_BRANDS = [
   'Audemars Piguet','Breitling','Bulgari','Cartier','Casio','Citizen',
@@ -4036,8 +4107,9 @@ function saveLog() {
   if (!date)       { toast('Please select a date', 'error'); return; }
   if (!selWatchId) { toast('Please select a watch', 'error'); return; }
   const notes = document.getElementById('track-notes').value.trim();
+  const vis = getDefaultVis();
   const logEntry = { id: uid(), watchId: selWatchId, date, useCase: selUseCase, notes,
-                     photoUrl: trackPhoto || null };
+                     photoUrl: trackPhoto || null, visibility: vis, isPublic: vis !== 'private' };
   if (selStrapId) logEntry.strapId = selStrapId;
   logs.push(logEntry);
   // Update "on wrist" strap status on the watch
@@ -5116,12 +5188,14 @@ function confirmRecLog() {
     toast('Already logged today!'); closeRecLog(); return;
   }
   const caption = (document.getElementById('rec-log-caption')?.value || '').trim();
+  const vis = getDefaultVis();
   const entry = {
     id: uid(), watchId: recLogWatchId,
     date: today, useCase: recLogUseCase,
     notes: caption,
     photoUrl: recLogPhoto || null,
     source: 'recommendation',
+    visibility: vis, isPublic: vis !== 'private',
   };
   if (recLogStrapId) {
     entry.strapId = recLogStrapId;
