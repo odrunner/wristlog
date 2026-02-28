@@ -4323,11 +4323,11 @@ function renderCollection() {
         </div>
         <div class="wc-spacer"></div>
         <div class="watch-card-meta">
-          <div class="meta-box">
+          <div class="meta-box" style="cursor:pointer" onclick="openEditWatch('${w.id}')">
             <div class="meta-lbl">Purchased</div>
             <div class="meta-val">${w.purchaseDate ? fmtDate(w.purchaseDate) : '—'}</div>
           </div>
-          <div class="meta-box">
+          <div class="meta-box" style="cursor:pointer" onclick="openEditWatch('${w.id}')">
             <div class="meta-lbl">Paid</div>
             <div class="meta-val">${fmtMoney(w.price)}</div>
           </div>
