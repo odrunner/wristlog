@@ -3068,15 +3068,9 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <div class="form-group"><label>Bio</label>
         <textarea id="pp-bio" rows="3" placeholder="Tell people about your collection…">${escHtml(profile.bio || '')}</textarea>
       </div>
-      <div class="form-group"><label>Default Post Visibility</label>
-        <div class="chips" id="pp-default-vis-chips">
-          ${visChipsHtml('pp-default-vis-chips', getDefaultVis())}
-        </div>
-        <div style="font-size:.73rem;color:var(--muted);margin-top:.3rem;">New posts will default to this setting. You can change each post individually.</div>
-      </div>
       <div style="display:flex;gap:.65rem;margin-top:.1rem;">
-        <button class="btn btn-primary" id="profile-save-btn" style="flex:1;">Save Profile</button>
-        <button class="btn btn-ghost" style="color:var(--danger);white-space:nowrap;" onclick="goBackFromProfile();signOut();">↩ Sign Out</button>
+        <button class="btn btn-primary btn-sm" id="profile-save-btn">Save</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleProfileEdit()">Cancel</button>
       </div>
     </div>` : '';
 
@@ -3107,13 +3101,24 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           ${pChip('prv-collection-chips','private','🔒 Private',curCol,'collection_visibility')}
         </div>
       </div>
-      <div class="form-group" style="margin-bottom:0;">
+      <div class="form-group" style="margin-bottom:.75rem;">
         <label style="font-size:.78rem;">Wishlist</label>
         <div class="chips" id="prv-wishlist-chips">
           ${pChip('prv-wishlist-chips','public','🌐 Public',wlVis,'wishlist_visibility')}
           ${pChip('prv-wishlist-chips','friends','👥 Friends',wlVis,'wishlist_visibility')}
           ${pChip('prv-wishlist-chips','private','🔒 Private',wlVis,'wishlist_visibility')}
         </div>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label style="font-size:.78rem;">Default Post Visibility</label>
+        <div class="chips" id="pp-default-vis-chips">
+          ${['public','friends','private'].map(v => {
+            const label = v === 'public' ? '🌐 Public' : v === 'friends' ? '👥 Friends' : '🔒 Private';
+            return `<div class="chip${v === getDefaultVis() ? ' selected' : ''}" data-vis="${v}"
+              onclick="selVisChip('pp-default-vis-chips','${v}');setDefaultVis('${v}')">${label}</div>`;
+          }).join('')}
+        </div>
+        <div style="font-size:.71rem;color:var(--muted);margin-top:.25rem;">New posts default to this. You can change each post individually.</div>
       </div>
     </div>`;
   })() : '';
@@ -3214,15 +3219,6 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
 
   const editIcon = isOwn ? `<button class="profile-edit-icon" onclick="toggleProfileEdit()" title="Edit profile">✏️</button>` : '';
 
-  const profileNudge = isOwn && (!profile.avatar_url || !profile.bio) ? `
-    <div class="profile-nudge">
-      <div>
-        <div style="font-weight:600;font-size:.85rem;">Complete your profile</div>
-        <div style="font-size:.78rem;color:var(--muted);margin-top:.15rem;">${!profile.avatar_url && !profile.bio ? 'Add a photo and bio' : !profile.avatar_url ? 'Add a profile photo' : 'Add a bio'} so others can find you.</div>
-      </div>
-      <button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .75rem;white-space:nowrap;" onclick="toggleProfileEdit()">Edit Profile</button>
-    </div>` : '';
-
   return `
     <div class="profile-hero">
       <div class="profile-avatar-lg">${avatarInner}${avatarFallback}${camOverlay}</div>
@@ -3235,7 +3231,6 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       ${followBtn}
     </div>
     ${statsHtml}
-    ${profileNudge}
     ${editHtml}
     ${privacyHtml}
     ${showcaseHtml}
