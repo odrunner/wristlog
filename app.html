@@ -964,7 +964,8 @@
       /* Wishlist cards: wrap actions onto their own row */
       .wl-card { flex-wrap: wrap; padding: .75rem .9rem; gap: .5rem .75rem; }
       .wl-card-img, .wl-card-avatar { width: 52px; height: 52px; font-size: .95rem; }
-      .wl-actions { flex-basis: 100%; justify-content: flex-end; margin-top: .1rem; }
+      .drag-handle { display: none; } /* not usable on touch */
+      .wl-actions { flex-basis: 100%; justify-content: flex-start; margin-top: .1rem; }
     }
 
     /* Very small screens: hide nav labels */
