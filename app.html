@@ -3451,18 +3451,17 @@ function confirmUnfriend(userId, btn) {
 }
 async function unfriendUser(userId) {
   if (!currentUser) return;
-  const req = sentRequests.get(userId) || receivedRequests.get(userId);
-  if (!req) return;
-  const { error } = await db.from('friend_requests').delete().eq('id', req.id);
-  if (!error) {
-    friends.delete(userId);
-    sentRequests.delete(userId);
-    receivedRequests.delete(userId);
-    toast('Unfriended');
-    renderDiscoverUsers();
-    renderFollowingList();
-    if (profilePageUserId === userId) loadAndRenderProfile(userId);
-  }
+  // Match the row regardless of who was sender/receiver
+  const { error } = await db.from('friend_requests').delete()
+    .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${currentUser.id})`);
+  if (error) { toast('Could not unfriend — ' + error.message, 'error'); return; }
+  friends.delete(userId);
+  sentRequests.delete(userId);
+  receivedRequests.delete(userId);
+  toast('Unfriended');
+  renderDiscoverUsers();
+  renderFollowingList();
+  if (profilePageUserId === userId) loadAndRenderProfile(userId);
 }
 
 // ── Friend Requests ────────────────────────────────────────────────────────
