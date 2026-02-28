@@ -940,7 +940,6 @@
     .wl-name  { font-weight: 700; font-size: .98rem; }
     .wl-brand { font-size: .78rem; color: var(--muted); margin-top: .1rem; }
     .wl-meta  { font-size: .75rem; color: var(--muted); margin-top: .25rem; }
-    .wl-actions { display: flex; gap: .4rem; flex-shrink: 0; align-items: center; }
 
     /* ── ROTATION HEALTH BADGE ── */
     .rot-badge { font-size:.67rem; margin-top:.18rem; display:inline-flex; align-items:center; gap:.28rem; }
@@ -1106,7 +1105,6 @@
       .wl-card { flex-wrap: wrap; padding: .75rem .9rem; gap: .5rem .75rem; }
       .wl-card-img, .wl-card-avatar { width: 52px; height: 52px; font-size: .95rem; }
       .drag-handle { touch-action: none; } /* keep visible; touch drag handled in JS */
-      .wl-actions { flex-basis: 100%; justify-content: flex-start; margin-top: .1rem; }
     }
 
     /* Very small screens: hide nav labels */
@@ -6597,13 +6595,10 @@ function renderWishlist() {
       <span class="drag-handle" title="Drag to reorder" ontouchstart="wlTouchStart(event,'${w.id}')">⠿</span>
       <div class="wl-rank ${rankCls}">#${i+1}</div>
       ${thumb}
-      <div class="wl-info">
-        <div class="wl-name">${w.name}</div>
+      <div class="wl-info" onclick="openEditWishlist('${w.id}')" style="cursor:pointer">
+        <div class="wl-name"><span class="inline-val"><span>${escHtml(w.name)}</span></span></div>
         <div class="wl-brand">${w.brand}</div>
         ${meta ? `<div class="wl-meta">${meta}</div>` : ''}
-      </div>
-      <div class="wl-actions">
-        <button class="btn btn-ghost btn-sm" onclick="openEditWishlist('${w.id}')">Edit</button>
       </div>
     </div>`;
   }).join('');
