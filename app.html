@@ -3430,6 +3430,41 @@ async function unfollowUser(userId) {
   }
 }
 
+function confirmUnfriend(userId, btn) {
+  if (btn.dataset.confirming) {
+    delete btn.dataset.confirming;
+    unfriendUser(userId);
+  } else {
+    btn.dataset.confirming = '1';
+    btn.textContent = 'Unfriend?';
+    btn.style.borderColor = 'var(--danger)';
+    btn.style.color = 'var(--danger)';
+    setTimeout(() => {
+      if (btn.dataset.confirming) {
+        delete btn.dataset.confirming;
+        btn.textContent = 'Friends ✓';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+      }
+    }, 3000);
+  }
+}
+async function unfriendUser(userId) {
+  if (!currentUser) return;
+  const req = sentRequests.get(userId) || receivedRequests.get(userId);
+  if (!req) return;
+  const { error } = await db.from('friend_requests').delete().eq('id', req.id);
+  if (!error) {
+    friends.delete(userId);
+    sentRequests.delete(userId);
+    receivedRequests.delete(userId);
+    toast('Unfriended');
+    renderDiscoverUsers();
+    renderFollowingList();
+    if (profilePageUserId === userId) loadAndRenderProfile(userId);
+  }
+}
+
 // ── Friend Requests ────────────────────────────────────────────────────────
 async function sendFriendRequest(userId) {
   if (!currentUser || userId === currentUser.id || sentRequests.has(userId)) return;
@@ -4243,7 +4278,7 @@ function friendActionBtn(u) {
       ${isFlw ? 'Following' : 'Follow'}</button>`;
   }
   // friends_only or private
-  if (isFr) return `<span class="friend-badge">Friends ✓</span>`;
+  if (isFr) return `<button class="follow-btn following" onclick="confirmUnfriend('${u.id}',this)">Friends ✓</button>`;
   if (recv?.status === 'pending') return `
     <button class="follow-btn follow"    style="margin-right:.3rem;" onclick="acceptFriendRequest('${u.id}')">Accept</button>
     <button class="follow-btn following" onclick="declineFriendRequest('${u.id}')">Decline</button>`;
