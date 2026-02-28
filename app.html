@@ -2007,7 +2007,11 @@ function rowToWatch(r) {
   return {
     id: r.id, brand: r.brand||'', name: r.name||'', ref: r.ref||'',
     price: r.price||null, purchaseDate: r.purchase_date||null,
-    color: r.color||'#c9a84c', image: r.image||null, url: r.url||null,
+    color: r.color||'#c9a84c',
+    // Upgrade plain http:// image URLs to https:// (imported backups sometimes
+    // stored raw URLs instead of base64; mixed-content warning on HTTPS pages)
+    image: r.image ? r.image.replace(/^http:\/\//i, 'https://') : null,
+    url: r.url||null,
     tags: r.tags||[], straps: r.straps||[], owner: r.owner||null,
     marketPrice: r.market_price||null, marketPriceDate: r.market_price_date||null,
     marketPriceSrc: r.market_price_src||null, watchChartsUrl: r.watch_charts_url||null,
