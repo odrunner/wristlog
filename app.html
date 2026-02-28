@@ -2018,8 +2018,6 @@ async function signInWithGoogle() {
 
 async function signOut() {
   try { await db.auth.signOut(); } catch(e) { console.warn('[WristLog] signOut error (ignored):', e.message); }
-  watches = []; logs = []; wishlist = []; brands = [...DEFAULT_BRANDS];
-  eloRatings = {};
   currentUser = null;
   clearUserState();
   document.getElementById('auth-screen').style.display = 'flex';
@@ -6120,9 +6118,6 @@ function initApp() {
   renderCollection();
   fetchWeather();
   initReminder();
-  // Show header buttons
-  const signoutBtn = document.getElementById('signout-btn');
-  if (signoutBtn && currentUser) { signoutBtn.style.display = ''; signoutBtn.textContent = 'Sign out'; }
   // Load social data (non-blocking)
   Promise.all([loadMyProfile(), loadFollowing()]).then(() => {
     // Pre-load feed in background so it's ready when user taps the tab
@@ -6144,7 +6139,6 @@ function clearUserState() {
 // Guard: if we're already booted for this user, do nothing.
 async function bootApp(user) {
   if (currentUser?.id === user.id) return; // already running for this user
-  console.log('[WristLog] bootApp →', user.email);
   clearUserState();
   currentUser = user;
   // Show app controls immediately so the user always has a sign-out escape hatch
@@ -6166,8 +6160,7 @@ async function bootApp(user) {
 // Reads directly from localStorage — the reliable path for the refresh case.
 // onAuthStateChange alone is not sufficient because event ordering varies.
 db.auth.getSession().then(({ data: { session }, error }) => {
-  console.log('[WristLog] getSession →', session?.user?.email || 'no session',
-              error ? '| error: ' + error.message : '');
+  if (error) console.error('[WristLog] getSession error:', error.message);
   if (session?.user) {
     bootApp(session.user);
   } else {
@@ -6181,7 +6174,6 @@ db.auth.getSession().then(({ data: { session }, error }) => {
 //          explicit sign-out (SIGNED_OUT), and hourly token refresh.
 // INITIAL_SESSION is intentionally ignored — getSession() above covers it.
 db.auth.onAuthStateChange((event, session) => {
-  console.log('[WristLog] auth event:', event, session?.user?.email || '—');
   if (event === 'SIGNED_IN' && session?.user) {
     bootApp(session.user); // guard prevents double-boot if getSession already ran
   } else if (event === 'SIGNED_OUT') {
