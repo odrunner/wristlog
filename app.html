@@ -3491,6 +3491,11 @@ function saveLog() {
 function deleteLog(id) {
   logs = logs.filter(l => l.id !== id);
   save();
+  // Hard-delete from Supabase — upsert only writes, never removes rows
+  if (currentUser) {
+    db.from('logs').delete().eq('id', id).eq('user_id', currentUser.id)
+      .then(({ error }) => { if (error) console.error('[WristLog] deleteLog error:', error.message); });
+  }
   renderTrack();
 }
 
@@ -5369,6 +5374,11 @@ function setCollSort(field) {
 function deleteLogFromReports(id) {
   logs = logs.filter(l => l.id !== id);
   save();
+  // Hard-delete from Supabase — upsert only writes, never removes rows
+  if (currentUser) {
+    db.from('logs').delete().eq('id', id).eq('user_id', currentUser.id)
+      .then(({ error }) => { if (error) console.error('[WristLog] deleteLogFromReports error:', error.message); });
+  }
   renderReports();
 }
 
