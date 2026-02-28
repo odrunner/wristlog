@@ -6927,14 +6927,32 @@ function renderWishlist() {
         ${meta ? `<div class="wl-meta">${meta}</div>` : ''}
       </div>
       <div class="wl-actions">
-        ${w.url ? `<a href="${w.url}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm" style="text-decoration:none;" title="Open listing">🔗</a>` : ''}
-        <button class="btn btn-ghost btn-sm"  onclick="openEditWishlist('${w.id}')">Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="openDelWlModal('${w.id}')">✕</button>
-        ${!w.image ? `<button class="btn btn-ghost btn-sm" onclick="pasteWishlistImage('${w.id}')" title="Add photo">📋</button>` : ''}
-        ${w.image  ? `<button class="btn btn-ghost btn-sm" onclick="removeWishlistImage('${w.id}')" title="Remove photo">🗑</button>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="openEditWishlist('${w.id}')">Edit</button>
+        <button class="btn btn-ghost btn-sm" onclick="openWlMoreMenu(event,'${w.id}')" title="More">⋯</button>
       </div>
     </div>`;
   }).join('');
+}
+
+// ── Wishlist "more" context menu ──────────────────────────────────────────────
+function openWlMoreMenu(ev, itemId) {
+  ev.stopPropagation();
+  closePhotoMenu();
+  const w = wishlist.find(x => x.id === itemId);
+  if (!w) return;
+  const menu = document.createElement('div');
+  menu.className = 'photo-menu';
+  menu.id = 'photo-menu';
+  if (w.url) menu.innerHTML += `<a class="photo-menu-item" href="${w.url}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;color:var(--text)">🔗 Open listing</a>`;
+  if (w.url && !w.image) menu.innerHTML += `<button class="photo-menu-item" onclick="closePhotoMenu();fetchWishlistImage('${itemId}')">🔍 Fetch photo</button>`;
+  if (!w.image) menu.innerHTML += `<button class="photo-menu-item" onclick="closePhotoMenu();pasteWishlistImage('${itemId}')">📋 Add photo</button>`;
+  if (w.image)  menu.innerHTML += `<button class="photo-menu-item" onclick="closePhotoMenu();removeWishlistImage('${itemId}')">🗑 Remove photo</button>`;
+  menu.innerHTML += `<button class="photo-menu-item danger" onclick="closePhotoMenu();openDelWlModal('${itemId}')">✕ Delete</button>`;
+  document.body.appendChild(menu);
+  const r = ev.currentTarget.getBoundingClientRect();
+  menu.style.top  = Math.min(r.bottom + 4, window.innerHeight - menu.offsetHeight - 8) + 'px';
+  menu.style.left = Math.min(r.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - 8) + 'px';
+  setTimeout(() => document.addEventListener('click', closePhotoMenu, { once: true }), 0);
 }
 
 // ── Wishlist drag-and-drop reordering ────────────────────────────────────────
