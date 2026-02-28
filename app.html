@@ -2008,7 +2008,10 @@ function showAuthError(msg) {
 async function signInWithGoogle() {
   const { error } = await db.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: 'https://odrunner.github.io/wristlog/app.html' }
+    options: {
+      redirectTo: 'https://odrunner.github.io/wristlog/app.html',
+      queryParams: { prompt: 'select_account' }, // always show Google account picker
+    }
   });
   if (error) showAuthError(error.message);
 }
