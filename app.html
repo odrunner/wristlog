@@ -1269,7 +1269,7 @@
 
       <div class="help-intro">
         <strong style="color:var(--text)">Welcome to WristLog.</strong> This guide covers everything you need to know to get the most out of the app.
-        Your watch data is stored privately in your own browser — nothing is sent to any server.
+        Sign in with Google to sync your data securely to the cloud — your collection is available on any device.
       </div>
 
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:2rem;">
@@ -1279,7 +1279,7 @@
         <button class="btn btn-primary" onclick="openFeedback()" style="white-space:nowrap;">💬 Send Feedback</button>
       </div>
 
-      <!-- ── ADDING WATCHES ── -->
+      <!-- ── BUILDING COLLECTION ── -->
       <div class="help-section">
         <div class="help-section-title">📦 Building Your Collection</div>
         <div class="help-card">
@@ -1323,7 +1323,7 @@
             <div class="help-step-num">1</div>
             <div class="help-step-body">
               <div class="help-step-title">Go to the Track tab</div>
-              <div class="help-step-desc">The date defaults to today. You can tap any past date on the calendar to log retroactively.</div>
+              <div class="help-step-desc">The date defaults to today. Use the date field to pick any past date and log retroactively. The <strong>⭐ Today's Pick</strong> card at the top suggests a watch based on your rotation — tap <strong>⌚ Log This Wear</strong> to log it directly from there.</div>
             </div>
           </div>
           <div class="help-step">
@@ -1353,7 +1353,7 @@
 
       <!-- ── COLLECTION FEATURES ── -->
       <div class="help-section">
-        <div class="help-section-title">📦 Collection Features</div>
+        <div class="help-section-title">✨ Collection Features</div>
         <div class="help-grid2">
           <div class="help-mini-card">
             <div class="help-mini-title">🎮 Ranking Game</div>
@@ -1384,8 +1384,43 @@
           <div class="help-step">
             <div class="help-step-num">2</div>
             <div class="help-step-body">
+              <div class="help-step-title">Drag to reorder your priority ranking</div>
+              <div class="help-step-desc">Grab the <strong>⠿ handle</strong> on any wishlist item and drag it up or down to set your priority. The #1 spot is highlighted in gold.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">3</div>
+            <div class="help-step-body">
               <div class="help-step-title">Move to Collection when purchased</div>
               <div class="help-step-desc">Edit the wishlist item and tap <strong>"Move to Collection"</strong> — it transfers all the details so you don't have to re-enter anything.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── FEED ── -->
+      <div class="help-section">
+        <div class="help-section-title">🏠 Feed &amp; Community</div>
+        <div class="help-card">
+          <div class="help-step">
+            <div class="help-step-num">1</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Follow other collectors</div>
+              <div class="help-step-desc">Tap <strong>🔍 Find People</strong> in the Feed tab to discover other WristLog users. Follow them and their daily wear logs will appear in your feed.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">2</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Like and comment on logs</div>
+              <div class="help-step-desc">Tap the ❤️ on any feed post to like it. Tap the 💬 to read and leave comments. A great way to share enthusiasm about a watch or ask about pairings.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">3</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Set up your profile</div>
+              <div class="help-step-desc">Tap your profile icon in the top-right corner to set a display name, username, and bio. Your public profile shows your recent wears to followers.</div>
             </div>
           </div>
         </div>
@@ -1419,11 +1454,9 @@
         </div>
       </div>
 
-      <!-- ── BACKUP ── -->
-
       <!-- ── VERSION ── -->
       <div style="text-align:center;color:var(--muted);font-size:.75rem;padding:1.5rem 0 .5rem;">
-        WristLog <span id="help-ver"></span> · All data stored locally in your browser
+        WristLog <span id="help-ver"></span> · Data synced securely via Supabase
       </div>
 
     </div>
