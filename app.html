@@ -373,8 +373,33 @@
 
     /* ── TRACK PAGE ── */
     .track-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: start; }
-    .track-grid > * { min-width: 0; } /* prevent grid items from overflowing their 1fr track */
+    .track-grid > * { min-width: 0; }
     .track-form { display: flex; flex-direction: column; gap: 1.25rem; }
+
+    /* ── Track log modal ── */
+    .tl-modal { max-width: 420px; padding: 1.25rem 1.35rem 1.35rem; }
+    .tl-hero {
+      display: flex; align-items: center; gap: .85rem;
+      background: linear-gradient(135deg, rgba(201,168,76,.08) 0%, transparent 60%);
+      border: 1px solid rgba(201,168,76,.18);
+      border-radius: 12px; padding: .85rem 1rem;
+      margin-bottom: 1.1rem;
+    }
+    .tl-hero-thumb {
+      width: 52px; height: 52px; border-radius: 10px; flex-shrink: 0;
+      overflow: hidden; display: flex; align-items: center; justify-content: center;
+    }
+    .tl-hero-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .tl-hero-info { min-width: 0; }
+    .tl-hero-brand { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+    .tl-hero-name  { font-weight: 700; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tl-field { margin-bottom: .8rem; }
+    .tl-row   { display: flex; gap: .75rem; }
+    .tl-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: .4rem; }
+    .tl-opt   { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--muted); opacity: .7; }
+    .tl-worn-notice { margin-top: .35rem; font-size: .75rem; color: var(--success); min-height: 1em; }
+    .tl-photo { aspect-ratio: unset; height: 80px; }
+    .tl-photo .log-photo-placeholder { font-size: .8rem; }
 
     .today-pill {
       display: inline-flex;
@@ -2158,53 +2183,9 @@
 <!-- ════ MY PROFILE MODAL ════ -->
 
 <!-- ════ TODAY'S PICK — LOG MODAL ════ -->
-<div id="rec-log-modal" class="overlay hidden">
-  <div class="modal" style="max-width:360px;">
-    <div class="modal-title" id="rec-log-title">⌚ Log This Wear</div>
-    <p style="font-size:.8rem;color:var(--muted);margin-bottom:1.1rem;">Today's date will be recorded automatically.</p>
-
-    <div class="form-group" id="rec-log-strap-group" style="display:none;">
-      <label>Strap / Bracelet</label>
-      <div class="chips" id="rec-log-strap-chips"></div>
-    </div>
-
-    <div class="form-group">
-      <label>Occasion</label>
-      <div class="chips" id="rec-log-uc-chips">
-        <div class="chip selected" data-ruc="unspecified" onclick="selRecLogUC('unspecified')">— Unspecified</div>
-        <div class="chip" data-ruc="work"     onclick="selRecLogUC('work')">💼 Work</div>
-        <div class="chip" data-ruc="leisure"  onclick="selRecLogUC('leisure')">🛋️ Leisure</div>
-        <div class="chip" data-ruc="dinner"   onclick="selRecLogUC('dinner')">🍽️ Dinner</div>
-        <div class="chip" data-ruc="travel"   onclick="selRecLogUC('travel')">✈️ Travel</div>
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label>Photo <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
-      <div id="rec-log-photo-area" class="log-photo-area" onclick="document.getElementById('rec-log-photo-input').click()">
-        <div id="rec-log-photo-placeholder" class="log-photo-placeholder">📷 Tap to add a photo</div>
-        <img id="rec-log-photo-preview" class="log-photo-preview" style="display:none;" alt="">
-        <button type="button" id="rec-log-photo-clear" class="log-photo-clear" style="display:none;"
-          onclick="event.stopPropagation();clearRecLogPhoto()">✕</button>
-      </div>
-      <input type="file" id="rec-log-photo-input" accept="image/*"
-        style="display:none" onchange="handleRecLogPhoto(this)">
 <!-- Shared hidden input for adding a photo to an existing feed card -->
 <input type="file" id="feed-photo-input" accept="image/*"
   style="display:none" onchange="handleFeedPhoto(this)">
-    </div>
-
-    <div class="form-group">
-      <label>Caption <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
-      <textarea id="rec-log-caption" rows="2" placeholder="What's the occasion? Share your thoughts…" style="resize:none;"></textarea>
-    </div>
-
-    <div class="modal-actions">
-      <button class="btn btn-primary" onclick="confirmRecLog()">✓ Log Wear</button>
-      <button class="btn btn-ghost"   onclick="closeRecLog()">Cancel</button>
-    </div>
-  </div>
-</div>
 
 <!-- ════ NEW POST MODAL ════ -->
 <div id="new-post-modal" class="overlay hidden">
@@ -2317,35 +2298,37 @@
 <!-- ════ EDIT LOG MODAL ════ -->
 <!-- ════ TRACK LOG MODAL ════ -->
 <div id="track-log-modal" class="overlay hidden" onclick="if(event.target===this)closeTrackModal()">
-  <div class="modal" style="max-width:420px;">
+  <div class="modal tl-modal">
 
-    <!-- Selected watch header -->
-    <div id="tl-watch-header" style="display:flex;align-items:center;gap:.8rem;padding-bottom:1rem;margin-bottom:1rem;border-bottom:1px solid var(--border);">
-      <div id="tl-watch-thumb" style="width:48px;height:48px;border-radius:10px;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;"></div>
-      <div style="min-width:0;">
-        <div id="tl-watch-brand" style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;line-height:1.3;"></div>
-        <div id="tl-watch-name" style="font-weight:700;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+    <!-- Watch hero -->
+    <div class="tl-hero">
+      <div id="tl-watch-thumb" class="tl-hero-thumb"></div>
+      <div class="tl-hero-info">
+        <div id="tl-watch-brand" class="tl-hero-brand"></div>
+        <div id="tl-watch-name"  class="tl-hero-name"></div>
       </div>
     </div>
 
-    <!-- Date -->
-    <div class="form-group">
-      <label>Date</label>
-      <input type="date" id="track-date" oninput="onDateChange()">
-      <div id="date-log-indicator" style="margin-top:.4rem;font-size:.78rem;color:var(--success);min-height:1.1em;"></div>
+    <!-- Date + worn notice -->
+    <div class="tl-row">
+      <div class="tl-field" style="flex:1;">
+        <div class="tl-label">Date</div>
+        <input type="date" id="track-date" oninput="onDateChange()">
+        <div id="date-log-indicator" class="tl-worn-notice"></div>
+      </div>
     </div>
 
-    <!-- Strap (shown only when watch has 2+ straps) -->
-    <div class="form-group" id="strap-selector-card" style="display:none;">
-      <label>Strap / Bracelet</label>
+    <!-- Strap (only when watch has 2+ straps) -->
+    <div class="tl-field" id="strap-selector-card" style="display:none;">
+      <div class="tl-label">Strap / Bracelet</div>
       <div class="chips" id="strap-chips"></div>
     </div>
 
     <!-- Occasion -->
-    <div class="form-group">
-      <label>Occasion</label>
+    <div class="tl-field">
+      <div class="tl-label">Occasion</div>
       <div class="chips" id="usecase-chips">
-        <div class="chip selected" data-uc="unspecified">— Unspecified</div>
+        <div class="chip selected" data-uc="unspecified">—</div>
         <div class="chip" data-uc="work">💼 Work</div>
         <div class="chip" data-uc="leisure">🛋️ Leisure</div>
         <div class="chip" data-uc="dinner">🍽️ Dinner</div>
@@ -2353,23 +2336,11 @@
       </div>
     </div>
 
-    <!-- Caption (shown in feed) -->
-    <div class="form-group">
-      <label>Caption <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(optional · shown in feed)</span></label>
-      <textarea id="track-notes" placeholder="What are you up to today…" rows="2"></textarea>
-    </div>
-
-    <!-- Private notes -->
-    <div class="form-group">
-      <label>Private notes <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(only you see this)</span></label>
-      <textarea id="track-private-notes" placeholder="Condition, thoughts, how it felt…" rows="2"></textarea>
-    </div>
-
-    <!-- Photo -->
-    <div class="form-group">
-      <label>Photo <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(optional)</span></label>
-      <div id="track-photo-area" class="log-photo-area" onclick="document.getElementById('track-photo-input').click()">
-        <div id="track-photo-placeholder" class="log-photo-placeholder">📷 Tap to add a photo</div>
+    <!-- Photo (compact strip) -->
+    <div class="tl-field">
+      <div class="tl-label">Photo <span class="tl-opt">optional</span></div>
+      <div id="track-photo-area" class="log-photo-area tl-photo" onclick="document.getElementById('track-photo-input').click()">
+        <div id="track-photo-placeholder" class="log-photo-placeholder">📷 Add a photo</div>
         <img id="track-photo-preview" class="log-photo-preview" style="display:none;" alt="">
         <button type="button" id="track-photo-clear" class="log-photo-clear" style="display:none;"
           onclick="event.stopPropagation();clearTrackPhoto()">✕</button>
@@ -2378,9 +2349,20 @@
         style="display:none" onchange="handleTrackPhoto(this)">
     </div>
 
+    <!-- Caption + Private notes side by side label, stacked fields -->
+    <div class="tl-field">
+      <div class="tl-label">Caption <span class="tl-opt">shown in feed</span></div>
+      <textarea id="track-notes" placeholder="What are you up to today…" rows="2"></textarea>
+    </div>
+
+    <div class="tl-field">
+      <div class="tl-label">Private notes <span class="tl-opt">only you see this</span></div>
+      <textarea id="track-private-notes" placeholder="Condition, thoughts, how it felt…" rows="2"></textarea>
+    </div>
+
     <!-- Visibility -->
-    <div class="form-group">
-      <label>Visibility</label>
+    <div class="tl-field">
+      <div class="tl-label">Post visibility</div>
       <div class="chips" id="tl-vis-chips">
         <div class="chip" data-vis="public">🌐 Public</div>
         <div class="chip" data-vis="friends">👥 Friends</div>
@@ -2388,7 +2370,7 @@
       </div>
     </div>
 
-    <div class="modal-actions">
+    <div class="modal-actions" style="margin-top:1.1rem;">
       <button class="btn btn-primary" onclick="saveLog()">Log This Wear</button>
       <button class="btn btn-ghost"   onclick="closeTrackModal()">Cancel</button>
     </div>
@@ -5383,130 +5365,8 @@ function quickLog(watchId) {
 }
 
 // ── Today's Pick log modal ────────────────────────────────────────────────────
-let recLogWatchId = null;
-let recLogUseCase = 'unspecified';
-let recLogStrapId = null;
-let recLogPhoto   = null;  // base64 or URL of the wear photo
-
-function openRecLog(watchId) {
-  const w = watches.find(w => w.id === watchId);
-  if (!w) return;
-  recLogWatchId = watchId;
-  recLogUseCase = 'unspecified';
-  recLogStrapId = null;
-
-  // Title
-  document.getElementById('rec-log-title').textContent = `⌚ ${w.brand} ${w.name}`;
-
-  // Strap chips
-  const straps = (w.straps || []).filter(s => !s.archived);
-  const strapGroup = document.getElementById('rec-log-strap-group');
-  if (straps.length > 1) {
-    const onWrist = straps.find(s => s.isOn) || straps[0];
-    recLogStrapId = onWrist.id;
-    renderRecLogStrapChips(w);
-    strapGroup.style.display = '';
-  } else {
-    recLogStrapId = straps[0]?.id || null;
-    strapGroup.style.display = 'none';
-  }
-
-  // Reset use case chips to unspecified
-  document.querySelectorAll('#rec-log-uc-chips [data-ruc]').forEach(c => {
-    c.classList.toggle('selected', c.dataset.ruc === 'unspecified');
-  });
-
-  // Reset photo + caption
-  recLogPhoto = null;
-  clearRecLogPhoto();
-  document.getElementById('rec-log-caption').value = '';
-
-  document.getElementById('rec-log-modal').classList.remove('hidden');
-}
-
-function renderRecLogStrapChips(w) {
-  const straps = (w.straps || []).filter(s => !s.archived);
-  document.getElementById('rec-log-strap-chips').innerHTML = straps.map(s =>
-    `<div class="chip${s.id === recLogStrapId ? ' selected' : ''}" onclick="selRecLogStrap('${s.id}')">${s.name}</div>`
-  ).join('');
-}
-
-function selRecLogStrap(strapId) {
-  recLogStrapId = strapId;
-  const w = watches.find(w => w.id === recLogWatchId);
-  if (w) renderRecLogStrapChips(w);
-}
-
-function selRecLogUC(uc) {
-  recLogUseCase = uc;
-  document.querySelectorAll('#rec-log-uc-chips [data-ruc]').forEach(c => {
-    c.classList.toggle('selected', c.dataset.ruc === uc);
-  });
-}
-
-function closeRecLog() {
-  document.getElementById('rec-log-modal').classList.add('hidden');
-  recLogPhoto = null;
-  clearRecLogPhoto();
-  document.getElementById('rec-log-caption').value = '';
-}
-
-function confirmRecLog() {
-  if (!recLogWatchId) return;
-  const today = todayStr();
-  if (logs.some(l => l.watchId === recLogWatchId && l.date === today)) {
-    toast('Already logged today!'); closeRecLog(); return;
-  }
-  const caption = (document.getElementById('rec-log-caption')?.value || '').trim();
-  const vis = getDefaultVis();
-  const entry = {
-    id: uid(), watchId: recLogWatchId,
-    date: today, useCase: recLogUseCase,
-    notes: caption,
-    photoUrl: recLogPhoto || null,
-    source: 'recommendation',
-    visibility: vis, isPublic: vis !== 'private',
-  };
-  if (recLogStrapId) {
-    entry.strapId = recLogStrapId;
-    // Update which strap is "on wrist"
-    const wIdx = watches.findIndex(w => w.id === recLogWatchId);
-    if (wIdx >= 0) watches[wIdx].straps = watches[wIdx].straps.map(s => ({ ...s, isOn: s.id === recLogStrapId }));
-  }
-  logs.push(entry);
-  save();
-  closeRecLog();
-  renderWatchRecommendation();
-  if (document.getElementById('page-collection').classList.contains('active')) renderCollection();
-  dismissReminder();
-  toast('Wear logged! ⌚');
-}
-
-async function handleRecLogPhoto(input) {
-  const file = input.files[0];
-  if (!file) return;
-  try {
-    recLogPhoto = await blobToResizedBase64(file);
-    const preview = document.getElementById('rec-log-photo-preview');
-    preview.src = recLogPhoto;
-    preview.style.display = 'block';
-    document.getElementById('rec-log-photo-placeholder').style.display = 'none';
-    document.getElementById('rec-log-photo-clear').style.display = '';
-    document.getElementById('rec-log-photo-area').classList.add('has-photo');
-  } catch(e) { toast('Could not load photo', 'error'); }
-  input.value = '';
-}
-
-function clearRecLogPhoto() {
-  recLogPhoto = null;
-  const preview = document.getElementById('rec-log-photo-preview');
-  if (!preview) return;
-  preview.style.display = 'none';
-  preview.src = '';
-  document.getElementById('rec-log-photo-placeholder').style.display = '';
-  document.getElementById('rec-log-photo-clear').style.display = 'none';
-  document.getElementById('rec-log-photo-area').classList.remove('has-photo');
-}
+// Recommendation card "Log This Wear" — reuses the shared track modal
+function openRecLog(watchId) { openTrackModal(watchId); }
 
 // ── Market price card row ────────────────────────────────────────────────────
 function marketPriceRowHTML(w) {
