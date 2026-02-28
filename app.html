@@ -212,7 +212,7 @@
 
     /* ── FORMS ── */
     label { font-size: .75rem; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; display: block; margin-bottom: .35rem; }
-    input[type=text], input[type=number], input[type=date], textarea, select {
+    input[type=text], input[type=number], input[type=date], input[type=url], textarea, select {
       width: 100%;
       max-width: 100%;
       min-width: 0; /* prevent input from inflating a flex/grid cell */
@@ -665,6 +665,7 @@
       max-width: 460px;
       max-height: 92vh;
       overflow-y: auto;
+      overflow-x: hidden;
     }
     .modal-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 1.4rem; }
     .modal-actions { display: flex; gap: .65rem; margin-top: 1.4rem; }
