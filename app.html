@@ -6066,12 +6066,18 @@ function clearUserState() {
 // Auth state listener — drives the whole show
 db.auth.onAuthStateChange(async (event, session) => {
   if (session?.user) {
-    // Clear any stale data from a previous session before loading the new user's data
-    clearUserState();
-    currentUser = session.user;
-    await loadUserData();
-    document.getElementById('auth-screen').style.display = 'none';
-    initApp();
+    const isNewUser = !currentUser || currentUser.id !== session.user.id;
+    if (isNewUser) {
+      // Switching users (or first load): wipe any stale state from the previous user
+      clearUserState();
+      currentUser = session.user;
+      await loadUserData();
+      document.getElementById('auth-screen').style.display = 'none';
+      initApp();
+    } else {
+      // TOKEN_REFRESHED / minor update for the same user — just keep token current
+      currentUser = session.user;
+    }
   } else {
     currentUser = null;
     clearUserState();
