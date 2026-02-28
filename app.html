@@ -1138,6 +1138,18 @@
     .feed-caption-textarea:focus { outline: none; border-color: var(--gold); }
     .feed-caption-edit-actions { display: flex; gap: .5rem; margin-top: .4rem; }
 
+    /* Text-only standalone post hero */
+    .feed-text-hero {
+      padding: 1.35rem 1.1rem 1.15rem;
+      background: linear-gradient(135deg, var(--surface2) 0%, var(--surface) 100%);
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      min-height: 80px; display: flex; align-items: center;
+    }
+    .feed-text-hero-body {
+      font-size: .97rem; line-height: 1.55; color: var(--text);
+      margin: 0; word-break: break-word; white-space: pre-wrap;
+    }
+
     /* Add-photo button inside watch banner (own cards, no photo) */
     .feed-add-photo-btn {
       background: none; border: 1px solid var(--border); color: var(--muted);
@@ -1471,7 +1483,10 @@
   <div id="page-feed" class="page active">
     <div class="page-header">
       <div class="page-title">🏠 Feed</div>
-      <button class="btn btn-ghost" onclick="openDiscover()">🔍 Find People</button>
+      <div style="display:flex;gap:.5rem;">
+        <button class="btn btn-primary btn-sm" onclick="openNewPost()">✏ Post</button>
+        <button class="btn btn-ghost" onclick="openDiscover()">🔍 Find People</button>
+      </div>
     </div>
     <div id="feed-list"></div>
   </div>
@@ -2106,6 +2121,30 @@
 <input type="file" id="feed-photo-input" accept="image/*" capture="environment"
   style="display:none" onchange="handleFeedPhoto(this)">
     </div>
+
+<!-- ════ NEW POST MODAL ════ -->
+<div id="new-post-modal" class="overlay hidden">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title">✏ New Post</div>
+    <div class="form-group">
+      <div id="np-photo-area" class="log-photo-area" onclick="document.getElementById('np-photo-input').click()">
+        <div id="np-photo-placeholder" class="log-photo-placeholder">📷 Add a photo (optional)</div>
+        <img id="np-photo-preview" class="log-photo-preview" style="display:none;" alt="">
+        <button type="button" id="np-photo-clear" class="log-photo-clear" style="display:none;"
+          onclick="event.stopPropagation();clearNewPostPhoto()">✕</button>
+      </div>
+      <input type="file" id="np-photo-input" accept="image/*" capture="environment"
+        style="display:none" onchange="handleNewPostPhoto(this)">
+    </div>
+    <div class="form-group">
+      <textarea id="np-body" rows="3" placeholder="What's on your mind?" style="resize:none;"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveNewPost()">Post</button>
+      <button class="btn btn-ghost"   onclick="closeNewPost()">Cancel</button>
+    </div>
+  </div>
+</div>
 
     <div class="form-group">
       <label>Caption <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
@@ -3064,16 +3103,25 @@ async function loadFeed() {
   if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--muted);">Loading…</div>';
   try {
     const allUserIds = [...new Set([...following, ...friends, currentUser.id])];
-    // Logs + nested watch data
+    // Logs (standalone posts have watch_id = null — fetch watches separately to avoid inner-join dropping them)
     const { data: rawLogs, error: logsErr } = await db
       .from('logs')
-      .select('*, watches!watch_id(id, brand, name, color, image)')
+      .select('*')
       .in('user_id', allUserIds)
       .eq('is_public', true)
       .order('date', { ascending: false })
       .limit(50);
     if (logsErr) { console.warn('Feed logs error:', logsErr.message); feedItems = []; renderFeed(); return; }
     if (!rawLogs || rawLogs.length === 0) { feedItems = []; renderFeed(); return; }
+
+    // Watches (separate query so null watch_id rows aren't dropped by an inner join)
+    const watchIds = [...new Set(rawLogs.filter(l => l.watch_id).map(l => l.watch_id))];
+    let watchMap = {};
+    if (watchIds.length) {
+      const { data: watchRows } = await db.from('watches')
+        .select('id, brand, name, color, image').in('id', watchIds);
+      (watchRows || []).forEach(w => watchMap[w.id] = w);
+    }
 
     // Profiles for authors
     const userIds = [...new Set(rawLogs.map(l => l.user_id))];
@@ -3097,7 +3145,11 @@ async function loadFeed() {
     feedCommentCounts = {};
     (commentData || []).forEach(c => { feedCommentCounts[c.log_id] = (feedCommentCounts[c.log_id] || 0) + 1; });
 
-    feedItems = rawLogs.map(l => ({ ...l, profile: profileMap[l.user_id] || null, watch: l.watches || null }));
+    feedItems = rawLogs.map(l => ({
+      ...l,
+      profile: profileMap[l.user_id] || null,
+      watch: l.watch_id ? (watchMap[l.watch_id] || null) : null,
+    }));
   } catch(e) { console.warn('Feed error:', e.message); }
   finally { feedLoading = false; }
   renderFeed();
@@ -3138,29 +3190,35 @@ function renderFeedCard(item) {
   const metaParts = [formatFeedDate(item.date), ucIcon ? `${ucIcon} ${item.use_case}` : ''].filter(Boolean);
   const metaStr   = metaParts.join(' · ');
 
-  // Hero: full-width photo if exists, else styled watch banner
-  let heroHtml;
+  const editingCaption = isMe && feedEditingCaption.has(item.id);
+  const isStandalonePost = !w; // no watch = standalone post
+
+  // Hero area
+  let heroHtml = '';
   if (item.photo_url) {
     heroHtml = `<div class="feed-card-photo"><img src="${escHtml(item.photo_url)}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`;
-  } else {
-    const thumb = w?.image
+  } else if (w) {
+    // Wear log without photo — watch banner
+    const thumb = w.image
       ? `<img class="feed-watch-banner-thumb" src="${escHtml(w.image)}" onerror="this.style.display='none'">`
-      : `<div class="feed-watch-banner-avatar" style="background:${w?.color||'#c9a84c'}">${initials(w?.brand||'',w?.name||'')}</div>`;
+      : `<div class="feed-watch-banner-avatar" style="background:${w.color||'#c9a84c'}">${initials(w.brand||'',w.name||'')}</div>`;
     const addPhotoBtn = isMe
       ? `<button class="feed-add-photo-btn" onclick="addFeedPhoto('${item.id}')">📷 Add photo</button>`
       : '';
     heroHtml = `
       <div class="feed-watch-banner">
         ${thumb}
-        <div class="feed-watch-banner-brand">${escHtml(w?.brand || '')}</div>
-        <div class="feed-watch-banner-name">${escHtml(w?.name || 'Unknown watch')}</div>
+        <div class="feed-watch-banner-brand">${escHtml(w.brand || '')}</div>
+        <div class="feed-watch-banner-name">${escHtml(w.name || '')}</div>
         ${addPhotoBtn}
       </div>`;
+  } else if (!editingCaption && item.notes) {
+    // Text-only standalone post — notes are the hero
+    heroHtml = `<div class="feed-text-hero"><p class="feed-text-hero-body">${escHtml(item.notes)}</p></div>`;
   }
 
-  // Caption — inline edit mode for own cards, static for others
-  const editingCaption = isMe && feedEditingCaption.has(item.id);
-  let captionHtml;
+  // Caption / edit area
+  let captionHtml = '';
   if (editingCaption) {
     captionHtml = `
       <div class="feed-caption-edit">
@@ -3171,14 +3229,15 @@ function renderFeedCard(item) {
           <button class="btn btn-ghost btn-sm"   onclick="cancelFeedCaption('${item.id}')">Cancel</button>
         </div>
       </div>`;
-  } else {
-    captionHtml = item.notes
-      ? `<div class="feed-caption"><span class="feed-caption-user">${escHtml(p?.display_name || p?.username || 'User')}</span>${escHtml(item.notes)}</div>`
-      : '';
+  } else if (item.notes && (item.photo_url || w)) {
+    // Caption below actions only for photo posts and wear logs (text posts show notes in hero)
+    captionHtml = `<div class="feed-caption"><span class="feed-caption-user">${escHtml(p?.display_name || p?.username || 'User')}</span>${escHtml(item.notes)}</div>`;
   }
 
-  // Watch chip (always visible — identifies what was worn)
-  const watchChip = `<div class="feed-watch-chip">⌚ ${escHtml((w?.brand||'') + ' ' + (w?.name||'Unknown'))}</div>`;
+  // Watch chip — only for wear logs
+  const watchChip = w
+    ? `<div class="feed-watch-chip">⌚ ${escHtml((w.brand||'') + ' ' + (w.name||''))}</div>`
+    : '';
 
   let commentsHtml = '';
   if (expanded) {
@@ -3265,6 +3324,72 @@ async function saveFeedCaption(logId) {
   feedEditingCaption.delete(logId);
   refreshFeedCard(logId);
   toast('Caption saved!');
+}
+
+// ── Standalone new post ────────────────────────────────────────────────────
+let newPostPhoto = null;
+
+function openNewPost() {
+  newPostPhoto = null;
+  clearNewPostPhoto();
+  document.getElementById('np-body').value = '';
+  document.getElementById('new-post-modal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('np-body').focus(), 50);
+}
+
+function closeNewPost() {
+  document.getElementById('new-post-modal').classList.add('hidden');
+  newPostPhoto = null;
+  clearNewPostPhoto();
+}
+
+async function handleNewPostPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    newPostPhoto = await blobToResizedBase64(file);
+    const preview = document.getElementById('np-photo-preview');
+    preview.src = newPostPhoto;
+    preview.style.display = 'block';
+    document.getElementById('np-photo-placeholder').style.display = 'none';
+    document.getElementById('np-photo-clear').style.display = '';
+    document.getElementById('np-photo-area').classList.add('has-photo');
+  } catch(e) { toast('Could not load photo', 'error'); }
+  input.value = '';
+}
+
+function clearNewPostPhoto() {
+  newPostPhoto = null;
+  const preview = document.getElementById('np-photo-preview');
+  if (!preview) return;
+  preview.style.display = 'none';
+  preview.src = '';
+  document.getElementById('np-photo-placeholder').style.display = '';
+  document.getElementById('np-photo-clear').style.display = 'none';
+  document.getElementById('np-photo-area').classList.remove('has-photo');
+}
+
+async function saveNewPost() {
+  const body = (document.getElementById('np-body')?.value || '').trim();
+  if (!body && !newPostPhoto) { toast('Add a photo or write something', 'error'); return; }
+  const entry = {
+    id: uid(), watchId: null, date: todayStr(),
+    useCase: 'unspecified', notes: body || null,
+    photoUrl: newPostPhoto || null, isPublic: true,
+  };
+  logs.push(entry);
+  localStorage.setItem(STORE_L, JSON.stringify(logs));
+  if (currentUser) {
+    const { error } = await db.from('logs').upsert({
+      id: entry.id, user_id: currentUser.id, watch_id: null,
+      date: entry.date, use_case: 'unspecified',
+      notes: entry.notes, photo_url: entry.photoUrl, is_public: true,
+    }, { onConflict: 'id' });
+    if (error) { toast('Post failed — ' + error.message, 'error'); return; }
+  }
+  closeNewPost();
+  toast('Posted! 🎉');
+  if (document.getElementById('page-feed').classList.contains('active')) loadFeed();
 }
 
 // ── Feed photo (add after logging) ────────────────────────────────────────
