@@ -5982,8 +5982,17 @@ function importData() {
           watchId: idMap[l.watchId] || l.watchId,
         }));
         wishlist = (d.wishlist || []).map(w => ({ ...w, id: uid() }));
-        brands   = d.brands || brands;
-        save(); saveWishlist(); saveBrands();
+        brands    = d.brands || brands;
+        eloRatings = {}; // new IDs have no elo history yet
+        // Write to localStorage directly then sync once — avoids the
+        // double-cloudSync that save() + saveWishlist() would trigger,
+        // which caused concurrent INSERT races failing RLS USING checks.
+        localStorage.setItem(STORE_W,   JSON.stringify(watches));
+        localStorage.setItem(STORE_L,   JSON.stringify(logs));
+        localStorage.setItem(STORE_WL,  JSON.stringify(wishlist));
+        localStorage.setItem(STORE_B,   JSON.stringify(brands));
+        localStorage.setItem(STORE_ELO, JSON.stringify(eloRatings));
+        cloudSync();
         renderCollection();
         renderTrack();
         toast(`Imported ${d.watches.length} watches · ${d.logs.length} logs`);
