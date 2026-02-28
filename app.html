@@ -1302,6 +1302,7 @@
     <div class="auth-tagline">Track every wear. Build your story.</div>
 
     <div id="auth-error" class="auth-error"></div>
+    <div id="auth-debug" style="display:none;margin-bottom:.75rem;padding:.6rem .8rem;background:#1a1a2e;border:1px solid #334;border-radius:6px;font-size:.7rem;color:#7af;word-break:break-all;font-family:monospace;white-space:pre-wrap;"></div>
 
     <button class="btn-google" onclick="signInWithGoogle()">
       <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
@@ -2297,14 +2298,31 @@
 // ══════════════════════════════════════════
 (function() {
   try {
-    // If Supabase redirected back with ?error=... (e.g. bad_oauth_state / PKCE state lost),
-    // clear stale PKCE state, show a friendly retry message, and leave the auth screen visible.
-    const params = new URLSearchParams(window.location.search);
-    const oauthErr = params.get('error_description') || params.get('error');
+    // ── Debug: capture the exact URL the app lands on after OAuth redirect ──
+    const rawSearch = window.location.search;
+    const rawHash   = window.location.hash;
+    const hasOAuthReturn = rawSearch || rawHash;
+    if (hasOAuthReturn) {
+      console.log('[WristLog Auth Debug] return URL search:', rawSearch);
+      console.log('[WristLog Auth Debug] return URL hash  :', rawHash);
+      // Surface in the debug banner so it's visible on mobile too
+      const dbg = document.getElementById('auth-debug');
+      if (dbg) {
+        dbg.textContent = 'Debug — search: ' + (rawSearch || '(none)') + ' | hash: ' + (rawHash || '(none)');
+        dbg.style.display = 'block';
+      }
+    }
+
+    // Check BOTH query-params AND hash for errors (Supabase uses ?error= for PKCE
+    // failures, but #error= for implicit-flow failures).
+    const params  = new URLSearchParams(rawSearch);
+    const hParams = new URLSearchParams(rawHash.replace(/^#/, ''));
+    const oauthErr = params.get('error_description') || params.get('error')
+                  || hParams.get('error_description') || hParams.get('error');
+
     if (oauthErr) {
       window.history.replaceState(null, '', window.location.pathname);
       // Wipe any stale PKCE code-verifier keys so the next sign-in attempt starts clean.
-      // We do NOT remove the auth-token key so valid sessions (on other pages) are unaffected.
       Object.keys(localStorage)
         .filter(k => k.includes('code-verifier') || k.includes('pkce') || k.includes('oauth-state'))
         .forEach(k => localStorage.removeItem(k));
@@ -2318,9 +2336,17 @@
       }
       return; // leave auth screen visible so user can try again
     }
-    // Synchronously hide auth screen for returning users who already have a session,
-    // so they never see a flash of the login screen on refresh.
-    // Check all Supabase auth-token keys (the key format varies by version).
+
+    // Check hash for a successful implicit-flow response (#access_token=...)
+    if (hParams.get('access_token')) {
+      // Supabase returned tokens in the fragment — detectSessionInUrl will handle it.
+      // Hide auth screen immediately to avoid flicker.
+      const el = document.getElementById('auth-screen');
+      if (el) el.style.display = 'none';
+      return;
+    }
+
+    // Synchronously hide auth screen for returning users who already have a session.
     const hasSession = Object.keys(localStorage).some(k => {
       if (!k.startsWith('sb-') || !k.endsWith('-auth-token')) return false;
       try {
