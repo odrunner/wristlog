@@ -198,6 +198,7 @@
     label { font-size: .75rem; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; display: block; margin-bottom: .35rem; }
     input[type=text], input[type=number], input[type=date], textarea, select {
       width: 100%;
+      max-width: 100%;
       min-width: 0; /* prevent input from inflating a flex/grid cell */
       background: var(--surface2);
       border: 1px solid var(--border);
@@ -996,8 +997,10 @@
       /* Toast: above tab bar */
       .toast { left: .75rem; right: .75rem; bottom: 76px; text-align: center; }
 
-      /* Track form */
-      .track-form { max-width: 100%; }
+      /* Track form — prevent date input from overflowing on narrow screens */
+      .track-form { max-width: 100%; overflow: hidden; }
+      .track-form .card { overflow: hidden; }
+      .track-form input[type=date] { max-width: 100%; }
 
       /* Save bar: fixed above tab bar so it's always visible */
       .save-bar {
