@@ -1013,10 +1013,9 @@
       /* Toast: above tab bar */
       .toast { left: .75rem; right: .75rem; bottom: 76px; text-align: center; }
 
-      /* Track form — prevent date input from overflowing on narrow screens */
-      .track-form { max-width: 100%; overflow: hidden; }
-      .track-form .card { overflow: hidden; }
-      .track-form input[type=date] { max-width: 100%; }
+      /* Track form — keep date input from overflowing on narrow screens */
+      .track-form { max-width: 100%; }
+      .track-form input[type=date] { max-width: 100%; padding-left: .5rem; padding-right: .3rem; }
 
       /* Save bar: fixed above tab bar so it's always visible */
       .save-bar {
