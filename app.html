@@ -354,6 +354,15 @@
     /* ── BRAND SELECT ── */
     .brand-add-row { display: flex; gap: .5rem; margin-top: .5rem; }
     .brand-add-row input { flex: 1; }
+    .brand-ac-wrap { position: relative; }
+    .brand-ac-list { position: absolute; left: 0; right: 0; top: calc(100% + 2px);
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+      max-height: 200px; overflow-y: auto; z-index: 200; box-shadow: 0 4px 16px rgba(0,0,0,.35); }
+    .brand-ac-item { padding: .45rem .75rem; cursor: pointer; font-size: .875rem; }
+    .brand-ac-item:hover, .brand-ac-item.ac-focused { background: var(--primary); color: var(--bg); border-radius: 6px; }
+    .brand-ac-request { padding: .45rem .75rem; cursor: pointer; font-size: .82rem;
+      color: var(--muted); border-top: 1px solid var(--border); }
+    .brand-ac-request:hover { color: var(--text); background: var(--surface); border-radius: 0 0 8px 8px; }
 
     /* ── CHIPS ── */
     .chips { display: flex; flex-wrap: wrap; gap: .45rem; }
@@ -1852,10 +1861,15 @@
     <div class="form-row">
       <div class="form-group">
         <label>Brand *</label>
-        <select id="w-brand" onchange="onBrandChange()"></select>
-        <div id="brand-add-row" class="brand-add-row" style="display:none;">
-          <input type="text" id="w-brand-new" placeholder="Enter new brand name…">
-          <button class="btn btn-primary btn-sm" onclick="addNewBrand()">Add</button>
+        <div class="brand-ac-wrap">
+          <input type="text" id="w-brand-display" placeholder="Type to search brands…"
+            autocomplete="off"
+            oninput="filterBrands(this.value)"
+            onfocus="filterBrands(this.value)"
+            onblur="setTimeout(hideBrandAC,150)"
+            onkeydown="brandKeyNav(event)">
+          <input type="hidden" id="w-brand">
+          <div id="brand-ac-list" class="brand-ac-list hidden"></div>
         </div>
       </div>
       <div class="form-group">
@@ -2050,10 +2064,15 @@
     <div class="form-row">
       <div class="form-group">
         <label>Brand *</label>
-        <select id="wl-brand" onchange="onWlBrandChange()"></select>
-        <div id="wl-brand-add-row" class="brand-add-row" style="display:none;">
-          <input type="text" id="wl-brand-new" placeholder="Enter new brand name…">
-          <button class="btn btn-primary btn-sm" onclick="addNewWlBrand()">Add</button>
+        <div class="brand-ac-wrap">
+          <input type="text" id="wl-brand-display" placeholder="Type to search brands…"
+            autocomplete="off"
+            oninput="filterWlBrands(this.value)"
+            onfocus="filterWlBrands(this.value)"
+            onblur="setTimeout(hideWlBrandAC,150)"
+            onkeydown="wlBrandKeyNav(event)">
+          <input type="hidden" id="wl-brand">
+          <div id="wl-brand-ac-list" class="brand-ac-list hidden"></div>
         </div>
       </div>
       <div class="form-group">
@@ -4047,10 +4066,36 @@ function getVisChip(cId) {
 }
 
 const DEFAULT_BRANDS = [
-  'Audemars Piguet','Breitling','Bulgari','Cartier','Casio','Citizen',
-  'Grand Seiko','Hublot','IWC','Jaeger-LeCoultre','Longines','Omega',
-  'Orient','Panerai','Patek Philippe','Richard Mille','Rolex','Seiko',
-  'Tag Heuer','Tudor','Ulysse Nardin','Vacheron Constantin','Zenith'
+  'A. Lange & Söhne', 'Akrivia', 'Alpina', 'Anordain', 'Archimede',
+  'Armani Exchange', 'Arnold & Son', 'Atlantic', 'Audemars Piguet',
+  'Baltic', 'Ball Watch', 'Baume & Mercier', 'Bell & Ross',
+  'Blancpain', 'Breguet', 'Bremont', 'Breitling', 'Bulgari', 'Bulova',
+  'Cartier', 'Casio', 'Certina', 'Chopard', 'Christopher Ward',
+  'Chronoswiss', 'Citizen', 'Corum', 'Czapek',
+  'Damasko', 'Dan Henry', 'Davosa', 'De Bethune', 'Diesel', 'Doxa',
+  'Ebel', 'Edox', 'Eterna',
+  'F.P. Journe', 'Festina', 'Formex', 'Fossil', 'Franck Muller',
+  'Frederique Constant',
+  'Girard-Perregaux', 'Glashütte Original', 'Glycine', 'Grand Seiko',
+  'Greubel Forsey', 'Guess',
+  'H. Moser & Cie', 'Habring²', 'Halios', 'Hamilton', 'Hanhart',
+  'Hermès', 'Hublot', 'Hugo Boss',
+  'IWC', 'Ingersoll', 'Invicta',
+  'Jaeger-LeCoultre', 'Junghans', 'Junkers',
+  'Kari Voutilainen',
+  'Laco', 'Lacoste', 'Laurent Ferrier', 'Longines', 'Luminox',
+  'MB&F', 'Marathon', 'Maurice Lacroix', 'Meistersinger', 'Michael Kors',
+  'Mido', 'Ming', 'Montblanc', 'Movado', 'MVMT',
+  'Nomos Glashütte', 'Nodus', 'Norqain',
+  'Omega', 'Oris', 'Orient',
+  'Panerai', 'Patek Philippe', 'Perrelet', 'Piaget', 'Porsche Design',
+  'Rado', 'Raymond Weil', 'Richard Mille', 'Roger Dubuis', 'Rolex',
+  'Seiko', 'Sinn', 'Skagen', 'Speake-Marin', 'Squale', 'Steinhart',
+  'Stowa', 'Swatch',
+  'Tag Heuer', 'Timex', 'Tissot', 'Traser', 'Tudor', 'Tutima',
+  'Ulysse Nardin', 'Undone', 'Universal Genève', 'Urwerk',
+  'Vacheron Constantin', 'Versace', 'Vostok',
+  'Zenith', 'Zeppelin',
 ];
 
 let watches        = JSON.parse(localStorage.getItem(STORE_W)  || '[]');
@@ -5479,7 +5524,7 @@ function marketPriceRowHTML(w) {
 function saveWatch() {
   const brand = document.getElementById('w-brand').value;
   const name  = document.getElementById('w-name').value.trim();
-  if (!brand || brand === '__new__') { toast('Please select or add a brand', 'error'); return; }
+  if (!brand) { toast('Please select a brand', 'error'); return; }
   if (!name) { toast('Model name is required', 'error'); return; }
 
   const insStatus = document.getElementById('w-insurance').value;
@@ -6345,7 +6390,7 @@ async function modalFindWcUrl() {
   const brand = document.getElementById('w-brand').value;
   const name  = document.getElementById('w-name').value.trim();
   const ref   = document.getElementById('w-ref').value.trim();
-  if (!brand || brand === '__new__' || !name) {
+  if (!brand || !name) {
     toast('Fill in Brand and Model name first', 'error'); return;
   }
   const btn      = document.getElementById('wc-find-btn');
@@ -6843,36 +6888,80 @@ function addReceiptFromEdit() {
 // ══════════════════════════════════════════
 //  BRAND SELECT
 // ══════════════════════════════════════════
-function buildBrandSelect(selected = '') {
+// ── Brand autocomplete ─────────────────────────────────────────────────────
+let _brandAcIdx = -1; // keyboard-focused row index
+
+function setBrandAC(selected = '') {
+  document.getElementById('w-brand-display').value = selected;
+  document.getElementById('w-brand').value = selected;
+  hideBrandAC();
+}
+
+function filterBrands(query) {
+  const q = (query || '').trim().toLowerCase();
   const sorted = [...brands].sort((a, b) => a.localeCompare(b));
-  document.getElementById('w-brand').innerHTML = [
-    `<option value="" disabled ${!selected ? 'selected' : ''}>Select a brand…</option>`,
-    ...sorted.map(b => `<option value="${b}" ${b === selected ? 'selected' : ''}>${b}</option>`),
-    `<option value="__new__">➕  Add new brand…</option>`
-  ].join('');
-  document.getElementById('brand-add-row').style.display = 'none';
-  document.getElementById('w-brand-new').value = '';
+  const matches = q
+    ? sorted.filter(b => b.toLowerCase().includes(q))
+    : sorted;
+
+  const list = document.getElementById('brand-ac-list');
+  _brandAcIdx = -1;
+
+  if (!matches.length && !q) { list.classList.add('hidden'); return; }
+
+  const items = matches.map((b, i) =>
+    `<div class="brand-ac-item" onmousedown="selectBrand('${escHtml(b)}')">${escHtml(b)}</div>`
+  ).join('');
+
+  // "Request brand" row when no exact match
+  const exactMatch = brands.some(b => b.toLowerCase() === q);
+  const requestRow = q && !exactMatch
+    ? `<div class="brand-ac-request" onmousedown="requestBrand('${escHtml(query.trim())}')">
+         ✉ "${escHtml(query.trim())}" not listed — request it
+       </div>`
+    : '';
+
+  list.innerHTML = items + requestRow;
+  list.classList.toggle('hidden', !items && !requestRow);
 }
 
-function onBrandChange() {
-  const show = document.getElementById('w-brand').value === '__new__';
-  document.getElementById('brand-add-row').style.display = show ? 'flex' : 'none';
-  if (show) document.getElementById('w-brand-new').focus();
+function selectBrand(name) {
+  document.getElementById('w-brand-display').value = name;
+  document.getElementById('w-brand').value = name;
+  hideBrandAC();
 }
 
-function addNewBrand() {
-  const input = document.getElementById('w-brand-new');
-  const name  = input.value.trim();
-  if (!name) { toast('Enter a brand name', 'error'); return; }
-  const normalised = name.charAt(0).toUpperCase() + name.slice(1);
-  if (brands.map(b => b.toLowerCase()).includes(normalised.toLowerCase())) {
-    toast('Brand already exists', 'error'); return;
+function hideBrandAC() {
+  document.getElementById('brand-ac-list').classList.add('hidden');
+  _brandAcIdx = -1;
+}
+
+function brandKeyNav(e) {
+  const list = document.getElementById('brand-ac-list');
+  const items = list.querySelectorAll('.brand-ac-item');
+  if (list.classList.contains('hidden') || !items.length) {
+    if (e.key === 'Escape') hideBrandAC();
+    return;
   }
-  brands.push(normalised);
-  saveBrands();
-  buildBrandSelect(normalised);
-  toast(`"${normalised}" added to brands!`);
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _brandAcIdx = Math.min(_brandAcIdx + 1, items.length - 1);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _brandAcIdx = Math.max(_brandAcIdx - 1, 0);
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (_brandAcIdx >= 0) items[_brandAcIdx].dispatchEvent(new MouseEvent('mousedown'));
+    return;
+  } else if (e.key === 'Escape') {
+    hideBrandAC(); return;
+  } else { return; }
+  items.forEach((el, i) => el.classList.toggle('ac-focused', i === _brandAcIdx));
+  if (_brandAcIdx >= 0) items[_brandAcIdx].scrollIntoView({ block: 'nearest' });
 }
+
+// Kept for backwards compatibility (called from openAddWatch / openEditWatch)
+function buildBrandSelect(selected = '') { setBrandAC(selected); }
 
 // ══════════════════════════════════════════
 //  WISHLIST PAGE
@@ -7208,7 +7297,7 @@ function closeWishlistModal() { clearInlineEdits(WL_INLINE_FIELDS); document.get
 function saveWishlistItem() {
   const brand = document.getElementById('wl-brand').value;
   const name  = document.getElementById('wl-name').value.trim();
-  if (!brand || brand === '__new__') { toast('Please select or add a brand', 'error'); return; }
+  if (!brand) { toast('Please select a brand', 'error'); return; }
   if (!name) { toast('Model name is required', 'error'); return; }
   const data = {
     brand, name,
@@ -7258,37 +7347,63 @@ function confirmDeleteWishlist() {
   toast('Removed from wishlist');
 }
 
-// ── Wishlist brand select (mirrors collection brand select) ─────────────────
-function buildWlBrandSelect(selected = '') {
+// ── Wishlist brand autocomplete (mirrors collection brand autocomplete) ────────
+let _wlBrandAcIdx = -1;
+
+function setWlBrandAC(selected = '') {
+  document.getElementById('wl-brand-display').value = selected;
+  document.getElementById('wl-brand').value = selected;
+  hideWlBrandAC();
+}
+
+function filterWlBrands(query) {
+  const q = (query || '').trim().toLowerCase();
   const sorted = [...brands].sort((a, b) => a.localeCompare(b));
-  document.getElementById('wl-brand').innerHTML = [
-    `<option value="" disabled ${!selected ? 'selected' : ''}>Select a brand…</option>`,
-    ...sorted.map(b => `<option value="${b}" ${b === selected ? 'selected' : ''}>${b}</option>`),
-    `<option value="__new__">➕  Add new brand…</option>`
-  ].join('');
-  document.getElementById('wl-brand-add-row').style.display = 'none';
-  document.getElementById('wl-brand-new').value = '';
+  const matches = q ? sorted.filter(b => b.toLowerCase().includes(q)) : sorted;
+  const list = document.getElementById('wl-brand-ac-list');
+  _wlBrandAcIdx = -1;
+  if (!matches.length && !q) { list.classList.add('hidden'); return; }
+  const items = matches.map(b =>
+    `<div class="brand-ac-item" onmousedown="selectWlBrand('${escHtml(b)}')">${escHtml(b)}</div>`
+  ).join('');
+  const exactMatch = brands.some(b => b.toLowerCase() === q);
+  const requestRow = q && !exactMatch
+    ? `<div class="brand-ac-request" onmousedown="requestBrand('${escHtml(query.trim())}')">
+         ✉ "${escHtml(query.trim())}" not listed — request it
+       </div>`
+    : '';
+  list.innerHTML = items + requestRow;
+  list.classList.toggle('hidden', !items && !requestRow);
 }
 
-function onWlBrandChange() {
-  const show = document.getElementById('wl-brand').value === '__new__';
-  document.getElementById('wl-brand-add-row').style.display = show ? 'flex' : 'none';
-  if (show) document.getElementById('wl-brand-new').focus();
+function selectWlBrand(name) {
+  document.getElementById('wl-brand-display').value = name;
+  document.getElementById('wl-brand').value = name;
+  hideWlBrandAC();
 }
 
-function addNewWlBrand() {
-  const input = document.getElementById('wl-brand-new');
-  const name  = input.value.trim();
-  if (!name) { toast('Enter a brand name', 'error'); return; }
-  const norm = name.charAt(0).toUpperCase() + name.slice(1);
-  if (brands.map(b => b.toLowerCase()).includes(norm.toLowerCase())) {
-    toast('Brand already exists', 'error'); return;
+function hideWlBrandAC() {
+  document.getElementById('wl-brand-ac-list').classList.add('hidden');
+  _wlBrandAcIdx = -1;
+}
+
+function wlBrandKeyNav(e) {
+  const list = document.getElementById('wl-brand-ac-list');
+  const items = list.querySelectorAll('.brand-ac-item');
+  if (list.classList.contains('hidden') || !items.length) {
+    if (e.key === 'Escape') hideWlBrandAC(); return;
   }
-  brands.push(norm);
-  saveBrands();
-  buildWlBrandSelect(norm);
-  toast(`"${norm}" added to brands!`);
+  if (e.key === 'ArrowDown') { e.preventDefault(); _wlBrandAcIdx = Math.min(_wlBrandAcIdx + 1, items.length - 1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); _wlBrandAcIdx = Math.max(_wlBrandAcIdx - 1, 0); }
+  else if (e.key === 'Enter') { e.preventDefault(); if (_wlBrandAcIdx >= 0) items[_wlBrandAcIdx].dispatchEvent(new MouseEvent('mousedown')); return; }
+  else if (e.key === 'Escape') { hideWlBrandAC(); return; }
+  else { return; }
+  items.forEach((el, i) => el.classList.toggle('ac-focused', i === _wlBrandAcIdx));
+  if (_wlBrandAcIdx >= 0) items[_wlBrandAcIdx].scrollIntoView({ block: 'nearest' });
 }
+
+// Kept for backwards compatibility
+function buildWlBrandSelect(selected = '') { setWlBrandAC(selected); }
 
 
 // ── Wishlist URL open button ────────────────────────────────────────────────
@@ -7858,6 +7973,19 @@ function openFeedback() {
   document.getElementById('fb-desc').value  = '';
   document.getElementById('fb-email').value = '';
   setFeedbackType('bug');
+  document.getElementById('fb-submit-btn').disabled = false;
+  document.getElementById('fb-submit-btn').textContent = 'Submit Feedback';
+  document.getElementById('feedback-modal').classList.remove('hidden');
+}
+
+function requestBrand(name) {
+  // Close any open brand dropdowns first
+  hideBrandAC();
+  hideWlBrandAC();
+  document.getElementById('fb-title').value = `Add brand: ${name}`;
+  document.getElementById('fb-desc').value  = `Please add "${name}" to the WristLog brand list.`;
+  document.getElementById('fb-email').value = '';
+  setFeedbackType('feat');
   document.getElementById('fb-submit-btn').disabled = false;
   document.getElementById('fb-submit-btn').textContent = 'Submit Feedback';
   document.getElementById('feedback-modal').classList.remove('hidden');
