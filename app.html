@@ -1485,77 +1485,25 @@
   <!-- ════ TRACK PAGE ════ -->
   <div id="page-track" class="page">
     <div id="rec-container"></div>
-    <div class="track-grid">
-
-      <div class="track-form">
-        <div class="card">
-          <div class="card-label">Date</div>
-          <input type="date" id="track-date" oninput="onDateChange()">
-          <div id="date-log-indicator" style="margin-top:.5rem;font-size:.78rem;color:var(--success);min-height:1.1em;"></div>
-        </div>
-
-        <div class="card">
-          <div class="card-label">Select Watch</div>
-          <div id="watch-selector"></div>
-        </div>
-
-        <div class="card" id="strap-selector-card" style="display:none;">
-          <div class="card-label">Strap / Bracelet</div>
-          <div class="chips" id="strap-chips"></div>
-        </div>
-
-        <div class="card">
-          <div class="card-label">Use Case</div>
-          <div class="chips" id="usecase-chips">
-            <div class="chip selected" data-uc="unspecified">— Unspecified</div>
-            <div class="chip" data-uc="work">💼 Work</div>
-            <div class="chip" data-uc="leisure">🛋️ Leisure</div>
-            <div class="chip" data-uc="dinner">🍽️ Dinner</div>
-            <div class="chip" data-uc="travel">✈️ Travel</div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-label">Notes <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
-          <textarea id="track-notes" placeholder="Any occasion, outfit, thoughts…"></textarea>
-        </div>
-
-        <div class="card">
-          <div class="card-label">Photo <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
-          <div id="track-photo-area" class="log-photo-area" onclick="document.getElementById('track-photo-input').click()">
-            <div id="track-photo-placeholder" class="log-photo-placeholder">📷 Tap to add a photo</div>
-            <img id="track-photo-preview" class="log-photo-preview" style="display:none;" alt="">
-            <button type="button" id="track-photo-clear" class="log-photo-clear" style="display:none;"
-              onclick="event.stopPropagation();clearTrackPhoto()">✕</button>
-          </div>
-          <input type="file" id="track-photo-input" accept="image/*" capture="environment"
-            style="display:none" onchange="handleTrackPhoto(this)">
-        </div>
-
-        <div class="save-bar">
-          <button class="btn btn-primary" id="save-btn" onclick="saveLog()">Log This Wear</button>
-        </div>
+    <div class="card" style="margin-bottom:1.25rem;">
+      <div class="card-label">Select a watch to log</div>
+      <div id="watch-selector"></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Wear History</div>
+      <div class="table-wrap" style="max-height:360px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Watch</th>
+              <th>Use Case</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="track-history-tbody"></tbody>
+        </table>
       </div>
-
-      <div style="display:flex;flex-direction:column;gap:1.25rem;">
-        <div class="card">
-          <div class="card-label">Wear History</div>
-          <div class="table-wrap" style="max-height:360px;">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Watch</th>
-                  <th>Use Case</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="track-history-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
 
@@ -2367,6 +2315,86 @@
 </div>
 
 <!-- ════ EDIT LOG MODAL ════ -->
+<!-- ════ TRACK LOG MODAL ════ -->
+<div id="track-log-modal" class="overlay hidden" onclick="if(event.target===this)closeTrackModal()">
+  <div class="modal" style="max-width:420px;">
+
+    <!-- Selected watch header -->
+    <div id="tl-watch-header" style="display:flex;align-items:center;gap:.8rem;padding-bottom:1rem;margin-bottom:1rem;border-bottom:1px solid var(--border);">
+      <div id="tl-watch-thumb" style="width:48px;height:48px;border-radius:10px;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;"></div>
+      <div style="min-width:0;">
+        <div id="tl-watch-brand" style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;line-height:1.3;"></div>
+        <div id="tl-watch-name" style="font-weight:700;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+      </div>
+    </div>
+
+    <!-- Date -->
+    <div class="form-group">
+      <label>Date</label>
+      <input type="date" id="track-date" oninput="onDateChange()">
+      <div id="date-log-indicator" style="margin-top:.4rem;font-size:.78rem;color:var(--success);min-height:1.1em;"></div>
+    </div>
+
+    <!-- Strap (shown only when watch has 2+ straps) -->
+    <div class="form-group" id="strap-selector-card" style="display:none;">
+      <label>Strap / Bracelet</label>
+      <div class="chips" id="strap-chips"></div>
+    </div>
+
+    <!-- Occasion -->
+    <div class="form-group">
+      <label>Occasion</label>
+      <div class="chips" id="usecase-chips">
+        <div class="chip selected" data-uc="unspecified">— Unspecified</div>
+        <div class="chip" data-uc="work">💼 Work</div>
+        <div class="chip" data-uc="leisure">🛋️ Leisure</div>
+        <div class="chip" data-uc="dinner">🍽️ Dinner</div>
+        <div class="chip" data-uc="travel">✈️ Travel</div>
+      </div>
+    </div>
+
+    <!-- Caption (shown in feed) -->
+    <div class="form-group">
+      <label>Caption <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(optional · shown in feed)</span></label>
+      <textarea id="track-notes" placeholder="What are you up to today…" rows="2"></textarea>
+    </div>
+
+    <!-- Private notes -->
+    <div class="form-group">
+      <label>Private notes <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(only you see this)</span></label>
+      <textarea id="track-private-notes" placeholder="Condition, thoughts, how it felt…" rows="2"></textarea>
+    </div>
+
+    <!-- Photo -->
+    <div class="form-group">
+      <label>Photo <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(optional)</span></label>
+      <div id="track-photo-area" class="log-photo-area" onclick="document.getElementById('track-photo-input').click()">
+        <div id="track-photo-placeholder" class="log-photo-placeholder">📷 Tap to add a photo</div>
+        <img id="track-photo-preview" class="log-photo-preview" style="display:none;" alt="">
+        <button type="button" id="track-photo-clear" class="log-photo-clear" style="display:none;"
+          onclick="event.stopPropagation();clearTrackPhoto()">✕</button>
+      </div>
+      <input type="file" id="track-photo-input" accept="image/*" capture="environment"
+        style="display:none" onchange="handleTrackPhoto(this)">
+    </div>
+
+    <!-- Visibility -->
+    <div class="form-group">
+      <label>Visibility</label>
+      <div class="chips" id="tl-vis-chips">
+        <div class="chip" data-vis="public">🌐 Public</div>
+        <div class="chip" data-vis="friends">👥 Friends</div>
+        <div class="chip" data-vis="private">🔒 Only me</div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveLog()">Log This Wear</button>
+      <button class="btn btn-ghost"   onclick="closeTrackModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div id="edit-log-modal" class="overlay hidden">
   <div class="modal" style="max-width:380px;">
     <div class="modal-title">✏️ Edit Log Entry</div>
@@ -4057,9 +4085,10 @@ let notifPanelOpen   = false;
 
 
 let selWatchId  = null;
-let selStrapId  = null;  // strap selected for current wear log session
+let selStrapId  = null;    // strap selected for current wear log session
 let selUseCase  = 'unspecified';
-let trackPhoto  = null;  // base64 photo attached to the tracking tab log
+let selTrackVis = 'public'; // visibility for the track modal
+let trackPhoto  = null;    // base64 photo attached to the tracking tab log
 let editingId   = null;
 let editingLogId   = null;  // log entry currently being edited
 let editLogUseCase = 'unspecified';
@@ -4193,8 +4222,8 @@ function nav(btn) {
 //  TRACK PAGE
 // ══════════════════════════════════════════
 function setToday() {
-  document.getElementById('track-date').value = todayStr();
-  onDateChange();
+  const el = document.getElementById('track-date');
+  if (el) { el.value = todayStr(); onDateChange(); }
 }
 
 function onDateChange() {
@@ -4204,9 +4233,7 @@ function onDateChange() {
 
 function renderTrack() {
   renderWatchRecommendation();
-  renderWornNotice();
   renderWatchSelector();
-  renderStrapSelector();
   renderTrackHistory();
 }
 
@@ -4225,67 +4252,82 @@ function renderWornNotice() {
 }
 
 function renderWatchSelector() {
-  const el   = document.getElementById('watch-selector');
-  const date = document.getElementById('track-date').value;
+  const el = document.getElementById('watch-selector');
+  if (!el) return;
   if (watches.length === 0) {
     el.innerHTML = `<div class="empty"><div class="empty-icon">⌚</div>
       <div class="empty-text">No watches yet</div>
       <div class="empty-sub">Add watches in the Collection tab</div></div>`;
     return;
   }
-  const wornToday = new Set(logs.filter(l => l.date === date).map(l => l.watchId));
+  const today     = todayStr();
+  const wornToday = new Set(logs.filter(l => l.date === today).map(l => l.watchId));
   el.innerHTML = `<div class="watch-list">${
     watches.map(w => {
       const cnt    = logs.filter(l => l.watchId === w.id).length;
-      const isSel  = selWatchId === w.id;
       const isWorn = wornToday.has(w.id);
-      const thumb = w.image
+      const thumb  = w.image
         ? `<img src="${w.image}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
         : `<div class="avatar" style="width:36px;height:36px;background:${w.color}">${initials(w.brand,w.name)}</div>`;
-      return `<div class="watch-option ${isSel?'selected':''} ${isWorn&&!isSel?'worn-today':''}"
-                   onclick="selWatch('${w.id}')">
+      return `<div class="watch-option ${isWorn ? 'worn-today' : ''}"
+                   onclick="openTrackModal('${w.id}')">
         ${thumb}
         <div style="flex:1;min-width:0;">
           <div class="watch-info-name">${w.brand} ${w.name}</div>
           <div class="watch-info-sub">${cnt} wear${cnt!==1?'s':''}</div>
         </div>
-        ${isWorn ? `<span class="watch-worn-badge">worn</span>` : ''}
+        ${isWorn ? `<span class="watch-worn-badge">worn today</span>` : ''}
       </div>`;
     }).join('')
   }</div>`;
 }
 
-function selWatch(id) {
-  selWatchId = id;
+function openTrackModal(id) {
   const w = watches.find(x => x.id === id);
-  const onWrist = (w?.straps || []).find(s => s.isOn);
+  if (!w) return;
+  selWatchId = id;
+  const onWrist = (w.straps || []).find(s => s.isOn);
   selStrapId = onWrist?.id || w?.straps?.[0]?.id || null;
-  renderWatchSelector();
+  selUseCase = 'unspecified';
+
+  // Populate watch header
+  const thumbEl = document.getElementById('tl-watch-thumb');
+  thumbEl.innerHTML = w.image
+    ? `<img src="${escHtml(w.image)}" alt="" style="width:48px;height:48px;object-fit:cover;">`
+    : `<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:${escHtml(w.color||'#c9a84c')};font-weight:800;font-size:.9rem;color:#000;border-radius:10px;">${initials(w.brand,w.name)}</div>`;
+  document.getElementById('tl-watch-brand').textContent = w.brand || '';
+  document.getElementById('tl-watch-name').textContent  = w.name  || '';
+
+  // Reset fields
+  document.getElementById('track-date').value          = todayStr();
+  document.getElementById('track-notes').value         = '';
+  document.getElementById('track-private-notes').value = '';
+  clearTrackPhoto();
+
+  // Reset occasion chips
+  document.querySelectorAll('#usecase-chips [data-uc]').forEach(c =>
+    c.classList.toggle('selected', c.dataset.uc === 'unspecified'));
+
+  // Visibility — default to user's stored preference
+  selTrackVis = getDefaultVis();
+  document.querySelectorAll('#tl-vis-chips [data-vis]').forEach(c =>
+    c.classList.toggle('selected', c.dataset.vis === selTrackVis));
+
+  // Strap selector & worn notice
   renderStrapSelector();
-  requestAnimationFrame(() => {
-    const hasMultiStraps = (w?.straps || []).length >= 2;
-    if (hasMultiStraps) {
-      // Scroll page so strap selector is visible (scrollIntoView unreliable; use scrollTo)
-      const strapCard = document.getElementById('strap-selector-card');
-      if (strapCard) {
-        const absTop    = strapCard.getBoundingClientRect().top + window.scrollY;
-        const saveBarH  = document.querySelector('.save-bar')?.offsetHeight || 0;
-        // Align card bottom above the sticky save-bar with a small gap
-        window.scrollTo({ top: Math.max(0, absTop - window.innerHeight + strapCard.offsetHeight + saveBarH + 16), behavior: 'smooth' });
-      }
-    } else {
-      // Scroll selected watch into view within the .watch-list scroll container
-      const list = document.querySelector('#watch-selector .watch-list');
-      const el   = document.querySelector('#watch-selector .watch-option.selected');
-      if (list && el) {
-        const elTop   = el.getBoundingClientRect().top;
-        const listTop = list.getBoundingClientRect().top;
-        const target  = list.scrollTop + (elTop - listTop) - (list.clientHeight / 2) + (el.clientHeight / 2);
-        list.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
-      }
-    }
-  });
+  renderWornNotice();
+
+  document.getElementById('track-log-modal').classList.remove('hidden');
 }
+
+function closeTrackModal() {
+  document.getElementById('track-log-modal').classList.add('hidden');
+  selWatchId = null;
+  selStrapId = null;
+}
+
+// Keep selWatch as alias for any external callers
+function selWatch(id) { openTrackModal(id); }
 
 function renderTrackHistory() {
   const tbody = document.getElementById('track-history-tbody');
@@ -4326,10 +4368,15 @@ function saveLog() {
   const date = document.getElementById('track-date').value;
   if (!date)       { toast('Please select a date', 'error'); return; }
   if (!selWatchId) { toast('Please select a watch', 'error'); return; }
-  const notes = document.getElementById('track-notes').value.trim();
-  const vis = getDefaultVis();
-  const logEntry = { id: uid(), watchId: selWatchId, date, useCase: selUseCase, notes,
-                     photoUrl: trackPhoto || null, visibility: vis, isPublic: vis !== 'private' };
+  const notes        = document.getElementById('track-notes').value.trim();
+  const privateNotes = document.getElementById('track-private-notes').value.trim();
+  const vis = selTrackVis || getDefaultVis();
+  const logEntry = {
+    id: uid(), watchId: selWatchId, date, useCase: selUseCase,
+    notes, privateNotes,
+    photoUrl: trackPhoto || null,
+    visibility: vis, isPublic: vis !== 'private',
+  };
   if (selStrapId) logEntry.strapId = selStrapId;
   logs.push(logEntry);
   // Update "on wrist" strap status on the watch
@@ -4340,7 +4387,7 @@ function saveLog() {
     }
   }
   save();
-  document.getElementById('track-notes').value = '';
+  closeTrackModal();
   clearTrackPhoto();
   if (date === todayStr()) dismissReminder();
   renderTrack();
@@ -4631,6 +4678,15 @@ document.getElementById('usecase-chips').addEventListener('click', e => {
   document.querySelectorAll('#usecase-chips [data-uc]').forEach(c => c.classList.remove('selected'));
   chip.classList.add('selected');
   selUseCase = chip.dataset.uc;
+});
+
+// Visibility chip selection (track log modal)
+document.getElementById('tl-vis-chips').addEventListener('click', e => {
+  const chip = e.target.closest('[data-vis]');
+  if (!chip) return;
+  document.querySelectorAll('#tl-vis-chips [data-vis]').forEach(c => c.classList.remove('selected'));
+  chip.classList.add('selected');
+  selTrackVis = chip.dataset.vis;
 });
 
 // Use case chip selection (edit-log modal)
