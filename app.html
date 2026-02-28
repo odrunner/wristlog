@@ -2062,6 +2062,9 @@ async function loadUserData() {
     db.from('logs').select('*').eq('user_id', uid),
     db.from('wishlist').select('*').eq('user_id', uid),
   ]);
+  if (wRes.error)  console.error('[WristLog] watches SELECT error:', wRes.error.message, wRes.error);
+  if (lRes.error)  console.error('[WristLog] logs SELECT error:',    lRes.error.message, lRes.error);
+  if (wlRes.error) console.error('[WristLog] wishlist SELECT error:', wlRes.error.message, wlRes.error);
   watches  = (wRes.data  || []).map(rowToWatch);
   logs     = (lRes.data  || []).map(rowToLog);
   wishlist = (wlRes.data || []).map(rowToWish);
@@ -2080,14 +2083,22 @@ async function loadUserData() {
 // ══════════════════════════════════════════
 async function cloudSync() {
   if (!currentUser) return;
+  const upsert = async (table, rows) => {
+    if (!rows.length) return;
+    const { error } = await db.from(table).upsert(rows, { onConflict: 'id' });
+    if (error) console.error(`[WristLog] cloudSync ${table} error:`, error.message, error);
+  };
   try {
-    if (watches.length)  await db.from('watches').upsert(watches.map(watchToRow),  { onConflict: 'id' });
-    if (logs.length)     await db.from('logs').upsert(logs.map(logToRow),          { onConflict: 'id' });
-    if (wishlist.length) await db.from('wishlist').upsert(wishlist.map(wishToRow), { onConflict: 'id' });
+    await upsert('watches',  watches.map(watchToRow));
+    await upsert('logs',     logs.map(logToRow));
+    await upsert('wishlist', wishlist.map(wishToRow));
     // Sync elo ratings back into watch rows
     const eloUpdates = Object.entries(eloRatings).map(([id, elo]) => ({ id, user_id: currentUser.id, elo_rating: elo }));
-    if (eloUpdates.length) await db.from('watches').upsert(eloUpdates, { onConflict: 'id', ignoreDuplicates: false });
-  } catch(e) { console.warn('Cloud sync error:', e.message); }
+    if (eloUpdates.length) {
+      const { error } = await db.from('watches').upsert(eloUpdates, { onConflict: 'id', ignoreDuplicates: false });
+      if (error) console.error('[WristLog] cloudSync elo error:', error.message, error);
+    }
+  } catch(e) { console.error('[WristLog] cloudSync exception:', e.message); }
 }
 
 // ══════════════════════════════════════════
