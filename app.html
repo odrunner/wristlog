@@ -124,12 +124,6 @@
       margin-left: auto; padding: 0 .25rem;
       flex-shrink: 0;  /* sign-out is never pushed off */
     }
-    .btn-data {
-      background: transparent; border: 1px solid var(--border); color: var(--muted);
-      font-size: .72rem; font-weight: 500; padding: .28rem .6rem; border-radius: 6px;
-      cursor: pointer; transition: all .15s; white-space: nowrap; font-family: inherit;
-    }
-    .btn-data:hover { border-color: var(--gold); color: var(--gold); }
     .app-ver { font-size: .6rem; color: var(--muted); opacity: .5; letter-spacing: .06em; white-space: nowrap; user-select: none; }
 
     /* ── AUTH SCREEN ── */
@@ -165,8 +159,7 @@
     .auth-divider { text-align: center; color: var(--muted); font-size: .75rem; margin: 1.25rem 0; position: relative; }
     .auth-divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--border); }
     .auth-divider span { background: var(--surface); padding: 0 .75rem; position: relative; }
-    .auth-import-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; font-size: .8rem; color: var(--muted); line-height: 1.5; }
-    .auth-import-box strong { color: var(--text); }
+
     .btn-signout { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: .72rem; font-weight: 500; padding: .28rem .6rem; border-radius: 6px; cursor: pointer; transition: all .15s; white-space: nowrap; font-family: inherit; }
     .btn-signout:hover { border-color: var(--danger); color: var(--danger); }
     .server-dot {
@@ -906,7 +899,6 @@
       /* Compact header */
       .header-inner { padding: 0 .75rem; gap: .35rem; align-items: center; }
       .logo { font-size: 1rem; padding: .65rem 0; }
-      .btn-data { font-size: .65rem; padding: .22rem .48rem; }
 
       /* Fixed bottom tab bar */
       nav {
@@ -1120,11 +1112,7 @@
     </button>
 
     <div class="auth-divider"><span>First time? Just sign in — account created automatically.</span></div>
-    <div class="auth-import-box">
-      <strong>Migrating from the old WristLog?</strong> Sign in first, then use
-      <strong>↓ Import</strong> in the top-right corner to upload your backup JSON.
-      All your watches and logs will sync instantly.
-    </div>
+
   </div>
 </div>
 
@@ -1141,8 +1129,7 @@
     </nav>
     <div class="header-data">
       <div id="server-dot" class="server-dot" title="Saving to local file"></div>
-      <button class="btn-data" onclick="exportData()" title="Download a backup JSON file">↑ Export</button>
-      <button class="btn-data" onclick="importData()" title="Restore from a backup JSON file">↓ Import</button>
+
       <span id="app-ver" class="app-ver"></span>
       <button class="profile-btn" id="profile-btn" onclick="openProfileModal()" style="display:none;" title="My Profile">?</button>
       <button class="btn-signout" id="signout-btn" onclick="signOut()" style="display:none;">Sign out</button>
@@ -1425,26 +1412,6 @@
       </div>
 
       <!-- ── BACKUP ── -->
-      <div class="help-section">
-        <div class="help-section-title">💾 Backup &amp; Restore</div>
-        <div class="help-card">
-          <div class="help-step">
-            <div class="help-step-num">↑</div>
-            <div class="help-step-body">
-              <div class="help-step-title">Export — download a backup</div>
-              <div class="help-step-desc">Tap <span class="help-kbd">↑ Export</span> in the top-right header. Saves a <code>.json</code> file with all your watches and logs. Keep a copy before clearing browser data or switching devices.</div>
-            </div>
-          </div>
-          <div class="help-step">
-            <div class="help-step-num">↓</div>
-            <div class="help-step-body">
-              <div class="help-step-title">Import — restore a backup</div>
-              <div class="help-step-desc">Tap <span class="help-kbd">↓ Import</span> and select a previously exported <code>.json</code> file. This merges the backup with any existing data — watches and logs are matched by ID, so there are no duplicates.</div>
-            </div>
-          </div>
-          <div class="help-tip">💡 <strong>Switching phones?</strong> Export on the old phone, open the app on the new phone, then Import the file. All your data transfers instantly.</div>
-        </div>
-      </div>
 
       <!-- ── VERSION ── -->
       <div style="text-align:center;color:var(--muted);font-size:.75rem;padding:1.5rem 0 .5rem;">
@@ -5979,74 +5946,6 @@ async function initServerData() {
   _serverReady = true; // from now on, every save() will also push to the server
 }
 
-// ══════════════════════════════════════════
-//  EXPORT / IMPORT
-// ══════════════════════════════════════════
-function exportData() {
-  const payload = {
-    exported: new Date().toISOString(),
-    watches, logs, wishlist, brands,
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = 'wristlog-backup-' + todayStr() + '.json';
-  a.click();
-  URL.revokeObjectURL(url);
-  toast('Backup downloaded!');
-}
-
-function importData() {
-  const input    = document.createElement('input');
-  input.type     = 'file';
-  input.accept   = '.json,application/json';
-  input.onchange = () => {
-    const file = input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      try {
-        const d = JSON.parse(e.target.result);
-        if (!Array.isArray(d.watches) || !Array.isArray(d.logs)) {
-          toast('Invalid backup file', 'error'); return;
-        }
-        // Reassign fresh IDs to every imported item so they never collide with
-        // another user's existing rows in Supabase. Without this, upsert
-        // onConflict:'id' is blocked by RLS when the same ID belongs to a
-        // different user, causing the import to silently fail to persist.
-        const idMap = {};
-        watches = d.watches.map(w => {
-          const newId = uid();
-          idMap[w.id] = newId;
-          return { ...w, id: newId };
-        });
-        logs = d.logs.map(l => ({
-          ...l,
-          id: uid(),
-          watchId: idMap[l.watchId] || l.watchId,
-        }));
-        wishlist = (d.wishlist || []).map(w => ({ ...w, id: uid() }));
-        brands    = d.brands || brands;
-        eloRatings = {}; // new IDs have no elo history yet
-        // Write to localStorage directly then sync once — avoids the
-        // double-cloudSync that save() + saveWishlist() would trigger,
-        // which caused concurrent INSERT races failing RLS USING checks.
-        localStorage.setItem(STORE_W,   JSON.stringify(watches));
-        localStorage.setItem(STORE_L,   JSON.stringify(logs));
-        localStorage.setItem(STORE_WL,  JSON.stringify(wishlist));
-        localStorage.setItem(STORE_B,   JSON.stringify(brands));
-        localStorage.setItem(STORE_ELO, JSON.stringify(eloRatings));
-        cloudSync();
-        renderCollection();
-        renderTrack();
-        toast(`Imported ${d.watches.length} watches · ${d.logs.length} logs`);
-      } catch { toast('Could not read file', 'error'); }
-    };
-    reader.readAsText(file);
-  };
-  input.click();
-}
 
 // ══════════════════════════════════════════
 //  FEEDBACK
