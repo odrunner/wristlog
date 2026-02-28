@@ -3175,7 +3175,9 @@ function renderNotificationPanel() {
     const nm   = escHtml(n.actor?.display_name || n.actor?.username || 'Someone');
     const time = formatFeedDate((n.created_at || '').slice(0, 10));
     const body = n.type === 'friend_request'  ? `${nm} sent you a friend request`
-               : n.type === 'friend_accepted' ? `${nm} accepted your friend request` : '';
+               : n.type === 'friend_accepted' ? `${nm} accepted your friend request`
+               : n.type === 'like'            ? `${nm} liked your wear log`
+               : n.type === 'comment'         ? `${nm} commented on your wear log` : '';
     const reqPending = n.type === 'friend_request' && receivedRequests.get(n.actor_id)?.status === 'pending';
     const actions = reqPending ? `
       <div class="notif-actions">
@@ -3464,6 +3466,11 @@ async function toggleLike(logId) {
     await db.from('likes').delete().eq('log_id', logId).eq('user_id', currentUser.id);
   } else {
     await db.from('likes').insert({ log_id: logId, user_id: currentUser.id });
+    // Notify the post author (skip if liking own post)
+    const item = feedItems.find(i => i.id === logId);
+    if (item && item.user_id !== currentUser.id) {
+      db.from('notifications').insert({ user_id: item.user_id, type: 'like', actor_id: currentUser.id, ref_id: logId }).then();
+    }
   }
 }
 
@@ -3507,6 +3514,11 @@ async function postComment(logId) {
     await fetchComments(logId);
     feedCommentCounts[logId] = (feedComments[logId] || []).length;
     refreshFeedCard(logId);
+    // Notify the post author (skip if commenting on own post)
+    const item = feedItems.find(i => i.id === logId);
+    if (item && item.user_id !== currentUser.id) {
+      db.from('notifications').insert({ user_id: item.user_id, type: 'comment', actor_id: currentUser.id, ref_id: logId }).then();
+    }
   } else { toast('Comment failed — ' + error.message, 'error'); }
 }
 
