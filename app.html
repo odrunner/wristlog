@@ -1076,7 +1076,7 @@
     .feed-meta       { font-size: .72rem; color: var(--muted); }
 
     /* Hero photo */
-    .feed-card-photo { width: 100%; aspect-ratio: 4/5; overflow: hidden; background: var(--surface2); }
+    .feed-card-photo { width: 100%; aspect-ratio: 4/5; max-height: 520px; overflow: hidden; background: var(--surface2); }
     .feed-card-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
     /* Watch banner fallback (no photo) */
@@ -2115,12 +2115,24 @@
         <button type="button" id="rec-log-photo-clear" class="log-photo-clear" style="display:none;"
           onclick="event.stopPropagation();clearRecLogPhoto()">✕</button>
       </div>
-      <input type="file" id="rec-log-photo-input" accept="image/*" capture="environment"
+      <input type="file" id="rec-log-photo-input" accept="image/*"
         style="display:none" onchange="handleRecLogPhoto(this)">
 <!-- Shared hidden input for adding a photo to an existing feed card -->
-<input type="file" id="feed-photo-input" accept="image/*" capture="environment"
+<input type="file" id="feed-photo-input" accept="image/*"
   style="display:none" onchange="handleFeedPhoto(this)">
     </div>
+
+    <div class="form-group">
+      <label>Caption <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+      <textarea id="rec-log-caption" rows="2" placeholder="What's the occasion? Share your thoughts…" style="resize:none;"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="confirmRecLog()">✓ Log Wear</button>
+      <button class="btn btn-ghost"   onclick="closeRecLog()">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <!-- ════ NEW POST MODAL ════ -->
 <div id="new-post-modal" class="overlay hidden">
@@ -2133,7 +2145,7 @@
         <button type="button" id="np-photo-clear" class="log-photo-clear" style="display:none;"
           onclick="event.stopPropagation();clearNewPostPhoto()">✕</button>
       </div>
-      <input type="file" id="np-photo-input" accept="image/*" capture="environment"
+      <input type="file" id="np-photo-input" accept="image/*"
         style="display:none" onchange="handleNewPostPhoto(this)">
     </div>
     <div class="form-group">
@@ -2142,18 +2154,6 @@
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="saveNewPost()">Post</button>
       <button class="btn btn-ghost"   onclick="closeNewPost()">Cancel</button>
-    </div>
-  </div>
-</div>
-
-    <div class="form-group">
-      <label>Caption <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
-      <textarea id="rec-log-caption" rows="2" placeholder="What's the occasion? Share your thoughts…" style="resize:none;"></textarea>
-    </div>
-
-    <div class="modal-actions">
-      <button class="btn btn-primary" onclick="confirmRecLog()">✓ Log Wear</button>
-      <button class="btn btn-ghost"   onclick="closeRecLog()">Cancel</button>
     </div>
   </div>
 </div>
