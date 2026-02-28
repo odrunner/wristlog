@@ -1099,6 +1099,25 @@
       background: var(--surface2); border-radius: 20px; padding: .22rem .65rem;
     }
 
+    /* Edit-caption pencil button in card header (own cards) */
+    .feed-edit-btn {
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      font-size: .85rem; padding: .25rem .4rem; border-radius: 6px;
+      transition: color .15s, background .15s; flex-shrink: 0;
+    }
+    .feed-edit-btn:hover { color: var(--gold); background: var(--hover); }
+
+    /* Inline caption editing area */
+    .feed-caption-edit { padding: .4rem 1rem .5rem; }
+    .feed-caption-textarea {
+      width: 100%; box-sizing: border-box; resize: none;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: .5rem .7rem; font-size: .85rem;
+      color: var(--text); font-family: inherit; line-height: 1.5;
+    }
+    .feed-caption-textarea:focus { outline: none; border-color: var(--gold); }
+    .feed-caption-edit-actions { display: flex; gap: .5rem; margin-top: .4rem; }
+
     /* Add-photo button inside watch banner (own cards, no photo) */
     .feed-add-photo-btn {
       background: none; border: 1px solid var(--border); color: var(--muted);
@@ -2944,10 +2963,24 @@ function renderFeedCard(item) {
       </div>`;
   }
 
-  // Caption below actions (Instagram style: bold username + caption inline)
-  const captionHtml = item.notes
-    ? `<div class="feed-caption"><span class="feed-caption-user">${escHtml(p?.display_name || p?.username || 'User')}</span>${escHtml(item.notes)}</div>`
-    : '';
+  // Caption — inline edit mode for own cards, static for others
+  const editingCaption = isMe && feedEditingCaption.has(item.id);
+  let captionHtml;
+  if (editingCaption) {
+    captionHtml = `
+      <div class="feed-caption-edit">
+        <textarea id="feed-caption-ta-${item.id}" class="feed-caption-textarea" rows="2"
+          placeholder="Add a caption…">${escHtml(item.notes || '')}</textarea>
+        <div class="feed-caption-edit-actions">
+          <button class="btn btn-primary btn-sm" onclick="saveFeedCaption('${item.id}')">Save</button>
+          <button class="btn btn-ghost btn-sm"   onclick="cancelFeedCaption('${item.id}')">Cancel</button>
+        </div>
+      </div>`;
+  } else {
+    captionHtml = item.notes
+      ? `<div class="feed-caption"><span class="feed-caption-user">${escHtml(p?.display_name || p?.username || 'User')}</span>${escHtml(item.notes)}</div>`
+      : '';
+  }
 
   // Watch chip (always visible — identifies what was worn)
   const watchChip = `<div class="feed-watch-chip">⌚ ${escHtml((w?.brand||'') + ' ' + (w?.name||'Unknown'))}</div>`;
@@ -2986,6 +3019,7 @@ function renderFeedCard(item) {
           <div class="feed-user-name" onclick="viewUserProfile('${item.user_id}')" style="cursor:pointer;">${escHtml(p?.display_name || p?.username || 'User')}</div>
           <div class="feed-meta">${metaStr}</div>
         </div>
+        ${isMe ? `<button class="feed-edit-btn" onclick="editFeedCaption('${item.id}')" title="Edit caption">✏</button>` : ''}
       </div>
       ${heroHtml}
       <div class="feed-actions">
@@ -3000,6 +3034,42 @@ function renderFeedCard(item) {
       ${watchChip}
       ${commentsHtml}
     </div>`;
+}
+
+// ── Feed caption editing ───────────────────────────────────────────────────
+const feedEditingCaption = new Set();
+
+function editFeedCaption(logId) {
+  feedEditingCaption.add(logId);
+  refreshFeedCard(logId);
+  // Focus the textarea after render
+  setTimeout(() => document.getElementById(`feed-caption-ta-${logId}`)?.focus(), 30);
+}
+
+function cancelFeedCaption(logId) {
+  feedEditingCaption.delete(logId);
+  refreshFeedCard(logId);
+}
+
+async function saveFeedCaption(logId) {
+  const ta = document.getElementById(`feed-caption-ta-${logId}`);
+  if (!ta) return;
+  const newNotes = ta.value.trim();
+  // Update local log
+  const log = logs.find(l => l.id === logId);
+  if (log) { log.notes = newNotes; save(); }
+  // Update feedItem for re-render
+  const fi = feedItems.find(i => i.id === logId);
+  if (fi) fi.notes = newNotes;
+  // Hard-update Supabase
+  if (currentUser) {
+    const { error } = await db.from('logs').update({ notes: newNotes || null })
+      .eq('id', logId).eq('user_id', currentUser.id);
+    if (error) console.error('[WristLog] saveFeedCaption error:', error.message);
+  }
+  feedEditingCaption.delete(logId);
+  refreshFeedCard(logId);
+  toast('Caption saved!');
 }
 
 // ── Feed photo (add after logging) ────────────────────────────────────────
