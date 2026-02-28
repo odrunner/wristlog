@@ -2141,8 +2141,8 @@ function watchToRow(w) {
     has_box: w.hasBox||false, has_papers: w.hasPapers||false,
     insurance: w.insurance||null, receipts: w.receipts||[],
     elo_rating: eloRatings[w.id] || 1000,
-    watch_privacy: w.watchPrivacy || 'public',
-    is_public: (w.watchPrivacy || 'public') !== 'private',
+    watch_privacy: w.watchPrivacy || 'private',
+    is_public: (w.watchPrivacy || 'private') !== 'private',
   };
 }
 function rowToWatch(r) {
@@ -2160,8 +2160,8 @@ function rowToWatch(r) {
     priceHistory: r.price_history||[], warrantyExpiry: r.warranty_expiry||null,
     hasBox: r.has_box||false, hasPapers: r.has_papers||false,
     insurance: r.insurance||null, receipts: r.receipts||[],
-    watchPrivacy: r.watch_privacy || 'public',
-    isPublic: (r.watch_privacy || 'public') !== 'private',
+    watchPrivacy: r.watch_privacy || 'private',
+    isPublic: (r.watch_privacy || 'private') !== 'private',
   };
 }
 function logToRow(l) {
@@ -2466,7 +2466,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         ? `<div class="showcase-priv-label ${priv === 'public' ? 'pub' : priv === 'friends_only' ? 'fri' : 'priv'}">${priv === 'public' ? 'Public' : priv === 'friends_only' ? 'Friends' : 'Private'}</div>`
         : '';
       const clickAttr = isOwn ? `onclick="cycleWatchPrivacy('${w.id}')"` : '';
-      return `<div class="showcase-card${isOwn ? ' priv-own' : ''}" data-priv="${priv}" ${clickAttr}>
+      return `<div class="showcase-card${isOwn ? ' priv-own' : ''}"${isOwn ? ` data-priv="${priv}"` : ''} ${clickAttr}>
         ${thumb}
         <div class="showcase-brand">${escHtml(w.brand || '')}</div>
         <div class="showcase-name">${escHtml(w.name || '')}</div>
@@ -4471,7 +4471,7 @@ function saveWatch() {
     watchChartsUrl: wcUrl || null,
     tags:           getSelectedTags(),
     straps:         wEditStraps,
-    isPublic:       editingId ? (watches.find(x => x.id === editingId)?.watchPrivacy !== 'private') : true,
+    isPublic:       editingId ? (watches.find(x => x.id === editingId)?.watchPrivacy !== 'private') : false,
     ...(wPendingImage ? { image: wPendingImage } : {}),
   };
 
