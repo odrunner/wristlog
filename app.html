@@ -2165,6 +2165,36 @@
   </div>
 </div>
 
+<!-- ════ EDIT POST MODAL ════ -->
+<div id="edit-post-modal" class="overlay hidden">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title">Edit Post</div>
+    <div class="form-group">
+      <div id="ep-photo-area" class="log-photo-area" onclick="document.getElementById('ep-photo-input').click()">
+        <div id="ep-photo-placeholder" class="log-photo-placeholder">📷 Add a photo (optional)</div>
+        <img id="ep-photo-preview" class="log-photo-preview" style="display:none;" alt="">
+        <button type="button" id="ep-photo-clear" class="log-photo-clear" style="display:none;"
+          onclick="event.stopPropagation();clearEditPostPhoto()">✕</button>
+      </div>
+      <input type="file" id="ep-photo-input" accept="image/*"
+        style="display:none" onchange="handleEditPostPhoto(this)">
+    </div>
+    <div class="form-group">
+      <textarea id="ep-body" rows="3" placeholder="What's on your mind?" style="resize:none;"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveEditPost()">Save</button>
+      <button class="btn btn-ghost"   onclick="closeEditPost()">Cancel</button>
+    </div>
+    <div style="margin-top:.85rem;text-align:center;">
+      <button id="ep-delete-btn" onclick="deletePostFromFeed()"
+        style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:.82rem;padding:.3rem .6rem;font-family:inherit;">
+        🗑 Delete post
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ FEEDBACK MODAL ════ -->
 <div id="feedback-modal" class="overlay hidden">
   <div class="modal" style="max-width:420px;">
@@ -3285,7 +3315,7 @@ function renderFeedCard(item) {
           <div class="feed-user-name" onclick="viewUserProfile('${item.user_id}')" style="cursor:pointer;">${escHtml(p?.display_name || p?.username || 'User')}</div>
           <div class="feed-meta">${metaStr}</div>
         </div>
-        ${isMe ? `<button class="feed-edit-btn" onclick="editFeedCaption('${item.id}')" title="Edit caption">✏</button>` : ''}
+        ${isMe ? `<button class="feed-edit-btn" onclick="openEditPost('${item.id}')" title="Edit post">✏</button>` : ''}
       </div>
       ${heroHtml}
       <div class="feed-actions">
@@ -3336,6 +3366,98 @@ async function saveFeedCaption(logId) {
   feedEditingCaption.delete(logId);
   refreshFeedCard(logId);
   toast('Caption saved!');
+}
+
+// ── Edit post modal ────────────────────────────────────────────────────────
+let editPostLogId   = null;
+let editPostNewPhoto = null; // null=unchanged, 'REMOVE'=clear, base64=new photo
+
+function openEditPost(logId) {
+  const fi = feedItems.find(i => i.id === logId);
+  if (!fi) return;
+  editPostLogId    = logId;
+  editPostNewPhoto = null;
+  document.getElementById('ep-body').value = fi.notes || '';
+  // Populate photo
+  if (fi.photo_url) {
+    document.getElementById('ep-photo-preview').src = fi.photo_url;
+    document.getElementById('ep-photo-preview').style.display = 'block';
+    document.getElementById('ep-photo-placeholder').style.display = 'none';
+    document.getElementById('ep-photo-clear').style.display = '';
+    document.getElementById('ep-photo-area').classList.add('has-photo');
+  } else {
+    _resetEpPhoto();
+  }
+  document.getElementById('edit-post-modal').classList.remove('hidden');
+}
+
+function closeEditPost() {
+  document.getElementById('edit-post-modal').classList.add('hidden');
+  editPostLogId = null; editPostNewPhoto = null;
+}
+
+function _resetEpPhoto() {
+  document.getElementById('ep-photo-preview').style.display = 'none';
+  document.getElementById('ep-photo-preview').src = '';
+  document.getElementById('ep-photo-placeholder').style.display = '';
+  document.getElementById('ep-photo-clear').style.display = 'none';
+  document.getElementById('ep-photo-area').classList.remove('has-photo');
+}
+
+function clearEditPostPhoto() {
+  editPostNewPhoto = 'REMOVE';
+  _resetEpPhoto();
+}
+
+async function handleEditPostPhoto(input) {
+  const file = input.files[0]; if (!file) return; input.value = '';
+  try {
+    editPostNewPhoto = await blobToResizedBase64(file);
+    document.getElementById('ep-photo-preview').src = editPostNewPhoto;
+    document.getElementById('ep-photo-preview').style.display = 'block';
+    document.getElementById('ep-photo-placeholder').style.display = 'none';
+    document.getElementById('ep-photo-clear').style.display = '';
+    document.getElementById('ep-photo-area').classList.add('has-photo');
+  } catch(e) { toast('Could not load photo', 'error'); }
+}
+
+async function saveEditPost() {
+  if (!editPostLogId) return;
+  const fi  = feedItems.find(i => i.id === editPostLogId);
+  const log = logs.find(l => l.id === editPostLogId);
+  const newNotes = (document.getElementById('ep-body').value || '').trim();
+  // Resolve final photo
+  let finalPhoto = fi?.photo_url ?? null;
+  if (editPostNewPhoto === 'REMOVE') finalPhoto = null;
+  else if (editPostNewPhoto)         finalPhoto = editPostNewPhoto;
+  // Update local state
+  if (fi)  { fi.notes  = newNotes || null; fi.photo_url = finalPhoto; }
+  if (log) { log.notes = newNotes || null; log.photoUrl = finalPhoto; save(); }
+  // Persist to Supabase
+  if (currentUser) {
+    const { error } = await db.from('logs')
+      .update({ notes: newNotes || null, photo_url: finalPhoto })
+      .eq('id', editPostLogId).eq('user_id', currentUser.id);
+    if (error) { toast('Save failed — ' + error.message, 'error'); return; }
+  }
+  refreshFeedCard(editPostLogId);
+  closeEditPost();
+  toast('Post updated!');
+}
+
+async function deletePostFromFeed() {
+  if (!editPostLogId) return;
+  const logId = editPostLogId;
+  const fi = feedItems.find(i => i.id === logId);
+  const isWearLog = !!(fi?.watch_id);
+  closeEditPost();
+  // Remove from feed immediately
+  feedItems = feedItems.filter(i => i.id !== logId);
+  const card = document.getElementById(`feedcard-${logId}`);
+  if (card) card.remove();
+  // Delete from logs + Supabase (also calls renderTrack() for wear logs)
+  deleteLog(logId);
+  toast(isWearLog ? 'Log deleted from feed and tracking.' : 'Post deleted.');
 }
 
 // ── Standalone new post ────────────────────────────────────────────────────
