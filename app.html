@@ -72,6 +72,8 @@
       position: sticky;
       top: 0;
       z-index: 100;
+      /* needed for notification panel absolute positioning */
+      overflow: visible;
     }
     .header-inner {
       max-width: 1160px;
@@ -80,6 +82,7 @@
       display: flex;
       align-items: stretch;
       gap: .75rem;
+      position: relative; /* positioning context for notif panel */
     }
     .logo {
       font-size: 1.15rem;
@@ -1106,6 +1109,38 @@
     }
     .follow-btn.following:hover { border-color: var(--danger); color: var(--danger); }
 
+    /* ── BELL ICON ──────────────────────────────── */
+    .bell-btn { position:relative; background:none; border:none; font-size:1.1rem; cursor:pointer;
+      padding:.25rem .4rem; border-radius:8px; display:flex; align-items:center; transition:background .15s; }
+    .bell-btn:hover { background:var(--surface2); }
+    .bell-badge { position:absolute; top:2px; right:2px; min-width:16px; height:16px; border-radius:8px;
+      background:var(--danger); color:#fff; font-size:.6rem; font-weight:700;
+      display:flex; align-items:center; justify-content:center; padding:0 3px; pointer-events:none; }
+    .bell-badge.hidden { display:none; }
+
+    /* ── NOTIFICATION PANEL ─────────────────────── */
+    .notif-panel { position:absolute; top:calc(100% + 2px); right:.75rem;
+      width:310px; max-height:420px; overflow-y:auto;
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--radius); box-shadow:0 8px 32px rgba(0,0,0,.55); z-index:200; }
+    .notif-panel-header { display:flex; align-items:center; justify-content:space-between;
+      padding:.65rem 1rem; border-bottom:1px solid var(--border);
+      font-size:.72rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); }
+    .notif-item { display:flex; gap:.7rem; padding:.7rem 1rem;
+      border-bottom:1px solid var(--border); cursor:pointer; transition:background .12s; }
+    .notif-item:hover { background:var(--surface2); }
+    .notif-item:last-child { border-bottom:none; }
+    .notif-unread { background:var(--gold-dim); }
+    .notif-body { font-size:.84rem; line-height:1.4; }
+    .notif-time { font-size:.72rem; color:var(--muted); margin-top:.18rem; }
+    .notif-actions { display:flex; gap:.45rem; margin-top:.5rem; }
+    .notif-empty { padding:1.5rem 1rem; text-align:center; color:var(--muted); font-size:.84rem; }
+
+    /* ── FRIEND BADGE + PRIVACY LABEL ──────────── */
+    .friend-badge { font-size:.72rem; font-weight:600; color:var(--success);
+      border:1px solid var(--success); border-radius:20px; padding:.2rem .7rem; white-space:nowrap; }
+    .privacy-label { font-size:.62rem; color:var(--muted); margin-left:.35rem; }
+
     /* ── FEED EMPTY STATE ──────────────────────── */
     .feed-empty-state  { text-align: center; padding: 3.5rem 1.5rem; color: var(--muted); }
     .feed-empty-icon   { font-size: 3rem; margin-bottom: .75rem; }
@@ -1174,8 +1209,19 @@
       <div id="server-dot" class="server-dot" title="Saving to local file"></div>
 
       <span id="app-ver" class="app-ver"></span>
+      <button class="bell-btn" id="bell-btn" onclick="toggleNotifPanel()" style="display:none;" title="Notifications">
+        🔔<span class="bell-badge hidden" id="bell-badge">0</span>
+      </button>
       <button class="profile-btn" id="profile-btn" onclick="openProfileModal()" style="display:none;" title="My Profile">?</button>
       <button class="btn-signout" id="signout-btn" onclick="signOut()" style="display:none;">Sign out</button>
+    </div>
+    <!-- Notification panel (position:absolute relative to .header-inner) -->
+    <div id="notif-panel" class="notif-panel hidden">
+      <div class="notif-panel-header">
+        <span>Notifications</span>
+        <button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .5rem;" onclick="markAllNotifsRead()">Mark all read</button>
+      </div>
+      <div id="notif-list"></div>
     </div>
   </div>
 </header>
@@ -2288,10 +2334,19 @@ async function loadAndRenderProfile(userId) {
   const isOwn = userId === currentUser?.id;
 
   const { data: profile } = await db.from('profiles')
-    .select('id, username, display_name, bio, avatar_url, collection_visibility')
+    .select('id, username, display_name, bio, avatar_url, collection_visibility, profile_privacy')
     .eq('id', userId).single();
   if (!profile) {
     el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Profile not found.</div>';
+    return;
+  }
+
+  const privacy    = profile.profile_privacy || 'public';
+  const isFriend   = friends.has(userId);
+
+  // Gate access for private / friends-only profiles
+  if (!isOwn && (privacy === 'private' || privacy === 'friends_only') && !isFriend) {
+    el.innerHTML = renderPrivateProfileHTML(profile, privacy, userId);
     return;
   }
 
@@ -2320,25 +2375,41 @@ async function loadAndRenderProfile(userId) {
     showcase = data || [];
   }
 
-  el.innerHTML = renderProfilePageHTML(profile, isOwn, isFollowing, logCount || 0, recentLogs || [], showcase, visibility);
+  el.innerHTML = renderProfilePageHTML(profile, isOwn, isFollowing, logCount || 0, recentLogs || [], showcase, visibility, privacy, isFriend);
 
   if (isOwn) {
     document.getElementById('profile-save-btn')?.addEventListener('click', saveProfileFromPage);
   }
 }
 
-function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs, showcase, visibility) {
+function renderPrivateProfileHTML(profile, privacy, userId) {
+  const heroInitials = profileInitials(profile);
+  const name  = escHtml(profile.display_name || profile.username || '—');
+  const uname = profile.username ? '@' + escHtml(profile.username) : '';
+  const msg   = privacy === 'private'
+    ? '🔒 This account is private'
+    : '🔒 Friends only — send a friend request to connect';
+  const actionHtml = friendActionBtn({ id: userId, profile_privacy: privacy });
+  return `
+    <div class="profile-hero">
+      <div class="profile-avatar-lg">${heroInitials}</div>
+      <div class="profile-display-name">${name}</div>
+      ${uname ? `<div class="profile-username-lbl">${uname}</div>` : ''}
+      <div style="color:var(--muted);margin-top:.55rem;font-size:.84rem;">${msg}</div>
+      <div style="margin-top:.9rem;">${actionHtml}</div>
+    </div>`;
+}
+
+function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs, showcase, visibility, privacy, isFriend) {
   const heroInitials = profileInitials(profile);
   const name     = escHtml(profile.display_name || profile.username || '—');
   const uname    = profile.username ? '@' + escHtml(profile.username) : '';
   const bio      = profile.bio ? `<div class="profile-bio-text">${escHtml(profile.bio)}</div>` : '';
 
-  // Follow button (other users only)
-  const followBtn = !isOwn ? `
-    <button class="follow-btn ${isFollowing ? 'following' : 'follow'} " style="margin-top:.75rem;"
-      onclick="${isFollowing ? `unfollowUser('${profile.id}')` : `followUser('${profile.id}')`}">
-      ${isFollowing ? 'Following' : 'Follow'}
-    </button>` : '';
+  // Action button (other users only) — privacy-aware
+  const followBtn = !isOwn
+    ? `<div style="margin-top:.75rem;">${friendActionBtn({ id: profile.id, profile_privacy: privacy || 'public' })}</div>`
+    : '';
 
   // Stats
   const watchCount = isOwn ? watches.length : (showcase.length || '—');
@@ -2365,6 +2436,14 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           <option value="public_only" ${visibility === 'public_only'  ? 'selected' : ''}>Show only public watches</option>
           <option value="none"        ${visibility === 'none'         ? 'selected' : ''}>Don't show collection</option>
         </select>
+      </div>
+      <div class="form-group"><label>Profile Privacy</label>
+        <select id="pp-profile-privacy">
+          <option value="public"       ${(privacy||'public') === 'public'       ? 'selected' : ''}>Public — anyone can view</option>
+          <option value="friends_only" ${(privacy||'public') === 'friends_only' ? 'selected' : ''}>Friends Only — send request to view</option>
+          <option value="private"      ${(privacy||'public') === 'private'      ? 'selected' : ''}>Private — hidden from search</option>
+        </select>
+        <div style="font-size:.73rem;color:var(--muted);margin-top:.3rem;">Changing to Friends Only or Private does not remove existing followers.</div>
       </div>
       <div style="display:flex;gap:.65rem;margin-top:.1rem;">
         <button class="btn btn-primary" id="profile-save-btn" style="flex:1;">Save Profile</button>
@@ -2440,15 +2519,16 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
 }
 
 async function saveProfileFromPage() {
-  const name = (document.getElementById('pp-display-name')?.value || '').trim();
-  const bio  = (document.getElementById('pp-bio')?.value || '').trim();
-  const vis  = document.getElementById('pp-collection-vis')?.value || 'public_only';
+  const name  = (document.getElementById('pp-display-name')?.value || '').trim();
+  const bio   = (document.getElementById('pp-bio')?.value || '').trim();
+  const vis   = document.getElementById('pp-collection-vis')?.value || 'public_only';
+  const priv  = document.getElementById('pp-profile-privacy')?.value || 'public';
   const { error } = await db.from('profiles').upsert(
-    { id: currentUser.id, display_name: name, bio, collection_visibility: vis },
+    { id: currentUser.id, display_name: name, bio, collection_visibility: vis, profile_privacy: priv },
     { onConflict: 'id' }
   );
   if (!error) {
-    myProfile = { ...myProfile, display_name: name, bio, collection_visibility: vis };
+    myProfile = { ...myProfile, display_name: name, bio, collection_visibility: vis, profile_privacy: priv };
     const btn = document.getElementById('profile-btn');
     if (btn) btn.textContent = profileInitials(myProfile);
     toast('Profile saved!');
@@ -2463,6 +2543,48 @@ async function loadFollowing() {
   if (!currentUser) return;
   const { data } = await db.from('follows').select('following_id').eq('follower_id', currentUser.id);
   following = new Set((data || []).map(r => r.following_id));
+}
+
+// ── Friend State ───────────────────────────────────────────────────────────
+async function loadFriendState() {
+  if (!currentUser) return;
+  const [{ data: sent }, { data: received }] = await Promise.all([
+    db.from('friend_requests').select('id, receiver_id, status').eq('sender_id', currentUser.id),
+    db.from('friend_requests').select('id, sender_id,   status').eq('receiver_id', currentUser.id),
+  ]);
+  friends.clear(); sentRequests.clear(); receivedRequests.clear();
+  (sent     || []).forEach(r => { sentRequests.set(r.receiver_id, {id:r.id, status:r.status}); if (r.status === 'accepted') friends.add(r.receiver_id); });
+  (received || []).forEach(r => { receivedRequests.set(r.sender_id, {id:r.id, status:r.status}); if (r.status === 'accepted') friends.add(r.sender_id); });
+}
+
+// ── Notifications ──────────────────────────────────────────────────────────
+async function loadNotifications() {
+  if (!currentUser) return;
+  const { data } = await db.from('notifications')
+    .select('id, type, actor_id, ref_id, is_read, created_at')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false }).limit(30);
+  if (!data) return;
+  const actorIds = [...new Set(data.map(n => n.actor_id).filter(Boolean))];
+  let pMap = {};
+  if (actorIds.length) {
+    const { data: ps } = await db.from('profiles').select('id, username, display_name, avatar_url').in('id', actorIds);
+    (ps || []).forEach(p => pMap[p.id] = p);
+  }
+  userNotifs = data.map(n => ({ ...n, actor: pMap[n.actor_id] || null }));
+  unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
+  updateBellBadge();
+}
+
+function updateBellBadge() {
+  const badge = document.getElementById('bell-badge');
+  if (!badge) return;
+  if (unreadNotifCount > 0) {
+    badge.textContent = unreadNotifCount > 9 ? '9+' : unreadNotifCount;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
 }
 async function followUser(userId) {
   if (!currentUser || userId === currentUser.id) return;
@@ -2487,6 +2609,134 @@ async function unfollowUser(userId) {
     loadFeed();
   }
 }
+
+// ── Friend Requests ────────────────────────────────────────────────────────
+async function sendFriendRequest(userId) {
+  if (!currentUser || userId === currentUser.id || sentRequests.has(userId)) return;
+  const { data, error } = await db.from('friend_requests')
+    .insert({ sender_id: currentUser.id, receiver_id: userId }).select().single();
+  if (!error && data) {
+    sentRequests.set(userId, { id: data.id, status: 'pending' });
+    toast('Friend request sent 👋');
+    renderDiscoverUsers();
+    if (profilePageUserId === userId) loadAndRenderProfile(userId);
+  } else { toast('Could not send request — ' + (error?.message || ''), 'error'); }
+}
+
+async function cancelFriendRequest(userId) {
+  const req = sentRequests.get(userId);
+  if (!req) return;
+  const { error } = await db.from('friend_requests').delete().eq('id', req.id);
+  if (!error) {
+    sentRequests.delete(userId); friends.delete(userId);
+    toast('Request cancelled');
+    renderDiscoverUsers();
+    if (profilePageUserId === userId) loadAndRenderProfile(userId);
+  }
+}
+
+async function acceptFriendRequest(senderId) {
+  const req = receivedRequests.get(senderId);
+  if (!req) return;
+  const { error } = await db.from('friend_requests').update({ status: 'accepted' }).eq('id', req.id);
+  if (!error) {
+    receivedRequests.set(senderId, { ...req, status: 'accepted' });
+    friends.add(senderId);
+    toast('Friend request accepted! 🎉');
+    const n = userNotifs.find(n => n.type === 'friend_request' && n.actor_id === senderId);
+    if (n) markNotificationRead(n.id);
+    renderNotificationPanel();
+    renderDiscoverUsers();
+  }
+}
+
+async function declineFriendRequest(senderId) {
+  const req = receivedRequests.get(senderId);
+  if (!req) return;
+  const { error } = await db.from('friend_requests').update({ status: 'declined' }).eq('id', req.id);
+  if (!error) {
+    receivedRequests.set(senderId, { ...req, status: 'declined' });
+    toast('Request declined');
+    const n = userNotifs.find(n => n.type === 'friend_request' && n.actor_id === senderId);
+    if (n) markNotificationRead(n.id);
+    renderNotificationPanel();
+  }
+}
+
+async function markNotificationRead(notifId) {
+  await db.from('notifications').update({ is_read: true }).eq('id', notifId);
+  const n = userNotifs.find(n => n.id === notifId);
+  if (n) n.is_read = true;
+  unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
+  updateBellBadge();
+}
+
+async function markAllNotifsRead() {
+  if (!currentUser) return;
+  await db.from('notifications').update({ is_read: true })
+    .eq('user_id', currentUser.id).eq('is_read', false);
+  userNotifs.forEach(n => n.is_read = true);
+  unreadNotifCount = 0;
+  updateBellBadge();
+  renderNotificationPanel();
+}
+
+// ── Notification Panel ─────────────────────────────────────────────────────
+function toggleNotifPanel() {
+  notifPanelOpen = !notifPanelOpen;
+  const panel = document.getElementById('notif-panel');
+  if (!panel) return;
+  if (notifPanelOpen) {
+    panel.classList.remove('hidden');
+    renderNotificationPanel();
+    setTimeout(markAllNotifsRead, 1200);
+  } else {
+    panel.classList.add('hidden');
+  }
+}
+
+function renderNotificationPanel() {
+  const el = document.getElementById('notif-list');
+  if (!el) return;
+  if (!userNotifs.length) {
+    el.innerHTML = '<div class="notif-empty">No notifications yet</div>';
+    return;
+  }
+  el.innerHTML = userNotifs.map(n => {
+    const nm   = escHtml(n.actor?.display_name || n.actor?.username || 'Someone');
+    const time = formatFeedDate((n.created_at || '').slice(0, 10));
+    const body = n.type === 'friend_request'  ? `${nm} sent you a friend request`
+               : n.type === 'friend_accepted' ? `${nm} accepted your friend request` : '';
+    const reqPending = n.type === 'friend_request' && receivedRequests.get(n.actor_id)?.status === 'pending';
+    const actions = reqPending ? `
+      <div class="notif-actions">
+        <button class="btn btn-primary" style="font-size:.74rem;padding:.28rem .7rem;"
+          onclick="event.stopPropagation();acceptFriendRequest('${n.actor_id}')">Accept</button>
+        <button class="btn btn-ghost"   style="font-size:.74rem;padding:.28rem .7rem;"
+          onclick="event.stopPropagation();declineFriendRequest('${n.actor_id}')">Decline</button>
+      </div>` : '';
+    return `
+      <div class="notif-item ${n.is_read ? '' : 'notif-unread'}" onclick="viewUserProfile('${n.actor_id}')">
+        <div class="feed-user-avatar" style="width:36px;height:36px;font-size:.76rem;flex-shrink:0;">${profileInitials(n.actor)}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="notif-body">${body}</div>
+          <div class="notif-time">${time}</div>
+          ${actions}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// Close notification panel when clicking outside
+document.addEventListener('click', e => {
+  if (!notifPanelOpen) return;
+  const panel = document.getElementById('notif-panel');
+  const bell  = document.getElementById('bell-btn');
+  if (panel && !panel.contains(e.target) && bell && !bell.contains(e.target)) {
+    notifPanelOpen = false;
+    panel.classList.add('hidden');
+  }
+});
 
 // ── Feed ──────────────────────────────────────────────────────────────────
 async function loadFeed() {
@@ -2719,7 +2969,7 @@ async function doSearchUsers(query) {
   if (el) el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">Searching…</div>';
   const { data, error } = await db
     .from('profiles')
-    .select('id, username, display_name, avatar_url')
+    .select('id, username, display_name, avatar_url, profile_privacy')
     .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
     .neq('id', currentUser.id)
     .limit(10);
@@ -2728,7 +2978,8 @@ async function doSearchUsers(query) {
     if (el) el.innerHTML = `<div style="color:var(--danger);font-size:.82rem;padding:.4rem 0;">Search failed: ${escHtml(error.message)}</div>`;
     return;
   }
-  discoverUsers = data || [];
+  // Hide private accounts that aren't already friends
+  discoverUsers = (data || []).filter(u => u.profile_privacy !== 'private' || friends.has(u.id));
   renderDiscoverUsers();
 }
 function renderDiscoverUsers() {
@@ -2750,7 +3001,7 @@ async function loadSuggestedUsers() {
   el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">Loading…</div>';
   const { data, error } = await db
     .from('profiles')
-    .select('id, username, display_name, avatar_url')
+    .select('id, username, display_name, avatar_url, profile_privacy')
     .neq('id', currentUser.id)
     .limit(20);
   if (error) {
@@ -2758,14 +3009,16 @@ async function loadSuggestedUsers() {
     el.innerHTML = `<div style="color:var(--danger);font-size:.82rem;padding:.4rem 0;">Could not load users: ${escHtml(error.message)}</div>`;
     return;
   }
-  if (!data || !data.length) {
+  // Hide private accounts that aren't already friends
+  const visible = (data || []).filter(u => u.profile_privacy !== 'private' || friends.has(u.id));
+  if (!visible.length) {
     el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">No other users yet.</div>';
     return;
   }
-  discoverUsers = data;
+  discoverUsers = visible;
   el.innerHTML = `
     <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin-bottom:.65rem;">All Users</div>
-    ${data.map(u => userCardHtml(u)).join('')}`;
+    ${visible.map(u => userCardHtml(u)).join('')}`;
 }
 async function renderFollowingList() {
   const el = document.getElementById('following-list');
@@ -2775,22 +3028,43 @@ async function renderFollowingList() {
     el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">You\'re not following anyone yet.</div>';
     return;
   }
-  const { data } = await db.from('profiles').select('id, username, display_name, avatar_url').in('id', ids);
+  const { data } = await db.from('profiles').select('id, username, display_name, avatar_url, profile_privacy').in('id', ids);
   el.innerHTML = (data || []).map(u => userCardHtml(u)).join('');
 }
+function friendActionBtn(u) {
+  const priv  = u.profile_privacy || 'public';
+  const isFr  = friends.has(u.id);
+  const sent  = sentRequests.get(u.id);
+  const recv  = receivedRequests.get(u.id);
+  const isFlw = following.has(u.id);
+
+  if (priv === 'public') {
+    return `<button class="follow-btn ${isFlw ? 'following' : 'follow'}"
+      onclick="${isFlw ? `unfollowUser('${u.id}')` : `followUser('${u.id}')`}">
+      ${isFlw ? 'Following' : 'Follow'}</button>`;
+  }
+  // friends_only or private
+  if (isFr) return `<span class="friend-badge">Friends ✓</span>`;
+  if (recv?.status === 'pending') return `
+    <button class="follow-btn follow"    style="margin-right:.3rem;" onclick="acceptFriendRequest('${u.id}')">Accept</button>
+    <button class="follow-btn following" onclick="declineFriendRequest('${u.id}')">Decline</button>`;
+  if (sent?.status === 'pending') return `<button class="follow-btn following" onclick="cancelFriendRequest('${u.id}')">Requested</button>`;
+  if (sent?.status === 'declined') return `<span style="font-size:.72rem;color:var(--muted);">Unavailable</span>`;
+  return `<button class="follow-btn follow" onclick="sendFriendRequest('${u.id}')">Add Friend</button>`;
+}
+
 function userCardHtml(u) {
-  const isFollowing = following.has(u.id);
+  const priv  = u.profile_privacy || 'public';
+  const label = priv === 'friends_only' ? '<span class="privacy-label">🔒 Friends Only</span>'
+              : priv === 'private'      ? '<span class="privacy-label">🔒 Private</span>' : '';
   return `
     <div class="user-card">
       <div class="feed-user-avatar" onclick="viewUserProfile('${u.id}')" style="cursor:pointer;">${profileInitials(u)}</div>
       <div style="flex:1;min-width:0;cursor:pointer;" onclick="viewUserProfile('${u.id}')">
         <div class="user-card-name">${escHtml(u.display_name || u.username || '—')}</div>
-        <div class="user-card-username">${u.username ? '@' + escHtml(u.username) : ''}</div>
+        <div class="user-card-username">${u.username ? '@' + escHtml(u.username) : ''}${label}</div>
       </div>
-      <button class="follow-btn ${isFollowing ? 'following' : 'follow'}"
-        onclick="${isFollowing ? `unfollowUser('${u.id}')` : `followUser('${u.id}')`}">
-        ${isFollowing ? 'Following' : 'Follow'}
-      </button>
+      ${friendActionBtn(u)}
     </div>`;
 }
 
@@ -2829,6 +3103,14 @@ let discoverUsers     = [];        // search results in discover modal
 let searchDebounce    = null;
 let profilePageUserId = null;      // user ID shown on full profile page
 let profilePagePrev   = 'page-feed'; // page to return to on Back
+
+// ── FRIEND / PRIVACY STATE ──────────────────────────────────────────────────
+let friends          = new Set(); // user IDs with an accepted friendship (both directions)
+let sentRequests     = new Map(); // receiverId → {id, status}
+let receivedRequests = new Map(); // senderId   → {id, status}
+let userNotifs       = [];        // loaded notifications (enriched with .actor profile)
+let unreadNotifCount = 0;
+let notifPanelOpen   = false;
 
 
 
@@ -6347,9 +6629,10 @@ function initApp() {
   fetchWeather();
   initReminder();
   // Load social data (non-blocking)
-  Promise.all([loadMyProfile(), loadFollowing()]).then(() => {
+  Promise.all([loadMyProfile(), loadFollowing(), loadFriendState()]).then(() => {
     // Pre-load feed in background so it's ready when user taps the tab
     loadFeed();
+    loadNotifications();
   });
 }
 
@@ -6375,6 +6658,8 @@ async function bootApp(user) {
   if (signoutBtn) { signoutBtn.style.display = ''; signoutBtn.textContent = 'Sign out'; }
   const profileBtn = document.getElementById('profile-btn');
   if (profileBtn) profileBtn.style.display = '';
+  const bellBtn = document.getElementById('bell-btn');
+  if (bellBtn) bellBtn.style.display = '';
   try {
     await loadUserData();
     initApp();
@@ -6409,10 +6694,16 @@ db.auth.onAuthStateChange((event, session) => {
     clearUserState();
     feedItems = []; feedLikes = {}; feedCommentCounts = {}; feedComments = {};
     expandedComments.clear(); following.clear(); myProfile = null;
+    friends.clear(); sentRequests.clear(); receivedRequests.clear();
+    userNotifs = []; unreadNotifCount = 0; notifPanelOpen = false;
     document.getElementById('auth-screen').style.display = 'flex';
     document.getElementById('signout-btn').style.display = 'none';
     const profileBtn = document.getElementById('profile-btn');
     if (profileBtn) profileBtn.style.display = 'none';
+    const bellBtn2 = document.getElementById('bell-btn');
+    if (bellBtn2) bellBtn2.style.display = 'none';
+    const notifPanel = document.getElementById('notif-panel');
+    if (notifPanel) notifPanel.classList.add('hidden');
   } else if (event === 'TOKEN_REFRESHED' && session?.user) {
     currentUser = session.user; // keep token current, no re-boot needed
   }
