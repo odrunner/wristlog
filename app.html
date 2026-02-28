@@ -1130,9 +1130,7 @@
     .wpm-field { display: flex; flex-direction: column; gap: .18rem; padding: .55rem 0; border-bottom: 1px solid var(--border); }
     .wpm-field:last-child { border-bottom: none; }
     .wpm-field-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
-    .wpm-field-value { font-size: .9rem; font-weight: 600; word-break: break-all; }
-    .wpm-field-value a { color: var(--gold); text-decoration: none; }
-    .wpm-field-value a:hover { text-decoration: underline; }
+    .wpm-field-value { font-size: .9rem; font-weight: 600; }
 
     /* Actions */
     .feed-actions {
@@ -6938,17 +6936,30 @@ function previewWatch(w) {
   document.getElementById('wpm-title').textContent = [w.brand, w.name].filter(Boolean).join(' ') || 'Watch';
 
   // Info fields (public only — no price/value)
-  const rows = [
+  const infoRows = [
     w.brand && ['Brand',     escHtml(w.brand)],
     w.name  && ['Model',     escHtml(w.name)],
     w.ref   && ['Reference', escHtml(w.ref)],
-    w.url   && ['Link',      `<a href="${escHtml(w.url)}" target="_blank" rel="noopener noreferrer">${escHtml(w.url)}</a>`],
   ].filter(Boolean);
-  document.getElementById('wpm-fields').innerHTML = rows.map(([label, val]) => `
-    <div class="wpm-field">
-      <div class="wpm-field-label">${label}</div>
-      <div class="wpm-field-value">${val}</div>
-    </div>`).join('');
+  const urlBtn = w.url
+    ? `<a href="${escHtml(w.url)}" target="_blank" rel="noopener noreferrer"
+          style="display:inline-flex;align-items:center;gap:.4rem;margin-top:1rem;
+                 padding:.45rem .9rem;border-radius:8px;background:var(--surface2);
+                 border:1px solid var(--border);color:var(--text);text-decoration:none;
+                 font-size:.83rem;font-weight:600;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+        Visit official page
+      </a>`
+    : '';
+  document.getElementById('wpm-fields').innerHTML =
+    infoRows.map(([label, val]) => `
+      <div class="wpm-field">
+        <div class="wpm-field-label">${label}</div>
+        <div class="wpm-field-value">${val}</div>
+      </div>`).join('') + urlBtn;
 
   document.getElementById('watch-preview-modal').classList.remove('hidden');
 }
