@@ -2297,14 +2297,25 @@
 // ══════════════════════════════════════════
 (function() {
   try {
-    // If Supabase redirected back with ?error=... (e.g. bad_oauth_state),
-    // show the error to the user and clean the URL — don't try to hide the auth screen.
+    // If Supabase redirected back with ?error=... (e.g. bad_oauth_state / PKCE state lost),
+    // clear stale PKCE state, show a friendly retry message, and leave the auth screen visible.
     const params = new URLSearchParams(window.location.search);
     const oauthErr = params.get('error_description') || params.get('error');
     if (oauthErr) {
       window.history.replaceState(null, '', window.location.pathname);
+      // Wipe any stale PKCE code-verifier keys so the next sign-in attempt starts clean.
+      // We do NOT remove the auth-token key so valid sessions (on other pages) are unaffected.
+      Object.keys(localStorage)
+        .filter(k => k.includes('code-verifier') || k.includes('pkce') || k.includes('oauth-state'))
+        .forEach(k => localStorage.removeItem(k));
       const el = document.getElementById('auth-error');
-      if (el) { el.textContent = oauthErr.replace(/\+/g, ' '); el.style.display = 'block'; }
+      if (el) {
+        const isStateErr = /state|pkce|verif/i.test(oauthErr);
+        el.textContent = isStateErr
+          ? 'Sign-in session expired — please tap "Continue with Google" to try again.'
+          : oauthErr.replace(/\+/g, ' ');
+        el.style.display = 'block';
+      }
       return; // leave auth screen visible so user can try again
     }
     // Synchronously hide auth screen for returning users who already have a session,
@@ -2370,6 +2381,8 @@ async function signOut() {
   document.getElementById('signout-btn').style.display = 'none';
   const profileBtn = document.getElementById('profile-btn');
   if (profileBtn) profileBtn.style.display = 'none';
+  const bellBtn = document.getElementById('bell-btn');
+  if (bellBtn) bellBtn.style.display = 'none';
 }
 
 // ══════════════════════════════════════════
