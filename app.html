@@ -1209,7 +1209,7 @@
       <div id="server-dot" class="server-dot" title="Saving to local file"></div>
 
       <span id="app-ver" class="app-ver"></span>
-      <button class="bell-btn" id="bell-btn" onclick="toggleNotifPanel()" style="display:none;" title="Notifications">
+      <button class="bell-btn" id="bell-btn" onclick="toggleNotifPanel();event.stopPropagation();" style="display:none;" title="Notifications">
         🔔<span class="bell-badge hidden" id="bell-badge">0</span>
       </button>
       <button class="profile-btn" id="profile-btn" onclick="openProfileModal()" style="display:none;" title="My Profile">?</button>
@@ -1219,7 +1219,7 @@
     <div id="notif-panel" class="notif-panel hidden">
       <div class="notif-panel-header">
         <span>Notifications</span>
-        <button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .5rem;" onclick="markAllNotifsRead()">Mark all read</button>
+        <span id="notif-mark-read-btn"></span>
       </div>
       <div id="notif-list"></div>
     </div>
@@ -2523,10 +2523,9 @@ async function saveProfileFromPage() {
   const bio   = (document.getElementById('pp-bio')?.value || '').trim();
   const vis   = document.getElementById('pp-collection-vis')?.value || 'public_only';
   const priv  = document.getElementById('pp-profile-privacy')?.value || 'public';
-  const { error } = await db.from('profiles').upsert(
-    { id: currentUser.id, display_name: name, bio, collection_visibility: vis, profile_privacy: priv },
-    { onConflict: 'id' }
-  );
+  const { error } = await db.from('profiles')
+    .update({ display_name: name, bio, collection_visibility: vis, profile_privacy: priv })
+    .eq('id', currentUser.id);
   if (!error) {
     myProfile = { ...myProfile, display_name: name, bio, collection_visibility: vis, profile_privacy: priv };
     const btn = document.getElementById('profile-btn');
@@ -2696,8 +2695,15 @@ function toggleNotifPanel() {
 }
 
 function renderNotificationPanel() {
-  const el = document.getElementById('notif-list');
+  const el  = document.getElementById('notif-list');
+  const btn = document.getElementById('notif-mark-read-btn');
   if (!el) return;
+  if (btn) {
+    const hasUnread = userNotifs.some(n => !n.is_read);
+    btn.innerHTML = hasUnread
+      ? `<button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .5rem;" onclick="markAllNotifsRead()">Mark all read</button>`
+      : '';
+  }
   if (!userNotifs.length) {
     el.innerHTML = '<div class="notif-empty">No notifications yet</div>';
     return;
