@@ -2589,13 +2589,10 @@ function viewUserProfile(userId) {
 
 function goBackFromProfile() {
   profilePageUserId = null;
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  const prev = document.getElementById(profilePagePrev) || document.getElementById('page-feed');
-  prev.classList.add('active');
   const navTarget = profilePagePrev.replace('page-', '');
-  document.querySelectorAll('nav button').forEach(b =>
-    b.classList.toggle('active', b.dataset.page === navTarget)
-  );
+  const btn = document.querySelector(`nav button[data-page="${navTarget}"]`);
+  if (btn) nav(btn);
+  else goHome();
 }
 
 async function loadAndRenderProfile(userId) {
