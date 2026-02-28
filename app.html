@@ -501,9 +501,13 @@
       flex-direction: column;
     }
     .watch-card:hover { border-color: rgba(201,168,76,.4); }
-    .watch-card-img {
+    .watch-card-img-wrap {
+      position: relative;
       width: calc(100% + 2.4rem);
       margin: -1.2rem -1.2rem .9rem -1.2rem;
+    }
+    .watch-card-img {
+      width: 100%;
       height: 155px;
       object-fit: cover;
       display: block;
@@ -511,6 +515,49 @@
       transition: opacity .2s;
     }
     .watch-card-img.loading { opacity: .4; }
+    .card-edit-btn {
+      position: absolute; top: .5rem; right: .5rem;
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(0,0,0,.55); border: none; color: #fff;
+      font-size: .82rem; cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      opacity: 0; transition: opacity .15s;
+    }
+    .watch-card:hover .card-edit-btn { opacity: 1; }
+    .card-edit-btn:hover { background: rgba(0,0,0,.75); }
+    .card-photo-btn {
+      position: absolute; bottom: .5rem; right: .5rem;
+      width: 26px; height: 26px; border-radius: 50%;
+      background: rgba(0,0,0,.55); border: none; color: #fff;
+      font-size: .7rem; cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      opacity: 0; transition: opacity .15s;
+    }
+    .watch-card:hover .card-photo-btn { opacity: 1; }
+    .card-photo-btn:hover { background: rgba(0,0,0,.75); }
+    .card-edit-btn-noimg {
+      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+      background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+      font-size: .82rem; cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      opacity: 0; transition: opacity .15s;
+    }
+    .watch-card:hover .card-edit-btn-noimg { opacity: 1; }
+    .card-edit-btn-noimg:hover { border-color: var(--gold); color: var(--gold); }
+    /* ── Photo context menu ── */
+    .photo-menu {
+      position: fixed; z-index: 9999; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: .35rem 0; min-width: 150px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.4);
+    }
+    .photo-menu-item {
+      display: block; width: 100%; text-align: left; padding: .5rem .9rem;
+      background: none; border: none; color: var(--text); font-size: .82rem;
+      font-family: inherit; cursor: pointer; transition: background .1s;
+    }
+    .photo-menu-item:hover { background: var(--surface2); }
+    .photo-menu-item.danger { color: var(--danger); }
     .watch-card-top { display: flex; align-items: center; gap: .9rem; margin-bottom: 1rem; }
     .watch-card-name  { font-weight: 700; font-size: .98rem; }
     .watch-card-brand { font-size: .78rem; color: var(--muted); margin-top: .1rem; }
@@ -1954,6 +2001,18 @@
           <button type="button" class="btn btn-primary btn-sm" onclick="confirmAddStrap()">Add</button>
           <button type="button" class="btn btn-ghost btn-sm" onclick="hideAddStrapRow()">Cancel</button>
         </div>
+      </div>
+    </div>
+
+    <!-- ── Receipts & Documents (collapsible) ── -->
+    <div class="modal-section">
+      <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-receipts')">
+        <span class="modal-section-hdr-label">🧾 Receipts &amp; Documents</span>
+        <span class="modal-section-chevron" id="chv-sec-receipts">▶</span>
+      </button>
+      <div class="modal-section-body collapsed" id="sec-receipts">
+        <div id="edit-receipts-list"></div>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="addReceiptFromEdit()" style="margin-top:.45rem">+ Upload Receipt</button>
       </div>
     </div>
 
@@ -4655,7 +4714,11 @@ function renderCollection() {
         : (anyHasMarket ? '<div class="market-price-row" style="visibility:hidden" aria-hidden="true"><span class="mp-label">—</span></div>' : '');
       return `<div class="watch-card">
         ${rankBadge}
-        ${w.image ? `<img src="${w.image}" alt="${w.brand} ${w.name}" class="watch-card-img" onerror="this.style.display='none'">` : ''}
+        ${w.image ? `<div class="watch-card-img-wrap">
+          <img src="${w.image}" alt="${w.brand} ${w.name}" class="watch-card-img" onerror="this.style.display='none'">
+          <button class="card-edit-btn" onclick="openEditWatch('${w.id}')" title="Edit">✎</button>
+          <button class="card-photo-btn" onclick="openPhotoMenu(event,'${w.id}')" title="Edit photo">📷</button>
+        </div>` : ''}
         <div class="watch-card-top">
           ${!w.image ? `<div class="avatar" style="width:52px;height:52px;font-size:.95rem;background:${w.color}">${initials(w.brand,w.name)}</div>` : ''}
           <div style="flex:1;min-width:0;">
@@ -4663,6 +4726,7 @@ function renderCollection() {
             <div class="watch-card-brand">${w.brand}${w.ref ? ' · '+w.ref : ''}</div>
             ${watchCardTagsHTML(w)}
           </div>
+          ${!w.image ? `<button class="card-edit-btn-noimg" onclick="openEditWatch('${w.id}')" title="Edit">✎</button>` : ''}
         </div>
         <div class="wc-spacer"></div>
         <div class="watch-card-meta">
@@ -4684,16 +4748,6 @@ function renderCollection() {
           </div>
         </div>
         ${mpHTML}
-        <div class="watch-card-actions">
-          ${wornToday
-            ? `<button class="btn-quicklog logged" disabled>✓ Today</button>`
-            : `<button class="btn-quicklog" onclick="quickLog('${w.id}')">⌚ Wear</button>`}
-          <button class="btn btn-ghost btn-sm" onclick="openEditWatch('${w.id}')">Edit</button>
-          <button class="btn-ic" onclick="openReceiptsModal('${w.id}')" title="Receipts">🧾${(w.receipts||[]).length > 0 ? ' '+w.receipts.length : ''}</button>
-          ${w.url && !w.image ? `<button class="btn-ic" id="fetchbtn-${w.id}" onclick="fetchWatchImage('${w.id}')" title="Get photo">📷</button>` : ''}
-          ${!w.image ? `<button class="btn-ic" onclick="pasteWatchImage('${w.id}')" title="Paste photo">📋</button>` : ''}
-          ${w.image ? `<button class="btn-ic" onclick="removeWatchImage('${w.id}')" title="Remove photo">🗑</button>` : ''}
-        </div>
       </div>`;
     }).join('');
   }
@@ -4758,10 +4812,7 @@ function renderCollectionList(visible, today) {
       const col = lastDays <= 14 ? 'var(--success)' : lastDays <= 45 ? '#ef7942' : 'var(--danger)';
       lastWornCell = `<span style="color:${col};font-size:.82rem">${lastDays === 0 ? 'Today' : lastDays+'d ago'}</span>`;
     }
-    const quickBtn = wornToday
-      ? `<span style="font-size:.72rem;color:var(--success)">✓ Today</span>`
-      : `<button class="btn-quicklog" style="padding:.2rem .5rem;font-size:.72rem;" onclick="quickLog('${w.id}')">⌚</button>`;
-    return `<tr>
+    return `<tr style="cursor:pointer" onclick="openEditWatch('${w.id}')">
       <td><div style="display:flex;align-items:center;gap:.6rem">${thumb}<div>
         <div style="font-weight:600;font-size:.84rem">${w.brand} ${w.name}</div>
         ${w.ref ? `<div style="font-size:.7rem;color:var(--muted)">${w.ref}</div>` : ''}
@@ -4771,7 +4822,6 @@ function renderCollectionList(visible, today) {
       <td style="text-align:right;color:var(--muted)">${cpwNum != null ? fmtMoney(cpwNum) : na}</td>
       <td style="text-align:right">${paid != null ? fmtMoney(paid) : na}</td>
       <td style="text-align:right">${market != null ? fmtMoney(market) : na}</td>
-      <td style="text-align:center">${quickBtn}</td>
     </tr>`;
   }).join('');
 
@@ -4783,7 +4833,6 @@ function renderCollectionList(visible, today) {
       ${th('cpu',    'Cost/Wear')}
       ${th('paid',   'Paid')}
       ${th('market', 'Market')}
-      <th style="text-align:center">Log</th>
     </tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
@@ -5094,10 +5143,11 @@ function openAddWatch() {
   wEditingStrapIdx = null;
   renderStrapList();
   hideAddStrapRow();
+  document.getElementById('edit-receipts-list').innerHTML = `<div style="color:var(--muted);font-size:.82rem;">No receipts yet.</div>`;
   updateUrlBtn();
   updateWcUrlBtn();
   // All sections collapsed for a fresh add
-  ['sec-condition','sec-market','sec-tags','sec-straps'].forEach(closeSection);
+  ['sec-condition','sec-market','sec-tags','sec-straps','sec-receipts'].forEach(closeSection);
   document.getElementById('watch-modal').classList.remove('hidden');
 }
 
@@ -5148,6 +5198,7 @@ function openEditWatch(id) {
   wEditingStrapIdx = null;
   renderStrapList();
   hideAddStrapRow();
+  renderEditReceiptsList(w);
   updateUrlBtn();
   updateWcUrlBtn();
   // Auto-open sections that have data; collapse empty ones
@@ -5155,10 +5206,12 @@ function openEditWatch(id) {
   const hasMarket    = w.watchChartsUrl || w.marketPrice;
   const hasTags      = (w.tags || []).length > 0;
   const hasStraps    = (w.straps || []).length > 0;
+  const hasReceipts  = (w.receipts || []).length > 0;
   if (hasCondition) openSection('sec-condition'); else closeSection('sec-condition');
   if (hasMarket)    openSection('sec-market');    else closeSection('sec-market');
   if (hasTags)      openSection('sec-tags');      else closeSection('sec-tags');
   if (hasStraps)    openSection('sec-straps');    else closeSection('sec-straps');
+  if (hasReceipts)  openSection('sec-receipts');  else closeSection('sec-receipts');
   document.getElementById('watch-modal').classList.remove('hidden');
 }
 
@@ -6383,6 +6436,29 @@ async function updateAllMarketPrices() {
 // ══════════════════════════════════════════
 //  WATCH IMAGE FETCH
 // ══════════════════════════════════════════
+// ── Photo context menu (collection card) ──────────────────────────────────
+function openPhotoMenu(ev, watchId) {
+  ev.stopPropagation();
+  closePhotoMenu();
+  const w = watches.find(x => x.id === watchId);
+  if (!w) return;
+  const menu = document.createElement('div');
+  menu.className = 'photo-menu';
+  menu.id = 'photo-menu';
+  if (w.url) menu.innerHTML += `<button class="photo-menu-item" onclick="closePhotoMenu();fetchWatchImage('${watchId}')">🔍 Fetch from URL</button>`;
+  menu.innerHTML += `<button class="photo-menu-item" onclick="closePhotoMenu();pasteWatchImage('${watchId}')">📋 Paste / Upload</button>`;
+  if (w.image) menu.innerHTML += `<button class="photo-menu-item danger" onclick="closePhotoMenu();removeWatchImage('${watchId}')">🗑 Remove photo</button>`;
+  document.body.appendChild(menu);
+  const r = ev.currentTarget.getBoundingClientRect();
+  menu.style.top  = Math.min(r.bottom + 4, window.innerHeight - menu.offsetHeight - 8) + 'px';
+  menu.style.left = Math.min(r.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - 8) + 'px';
+  setTimeout(() => document.addEventListener('click', closePhotoMenu, { once: true }), 0);
+}
+function closePhotoMenu() {
+  const m = document.getElementById('photo-menu');
+  if (m) m.remove();
+}
+
 async function fetchWatchImage(watchId) {
   const w = watches.find(x => x.id === watchId);
   if (!w || !w.url) return;
@@ -6676,6 +6752,87 @@ function viewReceipt(watchId, receiptId) {
     win.document.write(`<html><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="${r.data}" style="max-width:100%;max-height:100vh;object-fit:contain"></body></html>`);
   }
   win.document.close();
+}
+
+// ── Edit-modal receipt helpers ─────────────────────────────────────────────
+function renderEditReceiptsList(w) {
+  const receipts = w.receipts || [];
+  const el = document.getElementById('edit-receipts-list');
+  if (!receipts.length) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:.82rem;">No receipts yet.</div>`;
+    return;
+  }
+  el.innerHTML = `<div class="receipt-list">${receipts.map(r => {
+    const isPdf = r.type === 'application/pdf';
+    const icon  = isPdf ? '📄' : '🖼️';
+    const date  = r.addedDate ? fmtDate(r.addedDate) : '';
+    return `<div class="receipt-item">
+      <div class="receipt-icon">${icon}</div>
+      <div class="receipt-info">
+        <div class="receipt-name">${r.name}</div>
+        ${date ? `<div class="receipt-date">${date}</div>` : ''}
+      </div>
+      <div class="receipt-actions">
+        <button class="btn btn-ghost btn-sm" onclick="viewReceipt('${w.id}','${r.id}')">View</button>
+        <button class="btn btn-danger btn-sm" onclick="removeReceiptFromEdit('${w.id}','${r.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function removeReceiptFromEdit(watchId, receiptId) {
+  const idx = watches.findIndex(x => x.id === watchId);
+  if (idx < 0) return;
+  watches[idx].receipts = (watches[idx].receipts || []).filter(r => r.id !== receiptId);
+  save();
+  renderEditReceiptsList(watches[idx]);
+  renderCollection();
+  toast('Receipt removed');
+}
+
+function addReceiptFromEdit() {
+  if (!editingId) return;
+  const input = document.createElement('input');
+  input.type   = 'file';
+  input.accept = 'image/*,.pdf,application/pdf';
+  input.multiple = true;
+  input.onchange = async () => {
+    if (!input.files.length) return;
+    const idx = watches.findIndex(x => x.id === editingId);
+    if (idx < 0) return;
+    if (!watches[idx].receipts) watches[idx].receipts = [];
+    let added = 0;
+    for (const file of input.files) {
+      try {
+        let data;
+        if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+          data = await new Promise((res, rej) => {
+            const fr = new FileReader();
+            fr.onload = () => res(fr.result);
+            fr.onerror = rej;
+            fr.readAsDataURL(file);
+          });
+        } else {
+          data = await blobToResizedBase64(file);
+        }
+        watches[idx].receipts.push({
+          id:       Date.now().toString(36) + Math.random().toString(36).slice(2),
+          name:     file.name,
+          type:     file.type || 'image/jpeg',
+          data,
+          addedDate: todayStr(),
+        });
+        added++;
+      } catch { toast('Could not read: ' + file.name, 'error'); }
+    }
+    if (added > 0) {
+      save();
+      renderEditReceiptsList(watches[idx]);
+      renderCollection();
+      toast(added === 1 ? 'Receipt saved!' : added + ' receipts saved!');
+    }
+  };
+  input.click();
 }
 
 // ══════════════════════════════════════════
