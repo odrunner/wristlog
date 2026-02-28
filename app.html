@@ -1952,12 +1952,22 @@
 
 <script>
 // ══════════════════════════════════════════
-//  FAST SESSION PRE-CHECK
-//  Synchronously hide auth screen if a Supabase token exists in localStorage.
-//  Runs before any async code so returning users never see the login screen flash.
+//  FAST SESSION PRE-CHECK + OAUTH ERROR HANDLER
 // ══════════════════════════════════════════
 (function() {
   try {
+    // If Supabase redirected back with ?error=... (e.g. bad_oauth_state),
+    // show the error to the user and clean the URL — don't try to hide the auth screen.
+    const params = new URLSearchParams(window.location.search);
+    const oauthErr = params.get('error_description') || params.get('error');
+    if (oauthErr) {
+      window.history.replaceState(null, '', window.location.pathname);
+      const el = document.getElementById('auth-error');
+      if (el) { el.textContent = oauthErr.replace(/\+/g, ' '); el.style.display = 'block'; }
+      return; // leave auth screen visible so user can try again
+    }
+    // Synchronously hide auth screen for returning users who already have a session,
+    // so they never see a flash of the login screen on refresh.
     const key = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
     if (key) {
       const val = JSON.parse(localStorage.getItem(key));
@@ -1971,10 +1981,18 @@
 
 // ══════════════════════════════════════════
 //  SUPABASE
+//  Use implicit flow — correct for a static GitHub Pages app (no server).
+//  PKCE (the newer default) requires the OAuth state to survive the redirect,
+//  which is unreliable in this environment and causes bad_oauth_state errors.
 // ══════════════════════════════════════════
 const SUPABASE_URL = 'https://xnzweevzrojmouzhpwzv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs';
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    flowType: 'implicit',      // token returned in URL hash — no server-side exchange needed
+    detectSessionInUrl: true,  // auto-process #access_token on redirect
+  }
+});
 
 let currentUser = null; // set after sign-in
 
