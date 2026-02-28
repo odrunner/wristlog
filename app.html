@@ -3972,6 +3972,8 @@ function confirmDelete() {
   const id = deletingId;
   watches = watches.filter(x => x.id !== id);
   logs    = logs.filter(l => l.watchId !== id);
+  delete eloRatings[id]; // prevent cloudSync elo-upsert from re-inserting a ghost row
+  localStorage.setItem(STORE_ELO, JSON.stringify(eloRatings));
   if (selWatchId === id) selWatchId = null;
   save();
   // Hard-delete from Supabase (upsert only writes, never removes rows)
