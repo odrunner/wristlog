@@ -3360,9 +3360,9 @@ async function postComment(logId) {
 function openDiscover() {
   discoverUsers = [];
   document.getElementById('discover-search').value = '';
-  document.getElementById('discover-results').innerHTML = '';
+  document.getElementById('discover-results').innerHTML =
+    '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">Type a name or @username to search.</div>';
   renderFollowingList();
-  loadSuggestedUsers();
   document.getElementById('discover-modal').classList.remove('hidden');
 }
 function closeDiscover() {
@@ -3370,8 +3370,13 @@ function closeDiscover() {
 }
 function debounceSearch(val) {
   clearTimeout(searchDebounce);
+  if (!val.trim()) {
+    discoverUsers = [];
+    document.getElementById('discover-results').innerHTML =
+      '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">Type a name or @username to search.</div>';
+    return;
+  }
   document.getElementById('discover-results').innerHTML = '';
-  if (!val.trim()) { discoverUsers = []; loadSuggestedUsers(); return; }
   searchDebounce = setTimeout(() => doSearchUsers(val.trim()), 350);
 }
 async function doSearchUsers(query) {
@@ -3403,32 +3408,6 @@ function renderDiscoverUsers() {
   el.innerHTML = `
     <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin-bottom:.65rem;">Search Results</div>
     ${discoverUsers.map(u => userCardHtml(u)).join('')}`;
-}
-async function loadSuggestedUsers() {
-  if (!currentUser) return;
-  const el = document.getElementById('discover-results');
-  if (!el) return;
-  el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">Loading…</div>';
-  const { data, error } = await db
-    .from('profiles')
-    .select('id, username, display_name, avatar_url, profile_privacy')
-    .neq('id', currentUser.id)
-    .limit(20);
-  if (error) {
-    console.error('[WristLog] loadSuggestedUsers error:', error.message, error);
-    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem;padding:.4rem 0;">Could not load users: ${escHtml(error.message)}</div>`;
-    return;
-  }
-  // Hide private accounts that aren't already friends
-  const visible = (data || []).filter(u => u.profile_privacy !== 'private' || friends.has(u.id));
-  if (!visible.length) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">No other users yet.</div>';
-    return;
-  }
-  discoverUsers = visible;
-  el.innerHTML = `
-    <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin-bottom:.65rem;">All Users</div>
-    ${visible.map(u => userCardHtml(u)).join('')}`;
 }
 async function renderFollowingList() {
   const el = document.getElementById('following-list');
