@@ -173,12 +173,13 @@
     .server-dot.on { display: block; }
 
     /* ── USERNAME FIELD ── */
-    .username-field { position: relative; }
+    .username-field { display: flex; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: border-color .15s; }
+    .username-field:focus-within { border-color: var(--gold); }
     .username-field .username-prefix {
-      position: absolute; left: .85rem; top: 50%; transform: translateY(-50%);
-      color: var(--muted); font-size: .9rem; pointer-events: none; user-select: none;
+      padding: 0 .3rem 0 .85rem; color: var(--muted); font-size: .9rem;
+      pointer-events: none; user-select: none; white-space: nowrap; flex-shrink: 0;
     }
-    .username-field input { padding-left: 1.85rem; }
+    .username-field input { flex: 1; border: none !important; background: transparent !important; border-radius: 0 !important; padding-left: 0 !important; outline: none; box-shadow: none; width: auto; }
     .username-status {
       font-size: .73rem; margin-top: .3rem; min-height: 1.1em;
       transition: color .15s;
@@ -1482,8 +1483,7 @@
   <!-- ════ FEED PAGE ════ -->
   <div id="page-feed" class="page active">
     <div class="page-header">
-      <div class="page-title">🏠 Feed</div>
-      <div style="display:flex;gap:.5rem;">
+      <div style="display:flex;gap:.5rem;margin-left:auto;">
         <button class="btn btn-primary btn-sm" onclick="openNewPost()">✏ Post</button>
         <button class="btn btn-ghost" onclick="openDiscover()">🔍 Find People</button>
       </div>
