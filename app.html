@@ -235,12 +235,20 @@
 
     /* ── COLLECTION SHOWCASE ── */
     .showcase-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(88px,1fr)); gap:.65rem; }
-    .showcase-card { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:.6rem .45rem .5rem; display:flex; flex-direction:column; align-items:center; gap:.3rem; text-align:center; min-width:0; }
+    .showcase-card { background:var(--surface2); border:2px solid var(--border); border-radius:10px; padding:.6rem .45rem .5rem; display:flex; flex-direction:column; align-items:center; gap:.3rem; text-align:center; min-width:0; transition:border-color .15s, opacity .15s; }
+    .showcase-card[data-priv="public"]       { border-color: var(--success); }
+    .showcase-card[data-priv="friends_only"] { border-color: var(--gold); }
+    .showcase-card[data-priv="private"]      { border-color: var(--danger); }
+    .showcase-card.priv-own { cursor:pointer; }
+    .showcase-card.priv-own:hover { opacity:.78; }
     .showcase-card-img    { width:48px; height:48px; border-radius:8px; object-fit:cover; flex-shrink:0; }
     .showcase-card-avatar { width:48px; height:48px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.82rem; color:#000; flex-shrink:0; }
-    .showcase-name { font-size:.7rem; font-weight:600; line-height:1.3; word-break:break-word; }
-    .showcase-ref  { font-size:.62rem; color:var(--muted); }
-    .showcase-private-badge { font-size:.58rem; color:var(--muted); background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:.1rem .32rem; }
+    .showcase-brand { font-size:.58rem; color:var(--muted); line-height:1.3; word-break:break-word; }
+    .showcase-name  { font-size:.7rem; font-weight:600; line-height:1.3; word-break:break-word; }
+    .showcase-priv-label { font-size:.56rem; font-weight:700; letter-spacing:.03em; text-transform:uppercase; }
+    .showcase-priv-label.pub  { color:var(--success); }
+    .showcase-priv-label.fri  { color:var(--gold); }
+    .showcase-priv-label.priv { color:var(--danger); }
 
     /* ── PROFILE PAGE RECENT LOGS ── */
     .pp-log-row { display:flex; align-items:center; gap:.65rem; padding:.5rem 0; border-bottom:1px solid var(--border); }
@@ -1738,17 +1746,6 @@
       </div>
     </div>
 
-    <!-- ── Visibility ── -->
-    <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.1rem;">
-      <div>
-        <label style="margin:0;display:block;">Public watch</label>
-        <div style="font-size:.72rem;color:var(--muted);margin-top:.15rem;">Visible on your profile to followers</div>
-      </div>
-      <label class="toggle-switch">
-        <input type="checkbox" id="w-public" checked>
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
 
     <!-- ── Straps / Bracelets (collapsible) ── -->
     <div class="modal-section">
@@ -2144,7 +2141,8 @@ function watchToRow(w) {
     has_box: w.hasBox||false, has_papers: w.hasPapers||false,
     insurance: w.insurance||null, receipts: w.receipts||[],
     elo_rating: eloRatings[w.id] || 1000,
-    is_public: w.isPublic !== false,
+    watch_privacy: w.watchPrivacy || 'public',
+    is_public: (w.watchPrivacy || 'public') !== 'private',
   };
 }
 function rowToWatch(r) {
@@ -2162,7 +2160,8 @@ function rowToWatch(r) {
     priceHistory: r.price_history||[], warrantyExpiry: r.warranty_expiry||null,
     hasBox: r.has_box||false, hasPapers: r.has_papers||false,
     insurance: r.insurance||null, receipts: r.receipts||[],
-    isPublic: r.is_public !== false,
+    watchPrivacy: r.watch_privacy || 'public',
+    isPublic: (r.watch_privacy || 'public') !== 'private',
   };
 }
 function logToRow(l) {
@@ -2352,26 +2351,29 @@ async function loadAndRenderProfile(userId) {
   }
 
   const isFollowing = following.has(userId);
-  const visibility  = profile.collection_visibility || 'none';
+  const visibility  = profile.collection_visibility || 'public_only';
 
-  // Public log count
+  // Log count (is_public not on logs table — treat all logs as viewable)
   const { count: logCount } = await db.from('logs')
     .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId).eq('is_public', true);
+    .eq('user_id', userId);
 
-  // Recent public logs
+  // Recent logs
   const { data: recentLogs } = await db.from('logs')
     .select('id, date, use_case, notes, watch_id, watches!watch_id(id, brand, name, color, image)')
-    .eq('user_id', userId).eq('is_public', true)
+    .eq('user_id', userId)
     .order('date', { ascending: false }).limit(6);
 
   // Collection showcase
   let showcase = [];
   if (isOwn || visibility !== 'none') {
     let q = db.from('watches')
-      .select('id, brand, name, ref, color, image, is_public')
+      .select('id, brand, name, color, image, watch_privacy')
       .eq('user_id', userId);
-    if (!isOwn && visibility === 'public_only') q = q.eq('is_public', true);
+    if (!isOwn) {
+      if (isFriend) q = q.neq('watch_privacy', 'private');
+      else          q = q.eq('watch_privacy', 'public');
+    }
     const { data } = await q.order('brand').order('name');
     showcase = data || [];
   }
@@ -2417,7 +2419,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   const statsHtml = `
     <div class="profile-stats-row">
       <div class="profile-stat"><div class="profile-stat-value">${watchCount}</div><div class="profile-stat-label">Watches</div></div>
-      <div class="profile-stat"><div class="profile-stat-value">${logCount}</div><div class="profile-stat-label">Public&nbsp;Logs</div></div>
+      <div class="profile-stat"><div class="profile-stat-value">${logCount}</div><div class="profile-stat-label">Wears</div></div>
       ${isOwn ? `<div class="profile-stat"><div class="profile-stat-value">${following.size}</div><div class="profile-stat-label">Following</div></div>` : ''}
     </div>`;
 
@@ -2456,16 +2458,19 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   let showcaseHtml = '';
   if (showcase.length > 0) {
     const cards = showcase.map(w => {
+      const priv  = w.watch_privacy || 'public';
       const thumb = w.image
         ? `<img src="${escHtml(w.image)}" class="showcase-card-img" alt="" onerror="this.style.display='none'">`
         : `<div class="showcase-card-avatar" style="background:${escHtml(w.color || '#c9a84c')}">${initials(w.brand||'', w.name||'')}</div>`;
-      const privateBadge = isOwn && w.is_public === false
-        ? `<div class="showcase-private-badge">private</div>` : '';
-      return `<div class="showcase-card">
+      const privLabel = isOwn
+        ? `<div class="showcase-priv-label ${priv === 'public' ? 'pub' : priv === 'friends_only' ? 'fri' : 'priv'}">${priv === 'public' ? 'Public' : priv === 'friends_only' ? 'Friends' : 'Private'}</div>`
+        : '';
+      const clickAttr = isOwn ? `onclick="cycleWatchPrivacy('${w.id}')"` : '';
+      return `<div class="showcase-card${isOwn ? ' priv-own' : ''}" data-priv="${priv}" ${clickAttr}>
         ${thumb}
+        <div class="showcase-brand">${escHtml(w.brand || '')}</div>
         <div class="showcase-name">${escHtml(w.name || '')}</div>
-        <div class="showcase-ref">${escHtml(w.brand || '')}${w.ref ? ' · ' + escHtml(w.ref) : ''}</div>
-        ${privateBadge}
+        ${privLabel}
       </div>`;
     }).join('');
     showcaseHtml = `
@@ -2517,6 +2522,20 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     ${editHtml}
     ${showcaseHtml}
     ${logsHtml}`;
+}
+
+async function cycleWatchPrivacy(watchId) {
+  const w = watches.find(x => x.id === watchId);
+  if (!w) return;
+  const order = ['public', 'friends_only', 'private'];
+  const next  = order[(order.indexOf(w.watchPrivacy || 'public') + 1) % 3];
+  w.watchPrivacy = next;
+  w.isPublic     = next !== 'private';
+  const { error } = await db.from('watches')
+    .update({ watch_privacy: next, is_public: w.isPublic })
+    .eq('id', watchId);
+  if (error) { toast('Could not update — ' + error.message, 'error'); return; }
+  loadAndRenderProfile(currentUser.id);
 }
 
 async function saveProfileFromPage() {
@@ -2752,7 +2771,7 @@ async function loadFeed() {
   const listEl = document.getElementById('feed-list');
   if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--muted);">Loading…</div>';
   try {
-    const allUserIds = [...following, currentUser.id];
+    const allUserIds = [...new Set([...following, ...friends, currentUser.id])];
     // Logs + nested watch data
     const { data: rawLogs, error: logsErr } = await db
       .from('logs')
@@ -2831,13 +2850,7 @@ function renderFeedCard(item) {
     ? `<img src="${escHtml(w.image)}" style="width:42px;height:42px;border-radius:8px;object-fit:cover;" onerror="this.style.display='none'">`
     : `<div class="avatar" style="width:42px;height:42px;font-size:.7rem;background:${w?.color||'#c9a84c'};flex-shrink:0;">${initials(w?.brand||'',w?.name||'')}</div>`;
 
-  const followBtnHtml = isMe ? '' : `
-    <button class="follow-btn ${following.has(item.user_id) ? 'following' : 'follow'}"
-      onclick="event.stopPropagation();${following.has(item.user_id)
-        ? `unfollowUser('${item.user_id}')`
-        : `followUser('${item.user_id}')`}">
-      ${following.has(item.user_id) ? 'Following' : 'Follow'}
-    </button>`;
+  const followBtnHtml = '';
 
   let commentsHtml = '';
   if (expanded) {
@@ -4152,7 +4165,6 @@ function openAddWatch() {
   renderStrapList();
   updateUrlBtn();
   updateWcUrlBtn();
-  document.getElementById('w-public').checked = true; // default public
   // All sections collapsed for a fresh add
   ['sec-condition','sec-market','sec-tags','sec-straps'].forEach(closeSection);
   document.getElementById('watch-modal').classList.remove('hidden');
@@ -4214,7 +4226,6 @@ function openEditWatch(id) {
   if (hasMarket)    openSection('sec-market');    else closeSection('sec-market');
   if (hasTags)      openSection('sec-tags');      else closeSection('sec-tags');
   if (hasStraps)    openSection('sec-straps');    else closeSection('sec-straps');
-  document.getElementById('w-public').checked = (w.isPublic !== false);
   document.getElementById('watch-modal').classList.remove('hidden');
 }
 
@@ -4460,7 +4471,7 @@ function saveWatch() {
     watchChartsUrl: wcUrl || null,
     tags:           getSelectedTags(),
     straps:         wEditStraps,
-    isPublic:       document.getElementById('w-public').checked,
+    isPublic:       editingId ? (watches.find(x => x.id === editingId)?.watchPrivacy !== 'private') : true,
     ...(wPendingImage ? { image: wPendingImage } : {}),
   };
 
