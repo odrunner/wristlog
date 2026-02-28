@@ -1037,12 +1037,13 @@
 
     /* ── FEED ──────────────────────────────────── */
     .feed-card {
-      background: var(--card); border-radius: 14px;
-      margin-bottom: 1rem; overflow: hidden;
+      background: var(--card); border-radius: 16px;
+      margin-bottom: 1.25rem; overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,.18);
     }
     .feed-card-header {
       display: flex; align-items: center; gap: .75rem;
-      padding: .9rem 1rem .55rem;
+      padding: .85rem 1rem .6rem;
     }
     .feed-user-avatar {
       width: 38px; height: 38px; border-radius: 50%;
@@ -1052,29 +1053,69 @@
     }
     .feed-user-name  { font-weight: 700; font-size: .9rem; line-height: 1.2; }
     .feed-meta       { font-size: .72rem; color: var(--muted); }
-    .feed-watch-row  {
-      display: flex; align-items: center; gap: .75rem;
-      padding: .3rem 1rem .55rem;
+
+    /* Hero photo */
+    .feed-card-photo { width: 100%; aspect-ratio: 4/5; overflow: hidden; background: var(--surface2); }
+    .feed-card-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    /* Watch banner fallback (no photo) */
+    .feed-watch-banner {
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+      gap: .5rem; padding: 1.6rem 1rem;
+      background: linear-gradient(135deg, var(--surface2) 0%, var(--surface) 100%);
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      min-height: 130px;
     }
-    .feed-watch-name  { font-weight: 600; font-size: .88rem; }
-    .feed-watch-brand { font-size: .74rem; color: var(--muted); }
-    .feed-notes       {
-      font-size: .82rem; color: var(--muted);
-      padding: 0 1rem .6rem; line-height: 1.5;
+    .feed-watch-banner-thumb { width: 60px; height: 60px; border-radius: 10px; object-fit: cover; }
+    .feed-watch-banner-avatar {
+      width: 60px; height: 60px; border-radius: 10px; font-size: .8rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
     }
+    .feed-watch-banner-brand { font-size: .72rem; color: var(--muted); text-align: center; margin-top: .1rem; }
+    .feed-watch-banner-name  { font-weight: 700; font-size: .92rem; text-align: center; }
+
+    /* Actions */
     .feed-actions {
-      display: flex; gap: .25rem; padding: .35rem .65rem .55rem;
-      border-top: 1px solid var(--border);
+      display: flex; gap: .25rem; padding: .5rem .65rem .45rem;
     }
     .feed-action-btn {
       background: none; border: none; color: var(--muted);
-      cursor: pointer; font-size: .82rem; padding: .35rem .6rem;
-      border-radius: 8px; font-family: inherit;
-      display: flex; align-items: center; gap: .3rem;
+      cursor: pointer; font-size: .88rem; padding: .35rem .55rem;
+      border-radius: 8px; font-family: inherit; font-weight: 600;
+      display: flex; align-items: center; gap: .35rem;
       transition: all .15s;
     }
     .feed-action-btn:hover { background: var(--hover); color: var(--text); }
     .feed-action-btn.liked  { color: #f87171; }
+
+    /* Caption (Instagram style — bold username inline) */
+    .feed-caption { padding: .1rem 1rem .45rem; font-size: .85rem; line-height: 1.5; word-break: break-word; }
+    .feed-caption-user { font-weight: 700; margin-right: .35rem; }
+
+    /* Watch chip */
+    .feed-watch-chip {
+      display: inline-flex; align-items: center; gap: .35rem;
+      margin: 0 1rem .75rem; font-size: .72rem; color: var(--muted);
+      background: var(--surface2); border-radius: 20px; padding: .22rem .65rem;
+    }
+
+    /* Log photo upload area */
+    .log-photo-area {
+      position: relative; width: 100%; aspect-ratio: 4/3; border-radius: 10px;
+      border: 2px dashed var(--border); cursor: pointer; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--surface2); transition: border-color .15s;
+    }
+    .log-photo-area:hover  { border-color: var(--gold); }
+    .log-photo-area.has-photo { border-style: solid; border-color: var(--border); }
+    .log-photo-placeholder { font-size: .85rem; color: var(--muted); text-align: center; pointer-events: none; }
+    .log-photo-preview     { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .log-photo-clear {
+      position: absolute; top: .4rem; right: .4rem; width: 26px; height: 26px;
+      border-radius: 50%; background: rgba(0,0,0,.65); color: #fff; border: none;
+      cursor: pointer; font-size: .75rem; display: flex; align-items: center; justify-content: center;
+      line-height: 1;
+    }
 
     /* ── COMMENTS ──────────────────────────────── */
     .feed-comments-section {
@@ -1970,6 +2011,23 @@
       </div>
     </div>
 
+    <div class="form-group">
+      <label>Photo <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+      <div id="rec-log-photo-area" class="log-photo-area" onclick="document.getElementById('rec-log-photo-input').click()">
+        <div id="rec-log-photo-placeholder" class="log-photo-placeholder">📷 Tap to add a photo</div>
+        <img id="rec-log-photo-preview" class="log-photo-preview" style="display:none;" alt="">
+        <button type="button" id="rec-log-photo-clear" class="log-photo-clear" style="display:none;"
+          onclick="event.stopPropagation();clearRecLogPhoto()">✕</button>
+      </div>
+      <input type="file" id="rec-log-photo-input" accept="image/*" capture="environment"
+        style="display:none" onchange="handleRecLogPhoto(this)">
+    </div>
+
+    <div class="form-group">
+      <label>Caption <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+      <textarea id="rec-log-caption" rows="2" placeholder="What's the occasion? Share your thoughts…" style="resize:none;"></textarea>
+    </div>
+
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="confirmRecLog()">✓ Log Wear</button>
       <button class="btn btn-ghost"   onclick="closeRecLog()">Cancel</button>
@@ -2842,11 +2900,29 @@ function renderFeedCard(item) {
   const metaParts = [formatFeedDate(item.date), ucIcon ? `${ucIcon} ${item.use_case}` : ''].filter(Boolean);
   const metaStr   = metaParts.join(' · ');
 
-  const watchImg = w?.image
-    ? `<img src="${escHtml(w.image)}" style="width:42px;height:42px;border-radius:8px;object-fit:cover;" onerror="this.style.display='none'">`
-    : `<div class="avatar" style="width:42px;height:42px;font-size:.7rem;background:${w?.color||'#c9a84c'};flex-shrink:0;">${initials(w?.brand||'',w?.name||'')}</div>`;
+  // Hero: full-width photo if exists, else styled watch banner
+  let heroHtml;
+  if (item.photo_url) {
+    heroHtml = `<div class="feed-card-photo"><img src="${escHtml(item.photo_url)}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`;
+  } else {
+    const thumb = w?.image
+      ? `<img class="feed-watch-banner-thumb" src="${escHtml(w.image)}" onerror="this.style.display='none'">`
+      : `<div class="feed-watch-banner-avatar" style="background:${w?.color||'#c9a84c'}">${initials(w?.brand||'',w?.name||'')}</div>`;
+    heroHtml = `
+      <div class="feed-watch-banner">
+        ${thumb}
+        <div class="feed-watch-banner-brand">${escHtml(w?.brand || '')}</div>
+        <div class="feed-watch-banner-name">${escHtml(w?.name || 'Unknown watch')}</div>
+      </div>`;
+  }
 
-  const followBtnHtml = '';
+  // Caption below actions (Instagram style: bold username + caption inline)
+  const captionHtml = item.notes
+    ? `<div class="feed-caption"><span class="feed-caption-user">${escHtml(p?.display_name || p?.username || 'User')}</span>${escHtml(item.notes)}</div>`
+    : '';
+
+  // Watch chip (always visible — identifies what was worn)
+  const watchChip = `<div class="feed-watch-chip">⌚ ${escHtml((w?.brand||'') + ' ' + (w?.name||'Unknown'))}</div>`;
 
   let commentsHtml = '';
   if (expanded) {
@@ -2882,15 +2958,8 @@ function renderFeedCard(item) {
           <div class="feed-user-name" onclick="viewUserProfile('${item.user_id}')" style="cursor:pointer;">${escHtml(p?.display_name || p?.username || 'User')}</div>
           <div class="feed-meta">${metaStr}</div>
         </div>
-        ${followBtnHtml}
       </div>
-      <div class="feed-watch-row">
-        ${watchImg}
-        <div style="min-width:0;">
-          <div class="feed-watch-name">${escHtml((w?.brand || '') + ' ' + (w?.name || 'Unknown watch'))}</div>
-          ${item.notes ? `<div style="font-size:.8rem;color:var(--muted);margin-top:.15rem;">${escHtml(item.notes)}</div>` : ''}
-        </div>
-      </div>
+      ${heroHtml}
       <div class="feed-actions">
         <button class="feed-action-btn${likes.liked ? ' liked' : ''}" onclick="toggleLike('${item.id}')">
           ${likes.liked ? '❤️' : '🤍'} <span>${likes.count || ''}</span>
@@ -2899,6 +2968,8 @@ function renderFeedCard(item) {
           💬 <span>${cCount || ''}</span>
         </button>
       </div>
+      ${captionHtml}
+      ${watchChip}
       ${commentsHtml}
     </div>`;
 }
@@ -4375,6 +4446,7 @@ function quickLog(watchId) {
 let recLogWatchId = null;
 let recLogUseCase = 'unspecified';
 let recLogStrapId = null;
+let recLogPhoto   = null;  // base64 or URL of the wear photo
 
 function openRecLog(watchId) {
   const w = watches.find(w => w.id === watchId);
@@ -4404,6 +4476,11 @@ function openRecLog(watchId) {
     c.classList.toggle('selected', c.dataset.ruc === 'unspecified');
   });
 
+  // Reset photo + caption
+  recLogPhoto = null;
+  clearRecLogPhoto();
+  document.getElementById('rec-log-caption').value = '';
+
   document.getElementById('rec-log-modal').classList.remove('hidden');
 }
 
@@ -4429,6 +4506,9 @@ function selRecLogUC(uc) {
 
 function closeRecLog() {
   document.getElementById('rec-log-modal').classList.add('hidden');
+  recLogPhoto = null;
+  clearRecLogPhoto();
+  document.getElementById('rec-log-caption').value = '';
 }
 
 function confirmRecLog() {
@@ -4437,10 +4517,13 @@ function confirmRecLog() {
   if (logs.some(l => l.watchId === recLogWatchId && l.date === today)) {
     toast('Already logged today!'); closeRecLog(); return;
   }
+  const caption = (document.getElementById('rec-log-caption')?.value || '').trim();
   const entry = {
     id: uid(), watchId: recLogWatchId,
     date: today, useCase: recLogUseCase,
-    notes: '', source: 'recommendation',
+    notes: caption,
+    photoUrl: recLogPhoto || null,
+    source: 'recommendation',
   };
   if (recLogStrapId) {
     entry.strapId = recLogStrapId;
@@ -4455,6 +4538,32 @@ function confirmRecLog() {
   if (document.getElementById('page-collection').classList.contains('active')) renderCollection();
   dismissReminder();
   toast('Wear logged! ⌚');
+}
+
+async function handleRecLogPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    recLogPhoto = await blobToResizedBase64(file);
+    const preview = document.getElementById('rec-log-photo-preview');
+    preview.src = recLogPhoto;
+    preview.style.display = 'block';
+    document.getElementById('rec-log-photo-placeholder').style.display = 'none';
+    document.getElementById('rec-log-photo-clear').style.display = '';
+    document.getElementById('rec-log-photo-area').classList.add('has-photo');
+  } catch(e) { toast('Could not load photo', 'error'); }
+  input.value = '';
+}
+
+function clearRecLogPhoto() {
+  recLogPhoto = null;
+  const preview = document.getElementById('rec-log-photo-preview');
+  if (!preview) return;
+  preview.style.display = 'none';
+  preview.src = '';
+  document.getElementById('rec-log-photo-placeholder').style.display = '';
+  document.getElementById('rec-log-photo-clear').style.display = 'none';
+  document.getElementById('rec-log-photo-area').classList.remove('has-photo');
 }
 
 // ── Market price card row ────────────────────────────────────────────────────
