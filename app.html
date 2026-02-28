@@ -3342,7 +3342,9 @@ function toggleNotifPanel() {
   if (!panel) return;
   if (notifPanelOpen) {
     panel.classList.remove('hidden');
-    renderNotificationPanel();
+    // Always fetch fresh notifications when panel opens
+    loadNotifications().then(() => renderNotificationPanel());
+    renderNotificationPanel(); // show cached data immediately
     setTimeout(markAllNotifsRead, 1200);
   } else {
     panel.classList.add('hidden');
@@ -4325,7 +4327,7 @@ function nav(btn) {
   if (page === 'track')    renderTrack();
   if (page === 'wishlist') renderWishlist();
   if (page === 'reports')  renderReports();
-  if (page === 'feed')     loadFeed();
+  if (page === 'feed')     { loadFeed(); loadNotifications(); }
 }
 
 // ══════════════════════════════════════════
@@ -8156,6 +8158,8 @@ function initApp() {
   Promise.all([loadMyProfile(), loadFollowing(), loadFriendState()]).then(() => {
     loadFeed();
     loadNotifications();
+    // Poll for new notifications every 30 seconds
+    if (!window._notifPollId) window._notifPollId = setInterval(loadNotifications, 30000);
   });
   // Pre-load collection in background so it's ready when user taps the tab
   renderCollection();
@@ -8168,6 +8172,7 @@ function clearUserState() {
   localStorage.removeItem(STORE_L);
   localStorage.removeItem(STORE_WL);
   localStorage.removeItem(STORE_ELO);
+  if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }
 }
 
 // ── APP BOOT ──────────────────────────────────────────────────────────────
