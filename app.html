@@ -37,6 +37,8 @@
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Google Identity Services — delivers ID token directly to JS (no OAuth redirect, no Supabase state) -->
+  <script src="https://accounts.google.com/gsi/client" async></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     /* Prevent the header (not body) from creating horizontal scroll */
@@ -1302,9 +1304,12 @@
     <div class="auth-tagline">Track every wear. Build your story.</div>
 
     <div id="auth-error" class="auth-error"></div>
-    <div id="auth-debug" style="display:none;margin-bottom:.75rem;padding:.6rem .8rem;background:#1a1a2e;border:1px solid #334;border-radius:6px;font-size:.7rem;color:#7af;word-break:break-all;font-family:monospace;white-space:pre-wrap;"></div>
 
-    <button class="btn-google" onclick="signInWithGoogle()">
+    <!-- GIS renders its button here once the script loads; falls back to custom button below -->
+    <div id="gsi-btn" style="display:none;justify-content:center;margin-bottom:.5rem;"></div>
+
+    <!-- Fallback custom button — shown only if GIS fails to load within 3 s -->
+    <button id="google-fallback-btn" class="btn-google" onclick="signInWithGoogle()">
       <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
         <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
         <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
@@ -2294,58 +2299,12 @@
 
 <script>
 // ══════════════════════════════════════════
-//  FAST SESSION PRE-CHECK + OAUTH ERROR HANDLER
+//  FAST SESSION PRE-CHECK
+//  GIS flow never redirects back to the app with tokens in the URL,
+//  so we only need to check localStorage for an existing session.
 // ══════════════════════════════════════════
 (function() {
   try {
-    // ── Debug: capture the exact URL the app lands on after OAuth redirect ──
-    const rawSearch = window.location.search;
-    const rawHash   = window.location.hash;
-    const hasOAuthReturn = rawSearch || rawHash;
-    if (hasOAuthReturn) {
-      console.log('[WristLog Auth Debug] return URL search:', rawSearch);
-      console.log('[WristLog Auth Debug] return URL hash  :', rawHash);
-      // Surface in the debug banner so it's visible on mobile too
-      const dbg = document.getElementById('auth-debug');
-      if (dbg) {
-        dbg.textContent = 'Debug — search: ' + (rawSearch || '(none)') + ' | hash: ' + (rawHash || '(none)');
-        dbg.style.display = 'block';
-      }
-    }
-
-    // Check BOTH query-params AND hash for errors (Supabase uses ?error= for PKCE
-    // failures, but #error= for implicit-flow failures).
-    const params  = new URLSearchParams(rawSearch);
-    const hParams = new URLSearchParams(rawHash.replace(/^#/, ''));
-    const oauthErr = params.get('error_description') || params.get('error')
-                  || hParams.get('error_description') || hParams.get('error');
-
-    if (oauthErr) {
-      window.history.replaceState(null, '', window.location.pathname);
-      // Wipe any stale PKCE code-verifier keys so the next sign-in attempt starts clean.
-      Object.keys(localStorage)
-        .filter(k => k.includes('code-verifier') || k.includes('pkce') || k.includes('oauth-state'))
-        .forEach(k => localStorage.removeItem(k));
-      const el = document.getElementById('auth-error');
-      if (el) {
-        const isStateErr = /state|pkce|verif/i.test(oauthErr);
-        el.textContent = isStateErr
-          ? 'Sign-in session expired — please tap "Continue with Google" to try again.'
-          : oauthErr.replace(/\+/g, ' ');
-        el.style.display = 'block';
-      }
-      return; // leave auth screen visible so user can try again
-    }
-
-    // Check hash for a successful implicit-flow response (#access_token=...)
-    if (hParams.get('access_token')) {
-      // Supabase returned tokens in the fragment — detectSessionInUrl will handle it.
-      // Hide auth screen immediately to avoid flicker.
-      const el = document.getElementById('auth-screen');
-      if (el) el.style.display = 'none';
-      return;
-    }
-
     // Synchronously hide auth screen for returning users who already have a session.
     const hasSession = Object.keys(localStorage).some(k => {
       if (!k.startsWith('sb-') || !k.endsWith('-auth-token')) return false;
@@ -2363,18 +2322,17 @@
 
 // ══════════════════════════════════════════
 //  SUPABASE
-//  PKCE flow with localStorage storage — correct for a static GitHub Pages app.
-//  We store auth state (including the PKCE code verifier) in localStorage so it
-//  survives cross-site redirects (GitHub Pages → Google → GitHub Pages).
-//  Without this, browsers that clear sessionStorage on cross-site navigation
-//  lose the verifier and throw "OAuth state not found or expired".
+//  Auth uses Google Identity Services (GIS) id-token flow — no OAuth redirect,
+//  no server-side state, no PKCE. GIS delivers an ID token to JS directly via
+//  a popup, which we exchange with Supabase via signInWithIdToken.
 // ══════════════════════════════════════════
 const SUPABASE_URL = 'https://xnzweevzrojmouzhpwzv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs';
+const GOOGLE_CLIENT_ID = '947103258481-ssae8fdvogpoqratf5h5h3gsdbhq1138.apps.googleusercontent.com';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
-    storage: window.localStorage,  // keep PKCE verifier in localStorage, not sessionStorage
-    detectSessionInUrl: true,      // auto-process ?code= on redirect
+    storage: window.localStorage,
+    detectSessionInUrl: false, // GIS flow never puts tokens in the URL
     persistSession: true,
   }
 });
@@ -2395,15 +2353,71 @@ async function devLogin() {
   if (error) showAuthError('Dev login failed: ' + error.message);
 }
 
+// ── Google Identity Services (GIS) ────────────────────────────────────────────
+// Primary sign-in path: GIS popup → ID token → db.auth.signInWithIdToken
+// This avoids OAuth redirects and Supabase server-side state entirely.
+// Fallback: direct authorize redirect (shown only if GIS script fails to load).
+
+let _gsiReady = false;
+
+function _initGSI() {
+  if (typeof google === 'undefined' || !google?.accounts?.id || _gsiReady) return;
+  _gsiReady = true;
+
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: _handleGoogleToken,
+    auto_select: false,
+    cancel_on_tap_outside: true,
+    context: 'use',
+  });
+
+  const gsiDiv = document.getElementById('gsi-btn');
+  if (gsiDiv) {
+    google.accounts.id.renderButton(gsiDiv, {
+      type: 'standard',
+      theme: 'filled_black',
+      size: 'large',
+      text: 'continue_with',
+      shape: 'pill',
+      width: 264,
+    });
+    gsiDiv.style.display = 'flex';
+    // Hide the fallback redirect button now that GIS is ready
+    const fb = document.getElementById('google-fallback-btn');
+    if (fb) fb.style.display = 'none';
+  }
+}
+
+async function _handleGoogleToken(response) {
+  const { error } = await db.auth.signInWithIdToken({
+    provider: 'google',
+    token: response.credential,
+  });
+  if (error) showAuthError(error.message);
+}
+
+// Fallback: Supabase OAuth redirect — used only if GIS doesn't load.
+// Still subject to bad_oauth_state on some Supabase projects; GIS is preferred.
 function signInWithGoogle() {
-  // Bypass db.auth.signInWithOAuth entirely to avoid Supabase JS PKCE state
-  // being stored in localStorage and then lost/mismatched between tab navigations.
-  // Redirecting straight to the Supabase authorize endpoint means Supabase manages
-  // state server-side — nothing to lose on the client.
   const redirectTo = encodeURIComponent('https://odrunner.github.io/wristlog/app.html');
   window.location.href =
-    `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${redirectTo}&prompt=select_account`;
+    `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${redirectTo}`;
 }
+
+// Poll until GIS script loads (it's async; usually < 500 ms)
+let _gsiPollCount = 0;
+function _pollGSI() {
+  if (_gsiReady) return;
+  if (typeof google !== 'undefined' && google?.accounts?.id) {
+    _initGSI();
+  } else if (_gsiPollCount < 15) { // up to 3 seconds
+    _gsiPollCount++;
+    setTimeout(_pollGSI, 200);
+  }
+  // After 3 s, GIS failed to load — fallback button stays visible
+}
+_pollGSI();
 
 async function signOut() {
   try { await db.auth.signOut(); } catch(e) { console.warn('[WristLog] signOut error (ignored):', e.message); }
