@@ -355,6 +355,15 @@
     .brand-add-row { display: flex; gap: .5rem; margin-top: .5rem; }
     .brand-add-row input { flex: 1; }
     .brand-ac-wrap { position: relative; }
+    /* Brand display input — matches the dotted-underline inline-edit style */
+    #w-brand-display, #wl-brand-display {
+      background: transparent !important; border: none !important;
+      border-bottom: 1px dotted var(--muted) !important; border-radius: 0 !important;
+      padding: .2rem 0 !important; font-size: .9rem; color: var(--text);
+    }
+    #w-brand-display:focus, #wl-brand-display:focus {
+      outline: none; border-bottom-color: var(--text) !important; box-shadow: none !important;
+    }
     .brand-ac-list { position: absolute; left: 0; right: 0; top: calc(100% + 2px);
       background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
       max-height: 200px; overflow-y: auto; z-index: 200; box-shadow: 0 4px 16px rgba(0,0,0,.35); }
@@ -1864,8 +1873,8 @@
         <div class="brand-ac-wrap">
           <input type="text" id="w-brand-display" placeholder="Type to search brands…"
             autocomplete="off"
-            oninput="filterBrands(this.value)"
-            onfocus="filterBrands(this.value)"
+            oninput="onBrandInput(this.value)"
+            onfocus="onBrandFocus()"
             onblur="setTimeout(hideBrandAC,150)"
             onkeydown="brandKeyNav(event)">
           <input type="hidden" id="w-brand">
@@ -2067,8 +2076,8 @@
         <div class="brand-ac-wrap">
           <input type="text" id="wl-brand-display" placeholder="Type to search brands…"
             autocomplete="off"
-            oninput="filterWlBrands(this.value)"
-            onfocus="filterWlBrands(this.value)"
+            oninput="onWlBrandInput(this.value)"
+            onfocus="onWlBrandFocus()"
             onblur="setTimeout(hideWlBrandAC,150)"
             onkeydown="wlBrandKeyNav(event)">
           <input type="hidden" id="wl-brand">
@@ -4066,41 +4075,96 @@ function getVisChip(cId) {
 }
 
 const DEFAULT_BRANDS = [
-  'A. Lange & Söhne', 'Akrivia', 'Alpina', 'Anordain', 'Archimede',
-  'Armani Exchange', 'Arnold & Son', 'Atlantic', 'Audemars Piguet',
-  'Baltic', 'Ball Watch', 'Baume & Mercier', 'Bell & Ross',
-  'Blancpain', 'Breguet', 'Bremont', 'Breitling', 'Bulgari', 'Bulova',
-  'Cartier', 'Casio', 'Certina', 'Chopard', 'Christopher Ward',
-  'Chronoswiss', 'Citizen', 'Corum', 'Czapek',
-  'Damasko', 'Dan Henry', 'Davosa', 'De Bethune', 'Diesel', 'Doxa',
-  'Ebel', 'Edox', 'Eterna',
-  'F.P. Journe', 'Festina', 'Formex', 'Fossil', 'Franck Muller',
-  'Frederique Constant',
-  'Girard-Perregaux', 'Glashütte Original', 'Glycine', 'Grand Seiko',
-  'Greubel Forsey', 'Guess',
-  'H. Moser & Cie', 'Habring²', 'Halios', 'Hamilton', 'Hanhart',
-  'Hermès', 'Hublot', 'Hugo Boss',
-  'IWC', 'Ingersoll', 'Invicta',
-  'Jaeger-LeCoultre', 'Junghans', 'Junkers',
-  'Kari Voutilainen',
-  'Laco', 'Lacoste', 'Laurent Ferrier', 'Longines', 'Luminox',
-  'MB&F', 'Marathon', 'Maurice Lacroix', 'Meistersinger', 'Michael Kors',
-  'Mido', 'Ming', 'Montblanc', 'Movado', 'MVMT',
-  'Nomos Glashütte', 'Nodus', 'Norqain',
-  'Omega', 'Oris', 'Orient',
-  'Panerai', 'Patek Philippe', 'Perrelet', 'Piaget', 'Porsche Design',
-  'Rado', 'Raymond Weil', 'Richard Mille', 'Roger Dubuis', 'Rolex',
-  'Seiko', 'Sinn', 'Skagen', 'Speake-Marin', 'Squale', 'Steinhart',
-  'Stowa', 'Swatch',
-  'Tag Heuer', 'Timex', 'Tissot', 'Traser', 'Tudor', 'Tutima',
-  'Ulysse Nardin', 'Undone', 'Universal Genève', 'Urwerk',
-  'Vacheron Constantin', 'Versace', 'Vostok',
-  'Zenith', 'Zeppelin',
+  'A. Lange & Söhne', 'Accurist', 'Accutron', 'Adidas', 'Aerowatch',
+  'Aevig', 'Aigner', 'Airain', 'Alexander Shorokhoff', 'Alpina',
+  'Andreas Strehler', 'Angelus', 'Anne Klein', 'Anonimo', 'anOrdain',
+  'Aquadive', 'Aquastar', 'Aquatico', 'Archimede', 'Aristo',
+  'Armand Nicolet', 'Armin Strom', 'Armitron', 'Arnold & Son',
+  'Astor & Banks', 'Atelier Wen', 'Ateliers deMonaco', 'Audemars Piguet',
+  'Autodromo', 'AVI-8',
+  'B. Junge & Söhne', 'Backes & Strauss', 'Ball Watch', 'Balmain',
+  'Baltic', 'Bamford Watch Department', 'Baume & Mercier', 'Bedat & Co.',
+  'Bell & Ross', 'Benrus', 'Bering', 'Blancpain', 'BOLDR Supply Co.',
+  'Bovet', 'Bravur', 'Breguet', 'Breitling', 'Bremont', 'Breva',
+  'Brew Watch Co.', 'Bruno Söhnle', 'Buccellati', 'Bucherer', 'Bulgari',
+  'Bulova',
+  'Calvin Klein', 'Candino', 'Carl F. Bucherer', 'Carl Suchy & Söhne',
+  'Cartier', 'Casio', 'Certina', 'Chanel', 'Charriol', 'Chaumet',
+  'Chopard', 'Christophe Claret', 'Christopher Ward', 'Chronoswiss',
+  'Citizen', 'Clerc', 'Comex', 'Concord', 'Condor', 'Corum', 'Credor',
+  'Cvstos', 'Cyma', 'Czapek',
+  'D. Dornblüth & Sohn', 'D1 Milano', 'Damasko', 'Dan Henry',
+  'Daniel Roth', 'Daniel Wellington', 'Davosa', 'De Bethune',
+  'De Grisogono', 'De Witt', 'Deep Blue', 'Defakto', 'Delbana',
+  'Depancel', 'Deutsche Uhrenfabrik (DUFA)', 'Diesel', 'Dior', 'DKNY',
+  'Dolce & Gabbana', 'Doxa', 'Dubey & Schaldenbrand', 'Dufrane', 'Dugena',
+  'Ebel', 'Eberhard & Co.', 'Edox', 'Egard Watch Co.', 'Elgin',
+  'Emporio Armani', 'Epos', 'Ernest Borel', 'Erwin Sattler', 'Eterna', 'Eza',
+  'F.P. Journe', 'Faberge', 'Farer', 'Fastrack', 'Favre Leuba', 'Fears',
+  'Fendi', 'Festina', 'Flik Flak', 'Formex', 'Fortis', 'Fossil',
+  'Franck Muller', 'Frédérique Constant', 'Furlan Marri',
+  'Gallet', 'Garrick', 'Geckota', 'Gevril', 'Girard-Perregaux',
+  'Glashütte Original', 'Glycine', 'Graff', 'Graham', 'Grand Seiko',
+  'Greubel Forsey', 'Grieb & Benzinger', 'Grönefeld', 'Gruppo Gamma',
+  'Gucci', 'Guess',
+  'H. Moser & Cie.', 'Habring²', 'Hajime Asaoka', 'Halda Watch Co.',
+  'Haldimann', 'Halios', 'Hamilton', 'Hanhart', 'Hanowa', 'Harry Winston',
+  'Hautlence', 'Helson', 'Hemel', 'Hermès', 'Horage', 'Hublot',
+  'Hugo Boss', 'HYT',
+  'Ingersoll', 'Invicta', 'Isotope', 'Itay Noy', 'IWC',
+  'Jacob & Co.', 'Jaeger-LeCoultre', 'Jaquet Droz', 'Jean Richard',
+  'JS Watch Co.', 'Junghans', 'Junkers', 'Juvenia',
+  'Kari Voutilainen', 'Karl Lagerfeld', 'Kate Spade', 'Kenneth Cole',
+  'Konstantin Chaykin', 'Kudoke',
+  'L. Leroy', 'Laco', 'Lacoste', 'Lang & Heyne', 'Laurent Ferrier',
+  'Lew & Huey', 'Linde Werdelin', 'Lip', 'Locman', 'Longines', 'Lorier',
+  'Louis Erard', 'Louis Moinet', 'Louis Vuitton', 'Luminox', 'Lüm-Tec',
+  'Maen Watches', 'Magrette', 'Manufacture Royale', 'Marathon',
+  'Marloe Watch Company', 'Martin Braun', 'Marvin', 'Maserati',
+  'Maurice Lacroix', 'MB&F', 'MeisterSinger', 'Melbourne Watch Company',
+  'Michael Kors', 'Michel Herbelin', 'Mido', 'Milus', 'Minase', 'Ming',
+  'Mondaine', 'Monta', 'Montblanc', 'Moritz Grossmann', 'Movado', 'MVMT',
+  'Mühle-Glashütte',
+  'Nixon', 'Nodus', 'Nomos Glashütte', 'Nordgreen',
+  'Oak & Oscar', 'Ochs und Junior', 'Omega', 'Orient', 'Oris',
+  'Out of Order',
+  'Panerai', 'Parmigiani Fleurier', 'Patek Philippe', 'Paul Hewitt',
+  'Pequignet', 'Perrelet', 'Philippe Dufour', 'Piaget', 'Pierre Cardin',
+  'Pierre Kunz', 'Pinion', 'Porsche Design', 'Praesidus', 'Prim',
+  'Prometheus Watch Company', 'Pulsar',
+  'Rado', 'Ralph Christian', 'Ralph Lauren', 'Raven', 'Raymond Weil',
+  'Reservoir', 'Ressence', 'Revue Thommen', 'RGM Watch Co.',
+  'Richard Mille', 'Roamer', 'Roger Dubuis', 'Roger W. Smith', 'Rolex',
+  'Romain Gauthier', 'Rotary',
+  'San Martin', 'Schofield', 'Schwarz Etienne', 'Seaholm', 'Sector',
+  'Seiko', 'Serica', 'Shinola', 'Sinn', 'Sjöö Sandström', 'Skagen',
+  'Solvil et Titus', 'Speake-Marin', 'Spinnaker', 'Squale', 'Steinhart',
+  'Stepan Sarpaneva', 'Stowa', 'Straton Watch Co.', 'Struthers London',
+  'Studio Underd0g', 'Stuhrling Original', 'Swarovski', 'Swatch',
+  'Swiss Military',
+  'TAG Heuer', 'Thomas Earnshaw', 'Timex', 'Tissot', 'Titoni',
+  'Tommy Hilfiger', 'Torgoen', 'Towson Watch Company', 'Traser', 'Traska',
+  'Tudor', 'Tutima Glashütte', 'TW Steel',
+  'Ulysse Nardin', 'Undone', 'Unimatic', 'Union Glashütte',
+  'Universal Genève', 'Urwerk',
+  'Vacheron Constantin', 'Vaer', 'Van Cleef & Arpels', 'Venezianico',
+  'Versace', 'Vertex', 'Victorinox', 'Vincero', 'Visitor Watch Co.',
+  'Vortic Watch Company', 'Vostok Europe',
+  'Weiss Watch Company', 'Wempe', 'William Wood Watches',
+  'Xeric',
+  'Yema',
+  'Zelos', 'Zenith', 'Zeno-Watch Basel', 'Zodiac',
 ];
 
 let watches        = JSON.parse(localStorage.getItem(STORE_W)  || '[]');
 let logs           = JSON.parse(localStorage.getItem(STORE_L)  || '[]');
-let brands         = JSON.parse(localStorage.getItem(STORE_B)  || 'null') || [...DEFAULT_BRANDS];
+// Merge stored brands with DEFAULT_BRANDS so users automatically get new additions
+const _storedBrands = JSON.parse(localStorage.getItem(STORE_B) || 'null');
+let brands = (() => {
+  if (!_storedBrands) return [...DEFAULT_BRANDS];
+  const known = new Set(_storedBrands.map(b => b.toLowerCase()));
+  return [..._storedBrands, ...DEFAULT_BRANDS.filter(b => !known.has(b.toLowerCase()))];
+})();
 let wishlist       = JSON.parse(localStorage.getItem(STORE_WL) || '[]');
 let eloRatings     = JSON.parse(localStorage.getItem(STORE_ELO) || '{}'); // {watchId: score}
 
@@ -6960,6 +7024,23 @@ function brandKeyNav(e) {
   if (_brandAcIdx >= 0) items[_brandAcIdx].scrollIntoView({ block: 'nearest' });
 }
 
+// Focus: only open dropdown if no confirmed brand yet; otherwise select-all for easy replacement
+function onBrandFocus() {
+  const confirmed = document.getElementById('w-brand').value;
+  const display   = document.getElementById('w-brand-display').value;
+  if (confirmed && confirmed === display) {
+    document.getElementById('w-brand-display').select();
+  } else {
+    filterBrands(display);
+  }
+}
+
+// Input: user is typing — clear the confirmed hidden value and filter
+function onBrandInput(val) {
+  document.getElementById('w-brand').value = '';
+  filterBrands(val);
+}
+
 // Kept for backwards compatibility (called from openAddWatch / openEditWatch)
 function buildBrandSelect(selected = '') { setBrandAC(selected); }
 
@@ -7400,6 +7481,21 @@ function wlBrandKeyNav(e) {
   else { return; }
   items.forEach((el, i) => el.classList.toggle('ac-focused', i === _wlBrandAcIdx));
   if (_wlBrandAcIdx >= 0) items[_wlBrandAcIdx].scrollIntoView({ block: 'nearest' });
+}
+
+function onWlBrandFocus() {
+  const confirmed = document.getElementById('wl-brand').value;
+  const display   = document.getElementById('wl-brand-display').value;
+  if (confirmed && confirmed === display) {
+    document.getElementById('wl-brand-display').select();
+  } else {
+    filterWlBrands(display);
+  }
+}
+
+function onWlBrandInput(val) {
+  document.getElementById('wl-brand').value = '';
+  filterWlBrands(val);
 }
 
 // Kept for backwards compatibility
