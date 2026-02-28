@@ -696,8 +696,14 @@
     .strap-del-btn:hover   { color: var(--danger); }
     .strap-edit-btn        { background: none; border: none; color: var(--muted); cursor: pointer; font-size: .75rem; padding: .1rem .3rem; flex-shrink: 0; opacity: 0; transition: opacity .15s; }
     .strap-row:hover .strap-edit-btn { opacity: 1; }
-    .strap-name.clickable  { cursor: pointer; border-bottom: 1px dotted var(--muted); padding-bottom: 1px; }
-    .strap-name.clickable:hover { color: var(--gold); border-bottom-color: var(--gold); }
+    .strap-name.clickable  { cursor: pointer; }
+    .strap-name.clickable > span { border-bottom: 1px dotted var(--muted); padding-bottom: 1px; }
+    .strap-name.clickable:hover > span { color: var(--gold); border-bottom-color: var(--gold); }
+    /* ── INLINE-EDIT (click text to reveal input) ── */
+    .inline-val { font-size: .9rem; cursor: pointer; display: inline-block; min-height: 1.2em; padding: .6rem 0 .45rem; line-height: 1.4; }
+    .inline-val > span { border-bottom: 1px dotted var(--muted); padding-bottom: 1px; }
+    .inline-val:hover > span { color: var(--gold); border-bottom-color: var(--gold); }
+    .inline-val .empty { color: var(--muted); }
     .strap-empty           { font-size: .78rem; color: var(--muted); padding: .3rem 0; }
     .add-strap-row         { display: flex; gap: .4rem; margin-top: .5rem; flex-wrap: wrap; align-items: center; }
     .add-strap-row.hidden  { display: none; }
@@ -960,7 +966,6 @@
     .wl-name  { font-weight: 700; font-size: .98rem; }
     .wl-brand { font-size: .78rem; color: var(--muted); margin-top: .1rem; }
     .wl-meta  { font-size: .75rem; color: var(--muted); margin-top: .25rem; }
-    .wl-actions { display: flex; gap: .4rem; flex-shrink: 0; align-items: center; }
 
     /* ── ROTATION HEALTH BADGE ── */
     .rot-badge { font-size:.67rem; margin-top:.18rem; display:inline-flex; align-items:center; gap:.28rem; }
@@ -1126,7 +1131,6 @@
       .wl-card { flex-wrap: wrap; padding: .75rem .9rem; gap: .5rem .75rem; }
       .wl-card-img, .wl-card-avatar { width: 52px; height: 52px; font-size: .95rem; }
       .drag-handle { touch-action: none; } /* keep visible; touch drag handled in JS */
-      .wl-actions { flex-basis: 100%; justify-content: flex-start; margin-top: .1rem; }
     }
 
     /* Very small screens: hide nav labels */
@@ -1524,7 +1528,6 @@
             <tr>
               <th>Date</th>
               <th>Watch</th>
-              <th>Use Case</th>
               <th></th>
             </tr>
           </thead>
@@ -3334,7 +3337,9 @@ function renderNotificationPanel() {
     const nm   = escHtml(n.actor?.display_name || n.actor?.username || 'Someone');
     const time = formatFeedDate((n.created_at || '').slice(0, 10));
     const body = n.type === 'friend_request'  ? `${nm} sent you a friend request`
-               : n.type === 'friend_accepted' ? `${nm} accepted your friend request` : '';
+               : n.type === 'friend_accepted' ? `${nm} accepted your friend request`
+               : n.type === 'like'            ? `${nm} liked your wear log`
+               : n.type === 'comment'         ? `${nm} commented on your wear log` : '';
     const reqPending = n.type === 'friend_request' && receivedRequests.get(n.actor_id)?.status === 'pending';
     const actions = reqPending ? `
       <div class="notif-actions">
@@ -3856,6 +3861,11 @@ async function toggleLike(logId) {
     await db.from('likes').delete().eq('log_id', logId).eq('user_id', currentUser.id);
   } else {
     await db.from('likes').insert({ log_id: logId, user_id: currentUser.id });
+    // Notify the post author (skip if liking own post)
+    const item = feedItems.find(i => i.id === logId);
+    if (item && item.user_id !== currentUser.id) {
+      db.from('notifications').insert({ user_id: item.user_id, type: 'like', actor_id: currentUser.id, ref_id: logId }).then();
+    }
   }
 }
 
@@ -3899,6 +3909,11 @@ async function postComment(logId) {
     await fetchComments(logId);
     feedCommentCounts[logId] = (feedComments[logId] || []).length;
     refreshFeedCard(logId);
+    // Notify the post author (skip if commenting on own post)
+    const item = feedItems.find(i => i.id === logId);
+    if (item && item.user_id !== currentUser.id) {
+      db.from('notifications').insert({ user_id: item.user_id, type: 'comment', actor_id: currentUser.id, ref_id: logId }).then();
+    }
   } else { toast('Comment failed — ' + error.message, 'error'); }
 }
 
@@ -4318,7 +4333,7 @@ function renderTrackHistory() {
   if (!tbody) return;
   const sorted = [...logs].sort((a, b) => b.date.localeCompare(a.date));
   if (!sorted.length) {
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:2rem">No wear logs yet</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:2rem">No wear logs yet</td></tr>`;
     return;
   }
   tbody.innerHTML = sorted.map(log => {
@@ -4335,10 +4350,6 @@ function renderTrackHistory() {
         <div style="display:flex;align-items:center;gap:.5rem">
           ${thumb}<span>${w.brand} ${w.name}</span>
         </div>
-      </td>
-      <td>
-        <span class="uc-badge uc-${log.useCase}">${log.useCase}</span>
-        ${strapLabel}
       </td>
       <td style="white-space:nowrap">
         <button class="btn-icon" title="Edit" onclick="openEditLog('${log.id}')">✎</button>
@@ -4991,6 +5002,69 @@ function getSelectedTags() {
 }
 
 // ══════════════════════════════════════════
+//  INLINE-EDIT  (click text → reveal input)
+// ══════════════════════════════════════════
+const INLINE_FIELDS = [
+  { id: 'w-name',  fmt: v => v || null },
+  { id: 'w-ref',   fmt: v => v || null },
+  { id: 'w-price', fmt: v => { const n = parseFloat((v||'').toString().replace(/,/g,'')); return n ? fmtMoney(n) : null; } },
+  { id: 'w-date',  fmt: v => v ? fmtDate(v) : null },
+];
+
+function setupInlineEdits() {
+  INLINE_FIELDS.forEach(({ id, fmt }) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    // Remove any previous inline-val
+    const prev = input.parentElement.querySelector('.inline-val');
+    if (prev) prev.remove();
+    input.removeEventListener('blur', input._inlineBlur);
+
+    const display = fmt(input.value);
+    const span = document.createElement('span');
+    span.className = 'inline-val';
+    span.innerHTML = display ? `<span>${escHtml(display)}</span>` : `<span class="empty">—</span>`;
+    span.onclick = () => activateInline(id);
+    input.parentElement.insertBefore(span, input);
+    input.style.display = 'none';
+
+    const onBlur = () => { setTimeout(() => { if (document.activeElement !== input) deactivateInline(id); }, 150); };
+    input._inlineBlur = onBlur;
+    input.addEventListener('blur', onBlur);
+  });
+}
+
+function clearInlineEdits() {
+  INLINE_FIELDS.forEach(({ id }) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    const span = input.parentElement.querySelector('.inline-val');
+    if (span) span.remove();
+    input.style.display = '';
+    if (input._inlineBlur) { input.removeEventListener('blur', input._inlineBlur); delete input._inlineBlur; }
+  });
+}
+
+function activateInline(id) {
+  const input = document.getElementById(id);
+  const span = input.parentElement.querySelector('.inline-val');
+  if (span) span.style.display = 'none';
+  input.style.display = '';
+  input.focus();
+}
+
+function deactivateInline(id) {
+  const field = INLINE_FIELDS.find(f => f.id === id);
+  const input = document.getElementById(id);
+  const span = input.parentElement.querySelector('.inline-val');
+  if (!span || !field) return;
+  const display = field.fmt(input.value);
+  span.innerHTML = display ? `<span>${escHtml(display)}</span>` : `<span class="empty">—</span>`;
+  span.style.display = '';
+  input.style.display = 'none';
+}
+
+// ══════════════════════════════════════════
 //  STRAP TRACKER
 // ══════════════════════════════════════════
 function renderStrapList() {
@@ -5012,7 +5086,7 @@ function renderStrapList() {
     }
     return `
       <div class="strap-row${s.isOn ? ' strap-on' : ''}">
-        <span class="strap-name clickable" onclick="editStrap(${i})">${escHtml(s.name)}</span>
+        <span class="strap-name clickable" onclick="editStrap(${i})"><span>${escHtml(s.name)}</span></span>
         ${s.material ? `<span class="strap-mat">${escHtml(s.material)}</span>` : ''}
         <button type="button" class="strap-edit-btn" onclick="editStrap(${i})" title="Edit">✏</button>
         <button type="button" class="strap-on-btn${s.isOn ? ' active' : ''}" onclick="setStrapOn(${i})">${s.isOn ? '● On Wrist' : '○ Set on'}</button>
@@ -5189,6 +5263,7 @@ function openAddWatch() {
   updateWcUrlBtn();
   // All sections collapsed for a fresh add
   ['sec-condition','sec-market','sec-tags','sec-straps','sec-receipts'].forEach(closeSection);
+  clearInlineEdits();
   document.getElementById('watch-modal').classList.remove('hidden');
 }
 
@@ -5253,10 +5328,11 @@ function openEditWatch(id) {
   if (hasTags)      openSection('sec-tags');      else closeSection('sec-tags');
   if (hasStraps)    openSection('sec-straps');    else closeSection('sec-straps');
   if (hasReceipts)  openSection('sec-receipts');  else closeSection('sec-receipts');
+  setupInlineEdits();
   document.getElementById('watch-modal').classList.remove('hidden');
 }
 
-function closeWatchModal() { document.getElementById('watch-modal').classList.add('hidden'); }
+function closeWatchModal() { clearInlineEdits(); document.getElementById('watch-modal').classList.add('hidden'); }
 
 function onInsuranceChange() {
   const v = document.getElementById('w-insurance').value;
@@ -6840,13 +6916,10 @@ function renderWishlist() {
       <span class="drag-handle" title="Drag to reorder" ontouchstart="wlTouchStart(event,'${w.id}')">⠿</span>
       <div class="wl-rank ${rankCls}">#${i+1}</div>
       ${thumb}
-      <div class="wl-info">
-        <div class="wl-name">${w.name}</div>
+      <div class="wl-info" onclick="openEditWishlist('${w.id}')" style="cursor:pointer">
+        <div class="wl-name"><span class="inline-val"><span>${escHtml(w.name)}</span></span></div>
         <div class="wl-brand">${w.brand}</div>
         ${meta ? `<div class="wl-meta">${meta}</div>` : ''}
-      </div>
-      <div class="wl-actions">
-        <button class="btn btn-ghost btn-sm" onclick="openEditWishlist('${w.id}')">Edit</button>
       </div>
     </div>`;
   }).join('');
