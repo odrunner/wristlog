@@ -670,8 +670,14 @@
     .strap-del-btn:hover   { color: var(--danger); }
     .strap-edit-btn        { background: none; border: none; color: var(--muted); cursor: pointer; font-size: .75rem; padding: .1rem .3rem; flex-shrink: 0; opacity: 0; transition: opacity .15s; }
     .strap-row:hover .strap-edit-btn { opacity: 1; }
-    .strap-name.clickable  { cursor: pointer; border-bottom: 1px dotted var(--muted); padding-bottom: 1px; }
-    .strap-name.clickable:hover { color: var(--gold); border-bottom-color: var(--gold); }
+    .strap-name.clickable  { cursor: pointer; }
+    .strap-name.clickable > span { border-bottom: 1px dotted var(--muted); padding-bottom: 1px; }
+    .strap-name.clickable:hover > span { color: var(--gold); border-bottom-color: var(--gold); }
+    /* ── INLINE-EDIT (click text to reveal input) ── */
+    .inline-val { font-size: .9rem; cursor: pointer; display: inline-block; min-height: 1.2em; padding: .6rem 0 .45rem; line-height: 1.4; }
+    .inline-val > span { border-bottom: 1px dotted var(--muted); padding-bottom: 1px; }
+    .inline-val:hover > span { color: var(--gold); border-bottom-color: var(--gold); }
+    .inline-val .empty { color: var(--muted); }
     .strap-empty           { font-size: .78rem; color: var(--muted); padding: .3rem 0; }
     .add-strap-row         { display: flex; gap: .4rem; margin-top: .5rem; flex-wrap: wrap; align-items: center; }
     .add-strap-row.hidden  { display: none; }
@@ -4545,6 +4551,69 @@ function getSelectedTags() {
 }
 
 // ══════════════════════════════════════════
+//  INLINE-EDIT  (click text → reveal input)
+// ══════════════════════════════════════════
+const INLINE_FIELDS = [
+  { id: 'w-name',  fmt: v => v || null },
+  { id: 'w-ref',   fmt: v => v || null },
+  { id: 'w-price', fmt: v => { const n = parseFloat((v||'').toString().replace(/,/g,'')); return n ? fmtMoney(n) : null; } },
+  { id: 'w-date',  fmt: v => v ? fmtDate(v) : null },
+];
+
+function setupInlineEdits() {
+  INLINE_FIELDS.forEach(({ id, fmt }) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    // Remove any previous inline-val
+    const prev = input.parentElement.querySelector('.inline-val');
+    if (prev) prev.remove();
+    input.removeEventListener('blur', input._inlineBlur);
+
+    const display = fmt(input.value);
+    const span = document.createElement('span');
+    span.className = 'inline-val';
+    span.innerHTML = display ? `<span>${escHtml(display)}</span>` : `<span class="empty">—</span>`;
+    span.onclick = () => activateInline(id);
+    input.parentElement.insertBefore(span, input);
+    input.style.display = 'none';
+
+    const onBlur = () => { setTimeout(() => { if (document.activeElement !== input) deactivateInline(id); }, 150); };
+    input._inlineBlur = onBlur;
+    input.addEventListener('blur', onBlur);
+  });
+}
+
+function clearInlineEdits() {
+  INLINE_FIELDS.forEach(({ id }) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    const span = input.parentElement.querySelector('.inline-val');
+    if (span) span.remove();
+    input.style.display = '';
+    if (input._inlineBlur) { input.removeEventListener('blur', input._inlineBlur); delete input._inlineBlur; }
+  });
+}
+
+function activateInline(id) {
+  const input = document.getElementById(id);
+  const span = input.parentElement.querySelector('.inline-val');
+  if (span) span.style.display = 'none';
+  input.style.display = '';
+  input.focus();
+}
+
+function deactivateInline(id) {
+  const field = INLINE_FIELDS.find(f => f.id === id);
+  const input = document.getElementById(id);
+  const span = input.parentElement.querySelector('.inline-val');
+  if (!span || !field) return;
+  const display = field.fmt(input.value);
+  span.innerHTML = display ? `<span>${escHtml(display)}</span>` : `<span class="empty">—</span>`;
+  span.style.display = '';
+  input.style.display = 'none';
+}
+
+// ══════════════════════════════════════════
 //  STRAP TRACKER
 // ══════════════════════════════════════════
 function renderStrapList() {
@@ -4566,7 +4635,7 @@ function renderStrapList() {
     }
     return `
       <div class="strap-row${s.isOn ? ' strap-on' : ''}">
-        <span class="strap-name clickable" onclick="editStrap(${i})">${escHtml(s.name)}</span>
+        <span class="strap-name clickable" onclick="editStrap(${i})"><span>${escHtml(s.name)}</span></span>
         ${s.material ? `<span class="strap-mat">${escHtml(s.material)}</span>` : ''}
         <button type="button" class="strap-edit-btn" onclick="editStrap(${i})" title="Edit">✏</button>
         <button type="button" class="strap-on-btn${s.isOn ? ' active' : ''}" onclick="setStrapOn(${i})">${s.isOn ? '● On Wrist' : '○ Set on'}</button>
@@ -4743,6 +4812,7 @@ function openAddWatch() {
   updateWcUrlBtn();
   // All sections collapsed for a fresh add
   ['sec-condition','sec-market','sec-tags','sec-straps','sec-receipts'].forEach(closeSection);
+  clearInlineEdits();
   document.getElementById('watch-modal').classList.remove('hidden');
 }
 
@@ -4807,10 +4877,11 @@ function openEditWatch(id) {
   if (hasTags)      openSection('sec-tags');      else closeSection('sec-tags');
   if (hasStraps)    openSection('sec-straps');    else closeSection('sec-straps');
   if (hasReceipts)  openSection('sec-receipts');  else closeSection('sec-receipts');
+  setupInlineEdits();
   document.getElementById('watch-modal').classList.remove('hidden');
 }
 
-function closeWatchModal() { document.getElementById('watch-modal').classList.add('hidden'); }
+function closeWatchModal() { clearInlineEdits(); document.getElementById('watch-modal').classList.add('hidden'); }
 
 function onInsuranceChange() {
   const v = document.getElementById('w-insurance').value;
