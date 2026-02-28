@@ -6123,9 +6123,25 @@ db.auth.onAuthStateChange(async (event, session) => {
       // Switching users (or first load): wipe any stale state from the previous user
       clearUserState();
       currentUser = session.user;
-      await loadUserData();
+
+      // ── Immediately show the app shell and hide login ──
+      // Do this BEFORE loadUserData/initApp so the user always has controls
+      // even if something later throws.
       document.getElementById('auth-screen').style.display = 'none';
-      initApp();
+      const signoutBtn = document.getElementById('signout-btn');
+      if (signoutBtn) { signoutBtn.style.display = ''; signoutBtn.textContent = 'Sign out'; }
+      const profileBtn = document.getElementById('profile-btn');
+      if (profileBtn) profileBtn.style.display = '';
+
+      // ── Load data and boot the app ──
+      try {
+        await loadUserData();
+        initApp();
+      } catch (e) {
+        console.error('[WristLog] Init error after sign-in:', e.message, e);
+        // Attempt a graceful render with whatever data loaded
+        try { renderCollection(); } catch(_) {}
+      }
     } else {
       // TOKEN_REFRESHED / minor update for the same user — just keep token current
       currentUser = session.user;
