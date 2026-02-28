@@ -115,7 +115,7 @@
     nav button:hover { color: var(--text); }
     nav button.active { color: var(--gold); border-bottom-color: var(--gold); }
 
-    /* Mid-width (641–1060px): show emoji only, no text labels */
+    /* Mid-width (641–1060px): show icons only, no text labels */
     @media (min-width: 641px) and (max-width: 1060px) {
       .nav-label { display: none; }
       nav button { padding: .95rem .6rem; }
@@ -172,6 +172,22 @@
     }
     .server-dot.on { display: block; }
 
+    /* ── USERNAME FIELD ── */
+    .username-field { position: relative; }
+    .username-field .username-prefix {
+      position: absolute; left: .85rem; top: 50%; transform: translateY(-50%);
+      color: var(--muted); font-size: .9rem; pointer-events: none; user-select: none;
+    }
+    .username-field input { padding-left: 1.85rem; }
+    .username-status {
+      font-size: .73rem; margin-top: .3rem; min-height: 1.1em;
+      transition: color .15s;
+    }
+    .username-status.available { color: var(--success); }
+    .username-status.taken { color: var(--danger); }
+    .username-status.checking { color: var(--muted); }
+    .username-status.invalid { color: var(--danger); }
+
     /* ── LAYOUT ── */
     main { max-width: 1160px; margin: 0 auto; padding: 1.75rem 1.25rem; }
     .page { display: none; }
@@ -196,8 +212,9 @@
 
     /* ── FORMS ── */
     label { font-size: .75rem; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; display: block; margin-bottom: .35rem; }
-    input[type=text], input[type=number], input[type=date], textarea, select {
+    input[type=text], input[type=number], input[type=date], input[type=url], textarea, select {
       width: 100%;
+      max-width: 100%;
       min-width: 0; /* prevent input from inflating a flex/grid cell */
       background: var(--surface2);
       border: 1px solid var(--border);
@@ -648,6 +665,7 @@
       max-width: 460px;
       max-height: 92vh;
       overflow-y: auto;
+      overflow-x: hidden;
     }
     .modal-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 1.4rem; }
     .modal-actions { display: flex; gap: .65rem; margin-top: 1.4rem; }
@@ -826,9 +844,10 @@
     .warranty-expiring { color: #ef7942; }
     .warranty-expired  { color: var(--muted); opacity: .5; }
 
-    /* ── NAV EMOJI / LABEL ── */
+    /* ── NAV ICONS / LABEL ── */
     nav button { display: flex; align-items: center; gap: .35rem; }
-    .nav-emoji { line-height: 1; }
+    .nav-icon { line-height: 1; display: inline-flex; align-items: center; }
+    .nav-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
     .nav-label { }
 
     /* ── 3-COLUMN FORM ROW ── */
@@ -970,7 +989,7 @@
       }
       nav button.active { color: var(--gold); border-top-color: var(--gold); border-bottom-color: transparent; }
       nav button:hover { color: var(--text); }
-      .nav-emoji { font-size: 1.15rem; }
+      .nav-icon svg { width: 20px; height: 20px; }
 
       /* Main: pad bottom for tab bar */
       main { padding: 1.1rem .85rem 86px; }
@@ -996,8 +1015,9 @@
       /* Toast: above tab bar */
       .toast { left: .75rem; right: .75rem; bottom: 76px; text-align: center; }
 
-      /* Track form */
+      /* Track form — keep date input from overflowing on narrow screens */
       .track-form { max-width: 100%; }
+      .track-form input[type=date] { max-width: 100%; padding-left: .5rem; padding-right: .3rem; }
 
       /* Save bar: fixed above tab bar so it's always visible */
       .save-bar {
@@ -1021,7 +1041,7 @@
     /* Very small screens: hide nav labels */
     @media (max-width: 375px) {
       .nav-label { display: none; }
-      .nav-emoji { font-size: 1.3rem; }
+      .nav-icon svg { width: 22px; height: 22px; }
       nav button { padding: .55rem .1rem calc(.5rem + env(safe-area-inset-bottom, 0)); }
     }
 
@@ -1276,16 +1296,37 @@
   </div>
 </div>
 
+<!-- ════ USERNAME ONBOARDING MODAL ════ -->
+<div id="username-modal" class="overlay hidden">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title">Choose your username</div>
+    <p style="color:var(--muted);font-size:.85rem;margin-bottom:1.25rem;">
+      Pick a unique username so others can find and follow you.
+    </p>
+    <div class="username-field">
+      <span class="username-prefix">@</span>
+      <input type="text" id="onboard-username" placeholder="username" maxlength="30"
+        oninput="onUsernameInput(this, 'onboard-username-status')">
+    </div>
+    <div id="onboard-username-status" class="username-status"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="onboard-username-btn" style="flex:1;" onclick="saveOnboardUsername()" disabled>
+        Continue
+      </button>
+    </div>
+  </div>
+</div>
+
 <header>
   <div class="header-inner">
     <button class="logo" onclick="goHome()" title="Back to Collection">WRIST<sup>LOG</sup></button>
     <nav>
-      <button class="active" data-page="collection"  onclick="nav(this)"><span class="nav-emoji">📦</span><span class="nav-label">Collection</span></button>
-      <button               data-page="feed"         onclick="nav(this)"><span class="nav-emoji">🏠</span><span class="nav-label">Feed</span></button>
-      <button               data-page="track"        onclick="nav(this)"><span class="nav-emoji">⌚</span><span class="nav-label">Track</span></button>
-      <button               data-page="reports"      onclick="nav(this)"><span class="nav-emoji">📊</span><span class="nav-label">Reports</span></button>
-      <button               data-page="wishlist"     onclick="nav(this)"><span class="nav-emoji">🌟</span><span class="nav-label">Wishlist</span></button>
-      <button               data-page="help"         onclick="nav(this)"><span class="nav-emoji">❓</span><span class="nav-label">Help</span></button>
+      <button class="active" data-page="collection"  onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="nav-label">Collection</span></button>
+      <button               data-page="feed"         onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12h-6v-6h-4v6z"/></svg></span><span class="nav-label">Feed</span></button>
+      <button               data-page="track"        onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg></span><span class="nav-label">Track</span></button>
+      <button               data-page="reports"      onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 20h16"/><rect x="4" y="13" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/></svg></span><span class="nav-label">Reports</span></button>
+      <button               data-page="wishlist"     onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></span><span class="nav-label">Wishlist</span></button>
+      <button               data-page="help"         onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4.9.5c0 1.5-2.4 2-2.4 3.5"/><circle cx="12" cy="17" r=".5" fill="currentColor" stroke="none"/></svg></span><span class="nav-label">Help</span></button>
     </nav>
     <div class="header-data">
       <div id="server-dot" class="server-dot" title="Saving to local file"></div>
@@ -2389,6 +2430,7 @@ function formatFeedDate(dateStr) {
 async function loadMyProfile() {
   if (!currentUser) return;
   let { data } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
+  let isNewUser = false;
   if (!data) {
     // Auto-create profile for Google OAuth users (trigger may not have fired)
     const email       = currentUser.email || '';
@@ -2400,10 +2442,132 @@ async function loadMyProfile() {
     ).select().single();
     if (createErr) console.error('[WristLog] Profile create error:', createErr.message, createErr);
     data = created;
+    isNewUser = true;
   }
   myProfile = data;
   const btn = document.getElementById('profile-btn');
   if (btn) { btn.textContent = profileInitials(myProfile); btn.style.display = 'flex'; }
+  // Show username picker for brand-new sign-ups
+  if (isNewUser && myProfile) {
+    showUsernameOnboarding(myProfile.username || '');
+  }
+}
+
+// ── Username validation & availability ────────────────────────────────────
+let _usernameCheckTimer = null;
+let _lastCheckedUsername = '';
+let _usernameAvailable   = false;
+
+function validateUsername(raw) {
+  const val = raw.toLowerCase().replace(/[^a-z0-9_]/g, '');
+  if (val.length < 3) return { valid: false, clean: val, error: 'At least 3 characters' };
+  if (val.length > 30) return { valid: false, clean: val, error: 'Max 30 characters' };
+  if (!/^[a-z][a-z0-9_]*$/.test(val)) return { valid: false, clean: val, error: 'Must start with a letter' };
+  return { valid: true, clean: val, error: null };
+}
+
+function onUsernameInput(inputEl, statusElId) {
+  const statusEl = document.getElementById(statusElId);
+  const raw = inputEl.value.trim();
+  // Auto-clean the value to lowercase alphanumeric + underscore
+  const cleaned = raw.toLowerCase().replace(/[^a-z0-9_]/g, '');
+  if (cleaned !== raw) inputEl.value = cleaned;
+
+  const { valid, clean, error } = validateUsername(cleaned);
+
+  // If it matches the user's current username, skip check
+  const original = inputEl.dataset?.original || '';
+  if (clean === original && valid) {
+    statusEl.textContent = 'Your current username';
+    statusEl.className = 'username-status available';
+    _usernameAvailable = true;
+    _enableUsernameBtn(statusElId);
+    return;
+  }
+
+  if (!valid) {
+    statusEl.textContent = error;
+    statusEl.className = 'username-status invalid';
+    _usernameAvailable = false;
+    _enableUsernameBtn(statusElId);
+    return;
+  }
+
+  // Debounce availability check
+  statusEl.textContent = 'Checking…';
+  statusEl.className = 'username-status checking';
+  _usernameAvailable = false;
+  _enableUsernameBtn(statusElId);
+  clearTimeout(_usernameCheckTimer);
+  _usernameCheckTimer = setTimeout(() => checkUsernameAvailability(clean, statusElId), 400);
+}
+
+async function checkUsernameAvailability(username, statusElId) {
+  const statusEl = document.getElementById(statusElId);
+  if (!statusEl) return;
+  _lastCheckedUsername = username;
+  const { data, error } = await db.from('profiles')
+    .select('id')
+    .eq('username', username)
+    .neq('id', currentUser.id)
+    .limit(1);
+  // Guard: user may have typed more while we were waiting
+  if (_lastCheckedUsername !== username) return;
+  if (error) {
+    statusEl.textContent = 'Could not check — try again';
+    statusEl.className = 'username-status invalid';
+    _usernameAvailable = false;
+  } else if (data && data.length > 0) {
+    statusEl.textContent = 'Already taken';
+    statusEl.className = 'username-status taken';
+    _usernameAvailable = false;
+  } else {
+    statusEl.textContent = 'Available!';
+    statusEl.className = 'username-status available';
+    _usernameAvailable = true;
+  }
+  _enableUsernameBtn(statusElId);
+}
+
+function _enableUsernameBtn(statusElId) {
+  // Enable/disable the relevant submit button
+  if (statusElId === 'onboard-username-status') {
+    const btn = document.getElementById('onboard-username-btn');
+    if (btn) btn.disabled = !_usernameAvailable;
+  }
+}
+
+// ── Username onboarding (first sign-up) ───────────────────────────────────
+function showUsernameOnboarding(suggestedUsername) {
+  const input = document.getElementById('onboard-username');
+  if (input) {
+    input.value = suggestedUsername;
+    input.dataset.original = ''; // no original — this is a new user
+    onUsernameInput(input, 'onboard-username-status');
+  }
+  document.getElementById('username-modal').classList.remove('hidden');
+}
+
+async function saveOnboardUsername() {
+  const input = document.getElementById('onboard-username');
+  const username = (input?.value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+  const { valid } = validateUsername(username);
+  if (!valid || !_usernameAvailable) { toast('Please choose a valid available username', 'error'); return; }
+
+  const btn = document.getElementById('onboard-username-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+  const { error } = await db.from('profiles')
+    .update({ username })
+    .eq('id', currentUser.id);
+  if (!error) {
+    myProfile = { ...myProfile, username };
+    document.getElementById('username-modal').classList.add('hidden');
+    toast('Username set! Welcome to WristLog.');
+  } else {
+    toast('Could not save — ' + error.message, 'error');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Continue'; }
 }
 
 function openProfileModal() {
@@ -2412,6 +2576,8 @@ function openProfileModal() {
 
 // ── Profile Page ──────────────────────────────────────────────────────────
 function viewUserProfile(userId) {
+  // Close any open overlays (discover modal, etc.) so the profile page is visible
+  document.querySelectorAll('.overlay:not(.hidden)').forEach(o => o.classList.add('hidden'));
   const active = document.querySelector('.page.active');
   profilePagePrev   = active?.id || 'page-feed';
   profilePageUserId = userId;
@@ -2514,10 +2680,10 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   const uname    = profile.username ? '@' + escHtml(profile.username) : '';
   const bio      = profile.bio ? `<div class="profile-bio-text">${escHtml(profile.bio)}</div>` : '';
 
-  // Action button (other users only) — privacy-aware
+  // Action button — Edit for own profile, follow/friend for others
   const followBtn = !isOwn
     ? `<div style="margin-top:.75rem;">${friendActionBtn({ id: profile.id, profile_privacy: privacy || 'public' })}</div>`
-    : '';
+    : `<div style="margin-top:.75rem;"><button class="btn btn-ghost" style="font-size:.82rem;" onclick="document.getElementById('pp-display-name')?.focus();document.getElementById('pp-display-name')?.scrollIntoView({behavior:'smooth',block:'center'})">Edit Profile</button></div>`;
 
   // Stats
   const watchCount = isOwn ? watches.length : (showcase.length || '—');
@@ -2534,6 +2700,14 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <div class="profile-page-section-title">Edit Profile</div>
       <div class="form-group"><label>Display Name</label>
         <input type="text" id="pp-display-name" value="${escHtml(profile.display_name || '')}" placeholder="Your name">
+      </div>
+      <div class="form-group"><label>Username</label>
+        <div class="username-field">
+          <span class="username-prefix">@</span>
+          <input type="text" id="pp-username" value="${escHtml(profile.username || '')}" placeholder="username" maxlength="30"
+            oninput="onUsernameInput(this, 'pp-username-status')" data-original="${escHtml(profile.username || '')}">
+        </div>
+        <div id="pp-username-status" class="username-status"></div>
       </div>
       <div class="form-group"><label>Bio</label>
         <textarea id="pp-bio" rows="3" placeholder="Tell people about your collection…">${escHtml(profile.bio || '')}</textarea>
@@ -2640,17 +2814,38 @@ async function saveProfileFromPage() {
   const name  = (document.getElementById('pp-display-name')?.value || '').trim();
   const bio   = (document.getElementById('pp-bio')?.value || '').trim();
   const priv  = document.getElementById('pp-profile-privacy')?.value || 'public';
+
+  // Username validation
+  const usernameInput = document.getElementById('pp-username');
+  const rawUsername    = (usernameInput?.value || '').trim();
+  const original      = usernameInput?.dataset?.original || '';
+  const usernameChanged = rawUsername !== original;
+
+  if (usernameChanged) {
+    const { valid, error: valErr } = validateUsername(rawUsername);
+    if (!valid) { toast(valErr, 'error'); return; }
+    if (!_usernameAvailable) { toast('Username is not available', 'error'); return; }
+  }
+
+  const updateData = { display_name: name, bio, profile_privacy: priv };
+  if (usernameChanged) updateData.username = rawUsername;
+
   const { error } = await db.from('profiles')
-    .update({ display_name: name, bio, profile_privacy: priv })
+    .update(updateData)
     .eq('id', currentUser.id);
   if (!error) {
-    myProfile = { ...myProfile, display_name: name, bio, profile_privacy: priv };
+    myProfile = { ...myProfile, ...updateData };
     const btn = document.getElementById('profile-btn');
     if (btn) btn.textContent = profileInitials(myProfile);
     toast('Profile saved!');
     loadAndRenderProfile(currentUser.id);
   } else {
-    toast('Save failed — ' + error.message, 'error');
+    // Handle unique constraint violation from DB
+    if (error.message && error.message.includes('username')) {
+      toast('Username is already taken', 'error');
+    } else {
+      toast('Save failed — ' + error.message, 'error');
+    }
   }
 }
 
@@ -3168,9 +3363,9 @@ async function postComment(logId) {
 function openDiscover() {
   discoverUsers = [];
   document.getElementById('discover-search').value = '';
-  document.getElementById('discover-results').innerHTML = '';
+  document.getElementById('discover-results').innerHTML =
+    '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">Type a name or @username to search.</div>';
   renderFollowingList();
-  loadSuggestedUsers();
   document.getElementById('discover-modal').classList.remove('hidden');
 }
 function closeDiscover() {
@@ -3178,8 +3373,13 @@ function closeDiscover() {
 }
 function debounceSearch(val) {
   clearTimeout(searchDebounce);
+  if (!val.trim()) {
+    discoverUsers = [];
+    document.getElementById('discover-results').innerHTML =
+      '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">Type a name or @username to search.</div>';
+    return;
+  }
   document.getElementById('discover-results').innerHTML = '';
-  if (!val.trim()) { discoverUsers = []; loadSuggestedUsers(); return; }
   searchDebounce = setTimeout(() => doSearchUsers(val.trim()), 350);
 }
 async function doSearchUsers(query) {
@@ -3211,32 +3411,6 @@ function renderDiscoverUsers() {
   el.innerHTML = `
     <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin-bottom:.65rem;">Search Results</div>
     ${discoverUsers.map(u => userCardHtml(u)).join('')}`;
-}
-async function loadSuggestedUsers() {
-  if (!currentUser) return;
-  const el = document.getElementById('discover-results');
-  if (!el) return;
-  el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">Loading…</div>';
-  const { data, error } = await db
-    .from('profiles')
-    .select('id, username, display_name, avatar_url, profile_privacy')
-    .neq('id', currentUser.id)
-    .limit(20);
-  if (error) {
-    console.error('[WristLog] loadSuggestedUsers error:', error.message, error);
-    el.innerHTML = `<div style="color:var(--danger);font-size:.82rem;padding:.4rem 0;">Could not load users: ${escHtml(error.message)}</div>`;
-    return;
-  }
-  // Hide private accounts that aren't already friends
-  const visible = (data || []).filter(u => u.profile_privacy !== 'private' || friends.has(u.id));
-  if (!visible.length) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">No other users yet.</div>';
-    return;
-  }
-  discoverUsers = visible;
-  el.innerHTML = `
-    <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin-bottom:.65rem;">All Users</div>
-    ${visible.map(u => userCardHtml(u)).join('')}`;
 }
 async function renderFollowingList() {
   const el = document.getElementById('following-list');
