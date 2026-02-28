@@ -1340,6 +1340,18 @@
           <textarea id="track-notes" placeholder="Any occasion, outfit, thoughts…"></textarea>
         </div>
 
+        <div class="card">
+          <div class="card-label">Photo <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
+          <div id="track-photo-area" class="log-photo-area" onclick="document.getElementById('track-photo-input').click()">
+            <div id="track-photo-placeholder" class="log-photo-placeholder">📷 Tap to add a photo</div>
+            <img id="track-photo-preview" class="log-photo-preview" style="display:none;" alt="">
+            <button type="button" id="track-photo-clear" class="log-photo-clear" style="display:none;"
+              onclick="event.stopPropagation();clearTrackPhoto()">✕</button>
+          </div>
+          <input type="file" id="track-photo-input" accept="image/*" capture="environment"
+            style="display:none" onchange="handleTrackPhoto(this)">
+        </div>
+
         <div class="save-bar">
           <button class="btn btn-primary" id="save-btn" onclick="saveLog()">Log This Wear</button>
         </div>
@@ -3204,6 +3216,7 @@ let notifPanelOpen   = false;
 let selWatchId  = null;
 let selStrapId  = null;  // strap selected for current wear log session
 let selUseCase  = 'unspecified';
+let trackPhoto  = null;  // base64 photo attached to the tracking tab log
 let editingId   = null;
 let editingLogId   = null;  // log entry currently being edited
 let editLogUseCase = 'unspecified';
@@ -3471,7 +3484,8 @@ function saveLog() {
   if (!date)       { toast('Please select a date', 'error'); return; }
   if (!selWatchId) { toast('Please select a watch', 'error'); return; }
   const notes = document.getElementById('track-notes').value.trim();
-  const logEntry = { id: uid(), watchId: selWatchId, date, useCase: selUseCase, notes };
+  const logEntry = { id: uid(), watchId: selWatchId, date, useCase: selUseCase, notes,
+                     photoUrl: trackPhoto || null };
   if (selStrapId) logEntry.strapId = selStrapId;
   logs.push(logEntry);
   // Update "on wrist" strap status on the watch
@@ -3483,9 +3497,36 @@ function saveLog() {
   }
   save();
   document.getElementById('track-notes').value = '';
+  clearTrackPhoto();
   if (date === todayStr()) dismissReminder();
   renderTrack();
   toast('Wear logged!');
+}
+
+async function handleTrackPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    trackPhoto = await blobToResizedBase64(file);
+    const preview = document.getElementById('track-photo-preview');
+    preview.src = trackPhoto;
+    preview.style.display = 'block';
+    document.getElementById('track-photo-placeholder').style.display = 'none';
+    document.getElementById('track-photo-clear').style.display = '';
+    document.getElementById('track-photo-area').classList.add('has-photo');
+  } catch(e) { toast('Could not load photo', 'error'); }
+  input.value = '';
+}
+
+function clearTrackPhoto() {
+  trackPhoto = null;
+  const preview = document.getElementById('track-photo-preview');
+  if (!preview) return;
+  preview.style.display = 'none';
+  preview.src = '';
+  document.getElementById('track-photo-placeholder').style.display = '';
+  document.getElementById('track-photo-clear').style.display = 'none';
+  document.getElementById('track-photo-area').classList.remove('has-photo');
 }
 
 function deleteLog(id) {
