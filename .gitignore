@@ -4,3 +4,4 @@ server.py
 start.command
 wristlog-data.json
 .DS_Store
+node_modules/
