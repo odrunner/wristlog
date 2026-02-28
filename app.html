@@ -195,6 +195,7 @@
     label { font-size: .75rem; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; display: block; margin-bottom: .35rem; }
     input[type=text], input[type=number], input[type=date], textarea, select {
       width: 100%;
+      min-width: 0; /* prevent input from inflating a flex/grid cell */
       background: var(--surface2);
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -300,6 +301,7 @@
 
     /* ── TRACK PAGE ── */
     .track-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: start; }
+    .track-grid > * { min-width: 0; } /* prevent grid items from overflowing their 1fr track */
     .track-form { display: flex; flex-direction: column; gap: 1.25rem; }
 
     .today-pill {
