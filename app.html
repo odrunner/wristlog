@@ -1114,6 +1114,15 @@
     .feed-watch-banner-brand { font-size: .72rem; color: var(--muted); text-align: center; margin-top: .1rem; }
     .feed-watch-banner-name  { font-weight: 700; font-size: .92rem; text-align: center; }
 
+    /* Compact "is wearing" header row (no-photo wear logs) */
+    .feed-wearing-row { display: flex; align-items: center; gap: 5px; margin-top: 3px; margin-bottom: 1px; }
+    .feed-wearing-watch-thumb { width: 22px; height: 22px; border-radius: 5px; object-fit: cover; flex-shrink: 0; }
+    .feed-wearing-watch-avatar {
+      width: 22px; height: 22px; border-radius: 5px; font-size: .5rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #000;
+    }
+    .feed-wearing-watch-name { font-size: .84rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
     /* Actions */
     .feed-actions {
       display: flex; gap: .25rem; padding: .5rem .65rem .45rem;
@@ -3362,27 +3371,15 @@ function renderFeedCard(item) {
   const metaStr   = metaParts.join(' · ');
 
   const editingCaption = isMe && feedEditingCaption.has(item.id);
-  const isStandalonePost = !w; // no watch = standalone post
+  const compactWear = !!(w && !item.photo_url); // wear log with no user photo → compact layout
 
   // Hero area
   let heroHtml = '';
   if (item.photo_url) {
     heroHtml = `<div class="feed-card-photo"><img src="${escHtml(item.photo_url)}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`;
   } else if (w) {
-    // Wear log without photo — watch banner
-    const thumb = w.image
-      ? `<img class="feed-watch-banner-thumb" src="${escHtml(w.image)}" onerror="this.style.display='none'">`
-      : `<div class="feed-watch-banner-avatar" style="background:${w.color||'#c9a84c'}">${initials(w.brand||'',w.name||'')}</div>`;
-    const addPhotoBtn = isMe
-      ? `<button class="feed-add-photo-btn" onclick="addFeedPhoto('${item.id}')">📷 Add photo</button>`
-      : '';
-    heroHtml = `
-      <div class="feed-watch-banner">
-        ${thumb}
-        <div class="feed-watch-banner-brand">${escHtml(w.brand || '')}</div>
-        <div class="feed-watch-banner-name">${escHtml(w.name || '')}</div>
-        ${addPhotoBtn}
-      </div>`;
+    // Compact wear — watch moves to header; no banner here
+    heroHtml = '';
   } else if (!editingCaption && item.notes) {
     // Text-only standalone post — notes are the hero
     heroHtml = `<div class="feed-text-hero"><p class="feed-text-hero-body">${escHtml(item.notes)}</p></div>`;
@@ -3405,8 +3402,8 @@ function renderFeedCard(item) {
     captionHtml = `<div class="feed-caption"><span class="feed-caption-user">${escHtml(p?.display_name || p?.username || 'User')}</span>${escHtml(item.notes)}</div>`;
   }
 
-  // Watch chip — only for wear logs
-  const watchChip = w
+  // Watch chip — only for wear logs that also have a photo (compact wear shows it in the header)
+  const watchChip = (w && item.photo_url)
     ? `<div class="feed-watch-chip">⌚ ${escHtml((w.brand||'') + ' ' + (w.name||''))}</div>`
     : '';
 
@@ -3442,14 +3439,38 @@ function renderFeedCard(item) {
     }
   }
 
+  // Compact wear: inline watch row inside header
+  const displayName = escHtml(p?.display_name || p?.username || 'User');
+  let headerBody;
+  if (compactWear) {
+    const wThumb = w.image
+      ? `<img class="feed-wearing-watch-thumb" src="${escHtml(w.image)}" onerror="this.style.display='none'">`
+      : `<div class="feed-wearing-watch-avatar" style="background:${w.color||'#c9a84c'}">${initials(w.brand||'',w.name||'')}</div>`;
+    const wLabel = [w.brand, w.name].filter(Boolean).join(' ');
+    headerBody = `
+      <div class="feed-user-name" onclick="viewUserProfile('${item.user_id}')" style="cursor:pointer;">
+        ${displayName} <span style="font-weight:400;color:var(--muted)">is wearing</span>
+      </div>
+      <div class="feed-wearing-row">
+        ${wThumb}
+        <span class="feed-wearing-watch-name">${escHtml(wLabel)}</span>
+      </div>
+      <div class="feed-meta">${metaStr}</div>`;
+  } else {
+    headerBody = `
+      <div class="feed-user-name" onclick="viewUserProfile('${item.user_id}')" style="cursor:pointer;">${displayName}</div>
+      <div class="feed-meta">${metaStr}</div>`;
+  }
+
+  const addPhotoAction = (isMe && compactWear)
+    ? `<button class="feed-action-btn" onclick="addFeedPhoto('${item.id}')" title="Add photo">📷</button>`
+    : '';
+
   return `
     <div class="feed-card" id="feedcard-${item.id}">
       <div class="feed-card-header">
         <div class="feed-user-avatar" onclick="viewUserProfile('${item.user_id}')" style="cursor:pointer;">${profileInitials(p)}</div>
-        <div style="flex:1;min-width:0;">
-          <div class="feed-user-name" onclick="viewUserProfile('${item.user_id}')" style="cursor:pointer;">${escHtml(p?.display_name || p?.username || 'User')}</div>
-          <div class="feed-meta">${metaStr}</div>
-        </div>
+        <div style="flex:1;min-width:0;">${headerBody}</div>
         ${isMe ? `<button class="feed-edit-btn" onclick="openEditPost('${item.id}')" title="Edit post">✏</button>` : ''}
       </div>
       ${heroHtml}
@@ -3460,6 +3481,7 @@ function renderFeedCard(item) {
         <button class="feed-action-btn" onclick="toggleComments('${item.id}')">
           💬 <span>${cCount || ''}</span>
         </button>
+        ${addPhotoAction}
       </div>
       ${captionHtml}
       ${watchChip}
