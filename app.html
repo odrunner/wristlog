@@ -242,10 +242,18 @@
 
     /* ── PROFILE PAGE ── */
     .profile-hero { display:flex; flex-direction:column; align-items:center; text-align:center; padding:1.75rem 0 1.25rem; gap:.55rem; }
-    .profile-avatar-lg { width:72px; height:72px; border-radius:50%; background:var(--gold); color:#000; font-size:1.5rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .profile-avatar-lg { position:relative; width:72px; height:72px; border-radius:50%; background:var(--gold); color:#000; font-size:1.5rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden; }
+    .profile-avatar-lg img { width:100%; height:100%; object-fit:cover; }
+    .profile-avatar-cam { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.45); opacity:0; transition:opacity .15s; cursor:pointer; border-radius:50%; font-size:1.1rem; color:#fff; }
+    .profile-avatar-lg:hover .profile-avatar-cam { opacity:1; }
+    .profile-name-row { display:flex; align-items:center; gap:.4rem; }
+    .profile-edit-icon { background:none; border:none; color:var(--muted); cursor:pointer; font-size:.82rem; padding:.15rem .3rem; border-radius:4px; line-height:1; }
+    .profile-edit-icon:hover { color:var(--gold); background:var(--surface2); }
     .profile-display-name { font-size:1.25rem; font-weight:700; }
     .profile-username-lbl { font-size:.82rem; color:var(--muted); }
     .profile-bio-text { font-size:.84rem; color:var(--muted); max-width:420px; line-height:1.55; margin-top:.2rem; }
+    .profile-edit-card { display:none; }
+    .profile-edit-card.open { display:block; }
     .profile-stats-row { display:flex; gap:2.5rem; justify-content:center; margin:1.1rem 0 1.25rem; }
     .profile-page-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.1rem 1.25rem; margin-bottom:1.1rem; }
     .profile-page-section-title { font-size:.72rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--gold); margin-bottom:.9rem; }
@@ -1059,7 +1067,7 @@
       background: var(--gold); color: #000; border: none;
       font-weight: 700; font-size: .72rem; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; transition: opacity .15s;
+      flex-shrink: 0; transition: opacity .15s; overflow: hidden; padding: 0;
     }
     .profile-btn:hover { opacity: .85; }
 
@@ -2454,7 +2462,14 @@ async function loadMyProfile() {
   }
   myProfile = data;
   const btn = document.getElementById('profile-btn');
-  if (btn) { btn.textContent = profileInitials(myProfile); btn.style.display = 'flex'; }
+  if (btn) {
+    if (myProfile.avatar_url) {
+      btn.innerHTML = `<img src="${escHtml(myProfile.avatar_url)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    } else {
+      btn.textContent = profileInitials(myProfile);
+    }
+    btn.style.display = 'flex';
+  }
   // Show username picker for brand-new sign-ups
   if (isNewUser && myProfile) {
     showUsernameOnboarding(myProfile.username || '');
@@ -2685,10 +2700,21 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   const uname    = profile.username ? '@' + escHtml(profile.username) : '';
   const bio      = profile.bio ? `<div class="profile-bio-text">${escHtml(profile.bio)}</div>` : '';
 
-  // Action button — Edit for own profile, follow/friend for others
+  // Avatar — show pic if available, monogram otherwise; own profile gets camera overlay
+  const avatarInner = profile.avatar_url
+    ? `<img src="${escHtml(profile.avatar_url)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display=''">`
+    : '';
+  const avatarFallback = profile.avatar_url
+    ? `<span style="display:none">${heroInitials}</span>`
+    : `<span>${heroInitials}</span>`;
+  const camOverlay = isOwn
+    ? `<div class="profile-avatar-cam" onclick="uploadProfilePic()" title="Change photo">📷</div>`
+    : '';
+
+  // Action button — small edit icon for own profile, follow/friend for others
   const followBtn = !isOwn
     ? `<div style="margin-top:.75rem;">${friendActionBtn({ id: profile.id, profile_privacy: privacy || 'public' })}</div>`
-    : `<div style="margin-top:.75rem;"><button class="btn btn-ghost" style="font-size:.82rem;" onclick="document.getElementById('pp-display-name')?.focus();document.getElementById('pp-display-name')?.scrollIntoView({behavior:'smooth',block:'center'})">Edit Profile</button></div>`;
+    : '';
 
   // Stats
   const watchCount = isOwn ? watches.length : (showcase.length || '—');
@@ -2699,9 +2725,9 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       ${isOwn ? `<div class="profile-stat"><div class="profile-stat-value">${following.size}</div><div class="profile-stat-label">Following</div></div>` : ''}
     </div>`;
 
-  // Edit fields (own profile)
+  // Edit fields (own profile) — hidden until edit icon tapped
   const editHtml = isOwn ? `
-    <div class="profile-page-card">
+    <div class="profile-page-card profile-edit-card" id="profile-edit-card">
       <div class="profile-page-section-title">Edit Profile</div>
       <div class="form-group"><label>Display Name</label>
         <input type="text" id="pp-display-name" value="${escHtml(profile.display_name || '')}" placeholder="Your name">
@@ -2787,10 +2813,15 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       </div>`;
   }
 
+  const editIcon = isOwn ? `<button class="profile-edit-icon" onclick="toggleProfileEdit()" title="Edit profile">✏️</button>` : '';
+
   return `
     <div class="profile-hero">
-      <div class="profile-avatar-lg">${heroInitials}</div>
-      <div class="profile-display-name">${name}</div>
+      <div class="profile-avatar-lg">${avatarInner}${avatarFallback}${camOverlay}</div>
+      <div class="profile-name-row">
+        <div class="profile-display-name">${name}</div>
+        ${editIcon}
+      </div>
       ${uname ? `<div class="profile-username-lbl">${uname}</div>` : ''}
       ${bio}
       ${followBtn}
@@ -2841,7 +2872,13 @@ async function saveProfileFromPage() {
   if (!error) {
     myProfile = { ...myProfile, ...updateData };
     const btn = document.getElementById('profile-btn');
-    if (btn) btn.textContent = profileInitials(myProfile);
+    if (btn) {
+      if (myProfile.avatar_url) {
+        btn.innerHTML = `<img src="${escHtml(myProfile.avatar_url)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+      } else {
+        btn.textContent = profileInitials(myProfile);
+      }
+    }
     toast('Profile saved!');
     loadAndRenderProfile(currentUser.id);
   } else {
@@ -2852,6 +2889,43 @@ async function saveProfileFromPage() {
       toast('Save failed — ' + error.message, 'error');
     }
   }
+}
+
+function toggleProfileEdit() {
+  const card = document.getElementById('profile-edit-card');
+  if (!card) return;
+  const opening = !card.classList.contains('open');
+  card.classList.toggle('open');
+  if (opening) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+async function uploadProfilePic() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    try {
+      const base64 = await blobToResizedBase64(file);
+      const { error } = await db.from('profiles')
+        .update({ avatar_url: base64 })
+        .eq('id', currentUser.id);
+      if (error) { toast('Upload failed — ' + error.message, 'error'); return; }
+      myProfile = { ...myProfile, avatar_url: base64 };
+      const btn = document.getElementById('profile-btn');
+      if (btn) {
+        btn.innerHTML = `<img src="${base64}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+      }
+      loadAndRenderProfile(currentUser.id);
+      toast('Profile photo updated!');
+    } catch (e) {
+      toast('Could not process image', 'error');
+    }
+  };
+  input.click();
 }
 
 // ── Following ─────────────────────────────────────────────────────────────
