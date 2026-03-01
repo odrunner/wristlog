@@ -3970,10 +3970,17 @@ async function joinClub(clubId, privacy) {
     const { error } = await db.from('club_join_requests').insert({ club_id: clubId, user_id: currentUser.id });
     if (error && error.code !== '23505') { toast('Could not send request', 'error'); return; }
     pendingClubRequests.add(clubId);
+    // Non-members can't see club_members rows for private clubs (RLS).
+    // Fall back to created_by from clubs table, which is always readable.
     const { data: owners } = await db.from('club_members').select('user_id').eq('club_id', clubId).eq('role', 'owner');
-    if (owners?.length) {
-      await db.from('notifications').insert(owners.map(o => ({
-        user_id: o.user_id, type: 'club_join_request',
+    let ownerIds = (owners || []).map(o => o.user_id);
+    if (!ownerIds.length) {
+      const { data: clubRow } = await db.from('clubs').select('created_by').eq('id', clubId).maybeSingle();
+      if (clubRow?.created_by) ownerIds = [clubRow.created_by];
+    }
+    if (ownerIds.length) {
+      await db.from('notifications').insert(ownerIds.map(oid => ({
+        user_id: oid, type: 'club_join_request',
         actor_id: currentUser.id, ref_id: clubId, is_read: false
       })));
     }
