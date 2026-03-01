@@ -3930,10 +3930,16 @@ async function loadPendingRequests() {
 // ── CLUBS ──────────────────────────────────────────────────────
 async function loadMyClubs() {
   if (!currentUser) return;
-  const { data } = await db.from('club_members')
-    .select('role, clubs(id, name, privacy, image_url, description, created_by)')
-    .eq('user_id', currentUser.id);
-  myClubs = (data || []).map(r => ({ ...r.clubs, role: r.role }));
+  // Two separate queries to avoid RLS cross-table recursion with the nested PostgREST join.
+  const { data: memberRows } = await db.from('club_members')
+    .select('club_id, role').eq('user_id', currentUser.id);
+  if (!memberRows || !memberRows.length) { myClubs = []; return; }
+  const clubIds = memberRows.map(r => r.club_id);
+  const roleMap = {};
+  memberRows.forEach(r => roleMap[r.club_id] = r.role);
+  const { data: clubRows } = await db.from('clubs')
+    .select('id, name, privacy, image_url, description, created_by').in('id', clubIds);
+  myClubs = (clubRows || []).map(c => ({ ...c, role: roleMap[c.id] || 'member' }));
 }
 
 async function loadPendingClubRequests() {
@@ -4075,8 +4081,14 @@ async function renderClubDetail(clubId) {
   if (!el) return;
   el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Loading…</div>';
 
-  // Load club info
-  const { data: club } = await db.from('clubs').select('*').eq('id', clubId).single();
+  // Use cached myClubs data first (avoids RLS cross-table policy issues for private clubs).
+  // Fall back to a direct DB query for public clubs the user hasn't joined yet.
+  let club = myClubs.find(c => c.id === clubId) || null;
+  if (!club) {
+    const { data, error } = await db.from('clubs').select('*').eq('id', clubId).maybeSingle();
+    if (error) console.error('[Clubs] fetch error:', error);
+    club = data;
+  }
   if (!club) { el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Club not found.</div>'; return; }
 
   // Members
