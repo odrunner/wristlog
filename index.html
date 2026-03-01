@@ -1930,7 +1930,10 @@
         <div style="font-size:.82rem;color:var(--muted);line-height:1.5;">
           Found a bug? Have an idea? Let us know —
         </div>
-        <button class="btn btn-primary" onclick="openFeedback()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Feedback</button>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+          <button class="btn btn-ghost" onclick="shareApp()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share with a Friend</button>
+          <button class="btn btn-primary" onclick="openFeedback()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Feedback</button>
+        </div>
       </div>
 
       <!-- ── BUILDING COLLECTION ── -->
@@ -8971,6 +8974,20 @@ function requestBrand(name) {
 
 function closeFeedback() {
   document.getElementById('feedback-modal').classList.add('hidden');
+}
+
+async function shareApp() {
+  const text = `I'm on WRotate — logging my daily wears, following other watch enthusiasts, and sharing my collection. You can see what people are wearing, follow each other, and show off your watches. Come join! 👉 https://wrotate.com`;
+  if (navigator.share) {
+    try {
+      await navigator.share({ text });
+    } catch (e) {
+      if (e.name !== 'AbortError') toast('Could not open share sheet', 'error');
+    }
+  } else {
+    await navigator.clipboard.writeText(text);
+    toast('Invite text copied to clipboard!');
+  }
 }
 
 
