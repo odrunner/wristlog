@@ -2191,9 +2191,6 @@
       </div>
     </div>
 
-    <div id="year-in-review"></div>
-    <div id="monthly-review"></div>
-    <div id="dow-report"></div>
     <div class="stats-row" id="stats-row"></div>
 
     <div class="card" style="margin-bottom:1.25rem;">
@@ -2201,6 +2198,8 @@
       <div id="coll-report-summary"></div>
       <div id="coll-report-table" style="overflow-x:auto;margin-top:.6rem;"></div>
     </div>
+
+    <div id="dow-report"></div>
 
     <div class="card" style="margin-bottom:1.25rem;">
       <div class="section-title">Wears by Use Case</div>
@@ -2220,6 +2219,9 @@
         <div id="ch-collvalue-empty" class="chart-empty" style="display:none;">Add purchase dates &amp; prices to watches to see value over time</div>
       </div>
     </div>
+
+    <div id="year-in-review"></div>
+    <div id="monthly-review"></div>
 
   </div>
 
@@ -3100,7 +3102,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.28.26.22.59';
+const APP_VERSION = '2.28.26.23.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6851,13 +6853,13 @@ function quickLogAndRefreshRec(watchId) {
 
 function renderReports() {
   const fl = filteredLogs();
-  renderYearInReview();
-  renderMonthlyReview();
-  renderDowReport();
   renderStats(fl);
   renderCollectionReport(fl);
+  renderDowReport();
   renderChUsecase(fl);
   renderChCollectionValue();
+  renderYearInReview();
+  renderMonthlyReview();
 }
 
 function renderStats(fl) {
