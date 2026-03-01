@@ -3247,7 +3247,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.15.02';
+const APP_VERSION = '2.30.26.15.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3784,7 +3784,8 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   const editIcon = isOwn ? `<button class="profile-edit-icon" onclick="toggleProfileEdit()" title="Edit profile"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>` : '';
 
   const deleteAccountHtml = isOwn ? `
-    <div style="margin:1.5rem 1rem 0;text-align:center;">
+    <div style="margin:1.5rem 1rem 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:.5rem;">
+      <button class="btn-signout" onclick="signOut()" style="font-size:.8rem;padding:.4rem 1.2rem;">Sign Out</button>
       <button style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;font-family:inherit;padding:.25rem .5rem;" onclick="openDeleteAccount()">Delete Account</button>
     </div>` : '';
 
@@ -9906,10 +9907,7 @@ async function bootApp(user) {
   if (currentUser?.id === user.id) return; // already running for this user
   clearUserState();
   currentUser = user;
-  // Show app controls immediately so the user always has a sign-out escape hatch
   document.getElementById('auth-screen').style.display = 'none';
-  const signoutBtn = document.getElementById('signout-btn');
-  if (signoutBtn) { signoutBtn.style.display = ''; signoutBtn.textContent = 'Sign out'; }
   const profileBtn = document.getElementById('profile-btn');
   if (profileBtn) profileBtn.style.display = '';
   const bellBtn = document.getElementById('bell-btn');
