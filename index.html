@@ -4236,11 +4236,11 @@ async function renderClubsPage() {
 async function searchClubs(query) {
   const el = document.getElementById('club-search-results');
   if (!el) return;
-  let q = db.from('clubs').select('id, name, description, privacy, created_by').eq('privacy', 'public').order('created_at', { ascending: false }).limit(20);
+  let q = db.from('clubs').select('id, name, description, privacy, created_by').order('created_at', { ascending: false }).limit(20);
   if (query.trim()) q = q.ilike('name', `%${query.trim()}%`);
   const { data: clubs } = await q;
   if (!clubs || !clubs.length) {
-    el.innerHTML = query ? '<div style="color:var(--muted);font-size:.82rem;">No clubs found.</div>' : '<div style="color:var(--muted);font-size:.82rem;">No public clubs yet \u2014 be the first to create one!</div>';
+    el.innerHTML = query ? '<div style="color:var(--muted);font-size:.82rem;">No clubs found.</div>' : '<div style="color:var(--muted);font-size:.82rem;">No clubs yet \u2014 be the first to create one!</div>';
     return;
   }
   // Count members for display
@@ -4257,7 +4257,7 @@ async function searchClubs(query) {
     let actionBtn = '';
     if (isMember)  actionBtn = `<button class="follow-btn following" style="font-size:.75rem;padding:.3rem .7rem;" onclick="event.stopPropagation();openClubDetail('${c.id}')">Joined</button>`;
     else if (isPending) actionBtn = `<button class="follow-btn requested" style="font-size:.75rem;padding:.3rem .7rem;" onclick="event.stopPropagation();cancelClubRequest('${c.id}')">Requested</button>`;
-    else           actionBtn = `<button class="follow-btn follow" style="font-size:.75rem;padding:.3rem .7rem;" onclick="event.stopPropagation();joinClub('${c.id}','${c.privacy}')">Join</button>`;
+    else           actionBtn = `<button class="follow-btn follow" style="font-size:.75rem;padding:.3rem .7rem;" onclick="event.stopPropagation();joinClub('${c.id}','${c.privacy}')">${c.privacy === 'private' ? 'Request' : 'Join'}</button>`;
     return `<div class="club-card" onclick="openClubDetail('${c.id}')">
       <div class="club-card-avatar">${initStr}</div>
       <div style="flex:1;min-width:0;">
