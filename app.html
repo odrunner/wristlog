@@ -4412,13 +4412,15 @@ function friendActionBtn(u) {
   const recv  = receivedRequests.get(u.id);
   const isFlw = following.has(u.id);
 
+  // Friends ✓ takes priority regardless of profile privacy level
+  if (isFr) return `<button class="follow-btn following" onclick="confirmUnfriend('${u.id}',this)">Friends ✓</button>`;
+
   if (priv === 'public') {
     return `<button class="follow-btn ${isFlw ? 'following' : 'follow'}"
       onclick="${isFlw ? `confirmUnfollow('${u.id}',this)` : `followUser('${u.id}')`}">
       ${isFlw ? 'Following' : 'Follow'}</button>`;
   }
-  // friends_only or private
-  if (isFr) return `<button class="follow-btn following" onclick="confirmUnfriend('${u.id}',this)">Friends ✓</button>`;
+  // friends_only or private (not yet friends)
   if (recv?.status === 'pending') return `
     <button class="follow-btn follow"    style="margin-right:.3rem;" onclick="acceptFriendRequest('${u.id}')">Accept</button>
     <button class="follow-btn following" onclick="declineFriendRequest('${u.id}')">Decline</button>`;
