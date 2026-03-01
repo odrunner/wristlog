@@ -2688,25 +2688,34 @@ async function deleteAccount() {
   const uid = currentUser.id;
   const btn = document.getElementById('da-final-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Deleting…'; }
-  try {
-    await db.from('likes').delete().eq('user_id', uid);
-    await db.from('comments').delete().eq('user_id', uid);
-    await db.from('notifications').delete().or(`user_id.eq.${uid},actor_id.eq.${uid}`);
-    await db.from('follows').delete().or(`follower_id.eq.${uid},following_id.eq.${uid}`);
-    await db.from('friend_requests').delete().or(`sender_id.eq.${uid},receiver_id.eq.${uid}`);
-    await db.from('logs').delete().eq('user_id', uid);
-    await db.from('wishlist').delete().eq('user_id', uid);
-    await db.from('watches').delete().eq('user_id', uid);
-    await db.from('feedback').delete().eq('user_id', uid);
-    await db.from('profiles').delete().eq('id', uid);
-    localStorage.removeItem('wristlog_onboarded');
-    localStorage.removeItem('wristlog_onboarded_' + uid);
-    closeDeleteAccount();
-    await signOut();
-  } catch (e) {
-    toast('Error — ' + e.message, 'error');
+  const errs = [];
+  const del = async (table, filter) => {
+    let q = db.from(table).delete();
+    if (filter.eq)  q = q.eq(filter.eq[0], filter.eq[1]);
+    if (filter.or)  q = q.or(filter.or);
+    const { error } = await q;
+    if (error) errs.push(`${table}: ${error.message}`);
+  };
+  await del('likes',          { eq: ['user_id', uid] });
+  await del('comments',       { eq: ['user_id', uid] });
+  await del('notifications',  { or: `user_id.eq.${uid},actor_id.eq.${uid}` });
+  await del('follows',        { or: `follower_id.eq.${uid},following_id.eq.${uid}` });
+  await del('friend_requests',{ or: `sender_id.eq.${uid},receiver_id.eq.${uid}` });
+  await del('logs',           { eq: ['user_id', uid] });
+  await del('wishlist',       { eq: ['user_id', uid] });
+  await del('watches',        { eq: ['user_id', uid] });
+  await del('feedback',       { eq: ['user_id', uid] });
+  await del('profiles',       { eq: ['id', uid] });
+  if (errs.length) {
+    console.error('[WristLog] deleteAccount errors:', errs);
+    toast('Some data could not be deleted — check Supabase RLS policies.', 'error');
     if (btn) { btn.disabled = false; btn.textContent = 'Permanently Delete Everything'; }
+    return;
   }
+  localStorage.removeItem('wristlog_onboarded');
+  localStorage.removeItem('wristlog_onboarded_' + uid);
+  closeDeleteAccount();
+  await signOut();
 }
 
 async function signOut() {
@@ -3066,7 +3075,7 @@ async function loadAndRenderProfile(userId) {
     .select('id, username, display_name, bio, avatar_url, collection_visibility, profile_privacy, wishlist_visibility')
     .eq('id', userId).single();
   if (!profile) {
-    el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Profile not found.</div>';
+    el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">This account no longer exists.</div>';
     return;
   }
 
