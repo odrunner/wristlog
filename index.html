@@ -4143,17 +4143,34 @@ async function renderClubDetail(clubId) {
     const clubLikes = {};
     logIds.forEach(id => clubLikes[id] = { count: 0, liked: false });
     (likesData || []).forEach(l => { clubLikes[l.log_id].count++; if (l.user_id === currentUser.id) clubLikes[l.log_id].liked = true; });
-    // Temporarily override feedLikes for renderFeedCard
-    const prevFeedLikes    = feedLikes;
-    const prevFeedComments = feedComments;
+    // Comments — load full data so counts and inline threads work
+    const { data: clubCommentData } = await db.from('comments')
+      .select('id, log_id, user_id, body, created_at')
+      .in('log_id', logIds).order('created_at', { ascending: true }).limit(300);
+    const clubComments = {};
+    const clubCommentCounts = {};
+    if (clubCommentData && clubCommentData.length) {
+      const commenterIds = [...new Set(clubCommentData.map(c => c.user_id))];
+      const { data: commenterProfiles } = await db.from('profiles')
+        .select('id, username, display_name').in('id', commenterIds);
+      const cpm = {};
+      (commenterProfiles || []).forEach(p => cpm[p.id] = p);
+      clubCommentData.forEach(c => {
+        if (!clubComments[c.log_id]) clubComments[c.log_id] = [];
+        clubComments[c.log_id].push({ ...c, profile: cpm[c.user_id] || null });
+      });
+    }
+    logIds.forEach(id => clubCommentCounts[id] = (clubComments[id] || []).length);
+    // Temporarily override feed globals for renderFeedCard
+    const prevFeedLikes         = feedLikes;
+    const prevFeedComments      = feedComments;
     const prevFeedCommentCounts = feedCommentCounts;
-    feedLikes = clubLikes;
-    feedComments = {};
-    feedCommentCounts = {};
-    logIds.forEach(id => feedCommentCounts[id] = 0);
+    feedLikes         = clubLikes;
+    feedComments      = clubComments;
+    feedCommentCounts = clubCommentCounts;
     clubFeedHtml = clubPosts.map(l => renderFeedCard({ ...l, profile: pm[l.user_id] || null, watch: l.watch_id ? (watchMap[l.watch_id] || null) : null })).join('');
-    feedLikes    = prevFeedLikes;
-    feedComments = prevFeedComments;
+    feedLikes         = prevFeedLikes;
+    feedComments      = prevFeedComments;
     feedCommentCounts = prevFeedCommentCounts;
   }
 
