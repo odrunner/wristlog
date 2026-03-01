@@ -4010,7 +4010,8 @@ async function joinClub(clubId, privacy) {
 async function leaveClub(clubId) {
   if (!currentUser) return;
   if (!await showConfirm('You will lose access to this club\'s posts.', { title: 'Leave this club?', confirmLabel: 'Leave Club' })) return;
-  await db.from('club_members').delete().eq('club_id', clubId).eq('user_id', currentUser.id);
+  const { error } = await db.from('club_members').delete().eq('club_id', clubId).eq('user_id', currentUser.id);
+  if (error) { toast('Could not leave — ' + (error.message || error.code), 'error'); return; }
   myClubs = myClubs.filter(c => c.id !== clubId);
   toast('Left club');
   goBackFromClub();
@@ -4025,7 +4026,8 @@ async function cancelClubRequest(clubId) {
 
 async function acceptClubJoinRequest(requesterId, clubId, notifId) {
   if (!currentUser) return;
-  await db.from('club_members').insert({ club_id: clubId, user_id: requesterId, role: 'member' });
+  const { error } = await db.from('club_members').insert({ club_id: clubId, user_id: requesterId, role: 'member' });
+  if (error && error.code !== '23505') { toast('Could not approve — ' + (error.message || error.code), 'error'); return; }
   await db.from('club_join_requests').delete().eq('club_id', clubId).eq('user_id', requesterId);
   await db.from('notifications').delete().eq('id', notifId);
   await db.from('notifications').insert({
@@ -4045,6 +4047,7 @@ async function declineClubJoinRequest(requesterId, clubId, notifId) {
   userNotifs = userNotifs.filter(n => n.id !== notifId);
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
   updateBellBadge(); renderNotificationPanel();
+  toast('Request declined');
 }
 
 async function promoteToOwner(userId, clubId) {
@@ -4065,7 +4068,8 @@ async function promoteToOwner(userId, clubId) {
 
 async function removeMember(userId, clubId) {
   if (!await showConfirm('This member will lose access to the club.', { title: 'Remove member?', confirmLabel: 'Remove' })) return;
-  await db.from('club_members').delete().eq('club_id', clubId).eq('user_id', userId);
+  const { error } = await db.from('club_members').delete().eq('club_id', clubId).eq('user_id', userId);
+  if (error) { toast('Could not remove — ' + (error.message || error.code), 'error'); return; }
   toast('Member removed'); renderClubDetail(clubId);
 }
 
@@ -4432,6 +4436,7 @@ async function declineClubInvite(clubId, notifId) {
   userNotifs = userNotifs.filter(n => n.id !== notifId);
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
   updateBellBadge(); renderNotificationPanel();
+  toast('Invite declined');
 }
 
 async function renderClubsPage() {
