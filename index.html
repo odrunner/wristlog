@@ -3303,10 +3303,10 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         <label style="font-size:.78rem;">Profile</label>
         <div class="chips" id="prv-profile-chips">
           ${pChip('prv-profile-chips','public','🌐 Public',cur,'profile_privacy')}
-          ${pChip('prv-profile-chips','friends_only','👥 Friends Only',cur,'profile_privacy')}
+          ${pChip('prv-profile-chips','friends_only','👥 Friends',cur,'profile_privacy')}
           ${pChip('prv-profile-chips','private','🔒 Private',cur,'profile_privacy')}
         </div>
-        <div style="font-size:.71rem;color:var(--muted);margin-top:.25rem;">Friends Only or Private does not remove existing followers.</div>
+        <div style="font-size:.71rem;color:var(--muted);margin-top:.25rem;">Friends or Private does not remove existing followers.</div>
       </div>
       <div class="form-group" style="margin-bottom:.75rem;">
         <label style="font-size:.78rem;">Collection</label>
@@ -3388,7 +3388,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     if (wishlistItems.length === 0) {
       wishlistHtml = `
         <div class="profile-page-card">
-          <div class="profile-page-section-title">Wishlist <span style="font-size:.7rem;color:var(--muted);font-weight:400;">(${wlVis === 'public' ? 'Public' : wlVis === 'friends' ? 'Friends Only' : 'Private'})</span></div>
+          <div class="profile-page-section-title">Wishlist</div>
           <div style="color:var(--muted);font-size:.84rem;">Your wishlist is empty — add watches in the Wishlist tab.</div>
         </div>`;
     } else {
@@ -3409,10 +3409,9 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           ${privLabel}
         </div>`;
       }).join('');
-      const visLabel = isOwn ? ` <span style="font-size:.7rem;color:var(--muted);font-weight:400;">(${wlVis === 'public' ? 'Public' : wlVis === 'friends' ? 'Friends Only' : 'Private'})</span>` : '';
       wishlistHtml = `
         <div class="profile-page-card">
-          <div class="profile-page-section-title">Wishlist${visLabel}</div>
+          <div class="profile-page-section-title">Wishlist</div>
           <div class="showcase-grid">${wlCards}</div>
         </div>`;
     }
