@@ -276,10 +276,10 @@
     .showcase-priv-label.fri  { color:var(--gold); }
     .showcase-priv-label.priv { color:var(--danger); }
     .showcase-priv-label.inh  { color:var(--muted); }
-    /* Wishlist per-item privacy tints — subtle bg only */
-    .wl-wish-card.wl-pub  { background-color:rgba(34,197,94,.07); }
-    .wl-wish-card.wl-fri  { background-color:rgba(234,179,8,.10); }
-    .wl-wish-card.wl-priv { background-color:rgba(239,68,68,.08); }
+    /* Per-item privacy tints — subtle bg only (wishlist + collection) */
+    .wl-wish-card.wl-pub,  .col-watch-card.col-pub  { background-color:rgba(34,197,94,.07); }
+    .wl-wish-card.wl-fri,  .col-watch-card.col-fri  { background-color:rgba(234,179,8,.10); }
+    .wl-wish-card.wl-priv, .col-watch-card.col-priv { background-color:rgba(239,68,68,.08); }
 
     /* ── PROFILE PAGE RECENT LOGS ── */
     .pp-log-row { display:flex; align-items:center; gap:.65rem; padding:.5rem 0; border-bottom:1px solid var(--border); }
@@ -2768,8 +2768,8 @@ function rowToWatch(r) {
     priceHistory: r.price_history||[], warrantyExpiry: r.warranty_expiry||null,
     hasBox: r.has_box||false, hasPapers: r.has_papers||false,
     insurance: r.insurance||null, receipts: r.receipts||[],
-    watchPrivacy: r.watch_privacy || 'private',
-    isPublic: (r.watch_privacy || 'private') !== 'private',
+    watchPrivacy: r.watch_privacy ?? null,
+    isPublic: r.watch_privacy !== 'private',
   };
 }
 function logToRow(l) {
@@ -3116,8 +3116,16 @@ async function loadAndRenderProfile(userId) {
       .select('id, brand, name, color, image, ref, url, watch_privacy')
       .eq('user_id', userId);
     if (!isOwn) {
-      if (isFriend) q = q.neq('watch_privacy', 'private');
-      else          q = q.eq('watch_privacy', 'public');
+      const vis = profile.collection_visibility || 'public';
+      if (isFriend) {
+        // Friends see explicit non-private + null (Default), unless global is private
+        if (vis === 'private') q = q.neq('watch_privacy', 'private').not('watch_privacy', 'is', null);
+        else                   q = q.neq('watch_privacy', 'private'); // null passes through
+      } else {
+        // Non-friends see explicit public + null only if global is public
+        if (vis === 'public') q = q.or('watch_privacy.eq.public,watch_privacy.is.null');
+        else                  q = q.eq('watch_privacy', 'public');
+      }
     }
     const { data } = await q.order('brand').order('name');
     showcase = data || [];
@@ -3280,13 +3288,14 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   let showcaseHtml = '';
   if (showcase.length > 0) {
     const cards = showcase.map(w => {
-      const priv  = w.watch_privacy || 'public';
+      const priv  = w.watch_privacy ?? null; // null = Default
       const thumb = w.image
         ? `<img src="${escHtml(w.image)}" class="showcase-card-img" alt="" onerror="this.style.display='none'">`
         : `<div class="showcase-card-avatar" style="background:${escHtml(w.color || '#c9a84c')}">${initials(w.brand||'', w.name||'')}</div>`;
       const privLabel = isOwn
-        ? `<div class="showcase-priv-label ${priv === 'public' ? 'pub' : priv === 'friends_only' ? 'fri' : 'priv'}">${priv === 'public' ? 'Public' : priv === 'friends_only' ? 'Friends' : 'Private'}</div>`
+        ? `<div class="showcase-priv-label ${priv === null ? 'inh' : priv === 'public' ? 'pub' : priv === 'friends_only' ? 'fri' : 'priv'}">${priv === null ? 'Default' : priv === 'public' ? 'Public' : priv === 'friends_only' ? 'Friends' : 'Private'}</div>`
         : '';
+      const tintCls = isOwn ? (priv === 'public' ? ' col-pub' : priv === 'friends_only' ? ' col-fri' : priv === 'private' ? ' col-priv' : '') : '';
       const clickAttr = isOwn
         ? `onclick="cycleWatchPrivacy('${w.id}')"`
         : `onclick="previewWatchFromEl(this)" style="cursor:pointer;"
@@ -3297,7 +3306,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
            data-watch-url="${escHtml(w.url||'')}"
            data-watch-image="${escHtml(w.image||'')}"
            data-watch-color="${escHtml(w.color||'#c9a84c')}"`;
-      return `<div class="showcase-card${isOwn ? ' priv-own' : ''}"${isOwn ? ` data-priv="${priv}"` : ''} ${clickAttr}>
+      return `<div class="showcase-card${isOwn ? ' priv-own col-watch-card' + tintCls : ''}"${isOwn ? ` data-watch-id="${escHtml(w.id)}" data-priv="${priv||'inh'}"` : ''} ${clickAttr}>
         ${thumb}
         <div class="showcase-brand">${escHtml(w.brand || '')}</div>
         <div class="showcase-name">${escHtml(w.name || '')}</div>
@@ -3407,15 +3416,28 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
 async function cycleWatchPrivacy(watchId) {
   const w = watches.find(x => x.id === watchId);
   if (!w) return;
-  const order = ['public', 'friends_only', 'private'];
-  const next  = order[(order.indexOf(w.watchPrivacy || 'public') + 1) % 3];
+  // null = Default (inherit collection_visibility) → public → friends_only → private → null
+  const order = [null, 'public', 'friends_only', 'private'];
+  const next  = order[(order.indexOf(w.watchPrivacy ?? null) + 1) % order.length];
   w.watchPrivacy = next;
   w.isPublic     = next !== 'private';
   const { error } = await db.from('watches')
     .update({ watch_privacy: next, is_public: w.isPublic })
     .eq('id', watchId);
   if (error) { toast('Could not update — ' + error.message, 'error'); return; }
-  loadAndRenderProfile(currentUser.id);
+  // Update DOM in-place — no full page reload
+  const card = document.querySelector(`.col-watch-card[data-watch-id="${watchId}"]`);
+  if (card) {
+    const cls = next === null ? 'inh' : next === 'public' ? 'pub' : next === 'friends_only' ? 'fri' : 'priv';
+    const lbl = next === null ? 'Default' : next === 'public' ? 'Public' : next === 'friends_only' ? 'Friends' : 'Private';
+    card.dataset.priv = next || 'inh';
+    card.classList.remove('col-pub', 'col-fri', 'col-priv');
+    if (next === 'public')       card.classList.add('col-pub');
+    else if (next === 'friends_only') card.classList.add('col-fri');
+    else if (next === 'private') card.classList.add('col-priv');
+    const label = card.querySelector('.showcase-priv-label');
+    if (label) { label.className = `showcase-priv-label ${cls}`; label.textContent = lbl; }
+  }
 }
 
 async function cycleWishPrivacy(wishId) {
