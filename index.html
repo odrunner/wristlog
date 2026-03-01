@@ -2979,7 +2979,8 @@ function watchToRow(w) {
     price_history: w.priceHistory||[], warranty_expiry: w.warrantyExpiry||null,
     has_box: w.hasBox === 'yes' ? true : w.hasBox === 'no' ? false : null,
     has_papers: w.hasPapers === 'yes' ? true : w.hasPapers === 'no' ? false : null,
-    insurance: w.insurance||null, receipts: w.receipts||[],
+    insurance: w.insurance||null, insured_value: w.insuredValue||null,
+    insurance_notes: w.insuranceNotes||null, receipts: w.receipts||[],
     elo_rating: eloRatings[w.id] || 1000,
     watch_privacy: w.watchPrivacy ?? null,
     is_public: w.watchPrivacy !== 'private',
@@ -3000,7 +3001,8 @@ function rowToWatch(r) {
     priceHistory: r.price_history||[], warrantyExpiry: r.warranty_expiry||null,
     hasBox: r.has_box === true ? 'yes' : r.has_box === false ? 'no' : null,
     hasPapers: r.has_papers === true ? 'yes' : r.has_papers === false ? 'no' : null,
-    insurance: r.insurance||null, receipts: r.receipts||[],
+    insurance: r.insurance||null, insuredValue: r.insured_value||null,
+    insuranceNotes: r.insurance_notes||null, receipts: r.receipts||[],
     watchPrivacy: r.watch_privacy ?? null,
     isPublic: r.watch_privacy !== 'private',
   };
@@ -5132,7 +5134,8 @@ function setPriceInput(id, val) {
 }
 // Read raw number from a formatted price input
 function readPrice(id) {
-  return parseFloat(document.getElementById(id).value.replace(/,/g, '')) || 0;
+  const val = parseFloat(document.getElementById(id).value.replace(/,/g, ''));
+  return isNaN(val) ? null : val;
 }
 
 function toast(msg, type='success') {
