@@ -3908,7 +3908,8 @@ async function followUser(userId) {
     renderDiscoverUsers();
     renderFollowingList();
     loadFeed();
-  } else { toast('Could not follow — ' + error.message, 'error'); }
+  } else if (error.code === '23505') { toast('You\'re already following this person', 'error');
+  } else { toast('Could not follow — please try again', 'error'); }
 }
 async function sendFollowRequest(userId) {
   if (!currentUser || userId === currentUser.id) return;
@@ -3922,7 +3923,8 @@ async function sendFollowRequest(userId) {
     if (notifErr) console.error('follow_request notif failed:', notifErr);
     toast('Follow request sent');
     renderDiscoverUsers();
-  } else { toast('Could not send request — ' + error.message, 'error'); }
+  } else if (error.code === '23505') { toast('Follow request already sent', 'error');
+  } else { toast('Could not send request — please try again', 'error'); }
 }
 async function cancelFollowRequest(userId) {
   if (!currentUser) return;
@@ -3979,7 +3981,10 @@ async function followBackFromNotif(userId, btn) {
     btn.closest('.notif-follow-back').innerHTML =
       '<span style="color:var(--muted);font-size:.78rem;">Following ✓</span>';
     loadFeed();
-  } else { toast('Could not follow — ' + error.message, 'error'); }
+  } else if (error.code === '23505') {
+    following.add(userId);
+    btn.closest('.notif-follow-back').innerHTML = '<span style="color:var(--muted);font-size:.78rem;">Following ✓</span>';
+  } else { toast('Could not follow — please try again', 'error'); }
 }
 function confirmUnfollow(userId, btn) {
   if (btn.dataset.confirming) {
