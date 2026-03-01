@@ -2934,6 +2934,10 @@
       <label>Notes <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
       <textarea id="edit-log-notes" placeholder="Any occasion, outfit, thoughts…" style="height:70px;"></textarea>
     </div>
+    <div class="form-group" id="edit-log-club-field" style="display:none;">
+      <label>Share to Club <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+      <div class="chips" id="edit-log-club-chips"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="saveEditLog()">Save Changes</button>
       <button class="btn btn-ghost"   onclick="closeEditLog()">Cancel</button>
@@ -3156,6 +3160,7 @@ function rowToLog(r) {
     strapId: r.strap_id||null, photoUrl: r.photo_url||null,
     isPublic: r.is_public !== false,
     visibility: r.visibility || (r.is_public !== false ? 'public' : 'private'),
+    clubId: r.club_id || null,
   };
 }
 function wishToRow(w) {
@@ -6202,6 +6207,9 @@ function openEditLog(id) {
   } else {
     strapGroup.style.display = 'none';
   }
+  // Club chips — render and pre-select existing club
+  renderClubChips('edit-log-club-chips');
+  if (log.clubId) selClubChip('edit-log-club-chips', log.clubId);
   document.getElementById('edit-log-modal').classList.remove('hidden');
 }
 
@@ -6232,7 +6240,8 @@ function saveEditLog() {
   const notes = document.getElementById('edit-log-notes').value.trim();
   const idx = logs.findIndex(l => l.id === editingLogId);
   if (idx === -1) { closeEditLog(); return; }
-  logs[idx] = { ...logs[idx], date, useCase: editLogUseCase, notes };
+  const clubId = getSelectedClubId('edit-log-club-chips');
+  logs[idx] = { ...logs[idx], date, useCase: editLogUseCase, notes, clubId: clubId || null };
   if (editLogStrapId) logs[idx].strapId = editLogStrapId;
   save();
   closeEditLog();
