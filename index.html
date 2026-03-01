@@ -4550,11 +4550,18 @@ const STORE_L   = 'wristlog_logs';
 const STORE_B   = 'wristlog_brands';
 const STORE_WL  = 'wristlog_wishlist';
 const STORE_ELO = 'wristlog_elo';
-const STORE_VIS = 'wristlog_default_vis'; // 'public' | 'friends' | 'private'
+const STORE_VIS = 'wristlog_default_vis'; // legacy localStorage key (kept as fallback)
 
 // ── Visibility helpers ──────────────────────────────────────────────────────
-function getDefaultVis() { return localStorage.getItem(STORE_VIS) || 'public'; }
-function setDefaultVis(v) { localStorage.setItem(STORE_VIS, v); }
+// Reads from Supabase profile first; falls back to localStorage for guests/offline
+function getDefaultVis() {
+  return myProfile?.default_post_visibility || localStorage.getItem(STORE_VIS) || 'public';
+}
+// Saves to Supabase (syncs across devices) + localStorage cache
+function setDefaultVis(v) {
+  localStorage.setItem(STORE_VIS, v);
+  savePrivacyField('default_post_visibility', v);
+}
 
 function visChipsHtml(cId, selected) {
   return ['public','friends','private'].map(v => {
