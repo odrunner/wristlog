@@ -4053,6 +4053,11 @@ async function promoteToOwner(userId, clubId) {
   if (delErr) { toast('Could not promote — ' + (delErr.message || delErr.code), 'error'); return; }
   const { error: insErr } = await db.from('club_members').insert({ club_id: clubId, user_id: userId, role: 'owner' });
   if (insErr) { toast('Could not promote — ' + (insErr.message || insErr.code), 'error'); return; }
+  // Notify the promoted user
+  await db.from('notifications').insert({
+    user_id: userId, type: 'club_promoted',
+    actor_id: currentUser.id, ref_id: clubId, is_read: false
+  });
   await loadMyClubs();
   toast('Promoted to owner!');
   renderClubDetail(clubId);
@@ -4795,7 +4800,8 @@ function renderNotificationPanel() {
                : n.type === 'comment_also'    ? `${nm} also commented on a post you liked or commented on`
                : n.type === 'club_join_request'  ? `${nm} wants to join your club`
                : n.type === 'club_join_accepted' ? `${nm} approved your club request`
-               : n.type === 'club_invite'        ? `${nm} invited you to join a club` : '';
+               : n.type === 'club_invite'        ? `${nm} invited you to join a club`
+               : n.type === 'club_promoted'      ? `${nm} made you an owner of a club` : '';
     const actionsHtml = n.type === 'follow_request' ? `
       <div class="notif-follow-actions">
         <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
@@ -4820,7 +4826,7 @@ function renderNotificationPanel() {
     const notifClick = (n.type === 'like' || n.type === 'comment' || n.type === 'comment_also')
       ? `toggleNotifPanel();nav(document.querySelector('nav button[data-page=\\'feed\\']'))`
       : (n.type === 'follow_request' || n.type === 'club_join_request' || n.type === 'club_invite') ? ''
-      : n.type === 'club_join_accepted' ? `toggleNotifPanel();openClubDetail('${n.ref_id}')`
+      : (n.type === 'club_join_accepted' || n.type === 'club_promoted') ? `toggleNotifPanel();openClubDetail('${n.ref_id}')`
       : `viewUserProfile('${n.actor_id}')`;
     return `
       <div class="notif-item ${n.is_read ? '' : 'notif-unread'}" id="notif-${n.id}" onclick="${notifClick}">
