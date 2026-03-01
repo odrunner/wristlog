@@ -3894,24 +3894,27 @@ function updateBellBadge() {
     badge.classList.add('hidden');
   }
 }
-async function followUser(userId) {
+async function followUser(userId, btn) {
   if (!currentUser || userId === currentUser.id) return;
   const { error } = await db.from('follows').insert({ follower_id: currentUser.id, following_id: userId });
   if (!error) {
     following.add(userId);
-    // Send follow notification to the person being followed
     db.from('notifications').insert({
       user_id: userId, type: 'follow',
       actor_id: currentUser.id, is_read: false,
     }).then(() => {});
+    if (btn) { btn.className = 'follow-btn following'; btn.textContent = 'Following'; btn.onclick = function() { confirmUnfollow(userId, this); }; }
     toast('Following! Their logs will appear in your feed.');
     renderDiscoverUsers();
     renderFollowingList();
     loadFeed();
-  } else if (error.code === '23505') { toast('You\'re already following this person', 'error');
+  } else if (error.code === '23505') {
+    following.add(userId);
+    if (btn) { btn.className = 'follow-btn following'; btn.textContent = 'Following'; btn.onclick = function() { confirmUnfollow(userId, this); }; }
+    renderDiscoverUsers();
   } else { toast('Could not follow — please try again', 'error'); }
 }
-async function sendFollowRequest(userId) {
+async function sendFollowRequest(userId, btn) {
   if (!currentUser || userId === currentUser.id) return;
   const { error } = await db.from('follow_requests').insert({ requester_id: currentUser.id, target_id: userId });
   if (!error) {
@@ -3921,9 +3924,13 @@ async function sendFollowRequest(userId) {
       actor_id: currentUser.id, is_read: false,
     });
     if (notifErr) console.error('follow_request notif failed:', notifErr);
+    if (btn) { btn.className = 'follow-btn requested'; btn.textContent = 'Requested'; btn.onclick = () => cancelFollowRequest(userId); }
     toast('Follow request sent');
     renderDiscoverUsers();
-  } else if (error.code === '23505') { toast('Follow request already sent', 'error');
+  } else if (error.code === '23505') {
+    pendingRequests.add(userId);
+    if (btn) { btn.className = 'follow-btn requested'; btn.textContent = 'Requested'; btn.onclick = () => cancelFollowRequest(userId); }
+    renderDiscoverUsers();
   } else { toast('Could not send request — please try again', 'error'); }
 }
 async function cancelFollowRequest(userId) {
@@ -4768,7 +4775,7 @@ function friendActionBtn(u) {
   const restricted = u.profile_privacy === 'followers' || u.profile_privacy === 'private' || u.profile_privacy === 'friends_only';
   if (isFlw)     return `<button class="follow-btn following" onclick="confirmUnfollow('${u.id}',this)">Following</button>`;
   if (isPending) return `<button class="follow-btn requested" onclick="cancelFollowRequest('${u.id}')">Requested</button>`;
-  const action = restricted ? `sendFollowRequest('${u.id}')` : `followUser('${u.id}')`;
+  const action = restricted ? `sendFollowRequest('${u.id}',this)` : `followUser('${u.id}',this)`;
   return `<button class="follow-btn follow" onclick="${action}">Follow</button>`;
 }
 
