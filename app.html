@@ -275,6 +275,7 @@
     .showcase-priv-label.pub  { color:var(--success); }
     .showcase-priv-label.fri  { color:var(--gold); }
     .showcase-priv-label.priv { color:var(--danger); }
+    .showcase-priv-label.inh  { color:var(--muted); }
 
     /* ── PROFILE PAGE RECENT LOGS ── */
     .pp-log-row { display:flex; align-items:center; gap:.65rem; padding:.5rem 0; border-bottom:1px solid var(--border); }
@@ -2794,6 +2795,7 @@ function wishToRow(w) {
     notes: w.notes||null, color: w.color||null, tags: w.tags||[],
     market_price: w.marketPrice||null, market_price_date: w.marketPriceDate||null,
     market_price_src: w.marketPriceSrc||null, watch_charts_url: w.watchChartsUrl||null,
+    wish_privacy: w.wishPrivacy||null,
   };
 }
 function rowToWish(r) {
@@ -2803,6 +2805,7 @@ function rowToWish(r) {
     notes: r.notes||null, color: r.color||'#c9a84c', tags: r.tags||[],
     marketPrice: r.market_price||null, marketPriceDate: r.market_price_date||null,
     marketPriceSrc: r.market_price_src||null, watchChartsUrl: r.watch_charts_url||null,
+    wishPrivacy: r.wish_privacy||null,
   };
 }
 
@@ -3122,9 +3125,18 @@ async function loadAndRenderProfile(userId) {
   const showWishlist = isOwn || wlVis === 'public' || (wlVis === 'friends' && isFriend);
   if (showWishlist) {
     const { data: wlData } = await db.from('wishlist')
-      .select('id, brand, name, ref, price, image, color')
+      .select('id, brand, name, ref, price, image, color, wish_privacy')
       .eq('user_id', userId);
     wishlistItems = wlData || [];
+    // For non-owners, filter out items that are individually restricted
+    if (!isOwn) {
+      wishlistItems = wishlistItems.filter(w => {
+        const p = w.wish_privacy;
+        if (p === 'private') return false;
+        if (p === 'friends') return isFriend;
+        return true; // null (inherit global, already passed) or 'public'
+      });
+    }
   }
 
   el.innerHTML = renderProfilePageHTML(profile, isOwn, isFollowing, logCount || 0, recentLogs || [], showcase, visibility, privacy, isFriend, wishlistItems);
@@ -3235,6 +3247,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           ${pChip('prv-collection-chips','friends','👥 Friends',curCol,'collection_visibility')}
           ${pChip('prv-collection-chips','private','🔒 Private',curCol,'collection_visibility')}
         </div>
+        <div style="font-size:.71rem;color:var(--muted);margin-top:.25rem;">You can also tap each watch in your collection to set its visibility individually.</div>
       </div>
       <div class="form-group" style="margin-bottom:.75rem;">
         <label style="font-size:.78rem;">Wishlist</label>
@@ -3243,6 +3256,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           ${pChip('prv-wishlist-chips','friends','👥 Friends',wlVis,'wishlist_visibility')}
           ${pChip('prv-wishlist-chips','private','🔒 Private',wlVis,'wishlist_visibility')}
         </div>
+        <div style="font-size:.71rem;color:var(--muted);margin-top:.25rem;">You can also tap each item in your wishlist to set its visibility individually.</div>
       </div>
       <div class="form-group" style="margin-bottom:0;">
         <label style="font-size:.78rem;">Default Post Visibility</label>
@@ -3309,14 +3323,20 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           <div style="color:var(--muted);font-size:.84rem;">Your wishlist is empty — add watches in the Wishlist tab.</div>
         </div>`;
     } else {
-      const wlCards = wishlistItems.slice(0, 6).map(w => {
+      const wlCards = (isOwn ? wishlistItems : wishlistItems.slice(0, 6)).map(w => {
         const thumb = w.image
           ? `<img src="${escHtml(w.image)}" class="showcase-card-img" alt="" onerror="this.style.display='none'">`
           : `<div class="showcase-card-avatar" style="background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand||'', w.name||'')}</div>`;
-        return `<div class="showcase-card">
+        const wp = w.wish_privacy || null;
+        const privLabel = isOwn
+          ? `<div class="showcase-priv-label ${wp === 'public' ? 'pub' : wp === 'friends' ? 'fri' : wp === 'private' ? 'priv' : 'inh'}">${wp === 'public' ? 'Public' : wp === 'friends' ? 'Friends' : wp === 'private' ? 'Private' : 'Default'}</div>`
+          : '';
+        const clickAttr = isOwn ? `onclick="cycleWishPrivacy('${escHtml(w.id)}')"` : '';
+        return `<div class="showcase-card${isOwn ? ' priv-own' : ''}"${isOwn ? ` data-priv="${wp||'inh'}"` : ''} ${clickAttr}>
           ${thumb}
           <div class="showcase-brand">${escHtml(w.brand||'')}</div>
           <div class="showcase-name">${escHtml(w.name||'')}</div>
+          ${privLabel}
         </div>`;
       }).join('');
       const visLabel = isOwn ? ` <span style="font-size:.7rem;color:var(--muted);font-weight:400;">(${wlVis === 'public' ? 'Public' : wlVis === 'friends' ? 'Friends Only' : 'Private'})</span>` : '';
@@ -3389,6 +3409,20 @@ async function cycleWatchPrivacy(watchId) {
   const { error } = await db.from('watches')
     .update({ watch_privacy: next, is_public: w.isPublic })
     .eq('id', watchId);
+  if (error) { toast('Could not update — ' + error.message, 'error'); return; }
+  loadAndRenderProfile(currentUser.id);
+}
+
+async function cycleWishPrivacy(wishId) {
+  const w = wishlist.find(x => x.id === wishId);
+  if (!w) return;
+  // null = Default (inherit global) → public → friends → private → null
+  const order = [null, 'public', 'friends', 'private'];
+  const next  = order[(order.indexOf(w.wishPrivacy ?? null) + 1) % order.length];
+  w.wishPrivacy = next;
+  const { error } = await db.from('wishlist')
+    .update({ wish_privacy: next })
+    .eq('id', wishId).eq('user_id', currentUser.id);
   if (error) { toast('Could not update — ' + error.message, 'error'); return; }
   loadAndRenderProfile(currentUser.id);
 }
