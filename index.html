@@ -1437,7 +1437,7 @@
     /* ── WELCOME ONBOARDING ─────────────────────── */
     .welcome-step.hidden { display:none; }
     .welcome-dot { width:7px; height:7px; border-radius:50%; background:var(--border); transition:background .2s; }
-    .welcome-dot.active { background:var(--primary); }
+    .welcome-dot.active { background:var(--gold); }
 
     /* ── DELETE ACCOUNT MODAL ────────────────────── */
     .del-acct-step.hidden { display:none; }
@@ -1577,9 +1577,32 @@
       <button class="btn btn-ghost" style="width:100%;" onclick="welcomeStep(5)">Skip for now</button>
     </div>
     <div class="welcome-step hidden" id="ws-5">
-      <div style="font-size:2.5rem;margin-bottom:.75rem;">🎉</div>
-      <div class="modal-title" style="font-size:1.2rem;">You're all set!</div>
-      <p style="color:var(--muted);font-size:.9rem;line-height:1.55;margin:.5rem 0 1.5rem;">Track wears on the <b>Track</b> tab · Browse your collection · Share wears on the <b>Feed</b>.</p>
+      <div style="font-size:2.5rem;margin-bottom:.75rem;">🧭</div>
+      <div class="modal-title" style="font-size:1.2rem;">One last thing</div>
+      <p style="color:var(--muted);font-size:.9rem;line-height:1.55;margin:.5rem 0 1.25rem;">A few things live in the top-right corner of every screen.</p>
+      <div style="display:flex;flex-direction:column;gap:.75rem;text-align:left;margin-bottom:1.5rem;">
+        <div style="display:flex;align-items:flex-start;gap:.75rem;">
+          <div style="font-size:1.2rem;flex-shrink:0;line-height:1.4;">🌑</div>
+          <div>
+            <div style="font-size:.88rem;font-weight:600;color:var(--text);">Theme</div>
+            <div style="font-size:.8rem;color:var(--muted);line-height:1.45;">Tap the icon to cycle Dark, Light, or System.</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:.75rem;">
+          <div style="font-size:1.2rem;flex-shrink:0;line-height:1.4;">🔔</div>
+          <div>
+            <div style="font-size:.88rem;font-weight:600;color:var(--text);">Notifications</div>
+            <div style="font-size:.8rem;color:var(--muted);line-height:1.45;">Likes and comments on your posts.</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:.75rem;">
+          <div style="font-size:1.2rem;flex-shrink:0;line-height:1.4;">👤</div>
+          <div>
+            <div style="font-size:.88rem;font-weight:600;color:var(--text);">Your profile</div>
+            <div style="font-size:.8rem;color:var(--muted);line-height:1.45;">Collection, privacy settings, and sign out.</div>
+          </div>
+        </div>
+      </div>
       <button class="btn btn-primary" style="width:100%;" onclick="closeWelcome()">Start tracking →</button>
     </div>
     <div style="display:flex;justify-content:center;gap:.4rem;margin-top:1rem;">
@@ -8737,6 +8760,7 @@ async function submitFeedback() {
 // ══════════════════════════════════════════
 document.getElementById('app-ver').textContent  = 'v' + APP_VERSION;
 document.getElementById('help-ver').textContent = 'v' + APP_VERSION;
+applyTheme();   // apply OS/saved theme immediately, before auth resolves
 updateThemeBtn();
 
 // Show dev login button on localhost only
