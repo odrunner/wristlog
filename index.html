@@ -5587,7 +5587,7 @@ async function renderFollowingList() {
   el.innerHTML = (data || []).map(u => userCardHtml(u)).join('');
 }
 function friendActionBtn(u) {
-  if (currentUser && u.id === currentUser.id) return ''; // never show follow btn for yourself
+  if (currentUser && u.id === currentUser.id) return '<span style="font-size:.78rem;color:var(--muted);font-style:italic;">You</span>';
   const isFlw = following.has(u.id);
   const isPending = pendingRequests.has(u.id);
   const restricted = u.profile_privacy === 'followers' || u.profile_privacy === 'private' || u.profile_privacy === 'friends_only';
