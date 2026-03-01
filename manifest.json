@@ -1,8 +1,8 @@
 {
-  "name": "WristLog",
-  "short_name": "WristLog",
-  "description": "Watch Collection & Wear Tracker",
-  "start_url": "/wristlog/app.html",
+  "name": "WRotate",
+  "short_name": "WRotate",
+  "description": "Watch Collection, Rotation & Wear Tracker",
+  "start_url": "/app.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0b0b10",
