@@ -2348,7 +2348,7 @@
           <div class="wc-url-row">
             <input type="url" id="w-wc-url" placeholder="https://watchcharts.com/watch_model/…" oninput="updateWcUrlBtn()">
             <button class="btn btn-ghost btn-sm" id="wc-find-btn" onclick="modalFindWcUrl()" style="white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:.3rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find</button>
-            <button class="btn btn-ghost btn-sm" id="wc-fetch-btn" onclick="modalFetchPrice()" style="white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:.3rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Get Price</button>
+            <button class="btn btn-ghost btn-sm" id="wc-fetch-btn" onclick="modalFetchPrice()" style="white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:.3rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Get Price <span style="font-size:.6rem;font-weight:700;letter-spacing:.06em;background:rgba(201,168,76,.18);color:var(--gold);border-radius:4px;padding:.1rem .35rem;vertical-align:middle;">BETA</span></button>
             <a id="wc-url-open-btn" href="#" target="_blank" rel="noopener noreferrer" class="url-open-btn hidden" title="Open in new tab" style="flex-shrink:0;font-size:.78rem;padding:.35rem .5rem;">↗</a>
           </div>
           <div class="wc-status" id="wc-status"></div>
@@ -7354,7 +7354,7 @@ async function modalFetchPrice() {
   } catch (_) {
     statusEl.textContent = 'Fetch failed — check the URL or try again';
   }
-  btn.disabled = false; btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Get Price';
+  btn.disabled = false; btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Get Price <span style="font-size:.6rem;font-weight:700;letter-spacing:.06em;background:rgba(201,168,76,.18);color:var(--gold);border-radius:4px;padding:.1rem .35rem;vertical-align:middle;">BETA</span>';
 }
 
 // "Update All Prices" — batch update all watches that have a WatchCharts URL
