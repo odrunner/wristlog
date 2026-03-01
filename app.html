@@ -2752,8 +2752,8 @@ function watchToRow(w) {
     has_box: w.hasBox||false, has_papers: w.hasPapers||false,
     insurance: w.insurance||null, receipts: w.receipts||[],
     elo_rating: eloRatings[w.id] || 1000,
-    watch_privacy: w.watchPrivacy || 'private',
-    is_public: (w.watchPrivacy || 'private') !== 'private',
+    watch_privacy: w.watchPrivacy ?? null,
+    is_public: w.watchPrivacy !== 'private',
   };
 }
 function rowToWatch(r) {
