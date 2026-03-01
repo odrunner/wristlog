@@ -3345,13 +3345,9 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
 
   const editIcon = isOwn ? `<button class="profile-edit-icon" onclick="toggleProfileEdit()" title="Edit profile">✏️</button>` : '';
 
-  const dangerZoneHtml = isOwn ? `
-    <div style="margin:.5rem 1rem 0;padding:.85rem 1rem;border:1px solid rgba(239,68,68,.3);border-radius:10px;">
-      <div style="font-weight:600;font-size:.72rem;color:#ef4444;margin-bottom:.45rem;letter-spacing:.06em;text-transform:uppercase;">Danger Zone</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.4;">Permanently delete your account and all your data.</div>
-        <button class="btn" style="font-size:.75rem;padding:.3rem .75rem;border:1px solid #ef4444;color:#ef4444;background:transparent;white-space:nowrap;border-radius:6px;flex-shrink:0;" onclick="openDeleteAccount()">Delete Account</button>
-      </div>
+  const deleteAccountHtml = isOwn ? `
+    <div style="margin:1.5rem 1rem 0;text-align:center;">
+      <button style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;font-family:inherit;padding:.25rem .5rem;" onclick="openDeleteAccount()">Delete Account</button>
     </div>` : '';
 
   return `
@@ -3368,10 +3364,10 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     ${statsHtml}
     ${editHtml}
     ${privacyHtml}
-    ${dangerZoneHtml}
     ${showcaseHtml}
     ${wishlistHtml}
-    ${logsHtml}`;
+    ${logsHtml}
+    ${deleteAccountHtml}`;
 }
 
 async function cycleWatchPrivacy(watchId) {
