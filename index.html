@@ -3247,7 +3247,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.14.26';
+const APP_VERSION = '2.30.26.14.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4153,11 +4153,16 @@ async function renderClubDetail(clubId) {
   const members = (memberRows || []).map(r => ({ ...r.profiles, role: r.role }));
   const memberCount = members.length;
 
-  // Is current user a member / owner?
+  // Is current user a member / owner? Use fresh DB data from memberRows (not cache)
+  const myMemberRow  = (memberRows || []).find(r => r.user_id === currentUser?.id);
   const myMembership = myClubs.find(c => c.id === clubId);
-  const isMember = !!myMembership;
-  const isOwner  = myMembership?.role === 'owner';
+  const isMember = !!myMemberRow;
+  const isOwner  = myMemberRow?.role === 'owner';
   const isPending = pendingClubRequests.has(clubId);
+  // Sync cache if role changed (e.g. promoted while app was open)
+  if (myMemberRow && myMembership && myMembership.role !== myMemberRow.role) {
+    myMembership.role = myMemberRow.role;
+  }
 
   // Club feed — posts tagged to this club
   const { data: clubPosts } = await db.from('logs').select('*')
