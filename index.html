@@ -544,6 +544,21 @@
       flex-direction: column;
     }
     .watch-card:hover { border-color: rgba(201,168,76,.4); }
+    .watch-card-add {
+      border: 2px dashed var(--border);
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 160px;
+      transition: border-color .15s, background .15s;
+    }
+    .watch-card-add:hover { border-color: var(--gold); background: var(--gold-dim); }
+    .watch-card-add-inner { display:flex; flex-direction:column; align-items:center; gap:.5rem; color:var(--muted); pointer-events:none; }
+    .watch-card-add:hover .watch-card-add-inner { color: var(--gold); }
+    .watch-card-add-plus { font-size: 2rem; line-height: 1; font-weight: 300; }
+    .watch-card-add-label { font-size: .72rem; letter-spacing: .04em; }
     .watch-card-img-wrap {
       position: relative;
       width: calc(100% + 2.4rem);
@@ -5401,7 +5416,12 @@ function renderCollection() {
         </div>
         ${mpHTML}
       </div>`;
-    }).join('');
+    }).join('') + `<div class="watch-card watch-card-add" onclick="openAddWatch()" title="Add a watch">
+      <div class="watch-card-add-inner">
+        <div class="watch-card-add-plus">+</div>
+        <div class="watch-card-add-label">Add Watch</div>
+      </div>
+    </div>`;
   }
 }
 
