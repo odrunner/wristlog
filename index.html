@@ -31,6 +31,15 @@
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Apply saved theme before first paint to avoid flash -->
+  <script>
+    (function(){
+      var t = localStorage.getItem('wrotate_theme') || 'os';
+      if (t === 'light' || (t === 'os' && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     /* Prevent the header (not body) from creating horizontal scroll */
@@ -49,6 +58,17 @@
       --danger:    #e05555;
       --success:   #4caf7d;
       --radius:    10px;
+    }
+    [data-theme="light"] {
+      --bg:       #f5f5f8;
+      --surface:  #ffffff;
+      --surface2: #eeeff5;
+      --border:   #d8d9e8;
+      --gold:     #9a7628;
+      --gold-lt:  #c9a84c;
+      --gold-dim: rgba(154,118,40,.12);
+      --text:     #16161e;
+      --muted:    #70708a;
     }
 
     body {
@@ -1382,6 +1402,9 @@
     .bell-btn { position:relative; background:none; border:none; font-size:1.1rem; cursor:pointer;
       padding:.25rem .4rem; border-radius:8px; display:flex; align-items:center; transition:background .15s; }
     .bell-btn:hover { background:var(--surface2); }
+    #theme-btn { background:none; border:none; cursor:pointer; color:var(--muted);
+      padding:.25rem .4rem; border-radius:8px; display:flex; align-items:center; transition:background .15s, color .15s; }
+    #theme-btn:hover { background:var(--surface2); color:var(--text); }
     .bell-badge { position:absolute; top:2px; right:2px; min-width:16px; height:16px; border-radius:8px;
       background:var(--danger); color:#fff; font-size:.6rem; font-weight:700;
       display:flex; align-items:center; justify-content:center; padding:0 3px; pointer-events:none; }
@@ -1590,6 +1613,7 @@
       <div id="server-dot" class="server-dot" title="Saving to local file"></div>
 
       <span id="app-ver" class="app-ver"></span>
+      <button id="theme-btn" onclick="cycleTheme()" title="Toggle theme"></button>
       <button class="bell-btn" id="bell-btn" onclick="toggleNotifPanel();event.stopPropagation();" style="display:none;" title="Notifications">
         🔔<span class="bell-badge hidden" id="bell-badge">0</span>
       </button>
@@ -2692,7 +2716,7 @@ async function signInWithGoogle() {
   const { error } = await db.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin + window.location.pathname,
+      redirectTo: window.location.origin + window.location.pathname.replace(/\/$/, ''),
       queryParams: { prompt: 'select_account' }, // always show Google account picker
     }
   });
@@ -2945,6 +2969,8 @@ async function loadMyProfile() {
     isNewUser = true;
   }
   myProfile = data;
+  if (data.theme_preference) localStorage.setItem(STORE_THEME, data.theme_preference); // sync Supabase → local
+  applyTheme();
   const btn = document.getElementById('profile-btn');
   if (btn) {
     if (myProfile.avatar_url) {
@@ -4567,6 +4593,50 @@ function setDefaultVis(v) {
   localStorage.setItem(STORE_VIS, v);
   savePrivacyField('default_post_visibility', v);
 }
+
+// ── Theme helpers ────────────────────────────────────────────────────────────
+const STORE_THEME = 'wrotate_theme';
+function getTheme() {
+  return localStorage.getItem(STORE_THEME) || myProfile?.theme_preference || 'os';
+}
+function applyTheme(t) {
+  t = t || getTheme();
+  const resolved = t === 'os'
+    ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+    : t;
+  document.documentElement.setAttribute('data-theme', resolved);
+  const mc = document.querySelector('meta[name="theme-color"]');
+  if (mc) mc.content = resolved === 'light' ? '#f5f5f8' : '#0b0b10';
+  updateThemeBtn(t);
+}
+function setTheme(t) {
+  localStorage.setItem(STORE_THEME, t);
+  applyTheme(t);
+  savePrivacyField('theme_preference', t);
+}
+function cycleTheme() {
+  const order = ['dark', 'light', 'os'];
+  const next = order[(order.indexOf(getTheme()) + 1) % order.length];
+  setTheme(next);
+}
+function updateThemeBtn(t) {
+  const btn = document.getElementById('theme-btn');
+  if (!btn) return;
+  t = t || getTheme();
+  const svgAttrs = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"';
+  const icons = {
+    dark:  `<svg ${svgAttrs}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
+    light: `<svg ${svgAttrs}><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`,
+    os:    `<svg ${svgAttrs}><rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/></svg>`,
+  };
+  const labels = { dark: 'Dark mode  →  Light', light: 'Light mode  →  System', os: 'System  →  Dark' };
+  btn.innerHTML = icons[t] || icons.os;
+  btn.title = labels[t] || 'Toggle theme';
+}
+// Re-apply when OS colour scheme changes (only matters when mode = 'os')
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (getTheme() === 'os') applyTheme('os');
+});
 
 function visChipsHtml(cId, selected) {
   return ['public','friends','private'].map(v => {
@@ -8668,6 +8738,7 @@ async function submitFeedback() {
 // ══════════════════════════════════════════
 document.getElementById('app-ver').textContent  = 'v' + APP_VERSION;
 document.getElementById('help-ver').textContent = 'v' + APP_VERSION;
+updateThemeBtn();
 
 // Show dev login button on localhost only
 if (['localhost', '127.0.0.1'].includes(location.hostname)) {
