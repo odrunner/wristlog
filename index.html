@@ -3943,35 +3943,27 @@ async function acceptFollowRequest(requesterId, notifId) {
     user_id: requesterId, type: 'follow_accepted',
     actor_id: currentUser.id, is_read: false,
   }).then(() => {});
-  await db.from('notifications').update({ is_read: true }).eq('id', notifId);
-  const item = document.getElementById(`notif-${notifId}`);
-  if (item) {
-    const actionsEl = item.querySelector('.notif-follow-actions');
-    const alreadyFollowing = following.has(requesterId);
-    if (actionsEl) actionsEl.outerHTML = alreadyFollowing
-      ? `<div class="notif-follow-back"><span style="color:var(--muted);font-size:.78rem;">Now following you ✓</span></div>`
-      : `<div class="notif-follow-back">
-          <span style="color:var(--muted);font-size:.78rem;">Now following you.</span>
-          <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
-            onclick="followBackFromNotif('${requesterId}',this)">Follow back</button>
-          <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem;"
-            onclick="this.closest('.notif-follow-back').innerHTML='<span style=\\'color:var(--muted);font-size:.78rem\\'>Done</span>'">No thanks</button>
-        </div>`;
-    item.classList.remove('notif-unread');
-  }
-  unreadNotifCount = Math.max(0, unreadNotifCount - 1);
-  updateBellBadge();
-}
-async function declineFollowRequest(requesterId, notifId) {
-  if (!currentUser) return;
-  await db.from('follow_requests').delete()
-    .eq('requester_id', requesterId).eq('target_id', currentUser.id);
-  await db.from('notifications').update({ is_read: true }).eq('id', notifId);
+  // Delete the notification — it has been actioned
+  await db.from('notifications').delete().eq('id', notifId);
   const item = document.getElementById(`notif-${notifId}`);
   if (item) item.remove();
   userNotifs = userNotifs.filter(n => n.id !== notifId);
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
   updateBellBadge();
+  renderNotifs();
+}
+async function declineFollowRequest(requesterId, notifId) {
+  if (!currentUser) return;
+  await db.from('follow_requests').delete()
+    .eq('requester_id', requesterId).eq('target_id', currentUser.id);
+  // Delete the notification — it has been actioned
+  await db.from('notifications').delete().eq('id', notifId);
+  const item = document.getElementById(`notif-${notifId}`);
+  if (item) item.remove();
+  userNotifs = userNotifs.filter(n => n.id !== notifId);
+  unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
+  updateBellBadge();
+  renderNotifs();
 }
 async function followBackFromNotif(userId, btn) {
   if (!currentUser) return;
@@ -4078,7 +4070,7 @@ function renderNotificationPanel() {
                : n.type === 'follow'          ? `${nm} started following you`
                : n.type === 'like'            ? `${nm} liked your wear log`
                : n.type === 'comment'         ? `${nm} commented on your wear log` : '';
-    const actionsHtml = n.type === 'follow_request' ? `
+    const actionsHtml = (n.type === 'follow_request' && !n.is_read) ? `
       <div class="notif-follow-actions">
         <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
           onclick="event.stopPropagation();acceptFollowRequest('${n.actor_id}','${n.id}')">Accept</button>
