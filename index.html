@@ -4048,8 +4048,14 @@ async function declineClubJoinRequest(requesterId, clubId, notifId) {
 }
 
 async function promoteToOwner(userId, clubId) {
-  await db.from('club_members').update({ role: 'owner' }).eq('club_id', clubId).eq('user_id', userId);
-  toast('Promoted to owner'); renderClubDetail(clubId);
+  // No UPDATE policy on club_members — use delete + re-insert with new role
+  const { error: delErr } = await db.from('club_members').delete().eq('club_id', clubId).eq('user_id', userId);
+  if (delErr) { toast('Could not promote — ' + (delErr.message || delErr.code), 'error'); return; }
+  const { error: insErr } = await db.from('club_members').insert({ club_id: clubId, user_id: userId, role: 'owner' });
+  if (insErr) { toast('Could not promote — ' + (insErr.message || insErr.code), 'error'); return; }
+  await loadMyClubs();
+  toast('Promoted to owner!');
+  renderClubDetail(clubId);
 }
 
 async function removeMember(userId, clubId) {
