@@ -276,6 +276,10 @@
     .showcase-priv-label.fri  { color:var(--gold); }
     .showcase-priv-label.priv { color:var(--danger); }
     .showcase-priv-label.inh  { color:var(--muted); }
+    /* Wishlist per-item privacy tints — subtle bg only */
+    .wl-wish-card.wl-pub  { background-color:rgba(34,197,94,.07); }
+    .wl-wish-card.wl-fri  { background-color:rgba(234,179,8,.10); }
+    .wl-wish-card.wl-priv { background-color:rgba(239,68,68,.08); }
 
     /* ── PROFILE PAGE RECENT LOGS ── */
     .pp-log-row { display:flex; align-items:center; gap:.65rem; padding:.5rem 0; border-bottom:1px solid var(--border); }
@@ -3332,7 +3336,8 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           ? `<div class="showcase-priv-label ${wp === 'public' ? 'pub' : wp === 'friends' ? 'fri' : wp === 'private' ? 'priv' : 'inh'}">${wp === 'public' ? 'Public' : wp === 'friends' ? 'Friends' : wp === 'private' ? 'Private' : 'Default'}</div>`
           : '';
         const clickAttr = isOwn ? `onclick="cycleWishPrivacy('${escHtml(w.id)}')"` : '';
-        return `<div class="showcase-card${isOwn ? ' priv-own' : ''}"${isOwn ? ` data-priv="${wp||'inh'}"` : ''} ${clickAttr}>
+        const tintCls   = isOwn ? (wp === 'public' ? ' wl-pub' : wp === 'friends' ? ' wl-fri' : wp === 'private' ? ' wl-priv' : '') : '';
+        return `<div class="showcase-card${isOwn ? ' priv-own wl-wish-card' + tintCls : ''}" data-wish-id="${escHtml(w.id)}"${isOwn ? ` data-priv="${wp||'inh'}"` : ''} ${clickAttr}>
           ${thumb}
           <div class="showcase-brand">${escHtml(w.brand||'')}</div>
           <div class="showcase-name">${escHtml(w.name||'')}</div>
@@ -3424,7 +3429,19 @@ async function cycleWishPrivacy(wishId) {
     .update({ wish_privacy: next })
     .eq('id', wishId).eq('user_id', currentUser.id);
   if (error) { toast('Could not update — ' + error.message, 'error'); return; }
-  loadAndRenderProfile(currentUser.id);
+  // Update DOM in-place — no full page reload
+  const card = document.querySelector(`.wl-wish-card[data-wish-id="${wishId}"]`);
+  if (card) {
+    const cls = next === 'public' ? 'pub' : next === 'friends' ? 'fri' : next === 'private' ? 'priv' : 'inh';
+    const lbl = next === 'public' ? 'Public' : next === 'friends' ? 'Friends' : next === 'private' ? 'Private' : 'Default';
+    card.dataset.priv = next || 'inh';
+    card.classList.remove('wl-pub', 'wl-fri', 'wl-priv');
+    if (next === 'public')  card.classList.add('wl-pub');
+    else if (next === 'friends')  card.classList.add('wl-fri');
+    else if (next === 'private') card.classList.add('wl-priv');
+    const label = card.querySelector('.showcase-priv-label');
+    if (label) { label.className = `showcase-priv-label ${cls}`; label.textContent = lbl; }
+  }
 }
 
 async function saveProfileFromPage() {
