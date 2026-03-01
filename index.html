@@ -1402,6 +1402,17 @@
       cursor: pointer; display: flex; align-items: center;
       justify-content: center; flex-shrink: 0;
     }
+    .comments-view-more {
+      font-size: .78rem; color: var(--muted); cursor: pointer;
+      padding: .15rem 0 .35rem; font-weight: 600;
+    }
+    .comments-view-more:hover { color: var(--text); }
+    .comments-add-prompt {
+      font-size: .78rem; color: var(--muted); cursor: pointer;
+      padding: .4rem 0 0; border-top: 1px solid var(--border);
+      margin-top: .35rem;
+    }
+    .comments-add-prompt:hover { color: var(--text); }
 
     /* ── FOLLOW BUTTON ─────────────────────────── */
     .follow-btn {
@@ -4168,10 +4179,24 @@ async function loadFeed() {
       if (l.user_id === currentUser.id) feedLikes[l.log_id].liked = true;
     });
 
-    // Comment counts
-    const { data: commentData } = await db.from('comments').select('log_id').in('log_id', logIds);
+    // Comments — batch load all for feed items
+    const { data: commentData } = await db.from('comments')
+      .select('id, log_id, user_id, body, created_at')
+      .in('log_id', logIds).order('created_at', { ascending: true }).limit(500);
+    feedComments = {};
     feedCommentCounts = {};
-    (commentData || []).forEach(c => { feedCommentCounts[c.log_id] = (feedCommentCounts[c.log_id] || 0) + 1; });
+    if (commentData && commentData.length) {
+      const commenterIds = [...new Set(commentData.map(c => c.user_id))];
+      const { data: commenterProfiles } = await db.from('profiles')
+        .select('id, username, display_name').in('id', commenterIds);
+      const cpm = {};
+      (commenterProfiles || []).forEach(p => cpm[p.id] = p);
+      commentData.forEach(c => {
+        if (!feedComments[c.log_id]) feedComments[c.log_id] = [];
+        feedComments[c.log_id].push({ ...c, profile: cpm[c.user_id] || null });
+      });
+    }
+    logIds.forEach(id => feedCommentCounts[id] = (feedComments[id] || []).length);
 
     feedItems = rawLogs.map(l => ({
       ...l,
@@ -4269,30 +4294,37 @@ function renderFeedCard(item) {
     ? `<div class="vis-badge ${vis}">${(vis === 'followers' || vis === 'friends') ? 'Followers only' : 'Only you'}</div>`
     : '';
 
+  const COMMENT_PREVIEW = 2;
+  const allComments = feedComments[item.id] || [];
   let commentsHtml = '';
-  if (expanded) {
-    const cached = feedComments[item.id];
-    if (!cached) {
-      commentsHtml = `<div class="feed-comments-section"><div style="color:var(--muted);font-size:.8rem;">Loading…</div></div>`;
-    } else {
-      const commentItems = cached.map(c => `
-        <div class="comment-item">
-          <div class="comment-avatar">${profileInitials(c.profile)}</div>
-          <div class="comment-body">
-            <span class="comment-username">${escHtml(c.profile?.display_name || c.profile?.username || 'User')}</span>
-            <span> ${escHtml(c.body)}</span>
-          </div>
-        </div>`).join('');
-      commentsHtml = `
-        <div class="feed-comments-section">
-          ${commentItems}
-          <div class="comment-input-row">
-            <input class="comment-input" id="comment-input-${item.id}" placeholder="Add a comment…"
-              onkeydown="if(event.key==='Enter')postComment('${item.id}')">
-            <button class="comment-send-btn" onclick="postComment('${item.id}')">↑</button>
-          </div>
-        </div>`;
-    }
+  if (allComments.length > 0 || expanded) {
+    const showAll = expanded;
+    const displayComments = showAll ? allComments : allComments.slice(0, COMMENT_PREVIEW);
+    const remaining = allComments.length - displayComments.length;
+    const commentItems = displayComments.map(c => `
+      <div class="comment-item">
+        <div class="comment-avatar">${profileInitials(c.profile)}</div>
+        <div class="comment-body">
+          <span class="comment-username">${escHtml(c.profile?.display_name || c.profile?.username || 'User')}</span>
+          <span> ${escHtml(c.body)}</span>
+        </div>
+      </div>`).join('');
+    const viewMoreHtml = remaining > 0
+      ? `<div class="comments-view-more" onclick="toggleComments('${item.id}')">View ${remaining} more comment${remaining !== 1 ? 's' : ''}</div>`
+      : '';
+    const inputHtml = showAll
+      ? `<div class="comment-input-row">
+          <input class="comment-input" id="comment-input-${item.id}" placeholder="Add a comment…"
+            onkeydown="if(event.key==='Enter')postComment('${item.id}')">
+          <button class="comment-send-btn" onclick="postComment('${item.id}')">↑</button>
+        </div>`
+      : `<div class="comments-add-prompt" onclick="toggleComments('${item.id}')">Add a comment…</div>`;
+    commentsHtml = `
+      <div class="feed-comments-section">
+        ${commentItems}
+        ${viewMoreHtml}
+        ${inputHtml}
+      </div>`;
   }
 
   // Compact wear: inline watch row inside header
@@ -4620,12 +4652,11 @@ function refreshFeedCard(logId) {
 async function toggleComments(logId) {
   if (expandedComments.has(logId)) {
     expandedComments.delete(logId);
-    refreshFeedCard(logId);
-    return;
+  } else {
+    expandedComments.add(logId);
+    // Fetch if not yet loaded (e.g. posted while feed was open)
+    if (!feedComments[logId]) await fetchComments(logId);
   }
-  expandedComments.add(logId);
-  refreshFeedCard(logId); // shows loading state
-  if (!feedComments[logId]) await fetchComments(logId);
   refreshFeedCard(logId);
 }
 async function fetchComments(logId) {
