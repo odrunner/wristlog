@@ -4277,6 +4277,11 @@ async function renderClubDetail(clubId) {
           style="margin-bottom:.5rem;">
         <div id="club-invite-results"></div>
       </div>
+
+      <div style="border-top:1px solid var(--border);padding-top:.85rem;margin-top:.5rem;">
+        <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem;">Danger Zone</div>
+        <button class="btn btn-danger" style="font-size:.82rem;" onclick="deleteClub('${clubId}')">Delete Club</button>
+      </div>
     </div>` : '';
 
   el.innerHTML = `
@@ -4363,6 +4368,17 @@ async function saveClubEdit(clubId) {
   toast('Club updated!');
   document.getElementById('club-edit-section').style.display = 'none';
   renderClubDetail(clubId); // re-render to show updated header
+}
+
+async function deleteClub(clubId) {
+  if (!currentUser) return;
+  if (!await showConfirm('This will permanently remove the club and all its membership data. Members will lose access.', { title: 'Delete this club?', confirmLabel: 'Delete Club' })) return;
+  const { error } = await db.from('clubs').delete().eq('id', clubId);
+  if (error) { toast('Could not delete — ' + (error.message || error.code), 'error'); return; }
+  myClubs = myClubs.filter(c => c.id !== clubId);
+  toast('Club deleted');
+  goBackFromClub();
+  renderClubsPage();
 }
 
 // ── Club Invites ────────────────────────────────────────────────
