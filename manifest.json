@@ -2,7 +2,7 @@
   "name": "WRotate",
   "short_name": "WRotate",
   "description": "Watch Collection, Rotation & Wear Tracker",
-  "start_url": "/app.html",
+  "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0b0b10",
