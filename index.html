@@ -4363,7 +4363,7 @@ async function acceptClubInvite(clubId, notifId) {
   await loadMyClubs();
   userNotifs = userNotifs.filter(n => n.id !== notifId);
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
-  updateBellBadge(); renderNotifs();
+  updateBellBadge(); renderNotificationPanel();
   toast('You joined the club!');
   loadFeed();
 }
@@ -4374,7 +4374,7 @@ async function declineClubInvite(clubId, notifId) {
   await db.from('notifications').delete().eq('id', notifId);
   userNotifs = userNotifs.filter(n => n.id !== notifId);
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
-  updateBellBadge(); renderNotifs();
+  updateBellBadge(); renderNotificationPanel();
 }
 
 async function renderClubsPage() {
@@ -4606,7 +4606,7 @@ async function acceptFollowRequest(requesterId, notifId) {
   userNotifs = userNotifs.filter(n => n.id !== notifId);
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
   updateBellBadge();
-  renderNotifs();
+  renderNotificationPanel();
 }
 async function declineFollowRequest(requesterId, notifId) {
   if (!currentUser) return;
@@ -4619,7 +4619,7 @@ async function declineFollowRequest(requesterId, notifId) {
   userNotifs = userNotifs.filter(n => n.id !== notifId);
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
   updateBellBadge();
-  renderNotifs();
+  renderNotificationPanel();
 }
 async function followBackFromNotif(userId, btn) {
   if (!currentUser) return;
