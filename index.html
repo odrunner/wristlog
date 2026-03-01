@@ -4169,14 +4169,56 @@ async function renderClubDetail(clubId) {
   const privacyLabel = club.privacy === 'private' ? '\u{1F512} Private' : '\u{1F310} Public';
   const clubInitials = (club.name || '?').slice(0, 2).toUpperCase();
 
+  const ownerEditSection = isOwner ? `
+    <div id="club-edit-section" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1.25rem;">
+      <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:.75rem;">Edit Club</div>
+
+      <div class="form-group" style="margin-bottom:.75rem;">
+        <label class="form-label" style="font-size:.78rem;">Club Name</label>
+        <input type="text" id="club-edit-name" value="${escHtml(club.name)}" maxlength="60">
+      </div>
+
+      <div class="form-group" style="margin-bottom:.75rem;">
+        <label class="form-label" style="font-size:.78rem;">Description</label>
+        <textarea id="club-edit-desc" rows="2" style="resize:none;">${escHtml(club.description || '')}</textarea>
+      </div>
+
+      <div class="form-group" style="margin-bottom:.75rem;">
+        <label class="form-label" style="font-size:.78rem;">Club Photo</label>
+        <div id="club-edit-photo-area" class="log-photo-area" style="height:64px;" onclick="document.getElementById('club-edit-photo-input').click()">
+          ${club.image_url
+            ? `<img id="club-edit-photo-preview" src="${escHtml(club.image_url)}" class="log-photo-preview" style="display:block;max-height:56px;border-radius:8px;">`
+            : `<div id="club-edit-photo-placeholder" class="log-photo-placeholder" style="font-size:.78rem;">Upload photo</div><img id="club-edit-photo-preview" class="log-photo-preview" style="display:none;">`}
+        </div>
+        <input type="file" id="club-edit-photo-input" accept="image/*" style="display:none" onchange="handleClubImageUpload(this,'${clubId}')">
+      </div>
+
+      <div class="form-group" style="margin-bottom:.85rem;">
+        <label class="form-label" style="font-size:.78rem;">Privacy</label>
+        <div class="chips" id="club-edit-privacy-chips">
+          <div class="chip${club.privacy === 'public'  ? ' selected' : ''}" data-val="public"  onclick="document.querySelectorAll('#club-edit-privacy-chips .chip').forEach(c=>c.classList.toggle('selected',c.dataset.val==='public'))">🌐 Public</div>
+          <div class="chip${club.privacy === 'private' ? ' selected' : ''}" data-val="private" onclick="document.querySelectorAll('#club-edit-privacy-chips .chip').forEach(c=>c.classList.toggle('selected',c.dataset.val==='private'))">🔒 Private</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:.5rem;">
+        <button class="btn btn-primary" style="font-size:.82rem;" onclick="saveClubEdit('${clubId}')">Save Changes</button>
+        <button class="btn btn-ghost"   style="font-size:.82rem;" onclick="document.getElementById('club-edit-section').style.display='none'">Cancel</button>
+      </div>
+    </div>` : '';
+
   el.innerHTML = `
     <div class="club-detail-header">
-      <div class="club-detail-avatar">${club.image_url ? `<img src="${escHtml(club.image_url)}" onerror="this.style.display='none'">` : clubInitials}</div>
+      <div class="club-detail-avatar" id="club-detail-avatar-${clubId}">${club.image_url ? `<img src="${escHtml(club.image_url)}" onerror="this.style.display='none'">` : clubInitials}</div>
       <div style="font-size:1.25rem;font-weight:700;">${escHtml(club.name)}</div>
       <div style="font-size:.8rem;color:var(--muted);">${privacyLabel} · ${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
       ${club.description ? `<div style="font-size:.82rem;color:var(--muted);max-width:340px;margin-top:.25rem;">${escHtml(club.description)}</div>` : ''}
-      <div style="margin-top:.75rem;">${joinBtnHtml}</div>
+      <div style="margin-top:.75rem;display:flex;align-items:center;gap:.6rem;">
+        ${joinBtnHtml}
+        ${isOwner ? `<button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .65rem;" onclick="document.getElementById('club-edit-section').style.display=document.getElementById('club-edit-section').style.display==='none'?'':'none'">⚙ Manage</button>` : ''}
+      </div>
     </div>
+    ${ownerEditSection}
     <div class="club-section-label">Members</div>
     <div class="club-member-row">${membersHtml || '<span style="color:var(--muted);font-size:.82rem;">No members yet.</span>'}</div>
     <div class="club-section-label">Club Posts</div>
@@ -4200,6 +4242,44 @@ function showMemberMenu(userId, clubId, displayName) {
   document.addEventListener('click', function handler(e) {
     if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', handler); }
   }, { once: false, capture: true });
+}
+
+let _clubEditImageData = null; // temp storage for uploaded club image
+
+function handleClubImageUpload(input, clubId) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _clubEditImageData = e.target.result;
+    const preview = document.getElementById('club-edit-photo-preview');
+    const placeholder = document.getElementById('club-edit-photo-placeholder');
+    if (preview)     { preview.src = _clubEditImageData; preview.style.display = 'block'; }
+    if (placeholder) placeholder.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function saveClubEdit(clubId) {
+  const name    = document.getElementById('club-edit-name')?.value.trim();
+  const desc    = document.getElementById('club-edit-desc')?.value.trim();
+  const privacy = document.querySelector('#club-edit-privacy-chips .chip.selected')?.dataset.val || 'public';
+  if (!name) { toast('Club name is required', 'error'); return; }
+
+  const updates = { name, description: desc || null, privacy };
+  if (_clubEditImageData) updates.image_url = _clubEditImageData;
+
+  const { error } = await db.from('clubs').update(updates).eq('id', clubId);
+  if (error) { toast('Could not save — ' + error.message, 'error'); return; }
+
+  // Update local cache
+  const cached = myClubs.find(c => c.id === clubId);
+  if (cached) Object.assign(cached, updates);
+  _clubEditImageData = null;
+
+  toast('Club updated!');
+  document.getElementById('club-edit-section').style.display = 'none';
+  renderClubDetail(clubId); // re-render to show updated header
 }
 
 async function renderClubsPage() {
