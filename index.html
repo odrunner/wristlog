@@ -292,6 +292,7 @@
     .showcase-card { background:var(--surface2); border:2px solid var(--border); border-radius:10px; padding:.6rem .45rem .5rem; display:flex; flex-direction:column; align-items:center; gap:.3rem; text-align:center; min-width:0; transition:border-color .15s, opacity .15s; }
     .showcase-card[data-priv="public"]       { border-color: var(--success); }
     .showcase-card[data-priv="friends_only"] { border-color: var(--gold); }
+    .showcase-card[data-priv="followers"]    { border-color: var(--gold); }
     .showcase-card[data-priv="private"]      { border-color: var(--danger); }
     .showcase-card.priv-own { cursor:pointer; }
     .showcase-card.priv-own:hover { opacity:.78; }
@@ -1314,7 +1315,7 @@
     /* Post visibility badge */
     .vis-badge { display:inline-flex; align-items:center; gap:.25rem; font-size:.68rem;
       padding:.15rem .5rem; border-radius:20px; font-weight:600; margin: 0 1rem .6rem; }
-    .vis-badge.friends { background:rgba(201,168,76,.15); color:var(--gold); }
+    .vis-badge.friends, .vis-badge.followers { background:rgba(201,168,76,.15); color:var(--gold); }
     .vis-badge.private { background:rgba(224,85,85,.12); color:var(--danger); }
 
     /* Inline caption editing area */
@@ -1411,6 +1412,16 @@
       border: 1px solid var(--border);
     }
     .follow-btn.following:hover { border-color: var(--danger); color: var(--danger); }
+    .follow-btn.requested {
+      background: transparent; color: var(--muted);
+      border: 1.5px solid var(--border);
+    }
+    .notif-follow-actions {
+      display: flex; gap: .5rem; margin-top: .45rem;
+    }
+    .notif-follow-back {
+      display: flex; align-items: center; gap: .5rem; margin-top: .45rem; flex-wrap: wrap;
+    }
 
     /* ── BELL ICON ──────────────────────────────── */
     .bell-btn { position:relative; background:none; border:none; font-size:1.1rem; cursor:pointer;
@@ -1484,6 +1495,9 @@
       font-size: .68rem; color: var(--muted);
       text-transform: uppercase; letter-spacing: .06em;
     }
+    .profile-stat-btn    { cursor: pointer; border-radius: 8px; padding: .25rem .4rem; margin: -.25rem -.4rem; transition: background .15s; }
+    .profile-stat-btn:hover { background: var(--surface2); }
+    .profile-stat-btn:hover .profile-stat-value { color: var(--gold); }
     .profile-bio-edit {
       width: 100%; background: var(--hover); border: 1px solid var(--border);
       border-radius: 8px; padding: .5rem .75rem; font-size: .85rem;
@@ -1648,6 +1662,26 @@
 
 
 <!-- ════ USERNAME ONBOARDING MODAL ════ -->
+<div id="followers-modal" class="overlay hidden">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title">Followers</div>
+    <div id="followers-list" style="max-height:55vh;overflow-y:auto;margin:0 -.25rem;"></div>
+    <div class="modal-actions" style="margin-top:1rem;">
+      <button class="btn btn-ghost" onclick="closeFollowersModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="following-modal" class="overlay hidden">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title">Following</div>
+    <div id="following-modal-list" style="max-height:55vh;overflow-y:auto;margin:0 -.25rem;"></div>
+    <div class="modal-actions" style="margin-top:1rem;">
+      <button class="btn btn-ghost" onclick="closeFollowingModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <div id="username-modal" class="overlay hidden">
   <div class="modal" style="max-width:400px;">
     <div class="modal-title">Choose your username</div>
@@ -1955,7 +1989,7 @@
             <div class="help-step-num">4</div>
             <div class="help-step-body">
               <div class="help-step-title">Add a photo and set visibility, then tap "Log This Wear"</div>
-              <div class="help-step-desc">Each log can be 🌐 Public (visible to all followers), 👥 Friends (only friends see it), or 🔒 Private (only you). The default is set in your Privacy settings.</div>
+              <div class="help-step-desc">Each log can be 🌐 Public (visible to everyone), 👥 Followers (only your followers see it), or 🔒 Private (only you). The default is set in your Privacy settings.</div>
             </div>
           </div>
           <div class="help-tip">💡 Logged the wrong watch or use case? Tap the <strong>✎ pencil icon</strong> on any feed card or in the Wear History table to edit it.</div>
@@ -1980,7 +2014,7 @@
           </div>
           <div class="help-mini-card">
             <div class="help-mini-title">🔒 Per-Watch Privacy</div>
-            <div class="help-mini-desc">On your profile page, tap any watch in your Collection showcase to cycle its privacy: Public → Friends Only → Private. Private watches are hidden from everyone else.</div>
+            <div class="help-mini-desc">On your profile page, tap any watch in your Collection showcase to cycle its privacy: Public → Followers Only → Private. Private watches are hidden from everyone else.</div>
           </div>
         </div>
       </div>
@@ -2007,7 +2041,7 @@
             <div class="help-step-num">3</div>
             <div class="help-step-body">
               <div class="help-step-title">Share your wishlist with friends</div>
-              <div class="help-step-desc">Go to your profile → Privacy section → set <strong>Wishlist</strong> to 👥 Friends or 🌐 Public. Friends can then see your wishlist on your profile — great for gift inspiration or comparing GAS lists.</div>
+              <div class="help-step-desc">Go to your profile → Privacy section → set <strong>Wishlist</strong> to 👥 Followers or 🌐 Public. Your followers can then see your wishlist on your profile — great for gift inspiration or comparing GAS lists.</div>
             </div>
           </div>
           <div class="help-step">
@@ -2028,7 +2062,7 @@
             <div class="help-step-num">1</div>
             <div class="help-step-body">
               <div class="help-step-title">Follow or friend other collectors</div>
-              <div class="help-step-desc">Tap <strong>🔍 Find People</strong> in the Feed header. For <strong>Public</strong> profiles tap Follow — their logs appear in your feed immediately. For <strong>Friends Only</strong> profiles tap Add Friend and wait for them to accept — once accepted you can see their collection and wishlist (if shared).</div>
+              <div class="help-step-desc">Tap <strong>🔍 Find People</strong> in the Feed header. Follow anyone — their logs appear in your feed immediately. For <strong>Followers Only</strong> profiles you need to follow them first to see their collection and wishlist.</div>
             </div>
           </div>
           <div class="help-step">
@@ -2078,14 +2112,14 @@
             <div class="help-step-num">3</div>
             <div class="help-step-body">
               <div class="help-step-title">Profile visibility</div>
-              <div class="help-step-desc"><strong>🌐 Public</strong> — anyone can view your profile and follow you. <strong>👥 Friends Only</strong> — others must send a friend request; only accepted friends see your full profile. <strong>🔒 Private</strong> — hidden from search; only existing connections see you. Changing visibility does not remove existing followers.</div>
+              <div class="help-step-desc"><strong>🌐 Public</strong> — anyone can view your profile and follow you. <strong>👥 Followers Only</strong> — only people who follow you can see your full profile. <strong>🔒 Private</strong> — hidden from search; no one can view your profile. Changing visibility does not remove existing followers.</div>
             </div>
           </div>
           <div class="help-step">
             <div class="help-step-num">4</div>
             <div class="help-step-body">
               <div class="help-step-title">Collection &amp; Wishlist visibility</div>
-              <div class="help-step-desc">Set each independently: <strong>🌐 Public</strong> shows it to anyone who views your profile, <strong>👥 Friends</strong> shows it only to accepted friends, <strong>🔒 Private</strong> keeps it hidden from everyone. Wishlist is private by default.</div>
+              <div class="help-step-desc">Set each independently: <strong>🌐 Public</strong> shows it to anyone who views your profile, <strong>👥 Followers</strong> shows it only to your followers, <strong>🔒 Private</strong> keeps it hidden from everyone. Wishlist is private by default.</div>
             </div>
           </div>
           <div class="help-step">
@@ -2759,7 +2793,7 @@
       <div class="tl-label">Post visibility</div>
       <div class="chips" id="tl-vis-chips">
         <div class="chip" data-vis="public">🌐 Public</div>
-        <div class="chip" data-vis="friends">👥 Friends</div>
+        <div class="chip" data-vis="followers">👥 Followers</div>
         <div class="chip" data-vis="private">🔒 Only me</div>
       </div>
     </div>
@@ -2905,7 +2939,6 @@ async function deleteAccount() {
   await del('comments',       { eq: ['user_id', uid] });
   await del('notifications',  { or: `user_id.eq.${uid},actor_id.eq.${uid}` });
   await del('follows',        { or: `follower_id.eq.${uid},following_id.eq.${uid}` });
-  await del('friend_requests',{ or: `sender_id.eq.${uid},receiver_id.eq.${uid}` });
   await del('logs',           { eq: ['user_id', uid] });
   await del('wishlist',       { eq: ['user_id', uid] });
   await del('watches',        { eq: ['user_id', uid] });
@@ -3067,7 +3100,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.28.26.21.09';
+const APP_VERSION = '2.28.26.21.10';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3296,16 +3329,22 @@ async function loadAndRenderProfile(userId) {
   }
 
   const privacy    = profile.profile_privacy || 'public';
-  const isFriend   = friends.has(userId);
+  const isFriend   = following.has(userId); // followers = people you follow get access
 
-  // Gate access for private / friends-only profiles
-  if (!isOwn && (privacy === 'private' || privacy === 'friends_only') && !isFriend) {
+  // Gate access for private / followers-only profiles
+  if (!isOwn && (privacy === 'private' || privacy === 'followers' || privacy === 'friends_only') && !isFriend) {
     el.innerHTML = renderPrivateProfileHTML(profile, privacy, userId);
     return;
   }
 
   const isFollowing = following.has(userId);
   const visibility  = profile.collection_visibility || 'public_only';
+
+  // Follower count
+  const { data: followerRows } = await db.from('follows')
+    .select('follower_id')
+    .eq('following_id', userId);
+  const followerCount = (followerRows || []).length;
 
   // Log count (is_public not on logs table — treat all logs as viewable)
   const { count: logCount } = await db.from('logs')
@@ -3327,11 +3366,11 @@ async function loadAndRenderProfile(userId) {
     if (!isOwn) {
       const vis = profile.collection_visibility || 'public';
       if (isFriend) {
-        // Friends see explicit non-private + null (Default), unless global is private
+        // Followers see explicit non-private + null (Default), unless global is private
         if (vis === 'private') q = q.neq('watch_privacy', 'private').not('watch_privacy', 'is', null);
         else                   q = q.neq('watch_privacy', 'private'); // null passes through
       } else {
-        // Non-friends see explicit public + null only if global is public
+        // Non-followers see explicit public + null only if global is public
         if (vis === 'public') q = q.or('watch_privacy.eq.public,watch_privacy.is.null');
         else                  q = q.eq('watch_privacy', 'public');
       }
@@ -3343,7 +3382,7 @@ async function loadAndRenderProfile(userId) {
   // Wishlist (respects wishlist_visibility setting)
   let wishlistItems = [];
   const wlVis = profile.wishlist_visibility || 'private';
-  const showWishlist = isOwn || wlVis === 'public' || (wlVis === 'friends' && isFriend);
+  const showWishlist = isOwn || wlVis === 'public' || ((wlVis === 'followers' || wlVis === 'friends') && isFriend);
   if (showWishlist) {
     const { data: wlData } = await db.from('wishlist')
       .select('id, brand, name, ref, price, image, color, wish_privacy')
@@ -3354,13 +3393,13 @@ async function loadAndRenderProfile(userId) {
       wishlistItems = wishlistItems.filter(w => {
         const p = w.wish_privacy;
         if (p === 'private') return false;
-        if (p === 'friends') return isFriend;
+        if (p === 'followers' || p === 'friends') return isFriend;
         return true; // null (inherit global, already passed) or 'public'
       });
     }
   }
 
-  el.innerHTML = renderProfilePageHTML(profile, isOwn, isFollowing, logCount || 0, recentLogs || [], showcase, visibility, privacy, isFriend, wishlistItems);
+  el.innerHTML = renderProfilePageHTML(profile, isOwn, isFollowing, logCount || 0, recentLogs || [], showcase, visibility, privacy, isFriend, wishlistItems, followerCount || 0);
 
   if (isOwn) {
     document.getElementById('profile-save-btn')?.addEventListener('click', saveProfileFromPage);
@@ -3373,7 +3412,7 @@ function renderPrivateProfileHTML(profile, privacy, userId) {
   const uname = profile.username ? '@' + escHtml(profile.username) : '';
   const msg   = privacy === 'private'
     ? '🔒 This account is private'
-    : '🔒 Friends only — send a friend request to connect';
+    : '🔒 Followers only — follow this account to see their content';
   const actionHtml = friendActionBtn({ id: userId, profile_privacy: privacy });
   return `
     <div class="profile-hero">
@@ -3385,7 +3424,7 @@ function renderPrivateProfileHTML(profile, privacy, userId) {
     </div>`;
 }
 
-function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs, showcase, visibility, privacy, isFriend, wishlistItems = []) {
+function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs, showcase, visibility, privacy, isFriend, wishlistItems = [], followerCount = 0) {
   const heroInitials = profileInitials(profile);
   const wlVis = profile.wishlist_visibility || 'private';
   const name     = escHtml(profile.display_name || profile.username || '—');
@@ -3415,7 +3454,8 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     <div class="profile-stats-row">
       <div class="profile-stat"><div class="profile-stat-value">${watchCount}</div><div class="profile-stat-label">${watchLabel}</div></div>
       <div class="profile-stat"><div class="profile-stat-value">${logCount}</div><div class="profile-stat-label">Wears</div></div>
-      ${isOwn ? `<div class="profile-stat"><div class="profile-stat-value">${following.size}</div><div class="profile-stat-label">Following</div></div>` : ''}
+      <div class="profile-stat profile-stat-btn" onclick="openFollowersModal('${profile.id}')"><div class="profile-stat-value">${followerCount}</div><div class="profile-stat-label">Followers</div></div>
+      ${isOwn ? `<div class="profile-stat profile-stat-btn" onclick="openFollowingModal()"><div class="profile-stat-value">${following.size}</div><div class="profile-stat-label">Following</div></div>` : ''}
     </div>`;
 
   // Edit fields (own profile) — hidden until edit icon tapped
@@ -3456,16 +3496,16 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         <label style="font-size:.78rem;">Profile</label>
         <div class="chips" id="prv-profile-chips">
           ${pChip('prv-profile-chips','public','🌐 Public',cur,'profile_privacy')}
-          ${pChip('prv-profile-chips','friends_only','👥 Friends',cur,'profile_privacy')}
+          ${pChip('prv-profile-chips','followers','👥 Followers',cur,'profile_privacy')}
           ${pChip('prv-profile-chips','private','🔒 Private',cur,'profile_privacy')}
         </div>
-        <div style="font-size:.71rem;color:var(--muted);margin-top:.25rem;">Friends or Private does not remove existing followers.</div>
+        <div style="font-size:.71rem;color:var(--muted);margin-top:.25rem;">Followers or Private does not remove existing followers.</div>
       </div>
       <div class="form-group" style="margin-bottom:.75rem;">
         <label style="font-size:.78rem;">Collection</label>
         <div class="chips" id="prv-collection-chips">
           ${pChip('prv-collection-chips','public','🌐 Public',curCol,'collection_visibility')}
-          ${pChip('prv-collection-chips','friends','👥 Friends',curCol,'collection_visibility')}
+          ${pChip('prv-collection-chips','followers','👥 Followers',curCol,'collection_visibility')}
           ${pChip('prv-collection-chips','private','🔒 Private',curCol,'collection_visibility')}
         </div>
         <div style="font-size:.71rem;color:var(--muted);margin-top:.25rem;">You can also tap each watch in your collection to set its visibility individually.</div>
@@ -3474,7 +3514,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         <label style="font-size:.78rem;">Wishlist</label>
         <div class="chips" id="prv-wishlist-chips">
           ${pChip('prv-wishlist-chips','public','🌐 Public',wlVis,'wishlist_visibility')}
-          ${pChip('prv-wishlist-chips','friends','👥 Friends',wlVis,'wishlist_visibility')}
+          ${pChip('prv-wishlist-chips','followers','👥 Followers',wlVis,'wishlist_visibility')}
           ${pChip('prv-wishlist-chips','private','🔒 Private',wlVis,'wishlist_visibility')}
         </div>
         <div style="font-size:.71rem;color:var(--muted);margin-top:.25rem;">You can also tap each item in your wishlist to set its visibility individually.</div>
@@ -3482,8 +3522,8 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <div class="form-group" style="margin-bottom:0;">
         <label style="font-size:.78rem;">Default Post Visibility</label>
         <div class="chips" id="pp-default-vis-chips">
-          ${['public','friends','private'].map(v => {
-            const label = v === 'public' ? '🌐 Public' : v === 'friends' ? '👥 Friends' : '🔒 Private';
+          ${['public','followers','private'].map(v => {
+            const label = v === 'public' ? '🌐 Public' : v === 'followers' ? '👥 Followers' : '🔒 Private';
             return `<div class="chip${v === getDefaultVis() ? ' selected' : ''}" data-vis="${v}"
               onclick="selVisChip('pp-default-vis-chips','${v}');setDefaultVis('${v}')">${label}</div>`;
           }).join('')}
@@ -3502,9 +3542,9 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         ? `<img src="${escHtml(w.image)}" class="showcase-card-img" alt="" onerror="this.style.display='none'">`
         : `<div class="showcase-card-avatar" style="background:${escHtml(w.color || '#c9a84c')}">${initials(w.brand||'', w.name||'')}</div>`;
       const privLabel = isOwn
-        ? `<div class="showcase-priv-label ${priv === null ? 'inh' : priv === 'public' ? 'pub' : priv === 'friends_only' ? 'fri' : 'priv'}">${priv === null ? 'Default' : priv === 'public' ? 'Public' : priv === 'friends_only' ? 'Friends' : 'Private'}</div>`
+        ? `<div class="showcase-priv-label ${priv === null ? 'inh' : priv === 'public' ? 'pub' : (priv === 'followers' || priv === 'friends_only') ? 'fri' : 'priv'}">${priv === null ? 'Default' : priv === 'public' ? 'Public' : (priv === 'followers' || priv === 'friends_only') ? 'Followers' : 'Private'}</div>`
         : '';
-      const tintCls = isOwn ? (priv === 'public' ? ' col-pub' : priv === 'friends_only' ? ' col-fri' : priv === 'private' ? ' col-priv' : '') : '';
+      const tintCls = isOwn ? (priv === 'public' ? ' col-pub' : (priv === 'followers' || priv === 'friends_only') ? ' col-fri' : priv === 'private' ? ' col-priv' : '') : '';
       const clickAttr = isOwn
         ? `onclick="cycleWatchPrivacy('${w.id}')"`
         : `onclick="previewWatchFromEl(this)" style="cursor:pointer;"
@@ -3551,10 +3591,10 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           : `<div class="showcase-card-avatar" style="background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand||'', w.name||'')}</div>`;
         const wp = w.wish_privacy || null;
         const privLabel = isOwn
-          ? `<div class="showcase-priv-label ${wp === 'public' ? 'pub' : wp === 'friends' ? 'fri' : wp === 'private' ? 'priv' : 'inh'}">${wp === 'public' ? 'Public' : wp === 'friends' ? 'Friends' : wp === 'private' ? 'Private' : 'Default'}</div>`
+          ? `<div class="showcase-priv-label ${wp === 'public' ? 'pub' : (wp === 'followers' || wp === 'friends') ? 'fri' : wp === 'private' ? 'priv' : 'inh'}">${wp === 'public' ? 'Public' : (wp === 'followers' || wp === 'friends') ? 'Followers' : wp === 'private' ? 'Private' : 'Default'}</div>`
           : '';
         const clickAttr = isOwn ? `onclick="cycleWishPrivacy('${escHtml(w.id)}')"` : '';
-        const tintCls   = isOwn ? (wp === 'public' ? ' wl-pub' : wp === 'friends' ? ' wl-fri' : wp === 'private' ? ' wl-priv' : '') : '';
+        const tintCls   = isOwn ? (wp === 'public' ? ' wl-pub' : (wp === 'followers' || wp === 'friends') ? ' wl-fri' : wp === 'private' ? ' wl-priv' : '') : '';
         return `<div class="showcase-card${isOwn ? ' priv-own wl-wish-card' + tintCls : ''}" data-wish-id="${escHtml(w.id)}"${isOwn ? ` data-priv="${wp||'inh'}"` : ''} ${clickAttr}>
           ${thumb}
           <div class="showcase-brand">${escHtml(w.brand||'')}</div>
@@ -3624,9 +3664,11 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
 async function cycleWatchPrivacy(watchId) {
   const w = watches.find(x => x.id === watchId);
   if (!w) return;
-  // null = Default (inherit collection_visibility) → public → friends_only → private → null
-  const order = [null, 'public', 'friends_only', 'private'];
-  const next  = order[(order.indexOf(w.watchPrivacy ?? null) + 1) % order.length];
+  // null = Default (inherit collection_visibility) → public → followers → private → null
+  const order = [null, 'public', 'followers', 'private'];
+  // Normalize legacy 'friends_only' → 'followers' so indexOf works correctly
+  const cur = (w.watchPrivacy === 'friends_only' || w.watchPrivacy === 'friends') ? 'followers' : (w.watchPrivacy ?? null);
+  const next  = order[(order.indexOf(cur) + 1) % order.length];
   w.watchPrivacy = next;
   w.isPublic     = next !== 'private';
   const { error } = await db.from('watches')
@@ -3636,13 +3678,13 @@ async function cycleWatchPrivacy(watchId) {
   // Update DOM in-place — no full page reload
   const card = document.querySelector(`.col-watch-card[data-watch-id="${watchId}"]`);
   if (card) {
-    const cls = next === null ? 'inh' : next === 'public' ? 'pub' : next === 'friends_only' ? 'fri' : 'priv';
-    const lbl = next === null ? 'Default' : next === 'public' ? 'Public' : next === 'friends_only' ? 'Friends' : 'Private';
+    const cls = next === null ? 'inh' : next === 'public' ? 'pub' : next === 'followers' ? 'fri' : 'priv';
+    const lbl = next === null ? 'Default' : next === 'public' ? 'Public' : next === 'followers' ? 'Followers' : 'Private';
     card.dataset.priv = next || 'inh';
     card.classList.remove('col-pub', 'col-fri', 'col-priv');
-    if (next === 'public')       card.classList.add('col-pub');
-    else if (next === 'friends_only') card.classList.add('col-fri');
-    else if (next === 'private') card.classList.add('col-priv');
+    if (next === 'public')     card.classList.add('col-pub');
+    else if (next === 'followers') card.classList.add('col-fri');
+    else if (next === 'private')   card.classList.add('col-priv');
     const label = card.querySelector('.showcase-priv-label');
     if (label) { label.className = `showcase-priv-label ${cls}`; label.textContent = lbl; }
   }
@@ -3651,9 +3693,11 @@ async function cycleWatchPrivacy(watchId) {
 async function cycleWishPrivacy(wishId) {
   const w = wishlist.find(x => x.id === wishId);
   if (!w) return;
-  // null = Default (inherit global) → public → friends → private → null
-  const order = [null, 'public', 'friends', 'private'];
-  const next  = order[(order.indexOf(w.wishPrivacy ?? null) + 1) % order.length];
+  // null = Default (inherit global) → public → followers → private → null
+  const order = [null, 'public', 'followers', 'private'];
+  // Normalize legacy 'friends' / 'friends_only' → 'followers' so indexOf works correctly
+  const cur = (w.wishPrivacy === 'friends' || w.wishPrivacy === 'friends_only') ? 'followers' : (w.wishPrivacy ?? null);
+  const next  = order[(order.indexOf(cur) + 1) % order.length];
   w.wishPrivacy = next;
   const { error } = await db.from('wishlist')
     .update({ wish_privacy: next })
@@ -3662,13 +3706,13 @@ async function cycleWishPrivacy(wishId) {
   // Update DOM in-place — no full page reload
   const card = document.querySelector(`.wl-wish-card[data-wish-id="${wishId}"]`);
   if (card) {
-    const cls = next === 'public' ? 'pub' : next === 'friends' ? 'fri' : next === 'private' ? 'priv' : 'inh';
-    const lbl = next === 'public' ? 'Public' : next === 'friends' ? 'Friends' : next === 'private' ? 'Private' : 'Default';
+    const cls = next === 'public' ? 'pub' : next === 'followers' ? 'fri' : next === 'private' ? 'priv' : 'inh';
+    const lbl = next === 'public' ? 'Public' : next === 'followers' ? 'Followers' : next === 'private' ? 'Private' : 'Default';
     card.dataset.priv = next || 'inh';
     card.classList.remove('wl-pub', 'wl-fri', 'wl-priv');
-    if (next === 'public')  card.classList.add('wl-pub');
-    else if (next === 'friends')  card.classList.add('wl-fri');
-    else if (next === 'private') card.classList.add('wl-priv');
+    if (next === 'public')      card.classList.add('wl-pub');
+    else if (next === 'followers') card.classList.add('wl-fri');
+    else if (next === 'private')   card.classList.add('wl-priv');
     const label = card.querySelector('.showcase-priv-label');
     if (label) { label.className = `showcase-priv-label ${cls}`; label.textContent = lbl; }
   }
@@ -3764,18 +3808,61 @@ async function loadFollowing() {
   const { data } = await db.from('follows').select('following_id').eq('follower_id', currentUser.id);
   following = new Set((data || []).map(r => r.following_id));
 }
-
-// ── Friend State ───────────────────────────────────────────────────────────
-async function loadFriendState() {
+async function loadPendingRequests() {
   if (!currentUser) return;
-  const [{ data: sent }, { data: received }] = await Promise.all([
-    db.from('friend_requests').select('id, receiver_id, status').eq('sender_id', currentUser.id),
-    db.from('friend_requests').select('id, sender_id,   status').eq('receiver_id', currentUser.id),
-  ]);
-  friends.clear(); sentRequests.clear(); receivedRequests.clear();
-  (sent     || []).forEach(r => { sentRequests.set(r.receiver_id, {id:r.id, status:r.status}); if (r.status === 'accepted') friends.add(r.receiver_id); });
-  (received || []).forEach(r => { receivedRequests.set(r.sender_id, {id:r.id, status:r.status}); if (r.status === 'accepted') friends.add(r.sender_id); });
+  const { data } = await db.from('follow_requests').select('target_id').eq('requester_id', currentUser.id);
+  pendingRequests = new Set((data || []).map(r => r.target_id));
 }
+
+async function openFollowersModal(userId) {
+  const modal = document.getElementById('followers-modal');
+  const list  = document.getElementById('followers-list');
+  modal.classList.remove('hidden');
+  list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Loading…</div>';
+
+  const { data: rows } = await db.from('follows')
+    .select('follower_id')
+    .eq('following_id', userId);
+
+  const ids = (rows || []).map(r => r.follower_id);
+  if (!ids.length) {
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No followers yet.</div>';
+    return;
+  }
+
+  const { data: profiles } = await db.from('profiles')
+    .select('id, username, display_name, avatar_url, profile_privacy')
+    .in('id', ids);
+
+  list.innerHTML = (profiles || []).map(u => userCardHtml(u)).join('');
+}
+
+function closeFollowersModal() {
+  document.getElementById('followers-modal').classList.add('hidden');
+}
+
+async function openFollowingModal() {
+  const modal = document.getElementById('following-modal');
+  const list  = document.getElementById('following-modal-list');
+  modal.classList.remove('hidden');
+
+  const ids = [...following];
+  if (!ids.length) {
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">You\'re not following anyone yet.</div>';
+    return;
+  }
+
+  list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Loading…</div>';
+  const { data: profiles } = await db.from('profiles')
+    .select('id, username, display_name, avatar_url, profile_privacy')
+    .in('id', ids);
+  list.innerHTML = (profiles || []).map(u => userCardHtml(u)).join('');
+}
+
+function closeFollowingModal() {
+  document.getElementById('following-modal').classList.add('hidden');
+}
+
 
 // ── Notifications ──────────────────────────────────────────────────────────
 async function loadNotifications() {
@@ -3811,9 +3898,85 @@ async function followUser(userId) {
   const { error } = await db.from('follows').insert({ follower_id: currentUser.id, following_id: userId });
   if (!error) {
     following.add(userId);
+    // Send follow notification to the person being followed
+    db.from('notifications').insert({
+      user_id: userId, type: 'follow',
+      actor_id: currentUser.id, is_read: false,
+    }).then(() => {});
     toast('Following! Their logs will appear in your feed 🎉');
     renderDiscoverUsers();
     renderFollowingList();
+    loadFeed();
+  } else { toast('Could not follow — ' + error.message, 'error'); }
+}
+async function sendFollowRequest(userId) {
+  if (!currentUser || userId === currentUser.id) return;
+  const { error } = await db.from('follow_requests').insert({ requester_id: currentUser.id, target_id: userId });
+  if (!error) {
+    pendingRequests.add(userId);
+    const { error: notifErr } = await db.from('notifications').insert({
+      user_id: userId, type: 'follow_request',
+      actor_id: currentUser.id, is_read: false,
+    });
+    if (notifErr) console.error('follow_request notif failed:', notifErr);
+    toast('Follow request sent');
+    renderDiscoverUsers();
+  } else { toast('Could not send request — ' + error.message, 'error'); }
+}
+async function cancelFollowRequest(userId) {
+  if (!currentUser) return;
+  await db.from('follow_requests').delete()
+    .eq('requester_id', currentUser.id).eq('target_id', userId);
+  pendingRequests.delete(userId);
+  toast('Request cancelled');
+  renderDiscoverUsers();
+}
+async function acceptFollowRequest(requesterId, notifId) {
+  if (!currentUser) return;
+  await db.from('follows').insert({ follower_id: requesterId, following_id: currentUser.id });
+  await db.from('follow_requests').delete()
+    .eq('requester_id', requesterId).eq('target_id', currentUser.id);
+  db.from('notifications').insert({
+    user_id: requesterId, type: 'follow_accepted',
+    actor_id: currentUser.id, is_read: false,
+  }).then(() => {});
+  await db.from('notifications').update({ is_read: true }).eq('id', notifId);
+  const item = document.getElementById(`notif-${notifId}`);
+  if (item) {
+    const actionsEl = item.querySelector('.notif-follow-actions');
+    const alreadyFollowing = following.has(requesterId);
+    if (actionsEl) actionsEl.outerHTML = alreadyFollowing
+      ? `<div class="notif-follow-back"><span style="color:var(--muted);font-size:.78rem;">Now following you ✓</span></div>`
+      : `<div class="notif-follow-back">
+          <span style="color:var(--muted);font-size:.78rem;">Now following you.</span>
+          <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
+            onclick="followBackFromNotif('${requesterId}',this)">Follow back</button>
+          <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem;"
+            onclick="this.closest('.notif-follow-back').innerHTML='<span style=\\'color:var(--muted);font-size:.78rem\\'>Done</span>'">No thanks</button>
+        </div>`;
+    item.classList.remove('notif-unread');
+  }
+  unreadNotifCount = Math.max(0, unreadNotifCount - 1);
+  updateBellBadge();
+}
+async function declineFollowRequest(requesterId, notifId) {
+  if (!currentUser) return;
+  await db.from('follow_requests').delete()
+    .eq('requester_id', requesterId).eq('target_id', currentUser.id);
+  await db.from('notifications').update({ is_read: true }).eq('id', notifId);
+  const item = document.getElementById(`notif-${notifId}`);
+  if (item) item.remove();
+  userNotifs = userNotifs.filter(n => n.id !== notifId);
+  unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
+  updateBellBadge();
+}
+async function followBackFromNotif(userId, btn) {
+  if (!currentUser) return;
+  const { error } = await db.from('follows').insert({ follower_id: currentUser.id, following_id: userId });
+  if (!error) {
+    following.add(userId);
+    btn.closest('.notif-follow-back').innerHTML =
+      '<span style="color:var(--muted);font-size:.78rem;">Following ✓</span>';
     loadFeed();
   } else { toast('Could not follow — ' + error.message, 'error'); }
 }
@@ -3852,92 +4015,6 @@ async function unfollowUser(userId) {
   }
 }
 
-function confirmUnfriend(userId, btn) {
-  if (btn.dataset.confirming) {
-    delete btn.dataset.confirming;
-    unfriendUser(userId);
-  } else {
-    btn.dataset.confirming = '1';
-    btn.textContent = 'Unfriend?';
-    btn.style.borderColor = 'var(--danger)';
-    btn.style.color = 'var(--danger)';
-    setTimeout(() => {
-      if (btn.dataset.confirming) {
-        delete btn.dataset.confirming;
-        btn.textContent = 'Friends ✓';
-        btn.style.borderColor = '';
-        btn.style.color = '';
-      }
-    }, 3000);
-  }
-}
-async function unfriendUser(userId) {
-  if (!currentUser) return;
-  // Match the row regardless of who was sender/receiver
-  const { error } = await db.from('friend_requests').delete()
-    .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${currentUser.id})`);
-  if (error) { toast('Could not unfriend — ' + error.message, 'error'); return; }
-  friends.delete(userId);
-  sentRequests.delete(userId);
-  receivedRequests.delete(userId);
-  toast('Unfriended');
-  renderDiscoverUsers();
-  renderFollowingList();
-  if (profilePageUserId === userId) loadAndRenderProfile(userId);
-}
-
-// ── Friend Requests ────────────────────────────────────────────────────────
-async function sendFriendRequest(userId) {
-  if (!currentUser || userId === currentUser.id || sentRequests.has(userId)) return;
-  const { data, error } = await db.from('friend_requests')
-    .insert({ sender_id: currentUser.id, receiver_id: userId }).select().single();
-  if (!error && data) {
-    sentRequests.set(userId, { id: data.id, status: 'pending' });
-    toast('Friend request sent 👋');
-    renderDiscoverUsers();
-    if (profilePageUserId === userId) loadAndRenderProfile(userId);
-  } else { toast('Could not send request — ' + (error?.message || ''), 'error'); }
-}
-
-async function cancelFriendRequest(userId) {
-  const req = sentRequests.get(userId);
-  if (!req) return;
-  const { error } = await db.from('friend_requests').delete().eq('id', req.id);
-  if (!error) {
-    sentRequests.delete(userId); friends.delete(userId);
-    toast('Request cancelled');
-    renderDiscoverUsers();
-    if (profilePageUserId === userId) loadAndRenderProfile(userId);
-  }
-}
-
-async function acceptFriendRequest(senderId) {
-  const req = receivedRequests.get(senderId);
-  if (!req) return;
-  const { error } = await db.from('friend_requests').update({ status: 'accepted' }).eq('id', req.id);
-  if (!error) {
-    receivedRequests.set(senderId, { ...req, status: 'accepted' });
-    friends.add(senderId);
-    toast('Friend request accepted! 🎉');
-    const n = userNotifs.find(n => n.type === 'friend_request' && n.actor_id === senderId);
-    if (n) markNotificationRead(n.id);
-    renderNotificationPanel();
-    renderDiscoverUsers();
-  }
-}
-
-async function declineFriendRequest(senderId) {
-  const req = receivedRequests.get(senderId);
-  if (!req) return;
-  const { error } = await db.from('friend_requests').update({ status: 'declined' }).eq('id', req.id);
-  if (!error) {
-    receivedRequests.set(senderId, { ...req, status: 'declined' });
-    toast('Request declined');
-    const n = userNotifs.find(n => n.type === 'friend_request' && n.actor_id === senderId);
-    if (n) markNotificationRead(n.id);
-    renderNotificationPanel();
-  }
-}
 
 async function markNotificationRead(notifId) {
   await db.from('notifications').update({ is_read: true }).eq('id', notifId);
@@ -3990,28 +4067,29 @@ function renderNotificationPanel() {
   el.innerHTML = userNotifs.map(n => {
     const nm   = escHtml(n.actor?.display_name || n.actor?.username || 'Someone');
     const time = formatFeedDate(n.created_at || '');
-    const body = n.type === 'friend_request'  ? `${nm} sent you a friend request`
-               : n.type === 'friend_accepted' ? `${nm} accepted your friend request`
+    const body = n.type === 'follow_request'  ? `${nm} wants to follow you`
+               : n.type === 'follow_accepted' ? `${nm} accepted your follow request`
+               : n.type === 'follow'          ? `${nm} started following you`
                : n.type === 'like'            ? `${nm} liked your wear log`
                : n.type === 'comment'         ? `${nm} commented on your wear log` : '';
-    const reqPending = n.type === 'friend_request' && receivedRequests.get(n.actor_id)?.status === 'pending';
-    const actions = reqPending ? `
-      <div class="notif-actions">
-        <button class="btn btn-primary" style="font-size:.74rem;padding:.28rem .7rem;"
-          onclick="event.stopPropagation();acceptFriendRequest('${n.actor_id}')">Accept</button>
-        <button class="btn btn-ghost"   style="font-size:.74rem;padding:.28rem .7rem;"
-          onclick="event.stopPropagation();declineFriendRequest('${n.actor_id}')">Decline</button>
+    const actionsHtml = n.type === 'follow_request' ? `
+      <div class="notif-follow-actions">
+        <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
+          onclick="event.stopPropagation();acceptFollowRequest('${n.actor_id}','${n.id}')">Accept</button>
+        <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem;"
+          onclick="event.stopPropagation();declineFollowRequest('${n.actor_id}','${n.id}')">Decline</button>
       </div>` : '';
     const notifClick = (n.type === 'like' || n.type === 'comment')
       ? `toggleNotifPanel();nav(document.querySelector('nav button[data-page=\\'feed\\']'))`
+      : n.type === 'follow_request' ? ''
       : `viewUserProfile('${n.actor_id}')`;
     return `
-      <div class="notif-item ${n.is_read ? '' : 'notif-unread'}" onclick="${notifClick}">
+      <div class="notif-item ${n.is_read ? '' : 'notif-unread'}" id="notif-${n.id}" onclick="${notifClick}">
         <div class="feed-user-avatar" style="width:36px;height:36px;font-size:.76rem;flex-shrink:0;">${profileInitials(n.actor)}</div>
         <div style="flex:1;min-width:0;">
           <div class="notif-body">${body}</div>
+          ${actionsHtml}
           <div class="notif-time">${time}</div>
-          ${actions}
         </div>
       </div>`;
   }).join('');
@@ -4035,14 +4113,13 @@ async function loadFeed() {
   const listEl = document.getElementById('feed-list');
   if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--muted);">Loading…</div>';
   try {
-    const allUserIds = [...new Set([...following, ...friends, currentUser.id])];
+    const allUserIds = [...new Set([...following, currentUser.id])];
     // Logs — filter by visibility:
-    //   'public'  → show to all followers
-    //   'friends' → show only to mutual friends
-    //   'private' → only owner sees it
-    const friendIds = [...friends];
-    let visOr = `visibility.eq.public,user_id.eq.${currentUser.id}`;
-    if (friendIds.length) visOr += `,and(visibility.eq.friends,user_id.in.(${friendIds.join(',')}))`;
+    //   'public'    → show to all
+    //   'followers' → visible to anyone following that user (already filtered by allUserIds)
+    //   'friends'   → old value, treat same as followers
+    //   'private'   → only owner sees it
+    let visOr = `visibility.eq.public,user_id.eq.${currentUser.id},visibility.eq.followers,visibility.eq.friends`;
 
     let rawLogs, logsErr;
     try {
@@ -4184,7 +4261,7 @@ function renderFeedCard(item) {
   // Visibility badge — only shown to the author on non-public posts
   const vis = item.visibility || 'public';
   const visBadge = (isMe && vis !== 'public')
-    ? `<div class="vis-badge ${vis}">${vis === 'friends' ? '👥 Friends only' : '🔒 Only you'}</div>`
+    ? `<div class="vis-badge ${vis}">${(vis === 'followers' || vis === 'friends') ? '👥 Followers only' : '🔒 Only you'}</div>`
     : '';
 
   let commentsHtml = '';
@@ -4646,6 +4723,7 @@ function debounceSearch(val) {
   searchDebounce = setTimeout(() => doSearchUsers(val.trim()), 350);
 }
 async function doSearchUsers(query) {
+  if (!currentUser) return;
   const el = document.getElementById('discover-results');
   if (el) el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">Searching…</div>';
   const { data, error } = await db
@@ -4660,7 +4738,7 @@ async function doSearchUsers(query) {
     return;
   }
   // Hide private accounts that aren't already friends
-  discoverUsers = (data || []).filter(u => u.profile_privacy !== 'private' || friends.has(u.id));
+  discoverUsers = (data || []).filter(u => u.profile_privacy !== 'private' || following.has(u.id));
   renderDiscoverUsers();
 }
 function renderDiscoverUsers() {
@@ -4678,7 +4756,7 @@ function renderDiscoverUsers() {
 async function renderFollowingList() {
   const el = document.getElementById('following-list');
   if (!el) return;
-  const ids = [...new Set([...following, ...friends])];
+  const ids = [...following];
   if (!ids.length) {
     el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">You\'re not following anyone yet.</div>';
     return;
@@ -4687,33 +4765,19 @@ async function renderFollowingList() {
   el.innerHTML = (data || []).map(u => userCardHtml(u)).join('');
 }
 function friendActionBtn(u) {
-  const priv  = u.profile_privacy || 'public';
-  const isFr  = friends.has(u.id);
-  const sent  = sentRequests.get(u.id);
-  const recv  = receivedRequests.get(u.id);
   const isFlw = following.has(u.id);
-
-  // Friends ✓ takes priority regardless of profile privacy level
-  if (isFr) return `<button class="follow-btn following" onclick="confirmUnfriend('${u.id}',this)">Friends ✓</button>`;
-
-  if (priv === 'public') {
-    return `<button class="follow-btn ${isFlw ? 'following' : 'follow'}"
-      onclick="${isFlw ? `confirmUnfollow('${u.id}',this)` : `followUser('${u.id}')`}">
-      ${isFlw ? 'Following' : 'Follow'}</button>`;
-  }
-  // friends_only or private (not yet friends)
-  if (recv?.status === 'pending') return `
-    <button class="follow-btn follow"    style="margin-right:.3rem;" onclick="acceptFriendRequest('${u.id}')">Accept</button>
-    <button class="follow-btn following" onclick="declineFriendRequest('${u.id}')">Decline</button>`;
-  if (sent?.status === 'pending') return `<button class="follow-btn following" onclick="cancelFriendRequest('${u.id}')">Requested</button>`;
-  if (sent?.status === 'declined') return `<span style="font-size:.72rem;color:var(--muted);">Unavailable</span>`;
-  return `<button class="follow-btn follow" onclick="sendFriendRequest('${u.id}')">Add Friend</button>`;
+  const isPending = pendingRequests.has(u.id);
+  const restricted = u.profile_privacy === 'followers' || u.profile_privacy === 'private' || u.profile_privacy === 'friends_only';
+  if (isFlw)     return `<button class="follow-btn following" onclick="confirmUnfollow('${u.id}',this)">Following</button>`;
+  if (isPending) return `<button class="follow-btn requested" onclick="cancelFollowRequest('${u.id}')">Requested</button>`;
+  const action = restricted ? `sendFollowRequest('${u.id}')` : `followUser('${u.id}')`;
+  return `<button class="follow-btn follow" onclick="${action}">Follow</button>`;
 }
 
 function userCardHtml(u) {
   const priv  = u.profile_privacy || 'public';
-  const label = priv === 'friends_only' ? '<span class="privacy-label">🔒 Friends Only</span>'
-              : priv === 'private'      ? '<span class="privacy-label">🔒 Private</span>' : '';
+  const label = (priv === 'followers' || priv === 'friends_only') ? '<span class="privacy-label">🔒 Followers Only</span>'
+              : priv === 'private' ? '<span class="privacy-label">🔒 Private</span>' : '';
   return `
     <div class="user-card">
       <div class="feed-user-avatar" onclick="viewUserProfile('${u.id}')" style="cursor:pointer;">${profileInitials(u)}</div>
@@ -4791,8 +4855,8 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 });
 
 function visChipsHtml(cId, selected) {
-  return ['public','friends','private'].map(v => {
-    const label = v === 'public' ? '🌐 Public' : v === 'friends' ? '👥 Friends' : '🔒 Private';
+  return ['public','followers','private'].map(v => {
+    const label = v === 'public' ? '🌐 Public' : v === 'followers' ? '👥 Followers' : '🔒 Private';
     return `<div class="chip${v === selected ? ' selected' : ''}" data-vis="${v}"
       onclick="selVisChip('${cId}','${v}')">${label}</div>`;
   }).join('');
@@ -4911,6 +4975,7 @@ let feedCommentCounts = {};        // logId → count
 let feedComments      = {};        // logId → [{...}] (loaded on demand)
 let expandedComments  = new Set(); // logIds currently showing comments
 let following         = new Set(); // user_ids current user follows
+let pendingRequests   = new Set(); // user_ids I've sent a follow request to (awaiting approval)
 let feedLoading       = false;
 let myProfile         = null;      // current user's profile row
 let discoverUsers     = [];        // search results in discover modal
@@ -4919,9 +4984,6 @@ let profilePageUserId = null;      // user ID shown on full profile page
 let profilePagePrev   = 'page-feed'; // page to return to on Back
 
 // ── FRIEND / PRIVACY STATE ──────────────────────────────────────────────────
-let friends          = new Set(); // user IDs with an accepted friendship (both directions)
-let sentRequests     = new Map(); // receiverId → {id, status}
-let receivedRequests = new Map(); // senderId   → {id, status}
 let userNotifs       = [];        // loaded notifications (enriched with .actor profile)
 let unreadNotifCount = 0;
 let notifPanelOpen   = false;
@@ -8908,7 +8970,7 @@ function initApp() {
   fetchWeather();
   initReminder();
   // Load social data then feed (landing page)
-  Promise.all([loadMyProfile(), loadFollowing(), loadFriendState()]).then(() => {
+  Promise.all([loadMyProfile(), loadFollowing(), loadPendingRequests()]).then(() => {
     loadFeed();
     loadNotifications();
     // Poll for new notifications every 30 seconds
@@ -8991,7 +9053,6 @@ db.auth.onAuthStateChange((event, session) => {
     clearUserState();
     feedItems = []; feedLikes = {}; feedCommentCounts = {}; feedComments = {};
     expandedComments.clear(); following.clear(); myProfile = null;
-    friends.clear(); sentRequests.clear(); receivedRequests.clear();
     userNotifs = []; unreadNotifCount = 0; notifPanelOpen = false;
     document.getElementById('auth-screen').style.display = 'flex';
     document.getElementById('signout-btn').style.display = 'none';
