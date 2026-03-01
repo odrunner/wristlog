@@ -831,7 +831,7 @@
     .modal-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 1.4rem; }
     .modal-actions { display: flex; gap: .65rem; margin-top: 1.4rem; }
 
-    /* ── REPORTS PAGE ── */
+    /* ── STATS PAGE ── */
     .stats-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -949,9 +949,9 @@
     tbody tr:hover td { background: var(--surface2); }
 
     /* Filter */
-    .reports-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+    .stats-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
     select.filter-select { width: auto; min-width: 150px; }
-    .reports-filters { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+    .stats-filters { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
 
     /* Empty state */
     .empty {
@@ -1635,7 +1635,7 @@
               <svg viewBox="0 0 24 24"><path d="M4 20h16"/><rect x="4" y="13" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/></svg>
             </div>
             <div>
-              <div class="landing-feat-title">Reports & Insights</div>
+              <div class="landing-feat-title">Stats & Insights</div>
               <div class="landing-feat-desc">Wearing frequency, cost-per-wear, brand breakdowns, and your most and least worn watches.</div>
             </div>
           </div>
@@ -1864,7 +1864,7 @@
       <button               data-page="track"        onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg></span><span class="nav-label">Track</span></button>
       <button               data-page="collection"   onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="nav-label">Collection</span></button>
       <button               data-page="wishlist"     onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></span><span class="nav-label">Wishlist</span></button>
-      <button               data-page="reports"      onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 20h16"/><rect x="4" y="13" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/></svg></span><span class="nav-label">Reports</span></button>
+      <button               data-page="stats"      onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 20h16"/><rect x="4" y="13" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/></svg></span><span class="nav-label">Stats</span></button>
       <button               data-page="clubs"        onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="nav-label">Clubs</span></button>
     </nav>
     <div class="header-data">
@@ -2033,7 +2033,7 @@
             <div class="help-step-num">3</div>
             <div class="help-step-body">
               <div class="help-step-title">Fill in price, purchase date, and condition</div>
-              <div class="help-step-desc">These power the Cost-per-Wear metric in Reports. Purchase date is also used to sort your collection.</div>
+              <div class="help-step-desc">These power the Cost-per-Wear metric in Stats. Purchase date is also used to sort your collection.</div>
             </div>
           </div>
           <div class="help-step">
@@ -2069,7 +2069,7 @@
             <div class="help-step-num">3</div>
             <div class="help-step-body">
               <div class="help-step-title">Choose a use case and add notes (optional)</div>
-              <div class="help-step-desc">Work, Leisure, Dinner, or Travel — use cases power the wear-pattern charts in Reports. Notes are great for occasion details, outfit pairings, or quick impressions.</div>
+              <div class="help-step-desc">Work, Leisure, Dinner, or Travel — use cases power the wear-pattern charts in Stats. Notes are great for occasion details, outfit pairings, or quick impressions.</div>
             </div>
           </div>
           <div class="help-step">
@@ -2219,9 +2219,9 @@
         </div>
       </div>
 
-      <!-- ── REPORTS ── -->
+      <!-- ── STATS ── -->
       <div class="help-section">
-        <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Reports</div>
+        <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Stats</div>
         <div class="help-card">
           <div class="help-step">
             <div class="help-step-num">—</div>
@@ -2241,7 +2241,7 @@
             <div class="help-step-num">—</div>
             <div class="help-step-body">
               <div class="help-step-title">Year in Review</div>
-              <div class="help-step-desc">A full-year heat-map calendar showing every day you logged a watch. Scroll to the bottom of Reports and select the year.</div>
+              <div class="help-step-desc">A full-year heat-map calendar showing every day you logged a watch. Scroll to the bottom of Stats and select the year.</div>
             </div>
           </div>
         </div>
@@ -2264,12 +2264,12 @@
     <div id="wishlist-grid"></div>
   </div>
 
-  <!-- ════ REPORTS PAGE ════ -->
-  <div id="page-reports" class="page">
-    <div class="reports-top">
-      <div class="page-title">Reports</div>
-      <div class="reports-filters">
-        <select class="filter-select" id="report-period" onchange="renderReports()">
+  <!-- ════ STATS PAGE ════ -->
+  <div id="page-stats" class="page">
+    <div class="stats-top">
+      <div class="page-title">Stats</div>
+      <div class="stats-filters">
+        <select class="filter-select" id="report-period" onchange="renderStats()">
           <option value="all">All Time</option>
           <option value="30">Last 30 Days</option>
           <option value="90">Last 90 Days</option>
@@ -5949,7 +5949,7 @@ function nav(btn) {
   if (page === 'collection') renderCollection();
   if (page === 'track')    renderTrack();
   if (page === 'wishlist') renderWishlist();
-  if (page === 'reports')  renderReports();
+  if (page === 'stats')  renderStats();
   if (page === 'feed')     { loadFeed(); loadNotifications(); }
   if (page === 'clubs')    renderClubsPage();
 }
@@ -7343,7 +7343,7 @@ function confirmDelete() {
 }
 
 // ══════════════════════════════════════════
-//  REPORTS PAGE
+//  STATS PAGE
 // ══════════════════════════════════════════
 function filteredLogs() {
   const p = document.getElementById('report-period').value;
@@ -7698,7 +7698,7 @@ function quickLogAndRefreshRec(watchId) {
   renderWatchRecommendation();
 }
 
-function renderReports() {
+function renderStats() {
   const fl = filteredLogs();
   renderStats(fl);
   renderCollectionReport(fl);
@@ -8021,15 +8021,15 @@ function setCollSort(field) {
   renderCollectionReport(filteredLogs());
 }
 
-function deleteLogFromReports(id) {
+function deleteLogFromStats(id) {
   logs = logs.filter(l => l.id !== id);
   save();
   // Hard-delete from Supabase — upsert only writes, never removes rows
   if (currentUser) {
     db.from('logs').delete().eq('id', id).eq('user_id', currentUser.id)
-      .then(({ error }) => { if (error) console.error('[WristLog] deleteLogFromReports error:', error.message); });
+      .then(({ error }) => { if (error) console.error('[WristLog] deleteLogFromStats error:', error.message); });
   }
-  renderReports();
+  renderStats();
 }
 
 // ══════════════════════════════════════════
