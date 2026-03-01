@@ -46,18 +46,18 @@
     header { overflow: hidden; }
 
     :root {
-      --bg:        #0b0b10;
-      --surface:   #141419;
-      --surface2:  #1c1c25;
-      --border:    #272734;
-      --gold:      #c9a84c;
-      --gold-lt:   #dbbe72;
-      --gold-dim:  rgba(201,168,76,.12);
-      --text:      #e6e6f0;
-      --muted:     #7a7a95;
-      --danger:    #e05555;
-      --success:   #4caf7d;
-      --radius:    10px;
+      --bg:           #0b0b10;
+      --surface:      #141419;
+      --surface2:     #1c1c25;
+      --border:       #272734;
+      --gold:         #c9a84c;
+      --gold-lt:      #dbbe72;
+      --gold-dim:     rgba(201,168,76,.12);
+      --text:         #e6e6f0;
+      --muted:        #7a7a95;
+      --danger:       #e05555;
+      --success:      #4caf7d;
+      --radius:       10px;
     }
     [data-theme="light"] {
       --bg:       #f5f5f8;
@@ -143,13 +143,28 @@
     }
     .app-ver { font-size: .6rem; color: var(--muted); opacity: .5; letter-spacing: .06em; white-space: nowrap; user-select: none; }
 
-    /* ── AUTH SCREEN ── */
+    /* ── AUTH / LANDING SCREEN ── */
     #auth-screen {
       position: fixed; inset: 0; z-index: 500;
       background: var(--bg);
-      display: flex; /* shown by default — JS hides immediately for returning users */
-      align-items: center; justify-content: center;
-      padding: 1.5rem;
+      display: flex;
+      align-items: flex-start; justify-content: center;
+      overflow-y: auto;
+      padding: 2.5rem 1.25rem 4rem;
+    }
+    .landing-wrap { width: 100%; max-width: 900px; display: flex; align-items: flex-start; gap: 3rem; }
+    .landing-left { flex: 1; min-width: 0; }
+    .landing-right { flex-shrink: 0; width: 340px; position: sticky; top: 2rem; }
+    .landing-hero { margin-bottom: 2rem; }
+    .landing-features { display: flex; flex-direction: column; gap: .65rem; text-align: left; }
+    .landing-feat { display: flex; align-items: flex-start; gap: .9rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .9rem 1rem; }
+    .landing-feat-icon { font-size: 1.4rem; line-height: 1.2; flex-shrink: 0; }
+    .landing-feat-title { font-size: .88rem; font-weight: 600; color: var(--text); margin-bottom: .2rem; }
+    .landing-feat-desc { font-size: .79rem; color: var(--muted); line-height: 1.5; }
+    @media (max-width: 640px) {
+      .landing-wrap { flex-direction: column; gap: 1.5rem; }
+      .landing-right { width: 100%; position: static; }
+      .landing-hero { text-align: center; }
     }
     .auth-box {
       width: 100%; max-width: 380px;
@@ -1478,42 +1493,151 @@
 </head>
 <body>
 
-<!-- ════ AUTH SCREEN ════ -->
+<!-- ════ AUTH / LANDING SCREEN ════ -->
 <div id="auth-screen">
-  <div class="auth-box">
-    <div class="auth-logo">
-      <svg width="30" height="30" viewBox="0 0 32 32" fill="none" style="flex-shrink:0;">
-        <path d="M 21 7.3 A 10 10 0 1 1 11 7.3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-        <polygon points="11,7.3 8.5,9.5 7.7,6.6" fill="currentColor"/>
-        <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
-      </svg>
-      W<span style="font-weight:400;letter-spacing:.04em;">rotate</span>
+  <div class="landing-wrap">
+
+    <!-- LEFT: hero + features -->
+    <div class="landing-left">
+      <div class="landing-hero">
+        <div class="auth-logo" style="margin-bottom:.5rem;justify-content:flex-start;">
+          <svg width="34" height="34" viewBox="0 0 32 32" fill="none" style="flex-shrink:0;">
+            <path d="M 21 7.3 A 10 10 0 1 1 11 7.3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            <polygon points="11,7.3 8.5,9.5 7.7,6.6" fill="currentColor"/>
+            <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
+          </svg>
+          W<span style="font-weight:400;letter-spacing:.04em;">rotate</span>
+        </div>
+        <div style="font-size:1.6rem;font-weight:800;color:var(--text);line-height:1.25;margin-bottom:.5rem;">Every Watch.<br>Every Wear.</div>
+        <div style="font-size:.95rem;color:var(--muted);line-height:1.55;">The watch collection tracker for enthusiasts.<br>Track wears, build your collection, connect with others.</div>
+      </div>
+      <div class="landing-features">
+        <div class="landing-feat">
+          <div class="landing-feat-icon">⌚</div>
+          <div>
+            <div class="landing-feat-title">Track Every Wear</div>
+            <div class="landing-feat-desc">Log which watch you wore each day, with straps, mood, and notes. Build a personal wear history.</div>
+          </div>
+        </div>
+        <div class="landing-feat">
+          <div class="landing-feat-icon">📦</div>
+          <div>
+            <div class="landing-feat-title">Build Your Collection</div>
+            <div class="landing-feat-desc">Add watches by URL — brand, name, and photo fill in automatically. Track cost-per-wear and market value.</div>
+          </div>
+        </div>
+        <div class="landing-feat">
+          <div class="landing-feat-icon">🌍</div>
+          <div>
+            <div class="landing-feat-title">Connect With Enthusiasts</div>
+            <div class="landing-feat-desc">See what others are wearing in your feed. Follow people, like wears, and discover new watches.</div>
+          </div>
+        </div>
+        <div class="landing-feat">
+          <div class="landing-feat-icon">📊</div>
+          <div>
+            <div class="landing-feat-title">Reports & Insights</div>
+            <div class="landing-feat-desc">Wearing frequency, cost-per-wear, brand breakdowns, and your most and least worn watches.</div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="auth-tagline">Track every wear. Build your story.</div>
 
-    <div id="auth-error" class="auth-error"></div>
-
-    <button class="btn-google" onclick="signInWithGoogle()">
-      <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-        <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-        <path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
-        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-      </svg>
-      Continue with Google
-    </button>
-
-    <div class="auth-divider">First time? Just sign in — account created automatically.</div>
-
-    <!-- Dev-only anonymous login — localhost only -->
-    <div id="dev-login-wrap" style="display:none;margin-top:1rem;text-align:center;">
-      <button onclick="devLogin()" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.45rem 1.1rem;font-size:.78rem;cursor:pointer;font-family:inherit;">
-        🛠 Dev Login (localhost only)
-      </button>
+    <!-- RIGHT: sign in -->
+    <div class="landing-right">
+      <div class="auth-box" style="max-width:100%;">
+        <div class="auth-logo" style="margin-bottom:.3rem;">
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none" style="flex-shrink:0;">
+            <path d="M 21 7.3 A 10 10 0 1 1 11 7.3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            <polygon points="11,7.3 8.5,9.5 7.7,6.6" fill="currentColor"/>
+            <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
+          </svg>
+          W<span style="font-weight:400;letter-spacing:.04em;">rotate</span>
+        </div>
+        <div class="auth-tagline">Sign in to get started.</div>
+        <div id="auth-error" class="auth-error"></div>
+        <button class="btn-google" onclick="signInWithGoogle()">
+          <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+            <path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
+          Continue with Google
+        </button>
+        <div class="auth-divider">First time? Just sign in — account created automatically.</div>
+        <!-- Dev-only anonymous login — localhost only -->
+        <div id="dev-login-wrap" style="display:none;margin-top:1rem;text-align:center;">
+          <button onclick="devLogin()" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.45rem 1.1rem;font-size:.78rem;cursor:pointer;font-family:inherit;">
+            🛠 Dev Login (localhost only)
+          </button>
+        </div>
+      </div>
     </div>
 
   </div>
 </div>
+
+<!-- ════ OLD GHOST CARDS (removed) ════ -->
+<div id="landing-bg" style="display:none;">
+  <div style="width:100%;max-width:900px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;">
+    <div class="ghost-card">
+      <div class="ghost-bar" style="width:100%;height:148px;border-radius:7px;margin-bottom:1rem;"></div>
+      <div class="ghost-bar" style="width:50%;height:10px;margin-bottom:.45rem;opacity:.5;"></div>
+      <div class="ghost-bar" style="width:75%;height:13px;margin-bottom:.9rem;"></div>
+      <div style="display:flex;gap:.5rem;">
+        <div class="ghost-bar" style="width:60px;height:9px;opacity:.4;"></div>
+        <div class="ghost-bar" style="width:50px;height:9px;opacity:.4;"></div>
+      </div>
+    </div>
+    <div class="ghost-card">
+      <div class="ghost-bar" style="width:100%;height:148px;border-radius:7px;margin-bottom:1rem;"></div>
+      <div class="ghost-bar" style="width:42%;height:10px;margin-bottom:.45rem;opacity:.5;"></div>
+      <div class="ghost-bar" style="width:68%;height:13px;margin-bottom:.9rem;"></div>
+      <div style="display:flex;gap:.5rem;">
+        <div class="ghost-bar" style="width:55px;height:9px;opacity:.4;"></div>
+        <div class="ghost-bar" style="width:45px;height:9px;opacity:.4;"></div>
+      </div>
+    </div>
+    <div class="ghost-card">
+      <div class="ghost-bar" style="width:100%;height:148px;border-radius:7px;margin-bottom:1rem;"></div>
+      <div class="ghost-bar" style="width:55%;height:10px;margin-bottom:.45rem;opacity:.5;"></div>
+      <div class="ghost-bar" style="width:80%;height:13px;margin-bottom:.9rem;"></div>
+      <div style="display:flex;gap:.5rem;">
+        <div class="ghost-bar" style="width:58px;height:9px;opacity:.4;"></div>
+        <div class="ghost-bar" style="width:48px;height:9px;opacity:.4;"></div>
+      </div>
+    </div>
+    <div class="ghost-card">
+      <div class="ghost-bar" style="width:100%;height:148px;border-radius:7px;margin-bottom:1rem;"></div>
+      <div class="ghost-bar" style="width:38%;height:10px;margin-bottom:.45rem;opacity:.5;"></div>
+      <div class="ghost-bar" style="width:62%;height:13px;margin-bottom:.9rem;"></div>
+      <div style="display:flex;gap:.5rem;">
+        <div class="ghost-bar" style="width:52px;height:9px;opacity:.4;"></div>
+        <div class="ghost-bar" style="width:44px;height:9px;opacity:.4;"></div>
+      </div>
+    </div>
+    <div class="ghost-card">
+      <div class="ghost-bar" style="width:100%;height:148px;border-radius:7px;margin-bottom:1rem;"></div>
+      <div class="ghost-bar" style="width:48%;height:10px;margin-bottom:.45rem;opacity:.5;"></div>
+      <div class="ghost-bar" style="width:71%;height:13px;margin-bottom:.9rem;"></div>
+      <div style="display:flex;gap:.5rem;">
+        <div class="ghost-bar" style="width:56px;height:9px;opacity:.4;"></div>
+        <div class="ghost-bar" style="width:46px;height:9px;opacity:.4;"></div>
+      </div>
+    </div>
+    <div class="ghost-card">
+      <div class="ghost-bar" style="width:100%;height:148px;border-radius:7px;margin-bottom:1rem;"></div>
+      <div class="ghost-bar" style="width:44%;height:10px;margin-bottom:.45rem;opacity:.5;"></div>
+      <div class="ghost-bar" style="width:66%;height:13px;margin-bottom:.9rem;"></div>
+      <div style="display:flex;gap:.5rem;">
+        <div class="ghost-bar" style="width:54px;height:9px;opacity:.4;"></div>
+        <div class="ghost-bar" style="width:42px;height:9px;opacity:.4;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <!-- ════ USERNAME ONBOARDING MODAL ════ -->
 <div id="username-modal" class="overlay hidden">
@@ -2935,7 +3059,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.28.26.20.39';
+const APP_VERSION = '2.28.26.28.10';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
