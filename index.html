@@ -173,9 +173,7 @@
     }
     .btn-google:hover { box-shadow: 0 1px 6px rgba(0,0,0,.2); background: #f8f8f8; }
     .auth-error { background: rgba(224,85,85,.12); border: 1px solid rgba(224,85,85,.3); color: #f87171; font-size: .82rem; padding: .65rem .9rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
-    .auth-divider { text-align: center; color: var(--muted); font-size: .75rem; margin: 1.25rem 0; position: relative; }
-    .auth-divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--border); }
-    .auth-divider span { background: var(--surface); padding: 0 .75rem; position: relative; }
+    .auth-divider { text-align: center; color: var(--muted); font-size: .75rem; margin: 1.25rem 0; line-height: 1.5; }
 
     .btn-signout { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: .72rem; font-weight: 500; padding: .28rem .6rem; border-radius: 6px; cursor: pointer; transition: all .15s; white-space: nowrap; font-family: inherit; }
     .btn-signout:hover { border-color: var(--danger); color: var(--danger); }
@@ -1505,7 +1503,7 @@
       Continue with Google
     </button>
 
-    <div class="auth-divider"><span>First time? Just sign in — account created automatically.</span></div>
+    <div class="auth-divider">First time? Just sign in — account created automatically.</div>
 
     <!-- Dev-only anonymous login — localhost only -->
     <div id="dev-login-wrap" style="display:none;margin-top:1rem;text-align:center;">
