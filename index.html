@@ -4087,7 +4087,8 @@ function renderNotificationPanel() {
                : n.type === 'follow_accepted' ? `${nm} accepted your follow request`
                : n.type === 'follow'          ? `${nm} started following you`
                : n.type === 'like'            ? `${nm} liked your wear log`
-               : n.type === 'comment'         ? `${nm} commented on your wear log` : '';
+               : n.type === 'comment'         ? `${nm} commented on your wear log`
+               : n.type === 'comment_also'    ? `${nm} also commented on a post you liked or commented on` : '';
     const actionsHtml = (n.type === 'follow_request' && !n.is_read) ? `
       <div class="notif-follow-actions">
         <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
@@ -4095,7 +4096,7 @@ function renderNotificationPanel() {
         <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem;"
           onclick="event.stopPropagation();declineFollowRequest('${n.actor_id}','${n.id}')">Decline</button>
       </div>` : '';
-    const notifClick = (n.type === 'like' || n.type === 'comment')
+    const notifClick = (n.type === 'like' || n.type === 'comment' || n.type === 'comment_also')
       ? `toggleNotifPanel();nav(document.querySelector('nav button[data-page=\\'feed\\']'))`
       : n.type === 'follow_request' ? ''
       : `viewUserProfile('${n.actor_id}')`;
@@ -4680,10 +4681,25 @@ async function postComment(logId) {
     await fetchComments(logId);
     feedCommentCounts[logId] = (feedComments[logId] || []).length;
     refreshFeedCard(logId);
-    // Notify the post author (skip if commenting on own post)
     const item = feedItems.find(i => i.id === logId);
-    if (item && item.user_id !== currentUser.id) {
-      db.from('notifications').insert({ user_id: item.user_id, type: 'comment', actor_id: currentUser.id }).then();
+    const postOwner = item?.user_id;
+    // Notify the post author (skip if commenting on own post)
+    if (postOwner && postOwner !== currentUser.id) {
+      db.from('notifications').insert({ user_id: postOwner, type: 'comment', actor_id: currentUser.id, is_read: false }).then();
+    }
+    // Notify others who liked or previously commented on this post
+    const [{ data: likers }, { data: prevCommenters }] = await Promise.all([
+      db.from('likes').select('user_id').eq('log_id', logId),
+      db.from('comments').select('user_id').eq('log_id', logId)
+    ]);
+    const notifyIds = [...new Set([
+      ...(likers       || []).map(l => l.user_id),
+      ...(prevCommenters || []).map(c => c.user_id),
+    ])].filter(uid => uid !== currentUser.id && uid !== postOwner);
+    if (notifyIds.length) {
+      db.from('notifications').insert(
+        notifyIds.map(uid => ({ user_id: uid, type: 'comment_also', actor_id: currentUser.id, is_read: false }))
+      ).then();
     }
   } else { toast('Comment failed — ' + error.message, 'error'); }
 }
