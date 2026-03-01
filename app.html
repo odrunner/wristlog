@@ -2699,6 +2699,8 @@ async function deleteAccount() {
     await db.from('watches').delete().eq('user_id', uid);
     await db.from('feedback').delete().eq('user_id', uid);
     await db.from('profiles').delete().eq('id', uid);
+    localStorage.removeItem('wristlog_onboarded');
+    localStorage.removeItem('wristlog_onboarded_' + uid);
     closeDeleteAccount();
     await signOut();
   } catch (e) {
@@ -4290,7 +4292,7 @@ async function postComment(logId) {
 // ── Welcome Onboarding ────────────────────────────────────────────────────
 function maybeShowWelcome() {
   if (!currentUser) return;
-  if (localStorage.getItem('wristlog_onboarded')) return;
+  if (localStorage.getItem('wristlog_onboarded_' + currentUser.id)) return;
   if (watches.length > 0 || following.size > 0) return;
   document.getElementById('welcome-modal').classList.remove('hidden');
 }
@@ -4315,7 +4317,7 @@ function welcomeStep(n) {
 }
 function closeWelcome() {
   document.getElementById('welcome-modal').classList.add('hidden');
-  localStorage.setItem('wristlog_onboarded', '1');
+  if (currentUser) localStorage.setItem('wristlog_onboarded_' + currentUser.id, '1');
 }
 async function saveWelcomeProfile() {
   const name = (document.getElementById('ws-display-name').value || '').trim();
