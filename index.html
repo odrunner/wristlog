@@ -7721,7 +7721,7 @@ function quickLogAndRefreshRec(watchId) {
 
 function renderStats() {
   const fl = filteredLogs();
-  renderStats(fl);
+  renderStatsRow(fl);
   renderCollectionReport(fl);
   renderDowReport();
   renderChUsecase(fl);
@@ -7730,7 +7730,7 @@ function renderStats() {
   renderMonthlyReview();
 }
 
-function renderStats(fl) {
+function renderStatsRow(fl) {
   const el     = document.getElementById('stats-row');
   const total  = fl.length;
   const days   = new Set(fl.map(l=>l.date)).size;
