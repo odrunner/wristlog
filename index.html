@@ -2514,6 +2514,18 @@
   </div>
 </div>
 
+<!-- ════ GENERIC CONFIRM MODAL ════ -->
+<div id="confirm-modal" class="overlay hidden" onclick="if(event.target===this)_confirmCancel()">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-title" id="confirm-title">Are you sure?</div>
+    <p id="confirm-msg" style="color:var(--muted);font-size:.88rem;margin-bottom:1.25rem;line-height:1.55;"></p>
+    <div class="modal-actions">
+      <button id="confirm-ok-btn" class="btn btn-danger" onclick="_confirmOk()">Confirm</button>
+      <button class="btn btn-ghost" onclick="_confirmCancel()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ WISHLIST ADD / EDIT MODAL ════ -->
 <div id="wishlist-modal" class="overlay hidden">
   <div class="modal">
@@ -3998,7 +4010,7 @@ async function joinClub(clubId, privacy) {
 
 async function leaveClub(clubId) {
   if (!currentUser) return;
-  if (!confirm('Leave this club?')) return;
+  if (!await showConfirm('You will lose access to this club\'s posts.', { title: 'Leave this club?', confirmLabel: 'Leave Club' })) return;
   await db.from('club_members').delete().eq('club_id', clubId).eq('user_id', currentUser.id);
   myClubs = myClubs.filter(c => c.id !== clubId);
   toast('Left club');
@@ -4042,7 +4054,7 @@ async function promoteToOwner(userId, clubId) {
 }
 
 async function removeMember(userId, clubId) {
-  if (!confirm('Remove this member?')) return;
+  if (!await showConfirm('This member will lose access to the club.', { title: 'Remove member?', confirmLabel: 'Remove' })) return;
   await db.from('club_members').delete().eq('club_id', clubId).eq('user_id', userId);
   toast('Member removed'); renderClubDetail(clubId);
 }
@@ -5842,6 +5854,22 @@ function readPrice(id) {
   const val = parseFloat(document.getElementById(id).value.replace(/,/g, ''));
   return isNaN(val) ? null : val;
 }
+
+/* ── Generic confirm modal ── */
+let _confirmResolve = null;
+function showConfirm(message, { title = 'Are you sure?', confirmLabel = 'Confirm', danger = true } = {}) {
+  return new Promise(resolve => {
+    _confirmResolve = resolve;
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-msg').textContent   = message;
+    const btn = document.getElementById('confirm-ok-btn');
+    btn.textContent = confirmLabel;
+    btn.className   = danger ? 'btn btn-danger' : 'btn btn-primary';
+    document.getElementById('confirm-modal').classList.remove('hidden');
+  });
+}
+function _confirmOk()     { document.getElementById('confirm-modal').classList.add('hidden'); if (_confirmResolve) { _confirmResolve(true);  _confirmResolve = null; } }
+function _confirmCancel() { document.getElementById('confirm-modal').classList.add('hidden'); if (_confirmResolve) { _confirmResolve(false); _confirmResolve = null; } }
 
 function toast(msg, type='success') {
   const el = document.getElementById('toast');
@@ -8086,8 +8114,9 @@ async function updateAllMarketPrices() {
   let skipManual = false;
   if (manualOnes.length) {
     const names = manualOnes.slice(0, 3).map(w => `${w.brand} ${w.name}`).join(', ') + (manualOnes.length > 3 ? '…' : '');
-    skipManual = !confirm(
-      `${manualOnes.length} watch${manualOnes.length > 1 ? 'es have' : ' has'} a manually entered price:\n${names}\n\nOverride with fetched market prices?`
+    skipManual = !await showConfirm(
+      `${manualOnes.length} watch${manualOnes.length > 1 ? 'es have' : ' has'} a manually entered price: ${names}. Override with fetched market prices?`,
+      { title: 'Override manual prices?', confirmLabel: 'Override', danger: false }
     );
   }
   btn.disabled = true; btn.textContent = 'Updating…';
