@@ -3996,7 +3996,6 @@ async function joinClub(clubId, privacy) {
         actor_id: currentUser.id, ref_id: clubId, is_read: false
       })));
     }
-    toast('Request sent — waiting for approval');
     renderClubsPage();
   } else {
     const { error } = await db.from('club_members').insert({ club_id: clubId, user_id: currentUser.id, role: 'member' });
