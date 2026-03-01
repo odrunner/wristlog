@@ -1402,6 +1402,9 @@
     .welcome-dot { width:7px; height:7px; border-radius:50%; background:var(--border); transition:background .2s; }
     .welcome-dot.active { background:var(--primary); }
 
+    /* ── DELETE ACCOUNT MODAL ────────────────────── */
+    .del-acct-step.hidden { display:none; }
+
     /* ── PROFILE NUDGE ──────────────────────────── */
     .profile-nudge {
       display:flex; align-items:center; justify-content:space-between;
@@ -2411,6 +2414,30 @@
   </div>
 </div>
 
+<!-- ════ DELETE ACCOUNT MODAL ════ -->
+<div id="delete-account-modal" class="overlay hidden">
+  <div class="modal" style="max-width:380px;text-align:center;">
+    <div id="da-step-1" class="del-acct-step">
+      <div style="font-size:2.2rem;margin-bottom:.5rem;">⚠️</div>
+      <div class="modal-title" style="color:#ef4444;">Delete Account?</div>
+      <p style="color:var(--muted);font-size:.88rem;line-height:1.55;margin:.5rem 0 1.25rem;">
+        This will permanently erase <strong style="color:var(--text);">all</strong> your watches, wear logs, wishlists, posts, and social data. <strong style="color:var(--text);">This cannot be undone.</strong>
+      </p>
+      <button class="btn" style="width:100%;margin-bottom:.6rem;background:#ef4444;color:#fff;border:none;padding:.65rem;" onclick="deleteAccountStep2()">Yes, Delete My Account</button>
+      <button class="btn btn-ghost" style="width:100%;" onclick="closeDeleteAccount()">Cancel</button>
+    </div>
+    <div id="da-step-2" class="del-acct-step hidden">
+      <div style="font-size:2.2rem;margin-bottom:.5rem;">🗑️</div>
+      <div class="modal-title" style="color:#ef4444;">Absolutely sure?</div>
+      <p style="color:var(--muted);font-size:.88rem;line-height:1.55;margin:.5rem 0 1.25rem;">
+        Every watch, every wear log, every wishlist item — <strong style="color:var(--text);">gone forever.</strong> There is no way to recover this data.
+      </p>
+      <button id="da-final-btn" class="btn" style="width:100%;margin-bottom:.6rem;background:#b91c1c;color:#fff;border:none;padding:.65rem;font-weight:700;" onclick="deleteAccount()">Permanently Delete Everything</button>
+      <button class="btn btn-ghost" style="width:100%;" onclick="closeDeleteAccount()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ FEEDBACK MODAL ════ -->
 <div id="feedback-modal" class="overlay hidden">
   <div class="modal" style="max-width:420px;">
@@ -2642,6 +2669,42 @@ async function signInWithGoogle() {
     }
   });
   if (error) showAuthError(error.message);
+}
+
+function openDeleteAccount() {
+  document.getElementById('da-step-1').classList.remove('hidden');
+  document.getElementById('da-step-2').classList.add('hidden');
+  document.getElementById('delete-account-modal').classList.remove('hidden');
+}
+function closeDeleteAccount() {
+  document.getElementById('delete-account-modal').classList.add('hidden');
+}
+function deleteAccountStep2() {
+  document.getElementById('da-step-1').classList.add('hidden');
+  document.getElementById('da-step-2').classList.remove('hidden');
+}
+async function deleteAccount() {
+  if (!currentUser) return;
+  const uid = currentUser.id;
+  const btn = document.getElementById('da-final-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Deleting…'; }
+  try {
+    await db.from('likes').delete().eq('user_id', uid);
+    await db.from('comments').delete().eq('user_id', uid);
+    await db.from('notifications').delete().or(`user_id.eq.${uid},actor_id.eq.${uid}`);
+    await db.from('follows').delete().or(`follower_id.eq.${uid},following_id.eq.${uid}`);
+    await db.from('friend_requests').delete().or(`sender_id.eq.${uid},receiver_id.eq.${uid}`);
+    await db.from('logs').delete().eq('user_id', uid);
+    await db.from('wishlist').delete().eq('user_id', uid);
+    await db.from('watches').delete().eq('user_id', uid);
+    await db.from('feedback').delete().eq('user_id', uid);
+    await db.from('profiles').delete().eq('id', uid);
+    closeDeleteAccount();
+    await signOut();
+  } catch (e) {
+    toast('Error — ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Permanently Delete Everything'; }
+  }
 }
 
 async function signOut() {
@@ -3280,6 +3343,15 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
 
   const editIcon = isOwn ? `<button class="profile-edit-icon" onclick="toggleProfileEdit()" title="Edit profile">✏️</button>` : '';
 
+  const dangerZoneHtml = isOwn ? `
+    <div style="margin:.5rem 1rem 0;padding:.85rem 1rem;border:1px solid rgba(239,68,68,.3);border-radius:10px;">
+      <div style="font-weight:600;font-size:.72rem;color:#ef4444;margin-bottom:.45rem;letter-spacing:.06em;text-transform:uppercase;">Danger Zone</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.4;">Permanently delete your account and all your data.</div>
+        <button class="btn" style="font-size:.75rem;padding:.3rem .75rem;border:1px solid #ef4444;color:#ef4444;background:transparent;white-space:nowrap;border-radius:6px;flex-shrink:0;" onclick="openDeleteAccount()">Delete Account</button>
+      </div>
+    </div>` : '';
+
   return `
     <div class="profile-hero">
       <div class="profile-avatar-lg">${avatarInner}${avatarFallback}${camOverlay}</div>
@@ -3296,7 +3368,8 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     ${privacyHtml}
     ${showcaseHtml}
     ${wishlistHtml}
-    ${logsHtml}`;
+    ${logsHtml}
+    ${dangerZoneHtml}`;
 }
 
 async function cycleWatchPrivacy(watchId) {
