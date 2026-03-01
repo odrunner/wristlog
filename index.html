@@ -3247,7 +3247,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.14.58';
+const APP_VERSION = '2.30.26.15.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4235,7 +4235,7 @@ async function renderClubDetail(clubId) {
       ? `<div class="club-member-chip-avatar"><img src="${escHtml(m.avatar_url)}" onerror="this.style.display='none'"></div>`
       : `<div class="club-member-chip-avatar">${initStr}</div>`;
     const ownerBadge = m.role === 'owner' ? ' \u{1F451}' : '';
-    const ownerMenu = isOwner && m.id !== currentUser.id ? `
+    const ownerMenu = isOwner && m.id !== currentUser.id && m.role !== 'owner' ? `
       <button onclick="event.stopPropagation();showMemberMenu('${m.id}','${clubId}','${escHtml(m.display_name || m.username || '')}',this)"
         style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:.8rem;padding:0 .2rem;">\u{22EF}</button>` : '';
     return `<div class="club-member-chip" onclick="viewUserProfile('${m.id}')">
