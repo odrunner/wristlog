@@ -2913,9 +2913,14 @@ function escHtml(s) {
 function formatFeedDate(dateStr) {
   if (!dateStr) return '';
   const today = new Date(); today.setHours(0,0,0,0);
-  const d = new Date(dateStr + 'T00:00:00');
-  const diff = Math.round((today - d) / 86400000);
-  if (diff === 0) return 'Today';
+  // Full timestamps (created_at) contain 'T'/'Z' — parse as UTC so JS converts to local time.
+  // Plain date strings (wear logs) get T00:00:00 to avoid UTC-offset shifting the day.
+  const d = (dateStr.includes('T') || dateStr.includes('Z'))
+    ? new Date(dateStr)
+    : new Date(dateStr + 'T00:00:00');
+  const dayStart = new Date(d); dayStart.setHours(0,0,0,0); // local midnight of the event
+  const diff = Math.round((today - dayStart) / 86400000);
+  if (diff <= 0) return 'Today';   // guard: clock skew or same local day
   if (diff === 1) return 'Yesterday';
   if (diff < 7)  return `${diff} days ago`;
   return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
@@ -3806,7 +3811,7 @@ function renderNotificationPanel() {
   }
   el.innerHTML = userNotifs.map(n => {
     const nm   = escHtml(n.actor?.display_name || n.actor?.username || 'Someone');
-    const time = formatFeedDate((n.created_at || '').slice(0, 10));
+    const time = formatFeedDate(n.created_at || '');
     const body = n.type === 'friend_request'  ? `${nm} sent you a friend request`
                : n.type === 'friend_accepted' ? `${nm} accepted your friend request`
                : n.type === 'like'            ? `${nm} liked your wear log`
