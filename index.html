@@ -2806,6 +2806,27 @@
   </div>
 </div>
 
+<!-- ════ DELETE CLUB MODAL ════ -->
+<div id="delete-club-modal" class="overlay hidden">
+  <div class="modal" style="max-width:380px;text-align:center;">
+    <div id="dc-step-1">
+      <div style="margin-bottom:.5rem;display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+      <div class="modal-title" style="color:#ef4444;">Delete this club?</div>
+      <p id="dc-club-name" style="font-weight:700;margin:.25rem 0 .75rem;"></p>
+      <p style="color:var(--muted);font-size:.88rem;line-height:1.55;margin-bottom:1.25rem;">All members will lose access. Posts tagged to this club will remain but lose their club association. <strong style="color:var(--text);">This cannot be undone.</strong></p>
+      <button class="btn" style="width:100%;margin-bottom:.6rem;background:#ef4444;color:#fff;border:none;padding:.65rem;" onclick="deleteClubStep2()">Yes, Delete This Club</button>
+      <button class="btn btn-ghost" style="width:100%;" onclick="closeDeleteClubModal()">Cancel</button>
+    </div>
+    <div id="dc-step-2" class="hidden">
+      <div style="margin-bottom:.5rem;display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></div>
+      <div class="modal-title" style="color:#ef4444;">Absolutely sure?</div>
+      <p style="color:var(--muted);font-size:.88rem;line-height:1.55;margin:.5rem 0 1.25rem;">Every member, every post association — <strong style="color:var(--text);">gone forever.</strong> There is no way to undo this.</p>
+      <button class="btn" style="width:100%;margin-bottom:.6rem;background:#b91c1c;color:#fff;border:none;padding:.65rem;font-weight:700;" onclick="deleteClub()">Permanently Delete Club</button>
+      <button class="btn btn-ghost" style="width:100%;" onclick="closeDeleteClubModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ FEEDBACK MODAL ════ -->
 <div id="feedback-modal" class="overlay hidden">
   <div class="modal" style="max-width:420px;">
@@ -4265,12 +4286,7 @@ async function renderClubDetail(clubId) {
         </div>
       </div>
 
-      <div style="display:flex;gap:.5rem;margin-bottom:1rem;">
-        <button class="btn btn-primary" style="font-size:.82rem;" onclick="saveClubEdit('${clubId}')">Save Changes</button>
-        <button class="btn btn-ghost"   style="font-size:.82rem;" onclick="document.getElementById('club-edit-section').style.display='none'">Cancel</button>
-      </div>
-
-      <div style="border-top:1px solid var(--border);padding-top:.85rem;">
+      <div style="border-top:1px solid var(--border);padding-top:.85rem;margin-bottom:.85rem;">
         <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem;">Invite Members</div>
         <input type="text" id="club-invite-search" placeholder="Search by name or username…"
           oninput="debounceInviteSearch(this.value,'${clubId}')" autocomplete="off"
@@ -4278,9 +4294,10 @@ async function renderClubDetail(clubId) {
         <div id="club-invite-results"></div>
       </div>
 
-      <div style="border-top:1px solid var(--border);padding-top:.85rem;margin-top:.5rem;">
-        <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem;">Danger Zone</div>
-        <button class="btn btn-danger" style="font-size:.82rem;" onclick="deleteClub('${clubId}')">Delete Club</button>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:.85rem;">
+        <button class="btn btn-primary" style="font-size:.82rem;" onclick="saveClubEdit('${clubId}')">Save Changes</button>
+        <button class="btn btn-ghost"   style="font-size:.82rem;" onclick="document.getElementById('club-edit-section').style.display='none'">Cancel</button>
+        <button class="btn btn-danger"  style="font-size:.82rem;margin-left:auto;" onclick="openDeleteClubModal('${clubId}','${escHtml(club.name)}')">Delete Club</button>
       </div>
     </div>` : '';
 
@@ -4370,9 +4387,26 @@ async function saveClubEdit(clubId) {
   renderClubDetail(clubId); // re-render to show updated header
 }
 
-async function deleteClub(clubId) {
-  if (!currentUser) return;
-  if (!await showConfirm('This will permanently remove the club and all its membership data. Members will lose access.', { title: 'Delete this club?', confirmLabel: 'Delete Club' })) return;
+let _deleteClubId = null;
+function openDeleteClubModal(clubId, clubName) {
+  _deleteClubId = clubId;
+  document.getElementById('dc-club-name').textContent = clubName;
+  document.getElementById('dc-step-1').classList.remove('hidden');
+  document.getElementById('dc-step-2').classList.add('hidden');
+  document.getElementById('delete-club-modal').classList.remove('hidden');
+}
+function deleteClubStep2() {
+  document.getElementById('dc-step-1').classList.add('hidden');
+  document.getElementById('dc-step-2').classList.remove('hidden');
+}
+function closeDeleteClubModal() {
+  document.getElementById('delete-club-modal').classList.add('hidden');
+  _deleteClubId = null;
+}
+async function deleteClub() {
+  if (!currentUser || !_deleteClubId) return;
+  const clubId = _deleteClubId;
+  closeDeleteClubModal();
   const { error } = await db.from('clubs').delete().eq('id', clubId);
   if (error) { toast('Could not delete — ' + (error.message || error.code), 'error'); return; }
   myClubs = myClubs.filter(c => c.id !== clubId);
