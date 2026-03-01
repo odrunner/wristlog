@@ -3393,7 +3393,7 @@ async function loadAndRenderProfile(userId) {
 
   // Wishlist (respects wishlist_visibility setting)
   let wishlistItems = [];
-  const wlVis = profile.wishlist_visibility || 'private';
+  const wlVis = profile.wishlist_visibility || 'followers';
   const showWishlist = isOwn || wlVis === 'public' || ((wlVis === 'followers' || wlVis === 'friends') && isFriend);
   if (showWishlist) {
     const { data: wlData } = await db.from('wishlist')
@@ -3438,7 +3438,7 @@ function renderPrivateProfileHTML(profile, privacy, userId) {
 
 function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs, showcase, visibility, privacy, isFriend, wishlistItems = [], followerCount = 0) {
   const heroInitials = profileInitials(profile);
-  const wlVis = profile.wishlist_visibility || 'private';
+  const wlVis = profile.wishlist_visibility || 'followers';
   const name     = escHtml(profile.display_name || profile.username || '—');
   const uname    = profile.username ? '@' + escHtml(profile.username) : '';
   const bio      = profile.bio ? `<div class="profile-bio-text">${escHtml(profile.bio)}</div>` : '';
@@ -3500,7 +3500,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       `<div class="chip${current === val ? ' selected' : ''}" data-vis="${val}"
         onclick="selVisChip('${cId}','${val}');savePrivacyField('${field}','${val}')">${label}</div>`;
     const cur = privacy || 'public';
-    const curCol = visibility || 'public';
+    const curCol = visibility || 'followers';
     return `
     <div class="profile-page-card">
       <div class="profile-page-section-title">Privacy</div>
@@ -4838,7 +4838,7 @@ const STORE_VIS = 'wristlog_default_vis'; // legacy localStorage key (kept as fa
 // ── Visibility helpers ──────────────────────────────────────────────────────
 // Reads from Supabase profile first; falls back to localStorage for guests/offline
 function getDefaultVis() {
-  return myProfile?.default_post_visibility || localStorage.getItem(STORE_VIS) || 'public';
+  return myProfile?.default_post_visibility || localStorage.getItem(STORE_VIS) || 'followers';
 }
 // Saves to Supabase (syncs across devices) + localStorage cache
 function setDefaultVis(v) {
