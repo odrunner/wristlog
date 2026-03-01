@@ -6219,7 +6219,7 @@ function renderStrapSelector() {
   if (!el) return;
   const w = watches.find(x => x.id === selWatchId);
   const straps = w?.straps || [];
-  if (!w || straps.length < 2) { el.style.display = 'none'; return; }
+  if (!w || straps.length < 1) { el.style.display = 'none'; return; }
   el.style.display = '';
   document.getElementById('strap-chips').innerHTML = straps.map(s => `
     <div class="chip${selStrapId === s.id ? ' selected' : ''}" onclick="selStrap('${s.id}')">
