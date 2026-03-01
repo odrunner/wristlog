@@ -4201,9 +4201,17 @@ async function renderClubDetail(clubId) {
         </div>
       </div>
 
-      <div style="display:flex;gap:.5rem;">
+      <div style="display:flex;gap:.5rem;margin-bottom:1rem;">
         <button class="btn btn-primary" style="font-size:.82rem;" onclick="saveClubEdit('${clubId}')">Save Changes</button>
         <button class="btn btn-ghost"   style="font-size:.82rem;" onclick="document.getElementById('club-edit-section').style.display='none'">Cancel</button>
+      </div>
+
+      <div style="border-top:1px solid var(--border);padding-top:.85rem;">
+        <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem;">Invite Members</div>
+        <input type="text" id="club-invite-search" placeholder="Search by name or username…"
+          oninput="debounceInviteSearch(this.value,'${clubId}')" autocomplete="off"
+          style="margin-bottom:.5rem;">
+        <div id="club-invite-results"></div>
       </div>
     </div>` : '';
 
@@ -4280,6 +4288,89 @@ async function saveClubEdit(clubId) {
   toast('Club updated!');
   document.getElementById('club-edit-section').style.display = 'none';
   renderClubDetail(clubId); // re-render to show updated header
+}
+
+// ── Club Invites ────────────────────────────────────────────────
+let _inviteSearchTimer = null;
+function debounceInviteSearch(query, clubId) {
+  clearTimeout(_inviteSearchTimer);
+  _inviteSearchTimer = setTimeout(() => searchInviteUsers(query, clubId), 300);
+}
+
+async function searchInviteUsers(query, clubId) {
+  const el = document.getElementById('club-invite-results');
+  if (!el) return;
+  if (!query.trim()) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div style="color:var(--muted);font-size:.78rem;padding:.3rem 0;">Searching…</div>';
+
+  // Search profiles
+  const { data: profiles } = await db.from('profiles')
+    .select('id, username, display_name, avatar_url')
+    .or(`username.ilike.%${query.trim()}%,display_name.ilike.%${query.trim()}%`)
+    .neq('id', currentUser.id).limit(8);
+
+  if (!profiles || !profiles.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.78rem;">No users found.</div>'; return; }
+
+  // Get existing members + pending invites for this club
+  const { data: members }  = await db.from('club_members').select('user_id').eq('club_id', clubId);
+  const { data: invites }  = await db.from('club_invites').select('invitee_id').eq('club_id', clubId);
+  const memberSet = new Set((members  || []).map(r => r.user_id));
+  const inviteSet = new Set((invites  || []).map(r => r.invitee_id));
+
+  el.innerHTML = profiles.map(p => {
+    const initStr   = ((p.display_name || p.username || '?')[0]).toUpperCase();
+    const avatarHtml = p.avatar_url
+      ? `<img src="${escHtml(p.avatar_url)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
+      : `<div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;">${initStr}</div>`;
+    const name = escHtml(p.display_name || p.username || 'User');
+    let btn = '';
+    if (memberSet.has(p.id))     btn = `<span style="font-size:.72rem;color:var(--muted);">Member</span>`;
+    else if (inviteSet.has(p.id)) btn = `<span style="font-size:.72rem;color:var(--muted);">Invited</span>`;
+    else btn = `<button class="btn btn-primary" style="font-size:.72rem;padding:.2rem .6rem;"
+      onclick="sendClubInvite('${p.id}','${name}','${clubId}',this)">Invite</button>`;
+    return `<div style="display:flex;align-items:center;gap:.55rem;padding:.35rem 0;">
+      ${avatarHtml}
+      <span style="flex:1;font-size:.82rem;">${name}</span>
+      ${btn}
+    </div>`;
+  }).join('');
+}
+
+async function sendClubInvite(inviteeId, inviteeName, clubId, btn) {
+  if (!currentUser) return;
+  const { error } = await db.from('club_invites').insert({
+    club_id: clubId, invitee_id: inviteeId, invited_by: currentUser.id
+  });
+  if (error && error.code !== '23505') { toast('Could not send invite', 'error'); return; }
+  // Notify the invitee
+  await db.from('notifications').insert({
+    user_id: inviteeId, type: 'club_invite',
+    actor_id: currentUser.id, ref_id: clubId, is_read: false
+  });
+  if (btn) { btn.outerHTML = `<span style="font-size:.72rem;color:var(--muted);">Invited</span>`; }
+  toast(`Invite sent to ${inviteeName}`);
+}
+
+async function acceptClubInvite(clubId, notifId) {
+  if (!currentUser) return;
+  await db.from('club_members').insert({ club_id: clubId, user_id: currentUser.id, role: 'member' });
+  await db.from('club_invites').delete().eq('club_id', clubId).eq('invitee_id', currentUser.id);
+  await db.from('notifications').delete().eq('id', notifId);
+  await loadMyClubs();
+  userNotifs = userNotifs.filter(n => n.id !== notifId);
+  unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
+  updateBellBadge(); renderNotifs();
+  toast('You joined the club!');
+  loadFeed();
+}
+
+async function declineClubInvite(clubId, notifId) {
+  if (!currentUser) return;
+  await db.from('club_invites').delete().eq('club_id', clubId).eq('invitee_id', currentUser.id);
+  await db.from('notifications').delete().eq('id', notifId);
+  userNotifs = userNotifs.filter(n => n.id !== notifId);
+  unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
+  updateBellBadge(); renderNotifs();
 }
 
 async function renderClubsPage() {
@@ -4633,7 +4724,8 @@ function renderNotificationPanel() {
                : n.type === 'comment'         ? `${nm} commented on your wear log`
                : n.type === 'comment_also'    ? `${nm} also commented on a post you liked or commented on`
                : n.type === 'club_join_request'  ? `${nm} wants to join your club`
-               : n.type === 'club_join_accepted' ? `${nm} approved your club request` : '';
+               : n.type === 'club_join_accepted' ? `${nm} approved your club request`
+               : n.type === 'club_invite'        ? `${nm} invited you to join a club` : '';
     const actionsHtml = (n.type === 'follow_request' && !n.is_read) ? `
       <div class="notif-follow-actions">
         <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
@@ -4647,10 +4739,17 @@ function renderNotificationPanel() {
           onclick="event.stopPropagation();acceptClubJoinRequest('${n.actor_id}','${n.ref_id}','${n.id}')">Accept</button>
         <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem;"
           onclick="event.stopPropagation();declineClubJoinRequest('${n.actor_id}','${n.ref_id}','${n.id}')">Decline</button>
+      </div>`
+      : (n.type === 'club_invite' && !n.is_read) ? `
+      <div class="notif-follow-actions">
+        <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
+          onclick="event.stopPropagation();acceptClubInvite('${n.ref_id}','${n.id}')">Join Club</button>
+        <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem;"
+          onclick="event.stopPropagation();declineClubInvite('${n.ref_id}','${n.id}')">Decline</button>
       </div>` : '';
     const notifClick = (n.type === 'like' || n.type === 'comment' || n.type === 'comment_also')
       ? `toggleNotifPanel();nav(document.querySelector('nav button[data-page=\\'feed\\']'))`
-      : (n.type === 'follow_request' || n.type === 'club_join_request') ? ''
+      : (n.type === 'follow_request' || n.type === 'club_join_request' || n.type === 'club_invite') ? ''
       : n.type === 'club_join_accepted' ? `toggleNotifPanel();openClubDetail('${n.ref_id}')`
       : `viewUserProfile('${n.actor_id}')`;
     return `
