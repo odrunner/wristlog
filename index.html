@@ -8701,12 +8701,25 @@ async function bootApp(user) {
 // Reads directly from localStorage — the reliable path for the refresh case.
 // onAuthStateChange alone is not sufficient because event ordering varies.
 db.auth.getSession().then(({ data: { session }, error }) => {
-  if (error) console.error('[WristLog] getSession error:', error.message);
+  if (error) console.error('[WRotate] getSession error:', error.message);
   if (session?.user) {
     bootApp(session.user);
   } else {
-    // No stored session — make sure login screen is visible
-    document.getElementById('auth-screen').style.display = 'flex';
+    // If the URL contains an OAuth callback (access_token or code), Supabase
+    // is still processing it — onAuthStateChange will fire with SIGNED_IN.
+    // Showing the auth screen here causes the iOS login loop.
+    const isOAuthReturn = window.location.hash.includes('access_token') ||
+                          window.location.hash.includes('error=') ||
+                          window.location.search.includes('code=');
+    if (!isOAuthReturn) {
+      document.getElementById('auth-screen').style.display = 'flex';
+    } else {
+      // Safety net: if onAuthStateChange never fires (e.g. invalid token),
+      // show the login screen after 5 seconds rather than hanging forever.
+      setTimeout(() => {
+        if (!currentUser) document.getElementById('auth-screen').style.display = 'flex';
+      }, 5000);
+    }
   }
 });
 
