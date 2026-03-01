@@ -6207,7 +6207,9 @@ function openEditLog(id) {
   } else {
     strapGroup.style.display = 'none';
   }
-  // Club chips — render and pre-select existing club
+  // Club chips — only show when user is a member/owner of at least one club
+  const editClubField = document.getElementById('edit-log-club-field');
+  if (editClubField) editClubField.style.display = myClubs.length ? '' : 'none';
   renderClubChips('edit-log-club-chips');
   if (log.clubId) selClubChip('edit-log-club-chips', log.clubId);
   document.getElementById('edit-log-modal').classList.remove('hidden');
