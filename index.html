@@ -2677,7 +2677,7 @@ async function signInWithGoogle() {
   const { error } = await db.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.href,
+      redirectTo: window.location.origin + window.location.pathname,
       queryParams: { prompt: 'select_account' }, // always show Google account picker
     }
   });
