@@ -743,7 +743,7 @@
     .help-mini-desc { font-size: .78rem; color: var(--muted); line-height: 1.5; }
 
     /* ── FEEDBACK ── */
-    .feedback-type-row { display: flex; gap: .6rem; margin-bottom: 1rem; }
+    .feedback-type-row { display: none; }
     .feedback-type-btn {
       flex: 1; padding: .65rem .5rem; border-radius: 10px; border: 2px solid var(--border);
       background: var(--surface2); color: var(--muted); font-size: .82rem; font-weight: 600;
@@ -2697,19 +2697,6 @@
     <p style="font-size:.83rem;color:var(--muted);margin-bottom:1.1rem;line-height:1.55;">
       Your feedback goes straight to the developer. No account needed — just describe the issue or idea.
     </p>
-
-    <!-- Type selector -->
-    <div class="form-group" style="margin-bottom:.85rem;">
-      <label>What kind of feedback?</label>
-      <div class="feedback-type-row">
-        <button class="feedback-type-btn bug active" id="fb-type-bug" onclick="setFeedbackType('bug')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M18.66 5.34l-1.41 1.41"/></svg> Bug Report<br><span style="font-size:.7rem;font-weight:400;opacity:.8">Something isn't working</span>
-        </button>
-        <button class="feedback-type-btn feat" id="fb-type-feat" onclick="setFeedbackType('feat')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Feature Request<br><span style="font-size:.7rem;font-weight:400;opacity:.8">An idea or improvement</span>
-        </button>
-      </div>
-    </div>
 
     <!-- Title -->
     <div class="form-group">
@@ -8912,7 +8899,6 @@ function openFeedback() {
   document.getElementById('fb-title').value = '';
   document.getElementById('fb-desc').value  = '';
   document.getElementById('fb-email').value = '';
-  setFeedbackType('bug');
   document.getElementById('fb-submit-btn').disabled = false;
   document.getElementById('fb-submit-btn').textContent = 'Submit Feedback';
   document.getElementById('feedback-modal').classList.remove('hidden');
@@ -8925,7 +8911,7 @@ function requestBrand(name) {
   document.getElementById('fb-title').value = `Add brand: ${name}`;
   document.getElementById('fb-desc').value  = `Please add "${name}" to the WRotate brand list.`;
   document.getElementById('fb-email').value = '';
-  setFeedbackType('feat');
+  feedbackType = 'feature';
   document.getElementById('fb-submit-btn').disabled = false;
   document.getElementById('fb-submit-btn').textContent = 'Submit Feedback';
   document.getElementById('feedback-modal').classList.remove('hidden');
@@ -8935,11 +8921,6 @@ function closeFeedback() {
   document.getElementById('feedback-modal').classList.add('hidden');
 }
 
-function setFeedbackType(type) {
-  feedbackType = type;
-  document.getElementById('fb-type-bug').className  = 'feedback-type-btn bug'  + (type === 'bug'  ? ' active' : '');
-  document.getElementById('fb-type-feat').className = 'feedback-type-btn feat' + (type === 'feat' ? ' active' : '');
-}
 
 async function submitFeedback() {
   const title = document.getElementById('fb-title').value.trim();
