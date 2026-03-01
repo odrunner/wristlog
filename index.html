@@ -4433,15 +4433,23 @@ async function renderClubsPage() {
   const el = document.getElementById('clubs-page-content');
   if (!el) return;
 
+  // Fetch member counts for my clubs
+  let myClubCountMap = {};
+  if (myClubs.length) {
+    const { data: myCounts } = await db.from('club_members').select('club_id').in('club_id', myClubs.map(c => c.id));
+    (myCounts || []).forEach(r => { myClubCountMap[r.club_id] = (myClubCountMap[r.club_id] || 0) + 1; });
+  }
+
   // My clubs section
   const myClubsHtml = myClubs.length
     ? myClubs.map(c => {
         const initStr = (c.name || '?').slice(0, 2).toUpperCase();
+        const count = myClubCountMap[c.id] || 0;
         return `<div class="club-card" onclick="openClubDetail('${c.id}')">
           <div class="club-card-avatar">${c.image_url ? `<img src="${escHtml(c.image_url)}" onerror="this.textContent='${initStr}'">` : initStr}</div>
           <div>
             <div class="club-card-name">${escHtml(c.name)}</div>
-            <div class="club-card-meta">${c.privacy === 'private' ? '\u{1F512} Private' : '\u{1F310} Public'}${c.role === 'owner' ? ' · owner' : ''}</div>
+            <div class="club-card-meta">${c.privacy === 'private' ? '\u{1F512} Private' : '\u{1F310} Public'}${c.role === 'owner' ? ' · owner' : ''} · ${count} member${count !== 1 ? 's' : ''}</div>
           </div>
         </div>`;
       }).join('')
@@ -4454,20 +4462,21 @@ async function renderClubsPage() {
     <div class="form-group" style="margin-bottom:.75rem;">
       <input type="text" id="club-search-input" placeholder="Search clubs\u2026" oninput="searchClubs(this.value)" autocomplete="off">
     </div>
-    <div id="club-search-results"></div>`;
-
-  // Load all public clubs for initial discover list
-  searchClubs('');
+    <div id="club-search-results"><div style="color:var(--muted);font-size:.82rem;padding:.25rem 0;">Type to search for clubs.</div></div>`;
 }
 
 async function searchClubs(query) {
   const el = document.getElementById('club-search-results');
   if (!el) return;
+  if (!query.trim()) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.25rem 0;">Type to search for clubs.</div>';
+    return;
+  }
   let q = db.from('clubs').select('id, name, description, privacy, created_by').order('created_at', { ascending: false }).limit(20);
-  if (query.trim()) q = q.ilike('name', `%${query.trim()}%`);
+  q = q.ilike('name', `%${query.trim()}%`);
   const { data: clubs } = await q;
   if (!clubs || !clubs.length) {
-    el.innerHTML = query ? '<div style="color:var(--muted);font-size:.82rem;">No clubs found.</div>' : '<div style="color:var(--muted);font-size:.82rem;">No clubs yet \u2014 be the first to create one!</div>';
+    el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;">No clubs found.</div>';
     return;
   }
   // Count members for display
