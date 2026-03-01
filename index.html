@@ -4353,7 +4353,11 @@ async function sendClubInvite(inviteeId, inviteeName, clubId, btn) {
 
 async function acceptClubInvite(clubId, notifId) {
   if (!currentUser) return;
-  await db.from('club_members').insert({ club_id: clubId, user_id: currentUser.id, role: 'member' });
+  const { error } = await db.from('club_members').insert({ club_id: clubId, user_id: currentUser.id, role: 'member' });
+  if (error && error.code !== '23505') {
+    toast('Could not join — ' + (error.message || error.code), 'error');
+    return;
+  }
   await db.from('club_invites').delete().eq('club_id', clubId).eq('invitee_id', currentUser.id);
   await db.from('notifications').delete().eq('id', notifId);
   await loadMyClubs();
