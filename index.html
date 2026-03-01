@@ -2733,10 +2733,6 @@
     <div class="form-group">
       <textarea id="np-body" rows="3" placeholder="What's on your mind?" style="resize:none;"></textarea>
     </div>
-    <div class="form-group" id="np-club-field" style="display:none;">
-      <label style="font-size:.78rem;color:var(--muted);">Share to Club <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
-      <div class="chips" id="np-club-chips"></div>
-    </div>
     <div class="form-group">
       <label style="font-size:.78rem;color:var(--muted);">Who can see this?</label>
       <div class="chips" id="np-vis-chips"></div>
@@ -2768,6 +2764,10 @@
     <div class="form-group">
       <label style="font-size:.78rem;color:var(--muted);">Who can see this?</label>
       <div class="chips" id="ep-vis-chips"></div>
+    </div>
+    <div class="form-group" id="ep-club-field" style="display:none;">
+      <label style="font-size:.78rem;color:var(--muted);">Share to Club <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+      <div class="chips" id="ep-club-chips"></div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="saveEditPost()">Save</button>
@@ -2814,14 +2814,7 @@
       <div class="modal-title" style="color:#ef4444;">Delete this club?</div>
       <p id="dc-club-name" style="font-weight:700;margin:.25rem 0 .75rem;"></p>
       <p style="color:var(--muted);font-size:.88rem;line-height:1.55;margin-bottom:1.25rem;">All members will lose access. Posts tagged to this club will remain but lose their club association. <strong style="color:var(--text);">This cannot be undone.</strong></p>
-      <button class="btn" style="width:100%;margin-bottom:.6rem;background:#ef4444;color:#fff;border:none;padding:.65rem;" onclick="deleteClubStep2()">Yes, Delete This Club</button>
-      <button class="btn btn-ghost" style="width:100%;" onclick="closeDeleteClubModal()">Cancel</button>
-    </div>
-    <div id="dc-step-2" class="hidden">
-      <div style="margin-bottom:.5rem;display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></div>
-      <div class="modal-title" style="color:#ef4444;">Absolutely sure?</div>
-      <p style="color:var(--muted);font-size:.88rem;line-height:1.55;margin:.5rem 0 1.25rem;">Every member, every post association — <strong style="color:var(--text);">gone forever.</strong> There is no way to undo this.</p>
-      <button class="btn" style="width:100%;margin-bottom:.6rem;background:#b91c1c;color:#fff;border:none;padding:.65rem;font-weight:700;" onclick="deleteClub()">Permanently Delete Club</button>
+      <button class="btn" style="width:100%;margin-bottom:.6rem;background:#ef4444;color:#fff;border:none;padding:.65rem;" onclick="deleteClub()">Yes, Delete This Club</button>
       <button class="btn btn-ghost" style="width:100%;" onclick="closeDeleteClubModal()">Cancel</button>
     </div>
   </div>
@@ -2905,12 +2898,6 @@
     <div class="tl-field">
       <div class="tl-label">Private notes <span class="tl-opt">only you see this</span></div>
       <textarea id="track-private-notes" placeholder="Condition, thoughts, how it felt…" rows="2"></textarea>
-    </div>
-
-    <!-- Share to Club -->
-    <div class="tl-field" id="tl-club-field" style="display:none;">
-      <div class="tl-label">Share to Club <span class="tl-opt">optional</span></div>
-      <div class="chips" id="tl-club-chips"></div>
     </div>
 
     <!-- Visibility -->
@@ -4391,13 +4378,7 @@ let _deleteClubId = null;
 function openDeleteClubModal(clubId, clubName) {
   _deleteClubId = clubId;
   document.getElementById('dc-club-name').textContent = clubName;
-  document.getElementById('dc-step-1').classList.remove('hidden');
-  document.getElementById('dc-step-2').classList.add('hidden');
   document.getElementById('delete-club-modal').classList.remove('hidden');
-}
-function deleteClubStep2() {
-  document.getElementById('dc-step-1').classList.add('hidden');
-  document.getElementById('dc-step-2').classList.remove('hidden');
 }
 function closeDeleteClubModal() {
   document.getElementById('delete-club-modal').classList.add('hidden');
@@ -4951,8 +4932,9 @@ async function loadFeed() {
     if (logsErr) { console.warn('Feed logs error:', logsErr.message); feedItems = []; renderFeed(); return; }
     if (!rawLogs || rawLogs.length === 0) { feedItems = []; renderFeed(); return; }
 
-    // Merge club posts — include posts tagged to clubs I'm in, from any user
+    // Strip club posts the current user is not a member of
     const myClubIds = myClubs.map(c => c.id);
+    rawLogs = rawLogs.filter(l => !l.club_id || myClubIds.includes(l.club_id));
     if (myClubIds.length) {
       const { data: clubLogData } = await db.from('logs').select('*')
         .in('club_id', myClubIds)
@@ -5107,7 +5089,7 @@ function renderFeedCard(item) {
 
   const clubForBadge = item.club_id ? myClubs.find(c => c.id === item.club_id) : null;
   const clubBadge = clubForBadge
-    ? `<div class="club-badge" onclick="event.stopPropagation();openClubDetail('${item.club_id}')">\u{1F3DB} ${escHtml(clubForBadge.name)}</div>`
+    ? `<div class="club-badge" onclick="event.stopPropagation();openClubDetail('${item.club_id}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> ${escHtml(clubForBadge.name)}</div>`
     : '';
 
   const COMMENT_PREVIEW = 2;
@@ -5250,6 +5232,11 @@ function openEditPost(logId) {
   editPostNewPhoto = null;
   document.getElementById('ep-body').value = fi.notes || '';
   document.getElementById('ep-vis-chips').innerHTML = visChipsHtml('ep-vis-chips', fi.visibility || 'public');
+  // Club field — only show when user is a member/owner of at least one club
+  const epClubField = document.getElementById('ep-club-field');
+  if (epClubField) epClubField.style.display = myClubs.length ? '' : 'none';
+  renderClubChips('ep-club-chips');
+  if (fi.club_id) selClubChip('ep-club-chips', fi.club_id);
   // Populate photo
   if (fi.photo_url) {
     document.getElementById('ep-photo-preview').src = fi.photo_url;
@@ -5303,13 +5290,14 @@ async function saveEditPost() {
   let finalPhoto = fi?.photo_url ?? null;
   if (editPostNewPhoto === 'REMOVE') finalPhoto = null;
   else if (editPostNewPhoto)         finalPhoto = editPostNewPhoto;
+  const clubId = getSelectedClubId('ep-club-chips') || null;
   // Update local state
-  if (fi)  { fi.notes = newNotes || null; fi.photo_url = finalPhoto; fi.visibility = vis; }
-  if (log) { log.notes = newNotes || null; log.photoUrl = finalPhoto; log.visibility = vis; log.isPublic = vis !== 'private'; save(); }
+  if (fi)  { fi.notes = newNotes || null; fi.photo_url = finalPhoto; fi.visibility = vis; fi.club_id = clubId; }
+  if (log) { log.notes = newNotes || null; log.photoUrl = finalPhoto; log.visibility = vis; log.isPublic = vis !== 'private'; log.clubId = clubId; save(); }
   // Persist to Supabase
   if (currentUser) {
     const { error } = await db.from('logs')
-      .update({ notes: newNotes || null, photo_url: finalPhoto, visibility: vis, is_public: vis !== 'private' })
+      .update({ notes: newNotes || null, photo_url: finalPhoto, visibility: vis, is_public: vis !== 'private', club_id: clubId })
       .eq('id', editPostLogId).eq('user_id', currentUser.id);
     if (error) { toast('Save failed — ' + error.message, 'error'); return; }
   }
@@ -5341,9 +5329,6 @@ function openNewPost() {
   clearNewPostPhoto();
   document.getElementById('np-body').value = '';
   document.getElementById('np-vis-chips').innerHTML = visChipsHtml('np-vis-chips', getDefaultVis());
-  renderClubChips('np-club-chips');
-  const npClubField = document.getElementById('np-club-field');
-  if (npClubField) npClubField.style.display = myClubs.length ? '' : 'none';
   document.getElementById('new-post-modal').classList.remove('hidden');
   setTimeout(() => document.getElementById('np-body').focus(), 50);
 }
@@ -5398,7 +5383,7 @@ async function saveNewPost() {
       date: entry.date, use_case: 'unspecified',
       notes: entry.notes, photo_url: entry.photoUrl,
       is_public: vis !== 'private', visibility: vis,
-      club_id: getSelectedClubId('np-club-chips') || null,
+      club_id: null,
     }, { onConflict: 'id' });
     if (error) { toast('Post failed — ' + error.message, 'error'); return; }
   }
@@ -6121,10 +6106,6 @@ function openTrackModal(id) {
   renderStrapSelector();
   renderWornNotice();
 
-  renderClubChips('tl-club-chips');
-  const tlClubField = document.getElementById('tl-club-field');
-  if (tlClubField) tlClubField.style.display = myClubs.length ? '' : 'none';
-
   document.getElementById('track-log-modal').classList.remove('hidden');
 }
 
@@ -6180,7 +6161,7 @@ function saveLog() {
     notes, privateNotes,
     photoUrl: trackPhoto || null,
     visibility: vis, isPublic: vis !== 'private',
-    clubId: getSelectedClubId('tl-club-chips') || null,
+    clubId: null,
   };
   if (selStrapId) logEntry.strapId = selStrapId;
   logs.push(logEntry);
