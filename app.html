@@ -2262,6 +2262,9 @@
       <button class="btn btn-primary" onclick="saveWishlistItem()">Save</button>
       <button class="btn btn-ghost"   onclick="closeWishlistModal()">Cancel</button>
     </div>
+    <div style="margin-top:.85rem;text-align:center;">
+      <button id="wl-delete-btn" onclick="wlDeleteFromEdit()" style="display:none;background:none;border:none;color:var(--danger);cursor:pointer;font-size:.82rem;padding:.3rem .6rem;font-family:inherit;">🗑 Delete from wishlist</button>
+    </div>
   </div>
 </div>
 
@@ -2800,6 +2803,7 @@ function wishToRow(w) {
     market_price: w.marketPrice||null, market_price_date: w.marketPriceDate||null,
     market_price_src: w.marketPriceSrc||null, watch_charts_url: w.watchChartsUrl||null,
     wish_privacy: w.wishPrivacy||null,
+    added_date: w.addedDate||null,
   };
 }
 function rowToWish(r) {
@@ -2810,6 +2814,7 @@ function rowToWish(r) {
     marketPrice: r.market_price||null, marketPriceDate: r.market_price_date||null,
     marketPriceSrc: r.market_price_src||null, watchChartsUrl: r.watch_charts_url||null,
     wishPrivacy: r.wish_privacy||null,
+    addedDate: r.added_date||null,
   };
 }
 
@@ -7829,6 +7834,7 @@ function openAddWishlist() {
   ['wl-name','wl-ref','wl-price','wl-url'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('wl-date').value = todayStr();
   document.getElementById('wl-modal-title').textContent = 'Add to Wishlist';
+  document.getElementById('wl-delete-btn').style.display = 'none';
   buildWlBrandSelect();
   updateWlUrlBtn();
   renderWlModalImg(null);
@@ -7843,6 +7849,7 @@ function openEditWishlist(id) {
   wlPendingImage = null;
   wlRemoveImage  = false;
   document.getElementById('wl-modal-title').textContent = 'Edit Wishlist Item';
+  document.getElementById('wl-delete-btn').style.display = '';
   buildWlBrandSelect(w.brand);
   document.getElementById('wl-name').value  = w.name;
   document.getElementById('wl-ref').value   = w.ref   || '';
@@ -7853,6 +7860,13 @@ function openEditWishlist(id) {
   renderWlModalImg(w.image || null);
   setupInlineEdits(WL_INLINE_FIELDS);
   document.getElementById('wishlist-modal').classList.remove('hidden');
+}
+
+function wlDeleteFromEdit() {
+  if (!editingWlId) return;
+  const id = editingWlId;
+  closeWishlistModal();
+  openDelWlModal(id);
 }
 
 function closeWishlistModal() { clearInlineEdits(WL_INLINE_FIELDS); document.getElementById('wishlist-modal').classList.add('hidden'); }
