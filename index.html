@@ -3363,7 +3363,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.19.59';
+const APP_VERSION = '2.30.26.20.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5812,7 +5812,9 @@ async function postComment(logId) {
         .filter(uid => uid !== currentUser.id)           // don't notify yourself
         .map(uid => ({ user_id: uid, type: 'mention', actor_id: currentUser.id, ref_id: logId, is_read: false }));
       if (mentionNotifs.length) {
-        db.from('notifications').insert(mentionNotifs).then();
+        db.from('notifications').insert(mentionNotifs).then(({ error }) => {
+          if (error) console.error('Mention notification error:', error.message, error);
+        });
       }
     }
   } else { toast('Comment failed — ' + error.message, 'error'); }
