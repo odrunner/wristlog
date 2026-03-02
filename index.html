@@ -698,6 +698,10 @@
     .coll-sort-chip:hover { border-color: var(--gold); color: var(--gold); }
     .coll-sort-chip.active { background: rgba(201,168,76,.15); border-color: var(--gold); color: var(--gold); font-weight: 600; }
     .rank-badge-card      { position: absolute; top: .55rem; right: .55rem; font-size: .85rem; line-height: 1; pointer-events: none; }
+    .rank-drag-handle     { position: absolute; top: .5rem; left: .55rem; color: var(--border); cursor: grab; font-size: 1.1rem; user-select: none; z-index: 2; touch-action: none; line-height: 1; }
+    .rank-drag-handle:hover { color: var(--muted); }
+    .watch-card.dragging  { opacity: .4; }
+    .watch-card.drag-over { border-color: var(--gold) !important; box-shadow: 0 0 0 2px var(--gold); }
 
     /* ── COLLECTION RANKING GAME ── */
     .game-card {
@@ -3326,7 +3330,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.18.49';
+const APP_VERSION = '2.30.26.18.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5995,6 +5999,7 @@ let chUsecase = null, chCollValue = null;
 let collSort     = 'wears-desc';  // unified collection report sort: field-dir
 let collView     = 'grid';        // 'grid' | 'list'
 let collGridSort = 'purchase';    // 'purchase' | 'ranking' | 'wears'
+let collSortedWatches = [];       // current sorted order for drag-and-drop
 let collTagFilter = null;         // active tag filter in Collection page (null = all)
 let collListSort = 'wears-desc';  // list-view sort: field-dir
 
@@ -6753,20 +6758,30 @@ function renderCollection() {
     el.innerHTML = renderCollectionList(visible, today);  // list does its own sort
   } else {
     el.className = 'watches-grid';
+    const isRanking = collGridSort === 'ranking';
+    if (isRanking) collSortedWatches = sorted;
     // Only add market-price placeholder when collection is mixed (some have it, some don't)
     const anyHasMarket = sorted.some(w => w.marketPrice);
     el.innerHTML = sorted.map((w, idx) => {
       const wears = logs.filter(l => l.watchId === w.id).length;
       const cpu   = w.price && wears ? fmtMoney(Math.round(w.price/wears)) : '—';
       const wornToday = logs.some(l => l.watchId === w.id && l.date === today);
-      const rankBadge = collGridSort === 'ranking' && (eloRatings[w.id] != null)
+      const rankBadge = isRanking && (eloRatings[w.id] != null)
         ? `<span class="rank-badge-card" title="${eloRatings[w.id]} pts">${medals[idx] || '#'+(idx+1)}</span>` : '';
+      const dragHandle = isRanking
+        ? `<span class="rank-drag-handle" title="Drag to reorder" ontouchstart="collTouchStart(event,'${w.id}')">⠿</span>` : '';
       // When some cards have a market price row and others don't, insert an invisible
       // same-height placeholder so the stats always align across all cards in the grid row
       const mpHTML = w.marketPrice
         ? marketPriceRowHTML(w)
         : (anyHasMarket ? '<div class="market-price-row" style="visibility:hidden" aria-hidden="true"><span class="mp-label">—</span></div>' : '');
-      return `<div class="watch-card">
+      return `<div class="watch-card" data-id="${w.id}"
+        ${isRanking ? `draggable="true"
+        ondragstart="collDragStart(event,'${w.id}')"
+        ondragover="collDragOver(event)"
+        ondrop="collDrop(event,'${w.id}')"
+        ondragend="collDragEnd(event)"` : ''}>
+        ${dragHandle}
         ${rankBadge}
         ${w.image ? `<div class="watch-card-img-wrap">
           <img src="${w.image}" alt="${w.brand} ${w.name}" class="watch-card-img" onerror="this.style.display='none'">
@@ -9153,6 +9168,110 @@ function wlTouchEnd() {
     }
   }
   wlTouchId = null;
+}
+
+// ── Collection ranking drag-and-drop ─────────────────────────────────────────
+let collDraggingId  = null;
+let collTouchId     = null;
+let collTouchGhost  = null;
+let collTouchOffset = 0;
+
+function collDragStart(e, id) {
+  collDraggingId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.classList.add('dragging');
+}
+
+function collDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.watch-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+  const card = e.currentTarget.closest('.watch-card');
+  if (card && card.dataset.id !== collDraggingId) card.classList.add('drag-over');
+}
+
+function collDrop(e, targetId) {
+  e.preventDefault();
+  if (!collDraggingId || collDraggingId === targetId) return;
+  document.querySelectorAll('.watch-card').forEach(c => c.classList.remove('drag-over', 'dragging'));
+  const fromIdx = collSortedWatches.findIndex(w => w.id === collDraggingId);
+  const toIdx   = collSortedWatches.findIndex(w => w.id === targetId);
+  if (fromIdx < 0 || toIdx < 0) return;
+  const [item] = collSortedWatches.splice(fromIdx, 1);
+  collSortedWatches.splice(toIdx, 0, item);
+  collSaveRankOrder();
+  collDraggingId = null;
+}
+
+function collDragEnd(e) {
+  collDraggingId = null;
+  document.querySelectorAll('.watch-card').forEach(c => c.classList.remove('drag-over', 'dragging'));
+}
+
+function collTouchStart(e, id) {
+  const card = e.currentTarget.closest('.watch-card');
+  if (!card) return;
+  e.preventDefault();
+  collTouchId = id;
+  card.classList.add('dragging');
+  const touch = e.touches[0];
+  const rect  = card.getBoundingClientRect();
+  collTouchOffset = touch.clientY - rect.top;
+  collTouchGhost = card.cloneNode(true);
+  Object.assign(collTouchGhost.style, {
+    position: 'fixed', left: rect.left + 'px', top: rect.top + 'px',
+    width: rect.width + 'px', zIndex: '9999', opacity: '0.9',
+    pointerEvents: 'none', boxShadow: '0 8px 32px rgba(0,0,0,.55)',
+    transform: 'scale(1.03)', transition: 'none', borderRadius: '10px',
+  });
+  document.body.appendChild(collTouchGhost);
+  document.addEventListener('touchmove',   collTouchMove, { passive: false });
+  document.addEventListener('touchend',    collTouchEnd,  { once: true });
+  document.addEventListener('touchcancel', collTouchEnd,  { once: true });
+}
+
+function collTouchMove(e) {
+  if (!collTouchId || !collTouchGhost) return;
+  e.preventDefault();
+  const touch = e.touches[0];
+  collTouchGhost.style.top = (touch.clientY - collTouchOffset) + 'px';
+  collTouchGhost.style.visibility = 'hidden';
+  const under = document.elementFromPoint(touch.clientX, touch.clientY);
+  collTouchGhost.style.visibility = '';
+  document.querySelectorAll('.watch-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+  const targetCard = under?.closest('.watch-card');
+  if (targetCard && targetCard.dataset.id !== collTouchId && targetCard.dataset.id) {
+    targetCard.classList.add('drag-over');
+  }
+}
+
+function collTouchEnd() {
+  document.removeEventListener('touchmove',   collTouchMove);
+  document.removeEventListener('touchcancel', collTouchEnd);
+  const targetCard = document.querySelector('.watch-card.drag-over');
+  const targetId   = targetCard?.dataset.id;
+  document.querySelectorAll('.watch-card').forEach(c => c.classList.remove('dragging', 'drag-over'));
+  collTouchGhost?.remove();
+  collTouchGhost = null;
+  if (targetId && collTouchId && targetId !== collTouchId) {
+    const fromIdx = collSortedWatches.findIndex(w => w.id === collTouchId);
+    const toIdx   = collSortedWatches.findIndex(w => w.id === targetId);
+    if (fromIdx >= 0 && toIdx >= 0) {
+      const [item] = collSortedWatches.splice(fromIdx, 1);
+      collSortedWatches.splice(toIdx, 0, item);
+      collSaveRankOrder();
+    }
+  }
+  collTouchId = null;
+}
+
+function collSaveRankOrder() {
+  const total = collSortedWatches.length;
+  collSortedWatches.forEach((w, idx) => {
+    eloRatings[w.id] = ELO_DEFAULT + (total - idx) * 100;
+  });
+  localStorage.setItem(STORE_ELO, JSON.stringify(eloRatings));
+  renderCollection();
 }
 
 // ── Watch preview (read-only popup from feed / other-user profile) ─────────
