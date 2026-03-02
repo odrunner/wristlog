@@ -3402,7 +3402,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.10.08';
+const APP_VERSION = '2.30.26.10.41';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4009,11 +4009,13 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
 
   // Friends list — only visible to yourself
   const friendsListHtml = isOwn ? (() => {
+    // Look up profiles from the already-loaded followingProfiles (no extra DB query needed)
+    const profileById = id => followingProfiles.find(p => p.id === id) || { id, display_name: null, username: null };
     const activeFriends = friendRequests
       .filter(r => r.initiator_verified && r.target_verified &&
         ((r.initiator_id === currentUser.id && following.has(r.target_id)) ||
          (r.target_id   === currentUser.id && following.has(r.initiator_id))))
-      .map(r => r.initiator_id === currentUser.id ? r.target : r.initiator)
+      .map(r => profileById(r.initiator_id === currentUser.id ? r.target_id : r.initiator_id))
       .filter(Boolean);
     const pendingOut = friendRequests.filter(r =>
       r.initiator_id === currentUser.id && !(r.initiator_verified && r.target_verified));
@@ -4247,10 +4249,11 @@ function generateFriendCode() {
 async function loadFriendRequests() {
   if (!currentUser) return;
   try {
-    const { data } = await db
+    const { data, error } = await db
       .from('friend_requests')
-      .select('*, initiator:profiles!initiator_id(id,username,display_name,avatar_url), target:profiles!target_id(id,username,display_name,avatar_url)')
+      .select('*')   // no FK joins — table was created without FK constraints
       .or(`initiator_id.eq.${currentUser.id},target_id.eq.${currentUser.id}`);
+    if (error) throw error;
     friendRequests = data || [];
   } catch (e) {
     console.warn('loadFriendRequests failed (table may not exist yet):', e?.message);
