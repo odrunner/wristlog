@@ -3363,7 +3363,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.20.01';
+const APP_VERSION = '2.30.26.20.10';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5711,16 +5711,13 @@ function renderMentionAc(inputEl) {
       <div><div class="mention-ac-name">${name}</div><div class="mention-ac-user">@${user}</div></div>
     </div>`;
   }).join('');
-  // Position just above the input, anchored to the bottom of the screen
+  // Position below the input so existing comments stay visible
   const rect = inputEl.getBoundingClientRect();
-  const spaceAbove = rect.top;                       // px available above the input
-  const dropH = Math.min(220, _mentionResults.length * 52); // approx dropdown height
-  ac.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
-  ac.style.top    = '';
-  // Horizontal: align with input, but don't overflow the right edge
   const dropW = Math.min(300, window.innerWidth - 32);
-  ac.style.left  = Math.min(rect.left, window.innerWidth - dropW - 8) + 'px';
-  ac.style.width = dropW + 'px';
+  ac.style.top    = (rect.bottom + 6) + 'px';
+  ac.style.bottom = '';
+  ac.style.left   = Math.min(rect.left, window.innerWidth - dropW - 8) + 'px';
+  ac.style.width  = dropW + 'px';
   ac.classList.add('open');
   _mentionAcIdx = -1;
 }
