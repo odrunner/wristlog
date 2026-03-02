@@ -724,6 +724,16 @@
     .game-result-watch { font-size: .88rem; font-weight: 600; }
     .game-result-brand { font-size: .7rem; color: var(--muted); margin-top: .05rem; }
 
+    /* ── ADMIN PAGE ── */
+    .fb-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1rem 1.1rem; margin-bottom:.75rem; }
+    .fb-card-header { display:flex; align-items:center; gap:.6rem; margin-bottom:.4rem; flex-wrap:wrap; }
+    .fb-type-badge { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.18rem .55rem; border-radius:20px; }
+    .fb-type-badge.bug  { background:rgba(224,85,85,.15); color:var(--danger); }
+    .fb-type-badge.feature { background:rgba(129,140,248,.15); color:#818cf8; }
+    .fb-title { font-size:.88rem; font-weight:600; flex:1; min-width:0; }
+    .fb-details { font-size:.82rem; color:var(--muted); line-height:1.55; margin-bottom:.5rem; white-space:pre-wrap; }
+    .fb-meta { font-size:.72rem; color:var(--muted); display:flex; gap:.75rem; flex-wrap:wrap; }
+
     /* ── HELP PAGE ── */
     .help-wrap { max-width: 720px; margin: 0 auto; }
     .help-intro { color: var(--muted); font-size: .9rem; line-height: 1.6; margin-bottom: 2rem; padding: 1rem 1.25rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); border-left: 3px solid var(--gold); }
@@ -2035,6 +2045,15 @@
     </div>
   </div>
 
+  <!-- ════ ADMIN PAGE ════ -->
+  <div id="page-admin" class="page">
+    <div class="page-header" style="margin-bottom:1.5rem;">
+      <div class="page-title">Feedback</div>
+      <button class="btn btn-ghost" style="font-size:.8rem;" onclick="loadAdminFeedback()">↻ Refresh</button>
+    </div>
+    <div id="admin-feedback-list"><div style="color:var(--muted);font-size:.9rem;">Loading…</div></div>
+  </div>
+
   <!-- ════ HELP PAGE ════ -->
   <div id="page-help" class="page">
     <div class="page-header" style="margin-bottom:1.5rem;">
@@ -3288,7 +3307,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.18.31';
+const APP_VERSION = '2.30.26.18.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3835,9 +3854,13 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
 
   const editIcon = isOwn ? `<button class="profile-edit-icon" onclick="toggleProfileEdit()" title="Edit profile"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>` : '';
 
+  const adminLink = (isOwn && currentUser?.id === ADMIN_USER_ID)
+    ? `<button style="background:none;border:none;color:var(--gold);font-size:.75rem;cursor:pointer;font-family:inherit;padding:.25rem .5rem;font-weight:600;" onclick="showAdminPage()">⚙ Feedback Admin</button>`
+    : '';
   const deleteAccountHtml = isOwn ? `
     <div style="margin:1.5rem 1rem 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:.5rem;">
       <button class="btn-signout" onclick="signOut()" style="font-size:.8rem;padding:.4rem 1.2rem;">Sign Out</button>
+      ${adminLink}
       <button style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;font-family:inherit;padding:.25rem .5rem;" onclick="showHelpPage()">Help &amp; Guide</button>
       <button style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;font-family:inherit;padding:.25rem .5rem;" onclick="openDeleteAccount()">Delete Account</button>
     </div>` : '';
@@ -6073,6 +6096,42 @@ function showHelpPage() {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('page-help').classList.add('active');
+}
+
+const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
+
+function showAdminPage() {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-admin').classList.add('active');
+  loadAdminFeedback();
+}
+
+async function loadAdminFeedback() {
+  const el = document.getElementById('admin-feedback-list');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">Loading…</div>';
+  const { data, error } = await db.from('feedback')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) { el.innerHTML = `<div style="color:var(--danger);">Error: ${escHtml(error.message)}</div>`; return; }
+  if (!data || !data.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">No feedback yet.</div>'; return; }
+  el.innerHTML = data.map(f => {
+    const date = new Date(f.created_at).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+    return `
+    <div class="fb-card">
+      <div class="fb-card-header">
+        <span class="fb-type-badge ${f.type === 'bug' ? 'bug' : 'feature'}">${escHtml(f.type || 'general')}</span>
+        <span class="fb-title">${escHtml(f.title || '—')}</span>
+      </div>
+      <div class="fb-details">${escHtml(f.details || '')}</div>
+      <div class="fb-meta">
+        <span>${date}</span>
+        ${f.app_version ? `<span>v${escHtml(f.app_version)}</span>` : ''}
+        ${f.browser ? `<span>${escHtml(f.browser)}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function nav(btn) {
