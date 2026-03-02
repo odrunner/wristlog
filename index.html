@@ -3363,7 +3363,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.20.14';
+const APP_VERSION = '2.30.26.20.16';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5755,6 +5755,14 @@ document.addEventListener('mousedown', e => {
   }
 });
 document.addEventListener('scroll', closeMentionAc, true); // capture=true catches all scroll containers
+
+// Re-open dropdown on focus/click if cursor is still after an @query
+document.addEventListener('focusin', e => {
+  const input = e.target.closest('.comment-input');
+  if (!input) return;
+  const logId = input.id.replace('comment-input-', '');
+  if (getMentionQuery(input) !== null) mentionOnInput(input, logId);
+});
 
 async function viewUserByUsername(username) {
   const { data } = await db.from('profiles').select('id').eq('username', username).single();
