@@ -2654,6 +2654,27 @@
   </div>
 </div>
 
+<!-- ════ ADD PHOTO MODAL (paste / drop / browse — no clipboard permission) ════ -->
+<div id="photo-paste-modal" class="overlay hidden" onclick="if(event.target===this)closePhotoPasteModal()">
+  <div class="modal" style="max-width:320px;">
+    <div class="modal-title">Add Photo</div>
+    <div id="photo-drop-zone"
+         style="border:2px dashed var(--border);border-radius:10px;padding:1.75rem 1rem 1.25rem;text-align:center;transition:border-color .15s;"
+         ondragover="event.preventDefault();this.style.borderColor='var(--gold)'"
+         ondragleave="this.style.borderColor='var(--border)'"
+         ondrop="handlePhotoDrop(event)">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:.6rem"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <div style="color:var(--muted);font-size:.83rem;line-height:1.6;margin-bottom:.85rem;">
+        Press <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.05rem .35rem;font-size:.78rem;">⌘V</kbd> / <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.05rem .35rem;font-size:.78rem;">Ctrl+V</kbd> to paste<br>
+        or drag &amp; drop an image here
+      </div>
+      <button class="btn btn-ghost" style="font-size:.82rem;" onclick="document.getElementById('photo-file-input').click()">Browse files…</button>
+      <input type="file" id="photo-file-input" accept="image/*" style="display:none" onchange="handlePhotoFileInput(this)">
+    </div>
+    <button class="btn btn-ghost" style="width:100%;margin-top:.6rem;color:var(--muted);" onclick="closePhotoPasteModal()">Cancel</button>
+  </div>
+</div>
+
 <!-- ════ WISHLIST ADD / EDIT MODAL ════ -->
 <div id="wishlist-modal" class="overlay hidden">
   <div class="modal">
@@ -3379,7 +3400,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.06.59';
+const APP_VERSION = '2.30.26.07.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8770,38 +8791,58 @@ function blobToResizedBase64(blob) {
   });
 }
 
-// Paste an image from clipboard or file picker onto a watch card
-async function pasteWatchImage(watchId) {
-  // Try modern Clipboard API first
-  if (navigator.clipboard && navigator.clipboard.read) {
-    try {
-      const items = await navigator.clipboard.read();
-      for (const item of items) {
-        const imageType = item.types.find(t => t.startsWith('image/'));
-        if (imageType) {
-          const blob = await item.getType(imageType);
-          const base64 = await blobToResizedBase64(blob);
-          _saveWatchImageBase64(watchId, base64);
-          return;
-        }
-      }
-      toast('No image in clipboard — opening file picker…');
-    } catch (_) {
-      // Clipboard permission denied — fall through to file picker
+// ── Add-photo modal (paste / drop / browse — no clipboard permission dialog) ──
+let _photoPasteWatchId = null;
+
+function pasteWatchImage(watchId) {
+  openPhotoPasteModal(watchId);
+}
+
+function openPhotoPasteModal(watchId) {
+  _photoPasteWatchId = watchId;
+  document.getElementById('photo-drop-zone').style.borderColor = 'var(--border)';
+  document.getElementById('photo-paste-modal').classList.remove('hidden');
+  // paste event: user-initiated Ctrl+V — no permission dialog needed
+  document.addEventListener('paste', _handlePhotoPaste);
+}
+
+function closePhotoPasteModal() {
+  document.getElementById('photo-paste-modal').classList.add('hidden');
+  document.removeEventListener('paste', _handlePhotoPaste);
+  _photoPasteWatchId = null;
+}
+
+async function _handlePhotoPaste(e) {
+  const items = e.clipboardData?.items || [];
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const blob = item.getAsFile();
+      const base64 = await blobToResizedBase64(blob);
+      _saveWatchImageBase64(_photoPasteWatchId, base64);
+      closePhotoPasteModal();
+      return;
     }
   }
-  // Fallback: file picker
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  input.onchange = async () => {
-    if (!input.files[0]) return;
-    try {
-      const base64 = await blobToResizedBase64(input.files[0]);
-      _saveWatchImageBase64(watchId, base64);
-    } catch { toast('Could not read image file', 'error'); }
-  };
-  input.click();
+  toast('No image found in clipboard', 'error');
+}
+
+async function handlePhotoDrop(e) {
+  e.preventDefault();
+  e.currentTarget.style.borderColor = 'var(--border)';
+  const file = e.dataTransfer.files[0];
+  if (!file || !file.type.startsWith('image/')) { toast('Please drop an image file', 'error'); return; }
+  const base64 = await blobToResizedBase64(file);
+  _saveWatchImageBase64(_photoPasteWatchId, base64);
+  closePhotoPasteModal();
+}
+
+async function handlePhotoFileInput(input) {
+  if (!input.files[0]) return;
+  try {
+    const base64 = await blobToResizedBase64(input.files[0]);
+    _saveWatchImageBase64(_photoPasteWatchId, base64);
+    closePhotoPasteModal();
+  } catch { toast('Could not read image file', 'error'); }
 }
 
 function _saveWatchImageBase64(watchId, base64) {
