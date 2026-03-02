@@ -3253,7 +3253,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.18.02';
+const APP_VERSION = '2.30.26.18.05';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4897,7 +4897,7 @@ function renderNotificationPanel() {
           onclick="event.stopPropagation();declineClubInvite('${n.ref_id}','${n.id}')">Decline</button>
       </div>` : '';
     const notifClick = (n.type === 'like' || n.type === 'comment' || n.type === 'comment_also')
-      ? `toggleNotifPanel();nav(document.querySelector('nav button[data-page=\\'feed\\']'))`
+      ? `toggleNotifPanel();scrollToFeedPost('${n.ref_id}')`
       : (n.type === 'follow_request' || n.type === 'club_join_request' || n.type === 'club_invite') ? ''
       : (n.type === 'club_join_accepted' || n.type === 'club_promoted') ? `toggleNotifPanel();openClubDetail('${n.ref_id}')`
       : `viewUserProfile('${n.actor_id}')`;
@@ -5025,6 +5025,23 @@ async function loadFeed() {
   } catch(e) { console.warn('Feed error:', e.message); }
   finally { feedLoading = false; }
   renderFeed();
+}
+
+function scrollToFeedPost(postId) {
+  if (!postId) { nav(document.querySelector('nav button[data-page=\'feed\']')); return; }
+  nav(document.querySelector('nav button[data-page=\'feed\']'));
+  const attempt = (tries) => {
+    const card = document.getElementById('feedcard-' + postId);
+    if (card) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card.style.transition = 'box-shadow .3s';
+      card.style.boxShadow = '0 0 0 2px var(--gold)';
+      setTimeout(() => { card.style.boxShadow = ''; }, 1800);
+    } else if (tries > 0) {
+      setTimeout(() => attempt(tries - 1), 300);
+    }
+  };
+  attempt(8);
 }
 
 function renderFeed() {
