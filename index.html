@@ -3402,7 +3402,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.07.42';
+const APP_VERSION = '2.30.26.10.08';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3724,6 +3724,7 @@ async function loadAndRenderProfile(userId) {
       const { data } = await q.order('brand').order('name');
       showcase = data || [];
     }
+  } // end if (isOwn || visibility !== 'none')
 
   // Wishlist (respects wishlist_visibility setting)
   let wishlistItems = [];
