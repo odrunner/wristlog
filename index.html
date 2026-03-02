@@ -1465,6 +1465,36 @@
       padding: .15rem 0 .35rem; font-weight: 600;
     }
     .comments-view-more:hover { color: var(--text); }
+    /* ── @mention autocomplete dropdown ── */
+    .mention-ac {
+      position: fixed; background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; box-shadow: 0 4px 18px rgba(0,0,0,.35);
+      z-index: 9999; min-width: 200px; max-width: 280px;
+      max-height: 220px; overflow-y: auto; display: none;
+    }
+    .mention-ac.open { display: block; }
+    .mention-ac-item {
+      display: flex; align-items: center; gap: .55rem;
+      padding: .5rem .75rem; cursor: pointer; font-size: .84rem;
+      color: var(--text); transition: background .15s;
+    }
+    .mention-ac-item:hover, .mention-ac-item.active { background: var(--hover); }
+    .mention-ac-item:first-child { border-radius: 10px 10px 0 0; }
+    .mention-ac-item:last-child  { border-radius: 0 0 10px 10px; }
+    .mention-ac-item:only-child  { border-radius: 10px; }
+    .mention-ac-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--gold); color: #000;
+      font-size: .65rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .mention-ac-name  { font-weight: 600; line-height: 1.2; }
+    .mention-ac-user  { font-size: .75rem; color: var(--muted); line-height: 1.2; }
+    /* ── Inline @mention links in comment bodies ── */
+    .mention-link {
+      color: var(--gold); font-weight: 600; cursor: pointer;
+    }
+    .mention-link:hover { text-decoration: underline; }
     .comments-add-prompt {
       font-size: .78rem; color: var(--muted); cursor: pointer;
       padding: .4rem 0 0; border-top: 1px solid var(--border);
@@ -2900,6 +2930,9 @@
   Feedback
 </button>
 
+<!-- @mention autocomplete dropdown (shared, repositioned dynamically) -->
+<div id="mention-ac" class="mention-ac" role="listbox"></div>
+
 <div id="feedback-modal" class="overlay hidden">
   <div class="modal" style="max-width:420px;">
     <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Feedback</div>
@@ -3330,7 +3363,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.19.36';
+const APP_VERSION = '2.30.26.19.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4054,6 +4087,15 @@ async function loadFollowing() {
   if (!currentUser) return;
   const { data } = await db.from('follows').select('following_id').eq('follower_id', currentUser.id);
   following = new Set((data || []).map(r => r.following_id));
+  // Also load profiles for @mention autocomplete
+  if (following.size > 0) {
+    const ids = [...following];
+    const { data: profs } = await db.from('profiles').select('id, username, display_name').in('id', ids);
+    followingProfiles = (profs || []).sort((a, b) =>
+      (a.display_name || a.username || '').localeCompare(b.display_name || b.username || ''));
+  } else {
+    followingProfiles = [];
+  }
 }
 async function loadPendingRequests() {
   if (!currentUser) return;
@@ -4953,6 +4995,7 @@ function renderNotificationPanel() {
                : n.type === 'like'            ? `${nm} liked your wear log`
                : n.type === 'comment'         ? `${nm} commented on your wear log`
                : n.type === 'comment_also'    ? `${nm} also commented on a post you liked or commented on`
+               : n.type === 'mention'        ? `${nm} mentioned you in a comment`
                : n.type === 'club_join_request'  ? `${nm} wants to join your club`
                : n.type === 'club_join_accepted' ? `${nm} approved your club request`
                : n.type === 'club_invite'        ? `${nm} invited you to join a club`
@@ -4978,7 +5021,7 @@ function renderNotificationPanel() {
         <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem;"
           onclick="event.stopPropagation();declineClubInvite('${n.ref_id}','${n.id}')">Decline</button>
       </div>` : '';
-    const notifClick = (n.type === 'like' || n.type === 'comment' || n.type === 'comment_also')
+    const notifClick = (n.type === 'like' || n.type === 'comment' || n.type === 'comment_also' || n.type === 'mention')
       ? `toggleNotifPanel();scrollToFeedPost('${n.ref_id}')`
       : (n.type === 'follow_request' || n.type === 'club_join_request' || n.type === 'club_invite') ? ''
       : (n.type === 'club_join_accepted' || n.type === 'club_promoted') ? `toggleNotifPanel();openClubDetail('${n.ref_id}')`
@@ -5229,7 +5272,7 @@ function renderFeedCard(item) {
         <div class="comment-avatar">${profileInitials(c.profile)}</div>
         <div class="comment-body">
           <span class="comment-username">${escHtml(c.profile?.display_name || c.profile?.username || 'User')}</span>
-          <span> ${escHtml(c.body)}</span>
+          <span> ${renderCommentBody(c.body)}</span>
         </div>
       </div>`).join('');
     const viewMoreHtml = remaining > 0
@@ -5237,8 +5280,9 @@ function renderFeedCard(item) {
       : '';
     const inputHtml = showAll
       ? `<div class="comment-input-row">
-          <input class="comment-input" id="comment-input-${item.id}" placeholder="Add a comment…"
-            onkeydown="if(event.key==='Enter')postComment('${item.id}')">
+          <input class="comment-input" id="comment-input-${item.id}" placeholder="Add a comment… (@ to mention)"
+            oninput="mentionOnInput(this,'${item.id}')"
+            onkeydown="mentionOnKeydown(event,'${item.id}')">
           <button class="comment-send-btn" onclick="postComment('${item.id}')">↑</button>
         </div>`
       : `<div class="comments-add-prompt" onclick="toggleComments('${item.id}')">Add a comment…</div>`;
@@ -5600,6 +5644,128 @@ async function fetchComments(logId) {
   feedComments[logId] = data.map(c => ({ ...c, profile: pm[c.user_id] || null }));
   feedCommentCounts[logId] = data.length;
 }
+// ── @mention autocomplete ─────────────────────────────────────────────────
+let _mentionLogId    = null;   // which feed card the active dropdown belongs to
+let _mentionAcIdx    = -1;     // keyboard-selected item index
+let _mentionResults  = [];     // current filtered profile list
+
+function getMentionQuery(input) {
+  // Return the @query string before the cursor, or null if no active @
+  const before = input.value.slice(0, input.selectionStart);
+  const m = before.match(/@(\w*)$/);
+  return m ? m[1] : null;
+}
+
+function mentionOnInput(input, logId) {
+  const query = getMentionQuery(input);
+  if (query === null) { closeMentionAc(); return; }
+  _mentionLogId   = logId;
+  _mentionAcIdx   = -1;
+  const q = query.toLowerCase();
+  _mentionResults = followingProfiles.filter(p =>
+    (p.username     || '').toLowerCase().includes(q) ||
+    (p.display_name || '').toLowerCase().includes(q)
+  ).slice(0, 6);
+  renderMentionAc(input);
+}
+
+function mentionOnKeydown(e, logId) {
+  const ac = document.getElementById('mention-ac');
+  if (!ac.classList.contains('open')) {
+    // Normal Enter → post
+    if (e.key === 'Enter') { e.preventDefault(); postComment(logId); }
+    return;
+  }
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _mentionAcIdx = Math.min(_mentionAcIdx + 1, _mentionResults.length - 1);
+    highlightMentionItem();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _mentionAcIdx = Math.max(_mentionAcIdx - 1, 0);
+    highlightMentionItem();
+  } else if (e.key === 'Enter' || e.key === 'Tab') {
+    e.preventDefault();
+    const idx = _mentionAcIdx >= 0 ? _mentionAcIdx : 0;
+    if (_mentionResults[idx]) selectMention(_mentionResults[idx]);
+  } else if (e.key === 'Escape') {
+    closeMentionAc();
+  }
+}
+
+function highlightMentionItem() {
+  document.querySelectorAll('.mention-ac-item').forEach((el, i) => {
+    el.classList.toggle('active', i === _mentionAcIdx);
+  });
+}
+
+function renderMentionAc(inputEl) {
+  const ac = document.getElementById('mention-ac');
+  if (!_mentionResults.length) { closeMentionAc(); return; }
+  ac.innerHTML = _mentionResults.map((p, i) => {
+    const initials = ((p.display_name || p.username || '?')[0]).toUpperCase();
+    const name     = escHtml(p.display_name || p.username || '');
+    const user     = escHtml(p.username || '');
+    return `<div class="mention-ac-item" role="option" onmousedown="selectMentionByIdx(${i})">
+      <div class="mention-ac-avatar">${initials}</div>
+      <div><div class="mention-ac-name">${name}</div><div class="mention-ac-user">@${user}</div></div>
+    </div>`;
+  }).join('');
+  // Position above the input
+  const rect = inputEl.getBoundingClientRect();
+  ac.style.bottom  = (window.innerHeight - rect.top + 6) + 'px';
+  ac.style.left    = rect.left + 'px';
+  ac.style.top     = '';
+  ac.classList.add('open');
+  _mentionAcIdx = -1;
+}
+
+function selectMentionByIdx(idx) {
+  if (_mentionResults[idx]) selectMention(_mentionResults[idx]);
+}
+
+function selectMention(profile) {
+  const input = _mentionLogId ? document.getElementById(`comment-input-${_mentionLogId}`) : null;
+  if (!input) { closeMentionAc(); return; }
+  const before  = input.value.slice(0, input.selectionStart);
+  const after   = input.value.slice(input.selectionStart);
+  // Replace the @query before cursor with @username + space
+  const replaced = before.replace(/@(\w*)$/, `@${profile.username} `);
+  input.value   = replaced + after;
+  // Move cursor to after the inserted mention
+  const pos = replaced.length;
+  input.setSelectionRange(pos, pos);
+  input.focus();
+  closeMentionAc();
+}
+
+function closeMentionAc() {
+  const ac = document.getElementById('mention-ac');
+  if (ac) ac.classList.remove('open');
+  _mentionResults = [];
+  _mentionAcIdx   = -1;
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('mousedown', e => {
+  if (!e.target.closest('#mention-ac') && !e.target.closest('.comment-input')) {
+    closeMentionAc();
+  }
+});
+
+async function viewUserByUsername(username) {
+  const { data } = await db.from('profiles').select('id').eq('username', username).single();
+  if (data?.id) viewUserProfile(data.id);
+}
+
+function renderCommentBody(body) {
+  if (!body) return '';
+  // Escape HTML first, then replace @username tokens with clickable links
+  return escHtml(body).replace(/@(\w+)/g, (match, username) =>
+    `<span class="mention-link" onclick="viewUserByUsername('${username}')">@${username}</span>`
+  );
+}
+
 async function postComment(logId) {
   const input = document.getElementById(`comment-input-${logId}`);
   if (!input) return;
@@ -5630,6 +5796,19 @@ async function postComment(logId) {
       db.from('notifications').insert(
         notifyIds.map(uid => ({ user_id: uid, type: 'comment_also', actor_id: currentUser.id, ref_id: logId, is_read: false }))
       ).then();
+    }
+    // Send mention notifications for @usernames in the comment
+    const mentionedUsernames = [...new Set((text.match(/@(\w+)/g) || []).map(m => m.slice(1)))];
+    if (mentionedUsernames.length) {
+      const { data: mentionedProfs } = await db.from('profiles')
+        .select('id').in('username', mentionedUsernames);
+      const mentionNotifs = (mentionedProfs || [])
+        .map(p => p.id)
+        .filter(uid => uid !== currentUser.id)           // don't notify yourself
+        .map(uid => ({ user_id: uid, type: 'mention', actor_id: currentUser.id, ref_id: logId, is_read: false }));
+      if (mentionNotifs.length) {
+        db.from('notifications').insert(mentionNotifs).then();
+      }
     }
   } else { toast('Comment failed — ' + error.message, 'error'); }
 }
@@ -5958,6 +6137,7 @@ let feedCommentCounts = {};        // logId → count
 let feedComments      = {};        // logId → [{...}] (loaded on demand)
 let expandedComments  = new Set(); // logIds currently showing comments
 let following         = new Set(); // user_ids current user follows
+let followingProfiles = [];        // [{id, username, display_name}] for @mention autocomplete
 let pendingRequests   = new Set(); // user_ids I've sent a follow request to (awaiting approval)
 let myClubs = [];                    // clubs current user is member of
 let pendingClubRequests = new Set(); // club_ids user has requested to join
