@@ -93,11 +93,13 @@ export function watchToRow(w, userId, eloRatings = {}) {
     market_price: w.marketPrice || null, market_price_date: w.marketPriceDate || null,
     market_price_src: w.marketPriceSrc || null, watch_charts_url: w.watchChartsUrl || null,
     price_history: w.priceHistory || [], warranty_expiry: w.warrantyExpiry || null,
-    has_box: w.hasBox || false, has_papers: w.hasPapers || false,
-    insurance: w.insurance || null, receipts: w.receipts || [],
+    has_box: w.hasBox === 'yes' ? true : w.hasBox === 'no' ? false : null,
+    has_papers: w.hasPapers === 'yes' ? true : w.hasPapers === 'no' ? false : null,
+    insurance: w.insurance || null, insured_value: w.insuredValue || null,
+    insurance_notes: w.insuranceNotes || null, receipts: w.receipts || [],
     elo_rating: eloRatings[w.id] || 1000,
-    watch_privacy: w.watchPrivacy || 'private',
-    is_public: (w.watchPrivacy || 'private') !== 'private',
+    watch_privacy: w.watchPrivacy ?? null,
+    is_public: w.watchPrivacy !== 'private',
   };
 }
 
@@ -112,19 +114,24 @@ export function rowToWatch(r) {
     marketPrice: r.market_price || null, marketPriceDate: r.market_price_date || null,
     marketPriceSrc: r.market_price_src || null, watchChartsUrl: r.watch_charts_url || null,
     priceHistory: r.price_history || [], warrantyExpiry: r.warranty_expiry || null,
-    hasBox: r.has_box || false, hasPapers: r.has_papers || false,
-    insurance: r.insurance || null, receipts: r.receipts || [],
-    watchPrivacy: r.watch_privacy || 'private',
-    isPublic: (r.watch_privacy || 'private') !== 'private',
+    hasBox: r.has_box === true ? 'yes' : r.has_box === false ? 'no' : null,
+    hasPapers: r.has_papers === true ? 'yes' : r.has_papers === false ? 'no' : null,
+    insurance: r.insurance || null, insuredValue: r.insured_value || null,
+    insuranceNotes: r.insurance_notes || null, receipts: r.receipts || [],
+    watchPrivacy: r.watch_privacy ?? null,
+    isPublic: r.watch_privacy !== 'private',
   };
 }
 
 export function logToRow(l, userId) {
+  const vis = l.visibility || 'public';
   return {
     id: l.id, user_id: userId, watch_id: l.watchId,
     date: l.date, use_case: l.useCase || 'unspecified',
     notes: l.notes || null, strap_id: l.strapId || null,
-    photo_url: l.photoUrl || null, is_public: l.isPublic !== false,
+    photo_url: l.photoUrl || null, is_public: vis !== 'private',
+    visibility: vis,
+    club_id: l.clubId || null,
   };
 }
 
@@ -134,6 +141,8 @@ export function rowToLog(r) {
     useCase: r.use_case || 'unspecified', notes: r.notes || null,
     strapId: r.strap_id || null, photoUrl: r.photo_url || null,
     isPublic: r.is_public !== false,
+    visibility: r.visibility || (r.is_public !== false ? 'public' : 'private'),
+    clubId: r.club_id || null,
   };
 }
 
@@ -145,6 +154,8 @@ export function wishToRow(w, userId) {
     notes: w.notes || null, color: w.color || null, tags: w.tags || [],
     market_price: w.marketPrice || null, market_price_date: w.marketPriceDate || null,
     market_price_src: w.marketPriceSrc || null, watch_charts_url: w.watchChartsUrl || null,
+    wish_privacy: w.wishPrivacy || null,
+    added_date: w.addedDate || null,
   };
 }
 
@@ -155,6 +166,8 @@ export function rowToWish(r) {
     notes: r.notes || null, color: r.color || '#c9a84c', tags: r.tags || [],
     marketPrice: r.market_price || null, marketPriceDate: r.market_price_date || null,
     marketPriceSrc: r.market_price_src || null, watchChartsUrl: r.watch_charts_url || null,
+    wishPrivacy: r.wish_privacy || null,
+    addedDate: r.added_date || null,
   };
 }
 
@@ -511,7 +524,7 @@ export function warrantyStatus(w, today = new Date()) {
   const exp = new Date(w.warrantyExpiry + 'T12:00:00');
   const days = Math.round((exp - todayNorm) / 86400000);
   if (days < 0)   return { cls: 'warranty-expired', text: 'Warranty expired' };
-  if (days <= 60) return { cls: 'warranty-expiring', text: `⚠ Warranty: ${days}d left` };
+  if (days <= 60) return { cls: 'warranty-expiring', text: `Warranty: ${days}d left` };
   const mo = Math.round(days / 30);
   return { cls: 'warranty-active', text: `✓ Warranty: ${mo}mo left` };
 }
@@ -605,4 +618,140 @@ export function computeDowReport(logs, watches) {
     const topId = Object.keys(wm).sort((a, b) => wm[b] - wm[a])[0];
     return { dayName, dow, w: watches.find(x => x.id === topId) || null, cnt: wm[topId], total: dayLogs.length };
   });
+}
+
+// ══════════════════════════════════════════
+//  AUTO-SUGGEST TAGS (pure pattern matching)
+// ══════════════════════════════════════════
+
+export function autoSuggestTags(brand, name, ref) {
+  const t = `${brand} ${name} ${ref || ''}`.toLowerCase();
+  const r = [];
+  if (/sub(mariner)?|dive|aqua|sea|marine|diver|fathom/.test(t)) r.push('Dive');
+  if (/chrono(graph)?/.test(t)) r.push('Chronograph');
+  if (/\bgmt\b|dual.?time/.test(t)) r.push('GMT');
+  if (/pilot|aviator|navitimer|fli[ei]ger/.test(t)) r.push('Pilot');
+  if (/\bfield\b|military/.test(t)) r.push('Field');
+  if (/dress|calatrava|\btank\b|senator|datejust/.test(t)) r.push('Dress');
+  if (/skeleton|squelette/.test(t)) r.push('Skeleton');
+  if (/vintage/.test(t)) r.push('Vintage');
+  if (/tourbillon|perpetual|moonphase|complication/.test(t)) r.push('Complication');
+  if (/aquanaut|nautilus|royal.?oak|sport.?lux/.test(t)) r.push('Sport-Luxury');
+  else if (/sport/.test(t)) r.push('Sport');
+  return r;
+}
+
+// ══════════════════════════════════════════
+//  OEM STRAP GUESSER (pure pattern matching)
+// ══════════════════════════════════════════
+
+export function guessOEMStrap(w) {
+  const ref   = (w.ref   || '').toLowerCase();
+  const brand = (w.brand || '').toLowerCase();
+  const name  = (w.name  || '').toLowerCase();
+
+  // Specific ref matches
+  if (ref.includes('77451or') || ref.includes('1361or'))
+    return { name: 'Integrated Pink Gold Bracelet', material: '18K Pink Gold' };
+  if (ref.includes('26715st') || ref.includes('1356st'))
+    return { name: 'Integrated Steel Bracelet', material: 'Steel' };
+  if (ref.includes('5010') && (ref.includes('b64') || brand.includes('blancpain')))
+    return { name: 'Black Rubber Strap', material: 'Rubber' };
+  if (ref.includes('77605ok') || ref.includes('a101ca'))
+    return { name: 'Grey Rubber Strap', material: 'Rubber' };
+  if (brand.includes('kurono') && name.includes('jubilee'))
+    return { name: 'Black Calfskin Leather Strap', material: 'Calf Leather' };
+
+  // Brand + model keyword fallbacks
+  if (brand.includes('audemars')) {
+    if (name.includes('offshore'))  return { name: 'Rubber Strap', material: 'Rubber' };
+    if (name.includes('royal oak')) return { name: 'Integrated Steel Bracelet', material: 'Steel' };
+  }
+  if (brand.includes('blancpain') && (name.includes('fathom') || name.includes('fifty')))
+    return { name: 'Rubber Strap', material: 'Rubber' };
+  if (brand.includes('rolex')) {
+    if (name.includes('cellini') || name.includes('day-date'))
+      return { name: 'Leather Strap', material: 'Leather' };
+    return { name: 'Oyster Bracelet', material: 'Steel' };
+  }
+  if (brand.includes('omega')) {
+    if (name.includes('de ville')) return { name: 'Leather Strap', material: 'Leather' };
+    return { name: 'Metal Bracelet', material: 'Steel' };
+  }
+  if (brand.includes('tudor')) {
+    if (name.includes('black bay') || name.includes('pelagos')) return { name: 'Fabric Strap', material: 'Fabric' };
+    return { name: 'Steel Bracelet', material: 'Steel' };
+  }
+  if (brand.includes('tag heuer')) return { name: 'Rubber Strap', material: 'Rubber' };
+  if (brand.includes('patek')) {
+    if (name.includes('aquanaut') || name.includes('nautilus')) return { name: 'Rubber Strap', material: 'Rubber' };
+    return { name: 'Leather Strap', material: 'Leather' };
+  }
+  if (brand.includes('cartier') || brand.includes('vacheron') || brand.includes('jaeger'))
+    return { name: 'Leather Strap', material: 'Leather' };
+  if (brand.includes('iwc')) {
+    if (name.includes('aquatimer')) return { name: 'Rubber Strap', material: 'Rubber' };
+    return { name: 'Leather Strap', material: 'Leather' };
+  }
+  if (brand.includes('panerai'))  return { name: 'Leather Strap', material: 'Leather' };
+  if (brand.includes('grand seiko') || brand.includes('seiko') || brand.includes('orient'))
+    return { name: 'Leather Strap', material: 'Leather' };
+
+  // Generic name-keyword fallback
+  if (/sub(mariner)?|dive|diver|fathom|pelagos|aqua/.test(name))
+    return { name: 'Rubber Strap', material: 'Rubber' };
+  if (/pilot|aviator|field|explorer/.test(name))
+    return { name: 'Leather Strap', material: 'Leather' };
+
+  return null;
+}
+
+// ══════════════════════════════════════════
+//  BOX & PAPERS HTML (pure formatter)
+// ══════════════════════════════════════════
+
+export function boxPapersHTML(w) {
+  const b = w.hasBox, p = w.hasPapers;
+  if (!b && !p) return '';
+  if (b === 'yes' && p === 'yes')
+    return `<div class="bp-indicator"><span class="bp-item-yes">Box &amp; Papers</span></div>`;
+  const parts = [];
+  if      (b === 'yes') parts.push(`<span class="bp-item-yes">Box</span>`);
+  else if (b === 'no')  parts.push(`<span class="bp-item-no">No Box</span>`);
+  if      (p === 'yes') parts.push(`<span class="bp-item-yes">Papers</span>`);
+  else if (p === 'no')  parts.push(`<span class="bp-item-no">No Papers</span>`);
+  return parts.length ? `<div class="bp-indicator">${parts.join('<span style="color:var(--border)"> · </span>')}</div>` : '';
+}
+
+// ══════════════════════════════════════════
+//  WARRANTY BADGE HTML (pure formatter)
+// ══════════════════════════════════════════
+
+export function warrantyBadgeHTML(w, today = new Date()) {
+  const ws = warrantyStatus(w, today);
+  if (!ws) return '';
+  return `<div class="warranty-badge ${ws.cls}">${ws.text}</div>`;
+}
+
+// ══════════════════════════════════════════
+//  MARKET PRICE ROW HTML (pure formatter)
+// ══════════════════════════════════════════
+
+export function marketPriceRowHTML(w) {
+  const mp = w.marketPrice;
+  if (!mp) return '';
+  const delta = w.price ? mp - w.price : null;
+  const pct   = delta != null && w.price ? (delta / w.price * 100).toFixed(0) : null;
+  const sign  = delta >= 0 ? '+' : '-';
+  const deltaHTML = delta != null
+    ? `<span class="mp-delta ${delta >= 0 ? 'mp-up' : 'mp-down'}">${sign}${fmtMoney(Math.abs(delta))} (${sign}${Math.abs(pct)}%)</span>`
+    : '';
+  const srcParts = [w.marketPriceSrc, w.marketPriceDate ? fmtDate(w.marketPriceDate) : ''].filter(Boolean);
+  const srcHTML = srcParts.length ? `<span class="mp-src">${srcParts.join(' · ')}</span>` : '';
+  return `<div class="market-price-row">
+    <span class="mp-label">Market</span>
+    <span class="mp-value">${fmtMoney(mp)}</span>
+    ${deltaHTML}
+    ${srcHTML}
+  </div>`;
 }

@@ -16,7 +16,8 @@ const fullWatch = {
   marketPriceSrc: 'WatchCharts', watchChartsUrl: 'https://watchcharts.com/omega',
   priceHistory: [{ price: 6800, date: '2024-03-01', src: 'WatchCharts' }],
   warrantyExpiry: '2029-01-15', hasBox: 'yes', hasPapers: 'yes',
-  insurance: 'insured', receipts: [{ id: 'r1', name: 'Purchase receipt' }],
+  insurance: 'insured', insuredValue: 7000, insuranceNotes: null,
+  receipts: [{ id: 'r1', name: 'Purchase receipt' }],
   watchPrivacy: 'public',
 };
 
@@ -28,8 +29,9 @@ const fullRow = {
   owner: 'John', market_price: 7200, market_price_date: '2024-06-01',
   market_price_src: 'WatchCharts', watch_charts_url: 'https://watchcharts.com/omega',
   price_history: [{ price: 6800, date: '2024-03-01', src: 'WatchCharts' }],
-  warranty_expiry: '2029-01-15', has_box: 'yes', has_papers: 'yes',
-  insurance: 'insured', receipts: [{ id: 'r1', name: 'Purchase receipt' }],
+  warranty_expiry: '2029-01-15', has_box: true, has_papers: true,
+  insurance: 'insured', insured_value: 7000, insurance_notes: null,
+  receipts: [{ id: 'r1', name: 'Purchase receipt' }],
   watch_privacy: 'public', is_public: true,
 };
 
@@ -51,12 +53,27 @@ describe('watchToRow', () => {
     expect(row.straps).toEqual([{ id: 's1', name: 'OEM', isOn: true }]);
     expect(row.market_price).toBe(7200);
     expect(row.warranty_expiry).toBe('2029-01-15');
-    expect(row.has_box).toBe('yes');
-    expect(row.has_papers).toBe('yes');
+    expect(row.has_box).toBe(true);
+    expect(row.has_papers).toBe(true);
     expect(row.insurance).toBe('insured');
+    expect(row.insured_value).toBe(7000);
     expect(row.receipts).toEqual([{ id: 'r1', name: 'Purchase receipt' }]);
     expect(row.watch_privacy).toBe('public');
     expect(row.is_public).toBe(true);
+  });
+
+  it('converts hasBox/hasPapers yes/no to boolean', () => {
+    const w = { ...fullWatch, hasBox: 'no', hasPapers: 'no' };
+    const row = watchToRow(w, 'u1');
+    expect(row.has_box).toBe(false);
+    expect(row.has_papers).toBe(false);
+  });
+
+  it('converts hasBox/hasPapers null to null', () => {
+    const w = { ...fullWatch, hasBox: null, hasPapers: null };
+    const row = watchToRow(w, 'u1');
+    expect(row.has_box).toBeNull();
+    expect(row.has_papers).toBeNull();
   });
 
   it('uses ELO rating from ratings map when provided', () => {
@@ -69,11 +86,22 @@ describe('watchToRow', () => {
     expect(row.elo_rating).toBe(1000);
   });
 
-  it('defaults privacy to private when not set', () => {
-    const w = { ...fullWatch, watchPrivacy: undefined };
+  it('preserves null watch_privacy (Default state)', () => {
+    const w = { ...fullWatch, watchPrivacy: null };
     const row = watchToRow(w, 'u1');
-    expect(row.watch_privacy).toBe('private');
-    expect(row.is_public).toBe(false);
+    expect(row.watch_privacy).toBeNull();
+  });
+
+  it('marks is_public true when privacy is not private', () => {
+    const w = { ...fullWatch, watchPrivacy: 'public' };
+    expect(watchToRow(w, 'u1').is_public).toBe(true);
+    const w2 = { ...fullWatch, watchPrivacy: 'followers' };
+    expect(watchToRow(w2, 'u1').is_public).toBe(true);
+  });
+
+  it('marks is_public false when privacy is private', () => {
+    const w = { ...fullWatch, watchPrivacy: 'private' };
+    expect(watchToRow(w, 'u1').is_public).toBe(false);
   });
 
   it('handles null/undefined fields with safe defaults', () => {
@@ -84,8 +112,10 @@ describe('watchToRow', () => {
     expect(row.straps).toEqual([]);
     expect(row.price_history).toEqual([]);
     expect(row.receipts).toEqual([]);
-    expect(row.has_box).toBe(false);
-    expect(row.has_papers).toBe(false);
+    expect(row.has_box).toBeNull();
+    expect(row.has_papers).toBeNull();
+    expect(row.insured_value).toBeNull();
+    expect(row.insurance_notes).toBeNull();
   });
 });
 
@@ -101,18 +131,27 @@ describe('rowToWatch', () => {
     expect(w.warrantyExpiry).toBe('2029-01-15');
     expect(w.hasBox).toBe('yes');
     expect(w.hasPapers).toBe('yes');
+    expect(w.insuredValue).toBe(7000);
     expect(w.watchPrivacy).toBe('public');
     expect(w.isPublic).toBe(true);
   });
 
-  it('upgrades http:// image URLs to https://', () => {
-    const row = { ...fullRow, image: 'http://example.com/photo.jpg' };
+  it('converts has_box/has_papers booleans to yes/no strings', () => {
+    const row = { ...fullRow, has_box: false, has_papers: false };
     const w = rowToWatch(row);
-    expect(w.image).toBe('https://example.com/photo.jpg');
+    expect(w.hasBox).toBe('no');
+    expect(w.hasPapers).toBe('no');
   });
 
-  it('leaves https:// image URLs unchanged', () => {
-    const row = { ...fullRow, image: 'https://example.com/photo.jpg' };
+  it('converts has_box/has_papers null to null', () => {
+    const row = { ...fullRow, has_box: null, has_papers: null };
+    const w = rowToWatch(row);
+    expect(w.hasBox).toBeNull();
+    expect(w.hasPapers).toBeNull();
+  });
+
+  it('upgrades http:// image URLs to https://', () => {
+    const row = { ...fullRow, image: 'http://example.com/photo.jpg' };
     const w = rowToWatch(row);
     expect(w.image).toBe('https://example.com/photo.jpg');
   });
@@ -129,11 +168,10 @@ describe('rowToWatch', () => {
     expect(w.color).toBe('#c9a84c');
   });
 
-  it('defaults privacy to private when not set', () => {
+  it('preserves null watch_privacy (Default state)', () => {
     const row = { ...fullRow, watch_privacy: null };
     const w = rowToWatch(row);
-    expect(w.watchPrivacy).toBe('private');
-    expect(w.isPublic).toBe(false);
+    expect(w.watchPrivacy).toBeNull();
   });
 
   it('defaults arrays to empty when null', () => {
@@ -150,7 +188,6 @@ describe('watchToRow/rowToWatch round-trip', () => {
   it('preserves all data through a full round-trip', () => {
     const row = watchToRow(fullWatch, 'u1');
     const restored = rowToWatch(row);
-    // Check key fields preserved
     expect(restored.id).toBe(fullWatch.id);
     expect(restored.brand).toBe(fullWatch.brand);
     expect(restored.name).toBe(fullWatch.name);
@@ -161,6 +198,9 @@ describe('watchToRow/rowToWatch round-trip', () => {
     expect(restored.marketPrice).toBe(fullWatch.marketPrice);
     expect(restored.warrantyExpiry).toBe(fullWatch.warrantyExpiry);
     expect(restored.watchPrivacy).toBe(fullWatch.watchPrivacy);
+    expect(restored.hasBox).toBe(fullWatch.hasBox);
+    expect(restored.hasPapers).toBe(fullWatch.hasPapers);
+    expect(restored.insuredValue).toBe(fullWatch.insuredValue);
   });
 
   it('round-trip with minimal watch preserves id', () => {
@@ -177,14 +217,14 @@ const fullLog = {
   id: 'log1', watchId: 'w1', date: '2024-06-15',
   useCase: 'work', notes: 'Great day at the office',
   strapId: 's1', photoUrl: 'https://example.com/photo.jpg',
-  isPublic: true,
+  visibility: 'public', clubId: null,
 };
 
 const fullLogRow = {
   id: 'log1', user_id: 'u1', watch_id: 'w1', date: '2024-06-15',
   use_case: 'work', notes: 'Great day at the office',
   strap_id: 's1', photo_url: 'https://example.com/photo.jpg',
-  is_public: true,
+  is_public: true, visibility: 'public', club_id: null,
 };
 
 describe('logToRow', () => {
@@ -198,14 +238,21 @@ describe('logToRow', () => {
     expect(row.use_case).toBe('unspecified');
   });
 
-  it('defaults isPublic to true when not explicitly false', () => {
+  it('defaults visibility to public and is_public to true', () => {
     const row = logToRow({ id: 'l2', watchId: 'w1', date: '2024-01-01' }, 'u1');
+    expect(row.visibility).toBe('public');
     expect(row.is_public).toBe(true);
   });
 
-  it('sets isPublic false when explicitly false', () => {
-    const row = logToRow({ ...fullLog, isPublic: false }, 'u1');
+  it('sets is_public false when visibility is private', () => {
+    const row = logToRow({ ...fullLog, visibility: 'private' }, 'u1');
     expect(row.is_public).toBe(false);
+    expect(row.visibility).toBe('private');
+  });
+
+  it('includes club_id when provided', () => {
+    const row = logToRow({ ...fullLog, clubId: 'club1' }, 'u1');
+    expect(row.club_id).toBe('club1');
   });
 });
 
@@ -220,11 +267,25 @@ describe('rowToLog', () => {
     expect(log.strapId).toBe('s1');
     expect(log.photoUrl).toBe('https://example.com/photo.jpg');
     expect(log.isPublic).toBe(true);
+    expect(log.visibility).toBe('public');
+    expect(log.clubId).toBeNull();
   });
 
   it('defaults useCase to unspecified when null', () => {
     const log = rowToLog({ ...fullLogRow, use_case: null });
     expect(log.useCase).toBe('unspecified');
+  });
+
+  it('derives visibility from is_public when visibility column is missing', () => {
+    const log = rowToLog({ ...fullLogRow, visibility: null, is_public: false });
+    expect(log.visibility).toBe('private');
+    const log2 = rowToLog({ ...fullLogRow, visibility: null, is_public: true });
+    expect(log2.visibility).toBe('public');
+  });
+
+  it('includes clubId from row', () => {
+    const log = rowToLog({ ...fullLogRow, club_id: 'club42' });
+    expect(log.clubId).toBe('club42');
   });
 });
 
@@ -238,6 +299,7 @@ describe('logToRow/rowToLog round-trip', () => {
     expect(restored.useCase).toBe(fullLog.useCase);
     expect(restored.notes).toBe(fullLog.notes);
     expect(restored.strapId).toBe(fullLog.strapId);
+    expect(restored.visibility).toBe(fullLog.visibility);
   });
 });
 
@@ -249,6 +311,7 @@ const fullWish = {
   notes: 'Grail watch', color: '#38bdf8', tags: ['Diver'],
   marketPrice: 13500, marketPriceDate: '2024-05-01',
   marketPriceSrc: 'WatchCharts', watchChartsUrl: 'https://watchcharts.com/rolex',
+  wishPrivacy: 'public', addedDate: '2024-01-01',
 };
 
 describe('wishToRow', () => {
@@ -260,6 +323,8 @@ describe('wishToRow', () => {
     expect(row.name).toBe('Submariner');
     expect(row.market_price).toBe(13500);
     expect(row.tags).toEqual(['Diver']);
+    expect(row.wish_privacy).toBe('public');
+    expect(row.added_date).toBe('2024-01-01');
   });
 });
 
@@ -270,6 +335,8 @@ describe('rowToWish', () => {
     expect(w.id).toBe('wl1');
     expect(w.brand).toBe('Rolex');
     expect(w.marketPrice).toBe(13500);
+    expect(w.wishPrivacy).toBe('public');
+    expect(w.addedDate).toBe('2024-01-01');
   });
 
   it('defaults color to gold', () => {
