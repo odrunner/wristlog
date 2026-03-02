@@ -3363,7 +3363,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.20.27';
+const APP_VERSION = '2.30.26.20.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4884,19 +4884,6 @@ async function declineFollowRequest(requesterId, notifId) {
   updateBellBadge();
   renderNotificationPanel();
 }
-async function followBackFromNotif(userId, btn) {
-  if (!currentUser) return;
-  const { error } = await db.from('follows').insert({ follower_id: currentUser.id, following_id: userId });
-  if (!error) {
-    following.add(userId);
-    btn.closest('.notif-follow-back').innerHTML =
-      '<span style="color:var(--muted);font-size:.78rem;">Following ✓</span>';
-    loadFeed();
-  } else if (error.code === '23505') {
-    following.add(userId);
-    btn.closest('.notif-follow-back').innerHTML = '<span style="color:var(--muted);font-size:.78rem;">Following ✓</span>';
-  } else { toast('Could not follow — please try again', 'error'); }
-}
 function confirmUnfollow(userId, btn) {
   if (btn.dataset.confirming) {
     delete btn.dataset.confirming;
@@ -4932,14 +4919,6 @@ async function unfollowUser(userId) {
   }
 }
 
-
-async function markNotificationRead(notifId) {
-  await db.from('notifications').update({ is_read: true }).eq('id', notifId);
-  const n = userNotifs.find(n => n.id === notifId);
-  if (n) n.is_read = true;
-  unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
-  updateBellBadge();
-}
 
 async function markAllNotifsRead() {
   if (!currentUser) return;
@@ -5356,13 +5335,6 @@ function renderFeedCard(item) {
 
 // ── Feed caption editing ───────────────────────────────────────────────────
 const feedEditingCaption = new Set();
-
-function editFeedCaption(logId) {
-  feedEditingCaption.add(logId);
-  refreshFeedCard(logId);
-  // Focus the textarea after render
-  setTimeout(() => document.getElementById(`feed-caption-ta-${logId}`)?.focus(), 30);
-}
 
 function cancelFeedCaption(logId) {
   feedEditingCaption.delete(logId);
@@ -6387,11 +6359,6 @@ function nav(btn) {
 // ══════════════════════════════════════════
 //  TRACK PAGE
 // ══════════════════════════════════════════
-function setToday() {
-  const el = document.getElementById('track-date');
-  if (el) { el.value = todayStr(); onDateChange(); }
-}
-
 function onDateChange() {
   renderWornNotice();
   renderWatchSelector();
@@ -7578,38 +7545,6 @@ function warrantyStatus(w) {
   return { cls: 'warranty-active', text: `✓ Warranty: ${mo}mo left` };
 }
 
-function warrantyBadgeHTML(w) {
-  const ws = warrantyStatus(w);
-  if (!ws) return '';
-  return `<div class="warranty-badge ${ws.cls}">${ws.text}</div>`;
-}
-
-// ── Box & Papers badge helper ────────────────────────────────────────────────
-function boxPapersHTML(w) {
-  const b = w.hasBox, p = w.hasPapers;
-  if (!b && !p) return '';
-  if (b === 'yes' && p === 'yes')
-    return `<div class="bp-indicator"><span class="bp-item-yes">Box &amp; Papers</span></div>`;
-  const parts = [];
-  if      (b === 'yes') parts.push(`<span class="bp-item-yes">Box</span>`);
-  else if (b === 'no')  parts.push(`<span class="bp-item-no">No Box</span>`);
-  if      (p === 'yes') parts.push(`<span class="bp-item-yes">Papers</span>`);
-  else if (p === 'no')  parts.push(`<span class="bp-item-no">No Papers</span>`);
-  return parts.length ? `<div class="bp-indicator">${parts.join('<span style="color:var(--border)"> · </span>')}</div>` : '';
-}
-
-// ── Rotation health badge ────────────────────────────────────────────────────
-function rotationBadgeHTML(w) {
-  const wLogs = logs.filter(l => l.watchId === w.id);
-  if (!wLogs.length) return `<div class="rot-badge rot-never"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--border);margin-right:4px;"></span> Never worn</div>`;
-  const lastDate = wLogs.reduce((a, b) => a.date > b.date ? a : b).date;
-  const days = Math.floor((new Date() - new Date(lastDate + 'T12:00:00')) / 86400000);
-  if (days === 0)      return `<div class="rot-badge rot-fresh"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--success);margin-right:4px;"></span> Worn today</div>`;
-  if (days <= 14)      return `<div class="rot-badge rot-fresh"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--success);margin-right:4px;"></span> ${days}d ago</div>`;
-  if (days <= 45)      return `<div class="rot-badge rot-due"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-right:4px;"></span> ${days}d ago</div>`;
-  return                      `<div class="rot-badge rot-overdue"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--danger);margin-right:4px;"></span> ${days}d ago</div>`;
-}
-
 // ── Unified card tags (clean, no colors) ─────────────────────────────────────
 function watchCardTagsHTML(w) {
   const tags = [];
@@ -8143,11 +8078,6 @@ function renderWatchRecommendation() {
   el.innerHTML = recCardHTML(computeWatchRec(recSkips));
 }
 
-function quickLogAndRefreshRec(watchId) {
-  quickLog(watchId);
-  renderWatchRecommendation();
-}
-
 function renderStats() {
   const fl = filteredLogs();
   renderStatsRow(fl);
@@ -8186,17 +8116,6 @@ function renderStatsRow(fl) {
       <div class="stat-lbl" style="margin-bottom:.3rem">Collection Value</div>
       <div class="stat-sub">${val ? fmtMoney(val) : '—'}</div>
     </div>`;
-}
-
-function chartDefaults() {
-  return {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { ticks:{ color:'#7a7a95' }, grid:{ color:'#272734' } },
-      y: { ticks:{ color:'#7a7a95', stepSize:1 }, grid:{ color:'#272734' }, beginAtZero:true }
-    }
-  };
 }
 
 function toggleChart(canvasId, emptyId, hasData) {
@@ -8867,15 +8786,6 @@ function removeWatchImage(watchId) {
 // ══════════════════════════════════════════
 let receiptsWatchId = null;
 
-function openReceiptsModal(watchId) {
-  receiptsWatchId = watchId;
-  const w = watches.find(x => x.id === watchId);
-  if (!w) return;
-  document.getElementById('receipts-watch-name').textContent = w.brand + ' ' + w.name;
-  renderReceiptsList(w);
-  document.getElementById('receipts-modal').classList.remove('hidden');
-}
-
 function closeReceiptsModal() {
   document.getElementById('receipts-modal').classList.add('hidden');
   receiptsWatchId = null;
@@ -9218,27 +9128,6 @@ function renderWishlist() {
       </div>
     </div>`;
   }).join('');
-}
-
-// ── Wishlist "more" context menu ──────────────────────────────────────────────
-function openWlMoreMenu(ev, itemId) {
-  ev.stopPropagation();
-  closePhotoMenu();
-  const w = wishlist.find(x => x.id === itemId);
-  if (!w) return;
-  const menu = document.createElement('div');
-  menu.className = 'photo-menu';
-  menu.id = 'photo-menu';
-  if (w.url) menu.innerHTML += `<a class="photo-menu-item" href="${w.url}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;color:var(--text)">Open listing</a>`;
-  if (w.url && !w.image) menu.innerHTML += `<button class="photo-menu-item" onclick="closePhotoMenu();fetchWishlistImage('${itemId}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Fetch photo</button>`;
-  if (!w.image) menu.innerHTML += `<button class="photo-menu-item" onclick="closePhotoMenu();pasteWishlistImage('${itemId}')">Add photo</button>`;
-  if (w.image)  menu.innerHTML += `<button class="photo-menu-item" onclick="closePhotoMenu();removeWishlistImage('${itemId}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> Remove photo</button>`;
-  menu.innerHTML += `<button class="photo-menu-item danger" onclick="closePhotoMenu();openDelWlModal('${itemId}')">✕ Delete</button>`;
-  document.body.appendChild(menu);
-  const r = ev.currentTarget.getBoundingClientRect();
-  menu.style.top  = Math.min(r.bottom + 4, window.innerHeight - menu.offsetHeight - 8) + 'px';
-  menu.style.left = Math.min(r.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - 8) + 'px';
-  setTimeout(() => document.addEventListener('click', closePhotoMenu, { once: true }), 0);
 }
 
 // ── Wishlist drag-and-drop reordering ────────────────────────────────────────
@@ -10234,37 +10123,6 @@ function syncToServer() {
     body: JSON.stringify({ watches, logs, wishlist, brands, seeds }),
   }).catch(() => {}); // silent — localStorage is always the backup
 }
-
-async function initServerData() {
-  if (!IS_LOCAL) return;
-  try {
-    const res = await fetch('/api/load');
-    if (!res.ok) throw new Error('bad response');
-    const d = await res.json();
-    if (d.watches) {
-      // Server has data — use it as source of truth
-      watches  = d.watches;
-      logs     = d.logs     || [];
-      wishlist = d.wishlist || [];
-      brands   = d.brands   || brands;
-      // Restore seed-guard flags so seed functions don't re-run in this browser
-      Object.entries(d.seeds || {}).forEach(([k, v]) => localStorage.setItem(k, v));
-      // Mirror to localStorage as a crash-safe local cache
-      localStorage.setItem(STORE_W,  JSON.stringify(watches));
-      localStorage.setItem(STORE_L,  JSON.stringify(logs));
-      localStorage.setItem(STORE_WL, JSON.stringify(wishlist));
-      localStorage.setItem(STORE_B,  JSON.stringify(brands));
-      initOEMStraps();    // add OEM straps to any watches that don't have them yet
-      renderCollection(); // re-render with fresh server data
-    }
-    // Show the green dot in the header
-    document.getElementById('server-dot').classList.add('on');
-  } catch (e) {
-    console.warn('WristLog: local server not reachable — using localStorage only.');
-  }
-  _serverReady = true; // from now on, every save() will also push to the server
-}
-
 
 // ══════════════════════════════════════════
 //  FEEDBACK
