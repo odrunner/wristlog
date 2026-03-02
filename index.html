@@ -3363,7 +3363,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.20.10';
+const APP_VERSION = '2.30.26.20.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5652,7 +5652,7 @@ let _mentionResults  = [];     // current filtered profile list
 function getMentionQuery(input) {
   // Return the @query string before the cursor, or null if no active @
   const before = input.value.slice(0, input.selectionStart);
-  const m = before.match(/@(\w*)$/);
+  const m = before.match(/@([\w.]*)$/);
   return m ? m[1] : null;
 }
 
@@ -5732,7 +5732,7 @@ function selectMention(profile) {
   const before  = input.value.slice(0, input.selectionStart);
   const after   = input.value.slice(input.selectionStart);
   // Replace the @query before cursor with @username + space
-  const replaced = before.replace(/@(\w*)$/, `@${profile.username} `);
+  const replaced = before.replace(/@([\w.]*)$/, `@${profile.username} `);
   input.value   = replaced + after;
   // Move cursor to after the inserted mention
   const pos = replaced.length;
@@ -5748,12 +5748,13 @@ function closeMentionAc() {
   _mentionAcIdx   = -1;
 }
 
-// Close dropdown when clicking outside
+// Close dropdown when clicking outside or scrolling (fixed dropdown can't follow scroll)
 document.addEventListener('mousedown', e => {
   if (!e.target.closest('#mention-ac') && !e.target.closest('.comment-input')) {
     closeMentionAc();
   }
 });
+document.addEventListener('scroll', closeMentionAc, true); // capture=true catches all scroll containers
 
 async function viewUserByUsername(username) {
   const { data } = await db.from('profiles').select('id').eq('username', username).single();
@@ -5763,7 +5764,7 @@ async function viewUserByUsername(username) {
 function renderCommentBody(body) {
   if (!body) return '';
   // Escape HTML first, then replace @username tokens with clickable links
-  return escHtml(body).replace(/@(\w+)/g, (match, username) =>
+  return escHtml(body).replace(/@([\w.]+)/g, (match, username) =>
     `<span class="mention-link" onclick="viewUserByUsername('${username}')">@${username}</span>`
   );
 }
@@ -5800,7 +5801,7 @@ async function postComment(logId) {
       ).then();
     }
     // Send mention notifications for @usernames in the comment
-    const mentionedUsernames = [...new Set((text.match(/@(\w+)/g) || []).map(m => m.slice(1)))];
+    const mentionedUsernames = [...new Set((text.match(/@([\w.]+)/g) || []).map(m => m.slice(1)))];
     if (mentionedUsernames.length) {
       const { data: mentionedProfs } = await db.from('profiles')
         .select('id').in('username', mentionedUsernames);
