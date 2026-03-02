@@ -824,9 +824,10 @@ export function notificationBody(type, actorName) {
     case 'club_join_request':  return `${nm} wants to join your club`;
     case 'club_join_accepted': return `${nm} approved your club request`;
     case 'club_invite':        return `${nm} invited you to join a club`;
-    case 'club_promoted':      return `${nm} made you an owner of a club`;
-    case 'friend_invite':      return `${nm} wants to be friends — visit their profile to see your code`;
-    default:                   return '';
+    case 'club_promoted':        return `${nm} made you an owner of a club`;
+    case 'friend_code_entered':  return `${nm} entered your friend code`;
+    case 'friends_now':          return `You and ${nm} are now friends`;
+    default:                     return '';
   }
 }
 
@@ -858,7 +859,8 @@ export function notificationOpensClub(type) {
  * Returns true for types that tap-navigate to the actor's profile.
  */
 export function notificationOpensProfile(type) {
-  return type === 'follow' || type === 'follow_accepted' || type === 'friend_invite';
+  return type === 'follow' || type === 'follow_accepted'
+      || type === 'friend_code_entered' || type === 'friends_now';
 }
 
 /**

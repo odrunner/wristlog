@@ -51,8 +51,8 @@ ALTER TABLE notifications ADD CONSTRAINT notifications_type_check CHECK (
     'follow', 'follow_request', 'follow_accepted',
     'like', 'comment', 'comment_also', 'mention',
     'club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted',
-    'friend_invite',
+    'friend_code_entered', 'friends_now',
     -- legacy values that may exist in existing rows:
-    'friend_request', 'friend_accepted'
+    'friend_invite', 'friend_request', 'friend_accepted'
   )
 );
