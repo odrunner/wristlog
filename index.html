@@ -1467,9 +1467,9 @@
     .comments-view-more:hover { color: var(--text); }
     /* ── @mention autocomplete dropdown ── */
     .mention-ac {
-      position: fixed; background: var(--card); border: 1px solid var(--border);
-      border-radius: 10px; box-shadow: 0 4px 18px rgba(0,0,0,.35);
-      z-index: 9999; min-width: 200px; max-width: 280px;
+      position: fixed; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.55);
+      z-index: 9999; min-width: 220px; max-width: 300px;
       max-height: 220px; overflow-y: auto; display: none;
     }
     .mention-ac.open { display: block; }
@@ -3363,7 +3363,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.19.56';
+const APP_VERSION = '2.30.26.19.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5711,11 +5711,16 @@ function renderMentionAc(inputEl) {
       <div><div class="mention-ac-name">${name}</div><div class="mention-ac-user">@${user}</div></div>
     </div>`;
   }).join('');
-  // Position above the input
+  // Position just above the input, anchored to the bottom of the screen
   const rect = inputEl.getBoundingClientRect();
-  ac.style.bottom  = (window.innerHeight - rect.top + 6) + 'px';
-  ac.style.left    = rect.left + 'px';
-  ac.style.top     = '';
+  const spaceAbove = rect.top;                       // px available above the input
+  const dropH = Math.min(220, _mentionResults.length * 52); // approx dropdown height
+  ac.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+  ac.style.top    = '';
+  // Horizontal: align with input, but don't overflow the right edge
+  const dropW = Math.min(300, window.innerWidth - 32);
+  ac.style.left  = Math.min(rect.left, window.innerWidth - dropW - 8) + 'px';
+  ac.style.width = dropW + 'px';
   ac.classList.add('open');
   _mentionAcIdx = -1;
 }
