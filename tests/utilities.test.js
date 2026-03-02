@@ -159,30 +159,61 @@ describe('profileInitials', () => {
 // ── formatFeedDate ───────────────────────────────────────────────────────────
 
 describe('formatFeedDate', () => {
-  const today = new Date('2024-06-15T12:00:00');
+  const now = new Date('2024-06-15T12:00:00');
 
   it('returns empty for null/undefined', () => {
-    expect(formatFeedDate(null, today)).toBe('');
-    expect(formatFeedDate(undefined, today)).toBe('');
+    expect(formatFeedDate(null, null, now)).toBe('');
+    expect(formatFeedDate(undefined, null, now)).toBe('');
   });
 
-  it('returns "Today" for same day', () => {
-    expect(formatFeedDate('2024-06-15', today)).toBe('Today');
+  it('returns "Today" for same day date string', () => {
+    expect(formatFeedDate('2024-06-15', null, now)).toBe('Today');
   });
 
   it('returns "Yesterday" for one day ago', () => {
-    expect(formatFeedDate('2024-06-14', today)).toBe('Yesterday');
+    expect(formatFeedDate('2024-06-14', null, now)).toBe('Yesterday');
   });
 
   it('returns "N days ago" for 2-6 days ago', () => {
-    expect(formatFeedDate('2024-06-13', today)).toBe('2 days ago');
-    expect(formatFeedDate('2024-06-10', today)).toBe('5 days ago');
+    expect(formatFeedDate('2024-06-13', null, now)).toBe('2 days ago');
+    expect(formatFeedDate('2024-06-10', null, now)).toBe('5 days ago');
   });
 
   it('returns formatted date for 7+ days ago', () => {
-    const result = formatFeedDate('2024-06-01', today);
+    const result = formatFeedDate('2024-06-01', null, now);
     expect(result).toContain('Jun');
     expect(result).toContain('1');
+  });
+
+  // relative time via createdAt timestamp
+  it('returns "Just now" when createdAt is under 1 hour ago', () => {
+    const createdAt = new Date('2024-06-15T11:45:00').toISOString(); // 15 min ago
+    expect(formatFeedDate('2024-06-15', createdAt, now)).toBe('Just now');
+  });
+
+  it('returns "Xh ago" when createdAt is 1-17 hours ago', () => {
+    const createdAt = new Date('2024-06-15T09:00:00').toISOString(); // 3h ago
+    expect(formatFeedDate('2024-06-15', createdAt, now)).toBe('3h ago');
+  });
+
+  it('returns "Xh ago" for exactly 17 hours ago', () => {
+    const createdAt = new Date('2024-06-14T19:00:00').toISOString(); // 17h ago
+    expect(formatFeedDate('2024-06-14', createdAt, now)).toBe('17h ago');
+  });
+
+  it('falls back to day label when createdAt is 18+ hours ago', () => {
+    const createdAt = new Date('2024-06-14T13:00:00').toISOString(); // 23h ago
+    expect(formatFeedDate('2024-06-14', createdAt, now)).toBe('Yesterday');
+  });
+
+  it('uses dateStr for day-level fallback when no createdAt', () => {
+    expect(formatFeedDate('2024-06-13', null, now)).toBe('2 days ago');
+  });
+
+  it('handles ISO timestamp dateStr without createdAt (notification timestamps)', () => {
+    const ts = '2024-06-15T11:30:00.000Z';
+    const result = formatFeedDate(ts, null, new Date('2024-06-15T12:00:00Z'));
+    expect(result).toBe('Just now');
   });
 });
 

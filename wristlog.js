@@ -40,12 +40,23 @@ export function profileInitials(p) {
   return name.slice(0, 2).toUpperCase() || '?';
 }
 
-export function formatFeedDate(dateStr, today = new Date()) {
+export function formatFeedDate(dateStr, createdAt, now = new Date()) {
   if (!dateStr) return '';
-  const todayNorm = new Date(today); todayNorm.setHours(0, 0, 0, 0);
-  const d = new Date(dateStr + 'T00:00:00');
-  const diff = Math.round((todayNorm - d) / 86400000);
-  if (diff === 0) return 'Today';
+  // If we have a full timestamp try relative time within 18 h
+  const tsStr = createdAt || ((dateStr.includes('T') || dateStr.includes('Z')) ? dateStr : null);
+  if (tsStr) {
+    const diffH = (now - new Date(tsStr)) / 3600000;
+    if (diffH < 1)  return 'Just now';
+    if (diffH < 18) return `${Math.floor(diffH)}h ago`;
+  }
+  // Fall back to day-level comparison
+  const todayNorm = new Date(now); todayNorm.setHours(0, 0, 0, 0);
+  const d = (dateStr.includes('T') || dateStr.includes('Z'))
+    ? new Date(dateStr)
+    : new Date(dateStr + 'T00:00:00');
+  const dayStart = new Date(d); dayStart.setHours(0, 0, 0, 0);
+  const diff = Math.round((todayNorm - dayStart) / 86400000);
+  if (diff <= 0) return 'Today';
   if (diff === 1) return 'Yesterday';
   if (diff < 7)  return `${diff} days ago`;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -754,4 +765,40 @@ export function marketPriceRowHTML(w) {
     ${deltaHTML}
     ${srcHTML}
   </div>`;
+}
+
+// ══════════════════════════════════════════
+//  @MENTION HELPERS
+// ══════════════════════════════════════════
+
+/**
+ * Given a text input element, return the @-query string immediately before
+ * the cursor (e.g. "jo" if the text before cursor ends in "@jo"), or null
+ * if the cursor is not in an active mention context.
+ */
+export function getMentionQuery(inputValue, cursorPos) {
+  const before = inputValue.slice(0, cursorPos);
+  const m = before.match(/@([\w.]*)$/);
+  return m ? m[1] : null;
+}
+
+/**
+ * Extract all @mentioned usernames from a comment body string.
+ * Returns a de-duped array of username strings (without the @).
+ */
+export function extractMentionedUsernames(text) {
+  if (!text) return [];
+  return [...new Set((text.match(/@([\w.]+)/g) || []).map(m => m.slice(1)))];
+}
+
+/**
+ * Render a comment body: escapes HTML then wraps @username tokens in
+ * a clickable <span class="mention-link"> element.
+ * onClickFn is a string like "viewUserByUsername" injected into onclick.
+ */
+export function renderCommentBody(body, onClickFn = 'viewUserByUsername') {
+  if (!body) return '';
+  return escHtml(body).replace(/@([\w.]+)/g, (match, username) =>
+    `<span class="mention-link" onclick="${onClickFn}('${username}')">@${username}</span>`
+  );
 }
