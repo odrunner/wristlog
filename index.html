@@ -3253,7 +3253,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.18.05';
+const APP_VERSION = '2.30.26.18.09';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5484,7 +5484,7 @@ async function toggleLike(logId) {
     // Notify the post author (skip if liking own post)
     const item = feedItems.find(i => i.id === logId);
     if (item && item.user_id !== currentUser.id) {
-      db.from('notifications').insert({ user_id: item.user_id, type: 'like', actor_id: currentUser.id })
+      db.from('notifications').insert({ user_id: item.user_id, type: 'like', actor_id: currentUser.id, ref_id: logId })
         .then(({ error }) => { if (error) console.error('[WristLog] like notif:', error.code, error.message, error.details, error.hint); });
     }
   }
@@ -5533,7 +5533,7 @@ async function postComment(logId) {
     const postOwner = item?.user_id;
     // Notify the post author (skip if commenting on own post)
     if (postOwner && postOwner !== currentUser.id) {
-      db.from('notifications').insert({ user_id: postOwner, type: 'comment', actor_id: currentUser.id, is_read: false }).then();
+      db.from('notifications').insert({ user_id: postOwner, type: 'comment', actor_id: currentUser.id, ref_id: logId, is_read: false }).then();
     }
     // Notify others who liked or previously commented on this post
     const [{ data: likers }, { data: prevCommenters }] = await Promise.all([
@@ -5546,7 +5546,7 @@ async function postComment(logId) {
     ])].filter(uid => uid !== currentUser.id && uid !== postOwner);
     if (notifyIds.length) {
       db.from('notifications').insert(
-        notifyIds.map(uid => ({ user_id: uid, type: 'comment_also', actor_id: currentUser.id, is_read: false }))
+        notifyIds.map(uid => ({ user_id: uid, type: 'comment_also', actor_id: currentUser.id, ref_id: logId, is_read: false }))
       ).then();
     }
   } else { toast('Comment failed — ' + error.message, 'error'); }
