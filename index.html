@@ -397,6 +397,7 @@
       background: transparent !important; border: none !important;
       border-bottom: 1px dotted var(--muted) !important; border-radius: 0 !important;
       padding: .2rem 0 !important; font-size: .9rem; color: var(--text);
+      width: auto !important; max-width: 100%;
     }
     #w-brand-display:focus, #wl-brand-display:focus {
       outline: none; border-bottom-color: var(--text) !important; box-shadow: none !important;
@@ -2346,7 +2347,7 @@
         <div class="brand-ac-wrap">
           <input type="text" id="w-brand-display" placeholder="Type to search brands…"
             autocomplete="off"
-            oninput="onBrandInput(this.value)"
+            oninput="onBrandInput(this.value);autoSizeInput(this)"
             onfocus="onBrandFocus()"
             onblur="setTimeout(hideBrandAC,150)"
             onkeydown="brandKeyNav(event)">
@@ -2561,7 +2562,7 @@
         <div class="brand-ac-wrap">
           <input type="text" id="wl-brand-display" placeholder="Type to search brands…"
             autocomplete="off"
-            oninput="onWlBrandInput(this.value)"
+            oninput="onWlBrandInput(this.value);autoSizeInput(this)"
             onfocus="onWlBrandFocus()"
             onblur="setTimeout(hideWlBrandAC,150)"
             onkeydown="wlBrandKeyNav(event)">
@@ -8675,9 +8676,16 @@ function addReceiptFromEdit() {
 // ── Brand autocomplete ─────────────────────────────────────────────────────
 let _brandAcIdx = -1; // keyboard-focused row index
 
+function autoSizeInput(el) {
+  const val = el.value || el.placeholder || '';
+  el.size = Math.max(val.length + 1, 10);
+}
+
 function setBrandAC(selected = '') {
-  document.getElementById('w-brand-display').value = selected;
+  const el = document.getElementById('w-brand-display');
+  el.value = selected;
   document.getElementById('w-brand').value = selected;
+  autoSizeInput(el);
   hideBrandAC();
 }
 
@@ -9162,8 +9170,10 @@ function confirmDeleteWishlist() {
 let _wlBrandAcIdx = -1;
 
 function setWlBrandAC(selected = '') {
-  document.getElementById('wl-brand-display').value = selected;
+  const el = document.getElementById('wl-brand-display');
+  el.value = selected;
   document.getElementById('wl-brand').value = selected;
+  autoSizeInput(el);
   hideWlBrandAC();
 }
 
