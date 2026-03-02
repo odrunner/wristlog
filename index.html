@@ -3330,7 +3330,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.18.58';
+const APP_VERSION = '2.30.26.19.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6631,6 +6631,7 @@ function showGameResults() {
 
 function saveRanking() {
   localStorage.setItem(STORE_ELO, JSON.stringify(eloRatings));
+  cloudSync();
   collGridSort = 'ranking';
   closeGame();
   renderCollection();
@@ -9271,6 +9272,7 @@ function collSaveRankOrder() {
     eloRatings[w.id] = ELO_DEFAULT + (total - idx) * 100;
   });
   localStorage.setItem(STORE_ELO, JSON.stringify(eloRatings));
+  cloudSync();
   renderCollection();
 }
 
