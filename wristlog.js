@@ -802,3 +802,88 @@ export function renderCommentBody(body, onClickFn = 'viewUserByUsername') {
     `<span class="mention-link" onclick="${onClickFn}('${username}')">@${username}</span>`
   );
 }
+
+// ══════════════════════════════════════════
+//  NOTIFICATION HELPERS
+// ══════════════════════════════════════════
+
+/**
+ * Returns the human-readable body text for a notification.
+ * actorName is the display_name or username of the actor.
+ */
+export function notificationBody(type, actorName) {
+  const nm = actorName || 'Someone';
+  switch (type) {
+    case 'follow_request':     return `${nm} wants to follow you`;
+    case 'follow_accepted':    return `${nm} accepted your follow request`;
+    case 'follow':             return `${nm} started following you`;
+    case 'like':               return `${nm} liked your wear log`;
+    case 'comment':            return `${nm} commented on your wear log`;
+    case 'comment_also':       return `${nm} also commented on a post you liked or commented on`;
+    case 'mention':            return `${nm} mentioned you in a comment`;
+    case 'club_join_request':  return `${nm} wants to join your club`;
+    case 'club_join_accepted': return `${nm} approved your club request`;
+    case 'club_invite':        return `${nm} invited you to join a club`;
+    case 'club_promoted':      return `${nm} made you an owner of a club`;
+    default:                   return '';
+  }
+}
+
+/**
+ * Returns true for notification types that have Accept/Decline action buttons
+ * and must NOT be auto-marked as read when the panel opens.
+ */
+export function notificationIsActionable(type) {
+  return type === 'follow_request' || type === 'club_join_request' || type === 'club_invite';
+}
+
+/**
+ * Returns true for types that tap-navigate to a feed post via scrollToFeedPost.
+ * ref_id for these is a log/post ID.
+ */
+export function notificationScrollsToPost(type) {
+  return type === 'like' || type === 'comment' || type === 'comment_also' || type === 'mention';
+}
+
+/**
+ * Returns true for types that tap-navigate to a club detail view.
+ * ref_id for these is a club ID.
+ */
+export function notificationOpensClub(type) {
+  return type === 'club_join_accepted' || type === 'club_promoted';
+}
+
+/**
+ * Returns true for types that tap-navigate to the actor's profile.
+ */
+export function notificationOpensProfile(type) {
+  return type === 'follow' || type === 'follow_accepted';
+}
+
+/**
+ * Returns true for types that must include a ref_id when inserted.
+ * Follow types don't need one; all feed + club types do.
+ */
+export function notificationRequiresRefId(type) {
+  return notificationScrollsToPost(type) || notificationOpensClub(type) || type === 'club_invite' || type === 'club_join_request';
+}
+
+/**
+ * Format the bell badge count. Returns '9+' for counts over 9,
+ * the count as a string for 1-9, and null (hidden) for 0 or below.
+ */
+export function formatBadgeCount(n) {
+  if (n <= 0) return null;
+  return n > 9 ? '9+' : String(n);
+}
+
+/**
+ * Compute the set of user IDs that should receive a `comment_also` notification
+ * when a new comment is posted. Excludes the current commenter and the post owner
+ * (who gets a separate `comment` notification).
+ */
+export function buildCommentAlsoTargets(likerIds, commenterIds, currentUserId, postOwnerId) {
+  return [...new Set([...likerIds, ...commenterIds])].filter(
+    uid => uid !== currentUserId && uid !== postOwnerId
+  );
+}
