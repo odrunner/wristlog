@@ -3379,7 +3379,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.21.12';
+const APP_VERSION = '2.30.26.21.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8566,8 +8566,10 @@ async function updateAllMarketPrices() {
   if (!toUpdate.length) {
     toast('No watches have a WatchCharts URL yet. Edit a watch to add one.', 'error'); return;
   }
-  // Ask about manually-entered prices before starting the batch
-  const manualOnes = toUpdate.filter(w => w.marketPriceSrc === 'User Entry' && w.marketPrice);
+  // Ask about manually-entered prices before starting the batch.
+  // "Manual" = any price whose src is not 'WatchCharts' (includes 'User Entry' AND null/old entries).
+  const isManual = w => w.marketPrice && w.marketPriceSrc !== 'WatchCharts';
+  const manualOnes = toUpdate.filter(isManual);
   let skipManual = false;
   if (manualOnes.length) {
     const choice = await showUpdatePricesConfirm(manualOnes);
@@ -8577,26 +8579,24 @@ async function updateAllMarketPrices() {
   btn.disabled = true; btn.textContent = 'Updating…';
   let updated = 0, failed = 0, skipped = 0;
   for (const w of toUpdate) {
-    if (skipManual && w.marketPriceSrc === 'User Entry' && w.marketPrice) { skipped++; continue; }
+    if (skipManual && isManual(w)) { skipped++; continue; }
     try {
       const result = await fetchPriceFromWatchChartsUrl(w.watchChartsUrl);
       if (result) {
         const idx = watches.findIndex(x => x.id === w.id);
-        const priceChanged = watches[idx].marketPrice !== result.price;
-        if (priceChanged) {
-          // Archive the previous price before overwriting
-          if (watches[idx].marketPrice) {
-            watches[idx].priceHistory = [
-              ...(watches[idx].priceHistory || []),
-              { price: watches[idx].marketPrice, date: watches[idx].marketPriceDate || todayStr(), src: watches[idx].marketPriceSrc || 'WatchCharts' }
-            ];
-          }
-          watches[idx].marketPrice     = result.price;
-          watches[idx].marketPriceDate = todayStr();
-          watches[idx].marketPriceSrc  = result.src;
+        // Archive only when the price actually changes
+        if (watches[idx].marketPrice && watches[idx].marketPrice !== result.price) {
+          watches[idx].priceHistory = [
+            ...(watches[idx].priceHistory || []),
+            { price: watches[idx].marketPrice, date: watches[idx].marketPriceDate || todayStr(), src: watches[idx].marketPriceSrc || 'WatchCharts' }
+          ];
         }
-        // If price is unchanged, leave date/src untouched — don't overwrite a
-        // manual entry's date just because the fetched value happened to match.
+        // Always update price, date, and src — for non-manual watches this stamps
+        // "last verified today" even when the price is unchanged. For manual watches
+        // that were overridden, date/src correctly switch to WatchCharts.
+        watches[idx].marketPrice     = result.price;
+        watches[idx].marketPriceDate = todayStr();
+        watches[idx].marketPriceSrc  = result.src;
         updated++;
       } else { failed++; }
     } catch (_) { failed++; }
