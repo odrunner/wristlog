@@ -2638,6 +2638,22 @@
   </div>
 </div>
 
+<!-- ════ UPDATE PRICES — MANUAL OVERRIDE CONFIRM ════ -->
+<div id="price-confirm-modal" class="overlay hidden" onclick="if(event.target===this)_priceConfirmAbort()">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-title">Manual prices detected</div>
+    <p style="color:var(--muted);font-size:.85rem;margin-bottom:.75rem;line-height:1.5;">
+      The following watches have manually entered prices. Should the batch update override them with WatchCharts prices?
+    </p>
+    <div id="price-confirm-list" style="background:var(--surface2);border-radius:8px;padding:.55rem .75rem;margin-bottom:1.1rem;max-height:160px;overflow-y:auto;font-size:.83rem;line-height:1.9;"></div>
+    <div class="modal-actions" style="flex-direction:column;gap:.5rem;">
+      <button class="btn btn-primary" style="width:100%;" onclick="_priceConfirmOverride()">Override — update all</button>
+      <button class="btn btn-ghost"   style="width:100%;" onclick="_priceConfirmSkip()">No — keep manual, update the rest</button>
+      <button class="btn btn-ghost"   style="width:100%;color:var(--muted);" onclick="_priceConfirmAbort()">Cancel — stop the update</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ WISHLIST ADD / EDIT MODAL ════ -->
 <div id="wishlist-modal" class="overlay hidden">
   <div class="modal">
@@ -3363,7 +3379,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.21.01';
+const APP_VERSION = '2.30.26.21.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6265,6 +6281,25 @@ function showConfirm(message, { title = 'Are you sure?', confirmLabel = 'Confirm
 function _confirmOk()     { document.getElementById('confirm-modal').classList.add('hidden'); if (_confirmResolve) { _confirmResolve(true);  _confirmResolve = null; } }
 function _confirmCancel() { document.getElementById('confirm-modal').classList.add('hidden'); if (_confirmResolve) { _confirmResolve(false); _confirmResolve = null; } }
 
+// ── Update Prices — manual override dialog (3-choice) ─────────────────────
+let _priceConfirmResolve = null;
+function showUpdatePricesConfirm(manualOnes) {
+  return new Promise(resolve => {
+    _priceConfirmResolve = resolve;
+    const list = document.getElementById('price-confirm-list');
+    list.innerHTML = manualOnes.map(w =>
+      `<div style="display:flex;justify-content:space-between;gap:1rem;">
+         <span style="color:var(--text);font-weight:600;">${escHtml(w.brand)} ${escHtml(w.name)}</span>
+         <span style="color:var(--gold);white-space:nowrap;">${fmtMoney(w.marketPrice)}</span>
+       </div>`
+    ).join('');
+    document.getElementById('price-confirm-modal').classList.remove('hidden');
+  });
+}
+function _priceConfirmOverride() { document.getElementById('price-confirm-modal').classList.add('hidden'); if (_priceConfirmResolve) { _priceConfirmResolve('override'); _priceConfirmResolve = null; } }
+function _priceConfirmSkip()     { document.getElementById('price-confirm-modal').classList.add('hidden'); if (_priceConfirmResolve) { _priceConfirmResolve('skip');     _priceConfirmResolve = null; } }
+function _priceConfirmAbort()    { document.getElementById('price-confirm-modal').classList.add('hidden'); if (_priceConfirmResolve) { _priceConfirmResolve('abort');    _priceConfirmResolve = null; } }
+
 function toast(msg, type='success') {
   const el = document.getElementById('toast');
   el.textContent = msg;
@@ -8535,11 +8570,9 @@ async function updateAllMarketPrices() {
   const manualOnes = toUpdate.filter(w => w.marketPriceSrc === 'User Entry' && w.marketPrice);
   let skipManual = false;
   if (manualOnes.length) {
-    const names = manualOnes.slice(0, 3).map(w => `${w.brand} ${w.name}`).join(', ') + (manualOnes.length > 3 ? '…' : '');
-    skipManual = !await showConfirm(
-      `${manualOnes.length} watch${manualOnes.length > 1 ? 'es have' : ' has'} a manually entered price: ${names}. Override with fetched market prices?`,
-      { title: 'Override manual prices?', confirmLabel: 'Override', danger: false }
-    );
+    const choice = await showUpdatePricesConfirm(manualOnes);
+    if (choice === 'abort') return;          // user cancelled the whole pull
+    skipManual = (choice === 'skip');        // 'skip' = keep manual, 'override' = update all
   }
   btn.disabled = true; btn.textContent = 'Updating…';
   let updated = 0, failed = 0, skipped = 0;
@@ -8549,16 +8582,21 @@ async function updateAllMarketPrices() {
       const result = await fetchPriceFromWatchChartsUrl(w.watchChartsUrl);
       if (result) {
         const idx = watches.findIndex(x => x.id === w.id);
-        // Archive the previous price before overwriting
-        if (watches[idx].marketPrice && watches[idx].marketPrice !== result.price) {
-          watches[idx].priceHistory = [
-            ...(watches[idx].priceHistory || []),
-            { price: watches[idx].marketPrice, date: watches[idx].marketPriceDate || todayStr(), src: watches[idx].marketPriceSrc || 'WatchCharts' }
-          ];
+        const priceChanged = watches[idx].marketPrice !== result.price;
+        if (priceChanged) {
+          // Archive the previous price before overwriting
+          if (watches[idx].marketPrice) {
+            watches[idx].priceHistory = [
+              ...(watches[idx].priceHistory || []),
+              { price: watches[idx].marketPrice, date: watches[idx].marketPriceDate || todayStr(), src: watches[idx].marketPriceSrc || 'WatchCharts' }
+            ];
+          }
+          watches[idx].marketPrice     = result.price;
+          watches[idx].marketPriceDate = todayStr();
+          watches[idx].marketPriceSrc  = result.src;
         }
-        watches[idx].marketPrice     = result.price;
-        watches[idx].marketPriceDate = todayStr();
-        watches[idx].marketPriceSrc  = result.src;
+        // If price is unchanged, leave date/src untouched — don't overwrite a
+        // manual entry's date just because the fetched value happened to match.
         updated++;
       } else { failed++; }
     } catch (_) { failed++; }
