@@ -3420,7 +3420,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.11.12';
+const APP_VERSION = '2.30.26.11.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3681,11 +3681,14 @@ async function loadAndRenderProfile(userId) {
       .maybeSingle();
     isMutual = !!theyFollow;
     if (isMutual) {
-      // Always fetch fresh from DB so the other user sees updated verified flags immediately
-      const { data: freshReq } = await db.from('friend_requests').select('*')
-        .or(`and(initiator_id.eq.${currentUser.id},target_id.eq.${userId}),and(initiator_id.eq.${userId},target_id.eq.${currentUser.id})`)
-        .maybeSingle();
-      friendReq = freshReq || null;
+      // Refresh the global cache so both users see verified-flag updates immediately.
+      // Re-uses the simple .or() filter that's known to work.
+      await loadFriendRequests();
+      computeFriendships();
+      friendReq = friendRequests.find(r =>
+        (r.initiator_id === currentUser.id && r.target_id === userId) ||
+        (r.initiator_id === userId && r.target_id === currentUser.id)
+      ) || null;
     }
   }
 
@@ -4365,14 +4368,15 @@ async function enterFriendCode(requestId, rawCode) {
 
 async function removeFriend(userId) {
   if (!currentUser) return;
-  await db.from('friend_requests').delete()
-    .or(`and(initiator_id.eq.${currentUser.id},target_id.eq.${userId}),and(initiator_id.eq.${userId},target_id.eq.${currentUser.id})`)
-    .catch(() => {});
-  friendships.delete(userId);
-  friendRequests = friendRequests.filter(r =>
-    !((r.initiator_id === currentUser.id && r.target_id === userId) ||
-      (r.initiator_id === userId && r.target_id === currentUser.id)));
+  // RLS scopes delete to rows where auth.uid() is a party; filtering by userId
+  // picks the specific pair without needing nested and() inside or().
+  const { error } = await db.from('friend_requests').delete()
+    .or(`initiator_id.eq.${userId},target_id.eq.${userId}`);
+  if (error) { toast('Could not remove friend — ' + error.message, 'error'); return; }
+  await loadFriendRequests();
+  computeFriendships();
   viewUserProfile(userId);
+  toast('Friend removed');
 }
 
 // ── FRIEND ICON BUTTON (small, next to follow) ──────────────────────────────
@@ -5317,7 +5321,7 @@ async function unfollowUser(userId) {
     following.delete(userId);
     // Silently break any friendship — unfollow = unfriend, no notification sent
     await db.from('friend_requests').delete()
-      .or(`and(initiator_id.eq.${currentUser.id},target_id.eq.${userId}),and(initiator_id.eq.${userId},target_id.eq.${currentUser.id})`)
+      .or(`initiator_id.eq.${userId},target_id.eq.${userId}`)
       .catch(() => {});
     friendships.delete(userId);
     friendRequests = friendRequests.filter(r =>
