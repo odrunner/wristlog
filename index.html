@@ -3253,7 +3253,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.17.57';
+const APP_VERSION = '2.30.26.18.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3273,19 +3273,30 @@ function profileInitials(p) {
 function escHtml(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-function formatFeedDate(dateStr) {
+function formatFeedDate(dateStr, createdAt) {
   if (!dateStr) return '';
+  const now = new Date();
+
+  // If we have a full timestamp (created_at or a 'T'/'Z' dateStr), try relative time within 18 h
+  const tsStr = createdAt || ((dateStr.includes('T') || dateStr.includes('Z')) ? dateStr : null);
+  if (tsStr) {
+    const ts = new Date(tsStr);
+    const diffMs = now - ts;
+    const diffH  = diffMs / 3600000;
+    if (diffH < 1)   return 'Just now';
+    if (diffH < 18)  return `${Math.floor(diffH)}h ago`;
+  }
+
+  // Fall back to day-level comparison
   const today = new Date(); today.setHours(0,0,0,0);
-  // Full timestamps (created_at) contain 'T'/'Z' — parse as UTC so JS converts to local time.
-  // Plain date strings (wear logs) get T00:00:00 to avoid UTC-offset shifting the day.
   const d = (dateStr.includes('T') || dateStr.includes('Z'))
     ? new Date(dateStr)
     : new Date(dateStr + 'T00:00:00');
-  const dayStart = new Date(d); dayStart.setHours(0,0,0,0); // local midnight of the event
+  const dayStart = new Date(d); dayStart.setHours(0,0,0,0);
   const diff = Math.round((today - dayStart) / 86400000);
-  if (diff <= 0) return 'Today';   // guard: clock skew or same local day
+  if (diff <= 0) return 'Today';
   if (diff === 1) return 'Yesterday';
-  if (diff < 7)  return `${diff} days ago`;
+  if (diff < 7)  return `${diff} day${diff === 1 ? '' : 's'} ago`;
   return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
 }
 
@@ -5048,7 +5059,7 @@ function renderFeedCard(item) {
 
   const ucMap  = { work:'', leisure:'', dinner:'', travel:'' };
   const ucIcon = ucMap[item.use_case] || '';
-  const metaParts = [formatFeedDate(item.date), item.use_case && item.use_case !== 'unspecified' ? item.use_case : ''].filter(Boolean);
+  const metaParts = [formatFeedDate(item.date, item.created_at), item.use_case && item.use_case !== 'unspecified' ? item.use_case : ''].filter(Boolean);
   const metaStr   = metaParts.join(' · ');
 
   const editingCaption = isMe && feedEditingCaption.has(item.id);
