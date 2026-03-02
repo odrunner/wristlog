@@ -2716,6 +2716,7 @@
       Elo scores accumulate over sessions so your ranking gets more accurate over time.
     </p>
     <button class="btn btn-primary" onclick="beginRankingGame()" style="width:100%;margin-bottom:.85rem;">Let's go</button>
+    <button class="btn btn-ghost" onclick="endGame()" style="width:100%;margin-bottom:.85rem;">Try next time</button>
     <label style="display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--muted);cursor:pointer;">
       <input type="checkbox" id="game-skip-intro-chk" style="width:auto;margin:0;">
       Don't show this again
@@ -3325,7 +3326,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.18.43';
+const APP_VERSION = '2.30.26.18.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
