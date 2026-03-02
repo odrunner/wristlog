@@ -3420,7 +3420,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.11.40';
+const APP_VERSION = '2.30.26.11.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3675,14 +3675,15 @@ async function loadAndRenderProfile(userId) {
   // ── Mutual follow check + fresh friend-request state ────────────────────
   let isMutual  = false;
   let friendReq = null;
-  if (!isOwn && isFollowing) {
-    const { data: theyFollow } = await db.from('follows')
-      .select('follower_id').eq('follower_id', userId).eq('following_id', currentUser.id)
-      .maybeSingle();
-    isMutual = !!theyFollow;
-    // Always do a fresh per-user fetch (simple .or() — no compound syntax) so
-    // the other user sees verified-flag updates immediately. Don't touch global
-    // friendships/friendRequests here to avoid side effects on the rest of the app.
+  if (!isOwn) {
+    if (isFollowing) {
+      const { data: theyFollow } = await db.from('follows')
+        .select('follower_id').eq('follower_id', userId).eq('following_id', currentUser.id)
+        .maybeSingle();
+      isMutual = !!theyFollow;
+    }
+    // Fresh fetch for existing friend-request pair (simple .or(), filter in JS).
+    // Runs for all non-own profiles so the icon always shows the correct state.
     const { data: frData } = await db.from('friend_requests').select('*')
       .or(`initiator_id.eq.${currentUser.id},target_id.eq.${currentUser.id}`);
     friendReq = (frData || []).find(r =>
@@ -3815,11 +3816,9 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     : '';
 
   // Action button — small edit icon for own profile, follow/friend for others
-  // Friend icon sits inline with the follow button; shown whenever viewer follows
-  // this person (mutual-follow check is handled inside the popover / initiateFriendRequest)
-  const friendIconHtml = !isOwn && isFollowing
-    ? friendIconBtnHTML(profile.id, friendReq)
-    : '';
+  // Friend icon sits inline with the follow button; always shown on non-own profiles.
+  // Edge cases (not following yet, not mutual) are handled inside the popover.
+  const friendIconHtml = !isOwn ? friendIconBtnHTML(profile.id, friendReq) : '';
   const followBtn = !isOwn
     ? `<div style="margin-top:.75rem;display:flex;align-items:center;gap:.5rem;">
          ${friendActionBtn({ id: profile.id, profile_privacy: privacy || 'public' })}
