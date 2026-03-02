@@ -3253,7 +3253,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.15.19';
+const APP_VERSION = '2.30.26.17.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4932,13 +4932,13 @@ async function loadFeed() {
     try {
       const res = await db.from('logs').select('*')
         .in('user_id', allUserIds).or(visOr)
-        .order('date', { ascending: false }).limit(50);
+        .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50);
       rawLogs = res.data; logsErr = res.error;
     } catch {
       // visibility column not yet migrated — fall back to is_public
       const res = await db.from('logs').select('*')
         .in('user_id', allUserIds).eq('is_public', true)
-        .order('date', { ascending: false }).limit(50);
+        .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50);
       rawLogs = res.data; logsErr = res.error;
     }
     if (logsErr) { console.warn('Feed logs error:', logsErr.message); feedItems = []; renderFeed(); return; }
@@ -4950,11 +4950,14 @@ async function loadFeed() {
     if (myClubIds.length) {
       const { data: clubLogData } = await db.from('logs').select('*')
         .in('club_id', myClubIds)
-        .order('date', { ascending: false }).limit(100);
+        .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(100);
       if (clubLogData && clubLogData.length) {
         const merged = new Map();
         [...rawLogs, ...clubLogData].forEach(l => merged.set(l.id, l));
-        rawLogs = [...merged.values()].sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 80);
+        rawLogs = [...merged.values()].sort((a, b) => {
+          const d = (b.date || '').localeCompare(a.date || '');
+          return d !== 0 ? d : (b.created_at || '').localeCompare(a.created_at || '');
+        }).slice(0, 80);
       }
     }
 
