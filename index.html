@@ -3420,7 +3420,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.11.25';
+const APP_VERSION = '2.30.26.11.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3672,7 +3672,7 @@ async function loadAndRenderProfile(userId) {
   const isFollowing = following.has(userId);
   const visibility  = profile.collection_visibility || 'public_only';
 
-  // ── Mutual follow check (for friend UI) ────────────────────────────────
+  // ── Mutual follow check + fresh friend-request state ────────────────────
   let isMutual  = false;
   let friendReq = null;
   if (!isOwn && isFollowing) {
@@ -3680,16 +3680,15 @@ async function loadAndRenderProfile(userId) {
       .select('follower_id').eq('follower_id', userId).eq('following_id', currentUser.id)
       .maybeSingle();
     isMutual = !!theyFollow;
-    if (isMutual) {
-      // Refresh the global cache so both users see verified-flag updates immediately.
-      // Re-uses the simple .or() filter that's known to work.
-      await loadFriendRequests();
-      computeFriendships();
-      friendReq = friendRequests.find(r =>
-        (r.initiator_id === currentUser.id && r.target_id === userId) ||
-        (r.initiator_id === userId && r.target_id === currentUser.id)
-      ) || null;
-    }
+    // Always do a fresh per-user fetch (simple .or() — no compound syntax) so
+    // the other user sees verified-flag updates immediately. Don't touch global
+    // friendships/friendRequests here to avoid side effects on the rest of the app.
+    const { data: frData } = await db.from('friend_requests').select('*')
+      .or(`initiator_id.eq.${currentUser.id},target_id.eq.${currentUser.id}`);
+    friendReq = (frData || []).find(r =>
+      (r.initiator_id === currentUser.id && r.target_id === userId) ||
+      (r.initiator_id === userId && r.target_id === currentUser.id)
+    ) || null;
   }
 
   // Follower count
@@ -3816,8 +3815,9 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     : '';
 
   // Action button — small edit icon for own profile, follow/friend for others
-  // Friend icon sits inline with the follow button (shown only on mutual-follow profiles)
-  const friendIconHtml = !isOwn && isMutual
+  // Friend icon sits inline with the follow button; shown whenever viewer follows
+  // this person (mutual-follow check is handled inside the popover / initiateFriendRequest)
+  const friendIconHtml = !isOwn && isFollowing
     ? friendIconBtnHTML(profile.id, friendReq)
     : '';
   const followBtn = !isOwn
@@ -4470,7 +4470,8 @@ function renderFriendPopoverContent(userId, req) {
   if (!req) {
     return `
       <div style="font-size:.82rem;color:var(--muted);margin-bottom:.75rem;line-height:1.45;">
-        Connect as friends — you'll each get a unique code to exchange out of band.
+        Connect as friends — you'll each get a unique code to share out of band.
+        Both users must follow each other first.
       </div>
       <button class="btn btn-primary" style="width:100%;font-size:.84rem;"
         onclick="closeFriendPopover();initiateFriendRequest('${userId}')">
