@@ -63,7 +63,25 @@ ALTER TABLE wishlist ADD CONSTRAINT wishlist_wish_privacy_check CHECK (
 );
 
 
--- 4. Add friend notification types to the notifications type CHECK constraint
+-- 4. Allow authenticated users to read non-private wishlist items
+--    The wishlist table's existing RLS only allows owners to read their own rows.
+--    Without this policy, viewing another user's wishlist always returns empty —
+--    even when wishlist_visibility is set to 'friends' or 'followers'.
+--    We grant read access for all non-private items; client-side code then
+--    enforces the friends/followers distinction for the UI.
+-- --------------------------------------------------------------------------
+DROP POLICY IF EXISTS "Non-private wishlist items readable by authenticated users" ON wishlist;
+
+CREATE POLICY "Non-private wishlist items readable by authenticated users"
+  ON wishlist FOR SELECT
+  TO authenticated
+  USING (
+    user_id = auth.uid()
+    OR wish_privacy IS DISTINCT FROM 'private'
+  );
+
+
+-- 5. Add friend notification types to the notifications type CHECK constraint
 --    (adjust the IN list to match whatever types currently exist in your DB)
 -- --------------------------------------------------------------------------
 ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
