@@ -827,6 +827,9 @@ export function notificationBody(type, actorName) {
     case 'club_promoted':        return `${nm} made you an owner of a club`;
     case 'friend_code_entered':  return `${nm} entered your friend code`;
     case 'friends_now':          return `You and ${nm} are now friends`;
+    case 'friend_invite':        return `${nm} wants to connect as friends`;
+    case 'friend_request':       return `${nm} sent you a friend request`;
+    case 'friend_accepted':      return `${nm} accepted your friend request`;
     default:                     return '';
   }
 }
