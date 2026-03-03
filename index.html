@@ -2666,14 +2666,14 @@
 <!-- ════ UPDATE PRICES — MANUAL OVERRIDE CONFIRM ════ -->
 <div id="price-confirm-modal" class="overlay hidden" onclick="if(event.target===this)_priceConfirmAbort()">
   <div class="modal" style="max-width:380px;">
-    <div class="modal-title">Manual prices detected</div>
+    <div class="modal-title">Existing prices will be updated</div>
     <p style="color:var(--muted);font-size:.85rem;margin-bottom:.75rem;line-height:1.5;">
-      The following watches have manually entered prices. Should the batch update override them with WatchCharts prices?
+      The following watches already have prices set. Update All Prices will replace them with fresh WatchCharts data.
     </p>
     <div id="price-confirm-list" style="background:var(--surface2);border-radius:8px;padding:.55rem .75rem;margin-bottom:1.1rem;max-height:160px;overflow-y:auto;font-size:.83rem;line-height:1.9;"></div>
     <div class="modal-actions" style="flex-direction:column;gap:.5rem;">
       <button class="btn btn-primary" style="width:100%;" onclick="_priceConfirmOverride()">Override — update all</button>
-      <button class="btn btn-ghost"   style="width:100%;" onclick="_priceConfirmSkip()">No — keep manual, update the rest</button>
+      <button class="btn btn-ghost"   style="width:100%;" onclick="_priceConfirmSkip()">No — keep existing prices</button>
       <button class="btn btn-ghost"   style="width:100%;color:var(--muted);" onclick="_priceConfirmAbort()">Cancel — stop the update</button>
     </div>
   </div>
@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.20.23';
+const APP_VERSION = '2.30.26.20.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9154,20 +9154,21 @@ async function updateAllMarketPrices() {
   if (!toUpdate.length) {
     toast('No watches have a WatchCharts URL yet. Edit a watch to add one.', 'error'); return;
   }
-  // Ask about manually-entered prices before starting the batch.
-  // "Manual" = any price whose src is not 'WatchCharts' (includes 'User Entry' AND null/old entries).
-  const isManual = w => w.marketPrice && w.marketPriceSrc !== 'WatchCharts';
-  const manualOnes = toUpdate.filter(isManual);
-  let skipManual = false;
-  if (manualOnes.length) {
-    const choice = await showUpdatePricesConfirm(manualOnes);
+  // Warn about any watches that already have a price set — they will be overwritten.
+  // Using `w.marketPrice` (not src-based) so we catch watches whose src was incorrectly
+  // tagged as 'WatchCharts' by an older app version as well as genuine manual entries.
+  const hasExistingPrice = w => !!w.marketPrice;
+  const pricedOnes = toUpdate.filter(hasExistingPrice);
+  let skipExisting = false;
+  if (pricedOnes.length) {
+    const choice = await showUpdatePricesConfirm(pricedOnes);
     if (choice === 'abort') return;          // user cancelled the whole pull
-    skipManual = (choice === 'skip');        // 'skip' = keep manual, 'override' = update all
+    skipExisting = (choice === 'skip');      // 'skip' = keep all existing prices, 'override' = update all
   }
   btn.disabled = true; btn.textContent = 'Updating…';
   let updated = 0, failed = 0, skipped = 0;
   for (const w of toUpdate) {
-    if (skipManual && isManual(w)) { skipped++; continue; }
+    if (skipExisting && hasExistingPrice(w)) { skipped++; continue; }
     try {
       const result = await fetchPriceFromWatchChartsUrl(w.watchChartsUrl);
       if (result) {
