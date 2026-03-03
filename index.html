@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.18.49';
+const APP_VERSION = '2.30.26.18.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4410,11 +4410,20 @@ async function enterFriendCode(requestId, rawCode) {
   const popoverEl = document.getElementById('friend-popover');
 
   if (friendships.has(otherId)) {
-    // Notify both parties that they are now friends
-    db.from('notifications').insert([
+    // Delete the stale "entered your code" notification — it's been actioned
+    const staleNotif = userNotifs.find(n => n.type === 'friend_code_entered' && n.actor_id === otherId);
+    if (staleNotif) {
+      db.from('notifications').delete().eq('id', staleNotif.id).then();
+      userNotifs = userNotifs.filter(n => n.id !== staleNotif.id);
+    }
+    // Notify both parties that they are now friends (awaited so the panel refresh below sees them)
+    const { error: ne } = await db.from('notifications').insert([
       { user_id: otherId,          type: 'friends_now', actor_id: currentUser.id, is_read: false },
       { user_id: currentUser.id,   type: 'friends_now', actor_id: otherId,        is_read: false },
-    ]).then(({ error: ne }) => { if (ne) console.warn('friends_now notif failed:', ne.message); });
+    ]);
+    if (ne) console.warn('friends_now notif failed:', ne.message);
+    // Refresh notification panel so "You and Muge are now friends" appears immediately
+    loadNotifications().then(() => renderNotificationPanel());
     // Show success inside the popover, then auto-close and re-render the profile
     if (popoverEl) {
       popoverEl.innerHTML = `
