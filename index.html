@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.06.46';
+const APP_VERSION = '2.30.26.06.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6667,8 +6667,8 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 });
 
 function visChipsHtml(cId, selected) {
-  return ['public','followers','private'].map(v => {
-    const label = v === 'public' ? 'Public' : v === 'followers' ? 'Followers' : 'Private';
+  return ['public','followers','friends','private'].map(v => {
+    const label = v === 'public' ? 'Public' : v === 'followers' ? 'Followers' : v === 'friends' ? 'Friends' : 'Private';
     return `<div class="chip${v === selected ? ' selected' : ''}" data-vis="${v}"
       onclick="selVisChip('${cId}','${v}')">${label}</div>`;
   }).join('');
