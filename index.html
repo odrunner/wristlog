@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.18.56';
+const APP_VERSION = '2.30.26.19.08';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5374,10 +5374,7 @@ async function declineFollowRequest(requesterId, notifId) {
 function confirmUnfollow(userId, btn) {
   if (btn.dataset.confirming) {
     delete btn.dataset.confirming;
-    btn.textContent = 'Following';
-    btn.style.borderColor = '';
-    btn.style.color = '';
-    unfollowUser(userId);
+    unfollowUser(userId, btn);
   } else {
     btn.dataset.confirming = '1';
     btn.textContent = 'Unfollow?';
@@ -5432,7 +5429,7 @@ async function unfriendFromCard(userId, btn) {
     btn.onclick = function() { confirmUnfollow(userId, this); };
   }
 }
-async function unfollowUser(userId) {
+async function unfollowUser(userId, btn) {
   if (!currentUser) return;
   const { error } = await db.from('follows').delete()
     .eq('follower_id', currentUser.id).eq('following_id', userId);
@@ -5447,11 +5444,38 @@ async function unfollowUser(userId) {
       !((r.initiator_id === currentUser.id && r.target_id === userId) ||
         (r.initiator_id === userId && r.target_id === currentUser.id)));
     toast('Unfollowed');
+    // Update the button in-place immediately so it doesn't wait for a full re-render
+    if (btn && btn.isConnected) {
+      const profileInList = discoverUsers.find(u => u.id === userId);
+      const restricted = ['followers', 'private', 'friends_only'].includes(profileInList?.profile_privacy);
+      btn.className = 'follow-btn follow';
+      btn.textContent = 'Follow';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+      btn.onclick = restricted
+        ? function() { sendFollowRequest(userId, this); }
+        : function() { followUser(userId, this); };
+    }
     renderDiscoverUsers();
     renderFollowingList();
     loadFeed();
-    // Re-render the profile page if we're currently viewing this user's profile
-    if (profilePageUserId === userId) viewUserProfile(userId);
+    // Re-render the profile page only if it is the currently active page —
+    // not just because profilePageUserId matches (the discover modal can be
+    // open on top of an old profile, and calling viewUserProfile would
+    // close the modal unexpectedly via the .overlay hide-all).
+    const profilePageActive = document.getElementById('page-profile')?.classList.contains('active');
+    if (profilePageActive && profilePageUserId === userId) viewUserProfile(userId);
+  } else {
+    toast('Could not unfollow — please try again', 'error');
+    // Reset button on failure
+    if (btn && btn.isConnected) {
+      btn.className = 'follow-btn following';
+      btn.textContent = 'Following';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+      btn.dataset.confirming = '';
+      btn.onclick = function() { confirmUnfollow(userId, this); };
+    }
   }
 }
 
