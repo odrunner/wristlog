@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   computeFriendState, getFriendStatus,
+  computeFriendships,
   aggregateLikes, aggregateCommentCounts,
   reorderList,
 } from '../wristlog.js';
@@ -87,6 +88,97 @@ describe('getFriendStatus', () => {
       receivedRequests: new Map(),
     };
     expect(getFriendStatus('u2', dualState)).toBe('friends');
+  });
+});
+
+// ── computeFriendships ────────────────────────────────────────────────────────
+
+describe('computeFriendships', () => {
+  const ME = 'user-me';
+  const A  = 'user-a';
+  const B  = 'user-b';
+
+  it('returns empty set when no requests', () => {
+    expect(computeFriendships([], new Set(), ME).size).toBe(0);
+  });
+
+  it('returns empty set when both verified but not following', () => {
+    const req = [{ initiator_id: ME, target_id: A, initiator_verified: true, target_verified: true }];
+    // ME is not following A
+    expect(computeFriendships(req, new Set(), ME).size).toBe(0);
+  });
+
+  it('returns empty set when only one side verified', () => {
+    const following = new Set([A]);
+    const req = [{ initiator_id: ME, target_id: A, initiator_verified: true, target_verified: false }];
+    expect(computeFriendships(req, following, ME).size).toBe(0);
+  });
+
+  it('adds friend when both verified AND mutual follow (ME is initiator)', () => {
+    const following = new Set([A]);
+    const req = [{ initiator_id: ME, target_id: A, initiator_verified: true, target_verified: true }];
+    const result = computeFriendships(req, following, ME);
+    expect(result.has(A)).toBe(true);
+    expect(result.size).toBe(1);
+  });
+
+  it('adds friend when both verified AND mutual follow (ME is target)', () => {
+    const following = new Set([B]);
+    const req = [{ initiator_id: B, target_id: ME, initiator_verified: true, target_verified: true }];
+    const result = computeFriendships(req, following, ME);
+    expect(result.has(B)).toBe(true);
+    expect(result.size).toBe(1);
+  });
+
+  it('handles multiple friends', () => {
+    const following = new Set([A, B]);
+    const reqs = [
+      { initiator_id: ME, target_id: A, initiator_verified: true, target_verified: true },
+      { initiator_id: B,  target_id: ME, initiator_verified: true, target_verified: true },
+    ];
+    const result = computeFriendships(reqs, following, ME);
+    expect(result.size).toBe(2);
+    expect(result.has(A)).toBe(true);
+    expect(result.has(B)).toBe(true);
+  });
+
+  it('excludes requests where only initiator verified', () => {
+    const following = new Set([A]);
+    const req = [{ initiator_id: ME, target_id: A, initiator_verified: true, target_verified: false }];
+    expect(computeFriendships(req, following, ME).has(A)).toBe(false);
+  });
+
+  it('excludes requests where only target verified', () => {
+    const following = new Set([A]);
+    const req = [{ initiator_id: ME, target_id: A, initiator_verified: false, target_verified: true }];
+    expect(computeFriendships(req, following, ME).has(A)).toBe(false);
+  });
+
+  it('excludes requests where neither side verified', () => {
+    const following = new Set([A]);
+    const req = [{ initiator_id: ME, target_id: A, initiator_verified: false, target_verified: false }];
+    expect(computeFriendships(req, following, ME).has(A)).toBe(false);
+  });
+
+  it('does not mutate the followingSet', () => {
+    const following = new Set([A]);
+    const req = [{ initiator_id: ME, target_id: A, initiator_verified: true, target_verified: true }];
+    computeFriendships(req, following, ME);
+    expect(following.size).toBe(1);
+  });
+
+  it('correctly identifies otherId for both initiator and target roles', () => {
+    const C = 'user-c';
+    const following = new Set([A, B, C]);
+    const reqs = [
+      { initiator_id: ME, target_id: A, initiator_verified: true, target_verified: true }, // ME=initiator → friend is A
+      { initiator_id: B,  target_id: ME, initiator_verified: true, target_verified: true }, // ME=target   → friend is B
+      { initiator_id: C,  target_id: ME, initiator_verified: true, target_verified: false }, // not complete
+    ];
+    const result = computeFriendships(reqs, following, ME);
+    expect(result.has(A)).toBe(true);
+    expect(result.has(B)).toBe(true);
+    expect(result.has(C)).toBe(false);
   });
 });
 

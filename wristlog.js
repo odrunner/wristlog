@@ -579,6 +579,29 @@ export function getFriendStatus(userId, { friends, sentRequests, receivedRequest
   return 'none';
 }
 
+/**
+ * Compute the set of user IDs who are mutual friends with currentUserId.
+ * A friendship is active when BOTH sides of the friend_request row are verified
+ * AND the current user follows the other person (mutual-follow prerequisite).
+ *
+ * @param {Array}  friendRequests  - array of friend_request rows from DB
+ *                                   each row: { initiator_id, target_id,
+ *                                               initiator_verified, target_verified }
+ * @param {Set}    followingSet    - set of user IDs the current user follows
+ * @param {string} currentUserId  - the current user's ID
+ * @returns {Set<string>}
+ */
+export function computeFriendships(friendRequests, followingSet, currentUserId) {
+  const friendships = new Set();
+  for (const r of friendRequests) {
+    if (r.initiator_verified && r.target_verified) {
+      const otherId = r.initiator_id === currentUserId ? r.target_id : r.initiator_id;
+      if (followingSet.has(otherId)) friendships.add(otherId);
+    }
+  }
+  return friendships;
+}
+
 // ══════════════════════════════════════════
 //  FEED LIKES AGGREGATION
 // ══════════════════════════════════════════
