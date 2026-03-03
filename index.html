@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.19.21';
+const APP_VERSION = '2.30.26.19.26';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4564,6 +4564,7 @@ function renderFriendPopoverContent(userId, req) {
 
   return `
     <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:.6rem;">Friend Connection</div>
+    ${!theyVerified ? `
     <div style="margin-bottom:.75rem;">
       <div style="font-size:.73rem;color:var(--muted);margin-bottom:.35rem;">Your code — copy &amp; send to them:</div>
       <div style="display:flex;align-items:center;gap:.45rem;">
@@ -4572,10 +4573,10 @@ function renderFriendPopoverContent(userId, req) {
         <button class="btn btn-ghost btn-sm"
           onclick="navigator.clipboard.writeText('${myCode}').then(()=>toast('Code copied!'))">Copy</button>
       </div>
-    </div>
+    </div>` : ''}
     ${iVerified
       ? `<div style="font-size:.78rem;color:var(--muted);padding:.3rem 0;text-align:center;">
-           ✓ You've entered their code — ${theyVerified ? 'both verified!' : 'waiting for them to enter yours'}</div>`
+           ✓ You've entered their code — waiting for them to enter yours</div>`
       : `<div>
            <div style="font-size:.73rem;color:var(--muted);margin-bottom:.3rem;">Enter their code:</div>
            <div style="display:flex;gap:.45rem;">
