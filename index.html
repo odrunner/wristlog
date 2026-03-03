@@ -1539,9 +1539,10 @@
       border: 1.5px solid var(--border);
     }
     .follow-btn.friends-pill {
-      background: transparent; color: #a78bfa;
-      border: 1.5px solid #a78bfa;
+      background: none; color: #a78bfa;
+      border: 1px solid #a78bfa;
     }
+    .follow-btn.friends-pill:hover { border-color: var(--danger); color: var(--danger); }
     .club-badge {
       display: inline-flex; align-items: center; gap: .3rem;
       font-size: .72rem; color: var(--gold); cursor: pointer;
@@ -3424,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.16.04';
+const APP_VERSION = '2.30.26.16.08';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5362,6 +5363,45 @@ function confirmUnfollow(userId, btn) {
     }, 3000);
   }
 }
+function confirmUnfriend(userId, btn) {
+  if (btn.dataset.confirming) {
+    delete btn.dataset.confirming;
+    btn.textContent = 'Friends';
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    unfriendFromCard(userId, btn);
+  } else {
+    btn.dataset.confirming = '1';
+    btn.textContent = 'Unfriend?';
+    btn.style.borderColor = 'var(--danger)';
+    btn.style.color = 'var(--danger)';
+    setTimeout(() => {
+      if (btn.dataset.confirming) {
+        delete btn.dataset.confirming;
+        btn.textContent = 'Friends';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+      }
+    }, 3000);
+  }
+}
+async function unfriendFromCard(userId, btn) {
+  if (!currentUser) return;
+  const { error } = await db.from('friend_requests').delete()
+    .or(`initiator_id.eq.${userId},target_id.eq.${userId}`);
+  if (error) { toast('Could not remove friend — ' + error.message, 'error'); return; }
+  await loadFriendRequests();
+  computeFriendships();
+  toast('Friend removed');
+  // Revert button to "Following" in-place (still following each other)
+  if (btn && btn.isConnected) {
+    btn.className = 'follow-btn following';
+    btn.textContent = 'Following';
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    btn.onclick = function() { confirmUnfollow(userId, this); };
+  }
+}
 async function unfollowUser(userId) {
   if (!currentUser) return;
   const { error } = await db.from('follows').delete()
@@ -6386,7 +6426,7 @@ function friendActionBtn(u) {
   const isFlw = following.has(u.id);
   const isPending = pendingRequests.has(u.id);
   const restricted = u.profile_privacy === 'followers' || u.profile_privacy === 'private' || u.profile_privacy === 'friends_only';
-  if (isFrd)     return `<button class="follow-btn friends-pill" onclick="viewUserProfile('${u.id}')">Friends</button>`;
+  if (isFrd)     return `<button class="follow-btn friends-pill" onclick="confirmUnfriend('${u.id}',this)">Friends</button>`;
   if (isFlw)     return `<button class="follow-btn following" onclick="confirmUnfollow('${u.id}',this)">Following</button>`;
   if (isPending) return `<button class="follow-btn requested" onclick="cancelFollowRequest('${u.id}')">Requested</button>`;
   const action = restricted ? `sendFollowRequest('${u.id}',this)` : `followUser('${u.id}',this)`;
