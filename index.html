@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.21.18';
+const APP_VERSION = '2.30.26.21.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5645,25 +5645,38 @@ async function loadFeed() {
     //   'followers' → only from users you follow
     //   'friends'   → only from users you follow (client-side filters to friends below)
     //   'private'   → only owner sees it
-    // Build OR so that: public = any user; followers/friends = only from followed users.
-    // We do NOT use a top-level .in('user_id') because that would AND with the OR clause
-    // and prevent public posts from non-followed users from appearing.
-    const followingArr = [...following];
-    const followedPart = followingArr.length > 0
-      ? `,and(user_id.in.(${followingArr.join(',')}),or(visibility.eq.followers,visibility.eq.friends))`
-      : '';
-    const visOr = `visibility.eq.public,user_id.eq.${currentUser.id}${followedPart}`;
+    // Two-query approach (avoids nested AND-inside-OR PostgREST syntax issues):
+    //   Q1 — public posts: visible to everyone, no follow required (global discovery)
+    //   Q2 — gated posts:  own posts (any visibility) + followers/friends/null-legacy
+    //                      from followed users only
+    const allUserIds = [...new Set([...following, currentUser.id])];
 
     let rawLogs, logsErr;
     try {
-      const res = await db.from('logs').select('*')
-        .or(visOr)
-        .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50);
-      rawLogs = res.data; logsErr = res.error;
+      const [pubRes, privRes] = await Promise.all([
+        // Q1: all public posts — no user restriction, global discovery
+        db.from('logs').select('*')
+          .eq('visibility', 'public')
+          .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50),
+        // Q2: own posts + followers/friends/null-legacy from followed users
+        db.from('logs').select('*')
+          .in('user_id', allUserIds)
+          .or(`user_id.eq.${currentUser.id},visibility.eq.followers,visibility.eq.friends,visibility.is.null`)
+          .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50),
+      ]);
+      if (pubRes.error) throw pubRes.error;
+      if (privRes.error) throw privRes.error;
+      // Merge, deduplicate by id, re-sort date desc → created_at desc, cap at 50
+      const seen = new Set();
+      rawLogs = [...(pubRes.data || []), ...(privRes.data || [])]
+        .filter(l => { if (seen.has(l.id)) return false; seen.add(l.id); return true; })
+        .sort((a, b) => b.date.localeCompare(a.date) || new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 50);
+      logsErr = null;
     } catch {
-      // visibility column not yet migrated — fall back to is_public for all public posts
+      // visibility column not yet migrated — fall back to public + own posts
       const res = await db.from('logs').select('*')
-        .eq('is_public', true)
+        .or(`visibility.eq.public,user_id.eq.${currentUser.id}`)
         .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50);
       rawLogs = res.data; logsErr = res.error;
     }
