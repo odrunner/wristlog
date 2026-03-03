@@ -307,9 +307,29 @@
     .showcase-priv-label.fri  { color:var(--gold); }
     .showcase-priv-label.priv { color:var(--danger); }
     .showcase-priv-label.inh  { color:var(--muted); }
+    .showcase-priv-label.frd  { color:#a78bfa; } /* friends — purple */
+
+    /* ── FRIEND ICON BUTTON + POPOVER ── */
+    .friend-icon-btn {
+      width:2rem; height:2rem; border-radius:50%; border:1.5px solid; background:transparent;
+      display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
+      flex-shrink:0; transition:opacity .15s;
+    }
+    .friend-icon-btn:active { opacity:.7; }
+    .friend-icon-btn.fi-none    { color:var(--muted);  border-color:var(--border); }
+    .friend-icon-btn.fi-pending { color:var(--gold);   border-color:var(--gold); }
+    .friend-icon-btn.fi-friends { color:#a78bfa;       border-color:#a78bfa; }
+    #friend-popover {
+      position:fixed; background:var(--surface); border:1px solid var(--border);
+      border-radius:12px; padding:1rem 1rem .9rem;
+      width:min(320px, calc(100vw - 2rem));
+      box-shadow:0 8px 32px rgba(0,0,0,.45); z-index:9999;
+    }
+    #friend-popover-backdrop { position:fixed; inset:0; z-index:9998; }
     /* Per-item privacy tints — subtle bg only (wishlist + collection) */
     .wl-wish-card.wl-pub,  .col-watch-card.col-pub  { background-color:rgba(34,197,94,.07); }
     .wl-wish-card.wl-fri,  .col-watch-card.col-fri  { background-color:rgba(234,179,8,.10); }
+    .wl-wish-card.wl-frd,  .col-watch-card.col-frd  { background-color:rgba(167,139,250,.12); }
     .wl-wish-card.wl-priv, .col-watch-card.col-priv { background-color:rgba(239,68,68,.08); }
 
     /* ── PROFILE PAGE RECENT LOGS ── */
@@ -1518,6 +1538,11 @@
       background: transparent; color: var(--muted);
       border: 1.5px solid var(--border);
     }
+    .follow-btn.friends-pill {
+      background: none; color: #a78bfa;
+      border: 1px solid #a78bfa;
+    }
+    .follow-btn.friends-pill:hover { border-color: var(--danger); color: var(--danger); }
     .club-badge {
       display: inline-flex; align-items: center; gap: .3rem;
       font-size: .72rem; color: var(--gold); cursor: pointer;
@@ -3400,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.07.02';
+const APP_VERSION = '2.30.26.20.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3640,7 +3665,8 @@ async function loadAndRenderProfile(userId) {
   }
 
   const privacy    = profile.profile_privacy || 'public';
-  const isFriend   = following.has(userId); // followers = people you follow get access
+  const isFriend   = following.has(userId); // "isFriend" here means viewer follows this user
+  const isActualFriend = friendships.has(userId); // true mutual-follow + both codes verified
 
   // Gate access for private / followers-only profiles
   if (!isOwn && (privacy === 'private' || privacy === 'followers' || privacy === 'friends_only') && !isFriend) {
@@ -3650,6 +3676,26 @@ async function loadAndRenderProfile(userId) {
 
   const isFollowing = following.has(userId);
   const visibility  = profile.collection_visibility || 'public_only';
+
+  // ── Mutual follow check + fresh friend-request state ────────────────────
+  let isMutual  = false;
+  let friendReq = null;
+  if (!isOwn) {
+    if (isFollowing) {
+      const { data: theyFollow } = await db.from('follows')
+        .select('follower_id').eq('follower_id', userId).eq('following_id', currentUser.id)
+        .maybeSingle();
+      isMutual = !!theyFollow;
+    }
+    // Fresh fetch for existing friend-request pair (simple .or(), filter in JS).
+    // Runs for all non-own profiles so the icon always shows the correct state.
+    const { data: frData } = await db.from('friend_requests').select('*')
+      .or(`initiator_id.eq.${currentUser.id},target_id.eq.${currentUser.id}`);
+    friendReq = (frData || []).find(r =>
+      (r.initiator_id === currentUser.id && r.target_id === userId) ||
+      (r.initiator_id === userId && r.target_id === currentUser.id)
+    ) || null;
+  }
 
   // Follower count
   const { data: followerRows } = await db.from('follows')
@@ -3676,24 +3722,45 @@ async function loadAndRenderProfile(userId) {
       .eq('user_id', userId);
     if (!isOwn) {
       const vis = profile.collection_visibility || 'public';
-      if (isFriend) {
-        // Followers see explicit non-private + null (Default), unless global is private
-        if (vis === 'private') q = q.neq('watch_privacy', 'private').not('watch_privacy', 'is', null);
-        else                   q = q.neq('watch_privacy', 'private'); // null passes through
+      // Bail early if global visibility restricts this viewer
+      const collectionGated =
+        (vis === 'private') ||
+        ((vis === 'followers' || vis === 'friends_only') && !isFriend) ||
+        (vis === 'friends' && !isActualFriend);
+      if (collectionGated) {
+        showcase = [];
+      } else if (isActualFriend) {
+        // Friends see everything except explicitly private.
+        // Must use .or() + explicit null check — .neq() silently excludes NULL rows in PostgREST.
+        q = q.or('watch_privacy.neq.private,watch_privacy.is.null');
+        const { data } = await q.order('brand').order('name');
+        showcase = data || [];
+      } else if (isFriend) {
+        // Followers see public, followers, null — not friends-only or private
+        q = q.or('watch_privacy.eq.public,watch_privacy.eq.followers,watch_privacy.is.null');
+        const { data } = await q.order('brand').order('name');
+        showcase = data || [];
       } else {
-        // Non-followers see explicit public + null only if global is public
+        // Public viewers see only public + null when global vis is public
         if (vis === 'public') q = q.or('watch_privacy.eq.public,watch_privacy.is.null');
         else                  q = q.eq('watch_privacy', 'public');
+        const { data } = await q.order('brand').order('name');
+        showcase = data || [];
       }
+    } else {
+      // isOwn — no filter
+      const { data } = await q.order('brand').order('name');
+      showcase = data || [];
     }
-    const { data } = await q.order('brand').order('name');
-    showcase = data || [];
-  }
+  } // end if (isOwn || visibility !== 'none')
 
   // Wishlist (respects wishlist_visibility setting)
   let wishlistItems = [];
   const wlVis = profile.wishlist_visibility || 'followers';
-  const showWishlist = isOwn || wlVis === 'public' || ((wlVis === 'followers' || wlVis === 'friends') && isFriend);
+  const showWishlist = isOwn
+    || wlVis === 'public'
+    || (wlVis === 'followers' && isFriend)
+    || ((wlVis === 'friends' || wlVis === 'friends_only') && isActualFriend); // friends_only = legacy alias
   if (showWishlist) {
     const { data: wlData } = await db.from('wishlist')
       .select('id, brand, name, ref, price, image, color, wish_privacy')
@@ -3703,14 +3770,15 @@ async function loadAndRenderProfile(userId) {
     if (!isOwn) {
       wishlistItems = wishlistItems.filter(w => {
         const p = w.wish_privacy;
-        if (p === 'private') return false;
-        if (p === 'followers' || p === 'friends') return isFriend;
-        return true; // null (inherit global, already passed) or 'public'
+        if (p === 'private')                    return false;
+        if (p === 'friends' || p === 'friends_only') return isActualFriend;
+        if (p === 'followers')                  return isFriend;
+        return true; // null (inherit global) or 'public'
       });
     }
   }
 
-  el.innerHTML = renderProfilePageHTML(profile, isOwn, isFollowing, logCount || 0, recentLogs || [], showcase, visibility, privacy, isFriend, wishlistItems, followerCount || 0);
+  el.innerHTML = renderProfilePageHTML(profile, isOwn, isFollowing, logCount || 0, recentLogs || [], showcase, visibility, privacy, isFriend, wishlistItems, followerCount || 0, isMutual, friendReq);
 
   if (isOwn) {
     document.getElementById('profile-save-btn')?.addEventListener('click', saveProfileFromPage);
@@ -3735,9 +3803,11 @@ function renderPrivateProfileHTML(profile, privacy, userId) {
     </div>`;
 }
 
-function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs, showcase, visibility, privacy, isFriend, wishlistItems = [], followerCount = 0) {
+function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs, showcase, visibility, privacy, isFriend, wishlistItems = [], followerCount = 0, isMutual = false, friendReq = null) {
   const heroInitials = profileInitials(profile);
   const wlVis = profile.wishlist_visibility || 'followers';
+  const isActualFriend = !isOwn && friendships.has(profile.id); // mutual-follow + both codes verified
+  const isFollowerOnly = !isOwn && isFriend && !isActualFriend; // viewer follows owner but not friends
   const name     = escHtml(profile.display_name || profile.username || '—');
   const uname    = profile.username ? '@' + escHtml(profile.username) : '';
   const bio      = profile.bio ? `<div class="profile-bio-text">${escHtml(profile.bio)}</div>` : '';
@@ -3754,9 +3824,18 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     : '';
 
   // Action button — small edit icon for own profile, follow/friend for others
+  // Friend icon sits inline with the follow button; hidden when already friends
+  // (the Friends pill already conveys the relationship — no need for the icon too).
+  const friendIconHtml = (!isOwn && !isActualFriend) ? friendIconBtnHTML(profile.id, friendReq) : '';
   const followBtn = !isOwn
-    ? `<div style="margin-top:.75rem;">${friendActionBtn({ id: profile.id, profile_privacy: privacy || 'public' })}</div>`
+    ? `<div style="margin-top:.75rem;display:flex;align-items:center;gap:.5rem;">
+         ${friendActionBtn({ id: profile.id, profile_privacy: privacy || 'public' })}
+         ${friendIconHtml}
+       </div>`
     : '';
+
+  // Friend card replaced by inline icon + popover — no separate card below stats
+  const friendHtml = '';
 
   // Stats
   const watchCount = isOwn ? watches.length : (showcase.length || '—');
@@ -3817,6 +3896,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         <div class="chips" id="prv-collection-chips">
           ${pChip('prv-collection-chips','public','Public',curCol,'collection_visibility')}
           ${pChip('prv-collection-chips','followers','Followers',curCol,'collection_visibility')}
+          ${pChip('prv-collection-chips','friends','Friends',curCol,'collection_visibility')}
           ${pChip('prv-collection-chips','private','Private',curCol,'collection_visibility')}
         </div>
         <div style="font-size:.71rem;color:var(--muted);margin-top:.25rem;">You can also tap each watch in your collection to set its visibility individually.</div>
@@ -3826,6 +3906,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         <div class="chips" id="prv-wishlist-chips">
           ${pChip('prv-wishlist-chips','public','Public',wlVis,'wishlist_visibility')}
           ${pChip('prv-wishlist-chips','followers','Followers',wlVis,'wishlist_visibility')}
+          ${pChip('prv-wishlist-chips','friends','Friends',wlVis,'wishlist_visibility')}
           ${pChip('prv-wishlist-chips','private','Private',wlVis,'wishlist_visibility')}
         </div>
         <div style="font-size:.71rem;color:var(--muted);margin-top:.25rem;">You can also tap each item in your wishlist to set its visibility individually.</div>
@@ -3833,8 +3914,8 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <div class="form-group" style="margin-bottom:0;">
         <label style="font-size:.78rem;">Default Post Visibility</label>
         <div class="chips" id="pp-default-vis-chips">
-          ${['public','followers','private'].map(v => {
-            const label = v === 'public' ? 'Public' : v === 'followers' ? 'Followers' : 'Private';
+          ${['public','followers','friends','private'].map(v => {
+            const label = v === 'public' ? 'Public' : v === 'followers' ? 'Followers' : v === 'friends' ? 'Friends' : 'Private';
             return `<div class="chip${v === getDefaultVis() ? ' selected' : ''}" data-vis="${v}"
               onclick="selVisChip('pp-default-vis-chips','${v}');setDefaultVis('${v}')">${label}</div>`;
           }).join('')}
@@ -3852,10 +3933,31 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       const thumb = w.image
         ? `<img src="${escHtml(w.image)}" class="showcase-card-img" alt="" onerror="this.style.display='none'">`
         : `<div class="showcase-card-avatar" style="background:${escHtml(w.color || '#c9a84c')}">${initials(w.brand||'', w.name||'')}</div>`;
-      const privLabel = isOwn
-        ? `<div class="showcase-priv-label ${priv === null ? 'inh' : priv === 'public' ? 'pub' : (priv === 'followers' || priv === 'friends_only') ? 'fri' : 'priv'}">${priv === null ? 'Default' : priv === 'public' ? 'Public' : (priv === 'followers' || priv === 'friends_only') ? 'Followers' : 'Private'}</div>`
-        : '';
-      const tintCls = isOwn ? (priv === 'public' ? ' col-pub' : (priv === 'followers' || priv === 'friends_only') ? ' col-fri' : priv === 'private' ? ' col-priv' : '') : '';
+      const privLabel = (() => {
+        if (isOwn) {
+          const cls = priv === null ? 'inh' : priv === 'public' ? 'pub' : (priv === 'followers' || priv === 'friends_only') ? 'fri' : priv === 'friends' ? 'frd' : 'priv';
+          const lbl = priv === null ? 'Default' : priv === 'public' ? 'Public' : (priv === 'followers' || priv === 'friends_only') ? 'Followers' : priv === 'friends' ? 'Friends' : 'Private';
+          return `<div class="showcase-priv-label ${cls}">${lbl}</div>`;
+        }
+        if (isActualFriend) {
+          if (priv === 'public') return `<div class="showcase-priv-label pub">Public</div>`;
+          if (priv === 'followers' || priv === 'friends_only') return `<div class="showcase-priv-label fri">Followers</div>`;
+          if (priv === 'friends') return `<div class="showcase-priv-label frd">Friends</div>`;
+          // null = Default: show the effective level inherited from collection visibility
+          if (visibility === 'friends' || visibility === 'friends_only') return `<div class="showcase-priv-label frd">Friends</div>`;
+          if (visibility === 'followers') return `<div class="showcase-priv-label fri">Followers</div>`;
+          return `<div class="showcase-priv-label pub">Public</div>`;
+        }
+        if (isFollowerOnly) {
+          if (priv === 'public') return `<div class="showcase-priv-label pub">Public</div>`;
+          if (priv === 'followers' || priv === 'friends_only') return `<div class="showcase-priv-label fri">Followers</div>`;
+          // null = Default: inherit from collection visibility
+          if (visibility === 'followers') return `<div class="showcase-priv-label fri">Followers</div>`;
+          return `<div class="showcase-priv-label pub">Public</div>`;
+        }
+        return '';
+      })();
+      const tintCls = isOwn ? (priv === 'public' ? ' col-pub' : (priv === 'followers' || priv === 'friends_only') ? ' col-fri' : priv === 'friends' ? ' col-frd' : priv === 'private' ? ' col-priv' : '') : '';
       const clickAttr = isOwn
         ? `onclick="cycleWatchPrivacy('${w.id}')"`
         : `onclick="previewWatchFromEl(this)" style="cursor:pointer;"
@@ -3901,11 +4003,32 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           ? `<img src="${escHtml(w.image)}" class="showcase-card-img" alt="" onerror="this.style.display='none'">`
           : `<div class="showcase-card-avatar" style="background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand||'', w.name||'')}</div>`;
         const wp = w.wish_privacy || null;
-        const privLabel = isOwn
-          ? `<div class="showcase-priv-label ${wp === 'public' ? 'pub' : (wp === 'followers' || wp === 'friends') ? 'fri' : wp === 'private' ? 'priv' : 'inh'}">${wp === 'public' ? 'Public' : (wp === 'followers' || wp === 'friends') ? 'Followers' : wp === 'private' ? 'Private' : 'Default'}</div>`
-          : '';
+        const privLabel = (() => {
+          if (isOwn) {
+            const cls = wp === 'public' ? 'pub' : wp === 'followers' ? 'fri' : wp === 'friends' ? 'frd' : wp === 'private' ? 'priv' : 'inh';
+            const lbl = wp === 'public' ? 'Public' : wp === 'followers' ? 'Followers' : wp === 'friends' ? 'Friends' : wp === 'private' ? 'Private' : 'Default';
+            return `<div class="showcase-priv-label ${cls}">${lbl}</div>`;
+          }
+          if (isActualFriend) {
+            if (wp === 'public') return `<div class="showcase-priv-label pub">Public</div>`;
+            if (wp === 'followers' || wp === 'friends_only') return `<div class="showcase-priv-label fri">Followers</div>`;
+            if (wp === 'friends') return `<div class="showcase-priv-label frd">Friends</div>`;
+            // null = Default: inherit from wishlist visibility setting
+            if (wlVis === 'friends' || wlVis === 'friends_only') return `<div class="showcase-priv-label frd">Friends</div>`;
+            if (wlVis === 'followers') return `<div class="showcase-priv-label fri">Followers</div>`;
+            return `<div class="showcase-priv-label pub">Public</div>`;
+          }
+          if (isFollowerOnly) {
+            if (wp === 'public') return `<div class="showcase-priv-label pub">Public</div>`;
+            if (wp === 'followers' || wp === 'friends_only') return `<div class="showcase-priv-label fri">Followers</div>`;
+            // null = Default: inherit from wishlist visibility
+            if (wlVis === 'followers') return `<div class="showcase-priv-label fri">Followers</div>`;
+            return `<div class="showcase-priv-label pub">Public</div>`;
+          }
+          return '';
+        })();
         const clickAttr = isOwn ? `onclick="cycleWishPrivacy('${escHtml(w.id)}')"` : '';
-        const tintCls   = isOwn ? (wp === 'public' ? ' wl-pub' : (wp === 'followers' || wp === 'friends') ? ' wl-fri' : wp === 'private' ? ' wl-priv' : '') : '';
+        const tintCls   = isOwn ? (wp === 'public' ? ' wl-pub' : wp === 'followers' ? ' wl-fri' : wp === 'friends' ? ' wl-frd' : wp === 'private' ? ' wl-priv' : '') : '';
         return `<div class="showcase-card${isOwn ? ' priv-own wl-wish-card' + tintCls : ''}" data-wish-id="${escHtml(w.id)}"${isOwn ? ` data-priv="${wp||'inh'}"` : ''} ${clickAttr}>
           ${thumb}
           <div class="showcase-brand">${escHtml(w.brand||'')}</div>
@@ -3958,6 +4081,48 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <button style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;font-family:inherit;padding:.25rem .5rem;" onclick="openDeleteAccount()">Delete Account</button>
     </div>` : '';
 
+  // Friends list — only visible to yourself
+  const friendsListHtml = isOwn ? (() => {
+    // Look up profiles from the already-loaded followingProfiles (no extra DB query needed)
+    const profileById = id => followingProfiles.find(p => p.id === id) || { id, display_name: null, username: null };
+    const activeFriends = friendRequests
+      .filter(r => r.initiator_verified && r.target_verified &&
+        ((r.initiator_id === currentUser.id && following.has(r.target_id)) ||
+         (r.target_id   === currentUser.id && following.has(r.initiator_id))))
+      .map(r => profileById(r.initiator_id === currentUser.id ? r.target_id : r.initiator_id))
+      .filter(Boolean);
+    const pendingOut = friendRequests.filter(r =>
+      r.initiator_id === currentUser.id && !(r.initiator_verified && r.target_verified));
+    const pendingIn  = friendRequests.filter(r =>
+      r.target_id === currentUser.id && !(r.initiator_verified && r.target_verified));
+
+    const friendRows = activeFriends.map(f => `
+      <div style="display:flex;align-items:center;gap:.65rem;cursor:pointer;padding:.2rem 0;"
+           onclick="viewUserProfile('${f.id}')">
+        <div class="feed-user-avatar" style="width:34px;height:34px;font-size:.72rem;flex-shrink:0;">${profileInitials(f)}</div>
+        <div>
+          <div style="font-weight:600;font-size:.84rem;">${escHtml(f.display_name || f.username || '—')}</div>
+          ${f.username ? `<div style="color:var(--muted);font-size:.74rem;">@${escHtml(f.username)}</div>` : ''}
+        </div>
+      </div>`).join('');
+
+    const pendingNote = (pendingOut.length + pendingIn.length) > 0
+      ? `<div style="font-size:.73rem;color:var(--muted);margin-top:.5rem;">${
+          pendingOut.length ? `${pendingOut.length} pending (waiting on them)` : ''
+        }${pendingOut.length && pendingIn.length ? ' · ' : ''}${
+          pendingIn.length ? `${pendingIn.length} waiting for you to enter their code` : ''
+        }</div>` : '';
+
+    return `
+      <div class="profile-page-card">
+        <div class="profile-page-section-title">Friends${activeFriends.length ? ' · ' + activeFriends.length : ''}</div>
+        ${activeFriends.length
+          ? `<div style="display:flex;flex-direction:column;gap:.15rem;margin-top:.35rem;">${friendRows}</div>`
+          : `<div style="color:var(--muted);font-size:.82rem;">No friends yet — visit a mutual follow's profile to add them.</div>`}
+        ${pendingNote}
+      </div>`;
+  })() : '';
+
   return `
     <div class="profile-hero">
       <div class="profile-avatar-lg">${avatarInner}${avatarFallback}${camOverlay}</div>
@@ -3970,8 +4135,10 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       ${followBtn}
     </div>
     ${statsHtml}
+    ${friendHtml}
     ${editHtml}
     ${privacyHtml}
+    ${friendsListHtml}
     ${showcaseHtml}
     ${wishlistHtml}
     ${logsHtml}
@@ -3981,10 +4148,10 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
 async function cycleWatchPrivacy(watchId) {
   const w = watches.find(x => x.id === watchId);
   if (!w) return;
-  // null = Default (inherit collection_visibility) → public → followers → private → null
-  const order = [null, 'public', 'followers', 'private'];
-  // Normalize legacy 'friends_only' → 'followers' so indexOf works correctly
-  const cur = (w.watchPrivacy === 'friends_only' || w.watchPrivacy === 'friends') ? 'followers' : (w.watchPrivacy ?? null);
+  // null = Default → public → followers → friends → private → null
+  const order = [null, 'public', 'followers', 'friends', 'private'];
+  // Normalize legacy 'friends_only' → 'friends'
+  const cur = w.watchPrivacy === 'friends_only' ? 'friends' : (w.watchPrivacy ?? null);
   const next  = order[(order.indexOf(cur) + 1) % order.length];
   w.watchPrivacy = next;
   w.isPublic     = next !== 'private';
@@ -3995,12 +4162,13 @@ async function cycleWatchPrivacy(watchId) {
   // Update DOM in-place — no full page reload
   const card = document.querySelector(`.col-watch-card[data-watch-id="${watchId}"]`);
   if (card) {
-    const cls = next === null ? 'inh' : next === 'public' ? 'pub' : next === 'followers' ? 'fri' : 'priv';
-    const lbl = next === null ? 'Default' : next === 'public' ? 'Public' : next === 'followers' ? 'Followers' : 'Private';
+    const cls = next === null ? 'inh' : next === 'public' ? 'pub' : next === 'followers' ? 'fri' : next === 'friends' ? 'frd' : 'priv';
+    const lbl = next === null ? 'Default' : next === 'public' ? 'Public' : next === 'followers' ? 'Followers' : next === 'friends' ? 'Friends' : 'Private';
     card.dataset.priv = next || 'inh';
-    card.classList.remove('col-pub', 'col-fri', 'col-priv');
-    if (next === 'public')     card.classList.add('col-pub');
+    card.classList.remove('col-pub', 'col-fri', 'col-frd', 'col-priv');
+    if (next === 'public')      card.classList.add('col-pub');
     else if (next === 'followers') card.classList.add('col-fri');
+    else if (next === 'friends')   card.classList.add('col-frd');
     else if (next === 'private')   card.classList.add('col-priv');
     const label = card.querySelector('.showcase-priv-label');
     if (label) { label.className = `showcase-priv-label ${cls}`; label.textContent = lbl; }
@@ -4010,10 +4178,9 @@ async function cycleWatchPrivacy(watchId) {
 async function cycleWishPrivacy(wishId) {
   const w = wishlist.find(x => x.id === wishId);
   if (!w) return;
-  // null = Default (inherit global) → public → followers → private → null
-  const order = [null, 'public', 'followers', 'private'];
-  // Normalize legacy 'friends' / 'friends_only' → 'followers' so indexOf works correctly
-  const cur = (w.wishPrivacy === 'friends' || w.wishPrivacy === 'friends_only') ? 'followers' : (w.wishPrivacy ?? null);
+  // null = Default → public → followers → friends → private → null
+  const order = [null, 'public', 'followers', 'friends', 'private'];
+  const cur = w.wishPrivacy === 'friends_only' ? 'friends' : (w.wishPrivacy ?? null);
   const next  = order[(order.indexOf(cur) + 1) % order.length];
   w.wishPrivacy = next;
   const { error } = await db.from('wishlist')
@@ -4023,12 +4190,13 @@ async function cycleWishPrivacy(wishId) {
   // Update DOM in-place — no full page reload
   const card = document.querySelector(`.wl-wish-card[data-wish-id="${wishId}"]`);
   if (card) {
-    const cls = next === 'public' ? 'pub' : next === 'followers' ? 'fri' : next === 'private' ? 'priv' : 'inh';
-    const lbl = next === 'public' ? 'Public' : next === 'followers' ? 'Followers' : next === 'private' ? 'Private' : 'Default';
+    const cls = next === 'public' ? 'pub' : next === 'followers' ? 'fri' : next === 'friends' ? 'frd' : next === 'private' ? 'priv' : 'inh';
+    const lbl = next === 'public' ? 'Public' : next === 'followers' ? 'Followers' : next === 'friends' ? 'Friends' : next === 'private' ? 'Private' : 'Default';
     card.dataset.priv = next || 'inh';
-    card.classList.remove('wl-pub', 'wl-fri', 'wl-priv');
+    card.classList.remove('wl-pub', 'wl-fri', 'wl-frd', 'wl-priv');
     if (next === 'public')      card.classList.add('wl-pub');
     else if (next === 'followers') card.classList.add('wl-fri');
+    else if (next === 'friends')   card.classList.add('wl-frd');
     else if (next === 'private')   card.classList.add('wl-priv');
     const label = card.querySelector('.showcase-priv-label');
     if (label) { label.className = `showcase-priv-label ${cls}`; label.textContent = lbl; }
@@ -4138,6 +4306,311 @@ async function loadPendingRequests() {
   if (!currentUser) return;
   const { data } = await db.from('follow_requests').select('target_id').eq('requester_id', currentUser.id);
   pendingRequests = new Set((data || []).map(r => r.target_id));
+}
+
+// ── Friends ────────────────────────────────────────────────────────────────
+function generateFriendCode() {
+  // 8 chars from an unambiguous alphabet, formatted as XXXX-XXXX
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I, O, 0, 1
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    if (i === 4) code += '-';
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
+async function loadFriendRequests() {
+  if (!currentUser) return;
+  try {
+    const { data, error } = await db
+      .from('friend_requests')
+      .select('*')   // no FK joins — table was created without FK constraints
+      .or(`initiator_id.eq.${currentUser.id},target_id.eq.${currentUser.id}`);
+    if (error) throw error;
+    friendRequests = data || [];
+  } catch (e) {
+    console.warn('loadFriendRequests failed (table may not exist yet):', e?.message);
+    friendRequests = [];
+  }
+}
+
+function computeFriendships() {
+  // Must be called AFTER both loadFollowing() and loadFriendRequests() complete
+  friendships = new Set();
+  for (const r of friendRequests) {
+    if (r.initiator_verified && r.target_verified) {
+      const otherId = r.initiator_id === currentUser.id ? r.target_id : r.initiator_id;
+      if (following.has(otherId)) friendships.add(otherId); // mutual follow required
+    }
+  }
+}
+
+async function initiateFriendRequest(userId) {
+  if (!currentUser) return;
+  if (!following.has(userId)) { toast('You must follow each other first', 'error'); return; }
+  // Check they follow back
+  const { data: theyFollow } = await db.from('follows')
+    .select('follower_id').eq('follower_id', userId).eq('following_id', currentUser.id).maybeSingle();
+  if (!theyFollow) { toast('They need to follow you back first', 'error'); return; }
+
+  const initiatorCode = generateFriendCode();
+  const targetCode    = generateFriendCode();
+  const { error } = await db.from('friend_requests').insert({
+    initiator_id: currentUser.id, target_id: userId,
+    initiator_code: initiatorCode, target_code: targetCode,
+  });
+  if (error) { toast('Could not start friend connection — ' + error.message, 'error'); return; }
+
+  await loadFriendRequests();
+  computeFriendships();
+
+  // Update popover in-place to show the code — don't close it
+  const freshReq = friendRequests.find(r =>
+    (r.initiator_id === currentUser.id && r.target_id === userId) ||
+    (r.initiator_id === userId && r.target_id === currentUser.id)
+  ) || null;
+  const popoverEl = document.getElementById('friend-popover');
+  if (popoverEl) { popoverEl.innerHTML = renderFriendPopoverContent(userId, freshReq); }
+
+  // Update the icon button to pending state without a full page reload
+  const iconBtns = Array.from(document.querySelectorAll('.friend-icon-btn'));
+  const iconBtn  = iconBtns.find(b => b.getAttribute('onclick')?.includes(`'${userId}'`));
+  if (iconBtn) iconBtn.outerHTML = friendIconBtnHTML(userId, freshReq);
+
+  toast('Friend connection started — share your code with them!');
+}
+
+async function enterFriendCode(requestId, rawCode) {
+  if (!currentUser) return;
+  const req = friendRequests.find(r => r.id === requestId);
+  if (!req) return;
+  const isInitiator  = req.initiator_id === currentUser.id;
+  const correctCode  = isInitiator ? req.target_code : req.initiator_code;
+  const normalized   = c => c.toUpperCase().replace(/-/g, '');
+  if (normalized(rawCode) !== normalized(correctCode)) {
+    toast('Incorrect code — double-check with your friend', 'error'); return;
+  }
+  const field = isInitiator ? { initiator_verified: true } : { target_verified: true };
+  const { error } = await db.from('friend_requests').update(field).eq('id', requestId);
+  if (error) { toast('Could not verify — ' + error.message, 'error'); return; }
+
+  const otherId = isInitiator ? req.target_id : req.initiator_id;
+
+  await loadFriendRequests();
+  computeFriendships();
+
+  // Get freshly-loaded row so the popover can show the updated verified state
+  const freshReq  = friendRequests.find(r => r.id === requestId) || null;
+  const popoverEl = document.getElementById('friend-popover');
+
+  // Check completion directly from the fresh DB row — don't rely on the friendships Set
+  // (which is gated on following.has(otherId) and could be stale).
+  const bothVerified = !!(freshReq?.initiator_verified && freshReq?.target_verified);
+
+  console.log('[enterFriendCode] otherId:', otherId,
+    '| initiator_verified:', freshReq?.initiator_verified,
+    '| target_verified:', freshReq?.target_verified,
+    '| bothVerified:', bothVerified);
+
+  if (bothVerified) {
+    // COMPLETION — both codes entered, friendship established.
+    // Only notify B ("You and X are now friends"). A just saw the 🤝 popover.
+    // Do NOT also send friend_code_entered — B would get two notifications.
+    // Delete any stale friend_code_entered from A's own panel first.
+    const staleNotif = userNotifs.find(n => n.type === 'friend_code_entered' && n.actor_id === otherId);
+    if (staleNotif) {
+      db.from('notifications').delete().eq('id', staleNotif.id).then();
+      userNotifs = userNotifs.filter(n => n.id !== staleNotif.id);
+    }
+    console.log('[enterFriendCode] inserting friends_now for user_id:', otherId);
+    const { error: ne } = await db.from('notifications').insert(
+      { user_id: otherId, type: 'friends_now', actor_id: currentUser.id, is_read: false }
+    );
+    if (ne) {
+      console.error('[enterFriendCode] friends_now insert failed:', ne);
+      toast('Could not send friend notification — ' + ne.message, 'error');
+    } else {
+      console.log('[enterFriendCode] friends_now inserted OK');
+    }
+    // Refresh A's own notification panel (clears the stale entry above)
+    loadNotifications().then(() => renderNotificationPanel());
+    // Show success inside the popover, then auto-close and re-render the profile
+    if (popoverEl) {
+      popoverEl.innerHTML = `
+        <div style="text-align:center;padding:.6rem 0;">
+          <div style="font-size:1.6rem;margin-bottom:.4rem;">🤝</div>
+          <div style="font-weight:600;color:#a78bfa;font-size:.92rem;">You are now friends!</div>
+        </div>`;
+      setTimeout(() => { closeFriendPopover(); viewUserProfile(otherId); }, 1800);
+    } else {
+      viewUserProfile(otherId);
+    }
+    toast('🤝 You are now friends!');
+  } else {
+    // Don't close — update the popover in-place to show the ✓ verified state
+    // NOT YET COMPLETE — only one side verified. Notify B their code was entered.
+    console.log('[enterFriendCode] inserting friend_code_entered for user_id:', otherId);
+    const { error: fce } = await db.from('notifications').insert({
+      user_id: otherId, type: 'friend_code_entered', actor_id: currentUser.id, is_read: false,
+    });
+    if (fce) {
+      console.error('[enterFriendCode] friend_code_entered insert failed:', fce);
+      toast('Could not notify them — ' + fce.message, 'error');
+    } else {
+      console.log('[enterFriendCode] friend_code_entered inserted OK');
+    }
+    if (popoverEl) {
+      popoverEl.innerHTML = renderFriendPopoverContent(otherId, freshReq);
+    }
+    toast('Code verified! Waiting for them to enter your code.');
+  }
+}
+
+async function removeFriend(userId) {
+  if (!currentUser) return;
+  // RLS scopes delete to rows where auth.uid() is a party; filtering by userId
+  // picks the specific pair without needing nested and() inside or().
+  const { error } = await db.from('friend_requests').delete()
+    .or(`initiator_id.eq.${userId},target_id.eq.${userId}`);
+  if (error) { toast('Could not remove friend — ' + error.message, 'error'); return; }
+  await loadFriendRequests();
+  computeFriendships();
+  viewUserProfile(userId);
+  toast('Friend removed');
+}
+
+// ── FRIEND ICON BUTTON (small, next to follow) ──────────────────────────────
+function friendIconBtnHTML(userId, req) {
+  if (!currentUser) return '';
+  let state, title, svgPath;
+  if (friendships.has(userId)) {
+    state = 'friends'; title = 'Friends';
+    // Two-person check icon
+    svgPath = `<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+               <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+               <polyline points="20 6 22 8 26 4" transform="translate(-3,0)"/>`;
+  } else if (req) {
+    state = 'pending'; title = 'Friend request pending — tap to view';
+    // Clock / hourglass feel — use a simple dashed-circle person icon
+    svgPath = `<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+               <line x1="19" y1="8" x2="19" y2="13"/><line x1="16.5" y1="10.5" x2="19" y2="13"/>`;
+  } else {
+    state = 'none'; title = 'Connect as friends';
+    // Add-person icon
+    svgPath = `<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/>
+               <line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>`;
+  }
+  return `<button class="friend-icon-btn fi-${state}" title="${title}"
+    onclick="openFriendPopover(this,'${userId}')">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${svgPath}</svg>
+  </button>`;
+}
+
+// ── FRIEND POPOVER ───────────────────────────────────────────────────────────
+function openFriendPopover(anchorEl, userId) {
+  closeFriendPopover();
+  // Use cached req (updated by fresh fetch on profile load)
+  const req = friendRequests.find(r =>
+    (r.initiator_id === currentUser?.id && r.target_id === userId) ||
+    (r.initiator_id === userId && r.target_id === currentUser?.id)
+  ) || null;
+
+  const backdrop = document.createElement('div');
+  backdrop.id = 'friend-popover-backdrop';
+  backdrop.onclick = closeFriendPopover;
+
+  const popover = document.createElement('div');
+  popover.id = 'friend-popover';
+  popover.innerHTML = renderFriendPopoverContent(userId, req);
+
+  document.body.appendChild(backdrop);
+  document.body.appendChild(popover);
+
+  // Position below anchor, centred on it, clamped to viewport
+  const rect = anchorEl.getBoundingClientRect();
+  const pw   = Math.min(320, window.innerWidth - 32);
+  let left   = rect.left + rect.width / 2 - pw / 2;
+  left = Math.max(16, Math.min(left, window.innerWidth - pw - 16));
+  let top = rect.bottom + 8;
+  // If too close to bottom, flip above
+  if (top + 220 > window.innerHeight) top = Math.max(8, rect.top - 220);
+  popover.style.left  = left + 'px';
+  popover.style.top   = top  + 'px';
+  popover.style.width = pw   + 'px';
+}
+
+function closeFriendPopover() {
+  document.getElementById('friend-popover-backdrop')?.remove();
+  document.getElementById('friend-popover')?.remove();
+}
+
+function renderFriendPopoverContent(userId, req) {
+  if (!currentUser) return '';
+  const isFriends = friendships.has(userId);
+
+  if (isFriends) {
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.1rem;">
+        <div style="display:flex;align-items:center;gap:.45rem;color:#a78bfa;font-weight:600;font-size:.86rem;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          Friends
+        </div>
+        <button class="btn btn-ghost btn-sm" style="font-size:.75rem;color:var(--muted);"
+          onclick="closeFriendPopover();removeFriend('${userId}')">Remove</button>
+      </div>`;
+  }
+
+  if (!req) {
+    return `
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:.75rem;line-height:1.45;">
+        Connect as friends — you'll each get a unique code to share in person.
+        Both users must follow each other first.
+      </div>
+      <button class="btn btn-primary" style="width:100%;font-size:.84rem;"
+        onclick="initiateFriendRequest('${userId}')">
+        Start Friend Connection
+      </button>`;
+  }
+
+  const isInitiator = req.initiator_id === currentUser.id;
+  const myCode      = isInitiator ? req.initiator_code : req.target_code;
+  const iVerified   = isInitiator ? req.initiator_verified : req.target_verified;
+  const theyVerified= isInitiator ? req.target_verified   : req.initiator_verified;
+
+  return `
+    <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:.6rem;">Friend Connection</div>
+    ${!theyVerified ? `
+    <div style="margin-bottom:.75rem;">
+      <div style="font-size:.73rem;color:var(--muted);margin-bottom:.35rem;">Your code — copy &amp; send to them:</div>
+      <div style="display:flex;align-items:center;gap:.45rem;">
+        <code style="flex:1;text-align:center;font-size:.95rem;font-weight:700;letter-spacing:.14em;
+               color:var(--gold);background:var(--surface2);padding:.3rem .6rem;border-radius:7px;">${myCode}</code>
+        <button class="btn btn-ghost btn-sm"
+          onclick="navigator.clipboard.writeText('${myCode}').then(()=>toast('Code copied!'))">Copy</button>
+      </div>
+    </div>` : ''}
+    ${iVerified
+      ? `<div style="font-size:.78rem;color:var(--muted);padding:.3rem 0;text-align:center;">
+           ✓ You've entered their code — waiting for them to enter yours</div>`
+      : `<div>
+           <div style="font-size:.73rem;color:var(--muted);margin-bottom:.3rem;">Enter their code:</div>
+           <div style="display:flex;gap:.45rem;">
+             <input id="fc-input-${req.id}" type="text" maxlength="9" placeholder="XXXX-XXXX"
+               style="flex:1;font-family:monospace;text-transform:uppercase;letter-spacing:.08em;"
+               oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'')">
+             <button class="btn btn-primary btn-sm"
+               onclick="enterFriendCode('${req.id}',document.getElementById('fc-input-${req.id}').value)">Verify</button>
+           </div>
+         </div>`
+    }`;
 }
 
 // ── CLUBS ──────────────────────────────────────────────────────
@@ -4924,10 +5397,14 @@ async function declineFollowRequest(requesterId, notifId) {
 function confirmUnfollow(userId, btn) {
   if (btn.dataset.confirming) {
     delete btn.dataset.confirming;
-    btn.textContent = 'Following';
+    // Optimistically show Follow immediately — no confusing "Following" flash.
+    // Re-follow is always direct (followUser) since they were already accepted once.
+    btn.className = 'follow-btn follow';
+    btn.textContent = 'Follow';
     btn.style.borderColor = '';
     btn.style.color = '';
-    unfollowUser(userId);
+    btn.onclick = function() { followUser(userId, this); };
+    unfollowUser(userId, btn);
   } else {
     btn.dataset.confirming = '1';
     btn.textContent = 'Unfollow?';
@@ -4943,16 +5420,85 @@ function confirmUnfollow(userId, btn) {
     }, 3000);
   }
 }
-async function unfollowUser(userId) {
+function confirmUnfriend(userId, btn) {
+  if (btn.dataset.confirming) {
+    delete btn.dataset.confirming;
+    btn.textContent = 'Friends';
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    unfriendFromCard(userId, btn);
+  } else {
+    btn.dataset.confirming = '1';
+    btn.textContent = 'Unfriend?';
+    btn.style.borderColor = 'var(--danger)';
+    btn.style.color = 'var(--danger)';
+    setTimeout(() => {
+      if (btn.dataset.confirming) {
+        delete btn.dataset.confirming;
+        btn.textContent = 'Friends';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+      }
+    }, 3000);
+  }
+}
+async function unfriendFromCard(userId, btn) {
+  if (!currentUser) return;
+  const { error } = await db.from('friend_requests').delete()
+    .or(`initiator_id.eq.${userId},target_id.eq.${userId}`);
+  if (error) { toast('Could not remove friend — ' + error.message, 'error'); return; }
+  await loadFriendRequests();
+  computeFriendships();
+  toast('Friend removed');
+  // Revert button to "Following" in-place (still following each other)
+  if (btn && btn.isConnected) {
+    btn.className = 'follow-btn following';
+    btn.textContent = 'Following';
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    btn.onclick = function() { confirmUnfollow(userId, this); };
+  }
+}
+async function unfollowUser(userId, btn) {
   if (!currentUser) return;
   const { error } = await db.from('follows').delete()
     .eq('follower_id', currentUser.id).eq('following_id', userId);
   if (!error) {
     following.delete(userId);
+    // Silently break any friendship — unfollow = unfriend, no notification sent
+    await db.from('friend_requests').delete()
+      .or(`initiator_id.eq.${userId},target_id.eq.${userId}`)
+      .catch(() => {});
+    friendships.delete(userId);
+    friendRequests = friendRequests.filter(r =>
+      !((r.initiator_id === currentUser.id && r.target_id === userId) ||
+        (r.initiator_id === userId && r.target_id === currentUser.id)));
     toast('Unfollowed');
+    // Button was already set to Follow optimistically in confirmUnfollow — no change needed.
+    // Re-follow is always direct (followUser) since they were accepted before.
     renderDiscoverUsers();
-    renderFollowingList();
+    // Don't re-render the following list immediately — the in-place button update
+    // above is the right feedback. Re-rendering would remove the person from the
+    // list entirely, but the user expects to see them with a "Follow" button.
+    // The list refreshes correctly the next time the modal is opened.
     loadFeed();
+    // Re-render the profile page only if it is the currently active page —
+    // not just because profilePageUserId matches (the discover modal can be
+    // open on top of an old profile, and calling viewUserProfile would
+    // close the modal unexpectedly via the .overlay hide-all).
+    const profilePageActive = document.getElementById('page-profile')?.classList.contains('active');
+    if (profilePageActive && profilePageUserId === userId) viewUserProfile(userId);
+  } else {
+    toast('Could not unfollow — please try again', 'error');
+    // Reset button on failure
+    if (btn && btn.isConnected) {
+      btn.className = 'follow-btn following';
+      btn.textContent = 'Following';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+      btn.dataset.confirming = '';
+      btn.onclick = function() { confirmUnfollow(userId, this); };
+    }
   }
 }
 
@@ -5015,7 +5561,12 @@ function renderNotificationPanel() {
                : n.type === 'club_join_request'  ? `${nm} wants to join your club`
                : n.type === 'club_join_accepted' ? `${nm} approved your club request`
                : n.type === 'club_invite'        ? `${nm} invited you to join a club`
-               : n.type === 'club_promoted'      ? `${nm} made you an owner of a club` : '';
+               : n.type === 'club_promoted'        ? `${nm} made you an owner of a club`
+               : n.type === 'friend_code_entered' ? `${nm} entered your friend code`
+               : n.type === 'friends_now'          ? `You and ${nm} are now friends`
+               : n.type === 'friend_invite'        ? `${nm} wants to connect as friends`
+               : n.type === 'friend_request'       ? `${nm} sent you a friend request`
+               : n.type === 'friend_accepted'      ? `${nm} accepted your friend request` : '';
     const actionsHtml = n.type === 'follow_request' ? `
       <div class="notif-follow-actions">
         <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
@@ -5075,8 +5626,8 @@ async function loadFeed() {
     const allUserIds = [...new Set([...following, currentUser.id])];
     // Logs — filter by visibility:
     //   'public'    → show to all
-    //   'followers' → visible to anyone following that user (already filtered by allUserIds)
-    //   'friends'   → old value, treat same as followers
+    //   'followers' → visible to followers
+    //   'friends'   → visible to friends only (client-side filtered below)
     //   'private'   → only owner sees it
     let visOr = `visibility.eq.public,user_id.eq.${currentUser.id},visibility.eq.followers,visibility.eq.friends`;
 
@@ -5095,6 +5646,10 @@ async function loadFeed() {
     }
     if (logsErr) { console.warn('Feed logs error:', logsErr.message); feedItems = []; renderFeed(); return; }
     if (!rawLogs || rawLogs.length === 0) { feedItems = []; renderFeed(); return; }
+    // Client-side: filter out friends-only posts from non-friends
+    rawLogs = rawLogs.filter(log =>
+      log.visibility !== 'friends' || log.user_id === currentUser.id || friendships.has(log.user_id));
+
 
     // Strip club posts the current user is not a member of
     const myClubIds = myClubs.map(c => c.id);
@@ -5949,9 +6504,11 @@ async function renderFollowingList() {
 }
 function friendActionBtn(u) {
   if (currentUser && u.id === currentUser.id) return '<span style="font-size:.78rem;color:var(--muted);font-style:italic;">You</span>';
+  const isFrd = friendships.has(u.id);
   const isFlw = following.has(u.id);
   const isPending = pendingRequests.has(u.id);
   const restricted = u.profile_privacy === 'followers' || u.profile_privacy === 'private' || u.profile_privacy === 'friends_only';
+  if (isFrd)     return `<button class="follow-btn friends-pill" onclick="confirmUnfriend('${u.id}',this)">Friends</button>`;
   if (isFlw)     return `<button class="follow-btn following" onclick="confirmUnfollow('${u.id}',this)">Following</button>`;
   if (isPending) return `<button class="follow-btn requested" onclick="cancelFollowRequest('${u.id}')">Requested</button>`;
   const action = restricted ? `sendFollowRequest('${u.id}',this)` : `followUser('${u.id}',this)`;
@@ -5959,15 +6516,12 @@ function friendActionBtn(u) {
 }
 
 function userCardHtml(u) {
-  const priv  = u.profile_privacy || 'public';
-  const label = (priv === 'followers' || priv === 'friends_only') ? '<span class="privacy-label">Followers Only</span>'
-              : priv === 'private' ? '<span class="privacy-label">Private</span>' : '';
   return `
     <div class="user-card">
       <div class="feed-user-avatar" onclick="viewUserProfile('${u.id}')" style="cursor:pointer;">${profileInitials(u)}</div>
       <div style="flex:1;min-width:0;cursor:pointer;" onclick="viewUserProfile('${u.id}')">
         <div class="user-card-name">${escHtml(u.display_name || u.username || '—')}</div>
-        <div class="user-card-username">${u.username ? '@' + escHtml(u.username) : ''}${label}</div>
+        <div class="user-card-username">${u.username ? '@' + escHtml(u.username) : ''}</div>
       </div>
       ${friendActionBtn(u)}
     </div>`;
@@ -6161,6 +6715,8 @@ let expandedComments  = new Set(); // logIds currently showing comments
 let following         = new Set(); // user_ids current user follows
 let followingProfiles = [];        // [{id, username, display_name}] for @mention autocomplete
 let pendingRequests   = new Set(); // user_ids I've sent a follow request to (awaiting approval)
+let friendships       = new Set(); // user_ids who are active friends with currentUser
+let friendRequests    = [];        // raw friend_requests rows involving currentUser
 let myClubs = [];                    // clubs current user is member of
 let pendingClubRequests = new Set(); // club_ids user has requested to join
 let currentClubId = null;
@@ -10325,7 +10881,8 @@ function initApp() {
   fetchWeather();
   initReminder();
   // Load social data then feed (landing page)
-  Promise.all([loadMyProfile(), loadFollowing(), loadPendingRequests(), loadMyClubs(), loadPendingClubRequests()]).then(() => {
+  Promise.all([loadMyProfile(), loadFollowing(), loadPendingRequests(), loadMyClubs(), loadPendingClubRequests(), loadFriendRequests()]).then(() => {
+    computeFriendships(); // needs following + friendRequests both loaded
     loadFeed();
     loadNotifications();
     // Poll for new notifications every 30 seconds

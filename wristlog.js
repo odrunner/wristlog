@@ -579,6 +579,29 @@ export function getFriendStatus(userId, { friends, sentRequests, receivedRequest
   return 'none';
 }
 
+/**
+ * Compute the set of user IDs who are mutual friends with currentUserId.
+ * A friendship is active when BOTH sides of the friend_request row are verified
+ * AND the current user follows the other person (mutual-follow prerequisite).
+ *
+ * @param {Array}  friendRequests  - array of friend_request rows from DB
+ *                                   each row: { initiator_id, target_id,
+ *                                               initiator_verified, target_verified }
+ * @param {Set}    followingSet    - set of user IDs the current user follows
+ * @param {string} currentUserId  - the current user's ID
+ * @returns {Set<string>}
+ */
+export function computeFriendships(friendRequests, followingSet, currentUserId) {
+  const friendships = new Set();
+  for (const r of friendRequests) {
+    if (r.initiator_verified && r.target_verified) {
+      const otherId = r.initiator_id === currentUserId ? r.target_id : r.initiator_id;
+      if (followingSet.has(otherId)) friendships.add(otherId);
+    }
+  }
+  return friendships;
+}
+
 // ══════════════════════════════════════════
 //  FEED LIKES AGGREGATION
 // ══════════════════════════════════════════
@@ -824,8 +847,13 @@ export function notificationBody(type, actorName) {
     case 'club_join_request':  return `${nm} wants to join your club`;
     case 'club_join_accepted': return `${nm} approved your club request`;
     case 'club_invite':        return `${nm} invited you to join a club`;
-    case 'club_promoted':      return `${nm} made you an owner of a club`;
-    default:                   return '';
+    case 'club_promoted':        return `${nm} made you an owner of a club`;
+    case 'friend_code_entered':  return `${nm} entered your friend code`;
+    case 'friends_now':          return `You and ${nm} are now friends`;
+    case 'friend_invite':        return `${nm} wants to connect as friends`;
+    case 'friend_request':       return `${nm} sent you a friend request`;
+    case 'friend_accepted':      return `${nm} accepted your friend request`;
+    default:                     return '';
   }
 }
 
@@ -857,7 +885,8 @@ export function notificationOpensClub(type) {
  * Returns true for types that tap-navigate to the actor's profile.
  */
 export function notificationOpensProfile(type) {
-  return type === 'follow' || type === 'follow_accepted';
+  return type === 'follow' || type === 'follow_accepted'
+      || type === 'friend_code_entered' || type === 'friends_now';
 }
 
 /**
