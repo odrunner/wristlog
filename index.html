@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.17.54';
+const APP_VERSION = '2.30.26.18.07';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3760,7 +3760,7 @@ async function loadAndRenderProfile(userId) {
   const showWishlist = isOwn
     || wlVis === 'public'
     || (wlVis === 'followers' && isFriend)
-    || (wlVis === 'friends' && isActualFriend);
+    || ((wlVis === 'friends' || wlVis === 'friends_only') && isActualFriend); // friends_only = legacy alias
   if (showWishlist) {
     const { data: wlData } = await db.from('wishlist')
       .select('id, brand, name, ref, price, image, color, wish_privacy')
@@ -3770,10 +3770,10 @@ async function loadAndRenderProfile(userId) {
     if (!isOwn) {
       wishlistItems = wishlistItems.filter(w => {
         const p = w.wish_privacy;
-        if (p === 'private')   return false;
-        if (p === 'friends')   return isActualFriend;
-        if (p === 'followers') return isFriend;
-        return true; // null (inherit global, already passed) or 'public'
+        if (p === 'private')                    return false;
+        if (p === 'friends' || p === 'friends_only') return isActualFriend;
+        if (p === 'followers')                  return isFriend;
+        return true; // null (inherit global) or 'public'
       });
     }
   }
@@ -3943,12 +3943,17 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           if (priv === 'public') return `<div class="showcase-priv-label pub">Public</div>`;
           if (priv === 'followers' || priv === 'friends_only') return `<div class="showcase-priv-label fri">Followers</div>`;
           if (priv === 'friends') return `<div class="showcase-priv-label frd">Friends</div>`;
-          return '';
+          // null = Default: show the effective level inherited from collection visibility
+          if (visibility === 'friends' || visibility === 'friends_only') return `<div class="showcase-priv-label frd">Friends</div>`;
+          if (visibility === 'followers') return `<div class="showcase-priv-label fri">Followers</div>`;
+          return `<div class="showcase-priv-label pub">Public</div>`;
         }
         if (isFollowerOnly) {
           if (priv === 'public') return `<div class="showcase-priv-label pub">Public</div>`;
           if (priv === 'followers' || priv === 'friends_only') return `<div class="showcase-priv-label fri">Followers</div>`;
-          return '';
+          // null = Default: inherit from collection visibility
+          if (visibility === 'followers') return `<div class="showcase-priv-label fri">Followers</div>`;
+          return `<div class="showcase-priv-label pub">Public</div>`;
         }
         return '';
       })();
@@ -4006,14 +4011,19 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           }
           if (isActualFriend) {
             if (wp === 'public') return `<div class="showcase-priv-label pub">Public</div>`;
-            if (wp === 'followers') return `<div class="showcase-priv-label fri">Followers</div>`;
+            if (wp === 'followers' || wp === 'friends_only') return `<div class="showcase-priv-label fri">Followers</div>`;
             if (wp === 'friends') return `<div class="showcase-priv-label frd">Friends</div>`;
-            return '';
+            // null = Default: inherit from wishlist visibility setting
+            if (wlVis === 'friends' || wlVis === 'friends_only') return `<div class="showcase-priv-label frd">Friends</div>`;
+            if (wlVis === 'followers') return `<div class="showcase-priv-label fri">Followers</div>`;
+            return `<div class="showcase-priv-label pub">Public</div>`;
           }
           if (isFollowerOnly) {
             if (wp === 'public') return `<div class="showcase-priv-label pub">Public</div>`;
-            if (wp === 'followers') return `<div class="showcase-priv-label fri">Followers</div>`;
-            return '';
+            if (wp === 'followers' || wp === 'friends_only') return `<div class="showcase-priv-label fri">Followers</div>`;
+            // null = Default: inherit from wishlist visibility
+            if (wlVis === 'followers') return `<div class="showcase-priv-label fri">Followers</div>`;
+            return `<div class="showcase-priv-label pub">Public</div>`;
           }
           return '';
         })();
