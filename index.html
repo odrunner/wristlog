@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.19.31';
+const APP_VERSION = '2.30.26.19.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4404,7 +4404,11 @@ async function enterFriendCode(requestId, rawCode) {
   const freshReq  = friendRequests.find(r => r.id === requestId) || null;
   const popoverEl = document.getElementById('friend-popover');
 
-  if (friendships.has(otherId)) {
+  // Check completion directly from the fresh DB row — don't rely on the friendships Set
+  // (which is gated on following.has(otherId) and could be stale).
+  const bothVerified = freshReq?.initiator_verified && freshReq?.target_verified;
+
+  if (bothVerified) {
     // COMPLETION — both codes entered, friendship established.
     // Only notify B ("You and X are now friends"). A just saw the 🤝 popover.
     // Do NOT also send friend_code_entered — B would get two notifications.
@@ -4417,7 +4421,7 @@ async function enterFriendCode(requestId, rawCode) {
     const { error: ne } = await db.from('notifications').insert(
       { user_id: otherId, type: 'friends_now', actor_id: currentUser.id, is_read: false }
     );
-    if (ne) console.warn('friends_now notif failed:', ne.message);
+    if (ne) toast('Could not send friend notification — ' + ne.message, 'error');
     // Refresh A's own notification panel (clears the stale entry above)
     loadNotifications().then(() => renderNotificationPanel());
     // Show success inside the popover, then auto-close and re-render the profile
