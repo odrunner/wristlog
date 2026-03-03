@@ -2668,12 +2668,12 @@
   <div class="modal" style="max-width:380px;">
     <div class="modal-title">Existing prices will be updated</div>
     <p style="color:var(--muted);font-size:.85rem;margin-bottom:.75rem;line-height:1.5;">
-      The following watches already have prices set. Update All Prices will replace them with fresh WatchCharts data.
+      These watches already have prices. <b style="color:var(--text);">Manual</b> prices will be kept if you press Skip; WatchCharts prices will always refresh.
     </p>
     <div id="price-confirm-list" style="background:var(--surface2);border-radius:8px;padding:.55rem .75rem;margin-bottom:1.1rem;max-height:160px;overflow-y:auto;font-size:.83rem;line-height:1.9;"></div>
     <div class="modal-actions" style="flex-direction:column;gap:.5rem;">
       <button class="btn btn-primary" style="width:100%;" onclick="_priceConfirmOverride()">Override — update all</button>
-      <button class="btn btn-ghost"   style="width:100%;" onclick="_priceConfirmSkip()">No — keep existing prices</button>
+      <button class="btn btn-ghost"   style="width:100%;" onclick="_priceConfirmSkip()">Skip — keep manual, refresh WatchCharts</button>
       <button class="btn btn-ghost"   style="width:100%;color:var(--muted);" onclick="_priceConfirmAbort()">Cancel — stop the update</button>
     </div>
   </div>
@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.20.51';
+const APP_VERSION = '2.30.26.20.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6872,12 +6872,16 @@ function showUpdatePricesConfirm(manualOnes) {
   return new Promise(resolve => {
     _priceConfirmResolve = resolve;
     const list = document.getElementById('price-confirm-list');
-    list.innerHTML = manualOnes.map(w =>
-      `<div style="display:flex;justify-content:space-between;gap:1rem;">
-         <span style="color:var(--text);font-weight:600;">${escHtml(w.brand)} ${escHtml(w.name)}</span>
-         <span style="color:var(--gold);white-space:nowrap;">${fmtMoney(w.marketPrice)}</span>
-       </div>`
-    ).join('');
+    list.innerHTML = manualOnes.map(w => {
+      const isManualEntry = w.marketPriceSrc !== 'WatchCharts';
+      const badge = isManualEntry
+        ? `<span style="font-size:.68rem;font-weight:700;letter-spacing:.05em;color:var(--gold);background:rgba(201,168,76,.15);border-radius:4px;padding:.05rem .3rem;flex-shrink:0;">MANUAL</span>`
+        : '';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;">
+         <span style="color:var(--text);font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.brand)} ${escHtml(w.name)}</span>
+         <span style="display:flex;align-items:center;gap:.4rem;flex-shrink:0;">${badge}<span style="color:var(--gold);">${fmtMoney(w.marketPrice)}</span></span>
+       </div>`;
+    }).join('');
     document.getElementById('price-confirm-modal').classList.remove('hidden');
   });
 }
@@ -9154,21 +9158,21 @@ async function updateAllMarketPrices() {
   if (!toUpdate.length) {
     toast('No watches have a WatchCharts URL yet. Edit a watch to add one.', 'error'); return;
   }
-  // Warn about any watches that already have a price set — they will be overwritten.
-  // Using `w.marketPrice` (not src-based) so we catch watches whose src was incorrectly
-  // tagged as 'WatchCharts' by an older app version as well as genuine manual entries.
-  const hasExistingPrice = w => !!w.marketPrice;
-  const pricedOnes = toUpdate.filter(hasExistingPrice);
-  let skipExisting = false;
+  // Show ALL watches with a price in the warning dialog so nothing is hidden.
+  // "Skip" only protects manually-entered prices (src !== 'WatchCharts');
+  // WatchCharts-tagged prices are always refreshed unless the user cancels entirely.
+  const isManual = w => w.marketPrice && w.marketPriceSrc !== 'WatchCharts';
+  const pricedOnes = toUpdate.filter(w => w.marketPrice);
+  let skipManual = false;
   if (pricedOnes.length) {
     const choice = await showUpdatePricesConfirm(pricedOnes);
     if (choice === 'abort') return;          // user cancelled the whole pull
-    skipExisting = (choice === 'skip');      // 'skip' = keep all existing prices, 'override' = update all
+    skipManual = (choice === 'skip');        // 'skip' = keep manual, still refresh WatchCharts prices
   }
   btn.disabled = true; btn.textContent = 'Updating…';
   let updated = 0, failed = 0, skipped = 0;
   for (const w of toUpdate) {
-    if (skipExisting && hasExistingPrice(w)) { skipped++; continue; }
+    if (skipManual && isManual(w)) { skipped++; continue; }
     try {
       const result = await fetchPriceFromWatchChartsUrl(w.watchChartsUrl);
       if (result) {
