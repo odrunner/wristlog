@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.06.58';
+const APP_VERSION = '2.30.26.07.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5897,7 +5897,7 @@ function renderFeedCard(item) {
   // Visibility badge — only shown to the author on non-public posts
   const vis = item.visibility || 'public';
   const visBadge = (isMe && vis !== 'public')
-    ? `<div class="vis-badge ${vis}">${(vis === 'followers' || vis === 'friends') ? 'Followers only' : 'Only you'}</div>`
+    ? `<div class="vis-badge ${vis}">${vis === 'followers' ? 'Followers only' : vis === 'friends' ? 'Friends only' : 'Only you'}</div>`
     : '';
 
   const clubForBadge = item.club_id ? myClubs.find(c => c.id === item.club_id) : null;
