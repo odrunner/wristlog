@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.18.21';
+const APP_VERSION = '2.30.26.18.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3824,9 +3824,9 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     : '';
 
   // Action button — small edit icon for own profile, follow/friend for others
-  // Friend icon sits inline with the follow button; always shown on non-own profiles.
-  // Edge cases (not following yet, not mutual) are handled inside the popover.
-  const friendIconHtml = !isOwn ? friendIconBtnHTML(profile.id, friendReq) : '';
+  // Friend icon sits inline with the follow button; hidden when already friends
+  // (the Friends pill already conveys the relationship — no need for the icon too).
+  const friendIconHtml = (!isOwn && !isActualFriend) ? friendIconBtnHTML(profile.id, friendReq) : '';
   const followBtn = !isOwn
     ? `<div style="margin-top:.75rem;display:flex;align-items:center;gap:.5rem;">
          ${friendActionBtn({ id: profile.id, profile_privacy: privacy || 'public' })}
