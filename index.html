@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.21.07';
+const APP_VERSION = '2.30.26.21.18';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3675,7 +3675,16 @@ async function loadAndRenderProfile(userId) {
   }
 
   const isFollowing = following.has(userId);
-  const visibility  = profile.collection_visibility || 'followers';
+  // Normalise collection_visibility: treat null / undefined / legacy values as 'followers'.
+  // Valid chip values are 'public','followers','friends','private'. Anything else (e.g. the
+  // old 'friends_only' or an empty string) also resolves to the default.
+  const VALID_COL_VIS = new Set(['public','followers','friends','private']);
+  const rawColVis  = profile.collection_visibility;
+  const visibility = (rawColVis && VALID_COL_VIS.has(rawColVis)) ? rawColVis : 'followers';
+  // Persist the default to DB if the stored value is missing or invalid so it sticks next time.
+  if (isOwn && visibility !== rawColVis) {
+    db.from('profiles').update({ collection_visibility: 'followers' }).eq('id', currentUser.id).then(() => {});
+  }
 
   // ── Mutual follow check + fresh friend-request state ────────────────────
   let isMutual  = false;
