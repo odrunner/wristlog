@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.19.17';
+const APP_VERSION = '2.30.26.19.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5373,11 +5373,13 @@ async function declineFollowRequest(requesterId, notifId) {
 function confirmUnfollow(userId, btn) {
   if (btn.dataset.confirming) {
     delete btn.dataset.confirming;
-    // Reset immediately so the user sees feedback while the async call runs;
-    // unfollowUser will flip it to 'Follow' once the DB confirms.
-    btn.textContent = 'Following';
+    // Optimistically show Follow immediately — no confusing "Following" flash.
+    // Re-follow is always direct (followUser) since they were already accepted once.
+    btn.className = 'follow-btn follow';
+    btn.textContent = 'Follow';
     btn.style.borderColor = '';
     btn.style.color = '';
+    btn.onclick = function() { followUser(userId, this); };
     unfollowUser(userId, btn);
   } else {
     btn.dataset.confirming = '1';
@@ -5448,18 +5450,8 @@ async function unfollowUser(userId, btn) {
       !((r.initiator_id === currentUser.id && r.target_id === userId) ||
         (r.initiator_id === userId && r.target_id === currentUser.id)));
     toast('Unfollowed');
-    // Update the button in-place immediately so it doesn't wait for a full re-render
-    if (btn && btn.isConnected) {
-      const profileInList = discoverUsers.find(u => u.id === userId);
-      const restricted = ['followers', 'private', 'friends_only'].includes(profileInList?.profile_privacy);
-      btn.className = 'follow-btn follow';
-      btn.textContent = 'Follow';
-      btn.style.borderColor = '';
-      btn.style.color = '';
-      btn.onclick = restricted
-        ? function() { sendFollowRequest(userId, this); }
-        : function() { followUser(userId, this); };
-    }
+    // Button was already set to Follow optimistically in confirmUnfollow — no change needed.
+    // Re-follow is always direct (followUser) since they were accepted before.
     renderDiscoverUsers();
     // Don't re-render the following list immediately — the in-place button update
     // above is the right feedback. Re-rendering would remove the person from the
