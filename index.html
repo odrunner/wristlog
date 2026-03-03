@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.21.02';
+const APP_VERSION = '2.30.26.21.07';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3675,7 +3675,7 @@ async function loadAndRenderProfile(userId) {
   }
 
   const isFollowing = following.has(userId);
-  const visibility  = profile.collection_visibility || 'public_only';
+  const visibility  = profile.collection_visibility || 'followers';
 
   // ── Mutual follow check + fresh friend-request state ────────────────────
   let isMutual  = false;
@@ -3721,7 +3721,7 @@ async function loadAndRenderProfile(userId) {
       .select('id, brand, name, color, image, ref, url, watch_privacy')
       .eq('user_id', userId);
     if (!isOwn) {
-      const vis = profile.collection_visibility || 'public';
+      const vis = profile.collection_visibility || 'followers';
       // Bail early if global visibility restricts this viewer
       const collectionGated =
         (vis === 'private') ||
@@ -5631,24 +5631,30 @@ async function loadFeed() {
   const listEl = document.getElementById('feed-list');
   if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--muted);">Loading…</div>';
   try {
-    const allUserIds = [...new Set([...following, currentUser.id])];
-    // Logs — filter by visibility:
-    //   'public'    → show to all
-    //   'followers' → visible to followers
-    //   'friends'   → visible to friends only (client-side filtered below)
+    // Logs — visibility rules:
+    //   'public'    → show to everyone (discovery feed, even for new users with no following)
+    //   'followers' → only from users you follow
+    //   'friends'   → only from users you follow (client-side filters to friends below)
     //   'private'   → only owner sees it
-    let visOr = `visibility.eq.public,user_id.eq.${currentUser.id},visibility.eq.followers,visibility.eq.friends`;
+    // Build OR so that: public = any user; followers/friends = only from followed users.
+    // We do NOT use a top-level .in('user_id') because that would AND with the OR clause
+    // and prevent public posts from non-followed users from appearing.
+    const followingArr = [...following];
+    const followedPart = followingArr.length > 0
+      ? `,and(user_id.in.(${followingArr.join(',')}),or(visibility.eq.followers,visibility.eq.friends))`
+      : '';
+    const visOr = `visibility.eq.public,user_id.eq.${currentUser.id}${followedPart}`;
 
     let rawLogs, logsErr;
     try {
       const res = await db.from('logs').select('*')
-        .in('user_id', allUserIds).or(visOr)
+        .or(visOr)
         .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50);
       rawLogs = res.data; logsErr = res.error;
     } catch {
-      // visibility column not yet migrated — fall back to is_public
+      // visibility column not yet migrated — fall back to is_public for all public posts
       const res = await db.from('logs').select('*')
-        .in('user_id', allUserIds).eq('is_public', true)
+        .eq('is_public', true)
         .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50);
       rawLogs = res.data; logsErr = res.error;
     }
