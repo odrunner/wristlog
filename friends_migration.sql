@@ -41,7 +41,29 @@ CREATE POLICY "Users can delete friend requests they are party to"
   USING (auth.uid() = initiator_id OR auth.uid() = target_id);
 
 
--- 2. Add 'friend_invite' to the notifications type CHECK constraint
+-- 2. Add 'friends' to watches.watch_privacy CHECK constraint
+--    The original constraint only allowed public/followers/friends_only/private.
+--    Cycling now includes 'friends' as a distinct value separate from 'friends_only'.
+-- --------------------------------------------------------------------------
+ALTER TABLE watches DROP CONSTRAINT IF EXISTS watches_watch_privacy_check;
+
+ALTER TABLE watches ADD CONSTRAINT watches_watch_privacy_check CHECK (
+  watch_privacy IS NULL OR
+  watch_privacy IN ('public', 'followers', 'friends_only', 'friends', 'private')
+);
+
+
+-- 3. Add 'friends' to wishlist.wish_privacy CHECK constraint
+-- --------------------------------------------------------------------------
+ALTER TABLE wishlist DROP CONSTRAINT IF EXISTS wishlist_wish_privacy_check;
+
+ALTER TABLE wishlist ADD CONSTRAINT wishlist_wish_privacy_check CHECK (
+  wish_privacy IS NULL OR
+  wish_privacy IN ('public', 'followers', 'friends_only', 'friends', 'private')
+);
+
+
+-- 4. Add friend notification types to the notifications type CHECK constraint
 --    (adjust the IN list to match whatever types currently exist in your DB)
 -- --------------------------------------------------------------------------
 ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
