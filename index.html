@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.21.38';
+const APP_VERSION = '2.30.26.21.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5699,11 +5699,6 @@ async function loadFeed() {
     }
     if (logsErr) { console.warn('Feed logs error:', logsErr.message); feedItems = []; renderFeed(); return; }
     if (!rawLogs || rawLogs.length === 0) { feedItems = []; renderFeed(); return; }
-    // Client-side: filter out friends-only posts from non-friends
-    rawLogs = rawLogs.filter(log =>
-      log.visibility !== 'friends' || log.user_id === currentUser.id || friendships.has(log.user_id));
-
-
     // Strip club posts the current user is not a member of
     const myClubIds = myClubs.map(c => c.id);
     rawLogs = rawLogs.filter(l => !l.club_id || myClubIds.includes(l.club_id));
@@ -5720,6 +5715,32 @@ async function loadFeed() {
         }).slice(0, 80);
       }
     }
+
+    // ── Authoritative visibility gate (applied last, after club merge) ───────
+    // This is the single source of truth for who sees what. Covers all 4
+    // visibility values plus legacy null posts. Catches any leakage from server
+    // queries or club post fetch regardless of root cause.
+    //
+    //   private   → owner only (never shown to others)
+    //   public    → everyone
+    //   followers → only if currentUser follows the author
+    //   friends   → only if currentUser is friends with the author (mutual follow)
+    //   null      → legacy pre-visibility post: treat as followers-scoped
+    //               (is_public=true kept as public for club posts only)
+    rawLogs = rawLogs.filter(log => {
+      if (log.user_id === currentUser.id) return true;           // own post — always visible
+      if (log.club_id && myClubIds.includes(log.club_id)) {     // club post — membership already verified
+        // Within a club, apply a relaxed rule: private posts are still owner-only
+        return log.visibility !== 'private';
+      }
+      // Individual posts — strict visibility enforcement
+      if (log.visibility === 'private')   return false;
+      if (log.visibility === 'public')    return true;
+      if (log.visibility === 'followers') return following.has(log.user_id);
+      if (log.visibility === 'friends')   return friendships.has(log.user_id);
+      // null / legacy: only show to followers (is_public=true is followers-like scope)
+      return following.has(log.user_id);
+    });
 
     // Watches (separate query so null watch_id rows aren't dropped by an inner join)
     const watchIds = [...new Set(rawLogs.filter(l => l.watch_id).map(l => l.watch_id))];
