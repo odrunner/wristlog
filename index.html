@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.19.12';
+const APP_VERSION = '2.30.26.19.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5456,7 +5456,10 @@ async function unfollowUser(userId, btn) {
         : function() { followUser(userId, this); };
     }
     renderDiscoverUsers();
-    renderFollowingList();
+    // Don't re-render the following list immediately — the in-place button update
+    // above is the right feedback. Re-rendering would remove the person from the
+    // list entirely, but the user expects to see them with a "Follow" button.
+    // The list refreshes correctly the next time the modal is opened.
     loadFeed();
     // Re-render the profile page only if it is the currently active page —
     // not just because profilePageUserId matches (the discover modal can be
