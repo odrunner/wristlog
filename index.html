@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.18.19';
+const APP_VERSION = '2.30.26.18.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4557,12 +4557,18 @@ function renderFriendPopoverContent(userId, req) {
   return `
     <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:.6rem;">Friend Connection</div>
     <div style="margin-bottom:.75rem;">
-      <div style="font-size:.73rem;color:var(--muted);margin-bottom:.35rem;">Your code — copy &amp; send to them:</div>
+      <div style="font-size:.73rem;color:var(--muted);margin-bottom:.35rem;display:flex;align-items:center;gap:.35rem;">
+        ${iVerified
+          ? `Your code <span style="color:#4ade80;font-weight:600;">✓ shared</span>`
+          : `Your code — copy &amp; send to them:`}
+      </div>
       <div style="display:flex;align-items:center;gap:.45rem;">
         <code style="flex:1;text-align:center;font-size:.95rem;font-weight:700;letter-spacing:.14em;
                color:var(--gold);background:var(--surface2);padding:.3rem .6rem;border-radius:7px;">${myCode}</code>
-        <button class="btn btn-ghost btn-sm"
-          onclick="navigator.clipboard.writeText('${myCode}').then(()=>toast('Code copied!'))">Copy</button>
+        ${iVerified
+          ? ''
+          : `<button class="btn btn-ghost btn-sm"
+               onclick="navigator.clipboard.writeText('${myCode}').then(()=>toast('Code copied!'))">Copy</button>`}
       </div>
     </div>
     ${iVerified
