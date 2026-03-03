@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.20.01';
+const APP_VERSION = '2.30.26.20.10';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3763,7 +3763,7 @@ async function loadAndRenderProfile(userId) {
     || ((wlVis === 'friends' || wlVis === 'friends_only') && isActualFriend); // friends_only = legacy alias
   if (showWishlist) {
     const { data: wlData } = await db.from('wishlist')
-      .select('id, brand, name, ref, price, image, color, wish_privacy')
+      .select('id, brand, name, ref, url, price, image, color, wish_privacy')
       .eq('user_id', userId);
     wishlistItems = wlData || [];
     // For non-owners, filter out items that are individually restricted
@@ -4027,7 +4027,15 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           }
           return '';
         })();
-        const clickAttr = isOwn ? `onclick="cycleWishPrivacy('${escHtml(w.id)}')"` : '';
+        const clickAttr = isOwn
+          ? `onclick="cycleWishPrivacy('${escHtml(w.id)}')"`
+          : `onclick="previewWishFromEl(this)" style="cursor:pointer;"
+             data-wish-brand="${escHtml(w.brand||'')}"
+             data-wish-name="${escHtml(w.name||'')}"
+             data-wish-ref="${escHtml(w.ref||'')}"
+             data-wish-url="${escHtml(w.url||'')}"
+             data-wish-image="${escHtml(w.image||'')}"
+             data-wish-color="${escHtml(w.color||'#c9a84c')}"`;
         const tintCls   = isOwn ? (wp === 'public' ? ' wl-pub' : wp === 'followers' ? ' wl-fri' : wp === 'friends' ? ' wl-frd' : wp === 'private' ? ' wl-priv' : '') : '';
         return `<div class="showcase-card${isOwn ? ' priv-own wl-wish-card' + tintCls : ''}" data-wish-id="${escHtml(w.id)}"${isOwn ? ` data-priv="${wp||'inh'}"` : ''} ${clickAttr}>
           ${thumb}
@@ -10008,6 +10016,19 @@ function previewWatchFromEl(el) {
     url:   el.dataset.watchUrl   || '',
     image: el.dataset.watchImage || '',
     color: el.dataset.watchColor || '#c9a84c',
+  });
+}
+
+// Wishlist items on other users' profiles use the same watch preview modal.
+function previewWishFromEl(el) {
+  previewWatch({
+    id:    '',
+    brand: el.dataset.wishBrand || '',
+    name:  el.dataset.wishName  || '',
+    ref:   el.dataset.wishRef   || '',
+    url:   el.dataset.wishUrl   || '',
+    image: el.dataset.wishImage || '',
+    color: el.dataset.wishColor || '#c9a84c',
   });
 }
 
