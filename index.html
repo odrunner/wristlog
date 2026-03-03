@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.20.10';
+const APP_VERSION = '2.30.26.20.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8114,7 +8114,7 @@ function openEditWatch(id) {
   if (w.marketPrice) {
     setPriceInput('w-manual-mp', w.marketPrice);
     // Track it as the "baseline" so save logic knows it wasn't changed
-    modalFetchedPrice = (w.marketPriceSrc !== 'User Entry') ? w.marketPrice : null;
+    modalFetchedPrice = (w.marketPriceSrc === 'WatchCharts') ? w.marketPrice : null;
   } else {
     document.getElementById('w-manual-mp').value = '';
   }
