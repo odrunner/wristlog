@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.19.15';
+const APP_VERSION = '2.30.26.19.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5373,6 +5373,11 @@ async function declineFollowRequest(requesterId, notifId) {
 function confirmUnfollow(userId, btn) {
   if (btn.dataset.confirming) {
     delete btn.dataset.confirming;
+    // Reset immediately so the user sees feedback while the async call runs;
+    // unfollowUser will flip it to 'Follow' once the DB confirms.
+    btn.textContent = 'Following';
+    btn.style.borderColor = '';
+    btn.style.color = '';
     unfollowUser(userId, btn);
   } else {
     btn.dataset.confirming = '1';
