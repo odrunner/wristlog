@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.18.14';
+const APP_VERSION = '2.30.26.18.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4362,12 +4362,22 @@ async function initiateFriendRequest(userId) {
   });
   if (error) { toast('Could not start friend connection — ' + error.message, 'error'); return; }
 
-  // No notification on initiation — codes are exchanged out of band
-
   await loadFriendRequests();
   computeFriendships();
-  closeFriendPopover();
-  viewUserProfile(userId); // re-render profile (icon turns gold)
+
+  // Update popover in-place to show the code — don't close it
+  const freshReq = friendRequests.find(r =>
+    (r.initiator_id === currentUser.id && r.target_id === userId) ||
+    (r.initiator_id === userId && r.target_id === currentUser.id)
+  ) || null;
+  const popoverEl = document.getElementById('friend-popover');
+  if (popoverEl) { popoverEl.innerHTML = renderFriendPopoverContent(userId, freshReq); }
+
+  // Update the icon button to pending state without a full page reload
+  const iconBtns = Array.from(document.querySelectorAll('.friend-icon-btn'));
+  const iconBtn  = iconBtns.find(b => b.getAttribute('onclick')?.includes(`'${userId}'`));
+  if (iconBtn) iconBtn.outerHTML = friendIconBtnHTML(userId, freshReq);
+
   toast('Friend connection started — share your code with them!');
 }
 
@@ -4530,11 +4540,11 @@ function renderFriendPopoverContent(userId, req) {
   if (!req) {
     return `
       <div style="font-size:.82rem;color:var(--muted);margin-bottom:.75rem;line-height:1.45;">
-        Connect as friends — you'll each get a unique code to share out of band.
+        Connect as friends — you'll each get a unique code to share in person.
         Both users must follow each other first.
       </div>
       <button class="btn btn-primary" style="width:100%;font-size:.84rem;"
-        onclick="closeFriendPopover();initiateFriendRequest('${userId}')">
+        onclick="initiateFriendRequest('${userId}')">
         Start Friend Connection
       </button>`;
   }
