@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.19.39';
+const APP_VERSION = '2.30.26.19.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4406,7 +4406,12 @@ async function enterFriendCode(requestId, rawCode) {
 
   // Check completion directly from the fresh DB row — don't rely on the friendships Set
   // (which is gated on following.has(otherId) and could be stale).
-  const bothVerified = freshReq?.initiator_verified && freshReq?.target_verified;
+  const bothVerified = !!(freshReq?.initiator_verified && freshReq?.target_verified);
+
+  console.log('[enterFriendCode] otherId:', otherId,
+    '| initiator_verified:', freshReq?.initiator_verified,
+    '| target_verified:', freshReq?.target_verified,
+    '| bothVerified:', bothVerified);
 
   if (bothVerified) {
     // COMPLETION — both codes entered, friendship established.
@@ -4418,10 +4423,16 @@ async function enterFriendCode(requestId, rawCode) {
       db.from('notifications').delete().eq('id', staleNotif.id).then();
       userNotifs = userNotifs.filter(n => n.id !== staleNotif.id);
     }
+    console.log('[enterFriendCode] inserting friends_now for user_id:', otherId);
     const { error: ne } = await db.from('notifications').insert(
       { user_id: otherId, type: 'friends_now', actor_id: currentUser.id, is_read: false }
     );
-    if (ne) toast('Could not send friend notification — ' + ne.message, 'error');
+    if (ne) {
+      console.error('[enterFriendCode] friends_now insert failed:', ne);
+      toast('Could not send friend notification — ' + ne.message, 'error');
+    } else {
+      console.log('[enterFriendCode] friends_now inserted OK');
+    }
     // Refresh A's own notification panel (clears the stale entry above)
     loadNotifications().then(() => renderNotificationPanel());
     // Show success inside the popover, then auto-close and re-render the profile
@@ -4439,9 +4450,16 @@ async function enterFriendCode(requestId, rawCode) {
   } else {
     // Don't close — update the popover in-place to show the ✓ verified state
     // NOT YET COMPLETE — only one side verified. Notify B their code was entered.
-    db.from('notifications').insert({
+    console.log('[enterFriendCode] inserting friend_code_entered for user_id:', otherId);
+    const { error: fce } = await db.from('notifications').insert({
       user_id: otherId, type: 'friend_code_entered', actor_id: currentUser.id, is_read: false,
-    }).then(({ error: ne }) => { if (ne) console.warn('friend_code_entered notif failed:', ne.message); });
+    });
+    if (fce) {
+      console.error('[enterFriendCode] friend_code_entered insert failed:', fce);
+      toast('Could not notify them — ' + fce.message, 'error');
+    } else {
+      console.log('[enterFriendCode] friend_code_entered inserted OK');
+    }
     if (popoverEl) {
       popoverEl.innerHTML = renderFriendPopoverContent(otherId, freshReq);
     }
