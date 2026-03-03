@@ -3334,7 +3334,7 @@ function logToRow(l) {
     id: l.id, user_id: currentUser.id, watch_id: l.watchId,
     date: l.date, use_case: l.useCase||'unspecified',
     notes: l.notes||null, strap_id: l.strapId||null,
-    photo_url: l.photoUrl||null, is_public: vis === 'public',
+    photo_url: l.photoUrl||null,
     visibility: vis,
     club_id: l.clubId || null,
   };
@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.06.40';
+const APP_VERSION = '2.30.26.06.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6104,7 +6104,7 @@ async function saveEditPost() {
   // Persist to Supabase
   if (currentUser) {
     const { error } = await db.from('logs')
-      .update({ notes: newNotes || null, photo_url: finalPhoto, visibility: vis, is_public: vis === 'public', club_id: clubId })
+      .update({ notes: newNotes || null, photo_url: finalPhoto, visibility: vis, club_id: clubId })
       .eq('id', editPostLogId).eq('user_id', currentUser.id);
     if (error) { toast('Save failed — ' + error.message, 'error'); return; }
   }
@@ -6189,7 +6189,7 @@ async function saveNewPost() {
       id: entry.id, user_id: currentUser.id, watch_id: null,
       date: entry.date, use_case: 'unspecified',
       notes: entry.notes, photo_url: entry.photoUrl,
-      is_public: vis === 'public', visibility: vis,
+      visibility: vis,
       club_id: null,
     }, { onConflict: 'id' });
     if (error) { toast('Post failed — ' + error.message, 'error'); return; }
