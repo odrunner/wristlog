@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.16.58';
+const APP_VERSION = '2.30.26.17.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3730,8 +3730,9 @@ async function loadAndRenderProfile(userId) {
       if (collectionGated) {
         showcase = [];
       } else if (isActualFriend) {
-        // Friends see everything except explicitly private
-        q = q.neq('watch_privacy', 'private');
+        // Friends see everything except explicitly private.
+        // Must use .or() + explicit null check — .neq() silently excludes NULL rows in PostgREST.
+        q = q.or('watch_privacy.neq.private,watch_privacy.is.null');
         const { data } = await q.order('brand').order('name');
         showcase = data || [];
       } else if (isFriend) {
