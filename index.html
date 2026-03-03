@@ -2017,8 +2017,8 @@
   <!-- ════ GLOBAL REMINDER BANNER ════ -->
   <div id="reminder-banner" class="reminder-banner hidden">
     <div class="reminder-banner-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
-    <div class="reminder-banner-body">
-      <div class="reminder-banner-title">Don't forget to log your watch today!</div>
+    <div class="reminder-banner-body" onclick="nav(document.querySelector('nav button[data-page=\'track\']'))" style="cursor:pointer;">
+      <div class="reminder-banner-title">Don't forget to log your watch today! →</div>
       <div class="reminder-banner-sub">It's past 5 PM and no wear has been recorded yet.</div>
     </div>
     <button class="reminder-banner-close" onclick="dismissReminder()" title="Dismiss">✕</button>
@@ -3425,7 +3425,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.20.56';
+const APP_VERSION = '2.30.26.21.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
