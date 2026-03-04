@@ -6,6 +6,7 @@
   <title>WRotate – Every Watch. Every Wear.</title>
   <meta name="description" content="Track your watch collection, log every wear, and share with friends. Cost-per-wear stats, market values, social feed, clubs, and wishlist — all in one app.">
   <meta name="robots" content="index, follow">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://accounts.google.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https://api.wrotate.com https://*.supabase.co data: blob: https:; connect-src 'self' https://api.wrotate.com https://*.supabase.co https://corsproxy.io https://api.allorigins.win https://watchcharts.com https://accounts.google.com wss://api.wrotate.com; font-src 'self'; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self';">
   <link rel="canonical" href="https://wrotate.com/">
   <!-- Open Graph -->
   <meta property="og:type" content="website">
@@ -59,8 +60,8 @@
       img.src = url;
     })();
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" integrity="sha384-Sm2s7OXxsAMTyJ4iIyRBgVpeGUvMPk2lRQnnZhE78Wej7oggIoolKt+SCt0XJbUB" crossorigin="anonymous"></script>
   <!-- Apply saved theme before first paint to avoid flash -->
   <script>
     (function(){
@@ -3336,7 +3337,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.10.12';
+const APP_VERSION = '2.30.26.10.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
