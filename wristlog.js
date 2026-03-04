@@ -839,6 +839,7 @@ export function notificationBody(type, actorName) {
     case 'like':               return `${nm} liked your wear log`;
     case 'comment':            return `${nm} commented on your wear log`;
     case 'comment_also':       return `${nm} also commented on a post you liked or commented on`;
+    case 'comment_like':       return `${nm} liked your comment`;
     case 'mention':            return `${nm} mentioned you in a comment`;
     case 'club_join_request':  return `${nm} wants to join your club`;
     case 'club_join_accepted': return `${nm} approved your club request`;

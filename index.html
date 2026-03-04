@@ -1459,19 +1459,32 @@
       padding: .55rem 1rem .8rem;
       border-top: 1px solid var(--border);
     }
-    .comment-item  { display: flex; gap: .6rem; margin-bottom: .55rem; }
+    .comment-item  { display: flex; gap: .55rem; margin-bottom: .65rem; align-items: flex-start; }
     .comment-avatar {
-      width: 26px; height: 26px; border-radius: 50%;
+      width: 28px; height: 28px; border-radius: 50%;
       background: var(--gold); color: #000; font-size: .6rem;
       font-weight: 700; display: flex; align-items: center;
       justify-content: center; flex-shrink: 0; margin-top: .1rem;
     }
+    .comment-content { flex: 1; min-width: 0; }
     .comment-body {
-      font-size: .8rem; background: var(--hover);
-      border-radius: 10px; padding: .35rem .65rem;
-      line-height: 1.45; word-break: break-word;
+      font-size: .82rem; line-height: 1.45; word-break: break-word;
     }
     .comment-username { font-weight: 700; }
+    .comment-time { font-size: .7rem; color: var(--muted); font-weight: 400; margin-left: .35rem; }
+    .comment-heart-col {
+      display: flex; flex-direction: column; align-items: center;
+      flex-shrink: 0; padding-top: .15rem; min-width: 24px;
+    }
+    .comment-heart-btn {
+      background: none; border: none; cursor: pointer; padding: .15rem;
+      color: var(--muted); display: flex; align-items: center;
+      font-family: inherit; transition: color .15s;
+    }
+    .comment-heart-btn:hover { color: var(--text); }
+    .comment-heart-btn.liked { color: #ef4444; }
+    .comment-heart-btn svg { width: 12px; height: 12px; }
+    .comment-heart-count { font-size: .62rem; color: var(--muted); line-height: 1; }
     .comment-input-row { display: flex; gap: .5rem; margin-top: .65rem; }
     .comment-input {
       flex: 1; background: var(--hover); border: 1px solid var(--border);
@@ -3438,7 +3451,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.20.05';
+const APP_VERSION = '2.30.26.20.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3483,6 +3496,21 @@ function formatFeedDate(dateStr, createdAt) {
   if (diff === 1) return 'Yesterday';
   if (diff < 7)  return `${diff} day${diff === 1 ? '' : 's'} ago`;
   return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+}
+
+function formatCommentTime(createdAt) {
+  if (!createdAt) return '';
+  const now = new Date();
+  const ts  = new Date(createdAt);
+  const diffMs = now - ts;
+  const diffM  = Math.floor(diffMs / 60000);
+  if (diffM < 1)  return 'Just now';
+  if (diffM < 60) return `${diffM}m ago`;
+  const diffH = Math.floor(diffM / 60);
+  if (diffH < 24) return `${diffH}h ago`;
+  const diffD = Math.floor(diffH / 24);
+  if (diffD < 7)  return `${diffD}d ago`;
+  return ts.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 // ── My Profile ────────────────────────────────────────────────────────────
@@ -4847,6 +4875,16 @@ async function renderClubDetail(clubId) {
       });
     }
     logIds.forEach(id => clubCommentCounts[id] = (clubComments[id] || []).length);
+    // Load comment likes for club comments
+    const clubCommentIds = (clubCommentData || []).map(c => c.id);
+    if (clubCommentIds.length) {
+      const { data: clData } = await db.from('comment_likes').select('comment_id, user_id').in('comment_id', clubCommentIds);
+      (clData || []).forEach(cl => {
+        if (!commentLikes[cl.comment_id]) commentLikes[cl.comment_id] = { count: 0, liked: false };
+        commentLikes[cl.comment_id].count++;
+        if (cl.user_id === currentUser.id) commentLikes[cl.comment_id].liked = true;
+      });
+    }
     // Temporarily override feed globals for renderFeedCard
     const prevFeedLikes         = feedLikes;
     const prevFeedComments      = feedComments;
@@ -5548,6 +5586,7 @@ function renderNotificationPanel() {
                : n.type === 'like'            ? `${nm} liked your wear log`
                : n.type === 'comment'         ? `${nm} commented on your wear log`
                : n.type === 'comment_also'    ? `${nm} also commented on a post you liked or commented on`
+               : n.type === 'comment_like'   ? `${nm} liked your comment`
                : n.type === 'mention'        ? `${nm} mentioned you in a comment`
                : n.type === 'club_join_request'  ? `${nm} wants to join your club`
                : n.type === 'club_join_accepted' ? `${nm} approved your club request`
@@ -5583,7 +5622,7 @@ function renderNotificationPanel() {
         <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem;"
           onclick="event.stopPropagation();declineFriendRequest('${n.actor_id}','${n.id}')">Decline</button>
       </div>` : '';
-    const notifClick = (n.type === 'like' || n.type === 'comment' || n.type === 'comment_also' || n.type === 'mention')
+    const notifClick = (n.type === 'like' || n.type === 'comment' || n.type === 'comment_also' || n.type === 'comment_like' || n.type === 'mention')
       ? `toggleNotifPanel();scrollToFeedPost('${n.ref_id}')`
       : (n.type === 'follow_request' || n.type === 'club_join_request' || n.type === 'club_invite' || n.type === 'friend_request') ? ''
       : (n.type === 'club_join_accepted' || n.type === 'club_promoted') ? `toggleNotifPanel();openClubDetail('${n.ref_id}')`
@@ -5764,6 +5803,18 @@ async function loadFeed() {
     }
     logIds.forEach(id => feedCommentCounts[id] = (feedComments[id] || []).length);
 
+    // Load comment likes
+    const allCommentIds = (commentData || []).map(c => c.id);
+    if (allCommentIds.length) {
+      const { data: clData } = await db.from('comment_likes').select('comment_id, user_id').in('comment_id', allCommentIds);
+      commentLikes = {};
+      (clData || []).forEach(cl => {
+        if (!commentLikes[cl.comment_id]) commentLikes[cl.comment_id] = { count: 0, liked: false };
+        commentLikes[cl.comment_id].count++;
+        if (cl.user_id === currentUser.id) commentLikes[cl.comment_id].liked = true;
+      });
+    }
+
     feedItems = rawLogs.map(l => ({
       ...l,
       profile: profileMap[l.user_id] || null,
@@ -5889,14 +5940,27 @@ function renderFeedCard(item) {
     const showAll = expanded;
     const displayComments = showAll ? allComments : allComments.slice(0, COMMENT_PREVIEW);
     const remaining = allComments.length - displayComments.length;
-    const commentItems = displayComments.map(c => `
+    const commentItems = displayComments.map(c => {
+      const cl = commentLikes[c.id] || { count: 0, liked: false };
+      const heartSvg = cl.liked
+        ? `<svg viewBox="0 0 24 24" fill="#ef4444" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>`
+        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+      return `
       <div class="comment-item">
         <div class="comment-avatar">${profileInitials(c.profile)}</div>
-        <div class="comment-body">
-          <span class="comment-username">${escHtml(c.profile?.display_name || c.profile?.username || 'User')}</span>
-          <span> ${renderCommentBody(c.body)}</span>
+        <div class="comment-content">
+          <div class="comment-body">
+            <span class="comment-username">${escHtml(c.profile?.display_name || c.profile?.username || 'User')}</span>
+            <span class="comment-time">${formatCommentTime(c.created_at)}</span>
+            ${renderCommentBody(c.body)}
+          </div>
         </div>
-      </div>`).join('');
+        <div class="comment-heart-col">
+          <button class="comment-heart-btn${cl.liked ? ' liked' : ''}" onclick="toggleCommentLike('${c.id}','${item.id}')">${heartSvg}</button>
+          ${cl.count > 0 ? `<span class="comment-heart-count">${cl.count}</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
     const viewMoreHtml = remaining > 0
       ? `<div class="comments-view-more" onclick="toggleComments('${item.id}')">View ${remaining} more comment${remaining !== 1 ? 's' : ''}</div>`
       : '';
@@ -6231,6 +6295,28 @@ async function toggleLike(logId) {
   }
 }
 
+async function toggleCommentLike(commentId, logId) {
+  if (!currentUser) return;
+  const cur = commentLikes[commentId] || { count: 0, liked: false };
+  commentLikes[commentId] = cur.liked
+    ? { count: Math.max(0, cur.count - 1), liked: false }
+    : { count: cur.count + 1, liked: true };
+  refreshFeedCard(logId);
+  if (cur.liked) {
+    await db.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', currentUser.id);
+  } else {
+    await db.from('comment_likes').insert({ comment_id: commentId, user_id: currentUser.id });
+    // Notify the comment author
+    const allComments = feedComments[logId] || [];
+    const comment = allComments.find(c => c.id === commentId);
+    if (comment && comment.user_id !== currentUser.id) {
+      db.from('notifications').insert({
+        user_id: comment.user_id, type: 'comment_like', actor_id: currentUser.id, ref_id: logId, is_read: false
+      }).then(({ error }) => { if (error) console.error('[WristLog] comment_like notif:', error.code, error.message, error.details, error.hint); });
+    }
+  }
+}
+
 function refreshFeedCard(logId) {
   const item = feedItems.find(i => i.id === logId);
   if (!item) return;
@@ -6258,6 +6344,16 @@ async function fetchComments(logId) {
   (profiles || []).forEach(p => pm[p.id] = p);
   feedComments[logId] = data.map(c => ({ ...c, profile: pm[c.user_id] || null }));
   feedCommentCounts[logId] = data.length;
+  // Load comment likes for these comments
+  const cIds = data.map(c => c.id);
+  if (cIds.length) {
+    const { data: clData } = await db.from('comment_likes').select('comment_id, user_id').in('comment_id', cIds);
+    (clData || []).forEach(cl => {
+      if (!commentLikes[cl.comment_id]) commentLikes[cl.comment_id] = { count: 0, liked: false };
+      commentLikes[cl.comment_id].count++;
+      if (cl.user_id === currentUser.id) commentLikes[cl.comment_id].liked = true;
+    });
+  }
 }
 // ── @mention autocomplete ─────────────────────────────────────────────────
 let _mentionLogId    = null;   // which feed card the active dropdown belongs to
@@ -6764,6 +6860,7 @@ let feedItems         = [];        // enriched log rows for feed
 let feedLikes         = {};        // logId → {count, liked}
 let feedCommentCounts = {};        // logId → count
 let feedComments      = {};        // logId → [{...}] (loaded on demand)
+let commentLikes      = {};        // commentId → {count, liked}
 let expandedComments  = new Set(); // logIds currently showing comments
 let following         = new Set(); // user_ids current user follows
 let followingProfiles = [];        // [{id, username, display_name}] for @mention autocomplete
