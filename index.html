@@ -2967,7 +2967,7 @@
       <button class="btn btn-ghost"   onclick="closeEditPost()">Cancel</button>
     </div>
     <div style="margin-top:.85rem;text-align:center;">
-      <button id="ep-delete-btn" onclick="deletePostFromFeed()"
+      <button id="ep-delete-btn" onclick="this.dataset.confirm ? confirmDeletePost() : deletePostFromFeed()"
         style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:.82rem;padding:.3rem .6rem;font-family:inherit;">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> Delete post
       </button>
@@ -3451,7 +3451,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.22.07';
+const APP_VERSION = '2.30.26.22.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6177,7 +6177,16 @@ async function saveEditPost() {
   toast('Post updated!');
 }
 
-async function deletePostFromFeed() {
+function deletePostFromFeed() {
+  const btn = document.getElementById('ep-delete-btn');
+  if (!btn || btn.dataset.confirm) return;
+  btn.dataset.confirm = '1';
+  btn.innerHTML = 'Sure? Tap again to delete';
+  btn.style.fontWeight = '600';
+  setTimeout(() => { if (btn) { delete btn.dataset.confirm; btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> Delete post'; btn.style.fontWeight = ''; } }, 3000);
+}
+
+async function confirmDeletePost() {
   if (!editPostLogId) return;
   const logId = editPostLogId;
   const fi = feedItems.find(i => i.id === logId);
