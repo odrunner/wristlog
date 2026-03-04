@@ -3423,7 +3423,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.19.17';
+const APP_VERSION = '2.30.26.19.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4407,10 +4407,10 @@ async function acceptFriendRequest(initiatorId, notifId) {
     user_id: initiatorId, type: 'friend_accepted', actor_id: currentUser.id, is_read: false,
   });
 
-  // Mark the notification as read and update its type so it no longer shows action buttons
-  await db.from('notifications').update({ type: 'friend_accepted', is_read: true }).eq('id', notifId);
+  // Mark the notification as read (keep type as friend_request — DB constraint may block type change)
+  await db.from('notifications').update({ is_read: true }).eq('id', notifId);
   const notif = userNotifs.find(n => n.id === notifId);
-  if (notif) { notif.type = 'friend_accepted'; notif.is_read = true; }
+  if (notif) { notif.is_read = true; notif._accepted = true; }
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
   updateBellBadge();
 
@@ -5536,7 +5536,7 @@ function renderNotificationPanel() {
                : n.type === 'club_join_accepted' ? `${nm} approved your club request`
                : n.type === 'club_invite'        ? `${nm} invited you to join a club`
                : n.type === 'club_promoted'        ? `${nm} made you an owner of a club`
-               : n.type === 'friend_request'       ? (n._declined || !friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'pending') ? `Close friend request from ${nm} declined` : `${nm} wants to be close friends`)
+               : n.type === 'friend_request'       ? (n._accepted || friendships.has(n.actor_id) ? `You and ${nm} are now close friends` : n._declined || !friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'pending') ? `Close friend request from ${nm} declined` : `${nm} wants to be close friends`)
                : n.type === 'friend_accepted'      ? `You and ${nm} are now close friends` : '';
     const actionsHtml = (n.type === 'follow_request' && !n._declined) ? `
       <div class="notif-follow-actions">
@@ -5559,7 +5559,7 @@ function renderNotificationPanel() {
         <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem;"
           onclick="event.stopPropagation();declineClubInvite('${n.ref_id}','${n.id}')">Decline</button>
       </div>`
-      : (n.type === 'friend_request' && !n._declined && friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'pending')) ? `
+      : (n.type === 'friend_request' && !n._declined && !n._accepted && !friendships.has(n.actor_id) && friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'pending')) ? `
       <div class="notif-follow-actions">
         <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
           onclick="event.stopPropagation();acceptFriendRequest('${n.actor_id}','${n.id}')">Accept</button>
