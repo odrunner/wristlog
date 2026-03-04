@@ -3305,7 +3305,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.09.22';
+const APP_VERSION = '2.30.26.09.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11245,7 +11245,7 @@ function dismissReminder() {
 //     title      text not null,
 //     details    text,
 //     email      text,
-//     status     text not null default 'new' check (status in ('new', 'in_progress', 'resolved', 'wontfix')),
+//     status     text not null default 'pending' check (status in ('pending', 'reviewed', 'resolved', 'ignored')),
 //     app_version text,
 //     browser    text
 //   );
