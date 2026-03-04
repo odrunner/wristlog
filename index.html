@@ -154,20 +154,23 @@
       overflow-y: auto;
       padding: 2.5rem 1.25rem 4rem;
     }
-    .landing-wrap { width: 100%; max-width: 900px; display: flex; flex-direction: column; align-items: center; }
-    .landing-hero { width: 100%; text-align: center; margin-bottom: 2rem; }
-    .landing-cols { width: 100%; display: flex; align-items: flex-start; gap: 3rem; }
-    .landing-left { flex: 1; min-width: 0; }
-    .landing-right { flex-shrink: 0; width: 340px; position: sticky; top: 2rem; }
-    .landing-features { display: flex; flex-direction: column; gap: .65rem; text-align: left; }
+    .landing-wrap { width: 100%; max-width: 880px; display: flex; flex-direction: column; align-items: center; }
+    .landing-hero { width: 100%; text-align: center; margin-bottom: 1.25rem; }
+    .landing-cta { width: 100%; max-width: 380px; margin: 0 auto 1.5rem; text-align: center; }
+    .landing-preview { width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; display:flex; gap:1rem; padding:.5rem 0 1rem; margin-bottom:1.75rem; scroll-snap-type:x mandatory; scrollbar-width:none; justify-content:center; }
+    .landing-preview::-webkit-scrollbar { display:none; }
+    .landing-preview-card { flex-shrink:0; width:200px; border-radius:16px; overflow:hidden; border:1px solid var(--border); box-shadow:0 2px 12px rgba(0,0,0,.08); scroll-snap-align:center; background:var(--surface); }
+    .landing-preview-card img { width:100%; display:block; }
+    .landing-preview-label { text-align:center; font-size:.7rem; font-weight:600; color:var(--muted); padding:.4rem 0; letter-spacing:.04em; text-transform:uppercase; }
+    .landing-features { display: flex; flex-direction: column; gap: .65rem; text-align: left; width: 100%; max-width: 520px; margin: 0 auto; }
     .landing-feat { display: flex; align-items: center; gap: .9rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .9rem 1rem; }
     .landing-feat-icon { width: 2rem; height: 2rem; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--gold); }
     .landing-feat-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
     .landing-feat-title { font-size: .88rem; font-weight: 600; color: var(--text); margin-bottom: .2rem; }
     .landing-feat-desc { font-size: .79rem; color: var(--muted); line-height: 1.5; }
     @media (max-width: 640px) {
-      .landing-cols { flex-direction: column; gap: 1.5rem; }
-      .landing-right { width: 100%; position: static; order: -1; }
+      .landing-preview { justify-content:flex-start; padding-left:1rem; padding-right:1rem; }
+      .landing-preview-card { width:160px; }
     }
     .auth-box {
       width: 100%; max-width: 380px;
@@ -184,7 +187,7 @@
     .auth-tagline { text-align: center; color: var(--muted); font-size: .82rem; margin-bottom: 1.75rem; }
     .btn-google {
       display: flex; align-items: center; justify-content: center; gap: .75rem;
-      width: 100%; padding: .85rem 1rem; margin-bottom: 1.5rem;
+      width: 100%; padding: .85rem 1rem; margin-bottom: .75rem;
       background: #fff; color: #3c4043; border: 1px solid #dadce0; border-radius: 10px;
       font-size: .95rem; font-weight: 600; cursor: pointer; font-family: inherit;
       transition: box-shadow .15s, background .15s;
@@ -1728,94 +1731,104 @@
       <div style="font-size:.95rem;color:var(--muted);line-height:1.55;">Track your collection. Share with friends. Join the community.</div>
     </div>
 
-    <!-- COLUMNS -->
-    <div class="landing-cols">
+    <!-- SIGN IN (above the fold) -->
+    <div class="landing-cta">
+      <div id="auth-error" class="auth-error"></div>
+      <button class="btn-google" onclick="signInWithGoogle()">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+          <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+          <path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+          <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+      <div class="auth-divider">First time? Just sign in — account created automatically.</div>
+      <!-- Dev-only anonymous login — localhost only -->
+      <div id="dev-login-wrap" style="display:none;margin-top:.5rem;">
+        <button onclick="devLogin()" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.45rem 1.1rem;font-size:.78rem;cursor:pointer;font-family:inherit;">
+          Dev Login (localhost only)
+        </button>
+      </div>
+    </div>
 
-      <!-- LEFT: features -->
-      <div class="landing-left">
-        <div class="landing-features">
-          <div class="landing-feat">
-            <div class="landing-feat-icon">
-              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
-            </div>
-            <div>
-              <div class="landing-feat-title">Track Every Wear</div>
-              <div class="landing-feat-desc">Log which watch you wore, with straps, photos, and notes. Build a personal wear history over time.</div>
-            </div>
-          </div>
-          <div class="landing-feat">
-            <div class="landing-feat-icon">
-              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-            </div>
-            <div>
-              <div class="landing-feat-title">Build Your Collection</div>
-              <div class="landing-feat-desc">Add watches by URL — brand, photo, and price fill in automatically. Track cost-per-wear, market value, insurance, and receipts.</div>
-            </div>
-          </div>
-          <div class="landing-feat">
-            <div class="landing-feat-icon">
-              <svg viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12h-6v-6h-4v6z"/></svg>
-            </div>
-            <div>
-              <div class="landing-feat-title">Social Feed</div>
-              <div class="landing-feat-desc">See what others are wearing. Follow collectors, like and comment on wears, and discover new watches through your feed.</div>
-            </div>
-          </div>
-          <div class="landing-feat">
-            <div class="landing-feat-icon">
-              <svg viewBox="0 0 24 24"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
-            </div>
-            <div>
-              <div class="landing-feat-title">Close Friends & Privacy</div>
-              <div class="landing-feat-desc">Share your collection securely. Control who sees what with granular privacy — public, followers only, or close friends only.</div>
-            </div>
-          </div>
-          <div class="landing-feat">
-            <div class="landing-feat-icon">
-              <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
-            </div>
-            <div>
-              <div class="landing-feat-title">Clubs & Wishlist</div>
-              <div class="landing-feat-desc">Create or join clubs around brands and styles. Maintain a wishlist of your grails and track market prices.</div>
-            </div>
-          </div>
-          <div class="landing-feat">
-            <div class="landing-feat-icon">
-              <svg viewBox="0 0 24 24"><path d="M4 20h16"/><rect x="4" y="13" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/></svg>
-            </div>
-            <div>
-              <div class="landing-feat-title">Stats & Insights</div>
-              <div class="landing-feat-desc">Wearing frequency, cost-per-wear, brand breakdowns, collection value, and your most worn watches.</div>
-            </div>
-          </div>
+    <!-- APP PREVIEW SCREENSHOTS -->
+    <div class="landing-preview">
+      <div class="landing-preview-card">
+        <img src="https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/media/landing/track.PNG" alt="Track page" loading="lazy">
+        <div class="landing-preview-label">Track</div>
+      </div>
+      <div class="landing-preview-card">
+        <img src="https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/media/landing/collection.PNG" alt="Collection page" loading="lazy">
+        <div class="landing-preview-label">Collection</div>
+      </div>
+      <div class="landing-preview-card">
+        <img src="https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/media/landing/wishlist.PNG" alt="Wishlist page" loading="lazy">
+        <div class="landing-preview-label">Wishlist</div>
+      </div>
+      <div class="landing-preview-card">
+        <img src="https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/media/landing/stats.PNG" alt="Stats page" loading="lazy">
+        <div class="landing-preview-label">Stats</div>
+      </div>
+    </div>
+
+    <!-- FEATURES -->
+    <div class="landing-features">
+      <div class="landing-feat">
+        <div class="landing-feat-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
+        </div>
+        <div>
+          <div class="landing-feat-title">Track Every Wear</div>
+          <div class="landing-feat-desc">Log which watch you wore, with straps, photos, and notes. Build a personal wear history over time.</div>
         </div>
       </div>
-
-      <!-- RIGHT: sign in -->
-      <div class="landing-right">
-        <div class="auth-box" style="max-width:100%;">
-          <div class="auth-tagline">Sign in to get started.</div>
-          <div id="auth-error" class="auth-error"></div>
-          <button class="btn-google" onclick="signInWithGoogle()">
-            <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-              <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-              <path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
-              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-            </svg>
-            Continue with Google
-          </button>
-          <div class="auth-divider">First time? Just sign in — account created automatically.</div>
-          <!-- Dev-only anonymous login — localhost only -->
-          <div id="dev-login-wrap" style="display:none;margin-top:1rem;text-align:center;">
-            <button onclick="devLogin()" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.45rem 1.1rem;font-size:.78rem;cursor:pointer;font-family:inherit;">
-              Dev Login (localhost only)
-            </button>
-          </div>
+      <div class="landing-feat">
+        <div class="landing-feat-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        </div>
+        <div>
+          <div class="landing-feat-title">Build Your Collection</div>
+          <div class="landing-feat-desc">Add watches by URL — brand, photo, and price fill in automatically. Track cost-per-wear, market value, insurance, and receipts.</div>
         </div>
       </div>
-
-    </div><!-- /landing-cols -->
+      <div class="landing-feat">
+        <div class="landing-feat-icon">
+          <svg viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12h-6v-6h-4v6z"/></svg>
+        </div>
+        <div>
+          <div class="landing-feat-title">Social Feed</div>
+          <div class="landing-feat-desc">See what others are wearing. Follow collectors, like and comment on wears, and discover new watches through your feed.</div>
+        </div>
+      </div>
+      <div class="landing-feat">
+        <div class="landing-feat-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div>
+          <div class="landing-feat-title">Close Friends & Privacy</div>
+          <div class="landing-feat-desc">Share your collection securely. Control who sees what with granular privacy — public, followers only, or close friends only.</div>
+        </div>
+      </div>
+      <div class="landing-feat">
+        <div class="landing-feat-icon">
+          <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
+        </div>
+        <div>
+          <div class="landing-feat-title">Clubs & Wishlist</div>
+          <div class="landing-feat-desc">Create or join clubs around brands and styles. Maintain a wishlist of your grails and track market prices.</div>
+        </div>
+      </div>
+      <div class="landing-feat">
+        <div class="landing-feat-icon">
+          <svg viewBox="0 0 24 24"><path d="M4 20h16"/><rect x="4" y="13" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/></svg>
+        </div>
+        <div>
+          <div class="landing-feat-title">Stats & Insights</div>
+          <div class="landing-feat-desc">Wearing frequency, cost-per-wear, brand breakdowns, collection value, and your most worn watches.</div>
+        </div>
+      </div>
+    </div>
 
   </div>
 </div>
@@ -3469,7 +3482,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.06.51';
+const APP_VERSION = '2.30.26.08.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
