@@ -286,13 +286,13 @@ CREATE POLICY "Anyone can read club members" ON club_members
 DROP POLICY IF EXISTS "Users can join clubs" ON club_members;
 CREATE POLICY "Users can join clubs" ON club_members
   FOR INSERT WITH CHECK (auth.uid() = user_id OR auth.uid() IN (
-    SELECT user_id FROM club_members WHERE club_id = club_members.club_id AND role = 'owner'
+    SELECT c.created_by FROM clubs c WHERE c.id = club_members.club_id
   ));
 
 DROP POLICY IF EXISTS "Users can leave clubs or owners can remove" ON club_members;
 CREATE POLICY "Users can leave clubs or owners can remove" ON club_members
   FOR DELETE USING (auth.uid() = user_id OR auth.uid() IN (
-    SELECT cm.user_id FROM club_members cm WHERE cm.club_id = club_members.club_id AND cm.role = 'owner'
+    SELECT c.created_by FROM clubs c WHERE c.id = club_members.club_id
   ));
 
 -- ─── 15. CLUB JOIN REQUESTS ────────────────────────────
