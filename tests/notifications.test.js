@@ -78,11 +78,11 @@ describe('notificationBody', () => {
   });
 
   // Friend types
-  it('friend_request — "wants to be friends"', () => {
-    expect(notificationBody('friend_request', 'Muge')).toBe('Muge wants to be friends');
+  it('friend_request — "wants to be close friends"', () => {
+    expect(notificationBody('friend_request', 'Muge')).toBe('Muge wants to be close friends');
   });
-  it('friend_accepted — "accepted your friend request"', () => {
-    expect(notificationBody('friend_accepted', 'Muge')).toBe('Muge accepted your friend request');
+  it('friend_accepted — "accepted your close friend request"', () => {
+    expect(notificationBody('friend_accepted', 'Muge')).toBe('Muge accepted your close friend request');
   });
 
   it('all 13 active types produce non-empty body', () => {
