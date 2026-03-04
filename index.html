@@ -3469,7 +3469,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.06.35';
+const APP_VERSION = '2.30.26.06.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5534,6 +5534,11 @@ async function unfriendFromCard(userId, btn) {
     btn.style.borderColor = '';
     btn.style.color = '';
     btn.onclick = function() { confirmUnfollow(userId, this); };
+    // Add back the close-friend icon so user can re-request
+    const wrapper = btn.parentElement;
+    if (wrapper && !wrapper.querySelector('.friend-icon-btn')) {
+      wrapper.insertAdjacentHTML('beforeend', friendIconBtnHTML(userId, null));
+    }
   }
 }
 async function unfollowUser(userId, btn) {
