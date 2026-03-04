@@ -4,10 +4,40 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WRotate – Every Watch. Every Wear.</title>
-  <link rel="icon" id="favicon" type="image/svg+xml" href="">
-  <link rel="apple-touch-icon" id="touch-icon" href="">
+  <meta name="description" content="Track your watch collection, log every wear, and share with friends. Cost-per-wear stats, market values, social feed, clubs, and wishlist — all in one app.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://wrotate.com/">
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://wrotate.com/">
+  <meta property="og:title" content="WRotate – Every Watch. Every Wear.">
+  <meta property="og:description" content="Track your watch collection, log every wear, and share with friends. Cost-per-wear stats, market values, social feed, clubs, and wishlist.">
+  <meta property="og:image" content="https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/media/landing/collection.PNG">
+  <meta property="og:site_name" content="WRotate">
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="WRotate – Every Watch. Every Wear.">
+  <meta name="twitter:description" content="Track your watch collection, log every wear, and share with friends. Stats, social feed, clubs, and wishlist.">
+  <meta name="twitter:image" content="https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/media/landing/collection.PNG">
+  <!-- Icons -->
+  <link rel="icon" id="favicon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" id="touch-icon" href="icon.svg">
   <meta name="theme-color" content="#0b0b10">
   <link rel="manifest" href="manifest.json">
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "WRotate",
+    "url": "https://wrotate.com",
+    "description": "Track your watch collection, log every wear, and share with friends. Cost-per-wear stats, market values, social feed, clubs, and wishlist.",
+    "applicationCategory": "LifestyleApplication",
+    "operatingSystem": "Any",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Organization", "name": "WRotate" }
+  }
+  </script>
   <script>
     (function(){
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
@@ -166,7 +196,7 @@
     .landing-feat { display: flex; align-items: center; gap: .9rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .9rem 1rem; }
     .landing-feat-icon { width: 2rem; height: 2rem; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--gold); }
     .landing-feat-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-    .landing-feat-title { font-size: .88rem; font-weight: 600; color: var(--text); margin-bottom: .2rem; }
+    .landing-feat-title { font-size: .88rem; font-weight: 600; color: var(--text); margin: 0 0 .2rem; }
     .landing-feat-desc { font-size: .79rem; color: var(--muted); line-height: 1.5; }
     @media (max-width: 640px) {
       .landing-preview { justify-content:flex-start; padding-left:1rem; padding-right:1rem; }
@@ -1594,6 +1624,7 @@
   </style>
 </head>
 <body>
+<noscript><div style="padding:3rem 1.5rem;text-align:center;font-family:system-ui,sans-serif;color:#aaa;"><p style="font-size:1.2rem;font-weight:700;margin-bottom:.5rem;">WRotate requires JavaScript</p><p>Please enable JavaScript in your browser to use WRotate — a watch collection, rotation, and wear tracker.</p></div></noscript>
 
 <!-- ════ AUTH / LANDING SCREEN ════ -->
 <div id="auth-screen">
@@ -1609,8 +1640,8 @@
         </svg>
         W<span style="font-weight:400;letter-spacing:.04em;">rotate</span>
       </div>
-      <div style="font-size:1.75rem;font-weight:800;color:var(--text);line-height:1.25;margin-bottom:.5rem;">Every Watch. Every Wear.</div>
-      <div style="font-size:.95rem;color:var(--muted);line-height:1.55;">Track your collection. Share with friends. Join the community.</div>
+      <h1 style="font-size:1.75rem;font-weight:800;color:var(--text);line-height:1.25;margin:0 0 .5rem;">Every Watch. Every Wear.</h1>
+      <p style="font-size:.95rem;color:var(--muted);line-height:1.55;margin:0;">Track your collection. Share with friends. Join the community.</p>
     </div>
 
     <!-- SIGN IN (above the fold) -->
@@ -1661,7 +1692,7 @@
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
         </div>
         <div>
-          <div class="landing-feat-title">Track Every Wear</div>
+          <h2 class="landing-feat-title">Track Every Wear</h2>
           <div class="landing-feat-desc">Log which watch you wore, with straps, photos, and notes. Build a personal wear history over time.</div>
         </div>
       </div>
@@ -1670,7 +1701,7 @@
           <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
         </div>
         <div>
-          <div class="landing-feat-title">Build Your Collection</div>
+          <h2 class="landing-feat-title">Build Your Collection</h2>
           <div class="landing-feat-desc">Add watches by URL — brand, photo, and price fill in automatically. Track cost-per-wear, market value, insurance, and receipts.</div>
         </div>
       </div>
@@ -1679,7 +1710,7 @@
           <svg viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12h-6v-6h-4v6z"/></svg>
         </div>
         <div>
-          <div class="landing-feat-title">Social Feed</div>
+          <h2 class="landing-feat-title">Social Feed</h2>
           <div class="landing-feat-desc">See what others are wearing. Follow collectors, like and comment on wears, and discover new watches through your feed.</div>
         </div>
       </div>
@@ -1688,7 +1719,7 @@
           <svg viewBox="0 0 24 24"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
         </div>
         <div>
-          <div class="landing-feat-title">Close Friends & Privacy</div>
+          <h2 class="landing-feat-title">Close Friends &amp; Privacy</h2>
           <div class="landing-feat-desc">Share your collection securely. Control who sees what with granular privacy — public, followers only, or close friends only.</div>
         </div>
       </div>
@@ -1697,7 +1728,7 @@
           <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
         </div>
         <div>
-          <div class="landing-feat-title">Clubs & Wishlist</div>
+          <h2 class="landing-feat-title">Clubs &amp; Wishlist</h2>
           <div class="landing-feat-desc">Create or join clubs around brands and styles. Maintain a wishlist of your grails and track market prices.</div>
         </div>
       </div>
@@ -1706,7 +1737,7 @@
           <svg viewBox="0 0 24 24"><path d="M4 20h16"/><rect x="4" y="13" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/></svg>
         </div>
         <div>
-          <div class="landing-feat-title">Stats & Insights</div>
+          <h2 class="landing-feat-title">Stats &amp; Insights</h2>
           <div class="landing-feat-desc">Wearing frequency, cost-per-wear, brand breakdowns, collection value, and your most worn watches.</div>
         </div>
       </div>
@@ -3305,7 +3336,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.09.27';
+const APP_VERSION = '2.30.26.09.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
