@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   todayStr, fmtDate, fmtMonYear, initials, escHtml,
-  profileInitials, formatFeedDate, warrantyStatus,
+  profileInitials, formatFeedDate, formatCommentTime, warrantyStatus,
 } from '../wristlog.js';
 
 // ── todayStr ─────────────────────────────────────────────────────────────────
@@ -214,6 +214,58 @@ describe('formatFeedDate', () => {
     const ts = '2024-06-15T11:30:00.000Z';
     const result = formatFeedDate(ts, null, new Date('2024-06-15T12:00:00Z'));
     expect(result).toBe('Just now');
+  });
+});
+
+// ── formatCommentTime ────────────────────────────────────────────────────
+
+describe('formatCommentTime', () => {
+  const now = new Date('2024-06-15T12:00:00Z');
+
+  it('returns empty string for null/undefined', () => {
+    expect(formatCommentTime(null, now)).toBe('');
+    expect(formatCommentTime(undefined, now)).toBe('');
+  });
+
+  it('returns "Just now" for less than 1 minute ago', () => {
+    const ts = new Date('2024-06-15T11:59:30Z').toISOString(); // 30s ago
+    expect(formatCommentTime(ts, now)).toBe('Just now');
+  });
+
+  it('returns "Xm ago" for 1-59 minutes ago', () => {
+    const ts5m = new Date('2024-06-15T11:55:00Z').toISOString(); // 5 min ago
+    expect(formatCommentTime(ts5m, now)).toBe('5m ago');
+
+    const ts45m = new Date('2024-06-15T11:15:00Z').toISOString(); // 45 min ago
+    expect(formatCommentTime(ts45m, now)).toBe('45m ago');
+  });
+
+  it('returns "1m ago" for exactly 1 minute ago', () => {
+    const ts = new Date('2024-06-15T11:59:00Z').toISOString();
+    expect(formatCommentTime(ts, now)).toBe('1m ago');
+  });
+
+  it('returns "Xh ago" for 1-23 hours ago', () => {
+    const ts3h = new Date('2024-06-15T09:00:00Z').toISOString(); // 3h ago
+    expect(formatCommentTime(ts3h, now)).toBe('3h ago');
+
+    const ts23h = new Date('2024-06-14T13:00:00Z').toISOString(); // 23h ago
+    expect(formatCommentTime(ts23h, now)).toBe('23h ago');
+  });
+
+  it('returns "Xd ago" for 1-6 days ago', () => {
+    const ts1d = new Date('2024-06-14T12:00:00Z').toISOString(); // 24h ago
+    expect(formatCommentTime(ts1d, now)).toBe('1d ago');
+
+    const ts6d = new Date('2024-06-09T12:00:00Z').toISOString(); // 6 days ago
+    expect(formatCommentTime(ts6d, now)).toBe('6d ago');
+  });
+
+  it('returns formatted date for 7+ days ago', () => {
+    const ts = new Date('2024-06-01T12:00:00Z').toISOString(); // 14 days ago
+    const result = formatCommentTime(ts, now);
+    expect(result).toContain('Jun');
+    expect(result).toContain('1');
   });
 });
 

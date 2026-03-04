@@ -3451,7 +3451,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.20.25';
+const APP_VERSION = '2.30.26.22.07';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4138,6 +4138,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <button class="btn-signout" onclick="signOut()" style="font-size:.8rem;padding:.4rem 1.2rem;">Sign Out</button>
       ${adminLink}
       <button style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;font-family:inherit;padding:.25rem .5rem;" onclick="showHelpPage()">Help &amp; Guide</button>
+      ${currentUser?.id === ADMIN_USER_ID ? '<button id="migrate-storage-btn" style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;font-family:inherit;padding:.25rem .5rem;" onclick="migrateBase64ToStorage()">Migrate Images to CDN</button>' : ''}
       <button style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;font-family:inherit;padding:.25rem .5rem;" onclick="openDeleteAccount()">Delete Account</button>
     </div>` : '';
 
@@ -4327,15 +4328,15 @@ async function uploadProfilePic() {
     const file = input.files[0];
     if (!file) return;
     try {
-      const base64 = await blobToResizedBase64(file);
+      const url = currentUser ? await uploadImage(file, `avatars/${currentUser.id}.jpg`) : await blobToResizedBase64(file);
       const { error } = await db.from('profiles')
-        .update({ avatar_url: base64 })
+        .update({ avatar_url: url })
         .eq('id', currentUser.id);
       if (error) { toast('Upload failed — ' + error.message, 'error'); return; }
-      myProfile = { ...myProfile, avatar_url: base64 };
+      myProfile = { ...myProfile, avatar_url: url };
       const btn = document.getElementById('profile-btn');
       if (btn) {
-        btn.innerHTML = `<img src="${base64}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+        btn.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
       }
       loadAndRenderProfile(currentUser.id);
       toast('Profile photo updated!');
@@ -5023,20 +5024,19 @@ function showMemberMenu(userId, clubId, displayName, triggerBtn) {
   }, 0);
 }
 
-let _clubEditImageData = null; // temp storage for uploaded club image
+let _clubEditImageFile = null; // raw File for deferred upload
+let _clubEditImagePreview = null; // objectURL for preview
 
 function handleClubImageUpload(input, clubId) {
   const file = input.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    _clubEditImageData = e.target.result;
-    const preview = document.getElementById('club-edit-photo-preview');
-    const placeholder = document.getElementById('club-edit-photo-placeholder');
-    if (preview)     { preview.src = _clubEditImageData; preview.style.display = 'block'; }
-    if (placeholder) placeholder.style.display = 'none';
-  };
-  reader.readAsDataURL(file);
+  if (_clubEditImagePreview) URL.revokeObjectURL(_clubEditImagePreview);
+  _clubEditImageFile    = file;
+  _clubEditImagePreview = URL.createObjectURL(file);
+  const preview = document.getElementById('club-edit-photo-preview');
+  const placeholder = document.getElementById('club-edit-photo-placeholder');
+  if (preview)     { preview.src = _clubEditImagePreview; preview.style.display = 'block'; }
+  if (placeholder) placeholder.style.display = 'none';
 }
 
 async function saveClubEdit(clubId) {
@@ -5046,7 +5046,16 @@ async function saveClubEdit(clubId) {
   if (!name) { toast('Club name is required', 'error'); return; }
 
   const updates = { name, description: desc || null, privacy };
-  if (_clubEditImageData) updates.image_url = _clubEditImageData;
+  // Upload club image to Storage (with compression via uploadImage)
+  if (_clubEditImageFile) {
+    try {
+      const oldUrl = myClubs.find(c => c.id === clubId)?.image_url;
+      updates.image_url = await uploadImage(_clubEditImageFile, `clubs/${clubId}.jpg`);
+      // Cleanup old storage file if existed
+      const oldPath = storagePathFrom(oldUrl);
+      if (oldPath) deleteStorageFile(oldPath);
+    } catch(e) { toast('Photo upload failed — ' + e.message, 'error'); return; }
+  }
 
   const { error } = await db.from('clubs').update(updates).eq('id', clubId);
   if (error) { toast('Could not save — ' + error.message, 'error'); return; }
@@ -5054,7 +5063,9 @@ async function saveClubEdit(clubId) {
   // Update local cache
   const cached = myClubs.find(c => c.id === clubId);
   if (cached) Object.assign(cached, updates);
-  _clubEditImageData = null;
+  if (_clubEditImagePreview) URL.revokeObjectURL(_clubEditImagePreview);
+  _clubEditImageFile = null;
+  _clubEditImagePreview = null;
 
   toast('Club updated!');
   document.getElementById('club-edit-section').style.display = 'none';
@@ -6071,7 +6082,8 @@ async function saveFeedCaption(logId) {
 
 // ── Edit post modal ────────────────────────────────────────────────────────
 let editPostLogId   = null;
-let editPostNewPhoto = null; // null=unchanged, 'REMOVE'=clear, base64=new photo
+let editPostNewPhoto = null; // null=unchanged, 'REMOVE'=clear, objectURL=new photo
+let editPostNewFile  = null; // raw File for deferred upload
 
 function openEditPost(logId) {
   const fi = feedItems.find(i => i.id === logId);
@@ -6100,7 +6112,8 @@ function openEditPost(logId) {
 
 function closeEditPost() {
   document.getElementById('edit-post-modal').classList.add('hidden');
-  editPostLogId = null; editPostNewPhoto = null;
+  if (editPostNewPhoto && editPostNewPhoto !== 'REMOVE') URL.revokeObjectURL(editPostNewPhoto);
+  editPostLogId = null; editPostNewPhoto = null; editPostNewFile = null;
 }
 
 function _resetEpPhoto() {
@@ -6116,16 +6129,15 @@ function clearEditPostPhoto() {
   _resetEpPhoto();
 }
 
-async function handleEditPostPhoto(input) {
+function handleEditPostPhoto(input) {
   const file = input.files[0]; if (!file) return; input.value = '';
-  try {
-    editPostNewPhoto = await blobToResizedBase64(file);
-    document.getElementById('ep-photo-preview').src = editPostNewPhoto;
-    document.getElementById('ep-photo-preview').style.display = 'block';
-    document.getElementById('ep-photo-placeholder').style.display = 'none';
-    document.getElementById('ep-photo-clear').style.display = '';
-    document.getElementById('ep-photo-area').classList.add('has-photo');
-  } catch(e) { toast('Could not load photo', 'error'); }
+  editPostNewFile  = file;
+  editPostNewPhoto = URL.createObjectURL(file);
+  document.getElementById('ep-photo-preview').src = editPostNewPhoto;
+  document.getElementById('ep-photo-preview').style.display = 'block';
+  document.getElementById('ep-photo-placeholder').style.display = 'none';
+  document.getElementById('ep-photo-clear').style.display = '';
+  document.getElementById('ep-photo-area').classList.add('has-photo');
 }
 
 async function saveEditPost() {
@@ -6134,10 +6146,21 @@ async function saveEditPost() {
   const log = logs.find(l => l.id === editPostLogId);
   const newNotes = (document.getElementById('ep-body').value || '').trim();
   const vis = getVisChip('ep-vis-chips');
+  const oldPhoto = fi?.photo_url ?? null;
   // Resolve final photo
-  let finalPhoto = fi?.photo_url ?? null;
-  if (editPostNewPhoto === 'REMOVE') finalPhoto = null;
-  else if (editPostNewPhoto)         finalPhoto = editPostNewPhoto;
+  let finalPhoto = oldPhoto;
+  if (editPostNewPhoto === 'REMOVE') {
+    finalPhoto = null;
+  } else if (editPostNewFile && currentUser) {
+    try {
+      finalPhoto = await uploadImage(editPostNewFile, `logs/${currentUser.id}/${editPostLogId}.jpg`);
+    } catch(e) { toast('Photo upload failed — ' + e.message, 'error'); return; }
+  }
+  // Cleanup old storage file if replaced or removed
+  if (oldPhoto && oldPhoto !== finalPhoto) {
+    const oldPath = storagePathFrom(oldPhoto);
+    if (oldPath) deleteStorageFile(oldPath);
+  }
   const clubId = getSelectedClubId('ep-club-chips') || null;
   // Update local state
   if (fi)  { fi.notes = newNotes || null; fi.photo_url = finalPhoto; fi.visibility = vis; fi.club_id = clubId; }
@@ -6170,10 +6193,12 @@ async function deletePostFromFeed() {
 }
 
 // ── Standalone new post ────────────────────────────────────────────────────
-let newPostPhoto = null;
+let newPostPhoto = null;   // objectURL for preview (or null)
+let newPostFile  = null;   // raw File for deferred upload
 
 function openNewPost() {
   newPostPhoto = null;
+  newPostFile  = null;
   clearNewPostPhoto();
   document.getElementById('np-body').value = '';
   document.getElementById('np-vis-chips').innerHTML = visChipsHtml('np-vis-chips', getDefaultVis());
@@ -6184,26 +6209,28 @@ function openNewPost() {
 function closeNewPost() {
   document.getElementById('new-post-modal').classList.add('hidden');
   newPostPhoto = null;
+  newPostFile  = null;
   clearNewPostPhoto();
 }
 
-async function handleNewPostPhoto(input) {
+function handleNewPostPhoto(input) {
   const file = input.files[0];
   if (!file) return;
-  try {
-    newPostPhoto = await blobToResizedBase64(file);
-    const preview = document.getElementById('np-photo-preview');
-    preview.src = newPostPhoto;
-    preview.style.display = 'block';
-    document.getElementById('np-photo-placeholder').style.display = 'none';
-    document.getElementById('np-photo-clear').style.display = '';
-    document.getElementById('np-photo-area').classList.add('has-photo');
-  } catch(e) { toast('Could not load photo', 'error'); }
+  newPostFile  = file;
+  newPostPhoto = URL.createObjectURL(file);
+  const preview = document.getElementById('np-photo-preview');
+  preview.src = newPostPhoto;
+  preview.style.display = 'block';
+  document.getElementById('np-photo-placeholder').style.display = 'none';
+  document.getElementById('np-photo-clear').style.display = '';
+  document.getElementById('np-photo-area').classList.add('has-photo');
   input.value = '';
 }
 
 function clearNewPostPhoto() {
+  if (newPostPhoto) URL.revokeObjectURL(newPostPhoto);
   newPostPhoto = null;
+  newPostFile  = null;
   const preview = document.getElementById('np-photo-preview');
   if (!preview) return;
   preview.style.display = 'none';
@@ -6215,14 +6242,20 @@ function clearNewPostPhoto() {
 
 async function saveNewPost() {
   const body = (document.getElementById('np-body')?.value || '').trim();
-  if (!body && !newPostPhoto) { toast('Add a photo or write something', 'error'); return; }
+  if (!body && !newPostFile) { toast('Add a photo or write something', 'error'); return; }
   const vis = getVisChip('np-vis-chips');
   const entry = {
     id: uid(), watchId: null, date: todayStr(),
     useCase: 'unspecified', notes: body || null,
-    photoUrl: newPostPhoto || null,
+    photoUrl: null,
     visibility: vis,
   };
+  // Upload photo to Storage if present
+  if (newPostFile && currentUser) {
+    try {
+      entry.photoUrl = await uploadImage(newPostFile, `logs/${currentUser.id}/${entry.id}.jpg`);
+    } catch(e) { toast('Photo upload failed — ' + e.message, 'error'); return; }
+  }
   logs.push(entry);
   localStorage.setItem(STORE_L, JSON.stringify(logs));
   if (currentUser) {
@@ -6255,16 +6288,21 @@ async function handleFeedPhoto(input) {
   feedPhotoLogId = null;
   input.value = '';
   try {
-    const base64 = await blobToResizedBase64(file);
+    let photoUrl;
+    if (currentUser) {
+      photoUrl = await uploadImage(file, `logs/${currentUser.id}/${logId}.jpg`);
+    } else {
+      photoUrl = await blobToResizedBase64(file); // fallback for offline
+    }
     // Update local log
     const log = logs.find(l => l.id === logId);
-    if (log) { log.photoUrl = base64; save(); }
+    if (log) { log.photoUrl = photoUrl; save(); }
     // Update feedItems so refreshFeedCard picks it up
     const fi = feedItems.find(i => i.id === logId);
-    if (fi) fi.photo_url = base64;
+    if (fi) fi.photo_url = photoUrl;
     // Hard-update Supabase
     if (currentUser) {
-      const { error } = await db.from('logs').update({ photo_url: base64 })
+      const { error } = await db.from('logs').update({ photo_url: photoUrl })
         .eq('id', logId).eq('user_id', currentUser.id);
       if (error) console.error('[WristLog] feed photo update error:', error.message);
     }
@@ -6889,18 +6927,21 @@ let selWatchId  = null;
 let selStrapId  = null;    // strap selected for current wear log session
 let selUseCase  = 'unspecified';
 let selTrackVis = 'public'; // visibility for the track modal
-let trackPhoto  = null;    // base64 photo attached to the tracking tab log
+let trackPhoto     = null;    // objectURL for preview (or null)
+let trackPhotoFile = null;    // raw File for deferred upload
 let editingId   = null;
 let editingLogId   = null;  // log entry currently being edited
 let editLogUseCase = 'unspecified';
 let editLogStrapId = null;
 let deletingId  = null;
 let selColor    = '#c9a84c';
-let wPendingImage    = null;  // image fetched during Fetch, applied on Save
+let wPendingImage    = null;  // objectURL or direct URL for preview during Fetch, applied on Save
+let wPendingFile     = null;  // raw Blob for deferred upload
 let modalFetchedPrice = null; // market price fetched during modal session, applied on Save
 let editingWlId    = null;
 let deletingWlId   = null;
-let wlPendingImage = null;   // base64 image fetched/picked during modal session, applied on Save
+let wlPendingImage = null;   // objectURL for preview during modal session, applied on Save
+let wlPendingFile  = null;   // raw File/Blob for deferred upload
 let wlRemoveImage  = false;  // true when user explicitly removes the image in the modal
 
 let chUsecase = null, chCollValue = null;
@@ -7306,7 +7347,7 @@ function renderTrackHistory() {
   }).join('');
 }
 
-function saveLog() {
+async function saveLog() {
   const date = document.getElementById('track-date').value;
   if (!date)       { toast('Please select a date', 'error'); return; }
   if (!selWatchId) { toast('Please select a watch', 'error'); return; }
@@ -7316,10 +7357,16 @@ function saveLog() {
   const logEntry = {
     id: uid(), watchId: selWatchId, date, useCase: selUseCase,
     notes, privateNotes,
-    photoUrl: trackPhoto || null,
+    photoUrl: null,
     visibility: vis,
     clubId: null,
   };
+  // Upload photo to Storage if present
+  if (trackPhotoFile && currentUser) {
+    try {
+      logEntry.photoUrl = await uploadImage(trackPhotoFile, `logs/${currentUser.id}/${logEntry.id}.jpg`);
+    } catch(e) { toast('Photo upload failed — ' + e.message, 'error'); return; }
+  }
   if (selStrapId) logEntry.strapId = selStrapId;
   logs.push(logEntry);
   // Update "on wrist" strap status on the watch
@@ -7337,23 +7384,24 @@ function saveLog() {
   toast('Wear logged!');
 }
 
-async function handleTrackPhoto(input) {
+function handleTrackPhoto(input) {
   const file = input.files[0];
   if (!file) return;
-  try {
-    trackPhoto = await blobToResizedBase64(file);
-    const preview = document.getElementById('track-photo-preview');
-    preview.src = trackPhoto;
-    preview.style.display = 'block';
-    document.getElementById('track-photo-placeholder').style.display = 'none';
-    document.getElementById('track-photo-clear').style.display = '';
-    document.getElementById('track-photo-area').classList.add('has-photo');
-  } catch(e) { toast('Could not load photo', 'error'); }
+  trackPhotoFile = file;
+  trackPhoto = URL.createObjectURL(file);
+  const preview = document.getElementById('track-photo-preview');
+  preview.src = trackPhoto;
+  preview.style.display = 'block';
+  document.getElementById('track-photo-placeholder').style.display = 'none';
+  document.getElementById('track-photo-clear').style.display = '';
+  document.getElementById('track-photo-area').classList.add('has-photo');
   input.value = '';
 }
 
 function clearTrackPhoto() {
-  trackPhoto = null;
+  if (trackPhoto) URL.revokeObjectURL(trackPhoto);
+  trackPhoto     = null;
+  trackPhotoFile = null;
   const preview = document.getElementById('track-photo-preview');
   if (!preview) return;
   preview.style.display = 'none';
@@ -7364,6 +7412,9 @@ function clearTrackPhoto() {
 }
 
 function deleteLog(id) {
+  const log = logs.find(l => l.id === id);
+  // Cleanup Storage photo if present
+  if (log?.photoUrl) { const p = storagePathFrom(log.photoUrl); if (p) deleteStorageFile(p); }
   logs = logs.filter(l => l.id !== id);
   save();
   // Hard-delete from Supabase — upsert only writes, never removes rows
@@ -8248,6 +8299,7 @@ function openAddWatch() {
   editingId         = null;
   selColor          = PALETTE[0];
   wPendingImage     = null;
+  wPendingFile      = null;
   modalFetchedPrice = null;
   ['w-name','w-ref','w-price','w-date','w-url','w-ins-value','w-ins-notes','w-warranty','w-wc-url','w-manual-mp'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('w-insurance').value = '';
@@ -8279,6 +8331,7 @@ function openEditWatch(id) {
   editingId     = id;
   selColor      = w.color;
   wPendingImage = null;
+  wPendingFile  = null;
   document.getElementById('modal-title').textContent    = 'Edit Watch';
   document.getElementById('modal-delete-btn').style.display = '';
   buildBrandSelect(w.brand);
@@ -8440,7 +8493,7 @@ function marketPriceRowHTML(w) {
   </div>`;
 }
 
-function saveWatch() {
+async function saveWatch() {
   const brand = document.getElementById('w-brand').value;
   const name  = document.getElementById('w-name').value.trim();
   if (!brand) { toast('Please select a brand', 'error'); return; }
@@ -8449,6 +8502,19 @@ function saveWatch() {
   const insStatus = document.getElementById('w-insurance').value;
   const wcUrl     = document.getElementById('w-wc-url').value.trim();
   const manualMp  = readPrice('w-manual-mp');
+
+  // Upload pending image to Storage (from Fetch or direct URL fallback)
+  let pendingImageUrl = null;
+  if (wPendingFile && currentUser) {
+    try {
+      const watchId = editingId || uid();
+      if (!editingId) pendingImageUrl = await uploadImage(wPendingFile, `watches/${currentUser.id}/${watchId}.jpg`);
+      else pendingImageUrl = await uploadImage(wPendingFile, `watches/${currentUser.id}/${editingId}.jpg`);
+    } catch(e) { toast('Photo upload failed — ' + e.message, 'error'); return; }
+  } else if (wPendingImage && !wPendingFile) {
+    // Direct URL fallback (couldn't fetch blob, but URL works in <img>)
+    pendingImageUrl = wPendingImage;
+  }
 
   const data = {
     brand, name,
@@ -8466,7 +8532,7 @@ function saveWatch() {
     watchChartsUrl: wcUrl || null,
     tags:           getSelectedTags(),
     straps:         wEditStraps,
-    ...(wPendingImage ? { image: wPendingImage } : {}),
+    ...(pendingImageUrl ? { image: pendingImageUrl } : {}),
   };
 
   // Market price: if field has a value, save it.
@@ -8483,7 +8549,9 @@ function saveWatch() {
   }
   // else: field blank and no fetch → preserve existing market data via spread
 
-  wPendingImage    = null;
+  if (wPendingImage) URL.revokeObjectURL(wPendingImage);
+  wPendingImage     = null;
+  wPendingFile      = null;
   modalFetchedPrice = null;
 
   if (editingId) {
@@ -8521,6 +8589,11 @@ function closeDelModal() {
 function confirmDelete() {
   if (!deletingId) return;
   const id = deletingId;
+  const w = watches.find(x => x.id === id);
+  // Cleanup Storage files (watch image + receipts + log photos)
+  if (w?.image) { const p = storagePathFrom(w.image); if (p) deleteStorageFile(p); }
+  (w?.receipts || []).forEach(r => { if (r.data) { const p = storagePathFrom(r.data); if (p) deleteStorageFile(p); } });
+  logs.filter(l => l.watchId === id && l.photoUrl).forEach(l => { const p = storagePathFrom(l.photoUrl); if (p) deleteStorageFile(p); });
   watches = watches.filter(x => x.id !== id);
   logs    = logs.filter(l => l.watchId !== id);
   delete eloRatings[id]; // prevent cloudSync elo-upsert from re-inserting a ghost row
@@ -9477,14 +9550,14 @@ async function fetchWatchImage(watchId) {
       return;
     }
 
-    // ── Step 3: Fetch image bytes and store locally as base64 ───────────────
-    toast('Image found — saving locally…');
-    const base64 = await fetchImageAsBase64(imgUrl);
+    // ── Step 3: Fetch image and upload to Storage ──────────────────────────
+    toast('Image found — uploading…');
+    const imageUrl = await fetchAndUploadImage(imgUrl, `watches/${currentUser?.id || 'local'}/${watchId}.jpg`);
     const idx = watches.findIndex(x => x.id === watchId);
-    watches[idx].image = base64;
+    watches[idx].image = imageUrl;
     save();
     renderCollection();
-    toast('Watch photo saved locally!');
+    toast('Watch photo saved!');
 
   } catch (e) {
     toast('Could not fetch image — try pasting one instead', 'error');
@@ -9492,37 +9565,46 @@ async function fetchWatchImage(watchId) {
   }
 }
 
-// Fetch an image URL (direct then via proxy) and return a resized base64 JPEG
-async function fetchImageAsBase64(url) {
-  let blob;
-  const sources = [
-    url,
-    `https://corsproxy.io/?${encodeURIComponent(url)}`
-  ];
+// Fetch an image URL (direct then via proxy) and return { blob, directUrl }
+// blob is available when we could fetch the bytes; directUrl when only <img> can load it
+async function fetchImageBlobOrUrl(url) {
+  const sources = [url, `https://corsproxy.io/?${encodeURIComponent(url)}`];
   for (const src of sources) {
     try {
       const r = await fetch(src, { signal: AbortSignal.timeout(12000) });
       if (r.ok) {
         const b = await r.blob();
-        // Make sure we actually got an image, not a proxy error page
-        if (b.type.startsWith('image/') && b.size > 500) { blob = b; break; }
+        if (b.type.startsWith('image/') && b.size > 500) return { blob: b };
       }
     } catch (_) {}
   }
-  if (!blob) {
-    // Proxy fetches blocked (e.g. CDN anti-hotlinking). Check if the URL
-    // loads directly in an <img> element — if so, return the URL itself.
-    // It won't be stored locally but will display fine in the card.
-    const canLoad = await new Promise(resolve => {
-      const img = new Image();
-      img.onload  = () => resolve(true);
-      img.onerror = () => resolve(false);
-      img.src = url;
-    });
-    if (canLoad) return url;   // store URL directly as display fallback
-    throw new Error('image fetch failed');
+  // Proxy fetches blocked — check if URL loads in <img> as fallback
+  const canLoad = await new Promise(resolve => {
+    const img = new Image();
+    img.onload  = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = url;
+  });
+  if (canLoad) return { directUrl: url };
+  throw new Error('image fetch failed');
+}
+
+// Fetch image and upload to Storage, returning the public URL
+async function fetchAndUploadImage(url, storagePath) {
+  const result = await fetchImageBlobOrUrl(url);
+  if (result.blob && currentUser) {
+    return uploadImage(result.blob, storagePath);
   }
-  return blobToResizedBase64(blob);
+  // Fallback: store URL directly (or base64 for offline)
+  if (result.blob) return blobToResizedBase64(result.blob);
+  return result.directUrl;
+}
+
+// Legacy wrapper for backward compatibility
+async function fetchImageAsBase64(url) {
+  const result = await fetchImageBlobOrUrl(url);
+  if (result.blob) return blobToResizedBase64(result.blob);
+  return result.directUrl;
 }
 
 // Resize a blob to ≤800 px wide/tall and return a base64 JPEG data-URL
@@ -9543,6 +9625,184 @@ function blobToResizedBase64(blob) {
     img.onerror = () => reject(new Error('image decode failed'));
     img.src = objUrl;
   });
+}
+
+// Resize a blob to ≤800 px wide/tall and return a JPEG Blob (not base64)
+function blobToResizedBlob(blob) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objUrl = URL.createObjectURL(blob);
+    img.onload = () => {
+      URL.revokeObjectURL(objUrl);
+      const MAX = 800;
+      const scale = Math.min(1, MAX / Math.max(img.width || MAX, img.height || MAX));
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round((img.width  || MAX) * scale);
+      canvas.height = Math.round((img.height || MAX) * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/jpeg', 0.82);
+    };
+    img.onerror = () => reject(new Error('image decode failed'));
+    img.src = objUrl;
+  });
+}
+
+// Upload an image blob to Supabase Storage: resize → upload → return public URL
+async function uploadImage(blob, path) {
+  const resized = await blobToResizedBlob(blob);
+  const { data, error } = await db.storage.from('media').upload(path, resized, {
+    cacheControl: '31536000', upsert: true, contentType: 'image/jpeg',
+  });
+  if (error) throw new Error('Upload failed: ' + error.message);
+  const { data: urlData } = db.storage.from('media').getPublicUrl(path);
+  return urlData.publicUrl;
+}
+
+// Upload a raw file (PDF, etc.) to Supabase Storage without resize
+async function uploadFile(blob, path, contentType) {
+  const { data, error } = await db.storage.from('media').upload(path, blob, {
+    cacheControl: '31536000', upsert: true, contentType,
+  });
+  if (error) throw new Error('Upload failed: ' + error.message);
+  const { data: urlData } = db.storage.from('media').getPublicUrl(path);
+  return urlData.publicUrl;
+}
+
+// Delete a file from Supabase Storage
+async function deleteStorageFile(path) {
+  const { error } = await db.storage.from('media').remove([path]);
+  if (error) console.error('[WristLog] storage delete:', error.message);
+}
+
+// Check if a string is a base64 data-URL
+function isBase64(str) { return str && str.startsWith('data:'); }
+
+// Extract the storage path from a Supabase Storage public URL
+function storagePathFrom(url) {
+  if (!url) return null;
+  const marker = '/storage/v1/object/public/media/';
+  const idx = url.indexOf(marker);
+  return idx >= 0 ? url.slice(idx + marker.length) : null;
+}
+
+// ── One-time migration: base64 → Supabase Storage ─────────────────────────
+async function migrateBase64ToStorage() {
+  if (!currentUser || currentUser.id !== ADMIN_USER_ID) { toast('Admin only', 'error'); return; }
+  const btn = document.getElementById('migrate-storage-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Migrating… 0'; }
+  let migrated = 0, errors = 0;
+  const BATCH = 20;
+
+  const updateBtn = () => {
+    if (btn) btn.textContent = `Migrating… ${migrated} done${errors ? ` (${errors} err)` : ''}`;
+  };
+
+  async function migrateBlob(base64, path, isPdf) {
+    const resp = await fetch(base64);
+    const blob = await resp.blob();
+    if (isPdf) return uploadFile(blob, path, 'application/pdf');
+    return uploadImage(blob, path);
+  }
+
+  // Helper: paginated query for rows with base64 in a text column
+  async function migrateTable(table, idCol, userIdCol, imageCol, pathFn) {
+    let offset = 0;
+    while (true) {
+      const { data: rows, error } = await db.from(table).select(`${idCol}, ${userIdCol}, ${imageCol}`)
+        .like(imageCol, 'data:%').range(offset, offset + BATCH - 1);
+      if (error) { console.error(`[migrate] ${table} query:`, error.message); break; }
+      if (!rows?.length) break;
+      for (const row of rows) {
+        try {
+          const url = await migrateBlob(row[imageCol], pathFn(row));
+          await db.from(table).update({ [imageCol]: url }).eq(idCol, row[idCol]);
+          migrated++;
+        } catch(e) { errors++; console.error(`[migrate] ${table} ${row[idCol]}:`, e.message); }
+        updateBtn();
+      }
+      if (rows.length < BATCH) break;
+      offset += BATCH;
+    }
+  }
+
+  // 1. Profiles (avatar_url)
+  {
+    const { data: rows } = await db.from('profiles').select('id, avatar_url').like('avatar_url', 'data:%');
+    for (const p of (rows || [])) {
+      try {
+        const url = await migrateBlob(p.avatar_url, `avatars/${p.id}.jpg`);
+        await db.from('profiles').update({ avatar_url: url }).eq('id', p.id);
+        migrated++;
+      } catch(e) { errors++; console.error('[migrate] avatar:', p.id, e.message); }
+      updateBtn();
+    }
+  }
+
+  // 2. Watches (image column)
+  await migrateTable('watches', 'id', 'user_id', 'image',
+    row => `watches/${row.user_id}/${row.id}.jpg`);
+
+  // 3. Watch receipts (JSONB — need special handling)
+  {
+    let offset = 0;
+    while (true) {
+      const { data: rows, error } = await db.from('watches').select('id, user_id, receipts')
+        .not('receipts', 'eq', '[]').not('receipts', 'is', null)
+        .range(offset, offset + BATCH - 1);
+      if (error || !rows?.length) break;
+      for (const w of rows) {
+        let changed = false;
+        const receipts = w.receipts || [];
+        for (let i = 0; i < receipts.length; i++) {
+          const r = receipts[i];
+          if (r.data && isBase64(r.data)) {
+            try {
+              const isPdf = r.type === 'application/pdf' || (r.data && r.data.startsWith('data:application/pdf'));
+              const ext = isPdf ? 'pdf' : 'jpg';
+              receipts[i] = { ...r, data: await migrateBlob(r.data, `receipts/${w.user_id}/${w.id}/${r.id}.${ext}`, isPdf) };
+              changed = true; migrated++;
+            } catch(e) { errors++; console.error('[migrate] receipt:', r.id, e.message); }
+            updateBtn();
+          }
+        }
+        if (changed) await db.from('watches').update({ receipts }).eq('id', w.id);
+      }
+      if (rows.length < BATCH) break;
+      offset += BATCH;
+    }
+  }
+
+  // 4. Logs (photo_url)
+  await migrateTable('logs', 'id', 'user_id', 'photo_url',
+    row => `logs/${row.user_id}/${row.id}.jpg`);
+
+  // 5. Wishlist (image)
+  await migrateTable('wishlist', 'id', 'user_id', 'image',
+    row => `wishlist/${row.user_id}/${row.id}.jpg`);
+
+  // 6. Clubs (image_url — no user_id prefix)
+  {
+    const { data: rows } = await db.from('clubs').select('id, image_url').like('image_url', 'data:%');
+    for (const c of (rows || [])) {
+      try {
+        const url = await migrateBlob(c.image_url, `clubs/${c.id}.jpg`);
+        await db.from('clubs').update({ image_url: url }).eq('id', c.id);
+        migrated++;
+      } catch(e) { errors++; console.error('[migrate] club:', c.id, e.message); }
+      updateBtn();
+    }
+  }
+
+  // Refresh local state to pick up migrated URLs
+  if (migrated > 0 && typeof syncFromServer === 'function') {
+    try { await syncFromServer(); } catch(_) {}
+    renderCollection();
+    renderWishlist();
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Migrate Images to CDN'; }
+  if (migrated === 0 && errors === 0) toast('No base64 images found — already migrated!');
+  else toast(`Migration complete: ${migrated} migrated${errors ? `, ${errors} errors` : ''}!`);
 }
 
 // ── Add-photo modal (paste / drop / browse — no clipboard permission dialog) ──
@@ -9571,9 +9831,12 @@ async function _handlePhotoPaste(e) {
   for (const item of items) {
     if (item.type.startsWith('image/')) {
       const blob = item.getAsFile();
-      const base64 = await blobToResizedBase64(blob);
-      _saveWatchImageBase64(_photoPasteWatchId, base64);
+      const watchId = _photoPasteWatchId;
       closePhotoPasteModal();
+      try {
+        const url = currentUser ? await uploadImage(blob, `watches/${currentUser.id}/${watchId}.jpg`) : await blobToResizedBase64(blob);
+        _saveWatchImage(watchId, url);
+      } catch { toast('Could not save image', 'error'); }
       return;
     }
   }
@@ -9585,24 +9848,28 @@ async function handlePhotoDrop(e) {
   e.currentTarget.style.borderColor = 'var(--border)';
   const file = e.dataTransfer.files[0];
   if (!file || !file.type.startsWith('image/')) { toast('Please drop an image file', 'error'); return; }
-  const base64 = await blobToResizedBase64(file);
-  _saveWatchImageBase64(_photoPasteWatchId, base64);
+  const watchId = _photoPasteWatchId;
   closePhotoPasteModal();
+  try {
+    const url = currentUser ? await uploadImage(file, `watches/${currentUser.id}/${watchId}.jpg`) : await blobToResizedBase64(file);
+    _saveWatchImage(watchId, url);
+  } catch { toast('Could not save image', 'error'); }
 }
 
 async function handlePhotoFileInput(input) {
   if (!input.files[0]) return;
   try {
-    const base64 = await blobToResizedBase64(input.files[0]);
-    _saveWatchImageBase64(_photoPasteWatchId, base64);
+    const watchId = _photoPasteWatchId;
+    const url = currentUser ? await uploadImage(input.files[0], `watches/${currentUser.id}/${watchId}.jpg`) : await blobToResizedBase64(input.files[0]);
+    _saveWatchImage(watchId, url);
     closePhotoPasteModal();
   } catch { toast('Could not read image file', 'error'); }
 }
 
-function _saveWatchImageBase64(watchId, base64) {
+function _saveWatchImage(watchId, url) {
   const idx = watches.findIndex(x => x.id === watchId);
   if (idx < 0) return;
-  watches[idx].image = base64;
+  watches[idx].image = url;
   save();
   renderCollection();
   toast('Watch photo saved!');
@@ -9611,9 +9878,12 @@ function _saveWatchImageBase64(watchId, base64) {
 function removeWatchImage(watchId) {
   const idx = watches.findIndex(x => x.id === watchId);
   if (idx < 0) return;
+  const oldImage = watches[idx].image;
   delete watches[idx].image;
   save();
   renderCollection();
+  const path = storagePathFrom(oldImage);
+  if (path) deleteStorageFile(path);
   toast('Photo removed');
 }
 
@@ -9660,32 +9930,36 @@ function addReceipt() {
   input.multiple = true;
   input.onchange = async () => {
     if (!input.files.length) return;
-    const idx = watches.findIndex(x => x.id === receiptsWatchId);
+    const wId = receiptsWatchId;
+    const idx = watches.findIndex(x => x.id === wId);
     if (idx < 0) return;
     if (!watches[idx].receipts) watches[idx].receipts = [];
     let added = 0;
     for (const file of input.files) {
       try {
+        const rId = Date.now().toString(36) + Math.random().toString(36).slice(2);
+        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
         let data;
-        if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-          data = await new Promise((res, rej) => {
-            const fr = new FileReader();
-            fr.onload = () => res(fr.result);
-            fr.onerror = rej;
-            fr.readAsDataURL(file);
-          });
+        if (currentUser) {
+          const ext = isPdf ? 'pdf' : 'jpg';
+          const path = `receipts/${currentUser.id}/${wId}/${rId}.${ext}`;
+          data = isPdf
+            ? await uploadFile(file, path, 'application/pdf')
+            : await uploadImage(file, path);
         } else {
-          data = await blobToResizedBase64(file);
+          if (isPdf) {
+            data = await new Promise((res, rej) => {
+              const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
+            });
+          } else {
+            data = await blobToResizedBase64(file);
+          }
         }
         watches[idx].receipts.push({
-          id:       Date.now().toString(36) + Math.random().toString(36).slice(2),
-          name:     file.name,
-          type:     file.type || 'image/jpeg',
-          data,
-          addedDate: todayStr(),
+          id: rId, name: file.name, type: file.type || 'image/jpeg', data, addedDate: todayStr(),
         });
         added++;
-      } catch { toast('Could not read: ' + file.name, 'error'); }
+      } catch(e) { toast('Could not upload: ' + file.name, 'error'); }
     }
     if (added > 0) {
       save();
@@ -9700,6 +9974,11 @@ function addReceipt() {
 function removeReceipt(watchId, receiptId) {
   const idx = watches.findIndex(x => x.id === watchId);
   if (idx < 0) return;
+  const receipt = (watches[idx].receipts || []).find(r => r.id === receiptId);
+  if (receipt?.data) {
+    const p = storagePathFrom(receipt.data);
+    if (p) deleteStorageFile(p);
+  }
   watches[idx].receipts = (watches[idx].receipts || []).filter(r => r.id !== receiptId);
   save();
   renderReceiptsList(watches[idx]);
@@ -9712,6 +9991,11 @@ function viewReceipt(watchId, receiptId) {
   if (!w) return;
   const r = (w.receipts || []).find(x => x.id === receiptId);
   if (!r) return;
+  // If Storage URL, open directly in new tab
+  if (r.data && r.data.startsWith('https://')) {
+    window.open(r.data, '_blank');
+    return;
+  }
   const win = window.open();
   if (r.type === 'application/pdf' || r.data.startsWith('data:application/pdf')) {
     win.document.write(`<html><body style="margin:0"><embed src="${r.data}" type="application/pdf" width="100%" height="100%" /></body></html>`);
@@ -9750,6 +10034,11 @@ function renderEditReceiptsList(w) {
 function removeReceiptFromEdit(watchId, receiptId) {
   const idx = watches.findIndex(x => x.id === watchId);
   if (idx < 0) return;
+  const receipt = (watches[idx].receipts || []).find(r => r.id === receiptId);
+  if (receipt?.data) {
+    const p = storagePathFrom(receipt.data);
+    if (p) deleteStorageFile(p);
+  }
   watches[idx].receipts = (watches[idx].receipts || []).filter(r => r.id !== receiptId);
   save();
   renderEditReceiptsList(watches[idx]);
@@ -9765,32 +10054,36 @@ function addReceiptFromEdit() {
   input.multiple = true;
   input.onchange = async () => {
     if (!input.files.length) return;
-    const idx = watches.findIndex(x => x.id === editingId);
+    const wId = editingId;
+    const idx = watches.findIndex(x => x.id === wId);
     if (idx < 0) return;
     if (!watches[idx].receipts) watches[idx].receipts = [];
     let added = 0;
     for (const file of input.files) {
       try {
+        const rId = Date.now().toString(36) + Math.random().toString(36).slice(2);
+        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
         let data;
-        if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-          data = await new Promise((res, rej) => {
-            const fr = new FileReader();
-            fr.onload = () => res(fr.result);
-            fr.onerror = rej;
-            fr.readAsDataURL(file);
-          });
+        if (currentUser) {
+          const ext = isPdf ? 'pdf' : 'jpg';
+          const path = `receipts/${currentUser.id}/${wId}/${rId}.${ext}`;
+          data = isPdf
+            ? await uploadFile(file, path, 'application/pdf')
+            : await uploadImage(file, path);
         } else {
-          data = await blobToResizedBase64(file);
+          if (isPdf) {
+            data = await new Promise((res, rej) => {
+              const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
+            });
+          } else {
+            data = await blobToResizedBase64(file);
+          }
         }
         watches[idx].receipts.push({
-          id:       Date.now().toString(36) + Math.random().toString(36).slice(2),
-          name:     file.name,
-          type:     file.type || 'image/jpeg',
-          data,
-          addedDate: todayStr(),
+          id: rId, name: file.name, type: file.type || 'image/jpeg', data, addedDate: todayStr(),
         });
         added++;
-      } catch { toast('Could not read: ' + file.name, 'error'); }
+      } catch(e) { toast('Could not upload: ' + file.name, 'error'); }
     }
     if (added > 0) {
       save();
@@ -10340,28 +10633,50 @@ function wlDeleteFromEdit() {
 
 function closeWishlistModal() { clearInlineEdits(WL_INLINE_FIELDS); document.getElementById('wishlist-modal').classList.add('hidden'); }
 
-function saveWishlistItem() {
+async function saveWishlistItem() {
   const brand = document.getElementById('wl-brand').value;
   const name  = document.getElementById('wl-name').value.trim();
   if (!brand) { toast('Please select a brand', 'error'); return; }
   if (!name) { toast('Model name is required', 'error'); return; }
+  const itemId = editingWlId || ('wl_' + uid());
   const data = {
     brand, name,
     ref:       document.getElementById('wl-ref').value.trim(),
     price:     readPrice('wl-price'),
     addedDate: document.getElementById('wl-date').value,
     url:       document.getElementById('wl-url').value.trim(),
-    ...(wlPendingImage ? { image: wlPendingImage } : {}),
   };
+  // Upload pending image to Storage
+  if (wlPendingFile && currentUser) {
+    try {
+      data.image = await uploadImage(wlPendingFile, `wishlist/${currentUser.id}/${itemId}.jpg`);
+    } catch(e) { toast('Photo upload failed — ' + e.message, 'error'); return; }
+  } else if (wlPendingImage && !wlPendingFile) {
+    // Direct URL fallback (couldn't fetch blob, but URL works in <img>)
+    data.image = wlPendingImage;
+  }
+  if (wlPendingImage) URL.revokeObjectURL(wlPendingImage);
   wlPendingImage = null;
+  wlPendingFile  = null;
   if (editingWlId) {
     const idx = wishlist.findIndex(x => x.id === editingWlId);
+    const oldImage = wishlist[idx]?.image;
     const updated = { ...wishlist[idx], ...data };
-    if (wlRemoveImage) delete updated.image;
+    if (wlRemoveImage) {
+      delete updated.image;
+      // Cleanup old storage file
+      const oldPath = storagePathFrom(oldImage);
+      if (oldPath) deleteStorageFile(oldPath);
+    }
+    // Cleanup old storage file if replaced with new upload
+    if (data.image && oldImage && oldImage !== data.image) {
+      const oldPath = storagePathFrom(oldImage);
+      if (oldPath) deleteStorageFile(oldPath);
+    }
     wishlist[idx] = updated;
     toast('Wishlist item updated!');
   } else {
-    wishlist.push({ id: 'wl_' + uid(), ...data });
+    wishlist.push({ id: itemId, ...data });
     toast('Added to wishlist!');
   }
   wlRemoveImage = false;
@@ -10381,6 +10696,12 @@ function closeDelWlModal() {
 function confirmDeleteWishlist() {
   if (!deletingWlId) return;
   const id = deletingWlId;
+  const item = wishlist.find(x => x.id === id);
+  // Cleanup storage image
+  if (item?.image) {
+    const p = storagePathFrom(item.image);
+    if (p) deleteStorageFile(p);
+  }
   wishlist = wishlist.filter(x => x.id !== id);
   // Hard-delete from Supabase
   if (currentUser) {
@@ -10600,8 +10921,15 @@ async function fetchWishlistDetails() {
       if (imgUrl.startsWith('//'))     imgUrl = 'https:' + imgUrl;
       else if (imgUrl.startsWith('/')) imgUrl = new URL(urlVal).origin + imgUrl;
       try {
-        wlPendingImage = await fetchImageAsBase64(imgUrl);
-      } catch (_) { wlPendingImage = null; }
+        const result = await fetchImageBlobOrUrl(imgUrl);
+        if (result.blob) {
+          wlPendingFile  = result.blob;
+          wlPendingImage = URL.createObjectURL(result.blob);
+        } else {
+          wlPendingFile  = null;
+          wlPendingImage = result.directUrl;
+        }
+      } catch (_) { wlPendingImage = null; wlPendingFile = null; }
     }
 
     const filled = [detectedBrand && 'brand', name && 'name', ref && 'ref', price && 'price', wlPendingImage && 'photo'].filter(Boolean);
@@ -10722,8 +11050,15 @@ async function fetchCollectionDetails() {
       if (imgUrl.startsWith('//'))     imgUrl = 'https:' + imgUrl;
       else if (imgUrl.startsWith('/')) imgUrl = new URL(urlVal).origin + imgUrl;
       try {
-        wPendingImage = await fetchImageAsBase64(imgUrl);
-      } catch (_) { wPendingImage = null; }
+        const result = await fetchImageBlobOrUrl(imgUrl);
+        if (result.blob) {
+          wPendingFile  = result.blob;
+          wPendingImage = URL.createObjectURL(result.blob);
+        } else {
+          wPendingFile  = null;
+          wPendingImage = result.directUrl; // fallback: store URL directly
+        }
+      } catch (_) { wPendingImage = null; wPendingFile = null; }
     }
 
     const filled = [detectedBrand && 'brand', name && 'name', ref && 'ref', price && 'price', wPendingImage && 'photo'].filter(Boolean);
@@ -10765,10 +11100,10 @@ async function fetchWishlistImage(itemId) {
       else if (imgUrl.startsWith('/')) imgUrl = new URL(w.url).origin + imgUrl;
     }
     if (!imgUrl) { toast('No image found on that page', 'error'); if (btn) { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Get Photo'; } return; }
-    toast('Image found — saving locally…');
-    const base64 = await fetchImageAsBase64(imgUrl);
+    toast('Image found — uploading…');
+    const imageUrl = await fetchAndUploadImage(imgUrl, `wishlist/${currentUser?.id || 'local'}/${itemId}.jpg`);
     const idx = wishlist.findIndex(x => x.id === itemId);
-    wishlist[idx].image = base64;
+    wishlist[idx].image = imageUrl;
     saveWishlist();
     renderWishlist();
     toast('Photo saved!');
@@ -10808,7 +11143,8 @@ async function pickWlModalImage() {
         const imageType = item.types.find(t => t.startsWith('image/'));
         if (imageType) {
           const blob = await item.getType(imageType);
-          wlPendingImage = await blobToResizedBase64(blob);
+          wlPendingFile  = blob;
+          wlPendingImage = URL.createObjectURL(blob);
           wlRemoveImage  = false;
           renderWlModalImg(); return;
         }
@@ -10817,19 +11153,20 @@ async function pickWlModalImage() {
   }
   const input = document.createElement('input');
   input.type = 'file'; input.accept = 'image/*';
-  input.onchange = async () => {
+  input.onchange = () => {
     if (!input.files[0]) return;
-    try {
-      wlPendingImage = await blobToResizedBase64(input.files[0]);
-      wlRemoveImage  = false;
-      renderWlModalImg();
-    } catch { toast('Could not read image file', 'error'); }
+    wlPendingFile  = input.files[0];
+    wlPendingImage = URL.createObjectURL(input.files[0]);
+    wlRemoveImage  = false;
+    renderWlModalImg();
   };
   input.click();
 }
 
 function clearWlModalImg() {
+  if (wlPendingImage) URL.revokeObjectURL(wlPendingImage);
   wlPendingImage = null;
+  wlPendingFile  = null;
   wlRemoveImage  = true;
   renderWlModalImg();
 }
@@ -10843,8 +11180,7 @@ async function pasteWishlistImage(itemId) {
         const imageType = item.types.find(t => t.startsWith('image/'));
         if (imageType) {
           const blob = await item.getType(imageType);
-          const base64 = await blobToResizedBase64(blob);
-          _saveWishlistImageBase64(itemId, base64); return;
+          await _saveWishlistImage(itemId, blob); return;
         }
       }
       toast('No image in clipboard — opening file picker…');
@@ -10854,24 +11190,37 @@ async function pasteWishlistImage(itemId) {
   input.type = 'file'; input.accept = 'image/*';
   input.onchange = async () => {
     if (!input.files[0]) return;
-    try { _saveWishlistImageBase64(itemId, await blobToResizedBase64(input.files[0])); }
+    try { await _saveWishlistImage(itemId, input.files[0]); }
     catch { toast('Could not read image file', 'error'); }
   };
   input.click();
 }
 
-function _saveWishlistImageBase64(itemId, base64) {
+async function _saveWishlistImage(itemId, blob) {
   const idx = wishlist.findIndex(x => x.id === itemId);
   if (idx < 0) return;
-  wishlist[idx].image = base64;
-  saveWishlist();
-  renderWishlist();
-  toast('Photo saved!');
+  try {
+    const oldImage = wishlist[idx].image;
+    if (currentUser) {
+      wishlist[idx].image = await uploadImage(blob, `wishlist/${currentUser.id}/${itemId}.jpg`);
+      // Cleanup old storage file if replaced
+      const oldPath = storagePathFrom(oldImage);
+      if (oldPath) deleteStorageFile(oldPath);
+    } else {
+      wishlist[idx].image = await blobToResizedBase64(blob);
+    }
+    saveWishlist();
+    renderWishlist();
+    toast('Photo saved!');
+  } catch(e) { toast('Photo upload failed — ' + e.message, 'error'); }
 }
 
 function removeWishlistImage(itemId) {
   const idx = wishlist.findIndex(x => x.id === itemId);
   if (idx < 0) return;
+  const oldImage = wishlist[idx].image;
+  const oldPath = storagePathFrom(oldImage);
+  if (oldPath) deleteStorageFile(oldPath);
   delete wishlist[idx].image;
   saveWishlist();
   renderWishlist();

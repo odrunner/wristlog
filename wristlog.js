@@ -62,6 +62,20 @@ export function formatFeedDate(dateStr, createdAt, now = new Date()) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+export function formatCommentTime(createdAt, now = new Date()) {
+  if (!createdAt) return '';
+  const ts  = new Date(createdAt);
+  const diffMs = now - ts;
+  const diffM  = Math.floor(diffMs / 60000);
+  if (diffM < 1)  return 'Just now';
+  if (diffM < 60) return `${diffM}m ago`;
+  const diffH = Math.floor(diffM / 60);
+  if (diffH < 24) return `${diffH}h ago`;
+  const diffD = Math.floor(diffH / 24);
+  if (diffD < 7)  return `${diffD}d ago`;
+  return ts.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 // ══════════════════════════════════════════
 //  USERNAME VALIDATION
 // ══════════════════════════════════════════
@@ -864,7 +878,7 @@ export function notificationIsActionable(type) {
  * ref_id for these is a log/post ID.
  */
 export function notificationScrollsToPost(type) {
-  return type === 'like' || type === 'comment' || type === 'comment_also' || type === 'mention';
+  return type === 'like' || type === 'comment' || type === 'comment_also' || type === 'comment_like' || type === 'mention';
 }
 
 /**

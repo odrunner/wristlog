@@ -15,7 +15,7 @@ import {
 describe('notificationBody', () => {
   const ALL_TYPES = [
     'follow', 'follow_request', 'follow_accepted',
-    'like', 'comment', 'comment_also', 'mention',
+    'like', 'comment', 'comment_also', 'comment_like', 'mention',
     'club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted',
     'friend_request', 'friend_accepted',
   ];
@@ -61,6 +61,9 @@ describe('notificationBody', () => {
     expect(body).toContain('Steve');
     expect(body).toContain('also commented');
   });
+  it('comment_like — "liked your comment"', () => {
+    expect(notificationBody('comment_like', 'Steve')).toBe('Steve liked your comment');
+  });
   it('mention — "mentioned you in a comment"', () => {
     expect(notificationBody('mention', 'Steve')).toBe('Steve mentioned you in a comment');
   });
@@ -85,7 +88,7 @@ describe('notificationBody', () => {
     expect(notificationBody('friend_accepted', 'Muge')).toBe('You and Muge are now close friends');
   });
 
-  it('all 13 active types produce non-empty body', () => {
+  it('all 14 active types produce non-empty body', () => {
     ALL_TYPES.forEach(type => {
       expect(notificationBody(type, 'X'), `type=${type}`).not.toBe('');
     });
@@ -121,6 +124,9 @@ describe('notificationIsActionable', () => {
   it('comment_also is NOT actionable', () => {
     expect(notificationIsActionable('comment_also')).toBe(false);
   });
+  it('comment_like is NOT actionable', () => {
+    expect(notificationIsActionable('comment_like')).toBe(false);
+  });
   it('mention is NOT actionable', () => {
     expect(notificationIsActionable('mention')).toBe(false);
   });
@@ -138,10 +144,10 @@ describe('notificationIsActionable', () => {
     expect(notificationIsActionable('friend_accepted')).toBe(false);
   });
 
-  it('exactly 4 types are actionable across all 13 active types', () => {
+  it('exactly 4 types are actionable across all 14 active types', () => {
     const ALL_TYPES = [
       'follow', 'follow_request', 'follow_accepted',
-      'like', 'comment', 'comment_also', 'mention',
+      'like', 'comment', 'comment_also', 'comment_like', 'mention',
       'club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted',
       'friend_request', 'friend_accepted',
     ];
@@ -160,6 +166,7 @@ describe('notificationScrollsToPost', () => {
   it('like scrolls to post', () => expect(notificationScrollsToPost('like')).toBe(true));
   it('comment scrolls to post', () => expect(notificationScrollsToPost('comment')).toBe(true));
   it('comment_also scrolls to post', () => expect(notificationScrollsToPost('comment_also')).toBe(true));
+  it('comment_like scrolls to post', () => expect(notificationScrollsToPost('comment_like')).toBe(true));
   it('mention scrolls to post', () => expect(notificationScrollsToPost('mention')).toBe(true));
 
   it('follow does NOT scroll to post', () => expect(notificationScrollsToPost('follow')).toBe(false));
@@ -171,14 +178,14 @@ describe('notificationScrollsToPost', () => {
   it('friend_request does NOT scroll to post', () => expect(notificationScrollsToPost('friend_request')).toBe(false));
   it('friend_accepted does NOT scroll to post', () => expect(notificationScrollsToPost('friend_accepted')).toBe(false));
 
-  it('exactly 4 types scroll to post across all 13 active types', () => {
+  it('exactly 5 types scroll to post across all 14 active types', () => {
     const ALL_TYPES = [
       'follow', 'follow_request', 'follow_accepted',
-      'like', 'comment', 'comment_also', 'mention',
+      'like', 'comment', 'comment_also', 'comment_like', 'mention',
       'club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted',
       'friend_request', 'friend_accepted',
     ];
-    expect(ALL_TYPES.filter(notificationScrollsToPost)).toHaveLength(4);
+    expect(ALL_TYPES.filter(notificationScrollsToPost)).toHaveLength(5);
   });
 });
 
@@ -195,6 +202,7 @@ describe('notificationOpensClub', () => {
     expect(notificationOpensClub('club_join_request')).toBe(false);
   });
   it('like does NOT open club', () => expect(notificationOpensClub('like')).toBe(false));
+  it('comment_like does NOT open club', () => expect(notificationOpensClub('comment_like')).toBe(false));
   it('follow does NOT open club', () => expect(notificationOpensClub('follow')).toBe(false));
   it('friend_request does NOT open club', () => expect(notificationOpensClub('friend_request')).toBe(false));
   it('friend_accepted does NOT open club', () => expect(notificationOpensClub('friend_accepted')).toBe(false));
@@ -215,14 +223,15 @@ describe('notificationOpensProfile', () => {
   });
   it('like does NOT open profile', () => expect(notificationOpensProfile('like')).toBe(false));
   it('comment does NOT open profile', () => expect(notificationOpensProfile('comment')).toBe(false));
+  it('comment_like does NOT open profile', () => expect(notificationOpensProfile('comment_like')).toBe(false));
   it('mention does NOT open profile', () => expect(notificationOpensProfile('mention')).toBe(false));
   it('club_join_request does NOT open profile', () => expect(notificationOpensProfile('club_join_request')).toBe(false));
   it('club_join_accepted does NOT open profile', () => expect(notificationOpensProfile('club_join_accepted')).toBe(false));
 
-  it('exactly 3 types open profile across all 13 active types', () => {
+  it('exactly 3 types open profile across all 14 active types', () => {
     const ALL_TYPES = [
       'follow', 'follow_request', 'follow_accepted',
-      'like', 'comment', 'comment_also', 'mention',
+      'like', 'comment', 'comment_also', 'comment_like', 'mention',
       'club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted',
       'friend_request', 'friend_accepted',
     ];
@@ -241,6 +250,7 @@ describe('notificationRequiresRefId', () => {
   it('like requires ref_id', () => expect(notificationRequiresRefId('like')).toBe(true));
   it('comment requires ref_id', () => expect(notificationRequiresRefId('comment')).toBe(true));
   it('comment_also requires ref_id', () => expect(notificationRequiresRefId('comment_also')).toBe(true));
+  it('comment_like requires ref_id', () => expect(notificationRequiresRefId('comment_like')).toBe(true));
   it('mention requires ref_id', () => expect(notificationRequiresRefId('mention')).toBe(true));
 
   // Club types — ref_id is the club ID
@@ -258,14 +268,14 @@ describe('notificationRequiresRefId', () => {
   it('friend_request does NOT require ref_id', () => expect(notificationRequiresRefId('friend_request')).toBe(false));
   it('friend_accepted does NOT require ref_id', () => expect(notificationRequiresRefId('friend_accepted')).toBe(false));
 
-  it('exactly 8 types require ref_id across all 13 active types', () => {
+  it('exactly 9 types require ref_id across all 14 active types', () => {
     const ALL_TYPES = [
       'follow', 'follow_request', 'follow_accepted',
-      'like', 'comment', 'comment_also', 'mention',
+      'like', 'comment', 'comment_also', 'comment_like', 'mention',
       'club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted',
       'friend_request', 'friend_accepted',
     ];
-    expect(ALL_TYPES.filter(notificationRequiresRefId)).toHaveLength(8);
+    expect(ALL_TYPES.filter(notificationRequiresRefId)).toHaveLength(9);
   });
 });
 
@@ -274,7 +284,7 @@ describe('notificationRequiresRefId', () => {
 describe('notification navigation coverage — every type routes somewhere', () => {
   const ALL_TYPES = [
     'follow', 'follow_request', 'follow_accepted',
-    'like', 'comment', 'comment_also', 'mention',
+    'like', 'comment', 'comment_also', 'comment_like', 'mention',
     'club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted',
     'friend_request', 'friend_accepted',
   ];
@@ -412,7 +422,7 @@ describe('buildCommentAlsoTargets', () => {
 describe('ref_id contract', () => {
   const ALL_TYPES = [
     'follow', 'follow_request', 'follow_accepted',
-    'like', 'comment', 'comment_also', 'mention',
+    'like', 'comment', 'comment_also', 'comment_like', 'mention',
     'club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted',
     'friend_request', 'friend_accepted',
   ];
