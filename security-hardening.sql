@@ -319,7 +319,7 @@ ALTER TABLE club_invites ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Relevant users can read invites" ON club_invites;
 CREATE POLICY "Relevant users can read invites" ON club_invites
-  FOR SELECT USING (auth.uid() = invited_user_id OR auth.uid() = invited_by);
+  FOR SELECT USING (auth.uid() = invitee_id OR auth.uid() = invited_by);
 
 DROP POLICY IF EXISTS "Members can create invites" ON club_invites;
 CREATE POLICY "Members can create invites" ON club_invites
@@ -327,7 +327,7 @@ CREATE POLICY "Members can create invites" ON club_invites
 
 DROP POLICY IF EXISTS "Users can delete own invites" ON club_invites;
 CREATE POLICY "Users can delete own invites" ON club_invites
-  FOR DELETE USING (auth.uid() = invited_user_id OR auth.uid() = invited_by);
+  FOR DELETE USING (auth.uid() = invitee_id OR auth.uid() = invited_by);
 
 -- ─── 17. FEEDBACK (ADMIN UPDATE) ───────────────────────
 -- Keep existing insert policies, add admin-only update
