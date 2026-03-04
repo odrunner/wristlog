@@ -3423,7 +3423,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.19.04';
+const APP_VERSION = '2.30.26.19.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4426,10 +4426,10 @@ async function declineFriendRequest(initiatorId, notifId) {
     .eq('initiator_id', initiatorId)
     .eq('target_id', currentUser.id);
 
-  await db.from('notifications').delete().eq('id', notifId);
-  const item = document.getElementById(`notif-${notifId}`);
-  if (item) item.remove();
-  userNotifs = userNotifs.filter(n => n.id !== notifId);
+  // Keep notification but mark as read — re-render will hide action buttons
+  await db.from('notifications').update({ is_read: true }).eq('id', notifId);
+  const notif = userNotifs.find(n => n.id === notifId);
+  if (notif) { notif.is_read = true; notif._declined = true; }
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
   updateBellBadge();
 
@@ -5537,7 +5537,7 @@ function renderNotificationPanel() {
                : n.type === 'club_join_accepted' ? `${nm} approved your club request`
                : n.type === 'club_invite'        ? `${nm} invited you to join a club`
                : n.type === 'club_promoted'        ? `${nm} made you an owner of a club`
-               : n.type === 'friend_request'       ? `${nm} wants to be close friends`
+               : n.type === 'friend_request'       ? (n._declined || !friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'pending') ? `Close friend request from ${nm}` : `${nm} wants to be close friends`)
                : n.type === 'friend_accepted'      ? `You and ${nm} are now close friends` : '';
     const actionsHtml = n.type === 'follow_request' ? `
       <div class="notif-follow-actions">
@@ -5560,7 +5560,7 @@ function renderNotificationPanel() {
         <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem;"
           onclick="event.stopPropagation();declineClubInvite('${n.ref_id}','${n.id}')">Decline</button>
       </div>`
-      : n.type === 'friend_request' ? `
+      : (n.type === 'friend_request' && !n._declined && friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'pending')) ? `
       <div class="notif-follow-actions">
         <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
           onclick="event.stopPropagation();acceptFriendRequest('${n.actor_id}','${n.id}')">Accept</button>
