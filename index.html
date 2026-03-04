@@ -2163,6 +2163,15 @@
       <div class="chip" data-filter="ignored" onclick="filterAdminFeedback('ignored')">Ignored</div>
     </div>
     <div id="admin-feedback-list"><div style="color:var(--muted);font-size:.9rem;">Loading…</div></div>
+
+    <!-- Site Usage Report -->
+    <div style="margin-top:2rem;">
+      <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Site Usage</div>
+        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadAdminStats()">↻ Refresh</button>
+      </div>
+      <div id="admin-stats" style="color:var(--muted);font-size:.9rem;">Loading…</div>
+    </div>
   </div>
 
   <!-- ════ HELP PAGE ════ -->
@@ -2903,7 +2912,7 @@
       <div id="following-list"></div>
     </div>
     <div class="modal-actions" style="margin-top:1.25rem;">
-      <button class="btn btn-ghost" onclick="shareApp()" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Invite a Friend</button>
+      <button class="btn btn-ghost" onclick="shareApp()" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 32 32" fill="none" style="flex-shrink:0;"><path d="M 21 7.3 A 10 10 0 1 1 11 7.3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><polygon points="11,7.3 8.5,9.5 7.7,6.6" fill="currentColor"/><circle cx="16" cy="16" r="2.5" fill="currentColor"/></svg> Invite a Friend to WRotate</button>
       <button class="btn btn-ghost" onclick="closeDiscover()">Close</button>
     </div>
   </div>
@@ -3460,7 +3469,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.06.21';
+const APP_VERSION = '2.30.26.06.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7137,7 +7146,107 @@ function showAdminPage() {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('page-admin').classList.add('active');
+  loadAdminStats();
   loadAdminFeedback();
+}
+
+async function loadAdminStats() {
+  const el = document.getElementById('admin-stats');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">Loading…</div>';
+  try {
+    // Parallel queries for all stats
+    const [usersRes, watchesRes, logsRes, postsRes, wishlistRes, clubsRes, followsRes, friendsRes, likesRes, commentsRes] = await Promise.all([
+      db.from('profiles').select('id', { count: 'exact', head: true }),
+      db.from('watches').select('id', { count: 'exact', head: true }),
+      db.from('logs').select('id', { count: 'exact', head: true }).not('watch_id', 'is', null),
+      db.from('logs').select('id', { count: 'exact', head: true }).is('watch_id', null),
+      db.from('wishlist').select('id', { count: 'exact', head: true }),
+      db.from('clubs').select('id', { count: 'exact', head: true }),
+      db.from('follows').select('id', { count: 'exact', head: true }),
+      db.from('friend_requests').select('id', { count: 'exact', head: true }).eq('status', 'accepted'),
+      db.from('likes').select('id', { count: 'exact', head: true }),
+      db.from('comments').select('id', { count: 'exact', head: true }),
+    ]);
+
+    const users     = usersRes.count    || 0;
+    const totalWatches = watchesRes.count || 0;
+    const wearLogs  = logsRes.count     || 0;
+    const posts     = postsRes.count    || 0;
+    const totalLogs = wearLogs + posts;
+    const wishItems = wishlistRes.count || 0;
+    const clubs     = clubsRes.count    || 0;
+    const follows   = followsRes.count  || 0;
+    const friends   = friendsRes.count  || 0;
+    const likes     = likesRes.count    || 0;
+    const comments  = commentsRes.count || 0;
+
+    const avg = (n, d) => d > 0 ? (n / d).toFixed(1) : '0';
+
+    // Top users by watch count
+    const { data: topWatches } = await db.from('watches')
+      .select('user_id')
+      .limit(1000);
+    const watchByUser = {};
+    (topWatches || []).forEach(r => { watchByUser[r.user_id] = (watchByUser[r.user_id] || 0) + 1; });
+    const topWatchUserIds = Object.entries(watchByUser).sort((a,b) => b[1] - a[1]).slice(0, 5);
+
+    // Top users by log count
+    const { data: topLogs } = await db.from('logs')
+      .select('user_id')
+      .limit(5000);
+    const logByUser = {};
+    (topLogs || []).forEach(r => { logByUser[r.user_id] = (logByUser[r.user_id] || 0) + 1; });
+    const topLogUserIds = Object.entries(logByUser).sort((a,b) => b[1] - a[1]).slice(0, 5);
+
+    // Fetch usernames for top users
+    const allTopIds = [...new Set([...topWatchUserIds.map(e=>e[0]), ...topLogUserIds.map(e=>e[0])])];
+    let profileMap = {};
+    if (allTopIds.length) {
+      const { data: ps } = await db.from('profiles').select('id, username, display_name').in('id', allTopIds);
+      (ps || []).forEach(p => { profileMap[p.id] = p.display_name || p.username || p.id.slice(0,8); });
+    }
+
+    const statRow = (label, value) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span style="color:var(--text);">${label}</span><span style="color:var(--gold);font-weight:600;">${value}</span></div>`;
+
+    const leaderRow = (entries, pMap) => entries.map(e =>
+      `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span style="color:var(--text);">${pMap[e[0]] || e[0].slice(0,8)}</span><span style="color:var(--gold);font-weight:600;">${e[1]}</span></div>`
+    ).join('');
+
+    el.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Totals</div>
+        ${statRow('Users', users)}
+        ${statRow('Watches', totalWatches)}
+        ${statRow('Wears', wearLogs)}
+        ${statRow('Posts', posts)}
+        ${statRow('Wishlist Items', wishItems)}
+        ${statRow('Clubs', clubs)}
+        ${statRow('Follows', follows)}
+        ${statRow('Friends', friends)}
+        ${statRow('Likes', likes)}
+        ${statRow('Comments', comments)}
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Per-User Averages</div>
+        ${statRow('Watches / User', avg(totalWatches, users))}
+        ${statRow('Wears / User', avg(wearLogs, users))}
+        ${statRow('Posts / User', avg(posts, users))}
+        ${statRow('Follows / User', avg(follows, users))}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;">
+          <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Top by Watches</div>
+          ${topWatchUserIds.length ? leaderRow(topWatchUserIds, profileMap) : '<div style="color:var(--muted);font-size:.82rem;">—</div>'}
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;">
+          <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Top by Posts</div>
+          ${topLogUserIds.length ? leaderRow(topLogUserIds, profileMap) : '<div style="color:var(--muted);font-size:.82rem;">—</div>'}
+        </div>
+      </div>`;
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:.85rem;">Failed to load stats: ${e.message}</div>`;
+  }
 }
 
 let _adminFeedbackData = [];
