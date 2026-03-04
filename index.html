@@ -1226,6 +1226,8 @@
       /* Modals: bottom-sheet style */
       .overlay { align-items: flex-end; padding: 0; padding-top: 2.5rem; overflow-x: hidden; }
       .modal { border-radius: 16px 16px 0 0; max-height: 88vh; max-width: 100%; padding: 1.4rem 1rem 1.2rem; }
+      .modal.wpm-modal { max-width: 100%; }
+      .modal .wpm-hero { height: 200px; }
 
       /* Prevent horizontal overflow in modal rows */
       .url-row { flex-wrap: wrap; }
@@ -1352,6 +1354,7 @@
     .feed-wearing-watch-name { font-size: .84rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* Watch preview modal */
+    .wpm-modal { max-width: 360px; }
     .wpm-hero { width: 100%; height: 160px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: var(--surface2); overflow: hidden; margin-bottom: .9rem; }
     .wpm-hero img { width: 100%; height: 100%; object-fit: contain; }
     .wpm-hero-avatar { font-size: 2.5rem; font-weight: 800; color: #000; }
@@ -1359,6 +1362,8 @@
     .wpm-field:last-child { border-bottom: none; }
     .wpm-field-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
     .wpm-field-value { font-size: .9rem; font-weight: 600; }
+    .wpm-actions { flex-direction: column; gap: .5rem; margin-top: 1.25rem; }
+    .wpm-actions .btn { width: 100%; justify-content: center; }
 
     /* Actions */
     .feed-actions {
@@ -2783,11 +2788,11 @@
 
 <!-- ════ WATCH PREVIEW (read-only, from feed / other user profile) ════ -->
 <div id="watch-preview-modal" class="overlay hidden" onclick="if(event.target===this)closeWatchPreview()">
-  <div class="modal" style="max-width:360px;">
+  <div class="modal wpm-modal">
     <div class="wpm-hero" id="wpm-hero"></div>
     <div class="modal-title" id="wpm-title" style="margin-bottom:.75rem;"></div>
     <div id="wpm-fields"></div>
-    <div class="modal-actions" style="margin-top:1.25rem;">
+    <div class="modal-actions wpm-actions">
       <button class="btn btn-primary" onclick="addPreviewedWatchToWishlist()">Add to Wishlist</button>
       <button class="btn btn-ghost"   onclick="closeWatchPreview()">Close</button>
     </div>
@@ -3433,7 +3438,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.19.55';
+const APP_VERSION = '2.30.26.19.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
