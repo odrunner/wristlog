@@ -17,7 +17,7 @@ describe('notificationBody', () => {
     'follow', 'follow_request', 'follow_accepted',
     'like', 'comment', 'comment_also', 'mention',
     'club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted',
-    'friend_code_entered', 'friends_now',
+    'friend_request', 'friend_accepted',
   ];
 
   it('uses actor name in every known type', () => {
@@ -78,14 +78,11 @@ describe('notificationBody', () => {
   });
 
   // Friend types
-  it('friend_code_entered — "entered your friend code"', () => {
-    expect(notificationBody('friend_code_entered', 'Muge')).toBe('Muge entered your friend code');
+  it('friend_request — "wants to be friends"', () => {
+    expect(notificationBody('friend_request', 'Muge')).toBe('Muge wants to be friends');
   });
-  it('friends_now — "You and X are now friends"', () => {
-    expect(notificationBody('friends_now', 'Muge')).toBe('You and Muge are now friends');
-  });
-  it('friends_now with fallback — "You and Someone are now friends"', () => {
-    expect(notificationBody('friends_now', null)).toBe('You and Someone are now friends');
+  it('friend_accepted — "accepted your friend request"', () => {
+    expect(notificationBody('friend_accepted', 'Muge')).toBe('Muge accepted your friend request');
   });
 
   it('all 13 active types produce non-empty body', () => {
@@ -133,26 +130,27 @@ describe('notificationIsActionable', () => {
   it('club_promoted is NOT actionable', () => {
     expect(notificationIsActionable('club_promoted')).toBe(false);
   });
-  // Friend types auto-dismiss (no Accept/Decline buttons needed)
-  it('friend_code_entered is NOT actionable', () => {
-    expect(notificationIsActionable('friend_code_entered')).toBe(false);
+  // Friend types
+  it('friend_request IS actionable (has Accept/Decline)', () => {
+    expect(notificationIsActionable('friend_request')).toBe(true);
   });
-  it('friends_now is NOT actionable', () => {
-    expect(notificationIsActionable('friends_now')).toBe(false);
+  it('friend_accepted is NOT actionable', () => {
+    expect(notificationIsActionable('friend_accepted')).toBe(false);
   });
 
-  it('exactly 3 types are actionable across all 13 active types', () => {
+  it('exactly 4 types are actionable across all 13 active types', () => {
     const ALL_TYPES = [
       'follow', 'follow_request', 'follow_accepted',
       'like', 'comment', 'comment_also', 'mention',
       'club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted',
-      'friend_code_entered', 'friends_now',
+      'friend_request', 'friend_accepted',
     ];
     const actionable = ALL_TYPES.filter(notificationIsActionable);
-    expect(actionable).toHaveLength(3);
+    expect(actionable).toHaveLength(4);
     expect(actionable).toContain('follow_request');
     expect(actionable).toContain('club_join_request');
     expect(actionable).toContain('club_invite');
+    expect(actionable).toContain('friend_request');
   });
 });
 
@@ -170,15 +168,15 @@ describe('notificationScrollsToPost', () => {
   it('club_join_accepted does NOT scroll to post', () => expect(notificationScrollsToPost('club_join_accepted')).toBe(false));
   it('club_invite does NOT scroll to post', () => expect(notificationScrollsToPost('club_invite')).toBe(false));
   it('club_promoted does NOT scroll to post', () => expect(notificationScrollsToPost('club_promoted')).toBe(false));
-  it('friend_code_entered does NOT scroll to post', () => expect(notificationScrollsToPost('friend_code_entered')).toBe(false));
-  it('friends_now does NOT scroll to post', () => expect(notificationScrollsToPost('friends_now')).toBe(false));
+  it('friend_request does NOT scroll to post', () => expect(notificationScrollsToPost('friend_request')).toBe(false));
+  it('friend_accepted does NOT scroll to post', () => expect(notificationScrollsToPost('friend_accepted')).toBe(false));
 
   it('exactly 4 types scroll to post across all 13 active types', () => {
     const ALL_TYPES = [
       'follow', 'follow_request', 'follow_accepted',
       'like', 'comment', 'comment_also', 'mention',
       'club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted',
-      'friend_code_entered', 'friends_now',
+      'friend_request', 'friend_accepted',
     ];
     expect(ALL_TYPES.filter(notificationScrollsToPost)).toHaveLength(4);
   });
@@ -198,8 +196,8 @@ describe('notificationOpensClub', () => {
   });
   it('like does NOT open club', () => expect(notificationOpensClub('like')).toBe(false));
   it('follow does NOT open club', () => expect(notificationOpensClub('follow')).toBe(false));
-  it('friend_code_entered does NOT open club', () => expect(notificationOpensClub('friend_code_entered')).toBe(false));
-  it('friends_now does NOT open club', () => expect(notificationOpensClub('friends_now')).toBe(false));
+  it('friend_request does NOT open club', () => expect(notificationOpensClub('friend_request')).toBe(false));
+  it('friend_accepted does NOT open club', () => expect(notificationOpensClub('friend_accepted')).toBe(false));
 });
 
 // ── notificationOpensProfile ──────────────────────────────────────────────────
@@ -207,11 +205,13 @@ describe('notificationOpensClub', () => {
 describe('notificationOpensProfile', () => {
   it('follow opens profile', () => expect(notificationOpensProfile('follow')).toBe(true));
   it('follow_accepted opens profile', () => expect(notificationOpensProfile('follow_accepted')).toBe(true));
-  it('friend_code_entered opens profile', () => expect(notificationOpensProfile('friend_code_entered')).toBe(true));
-  it('friends_now opens profile', () => expect(notificationOpensProfile('friends_now')).toBe(true));
+  it('friend_accepted opens profile', () => expect(notificationOpensProfile('friend_accepted')).toBe(true));
 
   it('follow_request does NOT open profile (has Accept/Decline buttons)', () => {
     expect(notificationOpensProfile('follow_request')).toBe(false);
+  });
+  it('friend_request does NOT open profile (has Accept/Decline buttons)', () => {
+    expect(notificationOpensProfile('friend_request')).toBe(false);
   });
   it('like does NOT open profile', () => expect(notificationOpensProfile('like')).toBe(false));
   it('comment does NOT open profile', () => expect(notificationOpensProfile('comment')).toBe(false));
@@ -219,19 +219,18 @@ describe('notificationOpensProfile', () => {
   it('club_join_request does NOT open profile', () => expect(notificationOpensProfile('club_join_request')).toBe(false));
   it('club_join_accepted does NOT open profile', () => expect(notificationOpensProfile('club_join_accepted')).toBe(false));
 
-  it('exactly 4 types open profile across all 13 active types', () => {
+  it('exactly 3 types open profile across all 13 active types', () => {
     const ALL_TYPES = [
       'follow', 'follow_request', 'follow_accepted',
       'like', 'comment', 'comment_also', 'mention',
       'club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted',
-      'friend_code_entered', 'friends_now',
+      'friend_request', 'friend_accepted',
     ];
     const openers = ALL_TYPES.filter(notificationOpensProfile);
-    expect(openers).toHaveLength(4);
+    expect(openers).toHaveLength(3);
     expect(openers).toContain('follow');
     expect(openers).toContain('follow_accepted');
-    expect(openers).toContain('friend_code_entered');
-    expect(openers).toContain('friends_now');
+    expect(openers).toContain('friend_accepted');
   });
 });
 
@@ -256,15 +255,15 @@ describe('notificationRequiresRefId', () => {
   it('follow_accepted does NOT require ref_id', () => expect(notificationRequiresRefId('follow_accepted')).toBe(false));
 
   // Friend types — ref_id is NOT needed (tap opens actor profile via actor_id)
-  it('friend_code_entered does NOT require ref_id', () => expect(notificationRequiresRefId('friend_code_entered')).toBe(false));
-  it('friends_now does NOT require ref_id', () => expect(notificationRequiresRefId('friends_now')).toBe(false));
+  it('friend_request does NOT require ref_id', () => expect(notificationRequiresRefId('friend_request')).toBe(false));
+  it('friend_accepted does NOT require ref_id', () => expect(notificationRequiresRefId('friend_accepted')).toBe(false));
 
   it('exactly 8 types require ref_id across all 13 active types', () => {
     const ALL_TYPES = [
       'follow', 'follow_request', 'follow_accepted',
       'like', 'comment', 'comment_also', 'mention',
       'club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted',
-      'friend_code_entered', 'friends_now',
+      'friend_request', 'friend_accepted',
     ];
     expect(ALL_TYPES.filter(notificationRequiresRefId)).toHaveLength(8);
   });
@@ -277,7 +276,7 @@ describe('notification navigation coverage — every type routes somewhere', () 
     'follow', 'follow_request', 'follow_accepted',
     'like', 'comment', 'comment_also', 'mention',
     'club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted',
-    'friend_code_entered', 'friends_now',
+    'friend_request', 'friend_accepted',
   ];
 
   it('every type is handled by exactly one nav category (no gaps, no overlap)', () => {
@@ -292,18 +291,18 @@ describe('notification navigation coverage — every type routes somewhere', () 
     });
   });
 
-  it('friend_code_entered routes to profile (not post, not club, not actionable)', () => {
-    expect(notificationOpensProfile('friend_code_entered')).toBe(true);
-    expect(notificationScrollsToPost('friend_code_entered')).toBe(false);
-    expect(notificationOpensClub('friend_code_entered')).toBe(false);
-    expect(notificationIsActionable('friend_code_entered')).toBe(false);
+  it('friend_request is actionable (not post, not club, not profile)', () => {
+    expect(notificationIsActionable('friend_request')).toBe(true);
+    expect(notificationScrollsToPost('friend_request')).toBe(false);
+    expect(notificationOpensClub('friend_request')).toBe(false);
+    expect(notificationOpensProfile('friend_request')).toBe(false);
   });
 
-  it('friends_now routes to profile (not post, not club, not actionable)', () => {
-    expect(notificationOpensProfile('friends_now')).toBe(true);
-    expect(notificationScrollsToPost('friends_now')).toBe(false);
-    expect(notificationOpensClub('friends_now')).toBe(false);
-    expect(notificationIsActionable('friends_now')).toBe(false);
+  it('friend_accepted routes to profile (not post, not club, not actionable)', () => {
+    expect(notificationOpensProfile('friend_accepted')).toBe(true);
+    expect(notificationScrollsToPost('friend_accepted')).toBe(false);
+    expect(notificationOpensClub('friend_accepted')).toBe(false);
+    expect(notificationIsActionable('friend_accepted')).toBe(false);
   });
 });
 
@@ -415,7 +414,7 @@ describe('ref_id contract', () => {
     'follow', 'follow_request', 'follow_accepted',
     'like', 'comment', 'comment_also', 'mention',
     'club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted',
-    'friend_code_entered', 'friends_now',
+    'friend_request', 'friend_accepted',
   ];
 
   it('every type that scrolls to a post also requires ref_id', () => {
@@ -437,7 +436,7 @@ describe('ref_id contract', () => {
   });
 
   it('friend types do NOT require ref_id (profile opened via actor_id)', () => {
-    ['friend_code_entered', 'friends_now'].forEach(type => {
+    ['friend_request', 'friend_accepted'].forEach(type => {
       expect(notificationRequiresRefId(type)).toBe(false);
     });
   });

@@ -590,7 +590,7 @@ export function getFriendStatus(userId, { friends, sentRequests, receivedRequest
 export function computeFriendships(friendRequests, followingSet, currentUserId) {
   const friendships = new Set();
   for (const r of friendRequests) {
-    if (r.initiator_verified && r.target_verified) {
+    if (r.status === 'accepted') {
       const otherId = r.initiator_id === currentUserId ? r.target_id : r.initiator_id;
       if (followingSet.has(otherId)) friendships.add(otherId);
     }
@@ -844,10 +844,7 @@ export function notificationBody(type, actorName) {
     case 'club_join_accepted': return `${nm} approved your club request`;
     case 'club_invite':        return `${nm} invited you to join a club`;
     case 'club_promoted':        return `${nm} made you an owner of a club`;
-    case 'friend_code_entered':  return `${nm} entered your friend code`;
-    case 'friends_now':          return `You and ${nm} are now friends`;
-    case 'friend_invite':        return `${nm} wants to connect as friends`;
-    case 'friend_request':       return `${nm} sent you a friend request`;
+    case 'friend_request':       return `${nm} wants to be friends`;
     case 'friend_accepted':      return `${nm} accepted your friend request`;
     default:                     return '';
   }
@@ -858,7 +855,7 @@ export function notificationBody(type, actorName) {
  * and must NOT be auto-marked as read when the panel opens.
  */
 export function notificationIsActionable(type) {
-  return type === 'follow_request' || type === 'club_join_request' || type === 'club_invite';
+  return type === 'follow_request' || type === 'club_join_request' || type === 'club_invite' || type === 'friend_request';
 }
 
 /**
@@ -882,7 +879,7 @@ export function notificationOpensClub(type) {
  */
 export function notificationOpensProfile(type) {
   return type === 'follow' || type === 'follow_accepted'
-      || type === 'friend_code_entered' || type === 'friends_now';
+      || type === 'friend_accepted';
 }
 
 /**

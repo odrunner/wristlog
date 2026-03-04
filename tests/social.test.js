@@ -102,29 +102,28 @@ describe('computeFriendships', () => {
     expect(computeFriendships([], new Set(), ME).size).toBe(0);
   });
 
-  it('returns empty set when both verified but not following', () => {
-    const req = [{ initiator_id: ME, target_id: A, initiator_verified: true, target_verified: true }];
-    // ME is not following A
+  it('returns empty set when accepted but not following', () => {
+    const req = [{ initiator_id: ME, target_id: A, status: 'accepted' }];
     expect(computeFriendships(req, new Set(), ME).size).toBe(0);
   });
 
-  it('returns empty set when only one side verified', () => {
+  it('returns empty set when pending and following', () => {
     const following = new Set([A]);
-    const req = [{ initiator_id: ME, target_id: A, initiator_verified: true, target_verified: false }];
+    const req = [{ initiator_id: ME, target_id: A, status: 'pending' }];
     expect(computeFriendships(req, following, ME).size).toBe(0);
   });
 
-  it('adds friend when both verified AND mutual follow (ME is initiator)', () => {
+  it('adds friend when accepted AND mutual follow (ME is initiator)', () => {
     const following = new Set([A]);
-    const req = [{ initiator_id: ME, target_id: A, initiator_verified: true, target_verified: true }];
+    const req = [{ initiator_id: ME, target_id: A, status: 'accepted' }];
     const result = computeFriendships(req, following, ME);
     expect(result.has(A)).toBe(true);
     expect(result.size).toBe(1);
   });
 
-  it('adds friend when both verified AND mutual follow (ME is target)', () => {
+  it('adds friend when accepted AND mutual follow (ME is target)', () => {
     const following = new Set([B]);
-    const req = [{ initiator_id: B, target_id: ME, initiator_verified: true, target_verified: true }];
+    const req = [{ initiator_id: B, target_id: ME, status: 'accepted' }];
     const result = computeFriendships(req, following, ME);
     expect(result.has(B)).toBe(true);
     expect(result.size).toBe(1);
@@ -133,8 +132,8 @@ describe('computeFriendships', () => {
   it('handles multiple friends', () => {
     const following = new Set([A, B]);
     const reqs = [
-      { initiator_id: ME, target_id: A, initiator_verified: true, target_verified: true },
-      { initiator_id: B,  target_id: ME, initiator_verified: true, target_verified: true },
+      { initiator_id: ME, target_id: A, status: 'accepted' },
+      { initiator_id: B,  target_id: ME, status: 'accepted' },
     ];
     const result = computeFriendships(reqs, following, ME);
     expect(result.size).toBe(2);
@@ -142,27 +141,15 @@ describe('computeFriendships', () => {
     expect(result.has(B)).toBe(true);
   });
 
-  it('excludes requests where only initiator verified', () => {
+  it('excludes pending requests', () => {
     const following = new Set([A]);
-    const req = [{ initiator_id: ME, target_id: A, initiator_verified: true, target_verified: false }];
-    expect(computeFriendships(req, following, ME).has(A)).toBe(false);
-  });
-
-  it('excludes requests where only target verified', () => {
-    const following = new Set([A]);
-    const req = [{ initiator_id: ME, target_id: A, initiator_verified: false, target_verified: true }];
-    expect(computeFriendships(req, following, ME).has(A)).toBe(false);
-  });
-
-  it('excludes requests where neither side verified', () => {
-    const following = new Set([A]);
-    const req = [{ initiator_id: ME, target_id: A, initiator_verified: false, target_verified: false }];
+    const req = [{ initiator_id: ME, target_id: A, status: 'pending' }];
     expect(computeFriendships(req, following, ME).has(A)).toBe(false);
   });
 
   it('does not mutate the followingSet', () => {
     const following = new Set([A]);
-    const req = [{ initiator_id: ME, target_id: A, initiator_verified: true, target_verified: true }];
+    const req = [{ initiator_id: ME, target_id: A, status: 'accepted' }];
     computeFriendships(req, following, ME);
     expect(following.size).toBe(1);
   });
@@ -171,9 +158,9 @@ describe('computeFriendships', () => {
     const C = 'user-c';
     const following = new Set([A, B, C]);
     const reqs = [
-      { initiator_id: ME, target_id: A, initiator_verified: true, target_verified: true }, // ME=initiator → friend is A
-      { initiator_id: B,  target_id: ME, initiator_verified: true, target_verified: true }, // ME=target   → friend is B
-      { initiator_id: C,  target_id: ME, initiator_verified: true, target_verified: false }, // not complete
+      { initiator_id: ME, target_id: A, status: 'accepted' },  // ME=initiator → friend is A
+      { initiator_id: B,  target_id: ME, status: 'accepted' }, // ME=target   → friend is B
+      { initiator_id: C,  target_id: ME, status: 'pending' },  // not accepted
     ];
     const result = computeFriendships(reqs, following, ME);
     expect(result.has(A)).toBe(true);
