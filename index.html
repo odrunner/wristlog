@@ -3430,7 +3430,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.19.29';
+const APP_VERSION = '2.30.26.19.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6989,7 +6989,15 @@ async function loadAdminFeedback() {
     .select('*')
     .order('created_at', { ascending: false });
   if (error) { el.innerHTML = `<div style="color:var(--danger);">Error: ${escHtml(error.message)}</div>`; return; }
-  _adminFeedbackData = data || [];
+  _adminFeedbackData = (data || []).map(f => ({ ...f, status: f.status || 'pending' }));
+  // Sort: pending first (oldest first), then rest by newest first
+  const order = { pending: 0, reviewed: 1, resolved: 2, ignored: 3 };
+  _adminFeedbackData.sort((a, b) => {
+    const oa = order[a.status] ?? 9, ob = order[b.status] ?? 9;
+    if (oa !== ob) return oa - ob;
+    if (a.status === 'pending') return new Date(a.created_at) - new Date(b.created_at); // oldest first
+    return new Date(b.created_at) - new Date(a.created_at); // newest first
+  });
   updateAdminFilterCounts();
   if (!_adminFeedbackData.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">No feedback yet.</div>'; return; }
   renderAdminFeedback();
