@@ -3423,7 +3423,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.18.52';
+const APP_VERSION = '2.30.26.18.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4407,25 +4407,23 @@ async function acceptFriendRequest(initiatorId, notifId) {
     user_id: initiatorId, type: 'friend_accepted', actor_id: currentUser.id, is_read: false,
   });
 
-  // Show confirmation in-place before removing
+  // Replace Accept/Decline with confirmation text (notification stays)
   const item = document.getElementById(`notif-${notifId}`);
   if (item) {
     const actionsEl = item.querySelector('.notif-follow-actions');
     if (actionsEl) actionsEl.innerHTML = '<div style="color:#a78bfa;font-weight:600;font-size:.78rem;">You are now close friends!</div>';
   }
 
+  // Mark the notification as read and update its type so it no longer shows action buttons
+  await db.from('notifications').update({ type: 'friend_accepted', is_read: true }).eq('id', notifId);
+  const notif = userNotifs.find(n => n.id === notifId);
+  if (notif) { notif.type = 'friend_accepted'; notif.is_read = true; }
+  unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
+  updateBellBadge();
+
   await loadFriendRequests();
   computeFriendships();
   toast('You are now close friends!');
-
-  // Clean up the notification after a brief pause so the user sees the confirmation
-  setTimeout(async () => {
-    await db.from('notifications').delete().eq('id', notifId);
-    userNotifs = userNotifs.filter(n => n.id !== notifId);
-    unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
-    updateBellBadge();
-    renderNotificationPanel();
-  }, 2000);
 }
 
 async function declineFriendRequest(initiatorId, notifId) {
