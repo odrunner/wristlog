@@ -3423,7 +3423,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.19.15';
+const APP_VERSION = '2.30.26.19.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5525,7 +5525,7 @@ function renderNotificationPanel() {
   el.innerHTML = userNotifs.map(n => {
     const nm   = escHtml(n.actor?.display_name || n.actor?.username || 'Someone');
     const time = formatFeedDate(n.created_at || '');
-    const body = n.type === 'follow_request'  ? (n._declined ? `Follow request from ${nm}` : `${nm} wants to follow you`)
+    const body = n.type === 'follow_request'  ? (n._declined ? `Follow request from ${nm} declined` : `${nm} wants to follow you`)
                : n.type === 'follow_accepted' ? `${nm} accepted your follow request`
                : n.type === 'follow'          ? `${nm} started following you`
                : n.type === 'like'            ? `${nm} liked your wear log`
@@ -5536,7 +5536,7 @@ function renderNotificationPanel() {
                : n.type === 'club_join_accepted' ? `${nm} approved your club request`
                : n.type === 'club_invite'        ? `${nm} invited you to join a club`
                : n.type === 'club_promoted'        ? `${nm} made you an owner of a club`
-               : n.type === 'friend_request'       ? (n._declined || !friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'pending') ? `Close friend request from ${nm}` : `${nm} wants to be close friends`)
+               : n.type === 'friend_request'       ? (n._declined || !friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'pending') ? `Close friend request from ${nm} declined` : `${nm} wants to be close friends`)
                : n.type === 'friend_accepted'      ? `You and ${nm} are now close friends` : '';
     const actionsHtml = (n.type === 'follow_request' && !n._declined) ? `
       <div class="notif-follow-actions">
