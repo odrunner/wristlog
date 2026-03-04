@@ -12,13 +12,13 @@
   <meta property="og:url" content="https://wrotate.com/">
   <meta property="og:title" content="WRotate – Every Watch. Every Wear.">
   <meta property="og:description" content="Track your watch collection, log every wear, and share with friends. Cost-per-wear stats, market values, social feed, clubs, and wishlist.">
-  <meta property="og:image" content="https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/media/landing/collection.PNG">
+  <meta property="og:image" content="https://api.wrotate.com/storage/v1/object/public/media/landing/collection.PNG">
   <meta property="og:site_name" content="WRotate">
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="WRotate – Every Watch. Every Wear.">
   <meta name="twitter:description" content="Track your watch collection, log every wear, and share with friends. Stats, social feed, clubs, and wishlist.">
-  <meta name="twitter:image" content="https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/media/landing/collection.PNG">
+  <meta name="twitter:image" content="https://api.wrotate.com/storage/v1/object/public/media/landing/collection.PNG">
   <!-- Icons -->
   <link rel="icon" id="favicon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" id="touch-icon" href="icon.svg">
@@ -1668,19 +1668,19 @@
     <!-- APP PREVIEW SCREENSHOTS -->
     <div class="landing-preview">
       <div class="landing-preview-card">
-        <img src="https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/media/landing/track.PNG" alt="Track page" loading="lazy">
+        <img src="https://api.wrotate.com/storage/v1/object/public/media/landing/track.PNG" alt="Track page" loading="lazy">
         <div class="landing-preview-label">Track</div>
       </div>
       <div class="landing-preview-card">
-        <img src="https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/media/landing/collection.PNG" alt="Collection page" loading="lazy">
+        <img src="https://api.wrotate.com/storage/v1/object/public/media/landing/collection.PNG" alt="Collection page" loading="lazy">
         <div class="landing-preview-label">Collection</div>
       </div>
       <div class="landing-preview-card">
-        <img src="https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/media/landing/feed.PNG" alt="Feed page" loading="lazy">
+        <img src="https://api.wrotate.com/storage/v1/object/public/media/landing/feed.PNG" alt="Feed page" loading="lazy">
         <div class="landing-preview-label">Feed</div>
       </div>
       <div class="landing-preview-card">
-        <img src="https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/media/landing/stats.PNG" alt="Stats page" loading="lazy">
+        <img src="https://api.wrotate.com/storage/v1/object/public/media/landing/stats.PNG" alt="Stats page" loading="lazy">
         <div class="landing-preview-label">Stats</div>
       </div>
     </div>
@@ -3103,7 +3103,7 @@
 //  PKCE (the newer default) requires the OAuth state to survive the redirect,
 //  which is unreliable in this environment and causes bad_oauth_state errors.
 // ══════════════════════════════════════════
-const SUPABASE_URL = 'https://xnzweevzrojmouzhpwzv.supabase.co';
+const SUPABASE_URL = 'https://api.wrotate.com';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
@@ -3336,7 +3336,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.09.42';
+const APP_VERSION = '2.30.26.10.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
