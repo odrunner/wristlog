@@ -3339,7 +3339,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.15.43';
+const APP_VERSION = '2.30.26.15.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3806,7 +3806,6 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   const statsHtml = `
     <div class="profile-stats-row">
       <div class="profile-stat"><div class="profile-stat-value">${watchCount}</div><div class="profile-stat-label">${watchLabel}</div></div>
-      <div class="profile-stat"><div class="profile-stat-value">${logCount}</div><div class="profile-stat-label">Wears</div></div>
       <div class="profile-stat profile-stat-btn" onclick="openFollowersModal('${profile.id}')"><div class="profile-stat-value">${followerCount}</div><div class="profile-stat-label">Followers</div></div>
       <div class="profile-stat profile-stat-btn" onclick="openFollowingModalFor('${profile.id}')"><div class="profile-stat-value">${followingCount}</div><div class="profile-stat-label">Following</div></div>
       ${closeFriendsStat}
