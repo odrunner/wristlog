@@ -81,8 +81,8 @@ describe('notificationBody', () => {
   it('friend_request — "wants to be close friends"', () => {
     expect(notificationBody('friend_request', 'Muge')).toBe('Muge wants to be close friends');
   });
-  it('friend_accepted — "accepted your close friend request"', () => {
-    expect(notificationBody('friend_accepted', 'Muge')).toBe('Muge accepted your close friend request');
+  it('friend_accepted — "You and X are now close friends"', () => {
+    expect(notificationBody('friend_accepted', 'Muge')).toBe('You and Muge are now close friends');
   });
 
   it('all 13 active types produce non-empty body', () => {

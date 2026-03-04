@@ -845,7 +845,7 @@ export function notificationBody(type, actorName) {
     case 'club_invite':        return `${nm} invited you to join a club`;
     case 'club_promoted':        return `${nm} made you an owner of a club`;
     case 'friend_request':       return `${nm} wants to be close friends`;
-    case 'friend_accepted':      return `${nm} accepted your close friend request`;
+    case 'friend_accepted':      return `You and ${nm} are now close friends`;
     default:                     return '';
   }
 }
