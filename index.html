@@ -3430,7 +3430,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.19.25';
+const APP_VERSION = '2.30.26.19.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6962,6 +6962,17 @@ function filterAdminFeedback(filter) {
   renderAdminFeedback();
 }
 
+function updateAdminFilterCounts() {
+  const counts = { all: _adminFeedbackData.length };
+  for (const f of _adminFeedbackData) { const s = f.status || 'pending'; counts[s] = (counts[s] || 0) + 1; }
+  document.querySelectorAll('#admin-filter-chips .chip').forEach(c => {
+    const f = c.dataset.filter;
+    const count = counts[f] || 0;
+    const label = f.charAt(0).toUpperCase() + f.slice(1);
+    c.textContent = count ? `${label} (${count})` : label;
+  });
+}
+
 function renderAdminFeedback() {
   const el = document.getElementById('admin-feedback-list');
   if (!el) return;
@@ -6979,6 +6990,7 @@ async function loadAdminFeedback() {
     .order('created_at', { ascending: false });
   if (error) { el.innerHTML = `<div style="color:var(--danger);">Error: ${escHtml(error.message)}</div>`; return; }
   _adminFeedbackData = data || [];
+  updateAdminFilterCounts();
   if (!_adminFeedbackData.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">No feedback yet.</div>'; return; }
   renderAdminFeedback();
 }
@@ -7020,6 +7032,7 @@ async function updateFeedbackStatus(id, selectEl) {
     card.className = `fb-card status-${status}`;
   }
   selectEl.dataset.prev = status;
+  updateAdminFilterCounts();
 }
 
 function nav(btn) {
