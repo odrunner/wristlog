@@ -3305,7 +3305,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.09.14';
+const APP_VERSION = '2.30.26.09.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3749,6 +3749,20 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   // Friend card replaced by inline icon + popover — no separate card below stats
   const friendHtml = '';
 
+  // Close friends count (own profile only)
+  const activeFriends = isOwn ? friendRequests
+    .filter(r => r.status === 'accepted' &&
+      ((r.initiator_id === currentUser.id && following.has(r.target_id)) ||
+       (r.target_id   === currentUser.id && following.has(r.initiator_id))))
+    .map(r => {
+      const fid = r.initiator_id === currentUser.id ? r.target_id : r.initiator_id;
+      return followingProfiles.find(p => p.id === fid) || { id: fid, display_name: null, username: null };
+    })
+    .filter(Boolean) : [];
+  const closeFriendsStat = isOwn
+    ? `<div class="profile-stat profile-stat-btn" onclick="openCloseFriendsModal()"><div class="profile-stat-value">${activeFriends.length}</div><div class="profile-stat-label">Close Friends</div></div>`
+    : '';
+
   // Stats
   const watchCount = isOwn ? watches.length : (showcase.length || '—');
   const watchLabel = isOwn ? 'Watches' : 'Shared';
@@ -3758,6 +3772,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <div class="profile-stat"><div class="profile-stat-value">${logCount}</div><div class="profile-stat-label">Wears</div></div>
       <div class="profile-stat profile-stat-btn" onclick="openFollowersModal('${profile.id}')"><div class="profile-stat-value">${followerCount}</div><div class="profile-stat-label">Followers</div></div>
       <div class="profile-stat profile-stat-btn" onclick="openFollowingModalFor('${profile.id}')"><div class="profile-stat-value">${followingCount}</div><div class="profile-stat-label">Following</div></div>
+      ${closeFriendsStat}
     </div>`;
 
   // Edit fields (own profile) — hidden until edit icon tapped
@@ -4002,47 +4017,6 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <button style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;font-family:inherit;padding:.25rem .5rem;" onclick="openDeleteAccount()">Delete Account</button>
     </div>` : '';
 
-  // Friends list — only visible to yourself
-  const friendsListHtml = isOwn ? (() => {
-    // Look up profiles from the already-loaded followingProfiles (no extra DB query needed)
-    const profileById = id => followingProfiles.find(p => p.id === id) || { id, display_name: null, username: null };
-    const activeFriends = friendRequests
-      .filter(r => r.status === 'accepted' &&
-        ((r.initiator_id === currentUser.id && following.has(r.target_id)) ||
-         (r.target_id   === currentUser.id && following.has(r.initiator_id))))
-      .map(r => profileById(r.initiator_id === currentUser.id ? r.target_id : r.initiator_id))
-      .filter(Boolean);
-    const pendingOut = friendRequests.filter(r =>
-      r.initiator_id === currentUser.id && r.status === 'pending');
-    const pendingIn  = friendRequests.filter(r =>
-      r.target_id === currentUser.id && r.status === 'pending');
-
-    const friendRows = activeFriends.map(f => `
-      <div style="display:flex;align-items:center;gap:.65rem;cursor:pointer;padding:.2rem 0;"
-           onclick="viewUserProfile('${f.id}')">
-        <div class="feed-user-avatar" style="width:34px;height:34px;font-size:.72rem;flex-shrink:0;">${profileInitials(f)}</div>
-        <div>
-          <div style="font-weight:600;font-size:.84rem;">${escHtml(f.display_name || f.username || '—')}</div>
-          ${f.username ? `<div style="color:var(--muted);font-size:.74rem;">@${escHtml(f.username)}</div>` : ''}
-        </div>
-      </div>`).join('');
-
-    const pendingNote = (pendingOut.length + pendingIn.length) > 0
-      ? `<div style="font-size:.73rem;color:var(--muted);margin-top:.5rem;">${
-          pendingOut.length ? `${pendingOut.length} pending (waiting for acceptance)` : ''
-        }${pendingOut.length && pendingIn.length ? ' · ' : ''}${
-          pendingIn.length ? `${pendingIn.length} waiting for your acceptance` : ''
-        }</div>` : '';
-
-    return `
-      <div class="profile-page-card">
-        <div class="profile-page-section-title">Close Friends${activeFriends.length ? ' · ' + activeFriends.length : ''}</div>
-        ${activeFriends.length
-          ? `<div style="display:flex;flex-direction:column;gap:.15rem;margin-top:.35rem;">${friendRows}</div>`
-          : `<div style="color:var(--muted);font-size:.82rem;">No close friends yet — visit a mutual follow's profile to add them.</div>`}
-        ${pendingNote}
-      </div>`;
-  })() : '';
 
   return `
     <div class="profile-hero">
@@ -4059,7 +4033,6 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     ${friendHtml}
     ${editHtml}
     ${privacyHtml}
-    ${friendsListHtml}
     ${showcaseHtml}
     ${wishlistHtml}
     ${logsHtml}
@@ -5171,6 +5144,7 @@ async function openFollowingModalFor(userId) {
   if (!userId) return;
   const modal = document.getElementById('following-modal');
   const list  = document.getElementById('following-modal-list');
+  document.querySelector('#following-modal .modal-title').textContent = 'Following';
   modal.classList.remove('hidden');
   list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Loading…</div>';
 
@@ -5200,6 +5174,39 @@ function closeFollowingModal() {
   document.getElementById('following-modal').classList.add('hidden');
 }
 
+function openCloseFriendsModal() {
+  if (!currentUser) return;
+  const modal = document.getElementById('following-modal');
+  const list  = document.getElementById('following-modal-list');
+  document.querySelector('#following-modal .modal-title').textContent = 'Close Friends';
+  modal.classList.remove('hidden');
+
+  const activeFriends = friendRequests
+    .filter(r => r.status === 'accepted' &&
+      ((r.initiator_id === currentUser.id && following.has(r.target_id)) ||
+       (r.target_id   === currentUser.id && following.has(r.initiator_id))))
+    .map(r => {
+      const fid = r.initiator_id === currentUser.id ? r.target_id : r.initiator_id;
+      return followingProfiles.find(p => p.id === fid) || { id: fid, display_name: null, username: null };
+    })
+    .filter(Boolean);
+
+  const pendingOut = friendRequests.filter(r => r.initiator_id === currentUser.id && r.status === 'pending');
+  const pendingIn  = friendRequests.filter(r => r.target_id === currentUser.id && r.status === 'pending');
+  const pendingNote = (pendingOut.length + pendingIn.length) > 0
+    ? `<div style="font-size:.73rem;color:var(--muted);padding:.5rem 1rem;">${
+        pendingOut.length ? `${pendingOut.length} pending (waiting for acceptance)` : ''
+      }${pendingOut.length && pendingIn.length ? ' · ' : ''}${
+        pendingIn.length ? `${pendingIn.length} waiting for your acceptance` : ''
+      }</div>` : '';
+
+  if (!activeFriends.length && !pendingNote) {
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No close friends yet — visit a mutual follow\'s profile to add them.</div>';
+    return;
+  }
+
+  list.innerHTML = activeFriends.map(u => userCardHtml(u)).join('') + pendingNote;
+}
 
 // ── Notifications ──────────────────────────────────────────────────────────
 async function loadNotifications() {
