@@ -110,7 +110,6 @@ export function watchToRow(w, userId, eloRatings = {}) {
     insurance_notes: w.insuranceNotes || null, receipts: w.receipts || [],
     elo_rating: eloRatings[w.id] || 1000,
     watch_privacy: w.watchPrivacy ?? null,
-    is_public: w.watchPrivacy !== 'private',
   };
 }
 
@@ -130,7 +129,6 @@ export function rowToWatch(r) {
     insurance: r.insurance || null, insuredValue: r.insured_value || null,
     insuranceNotes: r.insurance_notes || null, receipts: r.receipts || [],
     watchPrivacy: r.watch_privacy ?? null,
-    isPublic: r.watch_privacy !== 'private',
   };
 }
 
@@ -140,7 +138,7 @@ export function logToRow(l, userId) {
     id: l.id, user_id: userId, watch_id: l.watchId,
     date: l.date, use_case: l.useCase || 'unspecified',
     notes: l.notes || null, strap_id: l.strapId || null,
-    photo_url: l.photoUrl || null, is_public: vis !== 'private',
+    photo_url: l.photoUrl || null,
     visibility: vis,
     club_id: l.clubId || null,
   };
@@ -151,8 +149,7 @@ export function rowToLog(r) {
     id: r.id, watchId: r.watch_id, date: r.date,
     useCase: r.use_case || 'unspecified', notes: r.notes || null,
     strapId: r.strap_id || null, photoUrl: r.photo_url || null,
-    isPublic: r.is_public !== false,
-    visibility: r.visibility || (r.is_public !== false ? 'public' : 'private'),
+    visibility: r.visibility || 'public',
     clubId: r.club_id || null,
   };
 }
@@ -286,7 +283,6 @@ export function buildSaveWatchData({ formData, editingId, watches, todayFn = tod
     watchChartsUrl: formData.watchChartsUrl || null,
     tags: formData.tags || [],
     straps: formData.straps || [],
-    isPublic: formData.isPublic || false,
     ...(formData.image ? { image: formData.image } : {}),
   };
 

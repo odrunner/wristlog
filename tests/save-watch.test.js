@@ -9,7 +9,7 @@ const baseFormData = {
   color: '#c9a84c', insurance: null, insuredValue: null,
   insuranceNotes: '', warrantyExpiry: null, hasBox: 'yes',
   hasPapers: 'yes', watchChartsUrl: null, tags: ['Chrono'],
-  straps: [], isPublic: false, image: null,
+  straps: [], image: null,
   manualMp: 0, modalFetchedPrice: null,
 };
 

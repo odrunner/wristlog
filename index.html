@@ -3304,7 +3304,6 @@ function watchToRow(w) {
     insurance_notes: w.insuranceNotes||null, receipts: w.receipts||[],
     elo_rating: eloRatings[w.id] || 1000,
     watch_privacy: w.watchPrivacy ?? null,
-    is_public: w.watchPrivacy !== 'private',
   };
 }
 function rowToWatch(r) {
@@ -3325,7 +3324,6 @@ function rowToWatch(r) {
     insurance: r.insurance||null, insuredValue: r.insured_value||null,
     insuranceNotes: r.insurance_notes||null, receipts: r.receipts||[],
     watchPrivacy: r.watch_privacy ?? null,
-    isPublic: r.watch_privacy !== 'private',
   };
 }
 function logToRow(l) {
@@ -3344,8 +3342,7 @@ function rowToLog(r) {
     id: r.id, watchId: r.watch_id, date: r.date,
     useCase: r.use_case||'unspecified', notes: r.notes||null,
     strapId: r.strap_id||null, photoUrl: r.photo_url||null,
-    isPublic: r.is_public !== false,
-    visibility: r.visibility || (r.is_public !== false ? 'public' : 'private'),
+    visibility: r.visibility || 'public',
     clubId: r.club_id || null,
   };
 }
@@ -3425,7 +3422,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.07.01';
+const APP_VERSION = '2.30.26.18.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3712,7 +3709,7 @@ async function loadAndRenderProfile(userId) {
     .eq('following_id', userId);
   const followerCount = (followerRows || []).length;
 
-  // Log count (is_public not on logs table — treat all logs as viewable)
+  // Log count
   const { count: logCount } = await db.from('logs')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId);
@@ -4171,9 +4168,8 @@ async function cycleWatchPrivacy(watchId) {
   const cur = w.watchPrivacy === 'friends_only' ? 'friends' : (w.watchPrivacy ?? null);
   const next  = order[(order.indexOf(cur) + 1) % order.length];
   w.watchPrivacy = next;
-  w.isPublic     = next !== 'private';
   const { error } = await db.from('watches')
-    .update({ watch_privacy: next, is_public: w.isPublic })
+    .update({ watch_privacy: next })
     .eq('id', watchId);
   if (error) { toast('Could not update — ' + error.message, 'error'); return; }
   // Update DOM in-place — no full page reload
@@ -5726,7 +5722,6 @@ async function loadFeed() {
     //   followers → only if currentUser follows the author
     //   friends   → only if currentUser is friends with the author (mutual follow)
     //   null      → legacy pre-visibility post: treat as followers-scoped
-    //               (is_public=true kept as public for club posts only)
     rawLogs = rawLogs.filter(log => {
       if (log.user_id === currentUser.id) return true;           // own post — always visible
       if (log.club_id && myClubIds.includes(log.club_id)) {     // club post — membership already verified
@@ -5738,7 +5733,7 @@ async function loadFeed() {
       if (log.visibility === 'public')    return true;
       if (log.visibility === 'followers') return following.has(log.user_id);
       if (log.visibility === 'friends')   return friendships.has(log.user_id);
-      // null / legacy: only show to followers (is_public=true is followers-like scope)
+      // null / legacy: only show to followers
       return following.has(log.user_id);
     });
 
@@ -6100,7 +6095,7 @@ async function saveEditPost() {
   const clubId = getSelectedClubId('ep-club-chips') || null;
   // Update local state
   if (fi)  { fi.notes = newNotes || null; fi.photo_url = finalPhoto; fi.visibility = vis; fi.club_id = clubId; }
-  if (log) { log.notes = newNotes || null; log.photoUrl = finalPhoto; log.visibility = vis; log.isPublic = vis !== 'private'; log.clubId = clubId; save(); }
+  if (log) { log.notes = newNotes || null; log.photoUrl = finalPhoto; log.visibility = vis; log.clubId = clubId; save(); }
   // Persist to Supabase
   if (currentUser) {
     const { error } = await db.from('logs')
@@ -6179,7 +6174,7 @@ async function saveNewPost() {
   const entry = {
     id: uid(), watchId: null, date: todayStr(),
     useCase: 'unspecified', notes: body || null,
-    photoUrl: newPostPhoto || null, isPublic: vis !== 'private',
+    photoUrl: newPostPhoto || null,
     visibility: vis,
   };
   logs.push(entry);
@@ -7197,7 +7192,7 @@ function saveLog() {
     id: uid(), watchId: selWatchId, date, useCase: selUseCase,
     notes, privateNotes,
     photoUrl: trackPhoto || null,
-    visibility: vis, isPublic: vis !== 'private',
+    visibility: vis,
     clubId: null,
   };
   if (selStrapId) logEntry.strapId = selStrapId;
@@ -8346,7 +8341,6 @@ function saveWatch() {
     watchChartsUrl: wcUrl || null,
     tags:           getSelectedTags(),
     straps:         wEditStraps,
-    isPublic:       editingId ? (watches.find(x => x.id === editingId)?.watchPrivacy !== 'private') : false,
     ...(wPendingImage ? { image: wPendingImage } : {}),
   };
 

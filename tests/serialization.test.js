@@ -32,7 +32,7 @@ const fullRow = {
   warranty_expiry: '2029-01-15', has_box: true, has_papers: true,
   insurance: 'insured', insured_value: 7000, insurance_notes: null,
   receipts: [{ id: 'r1', name: 'Purchase receipt' }],
-  watch_privacy: 'public', is_public: true,
+  watch_privacy: 'public',
 };
 
 // ── watchToRow / rowToWatch ─────────────────────────────────────────────────
@@ -59,7 +59,6 @@ describe('watchToRow', () => {
     expect(row.insured_value).toBe(7000);
     expect(row.receipts).toEqual([{ id: 'r1', name: 'Purchase receipt' }]);
     expect(row.watch_privacy).toBe('public');
-    expect(row.is_public).toBe(true);
   });
 
   it('converts hasBox/hasPapers yes/no to boolean', () => {
@@ -92,18 +91,6 @@ describe('watchToRow', () => {
     expect(row.watch_privacy).toBeNull();
   });
 
-  it('marks is_public true when privacy is not private', () => {
-    const w = { ...fullWatch, watchPrivacy: 'public' };
-    expect(watchToRow(w, 'u1').is_public).toBe(true);
-    const w2 = { ...fullWatch, watchPrivacy: 'followers' };
-    expect(watchToRow(w2, 'u1').is_public).toBe(true);
-  });
-
-  it('marks is_public false when privacy is private', () => {
-    const w = { ...fullWatch, watchPrivacy: 'private' };
-    expect(watchToRow(w, 'u1').is_public).toBe(false);
-  });
-
   it('handles null/undefined fields with safe defaults', () => {
     const minimal = { id: 'w2' };
     const row = watchToRow(minimal, 'u1');
@@ -133,7 +120,6 @@ describe('rowToWatch', () => {
     expect(w.hasPapers).toBe('yes');
     expect(w.insuredValue).toBe(7000);
     expect(w.watchPrivacy).toBe('public');
-    expect(w.isPublic).toBe(true);
   });
 
   it('converts has_box/has_papers booleans to yes/no strings', () => {
@@ -224,7 +210,7 @@ const fullLogRow = {
   id: 'log1', user_id: 'u1', watch_id: 'w1', date: '2024-06-15',
   use_case: 'work', notes: 'Great day at the office',
   strap_id: 's1', photo_url: 'https://example.com/photo.jpg',
-  is_public: true, visibility: 'public', club_id: null,
+  visibility: 'public', club_id: null,
 };
 
 describe('logToRow', () => {
@@ -238,16 +224,9 @@ describe('logToRow', () => {
     expect(row.use_case).toBe('unspecified');
   });
 
-  it('defaults visibility to public and is_public to true', () => {
+  it('defaults visibility to public', () => {
     const row = logToRow({ id: 'l2', watchId: 'w1', date: '2024-01-01' }, 'u1');
     expect(row.visibility).toBe('public');
-    expect(row.is_public).toBe(true);
-  });
-
-  it('sets is_public false when visibility is private', () => {
-    const row = logToRow({ ...fullLog, visibility: 'private' }, 'u1');
-    expect(row.is_public).toBe(false);
-    expect(row.visibility).toBe('private');
   });
 
   it('includes club_id when provided', () => {
@@ -266,7 +245,6 @@ describe('rowToLog', () => {
     expect(log.notes).toBe('Great day at the office');
     expect(log.strapId).toBe('s1');
     expect(log.photoUrl).toBe('https://example.com/photo.jpg');
-    expect(log.isPublic).toBe(true);
     expect(log.visibility).toBe('public');
     expect(log.clubId).toBeNull();
   });
@@ -276,11 +254,9 @@ describe('rowToLog', () => {
     expect(log.useCase).toBe('unspecified');
   });
 
-  it('derives visibility from is_public when visibility column is missing', () => {
-    const log = rowToLog({ ...fullLogRow, visibility: null, is_public: false });
-    expect(log.visibility).toBe('private');
-    const log2 = rowToLog({ ...fullLogRow, visibility: null, is_public: true });
-    expect(log2.visibility).toBe('public');
+  it('defaults visibility to public when column is null', () => {
+    const log = rowToLog({ ...fullLogRow, visibility: null });
+    expect(log.visibility).toBe('public');
   });
 
   it('includes clubId from row', () => {
