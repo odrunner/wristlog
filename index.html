@@ -2904,7 +2904,8 @@
         style="display:none" onchange="handleNewPostPhoto(this)">
     </div>
     <div class="form-group">
-      <textarea id="np-body" rows="3" placeholder="What's on your mind?" style="resize:none;"></textarea>
+      <textarea id="np-body" rows="3" placeholder="What's on your mind? (@ to mention)" style="resize:none;"
+        oninput="mentionOnInput(this)" onkeydown="mentionOnKeydown(event)"></textarea>
     </div>
     <div class="form-group">
       <label style="font-size:.78rem;color:var(--muted);">Who can see this?</label>
@@ -2932,7 +2933,8 @@
         style="display:none" onchange="handleEditPostPhoto(this)">
     </div>
     <div class="form-group">
-      <textarea id="ep-body" rows="3" placeholder="What's on your mind?" style="resize:none;"></textarea>
+      <textarea id="ep-body" rows="3" placeholder="What's on your mind? (@ to mention)" style="resize:none;"
+        oninput="mentionOnInput(this)" onkeydown="mentionOnKeydown(event)"></textarea>
     </div>
     <div class="form-group">
       <label style="font-size:.78rem;color:var(--muted);">Who can see this?</label>
@@ -3073,7 +3075,8 @@
     <!-- Caption + Private notes side by side label, stacked fields -->
     <div class="tl-field">
       <div class="tl-label">Caption <span class="tl-opt">shown in feed</span></div>
-      <textarea id="track-notes" placeholder="What are you up to today…" rows="2"></textarea>
+      <textarea id="track-notes" placeholder="What are you up to today… (@ to mention)" rows="2"
+        oninput="mentionOnInput(this)" onkeydown="mentionOnKeydown(event)"></textarea>
     </div>
 
     <div class="tl-field">
@@ -3430,7 +3433,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.19.44';
+const APP_VERSION = '2.30.26.19.55';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3717,15 +3720,17 @@ async function loadAndRenderProfile(userId) {
     .eq('following_id', userId);
   const followerCount = (followerRows || []).length;
 
-  // Log count
+  // Log count (wears only — has a watch_id)
   const { count: logCount } = await db.from('logs')
     .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .not('watch_id', 'is', null);
 
-  // Recent logs
+  // Recent logs (wears only)
   const { data: recentLogs } = await db.from('logs')
     .select('id, date, use_case, notes, watch_id, watches!watch_id(id, brand, name, color, image)')
     .eq('user_id', userId)
+    .not('watch_id', 'is', null)
     .order('date', { ascending: false }).limit(6);
 
   // Collection showcase
@@ -6251,6 +6256,7 @@ async function fetchComments(logId) {
 }
 // ── @mention autocomplete ─────────────────────────────────────────────────
 let _mentionLogId    = null;   // which feed card the active dropdown belongs to
+let _mentionInputId  = null;   // element ID of the active mention input
 let _mentionAcIdx    = -1;     // keyboard-selected item index
 let _mentionResults  = [];     // current filtered profile list
 
@@ -6265,6 +6271,7 @@ function mentionOnInput(input, logId) {
   const query = getMentionQuery(input);
   if (query === null) { closeMentionAc(); return; }
   _mentionLogId   = logId;
+  _mentionInputId = input.id;
   _mentionAcIdx   = -1;
   const q = query.toLowerCase();
   _mentionResults = followingProfiles.filter(p =>
@@ -6277,8 +6284,8 @@ function mentionOnInput(input, logId) {
 function mentionOnKeydown(e, logId) {
   const ac = document.getElementById('mention-ac');
   if (!ac.classList.contains('open')) {
-    // Normal Enter → post
-    if (e.key === 'Enter') { e.preventDefault(); postComment(logId); }
+    // Normal Enter → post comment (only for comment inputs, not textareas)
+    if (e.key === 'Enter' && logId) { e.preventDefault(); postComment(logId); }
     return;
   }
   if (e.key === 'ArrowDown') {
@@ -6332,7 +6339,7 @@ function selectMentionByIdx(idx) {
 }
 
 function selectMention(profile) {
-  const input = _mentionLogId ? document.getElementById(`comment-input-${_mentionLogId}`) : null;
+  const input = _mentionInputId ? document.getElementById(_mentionInputId) : (_mentionLogId ? document.getElementById(`comment-input-${_mentionLogId}`) : null);
   if (!input) { closeMentionAc(); return; }
   const before  = input.value.slice(0, input.selectionStart);
   const after   = input.value.slice(input.selectionStart);
@@ -6355,7 +6362,7 @@ function closeMentionAc() {
 
 // Close dropdown when clicking outside or scrolling (fixed dropdown can't follow scroll)
 document.addEventListener('mousedown', e => {
-  if (!e.target.closest('#mention-ac') && !e.target.closest('.comment-input')) {
+  if (!e.target.closest('#mention-ac') && !e.target.closest('.comment-input') && !['np-body','ep-body','track-notes'].includes(e.target.id)) {
     closeMentionAc();
   }
 });
@@ -6363,9 +6370,9 @@ document.addEventListener('scroll', closeMentionAc, true); // capture=true catch
 
 // Re-open dropdown on focus/click if cursor is still after an @query
 document.addEventListener('focusin', e => {
-  const input = e.target.closest('.comment-input');
+  const input = e.target.closest('.comment-input') || (['np-body','ep-body','track-notes'].includes(e.target.id) ? e.target : null);
   if (!input) return;
-  const logId = input.id.replace('comment-input-', '');
+  const logId = input.classList.contains('comment-input') ? input.id.replace('comment-input-', '') : null;
   if (getMentionQuery(input) !== null) mentionOnInput(input, logId);
 });
 
