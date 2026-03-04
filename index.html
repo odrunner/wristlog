@@ -2128,6 +2128,13 @@
       <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Feedback</div>
       <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadAdminFeedback()">↻ Refresh</button>
     </div>
+    <div class="chips" id="admin-filter-chips" style="margin-bottom:.75rem;">
+      <div class="chip selected" data-filter="all" onclick="filterAdminFeedback('all')">All</div>
+      <div class="chip" data-filter="pending" onclick="filterAdminFeedback('pending')">Pending</div>
+      <div class="chip" data-filter="reviewed" onclick="filterAdminFeedback('reviewed')">Reviewed</div>
+      <div class="chip" data-filter="resolved" onclick="filterAdminFeedback('resolved')">Resolved</div>
+      <div class="chip" data-filter="ignored" onclick="filterAdminFeedback('ignored')">Ignored</div>
+    </div>
     <div id="admin-feedback-list"><div style="color:var(--muted);font-size:.9rem;">Loading…</div></div>
   </div>
 
@@ -3423,7 +3430,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.19.23';
+const APP_VERSION = '2.30.26.19.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6946,6 +6953,23 @@ function showAdminPage() {
   loadAdminFeedback();
 }
 
+let _adminFeedbackData = [];
+let _adminFilter = 'all';
+
+function filterAdminFeedback(filter) {
+  _adminFilter = filter;
+  document.querySelectorAll('#admin-filter-chips .chip').forEach(c => c.classList.toggle('selected', c.dataset.filter === filter));
+  renderAdminFeedback();
+}
+
+function renderAdminFeedback() {
+  const el = document.getElementById('admin-feedback-list');
+  if (!el) return;
+  const filtered = _adminFilter === 'all' ? _adminFeedbackData : _adminFeedbackData.filter(f => (f.status || 'pending') === _adminFilter);
+  if (!filtered.length) { el.innerHTML = `<div style="color:var(--muted);font-size:.9rem;">No ${_adminFilter === 'all' ? '' : _adminFilter + ' '}feedback.</div>`; return; }
+  el.innerHTML = filtered.map(f => renderFeedbackCard(f)).join('');
+}
+
 async function loadAdminFeedback() {
   const el = document.getElementById('admin-feedback-list');
   if (!el) return;
@@ -6954,8 +6978,12 @@ async function loadAdminFeedback() {
     .select('*')
     .order('created_at', { ascending: false });
   if (error) { el.innerHTML = `<div style="color:var(--danger);">Error: ${escHtml(error.message)}</div>`; return; }
-  if (!data || !data.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">No feedback yet.</div>'; return; }
-  el.innerHTML = data.map(f => {
+  _adminFeedbackData = data || [];
+  if (!_adminFeedbackData.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">No feedback yet.</div>'; return; }
+  renderAdminFeedback();
+}
+
+function renderFeedbackCard(f) {
     const date = new Date(f.created_at).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
     const status = f.status || 'pending';
     const statusOptions = ['pending','reviewed','resolved','ignored']
@@ -6977,7 +7005,6 @@ async function loadAdminFeedback() {
         <select class="fb-status-select ${status}" onchange="updateFeedbackStatus('${f.id}', this)">${statusOptions}</select>
       </div>
     </div>`;
-  }).join('');
 }
 
 async function updateFeedbackStatus(id, selectEl) {
@@ -6985,6 +7012,9 @@ async function updateFeedbackStatus(id, selectEl) {
   const card = document.getElementById('fb-card-' + id);
   const { error } = await db.from('feedback').update({ status }).eq('id', id);
   if (error) { toast('Failed to update status', 'error'); selectEl.value = selectEl.dataset.prev || 'pending'; return; }
+  // Update local data so filters stay consistent
+  const item = _adminFeedbackData.find(f => f.id === id);
+  if (item) item.status = status;
   selectEl.className = `fb-status-select ${status}`;
   if (card) {
     card.className = `fb-card status-${status}`;
