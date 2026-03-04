@@ -3451,7 +3451,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.22.20';
+const APP_VERSION = '2.30.26.06.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3753,6 +3753,12 @@ async function loadAndRenderProfile(userId) {
     .eq('following_id', userId);
   const followerCount = (followerRows || []).length;
 
+  // Following count
+  const { data: followingRows } = await db.from('follows')
+    .select('following_id')
+    .eq('follower_id', userId);
+  const followingCount = isOwn ? following.size : (followingRows || []).length;
+
   // Log count (wears only — has a watch_id)
   const { count: logCount } = await db.from('logs')
     .select('*', { count: 'exact', head: true })
@@ -3830,7 +3836,7 @@ async function loadAndRenderProfile(userId) {
     }
   }
 
-  el.innerHTML = renderProfilePageHTML(profile, isOwn, isFollowing, logCount || 0, recentLogs || [], showcase, visibility, privacy, isFriend, wishlistItems, followerCount || 0, isMutual, friendReq);
+  el.innerHTML = renderProfilePageHTML(profile, isOwn, isFollowing, logCount || 0, recentLogs || [], showcase, visibility, privacy, isFriend, wishlistItems, followerCount || 0, isMutual, friendReq, followingCount || 0);
 
   if (isOwn) {
     document.getElementById('profile-save-btn')?.addEventListener('click', saveProfileFromPage);
@@ -3855,7 +3861,7 @@ function renderPrivateProfileHTML(profile, privacy, userId) {
     </div>`;
 }
 
-function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs, showcase, visibility, privacy, isFriend, wishlistItems = [], followerCount = 0, isMutual = false, friendReq = null) {
+function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs, showcase, visibility, privacy, isFriend, wishlistItems = [], followerCount = 0, isMutual = false, friendReq = null, followingCount = 0) {
   const heroInitials = profileInitials(profile);
   const wlVis = profile.wishlist_visibility || 'followers';
   const isActualFriend = !isOwn && friendships.has(profile.id); // mutual-follow + both codes verified
@@ -3897,7 +3903,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <div class="profile-stat"><div class="profile-stat-value">${watchCount}</div><div class="profile-stat-label">${watchLabel}</div></div>
       <div class="profile-stat"><div class="profile-stat-value">${logCount}</div><div class="profile-stat-label">Wears</div></div>
       <div class="profile-stat profile-stat-btn" onclick="openFollowersModal('${profile.id}')"><div class="profile-stat-value">${followerCount}</div><div class="profile-stat-label">Followers</div></div>
-      ${isOwn ? `<div class="profile-stat profile-stat-btn" onclick="openFollowingModal()"><div class="profile-stat-value">${following.size}</div><div class="profile-stat-label">Following</div></div>` : ''}
+      <div class="profile-stat profile-stat-btn" onclick="openFollowingModalFor('${profile.id}')"><div class="profile-stat-value">${followingCount}</div><div class="profile-stat-label">Following</div></div>
     </div>`;
 
   // Edit fields (own profile) — hidden until edit icon tapped
@@ -5305,18 +5311,31 @@ function closeFollowersModal() {
   document.getElementById('followers-modal').classList.add('hidden');
 }
 
-async function openFollowingModal() {
+async function openFollowingModal() { openFollowingModalFor(currentUser?.id); }
+
+async function openFollowingModalFor(userId) {
+  if (!userId) return;
   const modal = document.getElementById('following-modal');
   const list  = document.getElementById('following-modal-list');
   modal.classList.remove('hidden');
+  list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Loading…</div>';
 
-  const ids = [...following];
+  // For own profile use local set; for others query DB
+  let ids;
+  if (currentUser && userId === currentUser.id) {
+    ids = [...following];
+  } else {
+    const { data: rows } = await db.from('follows')
+      .select('following_id')
+      .eq('follower_id', userId);
+    ids = (rows || []).map(r => r.following_id);
+  }
+
   if (!ids.length) {
-    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">You\'re not following anyone yet.</div>';
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Not following anyone yet.</div>';
     return;
   }
 
-  list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Loading…</div>';
   const { data: profiles } = await db.from('profiles')
     .select('id, username, display_name, avatar_url, profile_privacy')
     .in('id', ids);
