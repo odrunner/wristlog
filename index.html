@@ -23,7 +23,7 @@
   <!-- Icons -->
   <link rel="icon" id="favicon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" id="touch-icon" href="icon.svg">
-  <meta name="theme-color" content="#0b0b10">
+  <meta name="theme-color" content="#f5f5f8">
   <link rel="manifest" href="manifest.json">
   <!-- Structured Data -->
   <script type="application/ld+json">
@@ -65,7 +65,7 @@
   <!-- Apply saved theme before first paint to avoid flash -->
   <script>
     (function(){
-      var t = localStorage.getItem('wrotate_theme') || 'os';
+      var t = localStorage.getItem('wrotate_theme') || 'light';
       if (t === 'light' || (t === 'os' && window.matchMedia('(prefers-color-scheme: light)').matches)) {
         document.documentElement.setAttribute('data-theme', 'light');
       }
@@ -1179,6 +1179,8 @@
 
       /* Modals: bottom-sheet style */
       .overlay { align-items: flex-end; padding: 0; padding-top: 2.5rem; overflow-x: hidden; }
+      #welcome-modal { align-items: center; padding: 1rem; }
+      #welcome-modal .modal { border-radius: 14px; }
       .modal { border-radius: 16px 16px 0 0; max-height: 88vh; max-width: 100%; padding: 1.4rem 1rem 1.2rem; }
       #watch-preview-modal { align-items: center; padding: 1.5rem; }
       #watch-preview-modal .modal { border-radius: 14px; max-width: 320px; }
@@ -3337,7 +3339,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.15.31';
+const APP_VERSION = '2.30.26.15.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6667,7 +6669,7 @@ function setDefaultVis(v) {
 // ── Theme helpers ────────────────────────────────────────────────────────────
 const STORE_THEME = 'wrotate_theme';
 function getTheme() {
-  return localStorage.getItem(STORE_THEME) || myProfile?.theme_preference || 'os';
+  return localStorage.getItem(STORE_THEME) || myProfile?.theme_preference || 'light';
 }
 function applyTheme(t) {
   t = t || getTheme();
