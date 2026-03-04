@@ -1819,11 +1819,11 @@
       <p style="color:var(--muted);font-size:.9rem;line-height:1.55;margin:.5rem 0 1rem;">Add your name and a short bio so others know who you are.</p>
       <div class="form-group" style="text-align:left;margin-bottom:.75rem;">
         <label style="font-size:.8rem;margin-bottom:.3rem;display:block;">Display Name</label>
-        <input type="text" id="ws-display-name" placeholder="Your name" autocomplete="off">
+        <input type="text" id="ws-display-name" placeholder="Your name" autocomplete="off" maxlength="50">
       </div>
       <div class="form-group" style="text-align:left;margin-bottom:1rem;">
         <label style="font-size:.8rem;margin-bottom:.3rem;display:block;">Bio</label>
-        <textarea id="ws-bio" rows="2" placeholder="A short bio..." style="resize:none;"></textarea>
+        <textarea id="ws-bio" rows="2" placeholder="A short bio..." style="resize:none;" maxlength="300"></textarea>
       </div>
       <button class="btn btn-primary" style="width:100%;margin-bottom:.6rem;" onclick="saveWelcomeProfile()">Save & Continue →</button>
       <button class="btn btn-ghost" style="width:100%;" onclick="welcomeStep(5)">Skip for now</button>
@@ -2390,13 +2390,13 @@
       </div>
       <div class="form-group">
         <label>Model / Name *</label>
-        <input type="text" id="w-name" placeholder="Submariner, Speedmaster…">
+        <input type="text" id="w-name" placeholder="Submariner, Speedmaster…" maxlength="100">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
         <label>Reference No.</label>
-        <input type="text" id="w-ref" placeholder="116610LN">
+        <input type="text" id="w-ref" placeholder="116610LN" maxlength="60">
       </div>
       <div class="form-group">
         <label>Purchase Price ($)</label>
@@ -2453,7 +2453,7 @@
           </div>
           <div class="form-group" id="w-ins-notes-group" style="display:none;">
             <label>Insurance Notes</label>
-            <input type="text" id="w-ins-notes" placeholder="Appraisal needed, need to send…">
+            <input type="text" id="w-ins-notes" placeholder="Appraisal needed, need to send…" maxlength="200">
           </div>
         </div>
       </div>
@@ -2505,8 +2505,8 @@
         <div id="strap-list"></div>
         <button type="button" class="btn btn-ghost btn-sm" id="add-strap-btn" onclick="showAddStrapRow()" style="margin-top:.45rem">+ Add Strap</button>
         <div id="add-strap-row" class="add-strap-row hidden">
-          <input type="text" id="strap-name-input" placeholder="Name (e.g. Black Rubber)">
-          <input type="text" id="strap-mat-input" placeholder="Material (optional)">
+          <input type="text" id="strap-name-input" placeholder="Name (e.g. Black Rubber)" maxlength="60">
+          <input type="text" id="strap-mat-input" placeholder="Material (optional)" maxlength="40">
           <button type="button" class="btn btn-primary btn-sm" onclick="confirmAddStrap()">Add</button>
           <button type="button" class="btn btn-ghost btn-sm" onclick="hideAddStrapRow()">Cancel</button>
         </div>
@@ -2642,14 +2642,14 @@
       </div>
       <div class="form-group">
         <label>Model / Name *</label>
-        <input type="text" id="wl-name" placeholder="Royal Oak, Nautilus…">
+        <input type="text" id="wl-name" placeholder="Royal Oak, Nautilus…" maxlength="100">
       </div>
     </div>
 
     <div class="form-row">
       <div class="form-group">
         <label>Reference No.</label>
-        <input type="text" id="wl-ref" placeholder="15500ST.OO.1220ST.01">
+        <input type="text" id="wl-ref" placeholder="15500ST.OO.1220ST.01" maxlength="60">
       </div>
       <div class="form-group">
         <label>Retail Price ($)</label>
@@ -2808,7 +2808,7 @@
         style="display:none" onchange="handleNewPostPhoto(this)">
     </div>
     <div class="form-group">
-      <textarea id="np-body" rows="3" placeholder="What's on your mind? (@ to mention)" style="resize:none;"
+      <textarea id="np-body" rows="3" placeholder="What's on your mind? (@ to mention)" style="resize:none;" maxlength="1000"
         oninput="mentionOnInput(this)" onkeydown="mentionOnKeydown(event)"></textarea>
     </div>
     <div class="form-group">
@@ -2837,7 +2837,7 @@
         style="display:none" onchange="handleEditPostPhoto(this)">
     </div>
     <div class="form-group">
-      <textarea id="ep-body" rows="3" placeholder="What's on your mind? (@ to mention)" style="resize:none;"
+      <textarea id="ep-body" rows="3" placeholder="What's on your mind? (@ to mention)" style="resize:none;" maxlength="1000"
         oninput="mentionOnInput(this)" onkeydown="mentionOnKeydown(event)"></textarea>
     </div>
     <div class="form-group">
@@ -2912,7 +2912,7 @@
   <div class="modal" style="max-width:420px;">
     <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Feedback</div>
     <div class="form-group" style="margin-bottom:.25rem;">
-      <textarea id="fb-desc" placeholder="Describe the issue or idea…" style="height:110px;"></textarea>
+      <textarea id="fb-desc" placeholder="Describe the issue or idea…" style="height:110px;" maxlength="2000"></textarea>
     </div>
 
     <div class="modal-actions">
@@ -2979,13 +2979,13 @@
     <!-- Caption + Private notes side by side label, stacked fields -->
     <div class="tl-field">
       <div class="tl-label">Caption <span class="tl-opt">shown in feed</span></div>
-      <textarea id="track-notes" placeholder="What are you up to today… (@ to mention)" rows="2"
+      <textarea id="track-notes" placeholder="What are you up to today… (@ to mention)" rows="2" maxlength="500"
         oninput="mentionOnInput(this)" onkeydown="mentionOnKeydown(event)"></textarea>
     </div>
 
     <div class="tl-field">
       <div class="tl-label">Private notes <span class="tl-opt">only you see this</span></div>
-      <textarea id="track-private-notes" placeholder="Condition, thoughts, how it felt…" rows="2"></textarea>
+      <textarea id="track-private-notes" placeholder="Condition, thoughts, how it felt…" rows="2" maxlength="500"></textarea>
     </div>
 
     <!-- Visibility -->
@@ -3029,7 +3029,7 @@
     </div>
     <div class="form-group">
       <label>Notes <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
-      <textarea id="edit-log-notes" placeholder="Any occasion, outfit, thoughts…" style="height:70px;"></textarea>
+      <textarea id="edit-log-notes" placeholder="Any occasion, outfit, thoughts…" style="height:70px;" maxlength="500"></textarea>
     </div>
     <div class="form-group" id="edit-log-club-field" style="display:none;">
       <label>Share to Club <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
@@ -3051,7 +3051,7 @@
     </div>
     <div class="form-group">
       <label class="form-label">Description <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
-      <textarea id="cc-desc" rows="2" placeholder="What's this club about?" style="resize:none;"></textarea>
+      <textarea id="cc-desc" rows="2" placeholder="What's this club about?" style="resize:none;" maxlength="300"></textarea>
     </div>
     <div class="form-group">
       <label class="form-label">Privacy</label>
@@ -3337,7 +3337,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.10.32';
+const APP_VERSION = '2.30.26.15.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3356,6 +3356,9 @@ function profileInitials(p) {
 }
 function escHtml(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function sanitizeSearch(s) {
+  return (s || '').replace(/[%_(),.*\\]/g, '').trim();
 }
 function formatFeedDate(dateStr, createdAt) {
   if (!dateStr) return '';
@@ -3812,7 +3815,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     <div class="profile-page-card profile-edit-card" id="profile-edit-card">
       <div class="profile-page-section-title">Edit Profile</div>
       <div class="form-group"><label>Display Name</label>
-        <input type="text" id="pp-display-name" value="${escHtml(profile.display_name || '')}" placeholder="Your name">
+        <input type="text" id="pp-display-name" value="${escHtml(profile.display_name || '')}" placeholder="Your name" maxlength="50">
       </div>
       <div class="form-group"><label>Username</label>
         <div class="username-field">
@@ -3823,7 +3826,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         <div id="pp-username-status" class="username-status"></div>
       </div>
       <div class="form-group"><label>Bio</label>
-        <textarea id="pp-bio" rows="3" placeholder="Tell people about your collection…">${escHtml(profile.bio || '')}</textarea>
+        <textarea id="pp-bio" rows="3" placeholder="Tell people about your collection…" maxlength="300">${escHtml(profile.bio || '')}</textarea>
       </div>
       <div style="display:flex;gap:.65rem;margin-top:.1rem;">
         <button class="btn btn-primary btn-sm" id="profile-save-btn">Save</button>
@@ -4805,7 +4808,7 @@ async function renderClubDetail(clubId) {
 
       <div class="form-group" style="margin-bottom:.75rem;">
         <label class="form-label" style="font-size:.78rem;">Description</label>
-        <textarea id="club-edit-desc" rows="2" style="resize:none;">${escHtml(club.description || '')}</textarea>
+        <textarea id="club-edit-desc" rows="2" style="resize:none;" maxlength="300">${escHtml(club.description || '')}</textarea>
       </div>
 
       <div class="form-group" style="margin-bottom:.75rem;">
@@ -4975,7 +4978,7 @@ async function searchInviteUsers(query, clubId) {
   // Search profiles
   const { data: profiles } = await db.from('profiles')
     .select('id, username, display_name, avatar_url')
-    .or(`username.ilike.%${query.trim()}%,display_name.ilike.%${query.trim()}%`)
+    .or(`username.ilike.%${sanitizeSearch(query)}%,display_name.ilike.%${sanitizeSearch(query)}%`)
     .neq('id', currentUser.id).limit(8);
 
   if (!profiles || !profiles.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.78rem;">No users found.</div>'; return; }
@@ -5091,7 +5094,7 @@ async function searchClubs(query) {
     return;
   }
   let q = db.from('clubs').select('id, name, description, privacy, created_by').order('created_at', { ascending: false }).limit(20);
-  q = q.ilike('name', `%${query.trim()}%`);
+  q = q.ilike('name', `%${sanitizeSearch(query)}%`);
   const { data: clubs } = await q;
   if (!clubs || !clubs.length) {
     el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;">No clubs found.</div>';
@@ -5894,7 +5897,7 @@ function renderFeedCard(item) {
       : '';
     const inputHtml = showAll
       ? `<div class="comment-input-row">
-          <input class="comment-input" id="comment-input-${item.id}" placeholder="Add a comment… (@ to mention)"
+          <input class="comment-input" id="comment-input-${item.id}" placeholder="Add a comment… (@ to mention)" maxlength="500"
             oninput="mentionOnInput(this,'${item.id}')"
             onkeydown="mentionOnKeydown(event,'${item.id}')">
           <button class="comment-send-btn" onclick="postComment('${item.id}')">↑</button>
@@ -6580,7 +6583,7 @@ async function doSearchUsers(query) {
   const { data, error } = await db
     .from('profiles')
     .select('id, username, display_name, avatar_url, profile_privacy')
-    .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
+    .or(`username.ilike.%${sanitizeSearch(query)}%,display_name.ilike.%${sanitizeSearch(query)}%`)
     .neq('id', currentUser.id)
     .limit(10);
   if (error) {
@@ -7604,9 +7607,9 @@ function renderGamePair() {
     const wId = i === 0 ? gamePair.aId : gamePair.bId;
     const alt = i === 0 ? gamePair.bId : gamePair.aId;
     const img = w.image
-      ? `<img src="${w.image}" alt="" class="game-card-img" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:64px;height:64px;font-size:1rem;background:${w.color}">${initials(w.brand, w.name)}</div>`;
-    el.innerHTML = `${img}<div class="game-card-brand">${w.brand}</div><div class="game-card-name">${w.name}</div>`;
+      ? `<img src="${escHtml(w.image)}" alt="" class="game-card-img" onerror="this.style.display='none'">`
+      : `<div class="avatar" style="width:64px;height:64px;font-size:1rem;background:${escHtml(w.color)}">${initials(w.brand, w.name)}</div>`;
+    el.innerHTML = `${img}<div class="game-card-brand">${escHtml(w.brand)}</div><div class="game-card-name">${escHtml(w.name)}</div>`;
     el.className = 'game-card';
     el.onclick   = () => pickWatch(wId, alt);
   });
@@ -7678,14 +7681,14 @@ function showGameResults() {
     const elo  = eloRatings[w.id] ?? ELO_DEFAULT;
     const rank = medals[i] || `#${i + 1}`;
     const img  = w.image
-      ? `<img src="${w.image}" alt="" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:34px;height:34px;font-size:.65rem;background:${w.color};flex-shrink:0">${initials(w.brand, w.name)}</div>`;
+      ? `<img src="${escHtml(w.image)}" alt="" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
+      : `<div class="avatar" style="width:34px;height:34px;font-size:.65rem;background:${escHtml(w.color)};flex-shrink:0">${initials(w.brand, w.name)}</div>`;
     return `<div class="game-result-item">
       <span class="game-rank-num">${rank}</span>
       ${img}
       <div style="flex:1;min-width:0;">
-        <div class="game-result-watch">${w.name}</div>
-        <div class="game-result-brand">${w.brand} · ${elo} pts</div>
+        <div class="game-result-watch">${escHtml(w.name)}</div>
+        <div class="game-result-brand">${escHtml(w.brand)} · ${elo} pts</div>
       </div>
     </div>`;
   }).join('');
@@ -8176,8 +8179,8 @@ function renderStrapList() {
     if (i === wEditingStrapIdx) {
       return `
         <div class="strap-row add-strap-row" style="margin-top:0;border-bottom:1px solid var(--border);padding:.3rem 0;">
-          <input type="text" id="strap-edit-name" value="${escHtml(s.name)}" placeholder="Name" style="flex:1;min-width:80px;">
-          <input type="text" id="strap-edit-mat"  value="${escHtml(s.material||'')}" placeholder="Material" style="flex:1;min-width:80px;">
+          <input type="text" id="strap-edit-name" value="${escHtml(s.name)}" placeholder="Name" style="flex:1;min-width:80px;" maxlength="60">
+          <input type="text" id="strap-edit-mat"  value="${escHtml(s.material||'')}" placeholder="Material" style="flex:1;min-width:80px;" maxlength="40">
           <button type="button" class="btn btn-primary btn-sm" onclick="saveStrapEdit(${i})">Save</button>
           <button type="button" class="btn btn-ghost btn-sm"   onclick="cancelStrapEdit()">Cancel</button>
         </div>`;
@@ -10033,11 +10036,16 @@ function viewReceipt(watchId, receiptId) {
   }
   const win = window.open();
   if (r.type === 'application/pdf' || r.data.startsWith('data:application/pdf')) {
-    win.document.write(`<html><body style="margin:0"><embed src="${r.data}" type="application/pdf" width="100%" height="100%" /></body></html>`);
+    const embed = win.document.createElement('embed');
+    embed.src = r.data; embed.type = 'application/pdf'; embed.width = '100%'; embed.height = '100%';
+    win.document.body.style.margin = '0';
+    win.document.body.appendChild(embed);
   } else {
-    win.document.write(`<html><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="${r.data}" style="max-width:100%;max-height:100vh;object-fit:contain"></body></html>`);
+    const img = win.document.createElement('img');
+    img.src = r.data; img.style.cssText = 'max-width:100%;max-height:100vh;object-fit:contain';
+    Object.assign(win.document.body.style, { margin: '0', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' });
+    win.document.body.appendChild(img);
   }
-  win.document.close();
 }
 
 // ── Edit-modal receipt helpers ─────────────────────────────────────────────
