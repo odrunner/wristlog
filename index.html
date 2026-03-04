@@ -311,7 +311,7 @@
     .profile-bio-text { font-size:.84rem; color:var(--muted); max-width:420px; line-height:1.55; margin-top:.2rem; }
     .profile-edit-card { display:none; }
     .profile-edit-card.open { display:block; }
-    .profile-stats-row { display:flex; gap:2.5rem; justify-content:center; margin:1.1rem 0 1.25rem; }
+    .profile-stats-row { display:flex; gap:1.2rem; justify-content:center; flex-wrap:wrap; margin:1.1rem 0 1.25rem; }
     .profile-page-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.1rem 1.25rem; margin-bottom:1.1rem; }
     .profile-page-section-title { font-size:.72rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--gold); margin-bottom:.9rem; }
 
@@ -3339,7 +3339,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.15.42';
+const APP_VERSION = '2.30.26.15.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
