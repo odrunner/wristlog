@@ -3305,7 +3305,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.09.24';
+const APP_VERSION = '2.30.26.09.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7098,9 +7098,12 @@ async function loadAdminStats() {
 
 let _adminFeedbackData = [];
 let _adminFilter = 'all';
+let _adminFbPage = 0;
+const ADMIN_FB_PER_PAGE = 10;
 
 function filterAdminFeedback(filter) {
   _adminFilter = filter;
+  _adminFbPage = 0;
   document.querySelectorAll('#admin-filter-chips .chip').forEach(c => c.classList.toggle('selected', c.dataset.filter === filter));
   renderAdminFeedback();
 }
@@ -7121,7 +7124,22 @@ function renderAdminFeedback() {
   if (!el) return;
   const filtered = _adminFilter === 'all' ? _adminFeedbackData : _adminFeedbackData.filter(f => (f.status || 'pending') === _adminFilter);
   if (!filtered.length) { el.innerHTML = `<div style="color:var(--muted);font-size:.9rem;">No ${_adminFilter === 'all' ? '' : _adminFilter + ' '}feedback.</div>`; return; }
-  el.innerHTML = filtered.map(f => renderFeedbackCard(f)).join('');
+  const totalPages = Math.ceil(filtered.length / ADMIN_FB_PER_PAGE);
+  if (_adminFbPage >= totalPages) _adminFbPage = totalPages - 1;
+  const start = _adminFbPage * ADMIN_FB_PER_PAGE;
+  const page = filtered.slice(start, start + ADMIN_FB_PER_PAGE);
+  const paginationHtml = totalPages > 1 ? `
+    <div style="display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:1rem;">
+      <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .6rem;" onclick="adminFbPageNav(-1)" ${_adminFbPage === 0 ? 'disabled' : ''}>← Prev</button>
+      <span style="font-size:.78rem;color:var(--muted);">${_adminFbPage + 1} / ${totalPages}</span>
+      <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .6rem;" onclick="adminFbPageNav(1)" ${_adminFbPage >= totalPages - 1 ? 'disabled' : ''}>Next →</button>
+    </div>` : '';
+  el.innerHTML = page.map(f => renderFeedbackCard(f)).join('') + paginationHtml;
+}
+
+function adminFbPageNav(dir) {
+  _adminFbPage += dir;
+  renderAdminFeedback();
 }
 
 async function loadAdminFeedback() {
