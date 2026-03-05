@@ -1179,8 +1179,8 @@
 
       /* Modals: bottom-sheet style */
       .overlay { align-items: flex-end; padding: 0; padding-top: 2.5rem; overflow-x: hidden; }
-      #welcome-modal, #username-modal, #delete-account-modal { align-items: center; padding: 1rem; }
-      #welcome-modal .modal, #username-modal .modal, #delete-account-modal .modal { border-radius: 14px; }
+      #welcome-modal, #username-modal, #delete-account-modal, #feedback-modal { align-items: center; padding: 1rem; }
+      #welcome-modal .modal, #username-modal .modal, #delete-account-modal .modal, #feedback-modal .modal { border-radius: 14px; max-width: 420px; }
       .modal { border-radius: 16px 16px 0 0; max-height: 88vh; max-width: 100%; padding: 1.4rem 1rem 1.2rem; }
       #watch-preview-modal { align-items: center; padding: 1.5rem; }
       #watch-preview-modal .modal { border-radius: 14px; max-width: 320px; }
@@ -3437,7 +3437,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.20.12';
+const APP_VERSION = '2.30.26.20.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
