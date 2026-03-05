@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>WRotate – Every Watch. Every Wear.</title>
   <meta name="description" content="Track your watch collection, log every wear, and share with friends. Cost-per-wear stats, market values, social feed, clubs, and wishlist — all in one app.">
   <meta name="robots" content="index, follow">
@@ -1194,7 +1194,8 @@
 
       /* Prevent iOS zoom on focus */
       input[type=text], input[type=number], input[type=date],
-      input[type=url], textarea, select { font-size: 16px !important; }
+      input[type=url], input[type=email], textarea, select,
+      .comment-input, .feed-caption-textarea { font-size: 16px !important; }
 
       /* Touch-friendly tap targets */
       .btn { min-height: 40px; }
@@ -1349,7 +1350,7 @@
     .feed-caption-textarea {
       width: 100%; box-sizing: border-box; resize: none;
       background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 8px; padding: .5rem .7rem; font-size: .85rem;
+      border-radius: 8px; padding: .5rem .7rem; font-size: 16px;
       color: var(--text); font-family: inherit; line-height: 1.5;
     }
     .feed-caption-textarea:focus { outline: none; border-color: var(--gold); }
@@ -1428,8 +1429,9 @@
     .comment-input-row { display: flex; gap: .5rem; margin-top: .65rem; }
     .comment-input {
       flex: 1; background: var(--hover); border: 1px solid var(--border);
-      border-radius: 20px; padding: .4rem .9rem; font-size: .82rem;
+      border-radius: 20px; padding: .4rem .9rem; font-size: 16px;
       color: var(--text); font-family: inherit;
+      max-width: 100%; min-width: 0;
     }
     .comment-input:focus { outline: none; border-color: var(--gold); }
     .comment-send-btn {
@@ -1447,7 +1449,7 @@
     .mention-ac {
       position: fixed; background: var(--surface); border: 1px solid var(--border);
       border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.55);
-      z-index: 9999; min-width: 220px; max-width: 300px;
+      z-index: 9999; min-width: 220px; max-width: min(300px, calc(100vw - 16px));
       max-height: 220px; overflow-y: auto; display: none;
     }
     .mention-ac.open { display: block; }
@@ -3435,7 +3437,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.19.57';
+const APP_VERSION = '2.30.26.20.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6557,13 +6559,35 @@ function renderMentionAc(inputEl) {
       <div><div class="mention-ac-name">${name}</div><div class="mention-ac-user">@${user}</div></div>
     </div>`;
   }).join('');
-  // Position below the input so existing comments stay visible
+  // Position the dropdown relative to the input, clamped to viewport
   const rect = inputEl.getBoundingClientRect();
-  const dropW = Math.min(300, window.innerWidth - 32);
-  ac.style.top    = (rect.bottom + 6) + 'px';
-  ac.style.bottom = '';
-  ac.style.left   = Math.min(rect.left, window.innerWidth - dropW - 8) + 'px';
-  ac.style.width  = dropW + 'px';
+  const dropW = Math.min(300, window.innerWidth - 16);
+  const gap = 6;
+
+  // Measure how tall the dropdown actually is (cap at max-height)
+  ac.style.visibility = 'hidden';
+  ac.style.display = 'block';
+  const dropH = Math.min(ac.scrollHeight, 220);
+  ac.style.visibility = '';
+  ac.style.display = '';
+
+  // Check if there's room below the input; if not, position above
+  const spaceBelow = window.innerHeight - rect.bottom - gap;
+  const spaceAbove = rect.top - gap;
+  if (spaceBelow >= dropH || spaceBelow >= spaceAbove) {
+    // Position below
+    ac.style.top    = (rect.bottom + gap) + 'px';
+    ac.style.bottom = '';
+  } else {
+    // Position above
+    ac.style.top    = '';
+    ac.style.bottom = (window.innerHeight - rect.top + gap) + 'px';
+  }
+
+  // Clamp left so the dropdown doesn't overflow left or right edge
+  const leftPos = Math.max(8, Math.min(rect.left, window.innerWidth - dropW - 8));
+  ac.style.left  = leftPos + 'px';
+  ac.style.width = dropW + 'px';
   ac.classList.add('open');
   _mentionAcIdx = -1;
 }
