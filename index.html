@@ -2790,6 +2790,22 @@
   </div>
 </div>
 
+<!-- ════ CLUB INVITE MEMBERS MODAL ════ -->
+<div id="club-invite-modal" class="overlay hidden">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title">Invite Members</div>
+    <div class="form-group" style="margin-bottom:1rem;">
+      <input type="text" id="club-invite-search" placeholder="Search by name or username…"
+        oninput="debounceInviteSearch(this.value, _clubInviteModalId)" autocomplete="off">
+    </div>
+    <div id="club-invite-results"></div>
+    <div id="club-pending-invites"></div>
+    <div class="modal-actions" style="margin-top:1.25rem;">
+      <button class="btn btn-ghost" onclick="closeClubInviteModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ MY PROFILE MODAL ════ -->
 
 <!-- ════ TODAY'S PICK — LOG MODAL ════ -->
@@ -3341,7 +3357,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.15.45';
+const APP_VERSION = '2.30.26.16.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4832,14 +4848,6 @@ async function renderClubDetail(clubId) {
         </div>
       </div>
 
-      <div style="border-top:1px solid var(--border);padding-top:.85rem;margin-bottom:.85rem;">
-        <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem;">Invite Members</div>
-        <input type="text" id="club-invite-search" placeholder="Search by name or username…"
-          oninput="debounceInviteSearch(this.value,'${clubId}')" autocomplete="off"
-          style="margin-bottom:.5rem;">
-        <div id="club-invite-results"></div>
-      </div>
-
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:.85rem;">
         <button class="btn btn-primary" style="font-size:.82rem;" onclick="saveClubEdit('${clubId}')">Save Changes</button>
         <button class="btn btn-ghost"   style="font-size:.82rem;" onclick="document.getElementById('club-edit-section').style.display='none'">Cancel</button>
@@ -4853,10 +4861,11 @@ async function renderClubDetail(clubId) {
       <div style="font-size:1.25rem;font-weight:700;">${escHtml(club.name)}</div>
       <div style="font-size:.8rem;color:var(--muted);">${privacyLabel} · ${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
       ${club.description ? `<div style="font-size:.82rem;color:var(--muted);max-width:340px;margin-top:.25rem;">${escHtml(club.description)}</div>` : ''}
-      <div style="margin-top:.75rem;display:flex;align-items:center;gap:.6rem;">
-        ${joinBtnHtml}
-        ${isOwner ? `<button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .65rem;" onclick="document.getElementById('club-edit-section').style.display=document.getElementById('club-edit-section').style.display==='none'?'':'none'">⚙ Manage</button>` : ''}
-      </div>
+      <div style="margin-top:.5rem;">${joinBtnHtml}</div>
+      ${isOwner ? `<div style="margin-top:.5rem;display:flex;align-items:center;gap:.5rem;">
+        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .65rem;" onclick="document.getElementById('club-edit-section').style.display=document.getElementById('club-edit-section').style.display==='none'?'':'none'">⚙ Manage</button>
+        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .65rem;" onclick="openClubInviteModal('${clubId}')">+ Invite Members</button>
+      </div>` : ''}
     </div>
     ${ownerEditSection}
     <div class="club-section-label">Members</div>
@@ -4865,6 +4874,7 @@ async function renderClubDetail(clubId) {
     <div id="club-feed-list" style="max-width:470px;margin:0 auto;">
       ${clubFeedHtml || '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.85rem;">No posts in this club yet.</div>'}
     </div>`;
+
 }
 
 function showMemberMenu(userId, clubId, displayName, triggerBtn) {
@@ -4967,8 +4977,28 @@ async function deleteClub() {
 
 // ── Club Invites ────────────────────────────────────────────────
 let _inviteSearchTimer = null;
+let _clubInviteModalId = null;
+
+function openClubInviteModal(clubId) {
+  _clubInviteModalId = clubId;
+  document.getElementById('club-invite-search').value = '';
+  document.getElementById('club-invite-results').innerHTML =
+    '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">Type a name or @username to search.</div>';
+  document.getElementById('club-invite-modal').classList.remove('hidden');
+  renderPendingInvites(clubId);
+}
+
+function closeClubInviteModal() {
+  document.getElementById('club-invite-modal').classList.add('hidden');
+  _clubInviteModalId = null;
+}
 function debounceInviteSearch(query, clubId) {
   clearTimeout(_inviteSearchTimer);
+  if (!query.trim()) {
+    document.getElementById('club-invite-results').innerHTML =
+      '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">Type a name or @username to search.</div>';
+    return;
+  }
   _inviteSearchTimer = setTimeout(() => searchInviteUsers(query, clubId), 300);
 }
 
@@ -5000,7 +5030,8 @@ async function searchInviteUsers(query, clubId) {
     const name = escHtml(p.display_name || p.username || 'User');
     let btn = '';
     if (memberSet.has(p.id))     btn = `<span style="font-size:.72rem;color:var(--muted);">Member</span>`;
-    else if (inviteSet.has(p.id)) btn = `<span style="font-size:.72rem;color:var(--muted);">Invited</span>`;
+    else if (inviteSet.has(p.id)) btn = `<button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger);border-color:var(--danger);"
+      onclick="rescindClubInvite('${p.id}','${name}','${clubId}',this)">Rescind</button>`;
     else btn = `<button class="btn btn-primary" style="font-size:.72rem;padding:.2rem .6rem;"
       onclick="sendClubInvite('${p.id}','${name}','${clubId}',this)">Invite</button>`;
     return `<div style="display:flex;align-items:center;gap:.55rem;padding:.35rem 0;">
@@ -5022,12 +5053,66 @@ async function sendClubInvite(inviteeId, inviteeName, clubId, btn) {
     user_id: inviteeId, type: 'club_invite',
     actor_id: currentUser.id, ref_id: clubId, is_read: false
   });
-  if (btn) { btn.outerHTML = `<span style="font-size:.72rem;color:var(--muted);">Invited</span>`; }
+  if (btn) { btn.outerHTML = `<button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger);border-color:var(--danger);"
+    onclick="rescindClubInvite('${inviteeId}','${inviteeName}','${clubId}',this)">Rescind</button>`; }
   toast(`Invite sent to ${inviteeName}`);
+  renderPendingInvites(clubId);
+}
+
+async function rescindClubInvite(inviteeId, inviteeName, clubId, btn) {
+  if (!currentUser) return;
+  await db.from('club_invites').delete().eq('club_id', clubId).eq('invitee_id', inviteeId);
+  // Also clean up the notification
+  await db.from('notifications').delete()
+    .eq('user_id', inviteeId).eq('type', 'club_invite')
+    .eq('actor_id', currentUser.id).eq('ref_id', clubId);
+  if (btn) {
+    btn.outerHTML = `<button class="btn btn-primary" style="font-size:.72rem;padding:.2rem .6rem;"
+      onclick="sendClubInvite('${inviteeId}','${escHtml(inviteeName)}','${clubId}',this)">Invite</button>`;
+  }
+  toast(`Invite to ${inviteeName} rescinded`);
+  renderPendingInvites(clubId);
+}
+
+async function renderPendingInvites(clubId) {
+  const el = document.getElementById('club-pending-invites');
+  if (!el) return;
+  const { data: invites } = await db.from('club_invites')
+    .select('invitee_id, created_at, profiles:invitee_id(id, username, display_name, avatar_url)')
+    .eq('club_id', clubId);
+  if (!invites || !invites.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:.75rem 0 .4rem;padding-top:.65rem;border-top:1px solid var(--border);">Pending Invites</div>`
+    + invites.map(inv => {
+      const p = inv.profiles;
+      if (!p) return '';
+      const name = escHtml(p.display_name || p.username || 'User');
+      const initStr = (name[0] || '?').toUpperCase();
+      const avatarHtml = p.avatar_url
+        ? `<img src="${escHtml(p.avatar_url)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
+        : `<div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;">${initStr}</div>`;
+      return `<div style="display:flex;align-items:center;gap:.55rem;padding:.35rem 0;">
+        ${avatarHtml}
+        <span style="flex:1;font-size:.82rem;">${name}</span>
+        <button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger);border-color:var(--danger);"
+          onclick="rescindClubInvite('${p.id}','${name}','${clubId}',this)">Rescind</button>
+      </div>`;
+    }).join('');
 }
 
 async function acceptClubInvite(clubId, notifId) {
   if (!currentUser) return;
+  // Check if invite still exists (owner may have rescinded it)
+  const { data: invite } = await db.from('club_invites')
+    .select('id').eq('club_id', clubId).eq('invitee_id', currentUser.id).maybeSingle();
+  if (!invite) {
+    // Invite was rescinded — clean up the stale notification
+    await db.from('notifications').delete().eq('id', notifId);
+    userNotifs = userNotifs.filter(n => n.id !== notifId);
+    unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
+    updateBellBadge(); renderNotificationPanel();
+    toast('This invite is no longer valid. Ask the club owner for a new invite.', 'error');
+    return;
+  }
   const { error } = await db.from('club_members').insert({ club_id: clubId, user_id: currentUser.id, role: 'member' });
   if (error && error.code !== '23505') {
     toast('Could not join — ' + (error.message || error.code), 'error');
