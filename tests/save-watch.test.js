@@ -10,7 +10,7 @@ const baseFormData = {
   insuranceNotes: '', warrantyExpiry: null, hasBox: 'yes',
   hasPapers: 'yes', watchChartsUrl: null, tags: ['Chrono'],
   straps: [], image: null,
-  manualMp: 0, modalFetchedPrice: null,
+  manualMp: 0,
 };
 
 describe('buildSaveWatchData', () => {
@@ -106,29 +106,20 @@ describe('buildSaveWatchData', () => {
     expect(result.data.marketPriceDate).toBe('2024-06-15');
   });
 
-  it('attributes source to WatchCharts when manual matches fetched', () => {
+  it('always uses User Entry as source for manual prices', () => {
     const result = buildSaveWatchData({
-      formData: { ...baseFormData, manualMp: 7500, modalFetchedPrice: 7500 },
-      editingId: null, watches: [], todayFn: baseTodayFn,
-    });
-    expect(result.data.marketPriceSrc).toBe('WatchCharts');
-  });
-
-  it('uses User Entry when manual differs from fetched', () => {
-    const result = buildSaveWatchData({
-      formData: { ...baseFormData, manualMp: 8000, modalFetchedPrice: 7500 },
+      formData: { ...baseFormData, manualMp: 8000 },
       editingId: null, watches: [], todayFn: baseTodayFn,
     });
     expect(result.data.marketPriceSrc).toBe('User Entry');
   });
 
-  it('uses fetched price when manual is 0 but fetch occurred', () => {
+  it('does not set market price when manual is 0', () => {
     const result = buildSaveWatchData({
-      formData: { ...baseFormData, manualMp: 0, modalFetchedPrice: 7500 },
+      formData: { ...baseFormData, manualMp: 0 },
       editingId: null, watches: [], todayFn: baseTodayFn,
     });
-    expect(result.data.marketPrice).toBe(7500);
-    expect(result.data.marketPriceSrc).toBe('WatchCharts');
+    expect(result.data.marketPrice).toBeUndefined();
   });
 
   // ── Price history archival ────────────────────────────────────────────

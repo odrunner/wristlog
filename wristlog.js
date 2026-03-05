@@ -302,16 +302,11 @@ export function buildSaveWatchData({ formData, editingId, watches, todayFn = tod
 
   // Market price logic
   const manualMp = formData.manualMp || 0;
-  const modalFetchedPrice = formData.modalFetchedPrice || null;
 
   if (manualMp) {
     data.marketPrice = manualMp;
     data.marketPriceDate = todayFn();
-    data.marketPriceSrc = (modalFetchedPrice && manualMp === modalFetchedPrice) ? 'WatchCharts' : 'User Entry';
-  } else if (modalFetchedPrice) {
-    data.marketPrice = modalFetchedPrice;
-    data.marketPriceDate = todayFn();
-    data.marketPriceSrc = 'WatchCharts';
+    data.marketPriceSrc = 'User Entry';
   }
 
   if (editingId) {
