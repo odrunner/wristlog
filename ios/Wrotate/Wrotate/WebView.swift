@@ -284,6 +284,9 @@ struct WebView: UIViewRepresentable {
                 PushManager.shared.handleSignIn(userId: userId, accessToken: accessToken)
             } else if event == "SIGNED_OUT" {
                 PushManager.shared.handleSignOut()
+            } else if event == "BADGE_UPDATE" {
+                let count = body["count"] as? Int ?? 0
+                UNUserNotificationCenter.current().setBadgeCount(count)
             }
         }
     }

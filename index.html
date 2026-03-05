@@ -3437,7 +3437,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.20.01';
+const APP_VERSION = '2.30.26.20.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5438,6 +5438,10 @@ function updateBellBadge() {
     badge.classList.remove('hidden');
   } else {
     badge.classList.add('hidden');
+  }
+  // Sync badge count to iOS native app
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.auth) {
+    try { window.webkit.messageHandlers.auth.postMessage({ event: 'BADGE_UPDATE', count: unreadNotifCount }); } catch(e) {}
   }
 }
 async function followUser(userId, btn) {
