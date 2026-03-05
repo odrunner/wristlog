@@ -5,3 +5,10 @@ start.command
 wristlog-data.json
 .DS_Store
 node_modules/
+
+# Xcode user-specific files
+xcuserdata/
+*.xcuserstate
+
+# Supabase CLI temp
+supabase/.temp/

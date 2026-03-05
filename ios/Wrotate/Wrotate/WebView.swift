@@ -1,0 +1,235 @@
+import SwiftUI
+import WebKit
+import UIKit
+
+struct WebView: UIViewRepresentable {
+    let url: URL
+    @Binding var isLoading: Bool
+    @Binding var hasError: Bool
+    var onReload: ((WKWebView) -> Void)?
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    func makeUIView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        config.allowsInlineMediaPlayback = true
+        config.mediaTypesRequiringUserActionForPlayback = []
+        config.websiteDataStore = WKWebsiteDataStore.default()
+
+        // JS → Native bridge for auth state changes
+        let contentController = config.userContentController
+        contentController.add(context.coordinator, name: "auth")
+
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.navigationDelegate = context.coordinator
+        webView.uiDelegate = context.coordinator
+        webView.allowsBackForwardNavigationGestures = true
+        webView.scrollView.bounces = true
+
+        // Pull-to-refresh
+        let refreshControl = UIRefreshControl()
+        refreshControl.addTarget(
+            context.coordinator,
+            action: #selector(Coordinator.handleRefresh(_:)),
+            for: .valueChanged
+        )
+        webView.scrollView.addSubview(refreshControl)
+        context.coordinator.refreshControl = refreshControl
+        context.coordinator.webView = webView
+
+        // Expose webView to parent for reload from offline screen
+        DispatchQueue.main.async {
+            self.onReload?(webView)
+        }
+
+        // Load the page once
+        webView.load(URLRequest(url: url))
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        // Intentionally empty — do NOT reload on SwiftUI re-render
+    }
+
+    // MARK: - Coordinator
+
+    class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
+        let parent: WebView
+        weak var webView: WKWebView?
+        var refreshControl: UIRefreshControl?
+        private let oauthManager = OAuthManager.shared
+
+        init(parent: WebView) {
+            self.parent = parent
+        }
+
+        // MARK: Pull-to-refresh
+
+        @objc func handleRefresh(_ sender: UIRefreshControl) {
+            webView?.reload()
+        }
+
+        // MARK: Navigation delegate
+
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        ) {
+            guard let url = navigationAction.request.url else {
+                decisionHandler(.allow)
+                return
+            }
+
+            let host = url.host ?? ""
+
+            // Intercept Supabase OAuth — hand off to ASWebAuthenticationSession
+            if host == "api.wrotate.com" && url.path.contains("/auth/v1/authorize") {
+                decisionHandler(.cancel)
+                handleOAuth(url: url)
+                return
+            }
+
+            // Allow wrotate.com and its API
+            let allowed = ["wrotate.com", "www.wrotate.com", "api.wrotate.com"]
+            if allowed.contains(host) {
+                decisionHandler(.allow)
+                return
+            }
+
+            // Allow Google OAuth intermediate pages (account chooser, consent)
+            if host.hasSuffix("google.com") || host.hasSuffix("googleapis.com") {
+                decisionHandler(.allow)
+                return
+            }
+
+            // Everything else → open in Safari
+            UIApplication.shared.open(url)
+            decisionHandler(.cancel)
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            parent.isLoading = false
+            parent.hasError = false
+            refreshControl?.endRefreshing()
+
+            // Inject JS bridge for auth state → native push registration
+            let js = """
+            (function() {
+                if (window._wrotateNativeBridgeInstalled) return;
+                window._wrotateNativeBridgeInstalled = true;
+
+                // Wait for Supabase client to be ready
+                var checkInterval = setInterval(function() {
+                    if (typeof db !== 'undefined' && db.auth) {
+                        clearInterval(checkInterval);
+                        db.auth.onAuthStateChange(function(event, session) {
+                            if (event === 'SIGNED_IN' && session && session.user) {
+                                window.webkit.messageHandlers.auth.postMessage({
+                                    event: 'SIGNED_IN',
+                                    userId: session.user.id
+                                });
+                            } else if (event === 'SIGNED_OUT') {
+                                window.webkit.messageHandlers.auth.postMessage({
+                                    event: 'SIGNED_OUT'
+                                });
+                            }
+                        });
+                        // Check current session
+                        db.auth.getSession().then(function(result) {
+                            if (result.data.session && result.data.session.user) {
+                                window.webkit.messageHandlers.auth.postMessage({
+                                    event: 'SIGNED_IN',
+                                    userId: result.data.session.user.id
+                                });
+                            }
+                        });
+                    }
+                }, 500);
+            })();
+            """
+            webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            refreshControl?.endRefreshing()
+            let nsError = error as NSError
+            // Ignore cancelled navigations (e.g. OAuth interception)
+            if nsError.code == NSURLErrorCancelled { return }
+            parent.hasError = true
+            parent.isLoading = false
+        }
+
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            refreshControl?.endRefreshing()
+            let nsError = error as NSError
+            if nsError.code == NSURLErrorCancelled { return }
+            parent.hasError = true
+            parent.isLoading = false
+        }
+
+        // MARK: UI delegate — handle target="_blank" links
+
+        func webView(
+            _ webView: WKWebView,
+            createWebViewWith configuration: WKWebViewConfiguration,
+            for navigationAction: WKNavigationAction,
+            windowFeatures: WKWindowFeatures
+        ) -> WKWebView? {
+            // Open target="_blank" links in the same webview
+            if navigationAction.targetFrame == nil {
+                webView.load(navigationAction.request)
+            }
+            return nil
+        }
+
+        // MARK: OAuth
+
+        private func handleOAuth(url: URL) {
+            // Rewrite the redirect_to parameter to use our custom URL scheme
+            guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
+            var queryItems = components.queryItems ?? []
+
+            // Replace redirect_to with our custom scheme
+            queryItems = queryItems.map { item in
+                if item.name == "redirect_to" {
+                    return URLQueryItem(name: "redirect_to", value: "wrotate://auth-callback")
+                }
+                return item
+            }
+            components.queryItems = queryItems
+
+            guard let modifiedURL = components.url else { return }
+
+            oauthManager.startOAuthFlow(authURL: modifiedURL) { [weak self] callbackURL in
+                guard let callbackURL = callbackURL else { return }
+
+                // Extract the fragment (access_token, refresh_token, etc.)
+                // The callback URL looks like: wrotate://auth-callback#access_token=...&refresh_token=...
+                let fragment = callbackURL.fragment ?? ""
+                if !fragment.isEmpty {
+                    let targetURL = URL(string: "https://wrotate.com/#\(fragment)")!
+                    self?.webView?.load(URLRequest(url: targetURL))
+                }
+            }
+        }
+
+        // MARK: JS → Native message handler
+
+        func userContentController(
+            _ userContentController: WKUserContentController,
+            didReceive message: WKScriptMessage
+        ) {
+            guard let body = message.body as? [String: Any],
+                  let event = body["event"] as? String else { return }
+
+            if event == "SIGNED_IN", let userId = body["userId"] as? String {
+                PushManager.shared.handleSignIn(userId: userId)
+            } else if event == "SIGNED_OUT" {
+                PushManager.shared.handleSignOut()
+            }
+        }
+    }
+}
