@@ -3437,7 +3437,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.20.04';
+const APP_VERSION = '2.30.26.20.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6254,6 +6254,7 @@ async function saveEditPost() {
     if (oldPath) deleteStorageFile(oldPath);
   }
   const clubId = getSelectedClubId('ep-club-chips') || null;
+  const oldNotes = fi?.notes || '';   // capture before mutation
   // Update local state
   if (fi)  { fi.notes = newNotes || null; fi.photo_url = finalPhoto; fi.visibility = vis; fi.club_id = clubId; }
   if (log) { log.notes = newNotes || null; log.photoUrl = finalPhoto; log.visibility = vis; log.clubId = clubId; save(); }
@@ -6263,6 +6264,25 @@ async function saveEditPost() {
       .update({ notes: newNotes || null, photo_url: finalPhoto, visibility: vis, club_id: clubId })
       .eq('id', editPostLogId).eq('user_id', currentUser.id);
     if (error) { toast('Save failed — ' + error.message, 'error'); return; }
+    // Send mention notifications for NEW @usernames added in the edit
+    if (newNotes) {
+      const oldMentions = new Set((oldNotes.match(/@([\w.]+)/g) || []).map(m => m.slice(1)));
+      const newMentions = [...new Set((newNotes.match(/@([\w.]+)/g) || []).map(m => m.slice(1)))]
+        .filter(u => !oldMentions.has(u));
+      if (newMentions.length) {
+        const { data: mentionedProfs } = await db.from('profiles')
+          .select('id').in('username', newMentions);
+        const mentionNotifs = (mentionedProfs || [])
+          .map(p => p.id)
+          .filter(uid => uid !== currentUser.id)
+          .map(uid => ({ user_id: uid, type: 'mention', actor_id: currentUser.id, ref_id: editPostLogId, is_read: false }));
+        if (mentionNotifs.length) {
+          db.from('notifications').insert(mentionNotifs).then(({ error }) => {
+            if (error) console.error('Edit post mention notification error:', error.message, error);
+          });
+        }
+      }
+    }
   }
   refreshFeedCard(editPostLogId);
   closeEditPost();
@@ -6368,6 +6388,23 @@ async function saveNewPost() {
       club_id: null,
     }, { onConflict: 'id' });
     if (error) { toast('Post failed — ' + error.message, 'error'); return; }
+    // Send mention notifications for @usernames in the post
+    if (body) {
+      const mentionedUsernames = [...new Set((body.match(/@([\w.]+)/g) || []).map(m => m.slice(1)))];
+      if (mentionedUsernames.length) {
+        const { data: mentionedProfs } = await db.from('profiles')
+          .select('id').in('username', mentionedUsernames);
+        const mentionNotifs = (mentionedProfs || [])
+          .map(p => p.id)
+          .filter(uid => uid !== currentUser.id)
+          .map(uid => ({ user_id: uid, type: 'mention', actor_id: currentUser.id, ref_id: entry.id, is_read: false }));
+        if (mentionNotifs.length) {
+          db.from('notifications').insert(mentionNotifs).then(({ error }) => {
+            if (error) console.error('Post mention notification error:', error.message, error);
+          });
+        }
+      }
+    }
   }
   closeNewPost();
   toast('Posted!');
@@ -7615,6 +7652,23 @@ async function saveLog() {
     }
   }
   save();
+  // Send mention notifications for @usernames in wear log notes
+  if (notes && currentUser) {
+    const mentionedUsernames = [...new Set((notes.match(/@([\w.]+)/g) || []).map(m => m.slice(1)))];
+    if (mentionedUsernames.length) {
+      db.from('profiles').select('id').in('username', mentionedUsernames).then(({ data: mentionedProfs }) => {
+        const mentionNotifs = (mentionedProfs || [])
+          .map(p => p.id)
+          .filter(uid => uid !== currentUser.id)
+          .map(uid => ({ user_id: uid, type: 'mention', actor_id: currentUser.id, ref_id: logEntry.id, is_read: false }));
+        if (mentionNotifs.length) {
+          db.from('notifications').insert(mentionNotifs).then(({ error }) => {
+            if (error) console.error('Wear log mention notification error:', error.message, error);
+          });
+        }
+      });
+    }
+  }
   closeTrackModal();
   clearTrackPhoto();
   if (date === todayStr()) dismissReminder();
