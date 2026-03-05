@@ -915,10 +915,6 @@
     .mp-down  { color: var(--danger);  background: rgba(224,85,85,.12); }
     .mp-src   { color: var(--muted); font-size: .68rem; margin-left: auto; white-space: nowrap; }
 
-    .wc-url-row { display: flex; gap: .45rem; align-items: center; }
-    .wc-url-row input { flex: 1; min-width: 0; }
-    .wc-status { font-size: .78rem; color: var(--muted); margin-top: .35rem; min-height: 1.1em; }
-
     /* ── PORTFOLIO VS MARKET TABLE ── */
     .pvm-table { width: 100%; border-collapse: collapse; font-size: .83rem; }
     .pvm-th { font-size: .71rem; font-weight: 600; color: var(--muted); text-transform: uppercase;
@@ -1187,8 +1183,6 @@
 
       /* Prevent horizontal overflow in modal rows */
       .url-row { flex-wrap: wrap; }
-      .wc-url-row { flex-wrap: wrap; }
-      .wc-url-row input { width: 100%; flex: unset; }
       .modal-actions { flex-wrap: wrap; gap: .5rem; }
       .modal-actions > div { flex-wrap: wrap; }
 
@@ -1972,7 +1966,6 @@
           <button class="view-btn active" id="view-grid-btn" onclick="setCollView('grid')" title="Grid view"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
           <button class="view-btn" id="view-list-btn" onclick="setCollView('list')" title="List view"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
         </div>
-        <button class="btn btn-ghost" id="update-all-btn" onclick="updateAllMarketPrices()" title="Update Prices" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg><span class="btn-label"> Update Prices <span style="font-size:.6rem;font-weight:700;letter-spacing:.06em;background:rgba(201,168,76,.18);color:var(--gold);border-radius:4px;padding:.1rem .35rem;vertical-align:middle;">BETA</span></span></button>
         <button class="btn btn-ghost" onclick="startGame()" title="Ranking Game" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="btn-label"> Ranking Game</span></button>
         <button class="btn btn-primary" onclick="openAddWatch()" title="Add Watch"><span class="btn-label-full">+ Add Watch</span><span class="btn-label-short">+ Add</span></button>
       </div>
@@ -2555,16 +2548,6 @@
       </button>
       <div class="modal-section-body collapsed" id="sec-market">
         <div class="form-group">
-          <label>WatchCharts URL</label>
-          <div class="wc-url-row">
-            <input type="url" id="w-wc-url" placeholder="https://watchcharts.com/watch_model/…" oninput="updateWcUrlBtn()">
-            <button class="btn btn-ghost btn-sm" id="wc-find-btn" onclick="modalFindWcUrl()" style="white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:.3rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find</button>
-            <button class="btn btn-ghost btn-sm" id="wc-fetch-btn" onclick="modalFetchPrice()" style="white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:.3rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Get Price <span style="font-size:.6rem;font-weight:700;letter-spacing:.06em;background:rgba(201,168,76,.18);color:var(--gold);border-radius:4px;padding:.1rem .35rem;vertical-align:middle;">BETA</span></button>
-            <a id="wc-url-open-btn" href="#" target="_blank" rel="noopener noreferrer" class="url-open-btn hidden" title="Open in new tab" style="flex-shrink:0;font-size:.78rem;padding:.35rem .5rem;">↗</a>
-          </div>
-          <div class="wc-status" id="wc-status"></div>
-        </div>
-        <div class="form-group">
           <label>Market Value ($)</label>
           <input type="text" inputmode="decimal" id="w-manual-mp" placeholder="0" autocomplete="off" oninput="fmtPriceInput(this)">
         </div>
@@ -2662,21 +2645,6 @@
   </div>
 </div>
 
-<!-- ════ UPDATE PRICES — MANUAL OVERRIDE CONFIRM ════ -->
-<div id="price-confirm-modal" class="overlay hidden" onclick="if(event.target===this)_priceConfirmAbort()">
-  <div class="modal" style="max-width:380px;">
-    <div class="modal-title">Existing prices will be updated</div>
-    <p style="color:var(--muted);font-size:.85rem;margin-bottom:.75rem;line-height:1.5;">
-      These watches already have prices. <b style="color:var(--text);">Manual</b> prices will be kept if you press Skip; WatchCharts prices will always refresh.
-    </p>
-    <div id="price-confirm-list" style="background:var(--surface2);border-radius:8px;padding:.55rem .75rem;margin-bottom:1.1rem;max-height:160px;overflow-y:auto;font-size:.83rem;line-height:1.9;"></div>
-    <div class="modal-actions" style="flex-direction:column;gap:.5rem;">
-      <button class="btn btn-primary" style="width:100%;" onclick="_priceConfirmOverride()">Override — update all</button>
-      <button class="btn btn-ghost"   style="width:100%;" onclick="_priceConfirmSkip()">Skip — keep manual, refresh WatchCharts</button>
-      <button class="btn btn-ghost"   style="width:100%;color:var(--muted);" onclick="_priceConfirmAbort()">Cancel — stop the update</button>
-    </div>
-  </div>
-</div>
 
 <!-- ════ ADD PHOTO MODAL (paste / drop / browse — no clipboard permission) ════ -->
 <div id="photo-paste-modal" class="overlay hidden" onclick="if(event.target===this)closePhotoPasteModal()">
@@ -3441,7 +3409,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.20.30';
+const APP_VERSION = '2.30.26.22.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7101,7 +7069,6 @@ let deletingId  = null;
 let selColor    = '#c9a84c';
 let wPendingImage    = null;  // objectURL or direct URL for preview during Fetch, applied on Save
 let wPendingFile     = null;  // raw Blob for deferred upload
-let modalFetchedPrice = null; // market price fetched during modal session, applied on Save
 let editingWlId    = null;
 let deletingWlId   = null;
 let wlPendingImage = null;   // objectURL for preview during modal session, applied on Save
@@ -7211,29 +7178,6 @@ function showConfirm(message, { title = 'Are you sure?', confirmLabel = 'Confirm
 }
 function _confirmOk()     { document.getElementById('confirm-modal').classList.add('hidden'); if (_confirmResolve) { _confirmResolve(true);  _confirmResolve = null; } }
 function _confirmCancel() { document.getElementById('confirm-modal').classList.add('hidden'); if (_confirmResolve) { _confirmResolve(false); _confirmResolve = null; } }
-
-// ── Update Prices — manual override dialog (3-choice) ─────────────────────
-let _priceConfirmResolve = null;
-function showUpdatePricesConfirm(manualOnes) {
-  return new Promise(resolve => {
-    _priceConfirmResolve = resolve;
-    const list = document.getElementById('price-confirm-list');
-    list.innerHTML = manualOnes.map(w => {
-      const isManualEntry = w.marketPriceSrc !== 'WatchCharts';
-      const badge = isManualEntry
-        ? `<span style="font-size:.68rem;font-weight:700;letter-spacing:.05em;color:var(--gold);background:rgba(201,168,76,.15);border-radius:4px;padding:.05rem .3rem;flex-shrink:0;">MANUAL</span>`
-        : '';
-      return `<div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;">
-         <span style="color:var(--text);font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.brand)} ${escHtml(w.name)}</span>
-         <span style="display:flex;align-items:center;gap:.4rem;flex-shrink:0;">${badge}<span style="color:var(--gold);">${fmtMoney(w.marketPrice)}</span></span>
-       </div>`;
-    }).join('');
-    document.getElementById('price-confirm-modal').classList.remove('hidden');
-  });
-}
-function _priceConfirmOverride() { document.getElementById('price-confirm-modal').classList.add('hidden'); if (_priceConfirmResolve) { _priceConfirmResolve('override'); _priceConfirmResolve = null; } }
-function _priceConfirmSkip()     { document.getElementById('price-confirm-modal').classList.add('hidden'); if (_priceConfirmResolve) { _priceConfirmResolve('skip');     _priceConfirmResolve = null; } }
-function _priceConfirmAbort()    { document.getElementById('price-confirm-modal').classList.add('hidden'); if (_priceConfirmResolve) { _priceConfirmResolve('abort');    _priceConfirmResolve = null; } }
 
 function toast(msg, type='success') {
   const el = document.getElementById('toast');
@@ -8270,18 +8214,6 @@ function updateUrlBtn() {
   }
 }
 
-function updateWcUrlBtn() {
-  const val = document.getElementById('w-wc-url').value.trim();
-  const btn = document.getElementById('wc-url-open-btn');
-  if (val && val.startsWith('http')) {
-    btn.href = val;
-    btn.classList.remove('hidden');
-  } else {
-    btn.href = '#';
-    btn.classList.add('hidden');
-  }
-}
-
 // ══════════════════════════════════════════
 //  WATCH TYPE TAGS
 // ══════════════════════════════════════════
@@ -8596,14 +8528,12 @@ function openAddWatch() {
   selColor          = PALETTE[0];
   wPendingImage     = null;
   wPendingFile      = null;
-  modalFetchedPrice = null;
-  ['w-name','w-ref','w-price','w-date','w-url','w-ins-value','w-ins-notes','w-warranty','w-wc-url','w-manual-mp'].forEach(id => document.getElementById(id).value = '');
+  ['w-name','w-ref','w-price','w-date','w-url','w-ins-value','w-ins-notes','w-warranty','w-manual-mp'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('w-insurance').value = '';
   document.getElementById('w-box').value = '';
   document.getElementById('w-papers').value = '';
   document.getElementById('w-ins-value-group').style.display = 'none';
   document.getElementById('w-ins-notes-group').style.display = 'none';
-  document.getElementById('wc-status').textContent = '';
   document.getElementById('modal-title').textContent = 'Add Watch';
   document.getElementById('modal-delete-btn').style.display = 'none';
   buildBrandSelect();
@@ -8614,7 +8544,6 @@ function openAddWatch() {
   hideAddStrapRow();
   document.getElementById('edit-receipts-list').innerHTML = `<div style="color:var(--muted);font-size:.82rem;">No receipts yet.</div>`;
   updateUrlBtn();
-  updateWcUrlBtn();
   // All sections collapsed for a fresh add
   ['sec-condition','sec-market','sec-tags','sec-straps','sec-receipts'].forEach(closeSection);
   clearInlineEdits();
@@ -8647,21 +8576,10 @@ function openEditWatch(id) {
   document.getElementById('w-box').value    = w.hasBox    || '';
   document.getElementById('w-papers').value = w.hasPapers || '';
   // Market Pricing
-  modalFetchedPrice = null;
-  document.getElementById('w-wc-url').value = w.watchChartsUrl || '';
-  // Always show existing market price in the field so user can see/override it
   if (w.marketPrice) {
     setPriceInput('w-manual-mp', w.marketPrice);
-    // Track it as the "baseline" so save logic knows it wasn't changed
-    modalFetchedPrice = (w.marketPriceSrc === 'WatchCharts') ? w.marketPrice : null;
   } else {
     document.getElementById('w-manual-mp').value = '';
-  }
-  const wcStatusEl = document.getElementById('wc-status');
-  if (w.marketPrice) {
-    wcStatusEl.textContent = `Current: ${fmtMoney(w.marketPrice)}${w.marketPriceSrc ? ' · ' + w.marketPriceSrc : ''}${w.marketPriceDate ? ' · ' + fmtDate(w.marketPriceDate) : ''}`;
-  } else {
-    wcStatusEl.textContent = '';
   }
   // Tags & Straps
   renderTagPicker(w.tags || [], autoSuggestTags(w.brand, w.name, w.ref));
@@ -8671,10 +8589,9 @@ function openEditWatch(id) {
   hideAddStrapRow();
   renderEditReceiptsList(w);
   updateUrlBtn();
-  updateWcUrlBtn();
   // Auto-open sections that have data; collapse empty ones
   const hasCondition = w.warrantyExpiry || w.hasBox || w.hasPapers || w.insurance;
-  const hasMarket    = w.watchChartsUrl || w.marketPrice;
+  const hasMarket    = w.marketPrice;
   const hasTags      = (w.tags || []).length > 0;
   const hasStraps    = (w.straps || []).length > 0;
   const hasReceipts  = (w.receipts || []).length > 0;
@@ -8796,7 +8713,6 @@ async function saveWatch() {
   if (!name) { toast('Model name is required', 'error'); return; }
 
   const insStatus = document.getElementById('w-insurance').value;
-  const wcUrl     = document.getElementById('w-wc-url').value.trim();
   const manualMp  = readPrice('w-manual-mp');
 
   // Upload pending image to Storage (from Fetch or direct URL fallback)
@@ -8825,30 +8741,22 @@ async function saveWatch() {
     warrantyExpiry: document.getElementById('w-warranty').value || null,
     hasBox:         document.getElementById('w-box').value    || null,
     hasPapers:      document.getElementById('w-papers').value || null,
-    watchChartsUrl: wcUrl || null,
     tags:           getSelectedTags(),
     straps:         wEditStraps,
     ...(pendingImageUrl ? { image: pendingImageUrl } : {}),
   };
 
-  // Market price: if field has a value, save it.
-  // Source = WatchCharts if Fetch was used AND value matches what was fetched; User Entry otherwise.
+  // Market price: if field has a value, save it as User Entry.
   if (manualMp) {
     data.marketPrice     = manualMp;
     data.marketPriceDate = todayStr();
-    data.marketPriceSrc  = (modalFetchedPrice && manualMp === modalFetchedPrice) ? 'WatchCharts' : 'User Entry';
-  } else if (modalFetchedPrice) {
-    // Fetch was used but user cleared the field — still honour the fetched value
-    data.marketPrice     = modalFetchedPrice;
-    data.marketPriceDate = todayStr();
-    data.marketPriceSrc  = 'WatchCharts';
+    data.marketPriceSrc  = 'User Entry';
   }
-  // else: field blank and no fetch → preserve existing market data via spread
+  // else: field blank → preserve existing market data via spread
 
   if (wPendingImage) URL.revokeObjectURL(wPendingImage);
   wPendingImage     = null;
   wPendingFile      = null;
-  modalFetchedPrice = null;
 
   if (editingId) {
     const idx      = watches.findIndex(x => x.id === editingId);
@@ -9583,180 +9491,8 @@ function deleteLogFromStats(id) {
 }
 
 // ══════════════════════════════════════════
-//  MARKET PRICE  (source: WatchCharts)
-// ══════════════════════════════════════════
+//  WATCH IMAGE FETCH (WatchCharts pricing removed — see watchcharts-backup.js)
 
-// Shared: fetch URL via CORS proxy, return raw HTML string (throws on failure).
-// Retries once with a 2.5s backoff on 429 (rate limit).
-async function _fetchViaProxy(url) {
-  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    if (attempt > 0) await new Promise(r => setTimeout(r, 2500));
-    try {
-      const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
-      if (r.status === 429) continue; // rate-limited → wait and retry
-      if (!r.ok) throw new Error(`proxy ${r.status}`);
-      const text = await r.text();
-      if (text.length < 200) throw new Error('empty response');
-      return text;
-    } catch (e) {
-      if (attempt === 1) throw e;
-    }
-  }
-  throw new Error('proxy failed after retry');
-}
-
-// Search WatchCharts for a model URL using reference number only (most precise).
-// Falls back to brand + name if no ref is provided. Returns a model root URL or null.
-async function findWatchChartsModelUrl(brand, name, ref) {
-  const brandKey = brand.toLowerCase().split(/\s+/)[0];
-  // Build query list: ref-only first (most precise), then brand+name as fallback
-  const queries = [];
-  if (ref && ref.trim()) {
-    queries.push(ref.trim()); // just the reference number — most accurate
-  }
-  if (!queries.length) {
-    // No ref → fall back to brand + first 3 words of name
-    const nameWords = name.trim().split(/\s+/);
-    queries.push(`${brand} ${nameWords.slice(0, 3).join(' ')}`);
-  }
-  for (const q of queries) {
-    try {
-      const searchHtml = await _fetchViaProxy(
-        `https://watchcharts.com/watches/search?q=${encodeURIComponent(q)}`
-      );
-      const allLinks = [...searchHtml.matchAll(/href="(https:\/\/watchcharts\.com\/watch_model\/[^"]+)"/g)]
-        .map(m => m[1]);
-      const modelUrl = allLinks.find(u => u.toLowerCase().includes(brandKey));
-      if (modelUrl) return modelUrl.replace(/\/[^/]+$/, ''); // strip trailing path
-    } catch (_) {}
-  }
-  return null;
-}
-
-// Fetch the market price from a given WatchCharts model URL.
-async function fetchPriceFromWatchChartsUrl(url) {
-  // Only strip known sub-page suffixes (NOT arbitrary path segments — that would eat the model slug!)
-  const modelRoot = url.replace(/\/(overview|prices|history|specs|charts?)(\?.*)?$/, '').replace(/\/$/, '');
-  const html = await _fetchViaProxy(modelRoot);
-  // Fast path: search snippet pattern
-  const fastMatch = html.match(/Market Price\.\s*\$([\d,]+)/);
-  if (fastMatch) {
-    const price = parseInt(fastMatch[1].replace(/,/g, ''), 10);
-    if (price > 100 && price < 10_000_000) return { price, src: 'WatchCharts' };
-  }
-  // Slow path: .market-price element on model page
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const mpEl = doc.querySelector('.market-price');
-  if (mpEl) {
-    const price = parseInt(mpEl.textContent.replace(/[$,\s]/g, ''), 10);
-    if (price > 100 && price < 10_000_000) return { price, src: 'WatchCharts' };
-  }
-  return null;
-}
-
-// Edit modal: auto-find WatchCharts URL for the watch being edited
-async function modalFindWcUrl() {
-  const brand = document.getElementById('w-brand').value;
-  const name  = document.getElementById('w-name').value.trim();
-  const ref   = document.getElementById('w-ref').value.trim();
-  if (!brand || !name) {
-    toast('Fill in Brand and Model name first', 'error'); return;
-  }
-  const btn      = document.getElementById('wc-find-btn');
-  const statusEl = document.getElementById('wc-status');
-  btn.disabled = true; btn.textContent = 'Searching…';
-  statusEl.textContent = '';
-  try {
-    const url = await findWatchChartsModelUrl(brand, name, ref);
-    if (!url) {
-      statusEl.textContent = 'No match found — paste the URL manually';
-    } else {
-      document.getElementById('w-wc-url').value = url;
-      updateWcUrlBtn();
-      statusEl.textContent = '✓ URL found — click Get Price to get the price';
-    }
-  } catch (_) {
-    statusEl.textContent = 'Search failed — try again';
-  }
-  btn.disabled = false; btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find';
-}
-
-// Edit modal: fetch price from the WatchCharts URL currently in the URL field
-async function modalFetchPrice() {
-  const wcUrl = document.getElementById('w-wc-url').value.trim();
-  if (!wcUrl) { toast('Enter or Find a WatchCharts URL first', 'error'); return; }
-  const btn      = document.getElementById('wc-fetch-btn');
-  const statusEl = document.getElementById('wc-status');
-  btn.disabled = true; btn.textContent = 'Fetching…';
-  statusEl.textContent = '';
-  try {
-    const result = await fetchPriceFromWatchChartsUrl(wcUrl);
-    if (!result) {
-      statusEl.textContent = 'Price not found on that page';
-    } else {
-      modalFetchedPrice = result.price;
-      setPriceInput('w-manual-mp', result.price);
-      statusEl.textContent = `✓ ${fmtMoney(result.price)} from WatchCharts — edit the value below to override`;
-    }
-  } catch (_) {
-    statusEl.textContent = 'Fetch failed — check the URL or try again';
-  }
-  btn.disabled = false; btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Get Price <span style="font-size:.6rem;font-weight:700;letter-spacing:.06em;background:rgba(201,168,76,.18);color:var(--gold);border-radius:4px;padding:.1rem .35rem;vertical-align:middle;">BETA</span>';
-}
-
-// "Update All Prices" — batch update all watches that have a WatchCharts URL
-async function updateAllMarketPrices() {
-  const btn      = document.getElementById('update-all-btn');
-  const toUpdate = watches.filter(w => w.watchChartsUrl);
-  if (!toUpdate.length) {
-    toast('No watches have a WatchCharts URL yet. Edit a watch to add one.', 'error'); return;
-  }
-  // Show ALL watches with a price in the warning dialog so nothing is hidden.
-  // "Skip" only protects manually-entered prices (src !== 'WatchCharts');
-  // WatchCharts-tagged prices are always refreshed unless the user cancels entirely.
-  const isManual = w => w.marketPrice && w.marketPriceSrc !== 'WatchCharts';
-  const pricedOnes = toUpdate.filter(w => w.marketPrice);
-  let skipManual = false;
-  if (pricedOnes.length) {
-    const choice = await showUpdatePricesConfirm(pricedOnes);
-    if (choice === 'abort') return;          // user cancelled the whole pull
-    skipManual = (choice === 'skip');        // 'skip' = keep manual, still refresh WatchCharts prices
-  }
-  btn.disabled = true; btn.textContent = 'Updating…';
-  let updated = 0, failed = 0, skipped = 0;
-  for (const w of toUpdate) {
-    if (skipManual && isManual(w)) { skipped++; continue; }
-    try {
-      const result = await fetchPriceFromWatchChartsUrl(w.watchChartsUrl);
-      if (result) {
-        const idx = watches.findIndex(x => x.id === w.id);
-        // Archive only when the price actually changes
-        if (watches[idx].marketPrice && watches[idx].marketPrice !== result.price) {
-          watches[idx].priceHistory = [
-            ...(watches[idx].priceHistory || []),
-            { price: watches[idx].marketPrice, date: watches[idx].marketPriceDate || todayStr(), src: watches[idx].marketPriceSrc || 'WatchCharts' }
-          ];
-        }
-        // Always update price, date, and src — for non-manual watches this stamps
-        // "last verified today" even when the price is unchanged. For manual watches
-        // that were overridden, date/src correctly switch to WatchCharts.
-        watches[idx].marketPrice     = result.price;
-        watches[idx].marketPriceDate = todayStr();
-        watches[idx].marketPriceSrc  = result.src;
-        updated++;
-      } else { failed++; }
-    } catch (_) { failed++; }
-    await new Promise(r => setTimeout(r, 900)); // polite delay between requests
-  }
-  save();
-  renderCollection();
-  btn.disabled = false; btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg> Update Prices <span style="font-size:.6rem;font-weight:700;letter-spacing:.06em;background:rgba(201,168,76,.18);color:var(--gold);border-radius:4px;padding:.1rem .35rem;vertical-align:middle;">BETA</span>';
-  const parts = [`Updated ${updated} watch${updated !== 1 ? 'es' : ''}`];
-  if (skipped) parts.push(`${skipped} manual price${skipped > 1 ? 's' : ''} kept`);
-  if (failed)  parts.push(`${failed} failed`);
-  toast(parts.join(' · '));
-}
 
 // ══════════════════════════════════════════
 //  WATCH IMAGE FETCH
