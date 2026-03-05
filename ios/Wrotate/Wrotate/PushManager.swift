@@ -6,16 +6,18 @@ class PushManager {
 
     var deviceToken: String?
     private var currentUserId: String?
+    private var userAccessToken: String?
 
     // Supabase config — same as web app
     private let supabaseURL = "https://api.wrotate.com"
-    private let supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzcyMTQ3MTEsImV4cCI6MjA1Mjc5MDcxMX0.sHCBGSFfJMzJMBm5JykFEOaG0r3VP3GH2McqFr97Vkc"
+    private let supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs"
 
     private init() {}
 
     // Called when user signs into the web app
-    func handleSignIn(userId: String) {
+    func handleSignIn(userId: String, accessToken: String? = nil) {
         currentUserId = userId
+        userAccessToken = accessToken
         requestPermissionAndRegister()
     }
 
@@ -68,7 +70,7 @@ class PushManager {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("return=minimal, resolution=merge-duplicates", forHTTPHeaderField: "Prefer")
         request.setValue(supabaseKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(supabaseKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(userAccessToken ?? supabaseKey)", forHTTPHeaderField: "Authorization")
 
         let body: [String: Any] = [
             "user_id": userId,
@@ -78,13 +80,18 @@ class PushManager {
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
 
-        URLSession.shared.dataTask(with: request) { _, response, error in
+        URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 print("[WRotate] Failed to store push token: \(error.localizedDescription)")
                 return
             }
-            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode >= 200 && httpResponse.statusCode < 300 {
+            let httpResponse = response as? HTTPURLResponse
+            let statusCode = httpResponse?.statusCode ?? 0
+            if statusCode >= 200 && statusCode < 300 {
                 print("[WRotate] Push token stored for user \(userId)")
+            } else {
+                let body = data.flatMap { String(data: $0, encoding: .utf8) } ?? "no body"
+                print("[WRotate] Failed to store push token: HTTP \(statusCode) — \(body)")
             }
         }.resume()
     }

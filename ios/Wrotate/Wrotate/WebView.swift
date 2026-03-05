@@ -129,7 +129,8 @@ struct WebView: UIViewRepresentable {
                             if (event === 'SIGNED_IN' && session && session.user) {
                                 window.webkit.messageHandlers.auth.postMessage({
                                     event: 'SIGNED_IN',
-                                    userId: session.user.id
+                                    userId: session.user.id,
+                                    accessToken: session.access_token
                                 });
                             } else if (event === 'SIGNED_OUT') {
                                 window.webkit.messageHandlers.auth.postMessage({
@@ -142,7 +143,8 @@ struct WebView: UIViewRepresentable {
                             if (result.data.session && result.data.session.user) {
                                 window.webkit.messageHandlers.auth.postMessage({
                                     event: 'SIGNED_IN',
-                                    userId: result.data.session.user.id
+                                    userId: result.data.session.user.id,
+                                    accessToken: result.data.session.access_token
                                 });
                             }
                         });
@@ -204,14 +206,66 @@ struct WebView: UIViewRepresentable {
             guard let modifiedURL = components.url else { return }
 
             oauthManager.startOAuthFlow(authURL: modifiedURL) { [weak self] callbackURL in
-                guard let callbackURL = callbackURL else { return }
+                guard let callbackURL = callbackURL else {
+                    print("[WRotate] OAuth: no callback URL received")
+                    return
+                }
+
+                print("[WRotate] OAuth callback: \(callbackURL.absoluteString.prefix(80))...")
 
                 // Extract the fragment (access_token, refresh_token, etc.)
                 // The callback URL looks like: wrotate://auth-callback#access_token=...&refresh_token=...
                 let fragment = callbackURL.fragment ?? ""
+                print("[WRotate] OAuth fragment length: \(fragment.count)")
+
                 if !fragment.isEmpty {
-                    let targetURL = URL(string: "https://wrotate.com/#\(fragment)")!
-                    self?.webView?.load(URLRequest(url: targetURL))
+                    // Parse the fragment to extract access_token and refresh_token
+                    var params: [String: String] = [:]
+                    for pair in fragment.split(separator: "&") {
+                        let kv = pair.split(separator: "=", maxSplits: 1)
+                        if kv.count == 2 {
+                            params[String(kv[0])] = String(kv[1])
+                        }
+                    }
+
+                    guard let accessToken = params["access_token"],
+                          let refreshToken = params["refresh_token"] else {
+                        print("[WRotate] OAuth: missing tokens in fragment")
+                        return
+                    }
+
+                    // Inject JS to set the session directly — much more reliable than URL reload
+                    let js = """
+                    (function() {
+                        if (typeof db !== 'undefined' && db.auth) {
+                            db.auth.setSession({
+                                access_token: '\(accessToken)',
+                                refresh_token: '\(refreshToken)'
+                            }).then(function(result) {
+                                if (result.error) {
+                                    console.error('[WRotate] setSession error:', result.error.message);
+                                } else {
+                                    console.log('[WRotate] Session set successfully');
+                                    window.location.reload();
+                                }
+                            });
+                        } else {
+                            window.location.hash = '\(fragment)';
+                            window.location.reload();
+                        }
+                        return true;
+                    })();
+                    """
+                    print("[WRotate] OAuth: injecting session via JS")
+                    DispatchQueue.main.async {
+                        self?.webView?.evaluateJavaScript(js) { _, error in
+                            if let error = error {
+                                print("[WRotate] OAuth JS error: \(error.localizedDescription)")
+                            }
+                        }
+                    }
+                } else {
+                    print("[WRotate] OAuth: empty fragment!")
                 }
             }
         }
@@ -226,7 +280,8 @@ struct WebView: UIViewRepresentable {
                   let event = body["event"] as? String else { return }
 
             if event == "SIGNED_IN", let userId = body["userId"] as? String {
-                PushManager.shared.handleSignIn(userId: userId)
+                let accessToken = body["accessToken"] as? String
+                PushManager.shared.handleSignIn(userId: userId, accessToken: accessToken)
             } else if event == "SIGNED_OUT" {
                 PushManager.shared.handleSignOut()
             }
