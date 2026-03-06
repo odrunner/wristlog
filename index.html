@@ -6,7 +6,7 @@
   <title>WRotate – Every Watch. Every Wear.</title>
   <meta name="description" content="Track your watch collection, log every wear, and share with friends. Cost-per-wear stats, market values, social feed, clubs, and wishlist — all in one app.">
   <meta name="robots" content="index, follow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://accounts.google.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https://api.wrotate.com https://*.supabase.co data: blob: https:; connect-src 'self' https://api.wrotate.com https://*.supabase.co https://corsproxy.io https://api.allorigins.win https://watchcharts.com https://accounts.google.com wss://api.wrotate.com; font-src 'self'; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://accounts.google.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https://api.wrotate.com https://*.supabase.co data: blob: https:; connect-src 'self' https://api.wrotate.com https://*.supabase.co https://corsproxy.io https://api.allorigins.win https://accounts.google.com wss://api.wrotate.com; font-src 'self'; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self';">
   <link rel="canonical" href="https://wrotate.com/">
   <!-- Open Graph -->
   <meta property="og:type" content="website">
@@ -73,9 +73,6 @@
   </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    /* Prevent the header (not body) from creating horizontal scroll */
-    header { overflow: hidden; }
-
     :root {
       --bg:           #0b0b10;
       --surface:      #141419;
@@ -224,7 +221,7 @@
     .server-dot {
       width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
       background: var(--success); box-shadow: 0 0 6px var(--success);
-      display: none; title: "Connected to local server";
+      display: none;
     }
     .server-dot.on { display: block; }
 
@@ -451,7 +448,7 @@
       max-height: 200px; overflow-y: auto; z-index: 200; box-shadow: 0 4px 16px rgba(0,0,0,.35); }
     .brand-ac-list.hidden { display: none !important; }
     .brand-ac-item { padding: .45rem .75rem; cursor: pointer; font-size: .875rem; }
-    .brand-ac-item:hover, .brand-ac-item.ac-focused { background: var(--primary); color: var(--bg); border-radius: 6px; }
+    .brand-ac-item:hover, .brand-ac-item.ac-focused { background: var(--gold); color: var(--bg); border-radius: 6px; }
     .brand-ac-request { padding: .45rem .75rem; cursor: pointer; font-size: .82rem;
       color: var(--muted); border-top: 1px solid var(--border); }
     .brand-ac-request:hover { color: var(--text); background: var(--surface); border-radius: 0 0 8px 8px; }
@@ -1750,7 +1747,7 @@
 
 
 
-<!-- ════ USERNAME ONBOARDING MODAL ════ -->
+<!-- ════ FOLLOWERS MODAL ════ -->
 <div id="followers-modal" class="overlay hidden">
   <div class="modal" style="max-width:400px;">
     <div class="modal-title">Followers</div>
@@ -2145,7 +2142,7 @@
           </div>
           <div class="help-mini-card">
             <div class="help-mini-title" style="display:flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Market Prices</div>
-            <div class="help-mini-desc">Paste a WatchCharts URL when editing a watch, then tap <strong>Update Prices</strong> in the Collection header to pull current market values. Price history is tracked over time.</div>
+            <div class="help-mini-desc">Enter a market value when editing a watch in the <strong>Market Pricing</strong> section. Price history is tracked over time so you can see how values change.</div>
           </div>
           <div class="help-mini-card">
             <div class="help-mini-title" style="display:flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Per-Watch Privacy</div>
@@ -3406,7 +3403,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.16.31';
+const APP_VERSION = '2.30.26.17.41';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9486,10 +9483,6 @@ function deleteLogFromStats(id) {
   }
   renderStats();
 }
-
-// ══════════════════════════════════════════
-//  WATCH IMAGE FETCH (WatchCharts pricing removed — see watchcharts-backup.js)
-
 
 // ══════════════════════════════════════════
 //  WATCH IMAGE FETCH
