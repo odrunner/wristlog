@@ -898,19 +898,19 @@
 
     /* ── MARKET PRICE ROW ── */
     .market-price-row {
-      display: flex; align-items: center; flex-wrap: wrap; gap: .45rem;
+      display: flex; align-items: center; gap: .4rem;
       padding: .55rem .75rem; background: var(--surface2);
-      border-radius: 8px; margin-bottom: .75rem; font-size: .82rem;
-      border: 1px solid var(--border);
+      border-radius: 8px; margin-bottom: .75rem; font-size: .8rem;
+      border: 1px solid var(--border); overflow: hidden;
     }
-    .mp-label { font-size: .65rem; font-weight: 700; text-transform: uppercase;
+    .mp-label { font-size: .6rem; font-weight: 700; text-transform: uppercase;
                 letter-spacing: .06em; color: var(--muted); flex-shrink: 0; }
-    .mp-value { font-weight: 700; }
-    .mp-delta { font-weight: 600; font-size: .75rem; padding: .1rem .45rem;
-                border-radius: 10px; white-space: nowrap; }
+    .mp-value { font-weight: 700; flex-shrink: 0; }
+    .mp-delta { font-weight: 600; font-size: .7rem; padding: .1rem .4rem;
+                border-radius: 10px; white-space: nowrap; flex-shrink: 0; }
     .mp-up    { color: var(--success); background: rgba(76,175,125,.12); }
     .mp-down  { color: var(--danger);  background: rgba(224,85,85,.12); }
-    .mp-src   { color: var(--muted); font-size: .68rem; margin-left: auto; white-space: nowrap; }
+    .mp-src   { color: var(--muted); font-size: .65rem; margin-left: auto; white-space: nowrap; flex-shrink: 0; }
 
     /* ── PORTFOLIO VS MARKET TABLE ── */
     .pvm-table { width: 100%; border-collapse: collapse; font-size: .83rem; }
@@ -3403,7 +3403,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.17.55';
+const APP_VERSION = '2.30.26.18.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
