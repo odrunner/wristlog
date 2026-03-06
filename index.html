@@ -418,13 +418,14 @@
     #sec-condition select,
     #sec-condition input[type=date],
     #sec-condition input[type=text] {
-      background: transparent; border: none;
-      border-bottom: 1px dotted var(--muted); border-radius: 0;
-      padding: .2rem 0; font-size: .9rem; color: var(--text);
+      background: transparent !important; border: none !important;
+      border-bottom: 1px dotted var(--muted) !important; border-radius: 0 !important;
+      padding: .2rem 0 !important; font-size: .9rem; color: var(--text);
+      width: fit-content !important; min-width: 0;
     }
     #sec-condition select:focus,
     #sec-condition input:focus {
-      outline: none; border-bottom-color: var(--text); box-shadow: none;
+      outline: none; border-bottom-color: var(--text) !important; box-shadow: none !important;
     }
 
     /* ── REMINDER BANNER ── */
@@ -3433,7 +3434,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.14.01';
+const APP_VERSION = '2.30.26.14.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11523,7 +11524,9 @@ function initApp() {
   fetchWeather();
   initReminder();
   // Load social data then feed (landing page)
-  Promise.all([loadMyProfile(), loadFollowing(), loadPendingRequests(), loadMyClubs(), loadPendingClubRequests(), loadFriendRequests()]).then(() => {
+  // Wrap each loader so one failure can't block the rest (prevents blank feed on stale auth / network error)
+  const _safe = fn => fn().catch(e => console.warn('[WRotate]', fn.name || 'social', 'load failed:', e?.message));
+  Promise.all([_safe(loadMyProfile), _safe(loadFollowing), _safe(loadPendingRequests), _safe(loadMyClubs), _safe(loadPendingClubRequests), _safe(loadFriendRequests)]).then(() => {
     computeFriendships(); // needs following + friendRequests both loaded
     loadFeed();
     loadNotifications();
@@ -11563,9 +11566,13 @@ async function bootApp(user) {
   if (bellBtn) bellBtn.style.display = '';
   try {
     await loadUserData();
+  } catch(e) {
+    console.error('[WristLog] bootApp loadUserData error:', e.message, e);
+  }
+  try {
     initApp();
   } catch(e) {
-    console.error('[WristLog] bootApp error:', e.message, e);
+    console.error('[WristLog] bootApp initApp error:', e.message, e);
     try { renderCollection(); } catch(_) {}
   }
 }
