@@ -1173,15 +1173,10 @@
       /* Main: pad bottom for tab bar */
       main { padding: 1.1rem .85rem 86px; }
 
-      /* Modals: bottom-sheet style */
-      .overlay { align-items: flex-end; padding: 0; padding-top: 2.5rem; overflow-x: hidden; }
-      #welcome-modal, #username-modal, #delete-account-modal, #feedback-modal,
-      #track-log-modal, #edit-log-modal, #new-post-modal, #edit-post-modal, #discover-modal { align-items: center; padding: 1rem; }
-      #welcome-modal .modal, #username-modal .modal, #delete-account-modal .modal, #feedback-modal .modal,
-      #track-log-modal .modal, #edit-log-modal .modal, #new-post-modal .modal, #edit-post-modal .modal, #discover-modal .modal { border-radius: 14px; max-width: 420px; }
-      .modal { border-radius: 16px 16px 0 0; max-height: 88vh; max-width: 100%; padding: 1.4rem 1rem 1.2rem; }
-      #watch-preview-modal { align-items: center; padding: 1.5rem; }
-      #watch-preview-modal .modal { border-radius: 14px; max-width: 320px; }
+      /* Modals: centered on mobile with side margins */
+      .overlay { align-items: center; padding: 1rem; overflow-x: hidden; }
+      .modal { border-radius: 14px; max-height: 88vh; max-width: 420px; padding: 1.4rem 1rem 1.2rem; }
+      #watch-preview-modal .modal { max-width: 320px; }
 
       /* Prevent horizontal overflow in modal rows */
       .url-row { flex-wrap: wrap; }
@@ -3411,7 +3406,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.16.21';
+const APP_VERSION = '2.30.26.16.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
