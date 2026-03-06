@@ -3403,7 +3403,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.17.53';
+const APP_VERSION = '2.30.26.17.55';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8718,8 +8718,7 @@ function marketPriceRowHTML(w) {
   const deltaHTML = delta != null
     ? `<span class="mp-delta ${delta >= 0 ? 'mp-up' : 'mp-down'}">${sign}${fmtMoney(Math.abs(delta))} (${sign}${Math.abs(pct)}%)</span>`
     : '';
-  const srcParts = [w.marketPriceSrc, w.marketPriceDate ? fmtDate(w.marketPriceDate) : ''].filter(Boolean);
-  const srcHTML = srcParts.length ? `<span class="mp-src">${srcParts.join(' · ')}</span>` : '';
+  const srcHTML = w.marketPriceDate ? `<span class="mp-src">${fmtDate(w.marketPriceDate)}</span>` : '';
   return `<div class="market-price-row">
     <span class="mp-label">Market</span>
     <span class="mp-value">${fmtMoney(mp)}</span>
