@@ -3401,7 +3401,8 @@ function rowToWish(r) {
 async function loadUserData() {
   const uid = currentUser.id;
   // Each query is individually fault-tolerant so one table failure doesn't block the others
-  const _q = query => query.catch(e => { console.error('[WristLog] loadUserData query error:', e?.message); return { data: null, error: e }; });
+  // Promise.resolve() converts the Supabase thenable to a real Promise (thenables lack .catch())
+  const _q = query => Promise.resolve(query).catch(e => { console.error('[WristLog] loadUserData query error:', e?.message); return { data: null, error: e }; });
   const [wRes, lRes, wlRes] = await Promise.all([
     _q(db.from('watches').select('*').eq('user_id', uid)),
     _q(db.from('logs').select('*').eq('user_id', uid)),
@@ -3449,7 +3450,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.14.50';
+const APP_VERSION = '2.30.26.14.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
