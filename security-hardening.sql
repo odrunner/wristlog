@@ -76,19 +76,30 @@ DROP POLICY IF EXISTS "Users can read own logs" ON logs;
 CREATE POLICY "Users can read own logs" ON logs
   FOR SELECT USING (auth.uid() = user_id);
 
--- Others can read logs based on visibility
+-- Others can read logs based on visibility + club membership
 DROP POLICY IF EXISTS "Others can read shared logs" ON logs;
 CREATE POLICY "Others can read shared logs" ON logs
   FOR SELECT USING (
+    -- Public posts: visible to everyone
     visibility = 'public'
+    -- Followers posts: visible to followers
     OR (visibility = 'followers' AND EXISTS (
       SELECT 1 FROM follows WHERE follower_id = auth.uid() AND following_id = logs.user_id
     ))
+    -- Friends posts: visible to verified friends only
     OR (visibility = 'friends' AND EXISTS (
       SELECT 1 FROM friend_requests
       WHERE status = 'accepted'
         AND ((initiator_id = auth.uid() AND target_id = logs.user_id)
           OR (target_id = auth.uid() AND initiator_id = logs.user_id))
+    ))
+    -- Legacy NULL visibility: treat as followers-scoped
+    OR (visibility IS NULL AND EXISTS (
+      SELECT 1 FROM follows WHERE follower_id = auth.uid() AND following_id = logs.user_id
+    ))
+    -- Club posts: visible to club members (except private)
+    OR (club_id IS NOT NULL AND visibility IS DISTINCT FROM 'private' AND EXISTS (
+      SELECT 1 FROM club_members WHERE club_id = logs.club_id AND user_id = auth.uid()
     ))
   );
 
