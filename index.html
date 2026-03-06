@@ -902,10 +902,13 @@
       padding: .55rem .75rem; background: var(--surface2);
       border-radius: 8px; margin-bottom: .75rem; font-size: .8rem;
       border: 1px solid var(--border); overflow: hidden;
+      cursor: pointer;
     }
+    .market-price-row:hover .mp-value,
+    .market-price-row:hover .mp-delta { color: var(--gold); border-bottom-color: var(--gold); }
     .mp-label { font-size: .6rem; font-weight: 700; text-transform: uppercase;
                 letter-spacing: .06em; color: var(--muted); flex-shrink: 0; }
-    .mp-value { font-weight: 700; flex-shrink: 0; }
+    .mp-value { font-weight: 700; flex-shrink: 0; border-bottom: 1px dotted var(--muted); padding-bottom: 1px; }
     .mp-delta { font-weight: 600; font-size: .7rem; padding: .1rem .4rem;
                 border-radius: 10px; white-space: nowrap; flex-shrink: 0; }
     .mp-up    { color: var(--success); background: rgba(76,175,125,.12); }
@@ -1139,9 +1142,9 @@
 
     /* ── MOBILE: bottom tab nav + touch UX (≤ 640px) ── */
     @media (max-width: 640px) {
-      /* Compact header */
-      .header-inner { padding: 0 .75rem; gap: .35rem; align-items: center; }
-      .logo { font-size: 1rem; padding: .65rem 0; }
+      /* Compact header — taller for mobile */
+      .header-inner { padding: 0 1.1rem; gap: .4rem; align-items: center; }
+      .logo { font-size: 1.15rem; padding: 1.2rem 0; }
       /* Icon-only collection buttons on mobile */
       .btn-label { display: none; }
       .btn-label-short { display: inline; }
@@ -1154,21 +1157,21 @@
         background: var(--surface);
         border-top: 1px solid var(--border);
         border-bottom: none;
-        padding-bottom: env(safe-area-inset-bottom, 0);
+        padding: 0 2rem env(safe-area-inset-bottom, 0) 2rem;
         gap: 0; justify-content: stretch;
       }
       nav button {
         flex: 1; flex-direction: column; align-items: center; justify-content: center;
-        padding: .45rem .1rem calc(.42rem + env(safe-area-inset-bottom, 0));
-        font-size: .58rem; letter-spacing: .01em; gap: 3px;
-        border-bottom: none; border-top: 2px solid transparent;
+        padding: .65rem .3rem calc(.6rem + env(safe-area-inset-bottom, 0));
+        font-size: .62rem; letter-spacing: .01em; gap: 3px;
+        border-bottom: none; border-top: 2.5px solid transparent;
       }
       nav button.active { color: var(--gold); border-top-color: var(--gold); border-bottom-color: transparent; }
       nav button:hover { color: var(--text); }
-      .nav-icon svg { width: 20px; height: 20px; }
+      .nav-icon svg { width: 22px; height: 22px; }
 
       /* Main: pad bottom for tab bar */
-      main { padding: 1.1rem .85rem 86px; }
+      main { padding: 1.1rem .85rem 92px; }
 
       /* Modals: centered on mobile with side margins */
       .overlay { align-items: center; padding: 1rem; overflow-x: hidden; }
@@ -1196,7 +1199,7 @@
       .chart-wrap { height: 200px !important; }
 
       /* Toast: above tab bar */
-      .toast { left: .75rem; right: .75rem; bottom: 76px; text-align: center; }
+      .toast { left: .75rem; right: .75rem; bottom: 82px; text-align: center; }
 
       /* Track form — keep date input from overflowing on narrow screens */
       .track-form { max-width: 100%; }
@@ -1206,7 +1209,7 @@
       .save-bar {
         position: fixed;
         left: 0; right: 0;
-        bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+        bottom: calc(64px + env(safe-area-inset-bottom, 0px));
         z-index: 200;
         padding: .55rem .85rem;
         background: linear-gradient(transparent, var(--bg) 30%);
@@ -1220,11 +1223,11 @@
       .drag-handle { touch-action: none; } /* keep visible; touch drag handled in JS */
     }
 
-    /* Very small screens: hide nav labels */
+    /* Very small screens: hide nav labels, bigger icons */
     @media (max-width: 375px) {
       .nav-label { display: none; }
-      .nav-icon svg { width: 22px; height: 22px; }
-      nav button { padding: .55rem .1rem calc(.5rem + env(safe-area-inset-bottom, 0)); }
+      .nav-icon svg { width: 24px; height: 24px; }
+      nav button { padding: .7rem .25rem calc(.65rem + env(safe-area-inset-bottom, 0)); }
     }
 
     /* ── PROFILE BUTTON (header) ───────────────── */
@@ -2541,7 +2544,7 @@
         <span class="modal-section-chevron" id="chv-sec-market">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-market">
-        <div class="form-group">
+        <div class="form-group" style="margin-bottom:0">
           <label>Market Value ($)</label>
           <input type="text" inputmode="decimal" id="w-manual-mp" placeholder="0" autocomplete="off" oninput="fmtPriceInput(this)">
         </div>
@@ -3403,7 +3406,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.18.01';
+const APP_VERSION = '2.30.26.18.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8306,6 +8309,7 @@ const INLINE_FIELDS = [
   { id: 'w-ref',   fmt: v => v || null },
   { id: 'w-price', fmt: v => { const n = parseFloat((v||'').toString().replace(/,/g,'')); return n ? fmtMoney(n) : null; } },
   { id: 'w-date',  fmt: v => v ? fmtDate(v) : null },
+  { id: 'w-manual-mp', fmt: v => { const n = parseFloat((v||'').toString().replace(/,/g,'')); return n ? fmtMoney(n) : null; } },
 ];
 
 const WL_INLINE_FIELDS = [
@@ -8719,7 +8723,7 @@ function marketPriceRowHTML(w) {
     ? `<span class="mp-delta ${delta >= 0 ? 'mp-up' : 'mp-down'}">${sign}${fmtMoney(Math.abs(delta))} (${sign}${Math.abs(pct)}%)</span>`
     : '';
   const srcHTML = w.marketPriceDate ? `<span class="mp-src">${fmtDate(w.marketPriceDate)}</span>` : '';
-  return `<div class="market-price-row">
+  return `<div class="market-price-row" onclick="openEditWatch('${w.id}')">
     <span class="mp-label">Market</span>
     <span class="mp-value">${fmtMoney(mp)}</span>
     ${deltaHTML}
