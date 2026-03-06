@@ -3403,7 +3403,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.17.47';
+const APP_VERSION = '2.30.26.17.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6009,7 +6009,33 @@ function renderFeedCard(item) {
   let commentsHtml = '';
   if (allComments.length > 0 || expanded) {
     const showAll = expanded;
-    const displayComments = showAll ? allComments : allComments.slice(-COMMENT_PREVIEW);
+    // When expanded: show all chronologically, but pin the top-liked comment first
+    // When collapsed: show the top-liked comment + the most recent comment
+    let displayComments;
+    if (showAll) {
+      // Find the highest-liked comment and move it to the top
+      const topIdx = allComments.reduce((best, c, i) => {
+        const likes = (commentLikes[c.id] || { count: 0 }).count;
+        return likes > best.likes ? { idx: i, likes } : best;
+      }, { idx: -1, likes: 0 }).idx;
+      if (topIdx > 0) {
+        displayComments = [allComments[topIdx], ...allComments.filter((_, i) => i !== topIdx)];
+      } else {
+        displayComments = allComments;
+      }
+    } else {
+      // Preview: top-liked + most recent (deduplicated)
+      const topLiked = allComments.reduce((best, c) => {
+        const likes = (commentLikes[c.id] || { count: 0 }).count;
+        return likes > best.likes ? { comment: c, likes } : best;
+      }, { comment: null, likes: 0 }).comment;
+      const newest = allComments[allComments.length - 1] || null;
+      if (topLiked && newest && topLiked.id !== newest.id) {
+        displayComments = [topLiked, newest];
+      } else {
+        displayComments = allComments.slice(-COMMENT_PREVIEW);
+      }
+    }
     const remaining = allComments.length - displayComments.length;
     const commentItems = displayComments.map(c => {
       const cl = commentLikes[c.id] || { count: 0, liked: false };
