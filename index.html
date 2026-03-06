@@ -3403,7 +3403,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.17.41';
+const APP_VERSION = '2.30.26.17.47';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5896,6 +5896,8 @@ async function loadFeed() {
 
 function scrollToFeedPost(postId) {
   if (!postId) { nav(document.querySelector('nav button[data-page=\'feed\']')); return; }
+  // Auto-expand comments so the latest comment is visible when coming from a notification
+  expandedComments.add(postId);
   nav(document.querySelector('nav button[data-page=\'feed\']'));
   const attempt = (tries) => {
     const card = document.getElementById('feedcard-' + postId);
@@ -6007,7 +6009,7 @@ function renderFeedCard(item) {
   let commentsHtml = '';
   if (allComments.length > 0 || expanded) {
     const showAll = expanded;
-    const displayComments = showAll ? allComments : allComments.slice(0, COMMENT_PREVIEW);
+    const displayComments = showAll ? allComments : allComments.slice(-COMMENT_PREVIEW);
     const remaining = allComments.length - displayComments.length;
     const commentItems = displayComments.map(c => {
       const cl = commentLikes[c.id] || { count: 0, liked: false };
@@ -6043,8 +6045,8 @@ function renderFeedCard(item) {
       : `<div class="comments-add-prompt" onclick="toggleComments('${item.id}')">Add a comment…</div>`;
     commentsHtml = `
       <div class="feed-comments-section">
-        ${commentItems}
         ${viewMoreHtml}
+        ${commentItems}
         ${inputHtml}
       </div>`;
   }
