@@ -2632,7 +2632,7 @@
 </div>
 
 <!-- ════ GENERIC CONFIRM MODAL ════ -->
-<div id="confirm-modal" class="overlay hidden" onclick="if(event.target===this)_confirmCancel()">
+<div id="confirm-modal" class="overlay hidden">
   <div class="modal" style="max-width:360px;">
     <div class="modal-title" id="confirm-title">Are you sure?</div>
     <p id="confirm-msg" style="color:var(--muted);font-size:.88rem;margin-bottom:1.25rem;line-height:1.55;"></p>
@@ -2645,7 +2645,7 @@
 
 
 <!-- ════ ADD PHOTO MODAL (paste / drop / browse — no clipboard permission) ════ -->
-<div id="photo-paste-modal" class="overlay hidden" onclick="if(event.target===this)closePhotoPasteModal()">
+<div id="photo-paste-modal" class="overlay hidden">
   <div class="modal" style="max-width:320px;">
     <div class="modal-title">Add Photo</div>
     <div id="photo-drop-zone"
@@ -2740,7 +2740,7 @@
 </div>
 
 <!-- ════ WATCH PREVIEW (read-only, from feed / other user profile) ════ -->
-<div id="watch-preview-modal" class="overlay hidden" onclick="if(event.target===this)closeWatchPreview()">
+<div id="watch-preview-modal" class="overlay hidden">
   <div class="modal wpm-modal">
     <div class="wpm-hero" id="wpm-hero"></div>
     <div class="modal-title" id="wpm-title" style="margin-bottom:.75rem;"></div>
@@ -2994,7 +2994,7 @@
 
 <!-- ════ EDIT LOG MODAL ════ -->
 <!-- ════ TRACK LOG MODAL ════ -->
-<div id="track-log-modal" class="overlay hidden" onclick="if(event.target===this)closeTrackModal()">
+<div id="track-log-modal" class="overlay hidden">
   <div class="modal tl-modal">
 
     <!-- Watch hero -->
@@ -3112,7 +3112,7 @@
   </div>
 </div>
 
-<div id="create-club-modal" class="overlay hidden" onclick="if(event.target===this)closeCreateClub()">
+<div id="create-club-modal" class="overlay hidden">
   <div class="modal" style="max-width:400px;">
     <div class="modal-title">Create a Club</div>
     <div class="form-group">
@@ -3195,6 +3195,7 @@ function showAuthError(msg) {
 }
 
 async function devLogin() {
+  if (!['localhost', '127.0.0.1'].includes(location.hostname)) return;
   const { error } = await db.auth.signInAnonymously();
   if (error) showAuthError('Dev login failed: ' + error.message);
 }
@@ -3407,7 +3408,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.18.29';
+const APP_VERSION = '2.30.26.18.38';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7527,7 +7528,7 @@ function renderWatchSelector() {
                    onclick="openTrackModal('${w.id}')">
         ${thumb}
         <div style="flex:1;min-width:0;">
-          <div class="watch-info-name">${w.brand} ${w.name}</div>
+          <div class="watch-info-name">${escHtml(w.brand)} ${escHtml(w.name)}</div>
           <div class="watch-info-sub">${cnt} wear${cnt!==1?'s':''}</div>
         </div>
         ${isWorn ? `<span class="watch-worn-badge">worn today</span>` : ''}
@@ -7596,12 +7597,12 @@ function renderTrackHistory() {
       ? `<img src="${w.image}" alt="" style="width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
       : `<div class="avatar" style="width:22px;height:22px;font-size:.55rem;background:${w.color};flex-shrink:0">${initials(w.brand,w.name)}</div>`;
     const strap = log.strapId ? (w.straps||[]).find(s => s.id === log.strapId) : null;
-    const strapLabel = strap ? `<div style="font-size:.68rem;color:var(--muted);margin-top:.2rem;line-height:1.3">${strap.name}</div>` : '';
+    const strapLabel = strap ? `<div style="font-size:.68rem;color:var(--muted);margin-top:.2rem;line-height:1.3">${escHtml(strap.name)}</div>` : '';
     return `<tr>
       <td style="white-space:nowrap">${fmtDate(log.date)}</td>
       <td>
         <div style="display:flex;align-items:center;gap:.5rem">
-          ${thumb}<span>${w.brand} ${w.name}</span>
+          ${thumb}<span>${escHtml(w.brand)} ${escHtml(w.name)}</span>
         </div>
       </td>
       <td style="white-space:nowrap">
@@ -8088,15 +8089,15 @@ function renderCollection() {
         ${dragHandle}
         ${rankBadge}
         ${w.image ? `<div class="watch-card-img-wrap">
-          <img src="${w.image}" alt="${w.brand} ${w.name}" class="watch-card-img" onerror="this.style.display='none'">
+          <img src="${w.image}" alt="${escHtml(w.brand)} ${escHtml(w.name)}" class="watch-card-img" onerror="this.style.display='none'">
           <button class="card-edit-btn" onclick="openEditWatch('${w.id}')" title="Edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button class="card-photo-btn" onclick="openPhotoMenu(event,'${w.id}')" title="Edit photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
         </div>` : ''}
         <div class="watch-card-top">
           ${!w.image ? `<div class="avatar" style="width:52px;height:52px;font-size:.95rem;background:${w.color}">${initials(w.brand,w.name)}</div>` : ''}
           <div style="flex:1;min-width:0;">
-            <div class="watch-card-name">${w.name}</div>
-            <div class="watch-card-brand">${w.brand}${w.ref ? ' · '+w.ref : ''}</div>
+            <div class="watch-card-name">${escHtml(w.name)}</div>
+            <div class="watch-card-brand">${escHtml(w.brand)}${w.ref ? ' · '+escHtml(w.ref) : ''}</div>
             ${watchCardTagsHTML(w)}
           </div>
           ${!w.image ? `<div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
@@ -8195,8 +8196,8 @@ function renderCollectionList(visible, today) {
     }
     return `<tr style="cursor:pointer" onclick="openEditWatch('${w.id}')">
       <td><div style="display:flex;align-items:center;gap:.6rem">${thumb}<div>
-        <div style="font-weight:600;font-size:.84rem">${w.brand} ${w.name}</div>
-        ${w.ref ? `<div style="font-size:.7rem;color:var(--muted)">${w.ref}</div>` : ''}
+        <div style="font-weight:600;font-size:.84rem">${escHtml(w.brand)} ${escHtml(w.name)}</div>
+        ${w.ref ? `<div style="font-size:.7rem;color:var(--muted)">${escHtml(w.ref)}</div>` : ''}
       </div></div></td>
       <td style="text-align:right;font-weight:600">${wears}</td>
       <td style="text-align:right">${lastWornCell}</td>
@@ -9072,7 +9073,7 @@ function renderDowReport() {
       return `<div class="dow-cell ${dow===todayDow?'today-col':''}">
         <div class="dow-day-name">${dayName}</div>
         <div class="dow-watch-thumb">${thumb}</div>
-        ${w ? `<div class="dow-watch-name">${w.name}</div><div class="dow-watch-count">${cnt}× of ${total}</div>`
+        ${w ? `<div class="dow-watch-name">${escHtml(w.name)}</div><div class="dow-watch-count">${cnt}× of ${total}</div>`
             : `<div class="dow-watch-count" style="margin-top:.15rem">—</div>`}
       </div>`;
     }).join('')}</div>
@@ -9175,8 +9176,8 @@ function recCardHTML(rec) {
     if (weatherReason) tags.push({ text: weatherReason, cls: '' });
   }
   if (weekendScore > 0) tags.push({ text: `Dinner watch`, cls: 'rec-tag-weekend' });
-  let explain = daysSince === 999 ? `${w.name} has never been logged — today could be its first wear.`
-    : daysSince >= 14 ? `The ${w.name} has been sitting for ${daysSince} days — it's time.`
+  let explain = daysSince === 999 ? `${escHtml(w.name)} has never been logged — today could be its first wear.`
+    : daysSince >= 14 ? `The ${escHtml(w.name)} has been sitting for ${daysSince} days — it's time.`
     : `Last worn ${daysSince} day${daysSince!==1?'s':''} ago.`;
   if (dowCount >= 2) explain += ` Tends to come out on ${DOW_NAMES[todayDOW]}s.`;
   if (weatherData && weatherReason) explain += ` ${weatherReason}.`;
@@ -9187,8 +9188,8 @@ function recCardHTML(rec) {
     <div class="rec-body">
       <div class="rec-thumb">${thumb}</div>
       <div class="rec-info">
-        <div class="rec-watch-name">${w.name}</div>
-        <div class="rec-watch-brand">${w.brand}${w.ref?' · '+w.ref:''}</div>
+        <div class="rec-watch-name">${escHtml(w.name)}</div>
+        <div class="rec-watch-brand">${escHtml(w.brand)}${w.ref?' · '+escHtml(w.ref):''}</div>
         <div class="rec-tags">${tags.map(t=>`<span class="rec-tag ${t.cls}">${t.text}</span>`).join('')}</div>
         <div class="rec-explanation">${explain}</div>
         <div style="display:flex;gap:.55rem;align-items:center;margin-top:.65rem;flex-wrap:wrap;">
@@ -9460,7 +9461,7 @@ function renderCollectionReport(fl) {
     const dCls = delta != null ? (delta >= 0 ? 'pvm-gain' : 'pvm-loss') : '';
     const sign = (delta != null && delta >= 0) ? '+' : '';
     return `<tr class="rank-tr">
-      <td class="rank-td">${w.brand} ${w.name}${w.ref ? ` <span style="color:var(--muted);font-size:.75em">(${w.ref})</span>` : ''}</td>
+      <td class="rank-td">${escHtml(w.brand)} ${escHtml(w.name)}${w.ref ? ` <span style="color:var(--muted);font-size:.75em">(${escHtml(w.ref)})</span>` : ''}</td>
       <td class="rank-td" style="text-align:right;color:var(--muted);white-space:nowrap">${fmtMonYear(pdate) || na}</td>
       <td class="rank-td" style="text-align:right">${cnt}</td>
       <td class="rank-td" style="text-align:right;color:var(--muted)">${cpw  != null ? fmtMoney(Math.round(cpw)) : na}</td>
@@ -10319,7 +10320,7 @@ function renderWishlist() {
       ${thumb}
       <div class="wl-info" onclick="openEditWishlist('${w.id}')" style="cursor:pointer">
         <div class="wl-name"><span class="inline-val"><span>${escHtml(w.name)}</span></span></div>
-        <div class="wl-brand">${w.brand}</div>
+        <div class="wl-brand">${escHtml(w.brand)}</div>
         ${meta ? `<div class="wl-meta">${meta}</div>` : ''}
       </div>
     </div>`;
@@ -11433,6 +11434,50 @@ updateThemeBtn();
 if (['localhost', '127.0.0.1'].includes(location.hostname)) {
   document.getElementById('dev-login-wrap').style.display = 'block';
 }
+
+// ── Global: click overlay background to close, Escape to close topmost modal ──
+const _overlayCloseMap = {
+  'followers-modal':     closeFollowersModal,
+  'following-modal':     closeFollowingModal,
+  'username-modal':      () => document.getElementById('username-modal').classList.add('hidden'),
+  'welcome-modal':       closeWelcome,
+  'watch-modal':         closeWatchModal,
+  'receipts-modal':      closeReceiptsModal,
+  'del-modal':           closeDelModal,
+  'confirm-modal':       _confirmCancel,
+  'photo-paste-modal':   closePhotoPasteModal,
+  'wishlist-modal':      closeWishlistModal,
+  'watch-preview-modal': closeWatchPreview,
+  'del-wl-modal':        closeDelWlModal,
+  'discover-modal':      closeDiscover,
+  'club-invite-modal':   closeClubInviteModal,
+  'new-post-modal':      closeNewPost,
+  'edit-post-modal':     closeEditPost,
+  'delete-account-modal':closeDeleteAccount,
+  'delete-club-modal':   closeDeleteClubModal,
+  'feedback-modal':      closeFeedback,
+  'track-log-modal':     closeTrackModal,
+  'edit-log-modal':      closeEditLog,
+  'create-club-modal':   closeCreateClub,
+};
+
+// Click overlay background to close
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('overlay') && !e.target.classList.contains('hidden')) {
+    const fn = _overlayCloseMap[e.target.id];
+    if (fn) fn();
+  }
+});
+
+// Escape key closes the topmost open modal
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const open = [...document.querySelectorAll('.overlay:not(.hidden)')];
+  if (!open.length) return;
+  const top = open[open.length - 1];
+  const fn = _overlayCloseMap[top.id];
+  if (fn) { e.preventDefault(); fn(); }
+});
 
 function initApp() {
   // Strip OAuth tokens from the URL bar after Google sign-in redirect
