@@ -455,6 +455,19 @@
       0%, 100% { border-color: rgba(201,168,76,.35); }
       50%       { border-color: rgba(201,168,76,.8);  }
     }
+    @keyframes shimmer {
+      0%   { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+    .feed-skeleton-item {
+      padding: 1rem; border-bottom: 1px solid var(--border, #eee);
+    }
+    .feed-skeleton-bar {
+      background: linear-gradient(90deg, var(--bg2, #f0f0f0) 25%, var(--bg, #e0e0e0) 50%, var(--bg2, #f0f0f0) 75%);
+      background-size: 800px 100%;
+      animation: shimmer 1.5s infinite linear;
+      border-radius: .4rem;
+    }
 
     /* ── BRAND SELECT ── */
     .brand-ac-wrap { position: relative; }
@@ -2006,7 +2019,7 @@
         <button class="btn btn-ghost" onclick="openDiscover()" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</button>
       </div>
     </div>
-    <div id="feed-list"></div>
+    <div id="feed-list"><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:40%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:90%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:70%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:35%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:80%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:60%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:45%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:85%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:65%;height:.7rem;"></div></div></div>
   </div>
 
   <!-- ════ PROFILE PAGE ════ -->
@@ -3387,10 +3400,12 @@ function rowToWish(r) {
 // ══════════════════════════════════════════
 async function loadUserData() {
   const uid = currentUser.id;
+  // Each query is individually fault-tolerant so one table failure doesn't block the others
+  const _q = query => query.catch(e => { console.error('[WristLog] loadUserData query error:', e?.message); return { data: null, error: e }; });
   const [wRes, lRes, wlRes] = await Promise.all([
-    db.from('watches').select('*').eq('user_id', uid),
-    db.from('logs').select('*').eq('user_id', uid),
-    db.from('wishlist').select('*').eq('user_id', uid),
+    _q(db.from('watches').select('*').eq('user_id', uid)),
+    _q(db.from('logs').select('*').eq('user_id', uid)),
+    _q(db.from('wishlist').select('*').eq('user_id', uid)),
   ]);
   if (wRes.error)  console.error('[WristLog] watches SELECT error:', wRes.error.message, wRes.error);
   if (lRes.error)  console.error('[WristLog] logs SELECT error:',    lRes.error.message, lRes.error);
@@ -3434,7 +3449,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.14.42';
+const APP_VERSION = '2.30.26.14.50';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5753,9 +5768,12 @@ document.addEventListener('click', e => {
 // ── Feed ──────────────────────────────────────────────────────────────────
 async function loadFeed() {
   if (feedLoading || !currentUser) return;
+  // Skip re-fetch if feed was loaded recently (60s) unless forced or errored
+  if (!feedError && feedItems.length > 0 && Date.now() - feedLoadedAt < 60000) return;
   feedLoading = true;
+  feedError = false;
   const listEl = document.getElementById('feed-list');
-  if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--muted);">Loading…</div>';
+  if (listEl) listEl.innerHTML = '<div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:40%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:90%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:70%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:35%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:80%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:60%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:45%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:85%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:65%;height:.7rem;"></div></div>';
   try {
     // Logs — visibility rules:
     //   'public'    → show to everyone (discovery feed, even for new users with no following)
@@ -5858,70 +5876,70 @@ async function loadFeed() {
       return following.has(log.user_id);
     });
 
-    // Watches (separate query so null watch_id rows aren't dropped by an inner join)
-    const watchIds = [...new Set(rawLogs.filter(l => l.watch_id).map(l => l.watch_id))];
-    let watchMap = {};
-    if (watchIds.length) {
-      const { data: watchRows } = await db.from('watches')
-        .select('id, brand, name, color, image, ref, url').in('id', watchIds);
-      (watchRows || []).forEach(w => watchMap[w.id] = w);
-    }
-
-    // Profiles for authors
-    const userIds = [...new Set(rawLogs.map(l => l.user_id))];
-    const { data: profileRows } = await db
-      .from('profiles').select('id, username, display_name, avatar_url').in('id', userIds);
-    const profileMap = {};
-    (profileRows || []).forEach(p => profileMap[p.id] = p);
-
-    // Likes
+    // ── Enrichment: watches, profiles, likes, comments — all in parallel ──
     const logIds = rawLogs.map(l => l.id);
-    const { data: likesData } = await db.from('likes').select('log_id, user_id').in('log_id', logIds);
+    const watchIds = [...new Set(rawLogs.filter(l => l.watch_id).map(l => l.watch_id))];
+    const userIds = [...new Set(rawLogs.map(l => l.user_id))];
+
+    const [watchResult, profileResult, likesResult, commentResult] = await Promise.all([
+      watchIds.length
+        ? db.from('watches').select('id, brand, name, color, image, ref, url').in('id', watchIds)
+        : { data: [] },
+      db.from('profiles').select('id, username, display_name, avatar_url').in('id', userIds),
+      db.from('likes').select('log_id, user_id').in('log_id', logIds),
+      db.from('comments').select('id, log_id, user_id, body, created_at')
+        .in('log_id', logIds).order('created_at', { ascending: true }).limit(500),
+    ]);
+
+    const watchMap = {};
+    (watchResult.data || []).forEach(w => watchMap[w.id] = w);
+
+    const profileMap = {};
+    (profileResult.data || []).forEach(p => profileMap[p.id] = p);
+
     feedLikes = {};
     logIds.forEach(id => feedLikes[id] = { count: 0, liked: false });
-    (likesData || []).forEach(l => {
+    (likesResult.data || []).forEach(l => {
       feedLikes[l.log_id].count++;
       if (l.user_id === currentUser.id) feedLikes[l.log_id].liked = true;
     });
 
-    // Comments — batch load all for feed items
-    const { data: commentData } = await db.from('comments')
-      .select('id, log_id, user_id, body, created_at')
-      .in('log_id', logIds).order('created_at', { ascending: true }).limit(500);
+    // Comments + commenter profiles + comment likes (latter two in parallel)
+    const commentData = commentResult.data;
     feedComments = {};
     feedCommentCounts = {};
     if (commentData && commentData.length) {
       const commenterIds = [...new Set(commentData.map(c => c.user_id))];
-      const { data: commenterProfiles } = await db.from('profiles')
-        .select('id, username, display_name').in('id', commenterIds);
+      const allCommentIds = commentData.map(c => c.id);
+      const [commenterResult, clResult] = await Promise.all([
+        db.from('profiles').select('id, username, display_name').in('id', commenterIds),
+        allCommentIds.length
+          ? db.from('comment_likes').select('comment_id, user_id').in('comment_id', allCommentIds)
+          : { data: [] },
+      ]);
       const cpm = {};
-      (commenterProfiles || []).forEach(p => cpm[p.id] = p);
+      (commenterResult.data || []).forEach(p => cpm[p.id] = p);
       commentData.forEach(c => {
         if (!feedComments[c.log_id]) feedComments[c.log_id] = [];
         feedComments[c.log_id].push({ ...c, profile: cpm[c.user_id] || null });
       });
-    }
-    logIds.forEach(id => feedCommentCounts[id] = (feedComments[id] || []).length);
-
-    // Load comment likes
-    const allCommentIds = (commentData || []).map(c => c.id);
-    if (allCommentIds.length) {
-      const { data: clData } = await db.from('comment_likes').select('comment_id, user_id').in('comment_id', allCommentIds);
       commentLikes = {};
-      (clData || []).forEach(cl => {
+      (clResult.data || []).forEach(cl => {
         if (!commentLikes[cl.comment_id]) commentLikes[cl.comment_id] = { count: 0, liked: false };
         commentLikes[cl.comment_id].count++;
         if (cl.user_id === currentUser.id) commentLikes[cl.comment_id].liked = true;
       });
     }
+    logIds.forEach(id => feedCommentCounts[id] = (feedComments[id] || []).length);
 
     feedItems = rawLogs.map(l => ({
       ...l,
       profile: profileMap[l.user_id] || null,
       watch: l.watch_id ? (watchMap[l.watch_id] || null) : null,
     }));
-  } catch(e) { console.warn('Feed error:', e.message); }
+  } catch(e) { console.warn('Feed error:', e.message); feedError = true; }
   finally { feedLoading = false; }
+  if (!feedError) feedLoadedAt = Date.now();
   renderFeed();
 }
 
@@ -5947,6 +5965,16 @@ function scrollToFeedPost(postId) {
 function renderFeed() {
   const el = document.getElementById('feed-list');
   if (!el) return;
+  if (feedError) {
+    el.innerHTML = `
+      <div style="text-align:center;padding:2.5rem 1rem;">
+        <div style="font-size:1.6rem;margin-bottom:.5rem;">⚠</div>
+        <div style="font-weight:600;margin-bottom:.4rem;color:var(--text);">Couldn't load your feed</div>
+        <div style="font-size:.82rem;color:var(--muted);margin-bottom:1.25rem;">Check your connection and try again.</div>
+        <button class="btn btn-primary" onclick="loadFeed()" style="display:inline-flex;align-items:center;gap:.4rem;">↻ Retry</button>
+      </div>`;
+    return;
+  }
   if (feedItems.length === 0) {
     el.innerHTML = `
       <div class="feed-empty-state">
@@ -7095,6 +7123,8 @@ let pendingClubRequests = new Set(); // club_ids user has requested to join
 let currentClubId = null;
 let clubPagePrev  = 'page-feed';
 let feedLoading       = false;
+let feedError         = false;       // true when loadFeed() fails — shows retry UI
+let feedLoadedAt      = 0;           // timestamp of last successful feed load (for cache)
 let myProfile         = null;      // current user's profile row
 let discoverUsers     = [];        // search results in discover modal
 let searchDebounce    = null;
@@ -11545,6 +11575,14 @@ function clearUserState() {
   localStorage.removeItem(STORE_L);
   localStorage.removeItem(STORE_WL);
   localStorage.removeItem(STORE_ELO);
+  // Social / feed state — prevents stale data leaking across accounts
+  feedItems = []; feedLikes = {}; feedCommentCounts = {}; feedComments = {};
+  expandedComments.clear(); following.clear(); followingProfiles = [];
+  pendingRequests.clear(); friendships.clear(); friendRequests = [];
+  myClubs = []; pendingClubRequests.clear(); myProfile = null;
+  userNotifs = []; unreadNotifCount = 0; notifPanelOpen = false;
+  commentLikes = {}; discoverUsers = []; profilePageUserId = null;
+  feedLoading = false; feedError = false; feedLoadedAt = 0;
   if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }
 }
 
@@ -11613,9 +11651,6 @@ db.auth.onAuthStateChange((event, session) => {
   } else if (event === 'SIGNED_OUT') {
     currentUser = null;
     clearUserState();
-    feedItems = []; feedLikes = {}; feedCommentCounts = {}; feedComments = {};
-    expandedComments.clear(); following.clear(); myProfile = null;
-    userNotifs = []; unreadNotifCount = 0; notifPanelOpen = false;
     document.getElementById('auth-screen').style.display = 'flex';
     document.getElementById('signout-btn').style.display = 'none';
     const profileBtn2 = document.getElementById('profile-btn');
