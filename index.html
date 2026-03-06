@@ -3407,7 +3407,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.18.25';
+const APP_VERSION = '2.30.26.18.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7270,35 +7270,48 @@ async function loadAdminStats() {
 
     const avg = (n, d) => d > 0 ? (n / d).toFixed(1) : '0';
 
-    // Top users by watch count
-    const { data: topWatches } = await db.from('watches')
-      .select('user_id')
-      .limit(1000);
+    // All watches & logs by user
+    const { data: allWatches } = await db.from('watches').select('user_id').limit(5000);
     const watchByUser = {};
-    (topWatches || []).forEach(r => { watchByUser[r.user_id] = (watchByUser[r.user_id] || 0) + 1; });
-    const topWatchUserIds = Object.entries(watchByUser).sort((a,b) => b[1] - a[1]).slice(0, 5);
+    (allWatches || []).forEach(r => { watchByUser[r.user_id] = (watchByUser[r.user_id] || 0) + 1; });
 
-    // Top users by log count
-    const { data: topLogs } = await db.from('logs')
-      .select('user_id')
-      .limit(5000);
-    const logByUser = {};
-    (topLogs || []).forEach(r => { logByUser[r.user_id] = (logByUser[r.user_id] || 0) + 1; });
-    const topLogUserIds = Object.entries(logByUser).sort((a,b) => b[1] - a[1]).slice(0, 5);
+    const { data: allLogs } = await db.from('logs').select('user_id, watch_id').limit(10000);
+    const wearByUser = {}, postByUser = {};
+    (allLogs || []).forEach(r => {
+      if (r.watch_id) { wearByUser[r.user_id] = (wearByUser[r.user_id] || 0) + 1; }
+      else { postByUser[r.user_id] = (postByUser[r.user_id] || 0) + 1; }
+    });
 
-    // Fetch usernames for top users
-    const allTopIds = [...new Set([...topWatchUserIds.map(e=>e[0]), ...topLogUserIds.map(e=>e[0])])];
-    let profileMap = {};
-    if (allTopIds.length) {
-      const { data: ps } = await db.from('profiles').select('id, username, display_name').in('id', allTopIds);
-      (ps || []).forEach(p => { profileMap[p.id] = p.display_name || p.username || p.id.slice(0,8); });
-    }
+    // Fetch ALL profiles
+    const { data: allProfiles } = await db.from('profiles').select('id, username, display_name, avatar_url, created_at').order('created_at', { ascending: false });
+    const profileList = (allProfiles || []).map(p => ({
+      id: p.id,
+      name: p.display_name || p.username || p.id.slice(0, 8),
+      username: p.username || '—',
+      avatar: p.avatar_url,
+      joined: p.created_at ? fmtDate(p.created_at.slice(0, 10)) : '—',
+      watches: watchByUser[p.id] || 0,
+      wears: wearByUser[p.id] || 0,
+      posts: postByUser[p.id] || 0,
+    }));
 
     const statRow = (label, value) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span style="color:var(--text);">${label}</span><span style="color:var(--gold);font-weight:600;">${value}</span></div>`;
 
-    const leaderRow = (entries, pMap) => entries.map(e =>
-      `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span style="color:var(--text);">${pMap[e[0]] || e[0].slice(0,8)}</span><span style="color:var(--gold);font-weight:600;">${e[1]}</span></div>`
-    ).join('');
+    const userRows = profileList.map(u => {
+      const initHTML = u.avatar
+        ? `<img src="${u.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
+        : `<div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;">${(u.name[0]||'?').toUpperCase()}</div>`;
+      return `<tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:.45rem .3rem;display:flex;align-items:center;gap:.45rem;">
+          ${initHTML}
+          <div><div style="font-weight:600;font-size:.82rem;">${escHtml(u.name)}</div><div style="font-size:.68rem;color:var(--muted);">@${escHtml(u.username)}</div></div>
+        </td>
+        <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;">${u.watches}</td>
+        <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;">${u.wears}</td>
+        <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;">${u.posts}</td>
+        <td style="padding:.45rem .3rem;text-align:right;font-size:.72rem;color:var(--muted);white-space:nowrap;">${u.joined}</td>
+      </tr>`;
+    }).join('');
 
     el.innerHTML = `
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
@@ -7321,15 +7334,18 @@ async function loadAdminStats() {
         ${statRow('Posts / User', avg(posts, users))}
         ${statRow('Follows / User', avg(follows, users))}
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;">
-          <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Top by Watches</div>
-          ${topWatchUserIds.length ? leaderRow(topWatchUserIds, profileMap) : '<div style="color:var(--muted);font-size:.82rem;">—</div>'}
-        </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;">
-          <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Top by Posts</div>
-          ${topLogUserIds.length ? leaderRow(topLogUserIds, profileMap) : '<div style="color:var(--muted);font-size:.82rem;">—</div>'}
-        </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">All Users (${profileList.length})</div>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">User</th>
+            <th style="text-align:center;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Watches</th>
+            <th style="text-align:center;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Wears</th>
+            <th style="text-align:center;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Posts</th>
+            <th style="text-align:right;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Joined</th>
+          </tr></thead>
+          <tbody>${userRows}</tbody>
+        </table>
       </div>`;
   } catch(e) {
     el.innerHTML = `<div style="color:var(--danger);font-size:.85rem;">Failed to load stats: ${e.message}</div>`;
