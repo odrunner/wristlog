@@ -3574,7 +3574,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.31.26.14.05';
+const APP_VERSION = '2.31.26.14.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7549,14 +7549,14 @@ async function loadAdminStats() {
       const initHTML = u.avatar
         ? `<img src="${u.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
         : `<div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;">${(u.name[0]||'?').toUpperCase()}</div>`;
-      return `<tr style="border-bottom:1px solid var(--border);">
-        <td style="padding:.45rem .3rem;display:flex;align-items:center;gap:.45rem;">
+      return `<tr>
+        <td style="padding:.45rem .3rem;border-bottom:1px solid var(--border);"><div style="display:flex;align-items:center;gap:.45rem;">
           ${initHTML}
           <div><div style="font-weight:600;font-size:.82rem;">${escHtml(u.name)} <span style="font-weight:400;font-size:.62rem;color:var(--muted);">${u.joined}</span></div><div style="font-size:.68rem;color:var(--muted);">@${escHtml(u.username)}</div></div>
-        </td>
-        <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;">${u.watches}</td>
-        <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;">${u.wears}</td>
-        <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;">${u.posts}</td>
+        </div></td>
+        <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;border-bottom:1px solid var(--border);">${u.watches}</td>
+        <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;border-bottom:1px solid var(--border);">${u.wears}</td>
+        <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;border-bottom:1px solid var(--border);">${u.posts}</td>
       </tr>`;
     }).join('');
 
