@@ -329,10 +329,15 @@
     .profile-page-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.1rem 1.25rem; margin-bottom:1.1rem; }
     .profile-page-section-title { font-size:.72rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--gold); margin-bottom:.9rem; }
 
-    /* ── COLLAPSIBLE SECTION HEADERS ── */
-    .section-toggle { display:flex; align-items:center; justify-content:space-between; cursor:pointer; -webkit-user-select:none; user-select:none; }
-    .section-toggle .chevron { font-size:.65rem; color:var(--muted); transition:transform .2s; }
-    .section-toggle .chevron.collapsed { transform:rotate(-90deg); }
+    /* ── PROFILE COLLAPSIBLE SECTIONS (matches modal-section pattern) ── */
+    .prof-section { border-top:1px solid var(--border); margin-top:.9rem; }
+    .prof-section-hdr { display:flex; justify-content:space-between; align-items:center; background:none; border:none; width:100%; text-align:left; cursor:pointer; padding:.5rem 0 .35rem; color:var(--fg); font-family:inherit; line-height:1; user-select:none; }
+    .prof-section-hdr:hover .prof-section-label { color:var(--fg); }
+    .prof-section-label { font-size:.7rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); transition:color .15s; }
+    .prof-section-chevron { font-size:.6rem; color:var(--muted); transition:transform .2s; display:inline-block; line-height:1; }
+    .prof-section-chevron.open { transform:rotate(90deg); }
+    .prof-section-body { padding-top:.6rem; }
+    .prof-section-body.collapsed { display:none; }
 
     /* ── TOGGLE SWITCH ── */
     .toggle-row { display:flex; align-items:center; justify-content:space-between; padding:.55rem 0; border-bottom:1px solid var(--border); }
@@ -3590,7 +3595,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.31.26.14.41';
+const APP_VERSION = '2.31.26.14.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4107,11 +4112,12 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     const prvOpen = localStorage.getItem('prv-collapse') !== '1';
     return `
     <div class="profile-page-card">
-      <div class="section-toggle" onclick="toggleSection('prv-section','prv-collapse',this)">
-        <div class="profile-page-section-title" style="margin-bottom:0;">Privacy</div>
-        <span class="chevron${prvOpen ? '' : ' collapsed'}">▾</span>
-      </div>
-      <div id="prv-section" style="${prvOpen ? '' : 'display:none;'}margin-top:.9rem;">
+      <div class="prof-section">
+        <button type="button" class="prof-section-hdr" onclick="toggleProfSection('prv-section','prv-collapse')">
+          <span class="prof-section-label">Privacy</span>
+          <span class="prof-section-chevron${prvOpen ? ' open' : ''}" id="chv-prv-section">▶</span>
+        </button>
+        <div class="prof-section-body${prvOpen ? '' : ' collapsed'}" id="prv-section">
       <div class="form-group" style="margin-bottom:.75rem;">
         <label style="font-size:.78rem;">Profile</label>
         <div class="chips" id="prv-profile-chips">
@@ -4153,6 +4159,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         <div style="font-size:.71rem;color:var(--muted);margin-top:.25rem;">New posts default to this. You can change each post individually.</div>
       </div>
       </div>
+      </div>
     </div>`;
   })() : '';
 
@@ -4170,17 +4177,19 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       </div>`;
     return `
     <div class="profile-page-card">
-      <div class="section-toggle" onclick="toggleSection('notif-section','notif-collapse',this)">
-        <div class="profile-page-section-title" style="margin-bottom:0;">Notifications</div>
-        <span class="chevron${notifOpen ? '' : ' collapsed'}">▾</span>
-      </div>
-      <div id="notif-section" style="${notifOpen ? '' : 'display:none;'}margin-top:.9rem;">
-        <div style="font-size:.75rem;color:var(--muted);margin-bottom:.6rem;">Email me when someone…</div>
-        ${tog('social','Likes or follows me')}
-        ${tog('comments','Comments on my posts')}
-        ${tog('mentions','Mentions me')}
-        ${tog('clubs','Club activity')}
-        ${tog('friends','Friend & follow requests')}
+      <div class="prof-section">
+        <button type="button" class="prof-section-hdr" onclick="toggleProfSection('notif-section','notif-collapse')">
+          <span class="prof-section-label">Notifications</span>
+          <span class="prof-section-chevron${notifOpen ? ' open' : ''}" id="chv-notif-section">▶</span>
+        </button>
+        <div class="prof-section-body${notifOpen ? '' : ' collapsed'}" id="notif-section">
+          <div style="font-size:.75rem;color:var(--muted);margin-bottom:.6rem;">Email me when someone…</div>
+          ${tog('social','Likes or follows me')}
+          ${tog('comments','Comments on my posts')}
+          ${tog('mentions','Mentions me')}
+          ${tog('clubs','Club activity')}
+          ${tog('friends','Friend & follow requests')}
+        </div>
       </div>
     </div>`;
   })() : '';
@@ -7216,14 +7225,13 @@ async function savePrivacyField(field, value) {
   if (error) toast('Could not save — ' + error.message, 'error');
 }
 
-function toggleSection(sectionId, storageKey, headerEl) {
-  const sec = document.getElementById(sectionId);
-  if (!sec) return;
-  const isVisible = sec.style.display !== 'none';
-  sec.style.display = isVisible ? 'none' : '';
-  localStorage.setItem(storageKey, isVisible ? '1' : '0');
-  const chev = headerEl.querySelector('.chevron');
-  if (chev) chev.classList.toggle('collapsed', isVisible);
+function toggleProfSection(sectionId, storageKey) {
+  const body = document.getElementById(sectionId);
+  const chevron = document.getElementById('chv-' + sectionId);
+  if (!body) return;
+  body.classList.toggle('collapsed');
+  if (chevron) chevron.classList.toggle('open');
+  localStorage.setItem(storageKey, body.classList.contains('collapsed') ? '1' : '0');
 }
 
 async function saveEmailPref(category, enabled) {
