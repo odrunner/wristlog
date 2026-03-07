@@ -2807,6 +2807,7 @@
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="saveWishlistItem()">Save</button>
       <button class="btn btn-ghost"   onclick="closeWishlistModal()">Cancel</button>
+      <button id="wl-move-btn" class="btn btn-ghost" onclick="moveWishlistToCollection()" style="display:none;">Move to Collection</button>
       <button id="wl-delete-btn" class="btn btn-ghost" onclick="wlDeleteFromEdit()" style="display:none;color:var(--danger);border-color:var(--danger);">Delete</button>
     </div>
   </div>
@@ -3490,7 +3491,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.18.00';
+const APP_VERSION = '2.30.26.22.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7203,6 +7204,8 @@ let deletingWlId   = null;
 let wlPendingImage = null;   // objectURL for preview during modal session, applied on Save
 let wlPendingFile  = null;   // raw File/Blob for deferred upload
 let wlRemoveImage  = false;  // true when user explicitly removes the image in the modal
+let movingFromWishlistId   = null;  // set when "Move to Collection" transfers a wishlist item
+let movingFromWishlistData = null;  // extra fields (watchChartsUrl, market data) to merge into new watch
 
 let chUsecase = null, chCollValue = null;
 let collSort     = 'wears-desc';  // unified collection report sort: field-dir
@@ -8759,7 +8762,7 @@ function openEditWatch(id) {
   document.getElementById('watch-modal').classList.remove('hidden');
 }
 
-function closeWatchModal() { clearInlineEdits(); document.getElementById('watch-modal').classList.add('hidden'); resumeWelcome(); }
+function closeWatchModal() { clearInlineEdits(); document.getElementById('watch-modal').classList.add('hidden'); movingFromWishlistId = null; movingFromWishlistData = null; resumeWelcome(); }
 
 function onInsuranceChange() {
   const v = document.getElementById('w-insurance').value;
@@ -8908,6 +8911,17 @@ async function saveWatch() {
   }
   // else: field blank → preserve existing market data via spread
 
+  // Merge extra data from wishlist move (watchChartsUrl, market data)
+  if (movingFromWishlistData) {
+    if (!data.marketPrice && movingFromWishlistData.marketPrice) {
+      data.marketPrice     = movingFromWishlistData.marketPrice;
+      data.marketPriceDate = movingFromWishlistData.marketPriceDate || null;
+      data.marketPriceSrc  = movingFromWishlistData.marketPriceSrc || null;
+    }
+    if (movingFromWishlistData.watchChartsUrl) data.watchChartsUrl = movingFromWishlistData.watchChartsUrl;
+    movingFromWishlistData = null;
+  }
+
   if (wPendingImage) URL.revokeObjectURL(wPendingImage);
   wPendingImage     = null;
   wPendingFile      = null;
@@ -8929,11 +8943,29 @@ async function saveWatch() {
     toast('Watch updated!');
   } else {
     watches.push({ id: uid(), ...data });
-    toast('Watch added to collection!');
+    toast(movingFromWishlistId ? 'Moved to collection!' : 'Watch added to collection!');
   }
+  const pendingWlId = movingFromWishlistId;  // capture before closeWatchModal clears it
   save();
   closeWatchModal();
   renderCollection();
+
+  // If this was a "Move from Wishlist" flow, delete the source wishlist item
+  if (pendingWlId) {
+    const wlId = pendingWlId;
+    const item = wishlist.find(x => x.id === wlId);
+    if (item?.image) {
+      const p = storagePathFrom(item.image);
+      if (p) deleteStorageFile(p);
+    }
+    wishlist = wishlist.filter(x => x.id !== wlId);
+    if (currentUser) {
+      db.from('wishlist').delete().eq('id', wlId).eq('user_id', currentUser.id)
+        .then(({ error }) => { if (error) console.error('[WristLog] Delete wishlist error:', error.message); });
+    }
+    saveWishlist();
+    renderWishlist();
+  }
 }
 
 function openDelModal(id) {
@@ -10636,6 +10668,8 @@ function addPreviewedWatchToWishlist() {
   wlPendingImage = null;
   wlRemoveImage  = false;
   document.getElementById('wl-modal-title').textContent = 'Add to Wishlist';
+  document.getElementById('wl-delete-btn').style.display = 'none';
+  document.getElementById('wl-move-btn').style.display = 'none';
   buildWlBrandSelect(w.brand);
   document.getElementById('wl-name').value = w.name || '';
   document.getElementById('wl-ref').value  = w.ref  || '';
@@ -10658,6 +10692,7 @@ function openAddWishlist() {
   document.getElementById('wl-date').value = todayStr();
   document.getElementById('wl-modal-title').textContent = 'Add to Wishlist';
   document.getElementById('wl-delete-btn').style.display = 'none';
+  document.getElementById('wl-move-btn').style.display = 'none';
   buildWlBrandSelect();
   updateWlUrlBtn();
   renderWlModalImg(null);
@@ -10673,6 +10708,7 @@ function openEditWishlist(id) {
   wlRemoveImage  = false;
   document.getElementById('wl-modal-title').textContent = 'Edit Wishlist Item';
   document.getElementById('wl-delete-btn').style.display = '';
+  document.getElementById('wl-move-btn').style.display = '';
   buildWlBrandSelect(w.brand);
   document.getElementById('wl-name').value  = w.name;
   document.getElementById('wl-ref').value   = w.ref   || '';
@@ -10683,6 +10719,78 @@ function openEditWishlist(id) {
   renderWlModalImg(w.image || null);
   setupInlineEdits(WL_INLINE_FIELDS);
   document.getElementById('wishlist-modal').classList.remove('hidden');
+}
+
+async function moveWishlistToCollection() {
+  if (!editingWlId) return;
+  const w = wishlist.find(x => x.id === editingWlId);
+  if (!w) return;
+  const wlId = editingWlId;
+
+  closeWishlistModal();
+
+  // Switch to collection tab so context is right
+  document.querySelector('[data-page="collection"]')?.click();
+
+  // Open a fresh add-watch modal
+  openAddWatch();
+
+  // Set tracking variables for post-save cleanup
+  movingFromWishlistId = wlId;
+  movingFromWishlistData = {};
+  if (w.watchChartsUrl) movingFromWishlistData.watchChartsUrl = w.watchChartsUrl;
+  if (w.marketPriceSrc) movingFromWishlistData.marketPriceSrc = w.marketPriceSrc;
+  if (w.marketPriceDate) movingFromWishlistData.marketPriceDate = w.marketPriceDate;
+  if (w.marketPrice) movingFromWishlistData.marketPrice = w.marketPrice;
+
+  // Change modal title
+  document.getElementById('modal-title').textContent = 'Move to Collection';
+
+  // Pre-fill mapped fields
+  if (w.brand) buildBrandSelect(w.brand);
+  if (w.name)  document.getElementById('w-name').value = w.name;
+  if (w.ref)   document.getElementById('w-ref').value  = w.ref;
+  if (w.url)   document.getElementById('w-url').value  = w.url;
+  if (w.color) selColor = w.color;
+  updateUrlBtn();
+
+  // Wishlist price = retail/market, NOT purchase price
+  // Map to market price field; leave purchase price empty for user to fill
+  const mpVal = w.marketPrice || w.price;
+  if (mpVal) {
+    setPriceInput('w-manual-mp', mpVal);
+    openSection('sec-market');
+  }
+
+  // Map tags
+  if (w.tags && w.tags.length > 0) {
+    renderTagPicker(w.tags, autoSuggestTags(w.brand, w.name, w.ref));
+    openSection('sec-tags');
+  }
+
+  // Fetch image blob from wishlist storage for re-upload to watches storage
+  if (w.image) {
+    try {
+      const result = await fetchImageBlobOrUrl(w.image);
+      if (result.blob) {
+        wPendingFile  = result.blob;
+        wPendingImage = URL.createObjectURL(result.blob);
+      } else if (result.directUrl) {
+        wPendingFile  = null;
+        wPendingImage = result.directUrl;
+      }
+      // Show image preview in the modal
+      const imgEl = document.getElementById('w-img-preview');
+      if (imgEl && wPendingImage) {
+        imgEl.src = wPendingImage;
+        imgEl.style.display = '';
+      }
+    } catch (_) {
+      // Image fetch failed — user can manually add a photo
+      wPendingImage = null;
+      wPendingFile  = null;
+    }
+  }
 }
 
 function wlDeleteFromEdit() {
