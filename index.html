@@ -3362,8 +3362,7 @@ async function deleteAccount() {
     if (btn) { btn.disabled = false; btn.textContent = 'Permanently Delete Everything'; }
     return;
   }
-  localStorage.removeItem('wristlog_onboarded');
-  localStorage.removeItem('wristlog_onboarded_' + uid);
+  try { localStorage.removeItem('wristlog_onboarded'); localStorage.removeItem('wristlog_onboarded_' + uid); } catch(e) {}
   closeDeleteAccount();
   await signOut();
 }
@@ -3491,10 +3490,10 @@ async function loadUserData() {
   (wRes.data || []).forEach(r => { if (r.elo_rating) eloRatings[r.id] = r.elo_rating; });
   rebuildLogsByWatch();
   // Persist locally as cache
-  localStorage.setItem(STORE_W,  JSON.stringify(watches));
-  localStorage.setItem(STORE_L,  JSON.stringify(logs));
-  localStorage.setItem(STORE_WL, JSON.stringify(wishlist));
-  localStorage.setItem(STORE_ELO, JSON.stringify(eloRatings));
+  safeSetJSON(STORE_W,  watches);
+  safeSetJSON(STORE_L,  logs);
+  safeSetJSON(STORE_WL, wishlist);
+  safeSetJSON(STORE_ELO, eloRatings);
 }
 
 // ══════════════════════════════════════════
@@ -3523,7 +3522,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.11.26';
+const APP_VERSION = '2.30.26.11.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3618,7 +3617,7 @@ async function loadMyProfile() {
     isNewUser = true;
   }
   myProfile = data;
-  if (!isNewUser && data.theme_preference) localStorage.setItem(STORE_THEME, data.theme_preference); // sync Supabase → local (skip for new users — default to light)
+  if (!isNewUser && data.theme_preference) { try { localStorage.setItem(STORE_THEME, data.theme_preference); } catch(e) {} } // sync Supabase → local (skip for new users — default to light)
   applyTheme();
   const btn = document.getElementById('profile-btn');
   if (btn) {
@@ -6519,7 +6518,7 @@ async function saveNewPost() {
   }
   logs.push(entry);
   rebuildLogsByWatch();
-  localStorage.setItem(STORE_L, JSON.stringify(logs));
+  safeSetJSON(STORE_L, logs);
   if (currentUser) {
     const { error } = await db.from('logs').upsert({
       id: entry.id, user_id: currentUser.id, watch_id: null,
@@ -6906,7 +6905,7 @@ function welcomeStep(n) {
 }
 function closeWelcome() {
   document.getElementById('welcome-modal').classList.add('hidden');
-  if (currentUser) localStorage.setItem('wristlog_onboarded_' + currentUser.id, '1');
+  try { if (currentUser) localStorage.setItem('wristlog_onboarded_' + currentUser.id, '1'); } catch(e) {}
 }
 async function saveWelcomeProfile() {
   const name = (document.getElementById('ws-display-name').value || '').trim();
@@ -7032,7 +7031,7 @@ function getDefaultVis() {
 }
 // Saves to Supabase (syncs across devices) + localStorage cache
 function setDefaultVis(v) {
-  localStorage.setItem(STORE_VIS, v);
+  try { localStorage.setItem(STORE_VIS, v); } catch(e) {}
   savePrivacyField('default_post_visibility', v);
 }
 
@@ -7056,7 +7055,7 @@ function applyTheme(t) {
   updateThemeBtn(t);
 }
 function setTheme(t) {
-  localStorage.setItem(STORE_THEME, t);
+  try { localStorage.setItem(STORE_THEME, t); } catch(e) {}
   applyTheme(t);
   savePrivacyField('theme_preference', t);
 }
@@ -7186,17 +7185,23 @@ const DEFAULT_BRANDS = [
   'Zelos', 'Zenith', 'Zeno-Watch Basel', 'Zodiac',
 ];
 
-let watches        = JSON.parse(localStorage.getItem(STORE_W)  || '[]');
-let logs           = JSON.parse(localStorage.getItem(STORE_L)  || '[]');
+// Safe localStorage reader — returns fallback on corrupted/missing data
+function safeGetJSON(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+  catch(e) { console.error('[WristLog] Corrupted localStorage key:', key, e.message); return fallback; }
+}
+
+let watches        = safeGetJSON(STORE_W,  []);
+let logs           = safeGetJSON(STORE_L,  []);
 // Merge stored brands with DEFAULT_BRANDS so users automatically get new additions
-const _storedBrands = JSON.parse(localStorage.getItem(STORE_B) || 'null');
+const _storedBrands = safeGetJSON(STORE_B, null);
 let brands = (() => {
   if (!_storedBrands) return [...DEFAULT_BRANDS];
   const known = new Set(_storedBrands.map(b => b.toLowerCase()));
   return [..._storedBrands, ...DEFAULT_BRANDS.filter(b => !known.has(b.toLowerCase()))];
 })();
-let wishlist       = JSON.parse(localStorage.getItem(STORE_WL) || '[]');
-let eloRatings     = JSON.parse(localStorage.getItem(STORE_ELO) || '{}'); // {watchId: score}
+let wishlist       = safeGetJSON(STORE_WL, []);
+let eloRatings     = safeGetJSON(STORE_ELO, {}); // {watchId: score}
 
 // ── SOCIAL STATE ────────────────────────────────────────────────────────────
 let feedItems         = [];        // enriched log rows for feed
@@ -7297,14 +7302,20 @@ const UC_COL = {
 //  HELPERS
 // ══════════════════════════════════════════
 const uid  = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+// Safe localStorage writer — survives quota exceeded / private browsing
+function safeSetJSON(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); }
+  catch(e) { console.error('[WristLog] localStorage write failed:', key, e.message); }
+}
+
 const save = () => {
-  localStorage.setItem(STORE_W, JSON.stringify(watches));
-  localStorage.setItem(STORE_L, JSON.stringify(logs));
+  safeSetJSON(STORE_W, watches);
+  safeSetJSON(STORE_L, logs);
   rebuildLogsByWatch();
   cloudSync(); // fire-and-forget sync to Supabase
 };
-const saveWishlist = () => { localStorage.setItem(STORE_WL, JSON.stringify(wishlist)); cloudSync(); };
-const saveBrands   = () => { localStorage.setItem(STORE_B,  JSON.stringify(brands)); };
+const saveWishlist = () => { safeSetJSON(STORE_WL, wishlist); cloudSync(); };
+const saveBrands   = () => { safeSetJSON(STORE_B,  brands); };
 
 // ── Pre-computed logs-by-watch map (avoids O(n*m) in render loops) ──────────
 let _logsByWatch = new Map();
@@ -8000,7 +8011,7 @@ function startGame() {
 }
 function beginRankingGame() {
   if (document.getElementById('game-skip-intro-chk')?.checked) {
-    localStorage.setItem('rankingGameSkipIntro', '1');
+    try { localStorage.setItem('rankingGameSkipIntro', '1'); } catch(e) {}
   }
   const pool = watches;
   pool.forEach(w => { if (!(w.id in eloRatings)) eloRatings[w.id] = ELO_DEFAULT; });
@@ -8122,7 +8133,7 @@ function showGameResults() {
 }
 
 function saveRanking() {
-  localStorage.setItem(STORE_ELO, JSON.stringify(eloRatings));
+  safeSetJSON(STORE_ELO, eloRatings);
   cloudSync();
   collGridSort = 'ranking';
   closeGame();
@@ -9002,6 +9013,7 @@ async function saveWatch() {
 
   if (editingId) {
     const idx      = watches.findIndex(x => x.id === editingId);
+    if (idx === -1) { toast('Watch not found — please try again', 'error'); return; }
     const existing = watches[idx];
     // Archive previous market price to history if the value is changing
     if (data.marketPrice && existing.marketPrice && existing.marketPrice !== data.marketPrice) {
@@ -9061,7 +9073,7 @@ function confirmDelete() {
   watches = watches.filter(x => x.id !== id);
   logs    = logs.filter(l => l.watchId !== id);
   delete eloRatings[id]; // prevent cloudSync elo-upsert from re-inserting a ghost row
-  localStorage.setItem(STORE_ELO, JSON.stringify(eloRatings));
+  safeSetJSON(STORE_ELO, eloRatings);
   if (selWatchId === id) selWatchId = null;
   save();
   // Hard-delete from Supabase (upsert only writes, never removes rows)
@@ -9843,6 +9855,7 @@ async function fetchWatchImage(watchId) {
     toast('Image found — uploading…');
     const imageUrl = await fetchAndUploadImage(imgUrl, `watches/${currentUser?.id || 'local'}/${watchId}.jpg`);
     const idx = watches.findIndex(x => x.id === watchId);
+    if (idx === -1) return;
     watches[idx].image = imageUrl;
     save();
     renderCollection();
@@ -10648,7 +10661,7 @@ function collSaveRankOrder() {
   collSortedWatches.forEach((w, idx) => {
     eloRatings[w.id] = ELO_DEFAULT + (total - idx) * 100;
   });
-  localStorage.setItem(STORE_ELO, JSON.stringify(eloRatings));
+  safeSetJSON(STORE_ELO, eloRatings);
   cloudSync();
   renderCollection();
 }
@@ -10904,6 +10917,7 @@ async function saveWishlistItem() {
   wlPendingFile  = null;
   if (editingWlId) {
     const idx = wishlist.findIndex(x => x.id === editingWlId);
+    if (idx === -1) { toast('Wishlist item not found', 'error'); return; }
     const oldImage = wishlist[idx]?.image;
     const updated = { ...wishlist[idx], ...data };
     if (wlRemoveImage) {
@@ -11347,6 +11361,7 @@ async function fetchWishlistImage(itemId) {
     toast('Image found — uploading…');
     const imageUrl = await fetchAndUploadImage(imgUrl, `wishlist/${currentUser?.id || 'local'}/${itemId}.jpg`);
     const idx = wishlist.findIndex(x => x.id === itemId);
+    if (idx === -1) return;
     wishlist[idx].image = imageUrl;
     saveWishlist();
     renderWishlist();
@@ -11689,10 +11704,7 @@ function initApp() {
 // Wipe all per-user data from memory and localStorage (called on sign-out and before new sign-in)
 function clearUserState() {
   watches = []; logs = []; wishlist = []; eloRatings = {};
-  localStorage.removeItem(STORE_W);
-  localStorage.removeItem(STORE_L);
-  localStorage.removeItem(STORE_WL);
-  localStorage.removeItem(STORE_ELO);
+  try { localStorage.removeItem(STORE_W); localStorage.removeItem(STORE_L); localStorage.removeItem(STORE_WL); localStorage.removeItem(STORE_ELO); } catch(e) {}
   // Social / feed state — prevents stale data leaking across accounts
   feedItems = []; feedLikes = {}; feedCommentCounts = {}; feedComments = {};
   expandedComments.clear(); following.clear(); followingProfiles = [];
