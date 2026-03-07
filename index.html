@@ -3546,7 +3546,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.13.00';
+const APP_VERSION = '2.30.26.13.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7512,13 +7512,11 @@ async function loadAdminStats() {
       return `<tr style="border-bottom:1px solid var(--border);">
         <td style="padding:.45rem .3rem;display:flex;align-items:center;gap:.45rem;">
           ${initHTML}
-          <div><div style="font-weight:600;font-size:.82rem;">${escHtml(u.name)}</div><div style="font-size:.68rem;color:var(--muted);">@${escHtml(u.username)}</div></div>
+          <div><div style="font-weight:600;font-size:.82rem;">${escHtml(u.name)} <span style="font-weight:400;font-size:.62rem;color:var(--muted);">${u.joined}</span></div><div style="font-size:.68rem;color:var(--muted);">@${escHtml(u.username)}</div></div>
         </td>
         <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;">${u.watches}</td>
         <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;">${u.wears}</td>
         <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;">${u.posts}</td>
-        <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;font-weight:600;">${u.wears + u.posts}</td>
-        <td style="padding:.45rem .3rem;text-align:right;font-size:.72rem;color:var(--muted);white-space:nowrap;">${u.joined}</td>
       </tr>`;
     }).join('');
 
@@ -7551,8 +7549,6 @@ async function loadAdminStats() {
             <th style="text-align:center;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Watches</th>
             <th style="text-align:center;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Wears</th>
             <th style="text-align:center;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Posts</th>
-            <th style="text-align:center;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Total</th>
-            <th style="text-align:right;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Joined</th>
           </tr></thead>
           <tbody>${userRows}</tbody>
         </table>
