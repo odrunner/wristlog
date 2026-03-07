@@ -330,8 +330,8 @@
     .profile-page-section-title { font-size:.72rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--gold); margin-bottom:.9rem; }
 
     /* ── PROFILE COLLAPSIBLE SECTIONS (matches modal-section pattern) ── */
-    .prof-section { border-top:1px solid var(--border); margin-top:.9rem; }
-    .prof-section-hdr { display:flex; justify-content:space-between; align-items:center; background:none; border:none; width:100%; text-align:left; cursor:pointer; padding:.5rem 0 .35rem; color:var(--fg); font-family:inherit; line-height:1; user-select:none; }
+    .prof-section { margin-top:.9rem; }
+    .prof-section-hdr { display:flex; justify-content:space-between; align-items:center; background:none; border:none; border-bottom:1px solid var(--border); width:100%; text-align:left; cursor:pointer; padding:.5rem 0 .35rem; color:var(--fg); font-family:inherit; line-height:1; user-select:none; }
     .prof-section-hdr:hover .prof-section-label { color:var(--fg); }
     .prof-section-label { font-size:.7rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); transition:color .15s; }
     .prof-section-chevron { font-size:.6rem; color:var(--muted); transition:transform .2s; display:inline-block; line-height:1; }
@@ -3595,7 +3595,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.31.26.14.45';
+const APP_VERSION = '2.31.26.14.47';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
