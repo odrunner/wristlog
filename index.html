@@ -3615,7 +3615,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.32.26.15.43';
+const APP_VERSION = '2.32.26.15.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9928,11 +9928,6 @@ function renderCollectionReport(fl) {
       case 'market': return numSort(a.mp,    b.mp);
       case 'delta':  return numSort(a.delta, b.delta);
       case 'pct':    return numSort(a.pct,   b.pct);
-      case 'src': {
-        const sa = (a.w.marketPriceSrc||'').toLowerCase();
-        const sb = (b.w.marketPriceSrc||'').toLowerCase();
-        return asc ? sa.localeCompare(sb) : sb.localeCompare(sa);
-      }
       case 'pdate': {
         if (!a.pdate && !b.pdate) return 0;
         if (!a.pdate) return 1;
@@ -9965,7 +9960,6 @@ function renderCollectionReport(fl) {
       <td class="rank-td" style="text-align:right">${mp   != null ? fmtMoney(mp)   : na}</td>
       <td class="rank-td ${dCls}" style="text-align:right">${delta != null ? sign + fmtMoney(delta)      : na}</td>
       <td class="rank-td ${dCls}" style="text-align:right">${pct  != null  ? sign + Math.round(pct) + '%': na}</td>
-      <td class="rank-td" style="text-align:right;color:var(--muted);font-size:.78rem">${w.marketPriceSrc || na}</td>
     </tr>`;
   }).join('');
 
@@ -9991,11 +9985,10 @@ function renderCollectionReport(fl) {
     <td class="rank-td" style="text-align:right;font-weight:700;">${totMktSum ? fmtMoney(totMktSum) : na}</td>
     <td class="rank-td ${tGainCls}" style="text-align:right;font-weight:700;">${rowsWDelta.length ? tSign + fmtMoney(totGain) : na}</td>
     <td class="rank-td ${tGainCls}" style="text-align:right;font-weight:700;">${totGainPct != null ? tSign + Math.round(totGainPct) + '%' : na}</td>
-    <td class="rank-td" style="text-align:right;"></td>
   </tr>`;
 
   document.getElementById('coll-report-table').innerHTML = `
-    <table class="rank-table" style="min-width:960px;">
+    <table class="rank-table" style="min-width:860px;">
       <thead><tr>
         ${th('watch',  'Watch',     'left')}
         ${th('pdate',  'Purchased')}
@@ -10006,7 +9999,6 @@ function renderCollectionReport(fl) {
         ${th('market', 'Market')}
         ${th('delta',  'Gain/Loss')}
         ${th('pct',    'Change')}
-        ${th('src',    'Source')}
       </tr></thead>
       <tbody>${tableRows}${totalsRow}</tbody>
     </table>`;
