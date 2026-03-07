@@ -3258,7 +3258,7 @@
     // so they never see a flash of the login screen on refresh.
     const key = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
     if (key) {
-      const val = JSON.parse(localStorage.getItem(key));
+      let val; try { val = JSON.parse(localStorage.getItem(key)); } catch(e) { val = null; }
       if (val?.access_token || val?.session?.access_token) {
         const el = document.getElementById('auth-screen');
         if (el) el.style.display = 'none';
@@ -3560,7 +3560,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.13.29';
+const APP_VERSION = '2.30.26.13.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7492,20 +7492,25 @@ async function loadAdminStats() {
 
     const avg = (n, d) => d > 0 ? (n / d).toFixed(1) : '0';
 
-    // All watches & logs by user
-    const { data: allWatches } = await db.from('watches').select('user_id').limit(5000);
+    // Per-user breakdowns — fetch in parallel with pagination safety
+    const ADMIN_ROW_LIMIT = 10000;
+    const [watchesR, logsR, profilesR] = await Promise.all([
+      db.from('watches').select('user_id').limit(ADMIN_ROW_LIMIT),
+      db.from('logs').select('user_id, watch_id').limit(ADMIN_ROW_LIMIT),
+      db.from('profiles').select('id, username, display_name, avatar_url, created_at').order('created_at', { ascending: false }).limit(500),
+    ]);
+    const allWatches = watchesR.data || [];
     const watchByUser = {};
-    (allWatches || []).forEach(r => { watchByUser[r.user_id] = (watchByUser[r.user_id] || 0) + 1; });
+    allWatches.forEach(r => { watchByUser[r.user_id] = (watchByUser[r.user_id] || 0) + 1; });
 
-    const { data: allLogs } = await db.from('logs').select('user_id, watch_id').limit(10000);
+    const allLogs = logsR.data || [];
     const wearByUser = {}, postByUser = {};
-    (allLogs || []).forEach(r => {
+    allLogs.forEach(r => {
       if (r.watch_id) { wearByUser[r.user_id] = (wearByUser[r.user_id] || 0) + 1; }
       else { postByUser[r.user_id] = (postByUser[r.user_id] || 0) + 1; }
     });
 
-    // Fetch ALL profiles
-    const { data: allProfiles } = await db.from('profiles').select('id, username, display_name, avatar_url, created_at').order('created_at', { ascending: false });
+    const allProfiles = profilesR.data || [];
     const profileList = (allProfiles || []).map(p => ({
       id: p.id,
       name: p.display_name || p.username || p.id.slice(0, 8),
@@ -7932,6 +7937,7 @@ function clearTrackPhoto() {
 }
 
 function deleteLog(id) {
+  if (!confirm('Delete this wear log?')) return;
   const log = logs.find(l => l.id === id);
   // Cleanup Storage photo if present
   if (log?.photoUrl) { const p = storagePathFrom(log.photoUrl); if (p) deleteStorageFile(p); }
@@ -7940,7 +7946,7 @@ function deleteLog(id) {
   // Hard-delete from Supabase — upsert only writes, never removes rows
   if (currentUser) {
     db.from('logs').delete().eq('id', id).eq('user_id', currentUser.id)
-      .then(({ error }) => { if (error) console.error('[WristLog] deleteLog error:', error.message); });
+      .then(({ error }) => { if (error) { console.error('[WristLog] deleteLog error:', error.message); toast('Delete may not have synced — it will retry on next load.', 'error'); } });
   }
   renderTrack();
 }
@@ -7978,7 +7984,7 @@ function openEditLog(id) {
 function renderEditLogStrapChips(straps) {
   document.getElementById('edit-log-strap-chips').innerHTML = straps.map(s =>
     `<div class="chip${editLogStrapId === s.id ? ' selected' : ''}" onclick="selEditLogStrap('${s.id}')">
-      ${s.name}${s.material ? ' · ' + s.material : ''}
+      ${escHtml(s.name)}${s.material ? ' · ' + escHtml(s.material) : ''}
     </div>`
   ).join('');
 }
@@ -8798,7 +8804,7 @@ function renderStrapSelector() {
   el.style.display = '';
   document.getElementById('strap-chips').innerHTML = straps.map(s => `
     <div class="chip${selStrapId === s.id ? ' selected' : ''}" onclick="selStrap('${s.id}')">
-      ${s.name}${s.material ? ' · ' + s.material : ''}
+      ${escHtml(s.name)}${s.material ? ' · ' + escHtml(s.material) : ''}
     </div>`).join('');
 }
 function selStrap(id) {
@@ -8921,7 +8927,7 @@ function watchCardTagsHTML(w) {
   }
   // Insurance
   if (w.insurance === 'insured')     tags.push('Insured');
-  if (w.insurance === 'not_insured') tags.push('Not insured' + (w.insuranceNotes ? ` · ${w.insuranceNotes}` : ''));
+  if (w.insurance === 'not_insured') tags.push('Not insured' + (w.insuranceNotes ? ` · ${escHtml(w.insuranceNotes)}` : ''));
   // Box & Papers (only positive)
   const bp = [w.hasBox === 'yes' ? 'Box' : '', w.hasPapers === 'yes' ? 'Papers' : ''].filter(Boolean);
   if (bp.length) tags.push(bp.join(' + '));
@@ -8944,10 +8950,11 @@ function watchCardTagsHTML(w) {
   (w.tags || []).forEach(tag => tags.push({ text: tag, cls: 'card-tag-watch-type' }));
   // Current strap on wrist
   const currentStrap = (w.straps || []).find(s => s.isOn);
-  if (currentStrap) tags.push({ text: currentStrap.name, cls: 'card-tag-strap' });
+  if (currentStrap) tags.push({ text: escHtml(currentStrap.name), cls: 'card-tag-strap' });
 
   return `<div class="card-tags">${tags.map(t => {
-    const text = typeof t === 'string' ? t : t.text;
+    const raw  = typeof t === 'string' ? t : t.text;
+    const text = typeof t === 'string' ? escHtml(raw) : raw; // object tags already escaped above
     const cls  = typeof t === 'object' ? ' ' + t.cls : '';
     return `<span class="card-tag${cls}">${text}</span>`;
   }).join('')}</div>`;
@@ -10196,6 +10203,7 @@ function addReceipt() {
 }
 
 function removeReceipt(watchId, receiptId) {
+  if (!confirm('Remove this receipt? This cannot be undone.')) return;
   const idx = watches.findIndex(x => x.id === watchId);
   if (idx < 0) return;
   const receipt = (watches[idx].receipts || []).find(r => r.id === receiptId);
@@ -10262,6 +10270,7 @@ function renderEditReceiptsList(w) {
 }
 
 function removeReceiptFromEdit(watchId, receiptId) {
+  if (!confirm('Remove this receipt? This cannot be undone.')) return;
   const idx = watches.findIndex(x => x.id === watchId);
   if (idx < 0) return;
   const receipt = (watches[idx].receipts || []).find(r => r.id === receiptId);
