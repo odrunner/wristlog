@@ -1877,12 +1877,16 @@
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">If you lose connection, a banner lets you know and your changes are saved locally. Everything syncs automatically when you&#8217;re back online.</div>
       </div>
       <div style="margin-bottom:.75rem;">
-        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Safer Deletes</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Deleting a wear log or removing a receipt now asks for confirmation first, so you won&#8217;t lose data by accident.</div>
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Email Notifications</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Get email alerts when someone likes, comments, follows, or mentions you. Toggle each category on or off in the Notifications section on your profile.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Performance Boost</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Profiles and club pages load significantly faster with parallel queries. Feed fetches only the columns it needs. A 30-second profile cache makes revisiting profiles instant. Drag-reorder and the ranking game are snappier too.</div>
       </div>
       <div>
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Security &amp; Reliability</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Hardened input escaping, fixed concurrent sync issues, graceful session expiry handling, memory leak fixes, and expanded test coverage to 575 tests.</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Hardened input escaping, query timeouts prevent hung requests, debounced saves reduce data writes, graceful session expiry handling, and expanded test coverage.</div>
       </div>
     </div>
     <div class="modal-actions" style="margin-top:1rem;">
@@ -2470,6 +2474,13 @@
             <div class="help-step-body">
               <div class="help-step-title">Default Post Visibility</div>
               <div class="help-step-desc">Also in the Privacy section — new wear logs and posts default to this visibility (Public, Followers, Close Friends, or Private). You can override it per post when logging.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">6</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Email Notification Preferences</div>
+              <div class="help-step-desc">Expand the <strong>Notifications</strong> section on your profile to control email alerts. Toggle each category independently: likes &amp; follows, comments, mentions, club activity, and friend requests. Changes save instantly.</div>
             </div>
           </div>
         </div>
@@ -3604,7 +3615,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.31.26.15.40';
+const APP_VERSION = '2.32.26.15.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
