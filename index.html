@@ -3595,7 +3595,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.31.26.15.19';
+const APP_VERSION = '2.31.26.15.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9565,13 +9565,17 @@ function computeWatchRec(skipSet) {
   const candidates = watches.map(w => {
     if (skipSet && skipSet.has(w.id)) return null; // skipped by user
     const wLogs = logsForWatch(w.id);
-    if (wLogs.some(l => l.date === today)) return null; // worn today → skip
-    let daysSince = 999;
-    if (wLogs.length) {
-      const last = wLogs.reduce((a,b) => a.date > b.date ? a : b).date;
-      daysSince  = Math.floor((now - new Date(last+'T12:00:00')) / 86400000);
+    // Single pass over logs: check today, find last date, count DOW matches, count dinner wears
+    let wornToday = false, lastDate = '', dowCount = 0, dinnerWears = 0;
+    for (let i = 0; i < wLogs.length; i++) {
+      const l = wLogs[i];
+      if (l.date === today) { wornToday = true; break; }
+      if (l.date > lastDate) lastDate = l.date;
+      if (new Date(l.date+'T12:00:00').getDay() === todayDOW) dowCount++;
+      if (l.useCase === 'dinner') dinnerWears++;
     }
-    const dowCount = wLogs.filter(l => new Date(l.date+'T12:00:00').getDay() === todayDOW).length;
+    if (wornToday) return null;
+    const daysSince = lastDate ? Math.floor((now - new Date(lastDate+'T12:00:00')) / 86400000) : 999;
     let weatherScore = 0, weatherReason = null;
     if (weatherData) {
       const isWarm = WARM.has(w.color), isCool = COOL.has(w.color), isDark = DARK.has(w.color);
@@ -9580,7 +9584,6 @@ function computeWatchRec(skipSet) {
       else if ((weatherData.condition === 'cloudy' || weatherData.condition === 'rainy') && (isCool||isDark)) { weatherScore = 3; weatherReason = `Cool tone suits today's ${weatherData.condition} skies`; }
     }
     // Weekend bonus: watches with dinner wear history score higher on Sat/Sun
-    const dinnerWears  = wLogs.filter(l => l.useCase === 'dinner').length;
     const hasDressTag  = (w.tags || []).includes('Dress');
     const weekendScore = isWeekend ? Math.min(dinnerWears * 5 + (hasDressTag ? 10 : 0), 30) : 0;
     const weekendReason = isWeekend && (dinnerWears > 0 || hasDressTag)
@@ -9998,9 +10001,11 @@ function openPhotoMenu(ev, watchId) {
   const menu = document.createElement('div');
   menu.className = 'photo-menu';
   menu.id = 'photo-menu';
-  if (w.url) menu.innerHTML += `<button class="photo-menu-item" onclick="closePhotoMenu();fetchWatchImage('${watchId}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Fetch from URL</button>`;
-  menu.innerHTML += `<button class="photo-menu-item" onclick="closePhotoMenu();pasteWatchImage('${watchId}')">Paste / Upload</button>`;
-  if (w.image) menu.innerHTML += `<button class="photo-menu-item danger" onclick="closePhotoMenu();removeWatchImage('${watchId}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> Remove photo</button>`;
+  let menuHtml = '';
+  if (w.url) menuHtml += `<button class="photo-menu-item" onclick="closePhotoMenu();fetchWatchImage('${watchId}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Fetch from URL</button>`;
+  menuHtml += `<button class="photo-menu-item" onclick="closePhotoMenu();pasteWatchImage('${watchId}')">Paste / Upload</button>`;
+  if (w.image) menuHtml += `<button class="photo-menu-item danger" onclick="closePhotoMenu();removeWatchImage('${watchId}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> Remove photo</button>`;
+  menu.innerHTML = menuHtml;
   document.body.appendChild(menu);
   const r = ev.currentTarget.getBoundingClientRect();
   menu.style.top  = Math.min(r.bottom + 4, window.innerHeight - menu.offsetHeight - 8) + 'px';
@@ -10757,23 +10762,24 @@ function wlTouchStart(e, id) {
   document.addEventListener('touchcancel', wlTouchEnd,  { once: true });
 }
 
+let _wlDragOverCard = null;
 function wlTouchMove(e) {
   if (!wlTouchId || !wlTouchGhost) return;
   e.preventDefault();
 
   const touch = e.touches[0];
-  // Move ghost with the finger
   wlTouchGhost.style.top = (touch.clientY - wlTouchOffset) + 'px';
 
-  // Find the card currently under the finger (hide ghost briefly so it doesn't block)
   wlTouchGhost.style.visibility = 'hidden';
   const under = document.elementFromPoint(touch.clientX, touch.clientY);
   wlTouchGhost.style.visibility = '';
 
-  document.querySelectorAll('.wl-card.drag-over').forEach(c => c.classList.remove('drag-over'));
   const targetCard = under?.closest('.wl-card');
-  if (targetCard && targetCard.dataset.id !== wlTouchId) {
-    targetCard.classList.add('drag-over');
+  const validTarget = (targetCard && targetCard.dataset.id !== wlTouchId) ? targetCard : null;
+  if (_wlDragOverCard !== validTarget) {
+    if (_wlDragOverCard) _wlDragOverCard.classList.remove('drag-over');
+    _wlDragOverCard = validTarget;
+    if (_wlDragOverCard) _wlDragOverCard.classList.add('drag-over');
   }
 }
 
@@ -10781,11 +10787,11 @@ function wlTouchEnd() {
   document.removeEventListener('touchmove',   wlTouchMove);
   document.removeEventListener('touchcancel', wlTouchEnd);
 
-  const targetCard = document.querySelector('.wl-card.drag-over');
-  const targetId   = targetCard?.dataset.id;
+  const targetId = _wlDragOverCard?.dataset.id;
 
   // Clean up visual state
-  document.querySelectorAll('.wl-card').forEach(c => c.classList.remove('dragging', 'drag-over'));
+  if (_wlDragOverCard) { _wlDragOverCard.classList.remove('drag-over'); _wlDragOverCard = null; }
+  document.querySelectorAll('.wl-card.dragging').forEach(c => c.classList.remove('dragging'));
   wlTouchGhost?.remove();
   wlTouchGhost = null;
 
@@ -10864,6 +10870,7 @@ function collTouchStart(e, id) {
   document.addEventListener('touchcancel', collTouchEnd,  { once: true });
 }
 
+let _collDragOverCard = null;
 function collTouchMove(e) {
   if (!collTouchId || !collTouchGhost) return;
   e.preventDefault();
@@ -10872,19 +10879,21 @@ function collTouchMove(e) {
   collTouchGhost.style.visibility = 'hidden';
   const under = document.elementFromPoint(touch.clientX, touch.clientY);
   collTouchGhost.style.visibility = '';
-  document.querySelectorAll('.watch-card.drag-over').forEach(c => c.classList.remove('drag-over'));
   const targetCard = under?.closest('.watch-card');
-  if (targetCard && targetCard.dataset.id !== collTouchId && targetCard.dataset.id) {
-    targetCard.classList.add('drag-over');
+  const validTarget = (targetCard && targetCard.dataset.id !== collTouchId && targetCard.dataset.id) ? targetCard : null;
+  if (_collDragOverCard !== validTarget) {
+    if (_collDragOverCard) _collDragOverCard.classList.remove('drag-over');
+    _collDragOverCard = validTarget;
+    if (_collDragOverCard) _collDragOverCard.classList.add('drag-over');
   }
 }
 
 function collTouchEnd() {
   document.removeEventListener('touchmove',   collTouchMove);
   document.removeEventListener('touchcancel', collTouchEnd);
-  const targetCard = document.querySelector('.watch-card.drag-over');
-  const targetId   = targetCard?.dataset.id;
-  document.querySelectorAll('.watch-card').forEach(c => c.classList.remove('dragging', 'drag-over'));
+  const targetId = _collDragOverCard?.dataset.id;
+  if (_collDragOverCard) { _collDragOverCard.classList.remove('drag-over'); _collDragOverCard = null; }
+  document.querySelectorAll('.watch-card.dragging').forEach(c => c.classList.remove('dragging'));
   collTouchGhost?.remove();
   collTouchGhost = null;
   if (targetId && collTouchId && targetId !== collTouchId) {
