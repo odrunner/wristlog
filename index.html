@@ -3595,7 +3595,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.31.26.15.12';
+const APP_VERSION = '2.31.26.15.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6700,6 +6700,7 @@ async function saveNewPost() {
   }
   closeNewPost();
   toast('Posted!');
+  feedLoadedAt = 0; // force feed to re-fetch after posting
   if (document.getElementById('page-feed').classList.contains('active')) loadFeed();
 }
 
@@ -8063,6 +8064,7 @@ async function saveLog() {
   closeTrackModal();
   clearTrackPhoto();
   if (date === todayStr()) dismissReminder();
+  feedLoadedAt = 0; // force feed to re-fetch after new log
   renderTrack();
   toast('Wear logged!');
 }
