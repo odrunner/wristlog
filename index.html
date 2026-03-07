@@ -3318,6 +3318,15 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 let currentUser = null; // set after sign-in
 
+// Wrap a promise with a timeout to prevent hung queries
+function withTimeout(promise, ms = 10000) {
+  let tid;
+  return Promise.race([
+    promise,
+    new Promise((_, rej) => { tid = setTimeout(() => rej(new Error('Query timed out')), ms); })
+  ]).finally(() => clearTimeout(tid));
+}
+
 // ══════════════════════════════════════════
 //  AUTH
 // ══════════════════════════════════════════
@@ -3510,11 +3519,11 @@ async function loadUserData() {
   // Each query is individually fault-tolerant so one table failure doesn't block the others
   // Promise.resolve() converts the Supabase thenable to a real Promise (thenables lack .catch())
   const _q = query => Promise.resolve(query).catch(e => { console.error('[WristLog] loadUserData query error:', e?.message); return { data: null, error: e }; });
-  const [wRes, lRes, wlRes] = await Promise.all([
+  const [wRes, lRes, wlRes] = await withTimeout(Promise.all([
     _q(db.from('watches').select('*').eq('user_id', uid)),
     _q(db.from('logs').select('*').eq('user_id', uid)),
     _q(db.from('wishlist').select('*').eq('user_id', uid)),
-  ]);
+  ]), 15000);
   if (wRes.error)  console.error('[WristLog] watches SELECT error:', wRes.error.message, wRes.error);
   if (lRes.error)  console.error('[WristLog] logs SELECT error:',    lRes.error.message, lRes.error);
   if (wlRes.error) console.error('[WristLog] wishlist SELECT error:', wlRes.error.message, wlRes.error);
@@ -3595,7 +3604,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.31.26.15.27';
+const APP_VERSION = '2.31.26.15.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3866,9 +3875,9 @@ async function loadAndRenderProfile(userId) {
   el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Loading…</div>';
   const isOwn = userId === currentUser?.id;
 
-  const { data: profile } = await db.from('profiles')
+  const { data: profile } = await withTimeout(db.from('profiles')
     .select('id, username, display_name, bio, avatar_url, collection_visibility, profile_privacy, wishlist_visibility')
-    .eq('id', userId).single();
+    .eq('id', userId).single());
   if (!profile) {
     el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">This account no longer exists.</div>';
     return;
@@ -3973,7 +3982,7 @@ async function loadAndRenderProfile(userId) {
   }
 
   // ── Await all at once ──────────────────────────────────────────────────
-  const _pr = await Promise.all(_pp);
+  const _pr = await withTimeout(Promise.all(_pp), 12000);
 
   // Destructure results
   const isMutual = (_pi.mutual !== undefined) ? !!_pr[_pi.mutual].data : false;
@@ -5016,14 +5025,14 @@ async function renderClubDetail(clubId) {
   if (!club) { el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Club not found.</div>'; return; }
 
   // ── Stage 1: members + posts in parallel ─────────────────────────────
-  const [{ data: memberRows }, { data: clubPosts }] = await Promise.all([
+  const [{ data: memberRows }, { data: clubPosts }] = await withTimeout(Promise.all([
     db.from('club_members')
       .select('user_id, role, profiles(id, username, display_name, avatar_url)')
       .eq('club_id', clubId),
     db.from('logs')
       .select('id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility')
       .eq('club_id', clubId).order('date', { ascending: false }).limit(30),
-  ]);
+  ]));
 
   const members = (memberRows || []).map(r => ({ ...r.profiles, role: r.role }));
   const memberCount = members.length;
@@ -5656,10 +5665,10 @@ function openCloseFriendsModal() {
 // ── Notifications ──────────────────────────────────────────────────────────
 async function loadNotifications() {
   if (!currentUser) return;
-  const { data, error } = await db.from('notifications')
+  const { data, error } = await withTimeout(db.from('notifications')
     .select('id, type, actor_id, ref_id, is_read, created_at')
     .eq('user_id', currentUser.id)
-    .order('created_at', { ascending: false }).limit(30);
+    .order('created_at', { ascending: false }).limit(30));
   if (error) {
     // Auth expired or revoked — stop polling to avoid endless 401s
     if (error.code === 'PGRST301' || error.message?.includes('JWT') || error.status === 401) {
@@ -6052,7 +6061,7 @@ async function loadFeed() {
         );
       }
 
-      const results = await Promise.all(promises);
+      const results = await withTimeout(Promise.all(promises), 12000);
       const firstError = results.find(r => r.error);
       if (firstError) throw firstError.error;
 
@@ -6119,7 +6128,7 @@ async function loadFeed() {
     const watchIds = [...new Set(rawLogs.filter(l => l.watch_id).map(l => l.watch_id))];
     const userIds = [...new Set(rawLogs.map(l => l.user_id))];
 
-    const [watchResult, profileResult, likesResult, commentResult] = await Promise.all([
+    const [watchResult, profileResult, likesResult, commentResult] = await withTimeout(Promise.all([
       watchIds.length
         ? db.from('watches').select('id, brand, name, color, image, ref, url').in('id', watchIds)
         : { data: [] },
@@ -6127,7 +6136,7 @@ async function loadFeed() {
       db.from('likes').select('log_id, user_id').in('log_id', logIds),
       db.from('comments').select('id, log_id, user_id, body, created_at')
         .in('log_id', logIds).order('created_at', { ascending: true }).limit(500),
-    ]);
+    ]));
 
     const watchMap = {};
     (watchResult.data || []).forEach(w => watchMap[w.id] = w);
@@ -8192,14 +8201,33 @@ function eloExpected(a, b) {
 }
 
 function buildGameQueue(watchList) {
+  const n = watchList.length;
+  const totalPairs = n * (n - 1) / 2;
+  const cap = Math.min(totalPairs, n * 3);  // cap at 3× collection size
+
+  if (cap >= totalPairs) {
+    // Small collection — generate all pairs, shuffle
+    const pairs = [];
+    for (let i = 0; i < n; i++)
+      for (let j = i + 1; j < n; j++)
+        pairs.push({ aId: watchList[i].id, bId: watchList[j].id });
+    for (let i = pairs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
+    }
+    return pairs;
+  }
+  // Large collection — sample random unique pairs
+  const seen = new Set();
   const pairs = [];
-  for (let i = 0; i < watchList.length; i++)
-    for (let j = i + 1; j < watchList.length; j++)
-      pairs.push({ aId: watchList[i].id, bId: watchList[j].id });
-  // Fisher-Yates shuffle
-  for (let i = pairs.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
+  while (pairs.length < cap) {
+    const a = Math.floor(Math.random() * n);
+    let b = Math.floor(Math.random() * (n - 1));
+    if (b >= a) b++;
+    const key = a < b ? a * n + b : b * n + a;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    pairs.push({ aId: watchList[a].id, bId: watchList[b].id });
   }
   return pairs;
 }
@@ -10340,32 +10368,31 @@ function addReceipt() {
     const idx = watches.findIndex(x => x.id === wId);
     if (idx < 0) return;
     if (!watches[idx].receipts) watches[idx].receipts = [];
-    let added = 0;
-    for (const file of input.files) {
-      try {
-        const rId = Date.now().toString(36) + Math.random().toString(36).slice(2);
-        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-        let data;
-        if (currentUser) {
-          const ext = isPdf ? 'pdf' : 'jpg';
-          const path = `receipts/${currentUser.id}/${wId}/${rId}.${ext}`;
-          data = isPdf
-            ? await uploadFile(file, path, 'application/pdf')
-            : await uploadImage(file, path);
+    const results = await Promise.allSettled([...input.files].map(async (file) => {
+      const rId = Date.now().toString(36) + Math.random().toString(36).slice(2);
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      let data;
+      if (currentUser) {
+        const ext = isPdf ? 'pdf' : 'jpg';
+        const path = `receipts/${currentUser.id}/${wId}/${rId}.${ext}`;
+        data = isPdf
+          ? await uploadFile(file, path, 'application/pdf')
+          : await uploadImage(file, path);
+      } else {
+        if (isPdf) {
+          data = await new Promise((res, rej) => {
+            const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
+          });
         } else {
-          if (isPdf) {
-            data = await new Promise((res, rej) => {
-              const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
-            });
-          } else {
-            data = await blobToResizedBase64(file);
-          }
+          data = await blobToResizedBase64(file);
         }
-        watches[idx].receipts.push({
-          id: rId, name: file.name, type: file.type || 'image/jpeg', data, addedDate: todayStr(),
-        });
-        added++;
-      } catch(e) { toast('Could not upload: ' + file.name, 'error'); }
+      }
+      return { id: rId, name: file.name, type: file.type || 'image/jpeg', data, addedDate: todayStr() };
+    }));
+    let added = 0;
+    for (const r of results) {
+      if (r.status === 'fulfilled') { watches[idx].receipts.push(r.value); added++; }
+      else toast('Could not upload: ' + (r.reason?.fileName || 'file'), 'error');
     }
     if (added > 0) {
       markDirty('watches', wId);
@@ -10482,32 +10509,31 @@ function addReceiptFromEdit() {
     const idx = watches.findIndex(x => x.id === wId);
     if (idx < 0) return;
     if (!watches[idx].receipts) watches[idx].receipts = [];
-    let added = 0;
-    for (const file of input.files) {
-      try {
-        const rId = Date.now().toString(36) + Math.random().toString(36).slice(2);
-        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-        let data;
-        if (currentUser) {
-          const ext = isPdf ? 'pdf' : 'jpg';
-          const path = `receipts/${currentUser.id}/${wId}/${rId}.${ext}`;
-          data = isPdf
-            ? await uploadFile(file, path, 'application/pdf')
-            : await uploadImage(file, path);
+    const results = await Promise.allSettled([...input.files].map(async (file) => {
+      const rId = Date.now().toString(36) + Math.random().toString(36).slice(2);
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      let data;
+      if (currentUser) {
+        const ext = isPdf ? 'pdf' : 'jpg';
+        const path = `receipts/${currentUser.id}/${wId}/${rId}.${ext}`;
+        data = isPdf
+          ? await uploadFile(file, path, 'application/pdf')
+          : await uploadImage(file, path);
+      } else {
+        if (isPdf) {
+          data = await new Promise((res, rej) => {
+            const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
+          });
         } else {
-          if (isPdf) {
-            data = await new Promise((res, rej) => {
-              const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file);
-            });
-          } else {
-            data = await blobToResizedBase64(file);
-          }
+          data = await blobToResizedBase64(file);
         }
-        watches[idx].receipts.push({
-          id: rId, name: file.name, type: file.type || 'image/jpeg', data, addedDate: todayStr(),
-        });
-        added++;
-      } catch(e) { toast('Could not upload: ' + file.name, 'error'); }
+      }
+      return { id: rId, name: file.name, type: file.type || 'image/jpeg', data, addedDate: todayStr() };
+    }));
+    let added = 0;
+    for (const r of results) {
+      if (r.status === 'fulfilled') { watches[idx].receipts.push(r.value); added++; }
+      else toast('Could not upload: ' + (r.reason?.fileName || 'file'), 'error');
     }
     if (added > 0) {
       markDirty('watches', wId);
