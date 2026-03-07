@@ -62,6 +62,7 @@
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" integrity="sha384-Sm2s7OXxsAMTyJ4iIyRBgVpeGUvMPk2lRQnnZhE78Wej7oggIoolKt+SCt0XJbUB" crossorigin="anonymous"></script>
+  <script src="dev-config.js" onerror="/* expected in production */"></script>
   <!-- Apply saved theme before first paint to avoid flash -->
   <script>
     (function(){
@@ -1788,6 +1789,51 @@
 
 
 
+<!-- ════ WHAT'S NEW MODAL ════ -->
+<div id="whats-new-modal" class="overlay hidden">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New
+    </div>
+    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;">
+      <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(74,222,128,.12);color:#4ade80;padding:.15rem .5rem;border-radius:6px;">March 2026</span>
+    </div>
+    <div style="max-height:60vh;overflow-y:auto;">
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">iOS App &amp; Push Notifications</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">WRotate is now available as an iOS app. Get push notifications when someone likes your wear, comments on your post, sends a follow request, or invites you to a club.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Clubs</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Create or join clubs around brands, styles, or anything else. Invite members, manage roles, and share watches with your community.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">@Mentions &amp; Pinned Comments</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Tag anyone with @username in comments and posts — they'll get notified instantly. The most-liked comment now pins to the top of each thread.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Close Friends Privacy</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">New &#8220;Close Friends&#8221; visibility option for individual watches, your collection, and your wishlist. Share only with people you trust most.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Feed Improvements</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Feed loads faster with parallel queries and shows a loading skeleton instead of a blank screen. If something goes wrong, you&#8217;ll see a clear error with a retry button instead of silence.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">UI Polish</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Modals are properly centered on mobile, the bottom nav has better spacing for iPhones with home indicators, and the edit modal got visual refinements.</div>
+      </div>
+      <div>
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Security &amp; Reliability</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Hardened input escaping across the app, added file upload validation, improved Row-Level Security policies, and expanded test coverage to 536 tests.</div>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:1rem;">
+      <button class="btn btn-ghost" onclick="closeWhatsNew()">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ FOLLOWERS MODAL ════ -->
 <div id="followers-modal" class="overlay hidden">
   <div class="modal" style="max-width:400px;">
@@ -2087,14 +2133,10 @@
     </div>
     <div class="help-wrap">
 
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:2rem;">
-        <div style="font-size:.82rem;color:var(--muted);line-height:1.5;">
-          Found a bug? Have an idea? Let us know —
-        </div>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-          <button class="btn btn-ghost" onclick="shareApp()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share with a Friend</button>
-          <button class="btn btn-primary" onclick="openFeedback()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Feedback</button>
-        </div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:2rem;">
+        <button class="btn btn-ghost" onclick="openWhatsNew()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem;flex:1;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New</button>
+        <button class="btn btn-ghost" onclick="shareApp()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem;flex:1;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Invite a Friend to WRotate</button>
+        <button class="btn btn-primary" onclick="openFeedback()" style="white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem;flex:1;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Feedback</button>
       </div>
 
       <!-- ── BUILDING COLLECTION ── -->
@@ -2215,13 +2257,6 @@
             <div class="help-step-body">
               <div class="help-step-title">Share your wishlist with friends</div>
               <div class="help-step-desc">Go to your profile → Privacy section → set <strong>Wishlist</strong> to Followers, Close Friends, or Public. Your followers can then see your wishlist on your profile — great for gift inspiration or comparing GAS lists.</div>
-            </div>
-          </div>
-          <div class="help-step">
-            <div class="help-step-num">4</div>
-            <div class="help-step-body">
-              <div class="help-step-title">Move to Collection when purchased</div>
-              <div class="help-step-desc">Edit the wishlist item and tap <strong>"Move to Collection"</strong> — all details transfer so you don't have to re-enter anything.</div>
             </div>
           </div>
         </div>
@@ -2407,52 +2442,6 @@
               <div class="help-step-title">Year in Review</div>
               <div class="help-step-desc">A full-year heat-map calendar showing every day you logged a watch. Scroll to the bottom of Stats and select the year.</div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── WHAT'S NEW ── -->
-      <div class="help-section" id="release-notes">
-        <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New</div>
-
-        <div class="help-card" style="border-left-color:#4ade80;">
-          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;">
-            <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(74,222,128,.12);color:#4ade80;padding:.15rem .5rem;border-radius:6px;">March 2026</span>
-          </div>
-
-          <div style="margin-bottom:.75rem;">
-            <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">iOS App &amp; Push Notifications</div>
-            <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">WRotate is now available as an iOS app. Get push notifications when someone likes your wear, comments on your post, sends a follow request, or invites you to a club.</div>
-          </div>
-
-          <div style="margin-bottom:.75rem;">
-            <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Clubs</div>
-            <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Create or join clubs around brands, styles, or anything else. Invite members, manage roles, and share watches with your community.</div>
-          </div>
-
-          <div style="margin-bottom:.75rem;">
-            <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">@Mentions &amp; Pinned Comments</div>
-            <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Tag anyone with @username in comments and posts — they'll get notified instantly. The most-liked comment now pins to the top of each thread.</div>
-          </div>
-
-          <div style="margin-bottom:.75rem;">
-            <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Close Friends Privacy</div>
-            <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">New "Close Friends" visibility option for individual watches, your collection, and your wishlist. Share only with people you trust most.</div>
-          </div>
-
-          <div style="margin-bottom:.75rem;">
-            <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Feed Improvements</div>
-            <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Feed loads faster with parallel queries and shows a loading skeleton instead of a blank screen. If something goes wrong, you'll see a clear error with a retry button instead of silence.</div>
-          </div>
-
-          <div style="margin-bottom:.75rem;">
-            <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">UI Polish</div>
-            <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Modals are properly centered on mobile, the bottom nav has better spacing for iPhones with home indicators, and the edit modal got visual refinements.</div>
-          </div>
-
-          <div>
-            <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Security &amp; Reliability</div>
-            <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Hardened input escaping across the app, added file upload validation, improved Row-Level Security policies, and expanded test coverage to 536 tests.</div>
           </div>
         </div>
       </div>
@@ -3281,7 +3270,9 @@ function showAuthError(msg) {
 
 async function devLogin() {
   if (!['localhost', '127.0.0.1'].includes(location.hostname)) return;
-  const { error } = await db.auth.signInAnonymously();
+  const creds = window.__DEV_CREDS__;
+  if (!creds) { showAuthError('Dev login not configured — create dev-config.js'); return; }
+  const { error } = await db.auth.signInWithPassword(creds);
   if (error) showAuthError('Dev login failed: ' + error.message);
 }
 
@@ -3496,7 +3487,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.16.02';
+const APP_VERSION = '2.30.26.16.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7335,6 +7326,13 @@ function showHelpPage() {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('page-help').classList.add('active');
+}
+
+function openWhatsNew() {
+  document.getElementById('whats-new-modal').classList.remove('hidden');
+}
+function closeWhatsNew() {
+  document.getElementById('whats-new-modal').classList.add('hidden');
 }
 
 const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
@@ -11577,6 +11575,7 @@ const _overlayCloseMap = {
   'track-log-modal':     closeTrackModal,
   'edit-log-modal':      closeEditLog,
   'create-club-modal':   closeCreateClub,
+  'whats-new-modal':     closeWhatsNew,
 };
 
 // Click overlay background to close

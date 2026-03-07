@@ -12,3 +12,6 @@ xcuserdata/
 
 # Supabase CLI temp
 supabase/.temp/
+
+# Dev credentials (never commit)
+dev-config.js
