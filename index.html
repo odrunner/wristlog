@@ -3595,7 +3595,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.31.26.15.17';
+const APP_VERSION = '2.31.26.15.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6954,13 +6954,19 @@ function closeMentionAc() {
   _mentionAcIdx   = -1;
   // Detach scroll listener when AC is closed (avoid firing on every scroll globally)
   if (_mentionScrollBound) {
-    document.removeEventListener('scroll', closeMentionAc, true);
+    document.removeEventListener('scroll', _mentionScrollHandler, true);
     _mentionScrollBound = false;
   }
 }
+function _mentionScrollHandler(e) {
+  // Don't close if user is scrolling inside the dropdown itself
+  const ac = document.getElementById('mention-ac');
+  if (ac && ac.contains(e.target)) return;
+  closeMentionAc();
+}
 function openMentionScroll() {
   if (!_mentionScrollBound) {
-    document.addEventListener('scroll', closeMentionAc, true);
+    document.addEventListener('scroll', _mentionScrollHandler, true);
     _mentionScrollBound = true;
   }
 }
