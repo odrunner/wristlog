@@ -79,29 +79,30 @@ function buildEmailContent(
   }
 }
 
-// Build HTML email template
+// Build HTML email template — light theme with logo
 function buildHtmlEmail(subject: string, body: string): string {
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#1a1a1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a1a;padding:40px 20px;">
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:40px 20px;">
     <tr><td align="center">
-      <table width="100%" style="max-width:480px;background:#242424;border-radius:12px;overflow:hidden;">
-        <tr><td style="padding:28px 28px 0;">
-          <div style="font-size:18px;font-weight:700;color:#c9a84c;letter-spacing:.03em;">WRotate</div>
+      <table width="100%" style="max-width:480px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+        <tr><td style="padding:28px 28px 20px;text-align:center;border-bottom:1px solid #eee;">
+          <img src="https://wrotate.com/icon.svg" alt="WRotate" width="40" height="40" style="display:inline-block;border-radius:9px;margin-bottom:8px;">
+          <div style="font-size:18px;font-weight:700;color:#b8941f;letter-spacing:.03em;">WRotate</div>
         </td></tr>
-        <tr><td style="padding:20px 28px;">
-          <div style="font-size:15px;font-weight:600;color:#f0f0f0;margin-bottom:8px;">${subject}</div>
-          <div style="font-size:14px;color:#a0a0a0;line-height:1.55;">${body}</div>
+        <tr><td style="padding:24px 28px;">
+          <div style="font-size:15px;font-weight:600;color:#1a1a1a;margin-bottom:8px;">${subject}</div>
+          <div style="font-size:14px;color:#555;line-height:1.55;">${body}</div>
         </td></tr>
-        <tr><td style="padding:8px 28px 28px;">
-          <a href="https://wrotate.com" style="display:inline-block;background:#c9a84c;color:#000;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
+        <tr><td style="padding:4px 28px 28px;">
+          <a href="https://wrotate.com" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
         </td></tr>
-        <tr><td style="padding:16px 28px;border-top:1px solid #333;">
-          <div style="font-size:11px;color:#666;line-height:1.5;">
+        <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
+          <div style="font-size:11px;color:#999;line-height:1.5;">
             You're receiving this because you have email notifications enabled in WRotate.
-            To change your preferences, open WRotate → Profile → Notifications.
+            To change your preferences, open WRotate &rarr; Profile &rarr; Notifications.
           </div>
         </td></tr>
       </table>
