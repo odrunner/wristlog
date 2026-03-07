@@ -215,6 +215,14 @@
       transition: box-shadow .15s, background .15s;
     }
     .btn-google:hover { box-shadow: 0 1px 6px rgba(0,0,0,.2); background: #f8f8f8; }
+    .btn-apple {
+      display: flex; align-items: center; justify-content: center; gap: .75rem;
+      width: 100%; padding: .85rem 1rem; margin-bottom: .75rem;
+      background: #000; color: #fff; border: none; border-radius: 10px;
+      font-size: .95rem; font-weight: 600; cursor: pointer; font-family: inherit;
+      transition: box-shadow .15s, background .15s;
+    }
+    .btn-apple:hover { box-shadow: 0 1px 6px rgba(0,0,0,.3); background: #1a1a1a; }
     .auth-error { background: rgba(224,85,85,.12); border: 1px solid rgba(224,85,85,.3); color: #f87171; font-size: .82rem; padding: .65rem .9rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
     .auth-divider { text-align: center; color: var(--muted); font-size: .75rem; margin: 1.25rem 0; line-height: 1.5; }
 
@@ -1692,6 +1700,12 @@
           <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
         </svg>
         Continue with Google
+      </button>
+      <button class="btn-apple" onclick="signInWithApple()">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="#fff"/>
+        </svg>
+        Continue with Apple
       </button>
       <div class="auth-divider">First time? Just sign in — account created automatically.</div>
       <!-- Dev-only anonymous login — localhost only -->
@@ -3291,6 +3305,16 @@ async function signInWithGoogle() {
   if (error) showAuthError(error.message);
 }
 
+async function signInWithApple() {
+  const { error } = await db.auth.signInWithOAuth({
+    provider: 'apple',
+    options: {
+      redirectTo: window.location.origin + window.location.pathname.replace(/\/$/, ''),
+    }
+  });
+  if (error) showAuthError(error.message);
+}
+
 function openDeleteAccount() {
   document.getElementById('da-step-1').classList.remove('hidden');
   document.getElementById('da-step-2').classList.add('hidden');
@@ -3492,7 +3516,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.23.00';
+const APP_VERSION = '2.30.26.07.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3566,10 +3590,18 @@ async function loadMyProfile() {
   let { data } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
   let isNewUser = false;
   if (!data) {
-    // Auto-create profile for Google OAuth users (trigger may not have fired)
+    // Auto-create profile for OAuth users (Google, Apple — trigger may not have fired)
     const email       = currentUser.email || '';
-    const googleName  = currentUser.user_metadata?.full_name || email.split('@')[0];
-    const username    = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 30);
+    const meta        = currentUser.user_metadata || {};
+    const googleName  = meta.full_name || meta.name
+      || [meta.given_name, meta.family_name].filter(Boolean).join(' ')
+      || email.split('@')[0];
+    // Apple private-relay emails produce ugly usernames — fall back to name-based or random
+    let username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 30);
+    if (!username || username.length < 3 || email.includes('privaterelay.appleid.com')) {
+      username = (googleName || '').toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9_]/g, '').slice(0, 20)
+        || ('user' + Math.random().toString(36).slice(2, 8));
+    }
     const { data: created, error: createErr } = await db.from('profiles').upsert(
       { id: currentUser.id, username, display_name: googleName },
       { onConflict: 'id' }
