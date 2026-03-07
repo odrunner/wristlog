@@ -3339,14 +3339,21 @@ async function deleteAccount() {
   const uid = currentUser.id;
   const btn = document.getElementById('da-final-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Deleting…'; }
-  const errs = [];
+  let failed = false;
   const del = async (table, filter) => {
+    if (failed) return; // stop on first error — don't leave partial state
     let q = db.from(table).delete();
     if (filter.eq)  q = q.eq(filter.eq[0], filter.eq[1]);
     if (filter.or)  q = q.or(filter.or);
     const { error } = await q;
-    if (error) errs.push(`${table}: ${error.message}`);
+    if (error) {
+      failed = true;
+      console.error(`[WristLog] deleteAccount failed at ${table}:`, error.message);
+      toast(`Delete failed at ${escHtml(table)}. Please try again.`, 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Permanently Delete Everything'; }
+    }
   };
+  // Order: dependents first (likes, comments, notifications, follows), then core data, then profile last
   await del('likes',          { eq: ['user_id', uid] });
   await del('comments',       { eq: ['user_id', uid] });
   await del('notifications',  { or: `user_id.eq.${uid},actor_id.eq.${uid}` });
@@ -3356,12 +3363,7 @@ async function deleteAccount() {
   await del('watches',        { eq: ['user_id', uid] });
   await del('feedback',       { eq: ['user_id', uid] });
   await del('profiles',       { eq: ['id', uid] });
-  if (errs.length) {
-    console.error('[WristLog] deleteAccount errors:', errs);
-    toast('Some data could not be deleted — check Supabase RLS policies.', 'error');
-    if (btn) { btn.disabled = false; btn.textContent = 'Permanently Delete Everything'; }
-    return;
-  }
+  if (failed) return; // user can retry — already-deleted tables will no-op on re-run
   try { localStorage.removeItem('wristlog_onboarded'); localStorage.removeItem('wristlog_onboarded_' + uid); } catch(e) {}
   closeDeleteAccount();
   await signOut();
@@ -3508,45 +3510,57 @@ function markDirty(type, id) {
 // ══════════════════════════════════════════
 //  CLOUD SYNC (called from save())
 // ══════════════════════════════════════════
+let _syncInFlight = false;
 async function cloudSync() {
   if (!currentUser) return;
   const hasDirty = _dirty.watches.size || _dirty.logs.size || _dirty.wishlist.size || _dirty.elo.size;
   if (!hasDirty) return; // nothing changed — skip network call
+  if (_syncInFlight) return; // prevent concurrent syncs — next save() will retry
+  _syncInFlight = true;
   const upsert = async (table, rows) => {
-    if (!rows.length) return;
+    if (!rows.length) return true;
     const { error } = await db.from(table).upsert(rows, { onConflict: 'id' });
-    if (error) console.error(`[WristLog] cloudSync ${table} error:`, error.message, error);
+    if (error) { console.error(`[WristLog] cloudSync ${table} error:`, error.message, error); return false; }
+    return true;
   };
   try {
+    // Snapshot IDs, attempt upsert, only clear on success (new mutations during await stay in the live set)
     if (_dirty.watches.size) {
-      const ids = _dirty.watches; _dirty.watches = new Set();
-      await upsert('watches', watches.filter(w => ids.has(w.id)).map(watchToRow));
+      const ids = [..._dirty.watches];
+      if (await upsert('watches', watches.filter(w => ids.includes(w.id)).map(watchToRow)))
+        ids.forEach(id => _dirty.watches.delete(id));
     }
     if (_dirty.logs.size) {
-      const ids = _dirty.logs; _dirty.logs = new Set();
-      await upsert('logs', logs.filter(l => ids.has(l.id)).map(logToRow));
+      const ids = [..._dirty.logs];
+      if (await upsert('logs', logs.filter(l => ids.includes(l.id)).map(logToRow)))
+        ids.forEach(id => _dirty.logs.delete(id));
     }
     if (_dirty.wishlist.size) {
-      const ids = _dirty.wishlist; _dirty.wishlist = new Set();
-      await upsert('wishlist', wishlist.filter(w => ids.has(w.id)).map(wishToRow));
+      const ids = [..._dirty.wishlist];
+      if (await upsert('wishlist', wishlist.filter(w => ids.includes(w.id)).map(wishToRow)))
+        ids.forEach(id => _dirty.wishlist.delete(id));
     }
     if (_dirty.elo.size) {
-      const ids = _dirty.elo; _dirty.elo = new Set();
-      const eloUpdates = [...ids]
+      const ids = [..._dirty.elo];
+      const eloUpdates = ids
         .filter(id => eloRatings[id] !== undefined)
         .map(id => ({ id, user_id: currentUser.id, elo_rating: eloRatings[id] }));
       if (eloUpdates.length) {
         const { error } = await db.from('watches').upsert(eloUpdates, { onConflict: 'id', ignoreDuplicates: false });
         if (error) console.error('[WristLog] cloudSync elo error:', error.message, error);
+        else ids.forEach(id => _dirty.elo.delete(id));
+      } else {
+        ids.forEach(id => _dirty.elo.delete(id));
       }
     }
   } catch(e) { console.error('[WristLog] cloudSync exception:', e.message); }
+  finally { _syncInFlight = false; }
 }
 
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.13.02';
+const APP_VERSION = '2.30.26.13.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7554,7 +7568,7 @@ async function loadAdminStats() {
         </table>
       </div>`;
   } catch(e) {
-    el.innerHTML = `<div style="color:var(--danger);font-size:.85rem;">Failed to load stats: ${e.message}</div>`;
+    el.innerHTML = `<div style="color:var(--danger);font-size:.85rem;">Failed to load stats: ${escHtml(e.message)}</div>`;
   }
 }
 
@@ -10120,7 +10134,7 @@ function renderReceiptsList(w) {
     return `<div class="receipt-item">
       <div class="receipt-icon">${icon}</div>
       <div class="receipt-info">
-        <div class="receipt-name">${r.name}</div>
+        <div class="receipt-name">${escHtml(r.name)}</div>
         ${date ? `<div class="receipt-date">${date}</div>` : ''}
       </div>
       <div class="receipt-actions">
@@ -10236,7 +10250,7 @@ function renderEditReceiptsList(w) {
     return `<div class="receipt-item">
       <div class="receipt-icon">${icon}</div>
       <div class="receipt-info">
-        <div class="receipt-name">${r.name}</div>
+        <div class="receipt-name">${escHtml(r.name)}</div>
         ${date ? `<div class="receipt-date">${date}</div>` : ''}
       </div>
       <div class="receipt-actions">
