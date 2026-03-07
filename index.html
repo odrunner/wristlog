@@ -329,6 +329,22 @@
     .profile-page-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.1rem 1.25rem; margin-bottom:1.1rem; }
     .profile-page-section-title { font-size:.72rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--gold); margin-bottom:.9rem; }
 
+    /* ── COLLAPSIBLE SECTION HEADERS ── */
+    .section-toggle { display:flex; align-items:center; justify-content:space-between; cursor:pointer; -webkit-user-select:none; user-select:none; }
+    .section-toggle .chevron { font-size:.65rem; color:var(--muted); transition:transform .2s; }
+    .section-toggle .chevron.collapsed { transform:rotate(-90deg); }
+
+    /* ── TOGGLE SWITCH ── */
+    .toggle-row { display:flex; align-items:center; justify-content:space-between; padding:.55rem 0; border-bottom:1px solid var(--border); }
+    .toggle-row:last-child { border-bottom:none; }
+    .toggle-label { font-size:.82rem; color:var(--text); }
+    .toggle-switch { position:relative; width:40px; height:22px; flex-shrink:0; }
+    .toggle-switch input { opacity:0; width:0; height:0; }
+    .toggle-slider { position:absolute; top:0; left:0; right:0; bottom:0; background:var(--surface2); border:1px solid var(--border); border-radius:22px; cursor:pointer; transition:.2s; }
+    .toggle-slider::before { content:''; position:absolute; height:16px; width:16px; left:2px; bottom:2px; background:var(--muted); border-radius:50%; transition:.2s; }
+    .toggle-switch input:checked + .toggle-slider { background:var(--gold); border-color:var(--gold); }
+    .toggle-switch input:checked + .toggle-slider::before { transform:translateX(18px); background:#000; }
+
     /* ── COLLECTION SHOWCASE ── */
     .showcase-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(88px,1fr)); gap:.65rem; }
     .showcase-card { background:var(--surface2); border:2px solid var(--border); border-radius:10px; padding:.6rem .45rem .5rem; display:flex; flex-direction:column; align-items:center; gap:.3rem; text-align:center; min-width:0; transition:border-color .15s, opacity .15s; }
@@ -3574,7 +3590,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.31.26.14.06';
+const APP_VERSION = '2.31.26.14.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4081,16 +4097,21 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       </div>
     </div>` : '';
 
-  // Always-visible Privacy section (own profile only)
+  // Always-visible Privacy section (own profile only) — collapsible
   const privacyHtml = isOwn ? (() => {
     const pChip = (cId, val, label, current, field) =>
       `<div class="chip${current === val ? ' selected' : ''}" data-vis="${val}"
         onclick="selVisChip('${cId}','${val}');savePrivacyField('${field}','${val}')">${label}</div>`;
     const cur = privacy || 'public';
     const curCol = visibility || 'followers';
+    const prvOpen = localStorage.getItem('prv-collapse') !== '1';
     return `
     <div class="profile-page-card">
-      <div class="profile-page-section-title">Privacy</div>
+      <div class="section-toggle" onclick="toggleSection('prv-section','prv-collapse',this)">
+        <div class="profile-page-section-title" style="margin-bottom:0;">Privacy</div>
+        <span class="chevron${prvOpen ? '' : ' collapsed'}">▾</span>
+      </div>
+      <div id="prv-section" style="${prvOpen ? '' : 'display:none;'}margin-top:.9rem;">
       <div class="form-group" style="margin-bottom:.75rem;">
         <label style="font-size:.78rem;">Profile</label>
         <div class="chips" id="prv-profile-chips">
@@ -4130,6 +4151,36 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           }).join('')}
         </div>
         <div style="font-size:.71rem;color:var(--muted);margin-top:.25rem;">New posts default to this. You can change each post individually.</div>
+      </div>
+      </div>
+    </div>`;
+  })() : '';
+
+  // Notifications section (own profile only) — collapsible, default collapsed
+  const notifHtml = isOwn ? (() => {
+    const ep = (profile.email_prefs || {social:true,comments:true,mentions:true,clubs:false,friends:true});
+    const notifOpen = localStorage.getItem('notif-collapse') !== '1';
+    const tog = (key, label) => `
+      <div class="toggle-row">
+        <span class="toggle-label">${label}</span>
+        <label class="toggle-switch">
+          <input type="checkbox" ${ep[key] ? 'checked' : ''} onchange="saveEmailPref('${key}',this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>`;
+    return `
+    <div class="profile-page-card">
+      <div class="section-toggle" onclick="toggleSection('notif-section','notif-collapse',this)">
+        <div class="profile-page-section-title" style="margin-bottom:0;">Notifications</div>
+        <span class="chevron${notifOpen ? '' : ' collapsed'}">▾</span>
+      </div>
+      <div id="notif-section" style="${notifOpen ? '' : 'display:none;'}margin-top:.9rem;">
+        <div style="font-size:.75rem;color:var(--muted);margin-bottom:.6rem;">Email me when someone…</div>
+        ${tog('social','Likes or follows me')}
+        ${tog('comments','Comments on my posts')}
+        ${tog('mentions','Mentions me')}
+        ${tog('clubs','Club activity')}
+        ${tog('friends','Friend & follow requests')}
       </div>
     </div>`;
   })() : '';
@@ -4314,6 +4365,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     ${friendHtml}
     ${editHtml}
     ${privacyHtml}
+    ${notifHtml}
     ${showcaseHtml}
     ${wishlistHtml}
     ${logsHtml}
@@ -7161,6 +7213,25 @@ async function savePrivacyField(field, value) {
   if (!currentUser) return;
   const { error } = await db.from('profiles').update({ [field]: value }).eq('id', currentUser.id);
   if (!error && window.myProfile) window.myProfile[field] = value;
+  if (error) toast('Could not save — ' + error.message, 'error');
+}
+
+function toggleSection(sectionId, storageKey, headerEl) {
+  const sec = document.getElementById(sectionId);
+  if (!sec) return;
+  const isVisible = sec.style.display !== 'none';
+  sec.style.display = isVisible ? 'none' : '';
+  localStorage.setItem(storageKey, isVisible ? '1' : '0');
+  const chev = headerEl.querySelector('.chevron');
+  if (chev) chev.classList.toggle('collapsed', isVisible);
+}
+
+async function saveEmailPref(category, enabled) {
+  if (!currentUser) return;
+  const prefs = (myProfile && myProfile.email_prefs) ? { ...myProfile.email_prefs } : { social: true, comments: true, mentions: true, clubs: false, friends: true };
+  prefs[category] = enabled;
+  const { error } = await db.from('profiles').update({ email_prefs: prefs }).eq('id', currentUser.id);
+  if (!error && window.myProfile) window.myProfile.email_prefs = prefs;
   if (error) toast('Could not save — ' + error.message, 'error');
 }
 
