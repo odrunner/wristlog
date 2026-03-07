@@ -3517,7 +3517,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.08.14';
+const APP_VERSION = '2.30.26.11.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3612,7 +3612,7 @@ async function loadMyProfile() {
     isNewUser = true;
   }
   myProfile = data;
-  if (data.theme_preference) localStorage.setItem(STORE_THEME, data.theme_preference); // sync Supabase → local
+  if (!isNewUser && data.theme_preference) localStorage.setItem(STORE_THEME, data.theme_preference); // sync Supabase → local (skip for new users — default to light)
   applyTheme();
   const btn = document.getElementById('profile-btn');
   if (btn) {
