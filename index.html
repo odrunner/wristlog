@@ -3595,7 +3595,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.31.26.14.47';
+const APP_VERSION = '2.31.26.14.50';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8037,7 +8037,6 @@ function clearTrackPhoto() {
 }
 
 function deleteLog(id) {
-  if (!confirm('Delete this wear log?')) return;
   const log = logs.find(l => l.id === id);
   // Cleanup Storage photo if present
   if (log?.photoUrl) { const p = storagePathFrom(log.photoUrl); if (p) deleteStorageFile(p); }
@@ -10248,7 +10247,7 @@ function renderReceiptsList(w) {
       </div>
       <div class="receipt-actions">
         <button class="btn btn-ghost btn-sm" onclick="viewReceipt('${w.id}','${r.id}')">View</button>
-        <button class="btn btn-danger btn-sm" onclick="removeReceipt('${w.id}','${r.id}')">✕</button>
+        <button class="btn btn-danger btn-sm" onclick="removeReceipt('${w.id}','${r.id}',this)">✕</button>
       </div>
     </div>`;
   }).join('')}</div>`;
@@ -10304,8 +10303,12 @@ function addReceipt() {
   input.click();
 }
 
-function removeReceipt(watchId, receiptId) {
-  if (!confirm('Remove this receipt? This cannot be undone.')) return;
+function removeReceipt(watchId, receiptId, btn) {
+  if (btn && !btn.dataset.confirm) {
+    btn.dataset.confirm = '1'; btn.textContent = 'Sure?'; btn.style.color = 'var(--danger,#e55)';
+    setTimeout(() => { if (btn) { delete btn.dataset.confirm; btn.textContent = '✕'; btn.style.color = ''; } }, 3000);
+    return;
+  }
   const idx = watches.findIndex(x => x.id === watchId);
   if (idx < 0) return;
   const receipt = (watches[idx].receipts || []).find(r => r.id === receiptId);
@@ -10365,14 +10368,18 @@ function renderEditReceiptsList(w) {
       </div>
       <div class="receipt-actions">
         <button class="btn btn-ghost btn-sm" onclick="viewReceipt('${w.id}','${r.id}')">View</button>
-        <button class="btn btn-danger btn-sm" onclick="removeReceiptFromEdit('${w.id}','${r.id}')">✕</button>
+        <button class="btn btn-danger btn-sm" onclick="removeReceiptFromEdit('${w.id}','${r.id}',this)">✕</button>
       </div>
     </div>`;
   }).join('')}</div>`;
 }
 
-function removeReceiptFromEdit(watchId, receiptId) {
-  if (!confirm('Remove this receipt? This cannot be undone.')) return;
+function removeReceiptFromEdit(watchId, receiptId, btn) {
+  if (btn && !btn.dataset.confirm) {
+    btn.dataset.confirm = '1'; btn.textContent = 'Sure?'; btn.style.color = 'var(--danger,#e55)';
+    setTimeout(() => { if (btn) { delete btn.dataset.confirm; btn.textContent = '✕'; btn.style.color = ''; } }, 3000);
+    return;
+  }
   const idx = watches.findIndex(x => x.id === watchId);
   if (idx < 0) return;
   const receipt = (watches[idx].receipts || []).find(r => r.id === receiptId);
