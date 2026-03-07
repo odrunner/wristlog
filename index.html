@@ -3595,7 +3595,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.31.26.15.05';
+const APP_VERSION = '2.31.26.15.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4559,8 +4559,11 @@ async function loadPendingRequests() {
 }
 
 // ── Friends ────────────────────────────────────────────────────────────────
-async function loadFriendRequests() {
+let _frLoadedAt = 0;
+async function loadFriendRequests(force) {
   if (!currentUser) return;
+  // Skip if freshly loaded (2s) unless forced
+  if (!force && _frLoadedAt && Date.now() - _frLoadedAt < 2000) return;
   try {
     const { data, error } = await db
       .from('friend_requests')
@@ -4568,6 +4571,7 @@ async function loadFriendRequests() {
       .or(`initiator_id.eq.${currentUser.id},target_id.eq.${currentUser.id}`);
     if (error) throw error;
     friendRequests = data || [];
+    _frLoadedAt = Date.now();
   } catch (e) {
     console.warn('loadFriendRequests failed (table may not exist yet):', e?.message);
     friendRequests = [];
@@ -4601,7 +4605,7 @@ async function initiateFriendRequest(userId) {
     user_id: userId, type: 'friend_request', actor_id: currentUser.id, is_read: false,
   });
 
-  await loadFriendRequests();
+  await loadFriendRequests(true);
   computeFriendships();
 
   const freshReq = friendRequests.find(r =>
@@ -4625,7 +4629,7 @@ async function removeFriend(userId) {
   const { error } = await db.from('friend_requests').delete()
     .or(`initiator_id.eq.${userId},target_id.eq.${userId}`);
   if (error) { toast('Could not remove friend — ' + error.message, 'error'); return; }
-  await loadFriendRequests();
+  await loadFriendRequests(true);
   computeFriendships();
   viewUserProfile(userId);
   toast('Friend removed');
@@ -4650,7 +4654,7 @@ async function acceptFriendRequest(initiatorId, notifId) {
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
   updateBellBadge();
 
-  await loadFriendRequests();
+  await loadFriendRequests(true);
   computeFriendships();
   renderNotificationPanel();
   toast('You are now close friends!');
@@ -4669,7 +4673,7 @@ async function declineFriendRequest(initiatorId, notifId) {
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
   updateBellBadge();
 
-  await loadFriendRequests();
+  await loadFriendRequests(true);
   computeFriendships();
   renderNotificationPanel();
 }
@@ -4694,7 +4698,7 @@ async function acceptFriendRequestFromPopover(userId) {
     updateBellBadge();
   }
 
-  await loadFriendRequests();
+  await loadFriendRequests(true);
   computeFriendships();
   closeFriendPopover();
   viewUserProfile(userId);
@@ -5819,7 +5823,7 @@ async function unfriendFromCard(userId, btn) {
   const { error } = await db.from('friend_requests').delete()
     .or(`initiator_id.eq.${userId},target_id.eq.${userId}`);
   if (error) { toast('Could not remove friend — ' + error.message, 'error'); return; }
-  await loadFriendRequests();
+  await loadFriendRequests(true);
   computeFriendships();
   toast('Friend removed');
   // Revert button to "Following" in-place (still following each other)
@@ -6918,6 +6922,7 @@ function renderMentionAc(inputEl) {
   ac.style.left  = leftPos + 'px';
   ac.style.width = dropW + 'px';
   ac.classList.add('open');
+  openMentionScroll(); // attach scroll listener only while AC is visible
   _mentionAcIdx = -1;
 }
 
@@ -6940,20 +6945,31 @@ function selectMention(profile) {
   closeMentionAc();
 }
 
+let _mentionScrollBound = false;
 function closeMentionAc() {
   const ac = document.getElementById('mention-ac');
   if (ac) ac.classList.remove('open');
   _mentionResults = [];
   _mentionAcIdx   = -1;
+  // Detach scroll listener when AC is closed (avoid firing on every scroll globally)
+  if (_mentionScrollBound) {
+    document.removeEventListener('scroll', closeMentionAc, true);
+    _mentionScrollBound = false;
+  }
+}
+function openMentionScroll() {
+  if (!_mentionScrollBound) {
+    document.addEventListener('scroll', closeMentionAc, true);
+    _mentionScrollBound = true;
+  }
 }
 
-// Close dropdown when clicking outside or scrolling (fixed dropdown can't follow scroll)
+// Close dropdown when clicking outside
 document.addEventListener('mousedown', e => {
   if (!e.target.closest('#mention-ac') && !e.target.closest('.comment-input') && !['np-body','ep-body','track-notes'].includes(e.target.id)) {
     closeMentionAc();
   }
 });
-document.addEventListener('scroll', closeMentionAc, true); // capture=true catches all scroll containers
 
 // Re-open dropdown on focus/click if cursor is still after an @query
 document.addEventListener('focusin', e => {
@@ -7474,13 +7490,27 @@ function safeSetJSON(key, value) {
   catch(e) { console.error('[WristLog] localStorage write failed:', key, e.message); }
 }
 
+// Data generation counter — bumped on every save so renders can skip if nothing changed
+let _dataGen = 0;
+const _lastRenderedGen = {};   // { collection: N, track: N, wishlist: N, stats: N }
+let _savePending = 0;
+let _wlSavePending = 0;
 const save = () => {
-  safeSetJSON(STORE_W, watches);
-  safeSetJSON(STORE_L, logs);
+  _dataGen++;
   rebuildLogsByWatch();
-  cloudSync(); // fire-and-forget sync to Supabase
+  // Debounce localStorage writes — immediate on first call, coalesced within 500ms
+  clearTimeout(_savePending);
+  _savePending = setTimeout(() => {
+    safeSetJSON(STORE_W, watches);
+    safeSetJSON(STORE_L, logs);
+    cloudSync();
+  }, 500);
 };
-const saveWishlist = () => { safeSetJSON(STORE_WL, wishlist); cloudSync(); };
+const saveWishlist = () => {
+  _dataGen++;
+  clearTimeout(_wlSavePending);
+  _wlSavePending = setTimeout(() => { safeSetJSON(STORE_WL, wishlist); cloudSync(); }, 500);
+};
 const saveBrands   = () => { safeSetJSON(STORE_B,  brands); };
 
 // ── Pre-computed logs-by-watch map (avoids O(n*m) in render loops) ──────────
@@ -7841,7 +7871,9 @@ function onDateChange() {
   renderWatchSelector();
 }
 
-function renderTrack() {
+function renderTrack(force) {
+  if (!force && _lastRenderedGen.track === _dataGen) return;
+  _lastRenderedGen.track = _dataGen;
   renderWatchRecommendation();
   renderWatchSelector();
   renderTrackHistory();
@@ -8400,7 +8432,9 @@ function renderTagFilterBar() {
   }</div>`;
 }
 
-function renderCollection() {
+function renderCollection(force) {
+  if (!force && _lastRenderedGen.collection === _dataGen) return;
+  _lastRenderedGen.collection = _dataGen;
   renderCollSortBar();
   renderTagFilterBar();
   const el = document.getElementById('watches-grid');
@@ -9618,7 +9652,9 @@ function renderWatchRecommendation() {
   el.innerHTML = recCardHTML(computeWatchRec(recSkips));
 }
 
-function renderStats() {
+function renderStats(force) {
+  if (!force && _lastRenderedGen.stats === _dataGen) return;
+  _lastRenderedGen.stats = _dataGen;
   if (typeof Chart === 'undefined') { toast('Charts still loading…', 'error'); return; }
   const fl = filteredLogs();
   renderStatsRow(fl);
@@ -10594,7 +10630,9 @@ const WL_BRAND_MAP = {
   'patek.com':'Patek Philippe', 'patekphilippe.com':'Patek Philippe'
 };
 
-function renderWishlist() {
+function renderWishlist(force) {
+  if (!force && _lastRenderedGen.wishlist === _dataGen) return;
+  _lastRenderedGen.wishlist = _dataGen;
   const el = document.getElementById('wishlist-grid');
   const visible = wishlist;
   if (visible.length === 0) {
@@ -11914,7 +11952,7 @@ function clearUserState() {
   myClubs = []; pendingClubRequests.clear(); myProfile = null;
   userNotifs = []; unreadNotifCount = 0; notifPanelOpen = false;
   commentLikes = {}; discoverUsers = []; profilePageUserId = null;
-  feedLoading = false; feedError = false; feedLoadedAt = 0; _clubsLoaded = false;
+  feedLoading = false; feedError = false; feedLoadedAt = 0; _clubsLoaded = false; _frLoadedAt = 0;
   Object.keys(_profileCache).forEach(k => delete _profileCache[k]);
   if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }
 }
