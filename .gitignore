@@ -15,3 +15,9 @@ supabase/.temp/
 
 # Dev credentials (never commit)
 dev-config.js
+
+# Apple auth keys (sensitive)
+*.p8
+
+# Test coverage output
+coverage/
