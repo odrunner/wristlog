@@ -3490,7 +3490,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.17.03';
+const APP_VERSION = '2.30.26.18.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4203,7 +4203,6 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       <button class="btn-signout" onclick="signOut()" style="font-size:.8rem;padding:.4rem 1.2rem;">Sign Out</button>
       ${adminLink}
       <button style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;font-family:inherit;padding:.25rem .5rem;" onclick="showHelpPage()">Help &amp; Guide</button>
-      ${currentUser?.id === ADMIN_USER_ID ? '<button id="migrate-storage-btn" style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;font-family:inherit;padding:.25rem .5rem;" onclick="migrateBase64ToStorage()">Migrate Images to CDN</button>' : ''}
       <button style="background:none;border:none;color:var(--muted);font-size:.75rem;cursor:pointer;font-family:inherit;padding:.25rem .5rem;" onclick="openDeleteAccount()">Delete Account</button>
     </div>` : '';
 
@@ -7100,7 +7099,7 @@ const DEFAULT_BRANDS = [
   'Jacob & Co.', 'Jaeger-LeCoultre', 'Jaquet Droz', 'Jean Richard',
   'JS Watch Co.', 'Junghans', 'Junkers', 'Juvenia',
   'Kari Voutilainen', 'Karl Lagerfeld', 'Kate Spade', 'Kenneth Cole',
-  'Konstantin Chaykin', 'Kudoke',
+  'Konstantin Chaykin', 'Kudoke', 'Kurono Tokyo',
   'L. Leroy', 'Laco', 'Lacoste', 'Lang & Heyne', 'Laurent Ferrier',
   'Lew & Huey', 'Linde Werdelin', 'Lip', 'Locman', 'Longines', 'Lorier',
   'Louis Erard', 'Louis Moinet', 'Louis Vuitton', 'Luminox', 'Lüm-Tec',
@@ -9860,126 +9859,6 @@ function storagePathFrom(url) {
   const marker = '/storage/v1/object/public/media/';
   const idx = url.indexOf(marker);
   return idx >= 0 ? url.slice(idx + marker.length) : null;
-}
-
-// ── One-time migration: base64 → Supabase Storage ─────────────────────────
-async function migrateBase64ToStorage() {
-  if (!currentUser || currentUser.id !== ADMIN_USER_ID) { toast('Admin only', 'error'); return; }
-  const btn = document.getElementById('migrate-storage-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Migrating… 0'; }
-  let migrated = 0, errors = 0;
-  const BATCH = 20;
-
-  const updateBtn = () => {
-    if (btn) btn.textContent = `Migrating… ${migrated} done${errors ? ` (${errors} err)` : ''}`;
-  };
-
-  async function migrateBlob(base64, path, isPdf) {
-    const resp = await fetch(base64);
-    const blob = await resp.blob();
-    if (isPdf) return uploadFile(blob, path, 'application/pdf');
-    return uploadImage(blob, path);
-  }
-
-  // Helper: paginated query for rows with base64 in a text column
-  async function migrateTable(table, idCol, userIdCol, imageCol, pathFn) {
-    let offset = 0;
-    while (true) {
-      const { data: rows, error } = await db.from(table).select(`${idCol}, ${userIdCol}, ${imageCol}`)
-        .like(imageCol, 'data:%').range(offset, offset + BATCH - 1);
-      if (error) { console.error(`[migrate] ${table} query:`, error.message); break; }
-      if (!rows?.length) break;
-      for (const row of rows) {
-        try {
-          const url = await migrateBlob(row[imageCol], pathFn(row));
-          await db.from(table).update({ [imageCol]: url }).eq(idCol, row[idCol]);
-          migrated++;
-        } catch(e) { errors++; console.error(`[migrate] ${table} ${row[idCol]}:`, e.message); }
-        updateBtn();
-      }
-      if (rows.length < BATCH) break;
-      offset += BATCH;
-    }
-  }
-
-  // 1. Profiles (avatar_url)
-  {
-    const { data: rows } = await db.from('profiles').select('id, avatar_url').like('avatar_url', 'data:%');
-    for (const p of (rows || [])) {
-      try {
-        const url = await migrateBlob(p.avatar_url, `avatars/${p.id}.jpg`);
-        await db.from('profiles').update({ avatar_url: url }).eq('id', p.id);
-        migrated++;
-      } catch(e) { errors++; console.error('[migrate] avatar:', p.id, e.message); }
-      updateBtn();
-    }
-  }
-
-  // 2. Watches (image column)
-  await migrateTable('watches', 'id', 'user_id', 'image',
-    row => `watches/${row.user_id}/${row.id}.jpg`);
-
-  // 3. Watch receipts (JSONB — need special handling)
-  {
-    let offset = 0;
-    while (true) {
-      const { data: rows, error } = await db.from('watches').select('id, user_id, receipts')
-        .not('receipts', 'eq', '[]').not('receipts', 'is', null)
-        .range(offset, offset + BATCH - 1);
-      if (error || !rows?.length) break;
-      for (const w of rows) {
-        let changed = false;
-        const receipts = w.receipts || [];
-        for (let i = 0; i < receipts.length; i++) {
-          const r = receipts[i];
-          if (r.data && isBase64(r.data)) {
-            try {
-              const isPdf = r.type === 'application/pdf' || (r.data && r.data.startsWith('data:application/pdf'));
-              const ext = isPdf ? 'pdf' : 'jpg';
-              receipts[i] = { ...r, data: await migrateBlob(r.data, `receipts/${w.user_id}/${w.id}/${r.id}.${ext}`, isPdf) };
-              changed = true; migrated++;
-            } catch(e) { errors++; console.error('[migrate] receipt:', r.id, e.message); }
-            updateBtn();
-          }
-        }
-        if (changed) await db.from('watches').update({ receipts }).eq('id', w.id);
-      }
-      if (rows.length < BATCH) break;
-      offset += BATCH;
-    }
-  }
-
-  // 4. Logs (photo_url)
-  await migrateTable('logs', 'id', 'user_id', 'photo_url',
-    row => `logs/${row.user_id}/${row.id}.jpg`);
-
-  // 5. Wishlist (image)
-  await migrateTable('wishlist', 'id', 'user_id', 'image',
-    row => `wishlist/${row.user_id}/${row.id}.jpg`);
-
-  // 6. Clubs (image_url — no user_id prefix)
-  {
-    const { data: rows } = await db.from('clubs').select('id, image_url').like('image_url', 'data:%');
-    for (const c of (rows || [])) {
-      try {
-        const url = await migrateBlob(c.image_url, `clubs/${c.id}.jpg`);
-        await db.from('clubs').update({ image_url: url }).eq('id', c.id);
-        migrated++;
-      } catch(e) { errors++; console.error('[migrate] club:', c.id, e.message); }
-      updateBtn();
-    }
-  }
-
-  // Refresh local state to pick up migrated URLs
-  if (migrated > 0 && typeof syncFromServer === 'function') {
-    try { await syncFromServer(); } catch(_) {}
-    renderCollection();
-    renderWishlist();
-  }
-
-  if (btn) { btn.disabled = false; btn.textContent = 'Migrate Images to CDN'; }
-  if (migrated === 0 && errors === 0) toast('No base64 images found — already migrated!');
-  else toast(`Migration complete: ${migrated} migrated${errors ? `, ${errors} errors` : ''}!`);
 }
 
 // ── Add-photo modal (paste / drop / browse — no clipboard permission dialog) ──
