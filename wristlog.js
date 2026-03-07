@@ -31,6 +31,9 @@ export function initials(b, n) {
 export function escHtml(s) {
   return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+export function escAttr(s) {
+  return escHtml(s).replace(/'/g, '&#39;');
+}
 
 export function profileInitials(p) {
   if (!p) return '?';
@@ -827,7 +830,7 @@ export function extractMentionedUsernames(text) {
 export function renderCommentBody(body, onClickFn = 'viewUserByUsername') {
   if (!body) return '';
   return escHtml(body).replace(/@([\w.]+)/g, (match, username) =>
-    `<span class="mention-link" onclick="${onClickFn}('${username}')">@${username}</span>`
+    `<span class="mention-link" onclick="${onClickFn}('${escAttr(username)}')">@${escHtml(username)}</span>`
   );
 }
 

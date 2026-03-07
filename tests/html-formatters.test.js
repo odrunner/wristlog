@@ -39,6 +39,12 @@ describe('boxPapersHTML', () => {
     expect(html).toContain('bp-item-no');
   });
 
+  it('returns empty for non-standard values (edge case)', () => {
+    // hasBox/hasPapers are truthy but not 'yes' or 'no', so no parts are generated
+    const html = boxPapersHTML({ hasBox: 'unknown', hasPapers: 'unknown' });
+    expect(html).toBe('');
+  });
+
   it('shows box yes + no papers with separator', () => {
     const html = boxPapersHTML({ hasBox: 'yes', hasPapers: 'no' });
     expect(html).toContain('bp-item-yes');

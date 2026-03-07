@@ -185,4 +185,43 @@ describe('buildSaveWatchData', () => {
     expect(result.data.insuredValue).toBeNull();
     expect(result.data.insuranceNotes).toBe('Too expensive');
   });
+
+  // ── Branch coverage: field defaults when missing ──
+
+  it('defaults all optional fields when formData has none', () => {
+    const result = buildSaveWatchData({
+      formData: { brand: 'Seiko', name: 'SKX009' },
+      editingId: null, watches: [], todayFn: baseTodayFn,
+    });
+    expect(result.data.ref).toBe('');
+    expect(result.data.price).toBe(0);
+    expect(result.data.purchaseDate).toBe('');
+    expect(result.data.url).toBe('');
+    expect(result.data.color).toBe('#c9a84c');
+    expect(result.data.insurance).toBeNull();
+    expect(result.data.insuredValue).toBeNull();
+    expect(result.data.insuranceNotes).toBe('');
+    expect(result.data.warrantyExpiry).toBeNull();
+    expect(result.data.hasBox).toBeNull();
+    expect(result.data.hasPapers).toBeNull();
+    expect(result.data.watchChartsUrl).toBeNull();
+    expect(result.data.tags).toEqual([]);
+    expect(result.data.straps).toEqual([]);
+  });
+
+  it('does not include image when formData.image is falsy', () => {
+    const result = buildSaveWatchData({
+      formData: { brand: 'Seiko', name: 'SKX009', image: null },
+      editingId: null, watches: [], todayFn: baseTodayFn,
+    });
+    expect(result.data).not.toHaveProperty('image');
+  });
+
+  it('includes image when formData.image is provided', () => {
+    const result = buildSaveWatchData({
+      formData: { brand: 'Seiko', name: 'SKX009', image: 'https://img.jpg' },
+      editingId: null, watches: [], todayFn: baseTodayFn,
+    });
+    expect(result.data.image).toBe('https://img.jpg');
+  });
 });

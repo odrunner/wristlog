@@ -2411,6 +2411,52 @@
         </div>
       </div>
 
+      <!-- ── WHAT'S NEW ── -->
+      <div class="help-section" id="release-notes">
+        <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New</div>
+
+        <div class="help-card" style="border-left-color:#4ade80;">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;">
+            <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(74,222,128,.12);color:#4ade80;padding:.15rem .5rem;border-radius:6px;">March 2026</span>
+          </div>
+
+          <div style="margin-bottom:.75rem;">
+            <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">iOS App &amp; Push Notifications</div>
+            <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">WRotate is now available as an iOS app. Get push notifications when someone likes your wear, comments on your post, sends a follow request, or invites you to a club.</div>
+          </div>
+
+          <div style="margin-bottom:.75rem;">
+            <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Clubs</div>
+            <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Create or join clubs around brands, styles, or anything else. Invite members, manage roles, and share watches with your community.</div>
+          </div>
+
+          <div style="margin-bottom:.75rem;">
+            <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">@Mentions &amp; Pinned Comments</div>
+            <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Tag anyone with @username in comments and posts — they'll get notified instantly. The most-liked comment now pins to the top of each thread.</div>
+          </div>
+
+          <div style="margin-bottom:.75rem;">
+            <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Close Friends Privacy</div>
+            <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">New "Close Friends" visibility option for individual watches, your collection, and your wishlist. Share only with people you trust most.</div>
+          </div>
+
+          <div style="margin-bottom:.75rem;">
+            <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Feed Improvements</div>
+            <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Feed loads faster with parallel queries and shows a loading skeleton instead of a blank screen. If something goes wrong, you'll see a clear error with a retry button instead of silence.</div>
+          </div>
+
+          <div style="margin-bottom:.75rem;">
+            <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">UI Polish</div>
+            <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Modals are properly centered on mobile, the bottom nav has better spacing for iPhones with home indicators, and the edit modal got visual refinements.</div>
+          </div>
+
+          <div>
+            <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Security &amp; Reliability</div>
+            <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Hardened input escaping across the app, added file upload validation, improved Row-Level Security policies, and expanded test coverage to 536 tests.</div>
+          </div>
+        </div>
+      </div>
+
       <!-- ── VERSION ── -->
       <div style="text-align:center;color:var(--muted);font-size:.75rem;padding:1.5rem 0 .5rem;">
         WRotate <span id="help-ver"></span> · Data synced securely via Supabase
@@ -3450,7 +3496,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.14.54';
+const APP_VERSION = '2.30.26.16.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3469,6 +3515,9 @@ function profileInitials(p) {
 }
 function escHtml(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  return escHtml(s).replace(/'/g, '&#39;');
 }
 function sanitizeSearch(s) {
   return (s || '').replace(/[%_(),.*\\]/g, '').trim();
@@ -4899,7 +4948,7 @@ async function renderClubDetail(clubId) {
       : `<div class="club-member-chip-avatar">${initStr}</div>`;
     const ownerBadge = m.role === 'owner' ? ' \u{1F451}' : '';
     const ownerMenu = isOwner && m.id !== currentUser.id && m.role !== 'owner' ? `
-      <button onclick="event.stopPropagation();showMemberMenu('${m.id}','${clubId}','${escHtml(m.display_name || m.username || '')}',this)"
+      <button onclick="event.stopPropagation();showMemberMenu('${escAttr(m.id)}','${escAttr(clubId)}','${escAttr(m.display_name || m.username || '')}',this)"
         style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:.8rem;padding:0 .2rem;">\u{22EF}</button>` : '';
     return `<div class="club-member-chip" onclick="viewUserProfile('${m.id}')">
       ${avatarHtml}<span>${escHtml(m.display_name || m.username || 'User')}${ownerBadge}</span>${ownerMenu}
@@ -4978,8 +5027,8 @@ function showMemberMenu(userId, clubId, displayName, triggerBtn) {
   menu.style.cssText = 'position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.75rem;z-index:999;min-width:180px;box-shadow:0 8px 32px rgba(0,0,0,.4)';
   menu.innerHTML = `
     <div style="font-size:.82rem;color:var(--muted);margin-bottom:.6rem;padding-bottom:.5rem;border-bottom:1px solid var(--border);">${escHtml(displayName)}</div>
-    <button onclick="promoteToOwner('${userId}','${clubId}');document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:var(--text);">\u{1F451} Promote to owner</button>
-    <button onclick="removeMember('${userId}','${clubId}');document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:#f87171;">Remove member</button>
+    <button onclick="promoteToOwner('${escAttr(userId)}','${escAttr(clubId)}');document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:var(--text);">\u{1F451} Promote to owner</button>
+    <button onclick="removeMember('${escAttr(userId)}','${escAttr(clubId)}');document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:#f87171;">Remove member</button>
     <button onclick="document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:var(--muted);">Cancel</button>`;
   document.body.appendChild(menu);
   // Position anchored to the ··· button
@@ -5004,6 +5053,9 @@ let _clubEditImagePreview = null; // objectURL for preview
 function handleClubImageUpload(input, clubId) {
   const file = input.files[0];
   if (!file) return;
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  if (!allowedTypes.includes(file.type)) { toast('Please upload an image (JPEG, PNG, WebP, GIF)', 'error'); input.value = ''; return; }
+  if (file.size > 5 * 1024 * 1024) { toast('Image must be under 5 MB', 'error'); input.value = ''; return; }
   if (_clubEditImagePreview) URL.revokeObjectURL(_clubEditImagePreview);
   _clubEditImageFile    = file;
   _clubEditImagePreview = URL.createObjectURL(file);
@@ -5120,7 +5172,7 @@ async function searchInviteUsers(query, clubId) {
     const avatarHtml = p.avatar_url
       ? `<img src="${escHtml(p.avatar_url)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
       : `<div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;">${initStr}</div>`;
-    const name = escHtml(p.display_name || p.username || 'User');
+    const name = escAttr(p.display_name || p.username || 'User');
     let btn = '';
     if (memberSet.has(p.id))     btn = `<span style="font-size:.72rem;color:var(--muted);">Member</span>`;
     else if (inviteSet.has(p.id)) btn = `<button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger);border-color:var(--danger);"
@@ -5147,8 +5199,8 @@ async function sendClubInvite(inviteeId, inviteeName, clubId, btn) {
     actor_id: currentUser.id, ref_id: clubId, is_read: false
   });
   if (btn) { btn.outerHTML = `<button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .6rem;color:var(--danger);border-color:var(--danger);"
-    onclick="rescindClubInvite('${inviteeId}','${inviteeName}','${clubId}',this)">Rescind</button>`; }
-  toast(`Invite sent to ${inviteeName}`);
+    onclick="rescindClubInvite('${escAttr(inviteeId)}','${escAttr(inviteeName)}','${escAttr(clubId)}',this)">Rescind</button>`; }
+  toast(`Invite sent to ${escHtml(inviteeName)}`);
   renderPendingInvites(clubId);
 }
 
@@ -5161,9 +5213,9 @@ async function rescindClubInvite(inviteeId, inviteeName, clubId, btn) {
     .eq('actor_id', currentUser.id).eq('ref_id', clubId);
   if (btn) {
     btn.outerHTML = `<button class="btn btn-primary" style="font-size:.72rem;padding:.2rem .6rem;"
-      onclick="sendClubInvite('${inviteeId}','${escHtml(inviteeName)}','${clubId}',this)">Invite</button>`;
+      onclick="sendClubInvite('${escAttr(inviteeId)}','${escAttr(inviteeName)}','${escAttr(clubId)}',this)">Invite</button>`;
   }
-  toast(`Invite to ${inviteeName} rescinded`);
+  toast(`Invite to ${escHtml(inviteeName)} rescinded`);
   renderPendingInvites(clubId);
 }
 
@@ -5178,7 +5230,7 @@ async function renderPendingInvites(clubId) {
     + invites.map(inv => {
       const p = inv.profiles;
       if (!p) return '';
-      const name = escHtml(p.display_name || p.username || 'User');
+      const name = escAttr(p.display_name || p.username || 'User');
       const initStr = (name[0] || '?').toUpperCase();
       const avatarHtml = p.avatar_url
         ? `<img src="${escHtml(p.avatar_url)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
@@ -6738,7 +6790,7 @@ function renderCommentBody(body) {
   if (!body) return '';
   // Escape HTML first, then replace @username tokens with clickable links
   return escHtml(body).replace(/@([\w.]+)/g, (match, username) =>
-    `<span class="mention-link" onclick="viewUserByUsername('${username}')">@${username}</span>`
+    `<span class="mention-link" onclick="viewUserByUsername('${escAttr(username)}')">@${escHtml(username)}</span>`
   );
 }
 

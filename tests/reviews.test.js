@@ -121,12 +121,14 @@ describe('computeMonthlyReview', () => {
     expect(result.topDow).toBeLessThanOrEqual(6);
   });
 
-  it('returns zeros for month with no data', () => {
+  it('returns zeros and nulls for month with no data', () => {
     const result = computeMonthlyReview(2024, 6, watches, logs); // July — no data
     expect(result.totalWears).toBe(0);
     expect(result.wearDays).toBe(0);
     expect(result.uniqueCount).toBe(0);
     expect(result.topWatch).toBeNull();
+    expect(result.topUC).toBeNull();
+    expect(result.topDow).toBeNull();
   });
 
   it('handles February correctly (month index 1)', () => {

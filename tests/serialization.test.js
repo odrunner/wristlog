@@ -320,3 +320,43 @@ describe('rowToWish', () => {
     expect(w.color).toBe('#c9a84c');
   });
 });
+
+// ── Branch coverage: null/undefined field fallbacks ──
+
+describe('rowToLog null field fallbacks', () => {
+  it('defaults notes and strapId to null when missing', () => {
+    const log = rowToLog({ id: 'l1', watch_id: 'w1', date: '2024-01-01', use_case: 'work', notes: null, strap_id: null, photo_url: null, visibility: 'public', club_id: null });
+    expect(log.notes).toBeNull();
+    expect(log.strapId).toBeNull();
+    expect(log.photoUrl).toBeNull();
+  });
+
+  it('defaults notes and strapId to null when undefined', () => {
+    const log = rowToLog({ id: 'l1', watch_id: 'w1', date: '2024-01-01' });
+    expect(log.notes).toBeNull();
+    expect(log.strapId).toBeNull();
+    expect(log.photoUrl).toBeNull();
+    expect(log.clubId).toBeNull();
+  });
+});
+
+describe('wishToRow null field fallbacks', () => {
+  it('nullifies all optional fields when missing', () => {
+    const row = wishToRow({ id: 'wl99' }, 'u1');
+    expect(row.brand).toBeNull();
+    expect(row.name).toBeNull();
+    expect(row.ref).toBeNull();
+    expect(row.price).toBeNull();
+    expect(row.url).toBeNull();
+    expect(row.image).toBeNull();
+    expect(row.notes).toBeNull();
+    expect(row.color).toBeNull();
+    expect(row.tags).toEqual([]);
+    expect(row.market_price).toBeNull();
+    expect(row.market_price_date).toBeNull();
+    expect(row.market_price_src).toBeNull();
+    expect(row.watch_charts_url).toBeNull();
+    expect(row.wish_privacy).toBeNull();
+    expect(row.added_date).toBeNull();
+  });
+});

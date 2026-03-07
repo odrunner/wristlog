@@ -109,6 +109,12 @@ describe('computeStats', () => {
     expect(stats.collectionSize).toBe(0);
     expect(stats.collectionValue).toBe(0);
   });
+
+  it('treats watches with no price as 0 in collection value', () => {
+    const noPriceWatches = [{ id: 'w1', brand: 'A', name: 'B', price: null }];
+    const stats = computeStats([], noPriceWatches);
+    expect(stats.collectionValue).toBe(0);
+  });
 });
 
 // ── computeCollectionReport ──────────────────────────────────────────────────
@@ -271,6 +277,77 @@ describe('sortReportRows', () => {
     const dates = sorted.filter(r => r.pdate).map(r => r.pdate);
     expect(dates).toEqual([...dates].sort());
   });
+
+  // ── Branch coverage: remaining sort fields ──
+
+  it('sorts by cpw descending', () => {
+    const sorted = sortReportRows(rows, 'cpw-desc');
+    const nonNulls = sorted.filter(r => r.cpw != null);
+    for (let i = 1; i < nonNulls.length; i++) {
+      expect(nonNulls[i].cpw).toBeLessThanOrEqual(nonNulls[i - 1].cpw);
+    }
+  });
+
+  it('sorts by market price ascending', () => {
+    const sorted = sortReportRows(rows, 'market-asc');
+    const nonNulls = sorted.filter(r => r.mp != null);
+    for (let i = 1; i < nonNulls.length; i++) {
+      expect(nonNulls[i].mp).toBeGreaterThanOrEqual(nonNulls[i - 1].mp);
+    }
+  });
+
+  it('sorts by delta descending', () => {
+    const sorted = sortReportRows(rows, 'delta-desc');
+    const nonNulls = sorted.filter(r => r.delta != null);
+    for (let i = 1; i < nonNulls.length; i++) {
+      expect(nonNulls[i].delta).toBeLessThanOrEqual(nonNulls[i - 1].delta);
+    }
+  });
+
+  it('sorts by pct ascending', () => {
+    const sorted = sortReportRows(rows, 'pct-asc');
+    const nonNulls = sorted.filter(r => r.pct != null);
+    for (let i = 1; i < nonNulls.length; i++) {
+      expect(nonNulls[i].pct).toBeGreaterThanOrEqual(nonNulls[i - 1].pct);
+    }
+  });
+
+  it('sorts by freq descending', () => {
+    const sorted = sortReportRows(rows, 'freq-desc');
+    const nonNulls = sorted.filter(r => r.avgFreq != null);
+    for (let i = 1; i < nonNulls.length; i++) {
+      expect(nonNulls[i].avgFreq).toBeLessThanOrEqual(nonNulls[i - 1].avgFreq);
+    }
+  });
+
+  it('sorts by purchase date descending', () => {
+    const sorted = sortReportRows(rows, 'pdate-desc');
+    const dates = sorted.filter(r => r.pdate).map(r => r.pdate);
+    expect(dates).toEqual([...dates].sort().reverse());
+  });
+
+  it('handles unknown sort field gracefully (default branch)', () => {
+    const sorted = sortReportRows(rows, 'unknown-asc');
+    expect(sorted).toHaveLength(rows.length);
+  });
+
+  it('handles both nulls in pdate sort', () => {
+    const rowsNullDates = [
+      { w: { brand: 'A', name: 'B' }, cnt: 1, pdate: null },
+      { w: { brand: 'C', name: 'D' }, cnt: 2, pdate: null },
+    ];
+    const sorted = sortReportRows(rowsNullDates, 'pdate-asc');
+    expect(sorted).toHaveLength(2);
+  });
+
+  it('handles both nulls in numSort', () => {
+    const rowsBothNull = [
+      { w: { brand: 'A', name: 'B' }, cnt: null, cpw: null, paid: null, mp: null, delta: null, pct: null, avgFreq: null },
+      { w: { brand: 'C', name: 'D' }, cnt: null, cpw: null, paid: null, mp: null, delta: null, pct: null, avgFreq: null },
+    ];
+    const sorted = sortReportRows(rowsBothNull, 'cpw-asc');
+    expect(sorted).toHaveLength(2);
+  });
 });
 
 // ── computeCollectionValuePoints ────────────────────────────────────────────
@@ -341,5 +418,13 @@ describe('computeDowReport', () => {
   it('returns correct day names', () => {
     const result = computeDowReport([], watches);
     expect(result.map(r => r.dayName)).toEqual(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
+  });
+
+  it('returns null watch when watchId is not in watches array', () => {
+    const orphanLogs = [{ id: 'l1', watchId: 'ghost', date: '2024-06-17', useCase: 'work' }]; // Monday
+    const result = computeDowReport(orphanLogs, watches);
+    const monday = result.find(r => r.dow === 1);
+    expect(monday.w).toBeNull();
+    expect(monday.total).toBe(1);
   });
 });

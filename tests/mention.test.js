@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getMentionQuery, extractMentionedUsernames, renderCommentBody } from '../wristlog.js';
+import { getMentionQuery, extractMentionedUsernames, renderCommentBody, escAttr } from '../wristlog.js';
 
 // ── getMentionQuery ───────────────────────────────────────────────────────────
 
@@ -158,5 +158,12 @@ describe('renderCommentBody', () => {
   it('does not double-escape ampersands in plain text', () => {
     const result = renderCommentBody('nice & clean');
     expect(result).toBe('nice &amp; clean');
+  });
+
+  it('escapes username single quotes in onclick via escAttr', () => {
+    // The @[\w.]+ regex won't match single quotes, but ensure the escAttr
+    // pipeline is wired in: a normal username should pass through unchanged
+    const result = renderCommentBody('hey @test.user');
+    expect(result).toContain("onclick=\"viewUserByUsername('test.user')\"");
   });
 });

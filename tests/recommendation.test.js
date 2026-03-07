@@ -164,6 +164,21 @@ describe('computeWatchRec', () => {
     expect(result.weekendScore).toBe(30);
   });
 
+  it('gives weekend bonus for Dress tag alone (no dinner wears)', () => {
+    const watches = [makeWatch('w1', { tags: ['Dress'] })];
+    const logs = [makeLog('w1', '2024-06-01')]; // no dinner use-case
+    const result = computeWatchRec({ watches, logs, weatherData: null, now: saturday });
+    expect(result.weekendScore).toBeGreaterThan(0);
+    expect(result.weekendReason).toContain('Dress watch');
+  });
+
+  it('gives weekend reason mentioning dinner count when > 0', () => {
+    const watches = [makeWatch('w1')];
+    const logs = [makeLog('w1', '2024-06-01', { useCase: 'dinner' })];
+    const result = computeWatchRec({ watches, logs, weatherData: null, now: saturday });
+    expect(result.weekendReason).toContain('dinner');
+  });
+
   // ── Day-of-week affinity ─────────────────────────────────────────────────
 
   it('gives DOW bonus to watches frequently worn on the same day of week', () => {

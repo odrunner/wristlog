@@ -54,6 +54,18 @@ describe('computeFriendState', () => {
     expect(friends.has('u2')).toBe(true);
     expect(friends.has('u3')).toBe(true);
   });
+
+  it('falls back to userId when receiver_id is missing in sent requests', () => {
+    const sent = new Map([['u2', { userId: 'u2', status: 'accepted' }]]);
+    const friends = computeFriendState(sent, new Map());
+    expect(friends.has('u2')).toBe(true);
+  });
+
+  it('falls back to userId when sender_id is missing in received requests', () => {
+    const received = new Map([['u3', { userId: 'u3', status: 'accepted' }]]);
+    const friends = computeFriendState(new Map(), received);
+    expect(friends.has('u3')).toBe(true);
+  });
 });
 
 // ── getFriendStatus ──────────────────────────────────────────────────────────

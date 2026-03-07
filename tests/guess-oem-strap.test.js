@@ -134,4 +134,22 @@ describe('guessOEMStrap', () => {
     const result = guessOEMStrap({});
     expect(result).toBeNull();
   });
+
+  // ── Branch coverage: specific ref/brand combos ──
+
+  it('detects Blancpain Fifty Fathoms rubber strap', () => {
+    const result = guessOEMStrap({ brand: 'Blancpain', name: 'Fifty Fathoms', ref: '' });
+    expect(result.material).toBe('Rubber');
+  });
+
+  it('detects grey rubber strap for ref 77605ok', () => {
+    const result = guessOEMStrap({ brand: 'Bvlgari', name: 'Octo', ref: '77605ok' });
+    expect(result.material).toBe('Rubber');
+    expect(result.name).toContain('Grey');
+  });
+
+  it('detects Blancpain ref 5010 rubber', () => {
+    const result = guessOEMStrap({ brand: 'Blancpain', name: 'Fifty', ref: '5010b64' });
+    expect(result.material).toBe('Rubber');
+  });
 });

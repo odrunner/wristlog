@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  todayStr, fmtDate, fmtMonYear, initials, escHtml,
+  todayStr, fmtDate, fmtMonYear, initials, escHtml, escAttr,
   profileInitials, formatFeedDate, formatCommentTime, warrantyStatus,
 } from '../wristlog.js';
 
@@ -121,6 +121,31 @@ describe('escHtml', () => {
     expect(escaped).not.toContain('<');
     expect(escaped).not.toContain('>');
     expect(escaped).not.toContain('"');
+  });
+});
+
+// ── escAttr ──────────────────────────────────────────────────────────────────
+
+describe('escAttr', () => {
+  it('escapes single quotes for onclick attributes', () => {
+    expect(escAttr("O'Brien")).toBe('O&#39;Brien');
+  });
+
+  it('escapes XSS payload with single quotes', () => {
+    expect(escAttr("');alert(1);//")).toBe('&#39;);alert(1);//');
+  });
+
+  it('also escapes HTML entities like escHtml', () => {
+    expect(escAttr('<b>"hi"</b>')).toBe('&lt;b&gt;&quot;hi&quot;&lt;/b&gt;');
+  });
+
+  it('handles null/undefined', () => {
+    expect(escAttr(null)).toBe('');
+    expect(escAttr(undefined)).toBe('');
+  });
+
+  it('handles strings without special chars', () => {
+    expect(escAttr('normaluser')).toBe('normaluser');
   });
 });
 
