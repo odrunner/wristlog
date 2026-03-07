@@ -67,9 +67,10 @@
   <script>
     (function(){
       var t = localStorage.getItem('wrotate_theme') || 'light';
-      if (t === 'light' || (t === 'os' && window.matchMedia('(prefers-color-scheme: light)').matches)) {
-        document.documentElement.setAttribute('data-theme', 'light');
-      }
+      var resolved = t === 'os'
+        ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+        : t;
+      document.documentElement.setAttribute('data-theme', resolved);
     })();
   </script>
   <style>
@@ -3516,7 +3517,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.07.28';
+const APP_VERSION = '2.30.26.08.13';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
