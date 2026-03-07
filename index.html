@@ -3595,7 +3595,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.31.26.14.50';
+const APP_VERSION = '2.31.26.15.05';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3849,9 +3849,20 @@ function goBackFromProfile() {
   else goHome();
 }
 
+const _profileCache = {}; // { [userId]: { args, ts } }
 async function loadAndRenderProfile(userId) {
   const el = document.getElementById('profile-page-content');
   if (!el) return;
+
+  // Use cached result if fresh (30s TTL)
+  const cached = _profileCache[userId];
+  if (cached && Date.now() - cached.ts < 30000) {
+    el.innerHTML = renderProfilePageHTML(...cached.args);
+    const isOwnCached = userId === currentUser?.id;
+    if (isOwnCached) document.getElementById('profile-save-btn')?.addEventListener('click', saveProfileFromPage);
+    return;
+  }
+
   el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Loading…</div>';
   const isOwn = userId === currentUser?.id;
 
@@ -3885,116 +3896,118 @@ async function loadAndRenderProfile(userId) {
     db.from('profiles').update({ collection_visibility: 'followers' }).eq('id', currentUser.id).then(() => {});
   }
 
-  // ── Mutual follow check + fresh friend-request state ────────────────────
-  let isMutual  = false;
-  let friendReq = null;
-  if (!isOwn) {
-    if (isFollowing) {
-      const { data: theyFollow } = await db.from('follows')
-        .select('follower_id').eq('follower_id', userId).eq('following_id', currentUser.id)
-        .maybeSingle();
-      isMutual = !!theyFollow;
-    }
-    // Fresh fetch for existing friend-request pair (simple .or(), filter in JS).
-    // Runs for all non-own profiles so the icon always shows the correct state.
-    const { data: frData } = await db.from('friend_requests').select('*')
-      .or(`initiator_id.eq.${currentUser.id},target_id.eq.${currentUser.id}`);
-    friendReq = (frData || []).find(r =>
-      (r.initiator_id === currentUser.id && r.target_id === userId) ||
-      (r.initiator_id === userId && r.target_id === currentUser.id)
-    ) || null;
+  // ── Fire all independent queries in parallel ────────────────────────────
+  // Build promise array; track indices so we can destructure results.
+  const _pp = [];   // parallel promises
+  const _pi = {};   // index map: name → position in _pp
+
+  // Mutual follow check (non-own + following only)
+  if (!isOwn && isFollowing) {
+    _pi.mutual = _pp.length;
+    _pp.push(db.from('follows').select('follower_id')
+      .eq('follower_id', userId).eq('following_id', currentUser.id).maybeSingle());
   }
-
+  // Friend requests (non-own)
+  if (!isOwn) {
+    _pi.fr = _pp.length;
+    _pp.push(db.from('friend_requests').select('*')
+      .or(`initiator_id.eq.${currentUser.id},target_id.eq.${currentUser.id}`));
+  }
   // Follower count
-  const { data: followerRows } = await db.from('follows')
-    .select('follower_id')
-    .eq('following_id', userId);
-  const followerCount = (followerRows || []).length;
-
+  _pi.followers = _pp.length;
+  _pp.push(db.from('follows').select('follower_id').eq('following_id', userId));
   // Following count
-  const { data: followingRows } = await db.from('follows')
-    .select('following_id')
-    .eq('follower_id', userId);
-  const followingCount = isOwn ? following.size : (followingRows || []).length;
-
-  // Log count (wears only — has a watch_id)
-  const { count: logCount } = await db.from('logs')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .not('watch_id', 'is', null);
-
-  // Recent logs (wears only)
-  const { data: recentLogs } = await db.from('logs')
+  _pi.following = _pp.length;
+  _pp.push(db.from('follows').select('following_id').eq('follower_id', userId));
+  // Log count
+  _pi.logCount = _pp.length;
+  _pp.push(db.from('logs').select('*', { count: 'exact', head: true })
+    .eq('user_id', userId).not('watch_id', 'is', null));
+  // Recent logs
+  _pi.recentLogs = _pp.length;
+  _pp.push(db.from('logs')
     .select('id, date, use_case, notes, watch_id, watches!watch_id(id, brand, name, color, image)')
-    .eq('user_id', userId)
-    .not('watch_id', 'is', null)
-    .order('date', { ascending: false }).limit(6);
+    .eq('user_id', userId).not('watch_id', 'is', null)
+    .order('date', { ascending: false }).limit(6));
 
-  // Collection showcase
-  let showcase = [];
+  // Collection showcase — pick the right query branch, push one promise
+  let showcaseGated = false;
   if (isOwn || visibility !== 'none') {
     let q = db.from('watches')
       .select('id, brand, name, color, image, ref, url, watch_privacy')
       .eq('user_id', userId);
     if (!isOwn) {
       const vis = profile.collection_visibility || 'followers';
-      // Bail early if global visibility restricts this viewer
       const collectionGated =
         (vis === 'private') ||
         ((vis === 'followers' || vis === 'friends_only') && !isFriend) ||
         (vis === 'friends' && !isActualFriend);
       if (collectionGated) {
-        showcase = [];
+        showcaseGated = true;
       } else if (isActualFriend) {
-        // Friends see everything except explicitly private.
-        // Must use .or() + explicit null check — .neq() silently excludes NULL rows in PostgREST.
         q = q.or('watch_privacy.neq.private,watch_privacy.is.null');
-        const { data } = await q.order('brand').order('name');
-        showcase = data || [];
       } else if (isFriend) {
-        // Followers see public, followers, null — not friends-only or private
         q = q.or('watch_privacy.eq.public,watch_privacy.eq.followers,watch_privacy.is.null');
-        const { data } = await q.order('brand').order('name');
-        showcase = data || [];
       } else {
-        // Public viewers see only public + null when global vis is public
         if (vis === 'public') q = q.or('watch_privacy.eq.public,watch_privacy.is.null');
         else                  q = q.eq('watch_privacy', 'public');
-        const { data } = await q.order('brand').order('name');
-        showcase = data || [];
       }
-    } else {
-      // isOwn — no filter
-      const { data } = await q.order('brand').order('name');
-      showcase = data || [];
     }
-  } // end if (isOwn || visibility !== 'none')
+    if (!showcaseGated) {
+      _pi.showcase = _pp.length;
+      _pp.push(q.order('brand').order('name'));
+    }
+  }
 
-  // Wishlist (respects wishlist_visibility setting)
-  let wishlistItems = [];
+  // Wishlist
   const wlVis = profile.wishlist_visibility || 'followers';
   const showWishlist = isOwn
     || wlVis === 'public'
     || (wlVis === 'followers' && isFriend)
-    || ((wlVis === 'friends' || wlVis === 'friends_only') && isActualFriend); // friends_only = legacy alias
+    || ((wlVis === 'friends' || wlVis === 'friends_only') && isActualFriend);
   if (showWishlist) {
-    const { data: wlData } = await db.from('wishlist')
+    _pi.wishlist = _pp.length;
+    _pp.push(db.from('wishlist')
       .select('id, brand, name, ref, url, price, image, color, wish_privacy')
-      .eq('user_id', userId);
-    wishlistItems = wlData || [];
-    // For non-owners, filter out items that are individually restricted
+      .eq('user_id', userId));
+  }
+
+  // ── Await all at once ──────────────────────────────────────────────────
+  const _pr = await Promise.all(_pp);
+
+  // Destructure results
+  const isMutual = (_pi.mutual !== undefined) ? !!_pr[_pi.mutual].data : false;
+  let friendReq = null;
+  if (_pi.fr !== undefined) {
+    const frData = _pr[_pi.fr].data || [];
+    friendReq = frData.find(r =>
+      (r.initiator_id === currentUser.id && r.target_id === userId) ||
+      (r.initiator_id === userId && r.target_id === currentUser.id)
+    ) || null;
+  }
+  const followerCount = (_pr[_pi.followers].data || []).length;
+  const followingCount = isOwn ? following.size : (_pr[_pi.following].data || []).length;
+  const logCount = _pr[_pi.logCount].count;
+  const recentLogs = _pr[_pi.recentLogs].data;
+  const showcase = showcaseGated ? [] : (_pi.showcase !== undefined ? (_pr[_pi.showcase].data || []) : []);
+
+  let wishlistItems = [];
+  if (_pi.wishlist !== undefined) {
+    wishlistItems = _pr[_pi.wishlist].data || [];
     if (!isOwn) {
       wishlistItems = wishlistItems.filter(w => {
         const p = w.wish_privacy;
         if (p === 'private')                    return false;
         if (p === 'friends' || p === 'friends_only') return isActualFriend;
         if (p === 'followers')                  return isFriend;
-        return true; // null (inherit global) or 'public'
+        return true;
       });
     }
   }
 
-  el.innerHTML = renderProfilePageHTML(profile, isOwn, isFollowing, logCount || 0, recentLogs || [], showcase, visibility, privacy, isFriend, wishlistItems, followerCount || 0, isMutual, friendReq, followingCount || 0);
+  const _profileArgs = [profile, isOwn, isFollowing, logCount || 0, recentLogs || [], showcase, visibility, privacy, isFriend, wishlistItems, followerCount || 0, isMutual, friendReq, followingCount || 0];
+  _profileCache[userId] = { args: _profileArgs, ts: Date.now() };
+  el.innerHTML = renderProfilePageHTML(..._profileArgs);
 
   if (isOwn) {
     document.getElementById('profile-save-btn')?.addEventListener('click', saveProfileFromPage);
@@ -4439,6 +4452,7 @@ async function cycleWishPrivacy(wishId) {
 }
 
 async function saveProfileFromPage() {
+  if (currentUser) delete _profileCache[currentUser.id]; // invalidate cache
   const name  = (document.getElementById('pp-display-name')?.value || '').trim();
   const bio   = (document.getElementById('pp-bio')?.value || '').trim();
 
@@ -4496,6 +4510,7 @@ function toggleProfileEdit() {
 }
 
 async function uploadProfilePic() {
+  if (currentUser) delete _profileCache[currentUser.id]; // invalidate cache
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
@@ -4996,10 +5011,16 @@ async function renderClubDetail(clubId) {
   }
   if (!club) { el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Club not found.</div>'; return; }
 
-  // Members
-  const { data: memberRows } = await db.from('club_members')
-    .select('user_id, role, profiles(id, username, display_name, avatar_url)')
-    .eq('club_id', clubId);
+  // ── Stage 1: members + posts in parallel ─────────────────────────────
+  const [{ data: memberRows }, { data: clubPosts }] = await Promise.all([
+    db.from('club_members')
+      .select('user_id, role, profiles(id, username, display_name, avatar_url)')
+      .eq('club_id', clubId),
+    db.from('logs')
+      .select('id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility')
+      .eq('club_id', clubId).order('date', { ascending: false }).limit(30),
+  ]);
+
   const members = (memberRows || []).map(r => ({ ...r.profiles, role: r.role }));
   const memberCount = members.length;
 
@@ -5014,55 +5035,59 @@ async function renderClubDetail(clubId) {
     myMembership.role = myMemberRow.role;
   }
 
-  // Club feed — posts tagged to this club
-  const { data: clubPosts } = await db.from('logs').select('*')
-    .eq('club_id', clubId).order('date', { ascending: false }).limit(30);
   let clubFeedHtml = '';
   if (clubPosts && clubPosts.length) {
-    // Resolve watches & profiles
     const watchIds = [...new Set(clubPosts.filter(l => l.watch_id).map(l => l.watch_id))];
-    let watchMap = {};
-    if (watchIds.length) {
-      const { data: ww } = await db.from('watches').select('id, brand, name, color, image, ref, url').in('id', watchIds);
-      (ww || []).forEach(w => watchMap[w.id] = w);
-    }
     const uids = [...new Set(clubPosts.map(l => l.user_id))];
-    const { data: profs } = await db.from('profiles').select('id, username, display_name, avatar_url').in('id', uids);
-    const pm = {}; (profs || []).forEach(p => pm[p.id] = p);
     const logIds = clubPosts.map(l => l.id);
-    // Likes
-    const { data: likesData } = await db.from('likes').select('log_id, user_id').in('log_id', logIds);
+
+    // ── Stage 2: watches + profiles + likes + comments in parallel ─────
+    const [watchResult, profResult, likesResult, commentResult] = await Promise.all([
+      watchIds.length
+        ? db.from('watches').select('id, brand, name, color, image, ref, url').in('id', watchIds)
+        : { data: [] },
+      db.from('profiles').select('id, username, display_name, avatar_url').in('id', uids),
+      db.from('likes').select('log_id, user_id').in('log_id', logIds),
+      db.from('comments').select('id, log_id, user_id, body, created_at')
+        .in('log_id', logIds).order('created_at', { ascending: true }).limit(300),
+    ]);
+
+    const watchMap = {};
+    (watchResult.data || []).forEach(w => watchMap[w.id] = w);
+    const pm = {};
+    (profResult.data || []).forEach(p => pm[p.id] = p);
+
     const clubLikes = {};
     logIds.forEach(id => clubLikes[id] = { count: 0, liked: false });
-    (likesData || []).forEach(l => { clubLikes[l.log_id].count++; if (l.user_id === currentUser.id) clubLikes[l.log_id].liked = true; });
-    // Comments — load full data so counts and inline threads work
-    const { data: clubCommentData } = await db.from('comments')
-      .select('id, log_id, user_id, body, created_at')
-      .in('log_id', logIds).order('created_at', { ascending: true }).limit(300);
+    (likesResult.data || []).forEach(l => { clubLikes[l.log_id].count++; if (l.user_id === currentUser.id) clubLikes[l.log_id].liked = true; });
+
+    const clubCommentData = commentResult.data || [];
     const clubComments = {};
     const clubCommentCounts = {};
-    if (clubCommentData && clubCommentData.length) {
+
+    // ── Stage 3: commenter profiles + comment likes in parallel ────────
+    if (clubCommentData.length) {
       const commenterIds = [...new Set(clubCommentData.map(c => c.user_id))];
-      const { data: commenterProfiles } = await db.from('profiles')
-        .select('id, username, display_name').in('id', commenterIds);
+      const clubCommentIds = clubCommentData.map(c => c.id);
+      const [cpResult, clResult] = await Promise.all([
+        db.from('profiles').select('id, username, display_name').in('id', commenterIds),
+        clubCommentIds.length
+          ? db.from('comment_likes').select('comment_id, user_id').in('comment_id', clubCommentIds)
+          : { data: [] },
+      ]);
       const cpm = {};
-      (commenterProfiles || []).forEach(p => cpm[p.id] = p);
+      (cpResult.data || []).forEach(p => cpm[p.id] = p);
       clubCommentData.forEach(c => {
         if (!clubComments[c.log_id]) clubComments[c.log_id] = [];
         clubComments[c.log_id].push({ ...c, profile: cpm[c.user_id] || null });
       });
-    }
-    logIds.forEach(id => clubCommentCounts[id] = (clubComments[id] || []).length);
-    // Load comment likes for club comments
-    const clubCommentIds = (clubCommentData || []).map(c => c.id);
-    if (clubCommentIds.length) {
-      const { data: clData } = await db.from('comment_likes').select('comment_id, user_id').in('comment_id', clubCommentIds);
-      (clData || []).forEach(cl => {
+      (clResult.data || []).forEach(cl => {
         if (!commentLikes[cl.comment_id]) commentLikes[cl.comment_id] = { count: 0, liked: false };
         commentLikes[cl.comment_id].count++;
         if (cl.user_id === currentUser.id) commentLikes[cl.comment_id].liked = true;
       });
     }
+    logIds.forEach(id => clubCommentCounts[id] = (clubComments[id] || []).length);
     // Temporarily override feed globals for renderFeedCard
     const prevFeedLikes         = feedLikes;
     const prevFeedComments      = feedComments;
@@ -5974,6 +5999,7 @@ document.addEventListener('click', e => {
 });
 
 // ── Feed ──────────────────────────────────────────────────────────────────
+const FEED_LOG_COLS = 'id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility';
 async function loadFeed() {
   if (feedLoading || !currentUser) return;
   // Skip re-fetch if feed was loaded recently (60s) unless forced or errored
@@ -5996,11 +6022,11 @@ async function loadFeed() {
     let rawLogs, logsErr;
     try {
       // Q1: public posts — no user restriction, global discovery feed
-      const q1 = db.from('logs').select('*')
+      const q1 = db.from('logs').select(FEED_LOG_COLS)
         .eq('visibility', 'public')
         .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50);
       // Q2: own posts — all visibility types (owner sees own private/followers/etc.)
-      const q2 = db.from('logs').select('*')
+      const q2 = db.from('logs').select(FEED_LOG_COLS)
         .eq('user_id', currentUser.id)
         .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50);
 
@@ -6008,14 +6034,14 @@ async function loadFeed() {
       if (followingArr.length > 0) {
         // Q3: followers + friends visibility posts from followed users
         promises.push(
-          db.from('logs').select('*')
+          db.from('logs').select(FEED_LOG_COLS)
             .in('user_id', followingArr)
             .in('visibility', ['followers', 'friends'])
             .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50)
         );
         // Q4: legacy null-visibility posts from followed users (old posts before column existed)
         promises.push(
-          db.from('logs').select('*')
+          db.from('logs').select(FEED_LOG_COLS)
             .in('user_id', followingArr)
             .is('visibility', null)
             .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50)
@@ -6035,7 +6061,7 @@ async function loadFeed() {
       logsErr = null;
     } catch {
       // Fallback: own posts only (safe when visibility column is unavailable)
-      const res = await db.from('logs').select('*')
+      const res = await db.from('logs').select(FEED_LOG_COLS)
         .eq('user_id', currentUser.id)
         .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50);
       rawLogs = res.data; logsErr = res.error;
@@ -6046,7 +6072,7 @@ async function loadFeed() {
     const myClubIds = myClubs.map(c => c.id);
     rawLogs = rawLogs.filter(l => !l.club_id || myClubIds.includes(l.club_id));
     if (myClubIds.length) {
-      const { data: clubLogData } = await db.from('logs').select('*')
+      const { data: clubLogData } = await db.from('logs').select(FEED_LOG_COLS)
         .in('club_id', myClubIds)
         .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(100);
       if (clubLogData && clubLogData.length) {
@@ -11889,6 +11915,7 @@ function clearUserState() {
   userNotifs = []; unreadNotifCount = 0; notifPanelOpen = false;
   commentLikes = {}; discoverUsers = []; profilePageUserId = null;
   feedLoading = false; feedError = false; feedLoadedAt = 0; _clubsLoaded = false;
+  Object.keys(_profileCache).forEach(k => delete _profileCache[k]);
   if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }
 }
 
