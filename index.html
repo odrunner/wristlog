@@ -2525,7 +2525,7 @@
     <div class="stats-top">
       <div class="page-title">Stats</div>
       <div class="stats-filters">
-        <select class="filter-select" id="report-period" onchange="renderStats()">
+        <select class="filter-select" id="report-period" onchange="renderStats(true)">
           <option value="all">All Time</option>
           <option value="30">Last 30 Days</option>
           <option value="90">Last 90 Days</option>
@@ -3595,7 +3595,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.31.26.15.24';
+const APP_VERSION = '2.31.26.15.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8348,7 +8348,7 @@ function saveRanking() {
   cloudSync();
   collGridSort = 'ranking';
   closeGame();
-  renderCollection();
+  renderCollection(true);
   toast('Ranking saved! Collection sorted by your preference.');
 }
 
@@ -8371,7 +8371,7 @@ function dismissGame() {
 
 function setCollGridSort(s) {
   collGridSort = s;
-  renderCollection();
+  renderCollection(true);
 }
 
 function renderCollSortBar() {
@@ -8421,7 +8421,7 @@ document.getElementById('edit-log-usecase-chips').addEventListener('click', e =>
 // ══════════════════════════════════════════
 function setTagFilter(tag) {
   collTagFilter = (collTagFilter === tag) ? null : tag;
-  renderCollection();
+  renderCollection(true);
 }
 
 function renderTagFilterBar() {
@@ -8636,14 +8636,14 @@ function renderCollectionList(visible, today) {
 
 function setCollListSort(field) {
   collListSort = (collListSort === field+'-desc') ? field+'-asc' : field+'-desc';
-  renderCollection();
+  renderCollection(true);
 }
 
 function setCollView(mode) {
   collView = mode;
   document.getElementById('view-grid-btn').classList.toggle('active', mode === 'grid');
   document.getElementById('view-list-btn').classList.toggle('active', mode === 'list');
-  renderCollection();
+  renderCollection(true);
 }
 
 function buildSwatches() {
