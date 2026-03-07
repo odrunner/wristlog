@@ -1695,9 +1695,12 @@
       </button>
       <div class="auth-divider">First time? Just sign in — account created automatically.</div>
       <!-- Dev-only anonymous login — localhost only -->
-      <div id="dev-login-wrap" style="display:none;margin-top:.5rem;">
+      <div id="dev-login-wrap" style="display:none;margin-top:.5rem;gap:.4rem;justify-content:center;">
         <button onclick="devLogin()" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.45rem 1.1rem;font-size:.78rem;cursor:pointer;font-family:inherit;">
-          Dev Login (localhost only)
+          Dev Login (testuser)
+        </button>
+        <button onclick="devLogin(true)" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.45rem 1.1rem;font-size:.78rem;cursor:pointer;font-family:inherit;">
+          Dev Login 2 (testuser2)
         </button>
       </div>
     </div>
@@ -3268,9 +3271,9 @@ function showAuthError(msg) {
   el.style.display = 'block';
 }
 
-async function devLogin() {
+async function devLogin(useSecond) {
   if (!['localhost', '127.0.0.1'].includes(location.hostname)) return;
-  const creds = window.__DEV_CREDS__;
+  const creds = useSecond ? window.__DEV_CREDS_2__ : window.__DEV_CREDS__;
   if (!creds) { showAuthError('Dev login not configured — create dev-config.js'); return; }
   const { error } = await db.auth.signInWithPassword(creds);
   if (error) showAuthError('Dev login failed: ' + error.message);
@@ -3487,7 +3490,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.16.32';
+const APP_VERSION = '2.30.26.16.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11548,7 +11551,7 @@ updateThemeBtn();
 
 // Show dev login button on localhost only
 if (['localhost', '127.0.0.1'].includes(location.hostname)) {
-  document.getElementById('dev-login-wrap').style.display = 'block';
+  document.getElementById('dev-login-wrap').style.display = 'flex';
 }
 
 // ── Global: click overlay background to close, Escape to close topmost modal ──
