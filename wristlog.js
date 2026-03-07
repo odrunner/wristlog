@@ -922,3 +922,48 @@ export function buildCommentAlsoTargets(likerIds, commenterIds, currentUserId, p
     uid => uid !== currentUserId && uid !== postOwnerId
   );
 }
+
+// ══════════════════════════════════════════
+//  RESILIENCE UTILITIES
+// ══════════════════════════════════════════
+
+/**
+ * Safely parse JSON from a string. Returns fallback on parse failure.
+ * Used for localStorage reads that may contain corrupted data.
+ */
+export function safeParseJSON(str, fallback = null) {
+  if (!str) return fallback;
+  try { return JSON.parse(str); } catch (e) { return fallback; }
+}
+
+/**
+ * Add one or more IDs to a dirty-tracking Set.
+ * id can be a single string or an array of strings.
+ */
+export function markDirty(dirtyState, type, id) {
+  const s = dirtyState[type];
+  if (!s) return;
+  if (Array.isArray(id)) id.forEach(i => s.add(i));
+  else s.add(id);
+}
+
+/**
+ * Filter an array of items to only those whose .id is in the dirtyIds set/array.
+ * Used by cloudSync to upsert only changed items.
+ */
+export function filterDirtyItems(items, dirtyIds) {
+  const idSet = dirtyIds instanceof Set ? dirtyIds : new Set(dirtyIds);
+  return items.filter(item => idSet.has(item.id));
+}
+
+/**
+ * Determine if a Supabase query error indicates auth expiry,
+ * meaning notification polling should be stopped.
+ */
+export function shouldStopNotifPolling(error) {
+  if (!error) return false;
+  if (error.code === 'PGRST301') return true;
+  if (error.status === 401) return true;
+  if (error.message && error.message.includes('JWT')) return true;
+  return false;
+}

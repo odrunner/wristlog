@@ -1847,9 +1847,21 @@
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">UI Polish</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Modals are properly centered on mobile, the bottom nav has better spacing for iPhones with home indicators, and the edit modal got visual refinements.</div>
       </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Smarter Sync</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Cloud sync now only uploads changes you actually made instead of your entire collection every time. Faster saves, less data usage.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Offline Support</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">If you lose connection, a banner lets you know and your changes are saved locally. Everything syncs automatically when you&#8217;re back online.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Safer Deletes</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Deleting a wear log or removing a receipt now asks for confirmation first, so you won&#8217;t lose data by accident.</div>
+      </div>
       <div>
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Security &amp; Reliability</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Hardened input escaping across the app, added file upload validation, improved Row-Level Security policies, and expanded test coverage to 536 tests.</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Hardened input escaping, fixed concurrent sync issues, graceful session expiry handling, memory leak fixes, and expanded test coverage to 575 tests.</div>
       </div>
     </div>
     <div class="modal-actions" style="margin-top:1rem;">
@@ -3237,6 +3249,7 @@
 </div>
 
 <div id="toast" class="toast"></div>
+<div id="offline-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#f59e0b;color:#000;text-align:center;padding:.45rem .75rem;font-size:.78rem;font-weight:600;">You're offline — changes are saved locally and will sync when you reconnect.</div>
 
 <script>
 // ══════════════════════════════════════════
@@ -3513,6 +3526,7 @@ function markDirty(type, id) {
 let _syncInFlight = false;
 async function cloudSync() {
   if (!currentUser) return;
+  if (!navigator.onLine) return; // offline — dirty IDs stay, synced on reconnect
   const hasDirty = _dirty.watches.size || _dirty.logs.size || _dirty.wishlist.size || _dirty.elo.size;
   if (!hasDirty) return; // nothing changed — skip network call
   if (_syncInFlight) return; // prevent concurrent syncs — next save() will retry
@@ -3560,7 +3574,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.13.33';
+const APP_VERSION = '2.30.26.14.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5552,10 +5566,17 @@ function openCloseFriendsModal() {
 // ── Notifications ──────────────────────────────────────────────────────────
 async function loadNotifications() {
   if (!currentUser) return;
-  const { data } = await db.from('notifications')
+  const { data, error } = await db.from('notifications')
     .select('id, type, actor_id, ref_id, is_read, created_at')
     .eq('user_id', currentUser.id)
     .order('created_at', { ascending: false }).limit(30);
+  if (error) {
+    // Auth expired or revoked — stop polling to avoid endless 401s
+    if (error.code === 'PGRST301' || error.message?.includes('JWT') || error.status === 401) {
+      if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }
+    }
+    return;
+  }
   if (!data) return;
   const actorIds = [...new Set(data.map(n => n.actor_id).filter(Boolean))];
   let pMap = {};
@@ -8198,7 +8219,9 @@ function closeGame() {
 function dismissGame() {
   // Restore ELO ratings from saved state so no in-memory changes leak out
   const saved = localStorage.getItem(STORE_ELO);
-  eloRatings = saved ? JSON.parse(saved) : {};
+  let parsed = {};
+  if (saved) { try { parsed = JSON.parse(saved); } catch(e) { /* corrupted — reset */ } }
+  eloRatings = parsed;
   closeGame();
 }
 
@@ -8893,7 +8916,7 @@ function openEditWatch(id) {
   document.getElementById('watch-modal').classList.remove('hidden');
 }
 
-function closeWatchModal() { clearInlineEdits(); document.getElementById('watch-modal').classList.add('hidden'); movingFromWishlistId = null; movingFromWishlistData = null; resumeWelcome(); }
+function closeWatchModal() { clearInlineEdits(); if (wPendingImage) { URL.revokeObjectURL(wPendingImage); wPendingImage = null; wPendingFile = null; } document.getElementById('watch-modal').classList.add('hidden'); movingFromWishlistId = null; movingFromWishlistData = null; resumeWelcome(); }
 
 function onInsuranceChange() {
   const v = document.getElementById('w-insurance').value;
@@ -10951,7 +10974,7 @@ function wlDeleteFromEdit() {
   openDelWlModal(id);
 }
 
-function closeWishlistModal() { clearInlineEdits(WL_INLINE_FIELDS); document.getElementById('wishlist-modal').classList.add('hidden'); }
+function closeWishlistModal() { clearInlineEdits(WL_INLINE_FIELDS); if (wlPendingImage) { URL.revokeObjectURL(wlPendingImage); wlPendingImage = null; wlPendingFile = null; } document.getElementById('wishlist-modal').classList.add('hidden'); }
 
 async function saveWishlistItem() {
   const brand = document.getElementById('wl-brand').value;
@@ -11846,10 +11869,12 @@ db.auth.onAuthStateChange((event, session) => {
   if (event === 'SIGNED_IN' && session?.user) {
     bootApp(session.user); // guard prevents double-boot if getSession already ran
   } else if (event === 'SIGNED_OUT') {
+    const wasLoggedIn = !!currentUser; // distinguish manual vs expired
     currentUser = null;
     clearUserState();
     document.getElementById('auth-screen').style.display = 'flex';
     document.getElementById('signout-btn').style.display = 'none';
+    if (wasLoggedIn) toast('Session expired — please sign in again.', 'error');
     const profileBtn2 = document.getElementById('profile-btn');
     if (profileBtn2) profileBtn2.style.display = 'none';
     const helpBtn2 = document.getElementById('help-btn');
@@ -11864,6 +11889,23 @@ db.auth.onAuthStateChange((event, session) => {
     currentUser = session.user; // keep token current, no re-boot needed
   }
 });
+
+// ── Offline detection ────────────────────────────────────────────────────────
+window.addEventListener('offline', () => {
+  const b = document.getElementById('offline-banner');
+  if (b) b.style.display = '';
+});
+window.addEventListener('online', () => {
+  const b = document.getElementById('offline-banner');
+  if (b) b.style.display = 'none';
+  toast('Back online — syncing…');
+  cloudSync();
+});
+// Show banner on boot if already offline
+if (!navigator.onLine) {
+  const b = document.getElementById('offline-banner');
+  if (b) b.style.display = '';
+}
 
 // ── PWA: register service worker ────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
