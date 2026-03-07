@@ -3497,24 +3497,48 @@ async function loadUserData() {
 }
 
 // ══════════════════════════════════════════
+//  DIRTY TRACKING (only sync what changed)
+// ══════════════════════════════════════════
+const _dirty = { watches: new Set(), logs: new Set(), wishlist: new Set(), elo: new Set() };
+function markDirty(type, id) {
+  const s = _dirty[type];
+  if (s) Array.isArray(id) ? id.forEach(i => s.add(i)) : s.add(id);
+}
+
+// ══════════════════════════════════════════
 //  CLOUD SYNC (called from save())
 // ══════════════════════════════════════════
 async function cloudSync() {
   if (!currentUser) return;
+  const hasDirty = _dirty.watches.size || _dirty.logs.size || _dirty.wishlist.size || _dirty.elo.size;
+  if (!hasDirty) return; // nothing changed — skip network call
   const upsert = async (table, rows) => {
     if (!rows.length) return;
     const { error } = await db.from(table).upsert(rows, { onConflict: 'id' });
     if (error) console.error(`[WristLog] cloudSync ${table} error:`, error.message, error);
   };
   try {
-    await upsert('watches',  watches.map(watchToRow));
-    await upsert('logs',     logs.map(logToRow));
-    await upsert('wishlist', wishlist.map(wishToRow));
-    // Sync elo ratings back into watch rows
-    const eloUpdates = Object.entries(eloRatings).map(([id, elo]) => ({ id, user_id: currentUser.id, elo_rating: elo }));
-    if (eloUpdates.length) {
-      const { error } = await db.from('watches').upsert(eloUpdates, { onConflict: 'id', ignoreDuplicates: false });
-      if (error) console.error('[WristLog] cloudSync elo error:', error.message, error);
+    if (_dirty.watches.size) {
+      const ids = _dirty.watches; _dirty.watches = new Set();
+      await upsert('watches', watches.filter(w => ids.has(w.id)).map(watchToRow));
+    }
+    if (_dirty.logs.size) {
+      const ids = _dirty.logs; _dirty.logs = new Set();
+      await upsert('logs', logs.filter(l => ids.has(l.id)).map(logToRow));
+    }
+    if (_dirty.wishlist.size) {
+      const ids = _dirty.wishlist; _dirty.wishlist = new Set();
+      await upsert('wishlist', wishlist.filter(w => ids.has(w.id)).map(wishToRow));
+    }
+    if (_dirty.elo.size) {
+      const ids = _dirty.elo; _dirty.elo = new Set();
+      const eloUpdates = [...ids]
+        .filter(id => eloRatings[id] !== undefined)
+        .map(id => ({ id, user_id: currentUser.id, elo_rating: eloRatings[id] }));
+      if (eloUpdates.length) {
+        const { error } = await db.from('watches').upsert(eloUpdates, { onConflict: 'id', ignoreDuplicates: false });
+        if (error) console.error('[WristLog] cloudSync elo error:', error.message, error);
+      }
     }
   } catch(e) { console.error('[WristLog] cloudSync exception:', e.message); }
 }
@@ -3522,7 +3546,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.30.26.11.44';
+const APP_VERSION = '2.30.26.12.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7836,11 +7860,13 @@ async function saveLog() {
   }
   if (selStrapId) logEntry.strapId = selStrapId;
   logs.push(logEntry);
+  markDirty('logs', logEntry.id);
   // Update "on wrist" strap status on the watch
   if (selStrapId) {
     const wIdx = watches.findIndex(x => x.id === selWatchId);
     if (wIdx !== -1 && (watches[wIdx].straps || []).length) {
       watches[wIdx].straps = watches[wIdx].straps.map(s => ({ ...s, isOn: s.id === selStrapId }));
+      markDirty('watches', selWatchId);
     }
   }
   save();
@@ -7969,6 +7995,7 @@ function saveEditLog() {
   const clubId = getSelectedClubId('edit-log-club-chips');
   logs[idx] = { ...logs[idx], date, useCase: editLogUseCase, notes, clubId: clubId || null };
   if (editLogStrapId) logs[idx].strapId = editLogStrapId;
+  markDirty('logs', editingLogId);
   save();
   closeEditLog();
   renderTrack();
@@ -8016,7 +8043,7 @@ function beginRankingGame() {
     try { localStorage.setItem('rankingGameSkipIntro', '1'); } catch(e) {}
   }
   const pool = watches;
-  pool.forEach(w => { if (!(w.id in eloRatings)) eloRatings[w.id] = ELO_DEFAULT; });
+  pool.forEach(w => { if (!(w.id in eloRatings)) { eloRatings[w.id] = ELO_DEFAULT; markDirty('elo', w.id); } });
   gameQueue    = buildGameQueue(pool);
   gameTotal    = gameQueue.length;
   gameMatchNum = 0;
@@ -8069,6 +8096,7 @@ function pickWatch(winnerId, loserId) {
   const exp   = eloExpected(wElo, lElo);
   eloRatings[winnerId] = Math.round(wElo + ELO_K * (1 - exp));
   eloRatings[loserId]  = Math.round(lElo + ELO_K * (0 - (1 - exp)));
+  markDirty('elo', [winnerId, loserId]);
   setTimeout(nextMatch, 480);
 }
 
@@ -8920,7 +8948,9 @@ function quickLog(watchId) {
   const today = todayStr();
   const alreadyWorn = logsForWatch(watchId).some(l => l.date === today);
   if (alreadyWorn) return;
-  logs.push({ id: uid(), watchId, date: today, useCase: 'unspecified', notes: '' });
+  const qId = uid();
+  logs.push({ id: qId, watchId, date: today, useCase: 'unspecified', notes: '' });
+  markDirty('logs', qId);
   save();
   if (document.getElementById('page-collection').classList.contains('active')) renderCollection();
   dismissReminder();
@@ -9028,9 +9058,12 @@ async function saveWatch() {
       data.priceHistory = existing.priceHistory;
     }
     watches[idx] = { ...existing, ...data };
+    markDirty('watches', editingId);
     toast('Watch updated!');
   } else {
-    watches.push({ id: uid(), ...data });
+    const newId = uid();
+    watches.push({ id: newId, ...data });
+    markDirty('watches', newId);
     toast(movingFromWishlistId ? 'Moved to collection!' : 'Watch added to collection!');
   }
   const pendingWlId = movingFromWishlistId;  // capture before closeWatchModal clears it
@@ -9859,6 +9892,7 @@ async function fetchWatchImage(watchId) {
     const idx = watches.findIndex(x => x.id === watchId);
     if (idx === -1) return;
     watches[idx].image = imageUrl;
+    markDirty('watches', watchId);
     save();
     renderCollection();
     toast('Watch photo saved!');
@@ -10048,6 +10082,7 @@ function _saveWatchImage(watchId, url) {
   const idx = watches.findIndex(x => x.id === watchId);
   if (idx < 0) return;
   watches[idx].image = url;
+  markDirty('watches', watchId);
   save();
   renderCollection();
   toast('Watch photo saved!');
@@ -10140,6 +10175,7 @@ function addReceipt() {
       } catch(e) { toast('Could not upload: ' + file.name, 'error'); }
     }
     if (added > 0) {
+      markDirty('watches', wId);
       save();
       renderReceiptsList(watches[idx]);
       renderCollection();
@@ -10158,6 +10194,7 @@ function removeReceipt(watchId, receiptId) {
     if (p) deleteStorageFile(p);
   }
   watches[idx].receipts = (watches[idx].receipts || []).filter(r => r.id !== receiptId);
+  markDirty('watches', watchId);
   save();
   renderReceiptsList(watches[idx]);
   renderCollection();
@@ -10223,6 +10260,7 @@ function removeReceiptFromEdit(watchId, receiptId) {
     if (p) deleteStorageFile(p);
   }
   watches[idx].receipts = (watches[idx].receipts || []).filter(r => r.id !== receiptId);
+  markDirty('watches', watchId);
   save();
   renderEditReceiptsList(watches[idx]);
   renderCollection();
@@ -10269,6 +10307,7 @@ function addReceiptFromEdit() {
       } catch(e) { toast('Could not upload: ' + file.name, 'error'); }
     }
     if (added > 0) {
+      markDirty('watches', wId);
       save();
       renderEditReceiptsList(watches[idx]);
       renderCollection();
@@ -10466,6 +10505,7 @@ function wlDrop(e, targetId) {
   if (fromIdx < 0 || toIdx < 0) return;
   const [item] = wishlist.splice(fromIdx, 1);
   wishlist.splice(toIdx, 0, item);
+  wishlist.forEach(w => markDirty('wishlist', w.id));
   wlDraggingId = null;
   saveWishlist();
   renderWishlist();
@@ -10556,6 +10596,7 @@ function wlTouchEnd() {
     if (fromIdx >= 0 && toIdx >= 0) {
       const [item] = wishlist.splice(fromIdx, 1);
       wishlist.splice(toIdx, 0, item);
+      wishlist.forEach(w => markDirty('wishlist', w.id));
       saveWishlist();
       renderWishlist();
     }
@@ -10663,6 +10704,7 @@ function collSaveRankOrder() {
   collSortedWatches.forEach((w, idx) => {
     eloRatings[w.id] = ELO_DEFAULT + (total - idx) * 100;
   });
+  markDirty('elo', collSortedWatches.map(w => w.id));
   safeSetJSON(STORE_ELO, eloRatings);
   cloudSync();
   renderCollection();
@@ -10934,9 +10976,11 @@ async function saveWishlistItem() {
       if (oldPath) deleteStorageFile(oldPath);
     }
     wishlist[idx] = updated;
+    markDirty('wishlist', editingWlId);
     toast('Wishlist item updated!');
   } else {
     wishlist.push({ id: itemId, ...data });
+    markDirty('wishlist', itemId);
     toast('Added to wishlist!');
   }
   wlRemoveImage = false;
@@ -11365,6 +11409,7 @@ async function fetchWishlistImage(itemId) {
     const idx = wishlist.findIndex(x => x.id === itemId);
     if (idx === -1) return;
     wishlist[idx].image = imageUrl;
+    markDirty('wishlist', itemId);
     saveWishlist();
     renderWishlist();
     toast('Photo saved!');
@@ -11706,6 +11751,7 @@ function initApp() {
 // Wipe all per-user data from memory and localStorage (called on sign-out and before new sign-in)
 function clearUserState() {
   watches = []; logs = []; wishlist = []; eloRatings = {};
+  _dirty.watches.clear(); _dirty.logs.clear(); _dirty.wishlist.clear(); _dirty.elo.clear();
   try { localStorage.removeItem(STORE_W); localStorage.removeItem(STORE_L); localStorage.removeItem(STORE_WL); localStorage.removeItem(STORE_ELO); } catch(e) {}
   // Social / feed state — prevents stale data leaking across accounts
   feedItems = []; feedLikes = {}; feedCommentCounts = {}; feedComments = {};
