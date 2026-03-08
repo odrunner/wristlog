@@ -510,6 +510,23 @@
       border-radius: .4rem;
     }
 
+    /* ── PULL TO REFRESH ── */
+    .ptr-indicator {
+      text-align: center; overflow: hidden; height: 0;
+      transition: height .2s ease;
+      display: flex; align-items: center; justify-content: center; gap: .5rem;
+      color: var(--muted); font-size: .78rem; font-weight: 500;
+    }
+    .ptr-indicator.pulling { transition: none; }
+    .ptr-indicator.refreshing { height: 48px !important; }
+    .ptr-spinner {
+      width: 18px; height: 18px; border: 2px solid var(--border);
+      border-top-color: var(--gold); border-radius: 50%;
+      display: inline-block; transition: transform .2s ease;
+    }
+    .ptr-indicator.refreshing .ptr-spinner { animation: spin .6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     /* ── BRAND SELECT ── */
     .brand-ac-wrap { position: relative; }
     /* Brand display input — matches the dotted-underline inline-edit style */
@@ -2182,6 +2199,7 @@
         <button class="btn btn-ghost" onclick="openDiscover()" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</button>
       </div>
     </div>
+    <div id="ptr-indicator" class="ptr-indicator"><div class="ptr-spinner"></div><span class="ptr-text">Pull to refresh</span></div>
     <div id="feed-list"><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:40%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:90%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:70%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:35%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:80%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:60%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:45%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:85%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:65%;height:.7rem;"></div></div></div>
   </div>
 
@@ -3752,7 +3770,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.08.11.16';
+const APP_VERSION = '2.33.08.11.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6159,6 +6177,67 @@ document.addEventListener('click', e => {
     panel.classList.add('hidden');
   }
 });
+
+// ── Pull to refresh (feed) ─────────────────────────────────────────────────
+(function initPullToRefresh() {
+  const PTR_MAX = 80, PTR_THRESHOLD = 55;
+  let _ptrY0 = 0, _ptrActive = false, _ptrRefreshing = false;
+
+  function feedPageActive() {
+    const fp = document.getElementById('page-feed');
+    return fp && fp.classList.contains('active');
+  }
+
+  document.addEventListener('touchstart', e => {
+    if (_ptrRefreshing || !feedPageActive()) return;
+    if (window.scrollY > 5) return;                 // only when at top
+    _ptrY0 = e.touches[0].clientY;
+    _ptrActive = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!_ptrActive || _ptrRefreshing) return;
+    const dy = Math.max(0, e.touches[0].clientY - _ptrY0);
+    if (dy === 0) return;
+    const pull = Math.min(dy * 0.45, PTR_MAX);       // dampen
+    const el = document.getElementById('ptr-indicator');
+    if (!el) return;
+    el.style.height = pull + 'px';
+    el.classList.add('pulling');
+    el.classList.remove('refreshing');
+    // Rotate spinner based on pull progress
+    const spinner = el.querySelector('.ptr-spinner');
+    if (spinner) spinner.style.transform = `rotate(${pull / PTR_MAX * 360}deg)`;
+    const txt = el.querySelector('.ptr-text');
+    if (txt) txt.textContent = pull >= PTR_THRESHOLD ? 'Release to refresh' : 'Pull to refresh';
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => {
+    if (!_ptrActive) return;
+    _ptrActive = false;
+    const el = document.getElementById('ptr-indicator');
+    if (!el) return;
+    const h = parseFloat(el.style.height) || 0;
+    el.classList.remove('pulling');
+
+    if (h >= PTR_THRESHOLD && !_ptrRefreshing) {
+      // Trigger refresh
+      _ptrRefreshing = true;
+      el.classList.add('refreshing');
+      const txt = el.querySelector('.ptr-text');
+      if (txt) txt.textContent = 'Refreshing...';
+      feedLoadedAt = 0;
+      feedError = false;
+      loadFeed().finally(() => {
+        _ptrRefreshing = false;
+        el.classList.remove('refreshing');
+        el.style.height = '0';
+      });
+    } else {
+      el.style.height = '0';
+    }
+  }, { passive: true });
+})();
 
 // ── Feed ──────────────────────────────────────────────────────────────────
 const FEED_LOG_COLS = 'id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility';
@@ -9179,7 +9258,9 @@ function setCollView(mode) {
 }
 
 function buildSwatches() {
-  document.getElementById('color-swatches').innerHTML = PALETTE.map(c =>
+  const el = document.getElementById('color-swatches');
+  if (!el) return;
+  el.innerHTML = PALETTE.map(c =>
     `<div class="color-swatch ${c===selColor?'chosen':''}"
           style="background:${c}" onclick="pickColor('${c}')"></div>`
   ).join('');
@@ -11398,44 +11479,59 @@ function renderPhotoIdentifyResults() {
 }
 
 async function addFromIdentified(idx) {
-  const w = _photoIdentifyResults[idx];
-  if (!w) return;
+  try {
+    const w = _photoIdentifyResults[idx];
+    if (!w) return;
 
-  // Close identify modal
-  closePhotoIdentify();
+    // Close identify modal
+    closePhotoIdentify();
 
-  // Open the add watch form
-  openAddWatch();
+    // Open the add watch form
+    openAddWatch();
 
-  // Pre-fill fields
-  if (w.brand) {
-    document.getElementById('w-brand').value = w.brand;
-    document.getElementById('w-brand-display').value = w.brand;
-    autoSizeInput(document.getElementById('w-brand-display'));
-  }
-  if (w.model) document.getElementById('w-name').value = w.model;
-  if (w.reference) document.getElementById('w-ref').value = w.reference;
-  if (w.estimatedColor) {
-    selColor = w.estimatedColor;
-    buildSwatches();
-  }
-
-  // Try to fetch stock photo — prefer productUrl from AI, fallback to brand domain
-  const fetchUrl = w.productUrl || (brandToDomain(w.brand || '') ? `https://www.${brandToDomain(w.brand)}` : '');
-  if (fetchUrl) {
-    document.getElementById('w-url').value = fetchUrl;
-    toast('Fetching watch photo...', 'info');
-    try {
-      await fetchCollectionDetails();
-    } catch (_) {
-      // Fetch failed — that's fine, user can fill manually
+    // Pre-fill fields from Claude's identification
+    const aiBrand = w.brand || '';
+    const aiModel = w.model || '';
+    const aiRef   = w.reference || '';
+    if (aiBrand) {
+      buildBrandSelect(aiBrand);
+      document.getElementById('w-brand').value = aiBrand;
+      document.getElementById('w-brand-display').value = aiBrand;
+      autoSizeInput(document.getElementById('w-brand-display'));
     }
+    if (aiModel) document.getElementById('w-name').value = aiModel;
+    if (aiRef)   document.getElementById('w-ref').value = aiRef;
+    if (w.estimatedColor) {
+      selColor = w.estimatedColor;
+      buildSwatches();
+    }
+
+    // Try to fetch stock photo — prefer productUrl from AI, fallback to brand domain
+    const fetchUrl = w.productUrl || `https://www.${brandToDomain(aiBrand)}`;
+    if (fetchUrl && fetchUrl !== 'https://www..com') {
+      document.getElementById('w-url').value = fetchUrl;
+      toast('Fetching watch photo...', 'info');
+      try {
+        await fetchCollectionDetails();
+      } catch (_) { /* fetch failed — user can fill manually */ }
+      // Restore AI-identified fields (fetchCollectionDetails may overwrite them)
+      if (aiBrand) {
+        buildBrandSelect(aiBrand);
+        document.getElementById('w-brand').value = aiBrand;
+        document.getElementById('w-brand-display').value = aiBrand;
+      }
+      if (aiModel) document.getElementById('w-name').value = aiModel;
+      if (aiRef)   document.getElementById('w-ref').value = aiRef;
+    }
+
+    // Remove this item from the results (mark as added)
+    _photoIdentifyResults.splice(idx, 1);
+
+    toast(`${escHtml(aiBrand)} ${escHtml(aiModel)} pre-filled — review and save`, 'success');
+  } catch (e) {
+    console.error('[WristLog] addFromIdentified error:', e);
+    toast('Add failed: ' + (e?.message || e), 'error');
   }
-
-  // Remove this item from the results (mark as added)
-  _photoIdentifyResults.splice(idx, 1);
-
-  toast(`${w.brand} ${w.model} pre-filled — review and save`, 'success');
 }
 
 function _showPhotoSourcePicker() {
@@ -12971,8 +13067,11 @@ window.onerror = function(msg, src, line, col, err) {
   return false;
 };
 window.addEventListener('unhandledrejection', function(ev) {
-  console.error('[WristLog] Unhandled promise rejection:', ev.reason);
-  if (typeof toast === 'function') toast('A background operation failed.', 'error');
+  const r = ev.reason;
+  const msg = r?.message || r?.toString?.() || 'unknown';
+  const stack = r?.stack?.split?.('\n')?.[1]?.trim() || '';
+  console.error('[WristLog] Unhandled promise rejection:', r, stack);
+  if (typeof toast === 'function') toast('BG fail: ' + msg + (stack ? ' @ ' + stack.slice(0, 60) : ''), 'error');
 });
 
 // ── PWA: register service worker ────────────────────────────────────────────
