@@ -47,8 +47,8 @@ serve(async (req: Request) => {
     });
   }
 
-  // ── Rate limiting: 10 requests per rolling 1-hour window ──
-  const RATE_LIMIT = 10;
+  // ── Rate limiting: 100 requests per rolling 1-hour window ──
+  const RATE_LIMIT = 100;
   const WINDOW_MS = 60 * 60 * 1000;
   const now = new Date();
   const windowStart = new Date(now.getTime() - WINDOW_MS);

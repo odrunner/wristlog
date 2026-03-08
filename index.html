@@ -2736,6 +2736,18 @@
         <input type="date" id="w-date" max="9999-12-31">
       </div>
     </div>
+    <!-- Photo preview -->
+    <div class="form-group">
+      <label>Photo</label>
+      <div id="w-img-area" style="display:none;align-items:center;gap:.65rem;">
+        <img id="w-img-preview" src="" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;gap:.35rem;">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="pickWatchModalImage()">↺ Replace</button>
+          <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="clearWatchModalImage()">✕ Remove</button>
+        </div>
+      </div>
+      <button type="button" id="w-img-upload-btn" class="btn btn-ghost btn-sm" onclick="pickWatchModalImage()" style="display:inline-flex;align-items:center;gap:.3rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Upload photo</button>
+    </div>
     <!-- ── Condition & Docs (collapsible) ── -->
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-condition')">
@@ -3797,7 +3809,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.08.12.04';
+const APP_VERSION = '2.34.08.12.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9701,6 +9713,7 @@ function openAddWatch() {
   // All sections collapsed for a fresh add
   ['sec-condition','sec-market','sec-tags','sec-straps','sec-receipts'].forEach(closeSection);
   clearInlineEdits();
+  renderWatchModalImg();
   document.getElementById('watch-modal').classList.remove('hidden');
 }
 
@@ -9753,10 +9766,47 @@ function openEditWatch(id) {
   if (hasStraps)    openSection('sec-straps');    else closeSection('sec-straps');
   if (hasReceipts)  openSection('sec-receipts');  else closeSection('sec-receipts');
   setupInlineEdits();
+  // Show existing photo in preview (use URL directly, no objectURL needed)
+  if (w.image) { wPendingImage = w.image; wPendingFile = null; }
+  renderWatchModalImg();
   document.getElementById('watch-modal').classList.remove('hidden');
 }
 
-function closeWatchModal() { clearInlineEdits(); if (wPendingImage) { URL.revokeObjectURL(wPendingImage); wPendingImage = null; wPendingFile = null; } document.getElementById('watch-modal').classList.add('hidden'); movingFromWishlistId = null; movingFromWishlistData = null; resumeWelcome(); }
+function closeWatchModal() { clearInlineEdits(); if (wPendingImage && wPendingImage.startsWith('blob:')) URL.revokeObjectURL(wPendingImage); wPendingImage = null; wPendingFile = null; document.getElementById('watch-modal').classList.add('hidden'); movingFromWishlistId = null; movingFromWishlistData = null; resumeWelcome(); }
+
+/* ── Watch modal photo preview ── */
+function renderWatchModalImg() {
+  const area = document.getElementById('w-img-area');
+  const btn  = document.getElementById('w-img-upload-btn');
+  const img  = document.getElementById('w-img-preview');
+  if (wPendingImage) {
+    img.src = wPendingImage;
+    area.style.display = 'flex';
+    btn.style.display = 'none';
+  } else {
+    area.style.display = 'none';
+    btn.style.display = '';
+  }
+}
+function pickWatchModalImage() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*';
+  input.onchange = () => {
+    if (!input.files[0]) return;
+    if (!validateImageFile(input.files[0])) return;
+    if (wPendingImage) URL.revokeObjectURL(wPendingImage);
+    wPendingFile  = input.files[0];
+    wPendingImage = URL.createObjectURL(input.files[0]);
+    renderWatchModalImg();
+  };
+  input.click();
+}
+function clearWatchModalImage() {
+  if (wPendingImage) URL.revokeObjectURL(wPendingImage);
+  wPendingImage = null;
+  wPendingFile  = null;
+  renderWatchModalImg();
+}
 
 function onInsuranceChange() {
   const v = document.getElementById('w-insurance').value;
@@ -12600,6 +12650,7 @@ async function fetchCollectionDetails() {
         }
       } catch (_) { wPendingImage = null; wPendingFile = null; }
     }
+    renderWatchModalImg();
 
     const filled = [detectedBrand && 'brand', name && 'name', ref && 'ref', price && 'price', wPendingImage && 'photo'].filter(Boolean);
     toast(`Fetched: ${filled.join(', ') || 'no data found'}`);
