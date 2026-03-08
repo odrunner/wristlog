@@ -3741,7 +3741,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.08.06.44';
+const APP_VERSION = '2.33.08.06.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11153,7 +11153,8 @@ function openPhotoIdentify() {
       return;
     }
 
-    // Show loading modal
+    // Show loading modal (with click guard — mobile browsers can fire stray
+    // click events when returning from the camera/gallery picker)
     const modal = document.getElementById('photo-identify-modal');
     const list = document.getElementById('photo-identify-list');
     list.innerHTML = `<div class="pi-loading">
@@ -11162,6 +11163,8 @@ function openPhotoIdentify() {
       <div style="font-size:.75rem;margin-top:.3rem;">This may take a few seconds</div>
     </div>`;
     modal.classList.remove('hidden');
+    modal.dataset.justOpened = '1';
+    setTimeout(() => delete modal.dataset.justOpened, 600);
 
     try {
       // Resize image to keep payload small
@@ -12599,6 +12602,7 @@ const _overlayCloseMap = {
 // Click overlay background to close
 document.addEventListener('click', e => {
   if (e.target.classList.contains('overlay') && !e.target.classList.contains('hidden')) {
+    if (e.target.dataset.justOpened) return; // guard against stray mobile clicks
     const fn = _overlayCloseMap[e.target.id];
     if (fn) fn();
   }
