@@ -3615,7 +3615,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.32.26.15.46';
+const APP_VERSION = '2.32.26.16.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9597,24 +9597,50 @@ function computeWatchRec(skipSet) {
   const now      = new Date();
   const today    = todayStr();
   const todayDOW = now.getDay();
+  const todayMonth = now.getMonth(); // 0-11
   const WARM = new Set(['#c9a84c','#fbbf24','#fb923c','#ef7942','#f43f5e']);
   const COOL = new Set(['#38bdf8','#818cf8','#a78bfa','#34d399','#4caf7d']);
   const DARK = new Set(['#94a3b8']);
   const isWeekend = todayDOW === 0 || todayDOW === 6;
+
+  // Tag-to-occasion mapping for smarter tag matching
+  const WORK_TAGS   = new Set(['Dress','Chronograph','GMT','Complication']);
+  const CASUAL_TAGS = new Set(['Daily Beater','Field','Sport','Dive','Pilot']);
+  const DRESSY_TAGS = new Set(['Dress','Sport-Luxury','Complication','Skeleton','Vintage']);
+
+  // Fair-share baseline: expected wears per watch if collection were rotated evenly
+  const totalLogs = logs.length;
+  const fairShare = watches.length > 0 ? totalLogs / watches.length : 0;
+
   const candidates = watches.map(w => {
     if (skipSet && skipSet.has(w.id)) return null; // skipped by user
     const wLogs = logsForWatch(w.id);
-    // Single pass over logs: check today, find last date, count DOW matches, count dinner wears
-    let wornToday = false, lastDate = '', dowCount = 0, dinnerWears = 0;
+    // Single pass over logs: check today, find last date, count DOW matches, count use cases
+    let wornToday = false, lastDate = '', dowCount = 0;
+    let dinnerWears = 0, workWears = 0, leisureWears = 0, travelWears = 0;
+    const monthCounts = new Array(12).fill(0);
     for (let i = 0; i < wLogs.length; i++) {
       const l = wLogs[i];
       if (l.date === today) { wornToday = true; break; }
       if (l.date > lastDate) lastDate = l.date;
       if (new Date(l.date+'T12:00:00').getDay() === todayDOW) dowCount++;
       if (l.useCase === 'dinner') dinnerWears++;
+      else if (l.useCase === 'work') workWears++;
+      else if (l.useCase === 'leisure') leisureWears++;
+      else if (l.useCase === 'travel') travelWears++;
+      const m = parseInt(l.date.slice(5, 7)) - 1; // 0-11
+      if (m >= 0 && m < 12) monthCounts[m]++;
     }
     if (wornToday) return null;
     const daysSince = lastDate ? Math.floor((now - new Date(lastDate+'T12:00:00')) / 86400000) : 999;
+
+    // ── 1. Recency (unchanged, capped at 90) ──
+    const recencyScore = Math.min(daysSince, 90);
+
+    // ── 2. Day-of-week habit matching ──
+    const dowScore = dowCount * 8;
+
+    // ── 3. Weather × color matching ──
     let weatherScore = 0, weatherReason = null;
     if (weatherData) {
       const isWarm = WARM.has(w.color), isCool = COOL.has(w.color), isDark = DARK.has(w.color);
@@ -9622,14 +9648,94 @@ function computeWatchRec(skipSet) {
       else if (weatherData.condition === 'sunny' && isCool) { weatherScore = 1; }
       else if ((weatherData.condition === 'cloudy' || weatherData.condition === 'rainy') && (isCool||isDark)) { weatherScore = 3; weatherReason = `Cool tone suits today's ${weatherData.condition} skies`; }
     }
-    // Weekend bonus: watches with dinner wear history score higher on Sat/Sun
+
+    // ── 4. Weekend/dinner bonus (existing) ──
     const hasDressTag  = (w.tags || []).includes('Dress');
     const weekendScore = isWeekend ? Math.min(dinnerWears * 5 + (hasDressTag ? 10 : 0), 30) : 0;
     const weekendReason = isWeekend && (dinnerWears > 0 || hasDressTag)
       ? (hasDressTag && dinnerWears === 0 ? 'Dress watch — perfect for the weekend' : `Worn to dinner ${dinnerWears}× — great for the weekend`)
       : null;
-    const score = Math.min(daysSince, 90) + dowCount * 8 + weatherScore * 5 + weekendScore;
-    return { w, daysSince, dowCount, weatherScore, weatherReason, weekendScore, weekendReason, score };
+
+    // ── 5. NEW: Elo ranking boost ──
+    // Watches the user ranked higher in the ranking game get a preference boost (0-20 pts)
+    let eloScore = 0, eloReason = null;
+    const elo = eloRatings[w.id];
+    if (elo != null) {
+      // Scale: 1000 = default (0 pts), 1200+ = strong favorite (20 pts)
+      eloScore = Math.max(0, Math.min(Math.round((elo - ELO_DEFAULT) / 10), 20));
+      if (eloScore >= 10) eloReason = 'One of your top-ranked watches';
+    }
+
+    // ── 6. NEW: Use case × day type matching ──
+    // On workdays, boost watches with work-wear history; on weekends, boost leisure
+    let useCaseScore = 0, useCaseReason = null;
+    const totalUC = workWears + leisureWears + dinnerWears + travelWears;
+    if (totalUC > 0) {
+      if (!isWeekend) {
+        // Workday: favor watches with work history
+        const workRatio = workWears / totalUC;
+        useCaseScore = Math.round(workRatio * 15);
+        if (workRatio >= 0.5 && workWears >= 3) useCaseReason = 'Your go-to work watch';
+      } else {
+        // Weekend: favor watches with leisure/dinner history
+        const leisureRatio = (leisureWears + dinnerWears) / totalUC;
+        useCaseScore = Math.round(leisureRatio * 15);
+        if (leisureRatio >= 0.5 && (leisureWears + dinnerWears) >= 3) useCaseReason = 'A weekend favorite';
+      }
+    }
+
+    // ── 7. NEW: Honeymoon boost for recently purchased watches ──
+    let honeymoonScore = 0, honeymoonReason = null;
+    if (w.purchaseDate) {
+      const daysSincePurchase = Math.floor((now - new Date(w.purchaseDate+'T12:00:00')) / 86400000);
+      if (daysSincePurchase <= 30 && daysSincePurchase >= 0) {
+        honeymoonScore = 20;
+        honeymoonReason = 'New addition — break it in!';
+      } else if (daysSincePurchase <= 60 && daysSincePurchase > 30) {
+        honeymoonScore = 10;
+        honeymoonReason = 'Still getting to know this one';
+      }
+    }
+
+    // ── 8. NEW: Neglected watch nudge ──
+    // If a watch has significantly fewer wears than the fair share, give it a boost
+    let neglectedScore = 0, neglectedReason = null;
+    if (fairShare > 2 && wLogs.length < fairShare * 0.4) {
+      // Worn less than 40% of its fair share — it's being neglected
+      neglectedScore = Math.min(Math.round((fairShare - wLogs.length) * 2), 25);
+      if (wLogs.length === 0) neglectedReason = 'Never worn — give it a chance';
+      else neglectedReason = 'Underrepresented in your rotation';
+    }
+
+    // ── 9. NEW: Tag-based occasion matching ──
+    // Beyond just Dress on weekends — match tags to workday/weekend context
+    let tagScore = 0, tagReason = null;
+    const wTags = new Set(w.tags || []);
+    if (wTags.size > 0) {
+      if (!isWeekend) {
+        // Workday: favor work-appropriate tags
+        for (const t of wTags) {
+          if (WORK_TAGS.has(t)) { tagScore = Math.max(tagScore, 8); }
+          if (CASUAL_TAGS.has(t) && workWears === 0) { tagScore = Math.max(tagScore, 3); } // casual OK if not a work watch
+        }
+        if (tagScore >= 8) tagReason = 'Tagged for the office';
+      } else {
+        // Weekend: favor casual/dressy tags
+        for (const t of wTags) {
+          if (CASUAL_TAGS.has(t)) { tagScore = Math.max(tagScore, 8); }
+          if (DRESSY_TAGS.has(t)) { tagScore = Math.max(tagScore, 6); }
+        }
+        if (tagScore >= 8) tagReason = 'Perfect weekend watch';
+        else if (tagScore >= 6) tagReason = 'Dress it up this weekend';
+      }
+    }
+
+    const score = recencyScore + dowScore + weatherScore * 5 + weekendScore
+                + eloScore + useCaseScore + honeymoonScore + neglectedScore + tagScore;
+    return { w, daysSince, dowCount, weatherScore, weatherReason, weekendScore, weekendReason,
+             eloScore, eloReason, useCaseScore, useCaseReason,
+             honeymoonScore, honeymoonReason, neglectedScore, neglectedReason,
+             tagScore, tagReason, score };
   }).filter(Boolean);
   if (!candidates.length) return null;
   candidates.sort((a, b) => b.score - a.score);
@@ -9653,7 +9759,8 @@ function recCardHTML(rec) {
       <div style="color:var(--muted);font-size:.85rem">All watches worn today — great rotation!</div>
     </div>`;
   }
-  const { w, daysSince, dowCount, weatherReason, weekendScore, weekendReason } = rec;
+  const { w, daysSince, dowCount, weatherReason, weekendScore, weekendReason,
+          eloReason, useCaseReason, honeymoonReason, neglectedReason, tagReason } = rec;
   const thumb = w.image
     ? `<img loading="lazy" src="${w.image}" alt="" style="width:56px;height:56px;border-radius:8px;object-fit:cover;" onerror="this.style.display='none'">`
     : `<div class="avatar" style="width:56px;height:56px;font-size:.95rem;border-radius:8px;background:${w.color}">${initials(w.brand,w.name)}</div>`;
@@ -9667,13 +9774,22 @@ function recCardHTML(rec) {
     tags.push({ text: `${weatherData.desc}, ${weatherData.tempC}°C`, cls: 'rec-tag-weather' });
     if (weatherReason) tags.push({ text: weatherReason, cls: '' });
   }
-  if (weekendScore > 0) tags.push({ text: `Dinner watch`, cls: 'rec-tag-weekend' });
+  if (weekendScore > 0) tags.push({ text: 'Dinner watch', cls: 'rec-tag-weekend' });
+  if (eloReason) tags.push({ text: '★ Top ranked', cls: '' });
+  if (honeymoonReason) tags.push({ text: 'New pickup', cls: '' });
+  if (neglectedReason) tags.push({ text: 'Needs love', cls: '' });
+  if (useCaseReason) tags.push({ text: useCaseReason, cls: '' });
+  if (tagReason) tags.push({ text: tagReason, cls: '' });
   let explain = daysSince === 999 ? `${escHtml(w.name)} has never been logged — today could be its first wear.`
     : daysSince >= 14 ? `The ${escHtml(w.name)} has been sitting for ${daysSince} days — it's time.`
     : `Last worn ${daysSince} day${daysSince!==1?'s':''} ago.`;
   if (dowCount >= 2) explain += ` Tends to come out on ${DOW_NAMES[todayDOW]}s.`;
   if (weatherData && weatherReason) explain += ` ${weatherReason}.`;
   if (weekendReason) explain += ` ${weekendReason}.`;
+  if (eloReason) explain += ` ${eloReason}.`;
+  if (honeymoonReason) explain += ` ${honeymoonReason}.`;
+  if (neglectedReason) explain += ` ${neglectedReason}.`;
+  if (useCaseReason) explain += ` ${useCaseReason}.`;
   const wornToday = logsForWatch(w.id).some(l => l.date === todayStr());
   return `<div class="rec-card">
     <div class="rec-label">Today's Pick</div>
