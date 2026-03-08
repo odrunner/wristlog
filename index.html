@@ -1226,6 +1226,11 @@
     .snap-btn:disabled { opacity:.5; pointer-events:none; }
     .snap-match-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:.75rem 1rem; margin-bottom:.5rem; display:flex; gap:.75rem; align-items:center; cursor:pointer; transition:border-color .2s; }
     .snap-match-card:hover { border-color:var(--gold); }
+    .watch-suggestion { margin-top:.6rem; padding:.6rem .75rem; background:rgba(184,148,31,.08); border:1px solid rgba(184,148,31,.25); border-radius:var(--radius); display:flex; align-items:center; gap:.6rem; font-size:.82rem; animation:fadeIn .3s; }
+    .watch-suggestion button { font-size:.75rem; font-weight:600; padding:.25rem .6rem; border-radius:6px; border:none; cursor:pointer; }
+    .watch-suggestion .sug-yes { background:var(--gold); color:#fff; }
+    .watch-suggestion .sug-no { background:transparent; color:var(--muted); }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
 
     /* ── RESPONSIVE ── */
     @media (max-width: 760px) {
@@ -3260,6 +3265,7 @@
       </div>
       <input type="file" id="track-photo-input" accept="image/*" capture="environment"
         style="display:none" onchange="handleTrackPhoto(this)">
+      <div id="watch-suggestion" style="display:none;"></div>
     </div>
 
     <!-- Caption + Private notes side by side label, stacked fields -->
@@ -3688,7 +3694,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.07.17.43';
+const APP_VERSION = '2.33.07.17.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8191,12 +8197,79 @@ function handleTrackPhoto(input) {
   document.getElementById('track-photo-clear').style.display = '';
   document.getElementById('track-photo-area').classList.add('has-photo');
   input.value = '';
+  // Auto-identify the watch in the photo and suggest a match
+  identifyWatchInPhoto(file);
+}
+
+async function identifyWatchInPhoto(file) {
+  if (!currentUser || !watches.length) return;
+  try {
+    const base64 = await blobToResizedBase64(file);
+    const resp = await withTimeout(fetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await db.auth.getSession()).data.session?.access_token}` },
+      body: JSON.stringify({ image: base64 }),
+    }), 30000);
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (!data.watches || data.watches.length === 0) return;
+    const matches = matchIdentifiedToCollection(data.watches);
+    if (matches.length === 0) return;
+    const best = matches[0];
+    // If the matched watch is different from what's currently selected, suggest switching
+    if (best.watch.id !== selWatchId) {
+      showWatchSuggestion(best.watch);
+    }
+  } catch (_) { /* silent — don't disrupt the user's flow */ }
+}
+
+function showWatchSuggestion(w) {
+  const el = document.getElementById('watch-suggestion');
+  if (!el) return;
+  const thumb = w.image
+    ? `<img src="${escHtml(w.image)}" alt="" style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
+    : `<div style="width:32px;height:32px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:#fff;background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+  el.innerHTML = `<div class="watch-suggestion">
+    ${thumb}
+    <div style="flex:1;min-width:0;">Looks like your <strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong>. Track this one?</div>
+    <button class="sug-yes" onclick="acceptWatchSuggestion('${w.id}')">Yes</button>
+    <button class="sug-no" onclick="dismissWatchSuggestion()">No</button>
+  </div>`;
+  el.style.display = '';
+}
+
+function acceptWatchSuggestion(watchId) {
+  document.getElementById('watch-suggestion').style.display = 'none';
+  // Save current photo state before openTrackModal clears it
+  const savedFile = trackPhotoFile;
+  const savedUrl = trackPhoto;
+  openTrackModal(watchId);
+  // Re-inject the photo
+  if (savedFile) {
+    trackPhotoFile = savedFile;
+    trackPhoto = savedUrl || URL.createObjectURL(savedFile);
+    const preview = document.getElementById('track-photo-preview');
+    if (preview) { preview.src = trackPhoto; preview.style.display = 'block'; }
+    const ph = document.getElementById('track-photo-placeholder');
+    if (ph) ph.style.display = 'none';
+    const clr = document.getElementById('track-photo-clear');
+    if (clr) clr.style.display = '';
+    const area = document.getElementById('track-photo-area');
+    if (area) area.classList.add('has-photo');
+  }
+}
+
+function dismissWatchSuggestion() {
+  const el = document.getElementById('watch-suggestion');
+  if (el) el.style.display = 'none';
 }
 
 function clearTrackPhoto() {
   if (trackPhoto) URL.revokeObjectURL(trackPhoto);
   trackPhoto     = null;
   trackPhotoFile = null;
+  const sug = document.getElementById('watch-suggestion');
+  if (sug) sug.style.display = 'none';
   const preview = document.getElementById('track-photo-preview');
   if (!preview) return;
   preview.style.display = 'none';
