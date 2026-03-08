@@ -3707,7 +3707,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.07.19.25';
+const APP_VERSION = '2.33.07.19.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11523,7 +11523,7 @@ function collSaveRankOrder() {
   markDirty('elo', collSortedWatches.map(w => w.id));
   safeSetJSON(STORE_ELO, eloRatings);
   cloudSync();
-  renderCollection();
+  renderCollection(true);
 }
 
 function collMoveRank(watchId, direction) {
