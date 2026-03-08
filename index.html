@@ -3747,7 +3747,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.08.10.05';
+const APP_VERSION = '2.33.08.10.50';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6170,6 +6170,13 @@ async function loadFeed() {
   feedLoading = true;
   _feedLoadStartedAt = Date.now();
   feedError = false;
+  // Master safety net: if loadFeed hasn't finished in 15s, force-render error state
+  const _feedSafety = setTimeout(() => {
+    if (feedLoading) {
+      console.warn('[WRotate] loadFeed master timeout (15s) — forcing error render');
+      feedLoading = false; feedError = true; renderFeed();
+    }
+  }, 15000);
   const listEl = document.getElementById('feed-list');
   if (listEl) listEl.innerHTML = '<div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:40%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:90%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:70%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:35%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:80%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:60%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:45%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:85%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:65%;height:.7rem;"></div></div>';
   try {
@@ -6225,9 +6232,9 @@ async function loadFeed() {
       logsErr = null;
     } catch {
       // Fallback: own posts only (safe when visibility column is unavailable)
-      const res = await db.from('logs').select(FEED_LOG_COLS)
+      const res = await withTimeout(db.from('logs').select(FEED_LOG_COLS)
         .eq('user_id', currentUser.id)
-        .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50);
+        .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50), 10000);
       rawLogs = res.data; logsErr = res.error;
     }
     if (logsErr) { console.warn('Feed logs error:', logsErr.message); feedItems = []; renderFeed(); return; }
@@ -6236,9 +6243,9 @@ async function loadFeed() {
     const myClubIds = myClubs.map(c => c.id);
     rawLogs = rawLogs.filter(l => !l.club_id || myClubIds.includes(l.club_id));
     if (myClubIds.length) {
-      const { data: clubLogData } = await db.from('logs').select(FEED_LOG_COLS)
+      const { data: clubLogData } = await withTimeout(db.from('logs').select(FEED_LOG_COLS)
         .in('club_id', myClubIds)
-        .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(100);
+        .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(100), 10000);
       if (clubLogData && clubLogData.length) {
         const merged = new Map();
         [...rawLogs, ...clubLogData].forEach(l => merged.set(l.id, l));
@@ -6309,12 +6316,12 @@ async function loadFeed() {
     if (commentData && commentData.length) {
       const commenterIds = [...new Set(commentData.map(c => c.user_id))];
       const allCommentIds = commentData.map(c => c.id);
-      const [commenterResult, clResult] = await Promise.all([
+      const [commenterResult, clResult] = await withTimeout(Promise.all([
         db.from('profiles').select('id, username, display_name').in('id', commenterIds),
         allCommentIds.length
           ? db.from('comment_likes').select('comment_id, user_id').in('comment_id', allCommentIds)
           : { data: [] },
-      ]);
+      ]), 10000);
       const cpm = {};
       (commenterResult.data || []).forEach(p => cpm[p.id] = p);
       commentData.forEach(c => {
@@ -6335,8 +6342,8 @@ async function loadFeed() {
       profile: profileMap[l.user_id] || null,
       watch: l.watch_id ? (watchMap[l.watch_id] || null) : null,
     }));
-  } catch(e) { console.warn('Feed error:', e.message); feedError = true; }
-  finally { feedLoading = false; }
+  } catch(e) { console.warn('Feed error:', e?.message); feedError = true; }
+  finally { clearTimeout(_feedSafety); feedLoading = false; }
   if (!feedError) feedLoadedAt = Date.now();
   renderFeed();
 }
@@ -8114,7 +8121,12 @@ function nav(btn) {
   if (page === 'track')    { _trackHistoryLimit = 50; renderTrack(); }
   if (page === 'wishlist') renderWishlist();
   if (page === 'stats')  renderStats();
-  if (page === 'feed')     { loadFeed(); loadNotifications(); }
+  if (page === 'feed')     {
+    // If feed is still showing skeleton (stuck load), force a fresh attempt
+    const fl = document.getElementById('feed-list');
+    if (fl && fl.querySelector('.feed-skeleton-item')) { feedLoading = false; feedLoadedAt = 0; }
+    loadFeed(); loadNotifications();
+  }
   if (page === 'clubs') {
     if (!_clubsLoaded) {
       _clubsLoaded = true;
