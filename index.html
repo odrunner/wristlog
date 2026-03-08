@@ -3661,7 +3661,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.26.17.07';
+const APP_VERSION = '2.33.07.17.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6071,10 +6071,17 @@ document.addEventListener('click', e => {
 // ── Feed ──────────────────────────────────────────────────────────────────
 const FEED_LOG_COLS = 'id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility';
 async function loadFeed() {
-  if (feedLoading || !currentUser) return;
+  if (!currentUser) return;
+  // If feedLoading is stuck true for >15s, treat it as dead and allow re-entry
+  if (feedLoading) {
+    if (!_feedLoadStartedAt || Date.now() - _feedLoadStartedAt < 15000) return;
+    console.warn('[WRotate] feedLoading stuck >15s — forcing re-entry');
+    feedLoading = false;
+  }
   // Skip re-fetch if feed was loaded recently (60s) unless forced or errored
   if (!feedError && feedItems.length > 0 && Date.now() - feedLoadedAt < 60000) return;
   feedLoading = true;
+  _feedLoadStartedAt = Date.now();
   feedError = false;
   const listEl = document.getElementById('feed-list');
   if (listEl) listEl.innerHTML = '<div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:40%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:90%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:70%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:35%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:80%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:60%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:45%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:85%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:65%;height:.7rem;"></div></div>';
@@ -7475,6 +7482,7 @@ let pendingClubRequests = new Set(); // club_ids user has requested to join
 let currentClubId = null;
 let clubPagePrev  = 'page-feed';
 let feedLoading       = false;
+let _feedLoadStartedAt = 0;          // when feedLoading was set true (stuck-guard)
 let feedError         = false;       // true when loadFeed() fails — shows retry UI
 let feedLoadedAt      = 0;           // timestamp of last successful feed load (for cache)
 let myProfile         = null;      // current user's profile row
@@ -12310,7 +12318,7 @@ function clearUserState() {
   myClubs = []; pendingClubRequests.clear(); myProfile = null;
   userNotifs = []; unreadNotifCount = 0; notifPanelOpen = false;
   commentLikes = {}; discoverUsers = []; profilePageUserId = null;
-  feedLoading = false; feedError = false; feedLoadedAt = 0; _clubsLoaded = false; _frLoadedAt = 0;
+  feedLoading = false; _feedLoadStartedAt = 0; feedError = false; feedLoadedAt = 0; _clubsLoaded = false; _frLoadedAt = 0;
   Object.keys(_profileCache).forEach(k => delete _profileCache[k]);
   if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }
 }
@@ -12396,6 +12404,17 @@ db.auth.onAuthStateChange((event, session) => {
     if (notifPanel) notifPanel.classList.add('hidden');
   } else if (event === 'TOKEN_REFRESHED' && session?.user) {
     currentUser = session.user; // keep token current, no re-boot needed
+  }
+});
+
+// ── Foreground detection — reload feed when app returns from background ───────
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || !currentUser) return;
+  const feedPage = document.getElementById('page-feed');
+  if (feedPage && feedPage.classList.contains('active')) {
+    // Force past the 60s cache so the feed refreshes after switching back
+    feedLoadedAt = 0;
+    loadFeed();
   }
 });
 
