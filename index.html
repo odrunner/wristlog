@@ -3092,7 +3092,7 @@
         <button type="button" id="np-photo-clear" class="log-photo-clear" style="display:none;"
           onclick="event.stopPropagation();clearNewPostPhoto()">✕</button>
       </div>
-      <input type="file" id="np-photo-input" accept="image/*"
+      <input type="file" id="np-photo-input" accept="image/*" capture="environment"
         style="display:none" onchange="handleNewPostPhoto(this)">
       <div id="np-watch-suggestion" style="display:none;"></div>
     </div>
@@ -3695,7 +3695,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.07.18.05';
+const APP_VERSION = '2.33.07.18.16';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6795,30 +6795,19 @@ async function npIdentifyWatch(file) {
 }
 
 function showNpWatchSuggestion(w) {
+  // Auto-accept: set watchId immediately, user can dismiss if wrong
+  npIdentifiedWatchId = w.id;
   const el = document.getElementById('np-watch-suggestion');
   if (!el) return;
   const thumb = w.image
     ? `<img src="${escHtml(w.image)}" alt="" style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
     : `<div style="width:32px;height:32px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:#fff;background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
-  el.innerHTML = `<div class="watch-suggestion">
+  el.innerHTML = `<div class="watch-suggestion" style="background:rgba(76,175,80,.08);border-color:rgba(76,175,80,.25);">
     ${thumb}
-    <div style="flex:1;min-width:0;">Looks like your <strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong>. Add wear log?</div>
-    <button class="sug-yes" onclick="acceptNpWatch('${w.id}')">Yes</button>
-    <button class="sug-no" onclick="dismissNpWatchSuggestion()">No</button>
+    <div style="flex:1;min-width:0;font-size:.82rem;"><strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong> recognized — wear log will be added</div>
+    <button class="sug-no" onclick="dismissNpWatchSuggestion()" style="font-size:.7rem;">Not this watch</button>
   </div>`;
   el.style.display = '';
-}
-
-function acceptNpWatch(watchId) {
-  npIdentifiedWatchId = watchId;
-  const w = watches.find(x => x.id === watchId);
-  const el = document.getElementById('np-watch-suggestion');
-  if (!el || !w) return;
-  el.innerHTML = `<div class="watch-suggestion" style="background:rgba(76,175,80,.08);border-color:rgba(76,175,80,.25);">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4caf50" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-    <div style="flex:1;min-width:0;font-size:.82rem;">Wear log for <strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong> will be added</div>
-    <button class="sug-no" onclick="dismissNpWatchSuggestion()" style="font-size:.7rem;">Undo</button>
-  </div>`;
 }
 
 function dismissNpWatchSuggestion() {
@@ -6875,6 +6864,7 @@ async function saveNewPost() {
     }
   }
   const postedWatch = trackWatchId ? watches.find(x => x.id === trackWatchId) : null;
+  if (postedWatch) dismissReminder(); // wear was logged, dismiss the reminder
   closeNewPost();
   toast(postedWatch ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : 'Posted!');
   feedLoadedAt = 0; // force feed to re-fetch after posting
