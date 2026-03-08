@@ -3593,7 +3593,7 @@ function wishToRow(w, idx) {
     market_price_src: w.marketPriceSrc||null, watch_charts_url: w.watchChartsUrl||null,
     wish_privacy: w.wishPrivacy||null,
     added_date: w.addedDate||null,
-    rank: typeof idx === 'number' ? idx : (w._rank ?? 0),
+    sort_order: typeof idx === 'number' ? idx : (w._rank ?? 0),
   };
 }
 function rowToWish(r) {
@@ -3605,7 +3605,7 @@ function rowToWish(r) {
     marketPriceSrc: r.market_price_src||null, watchChartsUrl: r.watch_charts_url||null,
     wishPrivacy: r.wish_privacy||null,
     addedDate: r.added_date||null,
-    _rank: r.rank ?? 0,
+    _rank: r.sort_order ?? 0,
   };
 }
 
@@ -3703,7 +3703,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.07.18.42';
+const APP_VERSION = '2.33.07.18.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
