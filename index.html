@@ -3747,7 +3747,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.08.08.38';
+const APP_VERSION = '2.33.08.08.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8278,7 +8278,7 @@ function renderTrackHistory() {
 
 async function saveLog() {
   const date = document.getElementById('track-date').value;
-  if (!date)       { toast('Please select a date', 'error'); return; }
+  if (!date)       { showFieldError('track-date', 'Please select a date'); return; }
   if (!selWatchId) { toast('Please select a watch', 'error'); return; }
   const _slBtn = document.querySelector('#track-log-modal .btn-primary');
   if (_slBtn?.disabled) return;
@@ -8578,7 +8578,7 @@ function closeEditLog() {
 function saveEditLog() {
   if (!editingLogId) return;
   const date = document.getElementById('edit-log-date').value;
-  if (!date) { toast('Please select a date', 'error'); return; }
+  if (!date) { showFieldError('edit-log-date', 'Please select a date'); return; }
   const notes = document.getElementById('edit-log-notes').value.trim();
   const idx = logs.findIndex(l => l.id === editingLogId);
   if (idx === -1) { closeEditLog(); return; }
@@ -11834,8 +11834,8 @@ function closeWishlistModal() { clearInlineEdits(WL_INLINE_FIELDS); if (wlPendin
 async function saveWishlistItem() {
   const brand = document.getElementById('wl-brand').value;
   const name  = document.getElementById('wl-name').value.trim();
-  if (!brand) { toast('Please select a brand', 'error'); return; }
-  if (!name) { toast('Model name is required', 'error'); return; }
+  if (!brand) { showFieldError('wl-brand-display', 'Please select a brand'); return; }
+  if (!name) { showFieldError('wl-name', 'Model name is required'); return; }
   const _wlBtn = document.querySelector('#wishlist-modal .btn-primary');
   if (_wlBtn?.disabled) return;
   if (_wlBtn) { _wlBtn.disabled = true; _wlBtn.textContent = 'Saving...'; }
@@ -12536,7 +12536,7 @@ ${handle ? `Find me @${handle} — ` : ''}Join free 👉 https://wrotate.com`;
 
 async function submitFeedback() {
   const details = document.getElementById('fb-desc').value.trim();
-  if (!details) { toast('Please describe your feedback', 'error'); return; }
+  if (!details) { showFieldError('fb-desc', 'Please describe your feedback'); return; }
 
   const btn = document.getElementById('fb-submit-btn');
   btn.disabled = true;
