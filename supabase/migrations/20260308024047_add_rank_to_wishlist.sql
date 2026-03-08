@@ -1,0 +1,1 @@
+ALTER TABLE wishlist ADD COLUMN IF NOT EXISTS rank integer DEFAULT 0;

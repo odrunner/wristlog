@@ -3583,7 +3583,7 @@ function rowToLog(r) {
     clubId: r.club_id || null,
   };
 }
-function wishToRow(w) {
+function wishToRow(w, idx) {
   return {
     id: w.id, user_id: currentUser.id,
     brand: w.brand||null, name: w.name||null, ref: w.ref||null,
@@ -3593,6 +3593,7 @@ function wishToRow(w) {
     market_price_src: w.marketPriceSrc||null, watch_charts_url: w.watchChartsUrl||null,
     wish_privacy: w.wishPrivacy||null,
     added_date: w.addedDate||null,
+    rank: typeof idx === 'number' ? idx : (w._rank ?? 0),
   };
 }
 function rowToWish(r) {
@@ -3604,6 +3605,7 @@ function rowToWish(r) {
     marketPriceSrc: r.market_price_src||null, watchChartsUrl: r.watch_charts_url||null,
     wishPrivacy: r.wish_privacy||null,
     addedDate: r.added_date||null,
+    _rank: r.rank ?? 0,
   };
 }
 
@@ -3625,7 +3627,7 @@ async function loadUserData() {
   if (wlRes.error) console.error('[WristLog] wishlist SELECT error:', wlRes.error.message, wlRes.error);
   watches  = (wRes.data  || []).map(rowToWatch);
   logs     = (lRes.data  || []).map(rowToLog);
-  wishlist = (wlRes.data || []).map(rowToWish);
+  wishlist = (wlRes.data || []).map(rowToWish).sort((a, b) => (a._rank ?? 0) - (b._rank ?? 0));
   // Rebuild eloRatings map from watch rows
   eloRatings = {};
   (wRes.data || []).forEach(r => { if (r.elo_rating) eloRatings[r.id] = r.elo_rating; });
@@ -3677,7 +3679,8 @@ async function cloudSync() {
     }
     if (_dirty.wishlist.size) {
       const ids = [..._dirty.wishlist];
-      if (await upsert('wishlist', wishlist.filter(w => ids.includes(w.id)).map(wishToRow)))
+      // Always sync all items when any are dirty to preserve rank order
+      if (await upsert('wishlist', wishlist.map((w, i) => wishToRow(w, i))))
         ids.forEach(id => _dirty.wishlist.delete(id));
     }
     if (_dirty.elo.size) {
@@ -3700,7 +3703,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.07.18.37';
+const APP_VERSION = '2.33.07.18.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
