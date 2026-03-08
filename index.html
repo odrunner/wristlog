@@ -1220,6 +1220,13 @@
     .pi-loading-spinner { display:inline-block; width:28px; height:28px; border:2.5px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:spin .7s linear infinite; margin-bottom:.7rem; }
     @keyframes spin { to { transform:rotate(360deg); } }
 
+    /* ── SNAP TO TRACK ── */
+    .snap-btn { width:100%; display:flex; align-items:center; justify-content:center; gap:.6rem; padding:.9rem 1rem; border:2px dashed var(--border); border-radius:var(--radius); background:transparent; color:var(--muted); font-size:.85rem; font-weight:500; cursor:pointer; transition:border-color .2s, color .2s; }
+    .snap-btn:hover, .snap-btn:active { border-color:var(--gold); color:var(--gold); }
+    .snap-btn:disabled { opacity:.5; pointer-events:none; }
+    .snap-match-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:.75rem 1rem; margin-bottom:.5rem; display:flex; gap:.75rem; align-items:center; cursor:pointer; transition:border-color .2s; }
+    .snap-match-card:hover { border-color:var(--gold); }
+
     /* ── RESPONSIVE ── */
     @media (max-width: 760px) {
       .track-grid    { grid-template-columns: 1fr; }
@@ -2102,6 +2109,14 @@
   <!-- ════ TRACK PAGE ════ -->
   <div id="page-track" class="page">
     <div id="rec-container"></div>
+    <div class="card" id="snap-to-track-card" style="margin-bottom:1.25rem;">
+      <div class="card-label">Snap to Track</div>
+      <button id="snap-to-track-btn" class="snap-btn" onclick="snapToTrack()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <span>Take a photo of your wrist</span>
+      </button>
+      <div id="snap-status" style="display:none;"></div>
+    </div>
     <div class="card" style="margin-bottom:1.25rem;">
       <div class="card-label">Select a watch to log</div>
       <div id="watch-selector"></div>
@@ -2844,6 +2859,19 @@
     <div id="photo-identify-list" style="max-height:60vh;overflow-y:auto;"></div>
     <div class="modal-actions" style="margin-top:1rem;">
       <button class="btn btn-ghost" onclick="closePhotoIdentify()">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ SNAP MATCH PICKER MODAL ════ -->
+<div id="snap-match-modal" class="overlay hidden">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Which watch is this?
+    </div>
+    <div id="snap-match-list" style="max-height:50vh;overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:1rem;">
+      <button class="btn btn-ghost" onclick="closeSnapMatch()">Cancel</button>
     </div>
   </div>
 </div>
@@ -3660,7 +3688,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.07.17.30';
+const APP_VERSION = '2.33.07.17.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7503,6 +7531,7 @@ let selUseCase  = 'unspecified';
 let selTrackVis = 'public'; // visibility for the track modal
 let trackPhoto     = null;    // objectURL for preview (or null)
 let trackPhotoFile = null;    // raw File for deferred upload
+let _snapPickerFile = null;   // temp file storage for snap-to-track multi-match flow
 let editingId   = null;
 let editingLogId   = null;  // log entry currently being edited
 let editLogUseCase = 'unspecified';
@@ -7976,6 +8005,8 @@ function renderWornNotice() {
 function renderWatchSelector() {
   const el = document.getElementById('watch-selector');
   if (!el) return;
+  const snapCard = document.getElementById('snap-to-track-card');
+  if (snapCard) snapCard.style.display = watches.length ? '' : 'none';
   if (watches.length === 0) {
     el.innerHTML = `<div class="empty"><div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
       <div class="empty-text">No watches yet</div>
@@ -8173,6 +8204,147 @@ function clearTrackPhoto() {
   document.getElementById('track-photo-placeholder').style.display = '';
   document.getElementById('track-photo-clear').style.display = 'none';
   document.getElementById('track-photo-area').classList.remove('has-photo');
+}
+
+// ── SNAP TO TRACK ─────────────────────────────────────────────────────────
+function snapToTrack() {
+  if (!currentUser) { toast('Sign in to use Snap to Track', 'error'); return; }
+  if (!watches.length) { toast('Add watches to your collection first', 'error'); return; }
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.capture = 'environment';
+  input.onchange = async () => {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    // Show loading state
+    const statusEl = document.getElementById('snap-status');
+    const btnEl = document.getElementById('snap-to-track-btn');
+    if (btnEl) btnEl.disabled = true;
+    if (statusEl) { statusEl.style.display = ''; statusEl.innerHTML = `<div class="pi-loading"><div class="pi-loading-spinner"></div><div style="font-size:.85rem;">Identifying your watch\u2026</div></div>`; }
+    try {
+      const base64 = await blobToResizedBase64(file);
+      const resp = await withTimeout(fetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await db.auth.getSession()).data.session?.access_token}` },
+        body: JSON.stringify({ image: base64 }),
+      }), 30000);
+      if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error || `API error ${resp.status}`); }
+      const data = await resp.json();
+      if (!data.watches || data.watches.length === 0) { toast('No watch identified — try a clearer shot', 'error'); resetSnapStatus(); return; }
+      const matches = matchIdentifiedToCollection(data.watches);
+      if (matches.length === 0) { toast('Watch not found in your collection', 'error'); resetSnapStatus(); return; }
+      if (matches.length === 1) { openTrackWithSnap(matches[0].watch.id, file); resetSnapStatus(); return; }
+      showSnapMatchPicker(matches, file);
+      resetSnapStatus();
+    } catch (e) {
+      console.error('[WRotate] Snap to track error:', e);
+      toast('Identification failed: ' + (e.message || 'Unknown error'), 'error');
+      resetSnapStatus();
+    }
+  };
+  input.click();
+}
+
+function resetSnapStatus() {
+  const statusEl = document.getElementById('snap-status');
+  const btnEl = document.getElementById('snap-to-track-btn');
+  if (statusEl) statusEl.style.display = 'none';
+  if (btnEl) btnEl.disabled = false;
+}
+
+function matchIdentifiedToCollection(identifiedWatches) {
+  const results = [];
+  const seen = new Set();
+  for (const identified of identifiedWatches) {
+    const idBrand = (identified.brand || '').toLowerCase().trim();
+    const idModel = (identified.model || '').toLowerCase().trim();
+    const idRef = (identified.reference || '').toLowerCase().trim().replace(/[\s\-]/g, '');
+    // Tier 1: exact reference match
+    if (idRef) {
+      for (const w of watches) {
+        const wRef = (w.ref || '').toLowerCase().trim().replace(/[\s\-]/g, '');
+        if (wRef && wRef === idRef && !seen.has(w.id)) {
+          results.push({ watch: w, matchType: 'reference', confidence: identified.confidence || 'high' });
+          seen.add(w.id);
+        }
+      }
+    }
+    // Tier 2: brand + model name match
+    if (idBrand && idModel) {
+      for (const w of watches) {
+        if (seen.has(w.id)) continue;
+        const wBrand = (w.brand || '').toLowerCase().trim();
+        const wName = (w.name || '').toLowerCase().trim();
+        if (wBrand === idBrand && (wName.includes(idModel) || idModel.includes(wName))) {
+          results.push({ watch: w, matchType: 'brand+model', confidence: identified.confidence || 'medium' });
+          seen.add(w.id);
+        }
+      }
+    }
+    // Tier 3: brand-only if exactly one watch of that brand
+    if (idBrand && results.length === 0) {
+      const brandMatches = watches.filter(w => (w.brand || '').toLowerCase().trim() === idBrand && !seen.has(w.id));
+      if (brandMatches.length === 1) {
+        results.push({ watch: brandMatches[0], matchType: 'brand-only', confidence: 'low' });
+        seen.add(brandMatches[0].id);
+      }
+    }
+  }
+  const typeOrder = { 'reference': 0, 'brand+model': 1, 'brand-only': 2 };
+  const confOrder = { 'high': 0, 'medium': 1, 'low': 2 };
+  results.sort((a, b) => (typeOrder[a.matchType] - typeOrder[b.matchType]) || (confOrder[a.confidence] - confOrder[b.confidence]));
+  return results;
+}
+
+function openTrackWithSnap(watchId, file) {
+  openTrackModal(watchId);
+  // Inject photo AFTER openTrackModal (which calls clearTrackPhoto internally)
+  if (file) {
+    trackPhotoFile = file;
+    trackPhoto = URL.createObjectURL(file);
+    const preview = document.getElementById('track-photo-preview');
+    if (preview) { preview.src = trackPhoto; preview.style.display = 'block'; }
+    const ph = document.getElementById('track-photo-placeholder');
+    if (ph) ph.style.display = 'none';
+    const clr = document.getElementById('track-photo-clear');
+    if (clr) clr.style.display = '';
+    const area = document.getElementById('track-photo-area');
+    if (area) area.classList.add('has-photo');
+  }
+}
+
+function showSnapMatchPicker(matches, file) {
+  _snapPickerFile = file;
+  const list = document.getElementById('snap-match-list');
+  list.innerHTML = matches.map((m) => {
+    const w = m.watch;
+    const thumb = w.image
+      ? `<img src="${escHtml(w.image)}" alt="" style="width:40px;height:40px;border-radius:8px;flex-shrink:0;object-fit:cover;" onerror="this.style.display='none'">`
+      : `<div style="width:40px;height:40px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+    const matchLabel = m.matchType === 'reference' ? 'Ref match' : m.matchType === 'brand+model' ? 'Model match' : 'Brand match';
+    return `<div class="snap-match-card" onclick="pickSnapMatch('${w.id}')">
+      ${thumb}
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:.88rem;">${escHtml(w.brand)} ${escHtml(w.name)}</div>
+        ${w.ref ? `<div style="font-size:.72rem;color:var(--muted);">Ref. ${escHtml(w.ref)}</div>` : ''}
+        <div style="font-size:.68rem;color:var(--muted);margin-top:.15rem;">${matchLabel}</div>
+      </div>
+      <span class="pi-card-conf ${m.confidence}">${m.confidence}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('snap-match-modal').classList.remove('hidden');
+}
+
+function pickSnapMatch(watchId) {
+  closeSnapMatch();
+  openTrackWithSnap(watchId, _snapPickerFile);
+  _snapPickerFile = null;
+}
+
+function closeSnapMatch() {
+  document.getElementById('snap-match-modal').classList.add('hidden');
+  _snapPickerFile = null;
 }
 
 function deleteLog(id) {
@@ -12248,6 +12420,7 @@ const _overlayCloseMap = {
   'confirm-modal':       _confirmCancel,
   'photo-paste-modal':   closePhotoPasteModal,
   'photo-identify-modal': closePhotoIdentify,
+  'snap-match-modal':     closeSnapMatch,
   'wishlist-modal':      closeWishlistModal,
   'watch-preview-modal': closeWatchPreview,
   'del-wl-modal':        closeDelWlModal,
