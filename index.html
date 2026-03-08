@@ -1219,6 +1219,7 @@
     .pi-loading { text-align:center; padding:2rem 1rem; color:var(--muted); }
     .pi-loading-spinner { display:inline-block; width:28px; height:28px; border:2.5px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:spin .7s linear infinite; margin-bottom:.7rem; }
     @keyframes spin { to { transform:rotate(360deg); } }
+    .spin { animation:spin .8s linear infinite; }
 
     /* ── SNAP TO TRACK ── */
     .snap-btn { width:100%; display:flex; align-items:center; justify-content:center; gap:.6rem; padding:.9rem 1rem; border:2px dashed var(--border); border-radius:var(--radius); background:transparent; color:var(--muted); font-size:.85rem; font-weight:500; cursor:pointer; transition:border-color .2s, color .2s; }
@@ -3093,6 +3094,7 @@
       </div>
       <input type="file" id="np-photo-input" accept="image/*"
         style="display:none" onchange="handleNewPostPhoto(this)">
+      <div id="np-watch-suggestion" style="display:none;"></div>
     </div>
     <div class="form-group">
       <textarea id="np-body" rows="3" placeholder="What's on your mind? (@ to mention)" style="resize:none;" maxlength="1000"
@@ -3265,7 +3267,6 @@
       </div>
       <input type="file" id="track-photo-input" accept="image/*" capture="environment"
         style="display:none" onchange="handleTrackPhoto(this)">
-      <div id="watch-suggestion" style="display:none;"></div>
     </div>
 
     <!-- Caption + Private notes side by side label, stacked fields -->
@@ -3694,7 +3695,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.07.17.51';
+const APP_VERSION = '2.33.07.18.05';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6713,11 +6714,14 @@ async function confirmDeletePost() {
 // ── Standalone new post ────────────────────────────────────────────────────
 let newPostPhoto = null;   // objectURL for preview (or null)
 let newPostFile  = null;   // raw File for deferred upload
+let npIdentifiedWatchId = null; // watchId from AI identification (or null)
 
 function openNewPost() {
   newPostPhoto = null;
   newPostFile  = null;
+  npIdentifiedWatchId = null;
   clearNewPostPhoto();
+  dismissNpWatchSuggestion();
   document.getElementById('np-body').value = '';
   document.getElementById('np-vis-chips').innerHTML = visChipsHtml('np-vis-chips', getDefaultVis());
   document.getElementById('new-post-modal').classList.remove('hidden');
@@ -6728,6 +6732,7 @@ function closeNewPost() {
   document.getElementById('new-post-modal').classList.add('hidden');
   newPostPhoto = null;
   newPostFile  = null;
+  npIdentifiedWatchId = null;
   clearNewPostPhoto();
 }
 
@@ -6743,12 +6748,16 @@ function handleNewPostPhoto(input) {
   document.getElementById('np-photo-clear').style.display = '';
   document.getElementById('np-photo-area').classList.add('has-photo');
   input.value = '';
+  // Identify watch in photo and suggest adding a wear log
+  npIdentifyWatch(file);
 }
 
 function clearNewPostPhoto() {
   if (newPostPhoto) URL.revokeObjectURL(newPostPhoto);
   newPostPhoto = null;
   newPostFile  = null;
+  npIdentifiedWatchId = null;
+  dismissNpWatchSuggestion();
   const preview = document.getElementById('np-photo-preview');
   if (!preview) return;
   preview.style.display = 'none';
@@ -6758,12 +6767,73 @@ function clearNewPostPhoto() {
   document.getElementById('np-photo-area').classList.remove('has-photo');
 }
 
+// ── New Post: AI watch identification ────────────────────────────────────────
+async function npIdentifyWatch(file) {
+  if (!currentUser || !watches.length) return;
+  const sugEl = document.getElementById('np-watch-suggestion');
+  if (!sugEl) return;
+  // Show loading state
+  sugEl.innerHTML = `<div class="watch-suggestion"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" class="spin"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><div style="flex:1;color:var(--muted);font-size:.8rem;">Identifying watch…</div></div>`;
+  sugEl.style.display = '';
+  try {
+    const base64 = await blobToResizedBase64(file);
+    const resp = await withTimeout(fetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await db.auth.getSession()).data.session?.access_token}` },
+      body: JSON.stringify({ image: base64 }),
+    }), 30000);
+    if (!resp.ok) { sugEl.style.display = 'none'; return; }
+    const data = await resp.json();
+    if (!data.watches || data.watches.length === 0) { sugEl.style.display = 'none'; return; }
+    const matches = matchIdentifiedToCollection(data.watches);
+    if (matches.length === 0) {
+      sugEl.style.display = 'none';
+      return;
+    }
+    showNpWatchSuggestion(matches[0].watch);
+  } catch (_) { sugEl.style.display = 'none'; }
+}
+
+function showNpWatchSuggestion(w) {
+  const el = document.getElementById('np-watch-suggestion');
+  if (!el) return;
+  const thumb = w.image
+    ? `<img src="${escHtml(w.image)}" alt="" style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
+    : `<div style="width:32px;height:32px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:#fff;background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+  el.innerHTML = `<div class="watch-suggestion">
+    ${thumb}
+    <div style="flex:1;min-width:0;">Looks like your <strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong>. Add wear log?</div>
+    <button class="sug-yes" onclick="acceptNpWatch('${w.id}')">Yes</button>
+    <button class="sug-no" onclick="dismissNpWatchSuggestion()">No</button>
+  </div>`;
+  el.style.display = '';
+}
+
+function acceptNpWatch(watchId) {
+  npIdentifiedWatchId = watchId;
+  const w = watches.find(x => x.id === watchId);
+  const el = document.getElementById('np-watch-suggestion');
+  if (!el || !w) return;
+  el.innerHTML = `<div class="watch-suggestion" style="background:rgba(76,175,80,.08);border-color:rgba(76,175,80,.25);">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4caf50" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+    <div style="flex:1;min-width:0;font-size:.82rem;">Wear log for <strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong> will be added</div>
+    <button class="sug-no" onclick="dismissNpWatchSuggestion()" style="font-size:.7rem;">Undo</button>
+  </div>`;
+}
+
+function dismissNpWatchSuggestion() {
+  npIdentifiedWatchId = null;
+  const el = document.getElementById('np-watch-suggestion');
+  if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+}
+
 async function saveNewPost() {
   const body = (document.getElementById('np-body')?.value || '').trim();
   if (!body && !newPostFile) { toast('Add a photo or write something', 'error'); return; }
   const vis = getVisChip('np-vis-chips');
+  const trackWatchId = npIdentifiedWatchId || null;
   const entry = {
-    id: uid(), watchId: null, date: todayStr(),
+    id: uid(), watchId: trackWatchId, date: todayStr(),
     useCase: 'unspecified', notes: body || null,
     photoUrl: null,
     visibility: vis,
@@ -6779,7 +6849,7 @@ async function saveNewPost() {
   safeSetJSON(STORE_L, logs);
   if (currentUser) {
     const { error } = await db.from('logs').upsert({
-      id: entry.id, user_id: currentUser.id, watch_id: null,
+      id: entry.id, user_id: currentUser.id, watch_id: trackWatchId,
       date: entry.date, use_case: 'unspecified',
       notes: entry.notes, photo_url: entry.photoUrl,
       visibility: vis,
@@ -6804,8 +6874,9 @@ async function saveNewPost() {
       }
     }
   }
+  const postedWatch = trackWatchId ? watches.find(x => x.id === trackWatchId) : null;
   closeNewPost();
-  toast('Posted!');
+  toast(postedWatch ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : 'Posted!');
   feedLoadedAt = 0; // force feed to re-fetch after posting
   if (document.getElementById('page-feed').classList.contains('active')) loadFeed();
 }
@@ -8197,79 +8268,12 @@ function handleTrackPhoto(input) {
   document.getElementById('track-photo-clear').style.display = '';
   document.getElementById('track-photo-area').classList.add('has-photo');
   input.value = '';
-  // Auto-identify the watch in the photo and suggest a match
-  identifyWatchInPhoto(file);
-}
-
-async function identifyWatchInPhoto(file) {
-  if (!currentUser || !watches.length) return;
-  try {
-    const base64 = await blobToResizedBase64(file);
-    const resp = await withTimeout(fetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await db.auth.getSession()).data.session?.access_token}` },
-      body: JSON.stringify({ image: base64 }),
-    }), 30000);
-    if (!resp.ok) return;
-    const data = await resp.json();
-    if (!data.watches || data.watches.length === 0) return;
-    const matches = matchIdentifiedToCollection(data.watches);
-    if (matches.length === 0) return;
-    const best = matches[0];
-    // If the matched watch is different from what's currently selected, suggest switching
-    if (best.watch.id !== selWatchId) {
-      showWatchSuggestion(best.watch);
-    }
-  } catch (_) { /* silent — don't disrupt the user's flow */ }
-}
-
-function showWatchSuggestion(w) {
-  const el = document.getElementById('watch-suggestion');
-  if (!el) return;
-  const thumb = w.image
-    ? `<img src="${escHtml(w.image)}" alt="" style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-    : `<div style="width:32px;height:32px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:#fff;background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
-  el.innerHTML = `<div class="watch-suggestion">
-    ${thumb}
-    <div style="flex:1;min-width:0;">Looks like your <strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong>. Track this one?</div>
-    <button class="sug-yes" onclick="acceptWatchSuggestion('${w.id}')">Yes</button>
-    <button class="sug-no" onclick="dismissWatchSuggestion()">No</button>
-  </div>`;
-  el.style.display = '';
-}
-
-function acceptWatchSuggestion(watchId) {
-  document.getElementById('watch-suggestion').style.display = 'none';
-  // Save current photo state before openTrackModal clears it
-  const savedFile = trackPhotoFile;
-  const savedUrl = trackPhoto;
-  openTrackModal(watchId);
-  // Re-inject the photo
-  if (savedFile) {
-    trackPhotoFile = savedFile;
-    trackPhoto = savedUrl || URL.createObjectURL(savedFile);
-    const preview = document.getElementById('track-photo-preview');
-    if (preview) { preview.src = trackPhoto; preview.style.display = 'block'; }
-    const ph = document.getElementById('track-photo-placeholder');
-    if (ph) ph.style.display = 'none';
-    const clr = document.getElementById('track-photo-clear');
-    if (clr) clr.style.display = '';
-    const area = document.getElementById('track-photo-area');
-    if (area) area.classList.add('has-photo');
-  }
-}
-
-function dismissWatchSuggestion() {
-  const el = document.getElementById('watch-suggestion');
-  if (el) el.style.display = 'none';
 }
 
 function clearTrackPhoto() {
   if (trackPhoto) URL.revokeObjectURL(trackPhoto);
   trackPhoto     = null;
   trackPhotoFile = null;
-  const sug = document.getElementById('watch-suggestion');
-  if (sug) sug.style.display = 'none';
   const preview = document.getElementById('track-photo-preview');
   if (!preview) return;
   preview.style.display = 'none';
