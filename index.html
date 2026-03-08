@@ -455,17 +455,27 @@
       outline: none; border-bottom-color: var(--text) !important; box-shadow: none !important;
     }
 
-    /* Condition & Docs — dotted underline for selects and inputs */
-    #sec-condition select,
-    #sec-condition input[type=date],
-    #sec-condition input[type=text] {
+    /* Dotted-underline inputs in watch & wishlist modals */
+    #watch-modal input[type=text],
+    #watch-modal input[type=number],
+    #watch-modal input[type=date],
+    #watch-modal select,
+    #watch-modal textarea,
+    #wishlist-modal input[type=text],
+    #wishlist-modal input[type=number],
+    #wishlist-modal input[type=date],
+    #wishlist-modal select,
+    #wishlist-modal textarea {
       background: transparent !important; border: none !important;
       border-bottom: 1px dotted var(--muted) !important; border-radius: 0 !important;
       padding: .2rem 0 !important; font-size: .9rem; color: var(--text);
-      width: fit-content !important; min-width: 0;
     }
-    #sec-condition select:focus,
-    #sec-condition input:focus {
+    #watch-modal input:focus,
+    #watch-modal select:focus,
+    #watch-modal textarea:focus,
+    #wishlist-modal input:focus,
+    #wishlist-modal select:focus,
+    #wishlist-modal textarea:focus {
       outline: none; border-bottom-color: var(--text) !important; box-shadow: none !important;
     }
 
@@ -3787,7 +3797,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.08.11.59';
+const APP_VERSION = '2.34.08.12.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
