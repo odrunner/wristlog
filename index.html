@@ -1861,6 +1861,14 @@
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Add Watches from Photo</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Snap a photo of a single watch or a collection flat-lay and AI identifies each one. Brand, model, and reference are pre-filled so you can review and save in seconds. The fastest way to build your collection.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Smarter Recommendations</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Daily watch picks now factor in your ranking preferences, use-case habits, how new a purchase is, and watches that haven&#8217;t been getting enough wrist time. Tags like Dress or Dive also match to the right occasion.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">iOS App &amp; Push Notifications</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">WRotate is now available as an iOS app. Get push notifications when someone likes your wear, comments on your post, sends a follow request, or invites you to a club.</div>
       </div>
@@ -1964,8 +1972,9 @@
     <div class="welcome-step hidden" id="ws-2">
       <div style="margin-bottom:.75rem;display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
       <div class="modal-title" style="font-size:1.2rem;">Add your first watch</div>
-      <p style="color:var(--muted);font-size:.9rem;line-height:1.55;margin:.5rem 0 1.5rem;">Your collection is the heart of WRotate. Add the watches you own to start tracking.</p>
-      <button class="btn btn-primary" style="width:100%;margin-bottom:.6rem;" onclick="pauseWelcome(3);openAddWatch()">Add a Watch</button>
+      <p style="color:var(--muted);font-size:.9rem;line-height:1.55;margin:.5rem 0 1.5rem;">Your collection is the heart of WRotate. Add watches manually, or snap a photo and let AI identify them for you.</p>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:.6rem;" onclick="pauseWelcome(3);openPhotoIdentify()">Add from Photo</button>
+      <button class="btn btn-ghost" style="width:100%;margin-bottom:.6rem;" onclick="pauseWelcome(3);openAddWatch()">Add Manually</button>
       <button class="btn btn-ghost" style="width:100%;" onclick="welcomeStep(3)">Skip for now</button>
     </div>
     <div class="welcome-step hidden" id="ws-3">
@@ -2224,32 +2233,39 @@
           <div class="help-step">
             <div class="help-step-num">1</div>
             <div class="help-step-body">
-              <div class="help-step-title">Go to Collection → "+ Add Watch"</div>
-              <div class="help-step-desc">Opens the add watch form. Fill it manually or use the URL fetch shortcut below.</div>
+              <div class="help-step-title">Quick add: tap "From Photo"</div>
+              <div class="help-step-desc">Take a photo of a single watch or a whole collection flat-lay. AI identifies each watch, then pre-fills the add form with brand, model, and reference number. Review and save — the fastest way to build your collection.</div>
             </div>
           </div>
           <div class="help-step">
             <div class="help-step-num">2</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Or add manually: tap "+ Add Watch"</div>
+              <div class="help-step-desc">Opens the add watch form. Fill it manually or use the URL fetch shortcut below.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">3</div>
             <div class="help-step-body">
               <div class="help-step-title">Paste a product page URL and tap Fetch</div>
               <div class="help-step-desc">Go to the brand's website (rolex.com, omegawatches.com, seikowatches.com…), open the exact watch page, copy the URL, and paste it in. Fetch fills in brand, name, reference number, and often pulls a photo automatically.</div>
             </div>
           </div>
           <div class="help-step">
-            <div class="help-step-num">3</div>
+            <div class="help-step-num">4</div>
             <div class="help-step-body">
               <div class="help-step-title">Fill in price, purchase date, and condition</div>
               <div class="help-step-desc">These power the Cost-per-Wear metric in Stats. Purchase date is also used to sort your collection.</div>
             </div>
           </div>
           <div class="help-step">
-            <div class="help-step-num">4</div>
+            <div class="help-step-num">5</div>
             <div class="help-step-body">
               <div class="help-step-title">Add straps if the watch has more than one</div>
               <div class="help-step-desc">Expand the <strong>Straps</strong> section. Add each strap (e.g. "NATO Black", "Oyster Bracelet") and toggle which is currently on the watch — the app will ask which strap you wore each time you log.</div>
             </div>
           </div>
-          <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Best URL sources:</strong> Brand websites (rolex.com, omegawatches.com…) and WatchCharts auto-fill the most fields. Avoid marketplace URLs (eBay, Chrono24) as they rarely work with Fetch.</span></div>
+          <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> "From Photo" works great for a quick start — snap your watch box and add everything in one go. For the most accurate data, use brand website URLs (rolex.com, omegawatches.com…) with the Fetch button.</span></div>
         </div>
       </div>
 
@@ -3645,7 +3661,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.32.26.16.45';
+const APP_VERSION = '2.33.26.17.07';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8521,8 +8537,8 @@ function renderCollection(force) {
     el.innerHTML = `<div style="grid-column:1/-1"><div class="empty">
       <div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
       <div class="empty-text">${watches.length === 0 ? 'Your collection is empty' : `No ${collTagFilter} watches`}</div>
-      <div class="empty-sub">${watches.length === 0 ? 'Add your first watch to get started' : 'Clear the filter to see all watches'}</div>
-      ${watches.length === 0 ? `<button class="btn btn-primary" style="margin-top:1rem;" onclick="openAddWatch()">Add a Watch</button>` : ''}
+      <div class="empty-sub">${watches.length === 0 ? 'Snap a photo or add manually to get started' : 'Clear the filter to see all watches'}</div>
+      ${watches.length === 0 ? `<button class="btn btn-primary" style="margin-top:1rem;margin-bottom:.5rem;" onclick="openPhotoIdentify()">Add from Photo</button><button class="btn btn-ghost" onclick="openAddWatch()">Add Manually</button>` : ''}
     </div></div>`;
     return;
   }
