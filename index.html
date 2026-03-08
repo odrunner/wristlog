@@ -3745,7 +3745,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.07.20.48';
+const APP_VERSION = '2.33.07.21.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6829,7 +6829,7 @@ async function npIdentifyWatch(file) {
     const base64 = await blobToResizedBase64(file);
     const resp = await withTimeout(fetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await db.auth.getSession()).data.session?.access_token}` },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await db.auth.getSession()).data.session?.access_token}`, 'apikey': SUPABASE_KEY, },
       body: JSON.stringify({ image: base64 }),
     }), 30000);
     if (!resp.ok) { sugEl.style.display = 'none'; return; }
@@ -8357,7 +8357,7 @@ function snapToTrack() {
       const base64 = await blobToResizedBase64(file);
       const resp = await withTimeout(fetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await db.auth.getSession()).data.session?.access_token}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await db.auth.getSession()).data.session?.access_token}`, 'apikey': SUPABASE_KEY, },
         body: JSON.stringify({ image: base64 }),
       }), 30000);
       if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error || `API error ${resp.status}`); }
@@ -11171,7 +11171,7 @@ function openPhotoIdentify() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await db.auth.getSession()).data.session?.access_token}`,
+          'Authorization': `Bearer ${(await db.auth.getSession()).data.session?.access_token}`, 'apikey': SUPABASE_KEY,
         },
         body: JSON.stringify({ image: base64 }),
       }), 30000);
