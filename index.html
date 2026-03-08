@@ -3362,7 +3362,12 @@
 </div>
 
 <div id="toast" class="toast" aria-live="polite" role="status"></div>
-<div id="offline-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#f59e0b;color:#000;text-align:center;padding:.45rem .75rem;font-size:.78rem;font-weight:600;">You're offline — changes are saved locally and will sync when you reconnect.</div>
+<div id="offline-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:var(--bg-card,#1e1e1e);border-bottom:1px solid var(--border,#333);text-align:center;padding:.5rem .75rem;font-size:.78rem;font-weight:500;color:var(--muted,#999);transform:translateY(-100%);transition:transform .3s ease;">
+  <span style="display:inline-flex;align-items:center;gap:.4rem;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+    Offline — changes saved locally, will sync when back online
+  </span>
+</div>
 
 <script>
 // ══════════════════════════════════════════
@@ -3666,13 +3671,9 @@ function queueDelete(table, id) {
 let _syncInFlight = false;
 let _syncRetryCount = 0;
 let _syncRetryTimer;
-let _offlineToastShown = false;
 async function cloudSync() {
   if (!currentUser) return;
-  if (!navigator.onLine) {
-    if (!_offlineToastShown) { toast('You\'re offline — changes saved locally', 'info'); _offlineToastShown = true; }
-    return;
-  }
+  if (!navigator.onLine) return;
   const hasDirty = _dirty.watches.size || _dirty.logs.size || _dirty.wishlist.size || _dirty.elo.size || _pendingDeletes.length;
   if (!hasDirty) return; // nothing changed — skip network call
   if (_syncInFlight) return; // prevent concurrent syncs — next save() will retry
@@ -3741,7 +3742,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.08.06.51';
+const APP_VERSION = '2.33.08.07.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12754,22 +12755,26 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ── Offline detection ────────────────────────────────────────────────────────
-window.addEventListener('offline', () => {
+function showOfflineBanner() {
   const b = document.getElementById('offline-banner');
-  if (b) b.style.display = '';
-});
+  if (!b) return;
+  b.style.display = '';
+  requestAnimationFrame(() => requestAnimationFrame(() => { b.style.transform = 'translateY(0)'; }));
+}
+function hideOfflineBanner() {
+  const b = document.getElementById('offline-banner');
+  if (!b) return;
+  b.style.transform = 'translateY(-100%)';
+  setTimeout(() => { b.style.display = 'none'; }, 300);
+}
+window.addEventListener('offline', showOfflineBanner);
 window.addEventListener('online', () => {
-  const b = document.getElementById('offline-banner');
-  if (b) b.style.display = 'none';
-  _offlineToastShown = false;
+  hideOfflineBanner();
   toast('Back online — syncing…');
   cloudSync();
 });
 // Show banner on boot if already offline
-if (!navigator.onLine) {
-  const b = document.getElementById('offline-banner');
-  if (b) b.style.display = '';
-}
+if (!navigator.onLine) showOfflineBanner();
 
 // ── Global error handlers ─────────────────────────────────────────────────
 window.onerror = function(msg, src, line, col, err) {
