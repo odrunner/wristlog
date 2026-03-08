@@ -302,6 +302,11 @@
     textarea { resize: vertical; min-height: 64px; }
     .form-group { margin-bottom: .9rem; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
+    .field-error input, .field-error select, .field-error textarea { border-color: var(--danger, #e55) !important; }
+    .field-error-msg { color: var(--danger, #e55); font-size: .72rem; margin-top: .2rem; animation: fieldErrorIn .25s ease; }
+    @keyframes fieldShake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-4px)} 40%{transform:translateX(4px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(2px)} }
+    @keyframes fieldErrorIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+    .field-shake { animation: fieldShake .35s ease; }
 
     /* ── TOGGLE SWITCH ── */
     .toggle-switch { position:relative; display:inline-block; width:42px; height:24px; flex-shrink:0; }
@@ -3742,7 +3747,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.08.07.02';
+const APP_VERSION = '2.33.08.08.38';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7814,6 +7819,34 @@ function toast(msg, type='success') {
   el._t = setTimeout(() => el.className = `toast ${type}`, 2600);
 }
 
+function showFieldError(fieldId, msg) {
+  const field = document.getElementById(fieldId);
+  if (!field) { toast(msg, 'error'); return; }
+  const group = field.closest('.form-group') || field.parentElement;
+  // Add error state
+  group.classList.add('field-error');
+  field.classList.add('field-shake');
+  // Insert message if not already present
+  let errEl = group.querySelector('.field-error-msg');
+  if (!errEl) { errEl = document.createElement('div'); errEl.className = 'field-error-msg'; group.appendChild(errEl); }
+  errEl.textContent = msg;
+  // Focus the field
+  field.focus();
+  // Clear shake after animation
+  field.addEventListener('animationend', () => field.classList.remove('field-shake'), { once: true });
+  // Clear error on next input
+  const clear = () => {
+    group.classList.remove('field-error');
+    if (errEl.parentNode) errEl.remove();
+    field.removeEventListener('input', clear);
+    field.removeEventListener('change', clear);
+  };
+  field.addEventListener('input', clear, { once: true });
+  field.addEventListener('change', clear, { once: true });
+  // Auto-clear after 4s
+  setTimeout(() => { if (group.classList.contains('field-error')) clear(); }, 4000);
+}
+
 // ══════════════════════════════════════════
 //  NAVIGATION
 // ══════════════════════════════════════════
@@ -9241,7 +9274,7 @@ function editStrap(idx) {
 }
 function saveStrapEdit(idx) {
   const name = document.getElementById('strap-edit-name').value.trim();
-  if (!name) { toast('Name is required', 'error'); return; }
+  if (!name) { showFieldError('strap-edit-name', 'Name is required'); return; }
   const material = document.getElementById('strap-edit-mat').value.trim();
   wEditStraps[idx] = { ...wEditStraps[idx], name, material };
   wEditingStrapIdx = null;
@@ -9272,7 +9305,7 @@ function hideAddStrapRow() {
 }
 function confirmAddStrap() {
   const name = document.getElementById('strap-name-input').value.trim();
-  if (!name) { toast('Strap name is required', 'error'); return; }
+  if (!name) { showFieldError('strap-name-input', 'Strap name is required'); return; }
   const material = document.getElementById('strap-mat-input').value.trim();
   wEditStraps.push({ id: uid(), name, material, isOn: wEditStraps.length === 0 });
   hideAddStrapRow();
@@ -9560,8 +9593,8 @@ function marketPriceRowHTML(w) {
 async function saveWatch() {
   const brand = document.getElementById('w-brand').value;
   const name  = document.getElementById('w-name').value.trim();
-  if (!brand) { toast('Please select a brand', 'error'); return; }
-  if (!name) { toast('Model name is required', 'error'); return; }
+  if (!brand) { showFieldError('w-brand-display', 'Please select a brand'); return; }
+  if (!name) { showFieldError('w-name', 'Model name is required'); return; }
   const _swBtn = document.getElementById('save-watch-btn');
   if (_swBtn?.disabled) return;
   if (_swBtn) { _swBtn.disabled = true; _swBtn.textContent = 'Saving...'; }
