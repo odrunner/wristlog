@@ -6842,6 +6842,7 @@ async function saveNewPost() {
     } catch(e) { toast('Photo upload failed — ' + e.message, 'error'); return; }
   }
   logs.push(entry);
+  _dataGen++;
   rebuildLogsByWatch();
   safeSetJSON(STORE_L, logs);
   if (currentUser) {
