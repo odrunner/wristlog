@@ -3661,7 +3661,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.07.17.22';
+const APP_VERSION = '2.33.07.17.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4244,7 +4244,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
 
   // Notifications section (own profile only) — collapsible, default collapsed
   const notifHtml = isOwn ? (() => {
-    const ep = (profile.email_prefs || {social:true,comments:true,mentions:true,clubs:false,friends:true});
+    const ep = (profile.email_prefs || {comments:true,mentions:true,clubs:false,friends:true});
     const notifOpen = localStorage.getItem('notif-collapse') !== '1';
     const tog = (key, label) => `
       <div class="toggle-row">
@@ -4263,11 +4263,10 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         </button>
         <div class="prof-section-body${notifOpen ? '' : ' collapsed'}" id="notif-section">
           <div style="font-size:.75rem;color:var(--muted);margin-bottom:.6rem;">Email me when someone…</div>
-          ${tog('social','Likes or follows me')}
           ${tog('comments','Comments on my posts')}
           ${tog('mentions','Mentions me')}
+          ${tog('friends','Follows & friend requests')}
           ${tog('clubs','Club activity')}
-          ${tog('friends','Friend & follow requests')}
         </div>
       </div>
     </div>`;
@@ -7358,7 +7357,7 @@ function toggleProfSection(sectionId, storageKey) {
 
 async function saveEmailPref(category, enabled) {
   if (!currentUser) return;
-  const prefs = (myProfile && myProfile.email_prefs) ? { ...myProfile.email_prefs } : { social: true, comments: true, mentions: true, clubs: false, friends: true };
+  const prefs = (myProfile && myProfile.email_prefs) ? { ...myProfile.email_prefs } : { comments: true, mentions: true, clubs: false, friends: true };
   prefs[category] = enabled;
   const { error } = await db.from('profiles').update({ email_prefs: prefs }).eq('id', currentUser.id);
   if (!error && window.myProfile) window.myProfile.email_prefs = prefs;

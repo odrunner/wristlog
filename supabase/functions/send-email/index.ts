@@ -14,11 +14,10 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const FROM_EMAIL = "WRotate <notifications@wrotate.com>";
 
 // Notification type → email category for preference lookup
+// like / comment_like are intentionally excluded — no email for hearts
 const TYPE_TO_CATEGORY: Record<string, string> = {
-  like: "social",
-  comment_like: "social",
-  follow: "social",
-  follow_accepted: "social",
+  follow: "friends",
+  follow_accepted: "friends",
   comment: "comments",
   comment_also: "comments",
   mention: "mentions",
@@ -33,7 +32,6 @@ const TYPE_TO_CATEGORY: Record<string, string> = {
 
 // Default preferences (matches DB default)
 const DEFAULT_PREFS: Record<string, boolean> = {
-  social: true,
   comments: true,
   mentions: true,
   clubs: false,
@@ -46,14 +44,10 @@ function buildEmailContent(
   actorName: string
 ): { subject: string; body: string } | null {
   switch (type) {
-    case "like":
-      return { subject: `${actorName} liked your post`, body: `${actorName} liked your wear log on WRotate.` };
     case "comment":
       return { subject: `${actorName} commented on your post`, body: `${actorName} left a comment on your wear log.` };
     case "comment_also":
       return { subject: `${actorName} also commented`, body: `${actorName} also commented on a post you interacted with.` };
-    case "comment_like":
-      return { subject: `${actorName} liked your comment`, body: `${actorName} liked your comment on WRotate.` };
     case "follow":
       return { subject: `${actorName} started following you`, body: `${actorName} is now following you on WRotate.` };
     case "follow_request":
