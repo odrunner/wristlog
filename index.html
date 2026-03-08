@@ -3696,7 +3696,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.07.18.29';
+const APP_VERSION = '2.33.07.18.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8197,13 +8197,12 @@ async function saveLog() {
   const notes        = document.getElementById('track-notes').value.trim();
   const privateNotes = document.getElementById('track-private-notes').value.trim();
   const vis = selTrackVis || getDefaultVis();
-  const logEntry = {
-    id: uid(), watchId: selWatchId, date, useCase: selUseCase,
-    notes, privateNotes,
-    photoUrl: null,
-    visibility: vis,
-    clubId: null,
-  };
+  // Check if a log already exists for this watch+date (e.g. from a New Post with auto-recognition)
+  const existingIdx = logs.findIndex(l => l.watchId === selWatchId && l.date === date);
+  const isUpdate = existingIdx !== -1;
+  const logEntry = isUpdate
+    ? { ...logs[existingIdx], useCase: selUseCase, notes: notes || logs[existingIdx].notes, privateNotes, visibility: vis, clubId: null }
+    : { id: uid(), watchId: selWatchId, date, useCase: selUseCase, notes, privateNotes, photoUrl: null, visibility: vis, clubId: null };
   // Upload photo to Storage if present
   if (trackPhotoFile && currentUser) {
     try {
@@ -8211,7 +8210,11 @@ async function saveLog() {
     } catch(e) { toast('Photo upload failed — ' + e.message, 'error'); return; }
   }
   if (selStrapId) logEntry.strapId = selStrapId;
-  logs.push(logEntry);
+  if (isUpdate) {
+    logs[existingIdx] = logEntry;
+  } else {
+    logs.push(logEntry);
+  }
   markDirty('logs', logEntry.id);
   // Update "on wrist" strap status on the watch
   if (selStrapId) {
@@ -8244,7 +8247,7 @@ async function saveLog() {
   if (date === todayStr()) dismissReminder();
   feedLoadedAt = 0; // force feed to re-fetch after new log
   renderTrack();
-  toast('Wear logged!');
+  toast(isUpdate ? 'Wear log updated!' : 'Wear logged!');
 }
 
 function handleTrackPhoto(input) {
