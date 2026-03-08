@@ -47,6 +47,62 @@ serve(async (req: Request) => {
     });
   }
 
+  // ── Rate limiting: 10 requests per rolling 1-hour window ──
+  const RATE_LIMIT = 10;
+  const WINDOW_MS = 60 * 60 * 1000;
+  const now = new Date();
+  const windowStart = new Date(now.getTime() - WINDOW_MS);
+
+  try {
+    const { data: rl } = await supabase
+      .from("rate_limits")
+      .select("window_start, request_count")
+      .eq("user_id", user.id)
+      .eq("function_name", "identify-watch")
+      .single();
+
+    if (rl) {
+      const rlWindowStart = new Date(rl.window_start);
+      if (rlWindowStart > windowStart) {
+        if (rl.request_count >= RATE_LIMIT) {
+          const resetTime = new Date(rlWindowStart.getTime() + WINDOW_MS);
+          return new Response(
+            JSON.stringify({ error: "Rate limit exceeded. Try again later." }),
+            {
+              status: 429,
+              headers: {
+                ...CORS_HEADERS,
+                "Content-Type": "application/json",
+                "Retry-After": String(Math.ceil((resetTime.getTime() - now.getTime()) / 1000)),
+              },
+            }
+          );
+        }
+        await supabase
+          .from("rate_limits")
+          .update({ request_count: rl.request_count + 1 })
+          .eq("user_id", user.id)
+          .eq("function_name", "identify-watch");
+      } else {
+        await supabase
+          .from("rate_limits")
+          .update({ window_start: now.toISOString(), request_count: 1 })
+          .eq("user_id", user.id)
+          .eq("function_name", "identify-watch");
+      }
+    } else {
+      await supabase.from("rate_limits").insert({
+        user_id: user.id,
+        function_name: "identify-watch",
+        window_start: now.toISOString(),
+        request_count: 1,
+      });
+    }
+  } catch (rlErr) {
+    console.error("[identify-watch] Rate limit check error:", rlErr);
+    // Fail open: allow the request if rate limit check fails
+  }
+
   try {
     const { image } = await req.json();
     if (!image) {

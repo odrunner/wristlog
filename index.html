@@ -3703,7 +3703,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.07.20.10';
+const APP_VERSION = '2.33.07.20.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4634,7 +4634,7 @@ async function uploadProfilePic() {
       myProfile = { ...myProfile, avatar_url: url };
       const btn = document.getElementById('profile-btn');
       if (btn) {
-        btn.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+        btn.innerHTML = `<img src="${escHtml(url)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
       }
       loadAndRenderProfile(currentUser.id);
       toast('Profile photo updated!');
