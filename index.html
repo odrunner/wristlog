@@ -3747,7 +3747,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.08.08.43';
+const APP_VERSION = '2.33.08.08.47';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12662,16 +12662,22 @@ function initApp() {
   fetchWeather();
   initReminder();
   // Load social data then feed (landing page)
-  // Wrap each loader so one failure can't block the rest (prevents blank feed on stale auth / network error)
+  // Wrap each loader so one failure OR hang can't block the feed forever
   const _safe = fn => fn().catch(e => console.warn('[WRotate]', fn.name || 'social', 'load failed:', e?.message));
-  Promise.all([_safe(loadMyProfile), _safe(loadFollowing), _safe(loadPendingRequests), _safe(loadFriendRequests)]).then(() => {
-    computeFriendships(); // needs following + friendRequests both loaded
+  const _socialReady = () => {
+    computeFriendships();
     loadFeed();
     loadNotifications();
-    // Poll for new notifications every 30 seconds
     if (!window._notifPollId) window._notifPollId = setInterval(loadNotifications, 30000);
     maybeShowWelcome();
-  });
+  };
+  let _socialFired = false;
+  const _fireSocial = () => { if (!_socialFired) { _socialFired = true; _socialReady(); } };
+  Promise.all([_safe(loadMyProfile), _safe(loadFollowing), _safe(loadPendingRequests), _safe(loadFriendRequests)])
+    .then(_fireSocial)
+    .catch(() => _fireSocial());
+  // Safety net: if social loaders hang >8s, load feed anyway (skeleton stays too long otherwise)
+  setTimeout(_fireSocial, 8000);
   // Collection renders on-demand when user taps the tab (nav → renderCollection)
 }
 
