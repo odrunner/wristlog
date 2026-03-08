@@ -2793,7 +2793,7 @@
     </div>
 
     <div class="modal-actions" style="flex-wrap:nowrap;">
-      <button class="btn btn-primary" onclick="saveWatch()">Save Watch</button>
+      <button id="save-watch-btn" class="btn btn-primary" onclick="saveWatch()">Save Watch</button>
       <button class="btn btn-ghost"   onclick="closeWatchModal()">Cancel</button>
       <button class="btn btn-danger" id="modal-delete-btn" style="display:none;margin-left:auto;" onclick="openDelModal(editingId);closeWatchModal();">Delete Watch</button>
     </div>
@@ -9529,7 +9529,7 @@ async function saveWatch() {
   const name  = document.getElementById('w-name').value.trim();
   if (!brand) { toast('Please select a brand', 'error'); return; }
   if (!name) { toast('Model name is required', 'error'); return; }
-  const _swBtn = document.querySelector('#watch-modal .btn-primary');
+  const _swBtn = document.getElementById('save-watch-btn');
   if (_swBtn?.disabled) return;
   if (_swBtn) { _swBtn.disabled = true; _swBtn.textContent = 'Saving...'; }
   try {
