@@ -1896,12 +1896,24 @@
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Swipe Between Tabs</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">On mobile, swipe left or right anywhere on the screen to move between tabs. A natural, app-like gesture that works alongside the bottom navigation bar.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Pull to Refresh</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">On the Feed, pull down to refresh your timeline &#8212; just like a native app. A spinner animates as you pull, and the latest posts load when you release.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Edit Post: Change Tagged Watch</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">When editing a post, you can now add, change, or remove the tagged watch. Forgot to tag a watch when you posted? Just edit the post and pick one from your collection.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Post a Photo, Auto-Log Your Wear</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">When you post a wrist shot from the Feed, AI recognizes which watch you&#8217;re wearing and matches it to your collection. The wear log is added automatically &#8212; just tap &#8220;Not this watch&#8221; if it gets it wrong. No extra steps to track your wear.</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">When you post a wrist shot from the Feed, AI recognizes which watch you&#8217;re wearing and matches it to your collection. The wear log is added automatically &#8212; just tap &#8220;Not this watch&#8221; if it gets it wrong.</div>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Add Watches from Photo</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Snap a photo of a single watch or a collection flat-lay and AI identifies each one. Brand, model, and reference are pre-filled so you can review and save in seconds. The fastest way to build your collection.</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Snap a photo of a single watch or a collection flat-lay and AI identifies each one. Brand, model, and reference are pre-filled so you can review and save in seconds. Stock photos are fetched automatically when available.</div>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Smarter Recommendations</div>
@@ -1928,6 +1940,10 @@
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Feed loads faster with parallel queries and shows a loading skeleton instead of a blank screen. If something goes wrong, you&#8217;ll see a clear error with a retry button instead of silence.</div>
       </div>
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Better Image Handling</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Unsupported photo formats like HEIC are detected with a clear error message and suggestion to use JPG, PNG, or WebP. No more broken image previews.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">UI Polish</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Modals are properly centered on mobile, the bottom nav has better spacing for iPhones with home indicators, and the edit modal got visual refinements.</div>
       </div>
@@ -1944,12 +1960,12 @@
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Get email alerts for comments, follows, friend requests, mentions, and club activity. Toggle each category on or off in the Notifications section on your profile.</div>
       </div>
       <div style="margin-bottom:.75rem;">
-        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Performance Boost</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Profiles and club pages load significantly faster with parallel queries. Feed fetches only the columns it needs. A 30-second profile cache makes revisiting profiles instant. Drag-reorder and the ranking game are snappier too.</div>
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Performance &amp; Reliability</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Profiles and club pages load faster with parallel queries. Feed fetches only the columns it needs. Graceful error handling throughout &#8212; background errors surface clear messages instead of silent failures.</div>
       </div>
       <div>
-        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Security &amp; Reliability</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Hardened input escaping, query timeouts prevent hung requests, debounced saves reduce data writes, graceful session expiry handling, and expanded test coverage.</div>
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Security</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Hardened input escaping, query timeouts prevent hung requests, debounced saves reduce data writes, and graceful session expiry handling.</div>
       </div>
     </div>
     <div class="modal-actions" style="margin-top:1rem;">
@@ -2419,7 +2435,7 @@
             <div class="help-step-num">2</div>
             <div class="help-step-body">
               <div class="help-step-title">Post a photo — wear is logged automatically</div>
-              <div class="help-step-desc">Tap <strong>Post</strong> in the Feed header and add a wrist shot. AI identifies the watch from the photo and matches it to your collection. The wear log is added automatically — just tap "Not this watch" if it gets it wrong. You can also post text-only updates.</div>
+              <div class="help-step-desc">Tap <strong>Post</strong> in the Feed header and add a wrist shot. AI identifies the watch from the photo and matches it to your collection. The wear log is added automatically — just tap "Not this watch" if it gets it wrong. You can also post text-only updates. Edit any post later to change the tagged watch, caption, or photo.</div>
             </div>
           </div>
           <div class="help-step">
@@ -2436,6 +2452,7 @@
               <div class="help-step-desc">Tap the bell in the top-right corner to see likes, comments, and follow requests. Tapping a like or comment notification opens the Feed. Tapping a follow request notification lets you accept or decline.</div>
             </div>
           </div>
+          <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Pull down on the Feed to refresh. Swipe left or right anywhere to switch between tabs — works across the whole app on mobile.</span></div>
           <div class="help-tip">To unfollow, go to their profile and tap <strong>Following</strong> → it turns red and asks <strong>Unfollow?</strong> — tap again to confirm.</div>
         </div>
       </div>
@@ -3770,7 +3787,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.08.11.55';
+const APP_VERSION = '2.34.08.11.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
