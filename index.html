@@ -3770,7 +3770,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.08.11.48';
+const APP_VERSION = '2.33.08.11.55';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4693,6 +4693,7 @@ async function uploadProfilePic() {
   input.onchange = async () => {
     const file = input.files[0];
     if (!file) return;
+    if (!validateImageFile(file)) return;
     try {
       const url = currentUser ? await uploadImage(file, `avatars/${currentUser.id}.jpg`) : await blobToResizedBase64(file);
       const { error } = await db.from('profiles')
@@ -5406,8 +5407,7 @@ let _clubEditImagePreview = null; // objectURL for preview
 function handleClubImageUpload(input, clubId) {
   const file = input.files[0];
   if (!file) return;
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-  if (!allowedTypes.includes(file.type)) { toast('Please upload an image (JPEG, PNG, WebP, GIF)', 'error'); input.value = ''; return; }
+  if (!validateImageFile(file)) { input.value = ''; return; }
   if (file.size > 5 * 1024 * 1024) { toast('Image must be under 5 MB', 'error'); input.value = ''; return; }
   if (_clubEditImagePreview) URL.revokeObjectURL(_clubEditImagePreview);
   _clubEditImageFile    = file;
@@ -6899,7 +6899,9 @@ function removeEpWatch() {
 }
 
 function handleEditPostPhoto(input) {
-  const file = input.files[0]; if (!file) return; input.value = '';
+  const file = input.files[0]; if (!file) return;
+  if (!validateImageFile(file)) { input.value = ''; return; }
+  input.value = '';
   editPostNewFile  = file;
   editPostNewPhoto = URL.createObjectURL(file);
   document.getElementById('ep-photo-preview').src = editPostNewPhoto;
@@ -7022,6 +7024,7 @@ function closeNewPost() {
 function handleNewPostPhoto(input) {
   const file = input.files[0];
   if (!file) return;
+  if (!validateImageFile(file)) { input.value = ''; return; }
   newPostFile  = file;
   newPostPhoto = URL.createObjectURL(file);
   const preview = document.getElementById('np-photo-preview');
@@ -7171,6 +7174,7 @@ function addFeedPhoto(logId) {
 async function handleFeedPhoto(input) {
   const file = input.files[0];
   if (!file || !feedPhotoLogId) return;
+  if (!validateImageFile(file)) { input.value = ''; return; }
   const logId = feedPhotoLogId;
   feedPhotoLogId = null;
   input.value = '';
@@ -8579,6 +8583,7 @@ async function saveLog() {
 function handleTrackPhoto(input) {
   const file = input.files[0];
   if (!file) return;
+  if (!validateImageFile(file)) { input.value = ''; return; }
   trackPhotoFile = file;
   trackPhoto = URL.createObjectURL(file);
   const preview = document.getElementById('track-photo-preview');
@@ -10963,6 +10968,20 @@ function blobToResizedBlob(blob) {
   });
 }
 
+// Validate image file type — rejects HEIC/HEIF and other unsupported formats
+function validateImageFile(file) {
+  const SUPPORTED = ['image/jpeg','image/png','image/webp','image/gif','image/bmp'];
+  // Check MIME type first
+  if (file.type && SUPPORTED.includes(file.type)) return true;
+  // Fallback: check extension when MIME is empty (some mobile browsers)
+  const ext = file.name?.split('.').pop()?.toLowerCase() || '';
+  if (['jpg','jpeg','png','webp','gif','bmp'].includes(ext)) return true;
+  // Unsupported
+  const label = ext?.toUpperCase() || file.type || 'Unknown format';
+  toast(`${label} photos aren't supported. Please use JPG, PNG, or WebP.`, 'error');
+  return false;
+}
+
 // Upload an image blob to Supabase Storage: resize → upload → return public URL
 async function uploadImage(blob, path) {
   const resized = await blobToResizedBlob(blob);
@@ -11054,6 +11073,7 @@ async function handlePhotoDrop(e) {
 
 async function handlePhotoFileInput(input) {
   if (!input.files[0]) return;
+  if (!validateImageFile(input.files[0])) { input.value = ''; return; }
   try {
     const watchId = _photoPasteWatchId;
     const url = currentUser ? await uploadImage(input.files[0], `watches/${currentUser.id}/${watchId}.jpg`) : await blobToResizedBase64(input.files[0]);
@@ -11444,13 +11464,7 @@ function openPhotoIdentify(source) {
     if (!input.files || !input.files[0]) return;
     const file = input.files[0];
 
-    // Validate image type — browsers can't decode HEIC/HEIF natively
-    const SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml'];
-    if (file.type && !SUPPORTED_TYPES.includes(file.type)) {
-      const ext = file.name.split('.').pop()?.toUpperCase() || file.type;
-      toast(`${ext} photos aren't supported. Please use JPG, PNG, or WebP.`, 'error');
-      return;
-    }
+    if (!validateImageFile(file)) return;
 
     // Show loading modal (with click guard — mobile browsers can fire stray
     // click events when returning from the camera/gallery picker)
@@ -12656,6 +12670,7 @@ async function pickWlModalImage() {
   input.type = 'file'; input.accept = 'image/*';
   input.onchange = () => {
     if (!input.files[0]) return;
+    if (!validateImageFile(input.files[0])) return;
     wlPendingFile  = input.files[0];
     wlPendingImage = URL.createObjectURL(input.files[0]);
     wlRemoveImage  = false;
