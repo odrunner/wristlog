@@ -148,9 +148,10 @@ For each watch, provide your best identification with these fields:
 - reference: The reference number if you can determine it (e.g., "126610LN", "310.30.42.50.01.001"). Leave empty string if unsure.
 - estimatedColor: A hex color code that best represents the watch's overall tone. Pick from these: #c9a84c (gold), #4caf7d (teal), #818cf8 (indigo), #ef7942 (orange), #38bdf8 (sky blue), #e879f9 (magenta), #f43f5e (rose), #94a3b8 (slate/silver), #fbbf24 (amber), #34d399 (emerald), #fb923c (orange-alt), #a78bfa (purple)
 - confidence: "high", "medium", or "low" based on how certain you are of the identification
+- productUrl: A product page URL where a stock photo of this exact model can be found. Prefer official brand sites, chrono24.com, or hodinkee.com. Leave empty string if unsure.
 
 Return ONLY valid JSON in this exact format, no other text:
-{"watches": [{"brand": "...", "model": "...", "reference": "...", "estimatedColor": "...", "confidence": "..."}]}
+{"watches": [{"brand": "...", "model": "...", "reference": "...", "estimatedColor": "...", "confidence": "...", "productUrl": "..."}]}
 
 If no watches are visible in the image, return: {"watches": []}
 If you can identify the brand but not the exact model, still include it with your best guess and "low" confidence.`,

@@ -3745,7 +3745,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.07.21.11';
+const APP_VERSION = '2.33.07.21.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11250,14 +11250,11 @@ async function addFromIdentified(idx) {
     buildSwatches();
   }
 
-  // Try to construct a brand URL and auto-fetch details
-  const domain = brandToDomain(w.brand || '');
-  if (domain && w.model) {
-    // Build a search-friendly URL: brand website + model name
-    const searchUrl = `https://www.${domain}`;
-    document.getElementById('w-url').value = searchUrl;
-    // Auto-trigger fetch to try and pull image + additional data
-    toast('Searching brand website for details...', 'info');
+  // Try to fetch stock photo — prefer productUrl from AI, fallback to brand domain
+  const fetchUrl = w.productUrl || (brandToDomain(w.brand || '') ? `https://www.${brandToDomain(w.brand)}` : '');
+  if (fetchUrl) {
+    document.getElementById('w-url').value = fetchUrl;
+    toast('Fetching watch photo...', 'info');
     try {
       await fetchCollectionDetails();
     } catch (_) {
