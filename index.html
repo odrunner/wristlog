@@ -3770,7 +3770,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.08.11.39';
+const APP_VERSION = '2.33.08.11.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6236,6 +6236,58 @@ document.addEventListener('click', e => {
     } else {
       el.style.height = '0';
     }
+  }, { passive: true });
+})();
+
+// ── Swipe between tabs (mobile) ───────────────────────────────────────────
+(function initSwipeNav() {
+  const TAB_ORDER = ['feed', 'track', 'collection', 'wishlist', 'stats', 'clubs'];
+  let _swX0 = 0, _swY0 = 0, _swT0 = 0, _swActive = false, _swLocked = false;
+
+  document.addEventListener('touchstart', e => {
+    _swActive = false; _swLocked = false;
+    // Skip: modals open, drag handles, form inputs
+    if (document.querySelector('.overlay:not(.hidden)')) return;
+    const t = e.target;
+    if (t?.closest && t.closest('.drag-handle, .rank-drag-handle, input, textarea, select, .chips, .log-photo-area')) return;
+    // Only on main tab pages
+    const cur = document.querySelector('nav button.active')?.dataset?.page;
+    if (!cur || !TAB_ORDER.includes(cur)) return;
+    _swX0 = e.touches[0].clientX;
+    _swY0 = e.touches[0].clientY;
+    _swT0 = Date.now();
+    _swActive = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!_swActive || _swLocked) return;
+    const dx = Math.abs(e.touches[0].clientX - _swX0);
+    const dy = Math.abs(e.touches[0].clientY - _swY0);
+    // Once direction is established, lock it
+    if (dx > 10 || dy > 10) {
+      if (dx > dy * 1.2) {
+        _swLocked = true; // horizontal swipe — we own this gesture
+      } else {
+        _swActive = false; // vertical scroll — bail out
+      }
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    if (!_swActive || !_swLocked) { _swActive = false; return; }
+    _swActive = false;
+    const dx = e.changedTouches[0].clientX - _swX0;
+    const dy = e.changedTouches[0].clientY - _swY0;
+    const elapsed = Date.now() - _swT0;
+    if (Math.abs(dx) < 50 || elapsed > 400 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+
+    const cur = document.querySelector('nav button.active')?.dataset?.page;
+    const idx = TAB_ORDER.indexOf(cur);
+    if (idx === -1) return;
+    const nextIdx = dx < 0 ? idx + 1 : idx - 1; // left swipe = next, right = prev
+    if (nextIdx < 0 || nextIdx >= TAB_ORDER.length) return;
+    const btn = document.querySelector(`nav button[data-page="${TAB_ORDER[nextIdx]}"]`);
+    if (btn) nav(btn);
   }, { passive: true });
 })();
 
