@@ -1,0 +1,121 @@
+// Supabase Edge Function: identify-watch
+// Called from the client to identify watches in a photo using Claude Vision.
+//
+// Required Supabase secrets (set via `supabase secrets set`):
+//   ANTHROPIC_API_KEY  — API key from anthropic.com
+
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+
+const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+serve(async (req: Request) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: CORS_HEADERS });
+  }
+
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  }
+
+  try {
+    const { image } = await req.json();
+    if (!image) {
+      return new Response(JSON.stringify({ error: "No image provided" }), {
+        status: 400,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+
+    // Strip data-URL prefix if present
+    const base64Data = image.replace(/^data:image\/[a-z]+;base64,/, "");
+    const mediaType = image.startsWith("data:image/png") ? "image/png" : "image/jpeg";
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2048,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: mediaType,
+                  data: base64Data,
+                },
+              },
+              {
+                type: "text",
+                text: `You are a luxury watch identification expert. Analyze this image and identify every watch visible in the photo.
+
+For each watch, provide your best identification with these fields:
+- brand: The manufacturer (e.g., "Rolex", "Omega", "Seiko")
+- model: The specific model name (e.g., "Submariner", "Speedmaster", "Presage")
+- reference: The reference number if you can determine it (e.g., "126610LN", "310.30.42.50.01.001"). Leave empty string if unsure.
+- estimatedColor: A hex color code that best represents the watch's overall tone. Pick from these: #c9a84c (gold), #4caf7d (teal), #818cf8 (indigo), #ef7942 (orange), #38bdf8 (sky blue), #e879f9 (magenta), #f43f5e (rose), #94a3b8 (slate/silver), #fbbf24 (amber), #34d399 (emerald), #fb923c (orange-alt), #a78bfa (purple)
+- confidence: "high", "medium", or "low" based on how certain you are of the identification
+
+Return ONLY valid JSON in this exact format, no other text:
+{"watches": [{"brand": "...", "model": "...", "reference": "...", "estimatedColor": "...", "confidence": "..."}]}
+
+If no watches are visible in the image, return: {"watches": []}
+If you can identify the brand but not the exact model, still include it with your best guess and "low" confidence.`,
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("[identify-watch] Anthropic API error:", response.status, errText);
+      return new Response(
+        JSON.stringify({ error: "AI identification failed", detail: response.status }),
+        { status: 502, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+      );
+    }
+
+    const result = await response.json();
+    const text = result.content?.[0]?.text ?? "";
+
+    // Extract JSON from Claude's response (handle markdown code blocks)
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return new Response(
+        JSON.stringify({ error: "Could not parse AI response", raw: text }),
+        { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+      );
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    return new Response(JSON.stringify(parsed), {
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    console.error("[identify-watch] Error:", err);
+    return new Response(
+      JSON.stringify({ error: err.message || "Internal error" }),
+      { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+    );
+  }
+});

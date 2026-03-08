@@ -1205,6 +1205,22 @@
     .rec-tag-weekend { color:#c9a84c; background:rgba(201,168,76,.08); }
     .rec-explanation { font-size:.77rem; color:var(--muted); margin-top:.55rem; line-height:1.55; }
 
+    /* ── Photo Identify ── */
+    .pi-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:.9rem 1rem; margin-bottom:.6rem; display:flex; gap:.85rem; align-items:center; }
+    .pi-card-avatar { width:44px; height:44px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:.7rem; font-weight:700; color:#fff; }
+    .pi-card-info { flex:1; min-width:0; }
+    .pi-card-name { font-size:.88rem; font-weight:600; }
+    .pi-card-brand { font-size:.76rem; color:var(--muted); margin-top:.1rem; }
+    .pi-card-ref { font-size:.72rem; color:var(--muted); margin-top:.1rem; }
+    .pi-card-conf { font-size:.65rem; text-transform:uppercase; letter-spacing:.05em; font-weight:600; padding:.12rem .4rem; border-radius:4px; }
+    .pi-card-conf.high { color:#4ade80; background:rgba(74,222,128,.1); }
+    .pi-card-conf.medium { color:#fbbf24; background:rgba(251,191,36,.1); }
+    .pi-card-conf.low { color:#f87171; background:rgba(248,113,113,.1); }
+    .pi-card-actions { display:flex; gap:.4rem; flex-shrink:0; }
+    .pi-loading { text-align:center; padding:2rem 1rem; color:var(--muted); }
+    .pi-loading-spinner { display:inline-block; width:28px; height:28px; border:2.5px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:spin .7s linear infinite; margin-bottom:.7rem; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
     /* ── RESPONSIVE ── */
     @media (max-width: 760px) {
       .track-grid    { grid-template-columns: 1fr; }
@@ -2109,6 +2125,7 @@
           <button class="view-btn" id="view-list-btn" onclick="setCollView('list')" title="List view"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
         </div>
         <button class="btn btn-ghost" onclick="startGame()" title="Ranking Game" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="btn-label"> Ranking Game</span></button>
+        <button class="btn btn-ghost" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="btn-label"> From Photo</span></button>
         <button class="btn btn-primary" onclick="openAddWatch()" title="Add Watch"><span class="btn-label-full">+ Add Watch</span><span class="btn-label-short">+ Add</span></button>
       </div>
     </div>
@@ -2800,6 +2817,19 @@
       <input type="file" id="photo-file-input" accept="image/*" style="display:none" onchange="handlePhotoFileInput(this)">
     </div>
     <button class="btn btn-ghost" style="width:100%;margin-top:.6rem;color:var(--muted);" onclick="closePhotoPasteModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- ════ PHOTO IDENTIFY MODAL ════ -->
+<div id="photo-identify-modal" class="overlay hidden">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Identified Watches
+    </div>
+    <div id="photo-identify-list" style="max-height:60vh;overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:1rem;">
+      <button class="btn btn-ghost" onclick="closePhotoIdentify()">Done</button>
+    </div>
   </div>
 </div>
 
@@ -3615,7 +3645,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.32.26.16.25';
+const APP_VERSION = '2.32.26.16.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10768,6 +10798,155 @@ function onBrandInput(val) {
 function buildBrandSelect(selected = '') { setBrandAC(selected); }
 
 // ══════════════════════════════════════════
+//  PHOTO IDENTIFY (Add from Photo)
+// ══════════════════════════════════════════
+let _photoIdentifyResults = []; // cached results for the modal
+
+// Reverse lookup: brand name → domain (built from WL_BRAND_MAP below)
+function brandToDomain(brand) {
+  const lc = brand.toLowerCase();
+  // Check WL_BRAND_MAP values → keys
+  for (const [domain, name] of Object.entries(WL_BRAND_MAP)) {
+    if (name.toLowerCase() === lc) return domain;
+  }
+  // Fallback: try brand.com
+  return lc.replace(/\s+/g, '') + '.com';
+}
+
+function openPhotoIdentify() {
+  if (!currentUser) { toast('Sign in to use photo identification', 'error'); return; }
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.capture = 'environment'; // mobile camera
+  input.onchange = async () => {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+
+    // Show loading modal
+    const modal = document.getElementById('photo-identify-modal');
+    const list = document.getElementById('photo-identify-list');
+    list.innerHTML = `<div class="pi-loading">
+      <div class="pi-loading-spinner"></div>
+      <div style="font-size:.85rem;">Identifying watches...</div>
+      <div style="font-size:.75rem;margin-top:.3rem;">This may take a few seconds</div>
+    </div>`;
+    modal.classList.remove('hidden');
+
+    try {
+      // Resize image to keep payload small
+      const base64 = await blobToResizedBase64(file);
+
+      // Call edge function
+      const resp = await withTimeout(fetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await db.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({ image: base64 }),
+      }), 30000);
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error || `API error ${resp.status}`);
+      }
+
+      const data = await resp.json();
+      if (!data.watches || data.watches.length === 0) {
+        list.innerHTML = `<div class="pi-loading">
+          <div style="font-size:.85rem;">No watches identified</div>
+          <div style="font-size:.75rem;color:var(--muted);margin-top:.3rem;">Try a clearer photo with the watch face visible</div>
+        </div>`;
+        return;
+      }
+
+      _photoIdentifyResults = data.watches;
+      renderPhotoIdentifyResults();
+    } catch (e) {
+      console.error('[WristLog] Photo identify error:', e);
+      list.innerHTML = `<div class="pi-loading">
+        <div style="font-size:.85rem;color:var(--danger);">Identification failed</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:.3rem;">${escHtml(e.message || 'Unknown error')}</div>
+      </div>`;
+    }
+  };
+  input.click();
+}
+
+function renderPhotoIdentifyResults() {
+  const list = document.getElementById('photo-identify-list');
+  if (!_photoIdentifyResults.length) {
+    list.innerHTML = '<div class="pi-loading"><div style="font-size:.85rem;">No watches found</div></div>';
+    return;
+  }
+  list.innerHTML = _photoIdentifyResults.map((w, i) => {
+    const color = w.estimatedColor || '#c9a84c';
+    const ini = initials(w.brand || '?', w.model || '?');
+    return `<div class="pi-card">
+      <div class="pi-card-avatar" style="background:${escHtml(color)}">${ini}</div>
+      <div class="pi-card-info">
+        <div class="pi-card-name">${escHtml(w.model || 'Unknown')}</div>
+        <div class="pi-card-brand">${escHtml(w.brand || 'Unknown')}</div>
+        ${w.reference ? `<div class="pi-card-ref">Ref. ${escHtml(w.reference)}</div>` : ''}
+      </div>
+      <span class="pi-card-conf ${w.confidence || 'medium'}">${w.confidence || 'medium'}</span>
+      <div class="pi-card-actions">
+        <button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .7rem;" onclick="addFromIdentified(${i})">+ Add</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function addFromIdentified(idx) {
+  const w = _photoIdentifyResults[idx];
+  if (!w) return;
+
+  // Close identify modal
+  closePhotoIdentify();
+
+  // Open the add watch form
+  openAddWatch();
+
+  // Pre-fill fields
+  if (w.brand) {
+    document.getElementById('w-brand').value = w.brand;
+    document.getElementById('w-brand-display').value = w.brand;
+    autoSizeInput(document.getElementById('w-brand-display'));
+  }
+  if (w.model) document.getElementById('w-name').value = w.model;
+  if (w.reference) document.getElementById('w-ref').value = w.reference;
+  if (w.estimatedColor) {
+    selColor = w.estimatedColor;
+    buildSwatches();
+  }
+
+  // Try to construct a brand URL and auto-fetch details
+  const domain = brandToDomain(w.brand || '');
+  if (domain && w.model) {
+    // Build a search-friendly URL: brand website + model name
+    const searchUrl = `https://www.${domain}`;
+    document.getElementById('w-url').value = searchUrl;
+    // Auto-trigger fetch to try and pull image + additional data
+    toast('Searching brand website for details...', 'info');
+    try {
+      await fetchCollectionDetails();
+    } catch (_) {
+      // Fetch failed — that's fine, user can fill manually
+    }
+  }
+
+  // Remove this item from the results (mark as added)
+  _photoIdentifyResults.splice(idx, 1);
+
+  toast(`${w.brand} ${w.model} pre-filled — review and save`, 'success');
+}
+
+function closePhotoIdentify() {
+  document.getElementById('photo-identify-modal').classList.add('hidden');
+}
+
+// ══════════════════════════════════════════
 //  WISHLIST PAGE
 // ══════════════════════════════════════════
 const WL_BRAND_MAP = {
@@ -12045,6 +12224,7 @@ const _overlayCloseMap = {
   'del-modal':           closeDelModal,
   'confirm-modal':       _confirmCancel,
   'photo-paste-modal':   closePhotoPasteModal,
+  'photo-identify-modal': closePhotoIdentify,
   'wishlist-modal':      closeWishlistModal,
   'watch-preview-modal': closeWatchPreview,
   'del-wl-modal':        closeDelWlModal,
