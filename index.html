@@ -3747,7 +3747,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.08.08.50';
+const APP_VERSION = '2.33.08.10.05';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10119,12 +10119,25 @@ function computeWatchRec(skipSet) {
       }
     }
 
+    // ── 10. Anniversary override ──
+    let anniversaryScore = 0, anniversaryReason = null, anniversaryYears = 0;
+    if (w.purchaseDate) {
+      const pd = new Date(w.purchaseDate + 'T12:00:00');
+      if (pd.getMonth() === now.getMonth() && pd.getDate() === now.getDate()) {
+        anniversaryYears = now.getFullYear() - pd.getFullYear();
+        if (anniversaryYears >= 1) {
+          anniversaryScore = 9999; // force to top
+          anniversaryReason = `${anniversaryYears} year${anniversaryYears !== 1 ? 's' : ''} in your collection today`;
+        }
+      }
+    }
+
     const score = recencyScore + dowScore + weatherScore * 5 + weekendScore
-                + eloScore + useCaseScore + honeymoonScore + neglectedScore + tagScore;
+                + eloScore + useCaseScore + honeymoonScore + neglectedScore + tagScore + anniversaryScore;
     return { w, daysSince, dowCount, weatherScore, weatherReason, weekendScore, weekendReason,
              eloScore, eloReason, useCaseScore, useCaseReason,
              honeymoonScore, honeymoonReason, neglectedScore, neglectedReason,
-             tagScore, tagReason, score };
+             tagScore, tagReason, anniversaryScore, anniversaryReason, anniversaryYears, score };
   }).filter(Boolean);
   if (!candidates.length) return null;
   candidates.sort((a, b) => b.score - a.score);
@@ -10149,7 +10162,8 @@ function recCardHTML(rec) {
     </div>`;
   }
   const { w, daysSince, dowCount, weatherReason, weekendScore, weekendReason,
-          eloReason, useCaseReason, honeymoonReason, neglectedReason, tagReason } = rec;
+          eloReason, useCaseReason, honeymoonReason, neglectedReason, tagReason,
+          anniversaryScore, anniversaryReason, anniversaryYears } = rec;
   const thumb = w.image
     ? `<img loading="lazy" src="${w.image}" alt="" style="width:56px;height:56px;border-radius:8px;object-fit:cover;" onerror="this.style.display='none'">`
     : `<div class="avatar" style="width:56px;height:56px;font-size:.95rem;border-radius:8px;background:${w.color}">${initials(w.brand,w.name)}</div>`;
@@ -10165,23 +10179,30 @@ function recCardHTML(rec) {
   }
   if (weekendScore > 0) tags.push({ text: 'Dinner watch', cls: 'rec-tag-weekend' });
   if (eloReason) tags.push({ text: '★ Top ranked', cls: '' });
+  if (anniversaryReason) tags.push({ text: `🎂 ${anniversaryYears}yr anniversary`, cls: '' });
   if (honeymoonReason) tags.push({ text: 'New pickup', cls: '' });
   if (neglectedReason) tags.push({ text: 'Needs love', cls: '' });
   if (useCaseReason) tags.push({ text: useCaseReason, cls: '' });
   if (tagReason) tags.push({ text: tagReason, cls: '' });
-  let explain = daysSince === 999 ? `${escHtml(w.name)} has never been logged — today could be its first wear.`
-    : daysSince >= 14 ? `The ${escHtml(w.name)} has been sitting for ${daysSince} days — it's time.`
-    : `Last worn ${daysSince} day${daysSince!==1?'s':''} ago.`;
-  if (dowCount >= 2) explain += ` Tends to come out on ${DOW_NAMES[todayDOW]}s.`;
-  if (weatherData && weatherReason) explain += ` ${weatherReason}.`;
-  if (weekendReason) explain += ` ${weekendReason}.`;
-  if (eloReason) explain += ` ${eloReason}.`;
-  if (honeymoonReason) explain += ` ${honeymoonReason}.`;
-  if (neglectedReason) explain += ` ${neglectedReason}.`;
-  if (useCaseReason) explain += ` ${useCaseReason}.`;
+  let explain;
+  if (anniversaryScore) {
+    explain = `Happy anniversary! The ${escHtml(w.name)} joined your collection ${anniversaryYears} year${anniversaryYears !== 1 ? 's' : ''} ago today. Give it a celebratory wear!`;
+  } else {
+    explain = daysSince === 999 ? `${escHtml(w.name)} has never been logged — today could be its first wear.`
+      : daysSince >= 14 ? `The ${escHtml(w.name)} has been sitting for ${daysSince} days — it's time.`
+      : `Last worn ${daysSince} day${daysSince!==1?'s':''} ago.`;
+    if (dowCount >= 2) explain += ` Tends to come out on ${DOW_NAMES[todayDOW]}s.`;
+    if (weatherData && weatherReason) explain += ` ${weatherReason}.`;
+    if (weekendReason) explain += ` ${weekendReason}.`;
+    if (eloReason) explain += ` ${eloReason}.`;
+    if (honeymoonReason) explain += ` ${honeymoonReason}.`;
+    if (neglectedReason) explain += ` ${neglectedReason}.`;
+    if (useCaseReason) explain += ` ${useCaseReason}.`;
+  }
   const wornToday = logsForWatch(w.id).some(l => l.date === todayStr());
+  const recLabel = anniversaryScore ? `🎂 Anniversary Pick` : `Today's Pick`;
   return `<div class="rec-card">
-    <div class="rec-label">Today's Pick</div>
+    <div class="rec-label">${recLabel}</div>
     <div class="rec-body">
       <div class="rec-thumb">${thumb}</div>
       <div class="rec-info">
