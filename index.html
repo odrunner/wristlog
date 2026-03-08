@@ -1248,6 +1248,22 @@
     .pi-card-conf.medium { color:#fbbf24; background:rgba(251,191,36,.1); }
     .pi-card-conf.low { color:#f87171; background:rgba(248,113,113,.1); }
     .pi-card-actions { display:flex; gap:.4rem; flex-shrink:0; }
+    .pi-img-status { margin-top:.3rem; display:flex; align-items:center; gap:.3rem; }
+    .pi-img-loading { font-size:.68rem; color:var(--muted); display:inline-flex; align-items:center; gap:.25rem; }
+    .pi-img-thumb { width:32px; height:32px; object-fit:cover; border-radius:4px; flex-shrink:0; }
+    .pi-img-found { font-size:.68rem; color:#4ade80; font-weight:500; }
+    .pi-img-notfound { font-size:.68rem; color:var(--muted); }
+    .pi-img-thumb { cursor:pointer; }
+
+    /* Crop adjuster overlay */
+    .crop-adjuster { position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,.92); display:flex; flex-direction:column; }
+    .crop-adjuster-header { display:flex; justify-content:space-between; align-items:center; padding:.8rem 1rem; flex-shrink:0; }
+    .crop-adjuster-header button { background:none; border:none; color:#fff; font-size:.88rem; padding:.4rem .8rem; cursor:pointer; border-radius:6px; }
+    .crop-adjuster-header .crop-done { background:var(--gold); color:#000; font-weight:600; }
+    .crop-viewport { flex:1; overflow:hidden; position:relative; touch-action:none; }
+    .crop-viewport img { position:absolute; user-select:none; -webkit-user-drag:none; pointer-events:none; }
+    .crop-guide { position:absolute; inset:0; pointer-events:none; }
+    .crop-guide-border { position:absolute; border:2px solid rgba(255,255,255,.5); border-radius:8px; box-shadow:0 0 0 9999px rgba(0,0,0,.5); }
     .pi-loading { text-align:center; padding:2rem 1rem; color:var(--muted); }
     .pi-loading-spinner { display:inline-block; width:28px; height:28px; border:2.5px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:spin .7s linear infinite; margin-bottom:.7rem; }
     @keyframes spin { to { transform:rotate(360deg); } }
@@ -2740,10 +2756,10 @@
     <div class="form-group">
       <label>Photo</label>
       <div id="w-img-area" style="display:none;align-items:center;gap:.65rem;">
-        <img id="w-img-preview" src="" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0;">
+        <img id="w-img-preview" src="" alt="" title="Click to crop" style="width:72px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0;cursor:pointer;" onclick="openModalCropAdjuster()">
         <div style="display:flex;flex-direction:column;gap:.35rem;">
-          <button type="button" class="btn btn-ghost btn-sm" onclick="pickWatchModalImage()">↺ Replace</button>
-          <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="clearWatchModalImage()">✕ Remove</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="pickWatchModalImage()">Replace</button>
+          <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="clearWatchModalImage()">Remove</button>
         </div>
       </div>
       <button type="button" id="w-img-upload-btn" class="btn btn-ghost btn-sm" onclick="pickWatchModalImage()" style="display:inline-flex;align-items:center;gap:.3rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Upload photo</button>
@@ -3002,10 +3018,10 @@
     <div class="form-group">
       <label>Photo</label>
       <div id="wl-img-preview" style="display:none;align-items:center;gap:.65rem;">
-        <img id="wl-img-el" src="" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0;">
+        <img id="wl-img-el" src="" alt="" title="Click to crop" style="width:72px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0;cursor:pointer;" onclick="openWlModalCropAdjuster()">
         <div style="display:flex;flex-direction:column;gap:.35rem;">
-          <button type="button" class="btn btn-ghost btn-sm" onclick="pickWlModalImage()">↺ Replace</button>
-          <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="clearWlModalImg()">✕ Remove</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="pickWlModalImage()">Replace</button>
+          <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="clearWlModalImg()">Remove</button>
         </div>
       </div>
       <button type="button" id="wl-img-upload-btn" class="btn btn-ghost btn-sm" onclick="pickWlModalImage()" style="display:inline-flex;align-items:center;gap:.3rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Upload photo</button>
@@ -3809,7 +3825,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.08.12.20';
+const APP_VERSION = '2.34.08.16.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9772,22 +9788,65 @@ function openEditWatch(id) {
   document.getElementById('watch-modal').classList.remove('hidden');
 }
 
-function closeWatchModal() { clearInlineEdits(); if (wPendingImage && wPendingImage.startsWith('blob:')) URL.revokeObjectURL(wPendingImage); wPendingImage = null; wPendingFile = null; document.getElementById('watch-modal').classList.add('hidden'); movingFromWishlistId = null; movingFromWishlistData = null; resumeWelcome(); }
+function closeWatchModal() {
+  clearInlineEdits();
+  if (wPendingImage && wPendingImage.startsWith('blob:')) URL.revokeObjectURL(wPendingImage);
+  wPendingImage = null; wPendingFile = null;
+  // Preserve blob if returning to identify modal, otherwise clean up
+  const returning = window._addingFromIdentify && _photoIdentifyResults.length > 0;
+  if (!returning) { window._photoIdentifyBlob = null; window._addingFromIdentify = false; }
+  document.getElementById('watch-modal').classList.add('hidden');
+  movingFromWishlistId = null; movingFromWishlistData = null;
+  // Return to identify modal if more watches remain
+  if (returning) {
+    renderPhotoIdentifyResults();
+    document.getElementById('photo-identify-modal').classList.remove('hidden');
+    window._addingFromIdentify = false;
+  } else {
+    resumeWelcome();
+  }
+}
 
 /* ── Watch modal photo preview ── */
 function renderWatchModalImg() {
   const area = document.getElementById('w-img-area');
   const btn  = document.getElementById('w-img-upload-btn');
   const img  = document.getElementById('w-img-preview');
+  const cropBtn = document.getElementById('w-img-crop-btn');
   if (wPendingImage) {
     img.src = wPendingImage;
     area.style.display = 'flex';
     btn.style.display = 'none';
+    // Show Crop button when there's any image to crop
+    if (cropBtn) cropBtn.style.display = wPendingImage ? '' : 'none';
   } else {
     area.style.display = 'none';
     btn.style.display = '';
   }
 }
+async function openModalCropAdjuster() {
+  let sourceBlob = window._photoIdentifyBlob;
+  // For existing watches: load the current photo as a blob
+  if (!sourceBlob && wPendingImage) {
+    try {
+      if (wPendingFile instanceof Blob) {
+        sourceBlob = wPendingFile;
+      } else {
+        // Fetch from URL (Supabase storage or blob URL)
+        const resp = await fetch(wPendingImage, { signal: AbortSignal.timeout(8000) });
+        if (resp.ok) sourceBlob = await resp.blob();
+      }
+    } catch (_) {}
+  }
+  if (!sourceBlob) { toast('Could not load photo to crop', 'info'); return; }
+  _openCropUI(sourceBlob, null, (croppedBlob) => {
+    if (wPendingImage && wPendingImage.startsWith('blob:')) URL.revokeObjectURL(wPendingImage);
+    wPendingFile = croppedBlob;
+    wPendingImage = URL.createObjectURL(croppedBlob);
+    renderWatchModalImg();
+  });
+}
+
 function pickWatchModalImage() {
   const input = document.createElement('input');
   input.type = 'file'; input.accept = 'image/*';
@@ -11560,6 +11619,15 @@ function openPhotoIdentify(source) {
       // Resize image to keep payload small
       const base64 = await blobToResizedBase64(file);
 
+      // Store original photo for crop fallback (if no stock photo found)
+      window._photoIdentifyBase64 = base64;
+      // Also store as blob — more reliable than data URL for Image loading
+      try {
+        window._photoIdentifyBlob = await blobToResizedBlob(file);
+      } catch (_) {
+        window._photoIdentifyBlob = file; // fallback to original
+      }
+
       // Call edge function
       const resp = await withTimeout(fetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
         method: 'POST',
@@ -11606,7 +11674,7 @@ function renderPhotoIdentifyResults() {
   list.innerHTML = _photoIdentifyResults.map((w, i) => {
     const color = w.estimatedColor || '#c9a84c';
     const ini = initials(w.brand || '?', w.model || '?');
-    return `<div class="pi-card">
+    return `<div class="pi-card" data-pi-idx="${i}">
       <div class="pi-card-avatar" style="background:${escHtml(color)}">${ini}</div>
       <div class="pi-card-info">
         <div class="pi-card-name">${escHtml(w.model || 'Unknown')}</div>
@@ -11619,6 +11687,132 @@ function renderPhotoIdentifyResults() {
       </div>
     </div>`;
   }).join('');
+  // Re-apply image state for already-searched items, then search any new ones
+  _photoIdentifyResults.forEach((w, i) => { if (w._imageSearched) updateIdentifyCard(i); });
+  prefetchIdentifiedImages();
+}
+
+function updateIdentifyCard(idx) {
+  const card = document.querySelector(`.pi-card[data-pi-idx="${idx}"]`);
+  if (!card) return;
+  const w = _photoIdentifyResults[idx];
+  if (!w) return;
+
+  // Remove old status element
+  card.querySelector('.pi-img-status')?.remove();
+
+  // Swap avatar with photo when available
+  const avatar = card.querySelector('.pi-card-avatar');
+  if (avatar && w._imageFound && w._prefetchedImageUrl) {
+    avatar.style.backgroundImage = `url(${w._prefetchedImageUrl})`;
+    avatar.style.backgroundSize = 'cover';
+    avatar.style.backgroundPosition = 'center';
+    avatar.textContent = '';
+    if (w._imageSource === 'cropped') {
+      avatar.style.cursor = 'pointer';
+      avatar.onclick = () => openCropAdjuster(idx);
+      avatar.title = 'Tap to adjust crop';
+    }
+  }
+
+  const statusEl = document.createElement('div');
+  statusEl.className = 'pi-img-status';
+
+  if (w._imageLoading) {
+    statusEl.innerHTML = '<span class="pi-img-loading">⟳ Finding photo…</span>';
+  } else if (w._imageFound && w._prefetchedImageUrl) {
+    const label = w._imageSource === 'cropped' ? '✓ Your photo' : '✓ Photo ready';
+    statusEl.innerHTML = `<span class="pi-img-found">${label}</span>`;
+  } else if (w._imageSearched) {
+    statusEl.innerHTML = '<span class="pi-img-notfound">No photo found</span>';
+  }
+
+  const infoEl = card.querySelector('.pi-card-info');
+  if (infoEl) infoEl.appendChild(statusEl);
+}
+
+async function prefetchIdentifiedImages() {
+  let token;
+  try {
+    const sess = await db.auth.getSession();
+    token = sess?.data?.session?.access_token;
+  } catch (_) {}
+  if (!token) return;
+
+  const promises = _photoIdentifyResults.map(async (w, i) => {
+    if (w._imageSearched) return;
+    w._imageSearched = true;
+    w._imageLoading = true;
+    updateIdentifyCard(i);
+
+    try {
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/search-watch-image`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'apikey': SUPABASE_KEY
+        },
+        signal: AbortSignal.timeout(15000),
+        body: JSON.stringify({
+          brand: w.brand || '',
+          model: w.model || '',
+          reference: w.reference || '',
+          productUrl: w.productUrl || ''
+        })
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.imageUrl) {
+          // Try to fetch image as blob (direct, then CORS proxy)
+          const urls = [data.imageUrl, `https://corsproxy.io/?${encodeURIComponent(data.imageUrl)}`];
+          for (const src of urls) {
+            if (w._imageFound) break;
+            try {
+              const imgResp = await fetch(src, { signal: AbortSignal.timeout(6000) });
+              if (imgResp.ok) {
+                const blob = await imgResp.blob();
+                if (blob.size > 500) {
+                  w._prefetchedBlob = blob;
+                  w._prefetchedImageUrl = URL.createObjectURL(blob);
+                  w._prefetchedSourceUrl = data.sourceUrl || '';
+                  w._imageFound = true;
+                  w._imageSource = 'stock';
+                }
+              }
+            } catch (_) {}
+          }
+          if (!w._imageFound) console.log('[WristLog] Stock image not loadable:', data.imageUrl);
+        }
+      }
+    } catch (e) {
+      console.error('[WristLog] prefetch image error:', e);
+    }
+
+    // Crop fallback: if no stock photo, use user's original photo
+    if (!w._imageFound && window._photoIdentifyBlob) {
+      const hasBbox = w.boundingBox && Array.isArray(w.boundingBox) && w.boundingBox.length === 4;
+      const bbox = hasBbox ? w.boundingBox : [0, 0, 100, 100];
+      console.log('[WristLog] Crop fallback, bbox:', bbox, 'blobSize:', window._photoIdentifyBlob.size);
+      try {
+        const cropped = await cropWatchFromPhoto(window._photoIdentifyBlob, bbox);
+        w._prefetchedCroppedBlob = cropped;
+        w._prefetchedImageUrl = URL.createObjectURL(cropped);
+        w._imageFound = true;
+        w._imageSource = 'cropped';
+        console.log('[WristLog] Crop success, size:', cropped.size);
+      } catch (cropErr) {
+        console.error('[WristLog] crop error:', cropErr);
+      }
+    }
+    if (!w._imageFound) w._imageFound = false;
+
+    w._imageLoading = false;
+    updateIdentifyCard(i);
+  });
+
+  await Promise.allSettled(promises);
 }
 
 async function addFromIdentified(idx) {
@@ -11626,7 +11820,10 @@ async function addFromIdentified(idx) {
     const w = _photoIdentifyResults[idx];
     if (!w) return;
 
-    // Close identify modal
+    // Flag so saveWatch knows to return to identify modal
+    window._addingFromIdentify = true;
+
+    // Close identify modal (but keep blob for crop)
     closePhotoIdentify();
 
     // Open the add watch form
@@ -11649,22 +11846,29 @@ async function addFromIdentified(idx) {
       buildSwatches();
     }
 
-    // Try to fetch stock photo — prefer productUrl from AI, fallback to brand domain
-    const fetchUrl = w.productUrl || `https://www.${brandToDomain(aiBrand)}`;
-    if (fetchUrl && fetchUrl !== 'https://www..com') {
-      document.getElementById('w-url').value = fetchUrl;
-      toast('Fetching watch photo...', 'info');
-      try {
-        await fetchCollectionDetails();
-      } catch (_) { /* fetch failed — user can fill manually */ }
-      // Restore AI-identified fields (fetchCollectionDetails may overwrite them)
-      if (aiBrand) {
-        buildBrandSelect(aiBrand);
-        document.getElementById('w-brand').value = aiBrand;
-        document.getElementById('w-brand-display').value = aiBrand;
+    // Use pre-fetched image if available, otherwise try productUrl (skip brand homepage fallback)
+    if (w._imageFound && w._prefetchedImageUrl) {
+      if (w._imageSource === 'cropped' && w._prefetchedCroppedBlob) {
+        // Cropped from user's original photo
+        wPendingFile  = w._prefetchedCroppedBlob;
+        wPendingImage = URL.createObjectURL(w._prefetchedCroppedBlob);
+        renderWatchModalImg();
+        toast('Using your photo', 'success');
+      } else {
+        // Stock photo from search — already pre-fetched as blob during prefetch
+        if (w._prefetchedBlob) {
+          wPendingFile  = w._prefetchedBlob;
+          wPendingImage = URL.createObjectURL(w._prefetchedBlob);
+          renderWatchModalImg();
+          toast('Stock photo loaded', 'success');
+        } else {
+          // Direct URL fallback (loaded in img but couldn't fetch blob)
+          wPendingFile  = null;
+          wPendingImage = w._prefetchedImageUrl;
+          renderWatchModalImg();
+          toast('Stock photo loaded', 'success');
+        }
       }
-      if (aiModel) document.getElementById('w-name').value = aiModel;
-      if (aiRef)   document.getElementById('w-ref').value = aiRef;
     }
 
     // Remove this item from the results (mark as added)
@@ -11675,6 +11879,198 @@ async function addFromIdentified(idx) {
     console.error('[WristLog] addFromIdentified error:', e);
     toast('Add failed: ' + (e?.message || e), 'error');
   }
+}
+
+/**
+ * Shared crop UI — fullscreen overlay with pan + zoom.
+ * @param {Blob} sourceBlob - the image to crop from
+ * @param {number[]|null} initialBbox - [x,y,w,h] percentages to center on, or null
+ * @param {function} onDone - callback(croppedBlob, bboxPct) when user taps Done
+ */
+function _openCropUI(sourceBlob, initialBbox, onDone) {
+  const overlay = document.createElement('div');
+  overlay.className = 'crop-adjuster';
+  overlay.innerHTML = `
+    <div class="crop-adjuster-header">
+      <button onclick="this.closest('.crop-adjuster').remove()">Cancel</button>
+      <span style="color:#fff;font-weight:600;font-size:.9rem;">Adjust Crop</span>
+      <button class="crop-done">Done</button>
+    </div>
+    <div class="crop-viewport">
+      <img alt="">
+      <div class="crop-guide"><div class="crop-guide-border"></div></div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const viewport = overlay.querySelector('.crop-viewport');
+  const img = overlay.querySelector('.crop-viewport img');
+  const guideBox = overlay.querySelector('.crop-guide-border');
+
+  const blobUrl = URL.createObjectURL(sourceBlob);
+  img.onload = () => {
+    const vw = viewport.clientWidth;
+    const vh = viewport.clientHeight;
+    const guideSize = Math.round(Math.min(vw, vh) * 0.7);
+    const guideLeft = Math.round((vw - guideSize) / 2);
+    const guideTop = Math.round((vh - guideSize) / 2);
+    guideBox.style.left = guideLeft + 'px';
+    guideBox.style.top = guideTop + 'px';
+    guideBox.style.width = guideSize + 'px';
+    guideBox.style.height = guideSize + 'px';
+
+    // Initial scale: fit image so shorter side = guideSize * 1.5
+    const imgAspect = img.naturalWidth / img.naturalHeight;
+    const baseScale = 1.5;
+    let baseW, baseH;
+    if (imgAspect > 1) {
+      baseH = guideSize * baseScale;
+      baseW = baseH * imgAspect;
+    } else {
+      baseW = guideSize * baseScale;
+      baseH = baseW / imgAspect;
+    }
+
+    let curScale = 1;
+    let imgW = baseW, imgH = baseH;
+    img.style.width = imgW + 'px';
+    img.style.height = imgH + 'px';
+
+    // Position: center bbox or center image
+    let imgX, imgY;
+    if (initialBbox && initialBbox.length === 4) {
+      const [bx, by, bw, bh] = initialBbox;
+      const cx = imgW * (bx + bw / 2) / 100;
+      const cy = imgH * (by + bh / 2) / 100;
+      imgX = guideLeft + guideSize / 2 - cx;
+      imgY = guideTop + guideSize / 2 - cy;
+    } else {
+      imgX = guideLeft + guideSize / 2 - imgW / 2;
+      imgY = guideTop + guideSize / 2 - imgH / 2;
+    }
+    img.style.left = imgX + 'px';
+    img.style.top = imgY + 'px';
+
+    function applyScale(newScale, centerX, centerY) {
+      // Zoom toward the center point
+      const oldW = parseFloat(img.style.width);
+      const oldH = parseFloat(img.style.height);
+      const oldX = parseFloat(img.style.left);
+      const oldY = parseFloat(img.style.top);
+      const newW = baseW * newScale;
+      const newH = baseH * newScale;
+      // Keep the point under centerX/centerY fixed
+      const ratioX = (centerX - oldX) / oldW;
+      const ratioY = (centerY - oldY) / oldH;
+      img.style.width = newW + 'px';
+      img.style.height = newH + 'px';
+      img.style.left = (centerX - ratioX * newW) + 'px';
+      img.style.top = (centerY - ratioY * newH) + 'px';
+      imgW = newW; imgH = newH;
+      curScale = newScale;
+    }
+
+    // ── Pan (touch + mouse) ──
+    let startX, startY, origX, origY, isPinching = false;
+    function onStart(e) {
+      if (e.touches && e.touches.length > 1) return; // let pinch handle it
+      e.preventDefault();
+      isPinching = false;
+      const pt = e.touches ? e.touches[0] : e;
+      startX = pt.clientX; startY = pt.clientY;
+      origX = parseFloat(img.style.left); origY = parseFloat(img.style.top);
+      const moveEvt = e.touches ? 'touchmove' : 'mousemove';
+      const endEvt = e.touches ? 'touchend' : 'mouseup';
+      function onMove(e2) {
+        if (isPinching) return;
+        e2.preventDefault();
+        const pt2 = e2.touches ? e2.touches[0] : e2;
+        img.style.left = (origX + pt2.clientX - startX) + 'px';
+        img.style.top  = (origY + pt2.clientY - startY) + 'px';
+      }
+      function onEnd() {
+        document.removeEventListener(moveEvt, onMove);
+        document.removeEventListener(endEvt, onEnd);
+      }
+      document.addEventListener(moveEvt, onMove, { passive: false });
+      document.addEventListener(endEvt, onEnd);
+    }
+    viewport.addEventListener('touchstart', onStart, { passive: false });
+    viewport.addEventListener('mousedown', onStart);
+
+    // ── Pinch to zoom (touch) ──
+    let pinchStartDist = 0, pinchStartScale = 1;
+    viewport.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        isPinching = true;
+        e.preventDefault();
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        pinchStartDist = Math.sqrt(dx * dx + dy * dy);
+        pinchStartScale = curScale;
+      }
+    }, { passive: false });
+    viewport.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const newScale = Math.max(0.5, Math.min(5, pinchStartScale * (dist / pinchStartDist)));
+        applyScale(newScale, midX, midY);
+      }
+    }, { passive: false });
+
+    // ── Scroll/wheel to zoom (desktop) ──
+    viewport.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      const newScale = Math.max(0.5, Math.min(5, curScale + delta));
+      const rect = viewport.getBoundingClientRect();
+      applyScale(newScale, e.clientX - rect.left, e.clientY - rect.top);
+    }, { passive: false });
+
+    // ── Done ──
+    overlay.querySelector('.crop-done').onclick = async () => {
+      const curX = parseFloat(img.style.left);
+      const curY = parseFloat(img.style.top);
+      const curW = parseFloat(img.style.width);
+      const curH = parseFloat(img.style.height);
+      const srcX = guideLeft - curX;
+      const srcY = guideTop - curY;
+      const xPct = Math.max(0, (srcX / curW) * 100);
+      const yPct = Math.max(0, (srcY / curH) * 100);
+      const wPct = Math.min(100 - xPct, (guideSize / curW) * 100);
+      const hPct = Math.min(100 - yPct, (guideSize / curH) * 100);
+      try {
+        const cropped = await cropWatchFromPhoto(sourceBlob, [xPct, yPct, wPct, hPct]);
+        onDone(cropped, [xPct, yPct, wPct, hPct]);
+      } catch (err) {
+        console.error('[WristLog] crop adjust error:', err);
+        toast('Crop failed', 'error');
+      }
+      URL.revokeObjectURL(blobUrl);
+      overlay.remove();
+    };
+  };
+  img.src = blobUrl;
+}
+
+/** Open crop adjuster from identify card */
+function openCropAdjuster(idx) {
+  const w = _photoIdentifyResults[idx];
+  if (!w || !window._photoIdentifyBlob) return;
+  const bbox = (w.boundingBox && w.boundingBox.length === 4) ? w.boundingBox : null;
+  _openCropUI(window._photoIdentifyBlob, bbox, (croppedBlob, bboxPct) => {
+    if (w._prefetchedImageUrl) URL.revokeObjectURL(w._prefetchedImageUrl);
+    w._prefetchedCroppedBlob = croppedBlob;
+    w._prefetchedImageUrl = URL.createObjectURL(croppedBlob);
+    w._imageFound = true;
+    w._imageSource = 'cropped';
+    w.boundingBox = bboxPct;
+    updateIdentifyCard(idx);
+  });
 }
 
 function _showPhotoSourcePicker() {
@@ -11696,6 +12092,39 @@ function _showPhotoSourcePicker() {
 
 function closePhotoIdentify() {
   document.getElementById('photo-identify-modal').classList.add('hidden');
+  // Note: don't clear _photoIdentifyBlob here — it's needed by the crop adjuster
+  // in the Add Watch modal. It gets cleared in closeWatchModal() instead.
+  window._photoIdentifyBase64 = null;
+}
+
+/**
+ * Crop a specific watch from the user's original photo using bounding box percentages.
+ * Uses blob URL (more reliable than data URL for Image loading).
+ * @param {Blob} blob - the original photo blob
+ * @param {number[]} bbox - [xPct, yPct, wPct, hPct] percentages (0-100)
+ * @returns {Promise<Blob>} cropped JPEG blob
+ */
+function cropWatchFromPhoto(blob, bbox) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const blobUrl = URL.createObjectURL(blob);
+    img.onload = () => {
+      URL.revokeObjectURL(blobUrl);
+      const [xPct, yPct, wPct, hPct] = bbox;
+      const sx = Math.max(0, Math.round(img.width * xPct / 100));
+      const sy = Math.max(0, Math.round(img.height * yPct / 100));
+      const sw = Math.min(Math.round(img.width * wPct / 100), img.width - sx);
+      const sh = Math.min(Math.round(img.height * hPct / 100), img.height - sy);
+      if (sw <= 0 || sh <= 0) { reject(new Error('invalid crop region')); return; }
+      const canvas = document.createElement('canvas');
+      canvas.width = sw;
+      canvas.height = sh;
+      canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/jpeg', 0.9);
+    };
+    img.onerror = () => { URL.revokeObjectURL(blobUrl); reject(new Error('img load failed')); };
+    img.src = blobUrl;
+  });
 }
 
 // ══════════════════════════════════════════
@@ -12726,6 +13155,25 @@ function renderWlModalImg(existingSrc) {
     preview.style.display   = 'none';
     uploadBtn.style.display = '';
   }
+}
+
+async function openWlModalCropAdjuster() {
+  var sourceBlob = null;
+  if (wlPendingFile instanceof Blob) {
+    sourceBlob = wlPendingFile;
+  } else if (wlPendingImage) {
+    try {
+      var resp = await fetch(wlPendingImage, {signal: AbortSignal.timeout(8000)});
+      if (resp.ok) sourceBlob = await resp.blob();
+    } catch (_) {}
+  }
+  if (!sourceBlob) { toast('Could not load photo to crop', 'info'); return; }
+  _openCropUI(sourceBlob, null, function(croppedBlob) {
+    if (wlPendingImage && wlPendingImage.startsWith('blob:')) URL.revokeObjectURL(wlPendingImage);
+    wlPendingFile = croppedBlob;
+    wlPendingImage = URL.createObjectURL(croppedBlob);
+    renderWlModalImg();
+  });
 }
 
 async function pickWlModalImage() {

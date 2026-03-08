@@ -148,10 +148,11 @@ For each watch, provide your best identification with these fields:
 - reference: The reference number if you can determine it (e.g., "126610LN", "310.30.42.50.01.001"). Leave empty string if unsure.
 - estimatedColor: A hex color code that best represents the watch's overall tone. Pick from these: #c9a84c (gold), #4caf7d (teal), #818cf8 (indigo), #ef7942 (orange), #38bdf8 (sky blue), #e879f9 (magenta), #f43f5e (rose), #94a3b8 (slate/silver), #fbbf24 (amber), #34d399 (emerald), #fb923c (orange-alt), #a78bfa (purple)
 - confidence: "high", "medium", or "low" based on how certain you are of the identification
-- productUrl: A product page URL where a stock photo of this exact model can be found. Prefer official brand sites, chrono24.com, or hodinkee.com. Leave empty string if unsure.
+- productUrl: ONLY provide a URL if you are CERTAIN it is a real, direct product page URL for this specific watch model (not a brand homepage). Prefer chrono24.com listing URLs. If you are not confident the URL points to the exact product page, use empty string "". Do NOT guess or construct URLs.
+- boundingBox: The approximate location of this watch in the image as [x, y, width, height] where values are percentages (0-100) of the image dimensions. x is from left edge, y is from top edge. For example [25, 10, 50, 80] means the watch starts 25% from left, 10% from top, is 50% of image width and 80% of image height. Be generous with padding — include the full watch face, case, and some of the strap.
 
 Return ONLY valid JSON in this exact format, no other text:
-{"watches": [{"brand": "...", "model": "...", "reference": "...", "estimatedColor": "...", "confidence": "...", "productUrl": "..."}]}
+{"watches": [{"brand": "...", "model": "...", "reference": "...", "estimatedColor": "...", "confidence": "...", "productUrl": "...", "boundingBox": [x, y, w, h]}]}
 
 If no watches are visible in the image, return: {"watches": []}
 If you can identify the brand but not the exact model, still include it with your best guess and "low" confidence.`,
