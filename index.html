@@ -3614,6 +3614,11 @@ function rowToWish(r) {
 // ══════════════════════════════════════════
 async function loadUserData() {
   const uid = currentUser.id;
+  // Flush any pending local changes before loading cloud state (prevents overwriting unsynced edits)
+  const hasPending = _dirty.watches.size || _dirty.logs.size || _dirty.wishlist.size || _dirty.elo.size || _pendingDeletes.length;
+  if (hasPending && navigator.onLine) {
+    try { await cloudSync(); } catch(_) {}
+  }
   // Each query is individually fault-tolerant so one table failure doesn't block the others
   // Promise.resolve() converts the Supabase thenable to a real Promise (thenables lack .catch())
   const _q = query => Promise.resolve(query).catch(e => { console.error('[WristLog] loadUserData query error:', e?.message); return { data: null, error: e }; });
@@ -3648,14 +3653,31 @@ function markDirty(type, id) {
   if (s) Array.isArray(id) ? id.forEach(i => s.add(i)) : s.add(id);
 }
 
+// ── Pending deletes queue (persisted to localStorage for offline resilience) ──
+const STORE_PD = 'wr_pendingDeletes';
+let _pendingDeletes = JSON.parse(localStorage.getItem(STORE_PD) || '[]');
+function savePendingDeletes() { safeSetJSON(STORE_PD, _pendingDeletes); }
+function queueDelete(table, id) {
+  if (!_pendingDeletes.some(d => d.table === table && d.id === id)) {
+    _pendingDeletes.push({ table, id });
+    savePendingDeletes();
+  }
+}
+
 // ══════════════════════════════════════════
 //  CLOUD SYNC (called from save())
 // ══════════════════════════════════════════
 let _syncInFlight = false;
+let _syncRetryCount = 0;
+let _syncRetryTimer;
+let _offlineToastShown = false;
 async function cloudSync() {
   if (!currentUser) return;
-  if (!navigator.onLine) return; // offline — dirty IDs stay, synced on reconnect
-  const hasDirty = _dirty.watches.size || _dirty.logs.size || _dirty.wishlist.size || _dirty.elo.size;
+  if (!navigator.onLine) {
+    if (!_offlineToastShown) { toast('You\'re offline — changes saved locally', 'info'); _offlineToastShown = true; }
+    return;
+  }
+  const hasDirty = _dirty.watches.size || _dirty.logs.size || _dirty.wishlist.size || _dirty.elo.size || _pendingDeletes.length;
   if (!hasDirty) return; // nothing changed — skip network call
   if (_syncInFlight) return; // prevent concurrent syncs — next save() will retry
   _syncInFlight = true;
@@ -3666,6 +3688,16 @@ async function cloudSync() {
     return true;
   };
   try {
+    // Process pending deletes BEFORE upserts (avoid re-inserting deleted rows)
+    if (_pendingDeletes.length) {
+      const remaining = [];
+      for (const d of _pendingDeletes) {
+        const { error } = await db.from(d.table).delete().eq('id', d.id).eq('user_id', currentUser.id);
+        if (error) { console.error(`[WristLog] delete ${d.table} error:`, error.message); remaining.push(d); }
+      }
+      _pendingDeletes = remaining;
+      savePendingDeletes();
+    }
     // Snapshot IDs, attempt upsert, only clear on success (new mutations during await stay in the live set)
     if (_dirty.watches.size) {
       const ids = [..._dirty.watches];
@@ -3696,6 +3728,16 @@ async function cloudSync() {
         ids.forEach(id => _dirty.elo.delete(id));
       }
     }
+    // Retry with exponential backoff if anything still pending
+    const stillDirty = _dirty.watches.size || _dirty.logs.size || _dirty.wishlist.size || _dirty.elo.size || _pendingDeletes.length;
+    if (stillDirty && navigator.onLine) {
+      _syncRetryCount = Math.min(_syncRetryCount + 1, 5);
+      const delay = Math.min(2000 * Math.pow(2, _syncRetryCount - 1), 60000);
+      clearTimeout(_syncRetryTimer);
+      _syncRetryTimer = setTimeout(cloudSync, delay);
+    } else {
+      _syncRetryCount = 0;
+    }
   } catch(e) { console.error('[WristLog] cloudSync exception:', e.message); }
   finally { _syncInFlight = false; }
 }
@@ -3703,7 +3745,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.07.20.34';
+const APP_VERSION = '2.33.07.20.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8447,11 +8489,8 @@ function deleteLog(id, btn) {
   if (log?.photoUrl) { const p = storagePathFrom(log.photoUrl); if (p) deleteStorageFile(p); }
   logs = logs.filter(l => l.id !== id);
   save();
-  // Hard-delete from Supabase — upsert only writes, never removes rows
-  if (currentUser) {
-    db.from('logs').delete().eq('id', id).eq('user_id', currentUser.id)
-      .then(({ error }) => { if (error) { console.error('[WristLog] deleteLog error:', error.message); toast('Delete may not have synced — it will retry on next load.', 'error'); } });
-  }
+  if (currentUser) queueDelete('logs', id);
+  cloudSync();
   renderTrack();
 }
 
@@ -9653,20 +9692,19 @@ function confirmDelete() {
   // Cleanup Storage files (watch image + receipts + log photos)
   if (w?.image) { const p = storagePathFrom(w.image); if (p) deleteStorageFile(p); }
   (w?.receipts || []).forEach(r => { if (r.data) { const p = storagePathFrom(r.data); if (p) deleteStorageFile(p); } });
-  logsForWatch(id).filter(l => l.photoUrl).forEach(l => { const p = storagePathFrom(l.photoUrl); if (p) deleteStorageFile(p); });
+  const watchLogs = logsForWatch(id);
+  watchLogs.filter(l => l.photoUrl).forEach(l => { const p = storagePathFrom(l.photoUrl); if (p) deleteStorageFile(p); });
+  if (currentUser) {
+    queueDelete('watches', id);
+    watchLogs.forEach(l => queueDelete('logs', l.id));
+  }
   watches = watches.filter(x => x.id !== id);
   logs    = logs.filter(l => l.watchId !== id);
   delete eloRatings[id]; // prevent cloudSync elo-upsert from re-inserting a ghost row
   safeSetJSON(STORE_ELO, eloRatings);
   if (selWatchId === id) selWatchId = null;
   save();
-  // Hard-delete from Supabase (upsert only writes, never removes rows)
-  if (currentUser) {
-    db.from('watches').delete().eq('id', id).eq('user_id', currentUser.id)
-      .then(({ error }) => { if (error) console.error('[WristLog] Delete watch error:', error.message); });
-    db.from('logs').delete().eq('watch_id', id).eq('user_id', currentUser.id)
-      .then(({ error }) => { if (error) console.error('[WristLog] Delete logs error:', error.message); });
-  }
+  cloudSync();
   closeDelModal();
   renderCollection();
   toast('Watch deleted');
@@ -10452,11 +10490,8 @@ function setCollSort(field) {
 function deleteLogFromStats(id) {
   logs = logs.filter(l => l.id !== id);
   save();
-  // Hard-delete from Supabase — upsert only writes, never removes rows
-  if (currentUser) {
-    db.from('logs').delete().eq('id', id).eq('user_id', currentUser.id)
-      .then(({ error }) => { if (error) console.error('[WristLog] deleteLogFromStats error:', error.message); });
-  }
+  if (currentUser) queueDelete('logs', id);
+  cloudSync();
   renderStats();
 }
 
@@ -11839,11 +11874,7 @@ function confirmDeleteWishlist() {
     if (p) deleteStorageFile(p);
   }
   wishlist = wishlist.filter(x => x.id !== id);
-  // Hard-delete from Supabase
-  if (currentUser) {
-    db.from('wishlist').delete().eq('id', id).eq('user_id', currentUser.id)
-      .then(({ error }) => { if (error) console.error('[WristLog] Delete wishlist error:', error.message); });
-  }
+  if (currentUser) queueDelete('wishlist', id);
   saveWishlist();
   closeDelWlModal();
   renderWishlist();
@@ -12728,6 +12759,7 @@ window.addEventListener('offline', () => {
 window.addEventListener('online', () => {
   const b = document.getElementById('offline-banner');
   if (b) b.style.display = 'none';
+  _offlineToastShown = false;
   toast('Back online — syncing…');
   cloudSync();
 });
@@ -12736,6 +12768,17 @@ if (!navigator.onLine) {
   const b = document.getElementById('offline-banner');
   if (b) b.style.display = '';
 }
+
+// ── Global error handlers ─────────────────────────────────────────────────
+window.onerror = function(msg, src, line, col, err) {
+  console.error('[WristLog] Uncaught error:', msg, 'at', src, line, col, err);
+  if (typeof toast === 'function') toast('Something went wrong. Try refreshing.', 'error');
+  return false;
+};
+window.addEventListener('unhandledrejection', function(ev) {
+  console.error('[WristLog] Unhandled promise rejection:', ev.reason);
+  if (typeof toast === 'function') toast('A background operation failed.', 'error');
+});
 
 // ── PWA: register service worker ────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
