@@ -168,7 +168,8 @@ serve(async (req) => {
         .eq("id", actor_id)
         .single();
       if (actor) {
-        actorName = actor.display_name || actor.username || "Someone";
+        const raw = actor.display_name || actor.username || "Someone";
+        actorName = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       }
     }
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>WRotate – Every Watch. Every Wear.</title>
   <meta name="description" content="Track your watch collection, log every wear, and share with friends. Cost-per-wear stats, market values, social feed, clubs, and wishlist — all in one app.">
   <meta name="robots" content="index, follow">
@@ -61,7 +61,7 @@
     })();
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" integrity="sha384-Sm2s7OXxsAMTyJ4iIyRBgVpeGUvMPk2lRQnnZhE78Wej7oggIoolKt+SCt0XJbUB" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" integrity="sha384-Sm2s7OXxsAMTyJ4iIyRBgVpeGUvMPk2lRQnnZhE78Wej7oggIoolKt+SCt0XJbUB" crossorigin="anonymous"></script>
   <script src="dev-config.js" onerror="/* expected in production */"></script>
   <!-- Apply saved theme before first paint to avoid flash -->
   <script>
@@ -1864,7 +1864,7 @@
 
 
 <!-- ════ WHAT'S NEW MODAL ════ -->
-<div id="whats-new-modal" class="overlay hidden">
+<div id="whats-new-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:440px;">
     <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New
@@ -1937,7 +1937,7 @@
 </div>
 
 <!-- ════ FOLLOWERS MODAL ════ -->
-<div id="followers-modal" class="overlay hidden">
+<div id="followers-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:400px;">
     <div class="modal-title">Followers</div>
     <div id="followers-list" style="max-height:55vh;overflow-y:auto;margin:0 -.25rem;"></div>
@@ -1947,7 +1947,7 @@
   </div>
 </div>
 
-<div id="following-modal" class="overlay hidden">
+<div id="following-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:400px;">
     <div class="modal-title">Following</div>
     <div id="following-modal-list" style="max-height:55vh;overflow-y:auto;margin:0 -.25rem;"></div>
@@ -1957,7 +1957,7 @@
   </div>
 </div>
 
-<div id="username-modal" class="overlay hidden">
+<div id="username-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:400px;">
     <div class="modal-title">Choose your username</div>
     <p style="color:var(--muted);font-size:.85rem;margin-bottom:1.25rem;">
@@ -1978,7 +1978,7 @@
 </div>
 
 <!-- ════ WELCOME ONBOARDING MODAL ════ -->
-<div id="welcome-modal" class="overlay hidden">
+<div id="welcome-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:380px;text-align:center;">
     <div class="welcome-step" id="ws-1">
       <div style="margin-bottom:.75rem;display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
@@ -2640,7 +2640,7 @@
 </main>
 
 <!-- ════ ADD / EDIT WATCH MODAL ════ -->
-<div id="watch-modal" class="overlay hidden">
+<div id="watch-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal">
     <div class="modal-title" id="modal-title">Add Watch</div>
     <div class="form-group">
@@ -2801,7 +2801,7 @@
 </div>
 
 <!-- ════ RECEIPTS MODAL ════ -->
-<div id="receipts-modal" class="overlay hidden">
+<div id="receipts-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:480px;">
     <div class="modal-title">Receipts &amp; Documents</div>
     <div id="receipts-watch-name" style="color:var(--muted);font-size:.85rem;margin-bottom:1rem;"></div>
@@ -2814,7 +2814,7 @@
 </div>
 
 <!-- ════ DELETE CONFIRM MODAL ════ -->
-<div id="del-modal" class="overlay hidden">
+<div id="del-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:360px;">
     <div class="modal-title">Delete Watch?</div>
     <p style="color:var(--muted);font-size:.88rem;margin-bottom:1.25rem;line-height:1.55;">
@@ -2828,7 +2828,7 @@
 </div>
 
 <!-- ════ GENERIC CONFIRM MODAL ════ -->
-<div id="confirm-modal" class="overlay hidden">
+<div id="confirm-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:360px;">
     <div class="modal-title" id="confirm-title">Are you sure?</div>
     <p id="confirm-msg" style="color:var(--muted);font-size:.88rem;margin-bottom:1.25rem;line-height:1.55;"></p>
@@ -2841,7 +2841,7 @@
 
 
 <!-- ════ ADD PHOTO MODAL (paste / drop / browse — no clipboard permission) ════ -->
-<div id="photo-paste-modal" class="overlay hidden">
+<div id="photo-paste-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:320px;">
     <div class="modal-title">Add Photo</div>
     <div id="photo-drop-zone"
@@ -2862,7 +2862,7 @@
 </div>
 
 <!-- ════ PHOTO IDENTIFY MODAL ════ -->
-<div id="photo-identify-modal" class="overlay hidden">
+<div id="photo-identify-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:480px;">
     <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Identified Watches
@@ -2875,7 +2875,7 @@
 </div>
 
 <!-- ════ SNAP MATCH PICKER MODAL ════ -->
-<div id="snap-match-modal" class="overlay hidden">
+<div id="snap-match-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:420px;">
     <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Which watch is this?
@@ -2888,7 +2888,7 @@
 </div>
 
 <!-- ════ WISHLIST ADD / EDIT MODAL ════ -->
-<div id="wishlist-modal" class="overlay hidden">
+<div id="wishlist-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal">
     <div class="modal-title" id="wl-modal-title">Add to Wishlist</div>
 
@@ -2963,7 +2963,7 @@
 </div>
 
 <!-- ════ WATCH PREVIEW (read-only, from feed / other user profile) ════ -->
-<div id="watch-preview-modal" class="overlay hidden">
+<div id="watch-preview-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal wpm-modal">
     <div class="wpm-hero" id="wpm-hero"></div>
     <div class="modal-title" id="wpm-title" style="margin-bottom:.75rem;"></div>
@@ -2976,7 +2976,7 @@
 </div>
 
 <!-- ════ WISHLIST DELETE CONFIRM ════ -->
-<div id="del-wl-modal" class="overlay hidden">
+<div id="del-wl-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:360px;">
     <div class="modal-title">Delete from Wishlist?</div>
     <p style="color:var(--muted);font-size:.88rem;margin-bottom:1.25rem;line-height:1.55;">
@@ -3045,7 +3045,7 @@
 </div>
 
 <!-- ════ DISCOVER / FIND PEOPLE MODAL ════ -->
-<div id="discover-modal" class="overlay hidden">
+<div id="discover-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:420px;">
     <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</div>
     <div class="form-group" style="margin-bottom:1rem;">
@@ -3064,7 +3064,7 @@
 </div>
 
 <!-- ════ CLUB INVITE MEMBERS MODAL ════ -->
-<div id="club-invite-modal" class="overlay hidden">
+<div id="club-invite-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:420px;">
     <div class="modal-title">Invite Members</div>
     <div class="form-group" style="margin-bottom:1rem;">
@@ -3087,7 +3087,7 @@
   style="display:none" onchange="handleFeedPhoto(this)">
 
 <!-- ════ NEW POST MODAL ════ -->
-<div id="new-post-modal" class="overlay hidden">
+<div id="new-post-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:400px;">
     <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> New Post</div>
     <div class="form-group">
@@ -3117,7 +3117,7 @@
 </div>
 
 <!-- ════ EDIT POST MODAL ════ -->
-<div id="edit-post-modal" class="overlay hidden">
+<div id="edit-post-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:400px;">
     <div class="modal-title">Edit Post</div>
     <div class="form-group">
@@ -3156,7 +3156,7 @@
 </div>
 
 <!-- ════ DELETE ACCOUNT MODAL ════ -->
-<div id="delete-account-modal" class="overlay hidden">
+<div id="delete-account-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:380px;text-align:center;">
     <div id="da-step-1" class="del-acct-step">
       <div style="margin-bottom:.5rem;display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
@@ -3180,7 +3180,7 @@
 </div>
 
 <!-- ════ DELETE CLUB MODAL ════ -->
-<div id="delete-club-modal" class="overlay hidden">
+<div id="delete-club-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:380px;text-align:center;">
     <div id="dc-step-1">
       <div style="margin-bottom:.5rem;display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
@@ -3202,7 +3202,7 @@
 <!-- @mention autocomplete dropdown (shared, repositioned dynamically) -->
 <div id="mention-ac" class="mention-ac" role="listbox"></div>
 
-<div id="feedback-modal" class="overlay hidden">
+<div id="feedback-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:420px;">
     <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Feedback</div>
     <div id="fb-type-picker" style="display:flex;gap:.5rem;margin-bottom:.5rem;">
@@ -3222,7 +3222,7 @@
 
 <!-- ════ EDIT LOG MODAL ════ -->
 <!-- ════ TRACK LOG MODAL ════ -->
-<div id="track-log-modal" class="overlay hidden">
+<div id="track-log-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal tl-modal">
 
     <!-- Watch hero -->
@@ -3304,7 +3304,7 @@
   </div>
 </div>
 
-<div id="edit-log-modal" class="overlay hidden">
+<div id="edit-log-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:380px;">
     <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit Log Entry</div>
     <div class="form-group">
@@ -3340,7 +3340,7 @@
   </div>
 </div>
 
-<div id="create-club-modal" class="overlay hidden">
+<div id="create-club-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:400px;">
     <div class="modal-title">Create a Club</div>
     <div class="form-group">
@@ -3365,7 +3365,7 @@
   </div>
 </div>
 
-<div id="toast" class="toast"></div>
+<div id="toast" class="toast" aria-live="polite" role="status"></div>
 <div id="offline-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#f59e0b;color:#000;text-align:center;padding:.45rem .75rem;font-size:.78rem;font-weight:600;">You're offline — changes are saved locally and will sync when you reconnect.</div>
 
 <script>
@@ -3703,7 +3703,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.07.19.40';
+const APP_VERSION = '2.33.07.20.07';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6827,6 +6827,10 @@ function dismissNpWatchSuggestion() {
 async function saveNewPost() {
   const body = (document.getElementById('np-body')?.value || '').trim();
   if (!body && !newPostFile) { toast('Add a photo or write something', 'error'); return; }
+  const _npBtn = document.querySelector('#new-post-modal .btn-primary');
+  if (_npBtn?.disabled) return;
+  if (_npBtn) { _npBtn.disabled = true; _npBtn.textContent = 'Posting...'; }
+  try {
   const vis = getVisChip('np-vis-chips');
   const trackWatchId = npIdentifiedWatchId || null;
   const entry = {
@@ -6878,6 +6882,7 @@ async function saveNewPost() {
   toast(postedWatch ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : 'Posted!');
   feedLoadedAt = 0; // force feed to re-fetch after posting
   if (document.getElementById('page-feed').classList.contains('active')) loadFeed();
+  } finally { if (_npBtn) { _npBtn.disabled = false; _npBtn.textContent = 'Post'; } }
 }
 
 // ── Feed photo (add after logging) ────────────────────────────────────────
@@ -8186,7 +8191,7 @@ function renderTrackHistory() {
       </td>
       <td style="white-space:nowrap">
         <button class="btn-icon" title="Edit" onclick="openEditLog('${log.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-        <button class="btn-icon" title="Delete" onclick="deleteLog('${log.id}')">✕</button>
+        <button class="btn-icon" title="Delete" onclick="deleteLog('${log.id}',this)">✕</button>
       </td>
     </tr>`;
   }).join('');
@@ -8202,6 +8207,10 @@ async function saveLog() {
   const date = document.getElementById('track-date').value;
   if (!date)       { toast('Please select a date', 'error'); return; }
   if (!selWatchId) { toast('Please select a watch', 'error'); return; }
+  const _slBtn = document.querySelector('#track-log-modal .btn-primary');
+  if (_slBtn?.disabled) return;
+  if (_slBtn) { _slBtn.disabled = true; _slBtn.textContent = 'Saving...'; }
+  try {
   const notes        = document.getElementById('track-notes').value.trim();
   const privateNotes = document.getElementById('track-private-notes').value.trim();
   const vis = selTrackVis || getDefaultVis();
@@ -8256,6 +8265,7 @@ async function saveLog() {
   feedLoadedAt = 0; // force feed to re-fetch after new log
   renderTrack();
   toast(isUpdate ? 'Wear log updated!' : 'Wear logged!');
+  } finally { if (_slBtn) { _slBtn.disabled = false; _slBtn.textContent = 'Log This Wear'; } }
 }
 
 function handleTrackPhoto(input) {
@@ -8426,7 +8436,12 @@ function closeSnapMatch() {
   _snapPickerFile = null;
 }
 
-function deleteLog(id) {
+function deleteLog(id, btn) {
+  if (btn && !btn.dataset.confirm) {
+    btn.dataset.confirm = '1'; btn.textContent = 'Sure?'; btn.style.color = 'var(--danger,#e55)';
+    setTimeout(() => { if (btn) { delete btn.dataset.confirm; btn.textContent = '✕'; btn.style.color = ''; } }, 3000);
+    return;
+  }
   const log = logs.find(l => l.id === id);
   // Cleanup Storage photo if present
   if (log?.photoUrl) { const p = storagePathFrom(log.photoUrl); if (p) deleteStorageFile(p); }
@@ -9514,6 +9529,10 @@ async function saveWatch() {
   const name  = document.getElementById('w-name').value.trim();
   if (!brand) { toast('Please select a brand', 'error'); return; }
   if (!name) { toast('Model name is required', 'error'); return; }
+  const _swBtn = document.querySelector('#watch-modal .btn-primary');
+  if (_swBtn?.disabled) return;
+  if (_swBtn) { _swBtn.disabled = true; _swBtn.textContent = 'Saving...'; }
+  try {
 
   const insStatus = document.getElementById('w-insurance').value;
   const manualMp  = readPrice('w-manual-mp');
@@ -9616,6 +9635,7 @@ async function saveWatch() {
     saveWishlist();
     renderWishlist();
   }
+  } finally { if (_swBtn) { _swBtn.disabled = false; _swBtn.textContent = 'Save Watch'; } }
 }
 
 function openDelModal(id) {
@@ -11746,6 +11766,10 @@ async function saveWishlistItem() {
   const name  = document.getElementById('wl-name').value.trim();
   if (!brand) { toast('Please select a brand', 'error'); return; }
   if (!name) { toast('Model name is required', 'error'); return; }
+  const _wlBtn = document.querySelector('#wishlist-modal .btn-primary');
+  if (_wlBtn?.disabled) return;
+  if (_wlBtn) { _wlBtn.disabled = true; _wlBtn.textContent = 'Saving...'; }
+  try {
   const itemId = editingWlId || ('wl_' + uid());
   const data = {
     brand, name,
@@ -11794,6 +11818,7 @@ async function saveWishlistItem() {
   saveWishlist();
   closeWishlistModal();
   renderWishlist();
+  } finally { if (_wlBtn) { _wlBtn.disabled = false; _wlBtn.textContent = 'Save'; } }
 }
 
 function openDelWlModal(id) {
@@ -12486,6 +12511,32 @@ updateThemeBtn();
 if (['localhost', '127.0.0.1'].includes(location.hostname)) {
   document.getElementById('dev-login-wrap').style.display = 'flex';
 }
+
+// ── Focus management for modals (a11y) ──
+const _focusStack = [];
+function releaseFocus() {
+  const prev = _focusStack.pop();
+  if (prev && prev.focus) try { prev.focus(); } catch(_) {}
+}
+// Auto-detect modal open/close via class changes
+new MutationObserver(mutations => {
+  for (const m of mutations) {
+    if (m.type !== 'attributes' || m.attributeName !== 'class') continue;
+    const el = m.target;
+    if (!el.classList.contains('overlay')) continue;
+    if (!el.classList.contains('hidden')) {
+      // Modal just opened — save focus and move into modal
+      _focusStack.push(document.activeElement);
+      requestAnimationFrame(() => {
+        const focusable = el.querySelectorAll('button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])');
+        if (focusable.length) focusable[0].focus();
+      });
+    } else {
+      // Modal just closed — restore focus
+      releaseFocus();
+    }
+  }
+}).observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
 
 // ── Global: click overlay background to close, Escape to close topmost modal ──
 const _overlayCloseMap = {
