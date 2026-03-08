@@ -2021,26 +2021,6 @@
   </div>
 </div>
 
-<div id="username-modal" class="overlay hidden" role="dialog" aria-modal="true">
-  <div class="modal" style="max-width:400px;">
-    <div class="modal-title">Choose your username</div>
-    <p style="color:var(--muted);font-size:.85rem;margin-bottom:1.25rem;">
-      Pick a unique username so others can find and follow you.
-    </p>
-    <div class="username-field">
-      <span class="username-prefix">@</span>
-      <input type="text" id="onboard-username" placeholder="username" maxlength="30"
-        oninput="onUsernameInput(this, 'onboard-username-status')">
-    </div>
-    <div id="onboard-username-status" class="username-status"></div>
-    <div class="modal-actions">
-      <button class="btn btn-primary" id="onboard-username-btn" style="flex:1;" onclick="saveOnboardUsername()" disabled>
-        Continue
-      </button>
-    </div>
-  </div>
-</div>
-
 <!-- ════ WELCOME ONBOARDING MODAL ════ -->
 <div id="welcome-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:380px;text-align:center;">
@@ -2059,25 +2039,34 @@
       <button class="btn btn-ghost" style="width:100%;" onclick="welcomeStep(3)">Skip for now</button>
     </div>
     <div class="welcome-step hidden" id="ws-3">
-      <div style="margin-bottom:.75rem;display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-      <div class="modal-title" style="font-size:1.2rem;">Find people to follow</div>
-      <p style="color:var(--muted);font-size:.9rem;line-height:1.55;margin:.5rem 0 1.5rem;">See what other watch enthusiasts are wearing every day. Follow them to fill your feed.</p>
-      <button class="btn btn-primary" style="width:100%;margin-bottom:.6rem;display:inline-flex;align-items:center;justify-content:center;gap:.4rem;" onclick="pauseWelcome(4);openDiscover()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</button>
+      <div style="margin-bottom:.75rem;display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="modal-title" style="font-size:1.2rem;">Complete your profile</div>
+      <p style="color:var(--muted);font-size:.9rem;line-height:1.55;margin:.5rem 0 1rem;">Add your name and pick a username so others can find you.</p>
+      <div class="form-group" style="text-align:left;margin-bottom:.75rem;">
+        <label style="font-size:.8rem;margin-bottom:.3rem;display:block;">Name</label>
+        <input type="text" id="ws-display-name" placeholder="Your name" autocomplete="off" maxlength="50">
+      </div>
+      <div class="form-group" style="text-align:left;margin-bottom:.2rem;">
+        <label style="font-size:.8rem;margin-bottom:.3rem;display:block;">Username</label>
+        <div class="username-field">
+          <span class="username-prefix">@</span>
+          <input type="text" id="ws-username" placeholder="username" maxlength="30"
+            oninput="onUsernameInput(this, 'ws-username-status')">
+        </div>
+      </div>
+      <div id="ws-username-status" class="username-status" style="margin-bottom:.75rem;"></div>
+      <div class="form-group" style="text-align:left;margin-bottom:1rem;">
+        <label style="font-size:.8rem;margin-bottom:.3rem;display:block;">About you</label>
+        <textarea id="ws-bio" rows="2" placeholder="A short bio..." style="resize:none;" maxlength="300"></textarea>
+      </div>
+      <button class="btn btn-primary" id="ws-profile-btn" style="width:100%;margin-bottom:.6rem;" onclick="saveWelcomeProfile()">Save & Continue →</button>
       <button class="btn btn-ghost" style="width:100%;" onclick="welcomeStep(4)">Skip for now</button>
     </div>
     <div class="welcome-step hidden" id="ws-4">
-      <div style="margin-bottom:.75rem;display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-      <div class="modal-title" style="font-size:1.2rem;">Complete your profile</div>
-      <p style="color:var(--muted);font-size:.9rem;line-height:1.55;margin:.5rem 0 1rem;">Add your name and a short bio so others know who you are.</p>
-      <div class="form-group" style="text-align:left;margin-bottom:.75rem;">
-        <label style="font-size:.8rem;margin-bottom:.3rem;display:block;">Display Name</label>
-        <input type="text" id="ws-display-name" placeholder="Your name" autocomplete="off" maxlength="50">
-      </div>
-      <div class="form-group" style="text-align:left;margin-bottom:1rem;">
-        <label style="font-size:.8rem;margin-bottom:.3rem;display:block;">Bio</label>
-        <textarea id="ws-bio" rows="2" placeholder="A short bio..." style="resize:none;" maxlength="300"></textarea>
-      </div>
-      <button class="btn btn-primary" style="width:100%;margin-bottom:.6rem;" onclick="saveWelcomeProfile()">Save & Continue →</button>
+      <div style="margin-bottom:.75rem;display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+      <div class="modal-title" style="font-size:1.2rem;">Find people to follow</div>
+      <p style="color:var(--muted);font-size:.9rem;line-height:1.55;margin:.5rem 0 1.5rem;">See what other watch enthusiasts are wearing every day. Follow them to fill your feed.</p>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:.6rem;display:inline-flex;align-items:center;justify-content:center;gap:.4rem;" onclick="pauseWelcome(5);openDiscover()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</button>
       <button class="btn btn-ghost" style="width:100%;" onclick="welcomeStep(5)">Skip for now</button>
     </div>
     <div class="welcome-step hidden" id="ws-5">
@@ -3825,7 +3814,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.08.16.29';
+const APP_VERSION = '2.34.08.16.55';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3921,7 +3910,7 @@ async function loadMyProfile() {
     isNewUser = true;
   }
   myProfile = data;
-  if (!isNewUser && data.theme_preference) { try { localStorage.setItem(STORE_THEME, data.theme_preference); } catch(e) {} } // sync Supabase → local (skip for new users — default to light)
+  try { localStorage.setItem(STORE_THEME, data.theme_preference || 'light'); } catch(e) {} // sync Supabase → local, default light
   applyTheme();
   const btn = document.getElementById('profile-btn');
   if (btn) {
@@ -3932,10 +3921,8 @@ async function loadMyProfile() {
     }
     btn.style.display = 'flex';
   }
-  // Show username picker for brand-new sign-ups
-  if (isNewUser && myProfile) {
-    showUsernameOnboarding(myProfile.username || '');
-  }
+  // New users go through the welcome tour (which includes profile setup)
+
 }
 
 // ── Username validation & availability ────────────────────────────────────
@@ -4015,44 +4002,7 @@ async function checkUsernameAvailability(username, statusElId) {
 }
 
 function _enableUsernameBtn(statusElId) {
-  // Enable/disable the relevant submit button
-  if (statusElId === 'onboard-username-status') {
-    const btn = document.getElementById('onboard-username-btn');
-    if (btn) btn.disabled = !_usernameAvailable;
-  }
-}
-
-// ── Username onboarding (first sign-up) ───────────────────────────────────
-function showUsernameOnboarding(suggestedUsername) {
-  const input = document.getElementById('onboard-username');
-  if (input) {
-    input.value = suggestedUsername;
-    input.dataset.original = ''; // no original — this is a new user
-    onUsernameInput(input, 'onboard-username-status');
-  }
-  document.getElementById('username-modal').classList.remove('hidden');
-}
-
-async function saveOnboardUsername() {
-  const input = document.getElementById('onboard-username');
-  const username = (input?.value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-  const { valid } = validateUsername(username);
-  if (!valid || !_usernameAvailable) { toast('Please choose a valid available username', 'error'); return; }
-
-  const btn = document.getElementById('onboard-username-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
-
-  const { error } = await db.from('profiles')
-    .update({ username })
-    .eq('id', currentUser.id);
-  if (!error) {
-    myProfile = { ...myProfile, username };
-    document.getElementById('username-modal').classList.add('hidden');
-    toast('Username set! Welcome to WRotate.');
-  } else {
-    toast('Could not save — ' + error.message, 'error');
-  }
-  if (btn) { btn.disabled = false; btn.textContent = 'Continue'; }
+  // Enable/disable the relevant submit button (no-op for removed onboard modal)
 }
 
 function openProfileModal() {
@@ -7588,6 +7538,17 @@ function welcomeStep(n) {
     document.getElementById(`ws-${i}`).classList.toggle('hidden', i !== n);
     document.getElementById(`wd-${i}`).classList.toggle('active', i === n);
   });
+  // Prefill profile step with existing data
+  if (n === 3 && myProfile) {
+    const uInput = document.getElementById('ws-username');
+    if (uInput && !uInput.value) {
+      uInput.value = myProfile.username || '';
+      uInput.dataset.original = myProfile.username || '';
+      onUsernameInput(uInput, 'ws-username-status');
+    }
+    const nInput = document.getElementById('ws-display-name');
+    if (nInput && !nInput.value && myProfile.display_name) nInput.value = myProfile.display_name;
+  }
 }
 function closeWelcome() {
   document.getElementById('welcome-modal').classList.add('hidden');
@@ -7595,18 +7556,30 @@ function closeWelcome() {
 }
 async function saveWelcomeProfile() {
   const name = (document.getElementById('ws-display-name').value || '').trim();
+  const usernameRaw = (document.getElementById('ws-username')?.value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
   const bio  = (document.getElementById('ws-bio').value || '').trim();
-  if ((name || bio) && currentUser) {
-    const updateData = {};
-    if (name) updateData.display_name = name;
-    if (bio)  updateData.bio = bio;
-    await db.from('profiles').update(updateData).eq('id', currentUser.id);
-    if (window.myProfile) {
-      if (name) window.myProfile.display_name = name;
-      if (bio)  window.myProfile.bio = bio;
-    }
+
+  // Validate username if provided
+  if (usernameRaw) {
+    const { valid } = validateUsername(usernameRaw);
+    if (!valid || !_usernameAvailable) { toast('Please choose a valid available username', 'error'); return; }
   }
-  welcomeStep(5);
+
+  const btn = document.getElementById('ws-profile-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+  const updateData = {};
+  if (name)        updateData.display_name = name;
+  if (usernameRaw) updateData.username = usernameRaw;
+  if (bio)         updateData.bio = bio;
+
+  if (Object.keys(updateData).length && currentUser) {
+    const { error } = await db.from('profiles').update(updateData).eq('id', currentUser.id);
+    if (error) { toast('Could not save — ' + error.message, 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Save & Continue →'; } return; }
+    if (window.myProfile) Object.assign(myProfile, updateData);
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Save & Continue →'; }
+  welcomeStep(4);
 }
 
 // ── Discover ──────────────────────────────────────────────────────────────
@@ -12095,6 +12068,7 @@ function closePhotoIdentify() {
   // Note: don't clear _photoIdentifyBlob here — it's needed by the crop adjuster
   // in the Add Watch modal. It gets cleared in closeWatchModal() instead.
   window._photoIdentifyBase64 = null;
+  resumeWelcome();
 }
 
 /**
@@ -13446,7 +13420,6 @@ new MutationObserver(mutations => {
 const _overlayCloseMap = {
   'followers-modal':     closeFollowersModal,
   'following-modal':     closeFollowingModal,
-  'username-modal':      () => document.getElementById('username-modal').classList.add('hidden'),
   'welcome-modal':       closeWelcome,
   'watch-modal':         closeWatchModal,
   'receipts-modal':      closeReceiptsModal,
