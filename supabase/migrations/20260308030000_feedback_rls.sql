@@ -10,10 +10,10 @@ DROP POLICY IF EXISTS "Users can insert feedback" ON feedback;
 CREATE POLICY "Users can insert feedback" ON feedback
   FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
--- Anonymous users can submit feedback (signed-out bug reports)
+-- Anonymous users can submit feedback (signed-out bug reports, user_id must be null)
 DROP POLICY IF EXISTS "Anon can insert feedback" ON feedback;
 CREATE POLICY "Anon can insert feedback" ON feedback
-  FOR INSERT TO anon WITH CHECK (true);
+  FOR INSERT TO anon WITH CHECK (user_id IS NULL);
 
 -- Users can delete own feedback (needed for account deletion flow)
 DROP POLICY IF EXISTS "Users can delete own feedback" ON feedback;

@@ -2683,7 +2683,7 @@
     <div class="form-row">
       <div class="form-group">
         <label>Purchase Date</label>
-        <input type="date" id="w-date">
+        <input type="date" id="w-date" max="9999-12-31">
       </div>
     </div>
     <!-- ── Condition & Docs (collapsible) ── -->
@@ -2727,10 +2727,6 @@
           <div class="form-group" id="w-ins-value-group" style="display:none;">
             <label>Insured Value ($)</label>
             <input type="text" inputmode="decimal" id="w-ins-value" placeholder="0" autocomplete="off" oninput="fmtPriceInput(this)">
-          </div>
-          <div class="form-group" id="w-ins-notes-group" style="display:none;">
-            <label>Insurance Notes</label>
-            <input type="text" id="w-ins-notes" placeholder="Appraisal needed, need to send…" maxlength="200">
           </div>
         </div>
       </div>
@@ -3745,7 +3741,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.33.07.21.24';
+const APP_VERSION = '2.33.08.06.44';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4106,7 +4102,7 @@ async function loadAndRenderProfile(userId) {
     }
     if (!showcaseGated) {
       _pi.showcase = _pp.length;
-      _pp.push(q.order('brand').order('name'));
+      _pp.push(q.order('purchase_date', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false }));
     }
   }
 
@@ -4119,8 +4115,9 @@ async function loadAndRenderProfile(userId) {
   if (showWishlist) {
     _pi.wishlist = _pp.length;
     _pp.push(db.from('wishlist')
-      .select('id, brand, name, ref, url, price, image, color, wish_privacy')
-      .eq('user_id', userId));
+      .select('id, brand, name, ref, url, price, image, color, wish_privacy, sort_order')
+      .eq('user_id', userId)
+      .order('sort_order'));
   }
 
   // ── Await all at once ──────────────────────────────────────────────────
@@ -9136,15 +9133,15 @@ function getSelectedTags() {
 const INLINE_FIELDS = [
   { id: 'w-name',  fmt: v => v || null },
   { id: 'w-ref',   fmt: v => v || null },
-  { id: 'w-price', fmt: v => { const n = parseFloat((v||'').toString().replace(/,/g,'')); return n ? fmtMoney(n) : null; } },
+  { id: 'w-price', fmt: v => { const n = parseFloat((v||'').toString().replace(/,/g,'')); return !isNaN(n) ? fmtMoney(n) : null; } },
   { id: 'w-date',  fmt: v => v ? fmtDate(v) : null },
-  { id: 'w-manual-mp', fmt: v => { const n = parseFloat((v||'').toString().replace(/,/g,'')); return n ? fmtMoney(n) : null; } },
+  { id: 'w-manual-mp', fmt: v => { const n = parseFloat((v||'').toString().replace(/,/g,'')); return !isNaN(n) ? fmtMoney(n) : null; } },
 ];
 
 const WL_INLINE_FIELDS = [
   { id: 'wl-name',  fmt: v => v || null },
   { id: 'wl-ref',   fmt: v => v || null },
-  { id: 'wl-price', fmt: v => { const n = parseFloat((v||'').toString().replace(/,/g,'')); return n ? fmtMoney(n) : null; } },
+  { id: 'wl-price', fmt: v => { const n = parseFloat((v||'').toString().replace(/,/g,'')); return !isNaN(n) ? fmtMoney(n) : null; } },
   { id: 'wl-date',  fmt: v => v ? fmtDate(v) : null },
 ];
 
@@ -9383,12 +9380,11 @@ function openAddWatch() {
   selColor          = PALETTE[0];
   wPendingImage     = null;
   wPendingFile      = null;
-  ['w-name','w-ref','w-price','w-date','w-url','w-ins-value','w-ins-notes','w-warranty','w-manual-mp'].forEach(id => document.getElementById(id).value = '');
+  ['w-name','w-ref','w-price','w-date','w-url','w-ins-value','w-warranty','w-manual-mp'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('w-insurance').value = '';
   document.getElementById('w-box').value = '';
   document.getElementById('w-papers').value = '';
   document.getElementById('w-ins-value-group').style.display = 'none';
-  document.getElementById('w-ins-notes-group').style.display = 'none';
   document.getElementById('modal-title').textContent = 'Add Watch';
   document.getElementById('modal-delete-btn').style.display = 'none';
   buildBrandSelect();
@@ -9417,15 +9413,13 @@ function openEditWatch(id) {
   buildBrandSelect(w.brand);
   document.getElementById('w-name').value               = w.name;
   document.getElementById('w-ref').value                = w.ref || '';
-  setPriceInput('w-price', w.price || '');
+  setPriceInput('w-price', w.price != null ? w.price : '');
   document.getElementById('w-date').value               = w.purchaseDate || '';
   document.getElementById('w-url').value                = w.url || '';
   // Insurance
   document.getElementById('w-insurance').value = w.insurance || '';
   setPriceInput('w-ins-value', w.insuredValue || '');
-  document.getElementById('w-ins-notes').value = w.insuranceNotes || '';
   document.getElementById('w-ins-value-group').style.display = w.insurance === 'insured'     ? '' : 'none';
-  document.getElementById('w-ins-notes-group').style.display = w.insurance === 'not_insured' ? '' : 'none';
   // Warranty + Box/Papers
   document.getElementById('w-warranty').value = w.warrantyExpiry || '';
   document.getElementById('w-box').value    = w.hasBox    || '';
@@ -9464,7 +9458,6 @@ function closeWatchModal() { clearInlineEdits(); if (wPendingImage) { URL.revoke
 function onInsuranceChange() {
   const v = document.getElementById('w-insurance').value;
   document.getElementById('w-ins-value-group').style.display  = v === 'insured'     ? '' : 'none';
-  document.getElementById('w-ins-notes-group').style.display  = v === 'not_insured' ? '' : 'none';
 }
 
 // ── Warranty status helper ───────────────────────────────────────────────────
@@ -9493,7 +9486,7 @@ function watchCardTagsHTML(w) {
   }
   // Insurance
   if (w.insurance === 'insured')     tags.push('Insured');
-  if (w.insurance === 'not_insured') tags.push('Not insured' + (w.insuranceNotes ? ` · ${escHtml(w.insuranceNotes)}` : ''));
+  if (w.insurance === 'not_insured') tags.push('Not insured');
   // Box & Papers (only positive)
   const bp = [w.hasBox === 'yes' ? 'Box' : '', w.hasPapers === 'yes' ? 'Papers' : ''].filter(Boolean);
   if (bp.length) tags.push(bp.join(' + '));
@@ -9598,7 +9591,7 @@ async function saveWatch() {
     color:          selColor,
     insurance:      insStatus,
     insuredValue:   insStatus === 'insured'     ? readPrice('w-ins-value')                              : null,
-    insuranceNotes: insStatus === 'not_insured' ? document.getElementById('w-ins-notes').value.trim() : '',
+    insuranceNotes: '',
     warrantyExpiry: document.getElementById('w-warranty').value || null,
     hasBox:         document.getElementById('w-box').value    || null,
     hasPapers:      document.getElementById('w-papers').value || null,
@@ -10653,7 +10646,7 @@ function blobToResizedBase64(blob) {
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
       resolve(canvas.toDataURL('image/jpeg', 0.82));
     };
-    img.onerror = () => reject(new Error('image decode failed'));
+    img.onerror = () => reject(new Error('Unsupported image format. Please use JPG, PNG, or WebP.'));
     img.src = objUrl;
   });
 }
@@ -11152,6 +11145,14 @@ function openPhotoIdentify() {
     if (!input.files || !input.files[0]) return;
     const file = input.files[0];
 
+    // Validate image type — browsers can't decode HEIC/HEIF natively
+    const SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml'];
+    if (file.type && !SUPPORTED_TYPES.includes(file.type)) {
+      const ext = file.name.split('.').pop()?.toUpperCase() || file.type;
+      toast(`${ext} photos aren't supported. Please use JPG, PNG, or WebP.`, 'error');
+      return;
+    }
+
     // Show loading modal
     const modal = document.getElementById('photo-identify-modal');
     const list = document.getElementById('photo-identify-list');
@@ -11314,7 +11315,7 @@ function renderWishlist(force) {
       ? `<img loading="lazy" src="${w.image}" class="wl-card-img" alt="" onerror="this.style.display='none'">`
       : `<div class="wl-card-avatar" style="background:${w.color}">${initials(w.brand,w.name)}</div>`;
     const meta = [
-      w.price ? fmtMoney(w.price) : '',
+      w.price != null ? fmtMoney(w.price) : '',
       w.ref   ? w.ref : '',
       w.addedDate ? fmtDate(w.addedDate) : ''
     ].filter(Boolean).join(' · ');
@@ -11703,7 +11704,7 @@ function openEditWishlist(id) {
   buildWlBrandSelect(w.brand);
   document.getElementById('wl-name').value  = w.name;
   document.getElementById('wl-ref').value   = w.ref   || '';
-  setPriceInput('wl-price', w.price || '');
+  setPriceInput('wl-price', w.price != null ? w.price : '');
   document.getElementById('wl-date').value  = w.addedDate || '';
   document.getElementById('wl-url').value   = w.url   || '';
   updateWlUrlBtn();
