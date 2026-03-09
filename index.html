@@ -3814,7 +3814,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.08.17.08';
+const APP_VERSION = '2.34.08.17.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3910,8 +3910,9 @@ async function loadMyProfile() {
     isNewUser = true;
   }
   myProfile = data;
-  try { localStorage.setItem(STORE_THEME, data.theme_preference || 'light'); } catch(e) {} // sync Supabase → local, default light
-  applyTheme();
+  const theme = isNewUser ? 'light' : (data.theme_preference || 'light');
+  try { localStorage.setItem(STORE_THEME, theme); } catch(e) {}
+  applyTheme(theme);
   const btn = document.getElementById('profile-btn');
   if (btn) {
     if (myProfile.avatar_url) {
@@ -13382,7 +13383,7 @@ async function submitFeedback() {
 // ══════════════════════════════════════════
 document.getElementById('app-ver').textContent  = 'v' + APP_VERSION;
 document.getElementById('help-ver').textContent = 'v' + APP_VERSION;
-applyTheme();   // apply OS/saved theme immediately, before auth resolves
+applyTheme();   // apply saved theme immediately; loadMyProfile() will re-apply once auth resolves
 updateThemeBtn();
 
 // Show dev login button on localhost only
