@@ -3814,7 +3814,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.08.20.41';
+const APP_VERSION = '2.34.08.20.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9772,7 +9772,11 @@ function closeWatchModal() {
   wPendingImage = null; wPendingFile = null;
   // Preserve blob if returning to identify modal, otherwise clean up
   const returning = window._addingFromIdentify && _photoIdentifyResults.length > 0;
-  if (!returning) { window._photoIdentifyBlob = null; window._addingFromIdentify = false; }
+  if (!returning) {
+    _photoIdentifyResults.forEach(w => { if (w._prefetchedImageUrl) URL.revokeObjectURL(w._prefetchedImageUrl); });
+    _photoIdentifyResults = [];
+    window._photoIdentifyBlob = null; window._addingFromIdentify = false;
+  }
   document.getElementById('watch-modal').classList.add('hidden');
   movingFromWishlistId = null; movingFromWishlistData = null;
   // Return to identify modal if more watches remain
@@ -11829,7 +11833,8 @@ async function addFromIdentified(idx) {
     // Use pre-fetched image if available, otherwise try productUrl (skip brand homepage fallback)
     if (w._imageFound && w._prefetchedImageUrl) {
       if (w._imageSource === 'cropped' && w._prefetchedCroppedBlob) {
-        // Cropped from user's original photo
+        // Cropped from user's original photo — revoke old preview URL, create fresh one
+        URL.revokeObjectURL(w._prefetchedImageUrl);
         wPendingFile  = w._prefetchedCroppedBlob;
         wPendingImage = URL.createObjectURL(w._prefetchedCroppedBlob);
         renderWatchModalImg();
@@ -11837,6 +11842,7 @@ async function addFromIdentified(idx) {
       } else {
         // Stock photo from search — already pre-fetched as blob during prefetch
         if (w._prefetchedBlob) {
+          URL.revokeObjectURL(w._prefetchedImageUrl);
           wPendingFile  = w._prefetchedBlob;
           wPendingImage = URL.createObjectURL(w._prefetchedBlob);
           renderWatchModalImg();
@@ -11872,7 +11878,7 @@ function _openCropUI(sourceBlob, initialBbox, onDone) {
   overlay.className = 'crop-adjuster';
   overlay.innerHTML = `
     <div class="crop-adjuster-header">
-      <button onclick="this.closest('.crop-adjuster').remove()">Cancel</button>
+      <button class="crop-cancel">Cancel</button>
       <span style="color:#fff;font-weight:600;font-size:.9rem;">Adjust Crop</span>
       <button class="crop-done">Done</button>
     </div>
@@ -11887,6 +11893,7 @@ function _openCropUI(sourceBlob, initialBbox, onDone) {
   const guideBox = overlay.querySelector('.crop-guide-border');
 
   const blobUrl = URL.createObjectURL(sourceBlob);
+  overlay.querySelector('.crop-cancel').onclick = () => { URL.revokeObjectURL(blobUrl); overlay.remove(); };
   img.onload = () => {
     const vw = viewport.clientWidth;
     const vh = viewport.clientHeight;
@@ -12072,9 +12079,16 @@ function _showPhotoSourcePicker() {
 
 function closePhotoIdentify() {
   document.getElementById('photo-identify-modal').classList.add('hidden');
-  // Note: don't clear _photoIdentifyBlob here — it's needed by the crop adjuster
-  // in the Add Watch modal. It gets cleared in closeWatchModal() instead.
   window._photoIdentifyBase64 = null;
+  // If adding from identify, keep blob + results for the watch modal / crop adjuster.
+  // Otherwise clean up all blob URLs to prevent memory leaks (esp. iOS Safari).
+  if (!window._addingFromIdentify) {
+    _photoIdentifyResults.forEach(w => {
+      if (w._prefetchedImageUrl) URL.revokeObjectURL(w._prefetchedImageUrl);
+    });
+    _photoIdentifyResults = [];
+    window._photoIdentifyBlob = null;
+  }
   resumeWelcome();
 }
 
