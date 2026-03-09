@@ -3822,7 +3822,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.09.16.34';
+const APP_VERSION = '2.34.09.16.37';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7093,7 +7093,9 @@ async function npIdentifyWatch(file) {
     if (!data.watches || data.watches.length === 0) { sugEl.style.display = 'none'; return; }
     const matches = matchIdentifiedToCollection(data.watches);
     if (matches.length === 0) {
-      sugEl.style.display = 'none';
+      // No collection match — show picker so user can tag manually
+      npIdentifiedWatchId = null;
+      renderNpWatchDisplay();
       return;
     }
     showNpWatchSuggestion(matches[0].watch);
