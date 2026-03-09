@@ -3814,7 +3814,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.08.21.21';
+const APP_VERSION = '2.34.09.10.10';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7083,7 +7083,7 @@ async function npIdentifyWatch(file) {
       return;
     }
     showNpWatchSuggestion(matches[0].watch);
-  } catch (_) { sugEl.style.display = 'none'; }
+  } catch (err) { sugEl.style.display = 'none'; }
 }
 
 function showNpWatchSuggestion(w) {
@@ -8705,13 +8705,19 @@ function matchIdentifiedToCollection(identifiedWatches) {
         }
       }
     }
-    // Tier 2: brand + model name match
+    // Tier 2: brand + model name match (word-level: all words of shorter name in longer name)
     if (idBrand && idModel) {
+      const idWords = idModel.split(/\s+/).filter(Boolean);
       for (const w of watches) {
         if (seen.has(w.id)) continue;
         const wBrand = (w.brand || '').toLowerCase().trim();
         const wName = (w.name || '').toLowerCase().trim();
-        if (wBrand === idBrand && (wName.includes(idModel) || idModel.includes(wName))) {
+        if (wBrand !== idBrand) continue;
+        const wWords = wName.split(/\s+/).filter(Boolean);
+        // All words of identified model found in collection name, or vice versa
+        const idInW = idWords.every(word => wWords.includes(word));
+        const wInId = wWords.every(word => idWords.includes(word));
+        if (idInW || wInId) {
           results.push({ watch: w, matchType: 'brand+model', confidence: identified.confidence || 'medium' });
           seen.add(w.id);
         }
