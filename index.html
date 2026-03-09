@@ -3822,7 +3822,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.09.16.37';
+const APP_VERSION = '2.34.09.16.41';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7140,7 +7140,13 @@ function toggleNpWatchPicker() {
       <div style="flex:1;min-width:0;"><div class="watch-info-name" style="color:var(--muted);">No watch</div></div>
       ${!npIdentifiedWatchId ? '<span style="color:var(--gold);font-size:.75rem;font-weight:600;">Selected</span>' : ''}
     </div>
-    ${watches.map(w => {
+    ${[...watches].sort((a, b) => {
+      const aLogs = logsForWatch(a.id), bLogs = logsForWatch(b.id);
+      const aLast = aLogs.length ? aLogs.reduce((m, l) => l.date > m ? l.date : m, '') : '';
+      const bLast = bLogs.length ? bLogs.reduce((m, l) => l.date > m ? l.date : m, '') : '';
+      if (bLast !== aLast) return bLast.localeCompare(aLast);
+      return (`${a.brand} ${a.name}`).localeCompare(`${b.brand} ${b.name}`);
+    }).map(w => {
       const isSel = w.id === npIdentifiedWatchId;
       const thumb = w.image
         ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
