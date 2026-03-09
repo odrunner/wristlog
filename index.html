@@ -3814,7 +3814,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.08.20.49';
+const APP_VERSION = '2.34.08.21.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13254,11 +13254,13 @@ function checkReminderNow() {
   }
 }
 
+let _reminderTimer;
 function scheduleReminderAt5PM() {
+  clearTimeout(_reminderTimer);
   const now   = new Date();
   const fivePM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 0, 0);
   if (now >= fivePM) return; // already past 5 PM
-  setTimeout(() => {
+  _reminderTimer = setTimeout(() => {
     const logged = logs.some(l => l.date === todayStr());
     if (!logged) {
       showReminderBanner();
@@ -13529,6 +13531,8 @@ function clearUserState() {
   feedLoading = false; _feedLoadStartedAt = 0; feedError = false; feedLoadedAt = 0; _clubsLoaded = false; _frLoadedAt = 0;
   Object.keys(_profileCache).forEach(k => delete _profileCache[k]);
   if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }
+  clearTimeout(_syncRetryTimer); _syncRetryTimer = undefined;
+  clearTimeout(_reminderTimer); _reminderTimer = undefined;
 }
 
 // ── APP BOOT ──────────────────────────────────────────────────────────────
