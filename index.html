@@ -3822,7 +3822,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.09.10.23';
+const APP_VERSION = '2.34.09.12.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4731,6 +4731,7 @@ async function uploadProfilePic() {
 // ── Following ─────────────────────────────────────────────────────────────
 async function loadFollowing() {
   if (!currentUser) return;
+  const hadFollowing = following.size > 0;
   const { data } = await db.from('follows').select('following_id').eq('follower_id', currentUser.id);
   following = new Set((data || []).map(r => r.following_id));
   // Also load profiles for @mention autocomplete
@@ -4741,6 +4742,11 @@ async function loadFollowing() {
       (a.display_name || a.username || '').localeCompare(b.display_name || b.username || ''));
   } else {
     followingProfiles = [];
+  }
+  // If feed already loaded while following was empty, re-fetch to include followed users' posts
+  if (!hadFollowing && following.size > 0 && feedLoadedAt > 0) {
+    feedLoadedAt = 0;
+    loadFeed();
   }
 }
 async function loadPendingRequests() {
