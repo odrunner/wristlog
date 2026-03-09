@@ -3822,7 +3822,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.09.12.21';
+const APP_VERSION = '2.34.09.12.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7101,19 +7101,64 @@ async function npIdentifyWatch(file) {
 }
 
 function showNpWatchSuggestion(w) {
-  // Auto-accept: set watchId immediately, user can dismiss if wrong
+  // Auto-accept: set watchId immediately, user can change if wrong
   npIdentifiedWatchId = w.id;
+  renderNpWatchDisplay();
+}
+
+function renderNpWatchDisplay() {
   const el = document.getElementById('np-watch-suggestion');
   if (!el) return;
-  const thumb = w.image
-    ? `<img src="${escHtml(w.image)}" alt="" style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-    : `<div style="width:32px;height:32px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:#fff;background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
-  el.innerHTML = `<div class="watch-suggestion" style="background:rgba(76,175,80,.08);border-color:rgba(76,175,80,.25);">
-    ${thumb}
-    <div style="flex:1;min-width:0;font-size:.82rem;"><strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong> recognized — wear log will be added</div>
-    <button class="sug-no" onclick="dismissNpWatchSuggestion()" style="font-size:.7rem;">Not this watch</button>
-  </div>`;
+  const w = npIdentifiedWatchId ? watches.find(x => x.id === npIdentifiedWatchId) : null;
+  if (w) {
+    const thumb = w.image
+      ? `<img src="${escHtml(w.image)}" alt="" style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
+      : `<div style="width:32px;height:32px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:#fff;background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+    el.innerHTML = `<div class="watch-suggestion" style="background:rgba(76,175,80,.08);border-color:rgba(76,175,80,.25);">
+      ${thumb}
+      <div style="flex:1;min-width:0;font-size:.82rem;"><strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong> recognized</div>
+      <button class="sug-no" onclick="toggleNpWatchPicker()" style="font-size:.7rem;">Change</button>
+      <button class="sug-no" onclick="clearNpWatch()" style="font-size:.7rem;">Remove</button>
+    </div><div id="np-watch-picker" style="display:none;"></div>`;
+  } else {
+    el.innerHTML = `<div class="watch-suggestion" onclick="toggleNpWatchPicker()" style="cursor:pointer;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      <div style="flex:1;color:var(--muted);font-size:.82rem;">Tag a watch from your collection</div>
+    </div><div id="np-watch-picker" style="display:none;"></div>`;
+  }
   el.style.display = '';
+}
+
+function toggleNpWatchPicker() {
+  const picker = document.getElementById('np-watch-picker');
+  if (!picker) return;
+  if (picker.style.display !== 'none') { picker.style.display = 'none'; return; }
+  picker.innerHTML = `<div class="watch-list" style="max-height:180px;overflow-y:auto;margin-top:.4rem;">
+    ${watches.map(w => {
+      const isSel = w.id === npIdentifiedWatchId;
+      const thumb = w.image
+        ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
+        : `<div class="avatar" style="width:32px;height:32px;font-size:.55rem;background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+      return `<div class="watch-option${isSel ? ' selected' : ''}" onclick="selectNpWatch('${w.id}')" style="padding:.45rem .5rem;">
+        ${thumb}
+        <div style="flex:1;min-width:0;">
+          <div class="watch-info-name">${escHtml(w.brand)} ${escHtml(w.name)}</div>
+        </div>
+        ${isSel ? '<span style="color:var(--gold);font-size:.75rem;font-weight:600;">Selected</span>' : ''}
+      </div>`;
+    }).join('')}
+  </div>`;
+  picker.style.display = '';
+}
+
+function selectNpWatch(watchId) {
+  npIdentifiedWatchId = watchId;
+  renderNpWatchDisplay();
+}
+
+function clearNpWatch() {
+  npIdentifiedWatchId = null;
+  renderNpWatchDisplay();
 }
 
 function dismissNpWatchSuggestion() {
