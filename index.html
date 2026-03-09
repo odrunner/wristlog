@@ -3814,7 +3814,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.08.17.14';
+const APP_VERSION = '2.34.08.17.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3902,7 +3902,7 @@ async function loadMyProfile() {
         || ('user' + Math.random().toString(36).slice(2, 8));
     }
     const { data: created, error: createErr } = await db.from('profiles').upsert(
-      { id: currentUser.id, username, display_name: googleName },
+      { id: currentUser.id, username, display_name: googleName, theme_preference: 'light' },
       { onConflict: 'id' }
     ).select().single();
     if (createErr) console.error('[WristLog] Profile create error:', createErr.message, createErr);
@@ -11570,6 +11570,8 @@ function openPhotoIdentify(source) {
   input.accept = 'image/*';
   if (source === 'camera') input.capture = 'environment';
   // source === 'library' or desktop: no capture attribute → shows file picker / photo library
+  // If user cancels file picker, resume welcome tour (if paused)
+  input.addEventListener('cancel', () => resumeWelcome());
   input.onchange = async () => {
     if (!input.files || !input.files[0]) return;
     const file = input.files[0];
@@ -13421,7 +13423,7 @@ new MutationObserver(mutations => {
 const _overlayCloseMap = {
   'followers-modal':     closeFollowersModal,
   'following-modal':     closeFollowingModal,
-  'welcome-modal':       closeWelcome,
+  // welcome-modal: intentionally excluded — must not close on overlay click or Escape
   'watch-modal':         closeWatchModal,
   'receipts-modal':      closeReceiptsModal,
   'del-modal':           closeDelModal,
