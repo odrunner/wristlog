@@ -3814,7 +3814,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.08.16.57';
+const APP_VERSION = '2.34.08.17.05';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13496,7 +13496,8 @@ function initApp() {
 function clearUserState() {
   watches = []; logs = []; wishlist = []; eloRatings = {};
   _dirty.watches.clear(); _dirty.logs.clear(); _dirty.wishlist.clear(); _dirty.elo.clear();
-  try { localStorage.removeItem(STORE_W); localStorage.removeItem(STORE_L); localStorage.removeItem(STORE_WL); localStorage.removeItem(STORE_ELO); } catch(e) {}
+  try { localStorage.removeItem(STORE_W); localStorage.removeItem(STORE_L); localStorage.removeItem(STORE_WL); localStorage.removeItem(STORE_ELO); localStorage.removeItem(STORE_THEME); } catch(e) {}
+  applyTheme('light'); // reset to light default on sign-out
   // Social / feed state — prevents stale data leaking across accounts
   feedItems = []; feedLikes = {}; feedCommentCounts = {}; feedComments = {};
   expandedComments.clear(); following.clear(); followingProfiles = [];
