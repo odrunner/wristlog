@@ -3822,7 +3822,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.09.12.47';
+const APP_VERSION = '2.34.09.16.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13620,23 +13620,34 @@ async function bootApp(user) {
   if (feedbackFab) feedbackFab.style.display = 'flex';
   const bellBtn = document.getElementById('bell-btn');
   if (bellBtn) bellBtn.style.display = '';
-  try {
-    await loadUserData();
-  } catch(e) {
-    console.error('[WristLog] bootApp loadUserData error:', e.message, e);
-  }
+  // Start feed/social loading immediately — don't block on user data
   try {
     initApp();
   } catch(e) {
     console.error('[WristLog] bootApp initApp error:', e.message, e);
-    try { renderCollection(); } catch(_) {}
+  }
+  // Load user's collection data in parallel (watches, logs, wishlist)
+  try {
+    await loadUserData();
+  } catch(e) {
+    console.error('[WristLog] bootApp loadUserData error:', e.message, e);
   }
 }
 
 // ── PRIMARY: explicit getSession() on every page load ─────────────────────
 // Reads directly from localStorage — the reliable path for the refresh case.
 // onAuthStateChange alone is not sufficient because event ordering varies.
+// Safety net: if getSession() hangs (token refresh stuck, network issue),
+// show login screen after 10s rather than skeleton forever
+const _sessionTimeout = setTimeout(() => {
+  if (!currentUser) {
+    console.warn('[WRotate] getSession timeout (10s) — showing auth screen');
+    document.getElementById('auth-screen').style.display = 'flex';
+  }
+}, 10000);
+
 db.auth.getSession().then(({ data: { session }, error }) => {
+  clearTimeout(_sessionTimeout);
   if (error) console.error('[WRotate] getSession error:', error.message);
   if (session?.user) {
     bootApp(session.user);
@@ -13657,6 +13668,10 @@ db.auth.getSession().then(({ data: { session }, error }) => {
       }, 5000);
     }
   }
+}).catch(() => {
+  clearTimeout(_sessionTimeout);
+  console.error('[WRotate] getSession threw — showing auth screen');
+  document.getElementById('auth-screen').style.display = 'flex';
 });
 
 // ── SECONDARY: react to live auth changes ─────────────────────────────────
