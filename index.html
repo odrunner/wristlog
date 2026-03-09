@@ -3822,7 +3822,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.09.12.45';
+const APP_VERSION = '2.34.09.12.47';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7118,7 +7118,6 @@ function renderNpWatchDisplay() {
       ${thumb}
       <div style="flex:1;min-width:0;font-size:.82rem;"><strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong> recognized</div>
       <button class="sug-no" onclick="toggleNpWatchPicker()" style="font-size:.7rem;">Change</button>
-      <button class="sug-no" onclick="clearNpWatch()" style="font-size:.7rem;">Remove</button>
     </div><div id="np-watch-picker" style="display:none;"></div>`;
   } else {
     el.innerHTML = `<div class="watch-suggestion" onclick="toggleNpWatchPicker()" style="cursor:pointer;">
@@ -7134,6 +7133,11 @@ function toggleNpWatchPicker() {
   if (!picker) return;
   if (picker.style.display !== 'none') { picker.style.display = 'none'; return; }
   picker.innerHTML = `<div class="watch-list" style="max-height:180px;overflow-y:auto;margin-top:.4rem;">
+    <div class="watch-option${!npIdentifiedWatchId ? ' selected' : ''}" onclick="selectNpWatch(null)" style="padding:.45rem .5rem;">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="9"/><path d="M18 6L6 18"/></svg>
+      <div style="flex:1;min-width:0;"><div class="watch-info-name" style="color:var(--muted);">No watch</div></div>
+      ${!npIdentifiedWatchId ? '<span style="color:var(--gold);font-size:.75rem;font-weight:600;">Selected</span>' : ''}
+    </div>
     ${watches.map(w => {
       const isSel = w.id === npIdentifiedWatchId;
       const thumb = w.image
