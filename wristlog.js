@@ -61,7 +61,7 @@ export function formatFeedDate(dateStr, createdAt, now = new Date()) {
   const diff = Math.round((todayNorm - dayStart) / 86400000);
   if (diff <= 0) return 'Today';
   if (diff === 1) return 'Yesterday';
-  if (diff < 7)  return `${diff} days ago`;
+  if (diff < 7)  return `${diff} day${diff === 1 ? '' : 's'} ago`;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
@@ -171,7 +171,7 @@ export function rowToLog(r) {
   };
 }
 
-export function wishToRow(w, userId) {
+export function wishToRow(w, userId, idx) {
   return {
     id: w.id, user_id: userId,
     brand: w.brand || null, name: w.name || null, ref: w.ref || null,
@@ -181,6 +181,7 @@ export function wishToRow(w, userId) {
     market_price_src: w.marketPriceSrc || null, watch_charts_url: w.watchChartsUrl || null,
     wish_privacy: w.wishPrivacy || null,
     added_date: w.addedDate || null,
+    sort_order: typeof idx === 'number' ? idx : (w._rank ?? 0),
   };
 }
 
@@ -193,6 +194,7 @@ export function rowToWish(r) {
     marketPriceSrc: r.market_price_src || null, watchChartsUrl: r.watch_charts_url || null,
     wishPrivacy: r.wish_privacy || null,
     addedDate: r.added_date || null,
+    _rank: r.sort_order ?? 0,
   };
 }
 
@@ -208,14 +210,33 @@ export function eloExpected(a, b) {
 }
 
 export function buildGameQueue(watchList) {
+  const n = watchList.length;
+  const totalPairs = n * (n - 1) / 2;
+  const cap = Math.min(totalPairs, n * 3);  // cap at 3× collection size
+
+  if (cap >= totalPairs) {
+    // Small collection — generate all pairs, shuffle
+    const pairs = [];
+    for (let i = 0; i < n; i++)
+      for (let j = i + 1; j < n; j++)
+        pairs.push({ aId: watchList[i].id, bId: watchList[j].id });
+    for (let i = pairs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
+    }
+    return pairs;
+  }
+  // Large collection — sample random unique pairs
+  const seen = new Set();
   const pairs = [];
-  for (let i = 0; i < watchList.length; i++)
-    for (let j = i + 1; j < watchList.length; j++)
-      pairs.push({ aId: watchList[i].id, bId: watchList[j].id });
-  // Fisher-Yates shuffle
-  for (let i = pairs.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
+  while (pairs.length < cap) {
+    const a = Math.floor(Math.random() * n);
+    let b = Math.floor(Math.random() * (n - 1));
+    if (b >= a) b++;
+    const key = a < b ? a * n + b : b * n + a;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    pairs.push({ aId: watchList[a].id, bId: watchList[b].id });
   }
   return pairs;
 }
@@ -238,21 +259,48 @@ const WARM = new Set(['#c9a84c', '#fbbf24', '#fb923c', '#ef7942', '#f43f5e']);
 const COOL = new Set(['#38bdf8', '#818cf8', '#a78bfa', '#34d399', '#4caf7d']);
 const DARK = new Set(['#94a3b8']);
 
-export function computeWatchRec({ watches, logs, weatherData, skipSet, now = new Date() }) {
+export function computeWatchRec({ watches, logs, weatherData, skipSet, eloRatings = {}, now = new Date() }) {
   if (!watches.length) return null;
   const today = todayStr(now);
   const todayDOW = now.getDay();
   const isWeekend = todayDOW === 0 || todayDOW === 6;
+
+  // Tag-to-occasion mapping for smarter tag matching
+  const WORK_TAGS   = new Set(['Dress','Chronograph','GMT','Complication']);
+  const CASUAL_TAGS = new Set(['Daily Beater','Field','Sport','Dive','Pilot']);
+  const DRESSY_TAGS = new Set(['Dress','Sport-Luxury','Complication','Skeleton','Vintage']);
+
+  // Fair-share baseline: expected wears per watch if collection were rotated evenly
+  const totalLogs = logs.length;
+  const fairShare = watches.length > 0 ? totalLogs / watches.length : 0;
+
   const candidates = watches.map(w => {
     if (skipSet && skipSet.has(w.id)) return null;
     const wLogs = logs.filter(l => l.watchId === w.id);
-    if (wLogs.some(l => l.date === today)) return null;
-    let daysSince = 999;
-    if (wLogs.length) {
-      const last = wLogs.reduce((a, b) => a.date > b.date ? a : b).date;
-      daysSince = Math.floor((now - new Date(last + 'T12:00:00')) / 86400000);
+
+    // Single pass over logs: check today, find last date, count DOW matches, count use cases
+    let wornToday = false, lastDate = '', dowCount = 0;
+    let dinnerWears = 0, workWears = 0, leisureWears = 0, travelWears = 0;
+    for (let i = 0; i < wLogs.length; i++) {
+      const l = wLogs[i];
+      if (l.date === today) { wornToday = true; break; }
+      if (l.date > lastDate) lastDate = l.date;
+      if (new Date(l.date + 'T12:00:00').getDay() === todayDOW) dowCount++;
+      if (l.useCase === 'dinner') dinnerWears++;
+      else if (l.useCase === 'work') workWears++;
+      else if (l.useCase === 'leisure') leisureWears++;
+      else if (l.useCase === 'travel') travelWears++;
     }
-    const dowCount = wLogs.filter(l => new Date(l.date + 'T12:00:00').getDay() === todayDOW).length;
+    if (wornToday) return null;
+    const daysSince = lastDate ? Math.floor((now - new Date(lastDate + 'T12:00:00')) / 86400000) : 999;
+
+    // 1. Recency (capped at 90)
+    const recencyScore = Math.min(daysSince, 90);
+
+    // 2. Day-of-week habit matching
+    const dowScore = dowCount * 8;
+
+    // 3. Weather × color matching
     let weatherScore = 0, weatherReason = null;
     if (weatherData) {
       const isWarm = WARM.has(w.color), isCool = COOL.has(w.color), isDark = DARK.has(w.color);
@@ -260,14 +308,97 @@ export function computeWatchRec({ watches, logs, weatherData, skipSet, now = new
       else if (weatherData.condition === 'sunny' && isCool) { weatherScore = 1; }
       else if ((weatherData.condition === 'cloudy' || weatherData.condition === 'rainy') && (isCool || isDark)) { weatherScore = 3; weatherReason = `Cool tone suits today's ${weatherData.condition} skies`; }
     }
-    const dinnerWears = wLogs.filter(l => l.useCase === 'dinner').length;
+
+    // 4. Weekend/dinner bonus
     const hasDressTag = (w.tags || []).includes('Dress');
     const weekendScore = isWeekend ? Math.min(dinnerWears * 5 + (hasDressTag ? 10 : 0), 30) : 0;
     const weekendReason = isWeekend && (dinnerWears > 0 || hasDressTag)
       ? (hasDressTag && dinnerWears === 0 ? 'Dress watch — perfect for the weekend' : `Worn to dinner ${dinnerWears}× — great for the weekend`)
       : null;
-    const score = Math.min(daysSince, 90) + dowCount * 8 + weatherScore * 5 + weekendScore;
-    return { w, daysSince, dowCount, weatherScore, weatherReason, weekendScore, weekendReason, score };
+
+    // 5. Elo ranking boost (0-20 pts)
+    let eloScore = 0, eloReason = null;
+    const elo = eloRatings[w.id];
+    if (elo != null) {
+      eloScore = Math.max(0, Math.min(Math.round((elo - ELO_DEFAULT) / 10), 20));
+      if (eloScore >= 10) eloReason = 'One of your top-ranked watches';
+    }
+
+    // 6. Use case × day type matching
+    let useCaseScore = 0, useCaseReason = null;
+    const totalUC = workWears + leisureWears + dinnerWears + travelWears;
+    if (totalUC > 0) {
+      if (!isWeekend) {
+        const workRatio = workWears / totalUC;
+        useCaseScore = Math.round(workRatio * 15);
+        if (workRatio >= 0.5 && workWears >= 3) useCaseReason = 'Your go-to work watch';
+      } else {
+        const leisureRatio = (leisureWears + dinnerWears) / totalUC;
+        useCaseScore = Math.round(leisureRatio * 15);
+        if (leisureRatio >= 0.5 && (leisureWears + dinnerWears) >= 3) useCaseReason = 'A weekend favorite';
+      }
+    }
+
+    // 7. Honeymoon boost for recently purchased watches
+    let honeymoonScore = 0, honeymoonReason = null;
+    if (w.purchaseDate) {
+      const daysSincePurchase = Math.floor((now - new Date(w.purchaseDate + 'T12:00:00')) / 86400000);
+      if (daysSincePurchase <= 30 && daysSincePurchase >= 0) {
+        honeymoonScore = 20;
+        honeymoonReason = 'New addition — break it in!';
+      } else if (daysSincePurchase <= 60 && daysSincePurchase > 30) {
+        honeymoonScore = 10;
+        honeymoonReason = 'Still getting to know this one';
+      }
+    }
+
+    // 8. Neglected watch nudge
+    let neglectedScore = 0, neglectedReason = null;
+    if (fairShare > 2 && wLogs.length < fairShare * 0.4) {
+      neglectedScore = Math.min(Math.round((fairShare - wLogs.length) * 2), 25);
+      if (wLogs.length === 0) neglectedReason = 'Never worn — give it a chance';
+      else neglectedReason = 'Underrepresented in your rotation';
+    }
+
+    // 9. Tag-based occasion matching
+    let tagScore = 0, tagReason = null;
+    const wTags = new Set(w.tags || []);
+    if (wTags.size > 0) {
+      if (!isWeekend) {
+        for (const t of wTags) {
+          if (WORK_TAGS.has(t)) { tagScore = Math.max(tagScore, 8); }
+          if (CASUAL_TAGS.has(t) && workWears === 0) { tagScore = Math.max(tagScore, 3); }
+        }
+        if (tagScore >= 8) tagReason = 'Tagged for the office';
+      } else {
+        for (const t of wTags) {
+          if (CASUAL_TAGS.has(t)) { tagScore = Math.max(tagScore, 8); }
+          if (DRESSY_TAGS.has(t)) { tagScore = Math.max(tagScore, 6); }
+        }
+        if (tagScore >= 8) tagReason = 'Perfect weekend watch';
+        else if (tagScore >= 6) tagReason = 'Dress it up this weekend';
+      }
+    }
+
+    // 10. Anniversary override
+    let anniversaryScore = 0, anniversaryReason = null, anniversaryYears = 0;
+    if (w.purchaseDate) {
+      const pd = new Date(w.purchaseDate + 'T12:00:00');
+      if (pd.getMonth() === now.getMonth() && pd.getDate() === now.getDate()) {
+        anniversaryYears = now.getFullYear() - pd.getFullYear();
+        if (anniversaryYears >= 1) {
+          anniversaryScore = 9999; // force to top
+          anniversaryReason = `${anniversaryYears} year${anniversaryYears !== 1 ? 's' : ''} in your collection today`;
+        }
+      }
+    }
+
+    const score = recencyScore + dowScore + weatherScore * 5 + weekendScore
+                + eloScore + useCaseScore + honeymoonScore + neglectedScore + tagScore + anniversaryScore;
+    return { w, daysSince, dowCount, weatherScore, weatherReason, weekendScore, weekendReason,
+             eloScore, eloReason, useCaseScore, useCaseReason,
+             honeymoonScore, honeymoonReason, neglectedScore, neglectedReason,
+             tagScore, tagReason, anniversaryScore, anniversaryReason, anniversaryYears, score };
   }).filter(Boolean);
   if (!candidates.length) return null;
   candidates.sort((a, b) => b.score - a.score);
@@ -788,9 +919,8 @@ export function marketPriceRowHTML(w) {
   const deltaHTML = delta != null
     ? `<span class="mp-delta ${delta >= 0 ? 'mp-up' : 'mp-down'}">${sign}${fmtMoney(Math.abs(delta))} (${sign}${Math.abs(pct)}%)</span>`
     : '';
-  const srcParts = [w.marketPriceSrc, w.marketPriceDate ? fmtDate(w.marketPriceDate) : ''].filter(Boolean);
-  const srcHTML = srcParts.length ? `<span class="mp-src">${srcParts.join(' · ')}</span>` : '';
-  return `<div class="market-price-row">
+  const srcHTML = w.marketPriceDate ? `<span class="mp-src">${fmtDate(w.marketPriceDate)}</span>` : '';
+  return `<div class="market-price-row" onclick="openEditWatch('${w.id}')">
     <span class="mp-label">Market</span>
     <span class="mp-value">${fmtMoney(mp)}</span>
     ${deltaHTML}

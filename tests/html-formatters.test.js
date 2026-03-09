@@ -125,7 +125,7 @@ describe('marketPriceRowHTML', () => {
       marketPrice: 10000, marketPriceSrc: 'WatchCharts',
       marketPriceDate: '2024-06-01',
     });
-    expect(html).toContain('WatchCharts');
     expect(html).toContain('mp-src');
+    expect(html).toContain('Jun');
   });
 });
