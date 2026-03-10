@@ -104,12 +104,21 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { image } = await req.json();
+    const { image, collection } = await req.json();
     if (!image) {
       return new Response(JSON.stringify({ error: "No image provided" }), {
         status: 400,
         headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       });
+    }
+
+    // Build collection hint for the prompt (helps Claude match niche brands)
+    let collectionHint = "";
+    if (Array.isArray(collection) && collection.length > 0) {
+      const items = collection.map((w: any) =>
+        `${w.brand} ${w.name}${w.ref ? ` (ref: ${w.ref})` : ""}`
+      ).join(", ");
+      collectionHint = `\n\nFor context, the user owns these watches: ${items}\nIf you recognize the watch in the image as one of these, use the exact brand and model names from this list. But do NOT force a match — if the watch is not from this collection, identify it normally. Accuracy matters more than matching.`;
     }
 
     // Strip data-URL prefix if present
@@ -162,7 +171,7 @@ Return ONLY valid JSON in this exact format, no other text:
 {"watches": [{"brand": "...", "model": "...", "reference": "...", "dialText": "...", "estimatedColor": "...", "confidence": "...", "productUrl": "...", "boundingBox": [x, y, w, h]}]}
 
 If no watches are visible in the image, return: {"watches": []}
-If you can identify the brand but not the exact model, still include it with your best guess and "low" confidence.`,
+If you can identify the brand but not the exact model, still include it with your best guess and "low" confidence.${collectionHint}`,
               },
             ],
           },

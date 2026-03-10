@@ -3822,7 +3822,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.09.17.41';
+const APP_VERSION = '2.34.09.17.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7086,7 +7086,7 @@ async function npIdentifyWatch(file) {
     const resp = await withTimeout(fetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await db.auth.getSession()).data.session?.access_token}`, 'apikey': SUPABASE_KEY, },
-      body: JSON.stringify({ image: base64 }),
+      body: JSON.stringify({ image: base64, collection: watches.map(w => ({ brand: w.brand, name: w.name, ref: w.ref || '' })) }),
     }), 30000);
     if (!resp.ok) { sugEl.style.display = 'none'; return; }
     const data = await resp.json();
@@ -8733,7 +8733,7 @@ function snapToTrack() {
       const resp = await withTimeout(fetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await db.auth.getSession()).data.session?.access_token}`, 'apikey': SUPABASE_KEY, },
-        body: JSON.stringify({ image: base64 }),
+        body: JSON.stringify({ image: base64, collection: watches.map(w => ({ brand: w.brand, name: w.name, ref: w.ref || '' })) }),
       }), 30000);
       if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error || `API error ${resp.status}`); }
       const data = await resp.json();
