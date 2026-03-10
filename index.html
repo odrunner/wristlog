@@ -3830,7 +3830,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.09.20.27';
+const APP_VERSION = '2.34.09.21.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11207,6 +11207,11 @@ function blobToResizedBlob(blob) {
 
 // Validate image file type — rejects HEIC/HEIF and other unsupported formats
 function validateImageFile(file) {
+  const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+  if (file.size > MAX_SIZE) {
+    toast(`Photo is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Please use an image under 10 MB.`, 'error');
+    return false;
+  }
   const SUPPORTED = ['image/jpeg','image/png','image/webp','image/gif','image/bmp'];
   // Check MIME type first
   if (file.type && SUPPORTED.includes(file.type)) return true;
@@ -13549,6 +13554,7 @@ function initApp() {
 function clearUserState() {
   watches = []; logs = []; wishlist = []; eloRatings = {};
   _dirty.watches.clear(); _dirty.logs.clear(); _dirty.wishlist.clear(); _dirty.elo.clear();
+  _pendingDeletes = []; savePendingDeletes();
   try { localStorage.removeItem(STORE_W); localStorage.removeItem(STORE_L); localStorage.removeItem(STORE_WL); localStorage.removeItem(STORE_ELO); localStorage.removeItem(STORE_THEME); } catch(e) {}
   applyTheme('light'); // reset to light default on sign-out
   // Social / feed state — prevents stale data leaking across accounts
