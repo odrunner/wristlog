@@ -83,6 +83,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    .hidden { display: none !important; }
     :root {
       --bg:         #f5f5f8;
       --surface:    #ffffff;
@@ -1489,6 +1490,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .feed-edit-btn:hover { color: var(--gold); background: var(--hover); }
 
+    /* Three-dot feed menu */
+    .feed-menu { position:absolute; right:0; top:100%; min-width:130px; background:var(--surface);
+      border:1px solid var(--border); border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,.15);
+      z-index:20; overflow:hidden; }
+    .feed-menu-item { padding:.5rem .75rem; font-size:.82rem; cursor:pointer; white-space:nowrap; }
+    .feed-menu-item:hover { background:var(--hover); }
+
     /* Post visibility badge */
     .vis-badge { display:inline-flex; align-items:center; gap:.25rem; font-size:.68rem;
       padding:.15rem .5rem; border-radius:20px; font-weight:600; margin: 0 1rem .6rem; }
@@ -1930,6 +1938,18 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Report &amp; Block</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Tap the three-dot menu on any post to report it or block the user. You can also report a specific comment from the menu. Reported content is immediately removed from feeds while it&#8217;s reviewed.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Content Moderation</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">All posts and comments are checked against community guidelines. Flagged content is hidden from feeds and reviewed by an admin, who can confirm the removal or restore the content.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Terms of Use</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">New and existing users are asked to accept the Terms of Use, which cover community standards, content policies, and account rules. You can review them any time from the Help page.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Swipe Between Tabs</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">On mobile, swipe left or right anywhere on the screen to move between tabs. A natural, app-like gesture that works alongside the bottom navigation bar.</div>
       </div>
@@ -2112,7 +2132,26 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
         </div>
       </div>
-      <button class="btn btn-primary" style="width:100%;" onclick="closeWelcome()">Start tracking →</button>
+      <button class="btn btn-primary" style="width:100%;" onclick="welcomeStep(6)">Start tracking →</button>
+    </div>
+    <div class="welcome-step hidden" id="ws-6">
+      <div style="margin-bottom:.75rem;display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+      <div class="modal-title" style="font-size:1.2rem;">Terms of Use</div>
+      <div style="color:var(--muted);font-size:.85rem;line-height:1.55;margin:.5rem 0 1rem;max-height:200px;overflow-y:auto;text-align:left;padding:0 .5rem;">
+        <p style="margin-bottom:.5rem;">By using WRotate, you agree to:</p>
+        <ul style="margin:0 0 .5rem;padding-left:1.2rem;">
+          <li>Not post objectionable, offensive, or inappropriate content</li>
+          <li>Not harass, bully, or threaten other users</li>
+          <li>Content that violates these terms will be removed</li>
+          <li>Accounts that violate these terms may be suspended or terminated</li>
+        </ul>
+        <p>Read the full <a href="/terms.html" target="_blank" style="color:var(--gold);">Terms of Use</a> and <a href="/privacy.html" target="_blank" style="color:var(--gold);">Privacy Policy</a>.</p>
+      </div>
+      <label style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;cursor:pointer;font-size:.88rem;">
+        <input type="checkbox" id="ws-eula-check" onchange="document.getElementById('ws-eula-btn').disabled = !this.checked">
+        <span>I agree to the Terms of Use and Privacy Policy</span>
+      </label>
+      <button class="btn btn-primary" id="ws-eula-btn" style="width:100%;" onclick="acceptEula()" disabled>Accept &amp; Start</button>
     </div>
     <div style="display:flex;justify-content:center;gap:.4rem;margin-top:1rem;">
       <div class="welcome-dot active" id="wd-1"></div>
@@ -2120,7 +2159,31 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="welcome-dot" id="wd-3"></div>
       <div class="welcome-dot" id="wd-4"></div>
       <div class="welcome-dot" id="wd-5"></div>
+      <div class="welcome-dot" id="wd-6"></div>
     </div>
+  </div>
+</div>
+
+<!-- ════ EULA GATE (for existing users who haven't accepted) ════ -->
+<div id="eula-modal" class="overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:420px;text-align:center;">
+    <div class="modal-title" style="font-size:1.2rem;">Terms of Use</div>
+    <div style="color:var(--muted);font-size:.85rem;line-height:1.55;margin:.5rem 0 1rem;max-height:250px;overflow-y:auto;text-align:left;padding:0 .5rem;">
+      <p style="margin-bottom:.5rem;">We've added Terms of Use to keep our community safe. By continuing, you agree to:</p>
+      <ul style="margin:0 0 .5rem;padding-left:1.2rem;">
+        <li>Not post objectionable, offensive, or inappropriate content</li>
+        <li>Not harass, bully, or threaten other users</li>
+        <li>Content that violates these terms will be removed</li>
+        <li>Accounts that violate these terms may be suspended or terminated</li>
+      </ul>
+      <p>Read the full <a href="/terms.html" target="_blank" style="color:var(--gold);">Terms of Use</a> and <a href="/privacy.html" target="_blank" style="color:var(--gold);">Privacy Policy</a>.</p>
+    </div>
+    <label style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;cursor:pointer;font-size:.88rem;">
+      <input type="checkbox" id="eula-gate-check" onchange="document.getElementById('eula-gate-btn').disabled = !this.checked">
+      <span>I agree to the Terms of Use and Privacy Policy</span>
+    </label>
+    <button class="btn btn-primary" id="eula-gate-btn" style="width:100%;" onclick="acceptEula()" disabled>I Agree</button>
+    <button class="btn btn-ghost" style="width:100%;margin-top:.5rem;" onclick="declineEula()">Decline &amp; Sign Out</button>
   </div>
 </div>
 
@@ -2297,6 +2360,21 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="chip" data-filter="ignored" onclick="filterAdminFeedback('ignored')">Ignored</div>
     </div>
     <div id="admin-feedback-list"><div style="color:var(--muted);font-size:.9rem;">Loading…</div></div>
+
+    <!-- Content Reports section -->
+    <div style="margin-top:2rem;">
+      <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Content Reports</div>
+        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadAdminReports()">↻ Refresh</button>
+      </div>
+      <div class="chips" id="report-filter-chips" style="margin-bottom:.75rem;">
+        <div class="chip selected" data-filter="all" onclick="filterReports('all')">All</div>
+        <div class="chip" data-filter="pending" onclick="filterReports('pending')">Pending</div>
+        <div class="chip" data-filter="actioned" onclick="filterReports('actioned')">Actioned</div>
+        <div class="chip" data-filter="dismissed" onclick="filterReports('dismissed')">Dismissed</div>
+      </div>
+      <div id="admin-reports-list"><div style="color:var(--muted);font-size:.9rem;">Loading…</div></div>
+    </div>
 
     <!-- Site Usage Report -->
     <div style="margin-top:2rem;">
@@ -2549,6 +2627,42 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
               <div class="help-step-desc">Tap <strong>Manage</strong> on your club's page to edit the name, description, photo, and privacy. You can also remove members or delete the club.</div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ── SAFETY & REPORTING ── -->
+      <div class="help-section">
+        <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Safety &amp; Reporting</div>
+        <div class="help-card">
+          <div class="help-step">
+            <div class="help-step-num">1</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Report a post</div>
+              <div class="help-step-desc">Tap the <strong>three-dot menu (...)</strong> on any post and select <strong>Report</strong>. Choose a reason (inappropriate, spam, harassment, or other), add optional details, and submit. The content is immediately removed from all feeds while under review.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">2</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Report a comment</div>
+              <div class="help-step-desc">On someone else&#8217;s post, tap the three-dot menu and select <strong>Report</strong> &#8212; you&#8217;ll see the option to report the post or a specific comment. On your own post, tap the <strong>pencil menu</strong> and select <strong>Report a comment</strong> to flag a comment left by another user.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">3</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Block a user</div>
+              <div class="help-step-desc">Tap the three-dot menu on a post and select <strong>Block user</strong>, or go to their profile and tap <strong>Block</strong>. Blocked users won&#8217;t appear in your feed and cannot interact with your content. You can manage your block list from your profile page.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">4</div>
+            <div class="help-step-body">
+              <div class="help-step-title">What happens after a report</div>
+              <div class="help-step-desc">Reported content is hidden from feeds immediately. An admin reviews every report and either confirms the removal or restores the content. Repeated violations may result in account suspension.</div>
+            </div>
+          </div>
+          <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span>By using WRotate you agree to the <a href="terms.html" target="_blank" style="color:var(--accent);">Terms of Use</a> and <a href="privacy.html" target="_blank" style="color:var(--accent);">Privacy Policy</a>. We have zero tolerance for objectionable content or abusive behaviour.</span></div>
         </div>
       </div>
 
@@ -3304,6 +3418,40 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
+<!-- ════ REPORT MODAL ════ -->
+<div id="report-modal" class="overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Report
+    </div>
+    <input type="hidden" id="report-content-type">
+    <input type="hidden" id="report-content-id">
+    <input type="hidden" id="report-user-id">
+    <div style="font-size:.82rem;color:var(--muted);margin-bottom:.75rem;" id="report-context"></div>
+    <div style="font-size:.82rem;margin-bottom:.35rem;">What's the problem?</div>
+    <div class="chips" id="report-reason-chips" style="margin-bottom:.75rem;">
+      <div class="chip selected" data-reason="inappropriate" onclick="setReportReason('inappropriate')">Inappropriate</div>
+      <div class="chip" data-reason="spam" onclick="setReportReason('spam')">Spam</div>
+      <div class="chip" data-reason="harassment" onclick="setReportReason('harassment')">Harassment</div>
+      <div class="chip" data-reason="other" onclick="setReportReason('other')">Other</div>
+    </div>
+
+    <!-- Comment selection (shown when reporting a post that has comments) -->
+    <div id="report-target-section" class="hidden" style="margin-bottom:.75rem;">
+      <div style="font-size:.82rem;margin-bottom:.35rem;">What are you reporting?</div>
+      <div id="report-target-list"></div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:.5rem;">
+      <textarea id="report-details" placeholder="Additional details (optional)" style="height:70px;" maxlength="500"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="report-submit-btn" onclick="submitReport()">Submit Report</button>
+      <button class="btn btn-ghost" onclick="closeReport()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ EDIT LOG MODAL ════ -->
 <!-- ════ TRACK LOG MODAL ════ -->
 <div id="track-log-modal" class="overlay hidden" role="dialog" aria-modal="true">
@@ -3830,7 +3978,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.09.21.27';
+const APP_VERSION = '2.34.10.08.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -3853,6 +4001,20 @@ function escHtml(s) {
 }
 function escAttr(s) {
   return escHtml(s).replace(/'/g, '&#39;');
+}
+
+// ── Content filtering ────────────────────────────────────────────────
+const _objPatterns = [
+  /\b(?:f+[u*]+[c*]+[k*]+|sh[i*]+[t*]+|a[s*]+h[o*]+le|b[i*]+tch|d[i*]+ck|c[u*]+nt)\b/i,
+  /\b(?:kill\s+your|go\s+die|kys|stfu)\b/i,
+  /\b(?:buy\s+now|click\s+here|free\s+money|act\s+now)\b/i,
+  /\b(?:n[i1]+[gq]+[e3]*r|f+[a@]+[gq]+[o0]*t|tr[a@]+nn)/i,
+];
+function checkContent(text) {
+  if (!text) return { clean: true, matches: [] };
+  const matches = [];
+  for (const p of _objPatterns) { const m = text.match(p); if (m) matches.push(m[0]); }
+  return { clean: matches.length === 0, matches };
 }
 function sanitizeSearch(s) {
   return (s || '').replace(/[%_(),.*\\]/g, '').trim();
@@ -4259,6 +4421,9 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     ? `<div style="margin-top:.75rem;display:flex;align-items:center;gap:.5rem;">
          ${friendActionBtn({ id: profile.id, profile_privacy: privacy || 'public' })}
          ${friendIconHtml}
+       </div>
+       <div style="margin-top:.4rem;">
+         <button class="btn btn-ghost" style="font-size:.72rem;padding:.25rem .6rem;color:var(--danger);" onclick="blockUser('${profile.id}','${escAttr(profile.display_name || profile.username || '')}')">Block User</button>
        </div>`
     : '';
 
@@ -4561,6 +4726,17 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   const adminLink = (isOwn && currentUser?.id === ADMIN_USER_ID)
     ? `<button style="background:none;border:none;color:var(--gold);font-size:.75rem;cursor:pointer;font-family:inherit;padding:.25rem .5rem;font-weight:600;" onclick="showAdminPage()">⚙ Admin</button>`
     : '';
+  const blockedHtml = (isOwn && blockedUsers.size > 0) ? `
+    <div class="profile-page-card" style="margin:1rem 0;">
+      <button type="button" class="prof-section-hdr" onclick="toggleProfSection('blocked-section','blocked-collapse');renderBlockedUsersList()">
+        <span class="prof-section-label">Blocked Users (${blockedUsers.size})</span>
+        <span class="prof-section-chevron" id="chv-blocked-section">▶</span>
+      </button>
+      <div class="prof-section-body collapsed" id="blocked-section">
+        <div id="blocked-users-list"></div>
+      </div>
+    </div>` : '';
+
   const deleteAccountHtml = isOwn ? `
     <div style="margin:1.5rem 1rem 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:.5rem;">
       <button class="btn-signout" onclick="signOut()" style="font-size:.8rem;padding:.4rem 1.2rem;">Sign Out</button>
@@ -4589,6 +4765,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     ${showcaseHtml}
     ${wishlistHtml}
     ${logsHtml}
+    ${blockedHtml}
     ${deleteAccountHtml}`;
 }
 
@@ -4761,6 +4938,76 @@ async function loadPendingRequests() {
   if (!currentUser) return;
   const { data } = await db.from('follow_requests').select('target_id').eq('requester_id', currentUser.id);
   pendingRequests = new Set((data || []).map(r => r.target_id));
+}
+
+// ── User Blocking ─────────────────────────────────────────────────────────
+let blockedUsers = new Set();
+
+async function loadBlockedUsers() {
+  if (!currentUser) return;
+  const { data } = await db.from('user_blocks').select('blocked_id').eq('blocker_id', currentUser.id);
+  blockedUsers = new Set((data || []).map(b => b.blocked_id));
+}
+
+function blockUser(userId, displayName) {
+  if (!userId || userId === currentUser?.id) return;
+  _pendingBlockAction = { userId, displayName: displayName || 'this user' };
+  const t = document.getElementById('toast');
+  t.className = 'toast info';
+  t.innerHTML = `Block ${escHtml(displayName || 'this user')}? Their content will be hidden from your feed. <button onclick="_execBlock()" style="margin-left:.5rem;padding:.25rem .6rem;border-radius:6px;background:var(--danger);color:#fff;border:none;cursor:pointer;font-size:.8rem;">Block</button> <button onclick="document.getElementById('toast').className='toast';" style="margin-left:.25rem;padding:.25rem .6rem;border-radius:6px;background:var(--border);color:var(--text);border:none;cursor:pointer;font-size:.8rem;">Cancel</button>`;
+  t.style.opacity = '1';
+}
+let _pendingBlockAction = null;
+async function _execBlock() {
+  document.getElementById('toast').className = 'toast';
+  const { userId, displayName } = _pendingBlockAction || {};
+  if (!userId) return;
+  _pendingBlockAction = null;
+
+  const { error } = await db.from('user_blocks').insert({
+    blocker_id: currentUser.id,
+    blocked_id: userId,
+  });
+  if (error) {
+    if (error.code === '23505') { toast('User already blocked'); return; }
+    toast('Could not block user', 'error');
+    return;
+  }
+  blockedUsers.add(userId);
+
+  // Remove follow relationships in both directions
+  await db.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', userId);
+  await db.from('follows').delete().eq('follower_id', userId).eq('following_id', currentUser.id);
+  following.delete(userId);
+
+  // Remove their content from feed
+  feedItems = feedItems.filter(i => i.user_id !== userId);
+  renderFeed();
+
+  toast(`${displayName || 'User'} blocked`);
+  if (profilePageUserId === userId) goBackFromProfile();
+}
+
+async function unblockUser(userId) {
+  await db.from('user_blocks').delete().eq('blocker_id', currentUser.id).eq('blocked_id', userId);
+  blockedUsers.delete(userId);
+  toast('User unblocked');
+  renderBlockedUsersList();
+}
+
+function renderBlockedUsersList() {
+  const el = document.getElementById('blocked-users-list');
+  if (!el) return;
+  if (blockedUsers.size === 0) { el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">No blocked users.</div>'; return; }
+  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Loading…</div>';
+  db.from('profiles').select('id, username, display_name').in('id', [...blockedUsers]).then(({ data }) => {
+    if (!data || !data.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">No blocked users.</div>'; return; }
+    el.innerHTML = data.map(p => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:.85rem;">${escHtml(p.display_name || p.username || 'User')}</span>
+        <button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .5rem;" onclick="unblockUser('${p.id}')">Unblock</button>
+      </div>`).join('');
+  });
 }
 
 // ── Friends ────────────────────────────────────────────────────────────────
@@ -5257,7 +5504,7 @@ async function renderClubDetail(clubId) {
         : { data: [] },
       db.from('profiles').select('id, username, display_name, avatar_url').in('id', uids),
       db.from('likes').select('log_id, user_id').in('log_id', logIds),
-      db.from('comments').select('id, log_id, user_id, body, created_at')
+      db.from('comments').select('id, log_id, user_id, body, created_at, moderation_status')
         .in('log_id', logIds).order('created_at', { ascending: true }).limit(300),
     ]);
 
@@ -6320,7 +6567,7 @@ document.addEventListener('click', e => {
 })();
 
 // ── Feed ──────────────────────────────────────────────────────────────────
-const FEED_LOG_COLS = 'id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility';
+const FEED_LOG_COLS = 'id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility, moderation_status';
 async function loadFeed() {
   if (!currentUser) return;
   // If feedLoading is stuck true for >15s, treat it as dead and allow re-entry
@@ -6403,6 +6650,8 @@ async function loadFeed() {
     }
     if (logsErr) { console.warn('Feed logs error:', logsErr.message); feedItems = []; renderFeed(); return; }
     if (!rawLogs || rawLogs.length === 0) { feedItems = []; renderFeed(); return; }
+    // Filter out blocked users' posts
+    rawLogs = rawLogs.filter(l => !blockedUsers.has(l.user_id));
     // Strip club posts the current user is not a member of
     const myClubIds = myClubs.map(c => c.id);
     rawLogs = rawLogs.filter(l => !l.club_id || myClubIds.includes(l.club_id));
@@ -6456,7 +6705,7 @@ async function loadFeed() {
         : { data: [] },
       db.from('profiles').select('id, username, display_name, avatar_url').in('id', userIds),
       db.from('likes').select('log_id, user_id').in('log_id', logIds),
-      db.from('comments').select('id, log_id, user_id, body, created_at')
+      db.from('comments').select('id, log_id, user_id, body, created_at, moderation_status')
         .in('log_id', logIds).order('created_at', { ascending: true }).limit(500),
     ]));
 
@@ -6565,6 +6814,21 @@ function renderFeed() {
 
 function renderFeedCard(item) {
   const isMe     = item.user_id === currentUser?.id;
+
+  // ── Moderation status rendering ──
+  if (item.moderation_status === 'flagged' && isMe) {
+    return `<div class="feed-card" id="feedcard-${item.id}" style="opacity:.6;text-align:center;padding:1.5rem 1rem;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.8" style="margin-bottom:.4rem;"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+      <div style="font-size:.88rem;color:var(--muted);line-height:1.5;">Your post has been flagged and is under review.</div>
+    </div>`;
+  }
+  if (item.moderation_status === 'removed' && isMe) {
+    return `<div class="feed-card" id="feedcard-${item.id}" style="opacity:.5;text-align:center;padding:1.5rem 1rem;">
+      <div style="font-size:.88rem;color:var(--danger);line-height:1.5;">This post was removed for violating our Terms of Use.</div>
+    </div>`;
+  }
+  if (item.moderation_status && !isMe && !myProfile?.is_admin) return ''; // RLS backup: hide flagged/removed posts from others
+
   const p        = item.profile;
   const w        = item.watch;
   const likes    = feedLikes[item.id]  || { count: 0, liked: false };
@@ -6666,6 +6930,17 @@ function renderFeedCard(item) {
     }
     const remaining = allComments.length - displayComments.length;
     const commentItems = displayComments.map(c => {
+      const cIsMe = c.user_id === currentUser?.id;
+      // Moderation status for comments
+      if (c.moderation_status === 'flagged' && cIsMe) {
+        return `<div class="comment-item" style="opacity:.6;"><div style="font-size:.78rem;color:var(--muted);padding:.2rem 0;">Your comment has been flagged and is under review.</div></div>`;
+      }
+      if (c.moderation_status === 'removed' && cIsMe) {
+        return `<div class="comment-item" style="opacity:.5;"><div style="font-size:.78rem;color:var(--danger);padding:.2rem 0;">This comment was removed for violating our Terms of Use.</div></div>`;
+      }
+      if (c.moderation_status && !cIsMe) return ''; // hide flagged/removed from others
+      // Filter blocked user comments
+      if (!cIsMe && blockedUsers.has(c.user_id)) return '';
       const cl = commentLikes[c.id] || { count: 0, liked: false };
       const heartSvg = cl.liked
         ? `<svg viewBox="0 0 24 24" fill="#ef4444" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>`
@@ -6745,7 +7020,19 @@ function renderFeedCard(item) {
       <div class="feed-card-header">
         <div class="feed-user-avatar" onclick="viewUserProfile('${item.user_id}')" style="cursor:pointer;">${profileInitials(p)}</div>
         <div style="flex:1;min-width:0;">${headerBody}</div>
-        ${isMe ? `<button class="feed-edit-btn" onclick="openEditPost('${item.id}')" title="Edit post"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>` : ''}
+        <div class="feed-dots-wrap" style="position:relative;">
+          ${isMe
+            ? `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="Edit post"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+              <div class="feed-menu hidden" id="feed-menu-${item.id}">
+                <div class="feed-menu-item" onclick="openEditPost('${item.id}');closeFeedMenu('${item.id}')">Edit post</div>
+                <div class="feed-menu-item" onclick="openReport('log','${item.id}','${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Report a comment</div>
+              </div>`
+            : `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="More options"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+              <div class="feed-menu hidden" id="feed-menu-${item.id}">
+                <div class="feed-menu-item" onclick="openReport('log','${item.id}','${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Report</div>
+                <div class="feed-menu-item" style="color:var(--danger);" onclick="blockUser('${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Block user</div>
+              </div>`}
+        </div>
       </div>
       ${heroHtml}
       <div class="feed-actions">
@@ -6765,6 +7052,185 @@ function renderFeedCard(item) {
     </div>`;
 }
 
+// ── Feed three-dot menu ──────────────────────────────────────────────────
+function toggleFeedMenu(logId) {
+  const el = document.getElementById('feed-menu-' + logId);
+  if (!el) return;
+  // Close all other open menus first
+  document.querySelectorAll('.feed-menu:not(.hidden)').forEach(m => { if (m.id !== el.id) m.classList.add('hidden'); });
+  el.classList.toggle('hidden');
+  if (!el.classList.contains('hidden')) {
+    // Close on outside click
+    const close = e => { if (!el.contains(e.target)) { el.classList.add('hidden'); document.removeEventListener('click', close); } };
+    setTimeout(() => document.addEventListener('click', close), 0);
+  }
+}
+function closeFeedMenu(logId) {
+  const el = document.getElementById('feed-menu-' + logId);
+  if (el) el.classList.add('hidden');
+}
+
+// ── Report modal ──────────────────────────────────────────────────────────
+let _reportReason = 'inappropriate';
+let _reportTargetType = 'log';
+let _reportTargetId = null;
+
+function setReportReason(reason) {
+  _reportReason = reason;
+  document.querySelectorAll('#report-reason-chips .chip').forEach(c =>
+    c.classList.toggle('selected', c.dataset.reason === reason));
+}
+
+function setReportTarget(type, id) {
+  _reportTargetType = type;
+  _reportTargetId = id;
+  document.querySelectorAll('#report-target-list .chip').forEach(c =>
+    c.classList.toggle('selected', c.dataset.targetId === id));
+}
+
+async function openReport(contentType, contentId, userId, contextName, logIdForComment) {
+  // logIdForComment is set when reporting a comment directly (contentType='comment')
+  const logId = contentType === 'comment' ? (logIdForComment || contentId) : contentId;
+  const isOwnPost = userId === currentUser?.id;
+  document.getElementById('report-content-type').value = 'log';
+  document.getElementById('report-content-id').value = logId;
+  document.getElementById('report-user-id').value = userId;
+  document.getElementById('report-details').value = '';
+  setReportReason('inappropriate');
+
+  // Fetch comments if not loaded yet
+  if (!feedComments[logId]) await fetchComments(logId);
+  const comments = feedComments[logId] || [];
+  const reportableComments = comments.filter(c => c.user_id !== currentUser?.id && !c.moderation_status);
+
+  // Own post "Report a comment" — if no reportable comments, show toast and bail
+  if (isOwnPost && reportableComments.length === 0) {
+    toast('No comments to report on this post.');
+    return;
+  }
+
+  // Context text
+  if (isOwnPost) {
+    document.getElementById('report-context').textContent = 'Report a comment on your post';
+  } else if (contentType === 'comment') {
+    document.getElementById('report-context').textContent = 'Reporting: comment by ' + (contextName || 'User');
+  } else {
+    document.getElementById('report-context').textContent = 'Reporting: post by ' + (contextName || 'User');
+  }
+
+  // Build target selection
+  const targetSection = document.getElementById('report-target-section');
+  const targetList = document.getElementById('report-target-list');
+  if (reportableComments.length > 0) {
+    const preselect = contentType === 'comment' ? contentId : (isOwnPost ? reportableComments[0].id : logId);
+    let html = '';
+    // Only show "The post itself" for other people's posts
+    if (!isOwnPost) {
+      html += `<div class="chip${preselect === logId ? ' selected' : ''}" data-target-id="${logId}" onclick="setReportTarget('log','${logId}')">The post itself</div>`;
+    }
+    reportableComments.forEach(c => {
+      const cName = escHtml(c.profile?.display_name || c.profile?.username || 'User');
+      const cBody = escHtml((c.body || '').slice(0, 30)) + (c.body?.length > 30 ? '...' : '');
+      html += `<div class="chip${preselect === c.id ? ' selected' : ''}" data-target-id="${c.id}" onclick="setReportTarget('comment','${c.id}')" title="${escAttr(c.body||'')}">${cName}: ${cBody}</div>`;
+    });
+    targetList.innerHTML = html;
+    targetSection.classList.remove('hidden');
+  } else {
+    targetSection.classList.add('hidden');
+  }
+
+  // Set initial target
+  if (isOwnPost) {
+    _reportTargetType = 'comment';
+    _reportTargetId = reportableComments[0].id;
+  } else if (contentType === 'comment') {
+    _reportTargetType = 'comment';
+    _reportTargetId = contentId;
+  } else {
+    _reportTargetType = 'log';
+    _reportTargetId = logId;
+  }
+
+  document.getElementById('report-submit-btn').disabled = false;
+  document.getElementById('report-submit-btn').textContent = 'Submit Report';
+  document.getElementById('report-modal').classList.remove('hidden');
+}
+
+function closeReport() {
+  document.getElementById('report-modal').classList.add('hidden');
+}
+
+async function submitReport() {
+  const btn = document.getElementById('report-submit-btn');
+  btn.disabled = true; btn.textContent = 'Submitting...';
+
+  const contentType = _reportTargetType;
+  const contentId = _reportTargetId;
+  const reportedUserId = document.getElementById('report-user-id').value;
+
+  // Determine the actual reported user for comments
+  let actualReportedUserId = reportedUserId;
+  if (contentType === 'comment') {
+    const logId = document.getElementById('report-content-id').value;
+    const comments = feedComments[logId] || [];
+    const c = comments.find(c => c.id === contentId);
+    if (c) actualReportedUserId = c.user_id;
+  }
+
+  // Insert report
+  const { error } = await db.from('content_reports').insert({
+    reporter_id: currentUser.id,
+    reported_user_id: actualReportedUserId,
+    content_type: contentType,
+    content_id: contentId,
+    reason: _reportReason,
+    details: (document.getElementById('report-details').value || '').trim() || null,
+  });
+
+  if (error) {
+    toast('Could not submit report', 'error');
+    btn.disabled = false; btn.textContent = 'Submit Report';
+    return;
+  }
+
+  // Immediately flag the content
+  const table = contentType === 'comment' ? 'comments' : 'logs';
+  await db.from(table).update({ moderation_status: 'flagged' }).eq('id', contentId);
+
+  // Update local state
+  if (contentType === 'log') {
+    const item = feedItems.find(i => i.id === contentId);
+    if (item) item.moderation_status = 'flagged';
+  } else {
+    // Flag the comment locally
+    const logId = document.getElementById('report-content-id').value;
+    const comments = feedComments[logId] || [];
+    const c = comments.find(c => c.id === contentId);
+    if (c) c.moderation_status = 'flagged';
+  }
+  renderFeed();
+
+  closeReport();
+
+  // Offer to block the user via a persistent toast with action
+  if (actualReportedUserId !== currentUser.id && !blockedUsers.has(actualReportedUserId)) {
+    const reportedName = document.getElementById('report-display-name')?.value || 'this user';
+    _pendingBlockUserId = actualReportedUserId;
+    _pendingBlockName = reportedName;
+    toast('Report submitted. Content removed from feeds while under review.');
+    // Show block offer after a short delay so the report toast is visible first
+    setTimeout(() => {
+      const t = document.getElementById('toast');
+      t.className = 'toast info';
+      t.innerHTML = `Block ${escHtml(_pendingBlockName)}? <button onclick="blockUser(_pendingBlockUserId,_pendingBlockName);document.getElementById('toast').className='toast';" style="margin-left:.5rem;padding:.25rem .6rem;border-radius:6px;background:var(--danger);color:#fff;border:none;cursor:pointer;font-size:.8rem;">Block</button> <button onclick="document.getElementById('toast').className='toast';" style="margin-left:.25rem;padding:.25rem .6rem;border-radius:6px;background:var(--border);color:var(--text);border:none;cursor:pointer;font-size:.8rem;">No thanks</button>`;
+      t.style.opacity = '1';
+    }, 2000);
+  } else {
+    toast('Report submitted. Content removed from feeds while under review.');
+  }
+}
+let _pendingBlockUserId = null, _pendingBlockName = '';
+
 // ── Feed caption editing ───────────────────────────────────────────────────
 const feedEditingCaption = new Set();
 
@@ -6777,6 +7243,8 @@ async function saveFeedCaption(logId) {
   const ta = document.getElementById(`feed-caption-ta-${logId}`);
   if (!ta) return;
   const newNotes = ta.value.trim();
+  const { clean } = checkContent(newNotes);
+  if (!clean) { toast('Caption contains inappropriate content. Please revise.', 'error'); return; }
   // Update local log
   const log = logs.find(l => l.id === logId);
   if (log) { log.notes = newNotes; save(); }
@@ -7190,6 +7658,7 @@ function dismissNpWatchSuggestion() {
 async function saveNewPost() {
   const body = (document.getElementById('np-body')?.value || '').trim();
   if (!body && !newPostFile) { toast('Add a photo or write something', 'error'); return; }
+  if (body) { const { clean } = checkContent(body); if (!clean) { toast('Your post contains inappropriate content. Please revise.', 'error'); return; } }
   const _npBtn = document.querySelector('#new-post-modal .btn-primary');
   if (_npBtn?.disabled) return;
   if (_npBtn) { _npBtn.disabled = true; _npBtn.textContent = 'Posting...'; }
@@ -7549,6 +8018,8 @@ async function postComment(logId) {
   if (!input) return;
   const text = input.value.trim();
   if (!text) return;
+  const { clean } = checkContent(text);
+  if (!clean) { toast('Your comment contains inappropriate content. Please revise.', 'error'); return; }
   input.value = '';
   const { error } = await db.from('comments').insert({ log_id: logId, user_id: currentUser.id, body: text });
   if (!error) {
@@ -7614,7 +8085,7 @@ function resumeWelcome() {
   }
 }
 function welcomeStep(n) {
-  [1,2,3,4,5].forEach(i => {
+  [1,2,3,4,5,6].forEach(i => {
     document.getElementById(`ws-${i}`).classList.toggle('hidden', i !== n);
     document.getElementById(`wd-${i}`).classList.toggle('active', i === n);
   });
@@ -7633,6 +8104,38 @@ function welcomeStep(n) {
 function closeWelcome() {
   document.getElementById('welcome-modal').classList.add('hidden');
   try { if (currentUser) localStorage.setItem('wristlog_onboarded_' + currentUser.id, '1'); } catch(e) {}
+  // If user dismissed welcome before accepting EULA, show standalone EULA gate
+  if (currentUser && (!myProfile || !myProfile.eula_accepted_at)) {
+    document.getElementById('eula-modal').classList.remove('hidden');
+  }
+}
+
+// ── EULA acceptance ────────────────────────────────────────────────
+async function checkEulaAcceptance() {
+  if (!currentUser || !myProfile) return true;
+  if (myProfile.eula_accepted_at) return true;
+  // Show EULA gate modal for existing users
+  document.getElementById('eula-modal').classList.remove('hidden');
+  return false;
+}
+
+async function acceptEula() {
+  if (!currentUser) return;
+  await db.from('eula_acceptances').insert({ user_id: currentUser.id, version: '1.0' });
+  await db.from('profiles').update({ eula_accepted_at: new Date().toISOString() }).eq('id', currentUser.id);
+  if (myProfile) myProfile.eula_accepted_at = new Date().toISOString();
+  document.getElementById('eula-modal').classList.add('hidden');
+  document.getElementById('welcome-modal').classList.add('hidden');
+  try { if (currentUser) localStorage.setItem('wristlog_onboarded_' + currentUser.id, '1'); } catch(e) {}
+  toast('Welcome to WRotate!');
+  // Trigger feed load if this was the EULA gate for existing users
+  loadFeed();
+  loadNotifications();
+  if (!window._notifPollId) window._notifPollId = setInterval(loadNotifications, 30000);
+}
+
+function declineEula() {
+  signOut();
 }
 async function saveWelcomeProfile() {
   const name = (document.getElementById('ws-display-name').value || '').trim();
@@ -8219,6 +8722,153 @@ function showAdminPage() {
   document.getElementById('page-admin').classList.add('active');
   loadAdminStats();
   loadAdminFeedback();
+  loadAdminReports();
+}
+
+// ── Admin Content Reports ────────────────────────────────────────────────
+let _adminReportsData = [];
+let _reportFilter = 'all';
+
+async function loadAdminReports() {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
+  const el = document.getElementById('admin-reports-list');
+  el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">Loading…</div>';
+  const { data, error } = await db.from('content_reports')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) { el.innerHTML = `<div style="color:var(--danger);">Error: ${escHtml(error.message)}</div>`; return; }
+  _adminReportsData = data || [];
+
+  // Fetch profiles for reporters and reported users
+  const userIds = [...new Set(_adminReportsData.flatMap(r => [r.reporter_id, r.reported_user_id]))];
+  const profileMap = {};
+  if (userIds.length) {
+    const { data: profs } = await db.from('profiles').select('id, username, display_name').in('id', userIds);
+    (profs || []).forEach(p => { profileMap[p.id] = p; });
+  }
+  _adminReportsData.forEach(r => {
+    r._reporter = profileMap[r.reporter_id] || {};
+    r._reported = profileMap[r.reported_user_id] || {};
+  });
+
+  // Fetch flagged content for each report
+  const logIds = _adminReportsData.filter(r => r.content_type === 'log' && r.content_id).map(r => r.content_id);
+  const commentIds = _adminReportsData.filter(r => r.content_type === 'comment' && r.content_id).map(r => r.content_id);
+  const contentMap = {};
+  if (logIds.length) {
+    const { data: logData } = await db.from('logs').select('id, notes, photo_url, date').in('id', logIds);
+    (logData || []).forEach(l => { contentMap[l.id] = l; });
+  }
+  if (commentIds.length) {
+    const { data: commentData } = await db.from('comments').select('id, body, created_at').in('id', commentIds);
+    (commentData || []).forEach(c => { contentMap[c.id] = c; });
+  }
+  _adminReportsData.forEach(r => { r._content = contentMap[r.content_id] || null; });
+
+  renderAdminReports();
+}
+
+function filterReports(filter) {
+  _reportFilter = filter;
+  document.querySelectorAll('#report-filter-chips .chip').forEach(c =>
+    c.classList.toggle('selected', c.dataset.filter === filter));
+  renderAdminReports();
+}
+
+function renderAdminReports() {
+  const el = document.getElementById('admin-reports-list');
+  const filtered = _reportFilter === 'all'
+    ? _adminReportsData
+    : _adminReportsData.filter(r => r.status === _reportFilter);
+  if (!filtered.length) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:.9rem;">No ${_reportFilter === 'all' ? '' : _reportFilter + ' '}reports.</div>`;
+    return;
+  }
+  el.innerHTML = filtered.map(r => renderReportCard(r)).join('');
+}
+
+function renderReportCard(r) {
+  const date = new Date(r.created_at).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+  const reporterName = r._reporter?.display_name || r._reporter?.username || 'Unknown';
+  const reportedName = r._reported?.display_name || r._reported?.username || 'Unknown';
+  const statusCls = r.status === 'pending' ? 'color:var(--gold)' : r.status === 'actioned' ? 'color:#22c55e' : 'color:var(--muted)';
+
+  let contentPreview = '';
+  if (r._content) {
+    if (r.content_type === 'log') {
+      const photoThumb = r._content.photo_url ? `<img src="${escHtml(r._content.photo_url)}" style="width:40px;height:40px;border-radius:4px;object-fit:cover;margin-right:.5rem;">` : '';
+      contentPreview = `<div style="display:flex;align-items:center;margin:.4rem 0;padding:.4rem;background:var(--hover);border-radius:6px;font-size:.78rem;">
+        ${photoThumb}<span style="color:var(--text);">${escHtml((r._content.notes || '').slice(0, 80))}${(r._content.notes||'').length > 80 ? '…' : ''}</span>
+      </div>`;
+    } else {
+      contentPreview = `<div style="margin:.4rem 0;padding:.4rem;background:var(--hover);border-radius:6px;font-size:.78rem;color:var(--text);">
+        ${escHtml((r._content.body || '').slice(0, 100))}${(r._content.body||'').length > 100 ? '…' : ''}
+      </div>`;
+    }
+  }
+
+  return `
+    <div class="fb-card" style="margin-bottom:.75rem;padding:.75rem;border-left:3px solid ${r.status === 'pending' ? 'var(--gold)' : r.status === 'actioned' ? '#22c55e' : 'var(--muted)'};">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem;">
+        <span class="fb-type-badge" style="text-transform:capitalize;">${escHtml(r.reason)}</span>
+        <span style="font-size:.72rem;${statusCls};font-weight:600;text-transform:uppercase;">${r.status}</span>
+      </div>
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:.3rem;">
+        ${escHtml(r.content_type)} by <strong>${escHtml(reportedName)}</strong> · reported by ${escHtml(reporterName)} · ${date}
+      </div>
+      ${r.details ? `<div style="font-size:.78rem;color:var(--text);margin-bottom:.3rem;">"${escHtml(r.details)}"</div>` : ''}
+      ${contentPreview}
+      ${r.status === 'pending' ? `
+        <div style="display:flex;gap:.4rem;margin-top:.5rem;">
+          <button class="btn btn-primary" style="font-size:.72rem;padding:.3rem .6rem;" onclick="adminConfirmRemoval('${r.id}','${r.content_type}','${r.content_id}')">Confirm Removal</button>
+          <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .6rem;" onclick="adminRestoreContent('${r.id}','${r.content_type}','${r.content_id}')">Restore</button>
+          <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .6rem;color:var(--danger);" onclick="adminSuspendUser('${r.reported_user_id}','${escAttr(reportedName)}')">Suspend User</button>
+        </div>` : ''}
+    </div>`;
+}
+
+async function adminConfirmRemoval(reportId, contentType, contentId) {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
+  const table = contentType === 'comment' ? 'comments' : 'logs';
+  await db.from(table).update({ moderation_status: 'removed' }).eq('id', contentId);
+  await db.from('content_reports').update({ status: 'actioned', actioned_at: new Date().toISOString() }).eq('id', reportId);
+  const r = _adminReportsData.find(x => x.id === reportId);
+  if (r) { r.status = 'actioned'; r.actioned_at = new Date().toISOString(); }
+  renderAdminReports();
+  toast('Content removed');
+}
+
+async function adminRestoreContent(reportId, contentType, contentId) {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
+  const table = contentType === 'comment' ? 'comments' : 'logs';
+  await db.from(table).update({ moderation_status: null }).eq('id', contentId);
+  await db.from('content_reports').update({ status: 'dismissed' }).eq('id', reportId);
+  const r = _adminReportsData.find(x => x.id === reportId);
+  if (r) r.status = 'dismissed';
+  renderAdminReports();
+  toast('Content restored');
+}
+
+function adminSuspendUser(userId, name) {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
+  _pendingSuspend = { userId, name };
+  const t = document.getElementById('toast');
+  t.className = 'toast info';
+  t.innerHTML = `Suspend ${escHtml(name)}? They will not be able to use the app. <button onclick="_execSuspend()" style="margin-left:.5rem;padding:.25rem .6rem;border-radius:6px;background:var(--danger);color:#fff;border:none;cursor:pointer;font-size:.8rem;">Suspend</button> <button onclick="document.getElementById('toast').className='toast';" style="margin-left:.25rem;padding:.25rem .6rem;border-radius:6px;background:var(--border);color:var(--text);border:none;cursor:pointer;font-size:.8rem;">Cancel</button>`;
+  t.style.opacity = '1';
+}
+let _pendingSuspend = null;
+async function _execSuspend() {
+  document.getElementById('toast').className = 'toast';
+  const { userId, name } = _pendingSuspend || {};
+  if (!userId) return;
+  _pendingSuspend = null;
+  const { error } = await db.from('profiles').update({
+    is_suspended: true,
+    suspended_at: new Date().toISOString()
+  }).eq('id', userId);
+  if (error) { toast('Failed to suspend', 'error'); return; }
+  toast(`${name} suspended`);
 }
 
 async function loadAdminStats() {
@@ -13500,6 +14150,8 @@ const _overlayCloseMap = {
   'edit-log-modal':      closeEditLog,
   'create-club-modal':   closeCreateClub,
   'whats-new-modal':     closeWhatsNew,
+  // eula-modal: intentionally excluded — must not close on overlay click or Escape
+  'report-modal':        closeReport,
 };
 
 // Click overlay background to close
@@ -13533,8 +14185,26 @@ function initApp() {
   // Load social data then feed (landing page)
   // Wrap each loader so one failure OR hang can't block the feed forever
   const _safe = fn => fn().catch(e => console.warn('[WRotate]', fn.name || 'social', 'load failed:', e?.message));
-  const _socialReady = () => {
+  const _socialReady = async () => {
     computeFriendships();
+    // Check if user is suspended
+    if (myProfile?.is_suspended) {
+      document.querySelector('main').innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:center;min-height:80vh;padding:2rem;">
+          <div style="text-align:center;max-width:360px;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="1.8" style="margin-bottom:.75rem;"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+            <div style="font-size:1.2rem;font-weight:700;margin-bottom:.5rem;color:var(--danger);">Account Suspended</div>
+            <div style="color:var(--muted);font-size:.9rem;line-height:1.5;margin-bottom:1rem;">
+              Your account has been suspended for violating our Terms of Use. If you believe this is a mistake, contact <a href="mailto:support@wrotate.com" style="color:var(--gold);">support@wrotate.com</a>.
+            </div>
+            <button class="btn btn-ghost" onclick="signOut()">Sign Out</button>
+          </div>
+        </div>`;
+      return;
+    }
+    // Check EULA acceptance for existing users; if not accepted, gate the app
+    const eulaOk = await checkEulaAcceptance();
+    if (!eulaOk) return; // EULA modal is showing; acceptEula() will re-trigger feed load
     loadFeed();
     loadNotifications();
     if (!window._notifPollId) window._notifPollId = setInterval(loadNotifications, 30000);
@@ -13542,7 +14212,7 @@ function initApp() {
   };
   let _socialFired = false;
   const _fireSocial = () => { if (!_socialFired) { _socialFired = true; _socialReady(); } };
-  Promise.all([_safe(loadMyProfile), _safe(loadFollowing), _safe(loadPendingRequests), _safe(loadFriendRequests)])
+  Promise.all([_safe(loadMyProfile), _safe(loadFollowing), _safe(loadPendingRequests), _safe(loadFriendRequests), _safe(loadBlockedUsers)])
     .then(_fireSocial)
     .catch(() => _fireSocial());
   // Safety net: if social loaders hang >8s, load feed anyway (skeleton stays too long otherwise)
@@ -13560,7 +14230,7 @@ function clearUserState() {
   // Social / feed state — prevents stale data leaking across accounts
   feedItems = []; feedLikes = {}; feedCommentCounts = {}; feedComments = {};
   expandedComments.clear(); following.clear(); followingProfiles = [];
-  pendingRequests.clear(); friendships.clear(); friendRequests = [];
+  pendingRequests.clear(); friendships.clear(); friendRequests = []; blockedUsers.clear();
   myClubs = []; pendingClubRequests.clear(); myProfile = null;
   userNotifs = []; unreadNotifCount = 0; notifPanelOpen = false;
   commentLikes = {}; discoverUsers = []; profilePageUserId = null;

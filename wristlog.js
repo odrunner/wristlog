@@ -1097,3 +1097,28 @@ export function shouldStopNotifPolling(error) {
   if (error.message && error.message.includes('JWT')) return true;
   return false;
 }
+
+// ══════════════════════════════════════════
+//  CONTENT FILTERING
+// ══════════════════════════════════════════
+
+const OBJECTIONABLE_PATTERNS = [
+  /\b(?:f+[u*]+[c*]+[k*]+|sh[i*]+[t*]+|a[s*]+h[o*]+le|b[i*]+tch|d[i*]+ck|c[u*]+nt)\b/i,
+  /\b(?:kill\s+your|go\s+die|kys|stfu)\b/i,
+  /\b(?:buy\s+now|click\s+here|free\s+money|act\s+now)\b/i,
+  /\b(?:n[i1]+[gq]+[e3]*r|f+[a@]+[gq]+[o0]*t|tr[a@]+nn)/i,
+];
+
+/**
+ * Check if text contains objectionable content.
+ * Returns { clean: boolean, matches: string[] }
+ */
+export function checkContent(text) {
+  if (!text) return { clean: true, matches: [] };
+  const matches = [];
+  for (const pattern of OBJECTIONABLE_PATTERNS) {
+    const m = text.match(pattern);
+    if (m) matches.push(m[0]);
+  }
+  return { clean: matches.length === 0, matches };
+}
