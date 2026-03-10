@@ -6298,9 +6298,8 @@ async function unfollowUser(userId, btn) {
   if (!error) {
     following.delete(userId);
     // Silently break any friendship — unfollow = unfriend, no notification sent
-    await db.from('friend_requests').delete()
-      .or(`initiator_id.eq.${userId},target_id.eq.${userId}`)
-      .catch(() => {});
+    try { await db.from('friend_requests').delete()
+      .or(`initiator_id.eq.${userId},target_id.eq.${userId}`); } catch (_) {}
     friendships.delete(userId);
     friendRequests = friendRequests.filter(r =>
       !((r.initiator_id === currentUser.id && r.target_id === userId) ||
