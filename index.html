@@ -3822,7 +3822,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.09.19.38';
+const APP_VERSION = '2.34.09.19.41';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8515,8 +8515,24 @@ function renderWatchSelector() {
   }
   const today     = todayStr();
   const wornToday = new Set(logs.filter(l => l.date === today).map(l => l.watchId));
+  // Sort by most recently worn (unworn watches at the end, in collection order)
+  const lastWorn = new Map();
+  for (const w of watches) {
+    const wl = logsForWatch(w.id);
+    let max = '';
+    for (const l of wl) { if (l.date > max) max = l.date; }
+    lastWorn.set(w.id, max);
+  }
+  const sorted = [...watches].sort((a, b) => {
+    const aLast = lastWorn.get(a.id);
+    const bLast = lastWorn.get(b.id);
+    if (aLast && !bLast) return -1;
+    if (!aLast && bLast) return 1;
+    if (aLast && bLast) return bLast.localeCompare(aLast);
+    return 0; // both unworn — keep collection order
+  });
   el.innerHTML = `<div class="watch-list">${
-    watches.map(w => {
+    sorted.map(w => {
       const cnt    = logsForWatch(w.id).length;
       const isWorn = wornToday.has(w.id);
       const thumb  = w.image
