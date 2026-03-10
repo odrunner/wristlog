@@ -198,4 +198,60 @@ describe('computeWatchRec', () => {
     expect(result.w.id).toBe('w1');
     expect(result.dowCount).toBe(5);
   });
+
+  // ── Honeymoon boost ─────────────────────────────────────────────────────
+
+  it('gives honeymoon boost to watches purchased within 30 days', () => {
+    const watches = [makeWatch('new', { purchaseDate: '2024-06-10' }), makeWatch('old')];
+    const logs = [makeLog('old', '2024-06-16')]; // old worn yesterday to lower its idle
+    const result = computeWatchRec({ watches, logs, weatherData: null, now: monday });
+    expect(result.w.id).toBe('new');
+    expect(result.honeymoonScore).toBe(20);
+    expect(result.honeymoonReason).toContain('New addition');
+  });
+
+  it('gives reduced honeymoon boost for watches purchased 31-60 days ago', () => {
+    const watches = [makeWatch('w1', { purchaseDate: '2024-05-01' })]; // 47 days ago
+    const result = computeWatchRec({ watches, logs: [], weatherData: null, now: monday });
+    expect(result.honeymoonScore).toBe(10);
+    expect(result.honeymoonReason).toContain('Still getting to know');
+  });
+
+  it('gives no honeymoon boost for watches purchased over 60 days ago', () => {
+    const watches = [makeWatch('w1', { purchaseDate: '2024-01-01' })]; // ~168 days ago
+    const result = computeWatchRec({ watches, logs: [], weatherData: null, now: monday });
+    expect(result.honeymoonScore).toBe(0);
+    expect(result.honeymoonReason).toBeNull();
+  });
+
+  // ── Anniversary override ──────────────────────────────────────────────
+
+  it('forces anniversary watch to the top on purchase anniversary', () => {
+    // Purchase date same month/day as "now" but different year
+    const watches = [makeWatch('anni', { purchaseDate: '2023-06-17' }), makeWatch('other')];
+    const logs = [makeLog('other', '2024-06-10')]; // other worn recently
+    const result = computeWatchRec({ watches, logs, weatherData: null, now: monday });
+    expect(result.w.id).toBe('anni');
+    expect(result.anniversaryScore).toBe(9999);
+    expect(result.anniversaryReason).toContain('1 year');
+  });
+
+  it('shows correct plural for multi-year anniversary', () => {
+    const watches = [makeWatch('w1', { purchaseDate: '2021-06-17' })]; // 3 years ago
+    const result = computeWatchRec({ watches, logs: [], weatherData: null, now: monday });
+    expect(result.anniversaryScore).toBe(9999);
+    expect(result.anniversaryReason).toContain('3 years');
+  });
+
+  it('no anniversary boost when purchase date is a different day', () => {
+    const watches = [makeWatch('w1', { purchaseDate: '2023-06-18' })]; // tomorrow, not today
+    const result = computeWatchRec({ watches, logs: [], weatherData: null, now: monday });
+    expect(result.anniversaryScore).toBe(0);
+  });
+
+  it('no anniversary boost in the same year as purchase (0 years)', () => {
+    const watches = [makeWatch('w1', { purchaseDate: '2024-06-17' })]; // same year
+    const result = computeWatchRec({ watches, logs: [], weatherData: null, now: monday });
+    expect(result.anniversaryScore).toBe(0);
+  });
 });
