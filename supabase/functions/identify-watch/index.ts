@@ -144,15 +144,22 @@ serve(async (req: Request) => {
 
 For each watch, provide your best identification with these fields:
 - brand: The manufacturer (e.g., "Rolex", "Omega", "Seiko")
-- model: The specific model name (e.g., "Submariner", "Speedmaster", "Presage")
+- model: The specific model name INCLUDING case size when known (e.g., "Submariner Date 41", "Oyster Perpetual 36", "Speedmaster Professional 42", "Presage"). Always include the size (mm) as part of the model name if you can determine it from the watch.
 - reference: The reference number if you can determine it (e.g., "126610LN", "310.30.42.50.01.001"). Leave empty string if unsure.
 - estimatedColor: A hex color code that best represents the watch's overall tone. Pick from these: #c9a84c (gold), #4caf7d (teal), #818cf8 (indigo), #ef7942 (orange), #38bdf8 (sky blue), #e879f9 (magenta), #f43f5e (rose), #94a3b8 (slate/silver), #fbbf24 (amber), #34d399 (emerald), #fb923c (orange-alt), #a78bfa (purple)
+- dialText: All visible text printed on the watch dial, read exactly as it appears. List each distinct line or block of text as a comma-separated string (e.g., "ROLEX, OYSTER PERPETUAL, SUPERLATIVE CHRONOMETER, SUBMARINER DATE"). Include brand name, model name, movement info, depth rating — anything you can read. If no text is legible, use empty string "".
 - confidence: "high", "medium", or "low" based on how certain you are of the identification
-- productUrl: ONLY provide a URL if you are CERTAIN it is a real, direct product page URL for this specific watch model (not a brand homepage). Prefer chrono24.com listing URLs. If you are not confident the URL points to the exact product page, use empty string "". Do NOT guess or construct URLs.
+- productUrl: You may construct a product page URL using these known brand domains:
+  Rolex → rolex.com/watches/, Omega → omegawatches.com/watches/, Tudor → tudorwatch.com/en/watches/,
+  Cartier → cartier.com/en-us/watches/, Patek Philippe → patek.com/, IWC → iwc.com/,
+  Breitling → breitling.com/, Grand Seiko → grand-seiko.com/, Panerai → panerai.com/,
+  Tag Heuer → tagheuer.com/, Zenith → zenith-watches.com/, Hublot → hublot.com/,
+  Longines → longines.com/, Blancpain → blancpain.com/, Seiko → seikowatches.com/
+  Only provide a URL if you believe it points to a real product page (not a homepage). If unsure, use empty string "".
 - boundingBox: The approximate location of this watch in the image as [x, y, width, height] where values are percentages (0-100) of the image dimensions. x is from left edge, y is from top edge. For example [25, 10, 50, 80] means the watch starts 25% from left, 10% from top, is 50% of image width and 80% of image height. Be generous with padding — include the full watch face, case, and some of the strap.
 
 Return ONLY valid JSON in this exact format, no other text:
-{"watches": [{"brand": "...", "model": "...", "reference": "...", "estimatedColor": "...", "confidence": "...", "productUrl": "...", "boundingBox": [x, y, w, h]}]}
+{"watches": [{"brand": "...", "model": "...", "reference": "...", "dialText": "...", "estimatedColor": "...", "confidence": "...", "productUrl": "...", "boundingBox": [x, y, w, h]}]}
 
 If no watches are visible in the image, return: {"watches": []}
 If you can identify the brand but not the exact model, still include it with your best guess and "low" confidence.`,
