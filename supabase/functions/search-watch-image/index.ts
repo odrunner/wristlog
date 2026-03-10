@@ -4,7 +4,7 @@
 // Strategy priority:
 //   1. Product URL from Claude (if provided and looks like a real product page)
 //   2. Direct brand website URLs (constructed from known patterns)
-//   If neither finds an image, client falls back to cropping user's original photo.
+//   If none finds an image, client falls back to cropping user's original photo.
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";

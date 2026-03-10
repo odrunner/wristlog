@@ -3822,7 +3822,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.09.18.02';
+const APP_VERSION = '2.34.09.19.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10126,6 +10126,7 @@ async function saveWatch() {
       // No new price being saved — preserve existing history
       data.priceHistory = existing.priceHistory;
     }
+    // Detect if reference was just added/changed — trigger deferred photo lookup
     watches[idx] = { ...existing, ...data };
     markDirty('watches', editingId);
     toast('Watch updated!');
@@ -11798,11 +11799,8 @@ function updateIdentifyCard(idx) {
   statusEl.className = 'pi-img-status';
 
   if (w._imageLoading) {
-    statusEl.innerHTML = '<span class="pi-img-loading">⟳ Finding photo…</span>';
-  } else if (w._imageFound && w._prefetchedImageUrl) {
-    const label = w._imageSource === 'cropped' ? '✓ Your photo' : '✓ Photo ready';
-    statusEl.innerHTML = `<span class="pi-img-found">${label}</span>`;
-  } else if (w._imageSearched) {
+    statusEl.innerHTML = '<span class="pi-img-loading">⟳ Cropping photo…</span>';
+  } else if (!w._imageFound && w._imageSearched) {
     statusEl.innerHTML = '<span class="pi-img-notfound">No photo found</span>';
   }
 
@@ -11811,65 +11809,14 @@ function updateIdentifyCard(idx) {
 }
 
 async function prefetchIdentifiedImages() {
-  let token;
-  try {
-    const sess = await db.auth.getSession();
-    token = sess?.data?.session?.access_token;
-  } catch (_) {}
-  if (!token) return;
-
   const promises = _photoIdentifyResults.map(async (w, i) => {
     if (w._imageSearched) return;
     w._imageSearched = true;
     w._imageLoading = true;
     updateIdentifyCard(i);
 
-    try {
-      const resp = await fetch(`${SUPABASE_URL}/functions/v1/search-watch-image`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'apikey': SUPABASE_KEY
-        },
-        signal: AbortSignal.timeout(15000),
-        body: JSON.stringify({
-          brand: w.brand || '',
-          model: w.model || '',
-          reference: w.reference || '',
-          productUrl: w.productUrl || ''
-        })
-      });
-
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.imageUrl) {
-          // Try to fetch image as blob (direct, then CORS proxy)
-          const urls = [data.imageUrl, `https://corsproxy.io/?${encodeURIComponent(data.imageUrl)}`];
-          for (const src of urls) {
-            if (w._imageFound) break;
-            try {
-              const imgResp = await fetch(src, { signal: AbortSignal.timeout(6000) });
-              if (imgResp.ok) {
-                const blob = await imgResp.blob();
-                if (blob.size > 500) {
-                  w._prefetchedBlob = blob;
-                  w._prefetchedImageUrl = URL.createObjectURL(blob);
-                  w._prefetchedSourceUrl = data.sourceUrl || '';
-                  w._imageFound = true;
-                  w._imageSource = 'stock';
-                }
-              }
-            } catch (_) {}
-          }
-          if (!w._imageFound) console.log('[WristLog] Stock image not loadable:', data.imageUrl);
-        }
-      }
-    } catch (e) {
-      console.error('[WristLog] prefetch image error:', e);
-    }
-
-    // Crop fallback: if no stock photo, use user's original photo
+    // Skip stock photo search — always crop from user's photo.
+    // Stock photo lookup happens later via deferred lookup when user enters a reference.
     if (!w._imageFound && window._photoIdentifyBlob) {
       const hasBbox = w.boundingBox && Array.isArray(w.boundingBox) && w.boundingBox.length === 4;
       const bbox = hasBbox ? w.boundingBox : [0, 0, 100, 100];
@@ -11925,30 +11872,16 @@ async function addFromIdentified(idx) {
       buildSwatches();
     }
 
-    // Use pre-fetched image if available, otherwise try productUrl (skip brand homepage fallback)
-    if (w._imageFound && w._prefetchedImageUrl) {
-      if (w._imageSource === 'cropped' && w._prefetchedCroppedBlob) {
-        // Cropped from user's original photo — revoke old preview URL, create fresh one
-        URL.revokeObjectURL(w._prefetchedImageUrl);
-        wPendingFile  = w._prefetchedCroppedBlob;
-        wPendingImage = URL.createObjectURL(w._prefetchedCroppedBlob);
-        renderWatchModalImg();
-        toast('Using your photo', 'success');
-      } else {
-        // Stock photo from search — already pre-fetched as blob during prefetch
-        if (w._prefetchedBlob) {
-          URL.revokeObjectURL(w._prefetchedImageUrl);
-          wPendingFile  = w._prefetchedBlob;
-          wPendingImage = URL.createObjectURL(w._prefetchedBlob);
-          renderWatchModalImg();
-          toast('Stock photo loaded', 'success');
-        } else {
-          // Direct URL fallback (loaded in img but couldn't fetch blob)
-          wPendingFile  = null;
-          wPendingImage = w._prefetchedImageUrl;
-          renderWatchModalImg();
-          toast('Stock photo loaded', 'success');
-        }
+    // Use cropped image from user's photo
+    if (w._imageFound && w._prefetchedCroppedBlob) {
+      if (w._prefetchedImageUrl) URL.revokeObjectURL(w._prefetchedImageUrl);
+      wPendingFile  = w._prefetchedCroppedBlob;
+      wPendingImage = URL.createObjectURL(w._prefetchedCroppedBlob);
+      renderWatchModalImg();
+    } else if (w._imageFound && w._prefetchedImageUrl) {
+      wPendingFile  = null;
+      wPendingImage = w._prefetchedImageUrl;
+      renderWatchModalImg();
       }
     }
 
