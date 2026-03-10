@@ -1869,7 +1869,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
         <div>
           <h2 class="landing-feat-title">Build Your Collection</h2>
-          <div class="landing-feat-desc">Add watches by URL — brand, photo, and price fill in automatically. Track cost-per-wear, market value, insurance, and receipts.</div>
+          <div class="landing-feat-desc">Add watches from a photo or by URL — brand, model, and price fill in automatically. Track cost-per-wear, market value, insurance, and receipts.</div>
         </div>
       </div>
       <div class="landing-feat">
@@ -1947,7 +1947,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Add Watches from Photo</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Snap a photo of a single watch or a collection flat-lay and AI identifies each one. Brand, model, and reference are pre-filled so you can review and save in seconds. Stock photos are fetched automatically when available.</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Snap a photo of a single watch or a collection flat-lay and AI identifies each one. Brand, model, and reference are pre-filled so you can review and save in seconds.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Unified Photo Picker</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Every photo action &#8212; posting, logging a wear, snap-to-track, adding a watch &#8212; now shows the same native menu: take a photo, choose from library, or pick a file.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Track Page: Recently Worn First</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">The watch selector on the Track page now sorts by most recently worn, so the watch on your wrist is always near the top.</div>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Smarter Recommendations</div>
@@ -2371,7 +2379,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">2</div>
             <div class="help-step-body">
               <div class="help-step-title">Select the watch you wore</div>
-              <div class="help-step-desc">Tap the watch from the grid. If it has multiple straps, a strap picker appears — choose which one was on the watch.</div>
+              <div class="help-step-desc">Watches are sorted by most recently worn, so the one on your wrist is near the top. Tap to select. If it has multiple straps, a strap picker appears — choose which one was on the watch.</div>
             </div>
           </div>
           <div class="help-step">
@@ -3822,7 +3830,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.09.20.18';
+const APP_VERSION = '2.34.09.20.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11822,8 +11830,7 @@ async function prefetchIdentifiedImages() {
     w._imageLoading = true;
     updateIdentifyCard(i);
 
-    // Skip stock photo search — always crop from user's photo.
-    // Stock photo lookup happens later via deferred lookup when user enters a reference.
+    // Always crop from user's photo.
     if (!w._imageFound && window._photoIdentifyBlob) {
       const hasBbox = w.boundingBox && Array.isArray(w.boundingBox) && w.boundingBox.length === 4;
       const bbox = hasBbox ? w.boundingBox : [0, 0, 100, 100];
