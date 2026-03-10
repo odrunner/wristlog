@@ -3822,7 +3822,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.09.20.01';
+const APP_VERSION = '2.34.09.20.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13235,7 +13235,7 @@ function initReminder() {
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission();
   }
-  checkReminderNow();
+  // checkReminderNow() moved to bootApp() after loadUserData() to avoid flash
   scheduleReminderAt5PM();
   checkWarrantyAlerts();
 }
