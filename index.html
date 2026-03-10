@@ -3978,7 +3978,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.10.09.38';
+const APP_VERSION = '2.34.10.16.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8128,6 +8128,7 @@ async function acceptEula() {
   try { if (currentUser) localStorage.setItem('wristlog_onboarded_' + currentUser.id, '1'); } catch(e) {}
   toast('Welcome to WRotate!');
   // Trigger feed load if this was the EULA gate for existing users
+  feedLoading = false; feedLoadedAt = 0; // ensure fresh load even if bg attempt got stuck
   loadFeed();
   loadNotifications();
   if (!window._notifPollId) window._notifPollId = setInterval(loadNotifications, 30000);
@@ -14203,7 +14204,7 @@ function initApp() {
     }
     // Check EULA acceptance for existing users; if not accepted, gate the app
     const eulaOk = await checkEulaAcceptance();
-    if (!eulaOk) return; // EULA modal is showing; acceptEula() will re-trigger feed load
+    if (!eulaOk) { loadFeed(); return; } // pre-load feed behind EULA modal so it's instant on accept
     loadFeed();
     loadNotifications();
     if (!window._notifPollId) window._notifPollId = setInterval(loadNotifications, 30000);
@@ -14342,14 +14343,46 @@ db.auth.onAuthStateChange((event, session) => {
 });
 
 // ── Foreground detection — reload feed when app returns from background ───────
+let _lastHiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible' || !currentUser) return;
-  const feedPage = document.getElementById('page-feed');
-  if (feedPage && feedPage.classList.contains('active')) {
-    // Force past the 60s cache so the feed refreshes after switching back
-    feedLoadedAt = 0;
-    loadFeed();
+  if (document.visibilityState === 'hidden') { _lastHiddenAt = Date.now(); return; }
+  if (document.visibilityState !== 'visible') return;
+
+  const bgDuration = _lastHiddenAt ? Date.now() - _lastHiddenAt : 0;
+
+  // If user was lost (iOS may have purged JS context), re-establish session
+  if (!currentUser) {
+    db.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) bootApp(session.user);
+      else document.getElementById('auth-screen').style.display = 'flex';
+    }).catch(() => {
+      document.getElementById('auth-screen').style.display = 'flex';
+    });
+    return;
   }
+
+  const feedPage = document.getElementById('page-feed');
+  if (!feedPage || !feedPage.classList.contains('active')) return;
+
+  // Long background (>= 5 min): aggressively reset all feed state
+  if (bgDuration >= 300000) {
+    feedLoading = false;
+    _feedLoadStartedAt = 0;
+    feedLoadedAt = 0;
+    feedError = false;
+  } else {
+    feedLoadedAt = 0; // short background: just bust the 60s cache
+  }
+
+  // If skeletons are still visible, force-reset guards regardless of duration
+  const fl = document.getElementById('feed-list');
+  if (fl && fl.querySelector('.feed-skeleton-item')) {
+    feedLoading = false;
+    _feedLoadStartedAt = 0;
+    feedLoadedAt = 0;
+  }
+
+  loadFeed();
 });
 
 // ── Offline detection ────────────────────────────────────────────────────────
@@ -14394,6 +14427,28 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   });
 }
+
+// ── Global skeleton safety net ──────────────────────────────────────────────
+// Runs independently of the entire init chain. If feed still shows skeletons
+// after 12s, force resolution. Catches: hung getSession, thrown initApp,
+// EULA gate, stuck social loaders, or any other failure path.
+setTimeout(() => {
+  const fl = document.getElementById('feed-list');
+  if (!fl || !fl.querySelector('.feed-skeleton-item')) return; // already resolved
+  console.warn('[WRotate] Global skeleton safety net (12s) — forcing resolution');
+  if (currentUser) {
+    feedLoading = false;
+    feedLoadedAt = 0;
+    _feedLoadStartedAt = 0;
+    loadFeed();
+  } else {
+    fl.innerHTML = '<div style="text-align:center;padding:2.5rem 1rem;">' +
+      '<div style="font-size:1.6rem;margin-bottom:.5rem;">\u26A0</div>' +
+      '<div style="font-weight:600;margin-bottom:.4rem;color:var(--text);">Taking too long to load</div>' +
+      '<div style="font-size:.82rem;color:var(--muted);margin-bottom:1.25rem;">Try refreshing the page.</div>' +
+      '<button class="btn btn-primary" onclick="location.reload()">Refresh</button></div>';
+  }
+}, 12000);
 </script>
 </body>
 </html>
