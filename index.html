@@ -3978,7 +3978,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.10.16.19';
+const APP_VERSION = '2.34.10.18.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6569,10 +6569,10 @@ document.addEventListener('click', e => {
 const FEED_LOG_COLS = 'id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility, moderation_status';
 async function loadFeed() {
   if (!currentUser) return;
-  // If feedLoading is stuck true for >15s, treat it as dead and allow re-entry
+  // If feedLoading is stuck true for >8s, treat it as dead and allow re-entry
   if (feedLoading) {
-    if (!_feedLoadStartedAt || Date.now() - _feedLoadStartedAt < 15000) return;
-    console.warn('[WRotate] feedLoading stuck >15s — forcing re-entry');
+    if (!_feedLoadStartedAt || Date.now() - _feedLoadStartedAt < 8000) return;
+    console.warn('[WRotate] feedLoading stuck >8s — forcing re-entry');
     feedLoading = false;
   }
   // Skip re-fetch if feed was loaded recently (60s) unless forced or errored
@@ -6580,24 +6580,19 @@ async function loadFeed() {
   feedLoading = true;
   _feedLoadStartedAt = Date.now();
   feedError = false;
-  // Master safety net: if loadFeed hasn't finished in 15s, force-render error state
+  // Master safety net: if loadFeed hasn't finished in 8s, force-render error state
   const _feedSafety = setTimeout(() => {
     if (feedLoading) {
-      console.warn('[WRotate] loadFeed master timeout (15s) — forcing error render');
+      console.warn('[WRotate] loadFeed master timeout (8s) — forcing error render');
       feedLoading = false; feedError = true; renderFeed();
     }
-  }, 15000);
+  }, 8000);
   const listEl = document.getElementById('feed-list');
   if (listEl) listEl.innerHTML = '<div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:40%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:90%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:70%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:35%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:80%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:60%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:45%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:85%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:65%;height:.7rem;"></div></div>';
   try {
-    // Logs — visibility rules:
-    //   'public'    → show to everyone (discovery feed, even for new users with no following)
-    //   'followers' → only from users you follow
-    //   'friends'   → only from users you follow (client-side filters to friends below)
-    //   'private'   → only owner sees it
-    // Multi-query approach — NO .or() on user-scoped queries to avoid PostgREST
-    // treating OR conditions as top-level (which leaks other users' posts).
-    // Each query uses only single-column equality filters so scoping is unambiguous.
+    // ═══════════════════════════════════════════════════════════════════════
+    // PHASE 1: Fetch logs and render immediately (kill skeletons fast)
+    // ═══════════════════════════════════════════════════════════════════════
     const followingArr = [...following];
 
     let rawLogs, logsErr;
@@ -6629,7 +6624,7 @@ async function loadFeed() {
         );
       }
 
-      const results = await withTimeout(Promise.all(promises), 12000);
+      const results = await withTimeout(Promise.all(promises), 8000);
       const firstError = results.find(r => r.error);
       if (firstError) throw firstError.error;
 
@@ -6644,7 +6639,7 @@ async function loadFeed() {
       // Fallback: own posts only (safe when visibility column is unavailable)
       const res = await withTimeout(db.from('logs').select(FEED_LOG_COLS)
         .eq('user_id', currentUser.id)
-        .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50), 10000);
+        .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50), 8000);
       rawLogs = res.data; logsErr = res.error;
     }
     if (logsErr) { console.warn('Feed logs error:', logsErr.message); feedItems = []; renderFeed(); return; }
@@ -6657,7 +6652,7 @@ async function loadFeed() {
     if (myClubIds.length) {
       const { data: clubLogData } = await withTimeout(db.from('logs').select(FEED_LOG_COLS)
         .in('club_id', myClubIds)
-        .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(100), 10000);
+        .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(100), 8000);
       if (clubLogData && clubLogData.length) {
         const merged = new Map();
         [...rawLogs, ...clubLogData].forEach(l => merged.set(l.id, l));
@@ -6669,32 +6664,32 @@ async function loadFeed() {
     }
 
     // ── Authoritative visibility gate (applied last, after club merge) ───────
-    // This is the single source of truth for who sees what. Covers all 4
-    // visibility values plus legacy null posts. Catches any leakage from server
-    // queries or club post fetch regardless of root cause.
-    //
-    //   private   → owner only (never shown to others)
-    //   public    → everyone
-    //   followers → only if currentUser follows the author
-    //   friends   → only if currentUser is friends with the author (mutual follow)
-    //   null      → legacy pre-visibility post: treat as followers-scoped
     rawLogs = rawLogs.filter(log => {
-      if (log.user_id === currentUser.id) return true;           // own post — always visible
-      if (log.club_id && myClubIds.includes(log.club_id)) {     // club post — membership already verified
-        // Within a club, apply a relaxed rule: private posts are still owner-only
+      if (log.user_id === currentUser.id) return true;
+      if (log.club_id && myClubIds.includes(log.club_id)) {
         return log.visibility !== 'private';
       }
-      // Individual posts — strict visibility enforcement
       if (log.visibility === 'private')   return false;
       if (log.visibility === 'public')    return true;
       if (log.visibility === 'followers') return following.has(log.user_id);
       if (log.visibility === 'friends')   return friendships.has(log.user_id);
-      // null / legacy: only show to followers
       return following.has(log.user_id);
     });
 
-    // ── Enrichment: watches, profiles, likes, comments — all in parallel ──
+    // ── PHASE 1 RENDER: show posts immediately with placeholders ──────────
+    // Kills skeletons ASAP. Avatars, likes, comments fill in during Phase 2.
     const logIds = rawLogs.map(l => l.id);
+    feedItems = rawLogs.map(l => ({ ...l, profile: null, watch: null }));
+    feedLikes = {};
+    logIds.forEach(id => feedLikes[id] = { count: 0, liked: false });
+    feedCommentCounts = {};
+    logIds.forEach(id => feedCommentCounts[id] = 0);
+    feedComments = {};
+    renderFeed();
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PHASE 2: Enrich with profiles, watches, likes, comments in background
+    // ═══════════════════════════════════════════════════════════════════════
     const watchIds = [...new Set(rawLogs.filter(l => l.watch_id).map(l => l.watch_id))];
     const userIds = [...new Set(rawLogs.map(l => l.user_id))];
 
@@ -6706,7 +6701,7 @@ async function loadFeed() {
       db.from('likes').select('log_id, user_id').in('log_id', logIds),
       db.from('comments').select('id, log_id, user_id, body, created_at, moderation_status')
         .in('log_id', logIds).order('created_at', { ascending: true }).limit(500),
-    ]));
+    ]), 8000);
 
     const watchMap = {};
     (watchResult.data || []).forEach(w => watchMap[w.id] = w);
@@ -6733,7 +6728,7 @@ async function loadFeed() {
         allCommentIds.length
           ? db.from('comment_likes').select('comment_id, user_id').in('comment_id', allCommentIds)
           : { data: [] },
-      ]), 10000);
+      ]), 8000);
       const cpm = {};
       (commenterResult.data || []).forEach(p => cpm[p.id] = p);
       commentData.forEach(c => {
@@ -6749,15 +6744,18 @@ async function loadFeed() {
     }
     logIds.forEach(id => feedCommentCounts[id] = (feedComments[id] || []).length);
 
+    // ── PHASE 2 RENDER: update with full enrichment data ──────────────────
     feedItems = rawLogs.map(l => ({
       ...l,
       profile: profileMap[l.user_id] || null,
       watch: l.watch_id ? (watchMap[l.watch_id] || null) : null,
     }));
+    renderFeed();
   } catch(e) { console.warn('Feed error:', e?.message); feedError = true; }
   finally { clearTimeout(_feedSafety); feedLoading = false; }
   if (!feedError) feedLoadedAt = Date.now();
-  renderFeed();
+  // If error occurred before Phase 1 could render, show error UI
+  if (feedError) renderFeed();
 }
 
 function scrollToFeedPost(postId) {
@@ -14182,11 +14180,30 @@ function initApp() {
   initOEMStraps();
   fetchWeather();
   initReminder();
-  // Load social data then feed (landing page)
-  // Wrap each loader so one failure OR hang can't block the feed forever
+  // ── Two-track social loading for sub-2s feed ──────────────────────────────
+  // Track A (feed-critical): following + blocked + friends → then loadFeed
+  // Track B (background): profile + pending requests → then EULA/notifications
   const _safe = fn => fn().catch(e => console.warn('[WRotate]', fn.name || 'social', 'load failed:', e?.message));
-  const _socialReady = async () => {
+
+  // ── TRACK A: Feed-critical loaders ──────────────────────────────────────
+  let _feedFired = false;
+  const _fireFeed = () => {
+    if (_feedFired) return;
+    _feedFired = true;
     computeFriendships();
+    loadFeed();
+  };
+  Promise.all([_safe(loadFollowing), _safe(loadBlockedUsers), _safe(loadFriendRequests)])
+    .then(_fireFeed)
+    .catch(() => _fireFeed());
+  // Safety: if feed-critical loaders hang >2s, start feed with whatever we have
+  setTimeout(_fireFeed, 2000);
+
+  // ── TRACK B: Non-feed loaders (EULA, suspension, notifications) ─────────
+  let _socialFired = false;
+  const _fireSocial = async () => {
+    if (_socialFired) return;
+    _socialFired = true;
     // Check if user is suspended
     if (myProfile?.is_suspended) {
       document.querySelector('main').innerHTML = `
@@ -14204,19 +14221,16 @@ function initApp() {
     }
     // Check EULA acceptance for existing users; if not accepted, gate the app
     const eulaOk = await checkEulaAcceptance();
-    if (!eulaOk) { loadFeed(); return; } // pre-load feed behind EULA modal so it's instant on accept
-    loadFeed();
+    if (!eulaOk) return; // feed already loading via Track A; EULA modal shows over it
     loadNotifications();
     if (!window._notifPollId) window._notifPollId = setInterval(loadNotifications, 30000);
     maybeShowWelcome();
   };
-  let _socialFired = false;
-  const _fireSocial = () => { if (!_socialFired) { _socialFired = true; _socialReady(); } };
-  Promise.all([_safe(loadMyProfile), _safe(loadFollowing), _safe(loadPendingRequests), _safe(loadFriendRequests), _safe(loadBlockedUsers)])
+  Promise.all([_safe(loadMyProfile), _safe(loadPendingRequests)])
     .then(_fireSocial)
     .catch(() => _fireSocial());
-  // Safety net: if social loaders hang >8s, load feed anyway (skeleton stays too long otherwise)
-  setTimeout(_fireSocial, 8000);
+  // Safety: if non-feed loaders hang >3s, fire EULA/notifications anyway
+  setTimeout(_fireSocial, 3000);
   // Collection renders on-demand when user taps the tab (nav → renderCollection)
 }
 
@@ -14430,12 +14444,12 @@ if ('serviceWorker' in navigator) {
 
 // ── Global skeleton safety net ──────────────────────────────────────────────
 // Runs independently of the entire init chain. If feed still shows skeletons
-// after 12s, force resolution. Catches: hung getSession, thrown initApp,
+// after 6s, force resolution. Catches: hung getSession, thrown initApp,
 // EULA gate, stuck social loaders, or any other failure path.
 setTimeout(() => {
   const fl = document.getElementById('feed-list');
   if (!fl || !fl.querySelector('.feed-skeleton-item')) return; // already resolved
-  console.warn('[WRotate] Global skeleton safety net (12s) — forcing resolution');
+  console.warn('[WRotate] Global skeleton safety net (6s) — forcing resolution');
   if (currentUser) {
     feedLoading = false;
     feedLoadedAt = 0;
@@ -14448,7 +14462,7 @@ setTimeout(() => {
       '<div style="font-size:.82rem;color:var(--muted);margin-bottom:1.25rem;">Try refreshing the page.</div>' +
       '<button class="btn btn-primary" onclick="location.reload()">Refresh</button></div>';
   }
-}, 12000);
+}, 6000);
 </script>
 </body>
 </html>
