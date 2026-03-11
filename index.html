@@ -3978,7 +3978,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.10.19.12';
+const APP_VERSION = '2.34.11.06.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4930,6 +4930,7 @@ async function loadFollowing() {
   }
   // If feed already loaded while following was empty, re-fetch to include followed users' posts
   if (!hadFollowing && following.size > 0 && feedLoadedAt > 0) {
+    computeFriendships();
     feedLoadedAt = 0;
     loadFeed();
   }
@@ -6580,6 +6581,8 @@ async function loadFeed() {
   feedLoading = true;
   _feedLoadStartedAt = Date.now();
   feedError = false;
+  // Snapshot following size — used at end to detect race condition
+  const _followingAtStart = following.size;
   // Master safety net: if loadFeed hasn't finished in 8s, force-render error state
   const _feedSafety = setTimeout(() => {
     if (feedLoading) {
@@ -6756,6 +6759,21 @@ async function loadFeed() {
   if (!feedError) feedLoadedAt = Date.now();
   // If error occurred before Phase 1 could render, show error UI
   if (feedError) renderFeed();
+  // ── Stale-following guard ──────────────────────────────────────────────
+  // If following was populated AFTER we built the query (race condition),
+  // re-compute friendships and re-fetch with full following data.
+  if (!feedError && following.size > _followingAtStart) {
+    console.log('[WRotate] following populated after feed query — re-fetching');
+    computeFriendships();
+    feedLoadedAt = 0;
+    loadFeed();
+  }
+  // ── Profile recovery ─────────────────────────────────────────────────
+  // If Track B's loadMyProfile() failed on cold start (auth token was refreshing),
+  // retry now that we know the DB is reachable (feed loaded successfully).
+  if (!feedError && !myProfile && currentUser) {
+    loadMyProfile().catch(() => {});
+  }
 }
 
 function scrollToFeedPost(postId) {
@@ -14215,8 +14233,9 @@ function initApp() {
   Promise.all([_safe(loadFollowing), _safe(loadBlockedUsers), _safe(loadFriendRequests)])
     .then(_fireFeed)
     .catch(() => _fireFeed());
-  // Safety: if feed-critical loaders hang >2s, start feed with whatever we have
-  setTimeout(_fireFeed, 2000);
+  // Safety: if feed-critical loaders hang >5s, start feed with whatever we have
+  // (2s was too aggressive — cold starts with auth token refresh easily exceed 2s)
+  setTimeout(_fireFeed, 5000);
 
   // ── TRACK B: Non-feed loaders (EULA, suspension, notifications) ─────────
   let _socialFired = false;
