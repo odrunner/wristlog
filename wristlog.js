@@ -978,8 +978,8 @@ export function notificationBody(type, actorName) {
     case 'follow_request':     return `${nm} wants to follow you`;
     case 'follow_accepted':    return `${nm} accepted your follow request`;
     case 'follow':             return `${nm} started following you`;
-    case 'like':               return `${nm} liked your wear log`;
-    case 'comment':            return `${nm} commented on your wear log`;
+    case 'like':               return `${nm} liked your post`;
+    case 'comment':            return `${nm} commented on your post`;
     case 'comment_also':       return `${nm} also commented on a post you liked or commented on`;
     case 'comment_like':       return `${nm} liked your comment`;
     case 'mention':            return `${nm} mentioned you in a comment`;

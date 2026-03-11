@@ -3980,7 +3980,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.11.09.47';
+const APP_VERSION = '2.36.11.11.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6359,8 +6359,9 @@ function toggleNotifPanel() {
   if (!panel) return;
   if (notifPanelOpen) {
     panel.classList.remove('hidden');
-    // Always fetch fresh notifications when panel opens
-    loadNotifications().then(() => renderNotificationPanel());
+    // Always fetch fresh notifications + friend requests when panel opens
+    Promise.all([loadNotifications(), loadFriendRequests(true)])
+      .then(() => renderNotificationPanel());
     renderNotificationPanel(); // show cached data immediately
     setTimeout(markAllNotifsRead, 1200);
   } else {
@@ -6388,8 +6389,8 @@ function renderNotificationPanel() {
     const body = n.type === 'follow_request'  ? (n._declined ? `Follow request from ${nm} declined` : `${nm} wants to follow you`)
                : n.type === 'follow_accepted' ? `${nm} accepted your follow request`
                : n.type === 'follow'          ? `${nm} started following you`
-               : n.type === 'like'            ? `${nm} liked your wear log`
-               : n.type === 'comment'         ? `${nm} commented on your wear log`
+               : n.type === 'like'            ? `${nm} liked your post`
+               : n.type === 'comment'         ? `${nm} commented on your post`
                : n.type === 'comment_also'    ? `${nm} also commented on a post you liked or commented on`
                : n.type === 'comment_like'   ? `${nm} liked your comment`
                : n.type === 'mention'        ? `${nm} mentioned you in a comment`

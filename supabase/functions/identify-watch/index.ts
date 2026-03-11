@@ -4,8 +4,8 @@
 // Required Supabase secrets (set via `supabase secrets set`):
 //   ANTHROPIC_API_KEY  — API key from anthropic.com
 
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -17,7 +17,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-serve(async (req: Request) => {
+Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
@@ -39,8 +39,16 @@ serve(async (req: Request) => {
     });
   }
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-  const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+  const token = authHeader.replace("Bearer ", "");
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
   if (authError || !user) {
+    console.error("[identify-watch] Auth failed:", {
+      error: authError?.message,
+      status: authError?.status,
+      hasUrl: !!SUPABASE_URL,
+      hasKey: SUPABASE_SERVICE_ROLE_KEY.length > 0,
+      tokenLen: token.length,
+    });
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },

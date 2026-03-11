@@ -50,11 +50,11 @@ describe('notificationBody', () => {
   it('follow_accepted — "accepted your follow request"', () => {
     expect(notificationBody('follow_accepted', 'Steve')).toBe('Steve accepted your follow request');
   });
-  it('like — "liked your wear log"', () => {
-    expect(notificationBody('like', 'Steve')).toBe('Steve liked your wear log');
+  it('like — "liked your post"', () => {
+    expect(notificationBody('like', 'Steve')).toBe('Steve liked your post');
   });
-  it('comment — "commented on your wear log"', () => {
-    expect(notificationBody('comment', 'Steve')).toBe('Steve commented on your wear log');
+  it('comment — "commented on your post"', () => {
+    expect(notificationBody('comment', 'Steve')).toBe('Steve commented on your post');
   });
   it('comment_also — "also commented on a post..."', () => {
     const body = notificationBody('comment_also', 'Steve');
