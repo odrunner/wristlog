@@ -3980,7 +3980,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.35.11.06.33';
+const APP_VERSION = '2.35.11.06.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4082,7 +4082,7 @@ async function loadMyProfile() {
         || ('user' + Math.random().toString(36).slice(2, 8));
     }
     const { data: created, error: createErr } = await db.from('profiles').upsert(
-      { id: currentUser.id, username, display_name: googleName, theme_preference: 'light' },
+      { id: currentUser.id, username, display_name: googleName, theme_preference: 'light', profile_privacy: 'followers' },
       { onConflict: 'id' }
     ).select().single();
     if (createErr) console.error('[WristLog] Profile create error:', createErr.message, createErr);
