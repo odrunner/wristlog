@@ -3980,7 +3980,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.35.11.06.36';
+const APP_VERSION = '2.35.11.06.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14259,7 +14259,18 @@ function initApp() {
         </div>`;
       return;
     }
-    // Check EULA acceptance for existing users; if not accepted, gate the app
+    // New users get the welcome flow (which includes EULA at step 6).
+    // Check this BEFORE the standalone EULA gate so new users see the
+    // full onboarding experience instead of just the EULA modal.
+    const isNewUser = currentUser
+      && !localStorage.getItem('wristlog_onboarded_' + currentUser.id)
+      && watches.length === 0 && following.size === 0
+      && myProfile && !myProfile.eula_accepted_at;
+    if (isNewUser) {
+      maybeShowWelcome();
+      return; // welcome flow handles EULA + notifications via acceptEula()
+    }
+    // Existing users: standalone EULA gate (if not yet accepted)
     const eulaOk = await checkEulaAcceptance();
     if (!eulaOk) return; // feed already loading via Track A; EULA modal shows over it
     loadNotifications();
