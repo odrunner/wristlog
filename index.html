@@ -3606,6 +3606,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <script>
+// Prevent iOS PWA from restoring previous scroll position on launch
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 // ══════════════════════════════════════════
 //  FAST SESSION PRE-CHECK + OAUTH ERROR HANDLER
 // ══════════════════════════════════════════
@@ -3978,7 +3980,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.11.06.25';
+const APP_VERSION = '2.35.11.06.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14300,6 +14302,8 @@ async function bootApp(user) {
   if (currentUser?.id === user.id) return; // already running for this user
   clearUserState();
   currentUser = user;
+  // Force scroll to top — iOS PWA restores previous scroll position on launch
+  window.scrollTo(0, 0);
   document.getElementById('auth-screen').style.display = 'none';
   const profileBtn = document.getElementById('profile-btn');
   if (profileBtn) profileBtn.style.display = '';
