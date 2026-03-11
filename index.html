@@ -3978,7 +3978,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.34.10.18.59';
+const APP_VERSION = '2.34.10.19.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13924,11 +13924,20 @@ function dismissWarrantyBanner() {
   document.getElementById('warranty-banner').classList.add('hidden');
 }
 
-function checkReminderNow() {
+async function checkReminderNow() {
   if (sessionStorage.getItem('wl_reminder_dismissed')) return;
   const now = new Date();
   if (now.getHours() >= 17) {
-    const logged = logs.some(l => l.date === todayStr());
+    const today = todayStr();
+    let logged = logs.some(l => l.date === today)
+              || feedItems.some(f => f.user_id === currentUser?.id && f.date === today);
+    if (!logged && currentUser) {
+      try {
+        const { count } = await db.from('logs').select('id', { count: 'exact', head: true })
+          .eq('user_id', currentUser.id).eq('date', today);
+        logged = count > 0;
+      } catch (_) { /* ignore */ }
+    }
     if (logged) {
       document.getElementById('reminder-banner').classList.add('hidden');
     } else {
@@ -13943,8 +13952,18 @@ function scheduleReminderAt5PM() {
   const now   = new Date();
   const fivePM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 0, 0);
   if (now >= fivePM) return; // already past 5 PM
-  _reminderTimer = setTimeout(() => {
-    const logged = logs.some(l => l.date === todayStr());
+  _reminderTimer = setTimeout(async () => {
+    // Check local logs first (fast); if stale, also check DB for today's wear
+    const today = todayStr();
+    let logged = logs.some(l => l.date === today)
+              || feedItems.some(f => f.user_id === currentUser?.id && f.date === today);
+    if (!logged && currentUser) {
+      try {
+        const { count } = await db.from('logs').select('id', { count: 'exact', head: true })
+          .eq('user_id', currentUser.id).eq('date', today);
+        logged = count > 0;
+      } catch (_) { /* ignore — fall through to local check */ }
+    }
     if (!logged) {
       showReminderBanner();
       if ('Notification' in window && Notification.permission === 'granted') {
