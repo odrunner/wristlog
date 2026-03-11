@@ -3980,7 +3980,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.11.08.19';
+const APP_VERSION = '2.36.11.09.47';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8085,6 +8085,7 @@ async function postComment(logId) {
 function maybeShowWelcome() {
   if (!currentUser) return;
   if (localStorage.getItem('wristlog_onboarded_' + currentUser.id)) return;
+  if (!myProfile || myProfile.eula_accepted_at) return;
   if (watches.length > 0 || following.size > 0) return;
   document.getElementById('welcome-modal').classList.remove('hidden');
 }
