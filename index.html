@@ -3980,7 +3980,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.35.11.06.59';
+const APP_VERSION = '2.36.11.08.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7581,9 +7581,9 @@ async function npIdentifyWatch(file) {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await db.auth.getSession()).data.session?.access_token}`, 'apikey': SUPABASE_KEY, },
       body: JSON.stringify({ image: base64, collection: watches.map(w => ({ brand: w.brand, name: w.name, ref: w.ref || '' })) }),
     }), 30000);
-    if (!resp.ok) { sugEl.style.display = 'none'; return; }
+    if (!resp.ok) { npIdentifiedWatchId = null; renderNpWatchDisplay(); return; }
     const data = await resp.json();
-    if (!data.watches || data.watches.length === 0) { sugEl.style.display = 'none'; return; }
+    if (!data.watches || data.watches.length === 0) { npIdentifiedWatchId = null; renderNpWatchDisplay(); return; }
     const matches = matchIdentifiedToCollection(data.watches);
     if (matches.length === 0) {
       // No collection match — show picker so user can tag manually
@@ -7592,7 +7592,7 @@ async function npIdentifyWatch(file) {
       return;
     }
     showNpWatchSuggestion(matches[0].watch);
-  } catch (err) { sugEl.style.display = 'none'; }
+  } catch (err) { npIdentifiedWatchId = null; renderNpWatchDisplay(); }
 }
 
 function showNpWatchSuggestion(w) {
