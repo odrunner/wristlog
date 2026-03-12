@@ -38,6 +38,11 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.25), value: isLoading)
         .animation(.easeInOut(duration: 0.25), value: hasError)
+        // Universal Links — open wrotate.com links in the app's WebView
+        .onOpenURL { url in
+            guard let host = url.host, host.hasSuffix("wrotate.com") else { return }
+            webViewRef?.load(URLRequest(url: url))
+        }
     }
 }
 
