@@ -14407,7 +14407,7 @@ db.auth.onAuthStateChange((event, session) => {
     const notifPanel = document.getElementById('notif-panel');
     if (notifPanel) notifPanel.classList.add('hidden');
   } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-    currentUser = session.user; // keep token current, no re-boot needed
+    if (currentUser) currentUser = session.user; // keep token current (only after boot; avoids triggering bootApp guard prematurely)
   }
 });
 
