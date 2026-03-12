@@ -6203,11 +6203,10 @@ async function acceptFollowRequest(requesterId, notifId) {
     user_id: requesterId, type: 'follow_accepted',
     actor_id: currentUser.id, is_read: false,
   }).then(() => {});
-  // Delete the notification — it has been actioned
-  await db.from('notifications').delete().eq('id', notifId);
-  const item = document.getElementById(`notif-${notifId}`);
-  if (item) item.remove();
-  userNotifs = userNotifs.filter(n => n.id !== notifId);
+  // Keep notification but mark as read — re-render will hide action buttons
+  await db.from('notifications').update({ is_read: true }).eq('id', notifId);
+  const notif = userNotifs.find(n => n.id === notifId);
+  if (notif) { notif.is_read = true; notif._accepted = true; }
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
   updateBellBadge();
   renderNotificationPanel();
@@ -6386,7 +6385,7 @@ function renderNotificationPanel() {
   el.innerHTML = userNotifs.map(n => {
     const nm   = escHtml(n.actor?.display_name || n.actor?.username || 'Someone');
     const time = formatFeedDate(n.created_at || '');
-    const body = n.type === 'follow_request'  ? (n._declined ? `Follow request from ${nm} declined` : `${nm} wants to follow you`)
+    const body = n.type === 'follow_request'  ? (n._declined ? `Follow request from ${nm} declined` : n._accepted ? `Follow request from ${nm} accepted` : `${nm} wants to follow you`)
                : n.type === 'follow_accepted' ? `${nm} accepted your follow request`
                : n.type === 'follow'          ? `${nm} started following you`
                : n.type === 'like'            ? `${nm} liked your post`
@@ -6400,7 +6399,7 @@ function renderNotificationPanel() {
                : n.type === 'club_promoted'        ? `${nm} made you an owner of a club`
                : n.type === 'friend_request'       ? (n._accepted || friendships.has(n.actor_id) || friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'accepted') ? `You and ${nm} are now close friends` : n._declined || !friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'pending') ? `Close friend request from ${nm} declined` : `${nm} wants to be close friends`)
                : n.type === 'friend_accepted'      ? `You and ${nm} are now close friends` : '';
-    const actionsHtml = (n.type === 'follow_request' && !n._declined) ? `
+    const actionsHtml = (n.type === 'follow_request' && !n._declined && !n._accepted) ? `
       <div class="notif-follow-actions">
         <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
           onclick="event.stopPropagation();acceptFollowRequest('${n.actor_id}','${n.id}')">Accept</button>
