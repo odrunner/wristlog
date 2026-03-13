@@ -3754,6 +3754,11 @@ async function deleteAccount() {
   await del('comments',       { eq: ['user_id', uid] });
   await del('notifications',  { or: `user_id.eq.${uid},actor_id.eq.${uid}` });
   await del('follows',        { or: `follower_id.eq.${uid},following_id.eq.${uid}` });
+  await del('follow_requests', { or: `requester_id.eq.${uid},target_id.eq.${uid}` });
+  await del('friend_requests', { or: `initiator_id.eq.${uid},target_id.eq.${uid}` });
+  await del('club_members',   { eq: ['user_id', uid] });
+  await del('user_blocks',    { or: `blocker_id.eq.${uid},blocked_id.eq.${uid}` });
+  await del('comment_likes',  { eq: ['user_id', uid] });
   await del('logs',           { eq: ['user_id', uid] });
   await del('wishlist',       { eq: ['user_id', uid] });
   await del('watches',        { eq: ['user_id', uid] });
@@ -3998,7 +4003,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.13.07.34';
+const APP_VERSION = '2.36.13.07.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4400,6 +4405,13 @@ async function loadAndRenderProfile(userId) {
   }
 
   const _profileArgs = [profile, isOwn, isFollowing, logCount || 0, recentLogs || [], showcase, visibility, privacy, isFriend, wishlistItems, followerCount || 0, isMutual, friendReq, followingCount || 0];
+  // Evict oldest entry if cache exceeds 100 profiles
+  const cacheKeys = Object.keys(_profileCache);
+  if (cacheKeys.length >= 100) {
+    let oldestKey = cacheKeys[0], oldestTs = _profileCache[cacheKeys[0]].ts;
+    for (const k of cacheKeys) { if (_profileCache[k].ts < oldestTs) { oldestKey = k; oldestTs = _profileCache[k].ts; } }
+    delete _profileCache[oldestKey];
+  }
   _profileCache[userId] = { args: _profileArgs, ts: Date.now() };
   el.innerHTML = renderProfilePageHTML(..._profileArgs);
 
