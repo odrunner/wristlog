@@ -38,16 +38,30 @@ const DEFAULT_PREFS: Record<string, boolean> = {
   friends: true,
 };
 
+// HTML-escape user content for safe embedding in email
+function esc(s: string): string {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Styled blockquote for comment text in emails
+function commentQuote(text: string): string {
+  const escaped = esc(text.length > 300 ? text.slice(0, 300) + '…' : text);
+  return `<div style="margin:12px 0 8px;padding:10px 14px;background:#f9f7f1;border-left:3px solid #b8941f;border-radius:4px;font-size:14px;color:#333;line-height:1.5;">${escaped}</div>`;
+}
+
 // Notification type → human-readable email subject + body
+// commentBody is provided for comment/mention types when available
 function buildEmailContent(
   type: string,
-  actorName: string
+  actorName: string,
+  commentBody?: string
 ): { subject: string; body: string } | null {
+  const quote = commentBody ? commentQuote(commentBody) : '';
   switch (type) {
     case "comment":
-      return { subject: `${actorName} commented on your post`, body: `${actorName} left a comment on your wear log.` };
+      return { subject: `${actorName} commented on your post`, body: `${actorName} commented on your post:${quote}` };
     case "comment_also":
-      return { subject: `${actorName} also commented`, body: `${actorName} also commented on a post you interacted with.` };
+      return { subject: `${actorName} also commented`, body: `${actorName} also commented on a post you interacted with:${quote}` };
     case "follow":
       return { subject: `${actorName} started following you`, body: `${actorName} is now following you on WRotate.` };
     case "follow_request":
@@ -67,7 +81,7 @@ function buildEmailContent(
     case "club_promoted":
       return { subject: `You were promoted in a club`, body: `${actorName} made you an owner of the club on WRotate.` };
     case "mention":
-      return { subject: `${actorName} mentioned you`, body: `${actorName} mentioned you in a comment on WRotate.` };
+      return { subject: `${actorName} mentioned you`, body: `${actorName} mentioned you in a comment:${quote}` };
     default:
       return null;
   }
@@ -168,13 +182,28 @@ serve(async (req) => {
         .eq("id", actor_id)
         .single();
       if (actor) {
-        const raw = actor.display_name || actor.username || "Someone";
-        actorName = raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        actorName = esc(actor.display_name || actor.username || "Someone");
+      }
+    }
+
+    // For comment/mention types, look up the actual comment text
+    let commentBody: string | undefined;
+    if ((type === "comment" || type === "comment_also" || type === "mention") && record.ref_id && actor_id) {
+      const { data: commentRow } = await supabase
+        .from("comments")
+        .select("body")
+        .eq("log_id", record.ref_id)
+        .eq("user_id", actor_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (commentRow?.body) {
+        commentBody = commentRow.body;
       }
     }
 
     // Build email content
-    const content = buildEmailContent(type, actorName);
+    const content = buildEmailContent(type, actorName, commentBody);
     if (!content) {
       return new Response(JSON.stringify({ skipped: "no template for type" }), { status: 200 });
     }
