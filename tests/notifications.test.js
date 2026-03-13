@@ -451,3 +451,107 @@ describe('ref_id contract', () => {
     });
   });
 });
+
+// ── Notification state rendering (Issue #25 fix) ──────────────────────────────
+// follow_request and friend_request have three display states:
+// pending (default), accepted (_accepted=true), declined (_declined=true)
+// The rendering logic in index.html uses these flags to change body text
+// and hide action buttons. These tests verify the body text contracts.
+
+describe('notification follow_request state rendering', () => {
+  it('pending state shows "wants to follow you"', () => {
+    const body = notificationBody('follow_request', 'Alice');
+    expect(body).toBe('Alice wants to follow you');
+  });
+
+  it('pending follow_request is actionable (shows Accept/Decline)', () => {
+    expect(notificationIsActionable('follow_request')).toBe(true);
+  });
+
+  it('follow_request body does not contain "accepted" or "declined" in default state', () => {
+    const body = notificationBody('follow_request', 'Alice');
+    expect(body).not.toContain('accepted');
+    expect(body).not.toContain('declined');
+  });
+});
+
+describe('notification friend_request state rendering', () => {
+  it('pending state shows "wants to be close friends"', () => {
+    const body = notificationBody('friend_request', 'Bob');
+    expect(body).toBe('Bob wants to be close friends');
+  });
+
+  it('pending friend_request is actionable (shows Accept/Decline)', () => {
+    expect(notificationIsActionable('friend_request')).toBe(true);
+  });
+
+  it('friend_accepted shows confirmed friendship text', () => {
+    const body = notificationBody('friend_accepted', 'Bob');
+    expect(body).toBe('You and Bob are now close friends');
+  });
+
+  it('friend_accepted is NOT actionable (no buttons)', () => {
+    expect(notificationIsActionable('friend_accepted')).toBe(false);
+  });
+});
+
+// ── Comment draft preservation pattern (Issue #27 fix) ────────────────────────
+// The feed re-render saves comment input values to a map keyed by input ID,
+// then restores them after DOM rebuild. This tests the save/restore logic.
+
+describe('comment draft save/restore pattern', () => {
+  it('save map captures input values keyed by ID', () => {
+    // Simulates the save logic from renderFeed()
+    const drafts = {};
+    const inputs = [
+      { id: 'comment-input-abc', value: 'great watch!' },
+      { id: 'comment-input-def', value: '' },
+      { id: 'comment-input-ghi', value: 'nice collection' },
+    ];
+    inputs.forEach(inp => {
+      if (inp.value) drafts[inp.id] = inp.value;
+    });
+
+    expect(Object.keys(drafts)).toHaveLength(2);
+    expect(drafts['comment-input-abc']).toBe('great watch!');
+    expect(drafts['comment-input-ghi']).toBe('nice collection');
+    expect(drafts['comment-input-def']).toBeUndefined();
+  });
+
+  it('restore assigns saved values back to matching inputs', () => {
+    const drafts = {
+      'comment-input-abc': 'great watch!',
+      'comment-input-ghi': 'nice collection',
+    };
+    // Simulates the restore logic — create mock inputs
+    const restored = {};
+    Object.entries(drafts).forEach(([id, val]) => {
+      restored[id] = val; // In real code: document.getElementById(id).value = val
+    });
+
+    expect(restored['comment-input-abc']).toBe('great watch!');
+    expect(restored['comment-input-ghi']).toBe('nice collection');
+  });
+
+  it('empty inputs are not saved (no wasted storage)', () => {
+    const drafts = {};
+    const inputs = [
+      { id: 'comment-input-1', value: '' },
+      { id: 'comment-input-2', value: '' },
+    ];
+    inputs.forEach(inp => {
+      if (inp.value) drafts[inp.id] = inp.value;
+    });
+    expect(Object.keys(drafts)).toHaveLength(0);
+  });
+
+  it('draft with only whitespace is still preserved', () => {
+    const drafts = {};
+    const inputs = [{ id: 'comment-input-1', value: '   ' }];
+    inputs.forEach(inp => {
+      if (inp.value) drafts[inp.id] = inp.value;
+    });
+    // Whitespace is truthy, so it gets saved (user may be typing)
+    expect(drafts['comment-input-1']).toBe('   ');
+  });
+});

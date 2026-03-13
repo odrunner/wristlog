@@ -120,4 +120,39 @@ describe('validateUsername', () => {
     expect(result.valid).toBe(true);
     expect(result.clean).toBe('johndoegmailcom');
   });
+
+  // ── Google OAuth edge cases (Issue #23 fix) ─────────────────────────
+  // Google emails can produce digit-leading usernames that need 'u' prefix
+
+  it('rejects digit-leading Google email local part (e.g. 123user@gmail.com)', () => {
+    const result = validateUsername('123user');
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('Must start with a letter');
+  });
+
+  it('rejects all-digit Google email local part', () => {
+    const result = validateUsername('9876543210');
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('Must start with a letter');
+  });
+
+  it('accepts Google email local part that starts with letter', () => {
+    const result = validateUsername('alice123');
+    expect(result.valid).toBe(true);
+    expect(result.clean).toBe('alice123');
+  });
+
+  it('validates prefixed username (u + digits) as valid', () => {
+    // The OAuth flow prefixes digit-leading names with 'u'
+    const result = validateUsername('u123user');
+    expect(result.valid).toBe(true);
+    expect(result.clean).toBe('u123user');
+  });
+
+  it('validates fallback random username pattern', () => {
+    // The OAuth retry generates 'user' + random chars
+    const result = validateUsername('user83729');
+    expect(result.valid).toBe(true);
+    expect(result.clean).toBe('user83729');
+  });
 });
