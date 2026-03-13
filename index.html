@@ -377,6 +377,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .showcase-brand { font-size:.58rem; color:var(--muted); line-height:1.3; word-break:break-word; }
     .showcase-name  { font-size:.7rem; font-weight:600; line-height:1.3; word-break:break-word; }
     .showcase-priv-label { font-size:.56rem; font-weight:700; letter-spacing:.03em; text-transform:uppercase; }
+
+    /* ── PROFILE POSTS GRID ── */
+    .profile-posts-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:3px; }
+    .profile-post-cell { position:relative; aspect-ratio:1; overflow:hidden; border-radius:4px; background:var(--surface2); cursor:pointer; }
+    .profile-post-cell img { width:100%; height:100%; object-fit:cover; display:block; }
+    .profile-post-cell .pp-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.1rem; color:#000; }
+    .profile-post-label { position:absolute; bottom:0; left:0; right:0; padding:4px 6px; font-size:.65rem; color:#fff; background:linear-gradient(transparent, rgba(0,0,0,.6)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .showcase-priv-label.pub  { color:var(--success); }
     .showcase-priv-label.fri  { color:var(--gold); }
     .showcase-priv-label.priv { color:var(--danger); }
@@ -3980,7 +3987,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.12.19.56';
+const APP_VERSION = '2.36.12.20.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4298,12 +4305,12 @@ async function loadAndRenderProfile(userId) {
   _pi.logCount = _pp.length;
   _pp.push(db.from('logs').select('*', { count: 'exact', head: true })
     .eq('user_id', userId).not('watch_id', 'is', null));
-  // Recent logs
+  // Recent posts (logs with photos + wear logs)
   _pi.recentLogs = _pp.length;
   _pp.push(db.from('logs')
-    .select('id, date, use_case, notes, watch_id, watches!watch_id(id, brand, name, color, image)')
-    .eq('user_id', userId).not('watch_id', 'is', null)
-    .order('date', { ascending: false }).limit(6));
+    .select('id, date, use_case, notes, photo_url, created_at, watch_id, watches!watch_id(id, brand, name, color, image)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false }).limit(9));
 
   // Collection showcase — pick the right query branch, push one promise
   let showcaseGated = false;
@@ -4712,27 +4719,30 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     }
   }
 
-  // Recent logs mini-feed
+  // Recent posts grid (Instagram-style)
   let logsHtml = '';
   if (recentLogs.length > 0) {
-    const rows = recentLogs.map(l => {
-      const w     = l.watches;
-      const thumb = w?.image
-        ? `<img src="${escHtml(w.image)}" alt="" style="width:28px;height:28px;border-radius:6px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-        : `<div class="avatar" style="width:28px;height:28px;font-size:.58rem;border-radius:6px;background:${escHtml(w?.color||'#c9a84c')};flex-shrink:0;">${initials(w?.brand||'', w?.name||'')}</div>`;
-      return `<div class="pp-log-row">
-        ${thumb}
-        <div class="pp-log-info">
-          <div class="pp-log-watch">${escHtml((w?.brand||'') + ' ' + (w?.name||'Unknown'))}</div>
-          <div class="pp-log-meta">${escHtml(l.use_case||'')}${l.notes ? ' · ' + escHtml(l.notes) : ''}</div>
-        </div>
-        <div class="pp-log-date">${fmtDate(l.date)}</div>
+    const cells = recentLogs.map(l => {
+      const w = l.watches;
+      const label = w ? escHtml((w.brand || '') + ' ' + (w.name || '')) : (l.notes ? escHtml(l.notes.slice(0, 40)) : '');
+      let inner;
+      if (l.photo_url) {
+        inner = `<img src="${escHtml(l.photo_url)}" alt="" loading="lazy" onerror="this.style.display='none'">`;
+      } else if (w?.image) {
+        inner = `<img src="${escHtml(w.image)}" alt="" loading="lazy" onerror="this.style.display='none'">`;
+      } else {
+        const bg = w?.color || '#c9a84c';
+        inner = `<div class="pp-fallback" style="background:${escHtml(bg)}">${initials(w?.brand || '', w?.name || '')}</div>`;
+      }
+      return `<div class="profile-post-cell" onclick="scrollToFeedPost('${l.id}')">
+        ${inner}
+        ${label ? `<div class="profile-post-label">${label}</div>` : ''}
       </div>`;
     }).join('');
     logsHtml = `
       <div class="profile-page-card">
-        <div class="profile-page-section-title">Recent Wears</div>
-        ${rows}
+        <div class="profile-page-section-title">Recent Posts</div>
+        <div class="profile-posts-grid">${cells}</div>
       </div>`;
   }
 
@@ -4778,8 +4788,8 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     ${privacyHtml}
     ${notifHtml}
     ${showcaseHtml}
-    ${wishlistHtml}
     ${logsHtml}
+    ${wishlistHtml}
     ${blockedHtml}
     ${deleteAccountHtml}`;
 }
