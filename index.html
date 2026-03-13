@@ -6813,6 +6813,13 @@ function scrollToFeedPost(postId) {
 function renderFeed() {
   const el = document.getElementById('feed-list');
   if (!el) return;
+
+  // Preserve any in-progress comment text so it survives re-renders
+  const _savedCommentDrafts = {};
+  el.querySelectorAll('input[id^="comment-input-"]').forEach(inp => {
+    if (inp.value) _savedCommentDrafts[inp.id] = inp.value;
+  });
+
   if (feedError) {
     el.innerHTML = `
       <div style="text-align:center;padding:2.5rem 1rem;">
@@ -6840,6 +6847,12 @@ function renderFeed() {
     return;
   }
   el.innerHTML = feedItems.map(item => renderFeedCard(item)).join('');
+
+  // Restore any comment drafts that survived re-render
+  Object.entries(_savedCommentDrafts).forEach(([id, val]) => {
+    const inp = document.getElementById(id);
+    if (inp) inp.value = val;
+  });
 }
 
 function renderFeedCard(item) {
