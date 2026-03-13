@@ -4003,7 +4003,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.13.07.45';
+const APP_VERSION = '2.36.13.10.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4265,7 +4265,7 @@ async function loadAndRenderProfile(userId) {
   const isOwn = userId === currentUser?.id;
 
   const { data: profile } = await withTimeout(db.from('profiles')
-    .select('id, username, display_name, bio, avatar_url, collection_visibility, profile_privacy, wishlist_visibility')
+    .select('id, username, display_name, bio, avatar_url, collection_visibility, profile_privacy, wishlist_visibility, email_prefs')
     .eq('id', userId).single());
   if (!profile) {
     el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">This account no longer exists.</div>';
