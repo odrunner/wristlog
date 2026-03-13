@@ -1945,6 +1945,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Profile Posts Grid</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Your profile now shows an Instagram-style 3&#215;3 photo grid of your recent posts and wears, right below your collection. Tap any cell to jump to that post in the feed.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Report &amp; Block</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Tap the three-dot menu on any post to report it or block the user. You can also report a specific comment from the menu. Reported content is immediately removed from feeds while it&#8217;s reviewed.</div>
       </div>
@@ -2731,6 +2735,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-body">
               <div class="help-step-title">Email Notification Preferences</div>
               <div class="help-step-desc">Expand the <strong>Notifications</strong> section on your profile to control email alerts. Toggle each category independently: likes &amp; follows, comments, mentions, club activity, and friend requests. Changes save instantly.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">7</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Recent Posts grid</div>
+              <div class="help-step-desc">Below your collection, a 3&#215;3 photo grid shows your latest posts and wears. Photo posts display the photo, wear logs show the watch image, and entries without images show watch initials. Tap any cell to jump to that post in the feed.</div>
             </div>
           </div>
         </div>
@@ -3987,7 +3998,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.12.20.19';
+const APP_VERSION = '2.36.12.20.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
