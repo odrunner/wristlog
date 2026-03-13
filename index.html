@@ -3998,7 +3998,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.13.07.20';
+const APP_VERSION = '2.36.13.07.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6222,8 +6222,9 @@ async function sendFollowRequest(userId, btn) {
 }
 async function cancelFollowRequest(userId) {
   if (!currentUser) return;
-  await db.from('follow_requests').delete()
+  const { error } = await db.from('follow_requests').delete()
     .eq('requester_id', currentUser.id).eq('target_id', userId);
+  if (error) { toast('Could not cancel request', 'error'); return; }
   pendingRequests.delete(userId);
   toast('Request cancelled');
   renderDiscoverUsers();
@@ -7319,17 +7320,27 @@ async function saveFeedCaption(logId) {
   const newNotes = ta.value.trim();
   const { clean } = checkContent(newNotes);
   if (!clean) { toast('Caption contains inappropriate content. Please revise.', 'error'); return; }
-  // Update local log
+  // Save old values for rollback
   const log = logs.find(l => l.id === logId);
-  if (log) { log.notes = newNotes; save(); }
-  // Update feedItem for re-render
   const fi = feedItems.find(i => i.id === logId);
+  const oldLogNotes = log?.notes;
+  const oldFiNotes = fi?.notes;
+  // Optimistic update
+  if (log) { log.notes = newNotes; save(); }
   if (fi) fi.notes = newNotes;
   // Hard-update Supabase
   if (currentUser) {
     const { error } = await db.from('logs').update({ notes: newNotes || null })
       .eq('id', logId).eq('user_id', currentUser.id);
-    if (error) console.error('[WristLog] saveFeedCaption error:', error.message);
+    if (error) {
+      console.error('[WristLog] saveFeedCaption error:', error.message);
+      // Rollback
+      if (log) { log.notes = oldLogNotes; save(); }
+      if (fi) fi.notes = oldFiNotes;
+      refreshFeedCard(logId);
+      toast('Could not save caption', 'error');
+      return;
+    }
   }
   feedEditingCaption.delete(logId);
   refreshFeedCard(logId);
