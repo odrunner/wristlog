@@ -3998,7 +3998,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.13.07.00';
+const APP_VERSION = '2.36.13.07.09';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6189,7 +6189,7 @@ async function followUser(userId, btn) {
     db.from('notifications').insert({
       user_id: userId, type: 'follow',
       actor_id: currentUser.id, is_read: false,
-    }).then(() => {});
+    }).then(({ error }) => { if (error) console.error('[WristLog] follow notif:', error.message); });
     if (btn) { btn.className = 'follow-btn following'; btn.textContent = 'Following'; btn.onclick = function() { confirmUnfollow(userId, this); }; }
     toast('Following! Their logs will appear in your feed.');
     renderDiscoverUsers();
@@ -6236,7 +6236,7 @@ async function acceptFollowRequest(requesterId, notifId) {
   db.from('notifications').insert({
     user_id: requesterId, type: 'follow_accepted',
     actor_id: currentUser.id, is_read: false,
-  }).then(() => {});
+  }).then(({ error }) => { if (error) console.error('[WristLog] follow_accepted notif:', error.message); });
   // Keep notification but mark as read — re-render will hide action buttons
   await db.from('notifications').update({ is_read: true }).eq('id', notifId);
   const notif = userNotifs.find(n => n.id === notifId);
@@ -7828,46 +7828,72 @@ async function handleFeedPhoto(input) {
 }
 
 // ── Likes ─────────────────────────────────────────────────────────────────
+const _likePending = new Set();
 async function toggleLike(logId) {
-  if (!currentUser) return;
+  if (!currentUser || _likePending.has(logId)) return;
+  _likePending.add(logId);
   const cur = feedLikes[logId] || { count: 0, liked: false };
   // Optimistic update
   feedLikes[logId] = cur.liked
     ? { count: Math.max(0, cur.count - 1), liked: false }
     : { count: cur.count + 1, liked: true };
   refreshFeedCard(logId);
-  if (cur.liked) {
-    await db.from('likes').delete().eq('log_id', logId).eq('user_id', currentUser.id);
-  } else {
-    await db.from('likes').insert({ log_id: logId, user_id: currentUser.id });
-    // Notify the post author (skip if liking own post)
-    const item = feedItems.find(i => i.id === logId);
-    if (item && item.user_id !== currentUser.id) {
-      db.from('notifications').insert({ user_id: item.user_id, type: 'like', actor_id: currentUser.id, ref_id: logId })
-        .then(({ error }) => { if (error) console.error('[WristLog] like notif:', error.code, error.message, error.details, error.hint); });
+  try {
+    if (cur.liked) {
+      const { error } = await db.from('likes').delete().eq('log_id', logId).eq('user_id', currentUser.id);
+      if (error) throw error;
+    } else {
+      const { error } = await db.from('likes').insert({ log_id: logId, user_id: currentUser.id });
+      if (error) throw error;
+      // Notify the post author (skip if liking own post)
+      const item = feedItems.find(i => i.id === logId);
+      if (item && item.user_id !== currentUser.id) {
+        db.from('notifications').insert({ user_id: item.user_id, type: 'like', actor_id: currentUser.id, ref_id: logId })
+          .then(({ error }) => { if (error) console.error('[WristLog] like notif:', error.code, error.message, error.details, error.hint); });
+      }
     }
+  } catch (e) {
+    // Rollback optimistic update
+    feedLikes[logId] = cur;
+    refreshFeedCard(logId);
+    console.error('[WristLog] toggleLike failed:', e);
+  } finally {
+    _likePending.delete(logId);
   }
 }
 
+const _commentLikePending = new Set();
 async function toggleCommentLike(commentId, logId) {
-  if (!currentUser) return;
+  if (!currentUser || _commentLikePending.has(commentId)) return;
+  _commentLikePending.add(commentId);
   const cur = commentLikes[commentId] || { count: 0, liked: false };
   commentLikes[commentId] = cur.liked
     ? { count: Math.max(0, cur.count - 1), liked: false }
     : { count: cur.count + 1, liked: true };
   refreshFeedCard(logId);
-  if (cur.liked) {
-    await db.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', currentUser.id);
-  } else {
-    await db.from('comment_likes').insert({ comment_id: commentId, user_id: currentUser.id });
-    // Notify the comment author
-    const allComments = feedComments[logId] || [];
-    const comment = allComments.find(c => c.id === commentId);
-    if (comment && comment.user_id !== currentUser.id) {
-      db.from('notifications').insert({
-        user_id: comment.user_id, type: 'comment_like', actor_id: currentUser.id, ref_id: logId, is_read: false
-      }).then(({ error }) => { if (error) console.error('[WristLog] comment_like notif:', error.code, error.message, error.details, error.hint); });
+  try {
+    if (cur.liked) {
+      const { error } = await db.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', currentUser.id);
+      if (error) throw error;
+    } else {
+      const { error } = await db.from('comment_likes').insert({ comment_id: commentId, user_id: currentUser.id });
+      if (error) throw error;
+      // Notify the comment author
+      const allComments = feedComments[logId] || [];
+      const comment = allComments.find(c => c.id === commentId);
+      if (comment && comment.user_id !== currentUser.id) {
+        db.from('notifications').insert({
+          user_id: comment.user_id, type: 'comment_like', actor_id: currentUser.id, ref_id: logId, is_read: false
+        }).then(({ error }) => { if (error) console.error('[WristLog] comment_like notif:', error.code, error.message, error.details, error.hint); });
+      }
     }
+  } catch (e) {
+    // Rollback optimistic update
+    commentLikes[commentId] = cur;
+    refreshFeedCard(logId);
+    console.error('[WristLog] toggleCommentLike failed:', e);
+  } finally {
+    _commentLikePending.delete(commentId);
   }
 }
 
@@ -8101,7 +8127,8 @@ async function postComment(logId) {
     const postOwner = item?.user_id;
     // Notify the post author (skip if commenting on own post)
     if (postOwner && postOwner !== currentUser.id) {
-      db.from('notifications').insert({ user_id: postOwner, type: 'comment', actor_id: currentUser.id, ref_id: logId, is_read: false }).then();
+      db.from('notifications').insert({ user_id: postOwner, type: 'comment', actor_id: currentUser.id, ref_id: logId, is_read: false })
+        .then(({ error }) => { if (error) console.error('[WristLog] comment notif:', error.message); });
     }
     // Notify others who liked or previously commented on this post
     const [{ data: likers }, { data: prevCommenters }] = await Promise.all([
@@ -8115,7 +8142,7 @@ async function postComment(logId) {
     if (notifyIds.length) {
       db.from('notifications').insert(
         notifyIds.map(uid => ({ user_id: uid, type: 'comment_also', actor_id: currentUser.id, ref_id: logId, is_read: false }))
-      ).then();
+      ).then(({ error }) => { if (error) console.error('[WristLog] comment_also notif:', error.message); });
     }
     // Send mention notifications for @usernames in the comment
     const mentionedUsernames = [...new Set((text.match(/@([\w.]+)/g) || []).map(m => m.slice(1)))];
