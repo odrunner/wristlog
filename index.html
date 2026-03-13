@@ -2391,8 +2391,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadAdminFeedback()">↻ Refresh</button>
       </div>
       <div class="chips" id="admin-filter-chips" style="margin-bottom:.75rem;">
-        <div class="chip selected" data-filter="all" onclick="filterAdminFeedback('all')">All</div>
-        <div class="chip" data-filter="pending" onclick="filterAdminFeedback('pending')">Pending</div>
+        <div class="chip" data-filter="all" onclick="filterAdminFeedback('all')">All</div>
+        <div class="chip selected" data-filter="pending" onclick="filterAdminFeedback('pending')">Pending</div>
         <div class="chip" data-filter="reviewed" onclick="filterAdminFeedback('reviewed')">Reviewed</div>
         <div class="chip" data-filter="resolved" onclick="filterAdminFeedback('resolved')">Resolved</div>
         <div class="chip" data-filter="ignored" onclick="filterAdminFeedback('ignored')">Ignored</div>
@@ -4020,7 +4020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.13.13.37';
+const APP_VERSION = '2.36.13.16.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9132,7 +9132,7 @@ async function loadAdminStats() {
 }
 
 let _adminFeedbackData = [];
-let _adminFilter = 'all';
+let _adminFilter = 'pending';
 let _adminFbPage = 0;
 const ADMIN_FB_PER_PAGE = 10;
 
