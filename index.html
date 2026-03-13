@@ -3998,7 +3998,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.12.20.36';
+const APP_VERSION = '2.36.12.21.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6647,13 +6647,23 @@ async function loadFeed() {
 
       const promises = [q1, q2];
       if (followingArr.length > 0) {
-        // Q3: followers + friends visibility posts from followed users
+        // Q3a: followers-visibility posts from all followed users
         promises.push(
           db.from('logs').select(FEED_LOG_COLS)
             .in('user_id', followingArr)
-            .in('visibility', ['followers', 'friends'])
+            .eq('visibility', 'followers')
             .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50)
         );
+        // Q3b: friends-visibility posts ONLY from actual close friends
+        const friendsArr = followingArr.filter(id => friendships.has(id));
+        if (friendsArr.length > 0) {
+          promises.push(
+            db.from('logs').select(FEED_LOG_COLS)
+              .in('user_id', friendsArr)
+              .eq('visibility', 'friends')
+              .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50)
+          );
+        }
         // Q4: legacy null-visibility posts from followed users (old posts before column existed)
         promises.push(
           db.from('logs').select(FEED_LOG_COLS)
