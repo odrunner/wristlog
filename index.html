@@ -3998,7 +3998,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.12.21.48';
+const APP_VERSION = '2.36.13.07.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4008,7 +4008,7 @@ const APP_VERSION = '2.36.12.21.48';
 function profileInitials(p) {
   if (!p) return '';
   if (p.avatar_url) {
-    const fb = (p.display_name||p.username||'').slice(0,2).toUpperCase();
+    const fb = escAttr((p.display_name||p.username||'').slice(0,2).toUpperCase());
     return `<img src="${escHtml(p.avatar_url)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.replaceWith(document.createTextNode('${fb}'))">`;
   }
   const name = (p.display_name || p.username || '').trim();
@@ -5659,7 +5659,7 @@ async function renderClubDetail(clubId) {
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:.85rem;">
         <button class="btn btn-primary" style="font-size:.82rem;" onclick="saveClubEdit('${clubId}')">Save Changes</button>
         <button class="btn btn-ghost"   style="font-size:.82rem;" onclick="document.getElementById('club-edit-section').style.display='none'">Cancel</button>
-        <button class="btn btn-danger"  style="font-size:.82rem;margin-left:auto;" onclick="openDeleteClubModal('${clubId}','${escHtml(club.name)}')">Delete Club</button>
+        <button class="btn btn-danger"  style="font-size:.82rem;margin-left:auto;" onclick="openDeleteClubModal('${clubId}','${escAttr(club.name)}')">Delete Club</button>
       </div>
     </div>` : '';
 
@@ -7585,9 +7585,6 @@ function openNewPost() {
 
 function closeNewPost() {
   document.getElementById('new-post-modal').classList.add('hidden');
-  newPostPhoto = null;
-  newPostFile  = null;
-  npIdentifiedWatchId = null;
   clearNewPostPhoto();
 }
 
