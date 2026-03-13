@@ -826,7 +826,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .coll-sort-chip       { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-size: .72rem; font-weight: 500; padding: .22rem .65rem; border-radius: 12px; cursor: pointer; transition: all .15s; font-family: inherit; white-space: nowrap; }
     .coll-sort-chip:hover { border-color: var(--gold); color: var(--gold); }
     .coll-sort-chip.active { background: rgba(201,168,76,.15); border-color: var(--gold); color: var(--gold); font-weight: 600; }
-    .coll-photo-toggle { display: flex; align-items: center; gap: .35rem; margin-left: auto; font-size: .72rem; color: var(--muted); white-space: nowrap; cursor: pointer; user-select: none; }
+    .coll-photo-toggle { display: flex; align-items: center; gap: .35rem; margin-left: auto; font-size: .72rem; color: var(--muted); white-space: nowrap; cursor: pointer; user-select: none; text-transform: none; letter-spacing: normal; margin-bottom: 0; }
     .coll-photo-toggle input[type="checkbox"] { appearance: none; -webkit-appearance: none; width: 32px; height: 18px; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; position: relative; cursor: pointer; transition: background .2s, border-color .2s; flex-shrink: 0; }
     .coll-photo-toggle input[type="checkbox"]::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--muted); transition: transform .2s, background .2s; }
     .coll-photo-toggle input[type="checkbox"]:checked { background: rgba(201,168,76,.15); border-color: var(--gold); }
@@ -4008,7 +4008,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.13.13.17';
+const APP_VERSION = '2.36.13.13.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9981,7 +9981,7 @@ function renderCollSortBar() {
   const photoToggle = anyPostPhoto
     ? `<label class="coll-photo-toggle" title="Show latest post photo instead of watch photo">
         <input type="checkbox" ${collPhotoMode === 'post' ? 'checked' : ''} onchange="toggleCollPhotoMode(this.checked)">
-        <span>Latest Post Pics</span>
+        <span>Post Pics</span>
       </label>` : '';
   if (!hasRanking) {
     bar.innerHTML = anyPostPhoto ? `<div class="coll-sort-bar">${photoToggle}</div>` : '';
