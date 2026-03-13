@@ -826,6 +826,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .coll-sort-chip       { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-size: .72rem; font-weight: 500; padding: .22rem .65rem; border-radius: 12px; cursor: pointer; transition: all .15s; font-family: inherit; white-space: nowrap; }
     .coll-sort-chip:hover { border-color: var(--gold); color: var(--gold); }
     .coll-sort-chip.active { background: rgba(201,168,76,.15); border-color: var(--gold); color: var(--gold); font-weight: 600; }
+    .coll-photo-toggle { display: flex; align-items: center; gap: .35rem; margin-left: auto; font-size: .72rem; color: var(--muted); white-space: nowrap; cursor: pointer; user-select: none; }
+    .coll-photo-toggle input[type="checkbox"] { appearance: none; -webkit-appearance: none; width: 32px; height: 18px; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; position: relative; cursor: pointer; transition: background .2s, border-color .2s; flex-shrink: 0; }
+    .coll-photo-toggle input[type="checkbox"]::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--muted); transition: transform .2s, background .2s; }
+    .coll-photo-toggle input[type="checkbox"]:checked { background: rgba(201,168,76,.15); border-color: var(--gold); }
+    .coll-photo-toggle input[type="checkbox"]:checked::after { transform: translateX(14px); background: var(--gold); }
     .rank-badge-card      { position: absolute; top: .55rem; right: .55rem; font-size: .85rem; line-height: 1; pointer-events: none; }
     .rank-drag-handle     { position: absolute; top: .5rem; left: .55rem; color: var(--border); cursor: grab; font-size: 1.1rem; user-select: none; z-index: 2; touch-action: none; line-height: 1; }
     .rank-drag-handle:hover { color: var(--muted); }
@@ -4003,7 +4008,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.13.10.35';
+const APP_VERSION = '2.36.13.13.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8648,6 +8653,7 @@ let collView     = 'grid';        // 'grid' | 'list'
 let collGridSort = 'purchase';    // 'purchase' | 'ranking' | 'wears'
 let collSortedWatches = [];       // current sorted order for drag-and-drop
 let collTagFilter = null;         // active tag filter in Collection page (null = all)
+let collPhotoMode = localStorage.getItem('collPhotoMode') || 'watch'; // 'watch' | 'post'
 let collListSort = 'wears-desc';  // list-view sort: field-dir
 
 // Collection ranking game state
@@ -9970,7 +9976,17 @@ function renderCollSortBar() {
   const bar = document.getElementById('coll-sort-bar');
   if (!bar) return;
   const hasRanking = Object.keys(eloRatings).some(id => watches.some(w => w.id === id));
-  if (!hasRanking) { bar.innerHTML = ''; return; }
+  // Photo toggle: show if any watch has a post with a photo
+  const anyPostPhoto = collView === 'grid' && watches.some(w => logsForWatch(w.id).some(l => l.photoUrl));
+  const photoToggle = anyPostPhoto
+    ? `<label class="coll-photo-toggle" title="Show latest post photo instead of watch photo">
+        <input type="checkbox" ${collPhotoMode === 'post' ? 'checked' : ''} onchange="toggleCollPhotoMode(this.checked)">
+        <span>Latest Post Pics</span>
+      </label>` : '';
+  if (!hasRanking) {
+    bar.innerHTML = anyPostPhoto ? `<div class="coll-sort-bar">${photoToggle}</div>` : '';
+    return;
+  }
   const opts = [
     { key: 'purchase', label: 'Newest' },
     { key: 'ranking',  label: 'My Ranking' },
@@ -9978,7 +9994,13 @@ function renderCollSortBar() {
   ];
   bar.innerHTML = `<div class="coll-sort-bar">${opts.map(o =>
     `<button class="coll-sort-chip${collGridSort === o.key ? ' active' : ''}" onclick="setCollGridSort('${o.key}')">${o.label}</button>`
-  ).join('')}</div>`;
+  ).join('')}${photoToggle}</div>`;
+}
+
+function toggleCollPhotoMode(checked) {
+  collPhotoMode = checked ? 'post' : 'watch';
+  localStorage.setItem('collPhotoMode', collPhotoMode);
+  renderCollection(true);
 }
 
 // Use case chip selection (track page)
@@ -10095,22 +10117,32 @@ function renderCollection(force) {
         ondragend="collDragEnd(event)"` : ''}>
         ${dragHandle}
         ${rankBadge}
-        ${w.image ? `<div class="watch-card-img-wrap">
-          <img loading="lazy" src="${w.image}" alt="${escHtml(w.brand)} ${escHtml(w.name)}" class="watch-card-img"${isRanking ? ' draggable="false"' : ''} onerror="this.style.display='none'">
+        ${(() => {
+          // Pick card image: "Latest post" mode uses newest post photo, falls back to watch image
+          const cardImg = collPhotoMode === 'post'
+            ? (wLogs.filter(l => l.photoUrl).sort((a,b) => (b.date||'').localeCompare(a.date||''))[0]?.photoUrl || w.image)
+            : w.image;
+          const hasImg = !!cardImg;
+          const imgBlock = hasImg ? `<div class="watch-card-img-wrap">
+          <img loading="lazy" src="${cardImg}" alt="${escHtml(w.brand)} ${escHtml(w.name)}" class="watch-card-img"${isRanking ? ' draggable="false"' : ''} onerror="this.style.display='none'">
           <button class="card-edit-btn" onclick="openEditWatch('${w.id}')" title="Edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button class="card-photo-btn" onclick="openPhotoMenu(event,'${w.id}')" title="Edit photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
-        </div>` : ''}
+        </div>` : '';
+          const noImgAvatar = !hasImg ? `<div class="avatar" style="width:52px;height:52px;font-size:.95rem;background:${w.color}">${initials(w.brand,w.name)}</div>` : '';
+          const noImgBtns = !hasImg ? `<div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
+            <button class="card-edit-btn-noimg" onclick="openEditWatch('${w.id}')" title="Edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+            <button class="card-edit-btn-noimg" onclick="openPhotoMenu(event,'${w.id}')" title="Add photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
+          </div>` : '';
+          return `${imgBlock}
         <div class="watch-card-top">
-          ${!w.image ? `<div class="avatar" style="width:52px;height:52px;font-size:.95rem;background:${w.color}">${initials(w.brand,w.name)}</div>` : ''}
+          ${noImgAvatar}
           <div style="flex:1;min-width:0;">
             <div class="watch-card-name">${escHtml(w.name)}</div>
             <div class="watch-card-brand">${escHtml(w.brand)}${w.ref ? ' · '+escHtml(w.ref) : ''}</div>
             ${watchCardTagsHTML(w)}
           </div>
-          ${!w.image ? `<div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
-            <button class="card-edit-btn-noimg" onclick="openEditWatch('${w.id}')" title="Edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-            <button class="card-edit-btn-noimg" onclick="openPhotoMenu(event,'${w.id}')" title="Add photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
-          </div>` : ''}
+          ${noImgBtns}`;
+        })()}
         </div>
         <div class="wc-spacer"></div>
         <div class="watch-card-meta">
