@@ -3998,7 +3998,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.13.07.09';
+const APP_VERSION = '2.36.13.07.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5342,7 +5342,7 @@ async function loadPendingClubRequests() {
 
 async function createClub(name, desc, privacy) {
   if (!currentUser || !name.trim()) return;
-  const clubId = (crypto.randomUUID ? crypto.randomUUID() : uid());
+  const clubId = uid();
   const { error } = await db.from('clubs').insert({
     id: clubId, name: name.trim(), description: desc || null,
     privacy, created_by: currentUser.id
@@ -8663,7 +8663,7 @@ const UC_COL = {
 // ══════════════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════════════
-const uid  = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+const uid  = () => crypto.randomUUID();
 // Safe localStorage writer — survives quota exceeded / private browsing
 function safeSetJSON(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); }
@@ -10051,9 +10051,10 @@ function renderCollection(force) {
     // Only add market-price placeholder when collection is mixed (some have it, some don't)
     const anyHasMarket = sorted.some(w => w.marketPrice);
     el.innerHTML = sorted.map((w, idx) => {
-      const wears = logsForWatch(w.id).length;
+      const wLogs = logsForWatch(w.id);
+      const wears = wLogs.length;
       const cpu   = w.price && wears ? fmtMoney(Math.round(w.price/wears)) : '—';
-      const wornToday = logsForWatch(w.id).some(l => l.date === today);
+      const wornToday = wLogs.some(l => l.date === today);
       const rankBadge = isRanking && (eloRatings[w.id] != null)
         ? `<span class="rank-badge-card" title="${eloRatings[w.id]} pts">${medals[idx] || '#'+(idx+1)}</span>` : '';
       const dragHandle = isRanking
@@ -12144,7 +12145,7 @@ function addReceipt() {
     if (idx < 0) return;
     if (!watches[idx].receipts) watches[idx].receipts = [];
     const results = await Promise.allSettled([...input.files].map(async (file) => {
-      const rId = Date.now().toString(36) + Math.random().toString(36).slice(2);
+      const rId = uid();
       const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
       let data;
       if (currentUser) {
@@ -12285,7 +12286,7 @@ function addReceiptFromEdit() {
     if (idx < 0) return;
     if (!watches[idx].receipts) watches[idx].receipts = [];
     const results = await Promise.allSettled([...input.files].map(async (file) => {
-      const rId = Date.now().toString(36) + Math.random().toString(36).slice(2);
+      const rId = uid();
       const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
       let data;
       if (currentUser) {
@@ -14494,8 +14495,18 @@ db.auth.onAuthStateChange((event, session) => {
 // ── Foreground detection — reload feed when app returns from background ───────
 let _lastHiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') { _lastHiddenAt = Date.now(); return; }
+  if (document.visibilityState === 'hidden') {
+    _lastHiddenAt = Date.now();
+    // Pause notification polling while tab is hidden
+    if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }
+    return;
+  }
   if (document.visibilityState !== 'visible') return;
+  // Resume notification polling
+  if (currentUser && !window._notifPollId) {
+    loadNotifications();
+    window._notifPollId = setInterval(loadNotifications, 30000);
+  }
 
   const bgDuration = _lastHiddenAt ? Date.now() - _lastHiddenAt : 0;
 
