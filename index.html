@@ -2315,7 +2315,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <button class="view-btn" id="view-list-btn" onclick="setCollView('list')" title="List view"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
         </div>
         <button class="btn btn-ghost" onclick="startGame()" title="Ranking Game" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="btn-label"> Ranking Game</span></button>
-        <button class="btn btn-ghost" onclick="openTimegrapher()" title="Timegrapher" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="btn-label">Timegrapher</span></button>
+        <button class="btn btn-ghost tg-admin-only" onclick="openTimegrapher()" title="Timegrapher" style="display:none;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="btn-label">Timegrapher</span></button>
         <button class="btn btn-ghost" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="btn-label"> Add From Photo</span></button>
         <button class="btn btn-primary" onclick="openAddWatch()" title="Add Watch"><span class="btn-label-full">+ Add Watch</span><span class="btn-label-short">+ Add</span></button>
       </div>
@@ -4121,7 +4121,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.11.32';
+const APP_VERSION = '2.36.14.11.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8726,6 +8726,7 @@ const TG_POSITIONS = [
 ];
 
 function openTimegrapher(watchId) {
+  if (!_currentUser || _currentUser.id !== ADMIN_USER_ID) return;
   const modal = document.getElementById('timegrapher-modal');
   // Populate watch selector
   const sel = document.getElementById('tg-watch-select');
@@ -8833,34 +8834,38 @@ async function startTimegrapher() {
     document.getElementById('tg-results').style.display = '';
     clearTgCanvas();
 
-    const expectedInterval = 3600000 / _tgBph;
-    const refractory = expectedInterval * 0.4;
-    let lastTickTime = 0;
+    const expectedInterval = 3600000 / _tgBph; // ms between ticks
     let _tgRenderPending = false;
     let lastNoiseUpdate = 0;
     let bufferCount = 0;
 
-    // Amplitude-based detection with calibration
-    const CALIBRATION_BUFFERS = 25;
-    let calibrating = true;
-    let calPeaks = [];
-    let ambientPeak = 0;
-    let rollingPeak = 0;
-    const ROLLING_DECAY = 0.97;
+    // --- Autocorrelation-based period detection ---
+    // Instead of detecting individual ticks (impossible at -60dB SNR),
+    // accumulate raw samples and use autocorrelation to find periodicity.
+    const WINDOW_SAMPLES = 64; // ~1.3ms energy windows at 48kHz
+    const windowDuration = WINDOW_SAMPLES / sampleRate * 1000; // ms per window
+    // Store energy envelope: ring buffer for ~10 seconds
+    const envCapacity = Math.ceil(10000 / windowDuration); // ~7500 entries
+    const envelope = new Float32Array(envCapacity);
+    let envWrite = 0;
+    let envCount = 0;
+    // Autocorrelation search range: ±30% of expected interval
+    const minLag = Math.max(2, Math.round((expectedInterval * 0.7) / windowDuration));
+    const maxLag = Math.round((expectedInterval * 1.3) / windowDuration);
+    let lastAnalysis = 0;
+    const ANALYSIS_INTERVAL = 2000; // run autocorrelation every 2s
+    // Results from autocorrelation
+    let acRate = null, acBeatError = null, acConfidence = 0;
+    let acDetectedInterval = 0;
 
     // === DEBUG LOG ===
     const _dbg = {
-      sampleRate: sampleRate,
-      bph: _tgBph,
-      sensitivity: _tgSensitivity,
-      bufferSize: 2048,
-      startTime: Date.now(),
-      calPeaks: [],           // all calibration buffer peaks
-      ambientPeak: 0,         // final calibrated value
-      bufferPeaks: [],        // every buffer's peak (capped at 500 entries)
-      tickEvents: [],         // every detected tick: {time, amp, threshold, rollingPeak}
-      bufferRms: [],          // every buffer's RMS (capped at 500)
-      peakHistogram: {},      // histogram of peak amplitudes (bucketed)
+      sampleRate: sampleRate, bph: _tgBph, sensitivity: _tgSensitivity,
+      bufferSize: 2048, startTime: Date.now(),
+      bufferPeaks: [], bufferRms: [], peakHistogram: {},
+      acResults: [], // autocorrelation results over time
+      envWindowDuration: windowDuration,
+      minLag: minLag, maxLag: maxLag,
     };
 
     scriptNode.onaudioprocess = function(e) {
@@ -8868,10 +8873,9 @@ async function startTimegrapher() {
       const samples = e.inputBuffer.getChannelData(0);
       const bufLen = samples.length;
       const now = performance.now();
-      const bufStartTime = now - (bufLen / sampleRate) * 1000;
       bufferCount++;
 
-      // Find peak amplitude + RMS
+      // Find peak amplitude + RMS for noise display
       let maxAmp = 0, sumSq = 0;
       for (let i = 0; i < bufLen; i++) {
         const s = samples[i];
@@ -8881,12 +8885,11 @@ async function startTimegrapher() {
       }
       const rms = Math.sqrt(sumSq / bufLen);
 
-      // Debug: log buffer stats (sample every 5th buffer to keep size manageable)
+      // Debug logging (every 5th buffer, up to 500)
       if (bufferCount % 5 === 0 && _dbg.bufferPeaks.length < 500) {
         _dbg.bufferPeaks.push(+(maxAmp.toFixed(6)));
         _dbg.bufferRms.push(+(rms.toFixed(6)));
       }
-      // Debug: peak histogram (bucket by order of magnitude)
       const bucket = maxAmp < 0.0001 ? '<0.0001' :
                      maxAmp < 0.001 ? '0.0001-0.001' :
                      maxAmp < 0.005 ? '0.001-0.005' :
@@ -8895,85 +8898,155 @@ async function startTimegrapher() {
                      maxAmp < 0.1 ? '0.05-0.1' : '>0.1';
       _dbg.peakHistogram[bucket] = (_dbg.peakHistogram[bucket] || 0) + 1;
 
-      // --- Noise level UI (throttled) ---
+      // --- Noise level UI ---
       if (now - lastNoiseUpdate > 150) {
         lastNoiseUpdate = now;
         const pct = Math.min(100, maxAmp * 200);
         const bar = document.getElementById('tg-noise-bar');
         const lbl = document.getElementById('tg-noise-label');
         bar.style.width = pct + '%';
-        if (calibrating) {
+        if (envCount < envCapacity * 0.3) {
           bar.style.background = '#3b82f6';
-          lbl.textContent = 'Calibrating...';
-        } else if (maxAmp < 0.001) {
-          bar.style.background = '#ef4444';
-          lbl.textContent = 'No signal — check mic access';
-        } else if (pct < 30) {
-          bar.style.background = '#22c55e';
-          lbl.textContent = 'Listening...';
-        } else if (pct < 60) {
-          bar.style.background = '#eab308';
-          lbl.textContent = 'Moderate — OK';
+          lbl.textContent = 'Accumulating signal... ' + Math.round(envCount / envCapacity * 100) + '%';
+        } else if (acRate !== null) {
+          bar.style.background = acConfidence > 0.3 ? '#22c55e' : '#eab308';
+          lbl.textContent = 'Confidence: ' + (acConfidence * 100).toFixed(0) + '% | Interval: ' + acDetectedInterval.toFixed(1) + 'ms';
         } else {
-          bar.style.background = '#ef4444';
-          lbl.textContent = 'Noisy — Move to quieter spot';
+          bar.style.background = '#eab308';
+          lbl.textContent = 'Analyzing...';
         }
       }
 
-      // --- Calibration phase ---
-      if (calibrating) {
-        calPeaks.push(maxAmp);
-        _dbg.calPeaks.push(+(maxAmp.toFixed(6)));
-        if (bufferCount >= CALIBRATION_BUFFERS) {
-          calPeaks.sort((a, b) => a - b);
-          ambientPeak = calPeaks[Math.floor(calPeaks.length * 0.9)] || 0.001;
-          rollingPeak = ambientPeak;
-          _dbg.ambientPeak = +(ambientPeak.toFixed(6));
-          calPeaks = null;
-          calibrating = false;
+      // --- Build energy envelope ---
+      for (let start = 0; start + WINDOW_SAMPLES <= bufLen; start += WINDOW_SAMPLES) {
+        let winEnergy = 0;
+        for (let j = start; j < start + WINDOW_SAMPLES; j++) {
+          winEnergy += samples[j] * samples[j];
         }
-        return;
+        envelope[envWrite % envCapacity] = winEnergy / WINDOW_SAMPLES;
+        envWrite++;
+        envCount = Math.min(envCount + 1, envCapacity);
       }
 
-      // --- Tick detection ---
-      const multiplier = 5.0 - (_tgSensitivity / 100) * 3.5;
-      const threshold = rollingPeak * multiplier;
+      // --- Autocorrelation analysis (every 2 seconds, needs at least 3s of data) ---
+      if (now - lastAnalysis > ANALYSIS_INTERVAL && envCount > envCapacity * 0.3) {
+        lastAnalysis = now;
+        const N = envCount;
+        // Compute mean energy
+        let mean = 0;
+        for (let i = 0; i < N; i++) mean += envelope[i];
+        mean /= N;
+        // Compute variance for normalization
+        let variance = 0;
+        for (let i = 0; i < N; i++) {
+          const d = envelope[i] - mean;
+          variance += d * d;
+        }
+        variance /= N;
 
-      for (let i = 1; i < bufLen - 1; i++) {
-        const amp = Math.abs(samples[i]);
-        if (amp > threshold &&
-            amp >= Math.abs(samples[i - 1]) &&
-            amp >= Math.abs(samples[i + 1])) {
-          const peakTime = bufStartTime + (i / sampleRate) * 1000;
-          if (peakTime - lastTickTime > refractory) {
-            _tgTicks.push(peakTime);
-            lastTickTime = peakTime;
-            // Debug: log tick event
-            _dbg.tickEvents.push({
-              t: +(peakTime.toFixed(1)),
-              amp: +(amp.toFixed(6)),
-              thr: +(threshold.toFixed(6)),
-              roll: +(rollingPeak.toFixed(6))
-            });
-            i += Math.floor(sampleRate * 0.005);
+        if (variance > 0) {
+          let bestLag = 0, bestCorr = -1;
+          const corrValues = [];
+          for (let lag = minLag; lag <= maxLag && lag < N / 2; lag++) {
+            let corr = 0;
+            const pairs = N - lag;
+            for (let i = 0; i < pairs; i++) {
+              corr += (envelope[i] - mean) * (envelope[(i + lag) % envCapacity] - mean);
+            }
+            corr = corr / (pairs * variance); // normalized [-1, 1]
+            corrValues.push({ lag, corr: +(corr.toFixed(4)) });
+            if (corr > bestCorr) { bestCorr = corr; bestLag = lag; }
           }
+
+          acDetectedInterval = bestLag * windowDuration;
+          acConfidence = Math.max(0, bestCorr);
+          acRate = ((acDetectedInterval - expectedInterval) / expectedInterval) * 86400;
+          acRate = Math.round(acRate * 10) / 10;
+
+          // Compute beat error from secondary peak analysis
+          // Look at lag = 2x best lag (full tick-tock cycle)
+          const doubleLag = bestLag * 2;
+          if (doubleLag < N / 2) {
+            let corrDouble = 0;
+            const pairsD = N - doubleLag;
+            for (let i = 0; i < pairsD; i++) {
+              corrDouble += (envelope[i] - mean) * (envelope[(i + doubleLag) % envCapacity] - mean);
+            }
+            corrDouble = corrDouble / (pairsD * variance);
+            // If double-lag correlation is significantly higher than single-lag,
+            // it means tick and tock have different amplitudes → beat error
+            if (corrDouble > bestCorr) {
+              // Try to find the actual tick-tock split
+              const halfLag = Math.round(bestLag / 2);
+              if (halfLag >= minLag) {
+                let corrHalf = 0;
+                const pairsH = N - halfLag;
+                for (let i = 0; i < pairsH; i++) {
+                  corrHalf += (envelope[i] - mean) * (envelope[(i + halfLag) % envCapacity] - mean);
+                }
+                corrHalf = corrHalf / (pairsH * variance);
+                acBeatError = Math.abs(acDetectedInterval - halfLag * windowDuration * 2);
+                acBeatError = Math.round(acBeatError * 100) / 100;
+              }
+            } else {
+              acBeatError = 0;
+            }
+          }
+
+          // Debug: log this analysis
+          _dbg.acResults.push({
+            t: +(now.toFixed(0)),
+            envCount: N,
+            bestLag, bestCorr: +(bestCorr.toFixed(4)),
+            detectedIntervalMs: +(acDetectedInterval.toFixed(2)),
+            rate: acRate,
+            beatError: acBeatError,
+            topCorrelations: corrValues.sort((a, b) => b.corr - a.corr).slice(0, 10)
+          });
         }
       }
 
-      if (maxAmp < ambientPeak * 3) {
-        rollingPeak = rollingPeak * ROLLING_DECAY + maxAmp * (1 - ROLLING_DECAY);
+      // --- Synthesize tick timestamps from autocorrelation for display ---
+      // Generate evenly-spaced "virtual ticks" at the detected interval
+      if (acRate !== null && acConfidence > 0.1 && acDetectedInterval > 0) {
+        const elapsed = now - _tgStartTime;
+        const expectedTicks = Math.floor(elapsed / acDetectedInterval);
+        while (_tgTicks.length < expectedTicks && _tgTicks.length < 10000) {
+          const nextTick = _tgStartTime + (_tgTicks.length + 1) * acDetectedInterval;
+          _tgTicks.push(nextTick);
+        }
       }
 
-      if (bufferCount % 4 === 0 && !_tgRenderPending) {
+      // Update UI periodically
+      if (bufferCount % 8 === 0 && !_tgRenderPending) {
         _tgRenderPending = true;
-        requestAnimationFrame(() => { updateTgResults(); renderTgDiagram(); _tgRenderPending = false; });
+        requestAnimationFrame(() => {
+          // Override results display with autocorrelation values
+          const rateEl = document.getElementById('tg-rate');
+          const beEl = document.getElementById('tg-beat-error');
+          const tcEl = document.getElementById('tg-tick-count');
+          if (acRate !== null && acConfidence > 0.1) {
+            rateEl.textContent = (acRate >= 0 ? '+' : '') + acRate;
+            rateEl.style.color = Math.abs(acRate) <= 20 ? '#22c55e' : Math.abs(acRate) <= 60 ? '#eab308' : '#ef4444';
+            beEl.textContent = acBeatError !== null ? acBeatError.toFixed(2) : '—';
+            tcEl.textContent = 'AC';
+          } else {
+            rateEl.textContent = '—';
+            rateEl.style.color = '';
+            beEl.textContent = '—';
+            tcEl.textContent = 'analyzing';
+          }
+          renderTgDiagram();
+          _tgRenderPending = false;
+        });
       }
 
+      // Output silence
       const output = e.outputBuffer.getChannelData(0);
       for (let i = 0; i < output.length; i++) output[i] = 0;
     };
 
-    // Store debug ref so stopTimegrapher can save it to Supabase
+    // Store debug ref
     _tgDebugLog = _dbg;
 
     // Connect: source → scriptNode → destination (raw signal, no filters)
@@ -15202,6 +15275,10 @@ async function bootApp(user) {
   if (feedbackFab) feedbackFab.style.display = 'flex';
   const bellBtn = document.getElementById('bell-btn');
   if (bellBtn) bellBtn.style.display = '';
+  // Show timegrapher button only for admin
+  if (user.id === ADMIN_USER_ID) {
+    document.querySelectorAll('.tg-admin-only').forEach(el => el.style.display = 'inline-flex');
+  }
   // Start feed/social loading immediately — don't block on user data
   try {
     initApp();
