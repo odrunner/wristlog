@@ -4121,7 +4121,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.08.09';
+const APP_VERSION = '2.36.14.10.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8715,8 +8715,8 @@ function renderRecSettingsBody() {
 }
 
 // ── Timegrapher ──
-let _tgAudioCtx = null, _tgStream = null, _tgAnalyser = null, _tgRunning = false;
-let _tgTicks = [], _tgPollId = null, _tgNoiseId = null, _tgStartTime = 0;
+let _tgAudioCtx = null, _tgStream = null, _tgScriptNode = null, _tgRunning = false;
+let _tgTicks = [], _tgStartTime = 0;
 let _tgBph = 28800, _tgPosition = 'dial_up';
 const TG_BPH_OPTIONS = [18000, 21600, 25200, 28800, 36000];
 const TG_POSITIONS = [
@@ -8810,18 +8810,9 @@ async function startTimegrapher() {
 
     const source = _tgAudioCtx.createMediaStreamSource(_tgStream);
 
-    // Single analyser on raw signal — no filters (max compatibility)
-    _tgAnalyser = _tgAudioCtx.createAnalyser();
-    _tgAnalyser.fftSize = 1024;
-    _tgAnalyser.smoothingTimeConstant = 0;
-    source.connect(_tgAnalyser);
-
-    // iOS Safari requires the graph to connect to destination for data to flow.
-    // Route through a zero-gain node so nothing plays through speakers.
-    const silentGain = _tgAudioCtx.createGain();
-    silentGain.gain.value = 0;
-    _tgAnalyser.connect(silentGain);
-    silentGain.connect(_tgAudioCtx.destination);
+    // Use ScriptProcessorNode for direct PCM access (works reliably on iOS)
+    const scriptNode = _tgAudioCtx.createScriptProcessor(4096, 1, 1);
+    _tgScriptNode = scriptNode;
 
     _tgTicks = [];
     _tgStartTime = performance.now();
@@ -8831,37 +8822,63 @@ async function startTimegrapher() {
     document.getElementById('tg-results').style.display = '';
     clearTgCanvas();
 
-    const bufLen = _tgAnalyser.fftSize;
-    const buf = new Uint8Array(bufLen);
     const expectedInterval = 3600000 / _tgBph;
     const refractory = expectedInterval * 0.55;
     let lastTickTime = 0;
     // Track recent peak levels to auto-calibrate
     const recentPeaks = [];
-    const PEAK_HISTORY = 100;
-
+    const PEAK_HISTORY = 80;
     let _tgRenderPending = false;
-    _tgPollId = setInterval(() => {
-      if (!_tgAnalyser) return;
-      _tgAnalyser.getByteTimeDomainData(buf);
-      // Find peak amplitude deviation from center (128)
-      let maxDev = 0;
-      for (let i = 0; i < bufLen; i++) {
-        const dev = Math.abs(buf[i] - 128);
-        if (dev > maxDev) maxDev = dev;
+    // For noise level UI updates (throttle to ~7fps)
+    let lastNoiseUpdate = 0;
+
+    scriptNode.onaudioprocess = function(e) {
+      if (!_tgRunning) return;
+      const samples = e.inputBuffer.getChannelData(0); // Float32Array, -1 to 1
+      // Find peak absolute amplitude in this buffer
+      let maxAmp = 0;
+      for (let i = 0; i < samples.length; i++) {
+        const a = Math.abs(samples[i]);
+        if (a > maxAmp) maxAmp = a;
       }
+
+      // --- Noise level UI (throttled) ---
+      const now = performance.now();
+      if (now - lastNoiseUpdate > 150) {
+        lastNoiseUpdate = now;
+        const pct = Math.min(100, maxAmp * 300); // 0.33 amplitude = 100%
+        const bar = document.getElementById('tg-noise-bar');
+        const lbl = document.getElementById('tg-noise-label');
+        bar.style.width = pct + '%';
+        if (maxAmp < 0.002) {
+          bar.style.background = '#ef4444';
+          lbl.textContent = 'No signal — check mic access';
+        } else if (pct < 30) {
+          bar.style.background = '#22c55e';
+          lbl.textContent = 'Quiet — Good';
+        } else if (pct < 60) {
+          bar.style.background = '#eab308';
+          lbl.textContent = 'Moderate — OK';
+        } else {
+          bar.style.background = '#ef4444';
+          lbl.textContent = 'Noisy — Move to quieter spot';
+        }
+      }
+
+      // --- Tick detection ---
       // Track recent peaks for auto-calibration
-      recentPeaks.push(maxDev);
+      recentPeaks.push(maxAmp);
       if (recentPeaks.length > PEAK_HISTORY) recentPeaks.shift();
+
       // Compute baseline: median of recent peaks (ambient noise floor)
       const sorted = [...recentPeaks].sort((a, b) => a - b);
-      const baseline = sorted[Math.floor(sorted.length * 0.5)] || 1;
-      // Sensitivity maps 0-100 to threshold multiplier 4.0x down to 1.3x
-      const multiplier = 4.0 - (_tgSensitivity / 100) * 2.7;
-      const threshold = Math.max(baseline * multiplier, 2); // min 2 (out of 128)
+      const baseline = sorted[Math.floor(sorted.length * 0.5)] || 0.001;
 
-      const now = performance.now();
-      if (maxDev > threshold && (now - lastTickTime) > refractory) {
+      // Sensitivity maps 0-100 to threshold multiplier 4.0x down to 1.5x
+      const multiplier = 4.0 - (_tgSensitivity / 100) * 2.5;
+      const threshold = Math.max(baseline * multiplier, 0.005);
+
+      if (maxAmp > threshold && (now - lastTickTime) > refractory) {
         _tgTicks.push(now);
         lastTickTime = now;
         if (!_tgRenderPending) {
@@ -8869,35 +8886,15 @@ async function startTimegrapher() {
           requestAnimationFrame(() => { updateTgResults(); renderTgDiagram(); _tgRenderPending = false; });
         }
       }
-    }, 10);
 
-    // Noise level + signal monitor
-    _tgNoiseId = setInterval(() => {
-      if (!_tgAnalyser) return;
-      _tgAnalyser.getByteTimeDomainData(buf);
-      let maxDev = 0;
-      for (let i = 0; i < bufLen; i++) {
-        const dev = Math.abs(buf[i] - 128);
-        if (dev > maxDev) maxDev = dev;
-      }
-      const pct = Math.min(100, (maxDev / 128) * 300);
-      const bar = document.getElementById('tg-noise-bar');
-      const lbl = document.getElementById('tg-noise-label');
-      bar.style.width = pct + '%';
-      if (maxDev <= 1) {
-        bar.style.background = '#ef4444';
-        lbl.textContent = 'No signal — check mic access';
-      } else if (pct < 30) {
-        bar.style.background = '#22c55e';
-        lbl.textContent = 'Quiet — Good';
-      } else if (pct < 60) {
-        bar.style.background = '#eab308';
-        lbl.textContent = 'Moderate — OK';
-      } else {
-        bar.style.background = '#ef4444';
-        lbl.textContent = 'Noisy — Move to quieter spot';
-      }
-    }, 150);
+      // Pass through (required for iOS — node must connect to destination)
+      const output = e.outputBuffer.getChannelData(0);
+      for (let i = 0; i < output.length; i++) output[i] = 0; // silence
+    };
+
+    // Connect: source → scriptNode → destination (iOS needs full chain)
+    source.connect(scriptNode);
+    scriptNode.connect(_tgAudioCtx.destination);
 
   } catch (e) {
     console.error('[WristLog] Timegrapher audio error:', e);
@@ -8910,11 +8907,9 @@ async function startTimegrapher() {
 
 function stopTimegrapher() {
   _tgRunning = false;
-  if (_tgPollId) { clearInterval(_tgPollId); _tgPollId = null; }
-  if (_tgNoiseId) { clearInterval(_tgNoiseId); _tgNoiseId = null; }
+  if (_tgScriptNode) { _tgScriptNode.disconnect(); _tgScriptNode = null; }
   if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
   if (_tgAudioCtx) { _tgAudioCtx.close().catch(() => {}); _tgAudioCtx = null; }
-  _tgAnalyser = null;
   document.getElementById('tg-start-btn').textContent = 'Start Listening';
   if (_tgTicks.length >= 20) {
     document.getElementById('tg-save-btn').style.display = 'block';
