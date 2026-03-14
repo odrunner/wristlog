@@ -4121,7 +4121,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.11.40';
+const APP_VERSION = '2.36.14.12.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8726,7 +8726,7 @@ const TG_POSITIONS = [
 ];
 
 function openTimegrapher(watchId) {
-  if (!_currentUser || _currentUser.id !== ADMIN_USER_ID) return;
+  if (!currentUser || currentUser.id !== ADMIN_USER_ID) return;
   const modal = document.getElementById('timegrapher-modal');
   // Populate watch selector
   const sel = document.getElementById('tg-watch-select');
