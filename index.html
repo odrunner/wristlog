@@ -4121,7 +4121,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.10.49';
+const APP_VERSION = '2.36.14.10.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8715,7 +8715,7 @@ function renderRecSettingsBody() {
 }
 
 // ── Timegrapher ──
-let _tgAudioCtx = null, _tgStream = null, _tgScriptNode = null, _tgRunning = false;
+let _tgAudioCtx = null, _tgStream = null, _tgScriptNode = null, _tgRunning = false, _tgDebugLog = null;
 let _tgTicks = [], _tgStartTime = 0;
 let _tgBph = 28800, _tgPosition = 'dial_up';
 const TG_BPH_OPTIONS = [18000, 21600, 25200, 28800, 36000];
@@ -8841,13 +8841,27 @@ async function startTimegrapher() {
     let bufferCount = 0;
 
     // Amplitude-based detection with calibration
-    const CALIBRATION_BUFFERS = 25; // ~1.2s warmup
+    const CALIBRATION_BUFFERS = 25;
     let calibrating = true;
-    let calPeaks = []; // per-buffer peak amplitudes during calibration
-    let ambientPeak = 0; // calibrated ambient peak level
-    // Rolling peak tracker (adapts to changing ambient noise)
+    let calPeaks = [];
+    let ambientPeak = 0;
     let rollingPeak = 0;
-    const ROLLING_DECAY = 0.97; // decays toward ambient over time
+    const ROLLING_DECAY = 0.97;
+
+    // === DEBUG LOG ===
+    const _dbg = {
+      sampleRate: sampleRate,
+      bph: _tgBph,
+      sensitivity: _tgSensitivity,
+      bufferSize: 2048,
+      startTime: Date.now(),
+      calPeaks: [],           // all calibration buffer peaks
+      ambientPeak: 0,         // final calibrated value
+      bufferPeaks: [],        // every buffer's peak (capped at 500 entries)
+      tickEvents: [],         // every detected tick: {time, amp, threshold, rollingPeak}
+      bufferRms: [],          // every buffer's RMS (capped at 500)
+      peakHistogram: {},      // histogram of peak amplitudes (bucketed)
+    };
 
     scriptNode.onaudioprocess = function(e) {
       if (!_tgRunning) return;
@@ -8857,12 +8871,29 @@ async function startTimegrapher() {
       const bufStartTime = now - (bufLen / sampleRate) * 1000;
       bufferCount++;
 
-      // Find peak amplitude in this buffer
-      let maxAmp = 0;
+      // Find peak amplitude + RMS
+      let maxAmp = 0, sumSq = 0;
       for (let i = 0; i < bufLen; i++) {
-        const a = Math.abs(samples[i]);
+        const s = samples[i];
+        sumSq += s * s;
+        const a = Math.abs(s);
         if (a > maxAmp) maxAmp = a;
       }
+      const rms = Math.sqrt(sumSq / bufLen);
+
+      // Debug: log buffer stats (sample every 5th buffer to keep size manageable)
+      if (bufferCount % 5 === 0 && _dbg.bufferPeaks.length < 500) {
+        _dbg.bufferPeaks.push(+(maxAmp.toFixed(6)));
+        _dbg.bufferRms.push(+(rms.toFixed(6)));
+      }
+      // Debug: peak histogram (bucket by order of magnitude)
+      const bucket = maxAmp < 0.0001 ? '<0.0001' :
+                     maxAmp < 0.001 ? '0.0001-0.001' :
+                     maxAmp < 0.005 ? '0.001-0.005' :
+                     maxAmp < 0.01 ? '0.005-0.01' :
+                     maxAmp < 0.05 ? '0.01-0.05' :
+                     maxAmp < 0.1 ? '0.05-0.1' : '>0.1';
+      _dbg.peakHistogram[bucket] = (_dbg.peakHistogram[bucket] || 0) + 1;
 
       // --- Noise level UI (throttled) ---
       if (now - lastNoiseUpdate > 150) {
@@ -8873,13 +8904,13 @@ async function startTimegrapher() {
         bar.style.width = pct + '%';
         if (calibrating) {
           bar.style.background = '#3b82f6';
-          lbl.textContent = 'Calibrating... peak=' + maxAmp.toFixed(4);
+          lbl.textContent = 'Calibrating...';
         } else if (maxAmp < 0.001) {
           bar.style.background = '#ef4444';
           lbl.textContent = 'No signal — check mic access';
         } else if (pct < 30) {
           bar.style.background = '#22c55e';
-          lbl.textContent = 'Listening... amb=' + ambientPeak.toFixed(4) + ' thr=' + (ambientPeak * (5.0 - (_tgSensitivity / 100) * 3.5)).toFixed(4);
+          lbl.textContent = 'Listening...';
         } else if (pct < 60) {
           bar.style.background = '#eab308';
           lbl.textContent = 'Moderate — OK';
@@ -8892,23 +8923,22 @@ async function startTimegrapher() {
       // --- Calibration phase ---
       if (calibrating) {
         calPeaks.push(maxAmp);
+        _dbg.calPeaks.push(+(maxAmp.toFixed(6)));
         if (bufferCount >= CALIBRATION_BUFFERS) {
-          // Set ambient peak to 90th percentile of buffer peaks
           calPeaks.sort((a, b) => a - b);
           ambientPeak = calPeaks[Math.floor(calPeaks.length * 0.9)] || 0.001;
           rollingPeak = ambientPeak;
+          _dbg.ambientPeak = +(ambientPeak.toFixed(6));
           calPeaks = null;
           calibrating = false;
         }
         return;
       }
 
-      // --- Tick detection: absolute amplitude threshold ---
-      // Sensitivity maps 0-100 to multiplier 5.0x down to 1.5x above ambient
+      // --- Tick detection ---
       const multiplier = 5.0 - (_tgSensitivity / 100) * 3.5;
       const threshold = rollingPeak * multiplier;
 
-      // Scan for peaks above threshold with sample-precise timing
       for (let i = 1; i < bufLen - 1; i++) {
         const amp = Math.abs(samples[i]);
         if (amp > threshold &&
@@ -8918,27 +8948,33 @@ async function startTimegrapher() {
           if (peakTime - lastTickTime > refractory) {
             _tgTicks.push(peakTime);
             lastTickTime = peakTime;
-            i += Math.floor(sampleRate * 0.005); // skip 5ms past this peak
+            // Debug: log tick event
+            _dbg.tickEvents.push({
+              t: +(peakTime.toFixed(1)),
+              amp: +(amp.toFixed(6)),
+              thr: +(threshold.toFixed(6)),
+              roll: +(rollingPeak.toFixed(6))
+            });
+            i += Math.floor(sampleRate * 0.005);
           }
         }
       }
 
-      // Slowly adapt rolling peak toward current ambient level
-      // (but don't let ticks inflate it — use buffer peak only if below 2x ambient)
       if (maxAmp < ambientPeak * 3) {
         rollingPeak = rollingPeak * ROLLING_DECAY + maxAmp * (1 - ROLLING_DECAY);
       }
 
-      // Update UI periodically
       if (bufferCount % 4 === 0 && !_tgRenderPending) {
         _tgRenderPending = true;
         requestAnimationFrame(() => { updateTgResults(); renderTgDiagram(); _tgRenderPending = false; });
       }
 
-      // Output silence (required for iOS — node must connect to destination)
       const output = e.outputBuffer.getChannelData(0);
       for (let i = 0; i < output.length; i++) output[i] = 0;
     };
+
+    // Store debug ref so stopTimegrapher can save it to Supabase
+    _tgDebugLog = _dbg;
 
     // Connect: source → scriptNode → destination (raw signal, no filters)
     source.connect(scriptNode);
@@ -8958,6 +8994,22 @@ function stopTimegrapher() {
   if (_tgScriptNode) { _tgScriptNode.disconnect(); _tgScriptNode = null; }
   if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
   if (_tgAudioCtx) { _tgAudioCtx.close().catch(() => {}); _tgAudioCtx = null; }
+
+  // Save debug log to Supabase for remote analysis
+  if (_tgDebugLog && _currentUser) {
+    _tgDebugLog.endTime = Date.now();
+    _tgDebugLog.totalTicks = _tgTicks.length;
+    _tgDebugLog.tickTimestamps = _tgTicks.slice(0, 500).map(t => +(t.toFixed(1)));
+    const results = computeTgResults(_tgTicks, _tgBph);
+    _tgDebugLog.results = results;
+    supabase.from('profiles').update({
+      tg_debug: _tgDebugLog
+    }).eq('id', _currentUser.id).then(() => {
+      console.log('[TG] Debug log saved to profile.tg_debug');
+    });
+    _tgDebugLog = null;
+  }
+
   document.getElementById('tg-start-btn').textContent = 'Start Listening';
   if (_tgTicks.length >= 20) {
     document.getElementById('tg-save-btn').style.display = 'block';
