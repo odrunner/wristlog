@@ -4109,7 +4109,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.07.36';
+const APP_VERSION = '2.36.14.07.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8782,11 +8782,27 @@ async function startTimegrapher() {
   }
   const AC = window.AudioContext || window.webkitAudioContext;
   _tgAudioCtx = new AC();
+  const sampleRate = _tgAudioCtx.sampleRate;
   const source = _tgAudioCtx.createMediaStreamSource(_tgStream);
+
+  // High-pass filter at 2kHz to isolate tick transients from low-freq ambient noise
+  const hpFilter = _tgAudioCtx.createBiquadFilter();
+  hpFilter.type = 'highpass';
+  hpFilter.frequency.value = 2000;
+  hpFilter.Q.value = 0.7;
+  source.connect(hpFilter);
+
+  // Analyser on filtered signal for tick detection
   _tgAnalyser = _tgAudioCtx.createAnalyser();
-  _tgAnalyser.fftSize = 2048;
+  _tgAnalyser.fftSize = 512; // smaller window = better time resolution
   _tgAnalyser.smoothingTimeConstant = 0;
-  source.connect(_tgAnalyser);
+  hpFilter.connect(_tgAnalyser);
+
+  // Second analyser on raw signal for noise level display
+  const _tgRawAnalyser = _tgAudioCtx.createAnalyser();
+  _tgRawAnalyser.fftSize = 2048;
+  _tgRawAnalyser.smoothingTimeConstant = 0.3;
+  source.connect(_tgRawAnalyser);
 
   _tgTicks = [];
   _tgStartTime = performance.now();
@@ -8801,39 +8817,45 @@ async function startTimegrapher() {
   const expectedInterval = 3600000 / _tgBph; // ms
   const refractory = expectedInterval * 0.55; // min ms between ticks
   let lastTickTime = 0;
-  let noiseFloor = 0.01;
-  let noiseAlpha = 0.995;
+  // Adaptive envelope follower
+  let envelope = 0;
+  const envAttack = 0.3;   // fast rise
+  const envRelease = 0.005; // slow decay
 
   let _tgRenderPending = false;
   _tgPollId = setInterval(() => {
     if (!_tgAnalyser) return;
     _tgAnalyser.getFloatTimeDomainData(buf);
-    // Compute peak
-    let peak = 0, sum = 0;
-    for (let i = 0; i < bufLen; i++) { const v = buf[i]; sum += v * v; const a = Math.abs(v); if (a > peak) peak = a; }
+    // Compute RMS of high-passed signal
+    let sum = 0;
+    for (let i = 0; i < bufLen; i++) sum += buf[i] * buf[i];
     const rms = Math.sqrt(sum / bufLen);
-    // Update noise floor (slow decay, but don't let ticks inflate it)
-    if (peak < noiseFloor * 3) noiseFloor = noiseFloor * noiseAlpha + rms * (1 - noiseAlpha);
-    // Tick detection: peak is 2.5x above noise floor, outside refractory period
-    const threshold = Math.max(noiseFloor * 2.5, 0.008);
+    // Envelope follower: fast attack, slow release
+    if (rms > envelope) {
+      envelope = envelope + envAttack * (rms - envelope);
+    } else {
+      envelope = envelope + envRelease * (rms - envelope);
+    }
+    // Tick = RMS spike above 1.8x the envelope, outside refractory
     const now = performance.now();
-    if (peak > threshold && (now - lastTickTime) > refractory) {
+    if (rms > envelope * 1.8 && rms > 0.003 && (now - lastTickTime) > refractory) {
       _tgTicks.push(now);
       lastTickTime = now;
-      // Throttle UI updates via rAF
       if (!_tgRenderPending) {
         _tgRenderPending = true;
         requestAnimationFrame(() => { updateTgResults(); renderTgDiagram(); _tgRenderPending = false; });
       }
     }
-  }, 10);
+  }, 8);
 
-  // Noise level display
+  // Noise level display (uses raw unfiltered signal)
+  const rawBuf = new Float32Array(_tgRawAnalyser.fftSize);
   _tgNoiseId = setInterval(() => {
-    _tgAnalyser.getFloatTimeDomainData(buf);
+    if (!_tgRawAnalyser) return;
+    _tgRawAnalyser.getFloatTimeDomainData(rawBuf);
     let sum = 0;
-    for (let i = 0; i < bufLen; i++) sum += buf[i] * buf[i];
-    const rms = Math.sqrt(sum / bufLen);
+    for (let i = 0; i < rawBuf.length; i++) sum += rawBuf[i] * rawBuf[i];
+    const rms = Math.sqrt(sum / rawBuf.length);
     const pct = Math.min(100, rms * 500);
     const bar = document.getElementById('tg-noise-bar');
     const lbl = document.getElementById('tg-noise-label');
