@@ -2400,6 +2400,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div id="admin-feedback-list"><div style="color:var(--muted);font-size:.9rem;">Loading…</div></div>
     </div>
 
+    <!-- Traffic -->
+    <div style="margin-top:2rem;">
+      <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Traffic</div>
+        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="renderAdminTraffic()">↻ Refresh</button>
+      </div>
+      <div id="admin-traffic" style="color:var(--muted);font-size:.9rem;">Loading…</div>
+    </div>
+
     <!-- Site Usage Report -->
     <div style="margin-top:2rem;">
       <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
@@ -3702,6 +3711,38 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 let currentUser = null; // set after sign-in
 const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
 
+// ── UTM / visit tracking ──────────────────────────────────────────────────
+(function trackVisit() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const utm_source = params.get('utm_source');
+    const utm_medium = params.get('utm_medium');
+    const utm_campaign = params.get('utm_campaign');
+    const utm_content = params.get('utm_content');
+    const utm_term = params.get('utm_term');
+    // Only track if there's a UTM param or a referrer from another site
+    const ref = document.referrer || null;
+    const externalRef = ref && !ref.includes(window.location.hostname) ? ref : null;
+    if (!utm_source && !utm_medium && !utm_campaign && !externalRef) return;
+    // Deduplicate: don't re-track within 30 min from same source
+    const dedupKey = 'wristlog_visit_' + (utm_source || '') + '_' + (utm_campaign || '');
+    const lastVisit = Number(localStorage.getItem(dedupKey) || 0);
+    if (Date.now() - lastVisit < 1800000) return;
+    localStorage.setItem(dedupKey, String(Date.now()));
+    db.from('page_visits').insert({
+      utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+      referrer: externalRef,
+      path: window.location.pathname,
+    }).then(() => {}).catch(() => {});
+    // Clean UTM params from URL without reload
+    if (utm_source) {
+      const clean = new URL(window.location.href);
+      ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(k => clean.searchParams.delete(k));
+      window.history.replaceState({}, '', clean.pathname + clean.search + clean.hash);
+    }
+  } catch(e) {}
+})();
+
 // Wrap a promise with a timeout to prevent hung queries
 function withTimeout(promise, ms = 10000) {
   let tid;
@@ -4034,7 +4075,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.15.48';
+const APP_VERSION = '2.36.14.15.55';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8997,6 +9038,7 @@ function showAdminPage() {
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('page-admin').classList.add('active');
   loadAdminStats();
+  renderAdminTraffic();
   loadAdminFeedback();
   loadAdminReports();
 }
@@ -9263,6 +9305,68 @@ async function loadAdminStats() {
       </div>`;
   } catch(e) {
     el.innerHTML = `<div style="color:var(--danger);font-size:.85rem;">Failed to load stats: ${escHtml(e.message)}</div>`;
+  }
+}
+
+// ── Admin Traffic Stats ───────────────────────────────────────────────────
+async function renderAdminTraffic() {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
+  const el = document.getElementById('admin-traffic');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Loading traffic…</div>';
+  try {
+    const now = new Date();
+    const d7 = new Date(now - 7 * 86400000).toISOString();
+    const d30 = new Date(now - 30 * 86400000).toISOString();
+    const [allRes, week7, week30] = await Promise.all([
+      db.from('page_visits').select('id', { count: 'exact', head: true }),
+      db.from('page_visits').select('utm_source, utm_medium, utm_campaign, referrer, created_at')
+        .gte('created_at', d7).order('created_at', { ascending: false }).limit(500),
+      db.from('page_visits').select('id', { count: 'exact', head: true }).gte('created_at', d30),
+    ]);
+    const total = allRes.count || 0;
+    const last30 = week30.count || 0;
+    const visits = week7.data || [];
+    const last7 = visits.length;
+
+    // Group by source
+    const bySource = {};
+    visits.forEach(v => {
+      const src = v.utm_source || (v.referrer ? new URL(v.referrer).hostname : 'direct');
+      bySource[src] = (bySource[src] || 0) + 1;
+    });
+    const sourceRows = Object.entries(bySource)
+      .sort((a, b) => b[1] - a[1])
+      .map(([src, cnt]) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${escHtml(src)}</span><span style="color:var(--gold);font-weight:600;">${cnt}</span></div>`)
+      .join('');
+
+    // Group by campaign
+    const byCampaign = {};
+    visits.filter(v => v.utm_campaign).forEach(v => {
+      byCampaign[v.utm_campaign] = (byCampaign[v.utm_campaign] || 0) + 1;
+    });
+    const campaignRows = Object.entries(byCampaign)
+      .sort((a, b) => b[1] - a[1])
+      .map(([c, cnt]) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${escHtml(c)}</span><span style="color:var(--gold);font-weight:600;">${cnt}</span></div>`)
+      .join('');
+
+    el.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Traffic Overview</div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>Total visits (all time)</span><span style="color:var(--gold);font-weight:600;">${total}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>Last 30 days</span><span style="color:var(--gold);font-weight:600;">${last30}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;"><span>Last 7 days</span><span style="color:var(--gold);font-weight:600;">${last7}</span></div>
+      </div>
+      ${sourceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">By Source (7 days)</div>
+        ${sourceRows}
+      </div>` : ''}
+      ${campaignRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">By Campaign (7 days)</div>
+        ${campaignRows}
+      </div>` : ''}`;
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:.85rem;">Failed to load traffic: ${escHtml(e.message)}</div>`;
   }
 }
 
