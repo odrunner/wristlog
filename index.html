@@ -4121,7 +4121,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.10.45';
+const APP_VERSION = '2.36.14.10.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8840,12 +8840,14 @@ async function startTimegrapher() {
     let lastNoiseUpdate = 0;
     let bufferCount = 0;
 
-    // Transient detection with calibration phase
-    const WINDOW = 64; // ~1.5ms at 44.1kHz
-    let runningEnergy = 0;
-    const CALIBRATION_BUFFERS = 25; // ~1.2s at 46ms/buffer — measure noise floor first
+    // Amplitude-based detection with calibration
+    const CALIBRATION_BUFFERS = 25; // ~1.2s warmup
     let calibrating = true;
-    let calibrationSamples = [];
+    let calPeaks = []; // per-buffer peak amplitudes during calibration
+    let ambientPeak = 0; // calibrated ambient peak level
+    // Rolling peak tracker (adapts to changing ambient noise)
+    let rollingPeak = 0;
+    const ROLLING_DECAY = 0.97; // decays toward ambient over time
 
     scriptNode.onaudioprocess = function(e) {
       if (!_tgRunning) return;
@@ -8855,15 +8857,12 @@ async function startTimegrapher() {
       const bufStartTime = now - (bufLen / sampleRate) * 1000;
       bufferCount++;
 
-      // Compute buffer-level RMS and peak
-      let sumSq = 0, maxAmp = 0;
+      // Find peak amplitude in this buffer
+      let maxAmp = 0;
       for (let i = 0; i < bufLen; i++) {
-        const s = samples[i];
-        sumSq += s * s;
-        const a = Math.abs(s);
+        const a = Math.abs(samples[i]);
         if (a > maxAmp) maxAmp = a;
       }
-      const bufRms = Math.sqrt(sumSq / bufLen);
 
       // --- Noise level UI (throttled) ---
       if (now - lastNoiseUpdate > 150) {
@@ -8880,7 +8879,7 @@ async function startTimegrapher() {
           lbl.textContent = 'No signal — check mic access';
         } else if (pct < 30) {
           bar.style.background = '#22c55e';
-          lbl.textContent = 'Listening... peak=' + maxAmp.toFixed(4) + ' floor=' + runningEnergy.toExponential(1);
+          lbl.textContent = 'Listening... amb=' + ambientPeak.toFixed(4) + ' thr=' + (ambientPeak * (5.0 - (_tgSensitivity / 100) * 3.5)).toFixed(4);
         } else if (pct < 60) {
           bar.style.background = '#eab308';
           lbl.textContent = 'Moderate — OK';
@@ -8890,55 +8889,44 @@ async function startTimegrapher() {
         }
       }
 
-      // --- Calibration phase: measure ambient noise floor ---
+      // --- Calibration phase ---
       if (calibrating) {
-        // Compute per-window energies for this buffer
-        for (let start = 0; start + WINDOW < bufLen; start += WINDOW) {
-          let winE = 0;
-          for (let j = start; j < start + WINDOW; j++) winE += samples[j] * samples[j];
-          calibrationSamples.push(winE / WINDOW);
-        }
+        calPeaks.push(maxAmp);
         if (bufferCount >= CALIBRATION_BUFFERS) {
-          // Set noise floor to the 75th percentile of window energies
-          calibrationSamples.sort((a, b) => a - b);
-          runningEnergy = calibrationSamples[Math.floor(calibrationSamples.length * 0.75)] || 1e-10;
-          calibrationSamples = null;
+          // Set ambient peak to 90th percentile of buffer peaks
+          calPeaks.sort((a, b) => a - b);
+          ambientPeak = calPeaks[Math.floor(calPeaks.length * 0.9)] || 0.001;
+          rollingPeak = ambientPeak;
+          calPeaks = null;
           calibrating = false;
         }
         return;
       }
 
-      // --- Tick detection (post-calibration) ---
-      // Sensitivity maps 0-100 to ratio threshold 10.0x down to 3.0x
-      const ratioThresh = 10.0 - (_tgSensitivity / 100) * 7.0;
+      // --- Tick detection: absolute amplitude threshold ---
+      // Sensitivity maps 0-100 to multiplier 5.0x down to 1.5x above ambient
+      const multiplier = 5.0 - (_tgSensitivity / 100) * 3.5;
+      const threshold = rollingPeak * multiplier;
 
-      for (let start = 0; start + WINDOW < bufLen; start += WINDOW) {
-        let winEnergy = 0;
-        for (let j = start; j < start + WINDOW; j++) {
-          winEnergy += samples[j] * samples[j];
-        }
-        winEnergy /= WINDOW;
-
-        const ratio = runningEnergy > 1e-15 ? winEnergy / runningEnergy : 0;
-
-        if (ratio > ratioThresh) {
-          // Found a transient — find peak sample for precise timing
-          let peakIdx = start, peakVal = 0;
-          for (let j = start; j < start + WINDOW; j++) {
-            const a = Math.abs(samples[j]);
-            if (a > peakVal) { peakVal = a; peakIdx = j; }
-          }
-          const peakTime = bufStartTime + (peakIdx / sampleRate) * 1000;
+      // Scan for peaks above threshold with sample-precise timing
+      for (let i = 1; i < bufLen - 1; i++) {
+        const amp = Math.abs(samples[i]);
+        if (amp > threshold &&
+            amp >= Math.abs(samples[i - 1]) &&
+            amp >= Math.abs(samples[i + 1])) {
+          const peakTime = bufStartTime + (i / sampleRate) * 1000;
           if (peakTime - lastTickTime > refractory) {
             _tgTicks.push(peakTime);
             lastTickTime = peakTime;
-            // Skip windows past this tick to avoid double-counting
-            start += WINDOW * 4;
+            i += Math.floor(sampleRate * 0.005); // skip 5ms past this peak
           }
-        } else {
-          // Non-transient: slowly update noise floor
-          runningEnergy = runningEnergy * 0.998 + winEnergy * 0.002;
         }
+      }
+
+      // Slowly adapt rolling peak toward current ambient level
+      // (but don't let ticks inflate it — use buffer peak only if below 2x ambient)
+      if (maxAmp < ambientPeak * 3) {
+        rollingPeak = rollingPeak * ROLLING_DECAY + maxAmp * (1 - ROLLING_DECAY);
       }
 
       // Update UI periodically
