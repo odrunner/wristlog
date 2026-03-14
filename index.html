@@ -4121,7 +4121,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.10.25';
+const APP_VERSION = '2.36.14.10.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8794,7 +8794,14 @@ async function startTimegrapher() {
   }
 
   try {
-    _tgStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Disable all audio processing — AGC/noise suppression actively kills watch ticks
+    _tgStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
+      }
+    });
   } catch (e) {
     warn.textContent = e.name === 'NotAllowedError'
       ? 'Microphone permission denied. Go to Settings → Safari → Microphone to allow.'
@@ -8811,19 +8818,8 @@ async function startTimegrapher() {
 
     const source = _tgAudioCtx.createMediaStreamSource(_tgStream);
 
-    // Bandpass filter: isolate watch tick frequencies (2kHz–10kHz)
-    // Watch ticks are sharp metallic clicks in this range
-    const hpFilter = _tgAudioCtx.createBiquadFilter();
-    hpFilter.type = 'highpass';
-    hpFilter.frequency.value = 2000;
-    hpFilter.Q.value = 0.7;
-
-    const lpFilter = _tgAudioCtx.createBiquadFilter();
-    lpFilter.type = 'lowpass';
-    lpFilter.frequency.value = 10000;
-    lpFilter.Q.value = 0.7;
-
-    // Use 2048 buffer for ~46ms chunks — good balance of resolution vs performance
+    // No bandpass filter — raw signal with AGC/noise suppression disabled
+    // Use 2048 buffer for ~46ms chunks
     const scriptNode = _tgAudioCtx.createScriptProcessor(2048, 1, 1);
     _tgScriptNode = scriptNode;
 
@@ -8838,29 +8834,27 @@ async function startTimegrapher() {
     const expectedInterval = 3600000 / _tgBph;
     const refractory = expectedInterval * 0.4;
     let lastTickTime = 0;
-    // Rolling RMS for auto-calibrating noise floor
-    const rmsHistory = [];
-    const RMS_HISTORY = 60;
     let _tgRenderPending = false;
     let lastNoiseUpdate = 0;
-    // Track buffer timing for sample-precise tick placement
     let bufferCount = 0;
+
+    // Transient detection: sliding window energy comparison
+    // Watch ticks = sudden short spikes vs ambient background
+    const WINDOW = 64; // ~1.5ms at 44.1kHz — shorter than a tick impulse
+    // Running average of short-window energies (noise floor tracker)
+    let runningEnergy = 0;
+    const ENERGY_DECAY = 0.995; // slow decay = stable noise floor
+    let energyInitialized = false;
 
     scriptNode.onaudioprocess = function(e) {
       if (!_tgRunning) return;
       const samples = e.inputBuffer.getChannelData(0); // Float32Array, -1 to 1
       const bufLen = samples.length;
       const now = performance.now();
-      // Time at start of this buffer (approximate)
       const bufStartTime = now - (bufLen / sampleRate) * 1000;
       bufferCount++;
 
-      // Compute RMS energy of this buffer (better than peak for noise floor)
-      let sumSq = 0;
-      for (let i = 0; i < bufLen; i++) sumSq += samples[i] * samples[i];
-      const rms = Math.sqrt(sumSq / bufLen);
-
-      // Also find peak for noise UI
+      // Find peak for noise UI
       let maxAmp = 0;
       for (let i = 0; i < bufLen; i++) {
         const a = Math.abs(samples[i]);
@@ -8870,16 +8864,16 @@ async function startTimegrapher() {
       // --- Noise level UI (throttled) ---
       if (now - lastNoiseUpdate > 150) {
         lastNoiseUpdate = now;
-        const pct = Math.min(100, maxAmp * 300);
+        const pct = Math.min(100, maxAmp * 200);
         const bar = document.getElementById('tg-noise-bar');
         const lbl = document.getElementById('tg-noise-label');
         bar.style.width = pct + '%';
-        if (maxAmp < 0.002) {
+        if (maxAmp < 0.003) {
           bar.style.background = '#ef4444';
           lbl.textContent = 'No signal — check mic access';
         } else if (pct < 30) {
           bar.style.background = '#22c55e';
-          lbl.textContent = 'Quiet — Good';
+          lbl.textContent = 'Listening...';
         } else if (pct < 60) {
           bar.style.background = '#eab308';
           lbl.textContent = 'Moderate — OK';
@@ -8889,33 +8883,50 @@ async function startTimegrapher() {
         }
       }
 
-      // --- Tick detection with sample-precise timing ---
-      rmsHistory.push(rms);
-      if (rmsHistory.length > RMS_HISTORY) rmsHistory.shift();
+      // --- Transient-based tick detection ---
+      // Slide a short window across the buffer, compute energy in each window,
+      // and compare to the running average energy. A spike = transient = tick.
+      // Sensitivity maps 0-100 to ratio threshold 8.0x down to 2.0x
+      const ratioThresh = 8.0 - (_tgSensitivity / 100) * 6.0;
 
-      // Noise floor = median RMS (stable estimate of ambient level)
-      const sortedRms = [...rmsHistory].sort((a, b) => a - b);
-      const noiseFloor = sortedRms[Math.floor(sortedRms.length * 0.5)] || 0.001;
+      for (let start = 0; start + WINDOW < bufLen; start += WINDOW) {
+        // Compute energy in this short window
+        let winEnergy = 0;
+        for (let j = start; j < start + WINDOW; j++) {
+          winEnergy += samples[j] * samples[j];
+        }
+        winEnergy /= WINDOW;
 
-      // Sensitivity maps 0-100 to threshold multiplier 5.0x down to 1.8x above noise
-      const multiplier = 5.0 - (_tgSensitivity / 100) * 3.2;
-      const threshold = Math.max(noiseFloor * multiplier, 0.003);
+        // Initialize running energy from first few windows
+        if (!energyInitialized) {
+          runningEnergy = winEnergy;
+          energyInitialized = true;
+        }
 
-      // Scan buffer for peaks above threshold — find the EXACT sample position
-      // This gives us sub-buffer timing precision
-      for (let i = 1; i < bufLen - 1; i++) {
-        const amp = Math.abs(samples[i]);
-        if (amp > threshold &&
-            amp >= Math.abs(samples[i - 1]) &&
-            amp >= Math.abs(samples[i + 1])) {
-          // Found a peak — compute precise timestamp
-          const peakTime = bufStartTime + (i / sampleRate) * 1000;
+        // Check if this window is a transient spike
+        const ratio = runningEnergy > 0 ? winEnergy / runningEnergy : 0;
+        if (ratio > ratioThresh && winEnergy > 1e-8) {
+          // Found a transient — compute precise time
+          // Find the peak sample within this window for exact timing
+          let peakIdx = start;
+          let peakVal = 0;
+          for (let j = start; j < start + WINDOW; j++) {
+            const a = Math.abs(samples[j]);
+            if (a > peakVal) { peakVal = a; peakIdx = j; }
+          }
+          const peakTime = bufStartTime + (peakIdx / sampleRate) * 1000;
           if (peakTime - lastTickTime > refractory) {
             _tgTicks.push(peakTime);
             lastTickTime = peakTime;
-            // Skip ahead past this peak to avoid double-counting
-            i += Math.floor(sampleRate * 0.002); // skip 2ms
+            // Skip a few windows past this tick
+            start += WINDOW * 3;
           }
+        }
+
+        // Update running energy (slow decay tracks noise floor, not ticks)
+        // Only update with non-transient windows to keep it stable
+        if (ratio <= ratioThresh) {
+          runningEnergy = runningEnergy * ENERGY_DECAY + winEnergy * (1 - ENERGY_DECAY);
         }
       }
 
@@ -8930,10 +8941,8 @@ async function startTimegrapher() {
       for (let i = 0; i < output.length; i++) output[i] = 0;
     };
 
-    // Connect: source → highpass → lowpass → scriptNode → destination
-    source.connect(hpFilter);
-    hpFilter.connect(lpFilter);
-    lpFilter.connect(scriptNode);
+    // Connect: source → scriptNode → destination (raw signal, no filters)
+    source.connect(scriptNode);
     scriptNode.connect(_tgAudioCtx.destination);
 
   } catch (e) {
