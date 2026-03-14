@@ -3788,6 +3788,7 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 
 let currentUser = null; // set after sign-in
+const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
 
 // Wrap a promise with a timeout to prevent hung queries
 function withTimeout(promise, ms = 10000) {
@@ -4121,7 +4122,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.12.01';
+const APP_VERSION = '2.36.14.12.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9650,7 +9651,6 @@ function closeWhatsNew() {
   document.getElementById('whats-new-modal').classList.add('hidden');
 }
 
-const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
 
 function showAdminPage() {
   if (currentUser?.id !== ADMIN_USER_ID) return;
