@@ -3452,6 +3452,18 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <label style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Position</label>
         <div id="tg-pos-chips" style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.25rem;"></div>
       </div>
+      <!-- Sensitivity slider -->
+      <div style="margin-bottom:.75rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <label style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Sensitivity</label>
+          <span id="tg-sens-val" style="font-size:.7rem;color:var(--muted);">50%</span>
+        </div>
+        <input type="range" id="tg-sensitivity" min="0" max="100" value="50" style="width:100%;margin-top:.25rem;accent-color:var(--gold);"
+          oninput="_tgSensitivity=+this.value;document.getElementById('tg-sens-val').textContent=this.value+'%'">
+        <div style="display:flex;justify-content:space-between;font-size:.65rem;color:var(--muted);margin-top:.1rem;">
+          <span>Less sensitive</span><span>More sensitive</span>
+        </div>
+      </div>
       <!-- Noise level -->
       <div style="margin-bottom:.75rem;">
         <label style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Noise Level</label>
@@ -4109,7 +4121,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.07.47';
+const APP_VERSION = '2.36.14.07.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8761,11 +8773,13 @@ function toggleTimegrapher() {
   if (_tgRunning) stopTimegrapher(); else startTimegrapher();
 }
 
+let _tgSensitivity = 50; // 0-100, default mid
+
 async function startTimegrapher() {
   const warn = document.getElementById('tg-mic-warning');
   warn.style.display = 'none';
 
-  // Check if running as PWA (standalone) — mic may not work
+  // Check if running as PWA (standalone)
   const isPWA = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
 
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -8776,10 +8790,9 @@ async function startTimegrapher() {
     return;
   }
 
+  // Try getting mic — use simplest constraints first for max compatibility
   try {
-    _tgStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
-    });
+    _tgStream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch (e) {
     if (isPWA) {
       warn.innerHTML = 'Microphone access failed in the app. Please open <a href="https://wrotate.com" style="color:var(--gold);text-decoration:underline;">wrotate.com</a> in Safari to use the Timegrapher.';
@@ -8795,67 +8808,55 @@ async function startTimegrapher() {
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
     _tgAudioCtx = new AC();
-    // iOS requires resume after user gesture
     if (_tgAudioCtx.state === 'suspended') await _tgAudioCtx.resume();
 
     const source = _tgAudioCtx.createMediaStreamSource(_tgStream);
 
-    // High-pass filter at 2kHz to isolate tick transients from low-freq ambient noise
-    const hpFilter = _tgAudioCtx.createBiquadFilter();
-    hpFilter.type = 'highpass';
-    hpFilter.frequency.value = 2000;
-    hpFilter.Q.value = 0.7;
-    source.connect(hpFilter);
-
-    // Analyser on filtered signal for tick detection
+    // Single analyser on raw signal — no filters (max compatibility)
     _tgAnalyser = _tgAudioCtx.createAnalyser();
-    _tgAnalyser.fftSize = 512;
+    _tgAnalyser.fftSize = 1024;
     _tgAnalyser.smoothingTimeConstant = 0;
-    hpFilter.connect(_tgAnalyser);
-
-    // Second analyser on raw signal for noise level display
-    const _tgRawAnalyser = _tgAudioCtx.createAnalyser();
-    _tgRawAnalyser.fftSize = 2048;
-    _tgRawAnalyser.smoothingTimeConstant = 0.3;
-    source.connect(_tgRawAnalyser);
+    source.connect(_tgAnalyser);
 
     _tgTicks = [];
     _tgStartTime = performance.now();
     _tgRunning = true;
     document.getElementById('tg-start-btn').textContent = 'Stop';
     document.getElementById('tg-save-btn').style.display = 'none';
-    document.getElementById('tg-results').style.display = 'grid';
+    document.getElementById('tg-results').style.display = '';
     clearTgCanvas();
 
     const bufLen = _tgAnalyser.fftSize;
-    // Use Uint8Array — getByteTimeDomainData is more reliable on iOS than getFloatTimeDomainData
     const buf = new Uint8Array(bufLen);
     const expectedInterval = 3600000 / _tgBph;
     const refractory = expectedInterval * 0.55;
     let lastTickTime = 0;
-    let envelope = 0;
-    const envAttack = 0.3;
-    const envRelease = 0.005;
+    // Track recent peak levels to auto-calibrate
+    const recentPeaks = [];
+    const PEAK_HISTORY = 100;
 
     let _tgRenderPending = false;
     _tgPollId = setInterval(() => {
       if (!_tgAnalyser) return;
-      // getByteTimeDomainData returns 0-255, center at 128
       _tgAnalyser.getByteTimeDomainData(buf);
-      let sum = 0;
+      // Find peak amplitude deviation from center (128)
+      let maxDev = 0;
       for (let i = 0; i < bufLen; i++) {
-        const v = (buf[i] - 128) / 128; // normalize to -1..1
-        sum += v * v;
+        const dev = Math.abs(buf[i] - 128);
+        if (dev > maxDev) maxDev = dev;
       }
-      const rms = Math.sqrt(sum / bufLen);
-      // Envelope follower
-      if (rms > envelope) {
-        envelope = envelope + envAttack * (rms - envelope);
-      } else {
-        envelope = envelope + envRelease * (rms - envelope);
-      }
+      // Track recent peaks for auto-calibration
+      recentPeaks.push(maxDev);
+      if (recentPeaks.length > PEAK_HISTORY) recentPeaks.shift();
+      // Compute baseline: median of recent peaks (ambient noise floor)
+      const sorted = [...recentPeaks].sort((a, b) => a - b);
+      const baseline = sorted[Math.floor(sorted.length * 0.5)] || 1;
+      // Sensitivity maps 0-100 to threshold multiplier 4.0x down to 1.3x
+      const multiplier = 4.0 - (_tgSensitivity / 100) * 2.7;
+      const threshold = Math.max(baseline * multiplier, 2); // min 2 (out of 128)
+
       const now = performance.now();
-      if (rms > envelope * 1.8 && rms > 0.003 && (now - lastTickTime) > refractory) {
+      if (maxDev > threshold && (now - lastTickTime) > refractory) {
         _tgTicks.push(now);
         lastTickTime = now;
         if (!_tgRenderPending) {
@@ -8863,26 +8864,35 @@ async function startTimegrapher() {
           requestAnimationFrame(() => { updateTgResults(); renderTgDiagram(); _tgRenderPending = false; });
         }
       }
-    }, 8);
+    }, 10);
 
-    // Noise level display (raw unfiltered)
-    const rawBuf = new Uint8Array(_tgRawAnalyser.fftSize);
+    // Noise level + signal monitor
     _tgNoiseId = setInterval(() => {
-      if (!_tgRawAnalyser) return;
-      _tgRawAnalyser.getByteTimeDomainData(rawBuf);
-      let sum = 0;
-      for (let i = 0; i < rawBuf.length; i++) {
-        const v = (rawBuf[i] - 128) / 128;
-        sum += v * v;
+      if (!_tgAnalyser) return;
+      _tgAnalyser.getByteTimeDomainData(buf);
+      let maxDev = 0;
+      for (let i = 0; i < bufLen; i++) {
+        const dev = Math.abs(buf[i] - 128);
+        if (dev > maxDev) maxDev = dev;
       }
-      const rms = Math.sqrt(sum / rawBuf.length);
-      const pct = Math.min(100, rms * 500);
+      const pct = Math.min(100, (maxDev / 128) * 300);
       const bar = document.getElementById('tg-noise-bar');
       const lbl = document.getElementById('tg-noise-label');
       bar.style.width = pct + '%';
-      bar.style.background = pct < 30 ? '#22c55e' : pct < 60 ? '#eab308' : '#ef4444';
-      lbl.textContent = pct < 30 ? 'Quiet — Good' : pct < 60 ? 'Moderate — OK' : 'Noisy — Move to quieter spot';
-    }, 100);
+      if (maxDev <= 1) {
+        bar.style.background = '#ef4444';
+        lbl.textContent = 'No signal — check mic access';
+      } else if (pct < 30) {
+        bar.style.background = '#22c55e';
+        lbl.textContent = 'Quiet — Good';
+      } else if (pct < 60) {
+        bar.style.background = '#eab308';
+        lbl.textContent = 'Moderate — OK';
+      } else {
+        bar.style.background = '#ef4444';
+        lbl.textContent = 'Noisy — Move to quieter spot';
+      }
+    }, 150);
 
   } catch (e) {
     console.error('[WristLog] Timegrapher audio error:', e);
