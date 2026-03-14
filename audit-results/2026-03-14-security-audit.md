@@ -102,23 +102,15 @@ const initHTML = u.avatar
 
 ## Medium Severity
 
-### M1. Admin operations rely on client-side guard only (CARRIED FORWARD)
+### M1. Admin operations rely on client-side guard only (CARRIED FORWARD) — **VERIFIED SECURE 2026-03-14**
 
 **File:** index.html, lines 8988, 9002, 9122, 9143
-**Status:** Still open from previous audit.
+**Status:** Already secured at database level. RLS policies on `profiles`, `content_reports`, `feedback`, `logs`, and `comments` all use `EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true)` checks. Client-side guard is UI-only convenience.
 
-**Issue:** Admin functions are gated only by `currentUser?.id !== ADMIN_USER_ID`. If RLS policies don't restrict `profiles.is_suspended` updates, `content_reports` reads, and `feedback` reads to the admin user, any authenticated user can call these directly via the Supabase API.
+### M2. Suspension enforcement is client-side only (CARRIED FORWARD) — **FIXED 2026-03-14**
 
-**Recommendation:** Verify RLS policies or migrate admin operations to Edge Functions.
-
-### M2. Suspension enforcement is client-side only (CARRIED FORWARD)
-
-**File:** index.html, line 14529+
-**Status:** Still open from previous audit.
-
-**Issue:** A suspended user can bypass the client-side check and use the Supabase API directly to insert posts, comments, likes, etc.
-
-**Recommendation:** Add RLS `WITH CHECK` clauses that deny mutations when `auth.uid()` has `is_suspended = true`.
+**File:** Supabase RLS migration `add_suspension_rls_to_social_tables`
+**Status:** Fixed. Added RLS `WITH CHECK` policies blocking suspended users from INSERT on: `likes`, `comment_likes`, `follows`, `follow_requests`, `friend_requests`, `clubs`, `club_join_requests`, `notifications`. Previously only `logs` and `comments` had suspension enforcement.
 
 ### M3. `uid()` uses predictable values (CARRIED FORWARD)
 
@@ -129,14 +121,10 @@ const initHTML = u.avatar
 
 **Fix:** Use `crypto.randomUUID()` with `uid()` as fallback.
 
-### M4. CORS proxy usage without URL validation on extracted values (CARRIED FORWARD)
+### M4. CORS proxy usage without URL validation on extracted values (CARRIED FORWARD) — **FIXED 2026-03-14**
 
-**File:** index.html, lines 12013-12014, 13810-13812, 13950-13952
-**Status:** Still open from previous audit.
-
-**Issue:** External pages fetched via CORS proxies have their metadata (image URLs, names, prices) extracted and used in the app. Image URLs extracted from malicious pages could contain `javascript:` or non-https schemes.
-
-**Recommendation:** Validate extracted image URLs start with `https://` before use. The code at lines 12044 already filters for `https://` in the image candidate scan, but og:image and twitter:image meta tag values (lines 12028-12032) are not validated.
+**File:** index.html — `sanitizeImageUrl()` helper + 4 call sites
+**Status:** Fixed. Added `sanitizeImageUrl(url, baseUrl)` that only allows `https://`, `//`, or `/path` schemes — blocks `javascript:`, `data:`, `http:`, and all other schemes. Applied to all 4 image extraction locations (watch modal, wishlist modal, wishlist fetch details, wishlist get photo). Both og:image/twitter:image meta tags and `<img>` fallback scans now go through the sanitizer.
 
 ### M5. Unescaped `w.color` in CSS `background` property (9 locations) — **FIXED 2026-03-14**
 

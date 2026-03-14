@@ -4092,7 +4092,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.16.00';
+const APP_VERSION = '2.36.14.16.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12157,12 +12157,14 @@ async function fetchWatchImage(watchId) {
     const doc = new DOMParser().parseFromString(pageHtml, 'text/html');
 
     // ── Step 2: Find best image URL ─────────────────────────────────────────
-    // 2a. Try og/twitter meta tags first
-    let imgUrl =
+    // 2a. Try og/twitter meta tags first (sanitize to block javascript:/data: schemes)
+    let imgUrl = sanitizeImageUrl(
       doc.querySelector('meta[property="og:image"]')?.content ||
       doc.querySelector('meta[name="og:image"]')?.content    ||
       doc.querySelector('meta[property="twitter:image"]')?.content ||
-      doc.querySelector('meta[name="twitter:image"]')?.content;
+      doc.querySelector('meta[name="twitter:image"]')?.content,
+      w.url
+    );
 
     // 2b. Fallback: scan <img> tags for product images
     if (!imgUrl) {
@@ -12174,18 +12176,13 @@ async function fetchWatchImage(watchId) {
           i.getAttribute('data-lazy-src'),
           i.getAttribute('data-original')
         ])
-        .filter(s => s && s.startsWith('https://') &&
+        .map(s => sanitizeImageUrl(s, w.url))
+        .filter(s => s &&
                      !/\.(svg|gif)(\?|$)/i.test(s) &&
                      !/logo|logotype|icon|favicon|sprite|banner/i.test(s));
       // Prefer images from same root domain (handles CDN subdomains)
       const sameDomain = candidates.filter(s => s.includes(watchDomain));
       imgUrl = sameDomain[0] || candidates[0] || null;
-    }
-
-    // 2c. Resolve relative / protocol-relative URLs
-    if (imgUrl) {
-      if (imgUrl.startsWith('//'))     imgUrl = 'https:' + imgUrl;
-      else if (imgUrl.startsWith('/')) imgUrl = new URL(w.url).origin + imgUrl;
     }
 
     if (!imgUrl) {
@@ -12209,6 +12206,17 @@ async function fetchWatchImage(watchId) {
     toast('Could not fetch image — try pasting one instead', 'error');
     if (btn) { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Get Photo'; }
   }
+}
+
+// Sanitize an extracted image URL — only allow https://, //, or /path
+function sanitizeImageUrl(url, baseUrl) {
+  if (!url) return null;
+  url = url.trim();
+  if (url.startsWith('//'))    return 'https:' + url;
+  if (url.startsWith('/'))     return new URL(baseUrl).origin + url;
+  if (url.startsWith('https://')) return url;
+  // Block javascript:, data:, http:, and anything else
+  return null;
 }
 
 // Fetch an image URL (direct then via proxy) and return { blob, directUrl }
@@ -14032,21 +14040,22 @@ async function fetchWishlistDetails() {
 
     // ── Extract image from the same page (no second page request) ────────────
     btn.textContent = 'Loading image…';
-    let imgUrl =
+    let imgUrl = sanitizeImageUrl(
       doc.querySelector('meta[property="og:image"]')?.content ||
       doc.querySelector('meta[name="og:image"]')?.content ||
       doc.querySelector('meta[property="twitter:image"]')?.content ||
-      doc.querySelector('meta[name="twitter:image"]')?.content;
+      doc.querySelector('meta[name="twitter:image"]')?.content,
+      urlVal
+    );
     if (!imgUrl) {
       const wd = new URL(urlVal).hostname.replace(/^www\./, '');
       const candidates = [...doc.querySelectorAll('img')]
         .flatMap(i => [i.getAttribute('src'), i.getAttribute('data-src'), i.getAttribute('data-lazy-src')])
-        .filter(s => s && s.startsWith('https://') && !/\.(svg|gif)(\?|$)/i.test(s) && !/logo|logotype|icon|favicon|sprite|banner/i.test(s));
+        .map(s => sanitizeImageUrl(s, urlVal))
+        .filter(s => s && !/\.(svg|gif)(\?|$)/i.test(s) && !/logo|logotype|icon|favicon|sprite|banner/i.test(s));
       imgUrl = candidates.find(s => s.includes(wd)) || candidates[0] || null;
     }
     if (imgUrl) {
-      if (imgUrl.startsWith('//'))     imgUrl = 'https:' + imgUrl;
-      else if (imgUrl.startsWith('/')) imgUrl = new URL(urlVal).origin + imgUrl;
       try {
         const result = await fetchImageBlobOrUrl(imgUrl);
         if (result.blob) {
@@ -14161,21 +14170,22 @@ async function fetchCollectionDetails() {
 
     // Image
     btn.textContent = 'Loading image…';
-    let imgUrl =
+    let imgUrl = sanitizeImageUrl(
       doc.querySelector('meta[property="og:image"]')?.content ||
       doc.querySelector('meta[name="og:image"]')?.content ||
       doc.querySelector('meta[property="twitter:image"]')?.content ||
-      doc.querySelector('meta[name="twitter:image"]')?.content;
+      doc.querySelector('meta[name="twitter:image"]')?.content,
+      urlVal
+    );
     if (!imgUrl) {
       const wd = new URL(urlVal).hostname.replace(/^www\./, '');
       const candidates = [...doc.querySelectorAll('img')]
         .flatMap(i => [i.getAttribute('src'), i.getAttribute('data-src'), i.getAttribute('data-lazy-src')])
-        .filter(s => s && s.startsWith('https://') && !/\.(svg|gif)(\?|$)/i.test(s) && !/logo|logotype|icon|favicon|sprite|banner/i.test(s));
+        .map(s => sanitizeImageUrl(s, urlVal))
+        .filter(s => s && !/\.(svg|gif)(\?|$)/i.test(s) && !/logo|logotype|icon|favicon|sprite|banner/i.test(s));
       imgUrl = candidates.find(s => s.includes(wd)) || candidates[0] || null;
     }
     if (imgUrl) {
-      if (imgUrl.startsWith('//'))     imgUrl = 'https:' + imgUrl;
-      else if (imgUrl.startsWith('/')) imgUrl = new URL(urlVal).origin + imgUrl;
       try {
         const result = await fetchImageBlobOrUrl(imgUrl);
         if (result.blob) {
@@ -14212,20 +14222,20 @@ async function fetchWishlistImage(itemId) {
     }
     if (!pageHtml) throw new Error('proxy failed');
     const doc = new DOMParser().parseFromString(pageHtml, 'text/html');
-    let imgUrl = doc.querySelector('meta[property="og:image"]')?.content ||
-                 doc.querySelector('meta[name="og:image"]')?.content ||
-                 doc.querySelector('meta[property="twitter:image"]')?.content ||
-                 doc.querySelector('meta[name="twitter:image"]')?.content;
+    let imgUrl = sanitizeImageUrl(
+      doc.querySelector('meta[property="og:image"]')?.content ||
+      doc.querySelector('meta[name="og:image"]')?.content ||
+      doc.querySelector('meta[property="twitter:image"]')?.content ||
+      doc.querySelector('meta[name="twitter:image"]')?.content,
+      w.url
+    );
     if (!imgUrl) {
       const wd = new URL(w.url).hostname.replace(/^www\./, '');
       const candidates = [...doc.querySelectorAll('img')]
         .flatMap(i => [i.getAttribute('src'), i.getAttribute('data-src'), i.getAttribute('data-lazy-src')])
-        .filter(s => s && s.startsWith('https://') && !/\.(svg|gif)(\?|$)/i.test(s) && !/logo|logotype|icon|favicon|sprite|banner/i.test(s));
+        .map(s => sanitizeImageUrl(s, w.url))
+        .filter(s => s && !/\.(svg|gif)(\?|$)/i.test(s) && !/logo|logotype|icon|favicon|sprite|banner/i.test(s));
       imgUrl = candidates.find(s => s.includes(wd)) || candidates[0] || null;
-    }
-    if (imgUrl) {
-      if (imgUrl.startsWith('//')) imgUrl = 'https:' + imgUrl;
-      else if (imgUrl.startsWith('/')) imgUrl = new URL(w.url).origin + imgUrl;
     }
     if (!imgUrl) { toast('No image found on that page', 'error'); if (btn) { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Get Photo'; } return; }
     toast('Image found — uploading…');
