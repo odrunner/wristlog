@@ -4121,7 +4121,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.10.29';
+const APP_VERSION = '2.36.14.10.37';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8967,13 +8967,34 @@ function stopTimegrapher() {
 }
 
 function computeTgResults(ticks, bph) {
-  if (ticks.length < 2) return { rate: null, beatError: null, tickCount: ticks.length };
+  if (ticks.length < 2) return { rate: null, beatError: null, tickCount: ticks.length, debug: 'Need more ticks' };
   const expectedInterval = 3600000 / bph;
   const intervals = [];
   for (let i = 1; i < ticks.length; i++) intervals.push(ticks[i] - ticks[i - 1]);
-  // Filter outliers (keep within 0.5x–2x expected)
-  const filtered = intervals.filter(iv => iv > expectedInterval * 0.5 && iv < expectedInterval * 2);
-  if (filtered.length < 2) return { rate: null, beatError: null, tickCount: ticks.length };
+
+  // Two-pass filtering:
+  // Pass 1: Keep intervals within generous range (0.3x–3x expected)
+  let filtered = intervals.filter(iv => iv > expectedInterval * 0.3 && iv < expectedInterval * 3);
+
+  // If strict filter fails, try statistical approach (IQR-based)
+  if (filtered.length < 2) {
+    // Use IQR to find the cluster of "normal" intervals
+    const sorted = [...intervals].sort((a, b) => a - b);
+    const q1 = sorted[Math.floor(sorted.length * 0.25)];
+    const q3 = sorted[Math.floor(sorted.length * 0.75)];
+    const iqr = q3 - q1;
+    filtered = intervals.filter(iv => iv >= q1 - 1.5 * iqr && iv <= q3 + 1.5 * iqr);
+  }
+
+  // Debug info: show interval distribution
+  const sorted = [...intervals].sort((a, b) => a - b);
+  const medianIv = sorted[Math.floor(sorted.length / 2)];
+  const minIv = sorted[0];
+  const maxIv = sorted[sorted.length - 1];
+  const debug = `${intervals.length} intervals, median=${Math.round(medianIv)}ms, range=${Math.round(minIv)}-${Math.round(maxIv)}ms, kept=${filtered.length}`;
+
+  if (filtered.length < 2) return { rate: null, beatError: null, tickCount: ticks.length, debug };
+
   const avgInterval = filtered.reduce((a, b) => a + b, 0) / filtered.length;
   // Rate in seconds/day
   const rate = ((avgInterval - expectedInterval) / expectedInterval) * 86400;
@@ -8988,7 +9009,7 @@ function computeTgResults(ticks, bph) {
       beatError = Math.abs(avgOdd - avgEven);
     }
   }
-  return { rate: Math.round(rate * 10) / 10, beatError: beatError !== null ? Math.round(beatError * 100) / 100 : null, tickCount: ticks.length };
+  return { rate: Math.round(rate * 10) / 10, beatError: beatError !== null ? Math.round(beatError * 100) / 100 : null, tickCount: ticks.length, debug };
 }
 
 function updateTgResults() {
@@ -9003,6 +9024,15 @@ function updateTgResults() {
     const absRate = Math.abs(r.rate);
     rateEl.style.color = absRate <= 5 ? '#22c55e' : absRate <= 15 ? '#eab308' : '#ef4444';
   }
+  // Debug info (temporary — shows interval stats below ticks)
+  let dbgEl = document.getElementById('tg-debug');
+  if (!dbgEl) {
+    dbgEl = document.createElement('div');
+    dbgEl.id = 'tg-debug';
+    dbgEl.style.cssText = 'font-size:0.65rem;color:#888;text-align:center;margin-top:6px;font-family:monospace;';
+    document.getElementById('tg-results').parentNode.insertBefore(dbgEl, document.getElementById('tg-results').nextSibling);
+  }
+  dbgEl.textContent = r.debug || '';
 }
 
 function clearTgCanvas() {

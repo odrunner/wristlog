@@ -1138,17 +1138,32 @@ export function checkContent(text) {
  * @returns {{ rate: number|null, beatError: number|null, tickCount: number }}
  */
 export function computeTgResults(ticks, bph) {
-  if (ticks.length < 2) return { rate: null, beatError: null, tickCount: ticks.length };
+  if (ticks.length < 2) return { rate: null, beatError: null, tickCount: ticks.length, debug: 'Need more ticks' };
   const expectedInterval = 3600000 / bph;
   const intervals = [];
   for (let i = 1; i < ticks.length; i++) intervals.push(ticks[i] - ticks[i - 1]);
-  // Filter outliers (keep within 0.5x–2x expected)
-  const filtered = intervals.filter(iv => iv > expectedInterval * 0.5 && iv < expectedInterval * 2);
-  if (filtered.length < 2) return { rate: null, beatError: null, tickCount: ticks.length };
+
+  // Two-pass filtering:
+  // Pass 1: Keep intervals within generous range (0.3x–3x expected)
+  let filtered = intervals.filter(iv => iv > expectedInterval * 0.3 && iv < expectedInterval * 3);
+
+  // If strict filter fails, try statistical approach (IQR-based)
+  if (filtered.length < 2) {
+    const sorted = [...intervals].sort((a, b) => a - b);
+    const q1 = sorted[Math.floor(sorted.length * 0.25)];
+    const q3 = sorted[Math.floor(sorted.length * 0.75)];
+    const iqr = q3 - q1;
+    filtered = intervals.filter(iv => iv >= q1 - 1.5 * iqr && iv <= q3 + 1.5 * iqr);
+  }
+
+  const sorted = [...intervals].sort((a, b) => a - b);
+  const medianIv = sorted[Math.floor(sorted.length / 2)];
+  const debug = `${intervals.length} ivs, median=${Math.round(medianIv)}ms, kept=${filtered.length}`;
+
+  if (filtered.length < 2) return { rate: null, beatError: null, tickCount: ticks.length, debug };
+
   const avgInterval = filtered.reduce((a, b) => a + b, 0) / filtered.length;
-  // Rate in seconds/day
   const rate = ((avgInterval - expectedInterval) / expectedInterval) * 86400;
-  // Beat error: separate odd/even intervals (tick vs tock)
   let beatError = null;
   if (filtered.length >= 4) {
     const odds = filtered.filter((_, i) => i % 2 === 0);
@@ -1159,5 +1174,5 @@ export function computeTgResults(ticks, bph) {
       beatError = Math.abs(avgOdd - avgEven);
     }
   }
-  return { rate: Math.round(rate * 10) / 10, beatError: beatError !== null ? Math.round(beatError * 100) / 100 : null, tickCount: ticks.length };
+  return { rate: Math.round(rate * 10) / 10, beatError: beatError !== null ? Math.round(beatError * 100) / 100 : null, tickCount: ticks.length, debug };
 }

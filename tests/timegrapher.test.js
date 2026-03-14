@@ -3,8 +3,8 @@ import { computeTgResults } from '../wristlog.js';
 
 describe('computeTgResults', () => {
   it('returns nulls for fewer than 2 ticks', () => {
-    expect(computeTgResults([], 28800)).toEqual({ rate: null, beatError: null, tickCount: 0 });
-    expect(computeTgResults([100], 28800)).toEqual({ rate: null, beatError: null, tickCount: 1 });
+    expect(computeTgResults([], 28800)).toMatchObject({ rate: null, beatError: null, tickCount: 0 });
+    expect(computeTgResults([100], 28800)).toMatchObject({ rate: null, beatError: null, tickCount: 1 });
   });
 
   it('returns 0 rate for perfectly timed ticks at 28800 bph', () => {
@@ -77,11 +77,14 @@ describe('computeTgResults', () => {
     expect(r.beatError).toBeNull();
   });
 
-  it('returns null rate when all intervals are outliers', () => {
-    // All intervals way too long for 28800 bph
-    const ticks = [0, 1000, 2000];
+  it('handles intervals outside expected range via IQR fallback', () => {
+    // All intervals way too long for 28800 bph (1000ms vs 125ms expected)
+    // IQR fallback keeps consistent intervals even if outside BPH range
+    const ticks = [0, 1000, 2000, 3000, 4000];
     const r = computeTgResults(ticks, 28800);
-    expect(r.rate).toBeNull();
+    // IQR keeps them since they're consistent — rate will be very wrong but computed
+    expect(r.rate).not.toBeNull();
+    expect(r.tickCount).toBe(5);
   });
 
   it('handles 36000 bph (100ms interval)', () => {
