@@ -1841,6 +1841,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         Continue with Apple
       </button>
       <div class="auth-divider">First time? Just sign in — account created automatically.</div>
+      <!-- APP STORE BADGE -->
+      <div style="text-align:center;margin-top:.75rem;">
+        <a href="https://apps.apple.com/us/app/wrotate/id6760091102" target="_blank" rel="noopener noreferrer" style="display:inline-block;" onclick="trackAppStoreClick()">
+          <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" style="height:40px;">
+        </a>
+      </div>
       <!-- Dev-only anonymous login — localhost only -->
       <div id="dev-login-wrap" style="display:none;margin-top:.5rem;gap:.4rem;justify-content:center;">
         <button onclick="devLogin()" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.45rem 1.1rem;font-size:.78rem;cursor:pointer;font-family:inherit;">
@@ -1850,13 +1856,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           Dev Login 2 (testuser2)
         </button>
       </div>
-    </div>
-
-    <!-- APP STORE BADGE -->
-    <div style="text-align:center;margin-bottom:1.25rem;">
-      <a href="https://apps.apple.com/us/app/wrotate/id6760091102" target="_blank" rel="noopener noreferrer" style="display:inline-block;">
-        <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" style="height:44px;">
-      </a>
     </div>
 
     <!-- APP PREVIEW SCREENSHOTS -->
@@ -3750,6 +3749,17 @@ const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
   } catch(e) {}
 })();
 
+function trackAppStoreClick() {
+  try {
+    db.from('page_visits').insert({
+      utm_source: 'appstore_click',
+      utm_medium: 'landing',
+      path: window.location.pathname,
+      referrer: document.referrer || null,
+    }).then(() => {}).catch(() => {});
+  } catch(e) {}
+}
+
 // Wrap a promise with a timeout to prevent hung queries
 function withTimeout(promise, ms = 10000) {
   let tid;
@@ -4082,7 +4092,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.15.58';
+const APP_VERSION = '2.36.14.16.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
