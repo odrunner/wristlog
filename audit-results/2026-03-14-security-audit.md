@@ -112,14 +112,10 @@ const initHTML = u.avatar
 **File:** Supabase RLS migration `add_suspension_rls_to_social_tables`
 **Status:** Fixed. Added RLS `WITH CHECK` policies blocking suspended users from INSERT on: `likes`, `comment_likes`, `follows`, `follow_requests`, `friend_requests`, `clubs`, `club_join_requests`, `notifications`. Previously only `logs` and `comments` had suspension enforcement.
 
-### M3. `uid()` uses predictable values (CARRIED FORWARD)
+### M3. `uid()` uses predictable values (CARRIED FORWARD) — **FIXED 2026-03-14**
 
-**File:** index.html, line 8632 area
-**Status:** Still open from previous audit.
-
-**Issue:** `Date.now() + Math.random()` is not cryptographically random.
-
-**Fix:** Use `crypto.randomUUID()` with `uid()` as fallback.
+**File:** index.html, line 8836
+**Status:** Fixed. `uid()` now uses `crypto.randomUUID()` with `Date.now() + Math.random()` as fallback only when crypto API is unavailable.
 
 ### M4. CORS proxy usage without URL validation on extracted values (CARRIED FORWARD) — **FIXED 2026-03-14**
 
@@ -226,10 +222,13 @@ if (r.type === 'application/pdf' || r.data.startsWith('data:application/pdf')) {
 
 ## Recommended Priority Actions
 
-1. **Fix H2 immediately** — add `escHtml()` to 6 bare `w.image` usages in `src` attributes (straightforward)
-2. **Fix H1 + M6** — `escAttr()` the `initials()` output in onerror handlers (2 locations)
-3. **Fix H3** — `escHtml()` the `u.avatar` in admin stats (1 location)
-4. **Fix M5** — `escHtml()` the 9 bare `w.color` usages in `style` attributes
-5. **Verify admin RLS policies** (M1) — confirm server-side enforcement
-6. **Add RLS enforcement for suspended users** (M2)
-7. **Migrate `uid()` to `crypto.randomUUID()`** (M3)
+1. ~~**Fix H2 immediately**~~ — **FIXED 2026-03-14**
+2. ~~**Fix H1 + M6**~~ — **FIXED 2026-03-14**
+3. ~~**Fix H3**~~ — **FIXED 2026-03-14**
+4. ~~**Fix M5**~~ — **FIXED 2026-03-14**
+5. ~~**Verify admin RLS policies (M1)**~~ — **VERIFIED SECURE 2026-03-14**
+6. ~~**Add RLS enforcement for suspended users (M2)**~~ — **FIXED 2026-03-14**
+7. ~~**Migrate `uid()` to `crypto.randomUUID()` (M3)**~~ — **FIXED 2026-03-14**
+8. ~~**CORS proxy URL validation (M4)**~~ — **FIXED 2026-03-14**
+
+**All recommended priority actions are now resolved.** Remaining open items are low-severity (L1–L4).
