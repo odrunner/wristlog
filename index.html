@@ -4121,7 +4121,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.07.52';
+const APP_VERSION = '2.36.14.08.09';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8779,28 +8779,26 @@ async function startTimegrapher() {
   const warn = document.getElementById('tg-mic-warning');
   warn.style.display = 'none';
 
-  // Check if running as PWA (standalone)
+  // Block PWA standalone mode immediately — getUserMedia crashes in iOS PWA
   const isPWA = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    warn.innerHTML = isPWA
-      ? 'Microphone is not available in the app. Please open <a href="https://wrotate.com" style="color:var(--gold);text-decoration:underline;">wrotate.com</a> in Safari to use the Timegrapher.'
-      : 'Microphone access is not available in this browser.';
+  if (isPWA) {
+    warn.innerHTML = 'Microphone requires Safari. Please open <a href="https://wrotate.com" style="color:var(--gold);text-decoration:underline;">wrotate.com</a> in Safari to use the Timegrapher.';
     warn.style.display = 'block';
     return;
   }
 
-  // Try getting mic — use simplest constraints first for max compatibility
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    warn.textContent = 'Microphone access is not available in this browser.';
+    warn.style.display = 'block';
+    return;
+  }
+
   try {
     _tgStream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch (e) {
-    if (isPWA) {
-      warn.innerHTML = 'Microphone access failed in the app. Please open <a href="https://wrotate.com" style="color:var(--gold);text-decoration:underline;">wrotate.com</a> in Safari to use the Timegrapher.';
-    } else {
-      warn.textContent = e.name === 'NotAllowedError'
-        ? 'Microphone permission denied. Go to Settings → Safari → Microphone to allow.'
-        : 'Could not access microphone: ' + e.message;
-    }
+    warn.textContent = e.name === 'NotAllowedError'
+      ? 'Microphone permission denied. Go to Settings → Safari → Microphone to allow.'
+      : 'Could not access microphone: ' + e.message;
     warn.style.display = 'block';
     return;
   }
@@ -8817,6 +8815,13 @@ async function startTimegrapher() {
     _tgAnalyser.fftSize = 1024;
     _tgAnalyser.smoothingTimeConstant = 0;
     source.connect(_tgAnalyser);
+
+    // iOS Safari requires the graph to connect to destination for data to flow.
+    // Route through a zero-gain node so nothing plays through speakers.
+    const silentGain = _tgAudioCtx.createGain();
+    silentGain.gain.value = 0;
+    _tgAnalyser.connect(silentGain);
+    silentGain.connect(_tgAudioCtx.destination);
 
     _tgTicks = [];
     _tgStartTime = performance.now();
