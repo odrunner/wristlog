@@ -11,9 +11,11 @@
 - **Update the Help page** (in-app guide), **landing page**, and **"What's New"** section to reflect changes shipped that day
 
 ## Audits
-- Run a **security / reliability / usability / performance audit** regularly
+- Run a **security / reliability / usability / performance audit** regularly — run all four categories every time
 - Save findings locally in `audit-results/` and keep updating after each audit and after each build that addresses them
-- Track what's been fixed vs. what's still open
+- Track what's been fixed vs. what's still open — mark items as FIXED with date when resolved
+- Each audit should reference previous findings and note which are new vs. carried forward
+- After fixing issues, update the corresponding audit report files to reflect the fix
 
 ## Testing & UAT
 - **Use test accounts only**: testuser (test@wrotate.com) and testuser2 (test2@wrotate.com) — never James Collins/watchdemo
