@@ -4109,7 +4109,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.07.25';
+const APP_VERSION = '2.36.14.07.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8812,10 +8812,10 @@ async function startTimegrapher() {
     let peak = 0, sum = 0;
     for (let i = 0; i < bufLen; i++) { const v = buf[i]; sum += v * v; const a = Math.abs(v); if (a > peak) peak = a; }
     const rms = Math.sqrt(sum / bufLen);
-    // Update noise floor (slow decay)
-    noiseFloor = noiseFloor * noiseAlpha + rms * (1 - noiseAlpha);
-    // Tick detection: peak is 4x above noise floor, outside refractory period
-    const threshold = Math.max(noiseFloor * 4, 0.02);
+    // Update noise floor (slow decay, but don't let ticks inflate it)
+    if (peak < noiseFloor * 3) noiseFloor = noiseFloor * noiseAlpha + rms * (1 - noiseAlpha);
+    // Tick detection: peak is 2.5x above noise floor, outside refractory period
+    const threshold = Math.max(noiseFloor * 2.5, 0.008);
     const now = performance.now();
     if (peak > threshold && (now - lastTickTime) > refractory) {
       _tgTicks.push(now);
