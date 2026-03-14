@@ -4121,7 +4121,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.10.19';
+const APP_VERSION = '2.36.14.10.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8807,11 +8807,24 @@ async function startTimegrapher() {
     const AC = window.AudioContext || window.webkitAudioContext;
     _tgAudioCtx = new AC();
     if (_tgAudioCtx.state === 'suspended') await _tgAudioCtx.resume();
+    const sampleRate = _tgAudioCtx.sampleRate;
 
     const source = _tgAudioCtx.createMediaStreamSource(_tgStream);
 
-    // Use ScriptProcessorNode for direct PCM access (works reliably on iOS)
-    const scriptNode = _tgAudioCtx.createScriptProcessor(4096, 1, 1);
+    // Bandpass filter: isolate watch tick frequencies (2kHz–10kHz)
+    // Watch ticks are sharp metallic clicks in this range
+    const hpFilter = _tgAudioCtx.createBiquadFilter();
+    hpFilter.type = 'highpass';
+    hpFilter.frequency.value = 2000;
+    hpFilter.Q.value = 0.7;
+
+    const lpFilter = _tgAudioCtx.createBiquadFilter();
+    lpFilter.type = 'lowpass';
+    lpFilter.frequency.value = 10000;
+    lpFilter.Q.value = 0.7;
+
+    // Use 2048 buffer for ~46ms chunks — good balance of resolution vs performance
+    const scriptNode = _tgAudioCtx.createScriptProcessor(2048, 1, 1);
     _tgScriptNode = scriptNode;
 
     _tgTicks = [];
@@ -8823,30 +8836,41 @@ async function startTimegrapher() {
     clearTgCanvas();
 
     const expectedInterval = 3600000 / _tgBph;
-    const refractory = expectedInterval * 0.55;
+    const refractory = expectedInterval * 0.4;
     let lastTickTime = 0;
-    // Track recent peak levels to auto-calibrate
-    const recentPeaks = [];
-    const PEAK_HISTORY = 80;
+    // Rolling RMS for auto-calibrating noise floor
+    const rmsHistory = [];
+    const RMS_HISTORY = 60;
     let _tgRenderPending = false;
-    // For noise level UI updates (throttle to ~7fps)
     let lastNoiseUpdate = 0;
+    // Track buffer timing for sample-precise tick placement
+    let bufferCount = 0;
 
     scriptNode.onaudioprocess = function(e) {
       if (!_tgRunning) return;
       const samples = e.inputBuffer.getChannelData(0); // Float32Array, -1 to 1
-      // Find peak absolute amplitude in this buffer
+      const bufLen = samples.length;
+      const now = performance.now();
+      // Time at start of this buffer (approximate)
+      const bufStartTime = now - (bufLen / sampleRate) * 1000;
+      bufferCount++;
+
+      // Compute RMS energy of this buffer (better than peak for noise floor)
+      let sumSq = 0;
+      for (let i = 0; i < bufLen; i++) sumSq += samples[i] * samples[i];
+      const rms = Math.sqrt(sumSq / bufLen);
+
+      // Also find peak for noise UI
       let maxAmp = 0;
-      for (let i = 0; i < samples.length; i++) {
+      for (let i = 0; i < bufLen; i++) {
         const a = Math.abs(samples[i]);
         if (a > maxAmp) maxAmp = a;
       }
 
       // --- Noise level UI (throttled) ---
-      const now = performance.now();
       if (now - lastNoiseUpdate > 150) {
         lastNoiseUpdate = now;
-        const pct = Math.min(100, maxAmp * 300); // 0.33 amplitude = 100%
+        const pct = Math.min(100, maxAmp * 300);
         const bar = document.getElementById('tg-noise-bar');
         const lbl = document.getElementById('tg-noise-label');
         bar.style.width = pct + '%';
@@ -8865,35 +8889,51 @@ async function startTimegrapher() {
         }
       }
 
-      // --- Tick detection ---
-      // Track recent peaks for auto-calibration
-      recentPeaks.push(maxAmp);
-      if (recentPeaks.length > PEAK_HISTORY) recentPeaks.shift();
+      // --- Tick detection with sample-precise timing ---
+      rmsHistory.push(rms);
+      if (rmsHistory.length > RMS_HISTORY) rmsHistory.shift();
 
-      // Compute baseline: median of recent peaks (ambient noise floor)
-      const sorted = [...recentPeaks].sort((a, b) => a - b);
-      const baseline = sorted[Math.floor(sorted.length * 0.5)] || 0.001;
+      // Noise floor = median RMS (stable estimate of ambient level)
+      const sortedRms = [...rmsHistory].sort((a, b) => a - b);
+      const noiseFloor = sortedRms[Math.floor(sortedRms.length * 0.5)] || 0.001;
 
-      // Sensitivity maps 0-100 to threshold multiplier 4.0x down to 1.5x
-      const multiplier = 4.0 - (_tgSensitivity / 100) * 2.5;
-      const threshold = Math.max(baseline * multiplier, 0.005);
+      // Sensitivity maps 0-100 to threshold multiplier 5.0x down to 1.8x above noise
+      const multiplier = 5.0 - (_tgSensitivity / 100) * 3.2;
+      const threshold = Math.max(noiseFloor * multiplier, 0.003);
 
-      if (maxAmp > threshold && (now - lastTickTime) > refractory) {
-        _tgTicks.push(now);
-        lastTickTime = now;
-        if (!_tgRenderPending) {
-          _tgRenderPending = true;
-          requestAnimationFrame(() => { updateTgResults(); renderTgDiagram(); _tgRenderPending = false; });
+      // Scan buffer for peaks above threshold — find the EXACT sample position
+      // This gives us sub-buffer timing precision
+      for (let i = 1; i < bufLen - 1; i++) {
+        const amp = Math.abs(samples[i]);
+        if (amp > threshold &&
+            amp >= Math.abs(samples[i - 1]) &&
+            amp >= Math.abs(samples[i + 1])) {
+          // Found a peak — compute precise timestamp
+          const peakTime = bufStartTime + (i / sampleRate) * 1000;
+          if (peakTime - lastTickTime > refractory) {
+            _tgTicks.push(peakTime);
+            lastTickTime = peakTime;
+            // Skip ahead past this peak to avoid double-counting
+            i += Math.floor(sampleRate * 0.002); // skip 2ms
+          }
         }
       }
 
-      // Pass through (required for iOS — node must connect to destination)
+      // Update UI periodically
+      if (bufferCount % 4 === 0 && !_tgRenderPending) {
+        _tgRenderPending = true;
+        requestAnimationFrame(() => { updateTgResults(); renderTgDiagram(); _tgRenderPending = false; });
+      }
+
+      // Output silence (required for iOS — node must connect to destination)
       const output = e.outputBuffer.getChannelData(0);
-      for (let i = 0; i < output.length; i++) output[i] = 0; // silence
+      for (let i = 0; i < output.length; i++) output[i] = 0;
     };
 
-    // Connect: source → scriptNode → destination (iOS needs full chain)
-    source.connect(scriptNode);
+    // Connect: source → highpass → lowpass → scriptNode → destination
+    source.connect(hpFilter);
+    hpFilter.connect(lpFilter);
+    lpFilter.connect(scriptNode);
     scriptNode.connect(_tgAudioCtx.destination);
 
   } catch (e) {
