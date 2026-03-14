@@ -4109,7 +4109,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.07.40';
+const APP_VERSION = '2.36.14.07.47';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8764,105 +8764,133 @@ function toggleTimegrapher() {
 async function startTimegrapher() {
   const warn = document.getElementById('tg-mic-warning');
   warn.style.display = 'none';
+
+  // Check if running as PWA (standalone) — mic may not work
+  const isPWA = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    warn.textContent = 'Microphone access is not available. Try opening WRotate in Safari.';
+    warn.innerHTML = isPWA
+      ? 'Microphone is not available in the app. Please open <a href="https://wrotate.com" style="color:var(--gold);text-decoration:underline;">wrotate.com</a> in Safari to use the Timegrapher.'
+      : 'Microphone access is not available in this browser.';
     warn.style.display = 'block';
     return;
   }
+
   try {
     _tgStream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
     });
   } catch (e) {
-    warn.textContent = e.name === 'NotAllowedError'
-      ? 'Microphone permission denied. Go to Settings → Safari → Microphone to allow.'
-      : 'Could not access microphone: ' + e.message;
+    if (isPWA) {
+      warn.innerHTML = 'Microphone access failed in the app. Please open <a href="https://wrotate.com" style="color:var(--gold);text-decoration:underline;">wrotate.com</a> in Safari to use the Timegrapher.';
+    } else {
+      warn.textContent = e.name === 'NotAllowedError'
+        ? 'Microphone permission denied. Go to Settings → Safari → Microphone to allow.'
+        : 'Could not access microphone: ' + e.message;
+    }
     warn.style.display = 'block';
     return;
   }
-  const AC = window.AudioContext || window.webkitAudioContext;
-  _tgAudioCtx = new AC();
-  const sampleRate = _tgAudioCtx.sampleRate;
-  const source = _tgAudioCtx.createMediaStreamSource(_tgStream);
 
-  // High-pass filter at 2kHz to isolate tick transients from low-freq ambient noise
-  const hpFilter = _tgAudioCtx.createBiquadFilter();
-  hpFilter.type = 'highpass';
-  hpFilter.frequency.value = 2000;
-  hpFilter.Q.value = 0.7;
-  source.connect(hpFilter);
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    _tgAudioCtx = new AC();
+    // iOS requires resume after user gesture
+    if (_tgAudioCtx.state === 'suspended') await _tgAudioCtx.resume();
 
-  // Analyser on filtered signal for tick detection
-  _tgAnalyser = _tgAudioCtx.createAnalyser();
-  _tgAnalyser.fftSize = 512; // smaller window = better time resolution
-  _tgAnalyser.smoothingTimeConstant = 0;
-  hpFilter.connect(_tgAnalyser);
+    const source = _tgAudioCtx.createMediaStreamSource(_tgStream);
 
-  // Second analyser on raw signal for noise level display
-  const _tgRawAnalyser = _tgAudioCtx.createAnalyser();
-  _tgRawAnalyser.fftSize = 2048;
-  _tgRawAnalyser.smoothingTimeConstant = 0.3;
-  source.connect(_tgRawAnalyser);
+    // High-pass filter at 2kHz to isolate tick transients from low-freq ambient noise
+    const hpFilter = _tgAudioCtx.createBiquadFilter();
+    hpFilter.type = 'highpass';
+    hpFilter.frequency.value = 2000;
+    hpFilter.Q.value = 0.7;
+    source.connect(hpFilter);
 
-  _tgTicks = [];
-  _tgStartTime = performance.now();
-  _tgRunning = true;
-  document.getElementById('tg-start-btn').textContent = 'Stop';
-  document.getElementById('tg-save-btn').style.display = 'none';
-  document.getElementById('tg-results').style.display = 'grid';
-  clearTgCanvas();
+    // Analyser on filtered signal for tick detection
+    _tgAnalyser = _tgAudioCtx.createAnalyser();
+    _tgAnalyser.fftSize = 512;
+    _tgAnalyser.smoothingTimeConstant = 0;
+    hpFilter.connect(_tgAnalyser);
 
-  const bufLen = _tgAnalyser.fftSize;
-  const buf = new Float32Array(bufLen);
-  const expectedInterval = 3600000 / _tgBph; // ms
-  const refractory = expectedInterval * 0.55; // min ms between ticks
-  let lastTickTime = 0;
-  // Adaptive envelope follower
-  let envelope = 0;
-  const envAttack = 0.3;   // fast rise
-  const envRelease = 0.005; // slow decay
+    // Second analyser on raw signal for noise level display
+    const _tgRawAnalyser = _tgAudioCtx.createAnalyser();
+    _tgRawAnalyser.fftSize = 2048;
+    _tgRawAnalyser.smoothingTimeConstant = 0.3;
+    source.connect(_tgRawAnalyser);
 
-  let _tgRenderPending = false;
-  _tgPollId = setInterval(() => {
-    if (!_tgAnalyser) return;
-    _tgAnalyser.getFloatTimeDomainData(buf);
-    // Compute RMS of high-passed signal
-    let sum = 0;
-    for (let i = 0; i < bufLen; i++) sum += buf[i] * buf[i];
-    const rms = Math.sqrt(sum / bufLen);
-    // Envelope follower: fast attack, slow release
-    if (rms > envelope) {
-      envelope = envelope + envAttack * (rms - envelope);
-    } else {
-      envelope = envelope + envRelease * (rms - envelope);
-    }
-    // Tick = RMS spike above 1.8x the envelope, outside refractory
-    const now = performance.now();
-    if (rms > envelope * 1.8 && rms > 0.003 && (now - lastTickTime) > refractory) {
-      _tgTicks.push(now);
-      lastTickTime = now;
-      if (!_tgRenderPending) {
-        _tgRenderPending = true;
-        requestAnimationFrame(() => { updateTgResults(); renderTgDiagram(); _tgRenderPending = false; });
+    _tgTicks = [];
+    _tgStartTime = performance.now();
+    _tgRunning = true;
+    document.getElementById('tg-start-btn').textContent = 'Stop';
+    document.getElementById('tg-save-btn').style.display = 'none';
+    document.getElementById('tg-results').style.display = 'grid';
+    clearTgCanvas();
+
+    const bufLen = _tgAnalyser.fftSize;
+    // Use Uint8Array — getByteTimeDomainData is more reliable on iOS than getFloatTimeDomainData
+    const buf = new Uint8Array(bufLen);
+    const expectedInterval = 3600000 / _tgBph;
+    const refractory = expectedInterval * 0.55;
+    let lastTickTime = 0;
+    let envelope = 0;
+    const envAttack = 0.3;
+    const envRelease = 0.005;
+
+    let _tgRenderPending = false;
+    _tgPollId = setInterval(() => {
+      if (!_tgAnalyser) return;
+      // getByteTimeDomainData returns 0-255, center at 128
+      _tgAnalyser.getByteTimeDomainData(buf);
+      let sum = 0;
+      for (let i = 0; i < bufLen; i++) {
+        const v = (buf[i] - 128) / 128; // normalize to -1..1
+        sum += v * v;
       }
-    }
-  }, 8);
+      const rms = Math.sqrt(sum / bufLen);
+      // Envelope follower
+      if (rms > envelope) {
+        envelope = envelope + envAttack * (rms - envelope);
+      } else {
+        envelope = envelope + envRelease * (rms - envelope);
+      }
+      const now = performance.now();
+      if (rms > envelope * 1.8 && rms > 0.003 && (now - lastTickTime) > refractory) {
+        _tgTicks.push(now);
+        lastTickTime = now;
+        if (!_tgRenderPending) {
+          _tgRenderPending = true;
+          requestAnimationFrame(() => { updateTgResults(); renderTgDiagram(); _tgRenderPending = false; });
+        }
+      }
+    }, 8);
 
-  // Noise level display (uses raw unfiltered signal)
-  const rawBuf = new Float32Array(_tgRawAnalyser.fftSize);
-  _tgNoiseId = setInterval(() => {
-    if (!_tgRawAnalyser) return;
-    _tgRawAnalyser.getFloatTimeDomainData(rawBuf);
-    let sum = 0;
-    for (let i = 0; i < rawBuf.length; i++) sum += rawBuf[i] * rawBuf[i];
-    const rms = Math.sqrt(sum / rawBuf.length);
-    const pct = Math.min(100, rms * 500);
-    const bar = document.getElementById('tg-noise-bar');
-    const lbl = document.getElementById('tg-noise-label');
-    bar.style.width = pct + '%';
-    bar.style.background = pct < 30 ? '#22c55e' : pct < 60 ? '#eab308' : '#ef4444';
-    lbl.textContent = pct < 30 ? 'Quiet — Good' : pct < 60 ? 'Moderate — OK' : 'Noisy — Move to quieter spot';
-  }, 100);
+    // Noise level display (raw unfiltered)
+    const rawBuf = new Uint8Array(_tgRawAnalyser.fftSize);
+    _tgNoiseId = setInterval(() => {
+      if (!_tgRawAnalyser) return;
+      _tgRawAnalyser.getByteTimeDomainData(rawBuf);
+      let sum = 0;
+      for (let i = 0; i < rawBuf.length; i++) {
+        const v = (rawBuf[i] - 128) / 128;
+        sum += v * v;
+      }
+      const rms = Math.sqrt(sum / rawBuf.length);
+      const pct = Math.min(100, rms * 500);
+      const bar = document.getElementById('tg-noise-bar');
+      const lbl = document.getElementById('tg-noise-label');
+      bar.style.width = pct + '%';
+      bar.style.background = pct < 30 ? '#22c55e' : pct < 60 ? '#eab308' : '#ef4444';
+      lbl.textContent = pct < 30 ? 'Quiet — Good' : pct < 60 ? 'Moderate — OK' : 'Noisy — Move to quieter spot';
+    }, 100);
+
+  } catch (e) {
+    console.error('[WristLog] Timegrapher audio error:', e);
+    warn.textContent = 'Audio setup failed: ' + e.message;
+    warn.style.display = 'block';
+    if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
+    if (_tgAudioCtx) { _tgAudioCtx.close().catch(() => {}); _tgAudioCtx = null; }
+  }
 }
 
 function stopTimegrapher() {
