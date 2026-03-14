@@ -1128,3 +1128,36 @@ export function checkContent(text) {
   }
   return { clean: matches.length === 0, matches };
 }
+
+// ── Timegrapher ──
+
+/**
+ * Compute timegrapher results from an array of tick timestamps.
+ * @param {number[]} ticks - Array of tick timestamps in ms (e.g., performance.now() values)
+ * @param {number} bph - Beats per hour (e.g., 28800)
+ * @returns {{ rate: number|null, beatError: number|null, tickCount: number }}
+ */
+export function computeTgResults(ticks, bph) {
+  if (ticks.length < 2) return { rate: null, beatError: null, tickCount: ticks.length };
+  const expectedInterval = 3600000 / bph;
+  const intervals = [];
+  for (let i = 1; i < ticks.length; i++) intervals.push(ticks[i] - ticks[i - 1]);
+  // Filter outliers (keep within 0.5x–2x expected)
+  const filtered = intervals.filter(iv => iv > expectedInterval * 0.5 && iv < expectedInterval * 2);
+  if (filtered.length < 2) return { rate: null, beatError: null, tickCount: ticks.length };
+  const avgInterval = filtered.reduce((a, b) => a + b, 0) / filtered.length;
+  // Rate in seconds/day
+  const rate = ((avgInterval - expectedInterval) / expectedInterval) * 86400;
+  // Beat error: separate odd/even intervals (tick vs tock)
+  let beatError = null;
+  if (filtered.length >= 4) {
+    const odds = filtered.filter((_, i) => i % 2 === 0);
+    const evens = filtered.filter((_, i) => i % 2 === 1);
+    if (odds.length && evens.length) {
+      const avgOdd = odds.reduce((a, b) => a + b, 0) / odds.length;
+      const avgEven = evens.reduce((a, b) => a + b, 0) / evens.length;
+      beatError = Math.abs(avgOdd - avgEven);
+    }
+  }
+  return { rate: Math.round(rate * 10) / 10, beatError: beatError !== null ? Math.round(beatError * 100) / 100 : null, tickCount: ticks.length };
+}

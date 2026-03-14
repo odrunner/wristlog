@@ -2315,6 +2315,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <button class="view-btn" id="view-list-btn" onclick="setCollView('list')" title="List view"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
         </div>
         <button class="btn btn-ghost" onclick="startGame()" title="Ranking Game" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="btn-label"> Ranking Game</span></button>
+        <button class="btn btn-ghost" onclick="openTimegrapher()" title="Timegrapher" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="btn-label">Timegrapher</span></button>
         <button class="btn btn-ghost" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="btn-label"> Add From Photo</span></button>
         <button class="btn btn-primary" onclick="openAddWatch()" title="Add Watch"><span class="btn-label-full">+ Add Watch</span><span class="btn-label-short">+ Add</span></button>
       </div>
@@ -3423,6 +3424,83 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
+<!-- ════ TIMEGRAPHER MODAL ════ -->
+<div id="timegrapher-modal" class="overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:540px;">
+    <div class="modal-title" style="display:flex;align-items:center;justify-content:space-between;">
+      <span style="display:flex;align-items:center;gap:.5rem;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Timegrapher
+      </span>
+      <button type="button" class="btn-ghost" onclick="closeTimegrapher()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted);padding:0;">&times;</button>
+    </div>
+    <div id="tg-body" style="max-height:70vh;overflow-y:auto;padding-right:.5rem;">
+      <!-- Watch selector -->
+      <div style="margin-bottom:.75rem;">
+        <label style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Watch</label>
+        <select id="tg-watch-select" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.88rem;margin-top:.25rem;">
+          <option value="">— Select a watch —</option>
+        </select>
+      </div>
+      <!-- BPH selector -->
+      <div style="margin-bottom:.75rem;">
+        <label style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Beat Rate (BPH)</label>
+        <div id="tg-bph-chips" style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.25rem;"></div>
+      </div>
+      <!-- Position selector -->
+      <div style="margin-bottom:.75rem;">
+        <label style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Position</label>
+        <div id="tg-pos-chips" style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.25rem;"></div>
+      </div>
+      <!-- Noise level -->
+      <div style="margin-bottom:.75rem;">
+        <label style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Noise Level</label>
+        <div style="background:var(--hover);border-radius:6px;height:8px;margin-top:.35rem;overflow:hidden;">
+          <div id="tg-noise-bar" style="height:100%;width:0%;border-radius:6px;transition:width .15s,background .15s;background:#22c55e;"></div>
+        </div>
+        <div id="tg-noise-label" style="font-size:.7rem;color:var(--muted);margin-top:.15rem;">Waiting...</div>
+      </div>
+      <!-- Timing diagram canvas -->
+      <div style="margin-bottom:.75rem;">
+        <label style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Timing Diagram</label>
+        <canvas id="tg-canvas" style="width:100%;height:200px;border-radius:8px;margin-top:.35rem;background:#1a1a1a;"></canvas>
+      </div>
+      <!-- Results -->
+      <div id="tg-results" style="display:none;margin-bottom:.75rem;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;">
+          <div style="background:var(--hover);border-radius:8px;padding:.6rem .75rem;text-align:center;">
+            <div id="tg-rate" style="font-size:1.1rem;font-weight:700;color:var(--text);">—</div>
+            <div style="font-size:.7rem;color:var(--muted);margin-top:.1rem;">s/day</div>
+          </div>
+          <div style="background:var(--hover);border-radius:8px;padding:.6rem .75rem;text-align:center;">
+            <div id="tg-beat-error" style="font-size:1.1rem;font-weight:700;color:var(--text);">—</div>
+            <div style="font-size:.7rem;color:var(--muted);margin-top:.1rem;">Beat Error (ms)</div>
+          </div>
+          <div style="background:var(--hover);border-radius:8px;padding:.6rem .75rem;text-align:center;">
+            <div id="tg-ticks" style="font-size:1.1rem;font-weight:700;color:var(--text);">0</div>
+            <div style="font-size:.7rem;color:var(--muted);margin-top:.1rem;">Ticks</div>
+          </div>
+        </div>
+      </div>
+      <!-- Controls -->
+      <div style="display:flex;gap:.5rem;margin-bottom:.75rem;">
+        <button id="tg-start-btn" class="btn btn-primary" style="flex:1;" onclick="toggleTimegrapher()">Start Listening</button>
+        <button id="tg-save-btn" class="btn btn-ghost" style="flex:1;display:none;" onclick="saveTimegrapherResult()">Save Result</button>
+      </div>
+      <!-- Mic warning -->
+      <div id="tg-mic-warning" style="display:none;font-size:.78rem;color:#ef4444;margin-bottom:.5rem;line-height:1.4;"></div>
+      <div style="font-size:.72rem;color:var(--muted);line-height:1.5;margin-bottom:.75rem;">
+        Place the watch crown-side down near the microphone in a quiet room. Keep the phone still during measurement. Avoid placing the watch directly on the phone speaker (magnets).
+      </div>
+      <!-- History -->
+      <div id="tg-history" style="display:none;">
+        <label style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">History</label>
+        <div id="tg-history-list" style="margin-top:.35rem;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ════ DELETE CLUB MODAL ════ -->
 <div id="delete-club-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:380px;text-align:center;">
@@ -4031,7 +4109,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.13.21.15';
+const APP_VERSION = '2.36.14.07.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8623,6 +8701,324 @@ function renderRecSettingsBody() {
       ${watchRows}
     </div>`;
 }
+
+// ── Timegrapher ──
+let _tgAudioCtx = null, _tgStream = null, _tgAnalyser = null, _tgRunning = false;
+let _tgTicks = [], _tgPollId = null, _tgNoiseId = null, _tgStartTime = 0;
+let _tgBph = 28800, _tgPosition = 'dial_up';
+const TG_BPH_OPTIONS = [18000, 21600, 25200, 28800, 36000];
+const TG_POSITIONS = [
+  { val: 'dial_up', lbl: 'Dial Up' }, { val: 'dial_down', lbl: 'Dial Down' },
+  { val: 'crown_up', lbl: 'Crown Up' }, { val: 'crown_down', lbl: 'Crown Down' },
+  { val: 'crown_left', lbl: 'Crown Left' }, { val: 'crown_right', lbl: 'Crown Right' }
+];
+
+function openTimegrapher(watchId) {
+  const modal = document.getElementById('timegrapher-modal');
+  // Populate watch selector
+  const sel = document.getElementById('tg-watch-select');
+  sel.innerHTML = '<option value="">— Select a watch —</option>' +
+    watches.map(w => `<option value="${w.id}"${w.id === watchId ? ' selected' : ''}>${escHtml(w.brand)} ${escHtml(w.name)}</option>`).join('');
+  // BPH chips
+  document.getElementById('tg-bph-chips').innerHTML = TG_BPH_OPTIONS.map(b =>
+    `<div class="chip${b === _tgBph ? ' selected' : ''}" onclick="selectTgBph(${b})">${(b/1000).toFixed(b%1000?1:0)}k</div>`
+  ).join('');
+  // Position chips
+  document.getElementById('tg-pos-chips').innerHTML = TG_POSITIONS.map(p =>
+    `<div class="chip${p.val === _tgPosition ? ' selected' : ''}" onclick="selectTgPos('${p.val}')">${p.lbl}</div>`
+  ).join('');
+  // Reset state
+  _tgTicks = [];
+  document.getElementById('tg-results').style.display = 'none';
+  document.getElementById('tg-save-btn').style.display = 'none';
+  document.getElementById('tg-start-btn').textContent = 'Start Listening';
+  document.getElementById('tg-mic-warning').style.display = 'none';
+  document.getElementById('tg-noise-bar').style.width = '0%';
+  document.getElementById('tg-noise-label').textContent = 'Waiting...';
+  clearTgCanvas();
+  loadTgHistory();
+  modal.classList.remove('hidden');
+}
+
+function closeTimegrapher() {
+  if (_tgRunning) stopTimegrapher();
+  document.getElementById('timegrapher-modal').classList.add('hidden');
+}
+
+function selectTgBph(bph) {
+  _tgBph = bph;
+  document.querySelectorAll('#tg-bph-chips .chip').forEach(c =>
+    c.classList.toggle('selected', c.textContent === (bph/1000).toFixed(bph%1000?1:0) + 'k'));
+}
+
+function selectTgPos(pos) {
+  _tgPosition = pos;
+  document.querySelectorAll('#tg-pos-chips .chip').forEach(c =>
+    c.classList.toggle('selected', c.onclick.toString().includes(`'${pos}'`)));
+}
+
+function toggleTimegrapher() {
+  if (_tgRunning) stopTimegrapher(); else startTimegrapher();
+}
+
+async function startTimegrapher() {
+  const warn = document.getElementById('tg-mic-warning');
+  warn.style.display = 'none';
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    warn.textContent = 'Microphone access is not available. Try opening WRotate in Safari.';
+    warn.style.display = 'block';
+    return;
+  }
+  try {
+    _tgStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+    });
+  } catch (e) {
+    warn.textContent = e.name === 'NotAllowedError'
+      ? 'Microphone permission denied. Go to Settings → Safari → Microphone to allow.'
+      : 'Could not access microphone: ' + e.message;
+    warn.style.display = 'block';
+    return;
+  }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  _tgAudioCtx = new AC();
+  const source = _tgAudioCtx.createMediaStreamSource(_tgStream);
+  _tgAnalyser = _tgAudioCtx.createAnalyser();
+  _tgAnalyser.fftSize = 2048;
+  _tgAnalyser.smoothingTimeConstant = 0;
+  source.connect(_tgAnalyser);
+
+  _tgTicks = [];
+  _tgStartTime = performance.now();
+  _tgRunning = true;
+  document.getElementById('tg-start-btn').textContent = 'Stop';
+  document.getElementById('tg-save-btn').style.display = 'none';
+  document.getElementById('tg-results').style.display = 'grid';
+  clearTgCanvas();
+
+  const bufLen = _tgAnalyser.fftSize;
+  const buf = new Float32Array(bufLen);
+  const expectedInterval = 3600000 / _tgBph; // ms
+  const refractory = expectedInterval * 0.55; // min ms between ticks
+  let lastTickTime = 0;
+  let noiseFloor = 0.01;
+  let noiseAlpha = 0.995;
+
+  _tgPollId = setInterval(() => {
+    _tgAnalyser.getFloatTimeDomainData(buf);
+    // Compute RMS
+    let sum = 0;
+    for (let i = 0; i < bufLen; i++) sum += buf[i] * buf[i];
+    const rms = Math.sqrt(sum / bufLen);
+    // Compute peak
+    let peak = 0;
+    for (let i = 0; i < bufLen; i++) { const a = Math.abs(buf[i]); if (a > peak) peak = a; }
+    // Update noise floor (slow decay)
+    noiseFloor = noiseFloor * noiseAlpha + rms * (1 - noiseAlpha);
+    // Tick detection: peak is 4x above noise floor, outside refractory period
+    const threshold = Math.max(noiseFloor * 4, 0.02);
+    const now = performance.now();
+    if (peak > threshold && (now - lastTickTime) > refractory) {
+      _tgTicks.push(now);
+      lastTickTime = now;
+      updateTgResults();
+      renderTgDiagram();
+    }
+  }, 4);
+
+  // Noise level display
+  _tgNoiseId = setInterval(() => {
+    _tgAnalyser.getFloatTimeDomainData(buf);
+    let sum = 0;
+    for (let i = 0; i < bufLen; i++) sum += buf[i] * buf[i];
+    const rms = Math.sqrt(sum / bufLen);
+    const pct = Math.min(100, rms * 500);
+    const bar = document.getElementById('tg-noise-bar');
+    const lbl = document.getElementById('tg-noise-label');
+    bar.style.width = pct + '%';
+    bar.style.background = pct < 30 ? '#22c55e' : pct < 60 ? '#eab308' : '#ef4444';
+    lbl.textContent = pct < 30 ? 'Quiet — Good' : pct < 60 ? 'Moderate — OK' : 'Noisy — Move to quieter spot';
+  }, 100);
+}
+
+function stopTimegrapher() {
+  _tgRunning = false;
+  if (_tgPollId) { clearInterval(_tgPollId); _tgPollId = null; }
+  if (_tgNoiseId) { clearInterval(_tgNoiseId); _tgNoiseId = null; }
+  if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
+  if (_tgAudioCtx) { _tgAudioCtx.close().catch(() => {}); _tgAudioCtx = null; }
+  _tgAnalyser = null;
+  document.getElementById('tg-start-btn').textContent = 'Start Listening';
+  if (_tgTicks.length >= 20) {
+    document.getElementById('tg-save-btn').style.display = 'block';
+  }
+  updateTgResults();
+}
+
+function computeTgResults(ticks, bph) {
+  if (ticks.length < 2) return { rate: null, beatError: null, tickCount: ticks.length };
+  const expectedInterval = 3600000 / bph;
+  const intervals = [];
+  for (let i = 1; i < ticks.length; i++) intervals.push(ticks[i] - ticks[i - 1]);
+  // Filter outliers (keep within 0.5x–2x expected)
+  const filtered = intervals.filter(iv => iv > expectedInterval * 0.5 && iv < expectedInterval * 2);
+  if (filtered.length < 2) return { rate: null, beatError: null, tickCount: ticks.length };
+  const avgInterval = filtered.reduce((a, b) => a + b, 0) / filtered.length;
+  // Rate in seconds/day
+  const rate = ((avgInterval - expectedInterval) / expectedInterval) * 86400;
+  // Beat error: separate odd/even intervals (tick vs tock)
+  let beatError = null;
+  if (filtered.length >= 4) {
+    const odds = filtered.filter((_, i) => i % 2 === 0);
+    const evens = filtered.filter((_, i) => i % 2 === 1);
+    if (odds.length && evens.length) {
+      const avgOdd = odds.reduce((a, b) => a + b, 0) / odds.length;
+      const avgEven = evens.reduce((a, b) => a + b, 0) / evens.length;
+      beatError = Math.abs(avgOdd - avgEven);
+    }
+  }
+  return { rate: Math.round(rate * 10) / 10, beatError: beatError !== null ? Math.round(beatError * 100) / 100 : null, tickCount: ticks.length };
+}
+
+function updateTgResults() {
+  const r = computeTgResults(_tgTicks, _tgBph);
+  document.getElementById('tg-results').style.display = '';
+  document.getElementById('tg-rate').textContent = r.rate !== null ? (r.rate > 0 ? '+' : '') + r.rate : '—';
+  document.getElementById('tg-beat-error').textContent = r.beatError !== null ? r.beatError.toFixed(2) : '—';
+  document.getElementById('tg-ticks').textContent = r.tickCount;
+  // Color code rate
+  const rateEl = document.getElementById('tg-rate');
+  if (r.rate !== null) {
+    const absRate = Math.abs(r.rate);
+    rateEl.style.color = absRate <= 5 ? '#22c55e' : absRate <= 15 ? '#eab308' : '#ef4444';
+  }
+}
+
+function clearTgCanvas() {
+  const canvas = document.getElementById('tg-canvas');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = canvas.clientHeight * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  // Center line
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, canvas.clientHeight / 2);
+  ctx.lineTo(canvas.clientWidth, canvas.clientHeight / 2);
+  ctx.stroke();
+}
+
+function renderTgDiagram() {
+  if (_tgTicks.length < 2) return;
+  const canvas = document.getElementById('tg-canvas');
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(0, 0, w, h);
+  // Center line (zero deviation)
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, h / 2);
+  ctx.lineTo(w, h / 2);
+  ctx.stroke();
+  // Grid lines at ±0.5ms, ±1ms
+  ctx.strokeStyle = '#222';
+  [0.25, 0.5, 0.75].forEach(frac => {
+    ctx.beginPath();
+    ctx.moveTo(0, h * frac);
+    ctx.lineTo(w, h * frac);
+    ctx.stroke();
+  });
+
+  const expectedInterval = 3600000 / _tgBph;
+  const maxDeviation = 2; // ±2ms range maps to canvas height
+  // Show last 500 ticks
+  const visibleTicks = _tgTicks.slice(-500);
+  const startIdx = Math.max(0, _tgTicks.length - 500);
+  const totalVisible = visibleTicks.length - 1;
+  if (totalVisible < 1) return;
+  const xStep = w / Math.max(totalVisible, 1);
+
+  ctx.fillStyle = '#b8941f';
+  for (let i = 1; i < visibleTicks.length; i++) {
+    const interval = visibleTicks[i] - visibleTicks[i - 1];
+    if (interval > expectedInterval * 2 || interval < expectedInterval * 0.5) continue;
+    const deviation = interval - expectedInterval; // ms
+    const x = (i - 1) * xStep;
+    const y = h / 2 - (deviation / maxDeviation) * (h / 2);
+    ctx.beginPath();
+    ctx.arc(x, Math.max(2, Math.min(h - 2, y)), 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Labels
+  ctx.fillStyle = '#666';
+  ctx.font = '10px sans-serif';
+  ctx.fillText('+' + maxDeviation + 'ms', 4, 12);
+  ctx.fillText('-' + maxDeviation + 'ms', 4, h - 4);
+  ctx.fillText('0', 4, h / 2 - 4);
+}
+
+async function saveTimegrapherResult() {
+  if (!currentUser || _tgTicks.length < 20) return;
+  const r = computeTgResults(_tgTicks, _tgBph);
+  const watchId = document.getElementById('tg-watch-select').value || null;
+  const duration = Math.round((performance.now() - _tgStartTime) / 1000);
+  const { error } = await db.from('timegrapher_results').insert({
+    user_id: currentUser.id,
+    watch_id: watchId,
+    rate: r.rate,
+    beat_error: r.beatError,
+    bph: _tgBph,
+    duration_seconds: duration,
+    tick_count: r.tickCount,
+    position: _tgPosition
+  });
+  if (error) { toast('Could not save — ' + error.message, 'error'); return; }
+  toast('Result saved!');
+  document.getElementById('tg-save-btn').style.display = 'none';
+  loadTgHistory();
+}
+
+async function loadTgHistory() {
+  const histEl = document.getElementById('tg-history');
+  const listEl = document.getElementById('tg-history-list');
+  if (!currentUser) { histEl.style.display = 'none'; return; }
+  const watchId = document.getElementById('tg-watch-select')?.value;
+  let q = db.from('timegrapher_results').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
+  if (watchId) q = q.eq('watch_id', watchId);
+  const { data, error } = await q;
+  if (error || !data || data.length === 0) { histEl.style.display = 'none'; return; }
+  histEl.style.display = '';
+  listEl.innerHTML = data.map(r => {
+    const d = new Date(r.created_at);
+    const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const rateStr = r.rate !== null ? (r.rate > 0 ? '+' : '') + Number(r.rate).toFixed(1) + ' s/d' : '—';
+    const beStr = r.beat_error !== null ? Number(r.beat_error).toFixed(2) + ' ms' : '—';
+    const posStr = TG_POSITIONS.find(p => p.val === r.position)?.lbl || '';
+    const rateColor = r.rate !== null ? (Math.abs(r.rate) <= 5 ? '#22c55e' : Math.abs(r.rate) <= 15 ? '#eab308' : '#ef4444') : 'var(--muted)';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.45rem 0;border-bottom:1px solid var(--border);font-size:.8rem;">
+      <div>
+        <span style="font-weight:600;color:${rateColor};">${rateStr}</span>
+        <span style="color:var(--muted);margin-left:.4rem;">BE: ${beStr}</span>
+      </div>
+      <div style="color:var(--muted);font-size:.72rem;">${posStr} · ${dateStr}</div>
+    </div>`;
+  }).join('');
+}
+
+// Reload history when watch selector changes
+document.addEventListener('change', e => {
+  if (e.target.id === 'tg-watch-select') loadTgHistory();
+});
 
 const DEFAULT_BRANDS = [
   'A. Lange & Söhne', 'Accurist', 'Accutron', 'Adidas', 'Aerowatch',
@@ -14458,6 +14854,7 @@ const _overlayCloseMap = {
   'delete-account-modal':closeDeleteAccount,
   'delete-club-modal':   closeDeleteClubModal,
   'rec-settings-modal':  closeRecSettings,
+  'timegrapher-modal':   closeTimegrapher,
   'feedback-modal':      closeFeedback,
   'track-log-modal':     closeTrackModal,
   'edit-log-modal':      closeEditLog,
