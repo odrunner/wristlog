@@ -3412,6 +3412,17 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
+<!-- ════ REC SETTINGS MODAL ════ -->
+<div id="rec-settings-modal" class="overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>Pick Settings</span>
+      <button type="button" class="btn-ghost" onclick="closeRecSettings()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted);padding:0;">&times;</button>
+    </div>
+    <div id="rec-settings-body" style="max-height:60vh;overflow-y:auto;padding-right:.75rem;"></div>
+  </div>
+</div>
+
 <!-- ════ DELETE CLUB MODAL ════ -->
 <div id="delete-club-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:380px;text-align:center;">
@@ -4020,7 +4031,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.13.19.12';
+const APP_VERSION = '2.36.13.21.09';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8526,6 +8537,93 @@ async function saveEmailPref(category, enabled) {
   if (error) toast('Could not save — ' + error.message, 'error');
 }
 
+// ── Recommendation settings ──
+const DEFAULT_REC_SETTINGS = { excluded: [], prioritizeUnworn: true, anniversaryPicks: true, weatherMatch: true, useCaseMatch: true };
+
+function getRecSettings() {
+  if (myProfile?.rec_settings) return { ...DEFAULT_REC_SETTINGS, ...myProfile.rec_settings };
+  return { ...DEFAULT_REC_SETTINGS };
+}
+
+async function saveRecSetting(key, value) {
+  const settings = getRecSettings();
+  settings[key] = value;
+  if (currentUser) {
+    const { error } = await db.from('profiles').update({ rec_settings: settings }).eq('id', currentUser.id);
+    if (error) { toast('Could not save — ' + error.message, 'error'); return; }
+    if (myProfile) myProfile.rec_settings = settings;
+  }
+  renderWatchRecommendation();
+  renderRecSettingsBody();
+}
+
+async function toggleRecExclude(watchId) {
+  const settings = getRecSettings();
+  const excluded = new Set(settings.excluded || []);
+  if (excluded.has(watchId)) excluded.delete(watchId); else excluded.add(watchId);
+  settings.excluded = [...excluded];
+  if (currentUser) {
+    const { error } = await db.from('profiles').update({ rec_settings: settings }).eq('id', currentUser.id);
+    if (error) { toast('Could not save — ' + error.message, 'error'); return; }
+    if (myProfile) myProfile.rec_settings = settings;
+  }
+  renderWatchRecommendation();
+  renderRecSettingsBody();
+}
+
+function openRecSettings() {
+  renderRecSettingsBody();
+  document.getElementById('rec-settings-modal').classList.remove('hidden');
+}
+
+function closeRecSettings() {
+  document.getElementById('rec-settings-modal').classList.add('hidden');
+}
+
+function renderRecSettingsBody() {
+  const el = document.getElementById('rec-settings-body');
+  if (!el) return;
+  const s = getRecSettings();
+  const excluded = new Set(s.excluded || []);
+  const tog = (key, label) => `
+    <div class="toggle-row">
+      <span class="toggle-label">${label}</span>
+      <label class="toggle-switch">
+        <input type="checkbox" ${s[key] ? 'checked' : ''} onchange="saveRecSetting('${key}',this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>`;
+  const watchRows = watches.map(w => {
+    const included = !excluded.has(w.id);
+    const thumb = w.image
+      ? `<img src="${escHtml(w.image)}" alt="" style="width:32px;height:32px;border-radius:6px;object-fit:cover;" onerror="this.style.display='none'">`
+      : `<div class="avatar" style="width:32px;height:32px;font-size:.6rem;border-radius:6px;background:${w.color}">${initials(w.brand,w.name)}</div>`;
+    return `<div class="toggle-row" style="gap:.6rem;">
+      ${thumb}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(w.name)}</div>
+        <div style="font-size:.72rem;color:var(--muted);">${escHtml(w.brand)}</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" ${included ? 'checked' : ''} onchange="toggleRecExclude('${w.id}')">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>`;
+  }).join('');
+  el.innerHTML = `
+    <div style="margin-bottom:1rem;">
+      <div style="font-size:.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem;">Algorithm</div>
+      ${tog('prioritizeUnworn', 'Boost neglected watches')}
+      ${tog('anniversaryPicks', 'Anniversary reminders')}
+      ${tog('weatherMatch', 'Weather × color matching')}
+      ${tog('useCaseMatch', 'Weekday/weekend occasion matching')}
+    </div>
+    <div>
+      <div style="font-size:.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem;">Include in rotation</div>
+      ${watchRows}
+    </div>`;
+}
+
 const DEFAULT_BRANDS = [
   'A. Lange & Söhne', 'Accurist', 'Accutron', 'Adidas', 'Aerowatch',
   'Aevig', 'Aigner', 'Airain', 'Alexander Shorokhoff', 'Alpina',
@@ -11304,6 +11402,8 @@ async function fetchWeather() {
 
 function computeWatchRec(skipSet) {
   if (!watches.length) return null;
+  const rs = getRecSettings();
+  const excludedSet = new Set(rs.excluded || []);
   const now      = new Date();
   const today    = todayStr();
   const todayDOW = now.getDay();
@@ -11324,6 +11424,7 @@ function computeWatchRec(skipSet) {
 
   const candidates = watches.map(w => {
     if (skipSet && skipSet.has(w.id)) return null; // skipped by user
+    if (excludedSet.has(w.id)) return null; // excluded in settings
     const wLogs = logsForWatch(w.id);
     // Single pass over logs: check today, find last date, count DOW matches, count use cases
     let wornToday = false, lastDate = '', dowCount = 0;
@@ -11352,7 +11453,7 @@ function computeWatchRec(skipSet) {
 
     // ── 3. Weather × color matching ──
     let weatherScore = 0, weatherReason = null;
-    if (weatherData) {
+    if (rs.weatherMatch && weatherData) {
       const isWarm = WARM.has(w.color), isCool = COOL.has(w.color), isDark = DARK.has(w.color);
       if      (weatherData.condition === 'sunny' && isWarm) { weatherScore = 3; weatherReason = 'Warm tone for sunny skies'; }
       else if (weatherData.condition === 'sunny' && isCool) { weatherScore = 1; }
@@ -11380,7 +11481,7 @@ function computeWatchRec(skipSet) {
     // On workdays, boost watches with work-wear history; on weekends, boost leisure
     let useCaseScore = 0, useCaseReason = null;
     const totalUC = workWears + leisureWears + dinnerWears + travelWears;
-    if (totalUC > 0) {
+    if (rs.useCaseMatch && totalUC > 0) {
       if (!isWeekend) {
         // Workday: favor watches with work history
         const workRatio = workWears / totalUC;
@@ -11410,7 +11511,7 @@ function computeWatchRec(skipSet) {
     // ── 8. NEW: Neglected watch nudge ──
     // If a watch has significantly fewer wears than the fair share, give it a boost
     let neglectedScore = 0, neglectedReason = null;
-    if (fairShare > 2 && wLogs.length < fairShare * 0.4) {
+    if (rs.prioritizeUnworn && fairShare > 2 && wLogs.length < fairShare * 0.4) {
       // Worn less than 40% of its fair share — it's being neglected
       neglectedScore = Math.min(Math.round((fairShare - wLogs.length) * 2), 25);
       if (wLogs.length === 0) neglectedReason = 'Never worn — give it a chance';
@@ -11442,7 +11543,7 @@ function computeWatchRec(skipSet) {
 
     // ── 10. Anniversary override ──
     let anniversaryScore = 0, anniversaryReason = null, anniversaryYears = 0;
-    if (w.purchaseDate) {
+    if (rs.anniversaryPicks && w.purchaseDate) {
       const pd = new Date(w.purchaseDate + 'T12:00:00');
       if (pd.getMonth() === now.getMonth() && pd.getDate() === now.getDate()) {
         anniversaryYears = now.getFullYear() - pd.getFullYear();
@@ -11478,7 +11579,7 @@ function recCardHTML(rec) {
   const todayDOW  = new Date().getDay();
   if (!rec) {
     return `<div class="rec-card">
-      <div class="rec-label">Today's Pick</div>
+      <div class="rec-label" style="display:flex;align-items:center;justify-content:space-between;">Today's Pick<button onclick="openRecSettings()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;line-height:1;" title="Pick settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
       <div style="color:var(--muted);font-size:.85rem">All watches worn today — great rotation!</div>
     </div>`;
   }
@@ -11523,7 +11624,7 @@ function recCardHTML(rec) {
   const wornToday = logsForWatch(w.id).some(l => l.date === todayStr());
   const recLabel = anniversaryScore ? `🎂 Anniversary Pick` : `Today's Pick`;
   return `<div class="rec-card">
-    <div class="rec-label">${recLabel}</div>
+    <div class="rec-label" style="display:flex;align-items:center;justify-content:space-between;">${recLabel}<button onclick="openRecSettings()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;line-height:1;" title="Pick settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div>
     <div class="rec-body">
       <div class="rec-thumb">${thumb}</div>
       <div class="rec-info">
@@ -14356,6 +14457,7 @@ const _overlayCloseMap = {
   'edit-post-modal':     closeEditPost,
   'delete-account-modal':closeDeleteAccount,
   'delete-club-modal':   closeDeleteClubModal,
+  'rec-settings-modal':  closeRecSettings,
   'feedback-modal':      closeFeedback,
   'track-log-modal':     closeTrackModal,
   'edit-log-modal':      closeEditLog,
