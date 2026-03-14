@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeWatchRec } from '../wristlog.js';
+import { computeWatchRec, DEFAULT_REC_SETTINGS } from '../wristlog.js';
 
 // Helper to create a fixed "now" for deterministic tests
 const monday = new Date('2024-06-17T12:00:00'); // Monday
@@ -253,5 +253,120 @@ describe('computeWatchRec', () => {
     const watches = [makeWatch('w1', { purchaseDate: '2024-06-17' })]; // same year
     const result = computeWatchRec({ watches, logs: [], weatherData: null, now: monday });
     expect(result.anniversaryScore).toBe(0);
+  });
+
+  // ── recSettings: exclusions ─────────────────────────────────────────────
+
+  it('excludes watches listed in recSettings.excluded', () => {
+    const watches = [makeWatch('w1'), makeWatch('w2')];
+    const recSettings = { ...DEFAULT_REC_SETTINGS, excluded: ['w1'] };
+    const result = computeWatchRec({ watches, logs: [], weatherData: null, recSettings, now: monday });
+    expect(result.w.id).toBe('w2');
+  });
+
+  it('returns null when all watches are excluded', () => {
+    const watches = [makeWatch('w1'), makeWatch('w2')];
+    const recSettings = { ...DEFAULT_REC_SETTINGS, excluded: ['w1', 'w2'] };
+    const result = computeWatchRec({ watches, logs: [], weatherData: null, recSettings, now: monday });
+    expect(result).toBeNull();
+  });
+
+  it('exclusions and skipSet work together', () => {
+    const watches = [makeWatch('w1'), makeWatch('w2'), makeWatch('w3')];
+    const recSettings = { ...DEFAULT_REC_SETTINGS, excluded: ['w1'] };
+    const skipSet = new Set(['w2']);
+    const result = computeWatchRec({ watches, logs: [], weatherData: null, recSettings, skipSet, now: monday });
+    expect(result.w.id).toBe('w3');
+  });
+
+  // ── recSettings: weatherMatch toggle ────────────────────────────────────
+
+  it('disables weather scoring when weatherMatch is false', () => {
+    const watches = [makeWatch('warm', { color: '#c9a84c' })];
+    const weather = { condition: 'sunny', desc: 'Sunny', tempC: 28 };
+    const recSettings = { ...DEFAULT_REC_SETTINGS, weatherMatch: false };
+    const result = computeWatchRec({ watches, logs: [], weatherData: weather, recSettings, now: monday });
+    expect(result.weatherScore).toBe(0);
+  });
+
+  it('enables weather scoring when weatherMatch is true (default)', () => {
+    const watches = [makeWatch('warm', { color: '#c9a84c' })];
+    const weather = { condition: 'sunny', desc: 'Sunny', tempC: 28 };
+    const result = computeWatchRec({ watches, logs: [], weatherData: weather, now: monday });
+    expect(result.weatherScore).toBe(3);
+  });
+
+  // ── recSettings: useCaseMatch toggle ────────────────────────────────────
+
+  it('disables use-case scoring when useCaseMatch is false', () => {
+    const watches = [makeWatch('w1')];
+    const logs = [
+      makeLog('w1', '2024-06-10', { useCase: 'work' }),
+      makeLog('w1', '2024-06-03', { useCase: 'work' }),
+      makeLog('w1', '2024-05-27', { useCase: 'work' }),
+      makeLog('w1', '2024-05-20', { useCase: 'work' }),
+    ];
+    const recSettings = { ...DEFAULT_REC_SETTINGS, useCaseMatch: false };
+    const result = computeWatchRec({ watches, logs, weatherData: null, recSettings, now: monday });
+    expect(result.useCaseScore).toBe(0);
+  });
+
+  // ── recSettings: prioritizeUnworn toggle ────────────────────────────────
+
+  it('disables neglected watch boost when prioritizeUnworn is false', () => {
+    // Create a scenario where neglect boost would normally fire:
+    // 5 watches, 20 logs on one watch (fairShare=4), another watch with 0 wears
+    const watches = [makeWatch('popular'), makeWatch('neglected')];
+    const logs = Array.from({ length: 20 }, (_, i) =>
+      makeLog('popular', `2024-05-${String(i + 1).padStart(2, '0')}`)
+    );
+    const recSettings = { ...DEFAULT_REC_SETTINGS, prioritizeUnworn: false };
+    const result = computeWatchRec({ watches, logs, weatherData: null, recSettings, now: monday });
+    expect(result.neglectedScore).toBe(0);
+  });
+
+  it('enables neglected watch boost when prioritizeUnworn is true (default)', () => {
+    const watches = [makeWatch('popular'), makeWatch('neglected')];
+    const logs = Array.from({ length: 20 }, (_, i) =>
+      makeLog('popular', `2024-05-${String(i + 1).padStart(2, '0')}`)
+    );
+    const result = computeWatchRec({ watches, logs, weatherData: null, now: monday });
+    // neglected watch: fairShare = 10, wLogs.length = 0, so neglectedScore > 0
+    expect(result.neglectedScore).toBeGreaterThan(0);
+  });
+
+  // ── recSettings: anniversaryPicks toggle ────────────────────────────────
+
+  it('disables anniversary override when anniversaryPicks is false', () => {
+    const watches = [makeWatch('anni', { purchaseDate: '2023-06-17' }), makeWatch('other')];
+    const recSettings = { ...DEFAULT_REC_SETTINGS, anniversaryPicks: false };
+    const result = computeWatchRec({ watches, logs: [], weatherData: null, recSettings, now: monday });
+    // anni should NOT get 9999 score
+    const anniResult = computeWatchRec({ watches: [makeWatch('anni', { purchaseDate: '2023-06-17' })], logs: [], weatherData: null, recSettings, now: monday });
+    expect(anniResult.anniversaryScore).toBe(0);
+  });
+
+  it('enables anniversary override when anniversaryPicks is true (default)', () => {
+    const watches = [makeWatch('anni', { purchaseDate: '2023-06-17' })];
+    const result = computeWatchRec({ watches, logs: [], weatherData: null, now: monday });
+    expect(result.anniversaryScore).toBe(9999);
+  });
+
+  // ── recSettings: defaults ───────────────────────────────────────────────
+
+  it('uses default settings when recSettings is not provided', () => {
+    const watches = [makeWatch('w1')];
+    const result = computeWatchRec({ watches, logs: [], weatherData: null, now: monday });
+    expect(result).not.toBeNull();
+  });
+
+  it('DEFAULT_REC_SETTINGS has expected shape', () => {
+    expect(DEFAULT_REC_SETTINGS).toEqual({
+      excluded: [],
+      prioritizeUnworn: true,
+      anniversaryPicks: true,
+      weatherMatch: true,
+      useCaseMatch: true,
+    });
   });
 });

@@ -259,8 +259,13 @@ const WARM = new Set(['#c9a84c', '#fbbf24', '#fb923c', '#ef7942', '#f43f5e']);
 const COOL = new Set(['#38bdf8', '#818cf8', '#a78bfa', '#34d399', '#4caf7d']);
 const DARK = new Set(['#94a3b8']);
 
-export function computeWatchRec({ watches, logs, weatherData, skipSet, eloRatings = {}, now = new Date() }) {
+const DEFAULT_REC_SETTINGS = { excluded: [], prioritizeUnworn: true, anniversaryPicks: true, weatherMatch: true, useCaseMatch: true };
+export { DEFAULT_REC_SETTINGS };
+
+export function computeWatchRec({ watches, logs, weatherData, skipSet, eloRatings = {}, recSettings = DEFAULT_REC_SETTINGS, now = new Date() }) {
   if (!watches.length) return null;
+  const rs = { ...DEFAULT_REC_SETTINGS, ...recSettings };
+  const excludedSet = new Set(rs.excluded || []);
   const today = todayStr(now);
   const todayDOW = now.getDay();
   const isWeekend = todayDOW === 0 || todayDOW === 6;
@@ -276,6 +281,7 @@ export function computeWatchRec({ watches, logs, weatherData, skipSet, eloRating
 
   const candidates = watches.map(w => {
     if (skipSet && skipSet.has(w.id)) return null;
+    if (excludedSet.has(w.id)) return null;
     const wLogs = logs.filter(l => l.watchId === w.id);
 
     // Single pass over logs: check today, find last date, count DOW matches, count use cases
@@ -302,7 +308,7 @@ export function computeWatchRec({ watches, logs, weatherData, skipSet, eloRating
 
     // 3. Weather × color matching
     let weatherScore = 0, weatherReason = null;
-    if (weatherData) {
+    if (rs.weatherMatch && weatherData) {
       const isWarm = WARM.has(w.color), isCool = COOL.has(w.color), isDark = DARK.has(w.color);
       if (weatherData.condition === 'sunny' && isWarm) { weatherScore = 3; weatherReason = 'Warm tone for sunny skies'; }
       else if (weatherData.condition === 'sunny' && isCool) { weatherScore = 1; }
@@ -327,7 +333,7 @@ export function computeWatchRec({ watches, logs, weatherData, skipSet, eloRating
     // 6. Use case × day type matching
     let useCaseScore = 0, useCaseReason = null;
     const totalUC = workWears + leisureWears + dinnerWears + travelWears;
-    if (totalUC > 0) {
+    if (rs.useCaseMatch && totalUC > 0) {
       if (!isWeekend) {
         const workRatio = workWears / totalUC;
         useCaseScore = Math.round(workRatio * 15);
@@ -354,7 +360,7 @@ export function computeWatchRec({ watches, logs, weatherData, skipSet, eloRating
 
     // 8. Neglected watch nudge
     let neglectedScore = 0, neglectedReason = null;
-    if (fairShare > 2 && wLogs.length < fairShare * 0.4) {
+    if (rs.prioritizeUnworn && fairShare > 2 && wLogs.length < fairShare * 0.4) {
       neglectedScore = Math.min(Math.round((fairShare - wLogs.length) * 2), 25);
       if (wLogs.length === 0) neglectedReason = 'Never worn — give it a chance';
       else neglectedReason = 'Underrepresented in your rotation';
@@ -382,7 +388,7 @@ export function computeWatchRec({ watches, logs, weatherData, skipSet, eloRating
 
     // 10. Anniversary override
     let anniversaryScore = 0, anniversaryReason = null, anniversaryYears = 0;
-    if (w.purchaseDate) {
+    if (rs.anniversaryPicks && w.purchaseDate) {
       const pd = new Date(w.purchaseDate + 'T12:00:00');
       if (pd.getMonth() === now.getMonth() && pd.getDate() === now.getDate()) {
         anniversaryYears = now.getFullYear() - pd.getFullYear();
