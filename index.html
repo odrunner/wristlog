@@ -3181,10 +3181,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button type="button" id="wl-img-upload-btn" class="btn btn-ghost btn-sm" onclick="pickWlModalImage()" style="display:inline-flex;align-items:center;gap:.3rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Upload photo</button>
     </div>
 
-    <div class="modal-actions">
+    <div class="modal-actions" style="flex-wrap:wrap;">
       <button class="btn btn-primary" onclick="saveWishlistItem()">Save</button>
       <button class="btn btn-ghost"   onclick="closeWishlistModal()">Cancel</button>
       <button id="wl-move-btn" class="btn btn-ghost" onclick="moveWishlistToCollection()" style="display:none;">Move to Collection</button>
+    </div>
+    <div style="margin-top:.35rem;">
       <button id="wl-delete-btn" class="btn btn-ghost" onclick="wlDeleteFromEdit()" style="display:none;color:var(--danger);border-color:var(--danger);">Delete</button>
     </div>
   </div>
@@ -4032,7 +4034,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.13.20';
+const APP_VERSION = '2.36.14.15.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10275,8 +10277,8 @@ function renderCollection(force) {
         <div class="watch-card-top">
           ${noImgAvatar}
           <div style="flex:1;min-width:0;">
-            <div class="watch-card-name">${escHtml(w.name)}</div>
-            <div class="watch-card-brand">${escHtml(w.brand)}${w.ref ? ' · '+escHtml(w.ref) : ''}</div>
+            <div class="watch-card-name" style="cursor:pointer" onclick="openEditWatch('${w.id}')">${escHtml(w.name)}</div>
+            <div class="watch-card-brand" style="cursor:pointer" onclick="openEditWatch('${w.id}')">${escHtml(w.brand)}${w.ref ? ' · '+escHtml(w.ref) : ''}</div>
             ${watchCardTagsHTML(w)}
           </div>
           ${noImgBtns}`;
