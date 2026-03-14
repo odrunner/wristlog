@@ -4109,7 +4109,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.07.00';
+const APP_VERSION = '2.36.14.07.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8721,11 +8721,11 @@ function openTimegrapher(watchId) {
     watches.map(w => `<option value="${w.id}"${w.id === watchId ? ' selected' : ''}>${escHtml(w.brand)} ${escHtml(w.name)}</option>`).join('');
   // BPH chips
   document.getElementById('tg-bph-chips').innerHTML = TG_BPH_OPTIONS.map(b =>
-    `<div class="chip${b === _tgBph ? ' selected' : ''}" onclick="selectTgBph(${b})">${(b/1000).toFixed(b%1000?1:0)}k</div>`
+    `<div class="chip${b === _tgBph ? ' selected' : ''}" data-bph="${b}" onclick="selectTgBph(${b})">${(b/1000).toFixed(b%1000?1:0)}k</div>`
   ).join('');
   // Position chips
   document.getElementById('tg-pos-chips').innerHTML = TG_POSITIONS.map(p =>
-    `<div class="chip${p.val === _tgPosition ? ' selected' : ''}" onclick="selectTgPos('${p.val}')">${p.lbl}</div>`
+    `<div class="chip${p.val === _tgPosition ? ' selected' : ''}" data-pos="${p.val}" onclick="selectTgPos('${p.val}')">${p.lbl}</div>`
   ).join('');
   // Reset state
   _tgTicks = [];
@@ -8748,13 +8748,13 @@ function closeTimegrapher() {
 function selectTgBph(bph) {
   _tgBph = bph;
   document.querySelectorAll('#tg-bph-chips .chip').forEach(c =>
-    c.classList.toggle('selected', c.textContent === (bph/1000).toFixed(bph%1000?1:0) + 'k'));
+    c.classList.toggle('selected', c.dataset.bph === String(bph)));
 }
 
 function selectTgPos(pos) {
   _tgPosition = pos;
   document.querySelectorAll('#tg-pos-chips .chip').forEach(c =>
-    c.classList.toggle('selected', c.onclick.toString().includes(`'${pos}'`)));
+    c.classList.toggle('selected', c.dataset.pos === pos));
 }
 
 function toggleTimegrapher() {
@@ -8804,15 +8804,14 @@ async function startTimegrapher() {
   let noiseFloor = 0.01;
   let noiseAlpha = 0.995;
 
+  let _tgRenderPending = false;
   _tgPollId = setInterval(() => {
+    if (!_tgAnalyser) return;
     _tgAnalyser.getFloatTimeDomainData(buf);
-    // Compute RMS
-    let sum = 0;
-    for (let i = 0; i < bufLen; i++) sum += buf[i] * buf[i];
-    const rms = Math.sqrt(sum / bufLen);
     // Compute peak
-    let peak = 0;
-    for (let i = 0; i < bufLen; i++) { const a = Math.abs(buf[i]); if (a > peak) peak = a; }
+    let peak = 0, sum = 0;
+    for (let i = 0; i < bufLen; i++) { const v = buf[i]; sum += v * v; const a = Math.abs(v); if (a > peak) peak = a; }
+    const rms = Math.sqrt(sum / bufLen);
     // Update noise floor (slow decay)
     noiseFloor = noiseFloor * noiseAlpha + rms * (1 - noiseAlpha);
     // Tick detection: peak is 4x above noise floor, outside refractory period
@@ -8821,10 +8820,13 @@ async function startTimegrapher() {
     if (peak > threshold && (now - lastTickTime) > refractory) {
       _tgTicks.push(now);
       lastTickTime = now;
-      updateTgResults();
-      renderTgDiagram();
+      // Throttle UI updates via rAF
+      if (!_tgRenderPending) {
+        _tgRenderPending = true;
+        requestAnimationFrame(() => { updateTgResults(); renderTgDiagram(); _tgRenderPending = false; });
+      }
     }
-  }, 4);
+  }, 10);
 
   // Noise level display
   _tgNoiseId = setInterval(() => {
