@@ -193,7 +193,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       display: flex;
       align-items: flex-start; justify-content: center;
       overflow-y: auto;
-      padding: calc(1.75rem + env(safe-area-inset-top, 0px)) 1.25rem 4rem;
+      padding: calc(1.75rem + env(safe-area-inset-top, 0px)) 1.25rem 10rem;
       /* Force light palette on landing page regardless of theme */
       --bg: #f5f5f8; --surface: #ffffff; --surface2: #eeeff5;
       --border: #d8d9e8; --gold: #9a7628; --gold-lt: #c9a84c;
@@ -1841,17 +1841,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
 
-    <!-- 2. FEATURES (middle) -->
+    <!-- 2. TOP FEATURES -->
     <div class="landing-features">
-      <div class="landing-feat">
-        <div class="landing-feat-icon">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
-        </div>
-        <div>
-          <h2 class="landing-feat-title">Track Every Wear</h2>
-          <div class="landing-feat-desc">Log which watch you wore, with straps, photos, and notes. Build a personal wear history over time.</div>
-        </div>
-      </div>
       <div class="landing-feat">
         <div class="landing-feat-icon">
           <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
@@ -1863,6 +1854,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div class="landing-feat">
         <div class="landing-feat-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
+        </div>
+        <div>
+          <h2 class="landing-feat-title">Track Every Wear</h2>
+          <div class="landing-feat-desc">Log which watch you wore, with straps, photos, and notes. Build a personal wear history over time.</div>
+        </div>
+      </div>
+      <div class="landing-feat">
+        <div class="landing-feat-icon">
           <svg viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12h-6v-6h-4v6z"/></svg>
         </div>
         <div>
@@ -1870,36 +1870,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div class="landing-feat-desc">See what others are wearing. Follow collectors, like and comment on wears, and discover new watches through your feed.</div>
         </div>
       </div>
-      <div class="landing-feat">
-        <div class="landing-feat-icon">
-          <svg viewBox="0 0 24 24"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
-        </div>
-        <div>
-          <h2 class="landing-feat-title">Close Friends &amp; Privacy</h2>
-          <div class="landing-feat-desc">Share your collection securely. Control who sees what with granular privacy — public, followers only, or close friends only.</div>
-        </div>
-      </div>
-      <div class="landing-feat">
-        <div class="landing-feat-icon">
-          <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
-        </div>
-        <div>
-          <h2 class="landing-feat-title">Clubs &amp; Wishlist</h2>
-          <div class="landing-feat-desc">Create or join clubs around brands and styles. Maintain a wishlist of your grails and track market prices.</div>
-        </div>
-      </div>
-      <div class="landing-feat">
-        <div class="landing-feat-icon">
-          <svg viewBox="0 0 24 24"><path d="M4 20h16"/><rect x="4" y="13" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/></svg>
-        </div>
-        <div>
-          <h2 class="landing-feat-title">Stats &amp; Insights</h2>
-          <div class="landing-feat-desc">Wearing frequency, cost-per-wear, brand breakdowns, collection value, and your most worn watches.</div>
-        </div>
-      </div>
     </div>
 
-    <!-- 3. SIGN IN + APP STORE (bottom) -->
+    <!-- 3. SIGN IN -->
     <div class="landing-cta">
       <div id="auth-error" class="auth-error"></div>
       <div class="auth-divider" style="margin-bottom:.5rem;">First time? Just sign in — account created automatically.</div>
@@ -1919,12 +1892,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </svg>
         Continue with Apple
       </button>
-      <!-- APP STORE BADGE -->
-      <div style="text-align:center;margin-top:.75rem;">
-        <a href="https://apps.apple.com/us/app/wrotate/id6760091102" target="_blank" rel="noopener noreferrer" style="display:inline-block;" onclick="trackAppStoreClick()">
-          <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" style="height:40px;">
-        </a>
-      </div>
       <!-- Dev-only anonymous login — localhost only -->
       <div id="dev-login-wrap" style="display:none;margin-top:.5rem;gap:.4rem;justify-content:center;">
         <button onclick="devLogin()" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.45rem 1.1rem;font-size:.78rem;cursor:pointer;font-family:inherit;">
@@ -1936,7 +1903,45 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
 
-    <div style="margin-top:2rem;text-align:center;">
+    <!-- 4. BOTTOM FEATURES -->
+    <div class="landing-features" style="margin-top:1.25rem;">
+      <div class="landing-feat">
+        <div class="landing-feat-icon">
+          <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
+        </div>
+        <div>
+          <h2 class="landing-feat-title">Clubs &amp; Wishlist</h2>
+          <div class="landing-feat-desc">Create or join clubs around brands and styles. Maintain a wishlist of your grails and track market prices.</div>
+        </div>
+      </div>
+      <div class="landing-feat">
+        <div class="landing-feat-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div>
+          <h2 class="landing-feat-title">Close Friends &amp; Privacy</h2>
+          <div class="landing-feat-desc">Share your collection securely. Control who sees what with granular privacy — public, followers only, or close friends only.</div>
+        </div>
+      </div>
+      <div class="landing-feat">
+        <div class="landing-feat-icon">
+          <svg viewBox="0 0 24 24"><path d="M4 20h16"/><rect x="4" y="13" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/></svg>
+        </div>
+        <div>
+          <h2 class="landing-feat-title">Stats &amp; Insights</h2>
+          <div class="landing-feat-desc">Wearing frequency, cost-per-wear, brand breakdowns, collection value, and your most worn watches.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. APP STORE BADGE -->
+    <div style="text-align:center;margin-top:1.25rem;">
+      <a href="https://apps.apple.com/us/app/wrotate/id6760091102" target="_blank" rel="noopener noreferrer" style="display:inline-block;" onclick="trackAppStoreClick()">
+        <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" style="height:40px;">
+      </a>
+    </div>
+
+    <div style="margin-top:1.25rem;text-align:center;">
       <a href="/privacy.html" style="font-size:.78rem;color:var(--muted);text-decoration:none;">Privacy Policy</a>
     </div>
 
@@ -4108,7 +4113,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.19.13';
+const APP_VERSION = '2.36.14.19.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
