@@ -4115,7 +4115,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.20.03';
+const APP_VERSION = '2.36.15.14.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6986,6 +6986,8 @@ function scrollToFeedPost(postId) {
   if (!postId) { nav(document.querySelector('nav button[data-page=\'feed\']')); return; }
   // Auto-expand comments so the latest comment is visible when coming from a notification
   expandedComments.add(postId);
+  // Force feed reload so new comments/likes are visible immediately
+  feedLoadedAt = 0;
   nav(document.querySelector('nav button[data-page=\'feed\']'));
   const attempt = (tries) => {
     const card = document.getElementById('feedcard-' + postId);
