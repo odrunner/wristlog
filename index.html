@@ -3854,6 +3854,16 @@ async function deleteAccount() {
   await del('feedback',       { eq: ['user_id', uid] });
   await del('profiles',       { eq: ['id', uid] });
   if (failed) return; // user can retry — already-deleted tables will no-op on re-run
+  // Delete from auth.users via edge function (requires service role)
+  try {
+    const sess = (await db.auth.getSession()).data.session;
+    if (sess) {
+      await fetch(SUPABASE_URL + '/functions/v1/delete-user', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + sess.access_token, 'Content-Type': 'application/json' },
+      });
+    }
+  } catch(e) { console.warn('[WristLog] auth.users cleanup failed (non-blocking):', e.message); }
   try { localStorage.removeItem('wristlog_onboarded'); localStorage.removeItem('wristlog_onboarded_' + uid); localStorage.removeItem(STORE_THEME); } catch(e) {}
   closeDeleteAccount();
   await signOut();
@@ -4092,7 +4102,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.17.59';
+const APP_VERSION = '2.36.14.18.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
