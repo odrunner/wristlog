@@ -6294,7 +6294,14 @@ async function loadNotifications() {
     const { data: ps } = await db.from('profiles').select('id, username, display_name, avatar_url').in('id', actorIds);
     (ps || []).forEach(p => pMap[p.id] = p);
   }
-  userNotifs = data.map(n => ({ ...n, actor: pMap[n.actor_id] || null }));
+  const clubNotifTypes = ['club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted'];
+  const clubIds = [...new Set(data.filter(n => clubNotifTypes.includes(n.type) && n.ref_id).map(n => n.ref_id))];
+  let clubMap = {};
+  if (clubIds.length) {
+    const { data: clubs } = await db.from('clubs').select('id, name').in('id', clubIds);
+    (clubs || []).forEach(c => clubMap[c.id] = c);
+  }
+  userNotifs = data.map(n => ({ ...n, actor: pMap[n.actor_id] || null, club: clubMap[n.ref_id] || null }));
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
   updateBellBadge();
 }
@@ -6575,10 +6582,10 @@ function renderNotificationPanel() {
                : n.type === 'comment_also'    ? `${nm} also commented on a post you liked or commented on`
                : n.type === 'comment_like'   ? `${nm} liked your comment`
                : n.type === 'mention'        ? `${nm} mentioned you in a comment`
-               : n.type === 'club_join_request'  ? `${nm} wants to join your club`
-               : n.type === 'club_join_accepted' ? `${nm} approved your club request`
-               : n.type === 'club_invite'        ? `${nm} invited you to join a club`
-               : n.type === 'club_promoted'        ? `${nm} made you an owner of a club`
+               : n.type === 'club_join_request'  ? `${nm} wants to join ${n.club?.name ? escHtml(n.club.name) : 'your club'}`
+               : n.type === 'club_join_accepted' ? `${nm} approved your request to join ${n.club?.name ? escHtml(n.club.name) : 'a club'}`
+               : n.type === 'club_invite'        ? `${nm} invited you to join ${n.club?.name ? escHtml(n.club.name) : 'a club'}`
+               : n.type === 'club_promoted'        ? `${nm} made you an owner of ${n.club?.name ? escHtml(n.club.name) : 'a club'}`
                : n.type === 'friend_request'       ? (n._accepted || friendships.has(n.actor_id) || friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'accepted') ? `You and ${nm} are now close friends` : n._declined || !friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'pending') ? `Close friend request from ${nm} declined` : `${nm} wants to be close friends`)
                : n.type === 'friend_accepted'      ? `You and ${nm} are now close friends` : '';
     const actionsHtml = (n.type === 'follow_request' && !n._declined && !frAccepted) ? `
