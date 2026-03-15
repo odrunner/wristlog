@@ -4092,7 +4092,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.14.17.55';
+const APP_VERSION = '2.36.14.17.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8360,7 +8360,7 @@ async function checkEulaAcceptance() {
 
 async function acceptEula() {
   if (!currentUser) return;
-  const { error: eulaErr } = await db.from('eula_acceptances').insert({ user_id: currentUser.id, version: '1.0' });
+  const { error: eulaErr } = await db.from('eula_acceptances').upsert({ user_id: currentUser.id, version: '1.0' }, { onConflict: 'user_id,version' });
   if (eulaErr) { toast('Could not save agreement — please try again', 'error'); return; }
   const { error: profErr } = await db.from('profiles').update({ eula_accepted_at: new Date().toISOString() }).eq('id', currentUser.id);
   if (profErr) { toast('Could not save agreement — please try again', 'error'); return; }
