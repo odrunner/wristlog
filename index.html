@@ -1863,6 +1863,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </svg>
         Continue with Apple
       </button>
+      <!-- APP STORE BADGE -->
+      <div style="text-align:center;margin-top:.75rem;">
+        <a href="https://apps.apple.com/us/app/wrotate/id6760091102" target="_blank" rel="noopener noreferrer" style="display:inline-block;" onclick="trackAppStoreClick()">
+          <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" style="height:40px;">
+        </a>
+      </div>
       <!-- Dev-only anonymous login — localhost only -->
       <div id="dev-login-wrap" style="display:none;margin-top:.5rem;gap:.4rem;justify-content:center;">
         <button onclick="devLogin()" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.45rem 1.1rem;font-size:.78rem;cursor:pointer;font-family:inherit;">
@@ -1906,7 +1912,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
 
     <!-- 4. MORE FEATURES -->
-    <div class="landing-features" style="margin-top:1.25rem;">
+    <div class="landing-features">
       <div class="landing-feat">
         <div class="landing-feat-icon">
           <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
@@ -1936,14 +1942,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
 
-    <!-- 5. APP STORE BADGE -->
-    <div style="text-align:center;margin-top:1.25rem;">
-      <a href="https://apps.apple.com/us/app/wrotate/id6760091102" target="_blank" rel="noopener noreferrer" style="display:inline-block;" onclick="trackAppStoreClick()">
-        <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" style="height:40px;">
-      </a>
-    </div>
-
-    <p style="font-size:.78rem;color:var(--muted);line-height:1.5;margin:1.5rem auto 0;max-width:340px;text-align:center;font-style:italic;">Built this as a personal side project — wanted to track my own rotation. A few friends started using it and liked it, so figured I'd share it more widely.</p>
+    <p style="font-size:.78rem;color:var(--muted);line-height:1.5;margin:1.25rem auto 0;max-width:340px;text-align:center;font-style:italic;">Built this as a personal side project — wanted to track my own rotation. A few friends started using it and liked it, so figured I'd share it more widely.</p>
     <div style="margin-top:.75rem;text-align:center;">
       <a href="/privacy.html" style="font-size:.78rem;color:var(--muted);text-decoration:none;">Privacy Policy</a>
     </div>
@@ -4117,7 +4116,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.15.19.56';
+const APP_VERSION = '2.36.15.20.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
