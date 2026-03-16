@@ -4116,7 +4116,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.15.21.37';
+const APP_VERSION = '2.36.16.10.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9452,13 +9452,15 @@ function renderFunnelSection(allData, weekData) {
       </div>`;
     }).join('');
   if (!rows) return '';
-  // Compute drop-off rates
+  // Compute drop-off rates — use max of any onboarding step as "started" (step 1 was added late)
   const signins = (allCounts.signin_google || 0) + (allCounts.signin_apple || 0);
-  const started = allCounts.onboarding_step_1 || allCounts.onboarding_step_2 || 0;
+  const started = Math.max(allCounts.onboarding_step_1 || 0, allCounts.onboarding_step_2 || 0);
   const completed = allCounts.onboarding_step_6 || 0;
+  const pctStart = signins ? Math.min(100, Math.round(started/signins*100)) : 0;
+  const pctDone = started ? Math.min(100, Math.round(completed/started*100)) : 0;
   const dropoff = signins > 0 ? `<div style="font-size:.78rem;color:var(--muted);margin-top:.5rem;line-height:1.6;">
-    Sign-in clicks → Onboarding started: <b>${started}</b>/${signins} (${signins ? Math.round(started/signins*100) : 0}%)<br>
-    Onboarding started → Completed: <b>${completed}</b>/${started} (${started ? Math.round(completed/started*100) : 0}%)
+    Sign-in clicks → Onboarding started: <b>${started}</b>/${signins} (${pctStart}%)<br>
+    Onboarding started → Completed: <b>${completed}</b>/${started} (${pctDone}%)
   </div>` : '';
   return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;">
     <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Signup Funnel</div>
