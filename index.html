@@ -200,24 +200,29 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       --gold-dim: rgba(154,118,40,.12); --text: #16161e; --muted: #70708a;
       --overlay-bg: rgba(245,245,248,.96);
     }
-    .landing-wrap { width: 100%; max-width: 880px; display: flex; flex-direction: column; align-items: center; }
-    .landing-hero { width: 100%; text-align: center; margin-bottom: .5rem; }
-    .landing-cta { width: 100%; max-width: 380px; margin: 0 auto 1.5rem; text-align: center; }
-    .landing-preview { width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; display:flex; gap:.75rem; padding:.25rem 0 .35rem; margin-bottom:.5rem; scroll-snap-type:x mandatory; scrollbar-width:none; justify-content:center; }
-    .landing-preview::-webkit-scrollbar { display:none; }
-    .landing-preview-card { flex-shrink:0; width:150px; border-radius:16px; overflow:hidden; border:1px solid var(--border); box-shadow:0 2px 12px rgba(0,0,0,.08); scroll-snap-align:center; background:var(--surface); }
-    .landing-preview-card img { width:100%; display:block; }
-    .landing-preview-label { text-align:center; font-size:.7rem; font-weight:600; color:var(--muted); padding:.4rem 0; letter-spacing:.04em; text-transform:uppercase; }
-    .landing-features { display: flex; flex-direction: column; gap: .65rem; text-align: left; width: 100%; max-width: 520px; margin: 0 auto 1.25rem; }
-    .landing-feat { display: flex; align-items: center; gap: .9rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .9rem 1rem; }
-    .landing-feat-icon { width: 2rem; height: 2rem; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--gold); }
-    .landing-feat-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-    .landing-feat-title { font-size: .88rem; font-weight: 600; color: var(--text); margin: 0 0 .2rem; }
-    .landing-feat-desc { font-size: .79rem; color: var(--muted); line-height: 1.5; }
-    @media (max-width: 640px) {
-      .landing-preview { justify-content:center; gap:.5rem; }
-      .landing-preview-card { width:80px; border-radius:10px; }
-      .landing-preview-label { font-size:.55rem; padding:.25rem 0; }
+    /* ── Public Feed Landing Layout ── */
+    .landing-feed-layout { width:100%; max-width:1000px; display:flex; gap:1.5rem; align-items:flex-start; margin:0 auto; }
+    .landing-feed-col { flex:1; min-width:0; max-width:470px; margin:0 auto; }
+    .landing-feed-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:.75rem; padding:0 .25rem; }
+    .landing-feed-header .auth-logo { margin-bottom:0; font-size:1.2rem; }
+    .landing-post-btn { display:flex; align-items:center; gap:.4rem; background:var(--gold); color:#fff; border:none; border-radius:8px; padding:.45rem .9rem; font-size:.82rem; font-weight:600; cursor:pointer; font-family:inherit; }
+    .landing-post-btn svg { width:14px; height:14px; }
+    .landing-sidebar { width:280px; flex-shrink:0; position:sticky; top:1.5rem; }
+    .landing-sidebar-inner { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:1.25rem; box-shadow:0 2px 12px rgba(0,0,0,.06); text-align:center; }
+    .landing-sidebar-inner .auth-logo { margin-bottom:.5rem; font-size:1.1rem; }
+    .landing-sidebar-inner .btn-google, .landing-sidebar-inner .btn-apple { font-size:.85rem; padding:.7rem .8rem; margin-bottom:.6rem; }
+    .landing-sidebar-tagline { font-size:.72rem; color:var(--muted); margin-bottom:.75rem; letter-spacing:.01em; }
+    .landing-mobile-bar { display:none; position:fixed; bottom:0; left:0; right:0; background:var(--surface); border-top:1px solid var(--border); padding:.5rem .75rem calc(.5rem + env(safe-area-inset-bottom,0px)); z-index:600; box-shadow:0 -2px 12px rgba(0,0,0,.08); align-items:center; gap:.5rem; }
+    .landing-mobile-bar .btn-google, .landing-mobile-bar .btn-apple { flex:1; margin-bottom:0; padding:.6rem .5rem; font-size:.78rem; gap:.4rem; }
+    .landing-mobile-bar .btn-google svg, .landing-mobile-bar .btn-apple svg { width:14px; height:14px; }
+    #login-prompt-modal .modal { text-align:center; }
+    #login-prompt-modal .btn-google, #login-prompt-modal .btn-apple { margin-bottom:.6rem; }
+    @media (max-width: 768px) {
+      .landing-feed-layout { flex-direction:column; align-items:center; }
+      .landing-sidebar { display:none; }
+      .landing-mobile-bar { display:flex; }
+      .landing-feed-col { padding-bottom:70px; max-width:100%; }
+      #auth-screen { padding-left:.75rem; padding-right:.75rem; }
     }
     .auth-logo {
       font-size: 1.5rem; font-weight: 800; color: var(--gold);
@@ -1807,144 +1812,102 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ AUTH / LANDING SCREEN ════ -->
 <div id="auth-screen" data-theme="light">
-  <div class="landing-wrap">
+  <div class="landing-feed-layout">
 
-    <!-- HERO: centered above columns -->
-    <div class="landing-hero">
-      <div class="auth-logo" style="margin-bottom:.6rem;justify-content:center;">
-        <svg width="34" height="34" viewBox="0 0 32 32" fill="none" style="flex-shrink:0;">
-          <path d="M 21 7.3 A 10 10 0 1 1 11 7.3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-          <polygon points="11,7.3 8.5,9.5 7.7,6.6" fill="currentColor"/>
-          <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
-        </svg>
-        W<span style="font-weight:400;letter-spacing:.04em;">rotate</span>
+    <!-- LEFT: Public feed column -->
+    <div class="landing-feed-col">
+      <div class="landing-feed-header">
+        <div class="auth-logo" style="justify-content:flex-start;">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" style="flex-shrink:0;">
+            <path d="M 21 7.3 A 10 10 0 1 1 11 7.3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            <polygon points="11,7.3 8.5,9.5 7.7,6.6" fill="currentColor"/>
+            <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
+          </svg>
+          W<span style="font-weight:400;letter-spacing:.04em;">rotate</span>
+        </div>
+        <button class="landing-post-btn" onclick="requireLogin()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Post
+        </button>
       </div>
-      <p style="font-size:.95rem;color:var(--text);line-height:1.55;margin:0;font-weight:600;">See their wrists. Show yours.</p>
-      <div style="font-size:.72rem;color:var(--muted);margin-top:.4rem;letter-spacing:.01em;">100% free · No ads · No credit card</div>
-    </div>
-
-    <!-- 1. APP PREVIEW SCREENSHOTS (first) -->
-    <div class="landing-preview">
-      <div class="landing-preview-card">
-        <img src="https://api.wrotate.com/storage/v1/object/public/media/landing/track.PNG" alt="Track page" loading="lazy">
-        <div class="landing-preview-label">Track</div>
-      </div>
-      <div class="landing-preview-card">
-        <img src="https://api.wrotate.com/storage/v1/object/public/media/landing/collection.PNG" alt="Collection page" loading="lazy">
-        <div class="landing-preview-label">Collection</div>
-      </div>
-      <div class="landing-preview-card">
-        <img src="https://api.wrotate.com/storage/v1/object/public/media/landing/feed.PNG" alt="Feed page" loading="lazy">
-        <div class="landing-preview-label">Feed</div>
-      </div>
-      <div class="landing-preview-card">
-        <img src="https://api.wrotate.com/storage/v1/object/public/media/landing/stats.PNG" alt="Stats page" loading="lazy">
-        <div class="landing-preview-label">Stats</div>
+      <div id="landing-feed-list">
+        <div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:40%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:90%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:70%;height:.7rem;"></div></div>
+        <div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:35%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:80%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:60%;height:.7rem;"></div></div>
+        <div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:45%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:85%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:65%;height:.7rem;"></div></div>
       </div>
     </div>
 
-    <!-- 2. SIGN IN -->
-    <div class="landing-cta">
-      <div id="auth-error" class="auth-error"></div>
-      <div class="auth-divider" style="margin-bottom:.5rem;">First time? Just sign in — account created automatically.</div>
+    <!-- RIGHT: Sticky sidebar (desktop) -->
+    <div class="landing-sidebar">
+      <div class="landing-sidebar-inner">
+        <div class="auth-logo" style="justify-content:center;">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none" style="flex-shrink:0;">
+            <path d="M 21 7.3 A 10 10 0 1 1 11 7.3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            <polygon points="11,7.3 8.5,9.5 7.7,6.6" fill="currentColor"/>
+            <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
+          </svg>
+          W<span style="font-weight:400;letter-spacing:.04em;">rotate</span>
+        </div>
+        <p style="font-size:.88rem;color:var(--text);font-weight:600;margin:0 0 .25rem;">See their wrists. Show yours.</p>
+        <div class="landing-sidebar-tagline">100% free · No ads · No credit card</div>
+        <div id="auth-error" class="auth-error"></div>
+        <div style="font-size:.72rem;color:var(--muted);margin-bottom:.6rem;">First time? Just sign in — account created automatically.</div>
+        <button class="btn-google" onclick="signInWithGoogle()">
+          <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+          Continue with Google
+        </button>
+        <button class="btn-apple" onclick="signInWithApple()">
+          <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="#fff"/></svg>
+          Continue with Apple
+        </button>
+        <div style="text-align:center;margin-top:.25rem;">
+          <a href="https://apps.apple.com/us/app/wrotate/id6760091102" target="_blank" rel="noopener noreferrer" style="display:inline-block;" onclick="trackAppStoreClick()">
+            <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" style="height:36px;">
+          </a>
+        </div>
+        <!-- Dev-only anonymous login — localhost only -->
+        <div id="dev-login-wrap" style="display:none;margin-top:.5rem;gap:.4rem;justify-content:center;">
+          <button onclick="devLogin()" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.35rem .8rem;font-size:.72rem;cursor:pointer;font-family:inherit;">testuser</button>
+          <button onclick="devLogin(true)" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.35rem .8rem;font-size:.72rem;cursor:pointer;font-family:inherit;">testuser2</button>
+        </div>
+        <div style="margin-top:.75rem;">
+          <a href="/privacy.html" style="font-size:.72rem;color:var(--muted);text-decoration:none;">Privacy Policy</a>
+        </div>
+      </div>
+    </div>
+  </div>
 
+  <!-- MOBILE: Sticky bottom bar -->
+  <div class="landing-mobile-bar">
+    <button class="btn-google" onclick="signInWithGoogle()">
+      <svg width="14" height="14" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+      Google
+    </button>
+    <button class="btn-apple" onclick="signInWithApple()">
+      <svg width="14" height="14" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="#fff"/></svg>
+      Apple
+    </button>
+  </div>
+
+  <!-- LOGIN PROMPT MODAL -->
+  <div id="login-prompt-modal" class="overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal" style="max-width:380px;">
+      <div class="modal-title" style="margin-bottom:.5rem;">Join WRotate</div>
+      <p style="font-size:.85rem;color:var(--muted);margin:0 0 1rem;">Sign in to like, comment, post, and share your own collection.</p>
       <button class="btn-google" onclick="signInWithGoogle()">
-        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-          <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
-          <path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
-          <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
-        </svg>
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
         Continue with Google
       </button>
       <button class="btn-apple" onclick="signInWithApple()">
-        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="#fff"/>
-        </svg>
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="#fff"/></svg>
         Continue with Apple
       </button>
-      <!-- APP STORE BADGE -->
-      <div style="text-align:center;margin-top:.75rem;">
+      <div style="text-align:center;margin-top:.25rem;">
         <a href="https://apps.apple.com/us/app/wrotate/id6760091102" target="_blank" rel="noopener noreferrer" style="display:inline-block;" onclick="trackAppStoreClick()">
-          <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" style="height:40px;">
+          <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" style="height:36px;">
         </a>
       </div>
-      <!-- Dev-only anonymous login — localhost only -->
-      <div id="dev-login-wrap" style="display:none;margin-top:.5rem;gap:.4rem;justify-content:center;">
-        <button onclick="devLogin()" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.45rem 1.1rem;font-size:.78rem;cursor:pointer;font-family:inherit;">
-          Dev Login (testuser)
-        </button>
-        <button onclick="devLogin(true)" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.45rem 1.1rem;font-size:.78rem;cursor:pointer;font-family:inherit;">
-          Dev Login 2 (testuser2)
-        </button>
-      </div>
-    </div>
-
-    <!-- 3. FEATURES -->
-    <div class="landing-features">
-      <div class="landing-feat">
-        <div class="landing-feat-icon">
-          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-        </div>
-        <div>
-          <h2 class="landing-feat-title">Build Your Collection</h2>
-          <div class="landing-feat-desc">Add watches from a photo or by URL — brand, model, and price fill in automatically. Track cost-per-wear, market value, insurance, and receipts.</div>
-        </div>
-      </div>
-      <div class="landing-feat">
-        <div class="landing-feat-icon">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
-        </div>
-        <div>
-          <h2 class="landing-feat-title">Track Every Wear</h2>
-          <div class="landing-feat-desc">Log which watch you wore, with straps, photos, and notes. Build a personal wear history over time.</div>
-        </div>
-      </div>
-      <div class="landing-feat">
-        <div class="landing-feat-icon">
-          <svg viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12h-6v-6h-4v6z"/></svg>
-        </div>
-        <div>
-          <h2 class="landing-feat-title">Social Feed</h2>
-          <div class="landing-feat-desc">See what others are wearing. Follow collectors, like and comment on wears, and discover new watches through your feed.</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 4. MORE FEATURES -->
-    <div class="landing-features">
-      <div class="landing-feat">
-        <div class="landing-feat-icon">
-          <svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
-        </div>
-        <div>
-          <h2 class="landing-feat-title">Clubs &amp; Wishlist</h2>
-          <div class="landing-feat-desc">Create or join clubs around brands and styles. Maintain a wishlist of your grails and track market prices.</div>
-        </div>
-      </div>
-      <div class="landing-feat">
-        <div class="landing-feat-icon">
-          <svg viewBox="0 0 24 24"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
-        </div>
-        <div>
-          <h2 class="landing-feat-title">Close Friends &amp; Privacy</h2>
-          <div class="landing-feat-desc">Share your collection securely. Control who sees what with granular privacy — public, followers only, or close friends only.</div>
-        </div>
-      </div>
-      <div class="landing-feat">
-        <div class="landing-feat-icon">
-          <svg viewBox="0 0 24 24"><path d="M4 20h16"/><rect x="4" y="13" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/></svg>
-        </div>
-        <div>
-          <h2 class="landing-feat-title">Stats &amp; Insights</h2>
-          <div class="landing-feat-desc">Wearing frequency, cost-per-wear, brand breakdowns, collection value, and your most worn watches.</div>
-        </div>
-      </div>
-    </div>
-
-    <p style="font-size:.78rem;color:var(--muted);line-height:1.5;margin:1.25rem auto 0;max-width:340px;text-align:center;font-style:italic;">Built this as a personal side project — wanted to track my own rotation. A few friends started using it and liked it, so figured I'd share it more widely.</p>
-    <div style="margin-top:.75rem;text-align:center;">
-      <a href="/privacy.html" style="font-size:.78rem;color:var(--muted);text-decoration:none;">Privacy Policy</a>
+      <button class="btn btn-ghost" onclick="closeLoginPrompt()" style="margin-top:.5rem;width:100%;font-size:.82rem;">Maybe later</button>
     </div>
   </div>
 </div>
@@ -4116,7 +4079,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.16.10.06';
+const APP_VERSION = '2.36.16.16.47';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6763,6 +6726,140 @@ document.addEventListener('click', e => {
   }, { passive: true });
 })();
 
+// ── Public Feed (Landing Page — no auth required) ────────────────────────
+let publicFeedItems = [];
+let publicFeedLikes = {};
+let publicFeedComments = {};
+let publicFeedLoading = false;
+
+async function loadPublicFeed() {
+  if (publicFeedLoading) return;
+  publicFeedLoading = true;
+  try {
+    const { data: rawLogs, error } = await db.from('logs')
+      .select('id, user_id, watch_id, photo_url, notes, use_case, date, created_at')
+      .eq('visibility', 'public')
+      .is('moderation_status', null)
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (error || !rawLogs?.length) { publicFeedLoading = false; return; }
+    const logIds = rawLogs.map(l => l.id);
+    const userIds = [...new Set(rawLogs.map(l => l.user_id))];
+    const watchIds = [...new Set(rawLogs.filter(l => l.watch_id).map(l => l.watch_id))];
+    const [profRes, watchRes, likesRes, commRes] = await Promise.all([
+      db.from('profiles').select('id, username, display_name, avatar_url').in('id', userIds),
+      watchIds.length ? db.from('watches').select('id, brand, name, image').in('id', watchIds) : { data: [] },
+      db.from('likes').select('log_id').in('log_id', logIds),
+      db.from('comments').select('id, log_id, user_id, body, created_at').in('log_id', logIds).is('moderation_status', null).order('created_at', { ascending: true }).limit(200),
+    ]);
+    const profMap = {}; (profRes.data || []).forEach(p => profMap[p.id] = p);
+    const watchMap = {}; (watchRes.data || []).forEach(w => watchMap[w.id] = w);
+    publicFeedLikes = {};
+    logIds.forEach(id => publicFeedLikes[id] = 0);
+    (likesRes.data || []).forEach(l => publicFeedLikes[l.log_id] = (publicFeedLikes[l.log_id] || 0) + 1);
+    // Comments + commenter profiles
+    const commentData = commRes.data || [];
+    const commenterIds = [...new Set(commentData.map(c => c.user_id))];
+    let commenterMap = {};
+    if (commenterIds.length) {
+      const { data: cp } = await db.from('profiles').select('id, username, display_name, avatar_url').in('id', commenterIds);
+      (cp || []).forEach(p => commenterMap[p.id] = p);
+    }
+    publicFeedComments = {};
+    commentData.forEach(c => {
+      if (!publicFeedComments[c.log_id]) publicFeedComments[c.log_id] = [];
+      publicFeedComments[c.log_id].push({ ...c, profile: commenterMap[c.user_id] || null });
+    });
+    publicFeedItems = rawLogs.map(l => ({
+      ...l,
+      profile: profMap[l.user_id] || null,
+      watch: l.watch_id ? (watchMap[l.watch_id] || null) : null,
+    }));
+    renderPublicFeed();
+  } catch(e) { console.warn('Public feed error:', e?.message); }
+  finally { publicFeedLoading = false; }
+}
+
+function renderPublicFeed() {
+  const el = document.getElementById('landing-feed-list');
+  if (!el || !publicFeedItems.length) return;
+  el.innerHTML = publicFeedItems.map(item => {
+    const p = item.profile;
+    const w = item.watch;
+    const likeCount = publicFeedLikes[item.id] || 0;
+    const comments = publicFeedComments[item.id] || [];
+    const displayName = escHtml(p?.display_name || p?.username || 'User');
+    const metaStr = formatFeedDate(item.date, item.created_at);
+    // Hero
+    let heroHtml = '';
+    if (item.photo_url) {
+      heroHtml = `<div class="feed-card-photo"><img src="${escHtml(item.photo_url)}" alt="" loading="lazy"></div>`;
+    } else if (item.notes && !w) {
+      heroHtml = `<div class="feed-text-hero"><p class="feed-text-hero-body">${escHtml(item.notes)}</p></div>`;
+    }
+    // Caption
+    let captionHtml = '';
+    if (item.notes && (item.photo_url || w)) {
+      captionHtml = `<div class="feed-caption"><span class="feed-caption-user">${displayName}</span> ${escHtml(item.notes)}</div>`;
+    }
+    // Watch chip
+    const watchChip = w ? `<div class="feed-watch-chip" onclick="requireLogin()" style="cursor:pointer;">${escHtml(((w.brand||'')+ ' ' +(w.name||'')).trim())}</div>` : '';
+    // Use case badge
+    const useCaseHtml = item.use_case ? `<span style="font-size:.7rem;color:var(--muted);margin-left:.5rem;text-transform:capitalize;">${escHtml(item.use_case)}</span>` : '';
+    // Comments preview (last 2)
+    let commentsHtml = '';
+    if (comments.length > 0) {
+      const preview = comments.slice(-2);
+      const remaining = comments.length - preview.length;
+      commentsHtml = `<div class="feed-comments-section">
+        ${remaining > 0 ? `<div class="comments-view-more" onclick="requireLogin()" style="cursor:pointer;">View all ${comments.length} comments</div>` : ''}
+        ${preview.map(c => `<div class="comment-item">
+          <div class="comment-avatar" onclick="requireLogin()" style="cursor:pointer;">${profileInitials(c.profile)}</div>
+          <div class="comment-content"><div class="comment-body">
+            <span class="comment-username" onclick="requireLogin()" style="cursor:pointer;">${escHtml(c.profile?.display_name || c.profile?.username || 'User')}</span>
+            ${escHtml(c.body)}
+            <span class="comment-time">${formatCommentTime(c.created_at)}</span>
+          </div></div>
+        </div>`).join('')}
+        <div class="comments-add-prompt" onclick="requireLogin()" style="cursor:pointer;font-size:.78rem;color:var(--muted);padding:.4rem 0;">Add a comment...</div>
+      </div>`;
+    } else {
+      commentsHtml = `<div style="padding:.25rem .75rem .5rem;"><span class="comments-add-prompt" onclick="requireLogin()" style="cursor:pointer;font-size:.78rem;color:var(--muted);">Add a comment...</span></div>`;
+    }
+    return `<div class="feed-card">
+      <div class="feed-card-header">
+        <div class="feed-user-avatar" onclick="requireLogin()" style="cursor:pointer;">${profileInitials(p)}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="feed-user-name" onclick="requireLogin()" style="cursor:pointer;">${displayName}</div>
+          <div class="feed-meta">${metaStr}${useCaseHtml}</div>
+        </div>
+      </div>
+      ${heroHtml}
+      <div class="feed-actions">
+        <button class="feed-action-btn" onclick="requireLogin()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <span>${likeCount || ''}</span>
+        </button>
+        <button class="feed-action-btn" onclick="requireLogin()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>${comments.length || ''}</span>
+        </button>
+      </div>
+      ${captionHtml}
+      ${watchChip}
+      ${commentsHtml}
+    </div>`;
+  }).join('');
+}
+
+function requireLogin() {
+  document.getElementById('login-prompt-modal').classList.remove('hidden');
+}
+function closeLoginPrompt() {
+  document.getElementById('login-prompt-modal').classList.add('hidden');
+}
+
 // ── Feed ──────────────────────────────────────────────────────────────────
 const FEED_LOG_COLS = 'id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility, moderation_status';
 async function loadFeed() {
@@ -8342,7 +8439,7 @@ function maybeShowWelcome() {
   if (!myProfile || myProfile.eula_accepted_at) return;
   if (watches.length > 0 || following.size > 0) return;
   document.getElementById('welcome-modal').classList.remove('hidden');
-  welcomeStep(1);
+  welcomeStep(2);
 }
 let _welcomePendingStep = null;
 function pauseWelcome(nextStep) {
@@ -14855,6 +14952,7 @@ const _sessionTimeout = setTimeout(() => {
   if (!currentUser) {
     console.warn('[WRotate] getSession timeout (10s) — showing auth screen');
     document.getElementById('auth-screen').style.display = 'flex';
+    loadPublicFeed();
   }
 }, 10000);
 
@@ -14872,11 +14970,12 @@ db.auth.getSession().then(({ data: { session }, error }) => {
                           window.location.search.includes('code=');
     if (!isOAuthReturn) {
       document.getElementById('auth-screen').style.display = 'flex';
+      loadPublicFeed();
     } else {
       // Safety net: if onAuthStateChange never fires (e.g. invalid token),
       // show the login screen after 5 seconds rather than hanging forever.
       setTimeout(() => {
-        if (!currentUser) document.getElementById('auth-screen').style.display = 'flex';
+        if (!currentUser) { document.getElementById('auth-screen').style.display = 'flex'; loadPublicFeed(); }
       }, 5000);
     }
   }
@@ -14884,6 +14983,7 @@ db.auth.getSession().then(({ data: { session }, error }) => {
   clearTimeout(_sessionTimeout);
   console.error('[WRotate] getSession threw — showing auth screen');
   document.getElementById('auth-screen').style.display = 'flex';
+  loadPublicFeed();
 });
 
 // ── SECONDARY: react to live auth changes ─────────────────────────────────
@@ -14898,6 +14998,7 @@ db.auth.onAuthStateChange((event, session) => {
     currentUser = null;
     clearUserState();
     document.getElementById('auth-screen').style.display = 'flex';
+    loadPublicFeed();
     document.getElementById('signout-btn').style.display = 'none';
     if (wasLoggedIn) toast('Session expired — please sign in again.', 'error');
     const profileBtn2 = document.getElementById('profile-btn');
