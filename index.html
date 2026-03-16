@@ -201,11 +201,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       --overlay-bg: rgba(245,245,248,.96);
     }
     .landing-wrap { width: 100%; max-width: 880px; display: flex; flex-direction: column; align-items: center; }
-    .landing-hero { width: 100%; text-align: center; margin-bottom: .75rem; }
+    .landing-hero { width: 100%; text-align: center; margin-bottom: .5rem; }
     .landing-cta { width: 100%; max-width: 380px; margin: 0 auto 1.5rem; text-align: center; }
-    .landing-preview { width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; display:flex; gap:1rem; padding:.5rem 0 1rem; margin-bottom:1rem; scroll-snap-type:x mandatory; scrollbar-width:none; justify-content:center; }
+    .landing-preview { width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; display:flex; gap:.75rem; padding:.25rem 0 .35rem; margin-bottom:.5rem; scroll-snap-type:x mandatory; scrollbar-width:none; justify-content:center; }
     .landing-preview::-webkit-scrollbar { display:none; }
-    .landing-preview-card { flex-shrink:0; width:200px; border-radius:16px; overflow:hidden; border:1px solid var(--border); box-shadow:0 2px 12px rgba(0,0,0,.08); scroll-snap-align:center; background:var(--surface); }
+    .landing-preview-card { flex-shrink:0; width:150px; border-radius:16px; overflow:hidden; border:1px solid var(--border); box-shadow:0 2px 12px rgba(0,0,0,.08); scroll-snap-align:center; background:var(--surface); }
     .landing-preview-card img { width:100%; display:block; }
     .landing-preview-label { text-align:center; font-size:.7rem; font-weight:600; color:var(--muted); padding:.4rem 0; letter-spacing:.04em; text-transform:uppercase; }
     .landing-features { display: flex; flex-direction: column; gap: .65rem; text-align: left; width: 100%; max-width: 520px; margin: 0 auto 1.25rem; }
@@ -215,8 +215,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .landing-feat-title { font-size: .88rem; font-weight: 600; color: var(--text); margin: 0 0 .2rem; }
     .landing-feat-desc { font-size: .79rem; color: var(--muted); line-height: 1.5; }
     @media (max-width: 640px) {
-      .landing-preview { justify-content:flex-start; padding-left:1rem; padding-right:1rem; }
-      .landing-preview-card { width:160px; }
+      .landing-preview { justify-content:center; gap:.5rem; }
+      .landing-preview-card { width:80px; border-radius:10px; }
+      .landing-preview-label { font-size:.55rem; padding:.25rem 0; }
     }
     .auth-logo {
       font-size: 1.5rem; font-weight: 800; color: var(--gold);
@@ -1842,38 +1843,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
 
-    <!-- 2. TOP FEATURES -->
-    <div class="landing-features">
-      <div class="landing-feat">
-        <div class="landing-feat-icon">
-          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-        </div>
-        <div>
-          <h2 class="landing-feat-title">Build Your Collection</h2>
-          <div class="landing-feat-desc">Add watches from a photo or by URL — brand, model, and price fill in automatically. Track cost-per-wear, market value, insurance, and receipts.</div>
-        </div>
-      </div>
-      <div class="landing-feat">
-        <div class="landing-feat-icon">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
-        </div>
-        <div>
-          <h2 class="landing-feat-title">Track Every Wear</h2>
-          <div class="landing-feat-desc">Log which watch you wore, with straps, photos, and notes. Build a personal wear history over time.</div>
-        </div>
-      </div>
-      <div class="landing-feat">
-        <div class="landing-feat-icon">
-          <svg viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12h-6v-6h-4v6z"/></svg>
-        </div>
-        <div>
-          <h2 class="landing-feat-title">Social Feed</h2>
-          <div class="landing-feat-desc">See what others are wearing. Follow collectors, like and comment on wears, and discover new watches through your feed.</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 3. SIGN IN -->
+    <!-- 2. SIGN IN -->
     <div class="landing-cta">
       <div id="auth-error" class="auth-error"></div>
       <div class="auth-divider" style="margin-bottom:.5rem;">First time? Just sign in — account created automatically.</div>
@@ -1904,7 +1874,38 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
 
-    <!-- 4. BOTTOM FEATURES -->
+    <!-- 3. FEATURES -->
+    <div class="landing-features">
+      <div class="landing-feat">
+        <div class="landing-feat-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        </div>
+        <div>
+          <h2 class="landing-feat-title">Build Your Collection</h2>
+          <div class="landing-feat-desc">Add watches from a photo or by URL — brand, model, and price fill in automatically. Track cost-per-wear, market value, insurance, and receipts.</div>
+        </div>
+      </div>
+      <div class="landing-feat">
+        <div class="landing-feat-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
+        </div>
+        <div>
+          <h2 class="landing-feat-title">Track Every Wear</h2>
+          <div class="landing-feat-desc">Log which watch you wore, with straps, photos, and notes. Build a personal wear history over time.</div>
+        </div>
+      </div>
+      <div class="landing-feat">
+        <div class="landing-feat-icon">
+          <svg viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12h-6v-6h-4v6z"/></svg>
+        </div>
+        <div>
+          <h2 class="landing-feat-title">Social Feed</h2>
+          <div class="landing-feat-desc">See what others are wearing. Follow collectors, like and comment on wears, and discover new watches through your feed.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. MORE FEATURES -->
     <div class="landing-features" style="margin-top:1.25rem;">
       <div class="landing-feat">
         <div class="landing-feat-icon">
@@ -4114,7 +4115,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.15.14.29';
+const APP_VERSION = '2.36.15.19.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
