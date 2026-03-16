@@ -4117,7 +4117,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.15.19.52';
+const APP_VERSION = '2.36.15.19.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9370,11 +9370,13 @@ async function renderAdminTraffic() {
     const now = new Date();
     const d7 = new Date(now - 7 * 86400000).toISOString();
     const d30 = new Date(now - 30 * 86400000).toISOString();
-    const [allRes, week7, week30] = await Promise.all([
+    const [allRes, week7, week30, funnelAll, funnel7] = await Promise.all([
       db.from('page_visits').select('id', { count: 'exact', head: true }),
       db.from('page_visits').select('utm_source, utm_medium, utm_campaign, referrer, created_at')
         .gte('created_at', d7).order('created_at', { ascending: false }).limit(500),
       db.from('page_visits').select('id', { count: 'exact', head: true }).gte('created_at', d30),
+      db.from('page_visits').select('utm_source, created_at').eq('utm_medium', 'funnel').order('created_at', { ascending: false }).limit(500),
+      db.from('page_visits').select('utm_source, created_at').eq('utm_medium', 'funnel').gte('created_at', d7).order('created_at', { ascending: false }).limit(500),
     ]);
     const total = allRes.count || 0;
     const last30 = week30.count || 0;
@@ -9413,13 +9415,55 @@ async function renderAdminTraffic() {
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">By Source (7 days)</div>
         ${sourceRows}
       </div>` : ''}
-      ${campaignRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;">
+      ${campaignRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">By Campaign (7 days)</div>
         ${campaignRows}
-      </div>` : ''}`;
+      </div>` : ''}
+      ${renderFunnelSection(funnelAll.data || [], funnel7.data || [])}`;
   } catch(e) {
     el.innerHTML = `<div style="color:var(--danger);font-size:.85rem;">Failed to load traffic: ${escHtml(e.message)}</div>`;
   }
+}
+
+function renderFunnelSection(allData, weekData) {
+  const funnelLabels = {
+    signin_google: 'Google sign-in click',
+    signin_apple: 'Apple sign-in click',
+    onboarding_step_1: 'Onboarding: Welcome',
+    onboarding_step_2: 'Onboarding: Add watch',
+    onboarding_step_3: 'Onboarding: Profile',
+    onboarding_step_4: 'Onboarding: Find people',
+    onboarding_step_5: 'Onboarding: UI tour',
+    onboarding_step_6: 'Onboarding: EULA (done)',
+  };
+  const order = ['signin_google', 'signin_apple', 'onboarding_step_1', 'onboarding_step_2', 'onboarding_step_3', 'onboarding_step_4', 'onboarding_step_5', 'onboarding_step_6'];
+  const count = (data) => { const m = {}; data.forEach(v => { m[v.utm_source] = (m[v.utm_source] || 0) + 1; }); return m; };
+  const allCounts = count(allData);
+  const weekCounts = count(weekData);
+  const rows = order
+    .filter(k => allCounts[k])
+    .map(k => {
+      const label = funnelLabels[k] || k;
+      const all = allCounts[k] || 0;
+      const w = weekCounts[k] || 0;
+      return `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);">
+        <span>${escHtml(label)}</span>
+        <span><span style="color:var(--muted);font-size:.75rem;margin-right:.5rem;">7d: ${w}</span><span style="color:var(--gold);font-weight:600;">${all}</span></span>
+      </div>`;
+    }).join('');
+  if (!rows) return '';
+  // Compute drop-off rates
+  const signins = (allCounts.signin_google || 0) + (allCounts.signin_apple || 0);
+  const started = allCounts.onboarding_step_1 || 0;
+  const completed = allCounts.onboarding_step_6 || 0;
+  const dropoff = signins > 0 ? `<div style="font-size:.78rem;color:var(--muted);margin-top:.5rem;line-height:1.6;">
+    Sign-in clicks → Onboarding started: <b>${started}</b>/${signins} (${signins ? Math.round(started/signins*100) : 0}%)<br>
+    Onboarding started → Completed: <b>${completed}</b>/${started} (${started ? Math.round(completed/started*100) : 0}%)
+  </div>` : '';
+  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;">
+    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Signup Funnel</div>
+    ${rows}${dropoff}
+  </div>`;
 }
 
 let _adminFeedbackData = [];
