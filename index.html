@@ -3794,6 +3794,7 @@ async function devLogin(useSecond) {
 }
 
 async function signInWithGoogle() {
+  try { db.from('page_visits').insert({ utm_source: 'signin_google', utm_medium: 'funnel', path: '/signin' }).then(() => {}).catch(() => {}); } catch(e) {}
   const { error } = await db.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -3805,6 +3806,7 @@ async function signInWithGoogle() {
 }
 
 async function signInWithApple() {
+  try { db.from('page_visits').insert({ utm_source: 'signin_apple', utm_medium: 'funnel', path: '/signin' }).then(() => {}).catch(() => {}); } catch(e) {}
   const { error } = await db.auth.signInWithOAuth({
     provider: 'apple',
     options: {
@@ -4115,7 +4117,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.15.19.40';
+const APP_VERSION = '2.36.15.19.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8356,6 +8358,7 @@ function resumeWelcome() {
   }
 }
 function welcomeStep(n) {
+  try { db.from('page_visits').insert({ utm_source: 'onboarding_step_' + n, utm_medium: 'funnel', path: '/welcome' }).then(() => {}).catch(() => {}); } catch(e) {}
   [1,2,3,4,5,6].forEach(i => {
     document.getElementById(`ws-${i}`).classList.toggle('hidden', i !== n);
     document.getElementById(`wd-${i}`).classList.toggle('active', i === n);
