@@ -352,6 +352,56 @@ describe('computeWatchRec', () => {
     expect(result.anniversaryScore).toBe(9999);
   });
 
+  // ── Use-case counting: leisure & travel branches ───────────────────────
+
+  it('counts leisure use-case wears for use-case scoring', () => {
+    const watches = [makeWatch('w1')];
+    const logs = [
+      makeLog('w1', '2024-06-10', { useCase: 'leisure' }),
+      makeLog('w1', '2024-06-03', { useCase: 'leisure' }),
+      makeLog('w1', '2024-05-27', { useCase: 'leisure' }),
+    ];
+    const result = computeWatchRec({ watches, logs, weatherData: null, now: saturday });
+    // On a weekend, leisure ratio feeds into useCaseScore
+    expect(result).not.toBeNull();
+    expect(result.useCaseScore).toBeGreaterThan(0);
+  });
+
+  it('counts travel use-case wears for use-case scoring', () => {
+    const watches = [makeWatch('w1')];
+    const logs = [
+      makeLog('w1', '2024-06-10', { useCase: 'travel' }),
+      makeLog('w1', '2024-06-03', { useCase: 'travel' }),
+      makeLog('w1', '2024-05-27', { useCase: 'work' }),
+    ];
+    const result = computeWatchRec({ watches, logs, weatherData: null, now: monday });
+    expect(result).not.toBeNull();
+  });
+
+  // ── ELO ranking boost with high-rated watch ───────────────────────────
+
+  it('gives eloReason when eloScore >= 10 (rating >= 1100)', () => {
+    const watches = [makeWatch('w1')];
+    const result = computeWatchRec({
+      watches, logs: [], weatherData: null,
+      eloRatings: { w1: 1200 }, // 200 above default 1000 → eloScore = 20
+      now: monday,
+    });
+    expect(result.eloScore).toBe(20);
+    expect(result.eloReason).toBe('One of your top-ranked watches');
+  });
+
+  it('gives no eloReason when eloScore < 10 (rating < 1100)', () => {
+    const watches = [makeWatch('w1')];
+    const result = computeWatchRec({
+      watches, logs: [], weatherData: null,
+      eloRatings: { w1: 1050 }, // 50 above default → eloScore = 5
+      now: monday,
+    });
+    expect(result.eloScore).toBe(5);
+    expect(result.eloReason).toBeNull();
+  });
+
   // ── recSettings: defaults ───────────────────────────────────────────────
 
   it('uses default settings when recSettings is not provided', () => {

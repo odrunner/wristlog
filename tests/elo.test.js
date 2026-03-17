@@ -76,6 +76,16 @@ describe('buildGameQueue', () => {
     expect(pairSet.has('b,c')).toBe(true);
   });
 
+  it('samples a subset of pairs for large collections (n > 7)', () => {
+    const watches = Array.from({ length: 10 }, (_, i) => ({ id: `w${i}` }));
+    // totalPairs = 10*9/2 = 45, cap = min(45, 10*3) = 30
+    const pairs = buildGameQueue(watches);
+    expect(pairs).toHaveLength(30);
+    // All pairs should be unique
+    const pairSet = new Set(pairs.map(p => [p.aId, p.bId].sort().join(',')));
+    expect(pairSet.size).toBe(30);
+  });
+
   it('shuffles the pairs (probabilistic — run multiple times)', () => {
     const watches = Array.from({ length: 6 }, (_, i) => ({ id: String(i) }));
     const orders = new Set();
