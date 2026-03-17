@@ -1176,3 +1176,163 @@ export function computeTgResults(ticks, bph) {
   }
   return { rate: Math.round(rate * 10) / 10, beatError: beatError !== null ? Math.round(beatError * 100) / 100 : null, tickCount: ticks.length, debug };
 }
+
+// ══════════════════════════════════════════
+//  SEARCH & INPUT SANITIZATION
+// ══════════════════════════════════════════
+
+export function sanitizeSearch(s) {
+  return (s || '').replace(/[%_(),.*\\]/g, '').trim();
+}
+
+// ══════════════════════════════════════════
+//  IMAGE / URL UTILITIES
+// ══════════════════════════════════════════
+
+export function sanitizeImageUrl(url, baseUrl) {
+  if (!url) return null;
+  url = url.trim();
+  if (url.startsWith('//'))    return 'https:' + url;
+  if (url.startsWith('/'))     return new URL(baseUrl).origin + url;
+  if (url.startsWith('https://')) return url;
+  // Block javascript:, data:, http:, and anything else
+  return null;
+}
+
+export function isBase64(str) { return !!(str && str.startsWith('data:')); }
+
+export function storagePathFrom(url) {
+  if (!url) return null;
+  const marker = '/storage/v1/object/public/media/';
+  const idx = url.indexOf(marker);
+  return idx >= 0 ? url.slice(idx + marker.length) : null;
+}
+
+// ══════════════════════════════════════════
+//  DEVICE CLASSIFICATION
+// ══════════════════════════════════════════
+
+export function classifyDevice(ua) {
+  if (!ua) return 'unknown';
+  if (/Mobile|iPhone|iPod|Android.*Mobile|webOS|BlackBerry|Opera Mini|IEMobile/i.test(ua)) return 'mobile';
+  if (/iPad|Android(?!.*Mobile)|Tablet/i.test(ua)) return 'tablet';
+  return 'desktop';
+}
+
+// ══════════════════════════════════════════
+//  WATCH IDENTIFICATION MATCHING
+// ══════════════════════════════════════════
+
+export function matchIdentifiedToCollection(identifiedWatches, watches) {
+  const results = [];
+  const seen = new Set();
+  for (const identified of identifiedWatches) {
+    const idBrand = (identified.brand || '').toLowerCase().trim();
+    const idModel = (identified.model || '').toLowerCase().trim();
+    const idRef = (identified.reference || '').toLowerCase().trim().replace(/[\s\-]/g, '');
+    // Tier 1: exact reference match
+    if (idRef) {
+      for (const w of watches) {
+        const wRef = (w.ref || '').toLowerCase().trim().replace(/[\s\-]/g, '');
+        if (wRef && wRef === idRef && !seen.has(w.id)) {
+          results.push({ watch: w, matchType: 'reference', confidence: identified.confidence || 'high' });
+          seen.add(w.id);
+        }
+      }
+    }
+    // Tier 2: brand + model name match
+    if (idBrand && idModel) {
+      const idWords = idModel.split(/\s+/).filter(Boolean);
+      for (const w of watches) {
+        if (seen.has(w.id)) continue;
+        const wBrand = (w.brand || '').toLowerCase().trim();
+        const wName = (w.name || '').toLowerCase().trim();
+        if (wBrand !== idBrand) continue;
+        const wWords = wName.split(/\s+/).filter(Boolean);
+        const idInW = idWords.every(word => wWords.includes(word));
+        const wInId = wWords.every(word => idWords.includes(word));
+        if (idInW || wInId) {
+          results.push({ watch: w, matchType: 'brand+model', confidence: identified.confidence || 'medium' });
+          seen.add(w.id);
+        }
+      }
+    }
+    // Tier 2.5: dial text match
+    const idDial = (identified.dialText || '').toLowerCase().trim();
+    if (idDial && idBrand) {
+      const dialWords = idDial.split(/[\s,;.·]+/).filter(w => w.length > 1);
+      for (const w of watches) {
+        if (seen.has(w.id)) continue;
+        const wBrand = (w.brand || '').toLowerCase().trim();
+        if (wBrand !== idBrand) continue;
+        const wName = (w.name || '').toLowerCase().trim();
+        const nameWords = `${wBrand} ${wName}`.split(/\s+/).filter(w => w.length > 1);
+        const matchCount = nameWords.filter(nw => dialWords.some(dw => dw.includes(nw) || nw.includes(dw))).length;
+        if (matchCount >= 2 && matchCount >= nameWords.length * 0.5) {
+          results.push({ watch: w, matchType: 'dial-text', confidence: identified.confidence || 'medium' });
+          seen.add(w.id);
+        }
+      }
+    }
+    // Tier 3: brand-only if exactly one watch of that brand
+    if (idBrand && results.length === 0) {
+      const brandMatches = watches.filter(w => (w.brand || '').toLowerCase().trim() === idBrand && !seen.has(w.id));
+      if (brandMatches.length === 1) {
+        results.push({ watch: brandMatches[0], matchType: 'brand-only', confidence: 'low' });
+        seen.add(brandMatches[0].id);
+      }
+    }
+  }
+  const typeOrder = { 'reference': 0, 'brand+model': 1, 'dial-text': 1.5, 'brand-only': 2 };
+  const confOrder = { 'high': 0, 'medium': 1, 'low': 2 };
+  results.sort((a, b) => (typeOrder[a.matchType] - typeOrder[b.matchType]) || (confOrder[a.confidence] - confOrder[b.confidence]));
+  return results;
+}
+
+// ══════════════════════════════════════════
+//  ASYNC UTILITIES
+// ══════════════════════════════════════════
+
+export function withTimeout(promise, ms = 10000) {
+  let tid;
+  return Promise.race([
+    promise,
+    new Promise((_, rej) => { tid = setTimeout(() => rej(new Error('Query timed out')), ms); })
+  ]).finally(() => clearTimeout(tid));
+}
+
+// ══════════════════════════════════════════
+//  WATCHCHARTS URL UTILITIES
+// ══════════════════════════════════════════
+
+export function normalizeWatchChartsUrl(url) {
+  return url.replace(/\/(overview|prices|history|specs|charts?)(\?.*)?$/, '').replace(/\/$/, '');
+}
+
+export function extractMarketPriceFromHtml(html) {
+  const fastMatch = html.match(/Market Price\.\s*\$([\d,]+)/);
+  if (fastMatch) {
+    const price = parseInt(fastMatch[1].replace(/,/g, ''), 10);
+    if (price > 100 && price < 10_000_000) return { price, src: 'WatchCharts' };
+  }
+  return null;
+}
+
+export function buildWatchSearchQueries(brand, name, ref) {
+  const queries = [];
+  if (ref && ref.trim()) {
+    queries.push(ref.trim());
+  }
+  if (!queries.length) {
+    const nameWords = name.trim().split(/\s+/);
+    queries.push(`${brand} ${nameWords.slice(0, 3).join(' ')}`);
+  }
+  return queries;
+}
+
+export function filterWatchChartsUrls(html, brandKey) {
+  const allLinks = [...html.matchAll(/href="(https:\/\/watchcharts\.com\/watch_model\/[^"]+)"/g)]
+    .map(m => m[1]);
+  const modelUrl = allLinks.find(u => u.toLowerCase().includes(brandKey));
+  return modelUrl ? modelUrl.replace(/\/[^/]+$/, '') : null;
+}
