@@ -4098,7 +4098,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.16.21.50';
+const APP_VERSION = '2.36.17.07.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9520,9 +9520,14 @@ async function renderAdminTraffic() {
     const visits = week7.data || [];
     const last7 = visits.length;
 
-    // Group by source
+    // Separate traffic visits from funnel events
+    const funnelSources = new Set(['signin_google', 'signin_apple', 'appstore_click']);
+    for (let i = 1; i <= 6; i++) funnelSources.add('onboarding_step_' + i);
+    const trafficVisits = visits.filter(v => !funnelSources.has(v.utm_source) && v.utm_medium !== 'funnel');
+
+    // Group by source (traffic only)
     const bySource = {};
-    visits.forEach(v => {
+    trafficVisits.forEach(v => {
       const src = v.utm_source || (v.referrer ? new URL(v.referrer).hostname : 'direct');
       bySource[src] = (bySource[src] || 0) + 1;
     });
@@ -9531,9 +9536,9 @@ async function renderAdminTraffic() {
       .map(([src, cnt]) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${escHtml(src)}</span><span style="color:var(--gold);font-weight:600;">${cnt}</span></div>`)
       .join('');
 
-    // Group by campaign
+    // Group by campaign (traffic only)
     const byCampaign = {};
-    visits.filter(v => v.utm_campaign).forEach(v => {
+    trafficVisits.filter(v => v.utm_campaign).forEach(v => {
       byCampaign[v.utm_campaign] = (byCampaign[v.utm_campaign] || 0) + 1;
     });
     const campaignRows = Object.entries(byCampaign)
@@ -9541,17 +9546,17 @@ async function renderAdminTraffic() {
       .map(([c, cnt]) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${escHtml(c)}</span><span style="color:var(--gold);font-weight:600;">${cnt}</span></div>`)
       .join('');
 
-    // Device breakdown (7 days)
+    // Device breakdown (7 days, traffic only)
     const byDevice = { mobile: 0, tablet: 0, desktop: 0, unknown: 0 };
-    visits.forEach(v => { byDevice[classifyDevice(v.user_agent)]++; });
+    trafficVisits.forEach(v => { byDevice[classifyDevice(v.user_agent)]++; });
     const deviceRows = Object.entries(byDevice).filter(([, c]) => c > 0)
       .sort((a, b) => b[1] - a[1])
       .map(([dev, cnt]) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${dev}</span><span style="color:var(--gold);font-weight:600;">${cnt}</span></div>`)
       .join('');
 
-    // Device breakdown per source (7 days)
+    // Device breakdown per source (7 days, traffic only)
     const sourceDevice = {};
-    visits.forEach(v => {
+    trafficVisits.forEach(v => {
       const src = v.utm_source || (v.referrer ? new URL(v.referrer).hostname : 'direct');
       const dev = classifyDevice(v.user_agent);
       if (!sourceDevice[src]) sourceDevice[src] = { mobile: 0, tablet: 0, desktop: 0, unknown: 0, total: 0 };
@@ -9570,7 +9575,7 @@ async function renderAdminTraffic() {
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Traffic Overview</div>
         <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>Total visits (all time)</span><span style="color:var(--gold);font-weight:600;">${total}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>Last 30 days</span><span style="color:var(--gold);font-weight:600;">${last30}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;"><span>Last 7 days</span><span style="color:var(--gold);font-weight:600;">${last7}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;"><span>Last 7 days</span><span style="color:var(--gold);font-weight:600;">${trafficVisits.length}</span></div>
       </div>
       ${sourceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">By Source (7 days)</div>
