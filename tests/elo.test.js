@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { eloExpected, buildGameQueue, computeEloUpdate } from '../wristlog.js';
+import { eloExpected, buildGameQueue, computeEloUpdate } from '../wrotate_test.js';
 
 describe('eloExpected', () => {
   it('returns 0.5 for equal ratings', () => {

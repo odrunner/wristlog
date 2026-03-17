@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { guessOEMStrap } from '../wristlog.js';
+import { guessOEMStrap } from '../wrotate_test.js';
 
 describe('guessOEMStrap', () => {
   // ── Specific ref matches ─────────────────────────────────────────────────

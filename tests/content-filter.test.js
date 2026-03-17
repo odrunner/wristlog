@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { checkContent } from '../wristlog.js';
+import { checkContent } from '../wrotate_test.js';
 
 describe('checkContent', () => {
   it('returns clean for normal text', () => {

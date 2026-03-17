@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeYearInReview, computeMonthlyReview, monthRevNav } from '../wristlog.js';
+import { computeYearInReview, computeMonthlyReview, monthRevNav } from '../wrotate_test.js';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 

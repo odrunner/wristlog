@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { boxPapersHTML, warrantyBadgeHTML, marketPriceRowHTML } from '../wristlog.js';
+import { boxPapersHTML, warrantyBadgeHTML, marketPriceRowHTML } from '../wrotate_test.js';
 
 // ── boxPapersHTML ─────────────────────────────────────────────────────────────
 

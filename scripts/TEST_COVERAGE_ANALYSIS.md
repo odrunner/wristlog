@@ -6,7 +6,7 @@ _Updated: 2026-03-17_
 
 **678 tests across 20 test files, all passing.**
 
-Coverage of `wristlog.js` (the extracted business-logic module):
+Coverage of `wrotate_test.js` (the extracted business-logic module):
 
 | Metric     | Coverage |
 |------------|----------|
@@ -15,13 +15,13 @@ Coverage of `wristlog.js` (the extracted business-logic module):
 | Functions  | 100%     |
 | Lines      | 98.2%    |
 
-However, `wristlog.js` is only ~1,178 lines of the total codebase. The overall project statement coverage is **38.7%** because several major areas have **zero test coverage**.
+However, `wrotate_test.js` is only ~1,178 lines of the total codebase. The overall project statement coverage is **38.7%** because several major areas have **zero test coverage**.
 
 ---
 
 ## What's Well-Tested
 
-The following modules in `wristlog.js` have strong unit test suites:
+The following modules in `wrotate_test.js` have strong unit test suites:
 
 - **Utilities** — date formatting, initials, HTML escaping, feed/comment time formatting (57 tests)
 - **Data serialization** — `watchToRow`/`rowToWatch`, log and wishlist round-trips (32 tests)
@@ -94,12 +94,12 @@ The main app file contains ~235 functions that are tightly coupled to the DOM. N
 6. **Toast notification system** — CSS class management and auto-dismiss timing.
 
 **Recommendation:** The best approach would be to:
-1. **Extract more pure logic** from `index.html` into `wristlog.js` (e.g., cloud sync data preparation, feed filtering, navigation state). This is the highest-ROI move.
+1. **Extract more pure logic** from `index.html` into `wrotate_test.js` (e.g., cloud sync data preparation, feed filtering, navigation state). This is the highest-ROI move.
 2. **Add integration/E2E tests** with Playwright for critical user flows that can't be easily unit-tested (sign in → add watch → log wear → check reports).
 
 ---
 
-### Gap 4 — Uncovered Lines in `wristlog.js` (LOW priority)
+### Gap 4 — Uncovered Lines in `wrotate_test.js` (LOW priority)
 
 Lines 297-298 and 329-331 are not covered. These are:
 - **Lines 297-298:** `travel` use-case counting branch in `computeWatchRec`
@@ -147,7 +147,7 @@ All 678 existing tests are unit tests against pure functions. There are no tests
 | **P1** | Supabase edge functions | 0% | High — server-side data handling | Medium |
 | **P2** | Extract more logic from `index.html` | 0% | Medium — increases testable surface | Low-Medium |
 | **P2** | Service worker | 0% | Medium — offline/caching correctness | Low |
-| **P3** | Uncovered `wristlog.js` branches | 96% → 100% | Low — minor gaps | Low |
+| **P3** | Uncovered `wrotate_test.js` branches | 96% → 100% | Low — minor gaps | Low |
 | **P3** | Operational scripts | 0% | Low — not user-facing | Low |
 
 The biggest wins would be **(1)** adding Playwright E2E tests for critical user journeys and **(2)** unit-testing the Supabase edge functions. Together these would cover the two largest untested surfaces — the UI layer and the server-side logic.

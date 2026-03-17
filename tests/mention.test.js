@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getMentionQuery, extractMentionedUsernames, renderCommentBody, escAttr } from '../wristlog.js';
+import { getMentionQuery, extractMentionedUsernames, renderCommentBody, escAttr } from '../wrotate_test.js';
 
 // ── getMentionQuery ───────────────────────────────────────────────────────────
 

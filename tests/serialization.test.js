@@ -3,7 +3,7 @@ import {
   watchToRow, rowToWatch,
   logToRow, rowToLog,
   wishToRow, rowToWish,
-} from '../wristlog.js';
+} from '../wrotate_test.js';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeWatchRec, DEFAULT_REC_SETTINGS } from '../wristlog.js';
+import { computeWatchRec, DEFAULT_REC_SETTINGS } from '../wrotate_test.js';
 
 // Helper to create a fixed "now" for deterministic tests
 const monday = new Date('2024-06-17T12:00:00'); // Monday
