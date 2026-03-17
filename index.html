@@ -3725,6 +3725,7 @@ const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
       utm_source, utm_medium, utm_campaign, utm_content, utm_term,
       referrer: externalRef,
       path: window.location.pathname,
+      user_agent: navigator.userAgent || null,
     }).then(() => {}).catch(() => {});
     // Clean UTM params from URL without reload
     if (utm_source) {
@@ -3742,6 +3743,7 @@ function trackAppStoreClick() {
       utm_medium: 'landing',
       path: window.location.pathname,
       referrer: document.referrer || null,
+      user_agent: navigator.userAgent || null,
     }).then(() => {}).catch(() => {});
   } catch(e) {}
 }
@@ -3773,7 +3775,7 @@ async function devLogin(useSecond) {
 }
 
 async function signInWithGoogle() {
-  try { db.from('page_visits').insert({ utm_source: 'signin_google', utm_medium: 'funnel', path: '/signin' }).then(() => {}).catch(() => {}); } catch(e) {}
+  try { db.from('page_visits').insert({ utm_source: 'signin_google', utm_medium: 'funnel', path: '/signin', user_agent: navigator.userAgent || null }).then(() => {}).catch(() => {}); } catch(e) {}
   const { error } = await db.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -3785,7 +3787,7 @@ async function signInWithGoogle() {
 }
 
 async function signInWithApple() {
-  try { db.from('page_visits').insert({ utm_source: 'signin_apple', utm_medium: 'funnel', path: '/signin' }).then(() => {}).catch(() => {}); } catch(e) {}
+  try { db.from('page_visits').insert({ utm_source: 'signin_apple', utm_medium: 'funnel', path: '/signin', user_agent: navigator.userAgent || null }).then(() => {}).catch(() => {}); } catch(e) {}
   const { error } = await db.auth.signInWithOAuth({
     provider: 'apple',
     options: {
@@ -4096,7 +4098,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.16.21.43';
+const APP_VERSION = '2.36.16.21.47';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8486,7 +8488,7 @@ function resumeWelcome() {
   }
 }
 function welcomeStep(n) {
-  try { db.from('page_visits').insert({ utm_source: 'onboarding_step_' + n, utm_medium: 'funnel', path: '/welcome' }).then(() => {}).catch(() => {}); } catch(e) {}
+  try { db.from('page_visits').insert({ utm_source: 'onboarding_step_' + n, utm_medium: 'funnel', path: '/welcome', user_agent: navigator.userAgent || null }).then(() => {}).catch(() => {}); } catch(e) {}
   [1,2,3,4,5,6].forEach(i => {
     document.getElementById(`ws-${i}`).classList.toggle('hidden', i !== n);
     document.getElementById(`wd-${i}`).classList.toggle('active', i === n);
@@ -9489,6 +9491,13 @@ async function loadAdminStats() {
 }
 
 // ── Admin Traffic Stats ───────────────────────────────────────────────────
+function classifyDevice(ua) {
+  if (!ua) return 'unknown';
+  if (/Mobile|iPhone|iPod|Android.*Mobile|webOS|BlackBerry|Opera Mini|IEMobile/i.test(ua)) return 'mobile';
+  if (/iPad|Android(?!.*Mobile)|Tablet/i.test(ua)) return 'tablet';
+  return 'desktop';
+}
+
 async function renderAdminTraffic() {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const el = document.getElementById('admin-traffic');
@@ -9500,7 +9509,7 @@ async function renderAdminTraffic() {
     const d30 = new Date(now - 30 * 86400000).toISOString();
     const [allRes, week7, week30, funnelAll, funnel7] = await Promise.all([
       db.from('page_visits').select('id', { count: 'exact', head: true }),
-      db.from('page_visits').select('utm_source, utm_medium, utm_campaign, referrer, created_at')
+      db.from('page_visits').select('utm_source, utm_medium, utm_campaign, referrer, user_agent, created_at')
         .gte('created_at', d7).order('created_at', { ascending: false }).limit(500),
       db.from('page_visits').select('id', { count: 'exact', head: true }).gte('created_at', d30),
       db.from('page_visits').select('utm_source, created_at').eq('utm_medium', 'funnel').order('created_at', { ascending: false }).limit(500),
@@ -9532,6 +9541,30 @@ async function renderAdminTraffic() {
       .map(([c, cnt]) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${escHtml(c)}</span><span style="color:var(--gold);font-weight:600;">${cnt}</span></div>`)
       .join('');
 
+    // Device breakdown (7 days)
+    const byDevice = { mobile: 0, tablet: 0, desktop: 0, unknown: 0 };
+    visits.forEach(v => { byDevice[classifyDevice(v.user_agent)]++; });
+    const deviceRows = Object.entries(byDevice).filter(([, c]) => c > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([dev, cnt]) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${dev}</span><span style="color:var(--gold);font-weight:600;">${cnt}</span></div>`)
+      .join('');
+
+    // Device breakdown per source (7 days)
+    const sourceDevice = {};
+    visits.forEach(v => {
+      const src = v.utm_source || (v.referrer ? new URL(v.referrer).hostname : 'direct');
+      const dev = classifyDevice(v.user_agent);
+      if (!sourceDevice[src]) sourceDevice[src] = { mobile: 0, tablet: 0, desktop: 0, unknown: 0, total: 0 };
+      sourceDevice[src][dev]++;
+      sourceDevice[src].total++;
+    });
+    const sourceDeviceRows = Object.entries(sourceDevice)
+      .sort((a, b) => b[1].total - a[1].total)
+      .map(([src, d]) => {
+        const parts = ['mobile','tablet','desktop'].filter(k => d[k] > 0).map(k => `${k}: ${d[k]}`).join(', ');
+        return `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${escHtml(src)}</span><span style="color:var(--muted);font-size:.75rem;">${parts || 'unknown'}</span></div>`;
+      }).join('');
+
     el.innerHTML = `
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Traffic Overview</div>
@@ -9546,6 +9579,14 @@ async function renderAdminTraffic() {
       ${campaignRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">By Campaign (7 days)</div>
         ${campaignRows}
+      </div>` : ''}
+      ${deviceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Device Type (7 days)</div>
+        ${deviceRows}
+      </div>` : ''}
+      ${sourceDeviceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Device by Source (7 days)</div>
+        ${sourceDeviceRows}
       </div>` : ''}
       ${renderFunnelSection(funnelAll.data || [], funnel7.data || [])}`;
   } catch(e) {
