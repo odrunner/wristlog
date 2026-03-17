@@ -4098,7 +4098,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.17.07.25';
+const APP_VERSION = '2.36.17.07.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9520,30 +9520,34 @@ async function renderAdminTraffic() {
     const visits = week7.data || [];
     const last7 = visits.length;
 
-    // Separate traffic visits from funnel events
+    // Separate traffic visits from funnel events and OAuth redirects
     const funnelSources = new Set(['signin_google', 'signin_apple', 'appstore_click']);
     for (let i = 1; i <= 6; i++) funnelSources.add('onboarding_step_' + i);
-    const trafficVisits = visits.filter(v => !funnelSources.has(v.utm_source) && v.utm_medium !== 'funnel');
+    const oauthRedirects = new Set(['accounts.google.com', 'appleid.apple.com']);
+    const trafficVisits = visits.filter(v => {
+      if (funnelSources.has(v.utm_source) || v.utm_medium === 'funnel') return false;
+      if (!v.utm_source && v.referrer) {
+        try { if (oauthRedirects.has(new URL(v.referrer).hostname)) return false; } catch(e) {}
+      }
+      return true;
+    });
+
+    // Friendly source names
+    const sourceLabel = (src) => {
+      const labels = { 'www.google.com': 'Google (organic)', 'google.com': 'Google (organic)', 'www.reddit.com': 'Reddit (organic)', 'old.reddit.com': 'Reddit (organic)', 'www.bing.com': 'Bing (organic)', 't.co': 'Twitter / X' };
+      return labels[src] || src;
+    };
 
     // Group by source (traffic only)
     const bySource = {};
     trafficVisits.forEach(v => {
-      const src = v.utm_source || (v.referrer ? new URL(v.referrer).hostname : 'direct');
+      const raw = v.utm_source || (v.referrer ? new URL(v.referrer).hostname : 'direct');
+      const src = sourceLabel(raw);
       bySource[src] = (bySource[src] || 0) + 1;
     });
     const sourceRows = Object.entries(bySource)
       .sort((a, b) => b[1] - a[1])
       .map(([src, cnt]) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${escHtml(src)}</span><span style="color:var(--gold);font-weight:600;">${cnt}</span></div>`)
-      .join('');
-
-    // Group by campaign (traffic only)
-    const byCampaign = {};
-    trafficVisits.filter(v => v.utm_campaign).forEach(v => {
-      byCampaign[v.utm_campaign] = (byCampaign[v.utm_campaign] || 0) + 1;
-    });
-    const campaignRows = Object.entries(byCampaign)
-      .sort((a, b) => b[1] - a[1])
-      .map(([c, cnt]) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${escHtml(c)}</span><span style="color:var(--gold);font-weight:600;">${cnt}</span></div>`)
       .join('');
 
     // Device breakdown (7 days, traffic only)
@@ -9557,7 +9561,8 @@ async function renderAdminTraffic() {
     // Device breakdown per source (7 days, traffic only)
     const sourceDevice = {};
     trafficVisits.forEach(v => {
-      const src = v.utm_source || (v.referrer ? new URL(v.referrer).hostname : 'direct');
+      const raw = v.utm_source || (v.referrer ? new URL(v.referrer).hostname : 'direct');
+      const src = sourceLabel(raw);
       const dev = classifyDevice(v.user_agent);
       if (!sourceDevice[src]) sourceDevice[src] = { mobile: 0, tablet: 0, desktop: 0, unknown: 0, total: 0 };
       sourceDevice[src][dev]++;
@@ -9580,10 +9585,6 @@ async function renderAdminTraffic() {
       ${sourceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">By Source (7 days)</div>
         ${sourceRows}
-      </div>` : ''}
-      ${campaignRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">By Campaign (7 days)</div>
-        ${campaignRows}
       </div>` : ''}
       ${deviceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Device Type (7 days)</div>
