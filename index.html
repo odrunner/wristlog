@@ -1498,6 +1498,27 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .feed-caption { padding: .1rem 1rem .45rem; font-size: .85rem; line-height: 1.5; word-break: break-word; }
     .feed-caption-user { font-weight: 700; margin-right: .35rem; }
 
+    /* Official badge */
+    .official-badge { display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; margin-left:3px; vertical-align:middle; flex-shrink:0; }
+    .official-badge svg { width:14px; height:14px; }
+    .profile-display-name .official-badge { width:16px; height:16px; }
+    .profile-display-name .official-badge svg { width:16px; height:16px; }
+
+    /* Official drafts admin */
+    .draft-card { background:var(--surface2); border-radius:10px; padding:.85rem; margin-bottom:.65rem; }
+    .draft-card-header { display:flex; gap:.65rem; align-items:flex-start; }
+    .draft-thumb { width:72px; height:72px; border-radius:6px; object-fit:cover; background:var(--surface1); flex-shrink:0; }
+    .draft-meta { flex:1; min-width:0; }
+    .draft-meta .draft-caption { font-size:.84rem; line-height:1.45; margin-bottom:.3rem; word-break:break-word; }
+    .draft-meta .draft-info { font-size:.72rem; color:var(--muted); }
+    .draft-actions { display:flex; gap:.4rem; margin-top:.5rem; }
+    .draft-form-row { margin-bottom:.6rem; }
+    .draft-form-row label { display:block; font-size:.72rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.2rem; }
+    .draft-form-row input, .draft-form-row textarea { width:100%; box-sizing:border-box; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:.45rem .6rem; font-size:.84rem; color:var(--text); font-family:inherit; }
+    .draft-form-row textarea { resize:vertical; min-height:3rem; }
+    .draft-extract-preview { background:var(--surface1); border-radius:8px; padding:.75rem; margin-top:.6rem; }
+    .draft-extract-preview img { max-width:200px; max-height:200px; border-radius:6px; margin-bottom:.5rem; }
+
     /* Watch chip */
     .feed-watch-chip {
       display: inline-flex; align-items: center; gap: .35rem;
@@ -2408,6 +2429,54 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadAdminStats()">↻ Refresh</button>
       </div>
       <div id="admin-stats" style="color:var(--muted);font-size:.9rem;">Loading…</div>
+    </div>
+
+    <!-- Official Posts -->
+    <div style="margin-top:2rem;">
+      <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Official Posts</div>
+        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadOfficialDrafts()">↻ Refresh</button>
+      </div>
+
+      <!-- URL extraction form -->
+      <div style="background:var(--surface2);border-radius:10px;padding:.85rem;margin-bottom:1rem;">
+        <div class="draft-form-row">
+          <label>Source URL (Instagram, blog, web page)</label>
+          <div style="display:flex;gap:.4rem;">
+            <input type="text" id="official-url-input" placeholder="https://…">
+            <button class="btn btn-primary btn-sm" onclick="extractOfficialUrl()" id="official-extract-btn" style="white-space:nowrap;">Extract</button>
+          </div>
+        </div>
+        <div id="official-extract-preview" style="display:none;"></div>
+        <div class="draft-form-row">
+          <label>Image URL (auto-filled or paste manually)</label>
+          <input type="text" id="official-image-input" placeholder="https://…image.jpg">
+        </div>
+        <div class="draft-form-row">
+          <label>Caption</label>
+          <textarea id="official-caption-input" placeholder="Celebrity name wearing watch details…" rows="2"></textarea>
+        </div>
+        <div style="display:flex;gap:.5rem;">
+          <div class="draft-form-row" style="flex:1;">
+            <label>Celebrity</label>
+            <input type="text" id="official-celeb-input" placeholder="Name">
+          </div>
+          <div class="draft-form-row" style="flex:1;">
+            <label>Watch info</label>
+            <input type="text" id="official-watch-input" placeholder="Brand Model">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveOfficialDraft()" style="width:100%;margin-top:.3rem;">Save as Draft</button>
+      </div>
+
+      <!-- Draft filter chips -->
+      <div class="chips" id="official-filter-chips" style="margin-bottom:.75rem;">
+        <div class="chip selected" data-filter="draft" onclick="filterOfficialDrafts('draft')">Drafts</div>
+        <div class="chip" data-filter="published" onclick="filterOfficialDrafts('published')">Published</div>
+        <div class="chip" data-filter="all" onclick="filterOfficialDrafts('all')">All</div>
+      </div>
+
+      <div id="official-drafts-list"><div style="color:var(--muted);font-size:.9rem;">Loading…</div></div>
     </div>
   </div>
 
@@ -3702,6 +3771,12 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 let currentUser = null; // set after sign-in
 const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
+let OFFICIAL_USER_ID = null; // resolved at init from profiles.is_official
+
+function officialBadgeHtml(profile) {
+  if (!profile?.is_official) return '';
+  return ' <span class="official-badge" title="Official account"><svg viewBox="0 0 24 24" fill="#4ea4f6" xmlns="http://www.w3.org/2000/svg"><path d="M9 12l2 2 4-4"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#4ea4f6"/><path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+}
 
 // ── UTM / visit tracking ──────────────────────────────────────────────────
 (function trackVisit() {
@@ -4518,6 +4593,7 @@ async function loadAndRenderProfile(userId) {
 function renderPrivateProfileHTML(profile, privacy, userId) {
   const heroInitials = profileInitials(profile);
   const name  = escHtml(profile.display_name || profile.username || '—');
+  const badge = officialBadgeHtml(profile);
   const uname = profile.username ? '@' + escHtml(profile.username) : '';
   const msg   = privacy === 'private'
     ? 'This account is private'
@@ -4526,7 +4602,7 @@ function renderPrivateProfileHTML(profile, privacy, userId) {
   return `
     <div class="profile-hero">
       <div class="profile-avatar-lg">${heroInitials}</div>
-      <div class="profile-display-name">${name}</div>
+      <div class="profile-display-name">${name}${badge}</div>
       ${uname ? `<div class="profile-username-lbl">${uname}</div>` : ''}
       <div style="color:var(--muted);margin-top:.55rem;font-size:.84rem;">${msg}</div>
       <div style="margin-top:.9rem;">${actionHtml}</div>
@@ -4539,6 +4615,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   const isActualFriend = !isOwn && friendships.has(profile.id); // mutual-follow + both codes verified
   const isFollowerOnly = !isOwn && isFriend && !isActualFriend; // viewer follows owner but not friends
   const name     = escHtml(profile.display_name || profile.username || '—');
+  const badge    = officialBadgeHtml(profile);
   const uname    = profile.username ? '@' + escHtml(profile.username) : '';
   const bio      = profile.bio ? `<div class="profile-bio-text">${escHtml(profile.bio)}</div>` : '';
 
@@ -4893,7 +4970,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     <div class="profile-hero">
       <div class="profile-avatar-lg">${avatarInner}${avatarFallback}${camOverlay}</div>
       <div class="profile-name-row">
-        <div class="profile-display-name">${name}</div>
+        <div class="profile-display-name">${name}${badge}</div>
         ${editIcon}
       </div>
       ${uname ? `<div class="profile-username-lbl">${uname}</div>` : ''}
@@ -5683,7 +5760,7 @@ async function renderClubDetail(clubId) {
       const commenterIds = [...new Set(clubCommentData.map(c => c.user_id))];
       const clubCommentIds = clubCommentData.map(c => c.id);
       const [cpResult, clResult] = await Promise.all([
-        db.from('profiles').select('id, username, display_name').in('id', commenterIds),
+        db.from('profiles').select('id, username, display_name, is_official').in('id', commenterIds),
         clubCommentIds.length
           ? db.from('comment_likes').select('comment_id, user_id').in('comment_id', clubCommentIds)
           : { data: [] },
@@ -6279,7 +6356,7 @@ async function loadNotifications() {
   const actorIds = [...new Set(data.map(n => n.actor_id).filter(Boolean))];
   let pMap = {};
   if (actorIds.length) {
-    const { data: ps } = await db.from('profiles').select('id, username, display_name, avatar_url').in('id', actorIds);
+    const { data: ps } = await db.from('profiles').select('id, username, display_name, avatar_url, is_official').in('id', actorIds);
     (ps || []).forEach(p => pMap[p.id] = p);
   }
   const clubNotifTypes = ['club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted'];
@@ -6772,7 +6849,7 @@ async function loadPublicFeed() {
     const userIds = [...new Set(rawLogs.map(l => l.user_id))];
     const watchIds = [...new Set(rawLogs.filter(l => l.watch_id).map(l => l.watch_id))];
     const [profRes, watchRes, likesRes, commRes] = await Promise.all([
-      db.from('profiles').select('id, username, display_name, avatar_url').in('id', userIds),
+      db.from('profiles').select('id, username, display_name, avatar_url, is_official').in('id', userIds),
       watchIds.length ? db.from('watches').select('id, brand, name, image').in('id', watchIds) : { data: [] },
       db.from('likes').select('log_id').in('log_id', logIds),
       db.from('comments').select('id, log_id, user_id, body, created_at').in('log_id', logIds).is('moderation_status', null).order('created_at', { ascending: true }).limit(200),
@@ -6787,7 +6864,7 @@ async function loadPublicFeed() {
     const commenterIds = [...new Set(commentData.map(c => c.user_id))];
     let commenterMap = {};
     if (commenterIds.length) {
-      const { data: cp } = await db.from('profiles').select('id, username, display_name, avatar_url').in('id', commenterIds);
+      const { data: cp } = await db.from('profiles').select('id, username, display_name, avatar_url, is_official').in('id', commenterIds);
       (cp || []).forEach(p => commenterMap[p.id] = p);
     }
     publicFeedComments = {};
@@ -6813,7 +6890,7 @@ function renderPublicFeed() {
     const w = item.watch;
     const likeCount = publicFeedLikes[item.id] || 0;
     const comments = publicFeedComments[item.id] || [];
-    const displayName = escHtml(p?.display_name || p?.username || 'User');
+    const displayName = escHtml(p?.display_name || p?.username || 'User') + officialBadgeHtml(p);
     const metaStr = formatFeedDate(item.date, item.created_at);
     // Hero
     let heroHtml = '';
@@ -6841,7 +6918,7 @@ function renderPublicFeed() {
         ${preview.map(c => `<div class="comment-item">
           <div class="comment-avatar" onclick="requireLogin()" style="cursor:pointer;">${profileInitials(c.profile)}</div>
           <div class="comment-content"><div class="comment-body">
-            <span class="comment-username" onclick="requireLogin()" style="cursor:pointer;">${escHtml(c.profile?.display_name || c.profile?.username || 'User')}</span>
+            <span class="comment-username" onclick="requireLogin()" style="cursor:pointer;">${escHtml(c.profile?.display_name || c.profile?.username || 'User')}${officialBadgeHtml(c.profile)}</span>
             ${escHtml(c.body)}
             <span class="comment-time">${formatCommentTime(c.created_at)}</span>
           </div></div>
@@ -7028,7 +7105,7 @@ async function loadFeed() {
       watchIds.length
         ? db.from('watches').select('id, brand, name, color, image, ref, url').in('id', watchIds)
         : { data: [] },
-      db.from('profiles').select('id, username, display_name, avatar_url').in('id', userIds),
+      db.from('profiles').select('id, username, display_name, avatar_url, is_official').in('id', userIds),
       db.from('likes').select('log_id, user_id').in('log_id', logIds),
       db.from('comments').select('id, log_id, user_id, body, created_at, moderation_status')
         .in('log_id', logIds).order('created_at', { ascending: true }).limit(500),
@@ -7055,7 +7132,7 @@ async function loadFeed() {
       const commenterIds = [...new Set(commentData.map(c => c.user_id))];
       const allCommentIds = commentData.map(c => c.id);
       const [commenterResult, clResult] = await withTimeout(Promise.all([
-        db.from('profiles').select('id, username, display_name').in('id', commenterIds),
+        db.from('profiles').select('id, username, display_name, is_official').in('id', commenterIds),
         allCommentIds.length
           ? db.from('comment_likes').select('comment_id, user_id').in('comment_id', allCommentIds)
           : { data: [] },
@@ -7227,7 +7304,7 @@ function renderFeedCard(item) {
       </div>`;
   } else if (item.notes && (item.photo_url || w)) {
     // Caption below actions only for photo posts and wear logs (text posts show notes in hero)
-    captionHtml = `<div class="feed-caption"><span class="feed-caption-user">${escHtml(p?.display_name || p?.username || 'User')}</span>${escHtml(item.notes)}</div>`;
+    captionHtml = `<div class="feed-caption"><span class="feed-caption-user">${escHtml(p?.display_name || p?.username || 'User')}${officialBadgeHtml(p)}</span>${escHtml(item.notes)}</div>`;
   }
 
   // Watch chip — only for wear logs that also have a photo (compact wear shows it in the header)
@@ -7308,7 +7385,7 @@ function renderFeedCard(item) {
         <div class="comment-avatar">${profileInitials(c.profile)}</div>
         <div class="comment-content">
           <div class="comment-body">
-            <span class="comment-username">${escHtml(c.profile?.display_name || c.profile?.username || 'User')}</span>
+            <span class="comment-username">${escHtml(c.profile?.display_name || c.profile?.username || 'User')}${officialBadgeHtml(c.profile)}</span>
             <span class="comment-time">${formatCommentTime(c.created_at)}</span>
             ${renderCommentBody(c.body)}
           </div>
@@ -7339,7 +7416,7 @@ function renderFeedCard(item) {
   }
 
   // Compact wear: inline watch row inside header
-  const displayName = escHtml(p?.display_name || p?.username || 'User');
+  const displayName = escHtml(p?.display_name || p?.username || 'User') + officialBadgeHtml(p);
   let headerBody;
   if (compactWear) {
     const wThumb = w.image
@@ -8635,7 +8712,7 @@ async function renderFollowingList() {
     el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.4rem 0;">You\'re not following anyone yet.</div>';
     return;
   }
-  const { data } = await db.from('profiles').select('id, username, display_name, avatar_url, profile_privacy').in('id', ids);
+  const { data } = await db.from('profiles').select('id, username, display_name, avatar_url, profile_privacy, is_official').in('id', ids);
   el.innerHTML = (data || []).map(u => userCardHtml(u)).join('');
 }
 function friendActionBtn(u) {
@@ -9223,6 +9300,7 @@ function showAdminPage() {
   renderAdminTraffic();
   loadAdminFeedback();
   loadAdminReports();
+  loadOfficialDrafts();
 }
 
 // ── Admin Content Reports ────────────────────────────────────────────────
@@ -9777,6 +9855,283 @@ function nav(btn) {
     } else {
       renderClubsPage();
     }
+  }
+}
+
+// ══════════════════════════════════════════
+//  OFFICIAL POSTS (admin-only)
+// ══════════════════════════════════════════
+let _officialDrafts = [];
+let _officialFilter = 'draft';
+
+async function loadOfficialDrafts() {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
+  const el = document.getElementById('official-drafts-list');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">Loading…</div>';
+  const { data, error } = await db.from('official_drafts')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) { el.innerHTML = `<div style="color:var(--danger);">Error: ${escHtml(error.message)}</div>`; return; }
+  _officialDrafts = data || [];
+  renderOfficialDrafts();
+}
+
+function filterOfficialDrafts(filter) {
+  _officialFilter = filter;
+  document.querySelectorAll('#official-filter-chips .chip').forEach(c => {
+    c.classList.toggle('selected', c.dataset.filter === filter);
+  });
+  renderOfficialDrafts();
+}
+
+function renderOfficialDrafts() {
+  const el = document.getElementById('official-drafts-list');
+  if (!el) return;
+  const filtered = _officialFilter === 'all'
+    ? _officialDrafts
+    : _officialDrafts.filter(d => d.status === _officialFilter);
+  if (!filtered.length) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:.9rem;">No ${_officialFilter === 'all' ? '' : _officialFilter + ' '}posts.</div>`;
+    return;
+  }
+  el.innerHTML = filtered.map(d => {
+    const thumb = d.photo_stored_url || d.image_url;
+    const thumbHtml = thumb
+      ? `<img class="draft-thumb" src="${escHtml(thumb)}" alt="" onerror="this.style.display='none'">`
+      : `<div class="draft-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.72rem;">No image</div>`;
+    const statusBadge = d.status === 'published'
+      ? '<span style="color:#4caf7d;font-weight:600;">Published</span>'
+      : d.status === 'rejected'
+        ? '<span style="color:var(--danger);font-weight:600;">Rejected</span>'
+        : '<span style="color:var(--gold);font-weight:600;">Draft</span>';
+    const actions = d.status === 'draft' ? `
+      <div class="draft-actions">
+        <button class="btn btn-primary btn-sm" onclick="approveOfficialDraft('${d.id}')">Approve & Publish</button>
+        <button class="btn btn-ghost btn-sm" onclick="editOfficialDraft('${d.id}')">Edit</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="deleteOfficialDraft('${d.id}')">Delete</button>
+      </div>` : '';
+    const sourceLink = d.source_url
+      ? `<div class="draft-info" style="margin-top:.2rem;"><a href="${escHtml(d.source_url)}" target="_blank" rel="noopener" style="color:var(--gold);">Source ↗</a></div>`
+      : '';
+    return `
+    <div class="draft-card" id="draft-${d.id}">
+      <div class="draft-card-header">
+        ${thumbHtml}
+        <div class="draft-meta">
+          <div class="draft-caption">${escHtml(d.caption || '(no caption)')}</div>
+          <div class="draft-info">${[d.celebrity_name, d.watch_info].filter(Boolean).map(escHtml).join(' · ')}</div>
+          <div class="draft-info">${statusBadge} · ${formatCommentTime(d.created_at)}</div>
+          ${sourceLink}
+        </div>
+      </div>
+      ${actions}
+    </div>`;
+  }).join('');
+}
+
+async function extractOfficialUrl() {
+  const urlInput = document.getElementById('official-url-input');
+  const url = urlInput?.value?.trim();
+  if (!url) { showToast('Enter a URL first'); return; }
+  const btn = document.getElementById('official-extract-btn');
+  const preview = document.getElementById('official-extract-preview');
+  btn.disabled = true;
+  btn.textContent = 'Extracting…';
+  try {
+    const session = await db.auth.getSession();
+    const token = session?.data?.session?.access_token;
+    const res = await fetch(SUPABASE_URL + '/functions/v1/extract-url-meta', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token,
+      },
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Extraction failed');
+    // Fill in the form fields
+    if (data.image_url) document.getElementById('official-image-input').value = data.image_url;
+    if (data.title || data.description) {
+      const caption = [data.title, data.description].filter(Boolean).join(' — ');
+      document.getElementById('official-caption-input').value = caption;
+    }
+    // Show preview
+    if (data.image_url) {
+      preview.style.display = '';
+      preview.innerHTML = `
+        <div class="draft-extract-preview">
+          <img src="${escHtml(data.image_url)}" alt="" onerror="this.style.display='none'">
+          <div style="font-size:.82rem;"><strong>${escHtml(data.title || '')}</strong></div>
+          <div style="font-size:.78rem;color:var(--muted);">${escHtml(data.description || '')}</div>
+          ${data.site_name ? `<div style="font-size:.72rem;color:var(--muted);">${escHtml(data.site_name)}</div>` : ''}
+        </div>`;
+    }
+    showToast('Metadata extracted');
+  } catch (e) {
+    showToast('Extraction failed: ' + e.message);
+    // Show manual entry hint
+    const preview = document.getElementById('official-extract-preview');
+    preview.style.display = '';
+    preview.innerHTML = `<div style="font-size:.82rem;color:var(--muted);padding:.5rem;">Could not extract metadata. Please fill in the fields manually.</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Extract';
+  }
+}
+
+async function saveOfficialDraft() {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
+  const sourceUrl = document.getElementById('official-url-input')?.value?.trim();
+  const imageUrl = document.getElementById('official-image-input')?.value?.trim();
+  const caption = document.getElementById('official-caption-input')?.value?.trim();
+  const celeb = document.getElementById('official-celeb-input')?.value?.trim();
+  const watchInfo = document.getElementById('official-watch-input')?.value?.trim();
+  if (!caption && !imageUrl) { showToast('Add at least a caption or image'); return; }
+  const { error } = await db.from('official_drafts').insert({
+    source_url: sourceUrl || null,
+    image_url: imageUrl || null,
+    caption: caption || null,
+    celebrity_name: celeb || null,
+    watch_info: watchInfo || null,
+    created_by: currentUser.id,
+  });
+  if (error) { showToast('Save failed: ' + error.message); return; }
+  showToast('Draft saved');
+  // Clear form
+  document.getElementById('official-url-input').value = '';
+  document.getElementById('official-image-input').value = '';
+  document.getElementById('official-caption-input').value = '';
+  document.getElementById('official-celeb-input').value = '';
+  document.getElementById('official-watch-input').value = '';
+  document.getElementById('official-extract-preview').style.display = 'none';
+  loadOfficialDrafts();
+}
+
+function editOfficialDraft(draftId) {
+  const draft = _officialDrafts.find(d => d.id === draftId);
+  if (!draft) return;
+  const card = document.getElementById('draft-' + draftId);
+  if (!card) return;
+  card.innerHTML = `
+    <div class="draft-form-row">
+      <label>Image URL</label>
+      <input type="text" id="edit-draft-image-${draftId}" value="${escAttr(draft.image_url || '')}">
+    </div>
+    <div class="draft-form-row">
+      <label>Caption</label>
+      <textarea id="edit-draft-caption-${draftId}" rows="2">${escHtml(draft.caption || '')}</textarea>
+    </div>
+    <div style="display:flex;gap:.5rem;">
+      <div class="draft-form-row" style="flex:1;">
+        <label>Celebrity</label>
+        <input type="text" id="edit-draft-celeb-${draftId}" value="${escAttr(draft.celebrity_name || '')}">
+      </div>
+      <div class="draft-form-row" style="flex:1;">
+        <label>Watch info</label>
+        <input type="text" id="edit-draft-watch-${draftId}" value="${escAttr(draft.watch_info || '')}">
+      </div>
+    </div>
+    <div class="draft-actions">
+      <button class="btn btn-primary btn-sm" onclick="saveOfficialDraftEdit('${draftId}')">Save</button>
+      <button class="btn btn-ghost btn-sm" onclick="renderOfficialDrafts()">Cancel</button>
+    </div>`;
+}
+
+async function saveOfficialDraftEdit(draftId) {
+  const imageUrl = document.getElementById('edit-draft-image-' + draftId)?.value?.trim();
+  const caption = document.getElementById('edit-draft-caption-' + draftId)?.value?.trim();
+  const celeb = document.getElementById('edit-draft-celeb-' + draftId)?.value?.trim();
+  const watchInfo = document.getElementById('edit-draft-watch-' + draftId)?.value?.trim();
+  const { error } = await db.from('official_drafts').update({
+    image_url: imageUrl || null,
+    caption: caption || null,
+    celebrity_name: celeb || null,
+    watch_info: watchInfo || null,
+    updated_at: new Date().toISOString(),
+  }).eq('id', draftId);
+  if (error) { showToast('Update failed: ' + error.message); return; }
+  showToast('Draft updated');
+  loadOfficialDrafts();
+}
+
+async function deleteOfficialDraft(draftId) {
+  const card = document.getElementById('draft-' + draftId);
+  if (!card) return;
+  // Inline confirmation
+  card.innerHTML = `
+    <div style="text-align:center;padding:.5rem;">
+      <div style="font-size:.84rem;margin-bottom:.5rem;">Delete this draft?</div>
+      <div class="draft-actions" style="justify-content:center;">
+        <button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="confirmDeleteDraft('${draftId}')">Delete</button>
+        <button class="btn btn-ghost btn-sm" onclick="renderOfficialDrafts()">Cancel</button>
+      </div>
+    </div>`;
+}
+
+async function confirmDeleteDraft(draftId) {
+  const { error } = await db.from('official_drafts').delete().eq('id', draftId);
+  if (error) { showToast('Delete failed: ' + error.message); return; }
+  showToast('Draft deleted');
+  loadOfficialDrafts();
+}
+
+async function approveOfficialDraft(draftId) {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
+  if (!OFFICIAL_USER_ID) {
+    showToast('Official account not set up yet. Set is_official=true on the official profile.');
+    return;
+  }
+  const draft = _officialDrafts.find(d => d.id === draftId);
+  if (!draft) return;
+  const card = document.getElementById('draft-' + draftId);
+  if (!card) return;
+  // Inline confirmation
+  card.querySelector('.draft-actions').innerHTML = `
+    <button class="btn btn-primary btn-sm" disabled>Publishing…</button>`;
+  try {
+    // Step 1: download and upload image to Supabase Storage
+    let storedUrl = null;
+    const logId = crypto.randomUUID();
+    if (draft.image_url) {
+      try {
+        const imgRes = await fetch(draft.image_url);
+        if (imgRes.ok) {
+          const blob = await imgRes.blob();
+          storedUrl = await uploadImage(blob, `logs/${OFFICIAL_USER_ID}/${logId}.jpg`);
+        }
+      } catch (imgErr) {
+        console.warn('[Official] Image upload failed, using external URL:', imgErr.message);
+        storedUrl = draft.image_url; // fallback to external URL
+      }
+    }
+    // Step 2: create the log entry
+    const attribution = draft.source_url ? `\n📸 Source: ${draft.source_url}` : '';
+    const caption = (draft.caption || '') + attribution;
+    const { error: logErr } = await db.from('logs').insert({
+      id: logId,
+      user_id: OFFICIAL_USER_ID,
+      date: new Date().toISOString().slice(0, 10),
+      notes: caption.slice(0, 500),
+      photo_url: storedUrl,
+      visibility: 'public',
+      use_case: 'unspecified',
+    });
+    if (logErr) throw logErr;
+    // Step 3: update draft status
+    await db.from('official_drafts').update({
+      status: 'published',
+      published_at: new Date().toISOString(),
+      published_log_id: logId,
+      photo_stored_url: storedUrl,
+      updated_at: new Date().toISOString(),
+    }).eq('id', draftId);
+    showToast('Published to official feed!');
+    loadOfficialDrafts();
+  } catch (e) {
+    showToast('Publish failed: ' + e.message);
+    renderOfficialDrafts();
   }
 }
 
@@ -15019,6 +15374,12 @@ async function bootApp(user) {
   }
   // Re-check reminder now that logs are loaded (initApp ran before data was ready)
   checkReminderNow();
+  // Resolve official account ID (for badge rendering and admin drafts)
+  if (!OFFICIAL_USER_ID) {
+    db.from('profiles').select('id').eq('is_official', true).limit(1).single().then(({ data }) => {
+      if (data) OFFICIAL_USER_ID = data.id;
+    });
+  }
 }
 
 // ── PRIMARY: explicit getSession() on every page load ─────────────────────
