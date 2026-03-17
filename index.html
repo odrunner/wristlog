@@ -1926,6 +1926,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Reliability &amp; Error Handling</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Editing a post now rolls back changes if the server save fails, so your feed stays consistent. Club creation and user unblocking also handle errors gracefully with clear feedback.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Accessibility Improvements</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Screen readers now get proper page headings and navigation landmarks across all tabs. Every page has a semantic heading structure for easier keyboard and assistive-technology navigation.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Post Pics Toggle</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">A new toggle on the Collection page lets you swap watch photos for your latest wrist shots. Each card shows the most recent post photo for that watch &#8212; toggle off to go back to the standard image.</div>
       </div>
@@ -4080,7 +4088,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.16.18.23';
+const APP_VERSION = '2.36.16.18.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments

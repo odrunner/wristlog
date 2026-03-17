@@ -8,7 +8,8 @@
 - **Update the test suite** after deployments to cover new/changed behavior
 
 ## After Each Working Day
-- **Update the Help page** (in-app guide), **landing page**, and **"What's New"** section to reflect changes shipped that day
+- **Update the Help page** (in-app guide) and **"What's New"** section to reflect changes shipped that day
+- **Do not modify the landing page** unless explicitly asked — it has a custom layout with a live public feed and sticky sidebar
 
 ## Audits
 - Run a **security / reliability / usability / performance audit** regularly — run all four categories every time
