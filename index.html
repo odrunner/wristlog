@@ -4191,7 +4191,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.17.18.53';
+const APP_VERSION = '2.36.17.18.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4294,8 +4294,9 @@ async function loadMyProfile() {
     }
     // Usernames must start with a letter — prefix digit-leading names with 'u'
     if (!/^[a-z]/.test(username)) username = 'u' + username;
+    const abVariant = localStorage.getItem('ab_landing') || null;
     const { data: created, error: createErr } = await db.from('profiles').upsert(
-      { id: currentUser.id, username, display_name: googleName, theme_preference: 'light', profile_privacy: 'followers' },
+      { id: currentUser.id, username, display_name: googleName, theme_preference: 'light', profile_privacy: 'followers', ab_variant: abVariant },
       { onConflict: 'id' }
     ).select().single();
     if (createErr) {
@@ -4303,7 +4304,7 @@ async function loadMyProfile() {
       // Retry with a guaranteed-unique username (e.g. username conflict)
       const fallback = 'user' + Math.random().toString(36).slice(2, 8);
       const { data: retry, error: retryErr } = await db.from('profiles').upsert(
-        { id: currentUser.id, username: fallback, display_name: googleName, theme_preference: 'light', profile_privacy: 'followers' },
+        { id: currentUser.id, username: fallback, display_name: googleName, theme_preference: 'light', profile_privacy: 'followers', ab_variant: abVariant },
         { onConflict: 'id' }
       ).select().single();
       if (retryErr) console.error('[WristLog] Profile create retry error:', retryErr.message, retryErr);
@@ -9612,7 +9613,7 @@ async function renderAdminTraffic() {
     const now = new Date();
     const d7 = new Date(now - 7 * 86400000).toISOString();
     const d30 = new Date(now - 30 * 86400000).toISOString();
-    const [allRes, week7, week30, funnelAll, funnel7, abAll] = await Promise.all([
+    const [allRes, week7, week30, funnelAll, funnel7, abAll, abSignups] = await Promise.all([
       db.from('page_visits').select('id', { count: 'exact', head: true }),
       db.from('page_visits').select('utm_source, utm_medium, utm_campaign, referrer, user_agent, created_at, ab_variant')
         .gte('created_at', d7).order('created_at', { ascending: false }).limit(500),
@@ -9620,6 +9621,7 @@ async function renderAdminTraffic() {
       db.from('page_visits').select('utm_source, created_at').eq('utm_medium', 'funnel').order('created_at', { ascending: false }).limit(500),
       db.from('page_visits').select('utm_source, created_at').eq('utm_medium', 'funnel').gte('created_at', d7).order('created_at', { ascending: false }).limit(500),
       db.from('page_visits').select('ab_variant, utm_source, utm_medium, created_at').not('ab_variant', 'is', null).order('created_at', { ascending: false }).limit(1000),
+      db.from('profiles').select('ab_variant, created_at').not('ab_variant', 'is', null),
     ]);
     const total = allRes.count || 0;
     const last30 = week30.count || 0;
@@ -9682,7 +9684,7 @@ async function renderAdminTraffic() {
       }).join('');
 
     el.innerHTML = `
-      ${renderABTestSection(abAll.data || [])}
+      ${renderABTestSection(abAll.data || [], abSignups.data || [])}
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Traffic Overview</div>
         <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>Total visits (all time)</span><span style="color:var(--gold);font-weight:600;">${total}</span></div>
@@ -9750,26 +9752,38 @@ function renderFunnelSection(allData, weekData) {
   </div>`;
 }
 
-function renderABTestSection(data) {
-  if (!data.length) return '';
+function renderABTestSection(data, signupData) {
+  if (!data.length && !signupData?.length) return '';
   const variants = {};
   data.forEach(v => {
     const ab = v.ab_variant;
-    if (!variants[ab]) variants[ab] = { visits: 0, signins: 0 };
+    if (!variants[ab]) variants[ab] = { visits: 0, signins: 0, newUsers: 0 };
     if (v.utm_medium === 'funnel' && (v.utm_source === 'signin_google' || v.utm_source === 'signin_apple' || v.utm_source === 'reddit_lp_google' || v.utm_source === 'reddit_lp_apple')) {
       variants[ab].signins++;
     } else if (v.utm_medium !== 'funnel') {
       variants[ab].visits++;
     }
   });
+  // Count actual new user signups per variant
+  (signupData || []).forEach(p => {
+    const ab = p.ab_variant;
+    if (!variants[ab]) variants[ab] = { visits: 0, signins: 0, newUsers: 0 };
+    variants[ab].newUsers++;
+  });
   const rows = Object.entries(variants)
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([variant, d]) => {
       const label = variant === 'a' ? 'A (current landing)' : variant === 'b' ? 'B (carousel)' : variant;
-      const rate = d.visits > 0 ? (d.signins / d.visits * 100).toFixed(1) + '%' : '—';
-      return `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);">
-        <span>${escHtml(label)}</span>
-        <span style="font-size:.75rem;"><span style="color:var(--muted);margin-right:.5rem;">visits: ${d.visits} · sign-ins: ${d.signins}</span><span style="color:var(--gold);font-weight:600;">${rate}</span></span>
+      const clickRate = d.visits > 0 ? (d.signins / d.visits * 100).toFixed(1) + '%' : '—';
+      const convRate = d.visits > 0 ? (d.newUsers / d.visits * 100).toFixed(1) + '%' : '—';
+      return `<div style="padding:.4rem 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;font-weight:600;margin-bottom:.2rem;">
+          <span>${escHtml(label)}</span>
+          <span style="color:var(--gold);">${d.newUsers} new user${d.newUsers !== 1 ? 's' : ''}</span>
+        </div>
+        <div style="font-size:.75rem;color:var(--muted);">
+          ${d.visits} visits → ${d.signins} sign-in clicks (${clickRate}) → ${d.newUsers} registered (${convRate})
+        </div>
       </div>`;
     }).join('');
   return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
