@@ -4223,7 +4223,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.12.04';
+const APP_VERSION = '2.36.18.14.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9348,6 +9348,15 @@ function closeWhatsNew() {
 }
 
 
+// Internal accounts — excluded from public-facing traffic/usage metrics
+const INTERNAL_IDS = new Set([
+  'd70b1a85-4f31-4431-b3b7-db76543daaf5', // ozgur
+  '9f6fccd3-e3d2-4595-87e7-de34ed859500', // watchdemo (James Collins)
+  'e0af1615-b151-4260-b6bd-c23e497efa6d', // testuser
+  '86ea0f82-044d-4730-82af-b942e3b09380', // testuser2
+  '3aa24417-214c-467d-b3aa-e76d63d73476', // wrotate official
+]);
+
 function showAdminPage() {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -9568,7 +9577,13 @@ async function loadAdminStats() {
     });
 
     const allProfiles = profilesR.data || [];
-    const profileList = (allProfiles || []).map(p => ({
+
+    // Compute external-only totals (excluding internal accounts)
+    const extWatches = allWatches.filter(r => !INTERNAL_IDS.has(r.user_id)).length;
+    const extWears = allLogs.filter(r => r.watch_id && !INTERNAL_IDS.has(r.user_id)).length;
+    const extPosts = allLogs.filter(r => !r.watch_id && !INTERNAL_IDS.has(r.user_id)).length;
+    const extUsers = allProfiles.filter(p => !INTERNAL_IDS.has(p.id)).length;
+    const toProfileItem = (p) => ({
       id: p.id,
       name: p.display_name || p.username || p.id.slice(0, 8),
       username: p.username || '—',
@@ -9577,32 +9592,48 @@ async function loadAdminStats() {
       watches: watchByUser[p.id] || 0,
       wears: wearByUser[p.id] || 0,
       posts: postByUser[p.id] || 0,
-    }));
+    });
+    const profileList = allProfiles.filter(p => !INTERNAL_IDS.has(p.id)).map(toProfileItem);
+    const internalList = allProfiles.filter(p => INTERNAL_IDS.has(p.id)).map(toProfileItem);
 
     const statRow = (label, value) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span style="color:var(--text);">${label}</span><span style="color:var(--gold);font-weight:600;">${value}</span></div>`;
 
-    const userRows = profileList.map(u => {
-      const initHTML = u.avatar
-        ? `<img src="${escHtml(u.avatar)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
-        : `<div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;">${(u.name[0]||'?').toUpperCase()}</div>`;
-      return `<tr>
-        <td style="padding:.45rem .3rem;border-bottom:1px solid var(--border);"><div style="display:flex;align-items:center;gap:.45rem;">
-          ${initHTML}
-          <div><div style="font-weight:600;font-size:.82rem;">${escHtml(u.name)} <span style="font-weight:400;font-size:.62rem;color:var(--muted);">${u.joined}</span></div><div style="font-size:.68rem;color:var(--muted);">@${escHtml(u.username)}</div></div>
-        </div></td>
-        <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;border-bottom:1px solid var(--border);">${u.watches}</td>
-        <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;border-bottom:1px solid var(--border);">${u.wears}</td>
-        <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;border-bottom:1px solid var(--border);">${u.posts}</td>
-      </tr>`;
-    }).join('');
+    const userTableHtml = (list, title) => {
+      const rows = list.map(u => {
+        const initHTML = u.avatar
+          ? `<img src="${escHtml(u.avatar)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
+          : `<div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;">${(u.name[0]||'?').toUpperCase()}</div>`;
+        return `<tr>
+          <td style="padding:.45rem .3rem;border-bottom:1px solid var(--border);"><div style="display:flex;align-items:center;gap:.45rem;">
+            ${initHTML}
+            <div><div style="font-weight:600;font-size:.82rem;">${escHtml(u.name)} <span style="font-weight:400;font-size:.62rem;color:var(--muted);">${u.joined}</span></div><div style="font-size:.68rem;color:var(--muted);">@${escHtml(u.username)}</div></div>
+          </div></td>
+          <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;border-bottom:1px solid var(--border);">${u.watches}</td>
+          <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;border-bottom:1px solid var(--border);">${u.wears}</td>
+          <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;border-bottom:1px solid var(--border);">${u.posts}</td>
+        </tr>`;
+      }).join('');
+      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">${title}</div>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">User</th>
+            <th style="text-align:center;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Watches</th>
+            <th style="text-align:center;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Wears</th>
+            <th style="text-align:center;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Posts</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    };
 
     el.innerHTML = `
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Totals</div>
-        ${statRow('Users', users)}
-        ${statRow('Watches', totalWatches)}
-        ${statRow('Wears', wearLogs)}
-        ${statRow('Posts', posts)}
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Totals (external users only)</div>
+        ${statRow('Users', extUsers)}
+        ${statRow('Watches', extWatches)}
+        ${statRow('Wears', extWears)}
+        ${statRow('Posts', extPosts)}
         ${statRow('Wishlist Items', wishItems)}
         ${statRow('Clubs', clubs)}
         ${statRow('Follows', follows)}
@@ -9611,24 +9642,14 @@ async function loadAdminStats() {
         ${statRow('Comments', comments)}
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Per-User Averages</div>
-        ${statRow('Watches / User', avg(totalWatches, users))}
-        ${statRow('Wears / User', avg(wearLogs, users))}
-        ${statRow('Posts / User', avg(posts, users))}
-        ${statRow('Follows / User', avg(follows, users))}
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Per-User Averages (external)</div>
+        ${statRow('Watches / User', avg(extWatches, extUsers))}
+        ${statRow('Wears / User', avg(extWears, extUsers))}
+        ${statRow('Posts / User', avg(extPosts, extUsers))}
+        ${statRow('Follows / User', avg(follows, extUsers))}
       </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;">
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">All Users (${profileList.length})</div>
-        <table style="width:100%;border-collapse:collapse;">
-          <thead><tr style="border-bottom:2px solid var(--border);">
-            <th style="text-align:left;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">User</th>
-            <th style="text-align:center;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Watches</th>
-            <th style="text-align:center;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Wears</th>
-            <th style="text-align:center;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Posts</th>
-          </tr></thead>
-          <tbody>${userRows}</tbody>
-        </table>
-      </div>`;
+      ${userTableHtml(profileList, 'Users (' + profileList.length + ')')}
+      ${userTableHtml(internalList, 'Internal Accounts (' + internalList.length + ')')}`;
   } catch(e) {
     el.innerHTML = `<div style="color:var(--danger);font-size:.85rem;">Failed to load stats: ${escHtml(e.message)}</div>`;
   }
