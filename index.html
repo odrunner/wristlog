@@ -4224,7 +4224,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.17.20.24';
+const APP_VERSION = '2.36.17.20.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10211,20 +10211,21 @@ async function extractOfficialUrl() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Extraction failed');
-    // Fill in the form fields
-    if (data.image_url) document.getElementById('official-image-input').value = data.image_url;
+    // Fill in the form fields — prefer stored (Supabase) URL over external
+    const imageUrl = data.stored_image_url || data.image_url;
+    if (imageUrl) document.getElementById('official-image-input').value = imageUrl;
     if (data.title || data.description) {
       const caption = [data.title, data.description].filter(Boolean).join(' — ');
       document.getElementById('official-caption-input').value = caption;
     }
     // Check if extraction returned useful data
-    const hasUsefulData = data.image_url || (data.title && data.title.length > 20) || data.description;
+    const hasUsefulData = imageUrl || (data.title && data.title.length > 20) || data.description;
     // Show preview
-    if (data.image_url) {
+    if (imageUrl) {
       preview.style.display = '';
       preview.innerHTML = `
         <div class="draft-extract-preview">
-          <img src="${escHtml(data.image_url)}" alt="" onerror="this.style.display='none'">
+          <img src="${escHtml(imageUrl)}" alt="" onerror="this.style.display='none'">
           <div style="font-size:.82rem;"><strong>${escHtml(data.title || '')}</strong></div>
           <div style="font-size:.78rem;color:var(--muted);">${escHtml(data.description || '')}</div>
           ${data.site_name ? `<div style="font-size:.72rem;color:var(--muted);">${escHtml(data.site_name)}</div>` : ''}
@@ -10356,21 +10357,9 @@ async function approveOfficialDraft(draftId) {
   card.querySelector('.draft-actions').innerHTML = `
     <button class="btn btn-primary btn-sm" disabled>Publishing…</button>`;
   try {
-    // Step 1: download and upload image to Supabase Storage
-    let storedUrl = null;
+    // Step 1: use stored image URL (already in Supabase Storage from extraction/upload)
     const logId = crypto.randomUUID();
-    if (draft.image_url) {
-      try {
-        const imgRes = await fetch(draft.image_url);
-        if (imgRes.ok) {
-          const blob = await imgRes.blob();
-          storedUrl = await uploadImage(blob, `logs/${OFFICIAL_USER_ID}/${logId}.jpg`);
-        }
-      } catch (imgErr) {
-        console.warn('[Official] Image upload failed, using external URL:', imgErr.message);
-        storedUrl = draft.image_url; // fallback to external URL
-      }
-    }
+    let storedUrl = draft.image_url || null; // already a Supabase Storage URL
     // Step 2: create the log entry
     const attribution = draft.source_url ? `\n📸 Source: ${draft.source_url}` : '';
     const caption = (draft.caption || '') + attribution;
