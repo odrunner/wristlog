@@ -9,15 +9,14 @@
       // Skip if already on /r.html, if user is logged in, or on localhost (dev)
       if (location.pathname === '/r.html') return;
       if (['localhost', '127.0.0.1'].includes(location.hostname)) return;
-      // Skip if returning from OAuth (token in URL hash or code in query)
+      // Assign A/B variant early (before any bail-out) so profile creation always has it
+      if (!localStorage.getItem('ab_landing')) { localStorage.setItem('ab_landing', Math.random() < 0.5 ? 'a' : 'b'); }
+      // Skip redirect if returning from OAuth or already signed in
       if (location.hash.indexOf('access_token') !== -1) return;
       if (location.search.indexOf('code=') !== -1) return;
       var sk = 'sb-xnzweevzrojmouzhpwzv-auth-token';
       if (localStorage.getItem(sk)) return;
-      // Check existing assignment or assign new
-      var v = localStorage.getItem('ab_landing');
-      if (!v) { v = Math.random() < 0.5 ? 'a' : 'b'; localStorage.setItem('ab_landing', v); }
-      if (v === 'b') { location.replace('/r.html'); }
+      if (localStorage.getItem('ab_landing') === 'b') { location.replace('/r.html'); }
     } catch(e) {}
   })();
   </script>
@@ -4227,7 +4226,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.10.13';
+const APP_VERSION = '2.36.18.10.38';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
