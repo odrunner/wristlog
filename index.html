@@ -4225,7 +4225,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.15.25';
+const APP_VERSION = '2.36.18.15.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9674,7 +9674,7 @@ async function renderAdminTraffic() {
     const now = new Date();
     const d7 = new Date(now - 7 * 86400000).toISOString();
     const d30 = new Date(now - 30 * 86400000).toISOString();
-    const [allRes, week7, week30, funnelAll, funnel7, abAll, abSignups] = await Promise.all([
+    const [allRes, week7, week30, funnelAll, funnel7, abAll, abSignups, allProfilesR] = await Promise.all([
       db.from('page_visits').select('id', { count: 'exact', head: true }),
       db.from('page_visits').select('utm_source, utm_medium, utm_campaign, referrer, user_agent, created_at, ab_variant, user_id')
         .gte('created_at', d7).order('created_at', { ascending: false }).limit(500),
@@ -9683,6 +9683,7 @@ async function renderAdminTraffic() {
       db.from('page_visits').select('utm_source, created_at, user_id').eq('utm_medium', 'funnel').gte('created_at', d7).order('created_at', { ascending: false }).limit(500),
       db.from('page_visits').select('ab_variant, utm_source, utm_medium, created_at, user_id').not('ab_variant', 'is', null).order('created_at', { ascending: false }).limit(1000),
       db.from('profiles').select('id, ab_variant, created_at').not('ab_variant', 'is', null),
+      db.from('profiles').select('id, created_at').order('created_at', { ascending: false }),
     ]);
     const total = allRes.count || 0;
     const last30 = week30.count || 0;
@@ -9766,52 +9767,49 @@ async function renderAdminTraffic() {
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Device by Source (7 days)</div>
         ${sourceDeviceRows}
       </div>` : ''}
-      ${renderFunnelSection((funnelAll.data || []).filter(v => !isInternal(v)), (funnel7.data || []).filter(v => !isInternal(v)))}`;
+      ${renderFunnelSection(
+        (funnelAll.data || []).filter(v => !isInternal(v)),
+        (funnel7.data || []).filter(v => !isInternal(v)),
+        (allProfilesR.data || []).filter(p => !INTERNAL_IDS.has(p.id))
+      )}`;
   } catch(e) {
     el.innerHTML = `<div style="color:var(--danger);font-size:.85rem;">Failed to load traffic: ${escHtml(e.message)}</div>`;
   }
 }
 
-function renderFunnelSection(allData, weekData) {
-  const funnelLabels = {
-    signin_google: 'Google sign-in click',
-    signin_apple: 'Apple sign-in click',
-    onboarding_step_1: 'Onboarding: Welcome',
-    onboarding_step_2: 'Onboarding: Add watch',
-    onboarding_step_3: 'Onboarding: Profile',
-    onboarding_step_4: 'Onboarding: Find people',
-    onboarding_step_5: 'Onboarding: UI tour',
-    onboarding_step_6: 'Onboarding: EULA (done)',
-  };
-  const order = ['signin_google', 'signin_apple', 'onboarding_step_1', 'onboarding_step_2', 'onboarding_step_3', 'onboarding_step_4', 'onboarding_step_5', 'onboarding_step_6'];
+function renderFunnelSection(allData, weekData, allProfiles) {
   const count = (data) => { const m = {}; data.forEach(v => { m[v.utm_source] = (m[v.utm_source] || 0) + 1; }); return m; };
   const allCounts = count(allData);
   const weekCounts = count(weekData);
-  const rows = order
-    .filter(k => allCounts[k])
-    .map(k => {
-      const label = funnelLabels[k] || k;
-      const all = allCounts[k] || 0;
-      const w = weekCounts[k] || 0;
-      return `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);">
-        <span>${escHtml(label)}</span>
-        <span><span style="color:var(--muted);font-size:.75rem;margin-right:.5rem;">7d: ${w}</span><span style="color:var(--gold);font-weight:600;">${all}</span></span>
-      </div>`;
-    }).join('');
-  if (!rows) return '';
-  // Compute drop-off rates — use max of any onboarding step as "started" (step 1 was added late)
-  const signins = (allCounts.signin_google || 0) + (allCounts.signin_apple || 0);
-  const started = Math.max(allCounts.onboarding_step_1 || 0, allCounts.onboarding_step_2 || 0);
-  const completed = allCounts.onboarding_step_6 || 0;
-  const pctStart = signins ? Math.min(100, Math.round(started/signins*100)) : 0;
-  const pctDone = started ? Math.min(100, Math.round(completed/started*100)) : 0;
-  const dropoff = signins > 0 ? `<div style="font-size:.78rem;color:var(--muted);margin-top:.5rem;line-height:1.6;">
-    Sign-in clicks → Onboarding started: <b>${started}</b>/${signins} (${pctStart}%)<br>
-    Onboarding started → Completed: <b>${completed}</b>/${started} (${pctDone}%)
-  </div>` : '';
+
+  const d7 = new Date(Date.now() - 7 * 86400000).toISOString();
+  const newUsersAll = allProfiles.length;
+  const newUsers7d = allProfiles.filter(p => p.created_at >= d7).length;
+
+  const signinGAll = allCounts.signin_google || 0;
+  const signinAAll = allCounts.signin_apple || 0;
+  const signinG7 = weekCounts.signin_google || 0;
+  const signinA7 = weekCounts.signin_apple || 0;
+  const totalSignins = signinGAll + signinAAll;
+  const totalSignins7 = signinG7 + signinA7;
+
+  const row = (label, w, all) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);">
+    <span>${escHtml(label)}</span>
+    <span><span style="color:var(--muted);font-size:.75rem;margin-right:.5rem;">7d: ${w}</span><span style="color:var(--gold);font-weight:600;">${all}</span></span>
+  </div>`;
+
+  const convAll = totalSignins > 0 ? (newUsersAll / totalSignins * 100).toFixed(1) + '%' : '—';
+  const conv7 = totalSignins7 > 0 ? (newUsers7d / totalSignins7 * 100).toFixed(1) + '%' : '—';
+
   return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;">
     <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Signup Funnel</div>
-    ${rows}${dropoff}
+    ${row('Google sign-in click', signinG7, signinGAll)}
+    ${row('Apple sign-in click', signinA7, signinAAll)}
+    ${row('New users created', newUsers7d, newUsersAll)}
+    <div style="font-size:.78rem;color:var(--muted);margin-top:.5rem;line-height:1.6;">
+      Sign-in clicks → New users: <b>${newUsersAll}</b>/${totalSignins} (${convAll})<br>
+      Last 7 days: <b>${newUsers7d}</b>/${totalSignins7} (${conv7})
+    </div>
   </div>`;
 }
 
