@@ -189,6 +189,9 @@
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs';
   const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+  // Mark this user as variant B (r.html landing page) immediately on page load
+  try { localStorage.setItem('ab_landing', 'b'); } catch(e) {}
+
   // Track page visit
   try {
     db.from('page_visits').insert({
@@ -197,7 +200,7 @@
       utm_medium: 'landing',
       referrer: document.referrer || null,
       user_agent: navigator.userAgent || null,
-      ab_variant: localStorage.getItem('ab_landing') || 'b',
+      ab_variant: 'b',
     }).then(() => {}).catch(() => {});
   } catch(e) {}
 
@@ -210,8 +213,8 @@
 
   async function signInGoogle() {
     try { db.from('page_visits').insert({ utm_source: 'reddit_lp_google', utm_medium: 'funnel', path: '/r/signin', user_agent: navigator.userAgent || null, ab_variant: 'b' }).then(() => {}).catch(() => {}); } catch(e) {}
-    // Override A/B variant so index.html won't redirect back to r.html after OAuth
-    try { localStorage.setItem('ab_landing', 'a'); } catch(e) {}
+    // Record that this user came from r.html (variant B)
+    try { localStorage.setItem('ab_landing', 'b'); } catch(e) {}
     const { error } = await db.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -224,8 +227,8 @@
 
   async function signInApple() {
     try { db.from('page_visits').insert({ utm_source: 'reddit_lp_apple', utm_medium: 'funnel', path: '/r/signin', user_agent: navigator.userAgent || null, ab_variant: 'b' }).then(() => {}).catch(() => {}); } catch(e) {}
-    // Override A/B variant so index.html won't redirect back to r.html after OAuth
-    try { localStorage.setItem('ab_landing', 'a'); } catch(e) {}
+    // Record that this user came from r.html (variant B)
+    try { localStorage.setItem('ab_landing', 'b'); } catch(e) {}
     const { error } = await db.auth.signInWithOAuth({
       provider: 'apple',
       options: {
