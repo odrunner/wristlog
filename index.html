@@ -2396,25 +2396,39 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
   <!-- ════ ADMIN PAGE ════ -->
   <div id="page-admin" class="page">
-    <div class="page-header" style="margin-bottom:1.5rem;">
+    <div class="page-header" style="margin-bottom:.75rem;">
       <h1 class="page-title">Admin</h1>
     </div>
 
-    <!-- Content Reports section -->
-    <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
-      <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Content Reports</div>
-      <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadAdminReports()">↻ Refresh</button>
+    <!-- Admin Tabs -->
+    <div class="chips" id="admin-tabs" style="margin-bottom:1rem;">
+      <div class="chip selected" data-tab="traffic" onclick="switchAdminTab('traffic')">Traffic</div>
+      <div class="chip" data-tab="usage" onclick="switchAdminTab('usage')">Usage</div>
+      <div class="chip" data-tab="feedback" onclick="switchAdminTab('feedback')">Feedback</div>
+      <div class="chip" data-tab="reports" onclick="switchAdminTab('reports')">Reports</div>
+      <div class="chip" data-tab="official" onclick="switchAdminTab('official')">Official</div>
     </div>
-    <div class="chips" id="report-filter-chips" style="margin-bottom:.75rem;">
-      <div class="chip selected" data-filter="all" onclick="filterReports('all')">All</div>
-      <div class="chip" data-filter="pending" onclick="filterReports('pending')">Pending</div>
-      <div class="chip" data-filter="actioned" onclick="filterReports('actioned')">Actioned</div>
-      <div class="chip" data-filter="dismissed" onclick="filterReports('dismissed')">Dismissed</div>
-    </div>
-    <div id="admin-reports-list"><div style="color:var(--muted);font-size:.9rem;">Loading…</div></div>
 
-    <!-- Feedback section -->
-    <div style="margin-top:2rem;">
+    <!-- Tab: Traffic -->
+    <div id="admin-tab-traffic" class="admin-tab">
+      <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Traffic</div>
+        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="renderAdminTraffic()">↻ Refresh</button>
+      </div>
+      <div id="admin-traffic" style="color:var(--muted);font-size:.9rem;">Loading…</div>
+    </div>
+
+    <!-- Tab: Usage -->
+    <div id="admin-tab-usage" class="admin-tab" style="display:none;">
+      <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Site Usage</div>
+        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadAdminStats()">↻ Refresh</button>
+      </div>
+      <div id="admin-stats" style="color:var(--muted);font-size:.9rem;">Loading…</div>
+    </div>
+
+    <!-- Tab: Feedback -->
+    <div id="admin-tab-feedback" class="admin-tab" style="display:none;">
       <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
         <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Feedback</div>
         <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadAdminFeedback()">↻ Refresh</button>
@@ -2429,26 +2443,23 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div id="admin-feedback-list"><div style="color:var(--muted);font-size:.9rem;">Loading…</div></div>
     </div>
 
-    <!-- Traffic -->
-    <div style="margin-top:2rem;">
+    <!-- Tab: Reports -->
+    <div id="admin-tab-reports" class="admin-tab" style="display:none;">
       <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
-        <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Traffic</div>
-        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="renderAdminTraffic()">↻ Refresh</button>
+        <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Content Reports</div>
+        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadAdminReports()">↻ Refresh</button>
       </div>
-      <div id="admin-traffic" style="color:var(--muted);font-size:.9rem;">Loading…</div>
+      <div class="chips" id="report-filter-chips" style="margin-bottom:.75rem;">
+        <div class="chip selected" data-filter="all" onclick="filterReports('all')">All</div>
+        <div class="chip" data-filter="pending" onclick="filterReports('pending')">Pending</div>
+        <div class="chip" data-filter="actioned" onclick="filterReports('actioned')">Actioned</div>
+        <div class="chip" data-filter="dismissed" onclick="filterReports('dismissed')">Dismissed</div>
+      </div>
+      <div id="admin-reports-list"><div style="color:var(--muted);font-size:.9rem;">Loading…</div></div>
     </div>
 
-    <!-- Site Usage Report -->
-    <div style="margin-top:2rem;">
-      <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
-        <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Site Usage</div>
-        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadAdminStats()">↻ Refresh</button>
-      </div>
-      <div id="admin-stats" style="color:var(--muted);font-size:.9rem;">Loading…</div>
-    </div>
-
-    <!-- Official Posts -->
-    <div style="margin-top:2rem;">
+    <!-- Tab: Official -->
+    <div id="admin-tab-official" class="admin-tab" style="display:none;">
       <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
         <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Official Posts</div>
         <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadOfficialDrafts()">↻ Refresh</button>
@@ -4180,7 +4191,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.17.18.39';
+const APP_VERSION = '2.36.17.18.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9310,6 +9321,15 @@ function showAdminPage() {
   loadOfficialDrafts();
 }
 
+function switchAdminTab(tab) {
+  document.querySelectorAll('.admin-tab').forEach(t => t.style.display = 'none');
+  document.querySelectorAll('#admin-tabs .chip').forEach(c => {
+    c.classList.toggle('selected', c.dataset.tab === tab);
+  });
+  const target = document.getElementById('admin-tab-' + tab);
+  if (target) target.style.display = '';
+}
+
 // ── Admin Content Reports ────────────────────────────────────────────────
 let _adminReportsData = [];
 let _reportFilter = 'all';
@@ -9662,6 +9682,7 @@ async function renderAdminTraffic() {
       }).join('');
 
     el.innerHTML = `
+      ${renderABTestSection(abAll.data || [])}
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Traffic Overview</div>
         <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>Total visits (all time)</span><span style="color:var(--gold);font-weight:600;">${total}</span></div>
@@ -9680,8 +9701,7 @@ async function renderAdminTraffic() {
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Device by Source (7 days)</div>
         ${sourceDeviceRows}
       </div>` : ''}
-      ${renderFunnelSection(funnelAll.data || [], funnel7.data || [])}
-      ${renderABTestSection(abAll.data || [])}`;
+      ${renderFunnelSection(funnelAll.data || [], funnel7.data || [])}`;
   } catch(e) {
     el.innerHTML = `<div style="color:var(--danger);font-size:.85rem;">Failed to load traffic: ${escHtml(e.message)}</div>`;
   }
@@ -9752,7 +9772,7 @@ function renderABTestSection(data) {
         <span style="font-size:.75rem;"><span style="color:var(--muted);margin-right:.5rem;">visits: ${d.visits} · sign-ins: ${d.signins}</span><span style="color:var(--gold);font-weight:600;">${rate}</span></span>
       </div>`;
     }).join('');
-  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-top:1rem;">
+  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
     <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">A/B Landing Test</div>
     ${rows}
   </div>`;
