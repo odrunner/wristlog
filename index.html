@@ -4224,7 +4224,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.17.20.11';
+const APP_VERSION = '2.36.17.20.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10205,6 +10205,7 @@ async function extractOfficialUrl() {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + token,
+        'apikey': SUPABASE_KEY,
       },
       body: JSON.stringify({ url }),
     });
