@@ -2,6 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <!-- A/B test: redirect 50% of new unauthenticated visitors to variant B -->
+  <script>
+  (function(){
+    try {
+      // Skip if already on /r.html or if user is logged in
+      if (location.pathname === '/r.html') return;
+      var sk = 'sb-xnzweevzrojmouzhpwzv-auth-token';
+      if (localStorage.getItem(sk)) return;
+      // Check existing assignment or assign new
+      var v = localStorage.getItem('ab_landing');
+      if (!v) { v = Math.random() < 0.5 ? 'a' : 'b'; localStorage.setItem('ab_landing', v); }
+      if (v === 'b') { location.replace('/r.html'); }
+    } catch(e) {}
+  })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>WRotate – Every Watch. Every Wear.</title>
   <meta name="description" content="Track your watch collection, log every wear, and share with friends. Cost-per-wear stats, market values, social feed, clubs, and wishlist — all in one app.">
@@ -3792,6 +3807,7 @@ function officialBadgeHtml(profile) {
       referrer: externalRef,
       path: window.location.pathname,
       user_agent: navigator.userAgent || null,
+      ab_variant: localStorage.getItem('ab_landing') || null,
     }).then(() => {}).catch(() => {});
     // Clean UTM params from URL without reload
     if (utm_source) {
@@ -3841,7 +3857,7 @@ async function devLogin(which) {
 }
 
 async function signInWithGoogle() {
-  try { db.from('page_visits').insert({ utm_source: 'signin_google', utm_medium: 'funnel', path: '/signin', user_agent: navigator.userAgent || null }).then(() => {}).catch(() => {}); } catch(e) {}
+  try { db.from('page_visits').insert({ utm_source: 'signin_google', utm_medium: 'funnel', path: '/signin', user_agent: navigator.userAgent || null, ab_variant: localStorage.getItem('ab_landing') || null }).then(() => {}).catch(() => {}); } catch(e) {}
   const { error } = await db.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -3853,7 +3869,7 @@ async function signInWithGoogle() {
 }
 
 async function signInWithApple() {
-  try { db.from('page_visits').insert({ utm_source: 'signin_apple', utm_medium: 'funnel', path: '/signin', user_agent: navigator.userAgent || null }).then(() => {}).catch(() => {}); } catch(e) {}
+  try { db.from('page_visits').insert({ utm_source: 'signin_apple', utm_medium: 'funnel', path: '/signin', user_agent: navigator.userAgent || null, ab_variant: localStorage.getItem('ab_landing') || null }).then(() => {}).catch(() => {}); } catch(e) {}
   const { error } = await db.auth.signInWithOAuth({
     provider: 'apple',
     options: {
@@ -4164,7 +4180,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.17.18.14';
+const APP_VERSION = '2.36.17.18.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9576,13 +9592,14 @@ async function renderAdminTraffic() {
     const now = new Date();
     const d7 = new Date(now - 7 * 86400000).toISOString();
     const d30 = new Date(now - 30 * 86400000).toISOString();
-    const [allRes, week7, week30, funnelAll, funnel7] = await Promise.all([
+    const [allRes, week7, week30, funnelAll, funnel7, abAll] = await Promise.all([
       db.from('page_visits').select('id', { count: 'exact', head: true }),
-      db.from('page_visits').select('utm_source, utm_medium, utm_campaign, referrer, user_agent, created_at')
+      db.from('page_visits').select('utm_source, utm_medium, utm_campaign, referrer, user_agent, created_at, ab_variant')
         .gte('created_at', d7).order('created_at', { ascending: false }).limit(500),
       db.from('page_visits').select('id', { count: 'exact', head: true }).gte('created_at', d30),
       db.from('page_visits').select('utm_source, created_at').eq('utm_medium', 'funnel').order('created_at', { ascending: false }).limit(500),
       db.from('page_visits').select('utm_source, created_at').eq('utm_medium', 'funnel').gte('created_at', d7).order('created_at', { ascending: false }).limit(500),
+      db.from('page_visits').select('ab_variant, utm_source, utm_medium, created_at').not('ab_variant', 'is', null).order('created_at', { ascending: false }).limit(1000),
     ]);
     const total = allRes.count || 0;
     const last30 = week30.count || 0;
@@ -9663,7 +9680,8 @@ async function renderAdminTraffic() {
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Device by Source (7 days)</div>
         ${sourceDeviceRows}
       </div>` : ''}
-      ${renderFunnelSection(funnelAll.data || [], funnel7.data || [])}`;
+      ${renderFunnelSection(funnelAll.data || [], funnel7.data || [])}
+      ${renderABTestSection(abAll.data || [])}`;
   } catch(e) {
     el.innerHTML = `<div style="color:var(--danger);font-size:.85rem;">Failed to load traffic: ${escHtml(e.message)}</div>`;
   }
@@ -9709,6 +9727,34 @@ function renderFunnelSection(allData, weekData) {
   return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;">
     <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Signup Funnel</div>
     ${rows}${dropoff}
+  </div>`;
+}
+
+function renderABTestSection(data) {
+  if (!data.length) return '';
+  const variants = {};
+  data.forEach(v => {
+    const ab = v.ab_variant;
+    if (!variants[ab]) variants[ab] = { visits: 0, signins: 0 };
+    if (v.utm_medium === 'funnel' && (v.utm_source === 'signin_google' || v.utm_source === 'signin_apple' || v.utm_source === 'reddit_lp_google' || v.utm_source === 'reddit_lp_apple')) {
+      variants[ab].signins++;
+    } else if (v.utm_medium !== 'funnel') {
+      variants[ab].visits++;
+    }
+  });
+  const rows = Object.entries(variants)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([variant, d]) => {
+      const label = variant === 'a' ? 'A (current landing)' : variant === 'b' ? 'B (carousel)' : variant;
+      const rate = d.visits > 0 ? (d.signins / d.visits * 100).toFixed(1) + '%' : '—';
+      return `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);">
+        <span>${escHtml(label)}</span>
+        <span style="font-size:.75rem;"><span style="color:var(--muted);margin-right:.5rem;">visits: ${d.visits} · sign-ins: ${d.signins}</span><span style="color:var(--gold);font-weight:600;">${rate}</span></span>
+      </div>`;
+    }).join('');
+  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-top:1rem;">
+    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">A/B Landing Test</div>
+    ${rows}
   </div>`;
 }
 

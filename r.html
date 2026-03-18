@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>WRotate — Track Your Watch Collection</title>
+  <meta name="description" content="Snap a photo. Track every watch. See your stats. Free, no ads.">
+  <meta property="og:title" content="WRotate — Track Your Watch Collection">
+  <meta property="og:description" content="Snap a photo. Track every watch. See your stats. Free, no ads.">
+  <meta property="og:image" content="https://api.wrotate.com/storage/v1/object/public/media/landing/collection.PNG">
+  <meta property="og:url" content="https://wrotate.com/r">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f8f7f4; --surface: #fff; --surface2: #f0eeeb;
+      --text: #1a1a1a; --muted: #777; --gold: #b8952e;
+      --border: #e0ddd8;
+    }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg); color: var(--text);
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+      min-height: 100dvh; padding: env(safe-area-inset-top, 2.5rem) 1rem 1rem;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      width: 100%; max-width: 400px;
+      display: flex; flex-direction: column; align-items: center;
+      gap: .35rem;
+    }
+
+    /* Logo */
+    .logo {
+      display: flex; align-items: center; gap: .5rem;
+      font-size: 1.5rem; font-weight: 700; color: var(--gold);
+      margin-bottom: 0;
+    }
+    .logo svg { width: 30px; height: 30px; }
+    .logo .light { font-weight: 400; letter-spacing: .04em; }
+
+    /* Headline */
+    h1 {
+      font-size: 1.2rem; font-weight: 700; text-align: center;
+      line-height: 1.3; letter-spacing: -.01em;
+    }
+    .subtitle {
+      font-size: .78rem; color: var(--muted); text-align: center;
+      line-height: 1.4; margin-bottom: 0;
+    }
+
+    /* Carousel */
+    .carousel {
+      position: relative; width: 62%; aspect-ratio: 9/16;
+      border-radius: 14px; overflow: hidden;
+      background: var(--surface); border: 1px solid var(--border);
+      margin: .2rem 0; max-height: 28dvh;
+    }
+    .carousel img {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; opacity: 0;
+      transition: opacity .6s ease;
+    }
+    .carousel img.active { opacity: 1; }
+
+    /* Caption under carousel */
+    .carousel-caption {
+      font-size: .82rem; color: var(--muted); text-align: center;
+      min-height: 1.5em;
+      transition: opacity .4s ease;
+    }
+
+    /* Dots */
+    .dots {
+      display: flex; gap: .45rem; justify-content: center;
+    }
+    .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--border); transition: background .3s, transform .3s;
+    }
+    .dot.active { background: var(--gold); transform: scale(1.25); }
+
+    /* Auth buttons */
+    .auth-buttons { width: 100%; margin-top: .15rem; }
+    .btn-google {
+      display: flex; align-items: center; justify-content: center; gap: .6rem;
+      width: 100%; padding: .65rem 1rem; margin-bottom: .5rem;
+      background: #fff; color: #3c4043; border: 1px solid #dadce0; border-radius: 10px;
+      font-size: .9rem; font-weight: 600; cursor: pointer; font-family: inherit;
+      transition: box-shadow .15s, background .15s;
+    }
+    .btn-google:hover { box-shadow: 0 1px 6px rgba(0,0,0,.2); background: #f8f8f8; }
+    .btn-apple {
+      display: flex; align-items: center; justify-content: center; gap: .6rem;
+      width: 100%; padding: .65rem 1rem; margin-bottom: .5rem;
+      background: #000; color: #fff; border: none; border-radius: 10px;
+      font-size: .85rem; font-weight: 600; cursor: pointer; font-family: inherit;
+      transition: box-shadow .15s, background .15s;
+    }
+    .btn-apple:hover { box-shadow: 0 1px 6px rgba(0,0,0,.3); background: #1a1a1a; }
+
+    .fine-print {
+      font-size: .72rem; color: var(--muted); text-align: center;
+      line-height: 1.5;
+    }
+    .fine-print a { color: var(--muted); text-decoration: underline; }
+
+    .app-store-badge { text-align: center; margin-top: .1rem; }
+    .app-store-badge img { height: 34px; }
+
+    /* Prevent layout shift on desktop */
+    @media (min-width: 600px) {
+      .carousel { max-height: 520px; aspect-ratio: auto; height: 520px; }
+    }
+
+    .auth-error {
+      background: rgba(224,85,85,.08); border: 1px solid rgba(224,85,85,.25);
+      color: #dc2626; font-size: .82rem; padding: .65rem .9rem;
+      border-radius: 8px; width: 100%; display: none; text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Logo -->
+  <div class="logo">
+    <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 21 7.3 A 10 10 0 1 1 11 7.3" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+      <polygon points="11,7.3 8.5,9.5 7.7,6.6" fill="currentColor"/>
+      <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
+    </svg>
+    <span>W<span class="light">rotate</span></span>
+  </div>
+
+  <!-- Carousel -->
+  <div class="carousel" id="carousel">
+    <img src="https://api.wrotate.com/storage/v1/object/public/media/landing/track.PNG" alt="Track your wears" class="active" draggable="false">
+    <img src="https://api.wrotate.com/storage/v1/object/public/media/landing/collection.PNG" alt="Your collection" draggable="false">
+    <img src="https://api.wrotate.com/storage/v1/object/public/media/landing/stats.PNG" alt="Collection stats" draggable="false">
+  </div>
+
+  <div class="carousel-caption" id="caption">Snap to track — log today's wear in seconds</div>
+
+  <div class="dots" id="dots">
+    <div class="dot active"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+
+  <!-- Auth -->
+  <div id="auth-error" class="auth-error"></div>
+  <div class="auth-buttons">
+    <button class="btn-google" onclick="signInGoogle()">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+      Continue with Google
+    </button>
+    <button class="btn-apple" onclick="signInApple()">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="#fff"/></svg>
+      Continue with Apple
+    </button>
+  </div>
+
+  <div class="app-store-badge">
+    <a href="https://apps.apple.com/us/app/wrotate/id6760091102" target="_blank" rel="noopener noreferrer">
+      <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store">
+    </a>
+  </div>
+
+  <div class="fine-print">
+    100% free · No ads · No credit card<br>
+    <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+  const SUPABASE_URL = 'https://api.wrotate.com';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs';
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // Track page visit
+  try {
+    db.from('page_visits').insert({
+      path: '/r',
+      utm_source: 'reddit_lp',
+      utm_medium: 'landing',
+      referrer: document.referrer || null,
+      user_agent: navigator.userAgent || null,
+      ab_variant: localStorage.getItem('ab_landing') || 'b',
+    }).then(() => {}).catch(() => {});
+  } catch(e) {}
+
+  // Auth — redirect to main app after sign-in
+  function showAuthError(msg) {
+    const el = document.getElementById('auth-error');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  async function signInGoogle() {
+    try { db.from('page_visits').insert({ utm_source: 'reddit_lp_google', utm_medium: 'funnel', path: '/r/signin', user_agent: navigator.userAgent || null, ab_variant: 'b' }).then(() => {}).catch(() => {}); } catch(e) {}
+    const { error } = await db.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+        queryParams: { prompt: 'select_account' },
+      }
+    });
+    if (error) showAuthError(error.message);
+  }
+
+  async function signInApple() {
+    try { db.from('page_visits').insert({ utm_source: 'reddit_lp_apple', utm_medium: 'funnel', path: '/r/signin', user_agent: navigator.userAgent || null, ab_variant: 'b' }).then(() => {}).catch(() => {}); } catch(e) {}
+    const { error } = await db.auth.signInWithOAuth({
+      provider: 'apple',
+      options: {
+        redirectTo: window.location.origin,
+      }
+    });
+    if (error) showAuthError(error.message);
+  }
+
+  // If already logged in, go to app
+  db.auth.getSession().then(({ data }) => {
+    if (data?.session) window.location.href = '/';
+  });
+
+  // Carousel
+  const slides = document.querySelectorAll('#carousel img');
+  const dots = document.querySelectorAll('.dot');
+  const captionEl = document.getElementById('caption');
+  const captions = [
+    'Snap to track — log today\'s wear in seconds',
+    'Your whole collection — price, value, cost per wear',
+    'Stats at a glance — wears, rotation, collection value',
+  ];
+  let current = 0;
+  let timer;
+
+  function goTo(idx) {
+    slides[current].classList.remove('active');
+    dots[current].classList.remove('active');
+    current = idx;
+    slides[current].classList.add('active');
+    dots[current].classList.add('active');
+    captionEl.style.opacity = '0';
+    setTimeout(() => {
+      captionEl.textContent = captions[current];
+      captionEl.style.opacity = '1';
+    }, 200);
+  }
+
+  function next() { goTo((current + 1) % slides.length); }
+
+  function startTimer() { timer = setInterval(next, 3500); }
+  function resetTimer() { clearInterval(timer); startTimer(); }
+
+  // Swipe support
+  let touchX = 0;
+  const carousel = document.getElementById('carousel');
+  carousel.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; }, { passive: true });
+  carousel.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 40) {
+      goTo(dx < 0 ? (current + 1) % slides.length : (current - 1 + slides.length) % slides.length);
+      resetTimer();
+    }
+  }, { passive: true });
+
+  // Dot clicks
+  dots.forEach((dot, i) => dot.addEventListener('click', () => { goTo(i); resetTimer(); }));
+
+  startTimer();
+</script>
+
+</body>
+</html>
