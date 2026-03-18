@@ -230,10 +230,20 @@
     if (error) showAuthError(error.message);
   }
 
-  // If already logged in, go to app
+  // If already logged in, go to app (replace so back button doesn't loop)
   db.auth.getSession().then(({ data }) => {
-    if (data?.session) window.location.href = '/';
+    if (data?.session) window.location.replace('/');
   });
+
+  // Handle OAuth callback landing on r.html (token in URL hash)
+  if (window.location.hash.includes('access_token') || window.location.search.includes('code=')) {
+    // Let Supabase process the token, then redirect
+    db.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        window.location.replace('/');
+      }
+    });
+  }
 
   // Carousel
   const slides = document.querySelectorAll('#carousel img');
