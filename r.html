@@ -69,7 +69,7 @@
     /* Caption under carousel */
     .carousel-caption {
       font-size: 1rem; color: var(--muted); text-align: center;
-      min-height: 1.5em; line-height: 1.4;
+      height: 1.4em; line-height: 1.4; overflow: hidden;
       transition: opacity .4s ease;
     }
 
@@ -255,8 +255,8 @@
   const captionEl = document.getElementById('caption');
   const captions = [
     'Snap to track — log today\'s wear in seconds',
-    'Your whole collection — price, value, cost per wear',
-    'Stats at a glance — wears, rotation, collection value',
+    'Your collection — value, cost per wear',
+    'Stats at a glance — wears, value, rotation',
   ];
   let current = 0;
   let timer;
