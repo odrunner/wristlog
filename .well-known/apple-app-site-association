@@ -4,11 +4,18 @@
       {
         "appIDs": ["JSNK92LRFD.com.wrotate.Wrotate"],
         "components": [
-          {
-            "/": "/*"
-          }
+          { "/": "/", "exclude": true },
+          { "/": "/index.html", "exclude": true },
+          { "/": "/r.html", "exclude": true },
+          { "/": "/privacy.html", "exclude": true },
+          { "/": "/terms.html", "exclude": true },
+          { "/": "/u/*" },
+          { "/": "/p/*" }
         ]
       }
     ]
+  },
+  "webcredentials": {
+    "apps": ["JSNK92LRFD.com.wrotate.Wrotate"]
   }
 }
