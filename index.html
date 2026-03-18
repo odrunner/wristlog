@@ -3851,6 +3851,7 @@ function officialBadgeHtml(profile) {
       path: window.location.pathname,
       user_agent: navigator.userAgent || null,
       ab_variant: localStorage.getItem('ab_landing') || null,
+      user_id: window.currentUser?.id || null,
     }).then(() => {}).catch(() => {});
     // Clean UTM params from URL without reload
     if (utm_source) {
@@ -3869,6 +3870,7 @@ function trackAppStoreClick() {
       path: window.location.pathname,
       referrer: document.referrer || null,
       user_agent: navigator.userAgent || null,
+      user_id: window.currentUser?.id || null,
     }).then(() => {}).catch(() => {});
   } catch(e) {}
 }
@@ -3900,7 +3902,7 @@ async function devLogin(which) {
 }
 
 async function signInWithGoogle() {
-  try { db.from('page_visits').insert({ utm_source: 'signin_google', utm_medium: 'funnel', path: '/signin', user_agent: navigator.userAgent || null, ab_variant: localStorage.getItem('ab_landing') || null }).then(() => {}).catch(() => {}); } catch(e) {}
+  try { db.from('page_visits').insert({ utm_source: 'signin_google', utm_medium: 'funnel', path: '/signin', user_agent: navigator.userAgent || null, ab_variant: localStorage.getItem('ab_landing') || null, user_id: window.currentUser?.id || null }).then(() => {}).catch(() => {}); } catch(e) {}
   const { error } = await db.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -3912,7 +3914,7 @@ async function signInWithGoogle() {
 }
 
 async function signInWithApple() {
-  try { db.from('page_visits').insert({ utm_source: 'signin_apple', utm_medium: 'funnel', path: '/signin', user_agent: navigator.userAgent || null, ab_variant: localStorage.getItem('ab_landing') || null }).then(() => {}).catch(() => {}); } catch(e) {}
+  try { db.from('page_visits').insert({ utm_source: 'signin_apple', utm_medium: 'funnel', path: '/signin', user_agent: navigator.userAgent || null, ab_variant: localStorage.getItem('ab_landing') || null, user_id: window.currentUser?.id || null }).then(() => {}).catch(() => {}); } catch(e) {}
   const { error } = await db.auth.signInWithOAuth({
     provider: 'apple',
     options: {
@@ -4223,7 +4225,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.14.48';
+const APP_VERSION = '2.36.18.15.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8623,7 +8625,7 @@ function resumeWelcome() {
   }
 }
 function welcomeStep(n) {
-  try { db.from('page_visits').insert({ utm_source: 'onboarding_step_' + n, utm_medium: 'funnel', path: '/welcome', user_agent: navigator.userAgent || null }).then(() => {}).catch(() => {}); } catch(e) {}
+  try { db.from('page_visits').insert({ utm_source: 'onboarding_step_' + n, utm_medium: 'funnel', path: '/welcome', user_agent: navigator.userAgent || null, user_id: window.currentUser?.id || null }).then(() => {}).catch(() => {}); } catch(e) {}
   [1,2,3,4,5,6].forEach(i => {
     document.getElementById(`ws-${i}`).classList.toggle('hidden', i !== n);
     document.getElementById(`wd-${i}`).classList.toggle('active', i === n);
@@ -9674,17 +9676,19 @@ async function renderAdminTraffic() {
     const d30 = new Date(now - 30 * 86400000).toISOString();
     const [allRes, week7, week30, funnelAll, funnel7, abAll, abSignups] = await Promise.all([
       db.from('page_visits').select('id', { count: 'exact', head: true }),
-      db.from('page_visits').select('utm_source, utm_medium, utm_campaign, referrer, user_agent, created_at, ab_variant')
+      db.from('page_visits').select('utm_source, utm_medium, utm_campaign, referrer, user_agent, created_at, ab_variant, user_id')
         .gte('created_at', d7).order('created_at', { ascending: false }).limit(500),
       db.from('page_visits').select('id', { count: 'exact', head: true }).gte('created_at', d30),
-      db.from('page_visits').select('utm_source, created_at').eq('utm_medium', 'funnel').order('created_at', { ascending: false }).limit(500),
-      db.from('page_visits').select('utm_source, created_at').eq('utm_medium', 'funnel').gte('created_at', d7).order('created_at', { ascending: false }).limit(500),
-      db.from('page_visits').select('ab_variant, utm_source, utm_medium, created_at').not('ab_variant', 'is', null).order('created_at', { ascending: false }).limit(1000),
-      db.from('profiles').select('ab_variant, created_at').not('ab_variant', 'is', null),
+      db.from('page_visits').select('utm_source, created_at, user_id').eq('utm_medium', 'funnel').order('created_at', { ascending: false }).limit(500),
+      db.from('page_visits').select('utm_source, created_at, user_id').eq('utm_medium', 'funnel').gte('created_at', d7).order('created_at', { ascending: false }).limit(500),
+      db.from('page_visits').select('ab_variant, utm_source, utm_medium, created_at, user_id').not('ab_variant', 'is', null).order('created_at', { ascending: false }).limit(1000),
+      db.from('profiles').select('id, ab_variant, created_at').not('ab_variant', 'is', null),
     ]);
     const total = allRes.count || 0;
     const last30 = week30.count || 0;
-    const visits = week7.data || [];
+    // Filter out internal accounts from all visit data
+    const isInternal = (v) => v.user_id && INTERNAL_IDS.has(v.user_id);
+    const visits = (week7.data || []).filter(v => !isInternal(v));
     const last7 = visits.length;
 
     // Separate traffic visits from funnel events and OAuth redirects
@@ -9743,7 +9747,7 @@ async function renderAdminTraffic() {
       }).join('');
 
     el.innerHTML = `
-      ${renderABTestSection(abAll.data || [], abSignups.data || [])}
+      ${renderABTestSection((abAll.data || []).filter(v => !isInternal(v)), (abSignups.data || []).filter(p => !INTERNAL_IDS.has(p.id)))}
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Traffic Overview</div>
         <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>Total visits (all time)</span><span style="color:var(--gold);font-weight:600;">${total}</span></div>
@@ -9762,7 +9766,7 @@ async function renderAdminTraffic() {
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Device by Source (7 days)</div>
         ${sourceDeviceRows}
       </div>` : ''}
-      ${renderFunnelSection(funnelAll.data || [], funnel7.data || [])}`;
+      ${renderFunnelSection((funnelAll.data || []).filter(v => !isInternal(v)), (funnel7.data || []).filter(v => !isInternal(v)))}`;
   } catch(e) {
     el.innerHTML = `<div style="color:var(--danger);font-size:.85rem;">Failed to load traffic: ${escHtml(e.message)}</div>`;
   }
