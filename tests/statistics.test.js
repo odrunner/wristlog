@@ -3,7 +3,7 @@ import {
   filterLogsByPeriod, computeStats, computeCollectionReport,
   computeReportTotals, sortReportRows, computeCollectionValuePoints,
   computeDowReport,
-} from '../wristlog.js';
+} from '../wrotate_test.js';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 

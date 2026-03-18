@@ -4,7 +4,7 @@ import {
   markDirty,
   filterDirtyItems,
   shouldStopNotifPolling,
-} from '../wristlog.js';
+} from '../wrotate_test.js';
 
 // ── safeParseJSON ─────────────────────────────────────────────────────────────
 

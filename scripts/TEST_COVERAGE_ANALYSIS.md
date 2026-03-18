@@ -1,230 +1,153 @@
 # WristLog — Test Coverage Analysis
 
+_Updated: 2026-03-17_
+
 ## Current State
 
-**Test coverage: 0%.** The project has no tests, no test framework, no CI/CD pipeline, and no coverage tooling. The entire application (~7,000 lines of JavaScript in `app.html`) is untested.
+**678 tests across 20 test files, all passing.**
+
+Coverage of `wrotate_test.js` (the extracted business-logic module):
+
+| Metric     | Coverage |
+|------------|----------|
+| Statements | 98.2%    |
+| Branches   | 96.0%    |
+| Functions  | 100%     |
+| Lines      | 98.2%    |
+
+However, `wrotate_test.js` is only ~1,178 lines of the total codebase. The overall project statement coverage is **38.7%** because several major areas have **zero test coverage**.
 
 ---
 
-## Risk Assessment by Module
+## What's Well-Tested
 
-The codebase contains **235 functions** across several logical domains. Below is a prioritized breakdown of where tests would deliver the most value, ranked by **risk** (likelihood of bugs) and **impact** (severity if broken).
+The following modules in `wrotate_test.js` have strong unit test suites:
 
----
-
-### Priority 1 — Critical (high risk, high impact)
-
-#### 1. Data Serialization: `watchToRow` / `rowToWatch` / `logToRow` / `rowToLog` / `wishToRow` / `rowToWish`
-**Lines:** 2236–2306
-**Risk:** These functions translate between the app's in-memory model and the Supabase row format. A single missed field or wrong default silently loses user data.
-**What to test:**
-- Round-trip fidelity: `rowToWatch(watchToRow(watch))` should preserve all fields
-- Default/fallback values when fields are `null` or `undefined`
-- The `http://` → `https://` image URL upgrade in `rowToWatch`
-- Privacy field defaults (`watchPrivacy` → `'private'`)
-- Edge cases: empty strings vs `null`, empty arrays vs `undefined`
-
-#### 2. Watch Save Logic: `saveWatch()`
-**Lines:** 4754–4823
-**Risk:** Complex branching — handles create vs. edit, market price archival to `priceHistory`, multiple sources of truth for price data, conditional field merging with spread.
-**What to test:**
-- New watch creation (generates `id`, adds to array)
-- Editing an existing watch preserves fields not in the form
-- Market price history is archived when price changes
-- Market price history is preserved when no new price is entered
-- Price source attribution (`'WatchCharts'` vs `'User Entry'`)
-- Validation: missing brand or name should fail
-
-#### 3. ELO Ranking System: `eloExpected()` / `pickWatch()` / `buildGameQueue()`
-**Lines:** 3726–3815
-**Risk:** Math-heavy pure logic — easy to get wrong, hard to spot visually. The ELO formula and rating update affect the ranking game results.
-**What to test:**
-- `eloExpected(1000, 1000)` should return `0.5`
-- `eloExpected(1200, 1000)` should be > `0.5` (higher rated player expected to win)
-- Winner gains points, loser loses points, and the sum is zero-sum
-- `buildGameQueue` generates all unique pairs (n*(n-1)/2 pairs)
-- `buildGameQueue` with < 2 watches returns empty
-
-#### 4. Watch Recommendation Engine: `computeWatchRec()`
-**Lines:** 5098–5137
-**Risk:** Multi-factor scoring algorithm with weather, day-of-week, and idle-time inputs. Silent scoring bugs lead to confusing recommendations.
-**What to test:**
-- Watches worn today are excluded
-- Longer-idle watches score higher
-- Weather-color matching logic (warm tones for sunny, cool for cloudy/rainy)
-- Weekend bonus for dress watches and dinner-use history
-- Skipped watches are excluded
-- Returns `null` when no candidates remain
-- Edge case: single watch, all watches worn today
+- **Utilities** — date formatting, initials, HTML escaping, feed/comment time formatting (57 tests)
+- **Data serialization** — `watchToRow`/`rowToWatch`, log and wishlist round-trips (32 tests)
+- **ELO ranking** — expected score, rating updates, game queue building (20 tests)
+- **Recommendation engine** — multi-factor scoring, skip sets, weather matching (38 tests)
+- **Save watch logic** — validation, price history, market price archival (19 tests)
+- **Wear logs** — validation, log building, strap selection (16 tests)
+- **Statistics** — period filtering, stats computation, collection reports, DOW breakdown (56 tests)
+- **Year/monthly reviews** — annual stats, month navigation (22 tests)
+- **Social features** — friend state, friendships, likes, comments (42 tests)
+- **Notifications** — body text, actionability, routing, badge formatting (120 tests)
+- **Mentions** — query extraction, mention parsing, comment rendering (32 tests)
+- **Content filtering** — profanity, harassment, spam detection (11 tests)
+- **Price formatting** — comma insertion, parsing, `fmtMoney` (23 tests)
+- **Auto-suggest tags** — brand/model-based tag inference (24 tests)
+- **OEM strap guessing** — brand/ref-based strap material inference (28 tests)
+- **Timegrapher** — rate and beat error computation (13 tests)
+- **Resilience** — safe JSON parsing, dirty tracking, polling control (39 tests)
+- **HTML formatters** — warranty badge, box/papers, market price row (19 tests)
+- **Public feed** — initials, dates, like/comment aggregation (44 tests)
 
 ---
 
-### Priority 2 — High (moderate risk, high impact)
+## Gaps and Recommendations
 
-#### 5. Wear Log Management: `saveLog()` / `deleteLog()` / `saveEditLog()`
-**Lines:** 3601–3727
-**Risk:** These modify the core `logs` array and trigger Supabase deletes. Bugs here lose wear history.
-**What to test:**
-- `saveLog` rejects missing date or watch
-- `saveLog` updates strap `isOn` status on the watch
-- `deleteLog` removes from local array and triggers Supabase delete
-- `saveEditLog` correctly merges edits without duplicating entries
+### Gap 1 — Supabase Edge Functions (0% coverage, HIGH priority)
 
-#### 6. Price Formatting: `fmtPriceInput()` / `readPrice()` / `setPriceInput()`
-**Lines:** 3421–3437
-**Risk:** Currency formatting with regex — easy to break on edge cases.
-**What to test:**
-- `fmtPriceInput` correctly adds commas: `1234567` → `1,234,567`
-- Handles decimals: `1234.56` → `1,234.56`
-- `readPrice` strips commas and returns a number
-- `readPrice` returns `0` for empty/invalid input
-- Multiple dots: only the first dot is preserved
+**Files:** 8 edge functions in `supabase/functions/`
+- `delete-user/index.ts` — Account deletion
+- `send-email/index.ts` — Transactional email
+- `send-push/index.ts` — Push notifications
+- `identify-watch/index.ts` — AI watch identification
+- `search-watch-image/index.ts` — Image search
+- `feedback-to-github/index.ts` — Feedback pipeline
+- `new-user-alert/index.ts` — Admin alerts
+- `report-notify/index.ts` — Report notifications
 
-#### 7. Statistics Computations: `renderStats()` / `filteredLogs()` / `renderCollectionReport()`
-**Lines:** 4857–5527
-**Risk:** Aggregation logic (totals, averages, percentages, cost-per-wear, gain/loss) that feeds the reports page. Wrong math is silently displayed.
-**What to test:**
-- `filteredLogs` correctly filters by period (30, 90, 365 days, all)
-- Cost-per-wear calculation: `price / wearCount`
-- Average frequency calculation between wear dates
-- Gain/loss and percentage calculations
-- Total row sums correctly
-- Null-safe sorting (nulls sink to bottom)
+**Why it matters:** These are server-side functions handling user data deletion, email delivery, and AI integrations. Bugs here can cause data loss (delete-user), missed notifications, or security issues.
 
-#### 8. Year-in-Review / Monthly Review: `renderYearInReview()` / `renderMonthlyReview()`
-**Lines:** 4877–5040
-**Risk:** Date-based aggregation with multiple derived metrics (most worn, top use case, best month, unworn count).
-**What to test:**
-- Correct year filtering of logs
-- Most-worn watch identification
-- Unworn watch count
-- Handles zero-log years gracefully
-- Month boundary navigation (Dec → Jan wraps year)
+**Recommendation:** Add unit tests for the pure logic portions (request validation, response formatting, error handling). Use mocked Supabase clients for DB interactions. Start with `delete-user` and `send-push` as they are highest impact.
 
 ---
 
-### Priority 3 — Medium (moderate risk, moderate impact)
+### Gap 2 — Service Worker (0% coverage, MEDIUM priority)
 
-#### 9. Cloud Sync: `cloudSync()` / `loadUserData()`
-**Lines:** 2311–2365
-**Risk:** Data synchronization with Supabase — concurrency edge cases, partial failure.
-**What to test:**
-- Successful load populates `watches`, `logs`, `wishlist`
-- Handles Supabase errors gracefully
-- Upsert sends correct row format
+**File:** `sw.js` (65 lines)
 
-#### 10. Social Features: `followUser()` / `sendFriendRequest()` / `acceptFriendRequest()` / `loadFeed()`
-**Lines:** 2625–3130
-**Risk:** Multi-user interactions with state machines (friend request lifecycle: pending → accepted/declined).
-**What to test:**
-- Friend request state transitions
-- Feed only shows items from friends/public profiles
-- Like/unlike toggling
-- Comment posting
+**Why it matters:** The SW controls offline behavior and caching. Bugs here can serve stale content after deploys or break the app when offline.
 
-#### 11. Wishlist Drag-and-Drop Reordering
-**Lines:** 6069–6240
-**Risk:** Touch and mouse event handling for reordering — platform-specific bugs.
-**What to test:**
-- Reorder correctly updates array positions
-- Dropping on self is a no-op
-- Touch events vs mouse events produce same result
-
-#### 12. Service Worker: `sw.js`
-**Lines:** 1–47
-**Risk:** Caching strategy bugs can serve stale content or break offline mode.
-**What to test:**
-- Only same-origin requests are cached
-- Old caches are cleaned up on activate
-- Network failure falls back to cache
-- Non-GET requests are not cached
+**Recommendation:** Test with a mock `caches` and `fetch` API:
+- Verify old caches are cleaned up on `activate`
+- Verify cross-origin requests bypass the cache
+- Verify navigation requests use network-first with fallback
+- Verify same-origin assets use stale-while-revalidate
+- Verify non-GET requests are not cached
 
 ---
 
-### Priority 4 — Lower (low risk or low impact)
+### Gap 3 — `index.html` UI Logic (0% coverage, MEDIUM priority)
 
-#### 13. HTML Escaping: `escHtml()`
-**Line:** 2374
-**What to test:** XSS prevention — verify `<script>` tags and quotes are escaped.
+**File:** `index.html` (~15,000 lines, embedded JS)
 
-#### 14. Navigation: `nav()`
-**Lines:** 3455–3466
-**What to test:** Correct page activation and render calls.
+The main app file contains ~235 functions that are tightly coupled to the DOM. None of these have tests. Key untested areas include:
 
-#### 15. Toast Notifications: `toast()`
-**Lines:** 3439–3445
-**What to test:** Correct CSS class application and auto-dismiss.
+1. **Cloud sync (`cloudSync`, `loadUserData`)** — Data synchronization with Supabase. Concurrency bugs and partial failures could lose data.
+2. **Navigation (`nav`)** — Page routing and render dispatch.
+3. **Social interactions (`followUser`, `sendFriendRequest`, `acceptFriendRequest`, `loadFeed`)** — Multi-user state transitions, feed loading, like/unlike toggling.
+4. **Wishlist drag-and-drop reordering** — Touch and mouse event handling.
+5. **Brand/model selectors** — Dynamic dropdown building.
+6. **Toast notification system** — CSS class management and auto-dismiss timing.
 
-#### 16. Brand Select Builders: `buildBrandSelect()` / `addNewBrand()`
-**Lines:** 6017–6068
-**What to test:** Deduplication, alphabetical sorting, custom brand insertion.
-
----
-
-## Recommended Testing Strategy
-
-### Step 1 — Extract Pure Logic into a Testable Module
-
-The biggest barrier to testing is that all code lives in a single `app.html` file with embedded `<script>` tags. To enable testing:
-
-1. Extract pure functions (serialization, ELO, recommendation scoring, price formatting, statistics) into a standalone `wristlog.js` module
-2. Use ES module exports so they can be imported by a test runner
-3. Keep DOM-dependent rendering functions in `app.html` (or test them with JSDOM/Playwright later)
-
-### Step 2 — Set Up a Minimal Test Framework
-
-```
-npm init -y
-npm install --save-dev vitest
-```
-
-Vitest is zero-config, fast, and supports ES modules natively — ideal for a project with no existing build tooling.
-
-### Step 3 — Write Unit Tests (Priority 1 & 2 First)
-
-Target coverage for extracted pure functions:
-| Module | Suggested test count |
-|--------|---------------------|
-| Data serialization (round-trips) | 10–15 tests |
-| ELO system | 8–10 tests |
-| Recommendation engine | 10–12 tests |
-| Price formatting | 6–8 tests |
-| Statistics/aggregation | 10–15 tests |
-| Save/delete logic | 8–10 tests |
-| **Total** | **~60 tests** |
-
-### Step 4 — Add Integration / E2E Tests
-
-Once unit tests are in place, add Playwright tests for critical user flows:
-- Sign in → add watch → log wear → verify in reports
-- Wishlist drag-and-drop reorder
-- Watch ranking game flow
-
-### Step 5 — CI/CD
-
-Add a GitHub Actions workflow to run tests on every push and PR:
-```yaml
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-      - run: npm ci
-      - run: npm test
-```
+**Recommendation:** The best approach would be to:
+1. **Extract more pure logic** from `index.html` into `wrotate_test.js` (e.g., cloud sync data preparation, feed filtering, navigation state). This is the highest-ROI move.
+2. **Add integration/E2E tests** with Playwright for critical user flows that can't be easily unit-tested (sign in → add watch → log wear → check reports).
 
 ---
 
-## Summary
+### Gap 4 — Uncovered Lines in `wrotate_test.js` (LOW priority)
 
-| Priority | Area | Functions | Estimated Tests |
-|----------|------|-----------|----------------|
-| P1 Critical | Data serialization, save logic, ELO, recommendations | 15 | ~40 |
-| P2 High | Wear logs, price formatting, statistics, reviews | 20 | ~40 |
-| P3 Medium | Cloud sync, social features, drag-and-drop, service worker | 25 | ~30 |
-| P4 Lower | HTML escaping, navigation, toasts, brand selects | 10 | ~15 |
-| **Total** | | **~70 functions** | **~125 tests** |
+Lines 297-298 and 329-331 are not covered. These are:
+- **Lines 297-298:** `travel` use-case counting branch in `computeWatchRec`
+- **Lines 329-331:** ELO score reason assignment (`eloScore >= 10`)
 
-The highest-ROI first step is extracting the ~15 pure-logic functions from Priority 1 into a separate module and writing ~40 unit tests against them. This alone would cover the most bug-prone code paths with minimal architectural disruption.
+**Recommendation:** Add targeted tests:
+- A recommendation test with a watch that has `travel` use-case wear logs
+- A recommendation test with an ELO rating high enough to trigger the reason string (rating ≥ 1100, i.e., 100+ above the 1000 default)
+
+---
+
+### Gap 5 — Scripts (0% coverage, LOW priority)
+
+**Files:**
+- `scripts/seed-images.js` — Image seeding utility
+- `scripts/watchcharts-backup.js` — WatchCharts data sync
+
+These are operational scripts, not user-facing. Testing is lower priority but could prevent data corruption during bulk operations.
+
+---
+
+### Gap 6 — No Integration or E2E Tests (HIGH priority)
+
+All 678 existing tests are unit tests against pure functions. There are no tests that verify:
+- Full user workflows (add watch → log wear → view stats)
+- Authentication flows
+- Real Supabase interactions
+- Mobile/responsive behavior
+- Cross-browser compatibility
+
+**Recommendation:** Add a Playwright test suite for the top 3-5 user journeys:
+1. Sign in → add a watch → verify it appears in collection
+2. Log a wear → verify stats update
+3. Post to feed → like → comment → verify social interactions
+4. Ranking game flow → verify ELO updates
+5. Wishlist management → add, reorder, remove
+
+---
+
+## Priority Summary
+
+| Priority | Gap | Current Coverage | Impact | Effort |
+|----------|-----|-----------------|--------|--------|
+| **P1** | E2E tests (Playwright) | 0% | High — validates real user flows | Medium |
+| **P1** | Supabase edge functions | 0% | High — server-side data handling | Medium |
+| **P2** | Extract more logic from `index.html` | 0% | Medium — increases testable surface | Low-Medium |
+| **P2** | Service worker | 0% | Medium — offline/caching correctness | Low |
+| **P3** | Uncovered `wrotate_test.js` branches | 96% → 100% | Low — minor gaps | Low |
+| **P3** | Operational scripts | 0% | Low — not user-facing | Low |
+
+The biggest wins would be **(1)** adding Playwright E2E tests for critical user journeys and **(2)** unit-testing the Supabase edge functions. Together these would cover the two largest untested surfaces — the UI layer and the server-side logic.

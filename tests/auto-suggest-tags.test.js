@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { autoSuggestTags } from '../wristlog.js';
+import { autoSuggestTags } from '../wrotate_test.js';
 
 describe('autoSuggestTags', () => {
   it('suggests Dive for submariner', () => {

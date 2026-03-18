@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   escHtml, profileInitials, formatFeedDate, formatCommentTime,
   aggregateLikes, aggregateCommentCounts,
-} from '../wristlog.js';
+} from '../wrotate_test.js';
 
 // ── profileInitials (used in public feed cards) ──────────────────────────────
 

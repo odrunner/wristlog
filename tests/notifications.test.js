@@ -8,7 +8,7 @@ import {
   notificationRequiresRefId,
   formatBadgeCount,
   buildCommentAlsoTargets,
-} from '../wristlog.js';
+} from '../wrotate_test.js';
 
 // ── notificationBody ──────────────────────────────────────────────────────────
 

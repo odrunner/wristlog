@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { eloExpected, buildGameQueue, computeEloUpdate } from '../wristlog.js';
+import { eloExpected, buildGameQueue, computeEloUpdate } from '../wrotate_test.js';
 
 describe('eloExpected', () => {
   it('returns 0.5 for equal ratings', () => {
@@ -74,6 +74,16 @@ describe('buildGameQueue', () => {
     expect(pairSet.has('a,b')).toBe(true);
     expect(pairSet.has('a,c')).toBe(true);
     expect(pairSet.has('b,c')).toBe(true);
+  });
+
+  it('samples a subset of pairs for large collections (n > 7)', () => {
+    const watches = Array.from({ length: 10 }, (_, i) => ({ id: `w${i}` }));
+    // totalPairs = 10*9/2 = 45, cap = min(45, 10*3) = 30
+    const pairs = buildGameQueue(watches);
+    expect(pairs).toHaveLength(30);
+    // All pairs should be unique
+    const pairSet = new Set(pairs.map(p => [p.aId, p.bId].sort().join(',')));
+    expect(pairSet.size).toBe(30);
   });
 
   it('shuffles the pairs (probabilistic — run multiple times)', () => {

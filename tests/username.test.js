@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateUsername } from '../wristlog.js';
+import { validateUsername } from '../wrotate_test.js';
 
 describe('validateUsername', () => {
   // ── Valid usernames ────────────────────────────────────────────────────

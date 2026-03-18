@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSaveWatchData } from '../wristlog.js';
+import { buildSaveWatchData } from '../wrotate_test.js';
 
 const baseTodayFn = () => '2024-06-15';
 

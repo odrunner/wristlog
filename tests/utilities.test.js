@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   todayStr, fmtDate, fmtMonYear, initials, escHtml, escAttr,
   profileInitials, formatFeedDate, formatCommentTime, warrantyStatus,
-} from '../wristlog.js';
+} from '../wrotate_test.js';
 
 // ── todayStr ─────────────────────────────────────────────────────────────────
 

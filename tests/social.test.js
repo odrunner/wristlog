@@ -4,7 +4,7 @@ import {
   computeFriendships,
   aggregateLikes, aggregateCommentCounts,
   reorderList,
-} from '../wristlog.js';
+} from '../wrotate_test.js';
 
 // ── computeFriendState ───────────────────────────────────────────────────────
 

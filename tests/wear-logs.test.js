@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateLog, buildLogEntry, applyStrapSelection } from '../wristlog.js';
+import { validateLog, buildLogEntry, applyStrapSelection } from '../wrotate_test.js';
 
 describe('validateLog', () => {
   it('returns error when date is missing', () => {

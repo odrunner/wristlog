@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeTgResults } from '../wristlog.js';
+import { computeTgResults } from '../wrotate_test.js';
 
 describe('computeTgResults', () => {
   it('returns nulls for fewer than 2 ticks', () => {

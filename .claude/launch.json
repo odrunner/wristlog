@@ -3,9 +3,24 @@
   "configurations": [
     {
       "name": "watch-tracker",
-      "runtimeExecutable": "/bin/sh",
-      "runtimeArgs": ["/tmp/wrotate-serve.sh"],
-      "port": 3000
+      "runtimeExecutable": "/Users/ozgurdogan/.nvm/versions/node/v22.22.1/bin/node",
+      "runtimeArgs": ["/tmp/wrotate-serve.js"],
+      "port": 3000,
+      "autoPort": false
+    },
+    {
+      "name": "openclaw-dashboard",
+      "runtimeExecutable": "/Users/ozgurdogan/.nvm/versions/node/v22.22.1/bin/node",
+      "runtimeArgs": ["/Users/ozgurdogan/Documents/Claude project/ozgurmuge-assistants/openclaw-dashboard/server.js"],
+      "port": 3737,
+      "autoPort": false
+    },
+    {
+      "name": "run-analytics",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": ["-c", "cd '/Users/ozgurdogan/Documents/Claude project/run-analytics' && export NVM_DIR=\"$HOME/.nvm\" && . \"$NVM_DIR/nvm.sh\" && npx next dev --port 3001"],
+      "port": 3001,
+      "autoPort": false
     }
   ]
 }

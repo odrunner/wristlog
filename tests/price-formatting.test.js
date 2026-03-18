@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatPriceString, parsePrice, fmtMoney } from '../wristlog.js';
+import { formatPriceString, parsePrice, fmtMoney } from '../wrotate_test.js';
 
 describe('formatPriceString', () => {
   it('adds commas to thousands', () => {
