@@ -4225,7 +4225,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.15.45';
+const APP_VERSION = '2.36.18.15.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4349,6 +4349,15 @@ async function loadMyProfile() {
     isNewUser = true;
   }
   myProfile = data;
+  // Backfill ab_variant if missing (e.g. profile created by auth trigger before JS ran)
+  if (data && !data.ab_variant) {
+    const ab = localStorage.getItem('ab_landing');
+    if (ab) {
+      db.from('profiles').update({ ab_variant: ab }).eq('id', currentUser.id).then(() => {
+        if (myProfile) myProfile.ab_variant = ab;
+      }).catch(() => {});
+    }
+  }
   const theme = isNewUser ? 'light' : (data.theme_preference || 'light');
   try { localStorage.setItem(STORE_THEME, theme); } catch(e) {}
   applyTheme(theme);
