@@ -36,10 +36,11 @@
 
     /* Logo */
     .logo {
-      display: flex; align-items: center; gap: .5rem;
-      font-size: 1.5rem; font-weight: 700; color: var(--gold);
+      display: flex; align-items: center; gap: .6rem;
+      font-size: 2rem; font-weight: 700; color: var(--gold);
+      margin-bottom: .5rem;
     }
-    .logo svg { width: 30px; height: 30px; }
+    .logo svg { width: 36px; height: 36px; }
     .logo .light { font-weight: 400; letter-spacing: .04em; }
 
     /* Carousel */
@@ -53,7 +54,7 @@
     }
     .carousel img {
       position: absolute; inset: 0; width: 100%; height: 100%;
-      object-fit: cover;
+      object-fit: contain; object-position: center;
       /* Use visibility + opacity to fully hide inactive slides on iOS */
       opacity: 0; visibility: hidden;
       transition: opacity .6s ease, visibility 0s .6s;
