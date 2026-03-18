@@ -4227,7 +4227,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.07.22';
+const APP_VERSION = '2.36.18.07.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5102,6 +5102,7 @@ async function cycleWishPrivacy(wishId) {
 }
 
 async function saveProfileFromPage() {
+  if (!checkEulaAcceptance()) return;
   if (currentUser) delete _profileCache[currentUser.id]; // invalidate cache
   const name  = (document.getElementById('pp-display-name')?.value || '').trim();
   const bio   = (document.getElementById('pp-bio')?.value || '').trim();
@@ -8546,6 +8547,7 @@ function renderCommentBody(body) {
 }
 
 async function postComment(logId) {
+  if (!checkEulaAcceptance()) return;
   const input = document.getElementById(`comment-input-${logId}`);
   if (!input) return;
   const text = input.value.trim();
@@ -8599,6 +8601,7 @@ async function postComment(logId) {
 
 // ── Welcome Onboarding ────────────────────────────────────────────────────
 function maybeShowWelcome() {
+  return; // DISABLED — onboarding skipped, EULA gated on content creation instead
   if (!currentUser) return;
   if (localStorage.getItem('wristlog_onboarded_' + currentUser.id)) return;
   if (!myProfile || myProfile.eula_accepted_at) return;
@@ -8665,9 +8668,8 @@ async function acceptEula() {
   document.getElementById('eula-modal').classList.add('hidden');
   document.getElementById('welcome-modal').classList.add('hidden');
   try { if (currentUser) localStorage.setItem('wristlog_onboarded_' + currentUser.id, '1'); } catch(e) {}
-  toast('Welcome to WRotate!');
-  // Trigger feed load if this was the EULA gate for existing users
-  feedLoading = false; feedLoadedAt = 0; // ensure fresh load even if bg attempt got stuck
+  toast('Terms accepted — you\'re all set!');
+  feedLoading = false; feedLoadedAt = 0;
   loadFeed();
   loadNotifications();
   if (!window._notifPollId) window._notifPollId = setInterval(loadNotifications, 30000);
@@ -10559,6 +10561,7 @@ function renderTrackHistory() {
 }
 
 async function saveLog() {
+  if (!checkEulaAcceptance()) return;
   const date = document.getElementById('track-date').value;
   if (!date)       { showFieldError('track-date', 'Please select a date'); return; }
   if (!selWatchId) { toast('Please select a watch', 'error'); return; }
