@@ -2457,16 +2457,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <label>Caption</label>
           <textarea id="official-caption-input" placeholder="Celebrity name wearing watch details…" rows="2"></textarea>
         </div>
-        <div style="display:flex;gap:.5rem;">
-          <div class="draft-form-row" style="flex:1;">
-            <label>Celebrity</label>
-            <input type="text" id="official-celeb-input" placeholder="Name">
-          </div>
-          <div class="draft-form-row" style="flex:1;">
-            <label>Watch info</label>
-            <input type="text" id="official-watch-input" placeholder="Brand Model">
-          </div>
-        </div>
         <button class="btn btn-primary" onclick="saveOfficialDraft()" style="width:100%;margin-top:.3rem;">Save as Draft</button>
       </div>
 
@@ -4174,7 +4164,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.17.18.06';
+const APP_VERSION = '2.36.17.18.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9921,7 +9911,6 @@ function renderOfficialDrafts() {
         ${thumbHtml}
         <div class="draft-meta">
           <div class="draft-caption">${escHtml(d.caption || '(no caption)')}</div>
-          <div class="draft-info">${[d.celebrity_name, d.watch_info].filter(Boolean).map(escHtml).join(' · ')}</div>
           <div class="draft-info">${statusBadge} · ${formatCommentTime(d.created_at)}</div>
           ${sourceLink}
         </div>
@@ -9958,6 +9947,8 @@ async function extractOfficialUrl() {
       const caption = [data.title, data.description].filter(Boolean).join(' — ');
       document.getElementById('official-caption-input').value = caption;
     }
+    // Check if extraction returned useful data
+    const hasUsefulData = data.image_url || (data.title && data.title.length > 20) || data.description;
     // Show preview
     if (data.image_url) {
       preview.style.display = '';
@@ -9968,6 +9959,12 @@ async function extractOfficialUrl() {
           <div style="font-size:.78rem;color:var(--muted);">${escHtml(data.description || '')}</div>
           ${data.site_name ? `<div style="font-size:.72rem;color:var(--muted);">${escHtml(data.site_name)}</div>` : ''}
         </div>`;
+    } else if (!hasUsefulData) {
+      preview.style.display = '';
+      preview.innerHTML = `<div style="font-size:.82rem;color:var(--muted);padding:.5rem;">
+        No useful metadata found. This site may block scraping — paste the image URL and caption manually.</div>`;
+      toast('No metadata found — fill in fields manually', 'error');
+      return;
     }
     toast('Metadata extracted');
   } catch (e) {
@@ -9987,15 +9984,11 @@ async function saveOfficialDraft() {
   const sourceUrl = document.getElementById('official-url-input')?.value?.trim();
   const imageUrl = document.getElementById('official-image-input')?.value?.trim();
   const caption = document.getElementById('official-caption-input')?.value?.trim();
-  const celeb = document.getElementById('official-celeb-input')?.value?.trim();
-  const watchInfo = document.getElementById('official-watch-input')?.value?.trim();
   if (!caption && !imageUrl) { toast('Add at least a caption or image', 'error'); return; }
   const { error } = await db.from('official_drafts').insert({
     source_url: sourceUrl || null,
     image_url: imageUrl || null,
     caption: caption || null,
-    celebrity_name: celeb || null,
-    watch_info: watchInfo || null,
     created_by: currentUser.id,
   });
   if (error) { toast('Save failed: ' + error.message, 'error'); return; }
@@ -10004,8 +9997,6 @@ async function saveOfficialDraft() {
   document.getElementById('official-url-input').value = '';
   document.getElementById('official-image-input').value = '';
   document.getElementById('official-caption-input').value = '';
-  document.getElementById('official-celeb-input').value = '';
-  document.getElementById('official-watch-input').value = '';
   document.getElementById('official-extract-preview').style.display = 'none';
   loadOfficialDrafts();
 }
@@ -10024,16 +10015,6 @@ function editOfficialDraft(draftId) {
       <label>Caption</label>
       <textarea id="edit-draft-caption-${draftId}" rows="2">${escHtml(draft.caption || '')}</textarea>
     </div>
-    <div style="display:flex;gap:.5rem;">
-      <div class="draft-form-row" style="flex:1;">
-        <label>Celebrity</label>
-        <input type="text" id="edit-draft-celeb-${draftId}" value="${escAttr(draft.celebrity_name || '')}">
-      </div>
-      <div class="draft-form-row" style="flex:1;">
-        <label>Watch info</label>
-        <input type="text" id="edit-draft-watch-${draftId}" value="${escAttr(draft.watch_info || '')}">
-      </div>
-    </div>
     <div class="draft-actions">
       <button class="btn btn-primary btn-sm" onclick="saveOfficialDraftEdit('${draftId}')">Save</button>
       <button class="btn btn-ghost btn-sm" onclick="renderOfficialDrafts()">Cancel</button>
@@ -10043,13 +10024,9 @@ function editOfficialDraft(draftId) {
 async function saveOfficialDraftEdit(draftId) {
   const imageUrl = document.getElementById('edit-draft-image-' + draftId)?.value?.trim();
   const caption = document.getElementById('edit-draft-caption-' + draftId)?.value?.trim();
-  const celeb = document.getElementById('edit-draft-celeb-' + draftId)?.value?.trim();
-  const watchInfo = document.getElementById('edit-draft-watch-' + draftId)?.value?.trim();
   const { error } = await db.from('official_drafts').update({
     image_url: imageUrl || null,
     caption: caption || null,
-    celebrity_name: celeb || null,
-    watch_info: watchInfo || null,
     updated_at: new Date().toISOString(),
   }).eq('id', draftId);
   if (error) { toast('Update failed: ' + error.message, 'error'); return; }

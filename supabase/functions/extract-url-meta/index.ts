@@ -22,6 +22,23 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
+/** Decode HTML entities (named + numeric) */
+function decodeEntities(str: string): string {
+  const named: Record<string, string> = {
+    "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": "\"",
+    "&apos;": "'", "&nbsp;": " ", "&ndash;": "–", "&mdash;": "—",
+    "&lsquo;": "\u2018", "&rsquo;": "\u2019", "&ldquo;": "\u201C", "&rdquo;": "\u201D",
+    "&hellip;": "…", "&copy;": "©", "&reg;": "®", "&trade;": "™",
+  };
+  return str
+    .replace(/&(?:#x([0-9a-fA-F]+)|#(\d+)|(\w+));/g, (m, hex, dec, name) => {
+      if (hex) return String.fromCodePoint(parseInt(hex, 16));
+      if (dec) return String.fromCodePoint(parseInt(dec, 10));
+      if (name) return named[`&${name};`] ?? m;
+      return m;
+    });
+}
+
 /** Extract OG/meta tags from HTML string */
 function extractMeta(html: string) {
   const get = (property: string): string => {
@@ -51,9 +68,9 @@ function extractMeta(html: string) {
 
   return {
     image_url: get("image") || fallbackImage,
-    title: get("title") || (titleTag ? titleTag[1].trim() : ""),
-    description: get("description"),
-    site_name: get("site_name"),
+    title: decodeEntities(get("title") || (titleTag ? titleTag[1].trim() : "")),
+    description: decodeEntities(get("description")),
+    site_name: decodeEntities(get("site_name")),
   };
 }
 
