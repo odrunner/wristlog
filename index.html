@@ -1893,6 +1893,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div id="dev-login-wrap" style="display:none;margin-top:.5rem;gap:.4rem;justify-content:center;">
           <button onclick="devLogin()" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.35rem .8rem;font-size:.72rem;cursor:pointer;font-family:inherit;">testuser</button>
           <button onclick="devLogin(true)" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.35rem .8rem;font-size:.72rem;cursor:pointer;font-family:inherit;">testuser2</button>
+          <button onclick="devLogin('official')" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.35rem .8rem;font-size:.72rem;cursor:pointer;font-family:inherit;">official</button>
         </div>
         <div style="margin-top:.75rem;">
           <a href="/privacy.html" style="font-size:.72rem;color:var(--muted);text-decoration:none;">Privacy Policy</a>
@@ -3841,9 +3842,9 @@ function showAuthError(msg) {
   el.style.display = 'block';
 }
 
-async function devLogin(useSecond) {
+async function devLogin(which) {
   if (!['localhost', '127.0.0.1'].includes(location.hostname)) return;
-  const creds = useSecond ? window.__DEV_CREDS_2__ : window.__DEV_CREDS__;
+  const creds = which === 'official' ? window.__OFFICIAL_CREDS__ : which ? window.__DEV_CREDS_2__ : window.__DEV_CREDS__;
   if (!creds) { showAuthError('Dev login not configured — create dev-config.js'); return; }
   const { error } = await db.auth.signInWithPassword(creds);
   if (error) showAuthError('Dev login failed: ' + error.message);
@@ -4173,7 +4174,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.17.07.39';
+const APP_VERSION = '2.36.17.18.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
