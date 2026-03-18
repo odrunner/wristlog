@@ -4231,7 +4231,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.15.54';
+const APP_VERSION = '2.36.18.15.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7261,18 +7261,24 @@ function scrollToFeedPost(postId) {
   // Force feed reload so new comments/likes are visible immediately
   feedLoadedAt = 0;
   nav(document.querySelector('nav button[data-page=\'feed\']'));
-  const attempt = (tries) => {
+  const highlightCard = () => {
     const card = document.getElementById('feedcard-' + postId);
     if (card) {
       card.scrollIntoView({ behavior: 'smooth', block: 'center' });
       card.style.transition = 'box-shadow .3s';
       card.style.boxShadow = '0 0 0 2px var(--gold)';
       setTimeout(() => { card.style.boxShadow = ''; }, 1800);
-    } else if (tries > 0) {
-      setTimeout(() => attempt(tries - 1), 300);
+      return true;
+    }
+    return false;
+  };
+  // Retry with longer timeout to wait for async feed load (up to 6s)
+  const attempt = (tries) => {
+    if (!highlightCard() && tries > 0) {
+      setTimeout(() => attempt(tries - 1), 400);
     }
   };
-  attempt(8);
+  attempt(15);
 }
 
 function renderFeed() {
