@@ -3,9 +3,22 @@
 ## Development Workflow
 - **Always test locally first** (localhost:3000) before deploying to production
 - **Note the stable commit hash** before making changes (for rollback)
-- **Run `npx vitest` before committing** — all tests must pass
+- **Run tests before committing** — all tests must pass
 - **Bump SW cache version** (`sw.js` → `wristlog-vNN`) on every HTML/JS change
 - **Update the test suite** after deployments to cover new/changed behavior
+
+## Test Commands
+All commands require node on PATH: `export PATH="/Users/ozgurdogan/.nvm/versions/node/v22.22.1/bin:$PATH"`
+
+| What | Command | Notes |
+|------|---------|-------|
+| **Unit tests** (774 tests) | `npm test` | Pure logic, no network. Run before every commit. |
+| **E2E mocked** (12 tests) | `npm run test:e2e` | Playwright with mocked Supabase routes. No network needed. |
+| **E2E integration** (7 tests) | `npm run test:e2e:int` | Hits real Supabase with test accounts. Requires `dev-config.js`. |
+| **E2E all** | `npm run test:e2e:all` | Both mocked + integration. |
+| **Full suite** | `npm test && npm run test:e2e` | Unit + mocked E2E. Best pre-commit check. |
+
+One-time setup for E2E: `npx playwright install chromium`
 
 ## After Each Working Day
 - **Update the Help page** (in-app guide) and **"What's New"** section to reflect changes shipped that day
