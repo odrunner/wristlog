@@ -2015,10 +2015,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Terms of Use</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">New and existing users are asked to accept the Terms of Use, which cover community standards, content policies, and account rules. You can review them any time from the Help page.</div>
       </div>
-      <div style="margin-bottom:.75rem;">
-        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Swipe Between Tabs</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">On mobile, swipe left or right anywhere on the screen to move between tabs. A natural, app-like gesture that works alongside the bottom navigation bar.</div>
-      </div>
+      <!-- Swipe nav removed per user feedback -->
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Pull to Refresh</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">On the Feed, pull down to refresh your timeline &#8212; just like a native app. A spinner animates as you pull, and the latest posts load when you release.</div>
@@ -4226,7 +4223,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.10.38';
+const APP_VERSION = '2.36.18.12.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6832,8 +6829,10 @@ document.addEventListener('click', e => {
   }, { passive: true });
 })();
 
-// ── Swipe between tabs (mobile) ───────────────────────────────────────────
+// ── Swipe between tabs (mobile) — DISABLED per user feedback (interferes with scrolling)
+// To re-enable: remove the early return below
 (function initSwipeNav() {
+  return; // DISABLED — swipe nav conflicts with vertical scrolling on feed images
   const TAB_ORDER = ['feed', 'track', 'collection', 'wishlist', 'stats', 'clubs'];
   let _swX0 = 0, _swY0 = 0, _swT0 = 0, _swActive = false, _swLocked = false;
 
