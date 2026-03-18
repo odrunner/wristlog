@@ -57,7 +57,15 @@ export async function mockSupabase(page, opts = {}) {
     if (route.request().method() === 'GET') {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(watches) });
     }
-    // POST/PATCH/DELETE — accept and return empty
+    // POST — return the posted body as a created object (with defaults)
+    if (route.request().method() === 'POST') {
+      try {
+        const body = JSON.parse(route.request().postData() || '{}');
+        const created = { id: 'watch-new-' + Date.now(), user_id: user.id, ...body };
+        return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify([created]) });
+      } catch { /* fall through */ }
+    }
+    // PATCH/DELETE — accept and return empty
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
   });
 
@@ -65,12 +73,26 @@ export async function mockSupabase(page, opts = {}) {
     if (route.request().method() === 'GET') {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(logs) });
     }
+    if (route.request().method() === 'POST') {
+      try {
+        const body = JSON.parse(route.request().postData() || '{}');
+        const created = { id: 'log-new-' + Date.now(), user_id: user.id, ...body };
+        return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify([created]) });
+      } catch { /* fall through */ }
+    }
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
   });
 
   await page.route('**/rest/v1/wishlist*', route => {
     if (route.request().method() === 'GET') {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(wishlist) });
+    }
+    if (route.request().method() === 'POST') {
+      try {
+        const body = JSON.parse(route.request().postData() || '{}');
+        const created = { id: 'wish-new-' + Date.now(), user_id: user.id, ...body };
+        return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify([created]) });
+      } catch { /* fall through */ }
     }
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
   });

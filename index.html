@@ -1533,6 +1533,17 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .draft-form-row textarea { resize:vertical; min-height:3rem; }
     .draft-extract-preview { background:var(--surface1); border-radius:8px; padding:.75rem; margin-top:.6rem; }
     .draft-extract-preview img { max-width:200px; max-height:200px; border-radius:6px; margin-bottom:.5rem; }
+    .official-photo-drop {
+      border:2px dashed var(--border); border-radius:8px; padding:1rem; text-align:center;
+      cursor:pointer; position:relative; transition:border-color .2s;
+      font-size:.82rem; color:var(--muted); min-height:60px;
+      display:flex; align-items:center; justify-content:center; gap:.5rem; flex-direction:column;
+    }
+    .official-photo-drop:hover, .official-photo-drop.dragover { border-color:var(--gold); color:var(--gold); }
+    .official-photo-drop img { max-width:100%; max-height:200px; border-radius:6px; object-fit:contain; }
+    .official-photo-drop .photo-clear { position:absolute; top:4px; right:6px; background:rgba(0,0,0,.6); color:#fff; border:none; border-radius:50%; width:22px; height:22px; font-size:.72rem; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+    .official-feed-preview { max-width:380px; margin:0 auto; }
+    .official-feed-preview .feed-card { pointer-events:none; }
 
     /* Watch chip */
     .feed-watch-chip {
@@ -2476,13 +2487,35 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
         <div id="official-extract-preview" style="display:none;"></div>
         <div class="draft-form-row">
-          <label>Image URL (auto-filled or paste manually)</label>
-          <input type="text" id="official-image-input" placeholder="https://…image.jpg">
+          <label>Image — upload or paste URL</label>
+          <div class="official-photo-drop" id="official-photo-drop"
+               onclick="document.getElementById('official-photo-file').click()"
+               ondragover="event.preventDefault();this.classList.add('dragover')"
+               ondragleave="this.classList.remove('dragover')"
+               ondrop="event.preventDefault();this.classList.remove('dragover');handleOfficialPhotoDrop(event)">
+            <div id="official-photo-placeholder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><div>Click to upload, drag &amp; drop, or paste an image</div></div>
+            <img id="official-photo-preview" style="display:none;" alt="">
+            <button type="button" class="photo-clear" id="official-photo-clear" style="display:none;" onclick="event.stopPropagation();clearOfficialPhoto()">✕</button>
+          </div>
+          <input type="file" id="official-photo-file" accept="image/*" style="display:none" onchange="handleOfficialPhotoFile(this)">
+        </div>
+        <div class="draft-form-row">
+          <label>Or paste image URL directly</label>
+          <input type="text" id="official-image-input" placeholder="https://…image.jpg" oninput="updateOfficialPreview()">
         </div>
         <div class="draft-form-row">
           <label>Caption</label>
-          <textarea id="official-caption-input" placeholder="Celebrity name wearing watch details…" rows="2"></textarea>
+          <textarea id="official-caption-input" placeholder="Celebrity name wearing watch details…" rows="2" oninput="updateOfficialPreview()"></textarea>
         </div>
+
+        <!-- Live feed preview -->
+        <div class="draft-form-row">
+          <label>Feed Preview</label>
+          <div class="official-feed-preview" id="official-feed-preview">
+            <div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">Add an image or caption to see preview</div>
+          </div>
+        </div>
+
         <button class="btn btn-primary" onclick="saveOfficialDraft()" style="width:100%;margin-top:.3rem;">Save as Draft</button>
       </div>
 
@@ -4191,7 +4224,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.17.19.25';
+const APP_VERSION = '2.36.17.20.08';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9935,6 +9968,124 @@ function nav(btn) {
 let _officialDrafts = [];
 let _officialFilter = 'draft';
 
+// ── Official Post: Photo Upload & Feed Preview ──────────────────────────
+let _officialPhotoBlob = null; // holds uploaded file blob
+
+function handleOfficialPhotoFile(input) {
+  const file = input.files?.[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  _officialPhotoBlob = file;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const preview = document.getElementById('official-photo-preview');
+    preview.src = reader.result;
+    preview.style.display = '';
+    document.getElementById('official-photo-placeholder').style.display = 'none';
+    document.getElementById('official-photo-clear').style.display = '';
+    // Clear URL input since file takes precedence
+    document.getElementById('official-image-input').value = '';
+    updateOfficialPreview();
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleOfficialPhotoDrop(event) {
+  const file = event.dataTransfer?.files?.[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  _officialPhotoBlob = file;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const preview = document.getElementById('official-photo-preview');
+    preview.src = reader.result;
+    preview.style.display = '';
+    document.getElementById('official-photo-placeholder').style.display = 'none';
+    document.getElementById('official-photo-clear').style.display = '';
+    document.getElementById('official-image-input').value = '';
+    updateOfficialPreview();
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearOfficialPhoto() {
+  _officialPhotoBlob = null;
+  document.getElementById('official-photo-preview').style.display = 'none';
+  document.getElementById('official-photo-preview').src = '';
+  document.getElementById('official-photo-placeholder').style.display = '';
+  document.getElementById('official-photo-clear').style.display = 'none';
+  document.getElementById('official-photo-file').value = '';
+  updateOfficialPreview();
+}
+
+// Paste image from clipboard anywhere on the official tab
+document.addEventListener('paste', (e) => {
+  // Only handle when official tab is active
+  const officialTab = document.getElementById('admin-tab-official');
+  if (!officialTab || officialTab.style.display === 'none') return;
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      e.preventDefault();
+      const blob = item.getAsFile();
+      if (!blob) return;
+      _officialPhotoBlob = blob;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const preview = document.getElementById('official-photo-preview');
+        preview.src = reader.result;
+        preview.style.display = '';
+        document.getElementById('official-photo-placeholder').style.display = 'none';
+        document.getElementById('official-photo-clear').style.display = '';
+        document.getElementById('official-image-input').value = '';
+        updateOfficialPreview();
+      };
+      reader.readAsDataURL(blob);
+      return;
+    }
+  }
+});
+
+function updateOfficialPreview() {
+  const el = document.getElementById('official-feed-preview');
+  if (!el) return;
+  const imageUrl = document.getElementById('official-image-input')?.value?.trim();
+  const caption = document.getElementById('official-caption-input')?.value?.trim();
+  const previewImg = document.getElementById('official-photo-preview');
+  const hasFile = _officialPhotoBlob && previewImg?.src;
+  const hasImage = hasFile || imageUrl;
+
+  if (!hasImage && !caption) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">Add an image or caption to see preview</div>';
+    return;
+  }
+
+  const imgSrc = hasFile ? previewImg.src : (imageUrl || '');
+  const heroHtml = imgSrc
+    ? `<div class="feed-card-photo"><img src="${escHtml(imgSrc)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"></div>`
+    : (caption ? `<div class="feed-text-hero"><p class="feed-text-hero-body">${escHtml(caption)}</p></div>` : '');
+  const captionHtml = (imgSrc && caption)
+    ? `<div style="padding:.4rem 1rem .7rem;font-size:.88rem;line-height:1.5;">${escHtml(caption)}</div>`
+    : '';
+  const todayFmt = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  el.innerHTML = `
+    <div class="feed-card" style="pointer-events:none;">
+      <div class="feed-card-header">
+        <div class="feed-user-avatar" style="background:var(--gold);color:#000;">W</div>
+        <div style="flex:1;min-width:0;">
+          <div class="feed-user-name">WRotate Official</div>
+          <div class="feed-meta">${todayFmt}</div>
+        </div>
+      </div>
+      ${heroHtml}
+      <div class="feed-actions" style="padding:.3rem 1rem;">
+        <button class="feed-action-btn" disabled><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+        <button class="feed-action-btn" disabled><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+      </div>
+      ${captionHtml}
+    </div>`;
+}
+
 async function loadOfficialDrafts() {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const el = document.getElementById('official-drafts-list');
@@ -9979,6 +10130,7 @@ function renderOfficialDrafts() {
     const actions = d.status === 'draft' ? `
       <div class="draft-actions">
         <button class="btn btn-primary btn-sm" onclick="approveOfficialDraft('${d.id}')">Approve & Publish</button>
+        <button class="btn btn-ghost btn-sm" onclick="previewOfficialDraft('${d.id}')">Preview</button>
         <button class="btn btn-ghost btn-sm" onclick="editOfficialDraft('${d.id}')">Edit</button>
         <button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="deleteOfficialDraft('${d.id}')">Delete</button>
       </div>` : '';
@@ -9998,6 +10150,43 @@ function renderOfficialDrafts() {
       ${actions}
     </div>`;
   }).join('');
+}
+
+function previewOfficialDraft(draftId) {
+  const draft = _officialDrafts.find(d => d.id === draftId);
+  if (!draft) return;
+  const card = document.getElementById('draft-' + draftId);
+  if (!card) return;
+  const imgSrc = draft.photo_stored_url || draft.image_url;
+  const heroHtml = imgSrc
+    ? `<div class="feed-card-photo"><img src="${escHtml(imgSrc)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"></div>`
+    : (draft.caption ? `<div class="feed-text-hero"><p class="feed-text-hero-body">${escHtml(draft.caption)}</p></div>` : '');
+  const captionHtml = (imgSrc && draft.caption)
+    ? `<div style="padding:.4rem 1rem .7rem;font-size:.88rem;line-height:1.5;">${escHtml(draft.caption)}</div>`
+    : '';
+  const todayFmt = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  card.innerHTML = `
+    <div class="official-feed-preview" style="margin-bottom:.5rem;">
+      <div class="feed-card" style="pointer-events:none;">
+        <div class="feed-card-header">
+          <div class="feed-user-avatar" style="background:var(--gold);color:#000;">W</div>
+          <div style="flex:1;min-width:0;">
+            <div class="feed-user-name">WRotate Official</div>
+            <div class="feed-meta">${todayFmt}</div>
+          </div>
+        </div>
+        ${heroHtml}
+        <div class="feed-actions" style="padding:.3rem 1rem;">
+          <button class="feed-action-btn" disabled><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+          <button class="feed-action-btn" disabled><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+        </div>
+        ${captionHtml}
+      </div>
+    </div>
+    <div class="draft-actions" style="justify-content:center;">
+      <button class="btn btn-ghost btn-sm" onclick="renderOfficialDrafts()">← Back</button>
+    </div>`;
 }
 
 async function extractOfficialUrl() {
@@ -10062,12 +10251,27 @@ async function extractOfficialUrl() {
 async function saveOfficialDraft() {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const sourceUrl = document.getElementById('official-url-input')?.value?.trim();
-  const imageUrl = document.getElementById('official-image-input')?.value?.trim();
+  let imageUrl = document.getElementById('official-image-input')?.value?.trim();
   const caption = document.getElementById('official-caption-input')?.value?.trim();
-  if (!caption && !imageUrl) { toast('Add at least a caption or image', 'error'); return; }
+  if (!caption && !imageUrl && !_officialPhotoBlob) { toast('Add at least a caption or image', 'error'); return; }
+
+  // If a file was uploaded, upload it to Supabase Storage first
+  let storedUrl = null;
+  if (_officialPhotoBlob) {
+    try {
+      const draftId = crypto.randomUUID();
+      storedUrl = await uploadImage(_officialPhotoBlob, `official-drafts/${draftId}.jpg`);
+      toast('Image uploaded');
+    } catch (e) {
+      toast('Image upload failed: ' + e.message, 'error');
+      return;
+    }
+  }
+
   const { error } = await db.from('official_drafts').insert({
     source_url: sourceUrl || null,
-    image_url: imageUrl || null,
+    image_url: storedUrl || imageUrl || null,
+    photo_stored_url: storedUrl || null,
     caption: caption || null,
     created_by: currentUser.id,
   });
@@ -10078,6 +10282,8 @@ async function saveOfficialDraft() {
   document.getElementById('official-image-input').value = '';
   document.getElementById('official-caption-input').value = '';
   document.getElementById('official-extract-preview').style.display = 'none';
+  clearOfficialPhoto();
+  updateOfficialPreview();
   loadOfficialDrafts();
 }
 

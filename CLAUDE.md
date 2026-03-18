@@ -13,7 +13,7 @@ All commands require node on PATH: `export PATH="/Users/ozgurdogan/.nvm/versions
 | What | Command | Notes |
 |------|---------|-------|
 | **Unit tests** (774 tests) | `npm test` | Pure logic, no network. Run before every commit. |
-| **E2E mocked** (12 tests) | `npm run test:e2e` | Playwright with mocked Supabase routes. No network needed. |
+| **E2E mocked** (42 tests) | `npm run test:e2e` | Playwright with mocked Supabase routes. No network needed. |
 | **E2E integration** (7 tests) | `npm run test:e2e:int` | Hits real Supabase with test accounts. Requires `dev-config.js`. |
 | **E2E all** | `npm run test:e2e:all` | Both mocked + integration. |
 | **Full suite** | `npm test && npm run test:e2e` | Unit + mocked E2E. Best pre-commit check. |
