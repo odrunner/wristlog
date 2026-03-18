@@ -4231,7 +4231,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.15.58';
+const APP_VERSION = '2.36.18.16.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7264,10 +7264,15 @@ function scrollToFeedPost(postId) {
   const highlightCard = () => {
     const card = document.getElementById('feedcard-' + postId);
     if (card) {
-      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Nudge down so card header is below the sticky app bar
+      setTimeout(() => {
+        const rect = card.getBoundingClientRect();
+        if (rect.top < 60) window.scrollBy({ top: rect.top - 70, behavior: 'smooth' });
+      }, 500);
       card.style.transition = 'box-shadow .3s';
       card.style.boxShadow = '0 0 0 2px var(--gold)';
-      setTimeout(() => { card.style.boxShadow = ''; }, 1800);
+      setTimeout(() => { card.style.boxShadow = ''; }, 2500);
       return true;
     }
     return false;
