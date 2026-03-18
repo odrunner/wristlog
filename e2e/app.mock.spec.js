@@ -21,6 +21,9 @@ test.describe('App boot (mocked)', () => {
     );
     await page.route('**/realtime/**', route => route.abort());
 
+    // Prevent A/B test redirect to r.html
+    await page.addInitScript(() => { localStorage.setItem('ab_landing', 'a'); });
+
     await page.goto('/');
     const authScreen = page.locator('#auth-screen');
     await expect(authScreen).toBeVisible({ timeout: 10_000 });
@@ -54,9 +57,9 @@ test.describe('Collection page (mocked)', () => {
     const grid = page.locator('#watches-grid');
     await expect(grid).toBeVisible();
 
-    // Should show both watches
-    await expect(page.getByText('Submariner Date')).toBeVisible();
-    await expect(page.getByText('Speedmaster Professional')).toBeVisible();
+    // Should show both watches in the collection grid
+    await expect(grid.getByText('Submariner Date')).toBeVisible();
+    await expect(grid.getByText('Speedmaster Professional')).toBeVisible();
   });
 
   test('shows watch count', async ({ page }) => {
