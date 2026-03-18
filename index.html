@@ -4174,7 +4174,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.17.18.03';
+const APP_VERSION = '2.36.17.18.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9934,7 +9934,7 @@ function renderOfficialDrafts() {
 async function extractOfficialUrl() {
   const urlInput = document.getElementById('official-url-input');
   const url = urlInput?.value?.trim();
-  if (!url) { showToast('Enter a URL first'); return; }
+  if (!url) { toast('Enter a URL first', 'error'); return; }
   const btn = document.getElementById('official-extract-btn');
   const preview = document.getElementById('official-extract-preview');
   btn.disabled = true;
@@ -9969,9 +9969,9 @@ async function extractOfficialUrl() {
           ${data.site_name ? `<div style="font-size:.72rem;color:var(--muted);">${escHtml(data.site_name)}</div>` : ''}
         </div>`;
     }
-    showToast('Metadata extracted');
+    toast('Metadata extracted');
   } catch (e) {
-    showToast('Extraction failed: ' + e.message);
+    toast('Extraction failed: ' + e.message, 'error');
     // Show manual entry hint
     const preview = document.getElementById('official-extract-preview');
     preview.style.display = '';
@@ -9989,7 +9989,7 @@ async function saveOfficialDraft() {
   const caption = document.getElementById('official-caption-input')?.value?.trim();
   const celeb = document.getElementById('official-celeb-input')?.value?.trim();
   const watchInfo = document.getElementById('official-watch-input')?.value?.trim();
-  if (!caption && !imageUrl) { showToast('Add at least a caption or image'); return; }
+  if (!caption && !imageUrl) { toast('Add at least a caption or image', 'error'); return; }
   const { error } = await db.from('official_drafts').insert({
     source_url: sourceUrl || null,
     image_url: imageUrl || null,
@@ -9998,8 +9998,8 @@ async function saveOfficialDraft() {
     watch_info: watchInfo || null,
     created_by: currentUser.id,
   });
-  if (error) { showToast('Save failed: ' + error.message); return; }
-  showToast('Draft saved');
+  if (error) { toast('Save failed: ' + error.message, 'error'); return; }
+  toast('Draft saved');
   // Clear form
   document.getElementById('official-url-input').value = '';
   document.getElementById('official-image-input').value = '';
@@ -10052,8 +10052,8 @@ async function saveOfficialDraftEdit(draftId) {
     watch_info: watchInfo || null,
     updated_at: new Date().toISOString(),
   }).eq('id', draftId);
-  if (error) { showToast('Update failed: ' + error.message); return; }
-  showToast('Draft updated');
+  if (error) { toast('Update failed: ' + error.message, 'error'); return; }
+  toast('Draft updated');
   loadOfficialDrafts();
 }
 
@@ -10073,15 +10073,15 @@ async function deleteOfficialDraft(draftId) {
 
 async function confirmDeleteDraft(draftId) {
   const { error } = await db.from('official_drafts').delete().eq('id', draftId);
-  if (error) { showToast('Delete failed: ' + error.message); return; }
-  showToast('Draft deleted');
+  if (error) { toast('Delete failed: ' + error.message, 'error'); return; }
+  toast('Draft deleted');
   loadOfficialDrafts();
 }
 
 async function approveOfficialDraft(draftId) {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   if (!OFFICIAL_USER_ID) {
-    showToast('Official account not set up yet. Set is_official=true on the official profile.');
+    toast('Official account not set up yet. Set is_official=true on the official profile.', 'error');
     return;
   }
   const draft = _officialDrafts.find(d => d.id === draftId);
@@ -10128,10 +10128,10 @@ async function approveOfficialDraft(draftId) {
       photo_stored_url: storedUrl,
       updated_at: new Date().toISOString(),
     }).eq('id', draftId);
-    showToast('Published to official feed!');
+    toast('Published to official feed!');
     loadOfficialDrafts();
   } catch (e) {
-    showToast('Publish failed: ' + e.message);
+    toast('Publish failed: ' + e.message, 'error');
     renderOfficialDrafts();
   }
 }
