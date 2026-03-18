@@ -3830,6 +3830,12 @@ function officialBadgeHtml(profile) {
 // ── UTM / visit tracking ──────────────────────────────────────────────────
 (function trackVisit() {
   try {
+    // Skip tracking if user will be redirected to r.html (avoid double-counting)
+    const abVal = localStorage.getItem('ab_landing');
+    const hasAuth = localStorage.getItem('sb-xnzweevzrojmouzhpwzv-auth-token');
+    const isOAuthReturn = location.search.indexOf('code=') !== -1 || location.hash.indexOf('access_token') !== -1;
+    if (abVal === 'b' && !hasAuth && !isOAuthReturn) return;
+
     const params = new URLSearchParams(window.location.search);
     const utm_source = params.get('utm_source');
     const utm_medium = params.get('utm_medium');
@@ -4225,7 +4231,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.15.48';
+const APP_VERSION = '2.36.18.15.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9713,9 +9719,9 @@ async function renderAdminTraffic() {
       return true;
     });
 
-    // Friendly source names
+    // Friendly source names — merge duplicates into single labels
     const sourceLabel = (src) => {
-      const labels = { 'www.google.com': 'Google (organic)', 'google.com': 'Google (organic)', 'www.reddit.com': 'Reddit (organic)', 'old.reddit.com': 'Reddit (organic)', 'www.bing.com': 'Bing (organic)', 't.co': 'Twitter / X' };
+      const labels = { 'www.google.com': 'Google (organic)', 'google.com': 'Google (organic)', 'www.reddit.com': 'Reddit', 'old.reddit.com': 'Reddit', 'reddit_lp': 'Reddit', 'reddit': 'Reddit', 'www.bing.com': 'Bing (organic)', 't.co': 'Twitter / X' };
       return labels[src] || src;
     };
 
