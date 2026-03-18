@@ -209,6 +209,8 @@
 
   async function signInGoogle() {
     try { db.from('page_visits').insert({ utm_source: 'reddit_lp_google', utm_medium: 'funnel', path: '/r/signin', user_agent: navigator.userAgent || null, ab_variant: 'b' }).then(() => {}).catch(() => {}); } catch(e) {}
+    // Override A/B variant so index.html won't redirect back to r.html after OAuth
+    try { localStorage.setItem('ab_landing', 'a'); } catch(e) {}
     const { error } = await db.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -221,6 +223,8 @@
 
   async function signInApple() {
     try { db.from('page_visits').insert({ utm_source: 'reddit_lp_apple', utm_medium: 'funnel', path: '/r/signin', user_agent: navigator.userAgent || null, ab_variant: 'b' }).then(() => {}).catch(() => {}); } catch(e) {}
+    // Override A/B variant so index.html won't redirect back to r.html after OAuth
+    try { localStorage.setItem('ab_landing', 'a'); } catch(e) {}
     const { error } = await db.auth.signInWithOAuth({
       provider: 'apple',
       options: {
