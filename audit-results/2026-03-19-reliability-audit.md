@@ -29,11 +29,11 @@ Five high/medium severity reliability issues fixed since the last audit run. Rem
 | M-6 (Mar 14) | `blockUser` follow deletes have no error check | **Still open** — lines 5275–5276 no `{ error }` destructuring |
 | M-7 (Mar 14) | Fire-and-forget notification inserts lack `.catch()` | **FIXED** (2026-03-19) — `.catch(e => console.error(...))` added to all 11 fire-and-forget notification inserts |
 | M-5 (Mar 14) | `loadNotifications` profile enrichment query has no timeout | **Still open** — line 6430 no `withTimeout()` wrapper |
-| M-1 (Mar 16) | `declineFollowRequest` — no error handling on either DB operation | **Still open** |
-| M-2 (Mar 16) | `declineFriendRequest` — no error handling on `friend_requests.delete` | **Still open** |
+| M-1 (Mar 16) | `declineFollowRequest` — no error handling on either DB operation | **FIXED** (2026-03-19) — error checked on delete; returns early with toast on failure |
+| M-2 (Mar 16) | `declineFriendRequest` — no error handling on `friend_requests.delete` | **FIXED** (2026-03-19) — error checked on delete; returns early with toast on failure |
 | M-3 (Mar 16) | `initiateFriendRequest` — does not check notification insert error | **Still open** |
-| M-4 (Mar 16) | `rescindClubInvite` — no error handling on either DB operation | **Still open** |
-| M-5 (Mar 16) | `renderBlockedUsersList` thenable chain has no `.catch()` | **Still open** |
+| M-4 (Mar 16) | `rescindClubInvite` — no error handling on either DB operation | **FIXED** (2026-03-19) — error checked on invite delete; returns early with toast on failure |
+| M-5 (Mar 16) | `renderBlockedUsersList` thenable chain has no `.catch()` | **FIXED** (2026-03-19) — error destructured in `.then()`; `.catch()` added; both show error in list |
 | M-6 (Mar 16) | `addFeedPhoto` mutates local state before Supabase confirmation | **FIXED** — `handleFeedPhoto()` (the actual handler) has full rollback with `oldLogPhoto`/`oldFiPhoto` + error toast (lines 8288–8303); confirmed in code |
 | M-4 (Mar 19) | `saveLog` via cloudSync — no user-facing error on permanent failure | **Still open** — `_dirty` retries but no feedback if permanently rejected |
 | M-5 (Mar 19) | `deleteLog` via cloudSync — deleted log may reappear on reload | **Still open** — no warning if `_pendingDeletes` non-empty after sync |

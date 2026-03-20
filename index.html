@@ -4237,7 +4237,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.19.20.32';
+const APP_VERSION = '2.36.19.20.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5305,14 +5305,15 @@ function renderBlockedUsersList() {
   if (!el) return;
   if (blockedUsers.size === 0) { el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">No blocked users.</div>'; return; }
   el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Loading…</div>';
-  db.from('profiles').select('id, username, display_name').in('id', [...blockedUsers]).then(({ data }) => {
+  db.from('profiles').select('id, username, display_name').in('id', [...blockedUsers]).then(({ data, error }) => {
+    if (error) { el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Could not load blocked users.</div>'; console.error('[WristLog] renderBlockedUsersList:', error.message); return; }
     if (!data || !data.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">No blocked users.</div>'; return; }
     el.innerHTML = data.map(p => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid var(--border);">
         <span style="font-size:.85rem;">${escHtml(p.display_name || p.username || 'User')}</span>
         <button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .5rem;" onclick="unblockUser('${p.id}')">Unblock</button>
       </div>`).join('');
-  });
+  }).catch(e => { el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Could not load blocked users.</div>'; console.error('[WristLog] renderBlockedUsersList network error:', e); });
 }
 
 // ── Friends ────────────────────────────────────────────────────────────────
@@ -5419,9 +5420,10 @@ async function acceptFriendRequest(initiatorId, notifId) {
 
 async function declineFriendRequest(initiatorId, notifId) {
   if (!currentUser) return;
-  await db.from('friend_requests').delete()
+  const { error: delErr } = await db.from('friend_requests').delete()
     .eq('initiator_id', initiatorId)
     .eq('target_id', currentUser.id);
+  if (delErr) { toast('Could not decline request — ' + delErr.message, 'error'); return; }
 
   // Keep notification but mark as read — re-render will hide action buttons
   await db.from('notifications').update({ is_read: true }).eq('id', notifId);
@@ -6148,7 +6150,8 @@ async function sendClubInvite(inviteeId, inviteeName, clubId, btn) {
 
 async function rescindClubInvite(inviteeId, inviteeName, clubId, btn) {
   if (!currentUser) return;
-  await db.from('club_invites').delete().eq('club_id', clubId).eq('invitee_id', inviteeId);
+  const { error } = await db.from('club_invites').delete().eq('club_id', clubId).eq('invitee_id', inviteeId);
+  if (error) { toast('Could not rescind invite — ' + error.message, 'error'); return; }
   // Also clean up the notification
   await db.from('notifications').delete()
     .eq('user_id', inviteeId).eq('type', 'club_invite')
@@ -6536,8 +6539,9 @@ async function acceptFollowRequest(requesterId, notifId) {
 }
 async function declineFollowRequest(requesterId, notifId) {
   if (!currentUser) return;
-  await db.from('follow_requests').delete()
+  const { error: delErr } = await db.from('follow_requests').delete()
     .eq('requester_id', requesterId).eq('target_id', currentUser.id);
+  if (delErr) { toast('Could not decline request — ' + delErr.message, 'error'); return; }
   // Keep notification but mark as read — re-render will hide action buttons
   await db.from('notifications').update({ is_read: true }).eq('id', notifId);
   const notif = userNotifs.find(n => n.id === notifId);
