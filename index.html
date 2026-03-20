@@ -24,7 +24,7 @@
   <title>WRotate – Every Watch. Every Wear.</title>
   <meta name="description" content="Track your watch collection, log every wear, and share with friends. Cost-per-wear stats, market values, social feed, clubs, and wishlist — all in one app.">
   <meta name="robots" content="index, follow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://accounts.google.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https://api.wrotate.com https://*.supabase.co data: blob: https:; connect-src 'self' https://api.wrotate.com https://*.supabase.co https://corsproxy.io https://api.allorigins.win https://accounts.google.com wss://api.wrotate.com; font-src 'self'; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://accounts.google.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https://api.wrotate.com https://*.supabase.co data: blob: https:; connect-src 'self' https://api.wrotate.com https://*.supabase.co https://corsproxy.io https://api.allorigins.win https://accounts.google.com wss://api.wrotate.com https://wttr.in; font-src 'self'; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self';">
   <link rel="canonical" href="https://wrotate.com/">
   <!-- Open Graph -->
   <meta property="og:type" content="website">
@@ -961,6 +961,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .strap-del-btn:hover   { color: var(--danger); }
     .strap-edit-btn        { background: none; border: none; color: var(--muted); cursor: pointer; font-size: .75rem; padding: .1rem .3rem; flex-shrink: 0; opacity: 0; transition: opacity .15s; }
     .strap-row:hover .strap-edit-btn { opacity: 1; }
+    @media (hover: none) {
+      .card-edit-btn, .card-photo-btn, .card-edit-btn-noimg { opacity: 1; }
+      .profile-avatar-cam { opacity: .7; }
+      .strap-edit-btn { opacity: 1; }
+    }
     .strap-name.clickable  { cursor: pointer; }
     .strap-name.clickable > span { border-bottom: 1px dotted var(--muted); padding-bottom: 1px; }
     .strap-name.clickable:hover > span { color: var(--gold); border-bottom-color: var(--gold); }
@@ -4231,7 +4236,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.21.30';
+const APP_VERSION = '2.36.19.18.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5067,11 +5072,12 @@ async function cycleWatchPrivacy(watchId) {
   // Normalize legacy 'friends_only' → 'friends'
   const cur = w.watchPrivacy === 'friends_only' ? 'friends' : (w.watchPrivacy ?? null);
   const next  = order[(order.indexOf(cur) + 1) % order.length];
+  const oldPrivacy = w.watchPrivacy;
   w.watchPrivacy = next;
   const { error } = await db.from('watches')
     .update({ watch_privacy: next })
     .eq('id', watchId);
-  if (error) { toast('Could not update — ' + error.message, 'error'); return; }
+  if (error) { w.watchPrivacy = oldPrivacy; toast('Could not update — ' + error.message, 'error'); return; }
   // Update DOM in-place — no full page reload
   const card = document.querySelector(`.col-watch-card[data-watch-id="${watchId}"]`);
   if (card) {
@@ -5095,11 +5101,12 @@ async function cycleWishPrivacy(wishId) {
   const order = [null, 'public', 'followers', 'friends', 'private'];
   const cur = w.wishPrivacy === 'friends_only' ? 'friends' : (w.wishPrivacy ?? null);
   const next  = order[(order.indexOf(cur) + 1) % order.length];
+  const oldWishPrivacy = w.wishPrivacy;
   w.wishPrivacy = next;
   const { error } = await db.from('wishlist')
     .update({ wish_privacy: next })
     .eq('id', wishId).eq('user_id', currentUser.id);
-  if (error) { toast('Could not update — ' + error.message, 'error'); return; }
+  if (error) { w.wishPrivacy = oldWishPrivacy; toast('Could not update — ' + error.message, 'error'); return; }
   // Update DOM in-place — no full page reload
   const card = document.querySelector(`.wl-wish-card[data-wish-id="${wishId}"]`);
   if (card) {
@@ -5662,7 +5669,8 @@ async function leaveClub(clubId) {
 }
 
 async function cancelClubRequest(clubId) {
-  await db.from('club_join_requests').delete().eq('club_id', clubId).eq('user_id', currentUser.id);
+  const { error } = await db.from('club_join_requests').delete().eq('club_id', clubId).eq('user_id', currentUser.id);
+  if (error) { toast('Could not cancel request — ' + error.message, 'error'); return; }
   pendingClubRequests.delete(clubId);
   toast('Request cancelled');
   renderClubsPage();
@@ -6667,8 +6675,9 @@ async function markAllNotifsRead() {
   const toMark = userNotifs.filter(n => !n.is_read && !actionable.has(n.type));
   if (!toMark.length) return;
   const ids = toMark.map(n => n.id);
-  await db.from('notifications').update({ is_read: true })
+  const { error: markErr } = await db.from('notifications').update({ is_read: true })
     .eq('user_id', currentUser.id).in('id', ids);
+  if (markErr) { console.error('markAllNotifsRead error:', markErr.message); return; }
   toMark.forEach(n => n.is_read = true);
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
   updateBellBadge();
@@ -8276,15 +8285,23 @@ async function handleFeedPhoto(input) {
     }
     // Update local log
     const log = logs.find(l => l.id === logId);
+    const oldLogPhoto = log?.photoUrl;
     if (log) { log.photoUrl = photoUrl; save(); }
     // Update feedItems so refreshFeedCard picks it up
     const fi = feedItems.find(i => i.id === logId);
+    const oldFiPhoto = fi?.photo_url;
     if (fi) fi.photo_url = photoUrl;
     // Hard-update Supabase
     if (currentUser) {
       const { error } = await db.from('logs').update({ photo_url: photoUrl })
         .eq('id', logId).eq('user_id', currentUser.id);
-      if (error) console.error('[WristLog] feed photo update error:', error.message);
+      if (error) {
+        if (log) { log.photoUrl = oldLogPhoto; save(); }
+        if (fi) fi.photo_url = oldFiPhoto;
+        refreshFeedCard(logId);
+        toast('Could not save photo', 'error');
+        return;
+      }
     }
     refreshFeedCard(logId);
     toast('Photo added!');
@@ -9323,7 +9340,7 @@ function toast(msg, type='success') {
   el.textContent = msg;
   el.className = `toast ${type} show`;
   clearTimeout(el._t);
-  el._t = setTimeout(() => el.className = `toast ${type}`, 2600);
+  el._t = setTimeout(() => el.className = `toast ${type}`, type === 'error' ? 5000 : 2600);
 }
 
 function showFieldError(fieldId, msg) {
@@ -10495,11 +10512,11 @@ function renderWatchSelector() {
     const wl = logsForWatch(w.id);
     let max = '';
     for (const l of wl) { if (l.date > max) max = l.date; }
-    lastWorn.set(w.id, max);
+    lastWorn.set(w.id, { max, count: wl.length });
   }
   const sorted = [...watches].sort((a, b) => {
-    const aLast = lastWorn.get(a.id);
-    const bLast = lastWorn.get(b.id);
+    const aLast = lastWorn.get(a.id).max;
+    const bLast = lastWorn.get(b.id).max;
     if (aLast && !bLast) return -1;
     if (!aLast && bLast) return 1;
     if (aLast && bLast) return bLast.localeCompare(aLast);
@@ -10507,7 +10524,7 @@ function renderWatchSelector() {
   });
   el.innerHTML = `<div class="watch-list">${
     sorted.map(w => {
-      const cnt    = logsForWatch(w.id).length;
+      const cnt    = (lastWorn.get(w.id) || { count: 0 }).count;
       const isWorn = wornToday.has(w.id);
       const thumb  = w.image
         ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
@@ -11259,12 +11276,13 @@ function renderCollection(force) {
     </div></div>`;
     return;
   }
+  const wearCounts = collGridSort === 'wears' ? new Map(visible.map(w => [w.id, logsForWatch(w.id).length])) : null;
   const sorted = [...visible].sort((a, b) => {
     if (collGridSort === 'ranking') {
       return (eloRatings[b.id] ?? ELO_DEFAULT) - (eloRatings[a.id] ?? ELO_DEFAULT);
     }
     if (collGridSort === 'wears') {
-      return logsForWatch(b.id).length - logsForWatch(a.id).length;
+      return wearCounts.get(b.id) - wearCounts.get(a.id);
     }
     // default: purchase date descending
     if (!a.purchaseDate && !b.purchaseDate) return 0;
@@ -11312,7 +11330,7 @@ function renderCollection(force) {
             : w.image;
           const hasImg = !!cardImg;
           const imgBlock = hasImg ? `<div class="watch-card-img-wrap">
-          <img loading="lazy" src="${cardImg}" alt="${escHtml(w.brand)} ${escHtml(w.name)}" class="watch-card-img"${isRanking ? ' draggable="false"' : ''} onerror="this.style.display='none'">
+          <img loading="lazy" src="${escHtml(cardImg)}" alt="${escHtml(w.brand)} ${escHtml(w.name)}" class="watch-card-img"${isRanking ? ' draggable="false"' : ''} onerror="this.style.display='none'">
           <button class="card-edit-btn" onclick="openEditWatch('${w.id}')" title="Edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button class="card-photo-btn" onclick="openPhotoMenu(event,'${w.id}')" title="Edit photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
         </div>` : '';
@@ -11373,7 +11391,8 @@ function renderCollectionList(visible, today) {
     const cpwNum  = (w.price && wears) ? Math.round(w.price / wears) : null;
     const lastDate = wLogs.length ? wLogs.reduce((a,b) => a.date > b.date ? a : b).date : null;
     const lastDays = lastDate ? Math.floor((new Date() - new Date(lastDate+'T12:00:00')) / 86400000) : null;
-    return { w, wears, cpwNum, lastDays, paid: w.price||null, market: w.marketPrice||null };
+    const wornToday = wLogs.some(l => l.date === today);
+    return { w, wears, cpwNum, lastDays, paid: w.price||null, market: w.marketPrice||null, wornToday };
   });
 
   // Sort
@@ -11411,8 +11430,7 @@ function renderCollectionList(visible, today) {
     return `<th style="text-align:${align};${cursor}${color}" onclick="setCollListSort('${key}')">${label}${icon}</th>`;
   };
 
-  const rows = enriched.map(({ w, wears, cpwNum, lastDays, paid, market }) => {
-    const wornToday = logsForWatch(w.id).some(l => l.date === today);
+  const rows = enriched.map(({ w, wears, cpwNum, lastDays, paid, market, wornToday }) => {
     const thumb = w.image
       ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
       : `<div class="avatar" style="width:28px;height:28px;font-size:.62rem;background:${escHtml(w.color)};flex-shrink:0">${initials(w.brand,w.name)}</div>`;
@@ -12623,14 +12641,12 @@ function computeWatchRec(skipSet) {
 function skipRec() {
   const current = computeWatchRec(recSkips);
   if (current) recSkips.add(current.w.id);
-  // If exhausted all candidates, clear skips and start fresh
-  const next = computeWatchRec(recSkips);
-  if (!next) recSkips = new Set();
-  // Render using already-computed result to avoid a third call
+  let next = computeWatchRec(recSkips);
+  if (!next) { recSkips = new Set(); next = computeWatchRec(recSkips); }
   const el = document.getElementById('rec-container');
   if (!el) return;
   if (!watches.length) { el.innerHTML = ''; return; }
-  el.innerHTML = recCardHTML(next || computeWatchRec(recSkips));
+  el.innerHTML = recCardHTML(next);
 }
 
 function recCardHTML(rec) {
