@@ -664,3 +664,102 @@ test.describe('Feedback (mocked)', () => {
     await expect(page.locator('#feedback-modal')).toBeVisible();
   });
 });
+
+// ── Notification bell aria-expanded ─────────────────────────────────────
+
+test.describe('Notification bell (mocked)', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+  });
+
+  test('bell button starts with aria-expanded false', async ({ page }) => {
+    const bell = page.locator('#bell-btn');
+    await expect(bell).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('clicking bell sets aria-expanded to true', async ({ page }) => {
+    const bell = page.locator('#bell-btn');
+    await bell.click();
+    await expect(bell).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('#notif-panel')).toBeVisible();
+  });
+
+  test('clicking bell again sets aria-expanded back to false', async ({ page }) => {
+    const bell = page.locator('#bell-btn');
+    await bell.click();
+    await expect(bell).toHaveAttribute('aria-expanded', 'true');
+    await bell.click();
+    await expect(bell).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.locator('#notif-panel')).toBeHidden();
+  });
+
+  test('bell button has aria-label and aria-controls', async ({ page }) => {
+    const bell = page.locator('#bell-btn');
+    await expect(bell).toHaveAttribute('aria-label', 'Notifications');
+    await expect(bell).toHaveAttribute('aria-controls', 'notif-panel');
+  });
+});
+
+// ── Admin chips keyboard accessibility ───────────────────────────────────
+
+const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
+const ADMIN_USER = { ...FAKE_USER, id: ADMIN_USER_ID, email: 'admin@wrotate.com' };
+const ADMIN_PROFILE = { ...FAKE_PROFILE, id: ADMIN_USER_ID, username: 'adminuser', is_admin: true };
+
+test.describe('Admin chips (mocked)', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS, user: ADMIN_USER, profile: ADMIN_PROFILE });
+    await injectSession(page, ADMIN_USER);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    // Admin page is not a nav tab — invoke showAdminPage() directly
+    await page.evaluate(() => showAdminPage());
+    await page.waitForSelector('#page-admin.active', { timeout: 5000 });
+  });
+
+  test('admin tab chips are button elements', async ({ page }) => {
+    const chips = page.locator('#admin-tabs button.chip');
+    await expect(chips).toHaveCount(5);
+  });
+
+  test('admin tab chips have correct labels', async ({ page }) => {
+    const labels = await page.locator('#admin-tabs button.chip').allTextContents();
+    expect(labels).toEqual(['Traffic', 'Usage', 'Feedback', 'Reports', 'Official']);
+  });
+
+  test('admin tab chips are keyboard focusable', async ({ page }) => {
+    const firstChip = page.locator('#admin-tabs button.chip').first();
+    await firstChip.focus();
+    await expect(firstChip).toBeFocused();
+  });
+
+  test('clicking admin tab chip switches selected state', async ({ page }) => {
+    const usageChip = page.locator('#admin-tabs button.chip[data-tab="usage"]');
+    await usageChip.click();
+    await expect(usageChip).toHaveClass(/selected/);
+    // Previously selected chip should no longer be selected
+    await expect(page.locator('#admin-tabs button.chip[data-tab="traffic"]')).not.toHaveClass(/selected/);
+  });
+
+  test('feedback filter chips are button elements', async ({ page }) => {
+    // Switch to feedback tab first
+    await page.locator('#admin-tabs button.chip[data-tab="feedback"]').click();
+    const chips = page.locator('#admin-filter-chips button.chip');
+    await expect(chips).toHaveCount(5);
+  });
+
+  test('report filter chips are button elements', async ({ page }) => {
+    await page.locator('#admin-tabs button.chip[data-tab="reports"]').click();
+    const chips = page.locator('#report-filter-chips button.chip');
+    await expect(chips).toHaveCount(4);
+  });
+
+  test('official filter chips are button elements', async ({ page }) => {
+    await page.locator('#admin-tabs button.chip[data-tab="official"]').click();
+    const chips = page.locator('#official-filter-chips button.chip');
+    await expect(chips).toHaveCount(3);
+  });
+});
