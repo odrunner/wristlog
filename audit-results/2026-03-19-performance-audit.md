@@ -15,7 +15,7 @@ Two performance fixes confirmed (H2 `skipRec`, M2 `renderWatchSelector`). Remain
 
 | # | Finding | Status |
 |---|---------|--------|
-| H1 | `SELECT *` on `loadUserData()` — watches, logs, wishlist (lines 4121–4123) | **Still open** — 7th consecutive audit |
+| H1 | `SELECT *` on `loadUserData()` — watches, logs, wishlist (lines 4121–4123) | **FIXED** (2026-03-19) — explicit column lists for all three tables |
 | H2 | `skipRec()` triple `computeWatchRec()` call | **FIXED** — result stored in `next` variable; third call eliminated (lines 12641–12650) |
 | H3 | Admin dashboard fetches 10,000 rows | **Still open** — `ADMIN_ROW_LIMIT = 10000` unchanged |
 | M1 | `renderCollectionList()` calls `logsForWatch()` twice per watch | **Still open** — lines 11371, 11415 |
