@@ -17,9 +17,9 @@ Four usability fixes confirmed today: touch-device visibility for profile camera
 
 | # | Finding | Status |
 |---|---------|--------|
-| C2 | No `role="button"` or `tabindex` on ~85 interactive `<div onclick>` / `<span onclick>` elements | **Still open** |
+| C2 | No `role="button"` or `tabindex` on ~85 interactive `<div onclick>` / `<span onclick>` elements | **Partially addressed** — 17 admin/filter chips converted to `<button type="button">` (2026-03-19); remaining ~68 in JS templates still open |
 | C3 | No semantic HTML landmarks | **Partially addressed** — `<header>`, `<main>`, `<nav>` now present; no `<footer>`, `<aside>`, `<section>`, `<article>` |
-| C4 | No `aria-expanded`, `aria-haspopup`, or `aria-controls` anywhere | **Still open** — 0 instances in entire file |
+| C4 | No `aria-expanded`, `aria-haspopup`, or `aria-controls` anywhere | **Partially addressed** — `aria-expanded`, `aria-controls`, `aria-label` added to notification bell button (2026-03-19); `toggleNotifPanel()` keeps `aria-expanded` in sync; remaining expandable elements still open |
 
 ### High
 

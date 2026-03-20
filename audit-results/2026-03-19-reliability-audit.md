@@ -27,14 +27,14 @@ Five high/medium severity reliability issues fixed since the last audit run. Rem
 | M-2 (Mar 14) | `saveNewPost` does not clean up local log entry on upsert failure | **Still open** — log pushed to array (line 8215) and localStorage (line 8218) before error path |
 | M-3 (Mar 14) | Admin moderation functions lack error handling | **Still open** — `adminConfirmRemoval`, `adminRestoreContent` fire DB updates without checking `{ error }` |
 | M-6 (Mar 14) | `blockUser` follow deletes have no error check | **Still open** — lines 5275–5276 no `{ error }` destructuring |
-| M-7 (Mar 14) | Fire-and-forget notification inserts lack `.catch()` | **Still open** — ~12 call sites lack outer `.catch()` for network-level failures |
+| M-7 (Mar 14) | Fire-and-forget notification inserts lack `.catch()` | **FIXED** (2026-03-19) — `.catch(e => console.error(...))` added to all 11 fire-and-forget notification inserts |
 | M-5 (Mar 14) | `loadNotifications` profile enrichment query has no timeout | **Still open** — line 6430 no `withTimeout()` wrapper |
 | M-1 (Mar 16) | `declineFollowRequest` — no error handling on either DB operation | **Still open** |
 | M-2 (Mar 16) | `declineFriendRequest` — no error handling on `friend_requests.delete` | **Still open** |
 | M-3 (Mar 16) | `initiateFriendRequest` — does not check notification insert error | **Still open** |
 | M-4 (Mar 16) | `rescindClubInvite` — no error handling on either DB operation | **Still open** |
 | M-5 (Mar 16) | `renderBlockedUsersList` thenable chain has no `.catch()` | **Still open** |
-| M-6 (Mar 16) | `addFeedPhoto` mutates local state before Supabase confirmation | **Still open** — error only logged, not rolled back |
+| M-6 (Mar 16) | `addFeedPhoto` mutates local state before Supabase confirmation | **FIXED** — `handleFeedPhoto()` (the actual handler) has full rollback with `oldLogPhoto`/`oldFiPhoto` + error toast (lines 8288–8303); confirmed in code |
 | M-4 (Mar 19) | `saveLog` via cloudSync — no user-facing error on permanent failure | **Still open** — `_dirty` retries but no feedback if permanently rejected |
 | M-5 (Mar 19) | `deleteLog` via cloudSync — deleted log may reappear on reload | **Still open** — no warning if `_pendingDeletes` non-empty after sync |
 | L-1 (Mar 14) | `handleTrackPhoto` does not revoke previous blob URL on re-selection | **Still open** |

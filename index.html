@@ -618,6 +618,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .chip:hover { border-color: var(--gold); color: var(--text); }
     .chip.selected { background: var(--gold-dim); border-color: var(--gold); color: var(--gold); }
+    button.chip { font-family: inherit; line-height: inherit; }
 
     /* ── TRACK PAGE ── */
     .track-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; align-items: start; }
@@ -2278,7 +2279,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <span id="app-ver" class="app-ver"></span>
       <button id="theme-btn" onclick="cycleTheme()" title="Toggle theme"></button>
       <button class="help-btn" id="help-btn" onclick="showHelpPage()" style="display:none;" title="Help &amp; Guide">?</button>
-      <button class="bell-btn" id="bell-btn" onclick="toggleNotifPanel();event.stopPropagation();" style="display:none;" title="Notifications">
+      <button class="bell-btn" id="bell-btn" onclick="toggleNotifPanel();event.stopPropagation();" style="display:none;" title="Notifications" aria-label="Notifications" aria-expanded="false" aria-controls="notif-panel">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="bell-badge hidden" id="bell-badge">0</span>
       </button>
       <button class="profile-btn" id="profile-btn" onclick="openProfileModal()" style="display:none;" title="My Profile">?</button>
@@ -2417,11 +2418,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <!-- Admin Tabs -->
     <div class="chips" id="admin-tabs" style="margin-bottom:1rem;">
-      <div class="chip selected" data-tab="traffic" onclick="switchAdminTab('traffic')">Traffic</div>
-      <div class="chip" data-tab="usage" onclick="switchAdminTab('usage')">Usage</div>
-      <div class="chip" data-tab="feedback" onclick="switchAdminTab('feedback')">Feedback</div>
-      <div class="chip" data-tab="reports" onclick="switchAdminTab('reports')">Reports</div>
-      <div class="chip" data-tab="official" onclick="switchAdminTab('official')">Official</div>
+      <button type="button" class="chip selected" data-tab="traffic" onclick="switchAdminTab('traffic')">Traffic</button>
+      <button type="button" class="chip" data-tab="usage" onclick="switchAdminTab('usage')">Usage</button>
+      <button type="button" class="chip" data-tab="feedback" onclick="switchAdminTab('feedback')">Feedback</button>
+      <button type="button" class="chip" data-tab="reports" onclick="switchAdminTab('reports')">Reports</button>
+      <button type="button" class="chip" data-tab="official" onclick="switchAdminTab('official')">Official</button>
     </div>
 
     <!-- Tab: Traffic -->
@@ -2449,11 +2450,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadAdminFeedback()">↻ Refresh</button>
       </div>
       <div class="chips" id="admin-filter-chips" style="margin-bottom:.75rem;">
-        <div class="chip" data-filter="all" onclick="filterAdminFeedback('all')">All</div>
-        <div class="chip selected" data-filter="pending" onclick="filterAdminFeedback('pending')">Pending</div>
-        <div class="chip" data-filter="reviewed" onclick="filterAdminFeedback('reviewed')">Reviewed</div>
-        <div class="chip" data-filter="resolved" onclick="filterAdminFeedback('resolved')">Resolved</div>
-        <div class="chip" data-filter="ignored" onclick="filterAdminFeedback('ignored')">Ignored</div>
+        <button type="button" class="chip" data-filter="all" onclick="filterAdminFeedback('all')">All</button>
+        <button type="button" class="chip selected" data-filter="pending" onclick="filterAdminFeedback('pending')">Pending</button>
+        <button type="button" class="chip" data-filter="reviewed" onclick="filterAdminFeedback('reviewed')">Reviewed</button>
+        <button type="button" class="chip" data-filter="resolved" onclick="filterAdminFeedback('resolved')">Resolved</button>
+        <button type="button" class="chip" data-filter="ignored" onclick="filterAdminFeedback('ignored')">Ignored</button>
       </div>
       <div id="admin-feedback-list"><div style="color:var(--muted);font-size:.9rem;">Loading…</div></div>
     </div>
@@ -2465,10 +2466,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadAdminReports()">↻ Refresh</button>
       </div>
       <div class="chips" id="report-filter-chips" style="margin-bottom:.75rem;">
-        <div class="chip selected" data-filter="all" onclick="filterReports('all')">All</div>
-        <div class="chip" data-filter="pending" onclick="filterReports('pending')">Pending</div>
-        <div class="chip" data-filter="actioned" onclick="filterReports('actioned')">Actioned</div>
-        <div class="chip" data-filter="dismissed" onclick="filterReports('dismissed')">Dismissed</div>
+        <button type="button" class="chip selected" data-filter="all" onclick="filterReports('all')">All</button>
+        <button type="button" class="chip" data-filter="pending" onclick="filterReports('pending')">Pending</button>
+        <button type="button" class="chip" data-filter="actioned" onclick="filterReports('actioned')">Actioned</button>
+        <button type="button" class="chip" data-filter="dismissed" onclick="filterReports('dismissed')">Dismissed</button>
       </div>
       <div id="admin-reports-list"><div style="color:var(--muted);font-size:.9rem;">Loading…</div></div>
     </div>
@@ -2525,9 +2526,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
       <!-- Draft filter chips -->
       <div class="chips" id="official-filter-chips" style="margin-bottom:.75rem;">
-        <div class="chip selected" data-filter="draft" onclick="filterOfficialDrafts('draft')">Drafts</div>
-        <div class="chip" data-filter="published" onclick="filterOfficialDrafts('published')">Published</div>
-        <div class="chip" data-filter="all" onclick="filterOfficialDrafts('all')">All</div>
+        <button type="button" class="chip selected" data-filter="draft" onclick="filterOfficialDrafts('draft')">Drafts</button>
+        <button type="button" class="chip" data-filter="published" onclick="filterOfficialDrafts('published')">Published</button>
+        <button type="button" class="chip" data-filter="all" onclick="filterOfficialDrafts('all')">All</button>
       </div>
 
       <div id="official-drafts-list"><div style="color:var(--muted);font-size:.9rem;">Loading…</div></div>
@@ -4236,7 +4237,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.19.20.11';
+const APP_VERSION = '2.36.19.20.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6472,7 +6473,8 @@ async function followUser(userId, btn) {
     db.from('notifications').insert({
       user_id: userId, type: 'follow',
       actor_id: currentUser.id, is_read: false,
-    }).then(({ error }) => { if (error) console.error('[WristLog] follow notif:', error.message); });
+    }).then(({ error }) => { if (error) console.error('[WristLog] follow notif:', error.message); })
+      .catch(e => console.error('[WristLog] follow notif network error:', e));
     if (btn) { btn.className = 'follow-btn following'; btn.textContent = 'Following'; btn.onclick = function() { confirmUnfollow(userId, this); }; }
     toast('Following! Their logs will appear in your feed.');
     renderDiscoverUsers();
@@ -6522,7 +6524,8 @@ async function acceptFollowRequest(requesterId, notifId) {
   db.from('notifications').insert({
     user_id: requesterId, type: 'follow_accepted',
     actor_id: currentUser.id, is_read: false,
-  }).then(({ error }) => { if (error) console.error('[WristLog] follow_accepted notif:', error.message); });
+  }).then(({ error }) => { if (error) console.error('[WristLog] follow_accepted notif:', error.message); })
+    .catch(e => console.error('[WristLog] follow_accepted notif network error:', e));
   // Keep notification but mark as read — re-render will hide action buttons
   await db.from('notifications').update({ is_read: true }).eq('id', notifId);
   const notif = userNotifs.find(n => n.id === notifId);
@@ -6549,7 +6552,8 @@ async function followBackFromNotif(userId, notifId) {
   if (error) { toast('Could not follow back', 'error'); return; }
   following.add(userId);
   db.from('notifications').insert({ user_id: userId, type: 'follow', actor_id: currentUser.id, is_read: false })
-    .then(({ error }) => { if (error) console.error('[WristLog] follow-back notif:', error.message); });
+    .then(({ error }) => { if (error) console.error('[WristLog] follow-back notif:', error.message); })
+    .catch(e => console.error('[WristLog] follow-back notif network error:', e));
   const notif = userNotifs.find(n => n.id === notifId);
   if (notif) notif._followedBack = true;
   renderNotificationPanel();
@@ -6689,8 +6693,10 @@ function toggleNotifPanel() {
   notifPanelOpen = !notifPanelOpen;
   const panel = document.getElementById('notif-panel');
   if (!panel) return;
+  const btn = document.getElementById('bell-btn');
   if (notifPanelOpen) {
     panel.classList.remove('hidden');
+    if (btn) btn.setAttribute('aria-expanded', 'true');
     // Always fetch fresh notifications + friend requests when panel opens
     Promise.all([loadNotifications(), loadFriendRequests(true)])
       .then(() => renderNotificationPanel());
@@ -6698,6 +6704,7 @@ function toggleNotifPanel() {
     setTimeout(markAllNotifsRead, 1200);
   } else {
     panel.classList.add('hidden');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
   }
 }
 
@@ -8005,7 +8012,7 @@ async function saveEditPost() {
         if (mentionNotifs.length) {
           db.from('notifications').insert(mentionNotifs).then(({ error }) => {
             if (error) console.error('Edit post mention notification error:', error.message, error);
-          });
+          }).catch(e => console.error('[WristLog] edit post mention notif network error:', e));
         }
       }
     }
@@ -8247,7 +8254,7 @@ async function saveNewPost() {
         if (mentionNotifs.length) {
           db.from('notifications').insert(mentionNotifs).then(({ error }) => {
             if (error) console.error('Post mention notification error:', error.message, error);
-          });
+          }).catch(e => console.error('[WristLog] post mention notif network error:', e));
         }
       }
     }
@@ -8330,7 +8337,8 @@ async function toggleLike(logId) {
       const item = feedItems.find(i => i.id === logId);
       if (item && item.user_id !== currentUser.id) {
         db.from('notifications').insert({ user_id: item.user_id, type: 'like', actor_id: currentUser.id, ref_id: logId })
-          .then(({ error }) => { if (error) console.error('[WristLog] like notif:', error.code, error.message, error.details, error.hint); });
+          .then(({ error }) => { if (error) console.error('[WristLog] like notif:', error.code, error.message, error.details, error.hint); })
+          .catch(e => console.error('[WristLog] like notif network error:', e));
       }
     }
   } catch (e) {
@@ -8365,7 +8373,8 @@ async function toggleCommentLike(commentId, logId) {
       if (comment && comment.user_id !== currentUser.id) {
         db.from('notifications').insert({
           user_id: comment.user_id, type: 'comment_like', actor_id: currentUser.id, ref_id: logId, is_read: false
-        }).then(({ error }) => { if (error) console.error('[WristLog] comment_like notif:', error.code, error.message, error.details, error.hint); });
+        }).then(({ error }) => { if (error) console.error('[WristLog] comment_like notif:', error.code, error.message, error.details, error.hint); })
+          .catch(e => console.error('[WristLog] comment_like notif network error:', e));
       }
     }
   } catch (e) {
@@ -8610,7 +8619,8 @@ async function postComment(logId) {
     // Notify the post author (skip if commenting on own post)
     if (postOwner && postOwner !== currentUser.id) {
       db.from('notifications').insert({ user_id: postOwner, type: 'comment', actor_id: currentUser.id, ref_id: logId, is_read: false })
-        .then(({ error }) => { if (error) console.error('[WristLog] comment notif:', error.message); });
+        .then(({ error }) => { if (error) console.error('[WristLog] comment notif:', error.message); })
+        .catch(e => console.error('[WristLog] comment notif network error:', e));
     }
     // Notify others who liked or previously commented on this post
     const [{ data: likers }, { data: prevCommenters }] = await Promise.all([
@@ -8624,7 +8634,8 @@ async function postComment(logId) {
     if (notifyIds.length) {
       db.from('notifications').insert(
         notifyIds.map(uid => ({ user_id: uid, type: 'comment_also', actor_id: currentUser.id, ref_id: logId, is_read: false }))
-      ).then(({ error }) => { if (error) console.error('[WristLog] comment_also notif:', error.message); });
+      ).then(({ error }) => { if (error) console.error('[WristLog] comment_also notif:', error.message); })
+        .catch(e => console.error('[WristLog] comment_also notif network error:', e));
     }
     // Send mention notifications for @usernames in the comment
     const mentionedUsernames = [...new Set((text.match(/@([\w.]+)/g) || []).map(m => m.slice(1)))];
@@ -8638,7 +8649,7 @@ async function postComment(logId) {
       if (mentionNotifs.length) {
         db.from('notifications').insert(mentionNotifs).then(({ error }) => {
           if (error) console.error('Mention notification error:', error.message, error);
-        });
+        }).catch(e => console.error('[WristLog] comment mention notif network error:', e));
       }
     }
   } else { toast('Comment failed — ' + error.message, 'error'); }
@@ -10678,7 +10689,7 @@ async function saveLog() {
         if (mentionNotifs.length) {
           db.from('notifications').insert(mentionNotifs).then(({ error }) => {
             if (error) console.error('Wear log mention notification error:', error.message, error);
-          });
+          }).catch(e => console.error('[WristLog] wear log mention notif network error:', e));
         }
       });
     }
