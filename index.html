@@ -2552,7 +2552,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <input type="text" id="broadcast-heading" placeholder="Optional heading inside email body" oninput="updateBroadcastPreview()">
         </div>
         <div class="draft-form-row">
-          <label>Body (supports HTML: &lt;b&gt;, &lt;a&gt;, &lt;br&gt;, &lt;ul&gt;/&lt;li&gt;. Use [img1] [img2] [img3] to place images inline)</label>
+          <label>Body (supports HTML: &lt;b&gt;, &lt;a&gt;, &lt;br&gt;, &lt;ul&gt;/&lt;li&gt;. Use [img1] [img2] etc. to place images inline)</label>
           <textarea id="broadcast-body" placeholder="Write your email content here…" rows="16" oninput="updateBroadcastPreview()" style="min-height:280px;"></textarea>
         </div>
 
@@ -4307,7 +4307,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.10.11';
+const APP_VERSION = '2.36.21.10.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10605,7 +10605,7 @@ async function approveOfficialDraft(draftId) {
 }
 
 // ── Broadcast Email ──────────────────────────────────────────────────────
-let _broadcastPhotoBlobs = [null, null, null];
+let _broadcastPhotoBlobs = [];
 let _broadcastImageSlots = 1;
 
 function handleBroadcastPhotoFile(input, idx) {
@@ -10658,7 +10658,6 @@ function clearBroadcastPhoto(idx) {
 }
 
 function addBroadcastImageSlot() {
-  if (_broadcastImageSlots >= 3) return;
   const idx = _broadcastImageSlots;
   _broadcastImageSlots++;
   const container = document.getElementById('broadcast-images');
@@ -10680,9 +10679,6 @@ function addBroadcastImageSlot() {
     <input type="text" class="broadcast-image-url" data-idx="${idx}" placeholder="Or paste image URL" oninput="updateBroadcastPreview()">
     <input type="text" class="broadcast-image-caption" data-idx="${idx}" placeholder="Image caption (optional)" oninput="updateBroadcastPreview()">`;
   container.appendChild(row);
-  if (_broadcastImageSlots >= 3) {
-    document.getElementById('broadcast-add-image-btn').style.display = 'none';
-  }
 }
 
 // Collect image URLs (uploaded blob as data-URL or pasted URL)
@@ -10712,7 +10708,7 @@ function imgSnippet(img) {
 
 // Replace [img1], [img2], [img3] markers in body HTML with inline images
 function inlineImages(bodyHtml, images) {
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < images.length; i++) {
     const marker = `[img${i + 1}]`;
     if (bodyHtml.includes(marker) && images[i]) {
       bodyHtml = bodyHtml.replace(marker, imgSnippet(images[i]));
@@ -10722,13 +10718,12 @@ function inlineImages(bodyHtml, images) {
 }
 
 function buildBroadcastEmailHtml(heading, bodyHtml, images) {
-  // Inline [img1]/[img2]/[img3] markers
   bodyHtml = inlineImages(bodyHtml, images);
 
   // Any images NOT referenced by markers go at the bottom
   const usedMarkers = new Set();
   const rawBody = document.getElementById('broadcast-body')?.value || '';
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < images.length; i++) {
     if (rawBody.includes(`[img${i + 1}]`)) usedMarkers.add(i);
   }
   let trailingImagesHtml = '';
@@ -10889,7 +10884,7 @@ function loadBroadcastDraft(id) {
   // Restore image URLs
   if (draft.imageUrls) {
     // Ensure enough slots exist
-    while (_broadcastImageSlots < draft.imageUrls.length && _broadcastImageSlots < 3) {
+    while (_broadcastImageSlots < draft.imageUrls.length) {
       addBroadcastImageSlot();
     }
     draft.imageUrls.forEach((img, i) => {
