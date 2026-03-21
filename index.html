@@ -4307,7 +4307,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.09.43';
+const APP_VERSION = '2.36.21.09.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10779,7 +10779,7 @@ function buildBroadcastHtml() {
   const images = getBroadcastImages();
 
   let bodyHtml = body;
-  if (body && !/<[a-z][\s\S]*>/i.test(body.replace(/\[img\d\]/g, ''))) {
+  if (body) {
     bodyHtml = body.replace(/\n\n+/g, '</div><div style="font-size:14px;color:#555;line-height:1.6;margin-top:12px;">').replace(/\n/g, '<br>');
   }
 
@@ -10824,7 +10824,7 @@ function buildFinalBroadcastHtml(images) {
   const body = document.getElementById('broadcast-body')?.value?.trim() || '';
 
   let bodyHtml = body;
-  if (body && !/<[a-z][\s\S]*>/i.test(body.replace(/\[img\d\]/g, ''))) {
+  if (body) {
     bodyHtml = body.replace(/\n\n+/g, '</div><div style="font-size:14px;color:#555;line-height:1.6;margin-top:12px;">').replace(/\n/g, '<br>');
   }
 
