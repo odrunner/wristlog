@@ -1,5 +1,5 @@
 # Performance Audit — WRotate
-**Date:** March 21, 2026 (updated from March 19)
+**Date:** March 21, 2026
 **Auditor:** Claude (automated)
 **Scope:** index.html (~16,427 lines), sw.js (SW v152)
 
@@ -7,7 +7,7 @@
 
 ## Summary
 
-File has grown from ~15,880 to ~16,427 lines (+547 lines, now ~3.5% larger). SW version jumped from v136 to v152 (+16 deploys in 2 days). Three previously reported issues (H1, H2, M2) confirmed FIXED. M1 appears partially mitigated (logsForWatch now called once per watch in list mode). Five NEW findings identified (N1-N5), mostly related to recent features (profile page, public feed, collection report).
+File has grown from ~15,880 to ~16,427 lines (+547 lines, now ~3.5% larger). SW version jumped from v136 to v152 (+16 deploys in 2 days). Four previously reported issues (H1, H2, M2, M8) confirmed FIXED. M1 appears partially mitigated (logsForWatch now called once per watch in list mode). Seven NEW findings identified (N1-N7), mostly related to recent features (profile page, public feed, collection report).
 
 ---
 
@@ -25,7 +25,7 @@ File has grown from ~15,880 to ~16,427 lines (+547 lines, now ~3.5% larger). SW 
 | M5 | File size — single-file architecture | **Still open** — now ~16,427 lines. SW v152 means 152 full re-downloads for cache busting. |
 | M6 | MutationObserver on `document.body` | **Still open** |
 | M7 | `renderDowReport()` Date per log per DOW | **Still open** — line 12968: `fLogs.filter(l => new Date(l.date+'T12:00:00').getDay() === dow)` runs 7 times, creating N Date objects each pass = 7N total Date constructions. |
-| M8 | Collection grid "wears" sort — `logsForWatch()` in comparator | **FIXED in new code** — pre-computed into wearCounts Map at line 11821 before sort. However, still called again per-watch in the render loop (see M1 note). |
+| M8 | Collection grid "wears" sort — `logsForWatch()` in comparator | **FIXED (2026-03-21)** — pre-computed into wearCounts Map at line 11821 before sort. However, still called again per-watch in the render loop (see M1 note). |
 | M9 | `computeWatchRec()` Date per log for DOW | **Still open** — line 13051: `new Date(l.date+'T12:00:00').getDay()` inside inner loop. |
 | L1 | Inline `style="..."` attributes | **Still open** — appears to have increased |
 | L3-L7 | `new Date()` in feed sort, `select('*')` in admin/clubs/comments | **Still open** |
