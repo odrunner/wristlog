@@ -4307,7 +4307,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.10.06';
+const APP_VERSION = '2.36.21.10.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10965,6 +10965,7 @@ async function sendBroadcastTest() {
       headers: {
         'Authorization': 'Bearer ' + token,
         'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
       },
       body: JSON.stringify({ subject, html, test_email: user.email }),
     });
@@ -11010,6 +11011,7 @@ async function confirmBroadcastAll() {
       headers: {
         'Authorization': 'Bearer ' + token,
         'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
       },
       body: JSON.stringify({ subject, html }),
     });
