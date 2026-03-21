@@ -46,8 +46,15 @@ serve(async (req) => {
 
     // Verify the caller is admin
     const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
+    console.log("[send-broadcast] Auth check:", {
+      hasToken: !!token,
+      tokenLen: token?.length,
+      userId: user?.id,
+      error: userError?.message,
+      adminMatch: user?.id === ADMIN_USER_ID
+    });
     if (userError || !user || user.id !== ADMIN_USER_ID) {
-      return jsonResponse({ error: "Unauthorized" }, 403);
+      return jsonResponse({ error: "Unauthorized", details: userError?.message }, 403);
     }
 
     const body = await req.json();
@@ -77,10 +84,10 @@ serve(async (req) => {
       return jsonResponse({ error: "Failed to fetch profiles", details: profilesError }, 500);
     }
 
-    // Filter out users who have explicitly disabled marketing emails
+    // Filter out users who have disabled "Updates & new features" emails
     const eligibleProfiles = (profiles || []).filter(p => {
       const prefs = p.email_prefs || {};
-      return prefs.marketing !== false; // default is opted-in
+      return prefs.updates !== false; // default is opted-in
     });
 
     // Fetch emails from auth.users for eligible profiles
