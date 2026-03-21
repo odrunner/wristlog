@@ -4285,7 +4285,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.10.53';
+const APP_VERSION = '2.36.21.11.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10567,13 +10567,18 @@ async function approveOfficialDraft(draftId) {
     });
     if (logErr) throw logErr;
     // Step 3: update draft status
-    await db.from('official_drafts').update({
+    const { error: draftErr } = await db.from('official_drafts').update({
       status: 'published',
       published_at: new Date().toISOString(),
       published_log_id: logId,
       photo_stored_url: storedUrl,
       updated_at: new Date().toISOString(),
     }).eq('id', draftId);
+    if (draftErr) {
+      // Rollback: delete the orphan log entry
+      await db.from('logs').delete().eq('id', logId);
+      throw draftErr;
+    }
     toast('Published to official feed!');
     loadOfficialDrafts();
   } catch (e) {
@@ -10679,8 +10684,8 @@ function getBroadcastImages() {
 // Build inline image HTML snippet for email
 function imgSnippet(img) {
   return `</div></td></tr><tr><td style="padding:8px 28px;">
-    <img src="${img.src}" alt="" style="max-width:100%;border-radius:8px;display:block;">
-    ${img.caption ? `<div style="font-size:12px;color:#888;margin-top:4px;text-align:center;">${img.caption}</div>` : ''}
+    <img src="${escHtml(img.src)}" alt="" style="max-width:100%;border-radius:8px;display:block;">
+    ${img.caption ? `<div style="font-size:12px;color:#888;margin-top:4px;text-align:center;">${escHtml(img.caption)}</div>` : ''}
   </td></tr><tr><td style="padding:0 28px;"><div style="font-size:14px;color:#555;line-height:1.6;">`;
 }
 
@@ -10708,8 +10713,8 @@ function buildBroadcastEmailHtml(heading, bodyHtml, images) {
   images.forEach((img, i) => {
     if (!usedMarkers.has(i)) {
       trailingImagesHtml += `<tr><td style="padding:8px 28px;">
-        <img src="${img.src}" alt="" style="max-width:100%;border-radius:8px;display:block;">
-        ${img.caption ? `<div style="font-size:12px;color:#888;margin-top:4px;text-align:center;">${img.caption}</div>` : ''}
+        <img src="${escHtml(img.src)}" alt="" style="max-width:100%;border-radius:8px;display:block;">
+        ${img.caption ? `<div style="font-size:12px;color:#888;margin-top:4px;text-align:center;">${escHtml(img.caption)}</div>` : ''}
       </td></tr>`;
     }
   });
@@ -10920,9 +10925,13 @@ function renderBroadcastDrafts() {
     </div>`).join('');
 }
 
+let _broadcastSending = false;
+
 async function sendBroadcastTest() {
+  if (_broadcastSending) return;
   const subject = document.getElementById('broadcast-subject')?.value?.trim();
   if (!subject) { toast('Subject is required', 'error'); return; }
+  _broadcastSending = true;
   const statusEl = document.getElementById('broadcast-status');
   statusEl.innerHTML = '<span style="color:var(--gold);">Uploading images & sending test…</span>';
 
@@ -10953,6 +10962,8 @@ async function sendBroadcastTest() {
   } catch (e) {
     statusEl.innerHTML = `<span style="color:var(--danger);">Error: ${escHtml(e.message)}</span>`;
     toast('Failed to send test: ' + e.message, 'error');
+  } finally {
+    _broadcastSending = false;
   }
 }
 
@@ -10972,6 +10983,8 @@ async function sendBroadcastAll() {
 }
 
 async function confirmBroadcastAll() {
+  if (_broadcastSending) return;
+  _broadcastSending = true;
   const subject = document.getElementById('broadcast-subject')?.value?.trim();
   const statusEl = document.getElementById('broadcast-status');
   statusEl.innerHTML = '<span style="color:var(--gold);">Uploading images & sending to all users…</span>';
@@ -10999,6 +11012,8 @@ async function confirmBroadcastAll() {
   } catch (e) {
     statusEl.innerHTML = `<span style="color:var(--danger);">Error: ${escHtml(e.message)}</span>`;
     toast('Broadcast failed: ' + e.message, 'error');
+  } finally {
+    _broadcastSending = false;
   }
 }
 

@@ -14,6 +14,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") ?? "";
 
+function esc(s: string): string {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 serve(async (req) => {
   try {
     const body = await req.json();
@@ -53,8 +57,8 @@ serve(async (req) => {
       provider = "Google or Email";
     }
 
-    const displayName = record.display_name || "Not set";
-    const username = record.username || "Not set";
+    const displayName = esc(record.display_name || "Not set");
+    const username = esc(record.username || "Not set");
     const createdAt = record.created_at || new Date().toISOString();
 
     // Count total users for context
@@ -79,7 +83,7 @@ serve(async (req) => {
           <table style="width:100%;border-collapse:collapse;font-size:14px;color:#333;">
             <tr><td style="padding:8px 0;font-weight:600;color:#888;width:110px;">Name</td><td style="padding:8px 0;">${displayName}</td></tr>
             <tr><td style="padding:8px 0;font-weight:600;color:#888;">Username</td><td style="padding:8px 0;">@${username}</td></tr>
-            <tr><td style="padding:8px 0;font-weight:600;color:#888;">Email</td><td style="padding:8px 0;">${userEmail}</td></tr>
+            <tr><td style="padding:8px 0;font-weight:600;color:#888;">Email</td><td style="padding:8px 0;">${esc(userEmail)}</td></tr>
             <tr><td style="padding:8px 0;font-weight:600;color:#888;">Provider</td><td style="padding:8px 0;">${provider}</td></tr>
             <tr><td style="padding:8px 0;font-weight:600;color:#888;">Signed up</td><td style="padding:8px 0;">${createdAt}</td></tr>
             <tr><td style="padding:8px 0;font-weight:600;color:#888;">Total users</td><td style="padding:8px 0;font-weight:600;color:#b8941f;">${count ?? "?"}</td></tr>

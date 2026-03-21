@@ -64,6 +64,11 @@ serve(async (req) => {
       return jsonResponse({ error: "subject and html are required" }, 400);
     }
 
+    // Limit HTML body size to 500KB to prevent abuse
+    if (html.length > 512000) {
+      return jsonResponse({ error: "Email body too large (max 500KB)" }, 400);
+    }
+
     // Use service role client for admin operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -90,41 +95,66 @@ serve(async (req) => {
       return prefs.updates !== false; // default is opted-in
     });
 
-    // Fetch emails from auth.users for eligible profiles
-    let sent = 0;
-    let failed = 0;
-    const errors: string[] = [];
-
-    // Process in batches of 10 to avoid rate limits
-    const batchSize = 10;
-    for (let i = 0; i < eligibleProfiles.length; i += batchSize) {
-      const batch = eligibleProfiles.slice(i, i + batchSize);
+    // Resolve emails from auth.users in parallel batches of 50
+    const emails: string[] = [];
+    const resolveSize = 50;
+    for (let i = 0; i < eligibleProfiles.length; i += resolveSize) {
+      const batch = eligibleProfiles.slice(i, i + resolveSize);
       const results = await Promise.allSettled(
         batch.map(async (profile) => {
-          const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(profile.id);
-          if (authError || !authUser?.user?.email) {
-            throw new Error(`No email for ${profile.id}`);
-          }
-          return sendEmail(authUser.user.email, subject, html);
+          const { data: authUser } = await supabase.auth.admin.getUserById(profile.id);
+          return authUser?.user?.email || null;
         })
       );
-
       for (const r of results) {
-        if (r.status === "fulfilled") sent++;
-        else {
-          failed++;
-          errors.push(r.reason?.message || "Unknown error");
-        }
-      }
-
-      // Small delay between batches to respect rate limits
-      if (i + batchSize < eligibleProfiles.length) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        if (r.status === "fulfilled" && r.value) emails.push(r.value);
       }
     }
 
-    console.log(`[send-broadcast] Sent ${sent}, failed ${failed}, total eligible ${eligibleProfiles.length}`);
-    return jsonResponse({ sent, failed, total: eligibleProfiles.length, errors: errors.slice(0, 5) });
+    // Send via Resend batch API (up to 100 per request)
+    let sent = 0;
+    let failed = 0;
+    const errors: string[] = [];
+    const batchSize = 100;
+
+    for (let i = 0; i < emails.length; i += batchSize) {
+      const batch = emails.slice(i, i + batchSize);
+      const batchPayload = batch.map(email => ({
+        from: FROM_EMAIL,
+        to: [email],
+        subject,
+        html,
+      }));
+
+      try {
+        const res = await fetch("https://api.resend.com/emails/batch", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${RESEND_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(batchPayload),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          failed += batch.length;
+          errors.push(`Batch error: ${JSON.stringify(data)}`);
+        } else {
+          sent += batch.length;
+        }
+      } catch (err) {
+        failed += batch.length;
+        errors.push(`Batch exception: ${String(err)}`);
+      }
+
+      // Small delay between batches
+      if (i + batchSize < emails.length) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
+
+    console.log(`[send-broadcast] Sent ${sent}, failed ${failed}, total eligible ${emails.length}`);
+    return jsonResponse({ sent, failed, total: emails.length, errors: errors.slice(0, 5) });
 
   } catch (err) {
     console.error("[send-broadcast] Error:", err);

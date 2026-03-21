@@ -14,6 +14,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") ?? "";
 
+function esc(s: string): string {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 serve(async (req) => {
   try {
     const body = await req.json();
@@ -40,19 +44,19 @@ serve(async (req) => {
       supabase.from("profiles").select("username, display_name").eq("id", record.reported_user_id).single(),
     ]);
 
-    const reporterName = reporter?.display_name || reporter?.username || "Unknown";
-    const reportedName = reported?.display_name || reported?.username || "Unknown";
+    const reporterName = esc(reporter?.display_name || reporter?.username || "Unknown");
+    const reportedName = esc(reported?.display_name || reported?.username || "Unknown");
 
-    const subject = `[WRotate Report] ${record.reason} — ${record.content_type} by ${reportedName}`;
+    const subject = `[WRotate Report] ${record.reason} — ${record.content_type} by ${reported?.display_name || reported?.username || "Unknown"}`;
     const htmlBody = `
       <h2>New Content Report</h2>
       <table style="border-collapse:collapse;">
         <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Reporter</td><td>${reporterName}</td></tr>
         <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Reported user</td><td>${reportedName}</td></tr>
-        <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Content type</td><td>${record.content_type}</td></tr>
-        <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Reason</td><td>${record.reason}</td></tr>
-        <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Details</td><td>${record.details || "None"}</td></tr>
-        <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Time</td><td>${record.created_at}</td></tr>
+        <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Content type</td><td>${esc(record.content_type || "")}</td></tr>
+        <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Reason</td><td>${esc(record.reason || "")}</td></tr>
+        <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Details</td><td>${esc(record.details || "None")}</td></tr>
+        <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Time</td><td>${esc(record.created_at || "")}</td></tr>
       </table>
       <p style="margin-top:16px;"><strong>Action required within 24 hours.</strong></p>
       <p>Log in to WRotate Admin to review.</p>
