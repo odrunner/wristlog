@@ -2584,8 +2584,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
         </div>
 
+        <!-- Draft management -->
+        <div style="display:flex;gap:.5rem;margin-top:.3rem;margin-bottom:.5rem;">
+          <button class="btn btn-ghost" onclick="saveBroadcastDraft()" style="flex:1;">Save Draft</button>
+          <button class="btn btn-ghost" onclick="loadBroadcastDraft()" style="flex:1;">Load Draft</button>
+          <button class="btn btn-ghost" onclick="clearBroadcastForm()" style="flex:1;">Clear</button>
+        </div>
+        <div id="broadcast-draft-status" style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem;"></div>
+
+        <!-- Saved drafts list -->
+        <div id="broadcast-drafts-list" style="margin-bottom:.6rem;"></div>
+
         <!-- Actions -->
-        <div style="display:flex;gap:.5rem;margin-top:.3rem;">
+        <div style="display:flex;gap:.5rem;">
           <button class="btn btn-ghost" onclick="sendBroadcastTest()" style="flex:1;">Send Test to Me</button>
           <button class="btn btn-primary" onclick="sendBroadcastAll()" style="flex:1;">Send to All Users</button>
         </div>
@@ -4296,7 +4307,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.09.40';
+const APP_VERSION = '2.36.21.09.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9509,6 +9520,7 @@ function showAdminPage() {
   loadAdminFeedback();
   loadAdminReports();
   loadOfficialDrafts();
+  renderBroadcastDrafts();
 }
 
 function switchAdminTab(tab) {
@@ -10817,6 +10829,118 @@ function buildFinalBroadcastHtml(images) {
   }
 
   return buildBroadcastEmailHtml(heading, bodyHtml, images);
+}
+
+const BROADCAST_DRAFTS_KEY = 'wrotate_broadcast_drafts';
+
+function getBroadcastDrafts() {
+  try { return JSON.parse(localStorage.getItem(BROADCAST_DRAFTS_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function saveBroadcastDraft() {
+  const subject = document.getElementById('broadcast-subject')?.value?.trim() || '';
+  const heading = document.getElementById('broadcast-heading')?.value?.trim() || '';
+  const body = document.getElementById('broadcast-body')?.value?.trim() || '';
+  if (!subject && !body) { toast('Nothing to save', 'error'); return; }
+
+  // Collect image URLs (not blobs — only URLs persist)
+  const imageUrls = [];
+  for (let i = 0; i < _broadcastImageSlots; i++) {
+    const urlInput = document.querySelector(`.broadcast-image-url[data-idx="${i}"]`);
+    const captionInput = document.querySelector(`.broadcast-image-caption[data-idx="${i}"]`);
+    imageUrls.push({
+      url: urlInput?.value?.trim() || '',
+      caption: captionInput?.value?.trim() || '',
+    });
+  }
+
+  const drafts = getBroadcastDrafts();
+  const draft = {
+    id: Date.now(),
+    subject,
+    heading,
+    body,
+    imageUrls,
+    savedAt: new Date().toISOString(),
+  };
+  drafts.unshift(draft);
+  // Keep max 10 drafts
+  if (drafts.length > 10) drafts.length = 10;
+  localStorage.setItem(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts));
+
+  const statusEl = document.getElementById('broadcast-draft-status');
+  statusEl.textContent = 'Draft saved ' + new Date().toLocaleTimeString();
+  toast('Draft saved');
+  renderBroadcastDrafts();
+}
+
+function loadBroadcastDraft(id) {
+  const drafts = getBroadcastDrafts();
+  if (!drafts.length) { toast('No saved drafts', 'error'); return; }
+  // If no id, load most recent
+  const draft = id ? drafts.find(d => d.id === id) : drafts[0];
+  if (!draft) { toast('Draft not found', 'error'); return; }
+
+  document.getElementById('broadcast-subject').value = draft.subject || '';
+  document.getElementById('broadcast-heading').value = draft.heading || '';
+  document.getElementById('broadcast-body').value = draft.body || '';
+
+  // Restore image URLs
+  if (draft.imageUrls) {
+    // Ensure enough slots exist
+    while (_broadcastImageSlots < draft.imageUrls.length && _broadcastImageSlots < 3) {
+      addBroadcastImageSlot();
+    }
+    draft.imageUrls.forEach((img, i) => {
+      const urlInput = document.querySelector(`.broadcast-image-url[data-idx="${i}"]`);
+      const captionInput = document.querySelector(`.broadcast-image-caption[data-idx="${i}"]`);
+      if (urlInput) urlInput.value = img.url || '';
+      if (captionInput) captionInput.value = img.caption || '';
+    });
+  }
+
+  updateBroadcastPreview();
+  const statusEl = document.getElementById('broadcast-draft-status');
+  statusEl.textContent = 'Loaded draft from ' + new Date(draft.savedAt).toLocaleString();
+  toast('Draft loaded');
+}
+
+function deleteBroadcastDraft(id) {
+  let drafts = getBroadcastDrafts();
+  drafts = drafts.filter(d => d.id !== id);
+  localStorage.setItem(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts));
+  renderBroadcastDrafts();
+  toast('Draft deleted');
+}
+
+function clearBroadcastForm() {
+  document.getElementById('broadcast-subject').value = '';
+  document.getElementById('broadcast-heading').value = '';
+  document.getElementById('broadcast-body').value = '';
+  for (let i = 0; i < _broadcastImageSlots; i++) {
+    clearBroadcastPhoto(i);
+    const urlInput = document.querySelector(`.broadcast-image-url[data-idx="${i}"]`);
+    const captionInput = document.querySelector(`.broadcast-image-caption[data-idx="${i}"]`);
+    if (urlInput) urlInput.value = '';
+    if (captionInput) captionInput.value = '';
+  }
+  updateBroadcastPreview();
+  document.getElementById('broadcast-draft-status').textContent = '';
+  document.getElementById('broadcast-status').innerHTML = '';
+}
+
+function renderBroadcastDrafts() {
+  const el = document.getElementById('broadcast-drafts-list');
+  if (!el) return;
+  const drafts = getBroadcastDrafts();
+  if (!drafts.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem;">Saved Drafts</div>' +
+    drafts.map(d => `<div style="display:flex;align-items:center;gap:.4rem;padding:.35rem .5rem;background:var(--surface);border-radius:6px;margin-bottom:.25rem;font-size:.82rem;">
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;" onclick="loadBroadcastDraft(${d.id})" title="Click to load">${escHtml(d.subject || '(no subject)')}</span>
+      <span style="color:var(--muted);font-size:.72rem;white-space:nowrap;">${new Date(d.savedAt).toLocaleDateString()}</span>
+      <button class="btn btn-ghost" style="padding:.1rem .3rem;font-size:.7rem;" onclick="deleteBroadcastDraft(${d.id})">✕</button>
+    </div>`).join('');
 }
 
 async function sendBroadcastTest() {
