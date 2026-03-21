@@ -2553,7 +2553,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
         <div class="draft-form-row">
           <label>Body (supports HTML: &lt;b&gt;, &lt;a&gt;, &lt;br&gt;, &lt;ul&gt;/&lt;li&gt;. Use [img1] [img2] [img3] to place images inline)</label>
-          <textarea id="broadcast-body" placeholder="Write your email content here…" rows="6" oninput="updateBroadcastPreview()"></textarea>
+          <textarea id="broadcast-body" placeholder="Write your email content here…" rows="16" oninput="updateBroadcastPreview()" style="min-height:280px;"></textarea>
         </div>
 
         <!-- Image sections — up to 3 images -->
@@ -4296,7 +4296,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.09.39';
+const APP_VERSION = '2.36.21.09.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10797,7 +10797,7 @@ async function uploadBroadcastImages() {
     const caption = captionInput?.value?.trim() || '';
 
     if (blob) {
-      const path = `broadcast/${Date.now()}-${i}.jpg`;
+      const path = `official-drafts/broadcast-${Date.now()}-${i}.jpg`;
       const url = await uploadImage(blob, path);
       images.push({ src: url, caption });
     } else if (urlInput?.value?.trim()) {
