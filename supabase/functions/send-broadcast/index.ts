@@ -16,7 +16,24 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ADMIN_USER_ID = "d70b1a85-4f31-4431-b3b7-db76543daaf5";
 const FROM_EMAIL = "WRotate <hello@wrotate.com>";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+function jsonResponse(body: object, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: CORS_HEADERS });
+  }
+
   try {
     // Verify admin — check Authorization header for service role or user JWT
     const authHeader = req.headers.get("Authorization") ?? "";
@@ -30,14 +47,14 @@ serve(async (req) => {
     // Verify the caller is admin
     const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
     if (userError || !user || user.id !== ADMIN_USER_ID) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 403 });
+      return jsonResponse({ error: "Unauthorized" }, 403);
     }
 
     const body = await req.json();
     const { subject, html, test_email } = body;
 
     if (!subject || !html) {
-      return new Response(JSON.stringify({ error: "subject and html are required" }), { status: 400 });
+      return jsonResponse({ error: "subject and html are required" }, 400);
     }
 
     // Use service role client for admin operations
@@ -46,7 +63,7 @@ serve(async (req) => {
     // Test mode: send to a single email
     if (test_email) {
       const result = await sendEmail(test_email, subject, html);
-      return new Response(JSON.stringify({ sent: 1, test: true, result }), { status: 200 });
+      return jsonResponse({ sent: 1, test: true, result });
     }
 
     // Production mode: send to all users
@@ -57,7 +74,7 @@ serve(async (req) => {
       .eq("is_suspended", false);
 
     if (profilesError) {
-      return new Response(JSON.stringify({ error: "Failed to fetch profiles", details: profilesError }), { status: 500 });
+      return jsonResponse({ error: "Failed to fetch profiles", details: profilesError }, 500);
     }
 
     // Filter out users who have explicitly disabled marketing emails
@@ -100,11 +117,11 @@ serve(async (req) => {
     }
 
     console.log(`[send-broadcast] Sent ${sent}, failed ${failed}, total eligible ${eligibleProfiles.length}`);
-    return new Response(JSON.stringify({ sent, failed, total: eligibleProfiles.length, errors: errors.slice(0, 5) }), { status: 200 });
+    return jsonResponse({ sent, failed, total: eligibleProfiles.length, errors: errors.slice(0, 5) });
 
   } catch (err) {
     console.error("[send-broadcast] Error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
+    return jsonResponse({ error: String(err) }, 500);
   }
 });
 
