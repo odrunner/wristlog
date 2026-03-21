@@ -935,21 +935,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .help-mini-desc { font-size: .78rem; color: var(--muted); line-height: 1.5; }
 
     /* ── FEEDBACK ── */
-    /* ── FEEDBACK FAB ── */
-    .feedback-fab {
-      position: fixed; bottom: 24px; right: 20px; z-index: 400;
-      background: var(--gold); color: #000; border: none;
-      border-radius: 50px; padding: .55rem 1rem;
-      font-size: .8rem; font-weight: 700; font-family: inherit;
-      cursor: pointer; display: none; align-items: center; gap: .4rem;
-      box-shadow: 0 4px 16px rgba(0,0,0,.35);
-      transition: transform .15s, box-shadow .15s;
-    }
-    .feedback-fab:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.45); }
-    .feedback-fab:active { transform: translateY(0); }
-    @media (max-width: 640px) {
-      .feedback-fab { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); right: 16px; }
-    }
 
     /* ── STRAP TRACKER (Edit Watch modal) ── */
     .strap-row             { display: flex; align-items: center; gap: .5rem; padding: .3rem 0; border-bottom: 1px solid var(--border); }
@@ -3635,11 +3620,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ FEEDBACK MODAL ════ -->
-<button class="feedback-fab" id="feedback-fab" onclick="openFeedback()">
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-  Feedback
-</button>
-
 <!-- @mention autocomplete dropdown (shared, repositioned dynamically) -->
 <div id="mention-ac" class="mention-ac" role="listbox"></div>
 
@@ -4084,8 +4064,6 @@ async function signOut() {
   if (profileBtn) profileBtn.style.display = 'none';
   const helpBtn = document.getElementById('help-btn');
   if (helpBtn) helpBtn.style.display = 'none';
-  const feedbackFab = document.getElementById('feedback-fab');
-  if (feedbackFab) feedbackFab.style.display = 'none';
 }
 
 // ══════════════════════════════════════════
@@ -4307,7 +4285,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.10.21';
+const APP_VERSION = '2.36.21.10.44';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16228,8 +16206,6 @@ async function bootApp(user) {
   if (profileBtn) profileBtn.style.display = '';
   const helpBtn = document.getElementById('help-btn');
   if (helpBtn) helpBtn.style.display = '';
-  const feedbackFab = document.getElementById('feedback-fab');
-  if (feedbackFab) feedbackFab.style.display = 'flex';
   const bellBtn = document.getElementById('bell-btn');
   if (bellBtn) bellBtn.style.display = '';
   // Start feed/social loading immediately — don't block on user data
@@ -16316,8 +16292,6 @@ db.auth.onAuthStateChange((event, session) => {
     if (profileBtn2) profileBtn2.style.display = 'none';
     const helpBtn2 = document.getElementById('help-btn');
     if (helpBtn2) helpBtn2.style.display = 'none';
-    const feedbackFab2 = document.getElementById('feedback-fab');
-    if (feedbackFab2) feedbackFab2.style.display = 'none';
     const bellBtn2 = document.getElementById('bell-btn');
     if (bellBtn2) bellBtn2.style.display = 'none';
     const notifPanel = document.getElementById('notif-panel');
