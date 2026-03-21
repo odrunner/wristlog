@@ -4275,6 +4275,10 @@ async function cloudSync() {
       const delay = Math.min(2000 * Math.pow(2, _syncRetryCount - 1), 60000);
       clearTimeout(_syncRetryTimer);
       _syncRetryTimer = setTimeout(cloudSync, delay);
+      // Surface persistent failures after 3 retries
+      if (_syncRetryCount >= 3) {
+        toast('Some changes haven\'t synced yet. Check your connection.', 'error');
+      }
     } else {
       _syncRetryCount = 0;
     }
@@ -4285,7 +4289,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.11.34';
+const APP_VERSION = '2.36.21.11.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5351,8 +5355,10 @@ async function _execBlock() {
   blockedUsers.add(userId);
 
   // Remove follow relationships in both directions
-  await db.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', userId);
-  await db.from('follows').delete().eq('follower_id', userId).eq('following_id', currentUser.id);
+  const { error: delErr1 } = await db.from('follows').delete().eq('follower_id', currentUser.id).eq('following_id', userId);
+  if (delErr1) console.error('[blockUser] follow delete 1:', delErr1.message);
+  const { error: delErr2 } = await db.from('follows').delete().eq('follower_id', userId).eq('following_id', currentUser.id);
+  if (delErr2) console.error('[blockUser] follow delete 2:', delErr2.message);
   following.delete(userId);
 
   // Remove their content from feed
@@ -5430,9 +5436,10 @@ async function initiateFriendRequest(userId) {
   });
   if (error) { toast('Could not send friend request — ' + error.message, 'error'); return; }
 
-  await db.from('notifications').insert({
+  const { error: notifErr } = await db.from('notifications').insert({
     user_id: userId, type: 'friend_request', actor_id: currentUser.id, is_read: false,
   });
+  if (notifErr) console.error('[initiateFriendRequest] notification insert:', notifErr.message);
 
   await loadFriendRequests(true);
   computeFriendships();
@@ -9615,8 +9622,10 @@ function renderReportCard(r) {
 async function adminConfirmRemoval(reportId, contentType, contentId) {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const table = contentType === 'comment' ? 'comments' : 'logs';
-  await db.from(table).update({ moderation_status: 'removed' }).eq('id', contentId);
-  await db.from('content_reports').update({ status: 'actioned', actioned_at: new Date().toISOString() }).eq('id', reportId);
+  const { error: modErr } = await db.from(table).update({ moderation_status: 'removed' }).eq('id', contentId);
+  if (modErr) { toast('Failed to remove content: ' + modErr.message, 'error'); return; }
+  const { error: repErr } = await db.from('content_reports').update({ status: 'actioned', actioned_at: new Date().toISOString() }).eq('id', reportId);
+  if (repErr) { toast('Content removed but report update failed', 'error'); }
   const r = _adminReportsData.find(x => x.id === reportId);
   if (r) { r.status = 'actioned'; r.actioned_at = new Date().toISOString(); }
   renderAdminReports();
@@ -9626,8 +9635,10 @@ async function adminConfirmRemoval(reportId, contentType, contentId) {
 async function adminRestoreContent(reportId, contentType, contentId) {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const table = contentType === 'comment' ? 'comments' : 'logs';
-  await db.from(table).update({ moderation_status: null }).eq('id', contentId);
-  await db.from('content_reports').update({ status: 'dismissed' }).eq('id', reportId);
+  const { error: modErr } = await db.from(table).update({ moderation_status: null }).eq('id', contentId);
+  if (modErr) { toast('Failed to restore content: ' + modErr.message, 'error'); return; }
+  const { error: repErr } = await db.from('content_reports').update({ status: 'dismissed' }).eq('id', reportId);
+  if (repErr) { toast('Content restored but report update failed', 'error'); }
   const r = _adminReportsData.find(x => x.id === reportId);
   if (r) r.status = 'dismissed';
   renderAdminReports();
@@ -10791,9 +10802,13 @@ async function uploadBroadcastImages() {
     const caption = captionInput?.value?.trim() || '';
 
     if (blob) {
-      const path = `official-drafts/broadcast-${Date.now()}-${i}.jpg`;
-      const url = await uploadImage(blob, path);
-      images.push({ src: url, caption });
+      try {
+        const path = `official-drafts/broadcast-${Date.now()}-${i}.jpg`;
+        const url = await uploadImage(blob, path);
+        images.push({ src: url, caption });
+      } catch (e) {
+        toast(`Image ${i + 1} upload failed: ${e.message}`, 'error');
+      }
     } else if (urlInput?.value?.trim()) {
       images.push({ src: urlInput.value.trim(), caption });
     }
