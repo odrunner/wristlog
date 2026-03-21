@@ -2552,7 +2552,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <input type="text" id="broadcast-heading" placeholder="Optional heading inside email body" oninput="updateBroadcastPreview()">
         </div>
         <div class="draft-form-row">
-          <label>Body (supports simple HTML: &lt;b&gt;, &lt;a&gt;, &lt;br&gt;, &lt;ul&gt;/&lt;li&gt;)</label>
+          <label>Body (supports HTML: &lt;b&gt;, &lt;a&gt;, &lt;br&gt;, &lt;ul&gt;/&lt;li&gt;. Use [img1] [img2] [img3] to place images inline)</label>
           <textarea id="broadcast-body" placeholder="Write your email content here…" rows="6" oninput="updateBroadcastPreview()"></textarea>
         </div>
 
@@ -4296,7 +4296,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.09.13';
+const APP_VERSION = '2.36.21.09.32';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10690,24 +10690,44 @@ function getBroadcastImages() {
   return images;
 }
 
-function buildBroadcastHtml() {
-  const heading = document.getElementById('broadcast-heading')?.value?.trim() || '';
-  const body = document.getElementById('broadcast-body')?.value?.trim() || '';
-  const images = getBroadcastImages();
+// Build inline image HTML snippet for email
+function imgSnippet(img) {
+  return `</div></td></tr><tr><td style="padding:8px 28px;">
+    <img src="${img.src}" alt="" style="max-width:100%;border-radius:8px;display:block;">
+    ${img.caption ? `<div style="font-size:12px;color:#888;margin-top:4px;text-align:center;">${img.caption}</div>` : ''}
+  </td></tr><tr><td style="padding:0 28px;"><div style="font-size:14px;color:#555;line-height:1.6;">`;
+}
 
-  let imagesHtml = '';
-  for (const img of images) {
-    imagesHtml += `<tr><td style="padding:8px 28px;">
-      <img src="${img.src}" alt="" style="max-width:100%;border-radius:8px;display:block;">
-      ${img.caption ? `<div style="font-size:12px;color:#888;margin-top:4px;text-align:center;">${img.caption}</div>` : ''}
-    </td></tr>`;
+// Replace [img1], [img2], [img3] markers in body HTML with inline images
+function inlineImages(bodyHtml, images) {
+  for (let i = 0; i < 3; i++) {
+    const marker = `[img${i + 1}]`;
+    if (bodyHtml.includes(marker) && images[i]) {
+      bodyHtml = bodyHtml.replace(marker, imgSnippet(images[i]));
+    }
   }
+  return bodyHtml;
+}
 
-  // Convert line breaks in body to <br> if no HTML tags present
-  let bodyHtml = body;
-  if (body && !/<[a-z][\s\S]*>/i.test(body)) {
-    bodyHtml = body.replace(/\n/g, '<br>');
+function buildBroadcastEmailHtml(heading, bodyHtml, images) {
+  // Inline [img1]/[img2]/[img3] markers
+  bodyHtml = inlineImages(bodyHtml, images);
+
+  // Any images NOT referenced by markers go at the bottom
+  const usedMarkers = new Set();
+  const rawBody = document.getElementById('broadcast-body')?.value || '';
+  for (let i = 0; i < 3; i++) {
+    if (rawBody.includes(`[img${i + 1}]`)) usedMarkers.add(i);
   }
+  let trailingImagesHtml = '';
+  images.forEach((img, i) => {
+    if (!usedMarkers.has(i)) {
+      trailingImagesHtml += `<tr><td style="padding:8px 28px;">
+        <img src="${img.src}" alt="" style="max-width:100%;border-radius:8px;display:block;">
+        ${img.caption ? `<div style="font-size:12px;color:#888;margin-top:4px;text-align:center;">${img.caption}</div>` : ''}
+      </td></tr>`;
+    }
+  });
 
   return `<!DOCTYPE html>
 <html>
@@ -10724,7 +10744,7 @@ function buildBroadcastHtml() {
         <tr><td style="padding:${heading ? '8px' : '24px'} 28px 16px;">
           <div style="font-size:14px;color:#555;line-height:1.6;">${bodyHtml}</div>
         </td></tr>
-        ${imagesHtml}
+        ${trailingImagesHtml}
         <tr><td style="padding:16px 28px 28px;">
           <a href="https://wrotate.com" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
         </td></tr>
@@ -10739,6 +10759,19 @@ function buildBroadcastHtml() {
   </table>
 </body>
 </html>`;
+}
+
+function buildBroadcastHtml() {
+  const heading = document.getElementById('broadcast-heading')?.value?.trim() || '';
+  const body = document.getElementById('broadcast-body')?.value?.trim() || '';
+  const images = getBroadcastImages();
+
+  let bodyHtml = body;
+  if (body && !/<[a-z][\s\S]*>/i.test(body.replace(/\[img\d\]/g, ''))) {
+    bodyHtml = body.replace(/\n/g, '<br>');
+  }
+
+  return buildBroadcastEmailHtml(heading, bodyHtml, images);
 }
 
 function updateBroadcastPreview() {
@@ -10775,53 +10808,15 @@ async function uploadBroadcastImages() {
 }
 
 function buildFinalBroadcastHtml(images) {
-  // Rebuild HTML with final uploaded URLs
   const heading = document.getElementById('broadcast-heading')?.value?.trim() || '';
   const body = document.getElementById('broadcast-body')?.value?.trim() || '';
 
-  let imagesHtml = '';
-  for (const img of images) {
-    imagesHtml += `<tr><td style="padding:8px 28px;">
-      <img src="${img.src}" alt="" style="max-width:100%;border-radius:8px;display:block;">
-      ${img.caption ? `<div style="font-size:12px;color:#888;margin-top:4px;text-align:center;">${img.caption}</div>` : ''}
-    </td></tr>`;
-  }
-
   let bodyHtml = body;
-  if (body && !/<[a-z][\s\S]*>/i.test(body)) {
+  if (body && !/<[a-z][\s\S]*>/i.test(body.replace(/\[img\d\]/g, ''))) {
     bodyHtml = body.replace(/\n/g, '<br>');
   }
 
-  return `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:40px 20px;">
-    <tr><td align="center">
-      <table width="100%" style="max-width:480px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
-        <tr><td style="padding:28px 28px 20px;text-align:center;border-bottom:1px solid #eee;">
-          <img src="https://wrotate.com/icon.svg" alt="WRotate" width="40" height="40" style="display:inline-block;border-radius:9px;margin-bottom:8px;">
-          <div style="font-size:18px;font-weight:700;color:#b8941f;letter-spacing:.03em;">WRotate</div>
-        </td></tr>
-        ${heading ? `<tr><td style="padding:24px 28px 8px;"><div style="font-size:17px;font-weight:700;color:#1a1a1a;">${heading}</div></td></tr>` : ''}
-        <tr><td style="padding:${heading ? '8px' : '24px'} 28px 16px;">
-          <div style="font-size:14px;color:#555;line-height:1.6;">${bodyHtml}</div>
-        </td></tr>
-        ${imagesHtml}
-        <tr><td style="padding:16px 28px 28px;">
-          <a href="https://wrotate.com" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
-        </td></tr>
-        <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
-          <div style="font-size:11px;color:#999;line-height:1.5;">
-            You're receiving this because you have a WRotate account.
-            To stop receiving marketing emails, open WRotate &rarr; Profile &rarr; Notifications &rarr; disable "Marketing emails".
-          </div>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+  return buildBroadcastEmailHtml(heading, bodyHtml, images);
 }
 
 async function sendBroadcastTest() {
