@@ -1,14 +1,22 @@
 # WRotate — Project Instructions
 
+## Environment Setup
+- **Claude runs on the Mac Mini** (192.168.1.246) — the user accesses the local dev server from their MacBook Pro, phone, or sometimes directly on the Mac Mini
+- The local dev server runs automatically via LaunchAgent (`com.wrotate.devserver.plist`) — it starts on boot and auto-restarts on crash. Logs at `/tmp/wrotate-devserver.log`
+
+## Deployment
+- **Production deploys via `git push origin main`** — hosting auto-deploys from the repo (GitHub: odrunner/wristlog)
+- **Always test locally first** (http://192.168.1.246:3000 from MacBook Pro/phone, or localhost:3000 on the Mac Mini) before deploying
+- **Supabase edge functions** are deployed separately via `npx supabase functions deploy <name>` (requires `supabase login` first)
+
 ## Development Workflow
-- **Always test locally first** (localhost:3000) before deploying to production
 - **Note the stable commit hash** before making changes (for rollback)
 - **Run tests before committing** — all tests must pass
 - **Bump SW cache version** (`sw.js` → `wristlog-vNN`) on every HTML/JS change
 - **Update the test suite** after deployments to cover new/changed behavior
 
 ## Test Commands
-All commands require node on PATH: `export PATH="/Users/ozgurdogan/.nvm/versions/node/v22.22.1/bin:$PATH"`
+Node is installed via Homebrew at `/opt/homebrew/bin` (v25.8.1)
 
 | What | Command | Notes |
 |------|---------|-------|

@@ -2423,6 +2423,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button type="button" class="chip" data-tab="feedback" onclick="switchAdminTab('feedback')">Feedback</button>
       <button type="button" class="chip" data-tab="reports" onclick="switchAdminTab('reports')">Reports</button>
       <button type="button" class="chip" data-tab="official" onclick="switchAdminTab('official')">Official</button>
+      <button type="button" class="chip" data-tab="broadcast" onclick="switchAdminTab('broadcast')">Broadcast</button>
     </div>
 
     <!-- Tab: Traffic -->
@@ -2532,6 +2533,64 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
 
       <div id="official-drafts-list"><div style="color:var(--muted);font-size:.9rem;">Loading…</div></div>
+    </div>
+
+    <!-- Tab: Broadcast -->
+    <div id="admin-tab-broadcast" class="admin-tab" style="display:none;">
+      <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Broadcast Email</div>
+      </div>
+
+      <!-- Composer -->
+      <div style="background:var(--surface2);border-radius:10px;padding:.85rem;margin-bottom:1rem;">
+        <div class="draft-form-row">
+          <label>Subject</label>
+          <input type="text" id="broadcast-subject" placeholder="What's new at WRotate" oninput="updateBroadcastPreview()">
+        </div>
+        <div class="draft-form-row">
+          <label>Heading</label>
+          <input type="text" id="broadcast-heading" placeholder="Optional heading inside email body" oninput="updateBroadcastPreview()">
+        </div>
+        <div class="draft-form-row">
+          <label>Body (supports simple HTML: &lt;b&gt;, &lt;a&gt;, &lt;br&gt;, &lt;ul&gt;/&lt;li&gt;)</label>
+          <textarea id="broadcast-body" placeholder="Write your email content here…" rows="6" oninput="updateBroadcastPreview()"></textarea>
+        </div>
+
+        <!-- Image sections — up to 3 images -->
+        <div id="broadcast-images">
+          <div class="draft-form-row broadcast-image-row" data-idx="0">
+            <label>Image 1</label>
+            <div class="official-photo-drop broadcast-photo-drop" data-idx="0"
+                 onclick="document.getElementById('broadcast-photo-file-0').click()"
+                 ondragover="event.preventDefault();this.classList.add('dragover')"
+                 ondragleave="this.classList.remove('dragover')"
+                 ondrop="event.preventDefault();this.classList.remove('dragover');handleBroadcastPhotoDrop(event,0)">
+              <div class="broadcast-photo-placeholder" data-idx="0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><div>Click to upload or drag &amp; drop</div></div>
+              <img class="broadcast-photo-preview" data-idx="0" style="display:none;" alt="">
+              <button type="button" class="photo-clear broadcast-photo-clear" data-idx="0" style="display:none;" onclick="event.stopPropagation();clearBroadcastPhoto(0)">✕</button>
+            </div>
+            <input type="file" id="broadcast-photo-file-0" accept="image/*" style="display:none" onchange="handleBroadcastPhotoFile(this,0)">
+            <input type="text" class="broadcast-image-url" data-idx="0" placeholder="Or paste image URL" oninput="updateBroadcastPreview()">
+            <input type="text" class="broadcast-image-caption" data-idx="0" placeholder="Image caption (optional)" oninput="updateBroadcastPreview()">
+          </div>
+        </div>
+        <button class="btn btn-ghost" onclick="addBroadcastImageSlot()" id="broadcast-add-image-btn" style="font-size:.78rem;margin-bottom:.6rem;">+ Add another image</button>
+
+        <!-- Preview -->
+        <div class="draft-form-row">
+          <label>Email Preview</label>
+          <div id="broadcast-preview" style="background:#f4f4f4;border-radius:8px;padding:1rem;max-height:500px;overflow-y:auto;">
+            <div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">Start typing to see preview</div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div style="display:flex;gap:.5rem;margin-top:.3rem;">
+          <button class="btn btn-ghost" onclick="sendBroadcastTest()" style="flex:1;">Send Test to Me</button>
+          <button class="btn btn-primary" onclick="sendBroadcastAll()" style="flex:1;">Send to All Users</button>
+        </div>
+        <div id="broadcast-status" style="font-size:.82rem;margin-top:.5rem;"></div>
+      </div>
     </div>
   </div>
 
@@ -4237,7 +4296,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.20.08.07';
+const APP_VERSION = '2.36.21.09.13';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10154,6 +10213,41 @@ document.addEventListener('paste', (e) => {
   }
 });
 
+// Paste image from clipboard on the broadcast tab — fills first empty slot
+document.addEventListener('paste', (e) => {
+  const broadcastTab = document.getElementById('admin-tab-broadcast');
+  if (!broadcastTab || broadcastTab.style.display === 'none') return;
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      e.preventDefault();
+      const blob = item.getAsFile();
+      if (!blob) return;
+      // Find first empty slot
+      let idx = 0;
+      for (let i = 0; i < _broadcastImageSlots; i++) {
+        if (!_broadcastPhotoBlobs[i]) { idx = i; break; }
+        idx = i;
+      }
+      _broadcastPhotoBlobs[idx] = blob;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const preview = document.querySelector(`.broadcast-photo-preview[data-idx="${idx}"]`);
+        preview.src = reader.result;
+        preview.style.display = '';
+        document.querySelector(`.broadcast-photo-placeholder[data-idx="${idx}"]`).style.display = 'none';
+        document.querySelector(`.broadcast-photo-clear[data-idx="${idx}"]`).style.display = '';
+        const urlInput = document.querySelector(`.broadcast-image-url[data-idx="${idx}"]`);
+        if (urlInput) urlInput.value = '';
+        updateBroadcastPreview();
+      };
+      reader.readAsDataURL(blob);
+      return;
+    }
+  }
+});
+
 function updateOfficialPreview() {
   const el = document.getElementById('official-feed-preview');
   if (!el) return;
@@ -10495,6 +10589,318 @@ async function approveOfficialDraft(draftId) {
   } catch (e) {
     toast('Publish failed: ' + e.message, 'error');
     renderOfficialDrafts();
+  }
+}
+
+// ── Broadcast Email ──────────────────────────────────────────────────────
+let _broadcastPhotoBlobs = [null, null, null];
+let _broadcastImageSlots = 1;
+
+function handleBroadcastPhotoFile(input, idx) {
+  const file = input.files?.[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  _broadcastPhotoBlobs[idx] = file;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const preview = document.querySelector(`.broadcast-photo-preview[data-idx="${idx}"]`);
+    preview.src = reader.result;
+    preview.style.display = '';
+    document.querySelector(`.broadcast-photo-placeholder[data-idx="${idx}"]`).style.display = 'none';
+    document.querySelector(`.broadcast-photo-clear[data-idx="${idx}"]`).style.display = '';
+    const urlInput = document.querySelector(`.broadcast-image-url[data-idx="${idx}"]`);
+    if (urlInput) urlInput.value = '';
+    updateBroadcastPreview();
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleBroadcastPhotoDrop(event, idx) {
+  const file = event.dataTransfer?.files?.[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  _broadcastPhotoBlobs[idx] = file;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const preview = document.querySelector(`.broadcast-photo-preview[data-idx="${idx}"]`);
+    preview.src = reader.result;
+    preview.style.display = '';
+    document.querySelector(`.broadcast-photo-placeholder[data-idx="${idx}"]`).style.display = 'none';
+    document.querySelector(`.broadcast-photo-clear[data-idx="${idx}"]`).style.display = '';
+    const urlInput = document.querySelector(`.broadcast-image-url[data-idx="${idx}"]`);
+    if (urlInput) urlInput.value = '';
+    updateBroadcastPreview();
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearBroadcastPhoto(idx) {
+  _broadcastPhotoBlobs[idx] = null;
+  const preview = document.querySelector(`.broadcast-photo-preview[data-idx="${idx}"]`);
+  if (preview) { preview.style.display = 'none'; preview.src = ''; }
+  const placeholder = document.querySelector(`.broadcast-photo-placeholder[data-idx="${idx}"]`);
+  if (placeholder) placeholder.style.display = '';
+  const clearBtn = document.querySelector(`.broadcast-photo-clear[data-idx="${idx}"]`);
+  if (clearBtn) clearBtn.style.display = 'none';
+  const fileInput = document.getElementById('broadcast-photo-file-' + idx);
+  if (fileInput) fileInput.value = '';
+  updateBroadcastPreview();
+}
+
+function addBroadcastImageSlot() {
+  if (_broadcastImageSlots >= 3) return;
+  const idx = _broadcastImageSlots;
+  _broadcastImageSlots++;
+  const container = document.getElementById('broadcast-images');
+  const row = document.createElement('div');
+  row.className = 'draft-form-row broadcast-image-row';
+  row.dataset.idx = idx;
+  row.innerHTML = `
+    <label>Image ${idx + 1}</label>
+    <div class="official-photo-drop broadcast-photo-drop" data-idx="${idx}"
+         onclick="document.getElementById('broadcast-photo-file-${idx}').click()"
+         ondragover="event.preventDefault();this.classList.add('dragover')"
+         ondragleave="this.classList.remove('dragover')"
+         ondrop="event.preventDefault();this.classList.remove('dragover');handleBroadcastPhotoDrop(event,${idx})">
+      <div class="broadcast-photo-placeholder" data-idx="${idx}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><div>Click to upload or drag &amp; drop</div></div>
+      <img class="broadcast-photo-preview" data-idx="${idx}" style="display:none;" alt="">
+      <button type="button" class="photo-clear broadcast-photo-clear" data-idx="${idx}" style="display:none;" onclick="event.stopPropagation();clearBroadcastPhoto(${idx})">&#x2715;</button>
+    </div>
+    <input type="file" id="broadcast-photo-file-${idx}" accept="image/*" style="display:none" onchange="handleBroadcastPhotoFile(this,${idx})">
+    <input type="text" class="broadcast-image-url" data-idx="${idx}" placeholder="Or paste image URL" oninput="updateBroadcastPreview()">
+    <input type="text" class="broadcast-image-caption" data-idx="${idx}" placeholder="Image caption (optional)" oninput="updateBroadcastPreview()">`;
+  container.appendChild(row);
+  if (_broadcastImageSlots >= 3) {
+    document.getElementById('broadcast-add-image-btn').style.display = 'none';
+  }
+}
+
+// Collect image URLs (uploaded blob as data-URL or pasted URL)
+function getBroadcastImages() {
+  const images = [];
+  for (let i = 0; i < _broadcastImageSlots; i++) {
+    const preview = document.querySelector(`.broadcast-photo-preview[data-idx="${i}"]`);
+    const urlInput = document.querySelector(`.broadcast-image-url[data-idx="${i}"]`);
+    const captionInput = document.querySelector(`.broadcast-image-caption[data-idx="${i}"]`);
+    const src = (preview && preview.style.display !== 'none' && preview.src)
+      ? preview.src
+      : urlInput?.value?.trim() || '';
+    if (src) {
+      images.push({ src, caption: captionInput?.value?.trim() || '' });
+    }
+  }
+  return images;
+}
+
+function buildBroadcastHtml() {
+  const heading = document.getElementById('broadcast-heading')?.value?.trim() || '';
+  const body = document.getElementById('broadcast-body')?.value?.trim() || '';
+  const images = getBroadcastImages();
+
+  let imagesHtml = '';
+  for (const img of images) {
+    imagesHtml += `<tr><td style="padding:8px 28px;">
+      <img src="${img.src}" alt="" style="max-width:100%;border-radius:8px;display:block;">
+      ${img.caption ? `<div style="font-size:12px;color:#888;margin-top:4px;text-align:center;">${img.caption}</div>` : ''}
+    </td></tr>`;
+  }
+
+  // Convert line breaks in body to <br> if no HTML tags present
+  let bodyHtml = body;
+  if (body && !/<[a-z][\s\S]*>/i.test(body)) {
+    bodyHtml = body.replace(/\n/g, '<br>');
+  }
+
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:480px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+        <tr><td style="padding:28px 28px 20px;text-align:center;border-bottom:1px solid #eee;">
+          <img src="https://wrotate.com/icon.svg" alt="WRotate" width="40" height="40" style="display:inline-block;border-radius:9px;margin-bottom:8px;">
+          <div style="font-size:18px;font-weight:700;color:#b8941f;letter-spacing:.03em;">WRotate</div>
+        </td></tr>
+        ${heading ? `<tr><td style="padding:24px 28px 8px;"><div style="font-size:17px;font-weight:700;color:#1a1a1a;">${heading}</div></td></tr>` : ''}
+        <tr><td style="padding:${heading ? '8px' : '24px'} 28px 16px;">
+          <div style="font-size:14px;color:#555;line-height:1.6;">${bodyHtml}</div>
+        </td></tr>
+        ${imagesHtml}
+        <tr><td style="padding:16px 28px 28px;">
+          <a href="https://wrotate.com" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
+        </td></tr>
+        <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
+          <div style="font-size:11px;color:#999;line-height:1.5;">
+            You're receiving this because you have a WRotate account.
+            To stop receiving marketing emails, open WRotate &rarr; Profile &rarr; Notifications &rarr; disable "Marketing emails".
+          </div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+function updateBroadcastPreview() {
+  const el = document.getElementById('broadcast-preview');
+  if (!el) return;
+  const subject = document.getElementById('broadcast-subject')?.value?.trim() || '';
+  const body = document.getElementById('broadcast-body')?.value?.trim() || '';
+  if (!subject && !body) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">Start typing to see preview</div>';
+    return;
+  }
+  const html = buildBroadcastHtml();
+  el.innerHTML = `<iframe srcdoc="${html.replace(/"/g, '&quot;')}" style="width:100%;min-height:400px;border:none;border-radius:6px;background:#fff;" sandbox></iframe>`;
+}
+
+async function uploadBroadcastImages() {
+  // Upload any blob images to Supabase Storage so they have public URLs
+  const images = [];
+  for (let i = 0; i < _broadcastImageSlots; i++) {
+    const blob = _broadcastPhotoBlobs[i];
+    const urlInput = document.querySelector(`.broadcast-image-url[data-idx="${i}"]`);
+    const captionInput = document.querySelector(`.broadcast-image-caption[data-idx="${i}"]`);
+    const caption = captionInput?.value?.trim() || '';
+
+    if (blob) {
+      const path = `broadcast/${Date.now()}-${i}.jpg`;
+      const url = await uploadImage(blob, path);
+      images.push({ src: url, caption });
+    } else if (urlInput?.value?.trim()) {
+      images.push({ src: urlInput.value.trim(), caption });
+    }
+  }
+  return images;
+}
+
+function buildFinalBroadcastHtml(images) {
+  // Rebuild HTML with final uploaded URLs
+  const heading = document.getElementById('broadcast-heading')?.value?.trim() || '';
+  const body = document.getElementById('broadcast-body')?.value?.trim() || '';
+
+  let imagesHtml = '';
+  for (const img of images) {
+    imagesHtml += `<tr><td style="padding:8px 28px;">
+      <img src="${img.src}" alt="" style="max-width:100%;border-radius:8px;display:block;">
+      ${img.caption ? `<div style="font-size:12px;color:#888;margin-top:4px;text-align:center;">${img.caption}</div>` : ''}
+    </td></tr>`;
+  }
+
+  let bodyHtml = body;
+  if (body && !/<[a-z][\s\S]*>/i.test(body)) {
+    bodyHtml = body.replace(/\n/g, '<br>');
+  }
+
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:480px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+        <tr><td style="padding:28px 28px 20px;text-align:center;border-bottom:1px solid #eee;">
+          <img src="https://wrotate.com/icon.svg" alt="WRotate" width="40" height="40" style="display:inline-block;border-radius:9px;margin-bottom:8px;">
+          <div style="font-size:18px;font-weight:700;color:#b8941f;letter-spacing:.03em;">WRotate</div>
+        </td></tr>
+        ${heading ? `<tr><td style="padding:24px 28px 8px;"><div style="font-size:17px;font-weight:700;color:#1a1a1a;">${heading}</div></td></tr>` : ''}
+        <tr><td style="padding:${heading ? '8px' : '24px'} 28px 16px;">
+          <div style="font-size:14px;color:#555;line-height:1.6;">${bodyHtml}</div>
+        </td></tr>
+        ${imagesHtml}
+        <tr><td style="padding:16px 28px 28px;">
+          <a href="https://wrotate.com" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
+        </td></tr>
+        <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
+          <div style="font-size:11px;color:#999;line-height:1.5;">
+            You're receiving this because you have a WRotate account.
+            To stop receiving marketing emails, open WRotate &rarr; Profile &rarr; Notifications &rarr; disable "Marketing emails".
+          </div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+async function sendBroadcastTest() {
+  const subject = document.getElementById('broadcast-subject')?.value?.trim();
+  if (!subject) { toast('Subject is required', 'error'); return; }
+  const statusEl = document.getElementById('broadcast-status');
+  statusEl.innerHTML = '<span style="color:var(--gold);">Uploading images & sending test…</span>';
+
+  try {
+    const images = await uploadBroadcastImages();
+    const html = buildFinalBroadcastHtml(images);
+
+    // Get current user's email
+    const { data: { user } } = await db.auth.getUser();
+    if (!user?.email) { toast('Could not get your email', 'error'); return; }
+
+    const session = await db.auth.getSession();
+    const token = session.data?.session?.access_token;
+
+    const res = await fetch(SUPABASE_URL + '/functions/v1/send-broadcast', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ subject, html, test_email: user.email }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed');
+    statusEl.innerHTML = `<span style="color:var(--success);">Test email sent to ${user.email}</span>`;
+    toast('Test email sent! Check your inbox.');
+  } catch (e) {
+    statusEl.innerHTML = `<span style="color:var(--danger);">Error: ${escHtml(e.message)}</span>`;
+    toast('Failed to send test: ' + e.message, 'error');
+  }
+}
+
+async function sendBroadcastAll() {
+  const subject = document.getElementById('broadcast-subject')?.value?.trim();
+  const body = document.getElementById('broadcast-body')?.value?.trim();
+  if (!subject) { toast('Subject is required', 'error'); return; }
+  if (!body) { toast('Body is required', 'error'); return; }
+
+  // Confirmation
+  const statusEl = document.getElementById('broadcast-status');
+  statusEl.innerHTML = `<div style="display:flex;gap:.5rem;align-items:center;padding:.5rem;background:var(--surface2);border-radius:8px;">
+    <span style="color:var(--danger);font-weight:600;">Send to ALL users?</span>
+    <button class="btn btn-primary btn-sm" onclick="confirmBroadcastAll()">Yes, send it</button>
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('broadcast-status').innerHTML=''">Cancel</button>
+  </div>`;
+}
+
+async function confirmBroadcastAll() {
+  const subject = document.getElementById('broadcast-subject')?.value?.trim();
+  const statusEl = document.getElementById('broadcast-status');
+  statusEl.innerHTML = '<span style="color:var(--gold);">Uploading images & sending to all users…</span>';
+
+  try {
+    const images = await uploadBroadcastImages();
+    const html = buildFinalBroadcastHtml(images);
+
+    const session = await db.auth.getSession();
+    const token = session.data?.session?.access_token;
+
+    const res = await fetch(SUPABASE_URL + '/functions/v1/send-broadcast', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ subject, html }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed');
+    statusEl.innerHTML = `<span style="color:var(--success);">Sent to ${data.sent} users${data.failed ? `, ${data.failed} failed` : ''}</span>`;
+    toast(`Broadcast sent to ${data.sent} users!`);
+  } catch (e) {
+    statusEl.innerHTML = `<span style="color:var(--danger);">Error: ${escHtml(e.message)}</span>`;
+    toast('Broadcast failed: ' + e.message, 'error');
   }
 }
 
