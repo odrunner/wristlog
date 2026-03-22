@@ -4307,7 +4307,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.19.51';
+const APP_VERSION = '2.36.21.19.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5526,12 +5526,14 @@ async function acceptFriendRequest(initiatorId, notifId) {
     .eq('target_id', currentUser.id);
   if (error) { toast('Could not accept — ' + error.message, 'error'); return; }
 
-  await db.from('notifications').insert({
+  const { error: notifErr } = await db.from('notifications').insert({
     user_id: initiatorId, type: 'friend_accepted', actor_id: currentUser.id, is_read: false,
   });
+  if (notifErr) console.error('[acceptFriendRequest] notification insert:', notifErr.message);
 
   // Mark the notification as read (keep type as friend_request — DB constraint may block type change)
-  await db.from('notifications').update({ is_read: true }).eq('id', notifId);
+  const { error: readErr } = await db.from('notifications').update({ is_read: true }).eq('id', notifId);
+  if (readErr) console.error('[acceptFriendRequest] mark-read:', readErr.message);
   const notif = userNotifs.find(n => n.id === notifId);
   if (notif) { notif.is_read = true; notif._accepted = true; }
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
@@ -5570,9 +5572,10 @@ async function acceptFriendRequestFromPopover(userId) {
     .eq('target_id', currentUser.id);
   if (error) { toast('Could not accept — ' + error.message, 'error'); return; }
 
-  await db.from('notifications').insert({
+  const { error: notifErr2 } = await db.from('notifications').insert({
     user_id: userId, type: 'friend_accepted', actor_id: currentUser.id, is_read: false,
   });
+  if (notifErr2) console.error('[acceptFriendRequestFromPopover] notification insert:', notifErr2.message);
 
   const friendNotif = userNotifs.find(n => n.type === 'friend_request' && n.actor_id === userId);
   if (friendNotif) {
@@ -5822,8 +5825,10 @@ async function acceptClubJoinRequest(requesterId, clubId, notifId) {
 
 async function declineClubJoinRequest(requesterId, clubId, notifId) {
   if (!currentUser) return;
-  await db.from('club_join_requests').delete().eq('club_id', clubId).eq('user_id', requesterId);
-  await db.from('notifications').delete().eq('id', notifId);
+  const { error: reqErr } = await db.from('club_join_requests').delete().eq('club_id', clubId).eq('user_id', requesterId);
+  if (reqErr) { toast('Could not decline request — ' + reqErr.message, 'error'); return; }
+  const { error: notifDelErr } = await db.from('notifications').delete().eq('id', notifId);
+  if (notifDelErr) console.error('[declineClubJoinRequest] notification delete:', notifDelErr.message);
   userNotifs = userNotifs.filter(n => n.id !== notifId);
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
   updateBellBadge(); renderNotificationPanel();
@@ -7862,7 +7867,8 @@ async function submitReport() {
 
   // Immediately flag the content
   const table = contentType === 'comment' ? 'comments' : 'logs';
-  await db.from(table).update({ moderation_status: 'flagged' }).eq('id', contentId);
+  const { error: flagErr } = await db.from(table).update({ moderation_status: 'flagged' }).eq('id', contentId);
+  if (flagErr) console.error('[submitReport] flag update failed:', flagErr.message);
 
   // Update local state
   if (contentType === 'log') {
@@ -8372,7 +8378,16 @@ async function saveNewPost() {
       visibility: vis,
       club_id: null,
     }, { onConflict: 'id' });
-    if (error) { toast('Post failed — ' + error.message, 'error'); return; }
+    if (error) {
+      // Rollback local state
+      const idx = logs.findIndex(l => l.id === entry.id);
+      if (idx >= 0) logs.splice(idx, 1);
+      _dataGen++;
+      rebuildLogsByWatch();
+      safeSetJSON(STORE_L, logs);
+      toast('Post failed — ' + error.message, 'error');
+      return;
+    }
     // Send mention notifications for @usernames in the post
     if (body) {
       const mentionedUsernames = [...new Set((body.match(/@([\w.]+)/g) || []).map(m => m.slice(1)))];
