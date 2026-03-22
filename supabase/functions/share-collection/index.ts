@@ -75,12 +75,6 @@ ${ogImageTags}
     .col-name { font-size: 1.2rem; font-weight: 800; margin-bottom: .15rem; }
     .col-uname { font-size: .82rem; color: var(--muted); margin-bottom: .4rem; }
     .col-bio { font-size: .88rem; color: var(--muted); line-height: 1.5; max-width: 340px; margin: 0 auto; }
-    /* Stats bar */
-    .stats-bar { display: flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface); margin-bottom: 1rem; }
-    .stat-cell { flex: 1; text-align: center; padding: .75rem .5rem; border-right: 1px solid var(--border); }
-    .stat-cell:last-child { border-right: none; }
-    .stat-val { font-size: 1rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .stat-lbl { font-size: .7rem; color: var(--muted); margin-top: .1rem; text-transform: uppercase; letter-spacing: .04em; }
     /* Watch grid */
     .watch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
     .watch-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
@@ -92,7 +86,6 @@ ${ogImageTags}
     .watch-card-wears { font-size: .72rem; color: var(--muted); }
     /* Clickable blocks */
     .link-block { display: block; text-decoration: none; color: inherit; }
-    .stats-bar.link-block { display: flex; }
     /* Error states */
     .state-wrap { text-align: center; padding: 3rem 1rem; }
     .state-icon { font-size: 2.5rem; margin-bottom: .5rem; }
@@ -208,8 +201,8 @@ serve(async (req) => {
   const ogDescription = mostWornName
     ? `${watches.length} watch${watches.length !== 1 ? "es" : ""} · ${totalWears} total wear${totalWears !== 1 ? "s" : ""} · Most worn: ${mostWornName}`
     : `${watches.length} watch${watches.length !== 1 ? "es" : ""} · ${totalWears} total wear${totalWears !== 1 ? "s" : ""}`;
-  // Use watch photo if available; fall back to avatar; omit entirely if neither (avoids generic landing image)
-  const ogImage = mostWorn?.image || sorted.find((w) => w.image)?.image || profile.avatar_url || "";
+  // Use watch photo → avatar → WRotate branded fallback (always set something so previews render)
+  const ogImage = mostWorn?.image || sorted.find((w) => w.image)?.image || profile.avatar_url || fallbackImage;
   const canonicalUrl = `${supabaseUrl}/functions/v1/share-collection?u=${encodeURIComponent(username)}`;
 
   // Build avatar HTML
@@ -222,11 +215,6 @@ serve(async (req) => {
     : "";
 
   const bioHtml = profile.bio ? `<div class="col-bio">${esc(profile.bio)}</div>` : "";
-
-  // Stats bar
-  const mostWornCell = mostWornName
-    ? esc(mostWornName.length > 18 ? mostWornName.slice(0, 17) + "…" : mostWornName)
-    : "—";
 
   // Watch grid (max 12, sorted by wear count) — each card links to wrotate.com
   const gridHtml = sorted.slice(0, 12).map((w) => {
@@ -251,21 +239,7 @@ serve(async (req) => {
       <div class="col-uname">@${esc(profile.username || "")}</div>
       ${bioHtml}
     </a>
-    <a href="https://wrotate.com/" class="stats-bar link-block">
-      <div class="stat-cell">
-        <div class="stat-val">${watches.length}</div>
-        <div class="stat-lbl">Watches</div>
-      </div>
-      <div class="stat-cell">
-        <div class="stat-val">${totalWears}</div>
-        <div class="stat-lbl">Total Wears</div>
-      </div>
-      <div class="stat-cell">
-        <div class="stat-val">${mostWornCell}</div>
-        <div class="stat-lbl">Most Worn</div>
-      </div>
-    </a>
-    ${watches.length > 0 ? `<div class="watch-grid">${gridHtml}</div>` : `<div class="state-wrap"><div class="state-icon">⌚</div><div class="state-title">No public watches yet</div></div>`}`;
+${watches.length > 0 ? `<div class="watch-grid">${gridHtml}</div>` : `<div class="state-wrap"><div class="state-icon">⌚</div><div class="state-title">No public watches yet</div></div>`}`;
 
   const html = htmlPage(ogTitle, ogDescription, ogImage, canonicalUrl, bodyHtml);
   return new Response(html, {
