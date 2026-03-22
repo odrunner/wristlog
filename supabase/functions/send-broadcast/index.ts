@@ -17,7 +17,7 @@ const ADMIN_USER_ID = "d70b1a85-4f31-4431-b3b7-db76543daaf5";
 const FROM_EMAIL = "WRotate <hello@wrotate.com>";
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://wrotate.com",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };

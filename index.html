@@ -3926,17 +3926,23 @@ function officialBadgeHtml(profile) {
   } catch(e) {}
 })();
 
-function trackAppStoreClick() {
+// Throttled page_visits insert — dedup by source key within 5 minutes
+function trackVisit(data) {
   try {
+    const key = 'wristlog_tv_' + (data.utm_source || '') + '_' + (data.utm_medium || '');
+    const last = Number(localStorage.getItem(key) || 0);
+    if (Date.now() - last < 300000) return; // 5 min dedup
+    localStorage.setItem(key, String(Date.now()));
     db.from('page_visits').insert({
-      utm_source: 'appstore_click',
-      utm_medium: 'landing',
-      path: window.location.pathname,
-      referrer: document.referrer || null,
+      ...data,
       user_agent: navigator.userAgent || null,
       user_id: window.currentUser?.id || null,
     }).then(() => {}).catch(() => {});
   } catch(e) {}
+}
+
+function trackAppStoreClick() {
+  trackVisit({ utm_source: 'appstore_click', utm_medium: 'landing', path: window.location.pathname, referrer: document.referrer || null });
 }
 
 // Wrap a promise with a timeout to prevent hung queries
@@ -3966,7 +3972,7 @@ async function devLogin(which) {
 }
 
 async function signInWithGoogle() {
-  try { db.from('page_visits').insert({ utm_source: 'signin_google', utm_medium: 'funnel', path: '/signin', user_agent: navigator.userAgent || null, ab_variant: localStorage.getItem('ab_landing') || null, user_id: window.currentUser?.id || null }).then(() => {}).catch(() => {}); } catch(e) {}
+  trackVisit({ utm_source: 'signin_google', utm_medium: 'funnel', path: '/signin', ab_variant: localStorage.getItem('ab_landing') || null });
   const { error } = await db.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -3978,7 +3984,7 @@ async function signInWithGoogle() {
 }
 
 async function signInWithApple() {
-  try { db.from('page_visits').insert({ utm_source: 'signin_apple', utm_medium: 'funnel', path: '/signin', user_agent: navigator.userAgent || null, ab_variant: localStorage.getItem('ab_landing') || null, user_id: window.currentUser?.id || null }).then(() => {}).catch(() => {}); } catch(e) {}
+  trackVisit({ utm_source: 'signin_apple', utm_medium: 'funnel', path: '/signin', ab_variant: localStorage.getItem('ab_landing') || null });
   const { error } = await db.auth.signInWithOAuth({
     provider: 'apple',
     options: {
@@ -4291,7 +4297,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.18.29';
+const APP_VERSION = '2.36.21.18.38';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8766,7 +8772,7 @@ function resumeWelcome() {
   }
 }
 function welcomeStep(n) {
-  try { db.from('page_visits').insert({ utm_source: 'onboarding_step_' + n, utm_medium: 'funnel', path: '/welcome', user_agent: navigator.userAgent || null, user_id: window.currentUser?.id || null }).then(() => {}).catch(() => {}); } catch(e) {}
+  trackVisit({ utm_source: 'onboarding_step_' + n, utm_medium: 'funnel', path: '/welcome' });
   [1,2,3,4,5,6].forEach(i => {
     document.getElementById(`ws-${i}`).classList.toggle('hidden', i !== n);
     document.getElementById(`wd-${i}`).classList.toggle('active', i === n);
@@ -13866,7 +13872,12 @@ async function uploadImage(blob, path) {
 }
 
 // Upload a raw file (PDF, etc.) to Supabase Storage without resize
+const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+
 async function uploadFile(blob, path, contentType) {
+  if (!ALLOWED_FILE_TYPES.includes(contentType)) {
+    throw new Error('File type not allowed: ' + contentType);
+  }
   const { data, error } = await db.storage.from('media').upload(path, blob, {
     cacheControl: '31536000', upsert: true, contentType,
   });

@@ -10,7 +10,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://wrotate.com",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
@@ -108,6 +108,20 @@ Deno.serve(async (req: Request) => {
     const { url } = await req.json();
     if (!url || typeof url !== "string") {
       return jsonResponse({ error: "No url provided" }, 400);
+    }
+
+    // Validate URL scheme and block private IPs
+    let parsed: URL;
+    try { parsed = new URL(url); } catch { return jsonResponse({ error: "Invalid URL" }, 400); }
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      return jsonResponse({ error: "Only http/https URLs allowed" }, 400);
+    }
+    const host = parsed.hostname;
+    if (host === "localhost" || host.startsWith("127.") || host.startsWith("10.") ||
+        host.startsWith("192.168.") || host.startsWith("169.254.") || host === "0.0.0.0" ||
+        host.startsWith("172.") && (() => { const b = parseInt(host.split('.')[1]); return b >= 16 && b <= 31; })() ||
+        host.endsWith(".internal") || host.endsWith(".local")) {
+      return jsonResponse({ error: "Private/internal URLs not allowed" }, 400);
     }
 
     // Fetch the page
