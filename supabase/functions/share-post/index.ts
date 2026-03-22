@@ -21,12 +21,16 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function htmlPage(title: string, description: string, imageUrl: string, canonicalUrl: string, bodyHtml: string): string {
+function htmlPage(title: string, description: string, imageUrl: string, canonicalUrl: string, bodyHtml: string, logId?: string): string {
+  const appBanner = logId
+    ? `<meta name="apple-itunes-app" content="app-id=6760091102, app-argument=https://wrotate.com/p/?id=${esc(logId)}">`
+    : '';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  ${appBanner}
   <title>${esc(title)}</title>
   <meta property="og:site_name" content="WRotate">
   <meta property="og:type" content="article">
@@ -237,7 +241,7 @@ serve(async (req) => {
       </a>
     </div>`;
 
-  const html = htmlPage(ogTitle, ogDescription, ogImage, canonicalUrl, bodyHtml);
+  const html = htmlPage(ogTitle, ogDescription, ogImage, canonicalUrl, bodyHtml, logId!);
   return new Response(html, {
     status: 200,
     headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=300" },
