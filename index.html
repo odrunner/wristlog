@@ -4307,7 +4307,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.19.58';
+const APP_VERSION = '2.36.21.20.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5199,7 +5199,7 @@ async function cycleWishPrivacy(wishId) {
 }
 
 async function saveProfileFromPage() {
-  if (!checkEulaAcceptance()) return;
+  if (!(await checkEulaAcceptance())) return;
   if (currentUser) delete _profileCache[currentUser.id]; // invalidate cache
   const name  = (document.getElementById('pp-display-name')?.value || '').trim();
   const bio   = (document.getElementById('pp-bio')?.value || '').trim();
@@ -5739,6 +5739,7 @@ async function loadPendingClubRequests() {
 }
 
 async function createClub(name, desc, privacy) {
+  if (!(await checkEulaAcceptance())) return;
   if (!currentUser || !name.trim()) return;
   const clubId = uid();
   const { error } = await db.from('clubs').insert({
@@ -7913,6 +7914,7 @@ function cancelFeedCaption(logId) {
 }
 
 async function saveFeedCaption(logId) {
+  if (!(await checkEulaAcceptance())) return;
   const ta = document.getElementById(`feed-caption-ta-${logId}`);
   if (!ta) return;
   const newNotes = ta.value.trim();
@@ -8091,6 +8093,7 @@ function handleEditPostPhoto(input) {
 }
 
 async function saveEditPost() {
+  if (!(await checkEulaAcceptance())) return;
   if (!editPostLogId) return;
   const fi  = feedItems.find(i => i.id === editPostLogId);
   const log = logs.find(l => l.id === editPostLogId);
@@ -8345,6 +8348,7 @@ function dismissNpWatchSuggestion() {
 }
 
 async function saveNewPost() {
+  if (!(await checkEulaAcceptance())) return;
   const body = (document.getElementById('np-body')?.value || '').trim();
   if (!body && !newPostFile) { toast('Add a photo or write something', 'error'); return; }
   if (body) { const { clean } = checkContent(body); if (!clean) { toast('Your post contains inappropriate content. Please revise.', 'error'); return; } }
@@ -8748,7 +8752,7 @@ function renderCommentBody(body) {
 }
 
 async function postComment(logId) {
-  if (!checkEulaAcceptance()) return;
+  if (!(await checkEulaAcceptance())) return;
   const input = document.getElementById(`comment-input-${logId}`);
   if (!input) return;
   const text = input.value.trim();
@@ -11281,7 +11285,7 @@ function renderTrackHistory() {
 }
 
 async function saveLog() {
-  if (!checkEulaAcceptance()) return;
+  if (!(await checkEulaAcceptance())) return;
   const date = document.getElementById('track-date').value;
   if (!date)       { showFieldError('track-date', 'Please select a date'); return; }
   if (!selWatchId) { toast('Please select a watch', 'error'); return; }
@@ -12736,6 +12740,7 @@ function marketPriceRowHTML(w) {
 }
 
 async function saveWatch() {
+  if (!(await checkEulaAcceptance())) return;
   const brand = document.getElementById('w-brand').value;
   const name  = document.getElementById('w-name').value.trim();
   if (!brand) { showFieldError('w-brand-display', 'Please select a brand'); return; }
@@ -15370,6 +15375,7 @@ function wlDeleteFromEdit() {
 function closeWishlistModal() { clearInlineEdits(WL_INLINE_FIELDS); if (wlPendingImage) { URL.revokeObjectURL(wlPendingImage); wlPendingImage = null; wlPendingFile = null; } document.getElementById('wishlist-modal').classList.add('hidden'); }
 
 async function saveWishlistItem() {
+  if (!(await checkEulaAcceptance())) return;
   const brand = document.getElementById('wl-brand').value;
   const name  = document.getElementById('wl-name').value.trim();
   if (!brand) { showFieldError('wl-brand-display', 'Please select a brand'); return; }
@@ -16140,6 +16146,7 @@ ${handle ? `Find me @${handle} — ` : ''}Join free 👉 https://wrotate.com`;
 
 
 async function submitFeedback() {
+  if (!(await checkEulaAcceptance())) return;
   const details = document.getElementById('fb-desc').value.trim();
   if (!details) { showFieldError('fb-desc', 'Please describe your feedback'); return; }
 
