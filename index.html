@@ -4291,7 +4291,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.13.31';
+const APP_VERSION = '2.36.21.17.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7643,11 +7643,13 @@ function renderFeedCard(item) {
           ${isMe
             ? `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="Edit post"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
               <div class="feed-menu hidden" id="feed-menu-${item.id}">
+                ${vis === 'public' ? `<div class="feed-menu-item" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
                 <div class="feed-menu-item" onclick="openEditPost('${item.id}');closeFeedMenu('${item.id}')">Edit post</div>
                 <div class="feed-menu-item" onclick="openReport('log','${item.id}','${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Report a comment</div>
               </div>`
             : `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="More options"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
               <div class="feed-menu hidden" id="feed-menu-${item.id}">
+                ${vis === 'public' ? `<div class="feed-menu-item" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
                 <div class="feed-menu-item" onclick="openReport('log','${item.id}','${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Report</div>
                 <div class="feed-menu-item" style="color:var(--danger);" onclick="blockUser('${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Block user</div>
               </div>`}
@@ -7662,6 +7664,7 @@ function renderFeedCard(item) {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> <span>${cCount || ''}</span>
         </button>
         ${addPhotoAction}
+        ${vis === 'public' ? `<button class="feed-action-btn" onclick="sharePost('${item.id}')" title="Share post"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>` : ''}
       </div>
       ${captionHtml}
       ${watchChip}
@@ -16001,6 +16004,25 @@ function requestBrand(name) {
 
 function closeFeedback() {
   document.getElementById('feedback-modal').classList.add('hidden');
+}
+
+async function sharePost(logId) {
+  const url = `https://api.wrotate.com/functions/v1/share-post?id=${logId}`;
+  const item = feedItems.find(i => i.id === logId);
+  const watchName = item?.watch ? `${item.watch.brand || ''} ${item.watch.name || ''}`.trim() : '';
+  const title = watchName ? `Check out this ${watchName} on WRotate` : 'Check out this post on WRotate';
+  if (navigator.share) {
+    try {
+      await navigator.share({ title, url });
+    } catch (e) {
+      if (e.name !== 'AbortError') toast('Could not open share sheet', 'error');
+    }
+  } else if (navigator.clipboard) {
+    await navigator.clipboard.writeText(url);
+    toast('Post link copied!');
+  } else {
+    _fallbackCopyText(url);
+  }
 }
 
 async function shareApp() {
