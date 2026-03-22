@@ -4307,7 +4307,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.22.04';
+const APP_VERSION = '2.36.22.09.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5257,26 +5257,29 @@ function toggleProfileEdit() {
   }
 }
 
-function sharePublicProfile() {
+async function sharePublicProfile() {
   const uname = myProfile?.username;
   if (!uname) return;
-  const url = `https://wrotate.com/profile?u=${encodeURIComponent(uname)}`;
-  if (navigator.clipboard) {
+  const url = `https://api.wrotate.com/functions/v1/share-collection?u=${encodeURIComponent(uname)}`;
+  const title = `${myProfile?.display_name || uname}'s Watch Collection — WRotate`;
+  if (navigator.share) {
+    try { await navigator.share({ title, url }); } catch(e) { if (e.name !== 'AbortError') toast('Could not open share sheet', 'error'); }
+  } else if (navigator.clipboard) {
     navigator.clipboard.writeText(url)
-      .then(() => toast('Profile link copied!'))
-      .catch(() => _fallbackCopyText(url));
+      .then(() => toast('Collection link copied!'))
+      .catch(() => _fallbackCopyText(url, 'Collection link copied!'));
   } else {
-    _fallbackCopyText(url);
+    _fallbackCopyText(url, 'Collection link copied!');
   }
 }
 
-function _fallbackCopyText(text) {
+function _fallbackCopyText(text, msg = 'Link copied!') {
   const ta = document.createElement('textarea');
   ta.value = text;
   ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
   document.body.appendChild(ta);
   ta.select();
-  try { document.execCommand('copy'); toast('Profile link copied!'); } catch(e) { toast('Copy failed — ' + text, 'error'); }
+  try { document.execCommand('copy'); toast(msg); } catch(e) { toast('Copy failed — ' + text, 'error'); }
   document.body.removeChild(ta);
 }
 
