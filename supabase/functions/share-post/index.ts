@@ -22,13 +22,11 @@ function esc(s: string): string {
 }
 
 function htmlPage(title: string, description: string, imageUrl: string, canonicalUrl: string, bodyHtml: string, logId?: string): string {
-  const appBanner = `<meta name="apple-itunes-app" content="app-id=6760091102">`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  ${appBanner}
   <title>${esc(title)}</title>
   <meta property="og:site_name" content="WRotate">
   <meta property="og:type" content="article">
