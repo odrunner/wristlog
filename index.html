@@ -4291,7 +4291,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.18.24';
+const APP_VERSION = '2.36.21.18.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11979,12 +11979,13 @@ function renderCollectionList(visible, today) {
   const na = '<span style="color:var(--muted)">—</span>';
 
   // Enrich each watch with sort-ready numeric values
+  const now = new Date();
   const enriched = visible.map(w => {
     const wLogs   = logsForWatch(w.id);
     const wears   = wLogs.length;
     const cpwNum  = (w.price && wears) ? Math.round(w.price / wears) : null;
     const lastDate = wLogs.length ? wLogs.reduce((a,b) => a.date > b.date ? a : b).date : null;
-    const lastDays = lastDate ? Math.floor((new Date() - new Date(lastDate+'T12:00:00')) / 86400000) : null;
+    const lastDays = lastDate ? Math.floor((now - new Date(lastDate+'T12:00:00')) / 86400000) : null;
     const wornToday = wLogs.some(l => l.date === today);
     return { w, wears, cpwNum, lastDays, paid: w.price||null, market: w.marketPrice||null, wornToday };
   });
@@ -13016,12 +13017,20 @@ function renderDowReport() {
   if (!fLogs.length) { el.innerHTML = ''; return; }
   const DOW_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const todayDow  = new Date().getDay();
+  // Single-pass DOW grouping: one Date per log instead of 7N
+  const dowBuckets = [null,null,null,null,null,null,null].map(() => ({}));
+  const dowTotals = [0,0,0,0,0,0,0];
+  for (const l of fLogs) {
+    const dow = new Date(l.date+'T12:00:00').getDay();
+    dowBuckets[dow][l.watchId] = (dowBuckets[dow][l.watchId] || 0) + 1;
+    dowTotals[dow]++;
+  }
   const cells = DOW_NAMES.map((dayName, dow) => {
-    const dayLogs = fLogs.filter(l => new Date(l.date+'T12:00:00').getDay() === dow);
-    if (!dayLogs.length) return { dayName, dow, w: null, cnt: 0, total: 0 };
-    const wm = {}; dayLogs.forEach(l => { wm[l.watchId]=(wm[l.watchId]||0)+1; });
+    const wm = dowBuckets[dow];
+    const total = dowTotals[dow];
+    if (!total) return { dayName, dow, w: null, cnt: 0, total: 0 };
     const topId = Object.keys(wm).sort((a,b) => wm[b]-wm[a])[0];
-    return { dayName, dow, w: watches.find(x => x.id === topId)||null, cnt: wm[topId], total: dayLogs.length };
+    return { dayName, dow, w: watches.find(x => x.id === topId)||null, cnt: wm[topId], total };
   });
   el.innerHTML = `<div class="yir-card">
     <div class="yir-header" style="margin-bottom:.75rem">
@@ -13232,11 +13241,13 @@ function computeWatchRec(skipSet) {
   return candidates[0];
 }
 
+let _currentRecWatchId = null;
+
 function skipRec() {
-  const current = computeWatchRec(recSkips);
-  if (current) recSkips.add(current.w.id);
+  if (_currentRecWatchId) recSkips.add(_currentRecWatchId);
   let next = computeWatchRec(recSkips);
   if (!next) { recSkips = new Set(); next = computeWatchRec(recSkips); }
+  _currentRecWatchId = next?.w?.id || null;
   const el = document.getElementById('rec-container');
   if (!el) return;
   if (!watches.length) { el.innerHTML = ''; return; }
@@ -13316,7 +13327,9 @@ function renderWatchRecommendation() {
   const el = document.getElementById('rec-container');
   if (!el) return;
   if (!watches.length) { el.innerHTML = ''; return; }
-  el.innerHTML = recCardHTML(computeWatchRec(recSkips));
+  const rec = computeWatchRec(recSkips);
+  _currentRecWatchId = rec?.w?.id || null;
+  el.innerHTML = recCardHTML(rec);
 }
 
 function renderStats(force) {
@@ -13501,14 +13514,11 @@ function renderCollectionReport(fl) {
     const delta = (mp != null && paid != null) ? mp - paid : null;
     const pct   = (delta != null && paid)      ? delta / paid * 100 : null;
     const pdate = w.purchaseDate || null;
-    // Average frequency: avg days between wears (all-time logs, not filtered)
+    // Average frequency: avg days between wears (first-to-last / count)
     const allWLogs = logsForWatch(w.id).map(l => l.date).sort();
     let avgFreq = null;
     if (allWLogs.length >= 2) {
-      let totalGap = 0;
-      for (let i = 1; i < allWLogs.length; i++) {
-        totalGap += (new Date(allWLogs[i]+'T12:00:00') - new Date(allWLogs[i-1]+'T12:00:00')) / 86400000;
-      }
+      const totalGap = (new Date(allWLogs[allWLogs.length - 1]+'T12:00:00') - new Date(allWLogs[0]+'T12:00:00')) / 86400000;
       avgFreq = Math.round(totalGap / (allWLogs.length - 1));
     }
     return { w, cnt, cpw, paid, mp, delta, pct, pdate, avgFreq };
