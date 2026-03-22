@@ -55,11 +55,13 @@ function htmlPage(title: string, description: string, imageUrl: string, canonica
     }
     body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; font-size: 15px; }
     a { color: var(--gold); text-decoration: none; }
-    .topbar { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: .75rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); }
-    .topbar-logo { font-size: 1.1rem; font-weight: 800; letter-spacing: -.02em; color: var(--gold); text-decoration: none; }
-    .btn-open-app { background: var(--gold); color: #fff; border: none; border-radius: 8px; padding: .4rem 1rem; font-size: .82rem; font-weight: 600; cursor: pointer; font-family: inherit; text-decoration: none; display: inline-block; }
+    .topbar { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: .75rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .topbar-logo { display: inline-flex; align-items: center; gap: .4rem; font-size: 1.1rem; font-weight: 800; letter-spacing: -.02em; color: var(--gold); text-decoration: none; }
+    .topbar-logo img { width: 24px; height: 24px; border-radius: 5px; }
+    .topbar-logo:hover { color: var(--gold-lt); }
     .page-wrap { max-width: 520px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
-    .post-card { background: var(--surface); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+    .post-card { background: var(--surface); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); cursor: pointer; transition: box-shadow .15s; display: block; text-decoration: none; color: var(--text); }
+    .post-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
     .post-photo { width: 100%; display: block; }
     .post-body { padding: 1rem 1.15rem; }
     .post-header { display: flex; align-items: center; gap: .6rem; margin-bottom: .75rem; }
@@ -80,8 +82,7 @@ function htmlPage(title: string, description: string, imageUrl: string, canonica
 </head>
 <body>
   <header class="topbar">
-    <a href="https://wrotate.com/" class="topbar-logo">WRotate</a>
-    <a href="https://wrotate.com/" class="btn-open-app">Open App</a>
+    <a href="https://wrotate.com/" class="topbar-logo"><img src="https://wrotate.com/icon.svg" alt=""> WRotate</a>
   </header>
   <main class="page-wrap">
     ${bodyHtml}
@@ -216,23 +217,21 @@ serve(async (req) => {
   const profileUrl = profile?.username ? `https://wrotate.com/profile?u=${encodeURIComponent(profile.username)}` : "https://wrotate.com/";
 
   const bodyHtml = `
-    <div class="post-card">
+    <a href="https://wrotate.com/" class="post-card">
       ${photoHtml}
       <div class="post-body">
         <div class="post-header">
           <div class="post-avatar">${avatarInner}</div>
           <div>
-            <div class="post-name"><a href="${esc(profileUrl)}" style="color:var(--text);text-decoration:none;">${esc(displayName)}${officialBadge}</a></div>
+            <div class="post-name">${esc(displayName)}${officialBadge}</div>
             ${metaParts ? `<div class="post-meta">${esc(metaParts)}</div>` : ""}
           </div>
         </div>
         ${captionHtml}
         ${watchChipHtml}
       </div>
-    </div>
+    </a>
     <div class="cta-wrap">
-      <a href="https://wrotate.com/" class="btn-cta">Open WRotate</a>
-      <br><br>
       <a href="https://apps.apple.com/us/app/wrotate/id6760091102">
         <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" width="130">
       </a>
