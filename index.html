@@ -2577,17 +2577,17 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <button class="btn btn-ghost" onclick="loadBroadcastDraft()" style="flex:1;">Load Draft</button>
           <button class="btn btn-ghost" onclick="clearBroadcastForm()" style="flex:1;">Clear</button>
         </div>
-        <div id="broadcast-draft-status" style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem;"></div>
+        <div id="broadcast-draft-status" aria-live="polite" style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem;"></div>
 
         <!-- Saved drafts list -->
         <div id="broadcast-drafts-list" style="margin-bottom:.6rem;"></div>
 
         <!-- Actions -->
         <div style="display:flex;gap:.5rem;">
-          <button class="btn btn-ghost" onclick="sendBroadcastTest()" style="flex:1;">Send Test to Me</button>
-          <button class="btn btn-primary" onclick="sendBroadcastAll()" style="flex:1;">Send to All Users</button>
+          <button class="btn btn-ghost" id="broadcast-test-btn" onclick="sendBroadcastTest()" style="flex:1;">Send Test to Me</button>
+          <button class="btn btn-primary" id="broadcast-send-btn" onclick="sendBroadcastAll()" style="flex:1;">Send to All Users</button>
         </div>
-        <div id="broadcast-status" style="font-size:.82rem;margin-top:.5rem;"></div>
+        <div id="broadcast-status" aria-live="polite" style="font-size:.82rem;margin-top:.5rem;"></div>
       </div>
     </div>
   </div>
@@ -4291,7 +4291,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.18.08';
+const APP_VERSION = '2.36.21.18.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10943,19 +10943,27 @@ function renderBroadcastDrafts() {
   if (!drafts.length) { el.innerHTML = ''; return; }
   el.innerHTML = '<div style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem;">Saved Drafts</div>' +
     drafts.map(d => `<div style="display:flex;align-items:center;gap:.4rem;padding:.35rem .5rem;background:var(--surface);border-radius:6px;margin-bottom:.25rem;font-size:.82rem;">
-      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;" onclick="loadBroadcastDraft(${d.id})" title="Click to load">${escHtml(d.subject || '(no subject)')}</span>
+      <button class="btn btn-ghost" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;padding:.1rem .3rem;font-size:.82rem;" onclick="loadBroadcastDraft(${d.id})" title="Click to load">${escHtml(d.subject || '(no subject)')}</button>
       <span style="color:var(--muted);font-size:.72rem;white-space:nowrap;">${new Date(d.savedAt).toLocaleDateString()}</span>
-      <button class="btn btn-ghost" style="padding:.1rem .3rem;font-size:.7rem;" onclick="deleteBroadcastDraft(${d.id})">✕</button>
+      <button class="btn btn-ghost" style="padding:.1rem .3rem;font-size:.7rem;" onclick="deleteBroadcastDraft(${d.id})" aria-label="Delete draft: ${escAttr(d.subject || 'untitled')}">✕</button>
     </div>`).join('');
 }
 
 let _broadcastSending = false;
+
+function setBroadcastBtnsDisabled(disabled) {
+  const testBtn = document.getElementById('broadcast-test-btn');
+  const sendBtn = document.getElementById('broadcast-send-btn');
+  if (testBtn) testBtn.disabled = disabled;
+  if (sendBtn) sendBtn.disabled = disabled;
+}
 
 async function sendBroadcastTest() {
   if (_broadcastSending) return;
   const subject = document.getElementById('broadcast-subject')?.value?.trim();
   if (!subject) { toast('Subject is required', 'error'); return; }
   _broadcastSending = true;
+  setBroadcastBtnsDisabled(true);
   const statusEl = document.getElementById('broadcast-status');
   statusEl.innerHTML = '<span style="color:var(--gold);">Uploading images & sending test…</span>';
 
@@ -10988,6 +10996,7 @@ async function sendBroadcastTest() {
     toast('Failed to send test: ' + e.message, 'error');
   } finally {
     _broadcastSending = false;
+    setBroadcastBtnsDisabled(false);
   }
 }
 
@@ -10997,18 +11006,21 @@ async function sendBroadcastAll() {
   if (!subject) { toast('Subject is required', 'error'); return; }
   if (!body) { toast('Body is required', 'error'); return; }
 
-  // Confirmation
+  // Confirmation with focus management
   const statusEl = document.getElementById('broadcast-status');
-  statusEl.innerHTML = `<div style="display:flex;gap:.5rem;align-items:center;padding:.5rem;background:var(--surface2);border-radius:8px;">
+  statusEl.innerHTML = `<div style="display:flex;gap:.5rem;align-items:center;padding:.5rem;background:var(--surface2);border-radius:8px;" role="alertdialog" aria-label="Confirm broadcast">
     <span style="color:var(--danger);font-weight:600;">Send to ALL users?</span>
-    <button class="btn btn-primary btn-sm" onclick="confirmBroadcastAll()">Yes, send it</button>
-    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('broadcast-status').innerHTML=''">Cancel</button>
+    <button class="btn btn-primary btn-sm" id="broadcast-confirm-yes" onclick="confirmBroadcastAll()">Yes, send it</button>
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('broadcast-status').innerHTML='';document.getElementById('broadcast-send-btn').focus()">Cancel</button>
   </div>`;
+  // Move focus to the confirm button
+  setTimeout(() => document.getElementById('broadcast-confirm-yes')?.focus(), 50);
 }
 
 async function confirmBroadcastAll() {
   if (_broadcastSending) return;
   _broadcastSending = true;
+  setBroadcastBtnsDisabled(true);
   const subject = document.getElementById('broadcast-subject')?.value?.trim();
   const statusEl = document.getElementById('broadcast-status');
   statusEl.innerHTML = '<span style="color:var(--gold);">Uploading images & sending to all users…</span>';
@@ -11038,6 +11050,7 @@ async function confirmBroadcastAll() {
     toast('Broadcast failed: ' + e.message, 'error');
   } finally {
     _broadcastSending = false;
+    setBroadcastBtnsDisabled(false);
   }
 }
 
