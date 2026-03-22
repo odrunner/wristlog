@@ -35,7 +35,7 @@ function generateOgSvg(displayName: string, watches: any[], wearCounts: Record<s
   const gridW = cols * CELL_W + (cols - 1) * GAP;
   const gridH = rows * CELL_H + (rows - 1) * GAP;
   const gridX = Math.round((W - gridW) / 2);
-  const gridY = Math.round((H - gridH) / 2) + 20;
+  const gridY = Math.round((H - gridH) / 2) + 50;
 
   const clips = displayed.map((_: unknown, i: number) => {
     const col = i % cols, row = Math.floor(i / cols);
