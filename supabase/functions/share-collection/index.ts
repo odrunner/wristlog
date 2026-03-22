@@ -27,6 +27,11 @@ function initials(brand: string, name: string): string {
 }
 
 function htmlPage(title: string, description: string, imageUrl: string, canonicalUrl: string, bodyHtml: string): string {
+  const ogImageTags = imageUrl
+    ? `  <meta property="og:image" content="${esc(imageUrl)}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="${esc(imageUrl)}">`
+    : `  <meta name="twitter:card" content="summary">`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,12 +42,10 @@ function htmlPage(title: string, description: string, imageUrl: string, canonica
   <meta property="og:type" content="profile">
   <meta property="og:title" content="${esc(title)}">
   <meta property="og:description" content="${esc(description)}">
-  <meta property="og:image" content="${esc(imageUrl)}">
   <meta property="og:url" content="${esc(canonicalUrl)}">
-  <meta name="twitter:card" content="summary_large_image">
+${ogImageTags}
   <meta name="twitter:title" content="${esc(title)}">
   <meta name="twitter:description" content="${esc(description)}">
-  <meta name="twitter:image" content="${esc(imageUrl)}">
   <link rel="icon" type="image/svg+xml" href="https://wrotate.com/icon.svg">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -87,8 +90,8 @@ function htmlPage(title: string, description: string, imageUrl: string, canonica
     .watch-card-brand { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
     .watch-card-name { font-size: .85rem; font-weight: 700; margin: .1rem 0; }
     .watch-card-wears { font-size: .72rem; color: var(--muted); }
-    /* CTA */
-    .cta-wrap { text-align: center; margin-top: 1.5rem; }
+    /* Clickable blocks */
+    .link-block { display: block; text-decoration: none; color: inherit; }
     /* Error states */
     .state-wrap { text-align: center; padding: 3rem 1rem; }
     .state-icon { font-size: 2.5rem; margin-bottom: .5rem; }
@@ -204,7 +207,8 @@ serve(async (req) => {
   const ogDescription = mostWornName
     ? `${watches.length} watch${watches.length !== 1 ? "es" : ""} · ${totalWears} total wear${totalWears !== 1 ? "s" : ""} · Most worn: ${mostWornName}`
     : `${watches.length} watch${watches.length !== 1 ? "es" : ""} · ${totalWears} total wear${totalWears !== 1 ? "s" : ""}`;
-  const ogImage = mostWorn?.image || sorted.find((w) => w.image)?.image || fallbackImage;
+  // Use watch photo if available; fall back to avatar; omit entirely if neither (avoids generic landing image)
+  const ogImage = mostWorn?.image || sorted.find((w) => w.image)?.image || profile.avatar_url || "";
   const canonicalUrl = `${supabaseUrl}/functions/v1/share-collection?u=${encodeURIComponent(username)}`;
 
   // Build avatar HTML
@@ -223,30 +227,30 @@ serve(async (req) => {
     ? esc(mostWornName.length > 18 ? mostWornName.slice(0, 17) + "…" : mostWornName)
     : "—";
 
-  // Watch grid (max 12, sorted by wear count)
+  // Watch grid (max 12, sorted by wear count) — each card links to wrotate.com
   const gridHtml = sorted.slice(0, 12).map((w) => {
     const wears = wearCounts[w.id] || 0;
     const imgHtml = w.image
       ? `<img class="watch-card-img" src="${esc(w.image)}" alt="" loading="lazy">`
       : `<div class="watch-card-ph">${esc(initials(w.brand || "", w.name || ""))}</div>`;
-    return `<div class="watch-card">
+    return `<a href="https://wrotate.com/" class="watch-card link-block">
       ${imgHtml}
       <div class="watch-card-body">
         ${w.brand ? `<div class="watch-card-brand">${esc(w.brand)}</div>` : ""}
         <div class="watch-card-name">${esc(w.name || "—")}</div>
         <div class="watch-card-wears">${wears} wear${wears !== 1 ? "s" : ""}</div>
       </div>
-    </div>`;
+    </a>`;
   }).join("");
 
   const bodyHtml = `
-    <div class="col-hero">
+    <a href="https://wrotate.com/" class="col-hero link-block">
       <div class="col-avatar">${avatarInner}</div>
       <div class="col-name">${esc(displayName)}${officialBadge}</div>
       <div class="col-uname">@${esc(profile.username || "")}</div>
       ${bioHtml}
-    </div>
-    <div class="stats-bar">
+    </a>
+    <a href="https://wrotate.com/" class="stats-bar link-block">
       <div class="stat-cell">
         <div class="stat-val">${watches.length}</div>
         <div class="stat-lbl">Watches</div>
@@ -259,13 +263,8 @@ serve(async (req) => {
         <div class="stat-val">${mostWornCell}</div>
         <div class="stat-lbl">Most Worn</div>
       </div>
-    </div>
-    ${watches.length > 0 ? `<div class="watch-grid">${gridHtml}</div>` : `<div class="state-wrap"><div class="state-icon">⌚</div><div class="state-title">No public watches yet</div></div>`}
-    <div class="cta-wrap">
-      <a href="https://apps.apple.com/us/app/wrotate/id6760091102">
-        <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" width="130">
-      </a>
-    </div>`;
+    </a>
+    ${watches.length > 0 ? `<div class="watch-grid">${gridHtml}</div>` : `<div class="state-wrap"><div class="state-icon">⌚</div><div class="state-title">No public watches yet</div></div>`}`;
 
   const html = htmlPage(ogTitle, ogDescription, ogImage, canonicalUrl, bodyHtml);
   return new Response(html, {
