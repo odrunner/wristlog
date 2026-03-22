@@ -92,6 +92,7 @@ ${ogImageTags}
     .watch-card-wears { font-size: .72rem; color: var(--muted); }
     /* Clickable blocks */
     .link-block { display: block; text-decoration: none; color: inherit; }
+    .stats-bar.link-block { display: flex; }
     /* Error states */
     .state-wrap { text-align: center; padding: 3rem 1rem; }
     .state-icon { font-size: 2.5rem; margin-bottom: .5rem; }
