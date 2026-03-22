@@ -22,9 +22,7 @@ function esc(s: string): string {
 }
 
 function htmlPage(title: string, description: string, imageUrl: string, canonicalUrl: string, bodyHtml: string, logId?: string): string {
-  const appBanner = logId
-    ? `<meta name="apple-itunes-app" content="app-id=6760091102, app-argument=https://wrotate.com/p/?id=${esc(logId)}">`
-    : '';
+  const appBanner = `<meta name="apple-itunes-app" content="app-id=6760091102">`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
