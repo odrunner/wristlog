@@ -76,7 +76,7 @@ test.describe('Collection page (mocked)', () => {
     if (await addBtn.isVisible()) {
       await addBtn.click();
       await expect(page.locator('#watch-modal')).toBeVisible();
-      await expect(page.locator('#modal-title')).toContainText(/add/i);
+      await expect(page.locator('#watch-modal-title')).toContainText(/add/i);
     }
   });
 });

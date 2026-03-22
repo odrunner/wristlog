@@ -101,6 +101,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+    }
     .hidden { display: none !important; }
     :root {
       --bg:         #f5f5f8;
@@ -1940,9 +1944,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 
   <!-- LOGIN PROMPT MODAL -->
-  <div id="login-prompt-modal" class="overlay hidden" role="dialog" aria-modal="true">
+  <div id="login-prompt-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="login-prompt-modal-title">
     <div class="modal" style="max-width:380px;">
-      <div class="modal-title" style="margin-bottom:.5rem;">Join WRotate</div>
+      <div class="modal-title" id="login-prompt-modal-title" style="margin-bottom:.5rem;">Join WRotate</div>
       <p style="font-size:.85rem;color:var(--muted);margin:0 0 1rem;">Sign in to like, comment, post, and share your own collection.</p>
       <button class="btn-google" onclick="signInWithGoogle()">
         <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
@@ -1965,9 +1969,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 
 <!-- ════ WHAT'S NEW MODAL ════ -->
-<div id="whats-new-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="whats-new-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="whats-new-modal-title">
   <div class="modal" style="max-width:440px;">
-    <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;">
+    <div class="modal-title" id="whats-new-modal-title" style="display:flex;align-items:center;gap:.5rem;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New
     </div>
     <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;">
@@ -2091,9 +2095,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ FOLLOWERS MODAL ════ -->
-<div id="followers-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="followers-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="followers-modal-title">
   <div class="modal" style="max-width:400px;">
-    <div class="modal-title">Followers</div>
+    <div class="modal-title" id="followers-modal-title">Followers</div>
     <div id="followers-list" style="max-height:55vh;overflow-y:auto;margin:0 -.25rem;"></div>
     <div class="modal-actions" style="margin-top:1rem;">
       <button class="btn btn-ghost" onclick="closeFollowersModal()">Close</button>
@@ -2101,9 +2105,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
-<div id="following-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="following-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="following-modal-title">
   <div class="modal" style="max-width:400px;">
-    <div class="modal-title">Following</div>
+    <div class="modal-title" id="following-modal-title">Following</div>
     <div id="following-modal-list" style="max-height:55vh;overflow-y:auto;margin:0 -.25rem;"></div>
     <div class="modal-actions" style="margin-top:1rem;">
       <button class="btn btn-ghost" onclick="closeFollowingModal()">Close</button>
@@ -2112,11 +2116,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ WELCOME ONBOARDING MODAL ════ -->
-<div id="welcome-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="welcome-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="welcome-modal-title">
   <div class="modal" style="max-width:380px;text-align:center;">
     <div class="welcome-step" id="ws-1">
       <div style="margin-bottom:.75rem;display:flex;justify-content:center;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
-      <div class="modal-title" style="font-size:1.3rem;">Welcome to WRotate</div>
+      <div class="modal-title" id="welcome-modal-title" style="font-size:1.3rem;">Welcome to WRotate</div>
       <p style="color:var(--muted);font-size:.9rem;line-height:1.55;margin:.5rem 0 1.5rem;">Track every wear, build your collection story, and discover what other enthusiasts are wearing.</p>
       <button class="btn btn-primary" style="width:100%;" onclick="welcomeStep(2)">Get started →</button>
     </div>
@@ -2133,11 +2137,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="modal-title" style="font-size:1.2rem;">Complete your profile</div>
       <p style="color:var(--muted);font-size:.9rem;line-height:1.55;margin:.5rem 0 1rem;">Add your name and pick a username so others can find you.</p>
       <div class="form-group" style="text-align:left;margin-bottom:.75rem;">
-        <label style="font-size:.8rem;margin-bottom:.3rem;display:block;">Name</label>
+        <label for="ws-display-name" style="font-size:.8rem;margin-bottom:.3rem;display:block;">Name</label>
         <input type="text" id="ws-display-name" placeholder="Your name" autocomplete="off" maxlength="50">
       </div>
       <div class="form-group" style="text-align:left;margin-bottom:.2rem;">
-        <label style="font-size:.8rem;margin-bottom:.3rem;display:block;">Username</label>
+        <label for="ws-username" style="font-size:.8rem;margin-bottom:.3rem;display:block;">Username</label>
         <div class="username-field">
           <span class="username-prefix">@</span>
           <input type="text" id="ws-username" placeholder="username" maxlength="30"
@@ -2146,7 +2150,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div id="ws-username-status" class="username-status" style="margin-bottom:.75rem;"></div>
       <div class="form-group" style="text-align:left;margin-bottom:1rem;">
-        <label style="font-size:.8rem;margin-bottom:.3rem;display:block;">About you</label>
+        <label for="ws-bio" style="font-size:.8rem;margin-bottom:.3rem;display:block;">About you</label>
         <textarea id="ws-bio" rows="2" placeholder="A short bio..." style="resize:none;" maxlength="300"></textarea>
       </div>
       <button class="btn btn-primary" id="ws-profile-btn" style="width:100%;margin-bottom:.6rem;" onclick="saveWelcomeProfile()">Save & Continue →</button>
@@ -2219,9 +2223,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ EULA GATE (for existing users who haven't accepted) ════ -->
-<div id="eula-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="eula-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="eula-modal-title">
   <div class="modal" style="max-width:420px;text-align:center;">
-    <div class="modal-title" style="font-size:1.2rem;">Terms of Use</div>
+    <div class="modal-title" id="eula-modal-title" style="font-size:1.2rem;">Terms of Use</div>
     <div style="color:var(--muted);font-size:.85rem;line-height:1.55;margin:.5rem 0 1rem;max-height:250px;overflow-y:auto;text-align:left;padding:0 .5rem;">
       <p style="margin-bottom:.5rem;">We've added Terms of Use to keep our community safe. By continuing, you agree to:</p>
       <ul style="margin:0 0 .5rem;padding-left:1.2rem;">
@@ -2470,7 +2474,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <!-- URL extraction form -->
       <div style="background:var(--surface2);border-radius:10px;padding:.85rem;margin-bottom:1rem;">
         <div class="draft-form-row">
-          <label>Source URL (Instagram, blog, web page)</label>
+          <label for="official-url-input">Source URL (Instagram, blog, web page)</label>
           <div style="display:flex;gap:.4rem;">
             <input type="text" id="official-url-input" placeholder="https://…">
             <button class="btn btn-primary btn-sm" onclick="extractOfficialUrl()" id="official-extract-btn" style="white-space:nowrap;">Extract</button>
@@ -2478,7 +2482,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
         <div id="official-extract-preview" style="display:none;"></div>
         <div class="draft-form-row">
-          <label>Image — upload or paste URL</label>
+          <label for="official-photo-file">Image — upload or paste URL</label>
           <div class="official-photo-drop" id="official-photo-drop"
                onclick="document.getElementById('official-photo-file').click()"
                ondragover="event.preventDefault();this.classList.add('dragover')"
@@ -2491,11 +2495,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <input type="file" id="official-photo-file" accept="image/*" style="display:none" onchange="handleOfficialPhotoFile(this)">
         </div>
         <div class="draft-form-row">
-          <label>Or paste image URL directly</label>
+          <label for="official-image-input">Or paste image URL directly</label>
           <input type="text" id="official-image-input" placeholder="https://…image.jpg" oninput="updateOfficialPreview()">
         </div>
         <div class="draft-form-row">
-          <label>Caption</label>
+          <label for="official-caption-input">Caption</label>
           <textarea id="official-caption-input" placeholder="Write a caption…" rows="2" oninput="updateOfficialPreview()"></textarea>
         </div>
 
@@ -3042,11 +3046,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </main>
 
 <!-- ════ ADD / EDIT WATCH MODAL ════ -->
-<div id="watch-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="watch-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="watch-modal-title">
   <div class="modal">
-    <div class="modal-title" id="modal-title">Add Watch</div>
+    <div class="modal-title" id="watch-modal-title">Add Watch</div>
     <div class="form-group">
-      <label>Manufacturer / Listing URL</label>
+      <label for="w-url">Manufacturer / Listing URL</label>
       <div class="url-row">
         <input type="url" id="w-url" placeholder="https://www.rolex.com/watches/submariner/…" oninput="updateUrlBtn()">
         <button id="w-fetch-btn" class="url-open-btn" onclick="fetchCollectionDetails()" style="color:var(--text);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Fetch</button>
@@ -3055,7 +3059,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>Brand *</label>
+        <label for="w-brand-display">Brand *</label>
         <div class="brand-ac-wrap">
           <input type="text" id="w-brand-display" placeholder="Type to search brands…"
             autocomplete="off"
@@ -3068,23 +3072,23 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
       </div>
       <div class="form-group">
-        <label>Model / Name *</label>
+        <label for="w-name">Model / Name *</label>
         <input type="text" id="w-name" placeholder="Submariner, Speedmaster…" maxlength="100">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>Reference No.</label>
+        <label for="w-ref">Reference No.</label>
         <input type="text" id="w-ref" placeholder="116610LN" maxlength="60">
       </div>
       <div class="form-group">
-        <label>Purchase Price ($)</label>
+        <label for="w-price">Purchase Price ($)</label>
         <input type="text" inputmode="decimal" id="w-price" placeholder="0" autocomplete="off" oninput="fmtPriceInput(this)">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>Purchase Date</label>
+        <label for="w-date">Purchase Date</label>
         <input type="date" id="w-date" max="9999-12-31">
       </div>
     </div>
@@ -3109,11 +3113,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="modal-section-body collapsed" id="sec-condition">
         <div class="form-row-3">
           <div class="form-group">
-            <label>Warranty Expires</label>
+            <label for="w-warranty">Warranty Expires</label>
             <input type="date" id="w-warranty">
           </div>
           <div class="form-group">
-            <label>Box</label>
+            <label for="w-box">Box</label>
             <select id="w-box">
               <option value="">— Not Set —</option>
               <option value="yes">Has Box</option>
@@ -3121,7 +3125,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             </select>
           </div>
           <div class="form-group">
-            <label>Papers</label>
+            <label for="w-papers">Papers</label>
             <select id="w-papers">
               <option value="">— Not Set —</option>
               <option value="yes">Has Papers</option>
@@ -3131,7 +3135,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Insurance Status</label>
+            <label for="w-insurance">Insurance Status</label>
             <select id="w-insurance" onchange="onInsuranceChange()">
               <option value="">— Not Set —</option>
               <option value="insured">Insured</option>
@@ -3139,7 +3143,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             </select>
           </div>
           <div class="form-group" id="w-ins-value-group" style="display:none;">
-            <label>Insured Value ($)</label>
+            <label for="w-ins-value">Insured Value ($)</label>
             <input type="text" inputmode="decimal" id="w-ins-value" placeholder="0" autocomplete="off" oninput="fmtPriceInput(this)">
           </div>
         </div>
@@ -3154,7 +3158,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </button>
       <div class="modal-section-body collapsed" id="sec-market">
         <div class="form-group" style="margin-bottom:0">
-          <label>Market Value ($)</label>
+          <label for="w-manual-mp">Market Value ($)</label>
           <input type="text" inputmode="decimal" id="w-manual-mp" placeholder="0" autocomplete="off" oninput="fmtPriceInput(this)">
         </div>
       </div>
@@ -3211,9 +3215,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ RECEIPTS MODAL ════ -->
-<div id="receipts-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="receipts-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="receipts-modal-title">
   <div class="modal" style="max-width:480px;">
-    <div class="modal-title">Receipts &amp; Documents</div>
+    <div class="modal-title" id="receipts-modal-title">Receipts &amp; Documents</div>
     <div id="receipts-watch-name" style="color:var(--muted);font-size:.85rem;margin-bottom:1rem;"></div>
     <div id="receipts-list"></div>
     <div class="modal-actions" style="margin-top:1.25rem;">
@@ -3224,9 +3228,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ DELETE CONFIRM MODAL ════ -->
-<div id="del-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="del-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="del-modal-title">
   <div class="modal" style="max-width:360px;">
-    <div class="modal-title">Delete Watch?</div>
+    <div class="modal-title" id="del-modal-title">Delete Watch?</div>
     <p style="color:var(--muted);font-size:.88rem;margin-bottom:1.25rem;line-height:1.55;">
       This will permanently remove the watch and <strong>all its wear logs</strong>. This cannot be undone.
     </p>
@@ -3238,9 +3242,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ GENERIC CONFIRM MODAL ════ -->
-<div id="confirm-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="confirm-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
   <div class="modal" style="max-width:360px;">
-    <div class="modal-title" id="confirm-title">Are you sure?</div>
+    <div class="modal-title" id="confirm-modal-title">Are you sure?</div>
     <p id="confirm-msg" style="color:var(--muted);font-size:.88rem;margin-bottom:1.25rem;line-height:1.55;"></p>
     <div class="modal-actions">
       <button id="confirm-ok-btn" class="btn btn-danger" onclick="_confirmOk()">Confirm</button>
@@ -3251,9 +3255,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 
 <!-- ════ ADD PHOTO MODAL (paste / drop / browse — no clipboard permission) ════ -->
-<div id="photo-paste-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="photo-paste-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="photo-paste-modal-title">
   <div class="modal" style="max-width:320px;">
-    <div class="modal-title">Add Photo</div>
+    <div class="modal-title" id="photo-paste-modal-title">Add Photo</div>
     <div id="photo-drop-zone"
          style="border:2px dashed var(--border);border-radius:10px;padding:1.75rem 1rem 1.25rem;text-align:center;transition:border-color .15s;"
          ondragover="event.preventDefault();this.style.borderColor='var(--gold)'"
@@ -3272,9 +3276,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ PHOTO IDENTIFY MODAL ════ -->
-<div id="photo-identify-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="photo-identify-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="photo-identify-modal-title">
   <div class="modal" style="max-width:480px;">
-    <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;">
+    <div class="modal-title" id="photo-identify-modal-title" style="display:flex;align-items:center;gap:.5rem;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Identified Watches
     </div>
     <div id="photo-identify-list" style="max-height:60vh;overflow-y:auto;"></div>
@@ -3285,9 +3289,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ SNAP MATCH PICKER MODAL ════ -->
-<div id="snap-match-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="snap-match-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="snap-match-modal-title">
   <div class="modal" style="max-width:420px;">
-    <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;">
+    <div class="modal-title" id="snap-match-modal-title" style="display:flex;align-items:center;gap:.5rem;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Which watch is this?
     </div>
     <div id="snap-match-list" style="max-height:50vh;overflow-y:auto;"></div>
@@ -3298,13 +3302,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ WISHLIST ADD / EDIT MODAL ════ -->
-<div id="wishlist-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="wishlist-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="wishlist-modal-title">
   <div class="modal">
-    <div class="modal-title" id="wl-modal-title">Add to Wishlist</div>
+    <div class="modal-title" id="wishlist-modal-title">Add to Wishlist</div>
 
     <!-- URL first — Fetch fills the other fields -->
     <div class="form-group">
-      <label>Manufacturer / Listing URL</label>
+      <label for="wl-url">Manufacturer / Listing URL</label>
       <div class="url-row">
         <input type="url" id="wl-url" placeholder="https://…" oninput="updateWlUrlBtn()">
         <a id="wl-url-open-btn" href="#" target="_blank" rel="noopener noreferrer" class="url-open-btn hidden">Open ↗</a>
@@ -3314,7 +3318,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <div class="form-row">
       <div class="form-group">
-        <label>Brand *</label>
+        <label for="wl-brand-display">Brand *</label>
         <div class="brand-ac-wrap">
           <input type="text" id="wl-brand-display" placeholder="Type to search brands…"
             autocomplete="off"
@@ -3327,25 +3331,25 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
       </div>
       <div class="form-group">
-        <label>Model / Name *</label>
+        <label for="wl-name">Model / Name *</label>
         <input type="text" id="wl-name" placeholder="Royal Oak, Nautilus…" maxlength="100">
       </div>
     </div>
 
     <div class="form-row">
       <div class="form-group">
-        <label>Reference No.</label>
+        <label for="wl-ref">Reference No.</label>
         <input type="text" id="wl-ref" placeholder="15500ST.OO.1220ST.01" maxlength="60">
       </div>
       <div class="form-group">
-        <label>Retail Price ($)</label>
+        <label for="wl-price">Retail Price ($)</label>
         <input type="text" inputmode="decimal" id="wl-price" placeholder="0" autocomplete="off" oninput="fmtPriceInput(this)">
       </div>
     </div>
 
     <div class="form-row">
       <div class="form-group">
-        <label>Date Added to Wishlist</label>
+        <label for="wl-date">Date Added to Wishlist</label>
         <input type="date" id="wl-date">
       </div>
     </div>
@@ -3375,10 +3379,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ WATCH PREVIEW (read-only, from feed / other user profile) ════ -->
-<div id="watch-preview-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="watch-preview-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="watch-preview-modal-title">
   <div class="modal wpm-modal">
     <div class="wpm-hero" id="wpm-hero"></div>
-    <div class="modal-title" id="wpm-title" style="margin-bottom:.75rem;"></div>
+    <div class="modal-title" id="watch-preview-modal-title" style="margin-bottom:.75rem;"></div>
     <div id="wpm-fields"></div>
     <div class="modal-actions wpm-actions">
       <button class="btn btn-primary" onclick="addPreviewedWatchToWishlist()">Add to Wishlist</button>
@@ -3388,9 +3392,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ WISHLIST DELETE CONFIRM ════ -->
-<div id="del-wl-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="del-wl-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="del-wl-modal-title">
   <div class="modal" style="max-width:360px;">
-    <div class="modal-title">Delete from Wishlist?</div>
+    <div class="modal-title" id="del-wl-modal-title">Delete from Wishlist?</div>
     <p style="color:var(--muted);font-size:.88rem;margin-bottom:1.25rem;line-height:1.55;">
       This will permanently delete the item from your wishlist. This cannot be undone.
     </p>
@@ -3457,9 +3461,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ DISCOVER / FIND PEOPLE MODAL ════ -->
-<div id="discover-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="discover-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="discover-modal-title">
   <div class="modal" style="max-width:420px;">
-    <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</div>
+    <div class="modal-title" id="discover-modal-title" style="display:flex;align-items:center;gap:.5rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</div>
     <div class="form-group" style="margin-bottom:1rem;">
       <input type="text" id="discover-search" placeholder="Search by username or name…" oninput="debounceSearch(this.value)" autocomplete="off">
     </div>
@@ -3476,9 +3480,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ CLUB INVITE MEMBERS MODAL ════ -->
-<div id="club-invite-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="club-invite-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="club-invite-modal-title">
   <div class="modal" style="max-width:420px;">
-    <div class="modal-title">Invite Members</div>
+    <div class="modal-title" id="club-invite-modal-title">Invite Members</div>
     <div class="form-group" style="margin-bottom:1rem;">
       <input type="text" id="club-invite-search" placeholder="Search by name or username…"
         oninput="debounceInviteSearch(this.value, _clubInviteModalId)" autocomplete="off">
@@ -3499,9 +3503,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   style="display:none" onchange="handleFeedPhoto(this)">
 
 <!-- ════ NEW POST MODAL ════ -->
-<div id="new-post-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="new-post-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="new-post-modal-title">
   <div class="modal" style="max-width:400px;">
-    <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> New Post</div>
+    <div class="modal-title" id="new-post-modal-title" style="display:flex;align-items:center;gap:.5rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> New Post</div>
     <div class="form-group">
       <div id="np-photo-area" class="log-photo-area" onclick="document.getElementById('np-photo-input').click()">
         <div id="np-photo-placeholder" class="log-photo-placeholder" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add a photo (optional)</div>
@@ -3529,9 +3533,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ EDIT POST MODAL ════ -->
-<div id="edit-post-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="edit-post-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="edit-post-modal-title">
   <div class="modal" style="max-width:400px;">
-    <div class="modal-title">Edit Post</div>
+    <div class="modal-title" id="edit-post-modal-title">Edit Post</div>
     <div class="form-group">
       <div id="ep-photo-area" class="log-photo-area" onclick="document.getElementById('ep-photo-input').click()">
         <div id="ep-photo-placeholder" class="log-photo-placeholder" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add a photo (optional)</div>
@@ -3573,11 +3577,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ DELETE ACCOUNT MODAL ════ -->
-<div id="delete-account-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="delete-account-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="delete-account-modal-title">
   <div class="modal" style="max-width:380px;text-align:center;">
     <div id="da-step-1" class="del-acct-step">
       <div style="margin-bottom:.5rem;display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-      <div class="modal-title" style="color:#ef4444;">Delete Account?</div>
+      <div class="modal-title" id="delete-account-modal-title" style="color:#ef4444;">Delete Account?</div>
       <p style="color:var(--muted);font-size:.88rem;line-height:1.55;margin:.5rem 0 1.25rem;">
         This will permanently erase <strong style="color:var(--text);">all</strong> your watches, wear logs, wishlists, posts, and social data. <strong style="color:var(--text);">This cannot be undone.</strong>
       </p>
@@ -3597,9 +3601,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ REC SETTINGS MODAL ════ -->
-<div id="rec-settings-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="rec-settings-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="rec-settings-modal-title">
   <div class="modal" style="max-width:420px;">
-    <div class="modal-title" style="display:flex;align-items:center;justify-content:space-between;">
+    <div class="modal-title" id="rec-settings-modal-title" style="display:flex;align-items:center;justify-content:space-between;">
       <span>Pick Settings</span>
       <button type="button" class="btn-ghost" onclick="closeRecSettings()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted);padding:0;">&times;</button>
     </div>
@@ -3608,11 +3612,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ DELETE CLUB MODAL ════ -->
-<div id="delete-club-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="delete-club-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="delete-club-modal-title">
   <div class="modal" style="max-width:380px;text-align:center;">
     <div id="dc-step-1">
       <div style="margin-bottom:.5rem;display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-      <div class="modal-title" style="color:#ef4444;">Delete this club?</div>
+      <div class="modal-title" id="delete-club-modal-title" style="color:#ef4444;">Delete this club?</div>
       <p id="dc-club-name" style="font-weight:700;margin:.25rem 0 .75rem;"></p>
       <p style="color:var(--muted);font-size:.88rem;line-height:1.55;margin-bottom:1.25rem;">All members will lose access. Posts tagged to this club will remain but lose their club association. <strong style="color:var(--text);">This cannot be undone.</strong></p>
       <button class="btn" style="width:100%;margin-bottom:.6rem;background:#ef4444;color:#fff;border:none;padding:.65rem;" onclick="deleteClub()">Yes, Delete This Club</button>
@@ -3625,9 +3629,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- @mention autocomplete dropdown (shared, repositioned dynamically) -->
 <div id="mention-ac" class="mention-ac" role="listbox"></div>
 
-<div id="feedback-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="feedback-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="feedback-modal-title">
   <div class="modal" style="max-width:420px;">
-    <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Feedback</div>
+    <div class="modal-title" id="feedback-modal-title" style="display:flex;align-items:center;gap:.5rem;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Send Feedback</div>
     <div id="fb-type-picker" style="display:flex;gap:.5rem;margin-bottom:.5rem;">
       <div class="chip selected" data-val="bug" onclick="setFeedbackType('bug')">&#128027; Bug Report</div>
       <div class="chip" data-val="feature" onclick="setFeedbackType('feature')">&#128161; Feature Request</div>
@@ -3644,9 +3648,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ REPORT MODAL ════ -->
-<div id="report-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="report-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="report-modal-title">
   <div class="modal" style="max-width:380px;">
-    <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;">
+    <div class="modal-title" id="report-modal-title" style="display:flex;align-items:center;gap:.5rem;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Report
     </div>
     <input type="hidden" id="report-content-type">
@@ -3679,8 +3683,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ EDIT LOG MODAL ════ -->
 <!-- ════ TRACK LOG MODAL ════ -->
-<div id="track-log-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="track-log-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="track-log-modal-title">
   <div class="modal tl-modal">
+    <span id="track-log-modal-title" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;">Log a Wear</span>
 
     <!-- Watch hero -->
     <div class="tl-hero">
@@ -3761,11 +3766,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
-<div id="edit-log-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="edit-log-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="edit-log-modal-title">
   <div class="modal" style="max-width:380px;">
-    <div class="modal-title" style="display:flex;align-items:center;gap:.5rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit Log Entry</div>
+    <div class="modal-title" id="edit-log-modal-title" style="display:flex;align-items:center;gap:.5rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Edit Log Entry</div>
     <div class="form-group">
-      <label>Date</label>
+      <label for="edit-log-date">Date</label>
       <input type="date" id="edit-log-date">
     </div>
     <div class="form-group">
@@ -3783,7 +3788,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="chips" id="edit-log-strap-chips"></div>
     </div>
     <div class="form-group">
-      <label>Notes <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+      <label for="edit-log-notes">Notes <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
       <textarea id="edit-log-notes" placeholder="Any occasion, outfit, thoughts…" style="height:70px;" maxlength="500"></textarea>
     </div>
     <div class="form-group" id="edit-log-club-field" style="display:none;">
@@ -3797,15 +3802,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
-<div id="create-club-modal" class="overlay hidden" role="dialog" aria-modal="true">
+<div id="create-club-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="create-club-modal-title">
   <div class="modal" style="max-width:400px;">
-    <div class="modal-title">Create a Club</div>
+    <div class="modal-title" id="create-club-modal-title">Create a Club</div>
     <div class="form-group">
-      <label class="form-label">Club Name *</label>
+      <label for="cc-name" class="form-label">Club Name *</label>
       <input type="text" id="cc-name" placeholder="e.g. Tudor Watch Crew" maxlength="60">
     </div>
     <div class="form-group">
-      <label class="form-label">Description <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+      <label for="cc-desc" class="form-label">Description <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
       <textarea id="cc-desc" rows="2" placeholder="What's this club about?" style="resize:none;" maxlength="300"></textarea>
     </div>
     <div class="form-group">
@@ -4042,6 +4047,11 @@ async function deleteAccount() {
   await del('user_blocks',    { or: `blocker_id.eq.${uid},blocked_id.eq.${uid}` });
   await del('comment_likes',  { eq: ['user_id', uid] });
   await del('eula_acceptances', { eq: ['user_id', uid] });
+  await del('club_invites',   { or: `inviter_id.eq.${uid},invitee_id.eq.${uid}` });
+  await del('club_join_requests', { eq: ['user_id', uid] });
+  await del('content_reports', { eq: ['reporter_id', uid] });
+  await del('device_tokens',  { eq: ['user_id', uid] });
+  await del('official_drafts', { eq: ['created_by', uid] });
   await del('logs',           { eq: ['user_id', uid] });
   await del('wishlist',       { eq: ['user_id', uid] });
   await del('watches',        { eq: ['user_id', uid] });
@@ -4297,7 +4307,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.18.43';
+const APP_VERSION = '2.36.21.19.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4813,10 +4823,10 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   const editHtml = isOwn ? `
     <div class="profile-page-card profile-edit-card" id="profile-edit-card">
       <div class="profile-page-section-title">Edit Profile</div>
-      <div class="form-group"><label>Display Name</label>
+      <div class="form-group"><label for="pp-display-name">Display Name</label>
         <input type="text" id="pp-display-name" value="${escHtml(profile.display_name || '')}" placeholder="Your name" maxlength="50">
       </div>
-      <div class="form-group"><label>Username</label>
+      <div class="form-group"><label for="pp-username">Username</label>
         <div class="username-field">
           <span class="username-prefix">@</span>
           <input type="text" id="pp-username" value="${escHtml(profile.username || '')}" placeholder="username" maxlength="30"
@@ -4824,7 +4834,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
         </div>
         <div id="pp-username-status" class="username-status"></div>
       </div>
-      <div class="form-group"><label>Bio</label>
+      <div class="form-group"><label for="pp-bio">Bio</label>
         <textarea id="pp-bio" rows="3" placeholder="Tell people about your collection…" maxlength="300">${escHtml(profile.bio || '')}</textarea>
       </div>
       <div style="display:flex;gap:.65rem;margin-top:.1rem;">
@@ -6023,17 +6033,17 @@ async function renderClubDetail(clubId) {
       <div style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:.75rem;">Edit Club</div>
 
       <div class="form-group" style="margin-bottom:.75rem;">
-        <label class="form-label" style="font-size:.78rem;">Club Name</label>
+        <label for="club-edit-name" class="form-label" style="font-size:.78rem;">Club Name</label>
         <input type="text" id="club-edit-name" value="${escHtml(club.name)}" maxlength="60">
       </div>
 
       <div class="form-group" style="margin-bottom:.75rem;">
-        <label class="form-label" style="font-size:.78rem;">Description</label>
+        <label for="club-edit-desc" class="form-label" style="font-size:.78rem;">Description</label>
         <textarea id="club-edit-desc" rows="2" style="resize:none;" maxlength="300">${escHtml(club.description || '')}</textarea>
       </div>
 
       <div class="form-group" style="margin-bottom:.75rem;">
-        <label class="form-label" style="font-size:.78rem;">Club Photo</label>
+        <label for="club-edit-photo-input" class="form-label" style="font-size:.78rem;">Club Photo</label>
         <div id="club-edit-photo-area" class="log-photo-area" style="height:64px;" onclick="document.getElementById('club-edit-photo-input').click()">
           ${club.image_url
             ? `<img id="club-edit-photo-preview" src="${escHtml(club.image_url)}" class="log-photo-preview" style="display:block;max-height:56px;border-radius:8px;">`
@@ -9457,7 +9467,7 @@ let _confirmResolve = null;
 function showConfirm(message, { title = 'Are you sure?', confirmLabel = 'Confirm', danger = true } = {}) {
   return new Promise(resolve => {
     _confirmResolve = resolve;
-    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-modal-title').textContent = title;
     document.getElementById('confirm-msg').textContent   = message;
     const btn = document.getElementById('confirm-ok-btn');
     btn.textContent = confirmLabel;
@@ -10542,11 +10552,11 @@ function editOfficialDraft(draftId) {
   if (!card) return;
   card.innerHTML = `
     <div class="draft-form-row">
-      <label>Image URL</label>
+      <label for="edit-draft-image-${draftId}">Image URL</label>
       <input type="text" id="edit-draft-image-${draftId}" value="${escAttr(draft.image_url || '')}">
     </div>
     <div class="draft-form-row">
-      <label>Caption</label>
+      <label for="edit-draft-caption-${draftId}">Caption</label>
       <textarea id="edit-draft-caption-${draftId}" rows="2">${escHtml(draft.caption || '')}</textarea>
     </div>
     <div class="draft-actions">
@@ -12454,7 +12464,7 @@ function openAddWatch() {
   document.getElementById('w-box').value = '';
   document.getElementById('w-papers').value = '';
   document.getElementById('w-ins-value-group').style.display = 'none';
-  document.getElementById('modal-title').textContent = 'Add Watch';
+  document.getElementById('watch-modal-title').textContent = 'Add Watch';
   document.getElementById('modal-delete-btn').style.display = 'none';
   buildBrandSelect();
   renderTagPicker([], []);
@@ -12478,7 +12488,7 @@ function openEditWatch(id) {
   selColor      = w.color;
   wPendingImage = null;
   wPendingFile  = null;
-  document.getElementById('modal-title').textContent    = 'Edit Watch';
+  document.getElementById('watch-modal-title').textContent    = 'Edit Watch';
   document.getElementById('modal-delete-btn').style.display = '';
   buildBrandSelect(w.brand);
   document.getElementById('w-name').value               = w.name;
@@ -15163,7 +15173,7 @@ function previewWatch(w) {
   }
 
   // Title
-  document.getElementById('wpm-title').textContent = [w.brand, w.name].filter(Boolean).join(' ') || 'Watch';
+  document.getElementById('watch-preview-modal-title').textContent = [w.brand, w.name].filter(Boolean).join(' ') || 'Watch';
 
   // Info fields (public only — no price/value)
   const infoRows = [
@@ -15209,7 +15219,7 @@ function addPreviewedWatchToWishlist() {
   editingWlId    = null;
   wlPendingImage = null;
   wlRemoveImage  = false;
-  document.getElementById('wl-modal-title').textContent = 'Add to Wishlist';
+  document.getElementById('wishlist-modal-title').textContent = 'Add to Wishlist';
   document.getElementById('wl-delete-btn').style.display = 'none';
   document.getElementById('wl-move-btn').style.display = 'none';
   buildWlBrandSelect(w.brand);
@@ -15232,7 +15242,7 @@ function openAddWishlist() {
   wlRemoveImage  = false;
   ['wl-name','wl-ref','wl-price','wl-url'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('wl-date').value = todayStr();
-  document.getElementById('wl-modal-title').textContent = 'Add to Wishlist';
+  document.getElementById('wishlist-modal-title').textContent = 'Add to Wishlist';
   document.getElementById('wl-delete-btn').style.display = 'none';
   document.getElementById('wl-move-btn').style.display = 'none';
   buildWlBrandSelect();
@@ -15248,7 +15258,7 @@ function openEditWishlist(id) {
   editingWlId    = id;
   wlPendingImage = null;
   wlRemoveImage  = false;
-  document.getElementById('wl-modal-title').textContent = 'Edit Wishlist Item';
+  document.getElementById('wishlist-modal-title').textContent = 'Edit Wishlist Item';
   document.getElementById('wl-delete-btn').style.display = '';
   document.getElementById('wl-move-btn').style.display = '';
   buildWlBrandSelect(w.brand);
@@ -15286,7 +15296,7 @@ async function moveWishlistToCollection() {
   if (w.marketPrice) movingFromWishlistData.marketPrice = w.marketPrice;
 
   // Change modal title
-  document.getElementById('modal-title').textContent = 'Move to Collection';
+  document.getElementById('watch-modal-title').textContent = 'Move to Collection';
 
   // Pre-fill mapped fields
   if (w.brand) buildBrandSelect(w.brand);
