@@ -399,6 +399,54 @@ test.describe('Feed page (mocked)', () => {
   });
 });
 
+// ── Share post button ────────────────────────────────────────────────────
+
+test.describe('Share post (mocked)', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await page.waitForTimeout(2000); // wait for feed to render
+  });
+
+  test('public post has share button in actions', async ({ page }) => {
+    // log-001 is public — should have share button
+    const card = page.locator('#feedcard-log-001');
+    if (await card.count() > 0) {
+      const shareBtn = card.locator('.feed-action-btn[title="Share post"]');
+      await expect(shareBtn).toBeVisible();
+    }
+  });
+
+  test('private post does not have share button', async ({ page }) => {
+    // log-002 is private — should NOT have share button
+    const card = page.locator('#feedcard-log-002');
+    if (await card.count() > 0) {
+      const shareBtn = card.locator('.feed-action-btn[title="Share post"]');
+      await expect(shareBtn).toHaveCount(0);
+    }
+  });
+
+  test('public post has share option in menu', async ({ page }) => {
+    const card = page.locator('#feedcard-log-001');
+    if (await card.count() > 0) {
+      const menu = card.locator('.feed-menu');
+      const shareItem = menu.locator('.feed-menu-item', { hasText: 'Share post' });
+      await expect(shareItem).toHaveCount(1);
+    }
+  });
+
+  test('private post does not have share option in menu', async ({ page }) => {
+    const card = page.locator('#feedcard-log-002');
+    if (await card.count() > 0) {
+      const menu = card.locator('.feed-menu');
+      const shareItem = menu.locator('.feed-menu-item', { hasText: 'Share post' });
+      await expect(shareItem).toHaveCount(0);
+    }
+  });
+});
+
 // ── Search / Discover ───────────────────────────────────────────────────
 
 test.describe('Search / Discover (mocked)', () => {

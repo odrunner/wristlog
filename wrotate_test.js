@@ -1336,3 +1336,31 @@ export function filterWatchChartsUrls(html, brandKey) {
   const modelUrl = allLinks.find(u => u.toLowerCase().includes(brandKey));
   return modelUrl ? modelUrl.replace(/\/[^/]+$/, '') : null;
 }
+
+// ══════════════════════════════════════════
+//  BROADCAST EMAIL HELPERS
+// ══════════════════════════════════════════
+
+// Build inline image HTML snippet for email
+export function imgSnippet(img) {
+  return `</div></td></tr><tr><td style="padding:8px 28px;">
+    <img src="${escHtml(img.src)}" alt="" style="max-width:100%;border-radius:8px;display:block;">
+    ${img.caption ? `<div style="font-size:12px;color:#888;margin-top:4px;text-align:center;">${escHtml(img.caption)}</div>` : ''}
+  </td></tr><tr><td style="padding:0 28px;"><div style="font-size:14px;color:#555;line-height:1.6;">`;
+}
+
+// Replace [img1], [img2] etc. markers in body HTML with inline images
+export function inlineImages(bodyHtml, images) {
+  for (let i = 0; i < images.length; i++) {
+    const marker = `[img${i + 1}]`;
+    if (bodyHtml.includes(marker) && images[i]) {
+      bodyHtml = bodyHtml.replace(marker, imgSnippet(images[i]));
+    }
+  }
+  return bodyHtml;
+}
+
+// Build share post URL
+export function sharePostUrl(logId) {
+  return `https://api.wrotate.com/functions/v1/share-post?id=${logId}`;
+}
