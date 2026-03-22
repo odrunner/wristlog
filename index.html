@@ -4291,7 +4291,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.17.32';
+const APP_VERSION = '2.36.21.17.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16007,7 +16007,7 @@ function closeFeedback() {
 }
 
 async function sharePost(logId) {
-  const url = `https://api.wrotate.com/functions/v1/share-post?id=${logId}`;
+  const url = `https://wrotate.com/p/?id=${logId}`;
   const item = feedItems.find(i => i.id === logId);
   const watchName = item?.watch ? `${item.watch.brand || ''} ${item.watch.name || ''}`.trim() : '';
   const title = watchName ? `Check out this ${watchName} on WRotate` : 'Check out this post on WRotate';

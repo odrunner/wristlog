@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https://api.wrotate.com https://*.supabase.co data: blob: https:; connect-src 'self' https://api.wrotate.com https://*.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self';">
+  <title>WRotate Post</title>
+  <meta name="robots" content="index, follow">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <meta property="og:site_name" content="WRotate">
+  <meta property="og:type" content="article">
+  <meta id="og-title" property="og:title" content="Post on WRotate">
+  <meta id="og-description" property="og:description" content="Check out this watch on WRotate — the collection tracker for enthusiasts.">
+  <meta id="og-url" property="og:url" content="https://wrotate.com/">
+  <meta id="og-image" property="og:image" content="https://api.wrotate.com/storage/v1/object/public/media/landing/collection.PNG">
+  <meta name="twitter:card" content="summary_large_image">
+  <script>
+    (function(){
+      try {
+        const stored = localStorage.getItem('wrotate_theme');
+        const prefer = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        if (prefer === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      } catch(e) {}
+    })();
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f5f5f8; --surface: #ffffff; --surface2: #eeeff5;
+      --border: #d8d9e8; --gold: #9a7628; --gold-lt: #c9a84c;
+      --gold-dim: rgba(154,118,40,.12); --text: #16161e; --muted: #70708a;
+      --radius: 10px;
+    }
+    [data-theme="dark"] {
+      --bg: #0b0b10; --surface: #141419; --surface2: #1c1c25;
+      --border: #272734; --gold: #c9a84c; --gold-lt: #dbbe72;
+      --gold-dim: rgba(201,168,76,.12); --text: #e6e6f0; --muted: #7a7a95;
+    }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; font-size: 15px; }
+    a { color: var(--gold); text-decoration: none; }
+
+    .topbar { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: .75rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .topbar-logo { display: inline-flex; align-items: center; gap: .4rem; font-size: 1.1rem; font-weight: 800; letter-spacing: -.02em; color: var(--gold); text-decoration: none; }
+    .topbar-logo img { width: 24px; height: 24px; border-radius: 5px; }
+    .topbar-logo:hover { color: var(--gold-lt); }
+
+    .page-wrap { max-width: 520px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+    .post-card { background: var(--surface); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); cursor: pointer; transition: box-shadow .15s; display: block; text-decoration: none; color: var(--text); }
+    .post-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+    .post-photo { width: 100%; display: block; }
+    .post-body { padding: 1rem 1.15rem; }
+    .post-header { display: flex; align-items: center; gap: .6rem; margin-bottom: .75rem; }
+    .post-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: .72rem; font-weight: 700; color: var(--muted); overflow: hidden; flex-shrink: 0; }
+    .post-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .post-name { font-weight: 700; font-size: .92rem; }
+    .post-meta { font-size: .75rem; color: var(--muted); }
+    .post-caption { font-size: .92rem; line-height: 1.5; margin-bottom: .75rem; }
+    .post-watch { display: inline-flex; align-items: center; gap: .4rem; background: var(--surface2); border-radius: 20px; padding: .3rem .75rem .3rem .4rem; font-size: .78rem; font-weight: 600; color: var(--text); }
+    .post-watch img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
+    .cta-wrap { text-align: center; margin-top: 1.5rem; }
+    .state-wrap { text-align: center; padding: 3rem 1rem; }
+    .state-icon { font-size: 2.5rem; margin-bottom: .5rem; }
+    .state-title { font-size: 1.1rem; font-weight: 700; margin-bottom: .3rem; }
+    .state-sub { font-size: .88rem; color: var(--muted); line-height: 1.5; max-width: 320px; margin: 0 auto; }
+    .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 1rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <a href="https://wrotate.com/" class="topbar-logo"><img src="/icon.svg" alt=""> WRotate</a>
+  </header>
+
+  <main class="page-wrap" id="main-content">
+    <div class="state-wrap">
+      <div class="spinner"></div>
+      <div class="state-sub">Loading post…</div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.98.0/dist/umd/supabase.js"></script>
+  <script>
+    const SUPABASE_URL = 'https://api.wrotate.com';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs';
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
+
+    function esc(s) {
+      return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function initials(name) {
+      return (name || '').trim().split(/\s+/).map(w => w[0] || '').join('').slice(0, 2).toUpperCase() || '?';
+    }
+
+    const useCaseLabels = {
+      casual: 'Casual', formal: 'Formal', sport: 'Sport', dive: 'Dive',
+      travel: 'Travel', work: 'Work', special: 'Special Occasion',
+      outdoor: 'Outdoor', dinner: 'Dinner', unspecified: '',
+    };
+
+    function renderError(msg) {
+      document.getElementById('main-content').innerHTML = `
+        <div class="state-wrap">
+          <div class="state-icon">🔒</div>
+          <div class="state-title">Post not found</div>
+          <div class="state-sub">${esc(msg)}</div>
+          <div class="cta-wrap" style="margin-top:1rem;"><a href="https://wrotate.com/" style="color:var(--gold);font-weight:600;">Open WRotate</a></div>
+        </div>`;
+    }
+
+    function renderPost(log, profile, watch) {
+      const displayName = profile?.display_name || profile?.username || 'Someone';
+      const watchName = watch ? (watch.brand || '') + ' ' + (watch.name || '') : '';
+      const trimmedWatch = watchName.trim();
+      const caption = log.notes || '';
+      const photoUrl = log.photo_url || '';
+      const useCaseLabel = log.use_case ? (useCaseLabels[log.use_case] || log.use_case) : '';
+      // Hide "unspecified" label
+      const visibleUseCase = useCaseLabel === '' ? '' : useCaseLabel;
+
+      let dateLabel = '';
+      if (log.date) {
+        try {
+          const d = new Date(log.date + 'T12:00:00');
+          dateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        } catch { dateLabel = log.date; }
+      }
+      const metaParts = [dateLabel, visibleUseCase].filter(Boolean).join(' · ');
+
+      // Update OG tags dynamically (helps if page is cached)
+      const ogTitle = trimmedWatch ? `${displayName}'s ${trimmedWatch} — WRotate` : `${displayName}'s post — WRotate`;
+      document.title = ogTitle;
+      document.getElementById('og-title').content = ogTitle;
+      if (caption) document.getElementById('og-description').content = caption.slice(0, 200);
+      if (photoUrl) document.getElementById('og-image').content = photoUrl;
+
+      const avatarHtml = profile?.avatar_url
+        ? `<img src="${esc(profile.avatar_url)}" alt="">`
+        : esc(initials(displayName));
+
+      const photoHtml = photoUrl
+        ? `<img class="post-photo" src="${esc(photoUrl)}" alt="${esc(trimmedWatch || 'Watch post')}">`
+        : '';
+
+      const captionHtml = caption
+        ? `<div class="post-caption">${esc(caption)}</div>`
+        : '';
+
+      const watchChipHtml = trimmedWatch
+        ? `<div class="post-watch">${watch?.image ? `<img src="${esc(watch.image)}" alt="">` : '⌚'} ${esc(trimmedWatch)}</div>`
+        : '';
+
+      document.getElementById('main-content').innerHTML = `
+        <a href="https://wrotate.com/" class="post-card">
+          ${photoHtml}
+          <div class="post-body">
+            <div class="post-header">
+              <div class="post-avatar">${avatarHtml}</div>
+              <div>
+                <div class="post-name">${esc(displayName)}</div>
+                ${metaParts ? `<div class="post-meta">${esc(metaParts)}</div>` : ''}
+              </div>
+            </div>
+            ${captionHtml}
+            ${watchChipHtml}
+          </div>
+        </a>
+        <div class="cta-wrap">
+          <a href="https://apps.apple.com/us/app/wrotate/id6760091102">
+            <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" width="130">
+          </a>
+        </div>`;
+    }
+
+    (async function() {
+      const params = new URLSearchParams(location.search);
+      const logId = params.get('id');
+      if (!logId) { renderError('No post specified.'); return; }
+
+      const { data: log, error } = await db
+        .from('logs')
+        .select('id, user_id, watch_id, photo_url, notes, use_case, date, created_at, visibility')
+        .eq('id', logId)
+        .eq('visibility', 'public')
+        .is('moderation_status', null)
+        .maybeSingle();
+
+      if (error || !log) { renderError('This post may be private, deleted, or no longer available.'); return; }
+
+      const [profileRes, watchRes] = await Promise.all([
+        db.from('profiles').select('id, username, display_name, avatar_url, is_official').eq('id', log.user_id).maybeSingle(),
+        log.watch_id
+          ? db.from('watches').select('id, brand, name, image').eq('id', log.watch_id).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+
+      renderPost(log, profileRes.data, watchRes.data);
+    })();
+  </script>
+</body>
+</html>
