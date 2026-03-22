@@ -4297,7 +4297,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.18.38';
+const APP_VERSION = '2.36.21.18.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4763,6 +4763,9 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   const camOverlay = isOwn
     ? `<div class="profile-avatar-cam" onclick="uploadProfilePic()" title="Change photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>`
     : '';
+  const removeAvatarBtn = (isOwn && profile.avatar_url)
+    ? `<button class="btn btn-ghost" onclick="removeProfilePic()" style="font-size:.72rem;padding:.2rem .5rem;margin-top:.3rem;">Remove photo</button>`
+    : '';
 
   // Action button — small edit icon for own profile, follow/friend for others
   // Friend icon sits inline with the follow button; hidden when already friends
@@ -5105,6 +5108,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   return `
     <div class="profile-hero">
       <div class="profile-avatar-lg">${avatarInner}${avatarFallback}${camOverlay}</div>
+      ${removeAvatarBtn}
       <div class="profile-name-row">
         <div class="profile-display-name">${name}${badge}</div>
         ${editIcon}
@@ -5276,7 +5280,9 @@ async function uploadProfilePic() {
     if (!file) return;
     if (!validateImageFile(file)) return;
     try {
-      const url = currentUser ? await uploadImage(file, `avatars/${currentUser.id}.jpg`) : await blobToResizedBase64(file);
+      const rawUrl = currentUser ? await uploadImage(file, `avatars/${currentUser.id}.jpg`) : await blobToResizedBase64(file);
+      // Cache-bust: append timestamp so browsers/CDN don't serve stale image
+      const url = rawUrl.includes('?') ? rawUrl + '&v=' + Date.now() : rawUrl + '?v=' + Date.now();
       const { error } = await db.from('profiles')
         .update({ avatar_url: url })
         .eq('id', currentUser.id);
@@ -5293,6 +5299,29 @@ async function uploadProfilePic() {
     }
   };
   input.click();
+}
+
+async function removeProfilePic() {
+  if (!currentUser) return;
+  delete _profileCache[currentUser.id];
+  try {
+    // Delete from storage
+    await db.storage.from('media').remove([`avatars/${currentUser.id}.jpg`]);
+    // Clear avatar_url in profile
+    const { error } = await db.from('profiles')
+      .update({ avatar_url: null })
+      .eq('id', currentUser.id);
+    if (error) { toast('Failed to remove photo: ' + error.message, 'error'); return; }
+    myProfile = { ...myProfile, avatar_url: null };
+    const btn = document.getElementById('profile-btn');
+    if (btn) {
+      btn.innerHTML = profileInitials(myProfile);
+    }
+    loadAndRenderProfile(currentUser.id);
+    toast('Profile photo removed');
+  } catch (e) {
+    toast('Could not remove photo', 'error');
+  }
 }
 
 // ── Following ─────────────────────────────────────────────────────────────
