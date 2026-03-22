@@ -4307,7 +4307,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.21.20.50';
+const APP_VERSION = '2.36.21.22.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9436,11 +9436,18 @@ const saveBrands   = () => { safeSetJSON(STORE_B,  brands); };
 
 // ── Pre-computed logs-by-watch map (avoids O(n*m) in render loops) ──────────
 let _logsByWatch = new Map();
+let _anyLogHasPhoto = false;
 function rebuildLogsByWatch() {
   _logsByWatch = new Map();
+  _anyLogHasPhoto = false;
   for (const l of logs) {
     const arr = _logsByWatch.get(l.watchId);
     if (arr) arr.push(l); else _logsByWatch.set(l.watchId, [l]);
+    if (l.photoUrl) _anyLogHasPhoto = true;
+    // Pre-compute DOW (0-6) to avoid Date construction in hot paths
+    if (l._dow === undefined && l.date) {
+      l._dow = new Date(l.date + 'T12:00:00').getDay();
+    }
   }
 }
 function logsForWatch(id) { return _logsByWatch.get(id) || []; }
@@ -11255,8 +11262,9 @@ function renderTrackHistory() {
     return;
   }
   const page = sorted.slice(0, _trackHistoryLimit);
+  const watchMap = new Map(watches.map(w => [w.id, w]));
   tbody.innerHTML = page.map(log => {
-    const w = watches.find(x => x.id === log.watchId);
+    const w = watchMap.get(log.watchId);
     if (!w) return '';
     const thumb = w.image
       ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
@@ -11840,7 +11848,7 @@ function renderCollSortBar() {
   if (!bar) return;
   const hasRanking = Object.keys(eloRatings).some(id => watches.some(w => w.id === id));
   // Photo toggle: show if any watch has a post with a photo
-  const anyPostPhoto = collView === 'grid' && watches.some(w => logsForWatch(w.id).some(l => l.photoUrl));
+  const anyPostPhoto = collView === 'grid' && _anyLogHasPhoto;
   const photoToggle = anyPostPhoto
     ? `<label class="coll-photo-toggle" title="Show latest post photo instead of watch photo">
         <input type="checkbox" ${collPhotoMode === 'post' ? 'checked' : ''} onchange="toggleCollPhotoMode(this.checked)">
@@ -12003,7 +12011,7 @@ function renderCollection(force) {
           <div style="flex:1;min-width:0;">
             <div class="watch-card-name" style="cursor:pointer" onclick="openEditWatch('${w.id}')">${escHtml(w.name)}</div>
             <div class="watch-card-brand" style="cursor:pointer" onclick="openEditWatch('${w.id}')">${escHtml(w.brand)}${w.ref ? ' · '+escHtml(w.ref) : ''}</div>
-            ${watchCardTagsHTML(w)}
+            ${watchCardTagsHTML(w, wLogs)}
           </div>
           ${noImgBtns}`;
         })()}
@@ -12656,13 +12664,17 @@ function warrantyStatus(w) {
 }
 
 // ── Unified card tags (clean, no colors) ─────────────────────────────────────
-function watchCardTagsHTML(w) {
+const _tagNow = { d: null, ts: 0 }; // cached Date for tags — refreshed every 60s
+function _getTagNow() { const t = Date.now(); if (t - _tagNow.ts > 60000) { _tagNow.d = new Date(); _tagNow.ts = t; } return _tagNow.d; }
+
+function watchCardTagsHTML(w, wLogs) {
+  if (!wLogs) wLogs = logsForWatch(w.id); // fallback for any other callers
   const tags = [];
+  const now = _getTagNow();
   // Last worn / rotation
-  const wLogs = logsForWatch(w.id);
   if (wLogs.length) {
     const lastDate = wLogs.reduce((a, b) => a.date > b.date ? a : b).date;
-    const days = Math.floor((new Date() - new Date(lastDate + 'T12:00:00')) / 86400000);
+    const days = Math.floor((now - new Date(lastDate + 'T12:00:00')) / 86400000);
     tags.push(days === 0 ? 'Today' : `${days}d ago`);
   } else {
     tags.push('Never worn');
@@ -12682,7 +12694,6 @@ function watchCardTagsHTML(w) {
   // Purchase anniversary (same month+day as today)
   if (w.purchaseDate) {
     const pd = new Date(w.purchaseDate + 'T12:00:00');
-    const now = new Date();
     if (pd.getMonth() === now.getMonth() && pd.getDate() === now.getDate()) {
       const yrs = now.getFullYear() - pd.getFullYear();
       if (yrs > 0) tags.push({ text: `${yrs} yr${yrs > 1 ? 's' : ''} today`, cls: 'card-tag-anniv' });
@@ -13174,7 +13185,7 @@ function computeWatchRec(skipSet) {
       const l = wLogs[i];
       if (l.date === today) { wornToday = true; break; }
       if (l.date > lastDate) lastDate = l.date;
-      if (new Date(l.date+'T12:00:00').getDay() === todayDOW) dowCount++;
+      if (l._dow === todayDOW) dowCount++;
       if (l.useCase === 'dinner') dinnerWears++;
       else if (l.useCase === 'work') workWears++;
       else if (l.useCase === 'leisure') leisureWears++;
