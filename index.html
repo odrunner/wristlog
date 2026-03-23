@@ -4307,7 +4307,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.22.17.44';
+const APP_VERSION = '2.36.22.18.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11195,7 +11195,7 @@ function renderWatchSelector() {
     const wl = logsForWatch(w.id);
     let max = '';
     for (const l of wl) { if (l.date > max) max = l.date; }
-    lastWorn.set(w.id, { max, count: wl.length });
+    lastWorn.set(w.id, { max, count: wearsForWatch(w.id) });
   }
   const sorted = [...watches].sort((a, b) => {
     const aLast = lastWorn.get(a.id).max;
@@ -13113,10 +13113,14 @@ function renderDowReport() {
   if (!fLogs.length) { el.innerHTML = ''; return; }
   const DOW_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const todayDow  = new Date().getDay();
-  // Single-pass DOW grouping: one Date per log instead of 7N
+  // Single-pass DOW grouping (dedup same watch+date)
   const dowBuckets = [null,null,null,null,null,null,null].map(() => ({}));
   const dowTotals = [0,0,0,0,0,0,0];
+  const _dowSeen = new Set();
   for (const l of fLogs) {
+    const k = l.watchId + '|' + l.date;
+    if (_dowSeen.has(k)) continue;
+    _dowSeen.add(k);
     const dow = new Date(l.date+'T12:00:00').getDay();
     dowBuckets[dow][l.watchId] = (dowBuckets[dow][l.watchId] || 0) + 1;
     dowTotals[dow]++;
@@ -13445,13 +13449,14 @@ function renderStats(force) {
 
 function renderStatsRow(fl) {
   const el     = document.getElementById('stats-row');
-  const total  = fl.length;
+  const total  = uniqueWears(fl);
   const days   = new Set(fl.map(l=>l.date)).size;
   const unique = new Set(fl.map(l=>l.watchId)).size;
 
-  // favourite
+  // favourite (dedup same watch+date)
   const wm   = {};
-  fl.forEach(l => { wm[l.watchId] = (wm[l.watchId]||0)+1; });
+  const _sSeen = new Set();
+  fl.forEach(l => { const k = l.watchId + '|' + l.date; if (!_sSeen.has(k)) { _sSeen.add(k); wm[l.watchId] = (wm[l.watchId]||0)+1; } });
   const favId = Object.keys(wm).sort((a,b)=>wm[b]-wm[a])[0];
   const fav   = favId ? watches.find(x=>x.id===favId) : null;
 
@@ -13480,7 +13485,8 @@ function toggleChart(canvasId, emptyId, hasData) {
 function renderChUsecase(fl) {
   if (chUsecase) { chUsecase.destroy(); chUsecase = null; }
   const um = {};
-  fl.forEach(l => { um[l.useCase] = (um[l.useCase]||0) + 1; });
+  const _ucSeen = new Set();
+  fl.forEach(l => { const k = l.watchId + '|' + l.date; if (!_ucSeen.has(k)) { _ucSeen.add(k); um[l.useCase] = (um[l.useCase]||0) + 1; } });
   const keys = Object.keys(um).sort((a, b) => um[b] - um[a]);
   const legendEl = document.getElementById('usecase-legend');
 
@@ -13597,9 +13603,10 @@ function renderChCollectionValue() {
 }
 
 function renderCollectionReport(fl) {
-  // Wears within the filtered period
+  // Wears within the filtered period (dedup same watch+date)
   const wm = {};
-  fl.forEach(l => { wm[l.watchId] = (wm[l.watchId]||0) + 1; });
+  const _crSeen = new Set();
+  fl.forEach(l => { const k = l.watchId + '|' + l.date; if (!_crSeen.has(k)) { _crSeen.add(k); wm[l.watchId] = (wm[l.watchId]||0) + 1; } });
   const owned = watches;
 
   // Build row data
@@ -13612,7 +13619,7 @@ function renderCollectionReport(fl) {
     const pct   = (delta != null && paid)      ? delta / paid * 100 : null;
     const pdate = w.purchaseDate || null;
     // Average frequency: avg days between wears (first-to-last / count)
-    const allWLogs = logsForWatch(w.id).map(l => l.date).sort();
+    const allWLogs = [...new Set(logsForWatch(w.id).map(l => l.date))].sort();
     let avgFreq = null;
     if (allWLogs.length >= 2) {
       const totalGap = (new Date(allWLogs[allWLogs.length - 1]+'T12:00:00') - new Date(allWLogs[0]+'T12:00:00')) / 86400000;
