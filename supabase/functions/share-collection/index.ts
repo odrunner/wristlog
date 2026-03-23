@@ -172,11 +172,13 @@ async function fetchCollectionData(db: ReturnType<typeof createClient>, username
   if (watches.length > 0) {
     const { data: logs } = await db
       .from("logs")
-      .select("watch_id")
+      .select("watch_id, date")
       .eq("user_id", profile.id)
       .in("watch_id", watches.map((w: { id: string }) => w.id));
+    const seen = new Set();
     for (const log of (logs || [])) {
-      wearCounts[log.watch_id] = (wearCounts[log.watch_id] || 0) + 1;
+      const k = log.watch_id + "|" + log.date;
+      if (!seen.has(k)) { seen.add(k); wearCounts[log.watch_id] = (wearCounts[log.watch_id] || 0) + 1; }
     }
   }
 

@@ -4307,7 +4307,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.22.11.06';
+const APP_VERSION = '2.36.22.17.44';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9454,6 +9454,21 @@ function rebuildLogsByWatch() {
   }
 }
 function logsForWatch(id) { return _logsByWatch.get(id) || []; }
+/** Count unique wear days for a watch (multiple posts same day = 1 wear) */
+function wearsForWatch(id) {
+  const wLogs = logsForWatch(id);
+  if (wLogs.length <= 1) return wLogs.length;
+  const dates = new Set();
+  for (const l of wLogs) if (l.date) dates.add(l.date);
+  return dates.size;
+}
+/** Count unique wear days from an array of logs */
+function uniqueWears(logArr) {
+  if (logArr.length <= 1) return logArr.length;
+  const dates = new Set();
+  for (const l of logArr) if (l.date) dates.add(l.date + '|' + (l.watchId || ''));
+  return dates.size;
+}
 let _clubsLoaded = false;
 const todayStr = () => {
   const d = new Date();
@@ -11945,7 +11960,7 @@ function renderCollection(force) {
     </div></div>`;
     return;
   }
-  const wearCounts = collGridSort === 'wears' ? new Map(visible.map(w => [w.id, logsForWatch(w.id).length])) : null;
+  const wearCounts = collGridSort === 'wears' ? new Map(visible.map(w => [w.id, wearsForWatch(w.id)])) : null;
   const sorted = [...visible].sort((a, b) => {
     if (collGridSort === 'ranking') {
       return (eloRatings[b.id] ?? ELO_DEFAULT) - (eloRatings[a.id] ?? ELO_DEFAULT);
@@ -11972,7 +11987,7 @@ function renderCollection(force) {
     const anyHasMarket = sorted.some(w => w.marketPrice);
     el.innerHTML = sorted.map((w, idx) => {
       const wLogs = logsForWatch(w.id);
-      const wears = wLogs.length;
+      const wears = wearsForWatch(w.id);
       const cpu   = w.price && wears ? fmtMoney(Math.round(w.price/wears)) : '—';
       const wornToday = wLogs.some(l => l.date === today);
       const rankBadge = isRanking && (eloRatings[w.id] != null)
@@ -12057,7 +12072,7 @@ function renderCollectionList(visible, today) {
   const now = new Date();
   const enriched = visible.map(w => {
     const wLogs   = logsForWatch(w.id);
-    const wears   = wLogs.length;
+    const wears   = wearsForWatch(w.id);
     const cpwNum  = (w.price && wears) ? Math.round(w.price / wears) : null;
     const lastDate = wLogs.length ? wLogs.reduce((a,b) => a.date > b.date ? a : b).date : null;
     const lastDays = lastDate ? Math.floor((now - new Date(lastDate+'T12:00:00')) / 86400000) : null;
@@ -12935,8 +12950,8 @@ function renderYearInReview() {
   // Logs for this year
   const yLogs = logs.filter(l => l.date.startsWith(yr) && watchIds.has(l.watchId));
 
-  // Total wears
-  const totalWears = yLogs.length;
+  // Total wears (unique watch+date combos)
+  const totalWears = uniqueWears(yLogs);
   // Unique days with at least one wear
   const wearDays = new Set(yLogs.map(l => l.date)).size;
   // New watches added this year (by purchaseDate)
@@ -12947,7 +12962,8 @@ function renderYearInReview() {
 
   // Most worn watch
   const wearMap = {};
-  yLogs.forEach(l => { wearMap[l.watchId] = (wearMap[l.watchId]||0) + 1; });
+  const _ySeen = new Set();
+  yLogs.forEach(l => { const k = l.watchId + '|' + l.date; if (!_ySeen.has(k)) { _ySeen.add(k); wearMap[l.watchId] = (wearMap[l.watchId]||0) + 1; } });
   const topWatchId = Object.keys(wearMap).sort((a,b) => wearMap[b]-wearMap[a])[0] || null;
   const topWatch   = topWatchId ? watches.find(w => w.id === topWatchId) : null;
 
@@ -13056,10 +13072,11 @@ function renderMonthlyReview() {
     el.innerHTML = `<div class="yir-card">${hdr}<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">No wears logged in ${MONTHS[monthRevMonth]} ${monthRevYear}.</div></div>`;
     return;
   }
-  const totalWears   = mLogs.length;
+  const totalWears   = uniqueWears(mLogs);
   const wearDays     = new Set(mLogs.map(l => l.date)).size;
   const uniqueCount  = new Set(mLogs.map(l => l.watchId)).size;
-  const wm = {}; mLogs.forEach(l => { wm[l.watchId] = (wm[l.watchId]||0)+1; });
+  const _mSeen = new Set();
+  const wm = {}; mLogs.forEach(l => { const k = l.watchId + '|' + l.date; if (!_mSeen.has(k)) { _mSeen.add(k); wm[l.watchId] = (wm[l.watchId]||0)+1; } });
   const topWId = Object.keys(wm).sort((a,b) => wm[b]-wm[a])[0];
   const topW   = topWId ? watches.find(w => w.id === topWId) : null;
   const ucm = {}; mLogs.forEach(l => { ucm[l.useCase] = (ucm[l.useCase]||0)+1; });
@@ -13265,10 +13282,11 @@ function computeWatchRec(skipSet) {
     // ── 8. NEW: Neglected watch nudge ──
     // If a watch has significantly fewer wears than the fair share, give it a boost
     let neglectedScore = 0, neglectedReason = null;
-    if (rs.prioritizeUnworn && fairShare > 2 && wLogs.length < fairShare * 0.4) {
+    const _wWears = wearsForWatch(w.id);
+    if (rs.prioritizeUnworn && fairShare > 2 && _wWears < fairShare * 0.4) {
       // Worn less than 40% of its fair share — it's being neglected
-      neglectedScore = Math.min(Math.round((fairShare - wLogs.length) * 2), 25);
-      if (wLogs.length === 0) neglectedReason = 'Never worn — give it a chance';
+      neglectedScore = Math.min(Math.round((fairShare - _wWears) * 2), 25);
+      if (_wWears === 0) neglectedReason = 'Never worn — give it a chance';
       else neglectedReason = 'Underrepresented in your rotation';
     }
 

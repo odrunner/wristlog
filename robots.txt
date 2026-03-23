@@ -1,3 +1,9 @@
 User-agent: *
 Allow: /
+
+# Block internal/app-only paths
+Disallow: /r.html
+Disallow: /ios/
+Disallow: /shelved/
+
 Sitemap: https://wrotate.com/sitemap.xml
