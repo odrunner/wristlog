@@ -42,13 +42,7 @@ Deno.serve(async (req: Request) => {
   const token = authHeader.replace("Bearer ", "");
   const { data: { user }, error: authError } = await supabase.auth.getUser(token);
   if (authError || !user) {
-    console.error("[identify-watch] Auth failed:", {
-      error: authError?.message,
-      status: authError?.status,
-      hasUrl: !!SUPABASE_URL,
-      hasKey: SUPABASE_SERVICE_ROLE_KEY.length > 0,
-      tokenLen: token.length,
-    });
+    console.error("[identify-watch] Auth failed:", authError?.message, "tokenLen:", token.length);
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },

@@ -3941,6 +3941,26 @@ function withTimeout(promise, ms = 10000) {
   ]).finally(() => clearTimeout(tid));
 }
 
+async function authedFetch(url, opts = {}, timeoutMs = 30000) {
+  async function getToken() {
+    const { data: { session } } = await db.auth.getSession();
+    return session?.access_token;
+  }
+  let token = await getToken();
+  const headers = { ...opts.headers, 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'apikey': SUPABASE_KEY };
+  let resp = await withTimeout(fetch(url, { ...opts, headers }), timeoutMs);
+  if (resp.status === 401) {
+    // Token may be stale — force refresh and retry once
+    const { data: { session }, error } = await db.auth.refreshSession();
+    if (session?.access_token) {
+      token = session.access_token;
+      headers['Authorization'] = `Bearer ${token}`;
+      resp = await withTimeout(fetch(url, { ...opts, headers }), timeoutMs);
+    }
+  }
+  return resp;
+}
+
 // ══════════════════════════════════════════
 //  AUTH
 // ══════════════════════════════════════════
@@ -4289,7 +4309,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.24.16.39';
+const APP_VERSION = '2.36.24.16.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8236,11 +8256,10 @@ async function npIdentifyWatch(file) {
   sugEl.style.display = '';
   try {
     const base64 = await blobToResizedBase64(file);
-    const resp = await withTimeout(fetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+    const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await db.auth.getSession()).data.session?.access_token}`, 'apikey': SUPABASE_KEY, },
       body: JSON.stringify({ image: base64, collection: watches.map(w => ({ brand: w.brand, name: w.name, ref: w.ref || '' })) }),
-    }), 30000);
+    });
     if (!resp.ok) { npIdentifiedWatchId = null; renderNpWatchDisplay(); return; }
     const data = await resp.json();
     if (!data.watches || data.watches.length === 0) { npIdentifiedWatchId = null; renderNpWatchDisplay(); return; }
@@ -11403,11 +11422,10 @@ function snapToTrack() {
     if (statusEl) { statusEl.style.display = ''; statusEl.innerHTML = `<div class="pi-loading"><div class="pi-loading-spinner"></div><div style="font-size:.85rem;">Identifying your watch\u2026</div></div>`; }
     try {
       const base64 = await blobToResizedBase64(file);
-      const resp = await withTimeout(fetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+      const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await db.auth.getSession()).data.session?.access_token}`, 'apikey': SUPABASE_KEY, },
         body: JSON.stringify({ image: base64, collection: watches.map(w => ({ brand: w.brand, name: w.name, ref: w.ref || '' })) }),
-      }), 30000);
+      });
       if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error || `API error ${resp.status}`); }
       const data = await resp.json();
       if (!data.watches || data.watches.length === 0) { toast('No watch identified — try a clearer shot', 'error'); resetSnapStatus(); return; }
@@ -14450,12 +14468,8 @@ function openPhotoIdentify() {
       }
 
       // Call edge function
-      const resp = await withTimeout(fetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+      const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await db.auth.getSession()).data.session?.access_token}`, 'apikey': SUPABASE_KEY,
-        },
         body: JSON.stringify({ image: base64 }),
       }), 30000);
 
