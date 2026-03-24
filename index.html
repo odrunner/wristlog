@@ -3942,23 +3942,11 @@ function withTimeout(promise, ms = 10000) {
 }
 
 async function authedFetch(url, opts = {}, timeoutMs = 30000) {
-  async function getToken() {
-    const { data: { session } } = await db.auth.getSession();
-    return session?.access_token;
-  }
-  let token = await getToken();
+  const { data: { session } } = await db.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error('Not authenticated');
   const headers = { ...opts.headers, 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'apikey': SUPABASE_KEY };
-  let resp = await withTimeout(fetch(url, { ...opts, headers }), timeoutMs);
-  if (resp.status === 401) {
-    // Token may be stale — force refresh and retry once
-    const { data: { session }, error } = await db.auth.refreshSession();
-    if (session?.access_token) {
-      token = session.access_token;
-      headers['Authorization'] = `Bearer ${token}`;
-      resp = await withTimeout(fetch(url, { ...opts, headers }), timeoutMs);
-    }
-  }
-  return resp;
+  return withTimeout(fetch(url, { ...opts, headers }), timeoutMs);
 }
 
 // ══════════════════════════════════════════
@@ -4309,7 +4297,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.24.16.56';
+const APP_VERSION = '2.36.24.16.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
