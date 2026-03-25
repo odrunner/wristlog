@@ -131,13 +131,13 @@ Deno.serve(async (req: Request) => {
       return m ? JSON.parse(m[0]) : null;
     }
 
-    // ── DETECT MODE: find bounding boxes only (fast, uses Sonnet) ──
+    // ── DETECT MODE: find bounding boxes only (Opus for accurate spatial reasoning) ──
     if (mode === "detect") {
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: apiHeaders,
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-opus-4-20250514",
           max_tokens: 1024,
           messages: [{
             role: "user",
@@ -147,7 +147,9 @@ Deno.serve(async (req: Request) => {
                 type: "text",
                 text: `Count every distinct wristwatch visible in this image and return their bounding boxes. Order them from top to bottom, left to right.
 
-For each watch, return ONLY its bounding box: [x, y, width, height] as percentages (0-100) of image dimensions. Be generous — include the full watch case, dial, and visible strap.
+For each watch, return its bounding box: [x, y, width, height] as percentages (0-100) of image dimensions.
+
+CRITICAL: The bounding box must be centered on the watch DIAL (the face where brand text is printed). Be very generous with size — include significant padding around the watch. It is much better to include too much background than to cut off any part of the dial or case. Add at least 20% extra padding on all sides.
 
 Return ONLY valid JSON:
 {"count": N, "watches": [{"boundingBox": [x, y, w, h]}]}
@@ -223,11 +225,15 @@ If no watches visible: {"count": 0, "watches": []}`,
 
 ${BRAND_CUES}
 
-IMPORTANT: Read the text on the dial carefully. Most watches have the brand name printed on the dial. Look for logos at 12 o'clock. Look at the bezel shape, bracelet type, case material, and complications.
+CRITICAL RULES:
+1. Read the text on the dial FIRST. The brand name is almost always printed on the dial. If you can read it, use exactly what it says.
+2. Look for the logo at 12 o'clock — crown = Rolex, shield = Tudor, cross = Patek Philippe, octagonal bezel = AP.
+3. If you CANNOT clearly read or identify the brand, return brand as "Unknown". NEVER guess a brand you are not confident about. Returning "Unknown" is always better than a wrong answer.
+4. Only use "high" confidence when you can clearly read the brand name on the dial or unmistakably recognize the design.
 
 Provide:
-- brand: The manufacturer (e.g., "Rolex", "Patek Philippe", "Audemars Piguet")
-- model: Model name with case size if determinable (e.g., "Calatrava 39", "Royal Oak Chronograph 41")
+- brand: The manufacturer. Use "Unknown" if you cannot clearly identify it.
+- model: Model name with case size if determinable. Use "Unknown" if unsure.
 - reference: Reference number if determinable. Empty string if unsure.
 - dialText: ALL text visible on the dial, comma-separated. Read very carefully.
 - estimatedColor: Pick from: #c9a84c (gold), #94a3b8 (slate/silver), #818cf8 (indigo), #fbbf24 (amber), #38bdf8 (sky blue), #a78bfa (purple), #f43f5e (rose), #4caf7d (teal)
