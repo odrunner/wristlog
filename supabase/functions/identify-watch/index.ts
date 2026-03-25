@@ -106,7 +106,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { image, collection } = await req.json();
+    const { image, collection, mode } = await req.json();
     if (!image) {
       return new Response(JSON.stringify({ error: "No image provided" }), {
         status: 400,
@@ -114,22 +114,12 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    let collectionHint = "";
-    if (Array.isArray(collection) && collection.length > 0) {
-      const items = collection.map((w: any) =>
-        `${w.brand} ${w.name}${w.ref ? ` (ref: ${w.ref})` : ""}`
-      ).join(", ");
-      collectionHint = `\nThe user owns these watches: ${items}\nIf you recognize a watch as one of these, use the exact names. Do NOT force a match — accuracy over matching.`;
-    }
-
     const base64Data = image.replace(/^data:image\/[a-z]+;base64,/, "");
     const mediaType = image.startsWith("data:image/png") ? "image/png" : "image/jpeg";
-
     const imageContent = {
       type: "image",
       source: { type: "base64", media_type: mediaType, data: base64Data },
     };
-
     const apiHeaders = {
       "Content-Type": "application/json",
       "x-api-key": ANTHROPIC_API_KEY,
@@ -139,6 +129,67 @@ Deno.serve(async (req: Request) => {
     function extractJson(text: string) {
       const m = text.match(/\{[\s\S]*\}/);
       return m ? JSON.parse(m[0]) : null;
+    }
+
+    // ── DETECT MODE: find bounding boxes only (fast, uses Sonnet) ──
+    if (mode === "detect") {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: apiHeaders,
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1024,
+          messages: [{
+            role: "user",
+            content: [
+              imageContent,
+              {
+                type: "text",
+                text: `Count every distinct wristwatch visible in this image and return their bounding boxes. Order them from top to bottom, left to right.
+
+For each watch, return ONLY its bounding box: [x, y, width, height] as percentages (0-100) of image dimensions. Be generous — include the full watch case, dial, and visible strap.
+
+Return ONLY valid JSON:
+{"count": N, "watches": [{"boundingBox": [x, y, w, h]}]}
+
+If no watches visible: {"count": 0, "watches": []}`,
+              },
+            ],
+          }],
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("[identify-watch] Detect error:", response.status, errText);
+        return new Response(
+          JSON.stringify({ error: "Watch detection failed", detail: response.status }),
+          { status: 502, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+        );
+      }
+
+      const result = await response.json();
+      const text = result.content?.[0]?.text ?? "";
+      const parsed = extractJson(text);
+      if (!parsed) {
+        return new Response(
+          JSON.stringify({ error: "Could not parse detection response" }),
+          { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+        );
+      }
+      parsed.count = parsed.count ?? parsed.watches?.length ?? 0;
+      return new Response(JSON.stringify(parsed), {
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── IDENTIFY MODE (default): full identification of a single watch ──
+    let collectionHint = "";
+    if (Array.isArray(collection) && collection.length > 0) {
+      const items = collection.map((w: any) =>
+        `${w.brand} ${w.name}${w.ref ? ` (ref: ${w.ref})` : ""}`
+      ).join(", ");
+      collectionHint = `\nThe user owns these watches: ${items}\nIf you recognize a watch as one of these, use the exact names. Do NOT force a match — accuracy over matching.`;
     }
 
     const BRAND_CUES = `Brand identification guide:
@@ -156,123 +207,63 @@ Deno.serve(async (req: Request) => {
 - GRØNE: "GRØNE" on dial, Danish microbrand, minimalist Scandinavian design
 - Anoma: "Anoma" on dial, microbrand`;
 
-    // ── PASS 1: Detect watches and locate them (with thinking) ──
-    const pass1 = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: apiHeaders,
       body: JSON.stringify({
         model: "claude-opus-4-20250514",
-        max_tokens: 8000,
+        max_tokens: 4096,
         messages: [{
           role: "user",
           content: [
             imageContent,
             {
               type: "text",
-              text: `Count every watch visible in this image and locate each one precisely.
+              text: `You are a world-class luxury watch expert. This image contains a watch. Focus all your attention on identifying it precisely.
 
 ${BRAND_CUES}
 
-For each watch, provide:
-- position: description (e.g., "top", "second from top")
-- boundingBox: [x, y, width, height] as percentages (0-100) of image. Be generous — include full case, dial, and strap visible.
-- firstImpression: brand guess based on logos, text, and visual cues above
+IMPORTANT: Read the text on the dial carefully. Most watches have the brand name printed on the dial. Look for logos at 12 o'clock. Look at the bezel shape, bracelet type, case material, and complications.
 
-Return ONLY valid JSON after your analysis:
-{"count": N, "watches": [{"position": "...", "boundingBox": [x, y, w, h], "firstImpression": "..."}]}`,
+Provide:
+- brand: The manufacturer (e.g., "Rolex", "Patek Philippe", "Audemars Piguet")
+- model: Model name with case size if determinable (e.g., "Calatrava 39", "Royal Oak Chronograph 41")
+- reference: Reference number if determinable. Empty string if unsure.
+- dialText: ALL text visible on the dial, comma-separated. Read very carefully.
+- estimatedColor: Pick from: #c9a84c (gold), #94a3b8 (slate/silver), #818cf8 (indigo), #fbbf24 (amber), #38bdf8 (sky blue), #a78bfa (purple), #f43f5e (rose), #4caf7d (teal)
+- confidence: "high", "medium", or "low"
+- productUrl: Product page URL if known. Empty string if not.
+
+Return ONLY valid JSON:
+{"watches": [{"brand": "...", "model": "...", "reference": "...", "dialText": "...", "estimatedColor": "...", "confidence": "...", "productUrl": "..."}]}
+
+If no watch visible: {"watches": []}${collectionHint}`,
             },
           ],
         }],
       }),
     });
 
-    if (!pass1.ok) {
-      const errText = await pass1.text();
-      console.error("[identify-watch] Pass 1 error:", pass1.status, errText);
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("[identify-watch] API error:", response.status, errText);
       return new Response(
-        JSON.stringify({ error: "AI detection failed", detail: pass1.status, apiError: errText }),
+        JSON.stringify({ error: "AI identification failed", detail: response.status }),
         { status: 502, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       );
     }
 
-    const pass1Result = await pass1.json();
-    const pass1Text = pass1Result.content?.[0]?.text ?? "";
-    const detected = extractJson(pass1Text);
-    if (!detected?.watches?.length) {
-      return new Response(JSON.stringify({ watches: [] }), {
-        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-      });
+    const result = await response.json();
+    const text = result.content?.[0]?.text ?? "";
+    const parsed = extractJson(text);
+    if (!parsed) {
+      return new Response(
+        JSON.stringify({ error: "Could not parse AI response", raw: text }),
+        { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+      );
     }
 
-    // ── PASS 2: Per-watch identification with thinking ──
-    // Each watch gets its own API call for maximum focus
-    const identifyPromises = detected.watches.map((w: any, i: number) => {
-      const bb = w.boundingBox || [0, 0, 100, 100];
-      return fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: apiHeaders,
-        body: JSON.stringify({
-          model: "claude-opus-4-20250514",
-          max_tokens: 8000,
-            messages: [{
-            role: "user",
-            content: [
-              imageContent,
-              {
-                type: "text",
-                text: `Focus ONLY on the watch at position [${bb.join(", ")}] (${w.position || "unknown"}) in this image. Ignore all other watches.
-
-${BRAND_CUES}
-
-First impression: ${w.firstImpression || "unknown"}
-
-Study this specific watch carefully:
-1. Read ALL text on the dial — brand name, model text, any small print
-2. Examine the logo at 12 o'clock position
-3. Note the bezel type (smooth, fluted, rotating, octagonal)
-4. Note the bracelet/strap type
-5. Check for date window, day window, chronograph subdials
-6. Identify the exact brand, model name, and reference number
-
-Provide:
-- brand: Exact manufacturer name
-- model: Model name with case size if determinable
-- reference: Reference number if determinable, empty string if not
-- dialText: All text you can read on the dial, comma-separated
-- estimatedColor: Pick from: #c9a84c (gold), #94a3b8 (slate/silver), #818cf8 (indigo), #fbbf24 (amber), #38bdf8 (sky blue), #a78bfa (purple), #f43f5e (rose), #4caf7d (teal)
-- confidence: "high", "medium", or "low"
-- productUrl: Product page URL if known, empty string if not
-- boundingBox: [${bb.join(", ")}]
-${collectionHint}
-
-Return ONLY valid JSON:
-{"brand": "...", "model": "...", "reference": "...", "dialText": "...", "estimatedColor": "...", "confidence": "...", "productUrl": "...", "boundingBox": [${bb.join(", ")}]}`,
-              },
-            ],
-          }],
-        }),
-      });
-    });
-
-    // Run all per-watch identification calls in parallel
-    const pass2Responses = await Promise.all(identifyPromises);
-    const watches = [];
-
-    for (let i = 0; i < pass2Responses.length; i++) {
-      const resp = pass2Responses[i];
-      if (!resp.ok) {
-        console.error(`[identify-watch] Pass 2 watch ${i} error:`, resp.status);
-        continue;
-      }
-      const result = await resp.json();
-      const text = result.content?.[0]?.text ?? "";
-      const parsed = extractJson(text);
-      if (parsed) {
-        watches.push(parsed);
-      }
-    }
-
-    return new Response(JSON.stringify({ watches }), {
+    return new Response(JSON.stringify(parsed), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
   } catch (err) {

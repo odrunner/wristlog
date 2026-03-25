@@ -4297,7 +4297,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.24.17.42';
+const APP_VERSION = '2.36.24.17.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14441,74 +14441,185 @@ function brandToDomain(brand) {
 
 function openPhotoIdentify() {
   if (!currentUser) { toast('Sign in to use photo identification', 'error'); return; }
+  window._identifyAborted = false;
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
-  // If user cancels file picker, resume welcome tour (if paused)
   input.addEventListener('cancel', () => resumeWelcome());
   input.onchange = async () => {
     if (!input.files || !input.files[0]) return;
     const file = input.files[0];
-
     if (!validateImageFile(file)) return;
 
-    // Show loading modal (with click guard — mobile browsers can fire stray
-    // click events when returning from the camera/gallery picker)
     const modal = document.getElementById('photo-identify-modal');
     const list = document.getElementById('photo-identify-list');
-    list.innerHTML = `<div class="pi-loading">
-      <div class="pi-loading-spinner"></div>
-      <div style="font-size:.85rem;">Identifying watches...</div>
-      <div style="font-size:.75rem;margin-top:.3rem;">This may take a few seconds</div>
-    </div>`;
+    list.innerHTML = `<div class="pi-loading"><div class="pi-loading-spinner"></div><div style="font-size:.85rem;">Detecting watches\u2026</div><div style="font-size:.75rem;margin-top:.3rem;">Scanning your photo</div></div>`;
     modal.classList.remove('hidden');
     modal.dataset.justOpened = '1';
     setTimeout(() => delete modal.dataset.justOpened, 600);
 
     try {
-      // Resize image for AI identification (1600px, higher quality)
       const base64 = await blobToResizedBase64ForIdentify(file);
-
-      // Store original photo for crop fallback (if no stock photo found)
       window._photoIdentifyBase64 = base64;
-      // Also store as blob — more reliable than data URL for Image loading
-      try {
-        window._photoIdentifyBlob = await blobToResizedBlob(file);
-      } catch (_) {
-        window._photoIdentifyBlob = file; // fallback to original
-      }
+      try { window._photoIdentifyBlob = await blobToResizedBlob(file); } catch (_) { window._photoIdentifyBlob = file; }
 
-      // Call edge function
-      const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+      // Phase 1: Detect watches (fast, Sonnet)
+      const detectResp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
         method: 'POST',
-        body: JSON.stringify({ image: base64 }),
-      }, 90000);
+        body: JSON.stringify({ image: base64, mode: 'detect' }),
+      }, 60000);
+      if (!detectResp.ok) { const err = await detectResp.json().catch(() => ({})); throw new Error(err.error || 'Detection failed'); }
+      const detectData = await detectResp.json();
 
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error || `API error ${resp.status}`);
-      }
-
-      const data = await resp.json();
-      if (!data.watches || data.watches.length === 0) {
-        list.innerHTML = `<div class="pi-loading">
-          <div style="font-size:.85rem;">No watches identified</div>
-          <div style="font-size:.75rem;color:var(--muted);margin-top:.3rem;">Try a clearer photo with the watch face visible</div>
-        </div>`;
+      if (!detectData.watches || detectData.count === 0) {
+        list.innerHTML = `<div class="pi-loading"><div style="font-size:.85rem;">No watches detected</div><div style="font-size:.75rem;color:var(--muted);margin-top:.3rem;">Try a clearer photo with watch faces visible</div></div>`;
         return;
       }
 
-      _photoIdentifyResults = data.watches;
-      renderPhotoIdentifyResults();
+      // Single watch: send full image directly to Opus (existing fast path)
+      if (detectData.count === 1) {
+        list.innerHTML = `<div class="pi-loading"><div class="pi-loading-spinner"></div><div style="font-size:.85rem;">Identifying watch\u2026</div></div>`;
+        const collection = watches.map(w => ({ brand: w.brand, name: w.name, ref: w.ref || '' }));
+        const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+          method: 'POST',
+          body: JSON.stringify({ image: base64, collection, mode: 'identify' }),
+        }, 90000);
+        if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error || 'Identification failed'); }
+        const data = await resp.json();
+        if (!data.watches || data.watches.length === 0) {
+          list.innerHTML = `<div class="pi-loading"><div style="font-size:.85rem;">No watches identified</div></div>`;
+          return;
+        }
+        // Use bounding box from detect if identify didn't return one
+        if (detectData.watches[0]?.boundingBox && data.watches[0]) {
+          data.watches[0].boundingBox = data.watches[0].boundingBox || detectData.watches[0].boundingBox;
+        }
+        _photoIdentifyResults = data.watches;
+        renderPhotoIdentifyResults();
+        return;
+      }
+
+      // Multiple watches: crop then identify sequentially
+      await _identifyMultipleWatches(detectData.watches, base64, list);
     } catch (e) {
       console.error('[WristLog] Photo identify error:', e);
-      list.innerHTML = `<div class="pi-loading">
-        <div style="font-size:.85rem;color:var(--danger);">Identification failed</div>
-        <div style="font-size:.75rem;color:var(--muted);margin-top:.3rem;">${escHtml(e.message || 'Unknown error')}</div>
-      </div>`;
+      list.innerHTML = `<div class="pi-loading"><div style="font-size:.85rem;color:var(--danger);">Identification failed</div><div style="font-size:.75rem;color:var(--muted);margin-top:.3rem;">${escHtml(e.message || 'Unknown error')}</div></div>`;
     }
   };
   input.click();
+}
+
+async function _identifyMultipleWatches(detectedWatches, fullBase64, listEl) {
+  const count = detectedWatches.length;
+  const blob = window._photoIdentifyBlob;
+
+  // Initialize results with bounding boxes only (no identification yet)
+  _photoIdentifyResults = detectedWatches.map((dw, i) => ({
+    boundingBox: dw.boundingBox || [0, 0, 100, 100],
+    brand: null, model: null, reference: '', dialText: '',
+    estimatedColor: '#94a3b8', confidence: null, productUrl: '',
+    _pending: true, _position: i,
+  }));
+
+  // Crop all watches from photo and show thumbnails immediately
+  for (let i = 0; i < count; i++) {
+    const w = _photoIdentifyResults[i];
+    try {
+      const cropped = await cropWatchFromPhoto(blob, w.boundingBox);
+      w._prefetchedCroppedBlob = cropped;
+      w._prefetchedImageUrl = URL.createObjectURL(cropped);
+      w._imageFound = true;
+      w._imageSource = 'cropped';
+      w._imageSearched = true;
+    } catch (err) { console.error('[WristLog] Crop failed for watch', i, err); }
+  }
+
+  // Render cards with cropped thumbnails but no brand/model yet
+  listEl.innerHTML = _photoIdentifyResults.map((w, i) => {
+    const hasImg = w._imageFound && w._prefetchedImageUrl;
+    const avatarStyle = hasImg
+      ? `background-image:url(${w._prefetchedImageUrl});background-size:cover;background-position:center;`
+      : 'background:#94a3b8';
+    return `<div class="pi-card" data-pi-idx="${i}">
+      <div class="pi-card-avatar" style="${avatarStyle}">${hasImg ? '' : '?'}</div>
+      <div class="pi-card-info">
+        <div class="pi-card-name" style="color:var(--muted);font-style:italic;">Watch ${i + 1}</div>
+        <div class="pi-card-brand pi-status" style="font-size:.72rem;color:var(--muted);">Waiting\u2026</div>
+      </div>
+      <div class="pi-card-actions"></div>
+    </div>`;
+  }).join('');
+
+  // Sequentially identify each watch from its crop
+  const collection = watches.map(w => ({ brand: w.brand, name: w.name, ref: w.ref || '' }));
+
+  for (let i = 0; i < count; i++) {
+    if (window._identifyAborted) break;
+    const w = _photoIdentifyResults[i];
+    if (!w) continue;
+
+    // Update status to "Identifying..."
+    const card = document.querySelector(`.pi-card[data-pi-idx="${i}"]`);
+    const statusEl = card?.querySelector('.pi-status');
+    if (statusEl) statusEl.innerHTML = `<span class="pi-loading-spinner" style="display:inline-block;width:12px;height:12px;border-width:1.5px;margin-right:.4rem;vertical-align:middle;"></span>Identifying ${i + 1} of ${count}\u2026`;
+
+    try {
+      // Convert cropped blob to base64 and send to Opus
+      const cropBase64 = w._prefetchedCroppedBlob
+        ? await blobToResizedBase64ForIdentify(w._prefetchedCroppedBlob)
+        : fullBase64;
+
+      const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+        method: 'POST',
+        body: JSON.stringify({ image: cropBase64, collection, mode: 'identify' }),
+      }, 90000);
+
+      if (window._identifyAborted) break;
+
+      if (resp.ok) {
+        const data = await resp.json();
+        const id = data.watches?.[0];
+        if (id) {
+          w.brand = id.brand || 'Unknown';
+          w.model = id.model || 'Unknown';
+          w.reference = id.reference || '';
+          w.dialText = id.dialText || '';
+          w.estimatedColor = id.estimatedColor || '#94a3b8';
+          w.confidence = id.confidence || 'medium';
+          w.productUrl = id.productUrl || '';
+        } else {
+          w.brand = 'Unknown'; w.model = 'Unknown'; w.confidence = 'low';
+        }
+      } else {
+        w.brand = 'Unknown'; w.model = 'Identification failed'; w.confidence = 'low';
+      }
+    } catch (err) {
+      console.error('[WristLog] Identify failed for watch', i, err);
+      w.brand = 'Unknown'; w.model = 'Identification failed'; w.confidence = 'low';
+    }
+
+    w._pending = false;
+
+    // Update the card in-place with results
+    if (card) {
+      const nameEl = card.querySelector('.pi-card-name');
+      if (nameEl) { nameEl.textContent = w.model || 'Unknown'; nameEl.style.color = ''; nameEl.style.fontStyle = ''; }
+      const brandEl = card.querySelector('.pi-status');
+      if (brandEl) { brandEl.textContent = w.brand || 'Unknown'; brandEl.style.color = ''; brandEl.className = 'pi-card-brand'; }
+      if (w.reference) {
+        const refEl = document.createElement('div');
+        refEl.className = 'pi-card-ref';
+        refEl.textContent = `Ref. ${w.reference}`;
+        card.querySelector('.pi-card-info')?.appendChild(refEl);
+      }
+      const confSpan = document.createElement('span');
+      confSpan.className = `pi-card-conf ${w.confidence || 'medium'}`;
+      confSpan.textContent = w.confidence || 'medium';
+      card.querySelector('.pi-card-actions')?.before(confSpan);
+      const actionsEl = card.querySelector('.pi-card-actions');
+      if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .7rem;" onclick="addFromIdentified(${i})">+ Add</button>`;
+    }
+  }
 }
 
 function renderPhotoIdentifyResults() {
@@ -14855,6 +14966,7 @@ function openCropAdjuster(idx) {
 // _showPhotoSourcePicker removed — native OS menu (Photo Library / Take Photo / Choose File) used instead
 
 function closePhotoIdentify() {
+  window._identifyAborted = true;
   document.getElementById('photo-identify-modal').classList.add('hidden');
   window._photoIdentifyBase64 = null;
   // If adding from identify, keep blob + results for the watch modal / crop adjuster.
