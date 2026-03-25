@@ -137,26 +137,25 @@ Deno.serve(async (req: Request) => {
         method: "POST",
         headers: apiHeaders,
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 256,
+          model: "claude-sonnet-4-6",
+          max_tokens: 4096,
           messages: [{
             role: "user",
             content: [
               imageContent,
               {
                 type: "text",
-                text: `Count every distinct wristwatch visible in this image and determine how they are arranged.
+                text: `Look at this image and find every wristwatch. For each watch, describe where it is in the image, then provide a bounding box.
 
-Return:
-- count: number of watches
-- layout: one of "vertical" (stacked top to bottom), "horizontal" (side by side), or "grid" (rows and columns)
-- rows: number of rows (e.g., 4 watches stacked = 4 rows, 1 col; 2x2 grid = 2 rows)
-- cols: number of columns
+The bounding box should be [x, y, width, height] as percentages (0-100) of the image. x is from the left edge, y is from the top edge. The box should be tightly centered on the watch DIAL (the circular/square face where the hands and brand name are). Include the full case and a small margin, but do NOT include other watches or large areas of background.
 
-Return ONLY valid JSON:
-{"count": N, "layout": "vertical|horizontal|grid", "rows": R, "cols": C}
+For a watch box with 4 watches stacked vertically, each watch is roughly 20-25% of the image height. The bounding boxes should NOT overlap.
 
-If no watches visible: {"count": 0}`,
+After your analysis, return JSON:
+{"count": N, "watches": [{"boundingBox": [x, y, w, h]}]}
+
+Order watches from top to bottom, left to right.
+If no watches visible: {"count": 0, "watches": []}`,
               },
             ],
           }],
@@ -181,10 +180,7 @@ If no watches visible: {"count": 0}`,
           { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
         );
       }
-      parsed.count = parsed.count ?? 0;
-      parsed.layout = parsed.layout || "vertical";
-      parsed.rows = parsed.rows || parsed.count;
-      parsed.cols = parsed.cols || 1;
+      parsed.count = parsed.count ?? parsed.watches?.length ?? 0;
       return new Response(JSON.stringify(parsed), {
         headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       });
