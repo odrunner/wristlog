@@ -1364,3 +1364,38 @@ export function inlineImages(bodyHtml, images) {
 export function sharePostUrl(logId) {
   return `https://api.wrotate.com/functions/v1/share-post?id=${logId}`;
 }
+
+// ══════════════════════════════════════════
+//  WEAR DEDUP
+// ══════════════════════════════════════════
+
+/** Count unique wear days for a single watch from its logs */
+export function wearsForWatchFromLogs(watchLogs) {
+  if (watchLogs.length <= 1) return watchLogs.length;
+  const dates = new Set();
+  for (const l of watchLogs) if (l.date) dates.add(l.date);
+  return dates.size;
+}
+
+/** Count unique wear days across all logs (composite key: watchId|date) */
+export function uniqueWears(logArr) {
+  if (logArr.length <= 1) return logArr.length;
+  const dates = new Set();
+  for (const l of logArr) if (l.date) dates.add(l.date + '|' + (l.watchId || ''));
+  return dates.size;
+}
+
+// ══════════════════════════════════════════
+//  DELETE ACCOUNT TABLE COLUMNS
+// ══════════════════════════════════════════
+
+/** Returns the delete filter for each table used by deleteAccount */
+export function deleteAccountFilters(uid) {
+  return {
+    club_invites: { or: `invited_by.eq.${uid},invitee_id.eq.${uid}` },
+    club_join_requests: { eq: ['user_id', uid] },
+    content_reports: { eq: ['reporter_id', uid] },
+    device_tokens: { eq: ['user_id', uid] },
+    official_drafts: { eq: ['created_by', uid] },
+  };
+}
