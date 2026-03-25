@@ -133,21 +133,12 @@ Deno.serve(async (req: Request) => {
     const apiHeaders = {
       "Content-Type": "application/json",
       "x-api-key": ANTHROPIC_API_KEY,
-      "anthropic-version": "2025-04-14",
+      "anthropic-version": "2023-06-01",
     };
 
     function extractJson(text: string) {
       const m = text.match(/\{[\s\S]*\}/);
       return m ? JSON.parse(m[0]) : null;
-    }
-
-    // Find the text block in thinking API responses (may have thinking + text blocks)
-    function getTextFromResponse(result: any): string {
-      if (!result.content) return "";
-      for (const block of result.content) {
-        if (block.type === "text") return block.text;
-      }
-      return "";
     }
 
     const BRAND_CUES = `Brand identification guide:
@@ -172,7 +163,6 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         model: "claude-opus-4-20250514",
         max_tokens: 8000,
-        thinking: { type: "enabled", budget_tokens: 10000 },
         messages: [{
           role: "user",
           content: [
@@ -200,13 +190,13 @@ Return ONLY valid JSON after your analysis:
       const errText = await pass1.text();
       console.error("[identify-watch] Pass 1 error:", pass1.status, errText);
       return new Response(
-        JSON.stringify({ error: "AI detection failed", detail: pass1.status }),
+        JSON.stringify({ error: "AI detection failed", detail: pass1.status, apiError: errText }),
         { status: 502, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       );
     }
 
     const pass1Result = await pass1.json();
-    const pass1Text = getTextFromResponse(pass1Result);
+    const pass1Text = pass1Result.content?.[0]?.text ?? "";
     const detected = extractJson(pass1Text);
     if (!detected?.watches?.length) {
       return new Response(JSON.stringify({ watches: [] }), {
@@ -224,8 +214,7 @@ Return ONLY valid JSON after your analysis:
         body: JSON.stringify({
           model: "claude-opus-4-20250514",
           max_tokens: 8000,
-          thinking: { type: "enabled", budget_tokens: 10000 },
-          messages: [{
+            messages: [{
             role: "user",
             content: [
               imageContent,
@@ -276,7 +265,7 @@ Return ONLY valid JSON:
         continue;
       }
       const result = await resp.json();
-      const text = getTextFromResponse(result);
+      const text = result.content?.[0]?.text ?? "";
       const parsed = extractJson(text);
       if (parsed) {
         watches.push(parsed);
