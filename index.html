@@ -4297,7 +4297,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.24.19.19';
+const APP_VERSION = '2.36.24.19.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14491,7 +14491,7 @@ function openPhotoIdentify() {
             if (detectData.watches && detectData.watches.length === data.watches.length) {
               // Apply Sonnet's bounding boxes to the results and re-crop
               detectData.watches.forEach((dw, i) => {
-                if (dw.boundingBox && _photoIdentifyResults[i]) {
+                if (dw.boundingBox && _photoIdentifyResults[i] && !_photoIdentifyResults[i]._userCropped) {
                   _photoIdentifyResults[i].boundingBox = dw.boundingBox;
                   _photoIdentifyResults[i]._imageSearched = false;
                   _photoIdentifyResults[i]._imageFound = false;
@@ -14949,7 +14949,7 @@ function _openCropUI(sourceBlob, initialBbox, onDone) {
       const wPct = Math.min(100 - xPct, (guideSize / curW) * 100);
       const hPct = Math.min(100 - yPct, (guideSize / curH) * 100);
       try {
-        const cropped = await cropWatchFromPhoto(sourceBlob, [xPct, yPct, wPct, hPct]);
+        const cropped = await cropWatchFromPhoto(sourceBlob, [xPct, yPct, wPct, hPct], 0);
         onDone(cropped, [xPct, yPct, wPct, hPct]);
       } catch (err) {
         console.error('[WristLog] crop adjust error:', err);
@@ -14973,6 +14973,7 @@ function openCropAdjuster(idx) {
     w._prefetchedImageUrl = URL.createObjectURL(croppedBlob);
     w._imageFound = true;
     w._imageSource = 'cropped';
+    w._userCropped = true;
     w.boundingBox = bboxPct;
     updateIdentifyCard(idx);
   });
