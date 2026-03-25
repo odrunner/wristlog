@@ -172,7 +172,7 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         model: "claude-opus-4-20250514",
         max_tokens: 8000,
-        thinking: { type: "enabled", budget_tokens: 2000 },
+        thinking: { type: "enabled", budget_tokens: 10000 },
         messages: [{
           role: "user",
           content: [
@@ -224,7 +224,7 @@ Return ONLY valid JSON after your analysis:
         body: JSON.stringify({
           model: "claude-opus-4-20250514",
           max_tokens: 8000,
-          thinking: { type: "enabled", budget_tokens: 3000 },
+          thinking: { type: "enabled", budget_tokens: 10000 },
           messages: [{
             role: "user",
             content: [
