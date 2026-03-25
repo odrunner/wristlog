@@ -218,37 +218,26 @@ If no watches visible: {"count": 0}`,
       method: "POST",
       headers: apiHeaders,
       body: JSON.stringify({
-        model: "claude-opus-4-20250514",
-        max_tokens: 4096,
+        model: "claude-opus-4-6",
+        max_tokens: 8192,
         messages: [{
           role: "user",
           content: [
             imageContent,
             {
               type: "text",
-              text: `You are a world-class luxury watch expert. This image contains a watch. Focus all your attention on identifying it precisely.
+              text: `Look at this image carefully. Identify every watch visible.
+
+For each watch, describe what you see: read the text on the dial, look at the logo, note the case shape, bezel, bracelet/strap, and any distinguishing features. Then give your best identification.
 
 ${BRAND_CUES}
 
-IMPORTANT:
-1. Read the text on the dial FIRST. The brand name is almost always printed on the dial.
-2. Look for the logo at 12 o'clock — crown = Rolex, shield = Tudor, cross = Patek Philippe, octagonal bezel = AP.
-3. Always make your best identification attempt. Use visual cues like case shape, bracelet style, bezel design, and dial layout.
-4. Use "high" when you can read the brand or unmistakably recognize the design, "medium" when you're fairly confident from visual cues, "low" for uncertain guesses.
+After your analysis, return a JSON object with your identifications:
+{"watches": [{"brand": "BrandName", "model": "ModelName", "reference": "ref or empty string", "dialText": "text you read on dial", "estimatedColor": "#hex", "confidence": "high/medium/low", "productUrl": ""}]}
 
-Provide:
-- brand: The manufacturer (e.g., "Rolex", "Patek Philippe"). Give your best guess — do not leave blank.
-- model: Model name with case size if determinable.
-- reference: Reference number if determinable. Empty string if unsure.
-- dialText: ALL text visible on the dial, comma-separated. Read very carefully.
-- estimatedColor: Pick from: #c9a84c (gold), #94a3b8 (slate/silver), #818cf8 (indigo), #fbbf24 (amber), #38bdf8 (sky blue), #a78bfa (purple), #f43f5e (rose), #4caf7d (teal)
-- confidence: "high", "medium", or "low"
-- productUrl: Product page URL if known. Empty string if not.
+For estimatedColor pick from: #c9a84c (gold), #94a3b8 (slate/silver), #818cf8 (indigo), #fbbf24 (amber), #38bdf8 (sky blue), #a78bfa (purple), #f43f5e (rose), #4caf7d (teal)
 
-Return ONLY valid JSON:
-{"watches": [{"brand": "...", "model": "...", "reference": "...", "dialText": "...", "estimatedColor": "...", "confidence": "...", "productUrl": "..."}]}
-
-If no watch visible: {"watches": []}${collectionHint}`,
+If no watches: {"watches": []}${collectionHint}`,
             },
           ],
         }],
