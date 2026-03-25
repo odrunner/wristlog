@@ -4297,7 +4297,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.24.18.07';
+const APP_VERSION = '2.36.24.18.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14471,7 +14471,7 @@ function openPhotoIdentify() {
       if (!detectResp.ok) { const err = await detectResp.json().catch(() => ({})); throw new Error(err.error || 'Detection failed'); }
       const detectData = await detectResp.json();
 
-      if (!detectData.watches || detectData.count === 0) {
+      if (!detectData.count || detectData.count === 0) {
         list.innerHTML = `<div class="pi-loading"><div style="font-size:.85rem;">No watches detected</div><div style="font-size:.75rem;color:var(--muted);margin-top:.3rem;">Try a clearer photo with watch faces visible</div></div>`;
         return;
       }
@@ -14491,16 +14491,14 @@ function openPhotoIdentify() {
           return;
         }
         // Use bounding box from detect if identify didn't return one
-        if (detectData.watches[0]?.boundingBox && data.watches[0]) {
-          data.watches[0].boundingBox = data.watches[0].boundingBox || detectData.watches[0].boundingBox;
-        }
+        // No bounding box from detect — not needed for single watch
         _photoIdentifyResults = data.watches;
         renderPhotoIdentifyResults();
         return;
       }
 
       // Multiple watches: crop then identify sequentially
-      await _identifyMultipleWatches(detectData.watches, base64, list);
+      await _identifyMultipleWatches(detectData, base64, list);
     } catch (e) {
       console.error('[WristLog] Photo identify error:', e);
       list.innerHTML = `<div class="pi-loading"><div style="font-size:.85rem;color:var(--danger);">Identification failed</div><div style="font-size:.75rem;color:var(--muted);margin-top:.3rem;">${escHtml(e.message || 'Unknown error')}</div></div>`;
@@ -14509,23 +14507,36 @@ function openPhotoIdentify() {
   input.click();
 }
 
-async function _identifyMultipleWatches(detectedWatches, fullBase64, listEl) {
-  const count = detectedWatches.length;
+async function _identifyMultipleWatches(detectData, fullBase64, listEl) {
+  const count = detectData.count;
+  const rows = detectData.rows || count;
+  const cols = detectData.cols || 1;
   const blob = window._photoIdentifyBlob;
 
-  // Initialize results with bounding boxes only (no identification yet)
-  _photoIdentifyResults = detectedWatches.map((dw, i) => ({
-    boundingBox: dw.boundingBox || [0, 0, 100, 100],
+  // Compute grid-based bounding boxes (no AI coordinates — just equal strips)
+  const cellW = 100 / cols;
+  const cellH = 100 / rows;
+  const gridBoxes = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (gridBoxes.length >= count) break;
+      gridBoxes.push([c * cellW, r * cellH, cellW, cellH]);
+    }
+  }
+
+  // Initialize results
+  _photoIdentifyResults = gridBoxes.map((bbox, i) => ({
+    boundingBox: bbox,
     brand: null, model: null, reference: '', dialText: '',
     estimatedColor: '#94a3b8', confidence: null, productUrl: '',
     _pending: true, _position: i,
   }));
 
-  // Crop all watches from photo and show thumbnails immediately
+  // Crop all watches using grid strips and show thumbnails immediately
   for (let i = 0; i < count; i++) {
     const w = _photoIdentifyResults[i];
     try {
-      const cropped = await cropWatchFromPhoto(blob, w.boundingBox);
+      const cropped = await cropWatchFromPhoto(blob, w.boundingBox, 0.05);
       w._prefetchedCroppedBlob = cropped;
       w._prefetchedImageUrl = URL.createObjectURL(cropped);
       w._imageFound = true;
