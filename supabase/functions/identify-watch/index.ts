@@ -230,15 +230,15 @@ If no watches visible: {"count": 0}`,
 
 ${BRAND_CUES}
 
-CRITICAL RULES:
-1. Read the text on the dial FIRST. The brand name is almost always printed on the dial. If you can read it, use exactly what it says.
+IMPORTANT:
+1. Read the text on the dial FIRST. The brand name is almost always printed on the dial.
 2. Look for the logo at 12 o'clock — crown = Rolex, shield = Tudor, cross = Patek Philippe, octagonal bezel = AP.
-3. If you CANNOT clearly read or identify the brand, return brand as "Unknown". NEVER guess a brand you are not confident about. Returning "Unknown" is always better than a wrong answer.
-4. Only use "high" confidence when you can clearly read the brand name on the dial or unmistakably recognize the design.
+3. Always make your best identification attempt. Use visual cues like case shape, bracelet style, bezel design, and dial layout.
+4. Use "high" when you can read the brand or unmistakably recognize the design, "medium" when you're fairly confident from visual cues, "low" for uncertain guesses.
 
 Provide:
-- brand: The manufacturer. Use "Unknown" if you cannot clearly identify it.
-- model: Model name with case size if determinable. Use "Unknown" if unsure.
+- brand: The manufacturer (e.g., "Rolex", "Patek Philippe"). Give your best guess — do not leave blank.
+- model: Model name with case size if determinable.
 - reference: Reference number if determinable. Empty string if unsure.
 - dialText: ALL text visible on the dial, comma-separated. Read very carefully.
 - estimatedColor: Pick from: #c9a84c (gold), #94a3b8 (slate/silver), #818cf8 (indigo), #fbbf24 (amber), #38bdf8 (sky blue), #a78bfa (purple), #f43f5e (rose), #4caf7d (teal)
