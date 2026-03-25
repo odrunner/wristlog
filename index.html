@@ -4037,7 +4037,7 @@ async function deleteAccount() {
   await del('user_blocks',    { or: `blocker_id.eq.${uid},blocked_id.eq.${uid}` });
   await del('comment_likes',  { eq: ['user_id', uid] });
   await del('eula_acceptances', { eq: ['user_id', uid] });
-  await del('club_invites',   { or: `inviter_id.eq.${uid},invitee_id.eq.${uid}` });
+  await del('club_invites',   { or: `invited_by.eq.${uid},invitee_id.eq.${uid}` });
   await del('club_join_requests', { eq: ['user_id', uid] });
   await del('content_reports', { eq: ['reporter_id', uid] });
   await del('device_tokens',  { eq: ['user_id', uid] });
@@ -4297,7 +4297,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.24.19.35';
+const APP_VERSION = '2.36.24.19.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
