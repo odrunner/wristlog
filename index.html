@@ -4297,7 +4297,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.24.17.30';
+const APP_VERSION = '2.36.24.17.32';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13908,13 +13908,25 @@ function blobToResizedBase64(blob) {
 }
 
 // Higher-res resize for AI watch identification (1600px max, 0.92 quality)
-// Convert blob to base64 at full resolution for AI identification
+// High-res resize for AI identification (2000px max, 0.95 quality)
+// Anthropic internally scales to ~1568px, so 2000px is more than enough.
+// Must stay under Supabase 2MB body limit — full-res iPhone photos are 3-5MB.
 function blobToResizedBase64ForIdentify(blob) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error('Could not read image.'));
-    reader.readAsDataURL(blob);
+    const img = new Image();
+    const objUrl = URL.createObjectURL(blob);
+    img.onload = () => {
+      URL.revokeObjectURL(objUrl);
+      const MAX = 2000;
+      const scale = Math.min(1, MAX / Math.max(img.width || MAX, img.height || MAX));
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round((img.width  || MAX) * scale);
+      canvas.height = Math.round((img.height || MAX) * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.95));
+    };
+    img.onerror = () => reject(new Error('Unsupported image format.'));
+    img.src = objUrl;
   });
 }
 
