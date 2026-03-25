@@ -4297,7 +4297,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.24.19.09';
+const APP_VERSION = '2.36.24.19.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14682,18 +14682,15 @@ async function prefetchIdentifiedImages() {
     w._imageLoading = true;
     updateIdentifyCard(i);
 
-    // Always crop from user's photo.
     if (!w._imageFound && window._photoIdentifyBlob) {
       const hasBbox = w.boundingBox && Array.isArray(w.boundingBox) && w.boundingBox.length === 4;
       const bbox = hasBbox ? w.boundingBox : [0, 0, 100, 100];
-      console.log('[WristLog] Crop fallback, bbox:', bbox, 'blobSize:', window._photoIdentifyBlob.size);
       try {
         const cropped = await cropWatchFromPhoto(window._photoIdentifyBlob, bbox);
         w._prefetchedCroppedBlob = cropped;
         w._prefetchedImageUrl = URL.createObjectURL(cropped);
         w._imageFound = true;
         w._imageSource = 'cropped';
-        console.log('[WristLog] Crop success, size:', cropped.size);
       } catch (cropErr) {
         console.error('[WristLog] crop error:', cropErr);
       }
