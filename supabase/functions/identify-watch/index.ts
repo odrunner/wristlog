@@ -119,7 +119,7 @@ Deno.serve(async (req: Request) => {
       const items = collection.map((w: any) =>
         `${w.brand} ${w.name}${w.ref ? ` (ref: ${w.ref})` : ""}`
       ).join(", ");
-      collectionHint = `\n\nThe user owns these watches: ${items}\nIf you recognize a watch as one of these, use the exact names. Do NOT force a match — accuracy over matching.`;
+      collectionHint = `\nThe user owns these watches: ${items}\nIf you recognize a watch as one of these, use the exact names. Do NOT force a match — accuracy over matching.`;
     }
 
     const base64Data = image.replace(/^data:image\/[a-z]+;base64,/, "");
@@ -141,27 +141,52 @@ Deno.serve(async (req: Request) => {
       return m ? JSON.parse(m[0]) : null;
     }
 
-    // ── PASS 1: Detect watches and locate them ──
+    // Find the text block in thinking API responses (may have thinking + text blocks)
+    function getTextFromResponse(result: any): string {
+      if (!result.content) return "";
+      for (const block of result.content) {
+        if (block.type === "text") return block.text;
+      }
+      return "";
+    }
+
+    const BRAND_CUES = `Brand identification guide:
+- Rolex: Crown logo at 12 o'clock, "ROLEX" on dial, Cyclops lens over date, Oyster/Jubilee/President bracelets, fluted or smooth bezel
+- Tudor: Shield logo at 12 o'clock, "TUDOR" on dial, snowflake hands on Black Bay models, rose or shield emblem
+- Omega: Ω symbol, "OMEGA" on dial, Speedmaster has tachymeter bezel, Seamaster has wave dial pattern
+- Patek Philippe: Calatrava cross logo, "PATEK PHILIPPE GENEVE" on dial, typically dress watches with leather straps
+- Audemars Piguet: "AP" initials, Royal Oak has octagonal bezel with 8 exposed hexagonal screws, "Tapisserie" waffle dial pattern
+- Vacheron Constantin: Maltese cross logo, "VACHERON CONSTANTIN" on dial, Overseas has distinctive cross-shaped bezel
+- Cartier: Roman numerals, blue sword hands, "Cartier" in cursive, Santos has exposed screws
+- IWC: "IWC SCHAFFHAUSEN" on dial, Portugieser has railroad chapter ring
+- Breitling: Winged B logo, "BREITLING" on dial, often with slide rule bezel
+- Panerai: Cushion case, crown-protecting bridge/lever, large luminous numerals
+- Grand Seiko: "GS" logo, "Grand Seiko" text, zaratsu polishing with sharp case edges`;
+
+    // ── PASS 1: Detect watches and locate them (with thinking) ──
     const pass1 = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: apiHeaders,
       body: JSON.stringify({
         model: "claude-opus-4-20250514",
-        max_tokens: 1024,
+        max_tokens: 16000,
+        thinking: { type: "enabled", budget_tokens: 4000 },
         messages: [{
           role: "user",
           content: [
             imageContent,
             {
               type: "text",
-              text: `Count every watch visible in this image and locate each one.
+              text: `Count every watch visible in this image and locate each one precisely.
+
+${BRAND_CUES}
 
 For each watch, provide:
-- position: brief description (e.g., "top", "second from top", "bottom-left")
-- boundingBox: [x, y, width, height] as percentages (0-100) of image dimensions. Be generous — include full case and some strap.
-- firstImpression: what brand/type it looks like at first glance (quick note, not final)
+- position: description (e.g., "top", "second from top")
+- boundingBox: [x, y, width, height] as percentages (0-100) of image. Be generous — include full case, dial, and strap visible.
+- firstImpression: brand guess based on logos, text, and visual cues above
 
-Return ONLY valid JSON:
+Return ONLY valid JSON after your analysis:
 {"count": N, "watches": [{"position": "...", "boundingBox": [x, y, w, h], "firstImpression": "..."}]}`,
             },
           ],
@@ -178,7 +203,8 @@ Return ONLY valid JSON:
       );
     }
 
-    const pass1Text = (await pass1.json()).content?.[0]?.text ?? "";
+    const pass1Result = await pass1.json();
+    const pass1Text = getTextFromResponse(pass1Result);
     const detected = extractJson(pass1Text);
     if (!detected?.watches?.length) {
       return new Response(JSON.stringify({ watches: [] }), {
@@ -186,67 +212,76 @@ Return ONLY valid JSON:
       });
     }
 
-    // ── PASS 2: Detailed identification using locations from pass 1 ──
-    const watchList = detected.watches.map((w: any, i: number) => {
+    // ── PASS 2: Per-watch identification with thinking ──
+    // Each watch gets its own API call for maximum focus
+    const identifyPromises = detected.watches.map((w: any, i: number) => {
       const bb = w.boundingBox || [0, 0, 100, 100];
-      return `Watch ${i + 1}: at [${bb.join(", ")}] (${w.position}). First impression: ${w.firstImpression}.`;
-    }).join("\n");
+      return fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: apiHeaders,
+        body: JSON.stringify({
+          model: "claude-opus-4-20250514",
+          max_tokens: 16000,
+          thinking: { type: "enabled", budget_tokens: 5000 },
+          messages: [{
+            role: "user",
+            content: [
+              imageContent,
+              {
+                type: "text",
+                text: `Focus ONLY on the watch at position [${bb.join(", ")}] (${w.position || "unknown"}) in this image. Ignore all other watches.
 
-    const pass2 = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: apiHeaders,
-      body: JSON.stringify({
-        model: "claude-opus-4-20250514",
-        max_tokens: 2048,
-        messages: [{
-          role: "user",
-          content: [
-            imageContent,
-            {
-              type: "text",
-              text: `You are an expert watch identifier. This image has ${detected.watches.length} watch(es):
+${BRAND_CUES}
 
-${watchList}
+First impression: ${w.firstImpression || "unknown"}
 
-Carefully identify each watch. Study the dial text, bezel shape, case design, crown, pushers, and bracelet/strap to determine the exact brand, model, and reference.
+Study this specific watch carefully:
+1. Read ALL text on the dial — brand name, model text, any small print
+2. Examine the logo at 12 o'clock position
+3. Note the bezel type (smooth, fluted, rotating, octagonal)
+4. Note the bracelet/strap type
+5. Check for date window, day window, chronograph subdials
+6. Identify the exact brand, model name, and reference number
 
-For each watch (same order), provide:
-- brand: Manufacturer (e.g., "Patek Philippe", "Audemars Piguet", "Vacheron Constantin")
-- model: Model name with case size if determinable (e.g., "Calatrava 39", "Royal Oak Chronograph 41", "Overseas 41")
-- reference: Reference number if determinable (e.g., "5227G-010", "26331ST.OO.1220ST.01"). Empty string if unsure.
-- dialText: All visible text on dial, comma-separated. Read carefully.
+Provide:
+- brand: Exact manufacturer name
+- model: Model name with case size if determinable
+- reference: Reference number if determinable, empty string if not
+- dialText: All text you can read on the dial, comma-separated
 - estimatedColor: Pick from: #c9a84c (gold), #94a3b8 (slate/silver), #818cf8 (indigo), #fbbf24 (amber), #38bdf8 (sky blue), #a78bfa (purple), #f43f5e (rose), #4caf7d (teal)
 - confidence: "high", "medium", or "low"
-- productUrl: Product page URL if you know the brand site. Empty string if unsure.
-- boundingBox: [x, y, w, h] percentages from the detection pass
+- productUrl: Product page URL if known, empty string if not
+- boundingBox: [${bb.join(", ")}]
+${collectionHint}
 
 Return ONLY valid JSON:
-{"watches": [{"brand": "...", "model": "...", "reference": "...", "dialText": "...", "estimatedColor": "...", "confidence": "...", "productUrl": "...", "boundingBox": [x, y, w, h]}]}${collectionHint}`,
-            },
-          ],
-        }],
-      }),
+{"brand": "...", "model": "...", "reference": "...", "dialText": "...", "estimatedColor": "...", "confidence": "...", "productUrl": "...", "boundingBox": [${bb.join(", ")}]}`,
+              },
+            ],
+          }],
+        }),
+      });
     });
 
-    if (!pass2.ok) {
-      const errText = await pass2.text();
-      console.error("[identify-watch] Pass 2 error:", pass2.status, errText);
-      return new Response(
-        JSON.stringify({ error: "AI identification failed", detail: pass2.status }),
-        { status: 502, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
-      );
+    // Run all per-watch identification calls in parallel
+    const pass2Responses = await Promise.all(identifyPromises);
+    const watches = [];
+
+    for (let i = 0; i < pass2Responses.length; i++) {
+      const resp = pass2Responses[i];
+      if (!resp.ok) {
+        console.error(`[identify-watch] Pass 2 watch ${i} error:`, resp.status);
+        continue;
+      }
+      const result = await resp.json();
+      const text = getTextFromResponse(result);
+      const parsed = extractJson(text);
+      if (parsed) {
+        watches.push(parsed);
+      }
     }
 
-    const pass2Text = (await pass2.json()).content?.[0]?.text ?? "";
-    const parsed = extractJson(pass2Text);
-    if (!parsed) {
-      return new Response(
-        JSON.stringify({ error: "Could not parse identification response", raw: pass2Text }),
-        { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
-      );
-    }
-
-    return new Response(JSON.stringify(parsed), {
+    return new Response(JSON.stringify({ watches }), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
   } catch (err) {
