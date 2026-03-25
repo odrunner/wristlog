@@ -161,7 +161,9 @@ Deno.serve(async (req: Request) => {
 - IWC: "IWC SCHAFFHAUSEN" on dial, Portugieser has railroad chapter ring
 - Breitling: Winged B logo, "BREITLING" on dial, often with slide rule bezel
 - Panerai: Cushion case, crown-protecting bridge/lever, large luminous numerals
-- Grand Seiko: "GS" logo, "Grand Seiko" text, zaratsu polishing with sharp case edges`;
+- Grand Seiko: "GS" logo, "Grand Seiko" text, zaratsu polishing with sharp case edges
+- GRØNE: "GRØNE" on dial, Danish microbrand, minimalist Scandinavian design
+- Anoma: "Anoma" on dial, microbrand`;
 
     // ── PASS 1: Detect watches and locate them (with thinking) ──
     const pass1 = await fetch("https://api.anthropic.com/v1/messages", {
@@ -169,8 +171,8 @@ Deno.serve(async (req: Request) => {
       headers: apiHeaders,
       body: JSON.stringify({
         model: "claude-opus-4-20250514",
-        max_tokens: 16000,
-        thinking: { type: "enabled", budget_tokens: 4000 },
+        max_tokens: 8000,
+        thinking: { type: "enabled", budget_tokens: 2000 },
         messages: [{
           role: "user",
           content: [
@@ -221,8 +223,8 @@ Return ONLY valid JSON after your analysis:
         headers: apiHeaders,
         body: JSON.stringify({
           model: "claude-opus-4-20250514",
-          max_tokens: 16000,
-          thinking: { type: "enabled", budget_tokens: 5000 },
+          max_tokens: 8000,
+          thinking: { type: "enabled", budget_tokens: 3000 },
           messages: [{
             role: "user",
             content: [
