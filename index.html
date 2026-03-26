@@ -204,24 +204,23 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       --gold-dim: rgba(154,118,40,.12); --text: #16161e; --muted: #70708a;
       --overlay-bg: rgba(245,245,248,.96);
     }
-    /* ── Carousel Landing Layout ── */
-    .landing-container { width:100%; max-width:400px; display:flex; flex-direction:column; align-items:center; gap:.75rem; margin:0 auto; }
-    .landing-carousel { position:relative; width:65%; aspect-ratio:9/16; border-radius:14px; overflow:hidden; background:var(--surface); border:1px solid var(--border); max-height:min(420px, 45dvh); }
-    .landing-carousel img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 3%; opacity:0; visibility:hidden; transition:opacity .6s ease, visibility 0s .6s; -webkit-backface-visibility:hidden; backface-visibility:hidden; }
-    .landing-carousel img.active { opacity:1; visibility:visible; transition:opacity .6s ease, visibility 0s 0s; }
-    .carousel-caption { font-size:1rem; color:var(--muted); text-align:center; height:1.4em; line-height:1.4; overflow:hidden; transition:opacity .4s ease; }
-    .carousel-dots { display:flex; gap:.45rem; justify-content:center; }
-    .carousel-dot { width:7px; height:7px; border-radius:50%; background:var(--border); transition:background .3s, transform .3s; cursor:pointer; border:none; padding:0; }
-    .carousel-dot.active { background:var(--gold); transform:scale(1.25); }
-    .landing-auth-buttons { width:100%; margin-top:.25rem; }
-    .landing-fine-print { font-size:.72rem; color:var(--muted); text-align:center; line-height:1.5; }
-    .landing-fine-print a { color:var(--muted); text-decoration:underline; }
-    .landing-app-badge { text-align:center; }
-    .landing-app-badge img { height:34px; }
+    /* ── Blurred Feed Preview Landing ── */
+    #auth-screen { position:relative; overflow:hidden; min-height:100dvh; }
+    .landing-feed-preview { width:100%; max-width:470px; margin:0 auto; padding:1rem .75rem 6rem; filter:blur(1px); -webkit-filter:blur(1px); pointer-events:none; user-select:none; opacity:0; transition:opacity .6s ease; }
+    .landing-feed-preview.loaded { opacity:1; }
+    .landing-feed-preview .feed-card { opacity:.85; }
+    .landing-overlay { position:fixed; inset:0; z-index:500; display:flex; align-items:center; justify-content:center; background:rgba(245,245,248,.45); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); }
+    .landing-cta { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:1.75rem 1.5rem; max-width:340px; width:90%; text-align:center; box-shadow:0 12px 48px rgba(0,0,0,.12); }
+    .landing-cta .auth-logo { margin-bottom:.75rem; font-size:1.8rem; }
+    .landing-cta-tagline { font-size:.92rem; font-weight:600; color:var(--text); margin-bottom:.25rem; }
+    .landing-cta-sub { font-size:.78rem; color:var(--muted); margin-bottom:1rem; line-height:1.4; }
+    .landing-cta .btn-google, .landing-cta .btn-apple { font-size:.88rem; padding:.75rem 1rem; margin-bottom:.55rem; }
+    .landing-cta .landing-app-badge { margin-top:.25rem; }
+    .landing-cta .landing-app-badge img { height:34px; }
+    .landing-cta .landing-fine-print { font-size:.7rem; color:var(--muted); margin-top:.5rem; line-height:1.5; }
+    .landing-cta .landing-fine-print a { color:var(--muted); text-decoration:underline; }
     #login-prompt-modal .modal { text-align:center; }
     #login-prompt-modal .btn-google, #login-prompt-modal .btn-apple { margin-bottom:.6rem; }
-    @media (min-width: 600px) { .landing-carousel { max-height:520px; } }
-    @media (max-height: 600px) { .landing-carousel { max-height:30dvh; } .landing-container { gap:.4rem; } }
     .auth-logo {
       font-size: 1.5rem; font-weight: 800; color: var(--gold);
       letter-spacing: .06em; margin-bottom: .35rem;
@@ -1833,35 +1832,43 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <noscript><div style="padding:3rem 1.5rem;text-align:center;font-family:system-ui,sans-serif;color:#aaa;"><p style="font-size:1.2rem;font-weight:700;margin-bottom:.5rem;">WRotate requires JavaScript</p><p>Please enable JavaScript in your browser to use WRotate — a watch collection, rotation, and wear tracker.</p></div></noscript>
 
 <!-- ════ AUTH / LANDING SCREEN ════ -->
-<div id="auth-screen" data-theme="light" style="display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:1.5rem 1.25rem 1rem;">
-  <div class="landing-container">
-    <!-- Logo -->
-    <div class="auth-logo" style="margin-bottom:.5rem;font-size:2rem;">
-      <svg width="36" height="36" viewBox="0 0 32 32" fill="none" style="flex-shrink:0;">
-        <path d="M 21 7.3 A 10 10 0 1 1 11 7.3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-        <polygon points="11,7.3 8.5,9.5 7.7,6.6" fill="currentColor"/>
-        <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
-      </svg><span>W<span style="font-weight:400;letter-spacing:.04em;">rotate</span></span>
+<div id="auth-screen" data-theme="light">
+  <!-- Blurred feed preview behind the CTA -->
+  <div class="landing-feed-preview">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;padding:0 .25rem;">
+      <div class="auth-logo" style="justify-content:flex-start;font-size:1.2rem;margin-bottom:0;">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" style="flex-shrink:0;">
+          <path d="M 21 7.3 A 10 10 0 1 1 11 7.3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          <polygon points="11,7.3 8.5,9.5 7.7,6.6" fill="currentColor"/>
+          <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
+        </svg><span>W<span style="font-weight:400;letter-spacing:.04em;">rotate</span></span>
+      </div>
     </div>
+    <div id="landing-feed-list"></div>
+  </div>
 
-    <!-- Carousel -->
-    <div class="landing-carousel" id="landing-carousel">
-      <img src="https://api.wrotate.com/storage/v1/object/public/media/landing/track.PNG" alt="Track your wears" class="active" draggable="false">
-      <img src="https://api.wrotate.com/storage/v1/object/public/media/landing/collection.PNG" alt="Your collection" draggable="false">
-      <img src="https://api.wrotate.com/storage/v1/object/public/media/landing/stats.PNG" alt="Collection stats" draggable="false">
-    </div>
+  <!-- Fake bottom nav (blurred, non-interactive) -->
+  <div id="landing-fake-nav" style="position:fixed;bottom:0;left:0;right:0;z-index:100;display:none;flex-direction:row;justify-content:space-around;align-items:center;background:var(--surface);border-top:1px solid var(--border);padding:.5rem 0 calc(.5rem + env(safe-area-inset-bottom,0px));filter:blur(1px);-webkit-filter:blur(1px);pointer-events:none;user-select:none;">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:.15rem;color:var(--gold);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span style="font-size:.62rem;font-weight:600;">Feed</span></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:.15rem;color:var(--muted);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span style="font-size:.62rem;">Track</span></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:.15rem;color:var(--muted);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span style="font-size:.62rem;">Collection</span></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:.15rem;color:var(--muted);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span style="font-size:.62rem;">Wishlist</span></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:.15rem;color:var(--muted);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span style="font-size:.62rem;">Stats</span></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:.15rem;color:var(--muted);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span style="font-size:.62rem;">Clubs</span></div>
+  </div>
 
-    <div class="carousel-caption" id="carousel-caption">Snap to track — log today's wear in seconds</div>
-
-    <div class="carousel-dots" id="carousel-dots">
-      <div class="carousel-dot active"></div>
-      <div class="carousel-dot"></div>
-      <div class="carousel-dot"></div>
-    </div>
-
-    <!-- Auth -->
-    <div id="auth-error" class="auth-error"></div>
-    <div class="landing-auth-buttons">
+  <!-- Floating CTA overlay -->
+  <div class="landing-overlay">
+    <div class="landing-cta">
+      <div class="auth-logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style="flex-shrink:0;">
+          <path d="M 21 7.3 A 10 10 0 1 1 11 7.3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          <polygon points="11,7.3 8.5,9.5 7.7,6.6" fill="currentColor"/>
+          <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
+        </svg><span>W<span style="font-weight:400;letter-spacing:.04em;">rotate</span></span>
+      </div>
+      <div class="landing-cta-sub">Track your watches, log every wear, share with friends.</div>
+      <div id="auth-error" class="auth-error"></div>
       <button class="btn-google" onclick="signInWithGoogle()">
         <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
         Continue with Google
@@ -1870,24 +1877,27 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="#fff"/></svg>
         Continue with Apple
       </button>
-    </div>
-
-    <div class="landing-app-badge">
-      <a href="https://apps.apple.com/us/app/wrotate/id6760091102" target="_blank" rel="noopener noreferrer" onclick="trackAppStoreClick()">
-        <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store">
-      </a>
-    </div>
-
-    <div class="landing-fine-print">
-      100% free · No ads · No credit card<br>
-      <a href="/privacy.html">Privacy</a>
-    </div>
-
-    <!-- Dev-only anonymous login — localhost only -->
-    <div id="dev-login-wrap" style="display:none;margin-top:.5rem;gap:.4rem;justify-content:center;">
-      <button onclick="devLogin()" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.35rem .8rem;font-size:.72rem;cursor:pointer;font-family:inherit;">testuser</button>
-      <button onclick="devLogin(true)" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.35rem .8rem;font-size:.72rem;cursor:pointer;font-family:inherit;">testuser2</button>
-      <button onclick="devLogin('official')" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.35rem .8rem;font-size:.72rem;cursor:pointer;font-family:inherit;">official</button>
+      <div class="landing-app-badge" id="landing-app-badge">
+        <a href="https://apps.apple.com/us/app/wrotate/id6760091102" target="_blank" rel="noopener noreferrer" onclick="trackAppStoreClick()">
+          <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store">
+        </a>
+      </div>
+      <script>
+        // Hide App Store badge when running inside the iOS app (standalone/PWA mode)
+        if (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
+          document.getElementById('landing-app-badge').style.display = 'none';
+        }
+      </script>
+      <div class="landing-fine-print">
+        100% free · No ads · No credit card<br>
+        <a href="/privacy.html">Privacy</a>
+      </div>
+      <!-- Dev-only anonymous login — localhost only -->
+      <div id="dev-login-wrap" style="display:none;margin-top:.5rem;gap:.4rem;justify-content:center;">
+        <button onclick="devLogin()" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.35rem .8rem;font-size:.72rem;cursor:pointer;font-family:inherit;">testuser</button>
+        <button onclick="devLogin(true)" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.35rem .8rem;font-size:.72rem;cursor:pointer;font-family:inherit;">testuser2</button>
+        <button onclick="devLogin('official')" style="background:none;border:1px dashed #555;color:#888;border-radius:8px;padding:.35rem .8rem;font-size:.72rem;cursor:pointer;font-family:inherit;">official</button>
+      </div>
     </div>
   </div>
 </div>
@@ -4241,7 +4251,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.25.19.46';
+const APP_VERSION = '2.36.25.21.32';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7113,6 +7123,10 @@ function renderPublicFeed() {
       ${commentsHtml}
     </div>`;
   }).join('');
+  const preview = document.querySelector('.landing-feed-preview');
+  if (preview) preview.classList.add('loaded');
+  const fakeNav = document.getElementById('landing-fake-nav');
+  if (fakeNav) fakeNav.style.display = 'flex';
 }
 
 function requireLogin() {
@@ -16504,6 +16518,8 @@ async function bootApp(user) {
   // Force scroll to top — iOS PWA restores previous scroll position on launch
   window.scrollTo(0, 0);
   document.getElementById('auth-screen').style.display = 'none';
+  const fakeNav = document.getElementById('landing-fake-nav');
+  if (fakeNav) fakeNav.style.display = 'none';
   const profileBtn = document.getElementById('profile-btn');
   if (profileBtn) profileBtn.style.display = '';
   const helpBtn = document.getElementById('help-btn');
@@ -16559,7 +16575,7 @@ const _sessionTimeout = setTimeout(() => {
   if (!currentUser) {
     console.warn('[WRotate] getSession timeout (10s) — showing auth screen');
     document.getElementById('auth-screen').style.display = 'flex';
-    initLandingCarousel();
+    loadPublicFeed();
   }
 }, 10000);
 
@@ -16577,12 +16593,12 @@ db.auth.getSession().then(({ data: { session }, error }) => {
                           window.location.search.includes('code=');
     if (!isOAuthReturn) {
       document.getElementById('auth-screen').style.display = 'flex';
-      initLandingCarousel();
+      loadPublicFeed();
     } else {
       // Safety net: if onAuthStateChange never fires (e.g. invalid token),
       // show the login screen after 5 seconds rather than hanging forever.
       setTimeout(() => {
-        if (!currentUser) { document.getElementById('auth-screen').style.display = 'flex'; initLandingCarousel(); }
+        if (!currentUser) { document.getElementById('auth-screen').style.display = 'flex'; loadPublicFeed(); }
       }, 5000);
     }
   }
@@ -16590,7 +16606,7 @@ db.auth.getSession().then(({ data: { session }, error }) => {
   clearTimeout(_sessionTimeout);
   console.error('[WRotate] getSession threw — showing auth screen');
   document.getElementById('auth-screen').style.display = 'flex';
-  initLandingCarousel();
+  loadPublicFeed();
 });
 
 // ── SECONDARY: react to live auth changes ─────────────────────────────────
@@ -16605,7 +16621,7 @@ db.auth.onAuthStateChange((event, session) => {
     currentUser = null;
     clearUserState();
     document.getElementById('auth-screen').style.display = 'flex';
-    initLandingCarousel();
+    loadPublicFeed();
     document.getElementById('signout-btn').style.display = 'none';
     if (wasLoggedIn) toast('Session expired — please sign in again.', 'error');
     const profileBtn2 = document.getElementById('profile-btn');
