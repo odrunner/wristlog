@@ -4241,7 +4241,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.25.08.14';
+const APP_VERSION = '2.36.25.19.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8187,12 +8187,12 @@ async function npIdentifyWatch(file) {
   sugEl.innerHTML = `<div class="watch-suggestion"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" class="spin"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><div style="flex:1;color:var(--muted);font-size:.8rem;">Identifying watch…</div></div>`;
   sugEl.style.display = '';
   try {
-    const base64 = await blobToResizedBase64ForIdentify(file);
+    const base64 = await blobToResizedBase64Fast(file);
     const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
       method: 'POST',
       body: JSON.stringify({ image: base64, collection: watches.map(w => ({ brand: w.brand, name: w.name, ref: w.ref || '' })) }),
     }, 90000);
-    if (!resp.ok) { npIdentifiedWatchId = null; renderNpWatchDisplay(); return; }
+    if (!resp.ok) { console.error('[WRotate] NP identify API error:', resp.status); npIdentifiedWatchId = null; renderNpWatchDisplay(); return; }
     const data = await resp.json();
     if (!data.watches || data.watches.length === 0) { npIdentifiedWatchId = null; renderNpWatchDisplay(); return; }
     const matches = matchIdentifiedToCollection(data.watches);
@@ -8203,7 +8203,7 @@ async function npIdentifyWatch(file) {
       return;
     }
     showNpWatchSuggestion(matches[0].watch);
-  } catch (err) { npIdentifiedWatchId = null; renderNpWatchDisplay(); }
+  } catch (err) { console.error('[WRotate] New post identify error:', err); npIdentifiedWatchId = null; renderNpWatchDisplay(); }
 }
 
 function showNpWatchSuggestion(w) {
@@ -9141,7 +9141,7 @@ function renderRecSettingsBody() {
 const DEFAULT_BRANDS = [
   'A. Lange & Söhne', 'Accurist', 'Accutron', 'Adidas', 'Aerowatch',
   'Aevig', 'Aigner', 'Airain', 'Alexander Shorokhoff', 'Alpina',
-  'Andreas Strehler', 'Angelus', 'Anne Klein', 'Anonimo', 'anOrdain', 'Apple',
+  'Andreas Strehler', 'Angelus', 'Anne Klein', 'Anoma', 'Anonimo', 'anOrdain', 'Apple',
   'Aquadive', 'Aquastar', 'Aquatico', 'Archimede', 'Aristo',
   'Armand Nicolet', 'Armin Strom', 'Armitron', 'Arnold & Son',
   'Astor & Banks', 'Atelier Wen', 'Ateliers deMonaco', 'Audemars Piguet',
@@ -9158,7 +9158,7 @@ const DEFAULT_BRANDS = [
   'Citizen', 'Clerc', 'Comex', 'Concord', 'Condor', 'Corum', 'Credor',
   'Cvstos', 'Cyma', 'Czapek',
   'D. Dornblüth & Sohn', 'D1 Milano', 'Damasko', 'Dan Henry',
-  'Daniel Roth', 'Daniel Wellington', 'Davosa', 'De Bethune',
+  'Daniel Roth', 'Daniel Wellington', 'Davosa', 'De Bethune', 'Dennison',
   'De Grisogono', 'De Witt', 'Deep Blue', 'Defakto', 'Delbana',
   'Depancel', 'Deutsche Uhrenfabrik (DUFA)', 'Diesel', 'Dior', 'DKNY',
   'Dolce & Gabbana', 'Doxa', 'Dubey & Schaldenbrand', 'Dufrane', 'Dugena',
@@ -9171,7 +9171,7 @@ const DEFAULT_BRANDS = [
   'Glashütte Original', 'Glycine', 'Graff', 'Graham', 'Grand Seiko',
   'Greubel Forsey', 'Grieb & Benzinger', 'Grönefeld', 'Gruppo Gamma',
   'Gucci', 'Guess',
-  'H. Moser & Cie.', 'Habring²', 'Hajime Asaoka', 'Halda Watch Co.',
+  'H. Moser & Cie.', 'Habring²', 'Haim Watch Company', 'Hajime Asaoka', 'Halda Watch Co.',
   'Haldimann', 'Halios', 'Hamilton', 'Hanhart', 'Hanowa', 'Harry Winston',
   'Hautlence', 'Helson', 'Hemel', 'Hermès', 'Horage', 'Hublot',
   'Hugo Boss', 'HYT',
@@ -11353,7 +11353,7 @@ function snapToTrack() {
     if (btnEl) btnEl.disabled = true;
     if (statusEl) { statusEl.style.display = ''; statusEl.innerHTML = `<div class="pi-loading"><div class="pi-loading-spinner"></div><div style="font-size:.85rem;">Identifying your watch\u2026</div></div>`; }
     try {
-      const base64 = await blobToResizedBase64ForIdentify(file);
+      const base64 = await blobToResizedBase64Fast(file);
       const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
         method: 'POST',
         body: JSON.stringify({ image: base64, collection: watches.map(w => ({ brand: w.brand, name: w.name, ref: w.ref || '' })) }),
@@ -13855,6 +13855,27 @@ function blobToResizedBase64(blob) {
 // High-res resize for AI identification (2000px max, 0.95 quality)
 // Anthropic internally scales to ~1568px, so 2000px is more than enough.
 // Must stay under Supabase 2MB body limit — full-res iPhone photos are 3-5MB.
+// Fast resize for snap-to-track / new post (smaller image, faster API call)
+function blobToResizedBase64Fast(blob) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objUrl = URL.createObjectURL(blob);
+    img.onload = () => {
+      URL.revokeObjectURL(objUrl);
+      const MAX = 1200;
+      const scale = Math.min(1, MAX / Math.max(img.width || MAX, img.height || MAX));
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round((img.width  || MAX) * scale);
+      canvas.height = Math.round((img.height || MAX) * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => reject(new Error('Unsupported image format.'));
+    img.src = objUrl;
+  });
+}
+
+// High-res resize for add-from-photo (accurate cold identification)
 function blobToResizedBase64ForIdentify(blob) {
   return new Promise((resolve, reject) => {
     const img = new Image();
