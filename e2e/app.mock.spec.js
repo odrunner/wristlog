@@ -42,6 +42,89 @@ test.describe('App boot (mocked)', () => {
   });
 });
 
+// ── Blurred Feed Preview Landing ─────────────────────────────────────────
+
+test.describe('Landing page (mocked)', () => {
+  test.beforeEach(async ({ page }) => {
+    // Mock auth to return no session, mock public feed with sample posts
+    await page.route('**/auth/v1/**', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) })
+    );
+    await page.route('**/rest/v1/logs*order=created_at*', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+        { id: 'p1', user_id: 'u1', watch_id: 'w1', photo_url: null, notes: 'Great wrist day', use_case: 'casual', date: '2026-03-25', created_at: '2026-03-25T10:00:00Z', visibility: 'public', moderation_status: null },
+        { id: 'p2', user_id: 'u2', watch_id: 'w2', photo_url: 'https://example.com/watch.jpg', notes: null, use_case: 'dress', date: '2026-03-24', created_at: '2026-03-24T09:00:00Z', visibility: 'public', moderation_status: null },
+      ]) })
+    );
+    await page.route('**/rest/v1/profiles*', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+        { id: 'u1', username: 'alice', display_name: 'Alice', avatar_url: null, is_official: false },
+        { id: 'u2', username: 'bob', display_name: 'Bob', avatar_url: null, is_official: false },
+      ]) })
+    );
+    await page.route('**/rest/v1/watches*', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+        { id: 'w1', user_id: 'u1', brand: 'Rolex', name: 'Submariner' },
+        { id: 'w2', user_id: 'u2', brand: 'Omega', name: 'Speedmaster' },
+      ]) })
+    );
+    await page.route('**/rest/v1/likes*', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
+    );
+    await page.route('**/rest/v1/comments*', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
+    );
+    await page.route('**/realtime/**', route => route.abort());
+  });
+
+  test('shows blurred feed preview with CTA overlay', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(12000);
+
+    // CTA overlay visible with sign-in buttons
+    await expect(page.locator('.landing-overlay')).toBeVisible();
+    await expect(page.locator('.landing-cta .btn-google')).toBeVisible();
+    await expect(page.locator('.landing-cta .btn-apple')).toBeVisible();
+  });
+
+  test('feed cards load behind the blur', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(12000);
+
+    const feedCards = await page.locator('#landing-feed-list .feed-card').count();
+    expect(feedCards).toBeGreaterThan(0);
+  });
+
+  test('feed preview has blur applied', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(12000);
+
+    const blur = await page.evaluate(() => {
+      const el = document.querySelector('.landing-feed-preview');
+      return el ? getComputedStyle(el).filter : '';
+    });
+    expect(blur).toContain('blur');
+  });
+
+  test('fake nav appears after feed loads', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(12000);
+
+    const navDisplay = await page.evaluate(() =>
+      document.getElementById('landing-fake-nav')?.style.display
+    );
+    expect(navDisplay).toBe('flex');
+  });
+
+  test('CTA has App Store badge and privacy link', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(12000);
+
+    await expect(page.locator('.landing-cta .landing-app-badge img')).toBeVisible();
+    await expect(page.locator('.landing-cta .landing-fine-print a[href="/privacy.html"]')).toBeVisible();
+  });
+});
+
 // ── Collection Page ──────────────────────────────────────────────────────
 
 test.describe('Collection page (mocked)', () => {
