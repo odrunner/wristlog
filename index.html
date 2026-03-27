@@ -7918,6 +7918,7 @@ function openEditPost(logId) {
   if (!fi) return;
   editPostLogId    = logId;
   editPostNewPhoto = null;
+  editPostNewFile  = null;
   editPostWatchId  = null;
   document.getElementById('ep-body').value = fi.notes || '';
   document.getElementById('ep-vis-chips').innerHTML = visChipsHtml('ep-vis-chips', fi.visibility || 'public');
@@ -8066,7 +8067,7 @@ async function saveEditPost() {
     finalPhoto = null;
   } else if (editPostNewFile && currentUser) {
     try {
-      finalPhoto = await uploadImage(editPostNewFile, `logs/${currentUser.id}/${editPostLogId}.jpg`);
+      finalPhoto = await uploadImage(editPostNewFile, `logs/${currentUser.id}/${editPostLogId}_${Date.now()}.jpg`);
     } catch(e) { toast('Photo upload failed — ' + e.message, 'error'); return; }
   }
   // Cleanup old storage file if replaced or removed
