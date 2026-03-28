@@ -32,6 +32,16 @@ class TimegrapherBridge {
             let value = body["value"] as? Int ?? 50
             engine.setSensitivity(value)
 
+        case "tuning":
+            let multLo = body["multLo"] as? Double ?? 8.0
+            let multHi = body["multHi"] as? Double ?? 1.5
+            let minThresh = body["minThreshold"] as? Double ?? 0.001
+            let percentile = body["percentile"] as? Int ?? 50
+            let hpCutoff = body["hpCutoff"] as? Int ?? 1000
+            engine.setTuning(multLo: Float(multLo), multHi: Float(multHi),
+                             minThreshold: Float(minThresh),
+                             percentile: percentile, hpCutoff: Float(hpCutoff))
+
         default:
             break
         }
@@ -68,6 +78,9 @@ class TimegrapherBridge {
                             "bestLag": dbg.bestLag,
                             "bestCorrelation": dbg.bestCorrelation,
                             "refinedLag": dbg.refinedLag,
+                            "noiseFloor": dbg.noiseFloor,
+                            "threshold": dbg.threshold,
+                            "peakEnergy": dbg.peakEnergy,
                             "allBphCorrelations": bphCorrs
                         ] as [String: Any]
                     }

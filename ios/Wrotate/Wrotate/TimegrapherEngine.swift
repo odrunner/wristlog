@@ -33,8 +33,11 @@ class TimegrapherEngine {
         let bestLag: Int           // auto-detected BPH
         let bestCorrelation: Double // measured interval ms
         let refinedLag: Double     // threshold value
+        let noiseFloor: Double     // current noise floor
+        let threshold: Double      // actual threshold used
+        let peakEnergy: Double     // recent peak energy
         let allBphCorrelations: [(bph: Int, correlation: Float, lag: Int)]
-        // correlation = grid-matched ticks, lag = total ticks
+        // correlation = grid-matched ticks, lag = grid positions
     }
 
     struct Result {
@@ -72,14 +75,25 @@ class TimegrapherEngine {
     private var energySubsampleCounter: Int = 0
     private var computedNoiseFloor: Float = 0
 
+    // Tuning parameters (adjustable from UI)
+    private var multAtZero: Float = 8.0    // multiplier at 0% sensitivity
+    private var multAtHundred: Float = 1.5 // multiplier at 100% sensitivity
+    private var minThreshold: Float = 0.001
+    private var noisePercentile: Int = 50
+    private var hpCutoffHz: Float = 1000
+
     // Sensitivity
-    private var sensitivityMultiplier: Float = 1.5
+    private var sensitivityMultiplier: Float = 3.0
+    private var sensitivityValue: Int = 50
 
     // Tick detection — rising edge required
     private var lastTickSample: Int64 = -100000
     private var minGapSamples: Int64 = 0
     private var tickSamples: [Int64] = []
     private var wasAboveThreshold: Bool = false
+
+    // Live debug values
+    private var recentPeakEnergy: Float = 0
 
     // Results
     private var currentRate: Double? = nil
@@ -94,11 +108,26 @@ class TimegrapherEngine {
     private var lastDebugInfo: DebugInfo? = nil
 
     func setSensitivity(_ value: Int) {
-        // 0% → 8× median (very strict), 50% → 3×, 100% → 1.5× (sensitive)
-        // Watch ticks are sharp transients easily 3-10× above median energy
-        // Ambient noise spikes rarely exceed 3× median
-        let v = Float(max(0, min(100, value)))
-        sensitivityMultiplier = 1.5 + ((100.0 - v) / 100.0) * 6.5
+        sensitivityValue = max(0, min(100, value))
+        let v = Float(sensitivityValue)
+        sensitivityMultiplier = multAtHundred + ((100.0 - v) / 100.0) * (multAtZero - multAtHundred)
+    }
+
+    func setTuning(multLo: Float, multHi: Float, minThreshold: Float,
+                    percentile: Int, hpCutoff: Float) {
+        multAtZero = max(1.0, multLo)
+        multAtHundred = max(1.0, multHi)
+        self.minThreshold = max(0, minThreshold)
+        noisePercentile = max(10, min(90, percentile))
+        hpCutoffHz = max(200, min(5000, hpCutoff))
+
+        // Recompute multiplier with new range
+        setSensitivity(sensitivityValue)
+
+        // Update HP filter coefficient
+        let dt = 1.0 / Float(actualSampleRate)
+        let rc = 1.0 / (2.0 * Float.pi * hpCutoffHz)
+        hpAlpha = rc / (rc + dt)
     }
 
     func start(bph: Int, sensitivity: Int) {
@@ -140,7 +169,7 @@ class TimegrapherEngine {
             actualSampleRate = format.sampleRate
 
             let dt = 1.0 / Float(actualSampleRate)
-            let rc = 1.0 / (2.0 * Float.pi * Float(1000))
+            let rc = 1.0 / (2.0 * Float.pi * hpCutoffHz)
             hpAlpha = rc / (rc + dt)
 
             energyWindowSize = max(1, Int(actualSampleRate * 0.001))
@@ -199,7 +228,7 @@ class TimegrapherEngine {
                 sorted[i] = energyHistory[i]
             }
             sorted.sort()
-            let pIdx = count * 50 / 100  // 50th percentile (median)
+            let pIdx = count * noisePercentile / 100
             computedNoiseFloor = sorted[pIdx]
         }
     }
@@ -233,6 +262,9 @@ class TimegrapherEngine {
 
             sampleCounter += 1
 
+            // Track peak energy for debug display
+            if energy > recentPeakEnergy { recentPeakEnergy = energy }
+
             // Update noise floor histogram
             updateNoiseFloor(energy)
 
@@ -242,8 +274,7 @@ class TimegrapherEngine {
 
             // Tick detection — require rising edge (energy must cross threshold from below)
             // This rejects sustained ambient noise that stays above threshold
-            // Absolute minimum prevents near-zero noise floor in very quiet rooms
-            let threshold = max(computedNoiseFloor * sensitivityMultiplier, Float(0.002))
+            let threshold = max(computedNoiseFloor * sensitivityMultiplier, minThreshold)
             if energy > threshold {
                 if !wasAboveThreshold && (sampleCounter - lastTickSample) > minGapSamples {
                     tickSamples.append(sampleCounter)
@@ -267,13 +298,32 @@ class TimegrapherEngine {
             analyzeGrid()
         }
 
+        // Build live debug info with current noise/threshold values
+        let currentThreshold = computedNoiseFloor > 0
+            ? max(computedNoiseFloor * sensitivityMultiplier, minThreshold) : 0
+        let liveDebug = DebugInfo(
+            sampleRate: actualSampleRate,
+            fftSize: lastDebugInfo?.fftSize ?? tickSamples.count,
+            bufferSamples: lastDebugInfo?.bufferSamples ?? 0,
+            hpCutoff: Double(hpCutoffHz),
+            bestLag: lastDebugInfo?.bestLag ?? 0,
+            bestCorrelation: lastDebugInfo?.bestCorrelation ?? 0,
+            refinedLag: lastDebugInfo?.refinedLag ?? 0,
+            noiseFloor: Double(computedNoiseFloor),
+            threshold: Double(currentThreshold),
+            peakEnergy: Double(recentPeakEnergy),
+            allBphCorrelations: lastDebugInfo?.allBphCorrelations ?? [])
+
+        // Reset peak energy tracker every buffer
+        recentPeakEnergy = recentPeakEnergy * 0.95
+
         let update = Update(
             rate: currentRate, beatError: currentBeatError,
             tickCount: tickSamples.count,
             confidence: currentConfidence, noiseLevel: currentNoiseLevel,
             detectedIntervalMs: currentDetectedInterval,
             detectedBph: detectedBph,
-            debug: lastDebugInfo)
+            debug: liveDebug)
         DispatchQueue.main.async { [weak self] in self?.onUpdate?(update) }
     }
 
@@ -324,12 +374,16 @@ class TimegrapherEngine {
         }
 
         // Need at least 20 matched ticks and 25% grid coverage
+        let currentThreshold = Double(max(computedNoiseFloor * sensitivityMultiplier, minThreshold))
         guard bestMatched >= 20 && bestMatchRate > 0.25 else {
             lastDebugInfo = DebugInfo(
                 sampleRate: actualSampleRate, fftSize: ticks.count,
-                bufferSamples: bestMatched, hpCutoff: 1000,
+                bufferSamples: bestMatched, hpCutoff: Double(hpCutoffHz),
                 bestLag: bestBph, bestCorrelation: 0,
-                refinedLag: Double(computedNoiseFloor * sensitivityMultiplier),
+                refinedLag: currentThreshold,
+                noiseFloor: Double(computedNoiseFloor),
+                threshold: currentThreshold,
+                peakEnergy: Double(recentPeakEnergy),
                 allBphCorrelations: bphResults)
             return
         }
@@ -363,9 +417,12 @@ class TimegrapherEngine {
 
         lastDebugInfo = DebugInfo(
             sampleRate: actualSampleRate, fftSize: ticks.count,
-            bufferSamples: bestMatched, hpCutoff: 1000,
+            bufferSamples: bestMatched, hpCutoff: Double(hpCutoffHz),
             bestLag: bestBph, bestCorrelation: currentDetectedInterval,
-            refinedLag: Double(computedNoiseFloor * sensitivityMultiplier),
+            refinedLag: currentThreshold,
+            noiseFloor: Double(computedNoiseFloor),
+            threshold: currentThreshold,
+            peakEnergy: Double(recentPeakEnergy),
             allBphCorrelations: bphResults)
     }
 

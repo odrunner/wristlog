@@ -3281,6 +3281,25 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
           <input type="range" id="msr-sensitivity" min="0" max="100" value="50" oninput="onMsrSensitivityChange(this.value)" style="width:100%;margin-top:.2rem;accent-color:var(--gold);">
         </div>
+        <!-- Debug tuning controls -->
+        <details id="msr-tuning" style="margin-top:.5rem;font-size:.7rem;">
+          <summary style="color:var(--muted);cursor:pointer;user-select:none;">Tuning</summary>
+          <div style="margin-top:.4rem;display:grid;grid-template-columns:1fr 1fr;gap:.3rem .6rem;">
+            <label style="color:var(--muted);">Mult @ 0%</label>
+            <input type="number" id="msr-tune-mult-lo" value="8" min="1" max="20" step="0.5" style="width:100%;background:var(--hover);border:1px solid var(--border);border-radius:4px;padding:2px 4px;color:var(--text);font-size:.7rem;" onchange="sendMsrTuning()">
+            <label style="color:var(--muted);">Mult @ 100%</label>
+            <input type="number" id="msr-tune-mult-hi" value="1.5" min="1" max="10" step="0.1" style="width:100%;background:var(--hover);border:1px solid var(--border);border-radius:4px;padding:2px 4px;color:var(--text);font-size:.7rem;" onchange="sendMsrTuning()">
+            <label style="color:var(--muted);">Min threshold</label>
+            <input type="number" id="msr-tune-min-thresh" value="0.001" min="0" max="0.1" step="0.0005" style="width:100%;background:var(--hover);border:1px solid var(--border);border-radius:4px;padding:2px 4px;color:var(--text);font-size:.7rem;" onchange="sendMsrTuning()">
+            <label style="color:var(--muted);">Noise %ile</label>
+            <input type="number" id="msr-tune-percentile" value="50" min="10" max="90" step="5" style="width:100%;background:var(--hover);border:1px solid var(--border);border-radius:4px;padding:2px 4px;color:var(--text);font-size:.7rem;" onchange="sendMsrTuning()">
+            <label style="color:var(--muted);">HP cutoff Hz</label>
+            <input type="number" id="msr-tune-hp-cutoff" value="1000" min="200" max="5000" step="100" style="width:100%;background:var(--hover);border:1px solid var(--border);border-radius:4px;padding:2px 4px;color:var(--text);font-size:.7rem;" onchange="sendMsrTuning()">
+          </div>
+          <div id="msr-tune-live" style="margin-top:.4rem;padding:.3rem;background:var(--hover);border-radius:6px;font-family:monospace;font-size:.62rem;color:var(--muted);line-height:1.5;white-space:pre;">Noise floor: —
+Threshold: —
+Peak energy: —</div>
+        </details>
       </div>
     </div>
     <!-- Save section (shown after measurement has data) -->
@@ -4428,7 +4447,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.28.13.48';
+const APP_VERSION = '2.36.28.13.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16940,6 +16959,14 @@ window._tgNativeCallback = function(data) {
     lbl.textContent = data.confidence > 0.1
       ? 'Confidence: ' + (data.confidence * 100).toFixed(0) + '%' + (data.detectedBph ? ' | ' + data.detectedBph.toLocaleString() + ' bph' : '') + ' | Interval: ' + (data.detectedIntervalMs || 0).toFixed(1) + 'ms'
       : 'Analyzing...';
+    // Live tuning readout
+    if (data.debug) {
+      const el = document.getElementById('msr-tune-live');
+      if (el) el.textContent = 'Noise floor: ' + (data.debug.noiseFloor != null ? data.debug.noiseFloor.toFixed(6) : '—')
+        + '\nThreshold: ' + (data.debug.threshold != null ? data.debug.threshold.toFixed(6) : '—')
+        + '\nPeak energy: ' + (data.debug.peakEnergy != null ? data.debug.peakEnergy.toFixed(6) : '—')
+        + '\nTicks: ' + (data.tickCount || 0) + ' | Matched: ' + (data.debug.bufferSamples || 0);
+    }
   } else if (data.event === 'stopped') {
     if (isMsr) {
       _msrListening = false;
@@ -17116,6 +17143,18 @@ function onMsrSensitivityChange(val) {
   }
 }
 
+function sendMsrTuning() {
+  if (!_msrListening || !_tgHasNative()) return;
+  window.webkit.messageHandlers.timegrapher.postMessage({
+    action: 'tuning',
+    multLo: parseFloat(document.getElementById('msr-tune-mult-lo').value) || 8,
+    multHi: parseFloat(document.getElementById('msr-tune-mult-hi').value) || 1.5,
+    minThreshold: parseFloat(document.getElementById('msr-tune-min-thresh').value) || 0.001,
+    percentile: parseInt(document.getElementById('msr-tune-percentile').value) || 50,
+    hpCutoff: parseInt(document.getElementById('msr-tune-hp-cutoff').value) || 1000
+  });
+}
+
 function selectMsrPos(pos) {
   _msrPosition = pos;
   document.querySelectorAll('#msr-pos-chips .chip').forEach(c =>
@@ -17131,6 +17170,8 @@ function toggleMsrListen() {
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: sens });
     _msrListening = true;
     _msrTarget = 'measure';
+    // Send tuning params if user has customized them
+    setTimeout(() => sendMsrTuning(), 200);
     document.getElementById('msr-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
     document.getElementById('msr-live-status').style.display = '';
     document.getElementById('msr-live-rate').textContent = '—';
