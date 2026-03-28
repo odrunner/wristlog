@@ -3938,6 +3938,7 @@ function trackVisit(data) {
 }
 
 function trackAppStoreClick() {
+  if (window.posthog) posthog.capture('appstore_clicked');
   trackVisit({ utm_source: 'appstore_click', utm_medium: 'landing', path: window.location.pathname, referrer: document.referrer || null });
 }
 
@@ -3976,6 +3977,7 @@ async function devLogin(which) {
 }
 
 async function signInWithGoogle() {
+  if (window.posthog) posthog.capture('signup_clicked', { provider: 'google' });
   trackVisit({ utm_source: 'signin_google', utm_medium: 'funnel', path: '/signin', ab_variant: localStorage.getItem('ab_landing') || null });
   const { error } = await db.auth.signInWithOAuth({
     provider: 'google',
@@ -3988,6 +3990,7 @@ async function signInWithGoogle() {
 }
 
 async function signInWithApple() {
+  if (window.posthog) posthog.capture('signup_clicked', { provider: 'apple' });
   trackVisit({ utm_source: 'signin_apple', utm_medium: 'funnel', path: '/signin', ab_variant: localStorage.getItem('ab_landing') || null });
   const { error } = await db.auth.signInWithOAuth({
     provider: 'apple',
@@ -4306,7 +4309,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.27.19.22';
+const APP_VERSION = '2.36.27.19.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7105,6 +7108,7 @@ async function loadPublicFeed() {
       watch: l.watch_id ? (watchMap[l.watch_id] || null) : null,
     }));
     renderPublicFeed();
+    if (window.posthog) posthog.capture('landing_page_viewed');
   } catch(e) { console.warn('Public feed error:', e?.message); }
   finally { publicFeedLoading = false; }
 }
