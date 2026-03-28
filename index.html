@@ -3296,6 +3296,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <label style="color:var(--muted);">HP cutoff Hz</label>
             <input type="number" id="msr-tune-hp-cutoff" value="1000" min="200" max="5000" step="100" style="width:100%;background:var(--hover);border:1px solid var(--border);border-radius:4px;padding:2px 4px;color:var(--text);font-size:.7rem;" onchange="sendMsrTuning()">
           </div>
+          <div style="margin-top:.4rem;display:flex;align-items:center;gap:.5rem;">
+            <label style="color:var(--muted);white-space:nowrap;">Watch near mic</label>
+            <button id="msr-watch-present-btn" onclick="toggleWatchPresent()" style="flex:1;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:#ef4444;color:#fff;font-size:.7rem;font-weight:600;cursor:pointer;">NO — away</button>
+          </div>
           <div id="msr-tune-live" style="margin-top:.4rem;padding:.3rem;background:var(--hover);border-radius:6px;font-family:monospace;font-size:.62rem;color:var(--muted);line-height:1.5;white-space:pre;">Noise floor: —
 Threshold: —
 Peak energy: —</div>
@@ -4447,7 +4451,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.28.14.12';
+const APP_VERSION = '2.36.28.14.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16962,7 +16966,8 @@ window._tgNativeCallback = function(data) {
         confidence: data.confidence,
         beat_error: data.beatError,
         noise_level: data.noiseLevel,
-        all_bph_correlations: data.debug.allBphCorrelations
+        all_bph_correlations: data.debug.allBphCorrelations,
+        watch_present: _msrWatchPresent
       }).then(() => {});
     }
   }
@@ -17179,6 +17184,19 @@ function onMsrSensitivityChange(val) {
   document.getElementById('msr-sens-val').textContent = val + '%';
   if (_msrListening && _tgHasNative()) {
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'sensitivity', value: parseInt(val) });
+  }
+}
+
+let _msrWatchPresent = false;
+function toggleWatchPresent() {
+  _msrWatchPresent = !_msrWatchPresent;
+  const btn = document.getElementById('msr-watch-present-btn');
+  if (_msrWatchPresent) {
+    btn.textContent = 'YES — listening';
+    btn.style.background = '#22c55e';
+  } else {
+    btn.textContent = 'NO — away';
+    btn.style.background = '#ef4444';
   }
 }
 
