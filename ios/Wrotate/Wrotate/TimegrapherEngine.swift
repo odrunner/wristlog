@@ -1,9 +1,8 @@
 import AVFoundation
 import Accelerate
 
-/// Captures microphone audio via AVAudioEngine and detects mechanical watch tick sounds.
-/// Uses Bartlett's method: averages autocorrelation over multiple segments.
-/// More recording time → more segments → accuracy improves as √N.
+/// Detects mechanical watch ticks via peak detection and interval fitting.
+/// Approach: detect tick transients → measure intervals → fit to expected BPH.
 class TimegrapherEngine {
 
     struct Update {
@@ -19,13 +18,14 @@ class TimegrapherEngine {
 
     struct DebugInfo {
         let sampleRate: Double
-        let fftSize: Int
-        let bufferSamples: Int
+        let fftSize: Int           // repurposed: total ticks detected
+        let bufferSamples: Int     // repurposed: matching intervals count
         let hpCutoff: Double
-        let bestLag: Int
-        let bestCorrelation: Double
-        let refinedLag: Double
+        let bestLag: Int           // repurposed: locked BPH
+        let bestCorrelation: Double // repurposed: mean interval ms
+        let refinedLag: Double     // repurposed: threshold used
         let allBphCorrelations: [(bph: Int, correlation: Float, lag: Int)]
+        // correlation = matching interval count, lag = total intervals checked
     }
 
     struct Result {
@@ -43,36 +43,34 @@ class TimegrapherEngine {
     private var actualSampleRate: Double = 48000
     private var totalSamplesProcessed: Int64 = 0
 
-    // Envelope ring buffer at decimated rate
-    private var envBuffer: [Float] = []
-    private var envCapacity: Int = 0
-    private var envWritePos: Int = 0
-    private var envSamplesWritten: Int64 = 0
+    // Envelope at decimated rate
     private var envSampleRate: Double = 2000
+    private var envDecimation: Int = 24
 
-    // High-pass filter (1kHz on raw audio)
+    // High-pass 1kHz on raw audio
     private var hpPrevIn: Float = 0
     private var hpPrevOut: Float = 0
     private var hpAlpha: Float = 0.97
 
-    // Envelope lowpass (80Hz)
+    // Lowpass 80Hz envelope
     private var lpEnvState: Float = 0
     private var lpEnvAlpha: Float = 0.0
 
-    // Decimation
+    // Decimation accumulator
     private var envAccum: Float = 0
     private var envAccumCount: Int = 0
-    private var envDecimation: Int = 24
 
-    // FFT (fixed size for one segment)
-    private var fftSetup: FFTSetup?
-    private var fftLog2N: vDSP_Length = 0
-    private var fftN: Int = 0  // samples per segment (~6s at 2kHz = 12288)
+    // Tick detection
+    private var envSamplesWritten: Int64 = 0
+    private var recentEnvelope: [Float] = []     // rolling window of envelope samples
+    private var recentEnvCapacity: Int = 0       // ~10 seconds worth
+    private var recentEnvWritePos: Int = 0
 
-    // Accumulated average autocorrelation (Bartlett's method)
-    private var accumAutocorr: [Float] = []
-    private var segmentCount: Int = 0
-    private var warmupDone = false
+    // Detected tick timestamps (in envelope sample index)
+    private var tickTimes: [Int64] = []          // global envelope sample index of each tick
+    private var lastTickEnvIdx: Int64 = -1000    // last detected tick (to enforce minimum gap)
+    private var noiseFloor: Float = 0
+    private var peakThreshold: Float = 0
 
     // Results
     private var currentRate: Double? = nil
@@ -81,17 +79,12 @@ class TimegrapherEngine {
     private var currentDetectedInterval: Double = 0
     private var detectedBph: Int? = nil
     private var currentNoiseLevel: Double = 0
-    private var tickCount: Int = 0
 
     private let standardBphs = [18000, 21600, 25200, 28800, 36000]
+    private var lockedBph: Int? = nil
 
     private var lastAnalysisTime: Double = 0
     private var lastDebugInfo: DebugInfo? = nil
-    private var lockedBph: Int? = nil
-    private var rateHistory: [Double] = []
-
-    // Track which envelope data we've already processed
-    private var lastProcessedEnvPos: Int64 = 0
 
     func start(bph: Int, sensitivity: Int) {
         guard !isRunning else { return }
@@ -101,7 +94,6 @@ class TimegrapherEngine {
         currentConfidence = 0
         currentDetectedInterval = 0
         detectedBph = nil
-        tickCount = 0
         totalSamplesProcessed = 0
         lastAnalysisTime = 0
         hpPrevIn = 0
@@ -109,12 +101,13 @@ class TimegrapherEngine {
         lpEnvState = 0
         envAccum = 0
         envAccumCount = 0
-        rateHistory = []
+        envSamplesWritten = 0
+        tickTimes = []
+        lastTickEnvIdx = -1000
+        noiseFloor = 0
+        peakThreshold = 0
         lockedBph = nil
-        segmentCount = 0
-        warmupDone = false
-        lastProcessedEnvPos = 0
-        accumAutocorr = []
+        currentNoiseLevel = 0
 
         do {
             let session = AVAudioSession.sharedInstance()
@@ -134,7 +127,7 @@ class TimegrapherEngine {
             let hpRc = 1.0 / (2.0 * Float.pi * Float(1000))
             hpAlpha = hpRc / (hpRc + dt)
 
-            // Lowpass 80Hz envelope
+            // Lowpass 80Hz
             let lpRc = 1.0 / (2.0 * Float.pi * Float(80))
             lpEnvAlpha = dt / (lpRc + dt)
 
@@ -142,20 +135,10 @@ class TimegrapherEngine {
             envDecimation = max(1, Int(actualSampleRate / 2000))
             envSampleRate = actualSampleRate / Double(envDecimation)
 
-            // Large ring buffer: 120 seconds of envelope
-            // This allows accumulating many segments over a long recording
-            envCapacity = Int(envSampleRate * 120)
-            envBuffer = [Float](repeating: 0, count: envCapacity)
-            envWritePos = 0
-            envSamplesWritten = 0
-
-            // FFT segment size: ~6 seconds at envelope rate
-            let desiredN = Int(envSampleRate * 6)
-            fftLog2N = vDSP_Length(ceil(log2(Double(desiredN))))
-            fftN = 1 << Int(fftLog2N)
-            fftSetup = vDSP_create_fftsetup(fftLog2N, FFTRadix(kFFTRadix2))
-
-            accumAutocorr = [Float](repeating: 0, count: fftN)
+            // Rolling envelope window: 2 seconds (for peak detection context)
+            recentEnvCapacity = Int(envSampleRate * 2)
+            recentEnvelope = [Float](repeating: 0, count: recentEnvCapacity)
+            recentEnvWritePos = 0
 
             inputNode.installTap(onBus: 0, bufferSize: 4096, format: format) { [weak self] buffer, time in
                 self?.processAudioBuffer(buffer)
@@ -174,12 +157,12 @@ class TimegrapherEngine {
         audioEngine?.inputNode.removeTap(onBus: 0)
         audioEngine?.stop()
         audioEngine = nil
-        if let s = fftSetup { vDSP_destroy_fftsetup(s); fftSetup = nil }
         try? AVAudioSession.sharedInstance().setActive(false)
-        return Result(rate: currentRate, beatError: currentBeatError, tickCount: tickCount, ticks: [])
+        return Result(rate: currentRate, beatError: currentBeatError,
+                      tickCount: tickTimes.count, ticks: [])
     }
 
-    // MARK: - Audio processing
+    // MARK: - Audio → envelope → tick detection
 
     private func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
         guard isRunning, let channelData = buffer.floatChannelData?[0] else { return }
@@ -189,7 +172,7 @@ class TimegrapherEngine {
         vDSP_rmsqv(channelData, 1, &rms, vDSP_Length(frameCount))
         currentNoiseLevel = min(1.0, Double(rms) * 10)
 
-        // Pipeline: HP 1kHz → rectify → LP 80Hz → decimate
+        // Pipeline: HP 1kHz → rectify → LP 80Hz → decimate → peak detect
         for i in 0..<frameCount {
             let x = channelData[i]
             let hp = hpAlpha * (hpPrevOut + x - hpPrevIn)
@@ -201,305 +184,249 @@ class TimegrapherEngine {
             envAccum += lpEnvState
             envAccumCount += 1
             if envAccumCount >= envDecimation {
-                envBuffer[envWritePos] = envAccum / Float(envAccumCount)
-                envWritePos = (envWritePos + 1) % envCapacity
-                envSamplesWritten += 1
+                let envSample = envAccum / Float(envAccumCount)
                 envAccum = 0
                 envAccumCount = 0
+
+                // Store in rolling window
+                recentEnvelope[recentEnvWritePos] = envSample
+                recentEnvWritePos = (recentEnvWritePos + 1) % recentEnvCapacity
+                envSamplesWritten += 1
+
+                // Update noise floor with slow EMA
+                let alpha: Float = 0.001
+                noiseFloor += alpha * (envSample - noiseFloor)
+
+                // Adaptive threshold: X times above noise floor
+                // Use a high multiplier to only detect real transients
+                peakThreshold = noiseFloor * 4.0
+
+                // Minimum gap between ticks in envelope samples
+                // Fastest watch: 36000 BPH = 100ms = 200 env samples at 2kHz
+                // Use 60% of that as minimum gap
+                let minGap: Int64 = Int64(envSampleRate * 0.06)  // 60ms minimum
+
+                // Peak detection: is this sample a local peak above threshold?
+                let currentIdx = envSamplesWritten - 1
+                if envSample > peakThreshold &&
+                   (currentIdx - lastTickEnvIdx) > minGap {
+                    // Check it's a local maximum: higher than neighbors
+                    // Look back 3 samples
+                    let lookback = 3
+                    var isLocalMax = true
+                    for j in 1...lookback {
+                        let prevPos = (recentEnvWritePos - 1 - j + recentEnvCapacity) % recentEnvCapacity
+                        if recentEnvelope[prevPos] >= envSample {
+                            isLocalMax = false
+                            break
+                        }
+                    }
+
+                    if isLocalMax {
+                        tickTimes.append(currentIdx)
+                        lastTickEnvIdx = currentIdx
+
+                        // Keep only last 2000 ticks to bound memory
+                        if tickTimes.count > 2000 {
+                            tickTimes.removeFirst(tickTimes.count - 2000)
+                        }
+                    }
+                }
             }
         }
         totalSamplesProcessed += Int64(frameCount)
 
-        // Skip first 8 seconds (warm-up: let filters settle)
-        if !warmupDone {
-            if envSamplesWritten > Int64(envSampleRate * 8) {
-                warmupDone = true
-                lastProcessedEnvPos = envSamplesWritten
-            }
-            // Still send updates (with no data) so UI is responsive
-            let update = Update(
-                rate: nil, beatError: nil, tickCount: 0,
-                confidence: 0, noiseLevel: currentNoiseLevel,
-                detectedIntervalMs: 0, detectedBph: nil, debug: nil)
-            DispatchQueue.main.async { [weak self] in self?.onUpdate?(update) }
-            return
-        }
-
-        // Check if we have a new complete segment to process
-        let newSamples = envSamplesWritten - lastProcessedEnvPos
+        // Analyze every ~1 second
         let now = CACurrentMediaTime() * 1000
-        if newSamples >= Int64(fftN) && now - lastAnalysisTime > 2000 {
+        if now - lastAnalysisTime > 1000 && tickTimes.count >= 10 {
             lastAnalysisTime = now
-            processNewSegments()
+            analyzeIntervals()
         }
 
         let update = Update(
-            rate: currentRate, beatError: currentBeatError, tickCount: tickCount,
+            rate: currentRate, beatError: currentBeatError,
+            tickCount: tickTimes.count,
             confidence: currentConfidence, noiseLevel: currentNoiseLevel,
             detectedIntervalMs: currentDetectedInterval, detectedBph: detectedBph,
             debug: lastDebugInfo)
         DispatchQueue.main.async { [weak self] in self?.onUpdate?(update) }
     }
 
-    // MARK: - Process new segments and update accumulated autocorrelation
+    // MARK: - Interval analysis: fit ticks to BPH grid
 
-    private func processNewSegments() {
-        guard let setup = fftSetup else { return }
-        let N = fftN
-        let halfN = N / 2
+    private func analyzeIntervals() {
+        let ticks = tickTimes
+        guard ticks.count >= 10 else { return }
 
-        // How many new complete segments since last processing?
-        let newSamples = envSamplesWritten - lastProcessedEnvPos
-        let newSegments = Int(newSamples) / N
-        guard newSegments > 0 else { return }
-
-        // Process each new segment
-        for seg in 0..<newSegments {
-            let segStart = lastProcessedEnvPos + Int64(seg * N)
-            var signal = [Float](repeating: 0, count: N)
-
-            // Extract segment from ring buffer
-            let ringStart = Int(segStart % Int64(envCapacity))
-            for i in 0..<N {
-                signal[i] = envBuffer[(ringStart + i) % envCapacity]
-            }
-
-            // Remove DC
-            var mean: Float = 0
-            vDSP_meanv(signal, 1, &mean, vDSP_Length(N))
-            var negMean = -mean
-            vDSP_vsadd(signal, 1, &negMean, &signal, 1, vDSP_Length(N))
-
-            // Autocorrelation via FFT
-            var realp = [Float](repeating: 0, count: halfN)
-            var imagp = [Float](repeating: 0, count: halfN)
-
-            signal.withUnsafeBufferPointer { sigBuf in
-                realp.withUnsafeMutableBufferPointer { rBuf in
-                    imagp.withUnsafeMutableBufferPointer { iBuf in
-                        var split = DSPSplitComplex(realp: rBuf.baseAddress!, imagp: iBuf.baseAddress!)
-                        sigBuf.baseAddress!.withMemoryRebound(to: DSPComplex.self, capacity: halfN) { ptr in
-                            vDSP_ctoz(ptr, 2, &split, 1, vDSP_Length(halfN))
-                        }
-                    }
-                }
-            }
-
-            var segAutocorr = [Float](repeating: 0, count: N)
-
-            realp.withUnsafeMutableBufferPointer { rBuf in
-                imagp.withUnsafeMutableBufferPointer { iBuf in
-                    var split = DSPSplitComplex(realp: rBuf.baseAddress!, imagp: iBuf.baseAddress!)
-                    vDSP_fft_zrip(setup, &split, 1, fftLog2N, FFTDirection(FFT_FORWARD))
-                    vDSP_zvmags(&split, 1, rBuf.baseAddress!, 1, vDSP_Length(halfN))
-                    memset(iBuf.baseAddress!, 0, halfN * MemoryLayout<Float>.size)
-                    vDSP_fft_zrip(setup, &split, 1, fftLog2N, FFTDirection(FFT_INVERSE))
-                    segAutocorr.withUnsafeMutableBufferPointer { outBuf in
-                        outBuf.baseAddress!.withMemoryRebound(to: DSPComplex.self, capacity: halfN) { ptr in
-                            vDSP_ztoc(&split, 1, ptr, 2, vDSP_Length(halfN))
-                        }
-                    }
-                }
-            }
-
-            // Normalize segment autocorrelation
-            let zp = segAutocorr[0]
-            if zp > 0 {
-                var s = 1.0 / zp
-                vDSP_vsmul(segAutocorr, 1, &s, &segAutocorr, 1, vDSP_Length(N))
-            }
-
-            // Add to accumulated average
-            vDSP_vadd(accumAutocorr, 1, segAutocorr, 1, &accumAutocorr, 1, vDSP_Length(N))
-            segmentCount += 1
+        // Compute all consecutive inter-tick intervals
+        var intervals: [Double] = []
+        for i in 1..<ticks.count {
+            let dt = Double(ticks[i] - ticks[i - 1]) / envSampleRate * 1000.0  // ms
+            intervals.append(dt)
         }
 
-        lastProcessedEnvPos += Int64(newSegments * N)
-
-        // Now analyze the averaged autocorrelation
-        analyzeAccumulated()
-    }
-
-    // MARK: - Analyze the accumulated (averaged) autocorrelation
-
-    private func analyzeAccumulated() {
-        let N = fftN
-        guard segmentCount > 0 else { return }
-
-        // Compute average: divide accumulated by segment count
-        var avg = accumAutocorr
-        var divisor = Float(segmentCount)
-        vDSP_vsdiv(avg, 1, &divisor, &avg, 1, vDSP_Length(N))
-
-        // Estimate the smooth decay baseline of the autocorrelation
-        // by fitting a local average. A real tick peak will STAND OUT above this baseline.
-        // Without this, shorter lags always win because envelope autocorrelation decays monotonically.
-
-        // Compute a smoothed baseline: moving average with wide window
-        let baselineWindow = max(20, Int(envSampleRate * 0.05))  // ~50ms window
-        var baseline = [Float](repeating: 0, count: N)
-        for i in 0..<N {
-            let wStart = max(0, i - baselineWindow)
-            let wEnd = min(N - 1, i + baselineWindow)
-            var sum: Float = 0
-            for j in wStart...wEnd { sum += avg[j] }
-            baseline[i] = sum / Float(wEnd - wStart + 1)
-        }
-
-        // Detrended autocorrelation: subtract baseline
-        var detrended = [Float](repeating: 0, count: N)
-        vDSP_vsub(baseline, 1, avg, 1, &detrended, 1, vDSP_Length(N))
-
-        // Search for best BPH using PEAK PROMINENCE in detrended autocorrelation
-        var bestScore: Float = -Float.infinity
-        var bestBphCandidate = 28800
-        var bestLag = 0
-        var bphCorrelations: [(bph: Int, correlation: Float, lag: Int)] = []
+        // For each candidate BPH, count how many intervals match
+        var bphResults: [(bph: Int, correlation: Float, lag: Int)] = []
+        var bestBph = 28800
+        var bestMatchCount = 0
+        var bestMatchingIntervals: [Double] = []
 
         for candidateBph in standardBphs {
-            let intervalSec = 3600.0 / Double(candidateBph)
-            let centerLag = Int(round(intervalSec * envSampleRate))
-            let searchRange = max(3, Int(round(Double(centerLag) * 0.10)))
-            let minLag = max(1, centerLag - searchRange)
-            let maxLag = min(N / 3, centerLag + searchRange)
-            guard maxLag > minLag else { continue }
+            let expectedMs = 3600000.0 / Double(candidateBph)
+            let tolerance = expectedMs * 0.08  // ±8% tolerance
 
-            // Find peak in detrended signal (prominence above baseline)
-            var localBestProminence: Float = -Float.infinity
-            var localBestLag = centerLag
-            for lag in minLag...maxLag {
-                let prominence = detrended[lag]
-                if prominence > localBestProminence {
-                    localBestProminence = prominence
-                    localBestLag = lag
+            // Count intervals that match this BPH (within tolerance)
+            // Also allow half-intervals (tick-tock pairs may merge)
+            // and double-intervals (missed ticks)
+            var matching: [Double] = []
+
+            for dt in intervals {
+                // Direct match
+                if abs(dt - expectedMs) < tolerance {
+                    matching.append(dt)
+                }
+                // Half interval match (two ticks detected per beat)
+                else if abs(dt - expectedMs / 2.0) < tolerance / 2.0 {
+                    // Don't add — this means we're detecting half-beats
+                    // We'll handle this separately
+                }
+                // Double interval (missed one tick)
+                else if abs(dt - expectedMs * 2.0) < tolerance * 2.0 {
+                    matching.append(dt / 2.0)  // treat as two intervals
                 }
             }
 
-            // Also check harmonics in detrended signal
-            var harmonicScore = localBestProminence
-            for mult in [2, 3] {
-                let mLag = localBestLag * mult
-                if mLag < N / 3 {
-                    let hr = max(2, Int(round(Double(localBestLag) * 0.05)))
-                    var hPeak: Float = -Float.infinity
-                    for lag in max(1, mLag - hr)...min(N / 3, mLag + hr) {
-                        if detrended[lag] > hPeak { hPeak = detrended[lag] }
-                    }
-                    if hPeak > 0 {
-                        harmonicScore += hPeak * (mult == 2 ? 0.5 : 0.3)
-                    }
-                }
-            }
+            bphResults.append((bph: candidateBph,
+                              correlation: Float(matching.count),
+                              lag: intervals.count))
 
-            // Store raw correlation for debug, but score by prominence
-            let rawCorrelation = avg[localBestLag]
-            bphCorrelations.append((bph: candidateBph, correlation: rawCorrelation, lag: localBestLag))
-            if harmonicScore > bestScore {
-                bestScore = harmonicScore
-                bestBphCandidate = candidateBph
-                bestLag = localBestLag
+            if matching.count > bestMatchCount {
+                bestMatchCount = matching.count
+                bestBph = candidateBph
+                bestMatchingIntervals = matching
             }
         }
 
-        // Use peak prominence (detrended value) for signal detection
-        let peakProminence = bestLag > 0 ? detrended[bestLag] : Float(0)
+        // Also try half-beat matching: some watches produce distinct tick and tock
+        // at 2x the BPH rate. Check if half-BPH intervals dominate.
+        for candidateBph in standardBphs {
+            let halfExpectedMs = 3600000.0 / Double(candidateBph) / 2.0
+            let tolerance = halfExpectedMs * 0.08
+            var halfMatching: [Double] = []
+            for dt in intervals {
+                if abs(dt - halfExpectedMs) < tolerance {
+                    halfMatching.append(dt * 2.0)  // convert to full-beat interval
+                }
+            }
+            if halfMatching.count > bestMatchCount {
+                bestMatchCount = halfMatching.count
+                bestBph = candidateBph
+                bestMatchingIntervals = halfMatching
+            }
+        }
 
-        guard peakProminence > 0.001, bestLag > 0 else {
+        // Need at least 5 matching intervals to make a call
+        guard bestMatchCount >= 5 else {
             currentConfidence = 0
             lastDebugInfo = DebugInfo(
-                sampleRate: envSampleRate, fftSize: fftN, bufferSamples: Int(envSamplesWritten),
-                hpCutoff: 1000, bestLag: 0, bestCorrelation: 0, refinedLag: 0,
-                allBphCorrelations: bphCorrelations)
+                sampleRate: envSampleRate, fftSize: ticks.count,
+                bufferSamples: bestMatchCount, hpCutoff: 1000,
+                bestLag: bestBph, bestCorrelation: 0,
+                refinedLag: Double(peakThreshold),
+                allBphCorrelations: bphResults)
             return
         }
 
-        // BPH locking
-        let useBph: Int
-        if let locked = lockedBph {
-            let lockedLag = bphCorrelations.first(where: { $0.bph == locked })?.lag ?? bestLag
-            let lockedProminence = lockedLag > 0 && lockedLag < N ? detrended[lockedLag] : Float(0)
-            if peakProminence > lockedProminence * 1.5 && segmentCount > 3 {
-                lockedBph = bestBphCandidate
-                useBph = bestBphCandidate
-                rateHistory = []
-            } else {
-                useBph = locked
-                if bestBphCandidate != locked, let entry = bphCorrelations.first(where: { $0.bph == locked }) {
-                    bestLag = entry.lag
-                }
-            }
+        // Lock BPH
+        if lockedBph == nil { lockedBph = bestBph }
+        let useBph = lockedBph ?? bestBph
+
+        // Recalculate matching intervals for locked BPH if different
+        let finalIntervals: [Double]
+        if useBph == bestBph {
+            finalIntervals = bestMatchingIntervals
         } else {
-            lockedBph = bestBphCandidate
-            useBph = bestBphCandidate
-        }
-
-        // Parabolic interpolation
-        var refinedLag = Double(bestLag)
-        if bestLag > 1 && bestLag < N - 1 {
-            let ym1 = avg[bestLag - 1]
-            let y0 = avg[bestLag]
-            let yp1 = avg[bestLag + 1]
-            let denom = ym1 - 2 * y0 + yp1
-            if abs(denom) > 1e-10 {
-                refinedLag = Double(bestLag) + 0.5 * Double(ym1 - yp1) / Double(denom)
+            let expectedMs = 3600000.0 / Double(useBph)
+            let tolerance = expectedMs * 0.08
+            var matching: [Double] = []
+            for dt in intervals {
+                if abs(dt - expectedMs) < tolerance { matching.append(dt) }
+                else if abs(dt - expectedMs * 2.0) < tolerance * 2.0 { matching.append(dt / 2.0) }
             }
+            // Also check half-beats
+            let halfExpectedMs = expectedMs / 2.0
+            let halfTol = halfExpectedMs * 0.08
+            for dt in intervals {
+                if abs(dt - halfExpectedMs) < halfTol { matching.append(dt * 2.0) }
+            }
+            finalIntervals = matching.isEmpty ? bestMatchingIntervals : matching
         }
 
-        let detectedIntervalMs = refinedLag / envSampleRate * 1000.0
+        guard finalIntervals.count >= 5 else {
+            currentConfidence = 0
+            lastDebugInfo = DebugInfo(
+                sampleRate: envSampleRate, fftSize: ticks.count,
+                bufferSamples: finalIntervals.count, hpCutoff: 1000,
+                bestLag: useBph, bestCorrelation: 0,
+                refinedLag: Double(peakThreshold),
+                allBphCorrelations: bphResults)
+            return
+        }
+
+        // Compute rate from matching intervals
+        // Use trimmed mean: sort, drop top/bottom 10%, average middle
+        let sorted = finalIntervals.sorted()
+        let trimCount = max(1, sorted.count / 10)
+        let trimmed: [Double]
+        if sorted.count > 10 {
+            trimmed = Array(sorted[trimCount..<(sorted.count - trimCount)])
+        } else {
+            // For small samples, just use median
+            trimmed = [sorted[sorted.count / 2]]
+        }
+
+        let meanInterval = trimmed.reduce(0.0, +) / Double(trimmed.count)
         let expectedInterval = 3600000.0 / Double(useBph)
-        let rate = ((detectedIntervalMs - expectedInterval) / expectedInterval) * 86400.0
+        let rate = ((meanInterval - expectedInterval) / expectedInterval) * 86400.0
 
-        currentDetectedInterval = detectedIntervalMs
+        currentDetectedInterval = meanInterval
         detectedBph = useBph
+        currentRate = (rate * 10).rounded() / 10
 
-        // Rate with outlier rejection (more aggressive as segments grow)
-        rateHistory.append(rate)
-        if rateHistory.count > 30 { rateHistory.removeFirst() }
-
-        if rateHistory.count >= 7 {
-            let sorted = rateHistory.sorted()
-            let trimCount = max(1, sorted.count / 4)  // trim 25% each side
-            let trimmed = Array(sorted[trimCount..<(sorted.count - trimCount)])
-            currentRate = ((trimmed.reduce(0.0, +) / Double(trimmed.count)) * 10).rounded() / 10
-        } else if rateHistory.count >= 3 {
-            let sorted = rateHistory.sorted()
-            currentRate = (sorted[sorted.count / 2] * 10).rounded() / 10
-        } else {
-            currentRate = (rate * 10).rounded() / 10
-        }
-
-        // Confidence based on peak prominence relative to detrended noise floor
-        // Compute noise floor from detrended autocorrelation
-        let noiseStart = N / 6
-        let noiseEnd = N / 4
-        var snrConf: Double = 0
-        if noiseEnd > noiseStart {
-            var noiseVals: [Float] = []
-            for i in noiseStart..<noiseEnd { noiseVals.append(abs(detrended[i])) }
-            noiseVals.sort()
-            let noiseFloor = noiseVals.count > 0 ? noiseVals[noiseVals.count / 2] : Float(0)
-            let snr = Double(peakProminence) / max(Double(noiseFloor), 0.0001)
-            snrConf = min(1.0, snr / 5.0)
-        }
-        let segFactor = min(1.0, Double(segmentCount) / 10.0)
-        currentConfidence = snrConf * (0.3 + 0.7 * segFactor)
+        // Confidence: based on fraction of intervals that match + total count
+        let matchFraction = Double(finalIntervals.count) / Double(max(1, intervals.count))
+        let countFactor = min(1.0, Double(finalIntervals.count) / 50.0)
+        currentConfidence = matchFraction * (0.3 + 0.7 * countFactor)
         currentConfidence = (currentConfidence * 100).rounded() / 100
 
-        // Monotonic tick count
-        tickCount = Int(Double(totalSamplesProcessed) / actualSampleRate * Double(useBph) / 3600.0)
-
-        // Beat error (use detrended for half-period peak detection)
-        let halfLag = bestLag / 2
-        if halfLag > 2 && halfLag < N / 3 {
-            let sH = max(2, Int(round(Double(halfLag) * 0.05)))
-            var hPeak: Float = -Float.infinity
-            var hPeakLag = halfLag
-            for lag in max(1, halfLag - sH)...min(N / 3, halfLag + sH) {
-                if detrended[lag] > hPeak { hPeak = detrended[lag]; hPeakLag = lag }
+        // Beat error from alternating intervals
+        // Tick-tock pattern: intervals should alternate short-long
+        // Beat error = |short - long| / 2
+        if finalIntervals.count >= 10 {
+            var shortIntervals: [Double] = []
+            var longIntervals: [Double] = []
+            // Look at consecutive pairs of raw intervals near expected
+            let expectedMs = 3600000.0 / Double(useBph)
+            let halfExpected = expectedMs / 2.0
+            let tolerance = halfExpected * 0.15
+            for i in stride(from: 0, to: intervals.count - 1, by: 2) {
+                let a = intervals[i]
+                let b = intervals[i + 1]
+                // Check if these are half-beat intervals (tick-tock)
+                if abs(a - halfExpected) < tolerance && abs(b - halfExpected) < tolerance {
+                    if a < b {
+                        shortIntervals.append(a)
+                        longIntervals.append(b)
+                    } else {
+                        shortIntervals.append(b)
+                        longIntervals.append(a)
+                    }
+                }
             }
-            if hPeak > peakProminence * 0.2 {
-                let asymmetry = abs(Double(hPeakLag) - Double(bestLag) / 2.0) / (Double(bestLag) / 2.0)
-                currentBeatError = (asymmetry * detectedIntervalMs * 100).rounded() / 100
+            if shortIntervals.count >= 3 {
+                let avgShort = shortIntervals.reduce(0.0, +) / Double(shortIntervals.count)
+                let avgLong = longIntervals.reduce(0.0, +) / Double(longIntervals.count)
+                currentBeatError = ((avgLong - avgShort) / 2.0 * 100).rounded() / 100
             } else {
                 currentBeatError = 0
             }
@@ -508,8 +435,10 @@ class TimegrapherEngine {
         }
 
         lastDebugInfo = DebugInfo(
-            sampleRate: envSampleRate, fftSize: fftN, bufferSamples: Int(envSamplesWritten),
-            hpCutoff: 1000, bestLag: bestLag, bestCorrelation: Double(peakProminence),
-            refinedLag: refinedLag, allBphCorrelations: bphCorrelations)
+            sampleRate: envSampleRate, fftSize: ticks.count,
+            bufferSamples: finalIntervals.count, hpCutoff: 1000,
+            bestLag: useBph, bestCorrelation: meanInterval,
+            refinedLag: Double(peakThreshold),
+            allBphCorrelations: bphResults)
     }
 }
