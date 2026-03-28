@@ -3244,6 +3244,23 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="measure-modal" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="modal" style="max-width:480px;">
     <div class="modal-title">Measure Accuracy</div>
+    <!-- Watch + BPH selection at top -->
+    <div style="display:grid;grid-template-columns:1fr auto;gap:.5rem;margin-bottom:.65rem;">
+      <div>
+        <label for="msr-watch-select" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Watch</label>
+        <select id="msr-watch-select" onchange="onMsrWatchChange()" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;"></select>
+      </div>
+      <div>
+        <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">BPH</label>
+        <select id="msr-bph-select" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+          <option value="18000">18,000</option>
+          <option value="21600">21,600</option>
+          <option value="25200">25,200</option>
+          <option value="28800" selected>28,800</option>
+          <option value="36000">36,000</option>
+        </select>
+      </div>
+    </div>
     <!-- Listen button + live results -->
     <div style="margin-bottom:.65rem;">
       <button id="msr-listen-btn" class="btn btn-ghost btn-sm" onclick="toggleMsrListen()" style="width:100%;margin-bottom:.5rem;display:flex;align-items:center;justify-content:center;gap:.4rem;">
@@ -3308,10 +3325,6 @@ Peak energy: —</div>
     </div>
     <!-- Save section (shown after measurement has data) -->
     <div id="msr-save-section" style="display:none;border-top:1px solid var(--border);padding-top:.65rem;">
-      <div style="margin-bottom:.5rem;">
-        <label for="msr-watch-select" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Save to Watch *</label>
-        <select id="msr-watch-select" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;"></select>
-      </div>
       <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;" id="msr-pos-chips"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem;">
         <div>
@@ -3323,21 +3336,9 @@ Peak energy: —</div>
           <input type="number" id="msr-be-input" step="0.01" readonly style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem;">
-        <div>
-          <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">BPH</label>
-          <select id="msr-bph-select" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
-            <option value="18000">18,000</option>
-            <option value="21600">21,600</option>
-            <option value="25200">25,200</option>
-            <option value="28800" selected>28,800</option>
-            <option value="36000">36,000</option>
-          </select>
-        </div>
-        <div>
-          <label for="msr-notes-input" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Notes</label>
-          <input type="text" id="msr-notes-input" placeholder="e.g. After full wind" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
-        </div>
+      <div style="margin-bottom:.5rem;">
+        <label for="msr-notes-input" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Notes</label>
+        <input type="text" id="msr-notes-input" placeholder="e.g. After full wind" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
       </div>
       <button class="btn btn-primary btn-sm" onclick="saveMsrReading()" style="width:100%;">Save Reading</button>
     </div>
@@ -4451,7 +4452,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.28.15.59';
+const APP_VERSION = '2.36.28.16.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17163,9 +17164,11 @@ function openMeasureModal() {
   document.getElementById('msr-live-status').style.display = 'none';
   document.getElementById('msr-mic-warning').style.display = 'none';
   document.getElementById('msr-save-section').style.display = 'none';
-  // Populate watch dropdown
+  // Populate watch dropdown at top
   const sel = document.getElementById('msr-watch-select');
   sel.innerHTML = watches.map(w => `<option value="${w.id}">${escHtml(w.brand + ' ' + w.name)}</option>`).join('');
+  // Auto-fill BPH from last reading for first watch
+  onMsrWatchChange();
   // Populate position chips
   const chipsEl = document.getElementById('msr-pos-chips');
   chipsEl.innerHTML = TG_POSITIONS.map(p =>
@@ -17174,8 +17177,23 @@ function openMeasureModal() {
   document.getElementById('msr-rate-input').value = '';
   document.getElementById('msr-be-input').value = '';
   document.getElementById('msr-notes-input').value = '';
-  document.getElementById('msr-bph-select').value = '28800';
   document.getElementById('measure-modal').classList.remove('hidden');
+}
+
+async function onMsrWatchChange() {
+  const watchId = document.getElementById('msr-watch-select').value;
+  if (!watchId || !currentUser) return;
+  // Look up last BPH used for this watch
+  const { data } = await db.from('timegrapher_results')
+    .select('bph')
+    .eq('watch_id', watchId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  if (data && data.length > 0 && data[0].bph) {
+    document.getElementById('msr-bph-select').value = String(data[0].bph);
+  } else {
+    document.getElementById('msr-bph-select').value = '28800';
+  }
 }
 
 function closeMeasureModal() {
