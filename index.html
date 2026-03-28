@@ -4421,7 +4421,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.28.07.49';
+const APP_VERSION = '2.36.28.07.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16870,7 +16870,36 @@ function stopTgListen() {
 
 // Native → JS callback
 let _msrTarget = null; // 'measure' when measure modal is open, null for watch modal
+let _tgDebugSessionId = null;
+let _tgLastDebugLogTime = 0;
 window._tgNativeCallback = function(data) {
+  // Log debug data to Supabase every ~5 seconds
+  if (data.event === 'update' && data.debug && currentUser) {
+    const now = Date.now();
+    if (now - _tgLastDebugLogTime > 5000) {
+      _tgLastDebugLogTime = now;
+      if (!_tgDebugSessionId) _tgDebugSessionId = crypto.randomUUID();
+      db.from('timegrapher_debug_logs').insert({
+        user_id: currentUser.id,
+        session_id: _tgDebugSessionId,
+        sample_rate: data.debug.sampleRate,
+        fft_size: data.debug.fftSize,
+        buffer_samples: data.debug.bufferSamples,
+        hp_filter_cutoff: data.debug.hpCutoff,
+        best_bph: data.detectedBph,
+        best_lag: data.debug.bestLag,
+        best_correlation: data.debug.bestCorrelation,
+        refined_lag: data.debug.refinedLag,
+        detected_interval_ms: data.detectedIntervalMs,
+        expected_interval_ms: data.detectedBph ? 3600000 / data.detectedBph : null,
+        rate_spd: data.rate,
+        confidence: data.confidence,
+        beat_error: data.beatError,
+        noise_level: data.noiseLevel,
+        all_bph_correlations: data.debug.allBphCorrelations
+      }).then(() => {});
+    }
+  }
   // Determine which UI to update
   const isMsr = _msrTarget === 'measure';
   const prefix = isMsr ? 'msr' : 'tg';
@@ -16914,7 +16943,7 @@ window._tgNativeCallback = function(data) {
       if (data.rate != null) {
         document.getElementById('tg-rate-input').value = data.rate.toFixed(1);
         if (data.beatError != null) document.getElementById('tg-be-input').value = data.beatError.toFixed(2);
-        toast('Measurement complete — review and save below');
+        _tgFromListening = true;
       }
     }
   } else if (data.event === 'error') {
@@ -17041,6 +17070,8 @@ let _msrLastBph = null;
 
 function openMeasureModal() {
   if (!currentUser) { toast('Sign in to measure accuracy', 'error'); return; }
+  _tgDebugSessionId = null;
+  _tgLastDebugLogTime = 0;
   _msrListening = false;
   _msrLastRate = null;
   _msrLastBe = null;

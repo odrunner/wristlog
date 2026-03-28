@@ -13,6 +13,19 @@ class TimegrapherEngine {
         let noiseLevel: Double     // 0–1
         let detectedIntervalMs: Double
         let detectedBph: Int?      // auto-detected BPH
+        // Debug info
+        let debug: DebugInfo?
+    }
+
+    struct DebugInfo {
+        let sampleRate: Double
+        let fftSize: Int
+        let bufferSamples: Int
+        let hpCutoff: Double
+        let bestLag: Int
+        let bestCorrelation: Double
+        let refinedLag: Double
+        let allBphCorrelations: [(bph: Int, correlation: Float, lag: Int)]
     }
 
     struct Result {
@@ -59,6 +72,7 @@ class TimegrapherEngine {
     private let standardBphs = [18000, 21600, 25200, 28800, 36000]
 
     private var lastAnalysisTime: Double = 0
+    private var lastDebugInfo: DebugInfo? = nil
 
     func start(bph: Int, sensitivity: Int) {
         guard !isRunning else { return }
@@ -177,7 +191,8 @@ class TimegrapherEngine {
             confidence: currentConfidence,
             noiseLevel: currentNoiseLevel,
             detectedIntervalMs: currentDetectedInterval,
-            detectedBph: detectedBph
+            detectedBph: detectedBph,
+            debug: lastDebugInfo
         )
 
         DispatchQueue.main.async { [weak self] in
@@ -286,10 +301,11 @@ class TimegrapherEngine {
                 var scale = 1.0 / zeroPeak
                 vDSP_vsmul(autocorr, 1, &scale, &autocorr, 1, vDSP_Length(N))
 
-                // Search for best BPH match
+                // Search for best BPH match, collecting per-BPH correlations
                 var bestCorrelation: Float = 0
                 var bestBphCandidate = 28800
                 var bestLag = 0
+                var bphCorrelations: [(bph: Int, correlation: Float, lag: Int)] = []
 
                 for candidateBph in self.standardBphs {
                     let expectedIntervalSec = 3600.0 / Double(candidateBph)
@@ -302,18 +318,31 @@ class TimegrapherEngine {
 
                     guard maxLag > minLag, maxLag < N else { continue }
 
+                    var localBest: Float = 0
+                    var localBestLag = centerLag
                     for lag in minLag...maxLag {
                         let corr = autocorr[lag]
-                        if corr > bestCorrelation {
-                            bestCorrelation = corr
-                            bestBphCandidate = candidateBph
-                            bestLag = lag
+                        if corr > localBest {
+                            localBest = corr
+                            localBestLag = lag
                         }
+                    }
+                    bphCorrelations.append((bph: candidateBph, correlation: localBest, lag: localBestLag))
+
+                    if localBest > bestCorrelation {
+                        bestCorrelation = localBest
+                        bestBphCandidate = candidateBph
+                        bestLag = localBestLag
                     }
                 }
 
                 guard bestCorrelation > 0.02, bestLag > 0 else {
                     self.currentConfidence = 0
+                    self.lastDebugInfo = DebugInfo(
+                        sampleRate: self.actualSampleRate, fftSize: N, bufferSamples: availableSamples,
+                        hpCutoff: 800, bestLag: 0, bestCorrelation: 0, refinedLag: 0,
+                        allBphCorrelations: bphCorrelations
+                    )
                     return
                 }
 
@@ -360,6 +389,13 @@ class TimegrapherEngine {
                 } else {
                     self.currentBeatError = 0
                 }
+
+                // Store debug info
+                self.lastDebugInfo = DebugInfo(
+                    sampleRate: self.actualSampleRate, fftSize: N, bufferSamples: availableSamples,
+                    hpCutoff: 800, bestLag: bestLag, bestCorrelation: Double(bestCorrelation),
+                    refinedLag: refinedLag, allBphCorrelations: bphCorrelations
+                )
             }
         }
     }

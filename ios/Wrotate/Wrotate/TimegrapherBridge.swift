@@ -44,7 +44,7 @@ class TimegrapherBridge {
                 }
 
                 self.engine.onUpdate = { [weak self] update in
-                    self?.sendToJS([
+                    var payload: [String: Any] = [
                         "event": "update",
                         "rate": update.rate as Any,
                         "beatError": update.beatError as Any,
@@ -53,7 +53,21 @@ class TimegrapherBridge {
                         "noiseLevel": update.noiseLevel,
                         "detectedIntervalMs": update.detectedIntervalMs,
                         "detectedBph": update.detectedBph as Any
-                    ])
+                    ]
+                    if let dbg = update.debug {
+                        let bphCorrs = dbg.allBphCorrelations.map { ["bph": $0.bph, "corr": $0.correlation, "lag": $0.lag] as [String: Any] }
+                        payload["debug"] = [
+                            "sampleRate": dbg.sampleRate,
+                            "fftSize": dbg.fftSize,
+                            "bufferSamples": dbg.bufferSamples,
+                            "hpCutoff": dbg.hpCutoff,
+                            "bestLag": dbg.bestLag,
+                            "bestCorrelation": dbg.bestCorrelation,
+                            "refinedLag": dbg.refinedLag,
+                            "allBphCorrelations": bphCorrs
+                        ] as [String: Any]
+                    }
+                    self?.sendToJS(payload)
                 }
 
                 self.engine.start(bph: bph, sensitivity: sensitivity)
