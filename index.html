@@ -4343,7 +4343,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.27.21.14';
+const APP_VERSION = '2.36.27.21.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16617,6 +16617,7 @@ let _tgPosition = 'dial_up';
 let _tgWatchId = null;
 let _tgEditingId = null;
 let _tgListening = false;
+let _tgFromListening = false; // true if rate was auto-filled from mic measurement
 const TG_POSITIONS = [
   { val: 'dial_up', lbl: 'Dial Up' }, { val: 'dial_down', lbl: 'Dial Down' },
   { val: 'crown_up', lbl: 'Crown Up' }, { val: 'crown_down', lbl: 'Crown Down' },
@@ -16627,6 +16628,7 @@ function initTgSection(watchId) {
   _tgWatchId = watchId;
   _tgEditingId = null;
   _tgListening = false;
+  _tgFromListening = false;
   _tgPosition = 'dial_up';
   document.getElementById('tg-pos-chips').innerHTML = TG_POSITIONS.map(p =>
     `<div class="chip${p.val === _tgPosition ? ' selected' : ''}" data-pos="${p.val}" onclick="selectTgPos('${p.val}')">${p.lbl}</div>`
@@ -16782,6 +16784,7 @@ function stopTgListen() {
     document.getElementById('tg-rate-input').value = rateEl.textContent;
     const beEl = document.getElementById('tg-live-be');
     if (beEl.textContent !== '—') document.getElementById('tg-be-input').value = beEl.textContent;
+    _tgFromListening = true;
     toast('Measurement complete — review and save below');
   }
 }
@@ -16848,21 +16851,23 @@ async function saveTimegrapherManual() {
   if (_tgEditingId) {
     // Update existing
     const { error } = await db.from('timegrapher_results').update({
-      rate, beat_error: beatError, amplitude, bph, position: _tgPosition, notes, source: 'manual'
+      rate, beat_error: beatError, amplitude, bph, position: _tgPosition, notes, source: _tgFromListening ? 'auto' : 'manual'
     }).eq('id', _tgEditingId).eq('user_id', currentUser.id);
     if (error) { toast('Update failed — ' + error.message, 'error'); return; }
     toast('Reading updated!');
     _tgEditingId = null;
   } else {
     // Insert new
+    const src = _tgFromListening ? 'auto' : 'manual';
     const { error } = await db.from('timegrapher_results').insert({
       user_id: currentUser.id, watch_id: _tgWatchId,
-      rate, beat_error: beatError, amplitude, bph, position: _tgPosition, source: 'manual', notes
+      rate, beat_error: beatError, amplitude, bph, position: _tgPosition, source: src, notes
     });
     if (error) { toast('Could not save — ' + error.message, 'error'); return; }
     toast('Reading saved!');
-    if (window.posthog) posthog.capture('accuracy_reading_saved', { source: 'manual' });
+    if (window.posthog) posthog.capture('accuracy_reading_saved', { source: src });
   }
+  _tgFromListening = false;
   document.getElementById('tg-rate-input').value = '';
   document.getElementById('tg-be-input').value = '';
   document.getElementById('tg-amplitude-input').value = '';

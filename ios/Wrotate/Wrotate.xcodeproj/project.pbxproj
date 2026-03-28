@@ -257,7 +257,6 @@
 				DEVELOPMENT_TEAM = JSNK92LRFD;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Wrotate/Info.plist;
 				INFOPLIST_KEY_CFBundleURLTypes = "({\nCFBundleURLSchemes = (wrotate);\n})";
 				INFOPLIST_KEY_NSCameraUsageDescription = "WRotate needs camera access to photograph your watches";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "WRotate uses the microphone to measure your watch accuracy by listening to its tick sound.";
@@ -295,7 +294,6 @@
 				DEVELOPMENT_TEAM = JSNK92LRFD;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Wrotate/Info.plist;
 				INFOPLIST_KEY_CFBundleURLTypes = "({\nCFBundleURLSchemes = (wrotate);\n})";
 				INFOPLIST_KEY_NSCameraUsageDescription = "WRotate needs camera access to photograph your watches";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "WRotate uses the microphone to measure your watch accuracy by listening to its tick sound.";
