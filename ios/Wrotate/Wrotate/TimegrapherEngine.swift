@@ -91,12 +91,12 @@ class TimegrapherEngine {
     private var lastAnalysisTime: Double = 0
     private var lastDebugInfo: DebugInfo? = nil
 
-    /// Update sensitivity live (0=most sensitive, 100=least sensitive)
+    /// Update sensitivity live (0=least sensitive, 100=most sensitive)
     func setSensitivity(_ value: Int) {
-        // Map 0-100 to multiplier 1.1-5.0
-        // 0% → 1.1× (catches everything), 100% → 5.0× (only strong peaks)
+        // Map 0-100 to multiplier 5.0-1.1 (INVERTED: high sensitivity = low threshold)
+        // 0% → 5.0× (only strong peaks), 100% → 1.1× (catches everything)
         let clamped = Float(max(0, min(100, value)))
-        sensitivityMultiplier = 1.1 + (clamped / 100.0) * 3.9
+        sensitivityMultiplier = 5.0 - (clamped / 100.0) * 3.9
 
         // When sensitivity changes, clear old ticks — they were detected at old threshold
         tickTimes.removeAll()
