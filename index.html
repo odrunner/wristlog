@@ -4447,7 +4447,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.28.13.57';
+const APP_VERSION = '2.36.28.14.08';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16895,6 +16895,45 @@ function stopTgListen() {
   }
 }
 
+// Remote tuning: poll Supabase for parameter changes
+let _tuningPollTimer = null;
+let _lastTuningTs = null;
+function startTuningPoll() {
+  if (_tuningPollTimer) return;
+  _tuningPollTimer = setInterval(async () => {
+    try {
+      const { data } = await db.from('timegrapher_tuning').select('*').eq('id', 1).single();
+      if (!data) return;
+      // Only apply if changed
+      const ts = data.updated_at;
+      if (ts === _lastTuningTs) return;
+      _lastTuningTs = ts;
+      // Update UI controls
+      const fields = {
+        'msr-tune-mult-lo': data.mult_at_zero,
+        'msr-tune-mult-hi': data.mult_at_hundred,
+        'msr-tune-min-thresh': data.min_threshold,
+        'msr-tune-percentile': data.noise_percentile,
+        'msr-tune-hp-cutoff': data.hp_cutoff_hz
+      };
+      for (const [id, val] of Object.entries(fields)) {
+        const el = document.getElementById(id);
+        if (el && val != null) el.value = val;
+      }
+      if (data.sensitivity != null) {
+        const sl = document.getElementById('msr-sensitivity');
+        if (sl) { sl.value = data.sensitivity; onMsrSensitivityChange(data.sensitivity); }
+      }
+      // Send to native
+      sendMsrTuning();
+    } catch (e) {}
+  }, 3000);
+}
+function stopTuningPoll() {
+  if (_tuningPollTimer) { clearInterval(_tuningPollTimer); _tuningPollTimer = null; }
+  _lastTuningTs = null;
+}
+
 // Native → JS callback
 let _msrTarget = null; // 'measure' when measure modal is open, null for watch modal
 let _tgDebugSessionId = null;
@@ -17172,6 +17211,8 @@ function toggleMsrListen() {
     _msrTarget = 'measure';
     // Send tuning params if user has customized them
     setTimeout(() => sendMsrTuning(), 200);
+    // Start remote tuning poll
+    startTuningPoll();
     document.getElementById('msr-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
     document.getElementById('msr-live-status').style.display = '';
     document.getElementById('msr-live-rate').textContent = '—';
@@ -17234,6 +17275,7 @@ function toggleMsrListen() {
 
 function stopMsrListen() {
   _msrListening = false;
+  stopTuningPoll();
   if (_tgHasNative()) {
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'stop' });
   }
