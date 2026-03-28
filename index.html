@@ -4341,7 +4341,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.27.20.48';
+const APP_VERSION = '2.36.27.20.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16609,7 +16609,7 @@ function clearUserState() {
 }
 
 // ── Timegrapher / Accuracy (inside watch edit modal) ─────────────────────
-const _tgNativeAvailable = !!(window.webkit?.messageHandlers?.timegrapher);
+function _tgHasNative() { return !!(window.webkit?.messageHandlers?.timegrapher); }
 let _tgPosition = 'dial_up';
 let _tgWatchId = null;
 let _tgEditingId = null;
@@ -16636,7 +16636,7 @@ function initTgSection(watchId) {
   // Show live measurement section only on native iOS app
   const liveEl = document.getElementById('tg-live-section');
   if (liveEl) {
-    liveEl.style.display = _tgNativeAvailable ? '' : 'none';
+    liveEl.style.display = _tgHasNative() ? '' : 'none';
     document.getElementById('tg-listen-btn').textContent = 'Start Listening';
     document.getElementById('tg-live-status').style.display = 'none';
   }
@@ -16644,7 +16644,7 @@ function initTgSection(watchId) {
 }
 
 function toggleTgListen() {
-  if (!_tgNativeAvailable) return;
+  if (!_tgHasNative()) return;
   if (_tgListening) {
     // Stop
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'stop' });
