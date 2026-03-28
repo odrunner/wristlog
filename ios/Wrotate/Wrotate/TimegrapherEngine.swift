@@ -190,46 +190,47 @@ class TimegrapherEngine {
         var bestBph = 28800
         var bestLagBins: Int = 0
 
-        for candidateBph in standardBphs {
-            let expectedIntervalMs = 3600000.0 / Double(candidateBph)
-            let centerLag = Int(round(expectedIntervalMs / hopMs))
+        // Compute envelope energy once for normalization
+        var envelopeEnergy: Float = 0
+        vDSP_svesq(envelope, 1, &envelopeEnergy, vDSP_Length(envelopeLength))
+        guard envelopeEnergy > 0 else { return }
 
-            // Search ±10% around expected interval
-            let searchRange = max(2, Int(round(Double(centerLag) * 0.1)))
-            let minLag = max(1, centerLag - searchRange)
-            let maxLag = min(envelopeLength / 2, centerLag + searchRange)
+        envelope.withUnsafeBufferPointer { envPtr in
+            guard let base = envPtr.baseAddress else { return }
 
-            guard maxLag > minLag else { continue }
+            for candidateBph in standardBphs {
+                let expectedIntervalMs = 3600000.0 / Double(candidateBph)
+                let centerLag = Int(round(expectedIntervalMs / hopMs))
 
-            // Compute normalized autocorrelation at each lag
-            var localBestCorr: Float = -1
-            var localBestLag = centerLag
+                // Search ±10% around expected interval
+                let searchRange = max(2, Int(round(Double(centerLag) * 0.1)))
+                let minLag = max(1, centerLag - searchRange)
+                let maxLag = min(envelopeLength / 2, centerLag + searchRange)
 
-            // Compute envelope energy for normalization
-            var envelopeEnergy: Float = 0
-            vDSP_svesq(envelope, 1, &envelopeEnergy, vDSP_Length(envelopeLength))
+                guard maxLag > minLag else { continue }
 
-            guard envelopeEnergy > 0 else { continue }
+                var localBestCorr: Float = -1
+                var localBestLag = centerLag
 
-            for lag in minLag...maxLag {
-                let pairs = envelopeLength - lag
-                guard pairs > 0 else { continue }
+                for lag in minLag...maxLag {
+                    let pairs = envelopeLength - lag
+                    guard pairs > 0 else { continue }
 
-                var corr: Float = 0
-                // Dot product of envelope with shifted version
-                vDSP_dotpr(envelope, 1, envelope.advanced(by: lag), 1, &corr, vDSP_Length(pairs))
-                corr /= envelopeEnergy  // normalize
+                    var corr: Float = 0
+                    vDSP_dotpr(base, 1, base.advanced(by: lag), 1, &corr, vDSP_Length(pairs))
+                    corr /= envelopeEnergy
 
-                if corr > localBestCorr {
-                    localBestCorr = corr
-                    localBestLag = lag
+                    if corr > localBestCorr {
+                        localBestCorr = corr
+                        localBestLag = lag
+                    }
                 }
-            }
 
-            if localBestCorr > bestCorrelation {
-                bestCorrelation = localBestCorr
-                bestBph = candidateBph
-                bestLagBins = localBestLag
+                if localBestCorr > bestCorrelation {
+                    bestCorrelation = localBestCorr
+                    bestBph = candidateBph
+                    bestLagBins = localBestLag
+                }
             }
         }
 
@@ -240,39 +241,32 @@ class TimegrapherEngine {
 
         // Parabolic interpolation for sub-bin accuracy
         let lag = bestLagBins
-        if lag > 0 && lag < envelopeLength / 2 - 1 {
-            let pairs = envelopeLength - lag
+        envelope.withUnsafeBufferPointer { envPtr in
+            guard let base = envPtr.baseAddress, lag > 1, lag < envelopeLength / 2 - 1 else {
+                currentDetectedInterval = Double(lag) * hopMs
+                return
+            }
+
             var corrMinus: Float = 0
             var corrCenter: Float = 0
             var corrPlus: Float = 0
-            var envelopeEnergy: Float = 0
-            vDSP_svesq(envelope, 1, &envelopeEnergy, vDSP_Length(envelopeLength))
 
-            if envelopeEnergy > 0 && lag > 1 {
-                let pM = envelopeLength - (lag - 1)
-                vDSP_dotpr(envelope, 1, envelope.advanced(by: lag - 1), 1, &corrMinus, vDSP_Length(pM))
-                corrMinus /= envelopeEnergy
+            vDSP_dotpr(base, 1, base.advanced(by: lag - 1), 1, &corrMinus, vDSP_Length(envelopeLength - lag + 1))
+            corrMinus /= envelopeEnergy
 
-                vDSP_dotpr(envelope, 1, envelope.advanced(by: lag), 1, &corrCenter, vDSP_Length(pairs))
-                corrCenter /= envelopeEnergy
+            vDSP_dotpr(base, 1, base.advanced(by: lag), 1, &corrCenter, vDSP_Length(envelopeLength - lag))
+            corrCenter /= envelopeEnergy
 
-                let pP = envelopeLength - (lag + 1)
-                vDSP_dotpr(envelope, 1, envelope.advanced(by: lag + 1), 1, &corrPlus, vDSP_Length(pP))
-                corrPlus /= envelopeEnergy
+            vDSP_dotpr(base, 1, base.advanced(by: lag + 1), 1, &corrPlus, vDSP_Length(envelopeLength - lag - 1))
+            corrPlus /= envelopeEnergy
 
-                let denom = corrMinus - 2 * corrCenter + corrPlus
-                if abs(denom) > 1e-10 {
-                    let delta = 0.5 * (corrMinus - corrPlus) / denom
-                    let refinedLag = Double(lag) + Double(delta)
-                    currentDetectedInterval = refinedLag * hopMs
-                } else {
-                    currentDetectedInterval = Double(lag) * hopMs
-                }
+            let denom = corrMinus - 2 * corrCenter + corrPlus
+            if abs(denom) > 1e-10 {
+                let delta = 0.5 * (corrMinus - corrPlus) / denom
+                currentDetectedInterval = (Double(lag) + Double(delta)) * hopMs
             } else {
                 currentDetectedInterval = Double(lag) * hopMs
             }
-        } else {
-            currentDetectedInterval = Double(lag) * hopMs
         }
 
         detectedBph = bestBph
@@ -291,22 +285,16 @@ class TimegrapherEngine {
         }
 
         // Beat error: compare autocorrelation at lag vs 2*lag
-        // If ticks alternate (tick-tock), the correlation at lag will be lower than at 2*lag
         let doubleLag = lag * 2
         if doubleLag < envelopeLength / 2 {
-            var envelopeEnergy: Float = 0
-            vDSP_svesq(envelope, 1, &envelopeEnergy, vDSP_Length(envelopeLength))
-
-            if envelopeEnergy > 0 {
+            envelope.withUnsafeBufferPointer { envPtr in
+                guard let base = envPtr.baseAddress else { return }
                 var corrDouble: Float = 0
                 let pairsD = envelopeLength - doubleLag
-                vDSP_dotpr(envelope, 1, envelope.advanced(by: doubleLag), 1, &corrDouble, vDSP_Length(pairsD))
+                vDSP_dotpr(base, 1, base.advanced(by: doubleLag), 1, &corrDouble, vDSP_Length(pairsD))
                 corrDouble /= envelopeEnergy
 
-                // Beat error ≈ how much stronger the double-period correlation is
-                // In a perfect tick-tock, double correlation >> single correlation
                 if corrDouble > bestCorrelation {
-                    // Alternating pattern detected — estimate beat error
                     let ratio = Double(corrDouble - bestCorrelation) / Double(corrDouble)
                     currentBeatError = ratio * currentDetectedInterval * 0.5
                     currentBeatError = (currentBeatError! * 100).rounded() / 100
