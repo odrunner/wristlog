@@ -2294,6 +2294,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
         <button class="btn btn-ghost" onclick="startGame()" title="Ranking Game" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="btn-label"> Ranking Game</span></button>
         <button class="btn btn-ghost" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="btn-label"> Add From Photo</span></button>
+        <button class="btn btn-ghost" onclick="openTimegrapher()" title="Timegrapher" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="btn-label">Accuracy</span></button>
         <button class="btn btn-primary" onclick="openAddWatch()" title="Add Watch"><span class="btn-label-full">+ Add Watch</span><span class="btn-label-short">+ Add</span></button>
       </div>
     </div>
@@ -3556,6 +3557,73 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ DELETE CLUB MODAL ════ -->
+<!-- ════ TIMEGRAPHER MODAL ════ -->
+<div id="timegrapher-modal" class="overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:540px;">
+    <div class="modal-title" style="display:flex;align-items:center;justify-content:space-between;">
+      <span style="display:flex;align-items:center;gap:.5rem;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Accuracy Tracker
+      </span>
+      <button type="button" class="btn-ghost" onclick="closeTimegrapher()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted);padding:0;">&times;</button>
+    </div>
+    <div id="tg-body" style="max-height:70vh;overflow-y:auto;padding-right:.5rem;">
+      <!-- Watch selector -->
+      <div style="margin-bottom:.75rem;">
+        <label style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Watch</label>
+        <select id="tg-watch-select" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.88rem;margin-top:.25rem;">
+          <option value="">— Select a watch —</option>
+        </select>
+      </div>
+      <!-- Position selector -->
+      <div style="margin-bottom:.75rem;">
+        <label style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Position</label>
+        <div id="tg-pos-chips" style="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.25rem;"></div>
+      </div>
+      <!-- Manual entry fields -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.65rem;margin-bottom:.75rem;">
+        <div>
+          <label for="tg-rate-input" style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Rate (s/day)</label>
+          <input type="number" id="tg-rate-input" step="0.1" placeholder="e.g. +5.2" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.88rem;margin-top:.25rem;">
+        </div>
+        <div>
+          <label for="tg-be-input" style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Beat Error (ms) <span style="font-size:.65rem;font-weight:400;">optional</span></label>
+          <input type="number" id="tg-be-input" step="0.01" min="0" placeholder="e.g. 0.3" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.88rem;margin-top:.25rem;">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.65rem;margin-bottom:.75rem;">
+        <div>
+          <label for="tg-amplitude-input" style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Amplitude (°) <span style="font-size:.65rem;font-weight:400;">optional</span></label>
+          <input type="number" id="tg-amplitude-input" step="1" min="0" max="360" placeholder="e.g. 275" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.88rem;margin-top:.25rem;">
+        </div>
+        <div>
+          <label for="tg-bph-select" style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Beat Rate (BPH)</label>
+          <select id="tg-bph-select" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.88rem;margin-top:.25rem;">
+            <option value="18000">18,000</option>
+            <option value="21600">21,600</option>
+            <option value="25200">25,200</option>
+            <option value="28800" selected>28,800</option>
+            <option value="36000">36,000</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <label for="tg-notes-input" style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Notes <span style="font-size:.65rem;font-weight:400;">optional</span></label>
+        <input type="text" id="tg-notes-input" placeholder="e.g. After full wind, 24h on wrist" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.88rem;margin-top:.25rem;">
+      </div>
+      <button class="btn btn-primary" onclick="saveTimegrapherManual()" style="width:100%;margin-bottom:.75rem;">Save Reading</button>
+      <div style="font-size:.72rem;color:var(--muted);line-height:1.5;margin-bottom:.75rem;">
+        Enter readings from your timegrapher device (e.g. Weishi 1000) or compare your watch against a reference clock and calculate the daily drift.
+      </div>
+      <!-- History -->
+      <div id="tg-history" style="display:none;">
+        <label style="font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">History</label>
+        <div id="tg-history-list" style="margin-top:.35rem;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="delete-club-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="delete-club-modal-title">
   <div class="modal" style="max-width:380px;text-align:center;">
     <div id="dc-step-1">
@@ -4259,7 +4327,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.27.06.31';
+const APP_VERSION = '2.36.27.18.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16416,6 +16484,7 @@ const _overlayCloseMap = {
   'whats-new-modal':     closeWhatsNew,
   // eula-modal: intentionally excluded — must not close on overlay click or Escape
   'report-modal':        closeReport,
+  'timegrapher-modal':   closeTimegrapher,
 };
 
 // Click overlay background to close
@@ -16519,6 +16588,119 @@ function clearUserState() {
   clearTimeout(_syncRetryTimer); _syncRetryTimer = undefined;
   clearTimeout(_reminderTimer); _reminderTimer = undefined;
 }
+
+// ── Timegrapher (manual entry) ────────────────────────────────────────────
+let _tgPosition = 'dial_up';
+const TG_POSITIONS = [
+  { val: 'dial_up', lbl: 'Dial Up' }, { val: 'dial_down', lbl: 'Dial Down' },
+  { val: 'crown_up', lbl: 'Crown Up' }, { val: 'crown_down', lbl: 'Crown Down' },
+  { val: 'crown_left', lbl: 'Crown Left' }, { val: 'crown_right', lbl: 'Crown Right' }
+];
+
+function openTimegrapher(watchId) {
+  const modal = document.getElementById('timegrapher-modal');
+  const sel = document.getElementById('tg-watch-select');
+  sel.innerHTML = '<option value="">— Select a watch —</option>' +
+    watches.map(w => `<option value="${w.id}"${w.id === watchId ? ' selected' : ''}>${escHtml(w.brand)} ${escHtml(w.name)}</option>`).join('');
+  document.getElementById('tg-pos-chips').innerHTML = TG_POSITIONS.map(p =>
+    `<div class="chip${p.val === _tgPosition ? ' selected' : ''}" data-pos="${p.val}" onclick="selectTgPos('${p.val}')">${p.lbl}</div>`
+  ).join('');
+  document.getElementById('tg-rate-input').value = '';
+  document.getElementById('tg-be-input').value = '';
+  document.getElementById('tg-amplitude-input').value = '';
+  document.getElementById('tg-notes-input').value = '';
+  document.getElementById('tg-bph-select').value = '28800';
+  loadTgHistory();
+  modal.classList.remove('hidden');
+}
+
+function closeTimegrapher() {
+  document.getElementById('timegrapher-modal').classList.add('hidden');
+}
+
+function selectTgPos(pos) {
+  _tgPosition = pos;
+  document.querySelectorAll('#tg-pos-chips .chip').forEach(c =>
+    c.classList.toggle('selected', c.dataset.pos === pos));
+}
+
+async function saveTimegrapherManual() {
+  if (!currentUser) return;
+  const rateVal = document.getElementById('tg-rate-input').value.trim();
+  if (rateVal === '') { toast('Please enter a rate (s/day)', 'error'); return; }
+  const rate = parseFloat(rateVal);
+  if (isNaN(rate) || rate < -999 || rate > 999) { toast('Rate must be between -999 and +999 s/day', 'error'); return; }
+  const beVal = document.getElementById('tg-be-input').value.trim();
+  const beatError = beVal !== '' ? parseFloat(beVal) : null;
+  const ampVal = document.getElementById('tg-amplitude-input').value.trim();
+  const amplitude = ampVal !== '' ? parseFloat(ampVal) : null;
+  const bph = parseInt(document.getElementById('tg-bph-select').value);
+  const watchId = document.getElementById('tg-watch-select').value || null;
+  const notes = document.getElementById('tg-notes-input').value.trim() || null;
+  const { error } = await db.from('timegrapher_results').insert({
+    user_id: currentUser.id,
+    watch_id: watchId,
+    rate: rate,
+    beat_error: beatError,
+    amplitude: amplitude,
+    bph: bph,
+    position: _tgPosition,
+    source: 'manual',
+    notes: notes
+  });
+  if (error) { toast('Could not save — ' + error.message, 'error'); return; }
+  toast('Reading saved!');
+  if (window.posthog) posthog.capture('accuracy_reading_saved', { source: 'manual', has_watch: !!watchId });
+  document.getElementById('tg-rate-input').value = '';
+  document.getElementById('tg-be-input').value = '';
+  document.getElementById('tg-amplitude-input').value = '';
+  document.getElementById('tg-notes-input').value = '';
+  loadTgHistory();
+}
+
+async function loadTgHistory() {
+  const histEl = document.getElementById('tg-history');
+  const listEl = document.getElementById('tg-history-list');
+  if (!currentUser) { histEl.style.display = 'none'; return; }
+  const watchId = document.getElementById('tg-watch-select')?.value;
+  let q = db.from('timegrapher_results').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
+  if (watchId) q = q.eq('watch_id', watchId);
+  const { data, error } = await q;
+  if (error || !data || data.length === 0) { histEl.style.display = 'none'; return; }
+  histEl.style.display = '';
+  listEl.innerHTML = data.map(r => {
+    const d = new Date(r.created_at);
+    const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const rateStr = r.rate !== null ? (r.rate > 0 ? '+' : '') + Number(r.rate).toFixed(1) + ' s/d' : '—';
+    const beStr = r.beat_error !== null ? 'BE: ' + Number(r.beat_error).toFixed(2) + ' ms' : '';
+    const ampStr = r.amplitude ? 'Amp: ' + r.amplitude + '°' : '';
+    const posStr = TG_POSITIONS.find(p => p.val === r.position)?.lbl || '';
+    const sourceStr = r.source === 'manual' ? '✎' : '🎤';
+    const noteStr = r.notes ? `<div style="font-size:.7rem;color:var(--muted);margin-top:.15rem;font-style:italic;">${escHtml(r.notes)}</div>` : '';
+    const rateColor = r.rate !== null ? (Math.abs(r.rate) <= 5 ? '#22c55e' : Math.abs(r.rate) <= 15 ? '#eab308' : '#ef4444') : 'var(--muted)';
+    const details = [beStr, ampStr].filter(Boolean).join(' · ');
+    return `<div style="padding:.45rem 0;border-bottom:1px solid var(--border);font-size:.8rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <span style="font-weight:600;color:${rateColor};">${rateStr}</span>
+          ${details ? `<span style="color:var(--muted);margin-left:.4rem;">${details}</span>` : ''}
+        </div>
+        <div style="color:var(--muted);font-size:.72rem;">${sourceStr} ${posStr} · ${dateStr}</div>
+      </div>${noteStr}
+    </div>`;
+  }).join('');
+}
+
+async function deleteTgResult(id) {
+  const { error } = await db.from('timegrapher_results').delete().eq('id', id).eq('user_id', currentUser.id);
+  if (error) { toast('Delete failed', 'error'); return; }
+  toast('Deleted');
+  loadTgHistory();
+}
+
+document.addEventListener('change', e => {
+  if (e.target.id === 'tg-watch-select') loadTgHistory();
+});
 
 // ── APP BOOT ──────────────────────────────────────────────────────────────
 // Single entry point for initialising the app once we have a confirmed user.
