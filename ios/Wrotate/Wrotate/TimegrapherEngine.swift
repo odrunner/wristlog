@@ -1,8 +1,8 @@
 import AVFoundation
 import Accelerate
 
-/// Captures microphone audio via AVAudioEngine and detects mechanical watch tick sounds.
-/// Results are reported through the `onUpdate` callback.
+/// Captures microphone audio via AVAudioEngine and detects mechanical watch tick sounds
+/// using peak-based transient detection for sub-millisecond timing precision.
 class TimegrapherEngine {
 
     struct Update {
@@ -29,24 +29,23 @@ class TimegrapherEngine {
     private var sensitivity: Int = 50
 
     // Tick detection state
-    private var startTime: Double = 0
-    private var tickTimestamps: [Double] = []
-    private var envelope: [Float] = []
-    private var envCapacity: Int = 0
-    private var envWrite: Int = 0
-    private var envCount: Int = 0
-    private var windowDurationMs: Double = 0
+    private var actualSampleRate: Double = 44100
+    private var startSampleOffset: Int64 = 0       // sample count at start
+    private var totalSamplesProcessed: Int64 = 0
+    private var tickTimestamps: [Double] = []       // ms since start, from sample position
+    private var tickIntervals: [Double] = []        // ms between consecutive ticks
 
-    // Analysis state
-    private var lastAnalysisTime: Double = 0
-    private let analysisIntervalMs: Double = 1000
+    // Peak detection
+    private var peakHoldoff: Int = 0                // samples to skip after a detected peak
+    private var noiseFloor: Float = 0               // adaptive noise floor
+    private var peakThreshold: Float = 0.01         // dynamic threshold
+
+    // Analysis
     private var currentRate: Double? = nil
     private var currentBeatError: Double? = nil
     private var currentConfidence: Double = 0
     private var currentDetectedInterval: Double = 0
-
-    private let sampleRate: Double = 44100
-    private let windowSamples: Int = 64
+    private var currentNoiseLevel: Double = 0
 
     func start(bph: Int, sensitivity: Int) {
         guard !isRunning else { return }
@@ -54,23 +53,19 @@ class TimegrapherEngine {
         self.sensitivity = sensitivity
 
         tickTimestamps = []
+        tickIntervals = []
         currentRate = nil
         currentBeatError = nil
         currentConfidence = 0
         currentDetectedInterval = 0
-        lastAnalysisTime = 0
-
-        // Calculate envelope buffer capacity (~10 seconds of data)
-        windowDurationMs = Double(windowSamples) / sampleRate * 1000
-        envCapacity = Int(ceil(10000 / windowDurationMs))
-        envelope = [Float](repeating: 0, count: envCapacity)
-        envWrite = 0
-        envCount = 0
+        totalSamplesProcessed = 0
+        noiseFloor = 0
+        peakThreshold = 0.01
 
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.record, mode: .measurement, options: [])
-            try session.setPreferredSampleRate(sampleRate)
+            try session.setPreferredSampleRate(44100)
             try session.setActive(true)
 
             audioEngine = AVAudioEngine()
@@ -78,11 +73,13 @@ class TimegrapherEngine {
 
             let inputNode = engine.inputNode
             let format = inputNode.outputFormat(forBus: 0)
-            let bufferSize: AVAudioFrameCount = 2048
+            actualSampleRate = format.sampleRate
 
-            startTime = CACurrentMediaTime() * 1000
+            // Holdoff: skip 60% of expected tick interval after each detection
+            let expectedIntervalSamples = actualSampleRate * 3600.0 / Double(bph)
+            peakHoldoff = Int(expectedIntervalSamples * 0.6)
 
-            inputNode.installTap(onBus: 0, bufferSize: bufferSize, format: format) { [weak self] buffer, time in
+            inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, time in
                 self?.processAudioBuffer(buffer)
             }
 
@@ -112,48 +109,68 @@ class TimegrapherEngine {
 
     // MARK: - Audio processing
 
+    private var holdoffCounter: Int = 0
+
     private func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
         guard isRunning, let channelData = buffer.floatChannelData?[0] else { return }
         let frameCount = Int(buffer.frameLength)
-        let now = CACurrentMediaTime() * 1000
 
-        // Calculate noise level (RMS)
+        // Compute RMS for noise level display
         var rms: Float = 0
-        var maxAmp: Float = 0
         vDSP_rmsqv(channelData, 1, &rms, vDSP_Length(frameCount))
-        vDSP_maxmgv(channelData, 1, &maxAmp, vDSP_Length(frameCount))
+        currentNoiseLevel = min(1.0, Double(rms) * 10)
 
-        let noiseLevel = min(1.0, Double(maxAmp) * 2)
+        // Adaptive noise floor (slow-follow RMS)
+        let alpha: Float = 0.02
+        noiseFloor = noiseFloor * (1 - alpha) + rms * alpha
 
-        // Build envelope: energy per window
-        var offset = 0
-        while offset + windowSamples <= frameCount {
-            var energy: Float = 0
-            vDSP_svesq(channelData.advanced(by: offset), 1, &energy, vDSP_Length(windowSamples))
-            energy /= Float(windowSamples)
+        // Threshold: noise floor multiplied by sensitivity factor
+        // sensitivity 0-100 maps to threshold multiplier 8x-3x
+        let sensMultiplier = Float(8.0 - 5.0 * Double(sensitivity) / 100.0)
+        peakThreshold = max(0.002, noiseFloor * sensMultiplier)
 
-            envelope[envWrite % envCapacity] = energy
-            envWrite += 1
-            envCount = min(envCount + 1, envCapacity)
-            offset += windowSamples
-        }
+        // Scan for peaks (transient tick sounds)
+        for i in 0..<frameCount {
+            let sample = abs(channelData[i])
 
-        // Run autocorrelation analysis periodically
-        if now - lastAnalysisTime > analysisIntervalMs && envCount > envCapacity * 3 / 10 {
-            lastAnalysisTime = now
-            runAutocorrelation()
-        }
+            if holdoffCounter > 0 {
+                holdoffCounter -= 1
+                continue
+            }
 
-        // Generate synthetic tick timestamps from detected interval
-        let expectedInterval = 3600000.0 / Double(bph)
-        if let _ = currentRate, currentConfidence > 0.1, currentDetectedInterval > 0 {
-            let elapsed = now - startTime
-            let expectedTicks = Int(elapsed / currentDetectedInterval)
-            while tickTimestamps.count < expectedTicks && tickTimestamps.count < 10000 {
-                let nextTick = Double(tickTimestamps.count + 1) * currentDetectedInterval
-                tickTimestamps.append(nextTick)
+            if sample > peakThreshold {
+                // Found a peak — record precise timestamp
+                let samplePosition = totalSamplesProcessed + Int64(i)
+                let timestampMs = Double(samplePosition) / actualSampleRate * 1000.0
+
+                // Record interval from previous tick
+                if let lastTick = tickTimestamps.last {
+                    let interval = timestampMs - lastTick
+                    let expectedInterval = 3600000.0 / Double(bph)
+
+                    // Accept only intervals within 50% of expected
+                    if interval > expectedInterval * 0.5 && interval < expectedInterval * 1.5 {
+                        tickIntervals.append(interval)
+                        tickTimestamps.append(timestampMs)
+                    }
+                    // If interval is very small, skip (noise/echo)
+                    // If interval is very large, still record the tick to restart
+                    else if interval > expectedInterval * 1.5 {
+                        tickTimestamps.append(timestampMs)
+                    }
+                } else {
+                    // First tick
+                    tickTimestamps.append(timestampMs)
+                }
+
+                holdoffCounter = peakHoldoff
             }
         }
+
+        totalSamplesProcessed += Int64(frameCount)
+
+        // Analyze collected intervals
+        analyzeIntervals()
 
         // Report update
         let update = Update(
@@ -161,7 +178,7 @@ class TimegrapherEngine {
             beatError: currentBeatError,
             tickCount: tickTimestamps.count,
             confidence: currentConfidence,
-            noiseLevel: noiseLevel,
+            noiseLevel: currentNoiseLevel,
             detectedIntervalMs: currentDetectedInterval
         )
 
@@ -170,65 +187,68 @@ class TimegrapherEngine {
         }
     }
 
-    private func runAutocorrelation() {
-        let expectedInterval = 3600000.0 / Double(bph)
-        let minLag = max(2, Int(round((expectedInterval * 0.7) / windowDurationMs)))
-        let maxLag = Int(round((expectedInterval * 1.3) / windowDurationMs))
-
-        let N = envCount
-        guard N > 0, maxLag < N / 2 else { return }
-
-        // Compute mean
-        var mean: Float = 0
-        vDSP_meanv(envelope, 1, &mean, vDSP_Length(N))
-
-        // Compute variance
-        var variance: Float = 0
-        var temp = [Float](repeating: 0, count: N)
-        var negMean = -mean
-        vDSP_vsadd(envelope, 1, &negMean, &temp, 1, vDSP_Length(N))
-        vDSP_svesq(temp, 1, &variance, vDSP_Length(N))
-        variance /= Float(N)
-
-        guard variance > 0 else { return }
-
-        var bestLag = 0
-        var bestCorr: Float = -1
-
-        for lag in minLag...min(maxLag, N / 2 - 1) {
-            var corr: Float = 0
-            let pairs = N - lag
-            for i in 0..<pairs {
-                corr += (envelope[i] - mean) * (envelope[(i + lag) % envCapacity] - mean)
-            }
-            corr = corr / (Float(pairs) * variance)
-            if corr > bestCorr {
-                bestCorr = corr
-                bestLag = lag
-            }
+    private func analyzeIntervals() {
+        let count = tickIntervals.count
+        guard count >= 4 else {
+            currentConfidence = 0
+            return
         }
 
-        currentDetectedInterval = Double(bestLag) * windowDurationMs
-        currentConfidence = Double(max(0, bestCorr))
-        currentRate = ((currentDetectedInterval - expectedInterval) / expectedInterval) * 86400
+        // Use only the last 200 intervals for analysis (sliding window)
+        let recentIntervals = count > 200 ? Array(tickIntervals.suffix(200)) : tickIntervals
+
+        // Sort for median calculation
+        let sorted = recentIntervals.sorted()
+        let n = sorted.count
+        let median = n % 2 == 0 ? (sorted[n/2 - 1] + sorted[n/2]) / 2.0 : sorted[n/2]
+
+        // Filter outliers: keep values within 5% of median
+        let filtered = recentIntervals.filter { abs($0 - median) / median < 0.05 }
+        guard filtered.count >= 3 else {
+            currentConfidence = Double(recentIntervals.count) / 20.0
+            return
+        }
+
+        // Calculate mean of filtered intervals
+        let mean = filtered.reduce(0, +) / Double(filtered.count)
+
+        // Standard deviation
+        let variance = filtered.reduce(0) { $0 + ($1 - mean) * ($1 - mean) } / Double(filtered.count)
+        let stddev = sqrt(variance)
+
+        // Rate calculation
+        let expectedInterval = 3600000.0 / Double(bph)
+        currentDetectedInterval = mean
+        currentRate = ((mean - expectedInterval) / expectedInterval) * 86400.0
         currentRate = (currentRate! * 10).rounded() / 10
 
-        // Beat error estimation
-        let doubleLag = bestLag * 2
-        if doubleLag < N / 2 {
-            var corrDouble: Float = 0
-            let pairsD = N - doubleLag
-            for i in 0..<pairsD {
-                corrDouble += (envelope[i] - mean) * (envelope[(i + doubleLag) % envCapacity] - mean)
-            }
-            corrDouble = corrDouble / (Float(pairsD) * variance)
+        // Confidence: based on consistency (low stddev = high confidence) and sample count
+        let cv = stddev / mean  // coefficient of variation
+        let consistencyScore = max(0, 1.0 - cv * 20)  // cv of 0.05 → 0, cv of 0 → 1
+        let sampleScore = min(1.0, Double(filtered.count) / 30.0)
+        currentConfidence = (consistencyScore * 0.7 + sampleScore * 0.3)
+        currentConfidence = (currentConfidence * 100).rounded() / 100
 
-            if corrDouble > bestCorr {
-                let halfLag = bestLag / 2
-                if halfLag >= minLag {
-                    currentBeatError = abs(currentDetectedInterval - Double(halfLag) * windowDurationMs * 2)
-                    currentBeatError = (currentBeatError! * 100).rounded() / 100
+        // Beat error: difference between alternating intervals (tick vs tock)
+        if filtered.count >= 6 {
+            var evenIntervals: [Double] = []
+            var oddIntervals: [Double] = []
+            // Use the original recent intervals (not sorted) for alternating pattern
+            let recent = count > 60 ? Array(tickIntervals.suffix(60)) : tickIntervals
+            for (i, interval) in recent.enumerated() {
+                if abs(interval - mean) / mean < 0.05 {
+                    if i % 2 == 0 {
+                        evenIntervals.append(interval)
+                    } else {
+                        oddIntervals.append(interval)
+                    }
                 }
+            }
+            if evenIntervals.count >= 3 && oddIntervals.count >= 3 {
+                let evenMean = evenIntervals.reduce(0, +) / Double(evenIntervals.count)
+                let oddMean = oddIntervals.reduce(0, +) / Double(oddIntervals.count)
+                currentBeatError = abs(evenMean - oddMean)
+                currentBeatError = (currentBeatError! * 100).rounded() / 100
             } else {
                 currentBeatError = 0
             }
