@@ -4343,7 +4343,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.27.20.59';
+const APP_VERSION = '2.36.27.21.08';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12629,6 +12629,7 @@ function openEditWatch(id) {
 }
 
 function closeWatchModal() {
+  if (_tgListening) stopTgListen();
   clearInlineEdits();
   if (wPendingImage && wPendingImage.startsWith('blob:')) URL.revokeObjectURL(wPendingImage);
   wPendingImage = null; wPendingFile = null;
