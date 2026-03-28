@@ -70,14 +70,16 @@ class TimegrapherEngine {
     private var energySum: Float = 0
 
     // Energy ring buffer for autocorrelation
-    // At 1ms resolution, 10 seconds = 10000 entries
-    // We need at least 2× the tick interval for autocorrelation
-    // 18000 BPH = 200ms interval → need 400ms minimum, we keep 10s
+    // At 0.1ms resolution (10kHz), 10 seconds = 100000 entries
+    // Higher resolution gives better rate precision:
+    // At 1ms: 1ms offset at 125ms lag = 691 s/day error
+    // At 0.1ms: 0.1ms offset at 1250 lag = 69 s/day, parabolic → ~7 s/day
     private var energyRing: [Float] = []
-    private var energyRingCapacity: Int = 10000  // 10 seconds at 1ms
+    private var energyRingCapacity: Int = 100000  // 10 seconds at 0.1ms
     private var energyRingWritePos: Int = 0
     private var energyRingCount: Int = 0
     private var energySubsampleCounter: Int = 0
+    private var ringSubsampleTarget: Int = 5  // 48kHz / 5 ≈ 9.6kHz ≈ 0.1ms
 
     // Tuning parameters
     private var hpCutoffHz: Float = 1000
@@ -153,8 +155,10 @@ class TimegrapherEngine {
             energyWritePos = 0
             energySum = 0
 
-            // Ring buffer: 10 seconds at 1ms resolution
-            energyRingCapacity = 10000
+            // Ring buffer: 10 seconds at ~10kHz (0.1ms) resolution
+            ringSubsampleTarget = max(1, Int(actualSampleRate / 10000))  // ~5 at 48kHz
+            let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
+            energyRingCapacity = Int(ringSampleRate * 10)  // 10 seconds
             energyRing = [Float](repeating: 0, count: energyRingCapacity)
 
             inputNode.installTap(onBus: 0, bufferSize: 4096, format: format) { [weak self] buffer, time in
@@ -206,9 +210,9 @@ class TimegrapherEngine {
 
             sampleCounter += 1
 
-            // Store one energy sample per ms into ring buffer
+            // Store energy sample at ~10kHz (every ~5 raw samples at 48kHz)
             energySubsampleCounter += 1
-            if energySubsampleCounter >= energyWindowSize {
+            if energySubsampleCounter >= ringSubsampleTarget {
                 energySubsampleCounter = 0
                 let energy = energySum / Float(energyWindowSize)
                 energyRing[energyRingWritePos] = energy
@@ -221,7 +225,8 @@ class TimegrapherEngine {
 
         // Analyze every ~2 seconds, after at least 5 seconds of data
         let now = CACurrentMediaTime() * 1000
-        let elapsedSec = Double(energyRingCount) / 1000.0
+        let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
+        let elapsedSec = Double(energyRingCount) / ringSampleRate
         if now - lastAnalysisTime > 2000 && elapsedSec >= 5 {
             lastAnalysisTime = now
             analyzeAutocorrelation()
@@ -241,12 +246,13 @@ class TimegrapherEngine {
 
     private func analyzeAutocorrelation() {
         let count = energyRingCount
-        guard count >= 3000 else { return }  // need at least 3 seconds
+        let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
+        guard count >= Int(ringSampleRate * 3) else { return }  // need at least 3 seconds
 
-        // Expected lag in ms (= energy ring indices at 1ms resolution)
-        // BPH → beats per second = BPH/3600 → interval = 3600/BPH seconds = 3600000/BPH ms
-        let expectedLagMs = 3600000.0 / Double(targetBph)
-        let lagCenter = Int(expectedLagMs)
+        // Expected lag in ring samples
+        // BPH → interval = 3600/BPH seconds → lag = interval × ringSampleRate
+        let expectedIntervalSec = 3600.0 / Double(targetBph)
+        let lagCenter = Int(expectedIntervalSec * ringSampleRate)
 
         // Search window: ±5% around expected lag
         let searchRadius = max(1, Int(Double(lagCenter) * 0.05))
@@ -333,24 +339,26 @@ class TimegrapherEngine {
         }
 
         // Rate calculation: how far is the detected interval from the expected interval?
-        // refinedLag is in ms, expectedLagMs is the ideal
-        // drift per tick interval = refinedLag - expectedLagMs (in ms)
-        // rate (s/day) = (drift / expected) × 86400
-        let driftMs = refinedLag - expectedLagMs
-        let rate = (driftMs / expectedLagMs) * 86400.0
+        // refinedLag is in ring samples, convert to seconds
+        let expectedLagSamples = Double(lagCenter)
+        let refinedIntervalSec = refinedLag / ringSampleRate
+        // rate (s/day) = (detected - expected) / expected × 86400
+        let rate = ((refinedLag - expectedLagSamples) / expectedLagSamples) * 86400.0
 
         // Confidence: based on peak ratio and data duration
-        let durationFactor = min(1.0, elapsedSeconds / 60.0)
-        let peakFactor = min(1.0, max(0, (peakRatio - 1.0) / 4.0))  // ratio 1=noise, 5+=strong
+        let elapsedSec = Double(count) / ringSampleRate
+        let durationFactor = min(1.0, elapsedSec / 60.0)
+        let peakFactor = min(1.0, max(0, (peakRatio - 1.0) / 9.0))  // ratio 1=noise, 10+=strong
         let confidence = peakFactor * (0.3 + 0.7 * durationFactor)
 
         // Only report results if there's meaningful periodicity
-        if peakRatio > 1.5 {
+        // Require ratio > 5 to avoid false positives from ambient noise
+        if peakRatio > 5.0 {
             currentRate = (rate * 10).rounded() / 10
-            currentDetectedInterval = refinedLag  // ms
+            currentDetectedInterval = refinedIntervalSec * 1000.0  // ms
             detectedBph = targetBph
             currentConfidence = min(0.99, (confidence * 100).rounded() / 100)
-            peakCount = Int(elapsedSeconds * Double(targetBph) / 3600.0)  // estimated ticks
+            peakCount = Int(elapsedSec * Double(targetBph) / 3600.0)  // estimated ticks
         } else {
             currentRate = nil
             currentConfidence = 0
@@ -379,6 +387,7 @@ class TimegrapherEngine {
     }
 
     private var elapsedSeconds: Double {
-        return Double(energyRingCount) / 1000.0
+        let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
+        return Double(energyRingCount) / ringSampleRate
     }
 }
