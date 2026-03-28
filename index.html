@@ -4451,7 +4451,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.28.14.15';
+const APP_VERSION = '2.36.28.15.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16967,7 +16967,10 @@ window._tgNativeCallback = function(data) {
         beat_error: data.beatError,
         noise_level: data.noiseLevel,
         all_bph_correlations: data.debug.allBphCorrelations,
-        watch_present: _msrWatchPresent
+        watch_present: _msrWatchPresent,
+        noise_floor: data.debug.noiseFloor,
+        threshold: data.debug.threshold,
+        peak_energy: data.debug.peakEnergy
       }).then(() => {});
     }
   }
