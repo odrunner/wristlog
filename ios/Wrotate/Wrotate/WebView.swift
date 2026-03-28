@@ -18,9 +18,10 @@ struct WebView: UIViewRepresentable {
         config.mediaTypesRequiringUserActionForPlayback = []
         config.websiteDataStore = WKWebsiteDataStore.default()
 
-        // JS → Native bridge for auth state changes
+        // JS → Native bridge for auth state changes + timegrapher
         let contentController = config.userContentController
         contentController.add(context.coordinator, name: "auth")
+        contentController.add(context.coordinator, name: "timegrapher")
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
@@ -38,6 +39,7 @@ struct WebView: UIViewRepresentable {
         webView.scrollView.addSubview(refreshControl)
         context.coordinator.refreshControl = refreshControl
         context.coordinator.webView = webView
+        context.coordinator.timegrapherBridge.attach(to: webView)
 
         // Expose webView to parent for reload from offline screen
         DispatchQueue.main.async {
@@ -60,6 +62,7 @@ struct WebView: UIViewRepresentable {
         weak var webView: WKWebView?
         var refreshControl: UIRefreshControl?
         private let oauthManager = OAuthManager.shared
+        private let timegrapherBridge = TimegrapherBridge()
 
         init(parent: WebView) {
             self.parent = parent
@@ -276,6 +279,14 @@ struct WebView: UIViewRepresentable {
             _ userContentController: WKUserContentController,
             didReceive message: WKScriptMessage
         ) {
+            // Route timegrapher messages to its bridge
+            if message.name == "timegrapher" {
+                if let body = message.body as? [String: Any] {
+                    timegrapherBridge.handleMessage(body)
+                }
+                return
+            }
+
             guard let body = message.body as? [String: Any],
                   let event = body["event"] as? String else { return }
 
