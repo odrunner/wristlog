@@ -3157,8 +3157,40 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="modal-section-chevron" id="chv-sec-accuracy">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-accuracy">
-        <!-- Quick-add form -->
+        <!-- Live measurement (native only) -->
+        <div id="tg-live-section" style="display:none;margin-bottom:.75rem;">
+          <div style="display:flex;gap:.5rem;margin-bottom:.5rem;">
+            <button id="tg-listen-btn" class="btn btn-primary btn-sm" onclick="toggleTgListen()" style="flex:1;">Start Listening</button>
+          </div>
+          <div id="tg-live-status" style="display:none;">
+            <div style="margin-bottom:.4rem;">
+              <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Noise Level</label>
+              <div style="background:var(--hover);border-radius:6px;height:8px;overflow:hidden;">
+                <div id="tg-noise-bar" style="height:100%;width:0%;border-radius:6px;transition:width .15s,background .15s;background:#22c55e;"></div>
+              </div>
+              <div id="tg-noise-label" style="font-size:.68rem;color:var(--muted);margin-top:.1rem;">Listening...</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.4rem;">
+              <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
+                <div id="tg-live-rate" style="font-size:1rem;font-weight:700;">—</div>
+                <div style="font-size:.65rem;color:var(--muted);">s/day</div>
+              </div>
+              <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
+                <div id="tg-live-be" style="font-size:1rem;font-weight:700;">—</div>
+                <div style="font-size:.65rem;color:var(--muted);">Beat Error</div>
+              </div>
+              <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
+                <div id="tg-live-ticks" style="font-size:1rem;font-weight:700;">0</div>
+                <div style="font-size:.65rem;color:var(--muted);">Ticks</div>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:.68rem;color:var(--muted);line-height:1.4;">Place the watch crown-side down near the microphone in a quiet room. Keep the phone still.</div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:.65rem 0;">
+        </div>
+        <!-- Manual entry form -->
         <div style="margin-bottom:.65rem;">
+          <div style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em;">Manual Entry</div>
           <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;" id="tg-pos-chips"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem;">
             <div>
@@ -4309,7 +4341,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.27.20.37';
+const APP_VERSION = '2.36.27.20.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16577,9 +16609,11 @@ function clearUserState() {
 }
 
 // ── Timegrapher / Accuracy (inside watch edit modal) ─────────────────────
+const _tgNativeAvailable = !!(window.webkit?.messageHandlers?.timegrapher);
 let _tgPosition = 'dial_up';
 let _tgWatchId = null;
 let _tgEditingId = null;
+let _tgListening = false;
 const TG_POSITIONS = [
   { val: 'dial_up', lbl: 'Dial Up' }, { val: 'dial_down', lbl: 'Dial Down' },
   { val: 'crown_up', lbl: 'Crown Up' }, { val: 'crown_down', lbl: 'Crown Down' },
@@ -16589,6 +16623,7 @@ const TG_POSITIONS = [
 function initTgSection(watchId) {
   _tgWatchId = watchId;
   _tgEditingId = null;
+  _tgListening = false;
   _tgPosition = 'dial_up';
   document.getElementById('tg-pos-chips').innerHTML = TG_POSITIONS.map(p =>
     `<div class="chip${p.val === _tgPosition ? ' selected' : ''}" data-pos="${p.val}" onclick="selectTgPos('${p.val}')">${p.lbl}</div>`
@@ -16598,8 +16633,75 @@ function initTgSection(watchId) {
   document.getElementById('tg-amplitude-input').value = '';
   document.getElementById('tg-notes-input').value = '';
   document.getElementById('tg-bph-select').value = '28800';
+  // Show live measurement section only on native iOS app
+  const liveEl = document.getElementById('tg-live-section');
+  if (liveEl) {
+    liveEl.style.display = _tgNativeAvailable ? '' : 'none';
+    document.getElementById('tg-listen-btn').textContent = 'Start Listening';
+    document.getElementById('tg-live-status').style.display = 'none';
+  }
   loadTgHistory();
 }
+
+function toggleTgListen() {
+  if (!_tgNativeAvailable) return;
+  if (_tgListening) {
+    // Stop
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'stop' });
+    _tgListening = false;
+    document.getElementById('tg-listen-btn').textContent = 'Start Listening';
+  } else {
+    // Start
+    const bph = parseInt(document.getElementById('tg-bph-select').value) || 28800;
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
+    _tgListening = true;
+    document.getElementById('tg-listen-btn').textContent = 'Stop';
+    document.getElementById('tg-live-status').style.display = '';
+    document.getElementById('tg-live-rate').textContent = '—';
+    document.getElementById('tg-live-be').textContent = '—';
+    document.getElementById('tg-live-ticks').textContent = '0';
+  }
+}
+
+// Native → JS callback
+window._tgNativeCallback = function(data) {
+  if (data.event === 'update') {
+    // Update live display
+    const rateEl = document.getElementById('tg-live-rate');
+    const beEl = document.getElementById('tg-live-be');
+    const ticksEl = document.getElementById('tg-live-ticks');
+    const bar = document.getElementById('tg-noise-bar');
+    const lbl = document.getElementById('tg-noise-label');
+
+    if (data.rate != null && data.confidence > 0.1) {
+      const r = data.rate;
+      rateEl.textContent = (r >= 0 ? '+' : '') + r.toFixed(1);
+      rateEl.style.color = Math.abs(r) <= 5 ? '#22c55e' : Math.abs(r) <= 15 ? '#eab308' : '#ef4444';
+      beEl.textContent = data.beatError != null ? data.beatError.toFixed(2) : '—';
+    }
+    ticksEl.textContent = data.tickCount || 0;
+
+    const noisePct = Math.min(100, (data.noiseLevel || 0) * 100);
+    bar.style.width = noisePct + '%';
+    bar.style.background = data.confidence > 0.3 ? '#22c55e' : '#eab308';
+    lbl.textContent = data.confidence > 0.1
+      ? 'Confidence: ' + (data.confidence * 100).toFixed(0) + '% | Interval: ' + (data.detectedIntervalMs || 0).toFixed(1) + 'ms'
+      : 'Analyzing...';
+  } else if (data.event === 'stopped') {
+    _tgListening = false;
+    document.getElementById('tg-listen-btn').textContent = 'Start Listening';
+    // Auto-fill manual entry form with results for saving
+    if (data.rate != null) {
+      document.getElementById('tg-rate-input').value = data.rate.toFixed(1);
+      if (data.beatError != null) document.getElementById('tg-be-input').value = data.beatError.toFixed(2);
+      toast('Measurement complete — review and save below');
+    }
+  } else if (data.event === 'error') {
+    _tgListening = false;
+    document.getElementById('tg-listen-btn').textContent = 'Start Listening';
+    toast(data.message || 'Microphone error', 'error');
+  }
+};
 
 function selectTgPos(pos) {
   _tgPosition = pos;
