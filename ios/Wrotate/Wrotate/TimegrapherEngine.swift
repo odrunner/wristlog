@@ -272,44 +272,44 @@ class TimegrapherEngine {
         var bestCorr: Float = -1
         var correlations = [Float](repeating: 0, count: lagMax - lagMin + 1)
 
-        for lag in lagMin...lagMax {
-            let n = count - lag
-            guard n > 0 else { continue }
-            var corr: Float = 0
-            vDSP_dotpr(signal, 1, &signal[lag], 1, &corr, vDSP_Length(n))
-            corr /= Float(n)
-            correlations[lag - lagMin] = corr
-            if corr > bestCorr {
-                bestCorr = corr
-                bestLag = lag
+        signal.withUnsafeBufferPointer { buf in
+            let ptr = buf.baseAddress!
+            for lag in lagMin...lagMax {
+                let n = count - lag
+                guard n > 0 else { continue }
+                var corr: Float = 0
+                vDSP_dotpr(ptr, 1, ptr + lag, 1, &corr, vDSP_Length(n))
+                corr /= Float(n)
+                correlations[lag - lagMin] = corr
+                if corr > bestCorr {
+                    bestCorr = corr
+                    bestLag = lag
+                }
             }
         }
-
-        // Compute autocorrelation at lag=0 (signal power) for normalization
-        var power: Float = 0
-        vDSP_dotpr(signal, 1, signal, 1, &power, vDSP_Length(count))
-        power /= Float(count)
 
         // Baseline: average correlation at distant lags (noise floor)
         // Use lags far from the peak (±30% away from expected)
         let baselineLagA = max(1, lagCenter / 2)
         let baselineLagB = min(count / 2 - 1, lagCenter * 2)
         var baselineSum: Float = 0
-        var baselineCount = 0
+        var baselineN = 0
 
-        // Sample a few points away from the expected lag
-        for testLag in [baselineLagA, baselineLagB] {
-            if testLag < lagMin || testLag > lagMax {
-                let n = count - testLag
-                guard n > 0 else { continue }
-                var corr: Float = 0
-                vDSP_dotpr(signal, 1, &signal[testLag], 1, &corr, vDSP_Length(n))
-                corr /= Float(n)
-                baselineSum += corr
-                baselineCount += 1
+        signal.withUnsafeBufferPointer { buf in
+            let ptr = buf.baseAddress!
+            for testLag in [baselineLagA, baselineLagB] {
+                if testLag < lagMin || testLag > lagMax {
+                    let n = count - testLag
+                    guard n > 0 else { continue }
+                    var corr: Float = 0
+                    vDSP_dotpr(ptr, 1, ptr + testLag, 1, &corr, vDSP_Length(n))
+                    corr /= Float(n)
+                    baselineSum += corr
+                    baselineN += 1
+                }
             }
         }
-        let baseline = baselineCount > 0 ? baselineSum / Float(baselineCount) : 0
+        let baseline = baselineN > 0 ? baselineSum / Float(baselineN) : 0
 
         // Peak-to-baseline ratio: strong periodicity → high ratio
         let peakRatio = baseline > 0 ? Double(bestCorr / baseline) : (bestCorr > 0 ? 10.0 : 0)
