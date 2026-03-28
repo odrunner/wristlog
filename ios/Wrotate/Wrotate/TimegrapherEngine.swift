@@ -75,10 +75,11 @@ class TimegrapherEngine {
     // Sensitivity
     private var sensitivityMultiplier: Float = 1.5
 
-    // Tick detection
+    // Tick detection — rising edge required
     private var lastTickSample: Int64 = -100000
     private var minGapSamples: Int64 = 0
     private var tickSamples: [Int64] = []
+    private var wasAboveThreshold: Bool = false
 
     // Results
     private var currentRate: Double? = nil
@@ -115,6 +116,7 @@ class TimegrapherEngine {
         hpPrevOut = 0
         lastTickSample = -100000
         tickSamples = []
+        wasAboveThreshold = false
         energySum = 0
         energyWritePos = 0
         energyHistoryWritePos = 0
@@ -186,15 +188,16 @@ class TimegrapherEngine {
 
         // Recompute noise floor every 100 entries (~100ms)
         if energyHistoryCount >= 100 && energyHistoryWritePos % 100 == 0 {
-            // Take 30th percentile of recent energy values
-            // This represents the "quiet" level — ticks are transient peaks above this
+            // Take 50th percentile (median) of recent energy values
+            // Threshold = median × multiplier rejects ambient noise well
+            // because ticks are brief transients far above the median
             let count = energyHistoryCount
             var sorted = [Float](repeating: 0, count: count)
             for i in 0..<count {
                 sorted[i] = energyHistory[i]
             }
             sorted.sort()
-            let pIdx = count * 30 / 100  // 30th percentile
+            let pIdx = count * 50 / 100  // 50th percentile (median)
             computedNoiseFloor = sorted[pIdx]
         }
     }
@@ -235,14 +238,20 @@ class TimegrapherEngine {
             guard sampleCounter > Int64(actualSampleRate * 2) else { continue }
             guard computedNoiseFloor > 0 else { continue }
 
-            // Tick detection
+            // Tick detection — require rising edge (energy must cross threshold from below)
+            // This rejects sustained ambient noise that stays above threshold
             let threshold = computedNoiseFloor * sensitivityMultiplier
-            if energy > threshold && (sampleCounter - lastTickSample) > minGapSamples {
-                tickSamples.append(sampleCounter)
-                lastTickSample = sampleCounter
-                if tickSamples.count > 10000 {
-                    tickSamples.removeFirst(tickSamples.count - 10000)
+            if energy > threshold {
+                if !wasAboveThreshold && (sampleCounter - lastTickSample) > minGapSamples {
+                    tickSamples.append(sampleCounter)
+                    lastTickSample = sampleCounter
+                    if tickSamples.count > 10000 {
+                        tickSamples.removeFirst(tickSamples.count - 10000)
+                    }
                 }
+                wasAboveThreshold = true
+            } else {
+                wasAboveThreshold = false
             }
         }
         totalSamplesProcessed += Int64(frameCount)
