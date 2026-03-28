@@ -2,7 +2,7 @@ import AVFoundation
 import Accelerate
 
 /// Captures microphone audio via AVAudioEngine and detects mechanical watch tick sounds
-/// using high-resolution autocorrelation on raw audio for robust, noise-tolerant detection.
+/// using FFT-based autocorrelation on high-pass filtered audio for sample-level precision.
 class TimegrapherEngine {
 
     struct Update {
@@ -19,7 +19,7 @@ class TimegrapherEngine {
         let rate: Double?
         let beatError: Double?
         let tickCount: Int
-        let ticks: [Double]        // timestamps in ms since start
+        let ticks: [Double]
     }
 
     var onUpdate: ((Update) -> Void)?
@@ -31,11 +31,21 @@ class TimegrapherEngine {
     private var actualSampleRate: Double = 44100
     private var totalSamplesProcessed: Int64 = 0
 
-    // Ring buffer for raw audio (~4 seconds)
+    // Ring buffer for raw audio (~6 seconds for good averaging)
     private var ringBuffer: [Float] = []
     private var ringCapacity: Int = 0
     private var ringWritePos: Int = 0
     private var ringSamplesWritten: Int64 = 0
+
+    // High-pass filter state (1st order IIR)
+    private var hpPrevIn: Float = 0
+    private var hpPrevOut: Float = 0
+    private var hpAlpha: Float = 0.95  // ~1kHz cutoff at 44.1kHz
+
+    // FFT setup
+    private var fftSetup: FFTSetup?
+    private var fftLog2N: vDSP_Length = 0
+    private var fftN: Int = 0
 
     // Results
     private var currentRate: Double? = nil
@@ -48,7 +58,6 @@ class TimegrapherEngine {
 
     private let standardBphs = [18000, 21600, 25200, 28800, 36000]
 
-    // Analysis timing
     private var lastAnalysisTime: Double = 0
 
     func start(bph: Int, sensitivity: Int) {
@@ -63,6 +72,8 @@ class TimegrapherEngine {
         tickCount = 0
         totalSamplesProcessed = 0
         lastAnalysisTime = 0
+        hpPrevIn = 0
+        hpPrevOut = 0
 
         do {
             let session = AVAudioSession.sharedInstance()
@@ -77,11 +88,23 @@ class TimegrapherEngine {
             let format = inputNode.outputFormat(forBus: 0)
             actualSampleRate = format.sampleRate
 
-            // Ring buffer: 4 seconds of audio
-            ringCapacity = Int(actualSampleRate * 4)
+            // High-pass filter coefficient: alpha = RC/(RC+dt), cutoff ~1kHz
+            let cutoffHz: Float = 800
+            let dt = 1.0 / Float(actualSampleRate)
+            let rc = 1.0 / (2.0 * Float.pi * cutoffHz)
+            hpAlpha = rc / (rc + dt)
+
+            // Ring buffer: 6 seconds of audio
+            ringCapacity = Int(actualSampleRate * 6)
             ringBuffer = [Float](repeating: 0, count: ringCapacity)
             ringWritePos = 0
             ringSamplesWritten = 0
+
+            // FFT: use power-of-2 size that fits ~4 seconds
+            let desiredN = Int(actualSampleRate * 4)
+            fftLog2N = vDSP_Length(ceil(log2(Double(desiredN))))
+            fftN = 1 << Int(fftLog2N)
+            fftSetup = vDSP_create_fftsetup(fftLog2N, FFTRadix(kFFTRadix2))
 
             inputNode.installTap(onBus: 0, bufferSize: 2048, format: format) { [weak self] buffer, time in
                 self?.processAudioBuffer(buffer)
@@ -101,6 +124,11 @@ class TimegrapherEngine {
         audioEngine?.stop()
         audioEngine = nil
 
+        if let setup = fftSetup {
+            vDSP_destroy_fftsetup(setup)
+            fftSetup = nil
+        }
+
         try? AVAudioSession.sharedInstance().setActive(false)
 
         return Result(
@@ -117,22 +145,26 @@ class TimegrapherEngine {
         guard isRunning, let channelData = buffer.floatChannelData?[0] else { return }
         let frameCount = Int(buffer.frameLength)
 
-        // Compute noise level
+        // Compute noise level from raw signal
         var rms: Float = 0
         vDSP_rmsqv(channelData, 1, &rms, vDSP_Length(frameCount))
         currentNoiseLevel = min(1.0, Double(rms) * 10)
 
-        // Write to ring buffer
+        // High-pass filter and write to ring buffer
         for i in 0..<frameCount {
-            ringBuffer[ringWritePos] = channelData[i]
+            let x = channelData[i]
+            let y = hpAlpha * (hpPrevOut + x - hpPrevIn)
+            hpPrevIn = x
+            hpPrevOut = y
+            ringBuffer[ringWritePos] = y
             ringWritePos = (ringWritePos + 1) % ringCapacity
         }
         ringSamplesWritten += Int64(frameCount)
         totalSamplesProcessed += Int64(frameCount)
 
-        // Run analysis every ~500ms, after we have at least 2 seconds of data
+        // Run analysis every ~800ms, after at least 3 seconds of data
         let now = CACurrentMediaTime() * 1000
-        if now - lastAnalysisTime > 500 && ringSamplesWritten > Int64(actualSampleRate * 2) {
+        if now - lastAnalysisTime > 800 && ringSamplesWritten > Int64(actualSampleRate * 3) {
             lastAnalysisTime = now
             runAnalysis()
         }
@@ -153,153 +185,180 @@ class TimegrapherEngine {
         }
     }
 
-    // MARK: - High-resolution autocorrelation analysis
+    // MARK: - FFT-based autocorrelation
 
     private func runAnalysis() {
-        // Build rectified energy envelope at ~0.5ms resolution
-        let hopSamples = max(1, Int(actualSampleRate * 0.0005))  // 0.5ms hop
-        let windowSize = hopSamples * 2  // 1ms window for energy
-
+        guard let setup = fftSetup else { return }
+        let N = fftN
         let availableSamples = min(Int(ringSamplesWritten), ringCapacity)
-        let envelopeLength = availableSamples / hopSamples
-        guard envelopeLength > 100 else { return }
+        guard availableSamples >= N else { return }
 
-        // Compute energy envelope from ring buffer
-        var envelope = [Float](repeating: 0, count: envelopeLength)
-        for i in 0..<envelopeLength {
-            let startIdx = (ringWritePos - availableSamples + i * hopSamples + ringCapacity) % ringCapacity
-            var energy: Float = 0
-            for j in 0..<min(windowSize, availableSamples - i * hopSamples) {
-                let idx = (startIdx + j) % ringCapacity
-                let s = ringBuffer[idx]
-                energy += s * s
-            }
-            envelope[i] = energy / Float(windowSize)
+        // Extract the most recent N samples from ring buffer into a linear array
+        var signal = [Float](repeating: 0, count: N)
+        let startPos = (ringWritePos - N + ringCapacity) % ringCapacity
+        for i in 0..<N {
+            signal[i] = ringBuffer[(startPos + i) % ringCapacity]
         }
 
-        // Remove DC / slow trends from envelope
+        // Rectify the signal (absolute value) to create an envelope
+        // This converts the oscillating tick waveform into positive energy pulses
+        vDSP_vabs(signal, 1, &signal, 1, vDSP_Length(N))
+
+        // Apply a simple smoothing (moving average over ~0.5ms) to create a cleaner envelope
+        let smoothWindow = max(1, Int(actualSampleRate * 0.0005))
+        if smoothWindow > 1 {
+            var smoothed = [Float](repeating: 0, count: N)
+            var windowF = Float(smoothWindow)
+            // Use a simple box filter via vDSP_vswsum isn't ideal, just do manual
+            var runSum: Float = 0
+            for i in 0..<smoothWindow { runSum += signal[i] }
+            smoothed[0] = runSum / windowF
+            for i in 1..<N {
+                if i + smoothWindow - 1 < N {
+                    runSum += signal[i + smoothWindow - 1]
+                }
+                if i > 0 {
+                    runSum -= signal[i - 1]
+                }
+                smoothed[i] = runSum / windowF
+            }
+            signal = smoothed
+        }
+
+        // Remove DC component
         var mean: Float = 0
-        vDSP_meanv(envelope, 1, &mean, vDSP_Length(envelopeLength))
+        vDSP_meanv(signal, 1, &mean, vDSP_Length(N))
         var negMean = -mean
-        vDSP_vsadd(envelope, 1, &negMean, &envelope, 1, vDSP_Length(envelopeLength))
+        vDSP_vsadd(signal, 1, &negMean, &signal, 1, vDSP_Length(N))
 
-        // Try each standard BPH and find best autocorrelation
-        let hopMs = Double(hopSamples) / actualSampleRate * 1000.0
+        // Compute autocorrelation via FFT:
+        // autocorr = IFFT(|FFT(signal)|²)
 
-        var bestCorrelation: Float = -1
-        var bestBph = 28800
-        var bestLagBins: Int = 0
+        // Prepare split complex for FFT
+        let halfN = N / 2
+        var realp = [Float](repeating: 0, count: halfN)
+        var imagp = [Float](repeating: 0, count: halfN)
 
-        // Compute envelope energy once for normalization
-        var envelopeEnergy: Float = 0
-        vDSP_svesq(envelope, 1, &envelopeEnergy, vDSP_Length(envelopeLength))
-        guard envelopeEnergy > 0 else { return }
+        // Pack signal into split complex format
+        signal.withUnsafeBufferPointer { sigBuf in
+            realp.withUnsafeMutableBufferPointer { rBuf in
+                imagp.withUnsafeMutableBufferPointer { iBuf in
+                    var splitComplex = DSPSplitComplex(
+                        realp: rBuf.baseAddress!,
+                        imagp: iBuf.baseAddress!
+                    )
+                    sigBuf.baseAddress!.withMemoryRebound(to: DSPComplex.self, capacity: halfN) { complexPtr in
+                        vDSP_ctoz(complexPtr, 2, &splitComplex, 1, vDSP_Length(halfN))
+                    }
+                }
+            }
+        }
 
-        envelope.withUnsafeBufferPointer { envPtr in
-            guard let base = envPtr.baseAddress else { return }
+        // Forward FFT
+        realp.withUnsafeMutableBufferPointer { rBuf in
+            imagp.withUnsafeMutableBufferPointer { iBuf in
+                var splitComplex = DSPSplitComplex(
+                    realp: rBuf.baseAddress!,
+                    imagp: iBuf.baseAddress!
+                )
+                vDSP_fft_zrip(setup, &splitComplex, 1, fftLog2N, FFTDirection(FFT_FORWARD))
 
-            for candidateBph in standardBphs {
-                let expectedIntervalMs = 3600000.0 / Double(candidateBph)
-                let centerLag = Int(round(expectedIntervalMs / hopMs))
+                // Compute power spectrum: |FFT|² = real² + imag²
+                // Store back in real, zero imag
+                vDSP_zvmags(&splitComplex, 1, rBuf.baseAddress!, 1, vDSP_Length(halfN))
+                // Move magnitude to real part, zero imaginary
+                memset(iBuf.baseAddress!, 0, halfN * MemoryLayout<Float>.size)
 
-                // Search ±10% around expected interval
-                let searchRange = max(2, Int(round(Double(centerLag) * 0.1)))
-                let minLag = max(1, centerLag - searchRange)
-                let maxLag = min(envelopeLength / 2, centerLag + searchRange)
+                // Inverse FFT to get autocorrelation
+                vDSP_fft_zrip(setup, &splitComplex, 1, fftLog2N, FFTDirection(FFT_INVERSE))
 
-                guard maxLag > minLag else { continue }
-
-                var localBestCorr: Float = -1
-                var localBestLag = centerLag
-
-                for lag in minLag...maxLag {
-                    let pairs = envelopeLength - lag
-                    guard pairs > 0 else { continue }
-
-                    var corr: Float = 0
-                    vDSP_dotpr(base, 1, base.advanced(by: lag), 1, &corr, vDSP_Length(pairs))
-                    corr /= envelopeEnergy
-
-                    if corr > localBestCorr {
-                        localBestCorr = corr
-                        localBestLag = lag
+                // Unpack back to linear array for analysis
+                var autocorr = [Float](repeating: 0, count: N)
+                autocorr.withUnsafeMutableBufferPointer { outBuf in
+                    outBuf.baseAddress!.withMemoryRebound(to: DSPComplex.self, capacity: halfN) { complexPtr in
+                        vDSP_ztoc(&splitComplex, 1, complexPtr, 2, vDSP_Length(halfN))
                     }
                 }
 
-                if localBestCorr > bestCorrelation {
-                    bestCorrelation = localBestCorr
-                    bestBph = candidateBph
-                    bestLagBins = localBestLag
+                // Normalize by autocorr[0] (the energy at zero lag)
+                let zeroPeak = autocorr[0]
+                guard zeroPeak > 0 else { return }
+                var scale = 1.0 / zeroPeak
+                vDSP_vsmul(autocorr, 1, &scale, &autocorr, 1, vDSP_Length(N))
+
+                // Search for best BPH match
+                var bestCorrelation: Float = 0
+                var bestBphCandidate = 28800
+                var bestLag = 0
+
+                for candidateBph in self.standardBphs {
+                    let expectedIntervalSec = 3600.0 / Double(candidateBph)
+                    let centerLag = Int(round(expectedIntervalSec * self.actualSampleRate))
+
+                    // Search ±8% around expected
+                    let searchRange = max(10, Int(round(Double(centerLag) * 0.08)))
+                    let minLag = max(1, centerLag - searchRange)
+                    let maxLag = min(N / 4, centerLag + searchRange)
+
+                    guard maxLag > minLag, maxLag < N else { continue }
+
+                    for lag in minLag...maxLag {
+                        let corr = autocorr[lag]
+                        if corr > bestCorrelation {
+                            bestCorrelation = corr
+                            bestBphCandidate = candidateBph
+                            bestLag = lag
+                        }
+                    }
                 }
-            }
-        }
 
-        guard bestCorrelation > 0.01 else {
-            currentConfidence = 0
-            return
-        }
+                guard bestCorrelation > 0.02, bestLag > 0 else {
+                    self.currentConfidence = 0
+                    return
+                }
 
-        // Parabolic interpolation for sub-bin accuracy
-        let lag = bestLagBins
-        envelope.withUnsafeBufferPointer { envPtr in
-            guard let base = envPtr.baseAddress, lag > 1, lag < envelopeLength / 2 - 1 else {
-                currentDetectedInterval = Double(lag) * hopMs
-                return
-            }
+                // Parabolic interpolation for sub-sample accuracy
+                var refinedLag = Double(bestLag)
+                if bestLag > 1 && bestLag < N - 1 {
+                    let ym1 = autocorr[bestLag - 1]
+                    let y0 = autocorr[bestLag]
+                    let yp1 = autocorr[bestLag + 1]
+                    let denom = ym1 - 2 * y0 + yp1
+                    if abs(denom) > 1e-10 {
+                        let delta = 0.5 * Double(ym1 - yp1) / Double(denom)
+                        refinedLag = Double(bestLag) + delta
+                    }
+                }
 
-            var corrMinus: Float = 0
-            var corrCenter: Float = 0
-            var corrPlus: Float = 0
+                let detectedIntervalMs = refinedLag / self.actualSampleRate * 1000.0
+                let expectedInterval = 3600000.0 / Double(bestBphCandidate)
+                let rate = ((detectedIntervalMs - expectedInterval) / expectedInterval) * 86400.0
 
-            vDSP_dotpr(base, 1, base.advanced(by: lag - 1), 1, &corrMinus, vDSP_Length(envelopeLength - lag + 1))
-            corrMinus /= envelopeEnergy
+                self.currentDetectedInterval = detectedIntervalMs
+                self.detectedBph = bestBphCandidate
+                self.currentRate = (rate * 10).rounded() / 10
+                self.currentConfidence = Double(min(1.0, bestCorrelation * 3))
+                self.currentConfidence = (self.currentConfidence * 100).rounded() / 100
 
-            vDSP_dotpr(base, 1, base.advanced(by: lag), 1, &corrCenter, vDSP_Length(envelopeLength - lag))
-            corrCenter /= envelopeEnergy
+                // Tick count estimate
+                let elapsedMs = Double(self.totalSamplesProcessed) / self.actualSampleRate * 1000.0
+                if detectedIntervalMs > 0 {
+                    self.tickCount = Int(elapsedMs / detectedIntervalMs)
+                }
 
-            vDSP_dotpr(base, 1, base.advanced(by: lag + 1), 1, &corrPlus, vDSP_Length(envelopeLength - lag - 1))
-            corrPlus /= envelopeEnergy
-
-            let denom = corrMinus - 2 * corrCenter + corrPlus
-            if abs(denom) > 1e-10 {
-                let delta = 0.5 * (corrMinus - corrPlus) / denom
-                currentDetectedInterval = (Double(lag) + Double(delta)) * hopMs
-            } else {
-                currentDetectedInterval = Double(lag) * hopMs
-            }
-        }
-
-        detectedBph = bestBph
-        currentConfidence = Double(max(0, min(1, bestCorrelation * 2)))
-        currentConfidence = (currentConfidence * 100).rounded() / 100
-
-        // Rate: deviation from detected BPH's expected interval
-        let expectedInterval = 3600000.0 / Double(bestBph)
-        currentRate = ((currentDetectedInterval - expectedInterval) / expectedInterval) * 86400.0
-        currentRate = (currentRate! * 10).rounded() / 10
-
-        // Estimate tick count from elapsed time
-        let elapsedMs = Double(totalSamplesProcessed) / actualSampleRate * 1000.0
-        if currentDetectedInterval > 0 {
-            tickCount = Int(elapsedMs / currentDetectedInterval)
-        }
-
-        // Beat error: compare autocorrelation at lag vs 2*lag
-        let doubleLag = lag * 2
-        if doubleLag < envelopeLength / 2 {
-            envelope.withUnsafeBufferPointer { envPtr in
-                guard let base = envPtr.baseAddress else { return }
-                var corrDouble: Float = 0
-                let pairsD = envelopeLength - doubleLag
-                vDSP_dotpr(base, 1, base.advanced(by: doubleLag), 1, &corrDouble, vDSP_Length(pairsD))
-                corrDouble /= envelopeEnergy
-
-                if corrDouble > bestCorrelation {
-                    let ratio = Double(corrDouble - bestCorrelation) / Double(corrDouble)
-                    currentBeatError = ratio * currentDetectedInterval * 0.5
-                    currentBeatError = (currentBeatError! * 100).rounded() / 100
+                // Beat error: compare correlation at lag vs 2*lag
+                let doubleLag = bestLag * 2
+                if doubleLag < N / 2 {
+                    let corrDouble = autocorr[doubleLag]
+                    if corrDouble > bestCorrelation {
+                        let ratio = Double(corrDouble - bestCorrelation) / Double(corrDouble)
+                        self.currentBeatError = ratio * detectedIntervalMs * 0.5
+                        self.currentBeatError = (self.currentBeatError! * 100).rounded() / 100
+                    } else {
+                        self.currentBeatError = 0
+                    }
                 } else {
-                    currentBeatError = 0
+                    self.currentBeatError = 0
                 }
             }
         }
