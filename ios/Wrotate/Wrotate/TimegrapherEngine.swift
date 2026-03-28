@@ -69,7 +69,7 @@ class TimegrapherEngine {
 
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.measurement, mode: .default, options: [])
+            try session.setCategory(.record, mode: .measurement, options: [])
             try session.setPreferredSampleRate(sampleRate)
             try session.setActive(true)
 
