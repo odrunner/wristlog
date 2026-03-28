@@ -3157,11 +3157,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="modal-section-chevron" id="chv-sec-accuracy">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-accuracy">
-        <!-- Live measurement (native only) -->
-        <div id="tg-live-section" style="display:none;margin-bottom:.75rem;">
-          <div style="display:flex;gap:.5rem;margin-bottom:.5rem;">
-            <button id="tg-listen-btn" class="btn btn-primary btn-sm" onclick="toggleTgListen()" style="flex:1;">Start Listening</button>
-          </div>
+        <!-- Listen button + live results -->
+        <div style="margin-bottom:.65rem;">
+          <button id="tg-listen-btn" class="btn btn-ghost btn-sm" onclick="toggleTgListen()" style="width:100%;margin-bottom:.5rem;display:flex;align-items:center;justify-content:center;gap:.4rem;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            Start Listening
+          </button>
+          <div id="tg-mic-warning" style="display:none;font-size:.75rem;color:#ef4444;margin-bottom:.5rem;line-height:1.4;"></div>
           <div id="tg-live-status" style="display:none;">
             <div style="margin-bottom:.4rem;">
               <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Noise Level</label>
@@ -3184,10 +3186,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
                 <div style="font-size:.65rem;color:var(--muted);">Ticks</div>
               </div>
             </div>
+            <div style="font-size:.68rem;color:var(--muted);line-height:1.4;margin-bottom:.4rem;">Place the watch crown-side down near the microphone in a quiet room.</div>
           </div>
-          <div style="font-size:.68rem;color:var(--muted);line-height:1.4;">Place the watch crown-side down near the microphone in a quiet room. Keep the phone still.</div>
-          <hr style="border:none;border-top:1px solid var(--border);margin:.65rem 0;">
         </div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:0 0 .65rem 0;">
         <!-- Manual entry form -->
         <div style="margin-bottom:.65rem;">
           <div style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em;">Manual Entry</div>
@@ -4341,7 +4343,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.27.20.56';
+const APP_VERSION = '2.36.27.20.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16633,33 +16635,153 @@ function initTgSection(watchId) {
   document.getElementById('tg-amplitude-input').value = '';
   document.getElementById('tg-notes-input').value = '';
   document.getElementById('tg-bph-select').value = '28800';
-  // Show live measurement section only on native iOS app
-  const liveEl = document.getElementById('tg-live-section');
-  if (liveEl) {
-    liveEl.style.display = _tgHasNative() ? '' : 'none';
-    document.getElementById('tg-listen-btn').textContent = 'Start Listening';
-    document.getElementById('tg-live-status').style.display = 'none';
-  }
+  document.getElementById('tg-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Start Listening';
+  document.getElementById('tg-live-status').style.display = 'none';
+  document.getElementById('tg-mic-warning').style.display = 'none';
   loadTgHistory();
 }
 
-function toggleTgListen() {
-  if (!_tgHasNative()) return;
+// Web Audio API fallback for mic listening
+let _tgAudioCtx = null, _tgStream = null, _tgScriptNode = null;
+
+async function toggleTgListen() {
   if (_tgListening) {
-    // Stop
-    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'stop' });
-    _tgListening = false;
-    document.getElementById('tg-listen-btn').textContent = 'Start Listening';
-  } else {
-    // Start
+    stopTgListen();
+    return;
+  }
+  // Try native bridge first
+  if (_tgHasNative()) {
     const bph = parseInt(document.getElementById('tg-bph-select').value) || 28800;
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
     _tgListening = true;
-    document.getElementById('tg-listen-btn').textContent = 'Stop';
+    document.getElementById('tg-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
     document.getElementById('tg-live-status').style.display = '';
     document.getElementById('tg-live-rate').textContent = '—';
     document.getElementById('tg-live-be').textContent = '—';
     document.getElementById('tg-live-ticks').textContent = '0';
+    return;
+  }
+  // Fall back to Web Audio API
+  const warn = document.getElementById('tg-mic-warning');
+  warn.style.display = 'none';
+  if (!navigator.mediaDevices?.getUserMedia) {
+    warn.textContent = 'Microphone not available in this browser.';
+    warn.style.display = 'block';
+    return;
+  }
+  try {
+    _tgStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
+  } catch (e) {
+    warn.textContent = e.name === 'NotAllowedError' ? 'Microphone permission denied.' : 'Could not access microphone: ' + e.message;
+    warn.style.display = 'block';
+    return;
+  }
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    _tgAudioCtx = new AC();
+    if (_tgAudioCtx.state === 'suspended') await _tgAudioCtx.resume();
+    const source = _tgAudioCtx.createMediaStreamSource(_tgStream);
+    const scriptNode = _tgAudioCtx.createScriptProcessor(2048, 1, 1);
+    _tgScriptNode = scriptNode;
+    _tgListening = true;
+    document.getElementById('tg-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
+    document.getElementById('tg-live-status').style.display = '';
+    document.getElementById('tg-live-rate').textContent = '—';
+    document.getElementById('tg-live-be').textContent = '—';
+    document.getElementById('tg-live-ticks').textContent = '0';
+    warn.innerHTML = 'Web audio mode — accuracy may be limited. For best results, use the <b>WRotate iOS app</b>.';
+    warn.style.color = '#eab308';
+    warn.style.display = 'block';
+
+    const bph = parseInt(document.getElementById('tg-bph-select').value) || 28800;
+    const expectedInterval = 3600000 / bph;
+    const sampleRate = _tgAudioCtx.sampleRate;
+    const WINDOW = 64;
+    const windowDur = WINDOW / sampleRate * 1000;
+    const envCap = Math.ceil(10000 / windowDur);
+    const envelope = new Float32Array(envCap);
+    let envW = 0, envN = 0, lastAnalysis = 0;
+    let acRate = null, acBE = null, acConf = 0, acInterval = 0;
+    const minLag = Math.max(2, Math.round((expectedInterval * 0.7) / windowDur));
+    const maxLag = Math.round((expectedInterval * 1.3) / windowDur);
+
+    scriptNode.onaudioprocess = function(e) {
+      if (!_tgListening) return;
+      const samples = e.inputBuffer.getChannelData(0);
+      const now = performance.now();
+      let maxAmp = 0;
+      for (let i = 0; i < samples.length; i++) { const a = Math.abs(samples[i]); if (a > maxAmp) maxAmp = a; }
+      const bar = document.getElementById('tg-noise-bar');
+      const lbl = document.getElementById('tg-noise-label');
+      bar.style.width = Math.min(100, maxAmp * 200) + '%';
+
+      for (let s = 0; s + WINDOW <= samples.length; s += WINDOW) {
+        let en = 0;
+        for (let j = s; j < s + WINDOW; j++) en += samples[j] * samples[j];
+        envelope[envW % envCap] = en / WINDOW;
+        envW++; envN = Math.min(envN + 1, envCap);
+      }
+
+      if (now - lastAnalysis > 1000 && envN > envCap * 0.3) {
+        lastAnalysis = now;
+        let mean = 0;
+        for (let i = 0; i < envN; i++) mean += envelope[i];
+        mean /= envN;
+        let variance = 0;
+        for (let i = 0; i < envN; i++) { const d = envelope[i] - mean; variance += d * d; }
+        variance /= envN;
+        if (variance > 0) {
+          let bestLag = 0, bestCorr = -1;
+          for (let lag = minLag; lag <= maxLag && lag < envN / 2; lag++) {
+            let corr = 0; const pairs = envN - lag;
+            for (let i = 0; i < pairs; i++) corr += (envelope[i] - mean) * (envelope[(i + lag) % envCap] - mean);
+            corr = corr / (pairs * variance);
+            if (corr > bestCorr) { bestCorr = corr; bestLag = lag; }
+          }
+          acInterval = bestLag * windowDur;
+          acConf = Math.max(0, bestCorr);
+          acRate = Math.round(((acInterval - expectedInterval) / expectedInterval) * 864000) / 10;
+        }
+      }
+
+      if (acRate !== null && acConf > 0.1) {
+        const rateEl = document.getElementById('tg-live-rate');
+        rateEl.textContent = (acRate >= 0 ? '+' : '') + acRate;
+        rateEl.style.color = Math.abs(acRate) <= 5 ? '#22c55e' : Math.abs(acRate) <= 15 ? '#eab308' : '#ef4444';
+        bar.style.background = acConf > 0.3 ? '#22c55e' : '#eab308';
+        lbl.textContent = 'Confidence: ' + (acConf * 100).toFixed(0) + '%';
+      } else {
+        lbl.textContent = envN < envCap * 0.3 ? 'Accumulating...' : 'Analyzing...';
+        bar.style.background = '#3b82f6';
+      }
+      const output = e.outputBuffer.getChannelData(0);
+      for (let i = 0; i < output.length; i++) output[i] = 0;
+    };
+    source.connect(scriptNode);
+    scriptNode.connect(_tgAudioCtx.destination);
+  } catch (e) {
+    warn.textContent = 'Audio setup failed: ' + e.message;
+    warn.style.display = 'block';
+    if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
+  }
+}
+
+function stopTgListen() {
+  _tgListening = false;
+  if (_tgHasNative()) {
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'stop' });
+  }
+  if (_tgScriptNode) { _tgScriptNode.disconnect(); _tgScriptNode = null; }
+  if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
+  if (_tgAudioCtx) { _tgAudioCtx.close().catch(() => {}); _tgAudioCtx = null; }
+  document.getElementById('tg-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Start Listening';
+  // Auto-fill rate if we got a result
+  const rateEl = document.getElementById('tg-live-rate');
+  if (rateEl.textContent !== '—') {
+    document.getElementById('tg-rate-input').value = rateEl.textContent;
+    const beEl = document.getElementById('tg-live-be');
+    if (beEl.textContent !== '—') document.getElementById('tg-be-input').value = beEl.textContent;
+    toast('Measurement complete — review and save below');
   }
 }
 
