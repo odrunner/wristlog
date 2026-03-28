@@ -4343,7 +4343,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.27.22.27';
+const APP_VERSION = '2.36.27.22.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16810,8 +16810,13 @@ window._tgNativeCallback = function(data) {
     const noisePct = Math.min(100, (data.noiseLevel || 0) * 100);
     bar.style.width = noisePct + '%';
     bar.style.background = data.confidence > 0.3 ? '#22c55e' : '#eab308';
+    // Auto-update BPH dropdown if detected
+    if (data.detectedBph) {
+      const bphSel = document.getElementById('tg-bph-select');
+      if (bphSel.value !== String(data.detectedBph)) bphSel.value = String(data.detectedBph);
+    }
     lbl.textContent = data.confidence > 0.1
-      ? 'Confidence: ' + (data.confidence * 100).toFixed(0) + '% | Interval: ' + (data.detectedIntervalMs || 0).toFixed(1) + 'ms'
+      ? 'Confidence: ' + (data.confidence * 100).toFixed(0) + '%' + (data.detectedBph ? ' | ' + data.detectedBph.toLocaleString() + ' bph' : '') + ' | Interval: ' + (data.detectedIntervalMs || 0).toFixed(1) + 'ms'
       : 'Analyzing...';
   } else if (data.event === 'stopped') {
     _tgListening = false;

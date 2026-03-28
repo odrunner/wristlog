@@ -51,7 +51,8 @@ class TimegrapherBridge {
                         "tickCount": update.tickCount,
                         "confidence": update.confidence,
                         "noiseLevel": update.noiseLevel,
-                        "detectedIntervalMs": update.detectedIntervalMs
+                        "detectedIntervalMs": update.detectedIntervalMs,
+                        "detectedBph": update.detectedBph as Any
                     ])
                 }
 

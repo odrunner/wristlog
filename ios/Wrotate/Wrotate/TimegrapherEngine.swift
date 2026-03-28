@@ -12,6 +12,7 @@ class TimegrapherEngine {
         let confidence: Double     // 0–1
         let noiseLevel: Double     // 0–1
         let detectedIntervalMs: Double
+        let detectedBph: Int?      // auto-detected BPH
     }
 
     struct Result {
@@ -46,6 +47,8 @@ class TimegrapherEngine {
     private var currentConfidence: Double = 0
     private var currentDetectedInterval: Double = 0
     private var currentNoiseLevel: Double = 0
+    private var detectedBph: Int? = nil
+    private let standardBphs = [18000, 21600, 25200, 28800, 36000]
 
     func start(bph: Int, sensitivity: Int) {
         guard !isRunning else { return }
@@ -179,7 +182,8 @@ class TimegrapherEngine {
             tickCount: tickTimestamps.count,
             confidence: currentConfidence,
             noiseLevel: currentNoiseLevel,
-            detectedIntervalMs: currentDetectedInterval
+            detectedIntervalMs: currentDetectedInterval,
+            detectedBph: detectedBph
         )
 
         DispatchQueue.main.async { [weak self] in
@@ -216,9 +220,23 @@ class TimegrapherEngine {
         let variance = filtered.reduce(0) { $0 + ($1 - mean) * ($1 - mean) } / Double(filtered.count)
         let stddev = sqrt(variance)
 
-        // Rate calculation
-        let expectedInterval = 3600000.0 / Double(bph)
         currentDetectedInterval = mean
+
+        // Auto-detect BPH: find the standard BPH closest to detected interval
+        var bestBph = bph
+        var bestDiff = Double.infinity
+        for candidateBph in standardBphs {
+            let candidateInterval = 3600000.0 / Double(candidateBph)
+            let diff = abs(mean - candidateInterval)
+            if diff < bestDiff {
+                bestDiff = diff
+                bestBph = candidateBph
+            }
+        }
+        detectedBph = bestBph
+
+        // Rate calculation using auto-detected BPH
+        let expectedInterval = 3600000.0 / Double(bestBph)
         currentRate = ((mean - expectedInterval) / expectedInterval) * 86400.0
         currentRate = (currentRate! * 10).rounded() / 10
 
