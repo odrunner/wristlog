@@ -2293,6 +2293,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <button class="view-btn" id="view-list-btn" onclick="setCollView('list')" title="List view"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
         </div>
         <button class="btn btn-ghost" onclick="startGame()" title="Ranking Game" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="btn-label"> Ranking Game</span></button>
+        <button class="btn btn-ghost" onclick="openMeasureModal()" title="Measure Accuracy" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg><span class="btn-label"> Measure</span></button>
         <button class="btn btn-ghost" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="btn-label"> Add From Photo</span></button>
         <button class="btn btn-primary" onclick="openAddWatch()" title="Add Watch"><span class="btn-label-full">+ Add Watch</span><span class="btn-label-short">+ Add</span></button>
       </div>
@@ -3235,6 +3236,83 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button id="save-watch-btn" class="btn btn-primary" onclick="saveWatch()">Save Watch</button>
       <button class="btn btn-ghost"   onclick="closeWatchModal()">Cancel</button>
       <button class="btn btn-danger" id="modal-delete-btn" style="display:none;margin-left:auto;" onclick="openDelModal(editingId);closeWatchModal();">Delete Watch</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MEASURE MODAL ════ -->
+<div id="measure-modal" class="overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title">Measure Accuracy</div>
+    <!-- Listen button + live results -->
+    <div style="margin-bottom:.65rem;">
+      <button id="msr-listen-btn" class="btn btn-ghost btn-sm" onclick="toggleMsrListen()" style="width:100%;margin-bottom:.5rem;display:flex;align-items:center;justify-content:center;gap:.4rem;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        Start Listening
+      </button>
+      <div id="msr-mic-warning" style="display:none;font-size:.75rem;color:#ef4444;margin-bottom:.5rem;line-height:1.4;"></div>
+      <div id="msr-live-status" style="display:none;">
+        <div style="margin-bottom:.4rem;">
+          <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Noise Level</label>
+          <div style="background:var(--hover);border-radius:6px;height:8px;overflow:hidden;">
+            <div id="msr-noise-bar" style="height:100%;width:0%;border-radius:6px;transition:width .15s,background .15s;background:#22c55e;"></div>
+          </div>
+          <div id="msr-noise-label" style="font-size:.68rem;color:var(--muted);margin-top:.1rem;">Listening...</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.4rem;">
+          <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
+            <div id="msr-live-rate" style="font-size:1rem;font-weight:700;">—</div>
+            <div style="font-size:.65rem;color:var(--muted);">s/day</div>
+          </div>
+          <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
+            <div id="msr-live-be" style="font-size:1rem;font-weight:700;">—</div>
+            <div style="font-size:.65rem;color:var(--muted);">Beat Error</div>
+          </div>
+          <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
+            <div id="msr-live-ticks" style="font-size:1rem;font-weight:700;">0</div>
+            <div style="font-size:.65rem;color:var(--muted);">Ticks</div>
+          </div>
+        </div>
+        <div style="font-size:.68rem;color:var(--muted);line-height:1.4;margin-bottom:.4rem;">Place the watch crown-side down near the microphone in a quiet room.</div>
+      </div>
+    </div>
+    <!-- Save section (shown after measurement has data) -->
+    <div id="msr-save-section" style="display:none;border-top:1px solid var(--border);padding-top:.65rem;">
+      <div style="margin-bottom:.5rem;">
+        <label for="msr-watch-select" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Save to Watch *</label>
+        <select id="msr-watch-select" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;"></select>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;" id="msr-pos-chips"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem;">
+        <div>
+          <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Rate (s/day)</label>
+          <input type="number" id="msr-rate-input" step="0.1" readonly style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+        </div>
+        <div>
+          <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Beat Error (ms)</label>
+          <input type="number" id="msr-be-input" step="0.01" readonly style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem;">
+        <div>
+          <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">BPH</label>
+          <select id="msr-bph-select" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+            <option value="18000">18,000</option>
+            <option value="21600">21,600</option>
+            <option value="25200">25,200</option>
+            <option value="28800" selected>28,800</option>
+            <option value="36000">36,000</option>
+          </select>
+        </div>
+        <div>
+          <label for="msr-notes-input" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Notes</label>
+          <input type="text" id="msr-notes-input" placeholder="e.g. After full wind" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="saveMsrReading()" style="width:100%;">Save Reading</button>
+    </div>
+    <div class="modal-actions" style="margin-top:.65rem;">
+      <button class="btn btn-ghost" onclick="closeMeasureModal()">Close</button>
     </div>
   </div>
 </div>
@@ -4343,7 +4421,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.27.22.37';
+const APP_VERSION = '2.36.28.07.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16657,6 +16735,7 @@ async function toggleTgListen() {
     const bph = parseInt(document.getElementById('tg-bph-select').value) || 28800;
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
     _tgListening = true;
+    _msrTarget = null;
     document.getElementById('tg-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
     document.getElementById('tg-live-status').style.display = '';
     document.getElementById('tg-live-rate').textContent = '—';
@@ -16790,46 +16869,63 @@ function stopTgListen() {
 }
 
 // Native → JS callback
+let _msrTarget = null; // 'measure' when measure modal is open, null for watch modal
 window._tgNativeCallback = function(data) {
+  // Determine which UI to update
+  const isMsr = _msrTarget === 'measure';
+  const prefix = isMsr ? 'msr' : 'tg';
+
   if (data.event === 'update') {
-    // Update live display
-    const rateEl = document.getElementById('tg-live-rate');
-    const beEl = document.getElementById('tg-live-be');
-    const ticksEl = document.getElementById('tg-live-ticks');
-    const bar = document.getElementById('tg-noise-bar');
-    const lbl = document.getElementById('tg-noise-label');
+    const rateEl = document.getElementById(prefix + '-live-rate');
+    const beEl = document.getElementById(prefix + '-live-be');
+    const ticksEl = document.getElementById(prefix + '-live-ticks');
+    const bar = document.getElementById(prefix + '-noise-bar');
+    const lbl = document.getElementById(prefix + '-noise-label');
+    if (!rateEl) return;
 
     if (data.rate != null && data.confidence > 0.1) {
       const r = data.rate;
       rateEl.textContent = (r >= 0 ? '+' : '') + r.toFixed(1);
       rateEl.style.color = Math.abs(r) <= 5 ? '#22c55e' : Math.abs(r) <= 15 ? '#eab308' : '#ef4444';
       beEl.textContent = data.beatError != null ? data.beatError.toFixed(2) : '—';
+      if (isMsr) { _msrLastRate = data.rate; _msrLastBe = data.beatError; }
     }
     ticksEl.textContent = data.tickCount || 0;
 
     const noisePct = Math.min(100, (data.noiseLevel || 0) * 100);
     bar.style.width = noisePct + '%';
     bar.style.background = data.confidence > 0.3 ? '#22c55e' : '#eab308';
-    // Auto-update BPH dropdown if detected
     if (data.detectedBph) {
-      const bphSel = document.getElementById('tg-bph-select');
-      if (bphSel.value !== String(data.detectedBph)) bphSel.value = String(data.detectedBph);
+      const bphSel = document.getElementById(prefix + '-bph-select');
+      if (bphSel && bphSel.value !== String(data.detectedBph)) bphSel.value = String(data.detectedBph);
+      if (isMsr) _msrLastBph = data.detectedBph;
     }
     lbl.textContent = data.confidence > 0.1
       ? 'Confidence: ' + (data.confidence * 100).toFixed(0) + '%' + (data.detectedBph ? ' | ' + data.detectedBph.toLocaleString() + ' bph' : '') + ' | Interval: ' + (data.detectedIntervalMs || 0).toFixed(1) + 'ms'
       : 'Analyzing...';
   } else if (data.event === 'stopped') {
-    _tgListening = false;
-    document.getElementById('tg-listen-btn').textContent = 'Start Listening';
-    // Auto-fill manual entry form with results for saving
-    if (data.rate != null) {
-      document.getElementById('tg-rate-input').value = data.rate.toFixed(1);
-      if (data.beatError != null) document.getElementById('tg-be-input').value = data.beatError.toFixed(2);
-      toast('Measurement complete — review and save below');
+    if (isMsr) {
+      _msrListening = false;
+      _msrTarget = null;
+      stopMsrListen();
+    } else {
+      _tgListening = false;
+      document.getElementById('tg-listen-btn').textContent = 'Start Listening';
+      if (data.rate != null) {
+        document.getElementById('tg-rate-input').value = data.rate.toFixed(1);
+        if (data.beatError != null) document.getElementById('tg-be-input').value = data.beatError.toFixed(2);
+        toast('Measurement complete — review and save below');
+      }
     }
   } else if (data.event === 'error') {
-    _tgListening = false;
-    document.getElementById('tg-listen-btn').textContent = 'Start Listening';
+    if (isMsr) {
+      _msrListening = false;
+      _msrTarget = null;
+      document.getElementById('msr-listen-btn').textContent = 'Start Listening';
+    } else {
+      _tgListening = false;
+      document.getElementById('tg-listen-btn').textContent = 'Start Listening';
+    }
     toast(data.message || 'Microphone error', 'error');
   }
 };
@@ -16934,6 +17030,156 @@ async function deleteTgResult(id) {
   if (error) { toast('Delete failed', 'error'); return; }
   toast('Deleted');
   loadTgHistory();
+}
+
+// ── Standalone Measure Modal ──
+let _msrListening = false;
+let _msrPosition = 'dial_up';
+let _msrLastRate = null;
+let _msrLastBe = null;
+let _msrLastBph = null;
+
+function openMeasureModal() {
+  if (!currentUser) { toast('Sign in to measure accuracy', 'error'); return; }
+  _msrListening = false;
+  _msrLastRate = null;
+  _msrLastBe = null;
+  _msrLastBph = null;
+  _msrPosition = 'dial_up';
+  document.getElementById('msr-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Start Listening';
+  document.getElementById('msr-live-status').style.display = 'none';
+  document.getElementById('msr-mic-warning').style.display = 'none';
+  document.getElementById('msr-save-section').style.display = 'none';
+  // Populate watch dropdown
+  const sel = document.getElementById('msr-watch-select');
+  sel.innerHTML = watches.map(w => `<option value="${w.id}">${escHtml(w.brand + ' ' + w.name)}</option>`).join('');
+  // Populate position chips
+  const chipsEl = document.getElementById('msr-pos-chips');
+  chipsEl.innerHTML = TG_POSITIONS.map(p =>
+    `<button class="chip${p.val === 'dial_up' ? ' selected' : ''}" data-pos="${p.val}" onclick="selectMsrPos('${p.val}')">${p.lbl}</button>`
+  ).join('');
+  document.getElementById('msr-rate-input').value = '';
+  document.getElementById('msr-be-input').value = '';
+  document.getElementById('msr-notes-input').value = '';
+  document.getElementById('msr-bph-select').value = '28800';
+  document.getElementById('measure-modal').classList.remove('hidden');
+}
+
+function closeMeasureModal() {
+  if (_msrListening) stopMsrListen();
+  document.getElementById('measure-modal').classList.add('hidden');
+}
+
+function selectMsrPos(pos) {
+  _msrPosition = pos;
+  document.querySelectorAll('#msr-pos-chips .chip').forEach(c =>
+    c.classList.toggle('selected', c.dataset.pos === pos));
+}
+
+function toggleMsrListen() {
+  if (_msrListening) { stopMsrListen(); return; }
+  // Use native bridge if available
+  if (_tgHasNative()) {
+    const bph = parseInt(document.getElementById('msr-bph-select').value) || 28800;
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
+    _msrListening = true;
+    _msrTarget = 'measure';
+    document.getElementById('msr-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
+    document.getElementById('msr-live-status').style.display = '';
+    document.getElementById('msr-live-rate').textContent = '—';
+    document.getElementById('msr-live-be').textContent = '—';
+    document.getElementById('msr-live-ticks').textContent = '0';
+    return;
+  }
+  // Web Audio fallback
+  const warn = document.getElementById('msr-mic-warning');
+  warn.style.display = 'none';
+  if (!navigator.mediaDevices?.getUserMedia) {
+    warn.textContent = 'Microphone not available in this browser.';
+    warn.style.display = 'block';
+    return;
+  }
+  (async () => {
+    try {
+      _tgStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
+    } catch (e) {
+      warn.textContent = e.name === 'NotAllowedError' ? 'Microphone permission denied.' : 'Could not access microphone: ' + e.message;
+      warn.style.display = 'block';
+      return;
+    }
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      _tgAudioCtx = new AC();
+      if (_tgAudioCtx.state === 'suspended') await _tgAudioCtx.resume();
+      const source = _tgAudioCtx.createMediaStreamSource(_tgStream);
+      const scriptNode = _tgAudioCtx.createScriptProcessor(2048, 1, 1);
+      _tgScriptNode = scriptNode;
+      _msrListening = true;
+      _msrTarget = 'measure';
+      document.getElementById('msr-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
+      document.getElementById('msr-live-status').style.display = '';
+      warn.innerHTML = 'Web audio mode — accuracy may be limited. For best results, use the <b>WRotate iOS app</b>.';
+      warn.style.color = '#eab308';
+      warn.style.display = 'block';
+
+      const bph = parseInt(document.getElementById('msr-bph-select').value) || 28800;
+      const expectedInterval = 3600000 / bph;
+      let ticks = 0;
+      scriptNode.onaudioprocess = function(e) {
+        if (!_msrListening) return;
+        const buf = e.inputBuffer.getChannelData(0);
+        let mx = 0;
+        for (let i = 0; i < buf.length; i++) { const a = Math.abs(buf[i]); if (a > mx) mx = a; }
+        const noisePct = Math.min(100, mx * 200);
+        document.getElementById('msr-noise-bar').style.width = noisePct + '%';
+        ticks++;
+        document.getElementById('msr-live-ticks').textContent = ticks;
+      };
+      source.connect(scriptNode);
+      scriptNode.connect(_tgAudioCtx.destination);
+    } catch (e) {
+      warn.textContent = 'Audio error: ' + e.message;
+      warn.style.display = 'block';
+    }
+  })();
+}
+
+function stopMsrListen() {
+  _msrListening = false;
+  if (_tgHasNative()) {
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'stop' });
+  }
+  if (_tgScriptNode) { _tgScriptNode.disconnect(); _tgScriptNode = null; }
+  if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
+  if (_tgAudioCtx) { _tgAudioCtx.close(); _tgAudioCtx = null; }
+  document.getElementById('msr-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Start Listening';
+  // Show save section if we have data
+  if (_msrLastRate != null) {
+    document.getElementById('msr-save-section').style.display = '';
+    document.getElementById('msr-rate-input').value = _msrLastRate.toFixed(1);
+    if (_msrLastBe != null) document.getElementById('msr-be-input').value = _msrLastBe.toFixed(2);
+    if (_msrLastBph) document.getElementById('msr-bph-select').value = String(_msrLastBph);
+  }
+}
+
+async function saveMsrReading() {
+  if (!currentUser) return;
+  const watchId = document.getElementById('msr-watch-select').value;
+  if (!watchId) { toast('Select a watch', 'error'); return; }
+  const rate = parseFloat(document.getElementById('msr-rate-input').value);
+  if (isNaN(rate)) { toast('No measurement data', 'error'); return; }
+  const beVal = document.getElementById('msr-be-input').value.trim();
+  const beatError = beVal !== '' ? parseFloat(beVal) : null;
+  const bph = parseInt(document.getElementById('msr-bph-select').value);
+  const notes = document.getElementById('msr-notes-input').value.trim() || null;
+  const { error } = await db.from('timegrapher_results').insert({
+    user_id: currentUser.id, watch_id: watchId,
+    rate, beat_error: beatError, bph, position: _msrPosition, source: 'auto', notes
+  });
+  if (error) { toast('Could not save — ' + error.message, 'error'); return; }
+  toast('Reading saved!');
+  if (window.posthog) posthog.capture('accuracy_reading_saved', { source: 'auto', from: 'measure_modal' });
+  closeMeasureModal();
 }
 
 // ── APP BOOT ──────────────────────────────────────────────────────────────
