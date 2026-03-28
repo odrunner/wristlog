@@ -62,7 +62,7 @@ struct WebView: UIViewRepresentable {
         weak var webView: WKWebView?
         var refreshControl: UIRefreshControl?
         private let oauthManager = OAuthManager.shared
-        private let timegrapherBridge = TimegrapherBridge()
+        let timegrapherBridge = TimegrapherBridge()
 
         init(parent: WebView) {
             self.parent = parent
