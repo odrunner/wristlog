@@ -4447,7 +4447,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.28.14.08';
+const APP_VERSION = '2.36.28.14.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17186,11 +17186,11 @@ function sendMsrTuning() {
   if (!_msrListening || !_tgHasNative()) return;
   window.webkit.messageHandlers.timegrapher.postMessage({
     action: 'tuning',
-    multLo: parseFloat(document.getElementById('msr-tune-mult-lo').value) || 8,
-    multHi: parseFloat(document.getElementById('msr-tune-mult-hi').value) || 1.5,
-    minThreshold: parseFloat(document.getElementById('msr-tune-min-thresh').value) || 0.001,
-    percentile: parseInt(document.getElementById('msr-tune-percentile').value) || 50,
-    hpCutoff: parseInt(document.getElementById('msr-tune-hp-cutoff').value) || 1000
+    multLo: Number(document.getElementById('msr-tune-mult-lo').value),
+    multHi: Number(document.getElementById('msr-tune-mult-hi').value),
+    minThreshold: Number(document.getElementById('msr-tune-min-thresh').value),
+    percentile: Number(document.getElementById('msr-tune-percentile').value),
+    hpCutoff: Number(document.getElementById('msr-tune-hp-cutoff').value)
   });
 }
 
