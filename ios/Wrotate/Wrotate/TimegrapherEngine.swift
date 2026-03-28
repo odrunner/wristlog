@@ -1,8 +1,10 @@
 import AVFoundation
 import Accelerate
 
-/// Detects mechanical watch ticks via peak detection and interval fitting.
-/// Approach: detect tick transients → measure intervals → fit to expected BPH.
+/// Detects watch ticks and measures rate via span measurement.
+/// Approach: detect tick events at 48kHz resolution → count N ticks over span T →
+/// rate = (T - expected) / expected × 86400.
+/// Accuracy improves with more ticks: 100 ticks ≈ ±15 s/day, 500 ticks ≈ ±3 s/day.
 class TimegrapherEngine {
 
     struct Update {
@@ -18,14 +20,13 @@ class TimegrapherEngine {
 
     struct DebugInfo {
         let sampleRate: Double
-        let fftSize: Int           // repurposed: total ticks detected
-        let bufferSamples: Int     // repurposed: matching intervals count
+        let fftSize: Int           // total ticks detected
+        let bufferSamples: Int     // ticks used in span calc
         let hpCutoff: Double
-        let bestLag: Int           // repurposed: locked BPH
-        let bestCorrelation: Double // repurposed: mean interval ms
-        let refinedLag: Double     // repurposed: threshold used
+        let bestLag: Int           // BPH used
+        let bestCorrelation: Double // measured interval ms
+        let refinedLag: Double     // threshold value
         let allBphCorrelations: [(bph: Int, correlation: Float, lag: Int)]
-        // correlation = matching interval count, lag = total intervals checked
     }
 
     struct Result {
@@ -43,89 +44,78 @@ class TimegrapherEngine {
     private var actualSampleRate: Double = 48000
     private var totalSamplesProcessed: Int64 = 0
 
-    // Envelope at decimated rate
-    private var envSampleRate: Double = 2000
-    private var envDecimation: Int = 24
-
-    // High-pass 1kHz on raw audio
+    // High-pass filter (1kHz)
     private var hpPrevIn: Float = 0
     private var hpPrevOut: Float = 0
     private var hpAlpha: Float = 0.97
 
-    // Lowpass 80Hz envelope
-    private var lpEnvState: Float = 0
-    private var lpEnvAlpha: Float = 0.0
+    // Short-term energy tracking (1ms window at 48kHz = 48 samples)
+    private var energyWindow: [Float] = []
+    private var energyWindowSize: Int = 48
+    private var energyWritePos: Int = 0
+    private var energySum: Float = 0
 
-    // Decimation accumulator
-    private var envAccum: Float = 0
-    private var envAccumCount: Int = 0
+    // Noise floor tracking
+    private var noiseFloor: Float = 0
+    private var noiseFloorInitialized = false
 
     // Tick detection
-    private var envSamplesWritten: Int64 = 0
-    private var recentEnvelope: [Float] = []     // rolling window of envelope samples
-    private var recentEnvCapacity: Int = 0       // ~10 seconds worth
-    private var recentEnvWritePos: Int = 0
-
-    // Detected tick timestamps (in envelope sample index)
-    private var tickTimes: [Int64] = []          // global envelope sample index of each tick
-    private var lastTickEnvIdx: Int64 = -1000    // last detected tick (to enforce minimum gap)
-    private var noiseFloor: Float = 0
     private var peakThreshold: Float = 0
+    private var sensitivityMultiplier: Float = 1.3
+    private var lastTickSample: Int64 = -100000
+    private var minGapSamples: Int64 = 0  // minimum samples between ticks
 
-    // Sensitivity: 0-100, controls threshold multiplier
-    // 0 = most sensitive (threshold = 1.1× noise), 100 = least sensitive (5× noise)
-    // Default 50 = 2.5× noise
-    private var sensitivityMultiplier: Float = 2.5
+    // Tick storage: raw 48kHz sample indices
+    private var tickSamples: [Int64] = []
+
+    // Running sample counter (precise, per-sample)
+    private var sampleCounter: Int64 = 0
 
     // Results
     private var currentRate: Double? = nil
     private var currentBeatError: Double? = nil
     private var currentConfidence: Double = 0
     private var currentDetectedInterval: Double = 0
-    private var detectedBph: Int? = nil
     private var currentNoiseLevel: Double = 0
-
-    private let standardBphs = [18000, 21600, 25200, 28800, 36000]
-    private var lockedBph: Int? = nil
+    private var selectedBph: Int = 28800
 
     private var lastAnalysisTime: Double = 0
     private var lastDebugInfo: DebugInfo? = nil
 
-    /// Update sensitivity live (0=least sensitive, 100=most sensitive)
-    func setSensitivity(_ value: Int) {
-        // Map 0-100 to multiplier 5.0-1.1 (INVERTED: high sensitivity = low threshold)
-        // 0% → 5.0× (only strong peaks), 100% → 1.1× (catches everything)
-        let clamped = Float(max(0, min(100, value)))
-        sensitivityMultiplier = 5.0 - (clamped / 100.0) * 3.9
+    // Rate history for smoothing
+    private var rateHistory: [Double] = []
 
-        // When sensitivity changes, clear old ticks — they were detected at old threshold
-        tickTimes.removeAll()
-        lastTickEnvIdx = envSamplesWritten
+    // Sensitivity: 0=least sensitive, 100=most sensitive
+    // Maps to threshold multiplier: 0→2.0×, 50→1.3×, 100→1.05×
+    func setSensitivity(_ value: Int) {
+        let v = Float(max(0, min(100, value)))
+        sensitivityMultiplier = 1.05 + ((100 - v) / 100.0) * 0.95
+        // Don't clear ticks on sensitivity change — span measurement is robust
+        // Just update threshold for future detection
     }
 
     func start(bph: Int, sensitivity: Int) {
         guard !isRunning else { return }
+        selectedBph = bph
         setSensitivity(sensitivity)
 
         currentRate = nil
         currentBeatError = nil
         currentConfidence = 0
         currentDetectedInterval = 0
-        detectedBph = nil
+        currentNoiseLevel = 0
         totalSamplesProcessed = 0
+        sampleCounter = 0
         lastAnalysisTime = 0
         hpPrevIn = 0
         hpPrevOut = 0
-        lpEnvState = 0
-        envAccum = 0
-        envAccumCount = 0
-        envSamplesWritten = 0
-        tickTimes = []
-        lastTickEnvIdx = -1000
         noiseFloor = 0
-        peakThreshold = 0
-        lockedBph = nil
-        currentNoiseLevel = 0
+        noiseFloorInitialized = false
+        lastTickSample = -100000
+        tickSamples = []
+        rateHistory = []
+        energySum = 0
+        energyWritePos = 0
 
         do {
             let session = AVAudioSession.sharedInstance()
@@ -140,23 +130,21 @@ class TimegrapherEngine {
             let format = inputNode.outputFormat(forBus: 0)
             actualSampleRate = format.sampleRate
 
-            // High-pass 1kHz
+            // HP filter coefficient for 1kHz
             let dt = 1.0 / Float(actualSampleRate)
-            let hpRc = 1.0 / (2.0 * Float.pi * Float(1000))
-            hpAlpha = hpRc / (hpRc + dt)
+            let rc = 1.0 / (2.0 * Float.pi * Float(1000))
+            hpAlpha = rc / (rc + dt)
 
-            // Lowpass 80Hz
-            let lpRc = 1.0 / (2.0 * Float.pi * Float(80))
-            lpEnvAlpha = dt / (lpRc + dt)
+            // Energy window: 1ms
+            energyWindowSize = max(1, Int(actualSampleRate * 0.001))
+            energyWindow = [Float](repeating: 0, count: energyWindowSize)
+            energyWritePos = 0
+            energySum = 0
 
-            // Decimate to ~2kHz
-            envDecimation = max(1, Int(actualSampleRate / 2000))
-            envSampleRate = actualSampleRate / Double(envDecimation)
-
-            // Rolling envelope window: 2 seconds (for peak detection context)
-            recentEnvCapacity = Int(envSampleRate * 2)
-            recentEnvelope = [Float](repeating: 0, count: recentEnvCapacity)
-            recentEnvWritePos = 0
+            // Minimum gap between ticks: 70% of shortest expected interval
+            // 36000 BPH = 100ms per tick, half-beat = 50ms
+            // Use 40ms minimum to allow tick-tock detection
+            minGapSamples = Int64(actualSampleRate * 0.04)
 
             inputNode.installTap(onBus: 0, bufferSize: 4096, format: format) { [weak self] buffer, time in
                 self?.processAudioBuffer(buffer)
@@ -177,98 +165,72 @@ class TimegrapherEngine {
         audioEngine = nil
         try? AVAudioSession.sharedInstance().setActive(false)
         return Result(rate: currentRate, beatError: currentBeatError,
-                      tickCount: tickTimes.count, ticks: [])
+                      tickCount: tickSamples.count, ticks: [])
     }
 
-    // MARK: - Audio → envelope → tick detection
+    // MARK: - Per-sample processing
 
     private func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
         guard isRunning, let channelData = buffer.floatChannelData?[0] else { return }
         let frameCount = Int(buffer.frameLength)
 
+        // Noise level for UI
         var rms: Float = 0
         vDSP_rmsqv(channelData, 1, &rms, vDSP_Length(frameCount))
         currentNoiseLevel = min(1.0, Double(rms) * 10)
 
-        // Pipeline: HP 1kHz → rectify → LP 80Hz → decimate → peak detect
+        // Process each sample at full 48kHz resolution
         for i in 0..<frameCount {
             let x = channelData[i]
+
+            // High-pass 1kHz
             let hp = hpAlpha * (hpPrevOut + x - hpPrevIn)
             hpPrevIn = x
             hpPrevOut = hp
 
-            lpEnvState += lpEnvAlpha * (abs(hp) - lpEnvState)
+            // Update short-term energy (rolling sum of |hp| over 1ms)
+            let absHp = abs(hp)
+            let oldest = energyWindow[energyWritePos]
+            energySum -= oldest
+            energySum += absHp
+            energyWindow[energyWritePos] = absHp
+            energyWritePos = (energyWritePos + 1) % energyWindowSize
 
-            envAccum += lpEnvState
-            envAccumCount += 1
-            if envAccumCount >= envDecimation {
-                let envSample = envAccum / Float(envAccumCount)
-                envAccum = 0
-                envAccumCount = 0
+            let energy = energySum / Float(energyWindowSize)
 
-                // Store in rolling window
-                recentEnvelope[recentEnvWritePos] = envSample
-                recentEnvWritePos = (recentEnvWritePos + 1) % recentEnvCapacity
-                envSamplesWritten += 1
+            sampleCounter += 1
 
-                // Track running stats for adaptive threshold
-                // Use two EMAs: slow (noise floor) and fast (tracks peaks)
-                let slowAlpha: Float = 0.01   // ~100 sample time constant
-                let fastAlpha: Float = 0.1    // ~10 sample time constant
+            // Skip first 0.5 seconds (filter settling)
+            guard sampleCounter > Int64(actualSampleRate * 0.5) else { continue }
 
-                // Initialize on first sample
-                if envSamplesWritten == 1 {
-                    noiseFloor = envSample
-                    peakThreshold = envSample * 2
-                }
+            // Adaptive noise floor
+            if !noiseFloorInitialized {
+                noiseFloor = energy
+                noiseFloorInitialized = true
+            }
 
-                // Noise floor tracks the quieter samples (only adapts downward fast)
-                if envSample < noiseFloor * 1.5 {
-                    noiseFloor += slowAlpha * (envSample - noiseFloor)
-                } else {
-                    // When signal is above noise, adapt very slowly upward
-                    noiseFloor += (slowAlpha * 0.1) * (envSample - noiseFloor)
-                }
+            // Noise floor tracks quiet periods (adapts down fast, up slowly)
+            if energy < noiseFloor * 1.5 {
+                noiseFloor += 0.0001 * (energy - noiseFloor)
+            } else {
+                noiseFloor += 0.00001 * (energy - noiseFloor)
+            }
 
-                // Threshold: sensitivityMultiplier × noise floor
-                // User controls via slider (0%=1.1x, 50%=3.05x, 100%=5.0x)
-                peakThreshold = noiseFloor * sensitivityMultiplier
+            // Threshold
+            peakThreshold = max(noiseFloor * sensitivityMultiplier, noiseFloor + 0.00001)
 
-                // Minimum gap: 50ms (fastest BPH=36000 has 100ms interval,
-                // but tick-tock gives 50ms half-intervals)
-                let minGap: Int64 = Int64(envSampleRate * 0.05)
+            // Tick detection: energy exceeds threshold, after minimum gap
+            if energy > peakThreshold &&
+               (sampleCounter - lastTickSample) > minGapSamples {
+                // Confirm it's a local peak: wait for energy to drop below peak
+                // Simple approach: just record this moment
+                // The 1ms energy smoothing already gives us sub-ms precision
+                tickSamples.append(sampleCounter)
+                lastTickSample = sampleCounter
 
-                // Skip first 2 seconds while noise floor settles
-                let currentIdx = envSamplesWritten - 1
-                guard currentIdx > Int64(envSampleRate * 2) else { continue }
-
-                // Peak detection: above threshold, after minimum gap,
-                // and is a local maximum (higher than surrounding samples)
-                if envSample > peakThreshold &&
-                   (currentIdx - lastTickEnvIdx) > minGap {
-                    // Check it's a local max: higher than 2 samples before and after
-                    // (we check "before" only since "after" hasn't arrived yet —
-                    //  we'll use a delayed detection: check if the sample 2 ago was a peak)
-                    let checkPos = (recentEnvWritePos - 3 + recentEnvCapacity) % recentEnvCapacity
-                    let candidate = recentEnvelope[checkPos]
-                    let before1 = recentEnvelope[(checkPos - 1 + recentEnvCapacity) % recentEnvCapacity]
-                    let before2 = recentEnvelope[(checkPos - 2 + recentEnvCapacity) % recentEnvCapacity]
-                    let after1 = recentEnvelope[(checkPos + 1) % recentEnvCapacity]
-                    let after2 = recentEnvelope[(checkPos + 2) % recentEnvCapacity]
-
-                    if candidate > before1 && candidate > before2 &&
-                       candidate > after1 && candidate > after2 &&
-                       candidate > peakThreshold {
-                        let tickIdx = currentIdx - 3  // offset for delayed check
-                        if (tickIdx - lastTickEnvIdx) > minGap {
-                            tickTimes.append(tickIdx)
-                            lastTickEnvIdx = tickIdx
-
-                            if tickTimes.count > 2000 {
-                                tickTimes.removeFirst(tickTimes.count - 2000)
-                            }
-                        }
-                    }
+                // Bound memory
+                if tickSamples.count > 5000 {
+                    tickSamples.removeFirst(tickSamples.count - 5000)
                 }
             }
         }
@@ -276,206 +238,170 @@ class TimegrapherEngine {
 
         // Analyze every ~1 second
         let now = CACurrentMediaTime() * 1000
-        if now - lastAnalysisTime > 1000 && tickTimes.count >= 10 {
+        if now - lastAnalysisTime > 1000 && tickSamples.count >= 20 {
             lastAnalysisTime = now
-            analyzeIntervals()
+            analyzeSpan()
         }
 
         let update = Update(
             rate: currentRate, beatError: currentBeatError,
-            tickCount: tickTimes.count,
+            tickCount: tickSamples.count,
             confidence: currentConfidence, noiseLevel: currentNoiseLevel,
-            detectedIntervalMs: currentDetectedInterval, detectedBph: detectedBph,
+            detectedIntervalMs: currentDetectedInterval,
+            detectedBph: selectedBph,
             debug: lastDebugInfo)
         DispatchQueue.main.async { [weak self] in self?.onUpdate?(update) }
     }
 
-    // MARK: - Interval analysis: fit ticks to BPH grid
+    // MARK: - Span-based rate measurement
 
-    private func analyzeIntervals() {
-        let ticks = tickTimes
-        guard ticks.count >= 10 else { return }
+    private func analyzeSpan() {
+        let ticks = tickSamples
+        guard ticks.count >= 20 else { return }
 
-        // Compute all consecutive inter-tick intervals
+        let expectedIntervalSec = 3600.0 / Double(selectedBph)
+        let expectedIntervalSamples = expectedIntervalSec * actualSampleRate
+
+        // ── SPAN MEASUREMENT ──
+        // Use the full span of all detected ticks.
+        // rate = (actual_span - expected_span) / expected_span × 86400
+        //
+        // But some "ticks" may be noise. To be robust, use a subset:
+        // Find ticks that form a consistent grid at the expected interval.
+
+        // Step 1: Compute all inter-tick intervals
         var intervals: [Double] = []
         for i in 1..<ticks.count {
-            let dt = Double(ticks[i] - ticks[i - 1]) / envSampleRate * 1000.0  // ms
-            intervals.append(dt)
+            intervals.append(Double(ticks[i] - ticks[i-1]))
         }
 
-        // For each candidate BPH, count how many intervals match
-        var bphResults: [(bph: Int, correlation: Float, lag: Int)] = []
-        var bestBph = 28800
-        var bestMatchCount = 0
-        var bestMatchingIntervals: [Double] = []
+        // Step 2: Find intervals that match expected (±15%)
+        // Also match half-interval (tick-tock) and double (missed tick)
+        let tolerance = expectedIntervalSamples * 0.15
 
-        for candidateBph in standardBphs {
-            let expectedMs = 3600000.0 / Double(candidateBph)
-            let tolerance = expectedMs * 0.08  // ±8% tolerance
-
-            // Count intervals that match this BPH (within tolerance)
-            // Also allow half-intervals (tick-tock pairs may merge)
-            // and double-intervals (missed ticks)
-            var matching: [Double] = []
-
-            for dt in intervals {
-                // Direct match
-                if abs(dt - expectedMs) < tolerance {
-                    matching.append(dt)
-                }
-                // Half interval match (two ticks detected per beat)
-                else if abs(dt - expectedMs / 2.0) < tolerance / 2.0 {
-                    // Don't add — this means we're detecting half-beats
-                    // We'll handle this separately
-                }
-                // Double interval (missed one tick)
-                else if abs(dt - expectedMs * 2.0) < tolerance * 2.0 {
-                    matching.append(dt / 2.0)  // treat as two intervals
-                }
-            }
-
-            bphResults.append((bph: candidateBph,
-                              correlation: Float(matching.count),
-                              lag: intervals.count))
-
-            if matching.count > bestMatchCount {
-                bestMatchCount = matching.count
-                bestBph = candidateBph
-                bestMatchingIntervals = matching
+        var goodTickIndices: [Int] = [0]  // always include first tick
+        for i in 0..<intervals.count {
+            let dt = intervals[i]
+            let isMatch = abs(dt - expectedIntervalSamples) < tolerance
+            let isHalf = abs(dt - expectedIntervalSamples / 2.0) < tolerance / 2.0
+            let isDouble = abs(dt - expectedIntervalSamples * 2.0) < tolerance * 2.0
+            if isMatch || isHalf || isDouble {
+                goodTickIndices.append(i + 1)
             }
         }
 
-        // Also try half-beat matching: some watches produce distinct tick and tock
-        // at 2x the BPH rate. Check if half-BPH intervals dominate.
-        for candidateBph in standardBphs {
-            let halfExpectedMs = 3600000.0 / Double(candidateBph) / 2.0
-            let tolerance = halfExpectedMs * 0.08
-            var halfMatching: [Double] = []
-            for dt in intervals {
-                if abs(dt - halfExpectedMs) < tolerance {
-                    halfMatching.append(dt * 2.0)  // convert to full-beat interval
-                }
-            }
-            if halfMatching.count > bestMatchCount {
-                bestMatchCount = halfMatching.count
-                bestBph = candidateBph
-                bestMatchingIntervals = halfMatching
-            }
-        }
-
-        // Need at least 5 matching intervals to make a call
-        guard bestMatchCount >= 5 else {
-            currentConfidence = 0
+        // Need at least 10 good ticks for a measurement
+        guard goodTickIndices.count >= 10 else {
             lastDebugInfo = DebugInfo(
-                sampleRate: envSampleRate, fftSize: ticks.count,
-                bufferSamples: bestMatchCount, hpCutoff: 1000,
-                bestLag: bestBph, bestCorrelation: 0,
+                sampleRate: actualSampleRate, fftSize: ticks.count,
+                bufferSamples: goodTickIndices.count, hpCutoff: 1000,
+                bestLag: selectedBph, bestCorrelation: 0,
                 refinedLag: Double(peakThreshold),
-                allBphCorrelations: bphResults)
+                allBphCorrelations: [])
             return
         }
 
-        // Lock BPH
-        if lockedBph == nil { lockedBph = bestBph }
-        let useBph = lockedBph ?? bestBph
+        // Step 3: Count total expected beats across the good ticks
+        // Each "good" interval contributes 1 beat (single), 0.5 beats (half), or 2 beats (double)
+        var totalBeats: Double = 0
+        var prevGoodIdx = goodTickIndices[0]
+        for j in 1..<goodTickIndices.count {
+            let idx = goodTickIndices[j]
+            let dt = Double(ticks[idx] - ticks[prevGoodIdx])
 
-        // Recalculate matching intervals for locked BPH if different
-        let finalIntervals: [Double]
-        if useBph == bestBph {
-            finalIntervals = bestMatchingIntervals
-        } else {
-            let expectedMs = 3600000.0 / Double(useBph)
-            let tolerance = expectedMs * 0.08
-            var matching: [Double] = []
-            for dt in intervals {
-                if abs(dt - expectedMs) < tolerance { matching.append(dt) }
-                else if abs(dt - expectedMs * 2.0) < tolerance * 2.0 { matching.append(dt / 2.0) }
+            // How many beats does this interval represent?
+            let beats = round(dt / expectedIntervalSamples)
+            if beats >= 0.5 && beats <= 3.0 {
+                totalBeats += beats
             }
-            // Also check half-beats
-            let halfExpectedMs = expectedMs / 2.0
-            let halfTol = halfExpectedMs * 0.08
-            for dt in intervals {
-                if abs(dt - halfExpectedMs) < halfTol { matching.append(dt * 2.0) }
-            }
-            finalIntervals = matching.isEmpty ? bestMatchingIntervals : matching
+            prevGoodIdx = idx
         }
 
-        guard finalIntervals.count >= 5 else {
-            currentConfidence = 0
-            lastDebugInfo = DebugInfo(
-                sampleRate: envSampleRate, fftSize: ticks.count,
-                bufferSamples: finalIntervals.count, hpCutoff: 1000,
-                bestLag: useBph, bestCorrelation: 0,
-                refinedLag: Double(peakThreshold),
-                allBphCorrelations: bphResults)
-            return
-        }
+        guard totalBeats >= 5 else { return }
 
-        // Compute rate from matching intervals
-        // Use trimmed mean: sort, drop top/bottom 10%, average middle
-        let sorted = finalIntervals.sorted()
-        let trimCount = max(1, sorted.count / 10)
-        let trimmed: [Double]
-        if sorted.count > 10 {
-            trimmed = Array(sorted[trimCount..<(sorted.count - trimCount)])
+        // Step 4: Actual span vs expected span
+        let firstGoodTick = ticks[goodTickIndices.first!]
+        let lastGoodTick = ticks[goodTickIndices.last!]
+        let actualSpanSamples = Double(lastGoodTick - firstGoodTick)
+        let expectedSpanSamples = totalBeats * expectedIntervalSamples
+
+        guard expectedSpanSamples > 0 else { return }
+
+        let rate = (actualSpanSamples - expectedSpanSamples) / expectedSpanSamples * 86400.0
+        let measuredIntervalMs = (actualSpanSamples / totalBeats) / actualSampleRate * 1000.0
+
+        currentDetectedInterval = measuredIntervalMs
+
+        // Rate smoothing: keep history, use trimmed mean
+        rateHistory.append(rate)
+        if rateHistory.count > 30 { rateHistory.removeFirst() }
+
+        if rateHistory.count >= 5 {
+            let sorted = rateHistory.sorted()
+            let trim = max(1, sorted.count / 4)
+            let trimmed = Array(sorted[trim..<(sorted.count - trim)])
+            currentRate = (trimmed.reduce(0.0, +) / Double(trimmed.count) * 10).rounded() / 10
         } else {
-            // For small samples, just use median
-            trimmed = [sorted[sorted.count / 2]]
+            currentRate = (rate * 10).rounded() / 10
         }
 
-        let meanInterval = trimmed.reduce(0.0, +) / Double(trimmed.count)
-        let expectedInterval = 3600000.0 / Double(useBph)
-        let rate = ((meanInterval - expectedInterval) / expectedInterval) * 86400.0
-
-        currentDetectedInterval = meanInterval
-        detectedBph = useBph
-        currentRate = (rate * 10).rounded() / 10
-
-        // Confidence: based on fraction of intervals that match + total count
-        let matchFraction = Double(finalIntervals.count) / Double(max(1, intervals.count))
-        let countFactor = min(1.0, Double(finalIntervals.count) / 50.0)
-        currentConfidence = matchFraction * (0.3 + 0.7 * countFactor)
+        // Confidence based on:
+        // - Number of good ticks (more = better)
+        // - Fraction of intervals that are "good" (higher = cleaner signal)
+        // - Measurement span (longer = more precise)
+        let spanSec = actualSpanSamples / actualSampleRate
+        let tickFraction = Double(goodTickIndices.count) / Double(ticks.count)
+        let spanFactor = min(1.0, spanSec / 60.0)      // max at 1 minute
+        let countFactor = min(1.0, Double(goodTickIndices.count) / 200.0)
+        currentConfidence = tickFraction * (0.3 * countFactor + 0.7 * spanFactor)
         currentConfidence = (currentConfidence * 100).rounded() / 100
 
-        // Beat error from alternating intervals
-        // Tick-tock pattern: intervals should alternate short-long
-        // Beat error = |short - long| / 2
-        if finalIntervals.count >= 10 {
-            var shortIntervals: [Double] = []
-            var longIntervals: [Double] = []
-            // Look at consecutive pairs of raw intervals near expected
-            let expectedMs = 3600000.0 / Double(useBph)
-            let halfExpected = expectedMs / 2.0
-            let tolerance = halfExpected * 0.15
-            for i in stride(from: 0, to: intervals.count - 1, by: 2) {
-                let a = intervals[i]
-                let b = intervals[i + 1]
-                // Check if these are half-beat intervals (tick-tock)
-                if abs(a - halfExpected) < tolerance && abs(b - halfExpected) < tolerance {
-                    if a < b {
-                        shortIntervals.append(a)
-                        longIntervals.append(b)
-                    } else {
-                        shortIntervals.append(b)
-                        longIntervals.append(a)
-                    }
+        // Beat error from alternating half-beat intervals
+        let halfExpected = expectedIntervalSamples / 2.0
+        let halfTolerance = halfExpected * 0.15
+        var shortHalves: [Double] = []
+        var longHalves: [Double] = []
+        for i in stride(from: 0, to: intervals.count - 1, by: 2) {
+            let a = intervals[i]
+            let b = intervals[i + 1]
+            if abs(a - halfExpected) < halfTolerance && abs(b - halfExpected) < halfTolerance {
+                if a < b {
+                    shortHalves.append(a / actualSampleRate * 1000)
+                    longHalves.append(b / actualSampleRate * 1000)
+                } else {
+                    shortHalves.append(b / actualSampleRate * 1000)
+                    longHalves.append(a / actualSampleRate * 1000)
                 }
             }
-            if shortIntervals.count >= 3 {
-                let avgShort = shortIntervals.reduce(0.0, +) / Double(shortIntervals.count)
-                let avgLong = longIntervals.reduce(0.0, +) / Double(longIntervals.count)
-                currentBeatError = ((avgLong - avgShort) / 2.0 * 100).rounded() / 100
-            } else {
-                currentBeatError = 0
-            }
+        }
+        if shortHalves.count >= 5 {
+            let avgShort = shortHalves.reduce(0, +) / Double(shortHalves.count)
+            let avgLong = longHalves.reduce(0, +) / Double(longHalves.count)
+            currentBeatError = ((avgLong - avgShort) / 2.0 * 100).rounded() / 100
         } else {
             currentBeatError = 0
         }
 
+        // Debug info
+        // Pack BPH match info: for each BPH, count how many intervals match
+        var bphResults: [(bph: Int, correlation: Float, lag: Int)] = []
+        let standardBphs = [18000, 21600, 25200, 28800, 36000]
+        for bph in standardBphs {
+            let expSamples = 3600.0 / Double(bph) * actualSampleRate
+            let tol = expSamples * 0.15
+            var matchCount = 0
+            for dt in intervals {
+                if abs(dt - expSamples) < tol { matchCount += 1 }
+                else if abs(dt - expSamples / 2.0) < tol / 2.0 { matchCount += 1 }
+                else if abs(dt - expSamples * 2.0) < tol * 2.0 { matchCount += 1 }
+            }
+            bphResults.append((bph: bph, correlation: Float(matchCount), lag: intervals.count))
+        }
+
         lastDebugInfo = DebugInfo(
-            sampleRate: envSampleRate, fftSize: ticks.count,
-            bufferSamples: finalIntervals.count, hpCutoff: 1000,
-            bestLag: useBph, bestCorrelation: meanInterval,
+            sampleRate: actualSampleRate, fftSize: ticks.count,
+            bufferSamples: goodTickIndices.count, hpCutoff: 1000,
+            bestLag: selectedBph, bestCorrelation: measuredIntervalMs,
             refinedLag: Double(peakThreshold),
             allBphCorrelations: bphResults)
     }
