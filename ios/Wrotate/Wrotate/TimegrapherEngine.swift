@@ -94,9 +94,11 @@ class TimegrapherEngine {
     private var lastDebugInfo: DebugInfo? = nil
 
     func setSensitivity(_ value: Int) {
-        // 0% → 2.5× noise (strict), 50% → 1.5×, 100% → 1.05× (sensitive)
+        // 0% → 8× median (very strict), 50% → 3×, 100% → 1.5× (sensitive)
+        // Watch ticks are sharp transients easily 3-10× above median energy
+        // Ambient noise spikes rarely exceed 3× median
         let v = Float(max(0, min(100, value)))
-        sensitivityMultiplier = 1.05 + ((100.0 - v) / 100.0) * 1.45
+        sensitivityMultiplier = 1.5 + ((100.0 - v) / 100.0) * 6.5
     }
 
     func start(bph: Int, sensitivity: Int) {
@@ -240,7 +242,8 @@ class TimegrapherEngine {
 
             // Tick detection — require rising edge (energy must cross threshold from below)
             // This rejects sustained ambient noise that stays above threshold
-            let threshold = computedNoiseFloor * sensitivityMultiplier
+            // Absolute minimum prevents near-zero noise floor in very quiet rooms
+            let threshold = max(computedNoiseFloor * sensitivityMultiplier, Float(0.002))
             if energy > threshold {
                 if !wasAboveThreshold && (sampleCounter - lastTickSample) > minGapSamples {
                     tickSamples.append(sampleCounter)
