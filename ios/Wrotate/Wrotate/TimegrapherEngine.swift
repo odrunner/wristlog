@@ -331,8 +331,27 @@ class TimegrapherEngine {
         var divisor = Float(segmentCount)
         vDSP_vsdiv(avg, 1, &divisor, &avg, 1, vDSP_Length(N))
 
-        // Search for best BPH
-        var bestScore: Float = 0
+        // Estimate the smooth decay baseline of the autocorrelation
+        // by fitting a local average. A real tick peak will STAND OUT above this baseline.
+        // Without this, shorter lags always win because envelope autocorrelation decays monotonically.
+
+        // Compute a smoothed baseline: moving average with wide window
+        let baselineWindow = max(20, Int(envSampleRate * 0.05))  // ~50ms window
+        var baseline = [Float](repeating: 0, count: N)
+        for i in 0..<N {
+            let wStart = max(0, i - baselineWindow)
+            let wEnd = min(N - 1, i + baselineWindow)
+            var sum: Float = 0
+            for j in wStart...wEnd { sum += avg[j] }
+            baseline[i] = sum / Float(wEnd - wStart + 1)
+        }
+
+        // Detrended autocorrelation: subtract baseline
+        var detrended = [Float](repeating: 0, count: N)
+        vDSP_vsub(baseline, 1, avg, 1, &detrended, 1, vDSP_Length(N))
+
+        // Search for best BPH using PEAK PROMINENCE in detrended autocorrelation
+        var bestScore: Float = -Float.infinity
         var bestBphCandidate = 28800
         var bestLag = 0
         var bphCorrelations: [(bph: Int, correlation: Float, lag: Int)] = []
@@ -345,40 +364,47 @@ class TimegrapherEngine {
             let maxLag = min(N / 3, centerLag + searchRange)
             guard maxLag > minLag else { continue }
 
-            var localBest: Float = 0
+            // Find peak in detrended signal (prominence above baseline)
+            var localBestProminence: Float = -Float.infinity
             var localBestLag = centerLag
             for lag in minLag...maxLag {
-                if avg[lag] > localBest {
-                    localBest = avg[lag]
+                let prominence = detrended[lag]
+                if prominence > localBestProminence {
+                    localBestProminence = prominence
                     localBestLag = lag
                 }
             }
 
-            // Harmonic scoring: peaks at 2x and 3x reinforce
-            var score = localBest
+            // Also check harmonics in detrended signal
+            var harmonicScore = localBestProminence
             for mult in [2, 3] {
                 let mLag = localBestLag * mult
                 if mLag < N / 3 {
                     let hr = max(2, Int(round(Double(localBestLag) * 0.05)))
-                    var hPeak: Float = 0
+                    var hPeak: Float = -Float.infinity
                     for lag in max(1, mLag - hr)...min(N / 3, mLag + hr) {
-                        if avg[lag] > hPeak { hPeak = avg[lag] }
+                        if detrended[lag] > hPeak { hPeak = detrended[lag] }
                     }
-                    score += hPeak * (mult == 2 ? 0.5 : 0.3)
+                    if hPeak > 0 {
+                        harmonicScore += hPeak * (mult == 2 ? 0.5 : 0.3)
+                    }
                 }
             }
 
-            bphCorrelations.append((bph: candidateBph, correlation: localBest, lag: localBestLag))
-            if score > bestScore {
-                bestScore = score
+            // Store raw correlation for debug, but score by prominence
+            let rawCorrelation = avg[localBestLag]
+            bphCorrelations.append((bph: candidateBph, correlation: rawCorrelation, lag: localBestLag))
+            if harmonicScore > bestScore {
+                bestScore = harmonicScore
                 bestBphCandidate = candidateBph
                 bestLag = localBestLag
             }
         }
 
-        let rawCorr = bphCorrelations.first(where: { $0.bph == bestBphCandidate })?.correlation ?? 0
+        // Use peak prominence (detrended value) for signal detection
+        let peakProminence = bestLag > 0 ? detrended[bestLag] : Float(0)
 
-        guard rawCorr > 0.005, bestLag > 0 else {
+        guard peakProminence > 0.001, bestLag > 0 else {
             currentConfidence = 0
             lastDebugInfo = DebugInfo(
                 sampleRate: envSampleRate, fftSize: fftN, bufferSamples: Int(envSamplesWritten),
@@ -390,8 +416,9 @@ class TimegrapherEngine {
         // BPH locking
         let useBph: Int
         if let locked = lockedBph {
-            let lockedCorr = bphCorrelations.first(where: { $0.bph == locked })?.correlation ?? 0
-            if rawCorr > lockedCorr * 1.5 && segmentCount > 3 {
+            let lockedLag = bphCorrelations.first(where: { $0.bph == locked })?.lag ?? bestLag
+            let lockedProminence = lockedLag > 0 && lockedLag < N ? detrended[lockedLag] : Float(0)
+            if peakProminence > lockedProminence * 1.5 && segmentCount > 3 {
                 lockedBph = bestBphCandidate
                 useBph = bestBphCandidate
                 rateHistory = []
@@ -441,17 +468,18 @@ class TimegrapherEngine {
             currentRate = (rate * 10).rounded() / 10
         }
 
-        // Confidence: SNR × segment count factor
+        // Confidence based on peak prominence relative to detrended noise floor
+        // Compute noise floor from detrended autocorrelation
         let noiseStart = N / 6
         let noiseEnd = N / 4
         var snrConf: Double = 0
         if noiseEnd > noiseStart {
             var noiseVals: [Float] = []
-            for i in noiseStart..<noiseEnd { noiseVals.append(abs(avg[i])) }
+            for i in noiseStart..<noiseEnd { noiseVals.append(abs(detrended[i])) }
             noiseVals.sort()
-            let floor = noiseVals.count > 0 ? noiseVals[noiseVals.count / 2] : Float(0)
-            let snr = (rawCorr - floor) / max(floor, 0.001)
-            snrConf = min(1.0, Double(snr) / 8.0)
+            let noiseFloor = noiseVals.count > 0 ? noiseVals[noiseVals.count / 2] : Float(0)
+            let snr = Double(peakProminence) / max(Double(noiseFloor), 0.0001)
+            snrConf = min(1.0, snr / 5.0)
         }
         let segFactor = min(1.0, Double(segmentCount) / 10.0)
         currentConfidence = snrConf * (0.3 + 0.7 * segFactor)
@@ -460,16 +488,16 @@ class TimegrapherEngine {
         // Monotonic tick count
         tickCount = Int(Double(totalSamplesProcessed) / actualSampleRate * Double(useBph) / 3600.0)
 
-        // Beat error
+        // Beat error (use detrended for half-period peak detection)
         let halfLag = bestLag / 2
         if halfLag > 2 && halfLag < N / 3 {
             let sH = max(2, Int(round(Double(halfLag) * 0.05)))
-            var hPeak: Float = 0
+            var hPeak: Float = -Float.infinity
             var hPeakLag = halfLag
             for lag in max(1, halfLag - sH)...min(N / 3, halfLag + sH) {
-                if avg[lag] > hPeak { hPeak = avg[lag]; hPeakLag = lag }
+                if detrended[lag] > hPeak { hPeak = detrended[lag]; hPeakLag = lag }
             }
-            if hPeak > rawCorr * 0.2 {
+            if hPeak > peakProminence * 0.2 {
                 let asymmetry = abs(Double(hPeakLag) - Double(bestLag) / 2.0) / (Double(bestLag) / 2.0)
                 currentBeatError = (asymmetry * detectedIntervalMs * 100).rounded() / 100
             } else {
@@ -481,7 +509,7 @@ class TimegrapherEngine {
 
         lastDebugInfo = DebugInfo(
             sampleRate: envSampleRate, fftSize: fftN, bufferSamples: Int(envSamplesWritten),
-            hpCutoff: 1000, bestLag: bestLag, bestCorrelation: Double(rawCorr),
+            hpCutoff: 1000, bestLag: bestLag, bestCorrelation: Double(peakProminence),
             refinedLag: refinedLag, allBphCorrelations: bphCorrelations)
     }
 }
