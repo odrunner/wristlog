@@ -193,42 +193,62 @@ class TimegrapherEngine {
                 recentEnvWritePos = (recentEnvWritePos + 1) % recentEnvCapacity
                 envSamplesWritten += 1
 
-                // Update noise floor with slow EMA
-                let alpha: Float = 0.001
-                noiseFloor += alpha * (envSample - noiseFloor)
+                // Track running stats for adaptive threshold
+                // Use two EMAs: slow (noise floor) and fast (tracks peaks)
+                let slowAlpha: Float = 0.01   // ~100 sample time constant
+                let fastAlpha: Float = 0.1    // ~10 sample time constant
 
-                // Adaptive threshold: X times above noise floor
-                // Use a high multiplier to only detect real transients
-                peakThreshold = noiseFloor * 4.0
+                // Initialize on first sample
+                if envSamplesWritten == 1 {
+                    noiseFloor = envSample
+                    peakThreshold = envSample * 2
+                }
 
-                // Minimum gap between ticks in envelope samples
-                // Fastest watch: 36000 BPH = 100ms = 200 env samples at 2kHz
-                // Use 60% of that as minimum gap
-                let minGap: Int64 = Int64(envSampleRate * 0.06)  // 60ms minimum
+                // Noise floor tracks the quieter samples (only adapts downward fast)
+                if envSample < noiseFloor * 1.5 {
+                    noiseFloor += slowAlpha * (envSample - noiseFloor)
+                } else {
+                    // When signal is above noise, adapt very slowly upward
+                    noiseFloor += (slowAlpha * 0.1) * (envSample - noiseFloor)
+                }
 
-                // Peak detection: is this sample a local peak above threshold?
+                // Threshold: detect peaks that are significantly above noise
+                // A watch tick should be 2-3x the ambient noise envelope
+                peakThreshold = noiseFloor * 2.5
+
+                // Minimum gap: 50ms (fastest BPH=36000 has 100ms interval,
+                // but tick-tock gives 50ms half-intervals)
+                let minGap: Int64 = Int64(envSampleRate * 0.05)
+
+                // Skip first 2 seconds while noise floor settles
                 let currentIdx = envSamplesWritten - 1
+                guard currentIdx > Int64(envSampleRate * 2) else { continue }
+
+                // Peak detection: above threshold, after minimum gap,
+                // and is a local maximum (higher than surrounding samples)
                 if envSample > peakThreshold &&
                    (currentIdx - lastTickEnvIdx) > minGap {
-                    // Check it's a local maximum: higher than neighbors
-                    // Look back 3 samples
-                    let lookback = 3
-                    var isLocalMax = true
-                    for j in 1...lookback {
-                        let prevPos = (recentEnvWritePos - 1 - j + recentEnvCapacity) % recentEnvCapacity
-                        if recentEnvelope[prevPos] >= envSample {
-                            isLocalMax = false
-                            break
-                        }
-                    }
+                    // Check it's a local max: higher than 2 samples before and after
+                    // (we check "before" only since "after" hasn't arrived yet —
+                    //  we'll use a delayed detection: check if the sample 2 ago was a peak)
+                    let checkPos = (recentEnvWritePos - 3 + recentEnvCapacity) % recentEnvCapacity
+                    let candidate = recentEnvelope[checkPos]
+                    let before1 = recentEnvelope[(checkPos - 1 + recentEnvCapacity) % recentEnvCapacity]
+                    let before2 = recentEnvelope[(checkPos - 2 + recentEnvCapacity) % recentEnvCapacity]
+                    let after1 = recentEnvelope[(checkPos + 1) % recentEnvCapacity]
+                    let after2 = recentEnvelope[(checkPos + 2) % recentEnvCapacity]
 
-                    if isLocalMax {
-                        tickTimes.append(currentIdx)
-                        lastTickEnvIdx = currentIdx
+                    if candidate > before1 && candidate > before2 &&
+                       candidate > after1 && candidate > after2 &&
+                       candidate > peakThreshold {
+                        let tickIdx = currentIdx - 3  // offset for delayed check
+                        if (tickIdx - lastTickEnvIdx) > minGap {
+                            tickTimes.append(tickIdx)
+                            lastTickEnvIdx = tickIdx
 
-                        // Keep only last 2000 ticks to bound memory
-                        if tickTimes.count > 2000 {
-                            tickTimes.removeFirst(tickTimes.count - 2000)
+                            if tickTimes.count > 2000 {
+                                tickTimes.removeFirst(tickTimes.count - 2000)
+                            }
                         }
                     }
                 }
