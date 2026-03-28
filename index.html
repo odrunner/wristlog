@@ -4341,7 +4341,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.27.20.53';
+const APP_VERSION = '2.36.27.20.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16609,7 +16609,7 @@ function clearUserState() {
 }
 
 // ── Timegrapher / Accuracy (inside watch edit modal) ─────────────────────
-function _tgHasNative() { return !!(window.webkit?.messageHandlers?.timegrapher); }
+function _tgHasNative() { return !!(window._wrotateNativeTimegrapher || window.webkit?.messageHandlers?.timegrapher); }
 let _tgPosition = 'dial_up';
 let _tgWatchId = null;
 let _tgEditingId = null;
