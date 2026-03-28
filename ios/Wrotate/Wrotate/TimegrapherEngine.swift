@@ -72,6 +72,11 @@ class TimegrapherEngine {
     private var noiseFloor: Float = 0
     private var peakThreshold: Float = 0
 
+    // Sensitivity: 0-100, controls threshold multiplier
+    // 0 = most sensitive (threshold = 1.1× noise), 100 = least sensitive (5× noise)
+    // Default 50 = 2.5× noise
+    private var sensitivityMultiplier: Float = 2.5
+
     // Results
     private var currentRate: Double? = nil
     private var currentBeatError: Double? = nil
@@ -86,8 +91,21 @@ class TimegrapherEngine {
     private var lastAnalysisTime: Double = 0
     private var lastDebugInfo: DebugInfo? = nil
 
+    /// Update sensitivity live (0=most sensitive, 100=least sensitive)
+    func setSensitivity(_ value: Int) {
+        // Map 0-100 to multiplier 1.1-5.0
+        // 0% → 1.1× (catches everything), 100% → 5.0× (only strong peaks)
+        let clamped = Float(max(0, min(100, value)))
+        sensitivityMultiplier = 1.1 + (clamped / 100.0) * 3.9
+
+        // When sensitivity changes, clear old ticks — they were detected at old threshold
+        tickTimes.removeAll()
+        lastTickEnvIdx = envSamplesWritten
+    }
+
     func start(bph: Int, sensitivity: Int) {
         guard !isRunning else { return }
+        setSensitivity(sensitivity)
 
         currentRate = nil
         currentBeatError = nil
@@ -212,9 +230,9 @@ class TimegrapherEngine {
                     noiseFloor += (slowAlpha * 0.1) * (envSample - noiseFloor)
                 }
 
-                // Threshold: detect peaks that are significantly above noise
-                // A watch tick should be 2-3x the ambient noise envelope
-                peakThreshold = noiseFloor * 2.5
+                // Threshold: sensitivityMultiplier × noise floor
+                // User controls via slider (0%=1.1x, 50%=3.05x, 100%=5.0x)
+                peakThreshold = noiseFloor * sensitivityMultiplier
 
                 // Minimum gap: 50ms (fastest BPH=36000 has 100ms interval,
                 // but tick-tock gives 50ms half-intervals)

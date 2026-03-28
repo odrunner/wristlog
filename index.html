@@ -3274,6 +3274,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
         </div>
         <div style="font-size:.68rem;color:var(--muted);line-height:1.4;margin-bottom:.4rem;">Place the watch crown-side down near the microphone in a quiet room.</div>
+        <div id="msr-sensitivity-row" style="margin-top:.4rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Sensitivity</label>
+            <span id="msr-sens-val" style="font-size:.7rem;color:var(--muted);">50%</span>
+          </div>
+          <input type="range" id="msr-sensitivity" min="0" max="100" value="50" oninput="onMsrSensitivityChange(this.value)" style="width:100%;margin-top:.2rem;accent-color:var(--gold);">
+        </div>
       </div>
     </div>
     <!-- Save section (shown after measurement has data) -->
@@ -4421,7 +4428,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.28.12.27';
+const APP_VERSION = '2.36.28.12.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16733,7 +16740,8 @@ async function toggleTgListen() {
   // Try native bridge first
   if (_tgHasNative()) {
     const bph = parseInt(document.getElementById('tg-bph-select').value) || 28800;
-    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
+    const sens = parseInt(document.getElementById('msr-sensitivity')?.value) || 50;
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: sens });
     _tgListening = true;
     _msrTarget = null;
     document.getElementById('tg-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
@@ -17101,6 +17109,13 @@ function closeMeasureModal() {
   document.getElementById('measure-modal').classList.add('hidden');
 }
 
+function onMsrSensitivityChange(val) {
+  document.getElementById('msr-sens-val').textContent = val + '%';
+  if (_msrListening && _tgHasNative()) {
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'sensitivity', value: parseInt(val) });
+  }
+}
+
 function selectMsrPos(pos) {
   _msrPosition = pos;
   document.querySelectorAll('#msr-pos-chips .chip').forEach(c =>
@@ -17112,7 +17127,8 @@ function toggleMsrListen() {
   // Use native bridge if available
   if (_tgHasNative()) {
     const bph = parseInt(document.getElementById('msr-bph-select').value) || 28800;
-    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
+    const sens = parseInt(document.getElementById('msr-sensitivity')?.value) || 50;
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: sens });
     _msrListening = true;
     _msrTarget = 'measure';
     document.getElementById('msr-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';

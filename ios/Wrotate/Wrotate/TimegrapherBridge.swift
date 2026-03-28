@@ -28,6 +28,10 @@ class TimegrapherBridge {
         case "stop":
             stopMeasurement()
 
+        case "sensitivity":
+            let value = body["value"] as? Int ?? 50
+            engine.setSensitivity(value)
+
         default:
             break
         }
