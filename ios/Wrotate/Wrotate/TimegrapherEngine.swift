@@ -67,12 +67,11 @@ class TimegrapherEngine {
     private var subsamplePeak: Float = 0
 
     // Energy ring buffer for autocorrelation
-    // At 0.1ms resolution (10kHz), 10 seconds = 100000 entries
-    // Higher resolution gives better rate precision:
-    // At 1ms: 1ms offset at 125ms lag = 691 s/day error
-    // At 0.1ms: 0.1ms offset at 1250 lag = 69 s/day, parabolic → ~7 s/day
+    // At 0.1ms resolution (10kHz), 30 seconds = 300000 entries
+    // Longer buffer = more tick periods averaged = better SNR
     private var energyRing: [Float] = []
-    private var energyRingCapacity: Int = 100000  // 10 seconds at 0.1ms
+    private var energyRingCapacity: Int = 300000  // 30 seconds at 0.1ms
+    private var bufferDurationSec: Float = 30.0
     private var energyRingWritePos: Int = 0
     private var energyRingCount: Int = 0
     private var energySubsampleCounter: Int = 0
@@ -103,12 +102,26 @@ class TimegrapherEngine {
 
     func setTuning(multLo: Float, multHi: Float, minThreshold: Float,
                     percentile: Int, hpCutoff: Float,
-                    peakRatioThreshold thresh: Float = 2.0) {
+                    peakRatioThreshold thresh: Float = 2.0,
+                    bufferSeconds bufSec: Float = 30.0) {
         hpCutoffHz = max(200, min(5000, hpCutoff))
         peakRatioThreshold = max(1.0, thresh)
         let dt = 1.0 / Float(actualSampleRate)
         let rc = 1.0 / (2.0 * Float.pi * hpCutoffHz)
         hpAlpha = rc / (rc + dt)
+        // Resize ring buffer if duration changed
+        let newDuration = max(5, min(120, bufSec))
+        if newDuration != bufferDurationSec {
+            bufferDurationSec = newDuration
+            let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
+            let newCapacity = Int(ringSampleRate * Double(bufferDurationSec))
+            if newCapacity != energyRingCapacity {
+                energyRingCapacity = newCapacity
+                energyRing = [Float](repeating: 0, count: energyRingCapacity)
+                energyRingWritePos = 0
+                energyRingCount = 0
+            }
+        }
     }
 
     func start(bph: Int, sensitivity: Int) {
@@ -149,10 +162,10 @@ class TimegrapherEngine {
             let rc = 1.0 / (2.0 * Float.pi * hpCutoffHz)
             hpAlpha = rc / (rc + dt)
 
-            // Ring buffer: 10 seconds at ~10kHz (0.1ms) resolution
+            // Ring buffer at ~10kHz (0.1ms) resolution
             ringSubsampleTarget = max(1, Int(actualSampleRate / 10000))  // ~5 at 48kHz
             let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
-            energyRingCapacity = Int(ringSampleRate * 10)  // 10 seconds
+            energyRingCapacity = Int(ringSampleRate * Double(bufferDurationSec))
             energyRing = [Float](repeating: 0, count: energyRingCapacity)
 
             inputNode.installTap(onBus: 0, bufferSize: 4096, format: format) { [weak self] buffer, time in
@@ -240,7 +253,7 @@ class TimegrapherEngine {
     private func analyzeAutocorrelation() {
         let count = energyRingCount
         let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
-        guard count >= Int(ringSampleRate * 3) else { return }  // need at least 3 seconds
+        guard count >= Int(ringSampleRate * 10) else { return }  // need at least 10 seconds
 
         // Expected lag in ring samples
         // BPH → interval = 3600/BPH seconds → lag = interval × ringSampleRate
@@ -287,16 +300,21 @@ class TimegrapherEngine {
             }
         }
 
-        // Baseline: average correlation at distant lags (noise floor)
-        // Use lags far from the peak (±30% away from expected)
-        let baselineLagA = max(1, lagCenter / 2)
-        let baselineLagB = min(count / 2 - 1, lagCenter * 2)
+        // Baseline: average correlation at incommensurate lags (noise floor)
+        // IMPORTANT: avoid integer multiples/fractions of lagCenter (0.5x, 2x, 3x, etc.)
+        // because periodic signals also correlate at harmonics, inflating the baseline.
+        // Use irrational-ish fractions: 0.73x, 1.37x, 1.73x — these don't align with tick harmonics.
+        let baselineLags = [
+            max(1, Int(Double(lagCenter) * 0.73)),
+            min(count / 2 - 1, Int(Double(lagCenter) * 1.37)),
+            min(count / 2 - 1, Int(Double(lagCenter) * 1.73))
+        ]
         var baselineSum: Float = 0
         var baselineN = 0
 
         signal.withUnsafeBufferPointer { buf in
             let ptr = buf.baseAddress!
-            for testLag in [baselineLagA, baselineLagB] {
+            for testLag in baselineLags {
                 if testLag < lagMin || testLag > lagMax {
                     let n = count - testLag
                     guard n > 0 else { continue }

@@ -4458,7 +4458,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.28.21.41';
+const APP_VERSION = '2.36.28.21.50';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16939,6 +16939,7 @@ function startTuningPoll() {
         if (sl) { sl.value = data.sensitivity; onMsrSensitivityChange(data.sensitivity); }
       }
       if (data.peak_ratio_threshold != null) _remotePeakRatioThreshold = data.peak_ratio_threshold;
+      if (data.buffer_seconds != null) _remoteBufferSeconds = data.buffer_seconds;
       // Send to native
       sendMsrTuning();
     } catch (e) {}
@@ -17240,10 +17241,12 @@ function sendMsrTuning() {
     minThreshold: Number(document.getElementById('msr-tune-min-thresh').value),
     percentile: Number(document.getElementById('msr-tune-percentile').value),
     hpCutoff: Number(document.getElementById('msr-tune-hp-cutoff').value),
-    peakRatioThreshold: _remotePeakRatioThreshold ?? 2.0
+    peakRatioThreshold: _remotePeakRatioThreshold ?? 2.0,
+    bufferSeconds: _remoteBufferSeconds ?? 30.0
   });
 }
 var _remotePeakRatioThreshold = 2.0;
+var _remoteBufferSeconds = 30.0;
 
 function selectMsrPos(pos) {
   _msrPosition = pos;
