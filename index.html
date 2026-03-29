@@ -2938,7 +2938,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <!-- No-watches callout (shown when collection is empty) -->
     <div id="measure-no-watches" style="display:none;text-align:center;padding:2rem 1rem;">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:1rem;opacity:.5;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
+      <svg aria-hidden="true" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:1rem;opacity:.5;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg>
       <div style="font-size:.95rem;font-weight:600;margin-bottom:.5rem;">Add a watch first</div>
       <div style="font-size:.82rem;color:var(--muted);margin-bottom:1.2rem;line-height:1.5;">To measure accuracy, you need at least one watch in your collection. Add your first watch to get started.</div>
       <button class="btn btn-primary" onclick="nav(document.querySelector('[data-page=collection]'));openAddWatch()">+ Add Your First Watch</button>
@@ -2952,7 +2952,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <select id="msr-watch-select" onchange="onMsrWatchChange()" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;"></select>
         </div>
         <div>
-          <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">BPH</label>
+          <label for="msr-bph-select" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">BPH</label>
           <select id="msr-bph-select" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
             <option value="18000">18,000</option>
             <option value="21600">21,600</option>
@@ -2964,29 +2964,29 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <!-- Listen button + live results -->
       <div style="margin-bottom:.65rem;">
-        <button id="msr-listen-btn" class="btn btn-ghost btn-sm" onclick="toggleMsrListen()" style="width:100%;margin-bottom:.5rem;display:flex;align-items:center;justify-content:center;gap:.4rem;">
+        <button id="msr-listen-btn" class="btn btn-ghost btn-sm" onclick="toggleMsrListen()" aria-label="Start listening for watch ticks" style="width:100%;margin-bottom:.5rem;display:flex;align-items:center;justify-content:center;gap:.4rem;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
           Start Listening
         </button>
-        <div id="msr-mic-warning" style="display:none;font-size:.75rem;color:#ef4444;margin-bottom:.5rem;line-height:1.4;"></div>
+        <div id="msr-mic-warning" role="alert" style="display:none;font-size:.75rem;color:#ef4444;margin-bottom:.5rem;line-height:1.4;"></div>
         <div id="msr-live-status" style="display:none;">
           <!-- Countdown + BPH status bar -->
           <div id="msr-status-bar" style="margin-bottom:.5rem;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem;">
-              <span id="msr-status-text" style="font-size:.75rem;color:var(--muted);">Listening...</span>
-              <span id="msr-detected-bph" style="font-size:.75rem;font-weight:600;color:var(--muted);display:none;"></span>
+              <span id="msr-status-text" aria-live="polite" style="font-size:.75rem;color:var(--muted);">Listening...</span>
+              <span id="msr-detected-bph" aria-live="polite" style="font-size:.75rem;font-weight:600;color:var(--muted);display:none;"></span>
             </div>
             <div style="background:var(--hover);border-radius:6px;height:6px;overflow:hidden;">
-              <div id="msr-countdown-bar" style="height:100%;width:0%;border-radius:6px;transition:width .3s;background:var(--gold);"></div>
+              <div id="msr-countdown-bar" role="progressbar" aria-label="Measurement progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="height:100%;width:0%;border-radius:6px;transition:width .3s;background:var(--gold);"></div>
             </div>
           </div>
           <!-- Noise level -->
           <div style="margin-bottom:.4rem;">
             <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Noise Level</label>
             <div style="background:var(--hover);border-radius:6px;height:8px;overflow:hidden;">
-              <div id="msr-noise-bar" style="height:100%;width:0%;border-radius:6px;transition:width .15s,background .15s;background:#22c55e;"></div>
+              <div id="msr-noise-bar" role="progressbar" aria-label="Noise level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="height:100%;width:0%;border-radius:6px;transition:width .15s,background .15s;background:#22c55e;"></div>
             </div>
-            <div id="msr-noise-label" style="font-size:.68rem;color:var(--muted);margin-top:.1rem;">Listening...</div>
+            <div id="msr-noise-label" aria-live="polite" style="font-size:.68rem;color:var(--muted);margin-top:.1rem;">Listening...</div>
           </div>
           <!-- Rate chart -->
           <div id="msr-chart-wrap" style="margin-bottom:.5rem;background:var(--hover);border-radius:8px;padding:.4rem .3rem;height:120px;display:none;">
@@ -2994,7 +2994,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.4rem;">
             <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
-              <div id="msr-live-rate" style="font-size:1rem;font-weight:700;">---</div>
+              <div id="msr-live-rate" aria-live="polite" aria-label="Rate in seconds per day" style="font-size:1rem;font-weight:700;">---</div>
               <div style="font-size:.65rem;color:var(--muted);">s/day</div>
             </div>
             <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
@@ -4453,7 +4453,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.29.10.34';
+const APP_VERSION = '2.36.29.10.44';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10354,6 +10354,9 @@ async function updateFeedbackStatus(id, selectEl) {
 
 function nav(btn) {
   const page = btn.dataset.page;
+  // Stop active microphone/audio when navigating away from measure or watch detail
+  if (typeof _tgListening !== 'undefined' && _tgListening) stopTgListen();
+  if (typeof _msrListening !== 'undefined' && _msrListening) stopMsrListen();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
@@ -10391,6 +10394,8 @@ function nav(btn) {
 }
 
 function showClubsPage() {
+  if (typeof _tgListening !== 'undefined' && _tgListening) stopTgListen();
+  if (typeof _msrListening !== 'undefined' && _msrListening) stopMsrListen();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('page-clubs').classList.add('active');
@@ -17038,6 +17043,7 @@ window._tgNativeCallback = function(data) {
 
     const noisePct = Math.min(100, (data.noiseLevel || 0) * 100);
     bar.style.width = noisePct + '%';
+    if (bar.hasAttribute('aria-valuenow')) bar.setAttribute('aria-valuenow', Math.round(noisePct));
     const tooNoisy = noisePct > 3 && data.confidence < 0.1;
     bar.style.background = tooNoisy ? '#ef4444' : data.confidence > 0.3 ? '#22c55e' : '#eab308';
 
@@ -17059,7 +17065,7 @@ window._tgNativeCallback = function(data) {
       const pct = Math.min(100, (elapsed / target) * 100);
       const cdBar = document.getElementById('msr-countdown-bar');
       const statusText = document.getElementById('msr-status-text');
-      if (cdBar) cdBar.style.width = pct + '%';
+      if (cdBar) { cdBar.style.width = pct + '%'; cdBar.setAttribute('aria-valuenow', Math.round(pct)); }
       if (statusText) {
         if (elapsed < target) {
           const remaining = Math.ceil(target - elapsed);
@@ -17434,7 +17440,7 @@ function stopMsrListen() {
   }
   if (_tgScriptNode) { _tgScriptNode.disconnect(); _tgScriptNode = null; }
   if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
-  if (_tgAudioCtx) { _tgAudioCtx.close(); _tgAudioCtx = null; }
+  if (_tgAudioCtx) { _tgAudioCtx.close().catch(() => {}); _tgAudioCtx = null; }
   document.getElementById('msr-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Start Listening';
   _msrListenStart = null;
   // Keep save section visible if we have data
