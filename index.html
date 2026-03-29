@@ -2989,24 +2989,33 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div id="msr-noise-label" aria-live="polite" style="font-size:.68rem;color:var(--muted);margin-top:.1rem;">Listening...</div>
           </div>
           <!-- Rate chart -->
-          <div id="msr-chart-wrap" style="margin-bottom:.5rem;background:var(--hover);border-radius:8px;padding:.4rem .3rem;height:120px;display:none;">
+          <div id="msr-chart-wrap" style="margin-bottom:.4rem;background:var(--hover);border-radius:8px;padding:.3rem .3rem;height:80px;display:none;">
             <canvas id="msr-rate-chart"></canvas>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.4rem;">
+          <!-- Signal strength + rate -->
+          <div id="msr-signal-row" style="display:none;margin-bottom:.4rem;">
+            <div id="msr-signal-badge" style="display:inline-block;font-size:.68rem;font-weight:600;padding:.15rem .5rem;border-radius:10px;"></div>
+            <span id="msr-rate-interpret" style="font-size:.68rem;color:var(--muted);margin-left:.4rem;"></span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.4rem;">
             <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
               <div id="msr-live-rate" aria-live="polite" aria-label="Rate in seconds per day" style="font-size:1rem;font-weight:700;">---</div>
               <div style="font-size:.65rem;color:var(--muted);">s/day</div>
-            </div>
-            <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
-              <div id="msr-live-be" style="font-size:1rem;font-weight:700;">---</div>
-              <div style="font-size:.65rem;color:var(--muted);">Beat Error</div>
             </div>
             <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
               <div id="msr-live-ticks" style="font-size:1rem;font-weight:700;">0</div>
               <div style="font-size:.65rem;color:var(--muted);">Ticks</div>
             </div>
           </div>
-          <div style="font-size:.68rem;color:var(--muted);line-height:1.4;margin-bottom:.4rem;">Place the watch caseback on the microphone in a quiet room. Works best with exhibition, sapphire, or ceramic casebacks. Solid metal casebacks may block the tick sound.</div>
+          <!-- No-signal guidance (shown after 30s with no detection) -->
+          <div id="msr-no-signal-tip" style="display:none;font-size:.72rem;line-height:1.45;color:#eab308;background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.2);border-radius:8px;padding:.5rem .65rem;margin-bottom:.4rem;">
+            No ticks detected yet. Try pressing the caseback firmly on the mic. Thick sport cases (Oyster, Royal Oak) may not transmit enough sound.
+          </div>
+          <!-- Done prompt (shown after 30s when detected) -->
+          <div id="msr-done-prompt" style="display:none;font-size:.72rem;line-height:1.45;color:#22c55e;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:.5rem .65rem;margin-bottom:.4rem;">
+            Measurement ready — you can stop now or keep listening for a more stable reading.
+          </div>
+          <div id="msr-tip-text" style="font-size:.68rem;color:var(--muted);line-height:1.4;margin-bottom:.4rem;">Place the watch caseback on the microphone in a quiet room. Works best with exhibition, sapphire, or ceramic casebacks. Solid metal casebacks may block the tick sound.</div>
           <!-- Hidden tuning inputs (used by remote tuning) -->
           <div style="display:none;">
             <input type="hidden" id="msr-tune-mult-lo" value="8">
@@ -3025,7 +3034,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <label for="msr-notes-input" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Notes</label>
           <input type="text" id="msr-notes-input" placeholder="e.g. After full wind" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
         </div>
-        <button id="msr-save-btn" class="btn btn-primary btn-sm" onclick="saveMsrReading()" style="width:100%;" disabled>Save Reading</button>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:.4rem;">
+          <button id="msr-save-btn" class="btn btn-primary btn-sm" onclick="saveMsrReading()" disabled>Save Reading</button>
+          <button class="btn btn-ghost btn-sm" onclick="discardMsrReading()" style="color:var(--muted);">Discard</button>
+        </div>
         <input type="hidden" id="msr-rate-input">
         <input type="hidden" id="msr-be-input">
       </div>
@@ -4453,7 +4465,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.29.10.47';
+const APP_VERSION = '2.36.29.11.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17022,21 +17034,44 @@ window._tgNativeCallback = function(data) {
       const r = data.rate;
       rateEl.textContent = (r >= 0 ? '+' : '') + r.toFixed(1);
       rateEl.style.color = Math.abs(r) <= 5 ? '#22c55e' : Math.abs(r) <= 15 ? '#eab308' : '#ef4444';
-      beEl.textContent = data.beatError != null ? data.beatError.toFixed(2) : '—';
+      if (beEl) beEl.textContent = data.beatError != null ? data.beatError.toFixed(2) : '—';
       if (isMsr) {
         _msrLastRate = data.rate;
         _msrLastBe = data.beatError;
-        // Update hidden inputs for save
         document.getElementById('msr-rate-input').value = r.toFixed(1);
         if (data.beatError != null) document.getElementById('msr-be-input').value = data.beatError.toFixed(2);
-        // Enable save button + show save section
         const saveBtn = document.getElementById('msr-save-btn');
         if (saveBtn) saveBtn.disabled = false;
         document.getElementById('msr-save-section').style.display = '';
-        // Add to rate chart
         _msrRateHistory.push({ t: Date.now(), r: r });
         if (_msrRateHistory.length > 60) _msrRateHistory.shift();
         updateMsrRateChart();
+        // Signal strength badge
+        const ratio = data.debug?.threshold || 0;
+        const sigRow = document.getElementById('msr-signal-row');
+        const sigBadge = document.getElementById('msr-signal-badge');
+        const rateInterp = document.getElementById('msr-rate-interpret');
+        if (sigRow) {
+          sigRow.style.display = '';
+          if (ratio >= 6) { sigBadge.textContent = 'Strong signal'; sigBadge.style.background = 'rgba(34,197,94,.15)'; sigBadge.style.color = '#22c55e'; }
+          else if (ratio >= 4) { sigBadge.textContent = 'Good signal'; sigBadge.style.background = 'rgba(34,197,94,.1)'; sigBadge.style.color = '#22c55e'; }
+          else { sigBadge.textContent = 'Weak signal'; sigBadge.style.background = 'rgba(234,179,8,.12)'; sigBadge.style.color = '#eab308'; }
+        }
+        // Rate interpretation
+        if (rateInterp) {
+          const absR = Math.abs(r);
+          if (absR <= 2) rateInterp.textContent = 'Excellent — near-perfect accuracy';
+          else if (absR <= 5) rateInterp.textContent = 'Great — within COSC spec';
+          else if (absR <= 15) rateInterp.textContent = 'Normal — within manufacturer spec';
+          else if (absR <= 30) rateInterp.textContent = 'Slightly off — may need regulation';
+          else rateInterp.textContent = 'Needs attention — consider servicing';
+        }
+        // Hide tip text once detected
+        const tipText = document.getElementById('msr-tip-text');
+        if (tipText) tipText.style.display = 'none';
+        // Hide no-signal tip
+        const noSigTip = document.getElementById('msr-no-signal-tip');
+        if (noSigTip) noSigTip.style.display = 'none';
       }
     }
     ticksEl.textContent = data.tickCount || 0;
@@ -17061,17 +17096,31 @@ window._tgNativeCallback = function(data) {
     // Countdown / status bar
     if (isMsr) {
       const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
-      const target = 30; // seconds to full buffer
+      const target = 30;
       const pct = Math.min(100, (elapsed / target) * 100);
       const cdBar = document.getElementById('msr-countdown-bar');
       const statusText = document.getElementById('msr-status-text');
       if (cdBar) { cdBar.style.width = pct + '%'; cdBar.setAttribute('aria-valuenow', Math.round(pct)); }
+      const donePrompt = document.getElementById('msr-done-prompt');
+      const noSigTip = document.getElementById('msr-no-signal-tip');
       if (statusText) {
         if (elapsed < target) {
           const remaining = Math.ceil(target - elapsed);
           statusText.textContent = data.confidence > 0.1 ? 'Measuring... ' + remaining + 's' : 'Analyzing... ' + remaining + 's';
+          if (donePrompt) donePrompt.style.display = 'none';
+          if (noSigTip) noSigTip.style.display = 'none';
         } else {
-          statusText.textContent = data.confidence > 0.1 ? 'Measurement ready' : 'Analyzing...';
+          if (data.confidence > 0.1) {
+            statusText.textContent = 'Measurement ready';
+            statusText.style.color = '#22c55e';
+            if (donePrompt) donePrompt.style.display = '';
+            if (noSigTip) noSigTip.style.display = 'none';
+          } else {
+            statusText.textContent = 'No ticks detected';
+            statusText.style.color = '#eab308';
+            if (noSigTip) noSigTip.style.display = '';
+            if (donePrompt) donePrompt.style.display = 'none';
+          }
         }
       }
     }
@@ -17079,10 +17128,19 @@ window._tgNativeCallback = function(data) {
     if (tooNoisy) {
       lbl.textContent = 'Too noisy — move to a quieter room';
       lbl.style.color = '#ef4444';
+    } else if (isMsr) {
+      if (data.confidence > 0.1) {
+        const ratio = data.debug?.threshold || 0;
+        lbl.textContent = ratio >= 6 ? 'Strong signal — hold steady' : ratio >= 4 ? 'Good signal — keep listening' : 'Weak signal — press caseback firmly on mic';
+        lbl.style.color = ratio >= 4 ? '#22c55e' : '#eab308';
+      } else {
+        lbl.style.color = '';
+        lbl.textContent = 'Listening...';
+      }
     } else {
       lbl.style.color = '';
       lbl.textContent = data.confidence > 0.1
-        ? 'Confidence: ' + (data.confidence * 100).toFixed(0) + '%' + ' | Ratio: ' + (data.debug?.threshold || 0).toFixed(1)
+        ? 'Confidence: ' + (data.confidence * 100).toFixed(0) + '%'
         : 'Listening...';
     }
     // Live tuning readout
@@ -17375,8 +17433,13 @@ function toggleMsrListen() {
     document.getElementById('msr-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
     document.getElementById('msr-live-status').style.display = '';
     document.getElementById('msr-live-rate').textContent = '—';
-    document.getElementById('msr-live-be').textContent = '—';
     document.getElementById('msr-live-ticks').textContent = '0';
+    // Reset new UI elements
+    const sigRow = document.getElementById('msr-signal-row'); if (sigRow) sigRow.style.display = 'none';
+    const noSigTip = document.getElementById('msr-no-signal-tip'); if (noSigTip) noSigTip.style.display = 'none';
+    const donePrompt = document.getElementById('msr-done-prompt'); if (donePrompt) donePrompt.style.display = 'none';
+    const tipText = document.getElementById('msr-tip-text'); if (tipText) tipText.style.display = '';
+    const statusText = document.getElementById('msr-status-text'); if (statusText) statusText.style.color = '';
     return;
   }
   // Web Audio fallback
@@ -17447,11 +17510,29 @@ function stopMsrListen() {
   if (_msrLastRate != null) {
     document.getElementById('msr-save-section').style.display = '';
     document.getElementById('msr-rate-input').value = _msrLastRate.toFixed(1);
-    if (_msrLastBe != null) document.getElementById('msr-be-input').value = _msrLastBe.toFixed(2);
     if (_msrLastBph) document.getElementById('msr-bph-select').value = String(_msrLastBph);
     const saveBtn = document.getElementById('msr-save-btn');
     if (saveBtn) saveBtn.disabled = false;
   }
+}
+
+function discardMsrReading() {
+  _msrLastRate = null;
+  _msrLastBe = null;
+  _msrLastBph = null;
+  document.getElementById('msr-save-section').style.display = 'none';
+  document.getElementById('msr-live-status').style.display = 'none';
+  document.getElementById('msr-live-rate').textContent = '---';
+  document.getElementById('msr-live-ticks').textContent = '0';
+  document.getElementById('msr-rate-input').value = '';
+  document.getElementById('msr-be-input').value = '';
+  if (_msrRateChart) { _msrRateChart.destroy(); _msrRateChart = null; }
+  document.getElementById('msr-chart-wrap').style.display = 'none';
+  const sigRow = document.getElementById('msr-signal-row'); if (sigRow) sigRow.style.display = 'none';
+  const noSigTip = document.getElementById('msr-no-signal-tip'); if (noSigTip) noSigTip.style.display = 'none';
+  const donePrompt = document.getElementById('msr-done-prompt'); if (donePrompt) donePrompt.style.display = 'none';
+  const tipText = document.getElementById('msr-tip-text'); if (tipText) tipText.style.display = '';
+  const statusText = document.getElementById('msr-status-text'); if (statusText) statusText.style.color = '';
 }
 
 async function saveMsrReading() {
