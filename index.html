@@ -17520,6 +17520,7 @@ function discardMsrReading() {
   _msrLastRate = null;
   _msrLastBe = null;
   _msrLastBph = null;
+  if (_msrListening) stopMsrListen();
   document.getElementById('msr-save-section').style.display = 'none';
   document.getElementById('msr-live-status').style.display = 'none';
   document.getElementById('msr-live-rate').textContent = '---';
