@@ -3027,11 +3027,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input type="text" id="w-ref" placeholder="116610LN" maxlength="60">
       </div>
       <div class="form-group">
-        <label for="w-price">Purchase Price ($)</label>
-        <input type="text" inputmode="decimal" id="w-price" placeholder="0" autocomplete="off" oninput="fmtPriceInput(this)">
+        <label for="w-movement">Movement / Calibre</label>
+        <input type="text" id="w-movement" placeholder="Cal. 3235" maxlength="80">
       </div>
     </div>
     <div class="form-row">
+      <div class="form-group">
+        <label for="w-price">Purchase Price ($)</label>
+        <input type="text" inputmode="decimal" id="w-price" placeholder="0" autocomplete="off" oninput="fmtPriceInput(this)">
+      </div>
       <div class="form-group">
         <label for="w-date">Purchase Date</label>
         <input type="date" id="w-date" max="9999-12-31">
@@ -4236,6 +4240,7 @@ function watchToRow(w) {
   return {
     id: w.id, user_id: currentUser.id,
     brand: w.brand||null, name: w.name||null, ref: w.ref||null,
+    movement: w.movement||null,
     price: w.price||null, purchase_date: w.purchaseDate||null,
     color: w.color||null, image: w.image||null, url: w.url||null,
     tags: w.tags||[], straps: w.straps||[], owner: w.owner||null,
@@ -4253,6 +4258,7 @@ function watchToRow(w) {
 function rowToWatch(r) {
   return {
     id: r.id, brand: r.brand||'', name: r.name||'', ref: r.ref||'',
+    movement: r.movement||'',
     price: r.price||null, purchaseDate: r.purchase_date||null,
     color: r.color||'#c9a84c',
     // Upgrade plain http:// image URLs to https:// (imported backups sometimes
@@ -4330,7 +4336,7 @@ async function loadUserData() {
   // Promise.resolve() converts the Supabase thenable to a real Promise (thenables lack .catch())
   const _q = query => Promise.resolve(query).catch(e => { console.error('[WristLog] loadUserData query error:', e?.message); return { data: null, error: e }; });
   const [wRes, lRes, wlRes] = await withTimeout(Promise.all([
-    _q(db.from('watches').select('id,brand,name,ref,price,purchase_date,color,image,url,tags,straps,owner,market_price,market_price_date,market_price_src,watch_charts_url,price_history,warranty_expiry,has_box,has_papers,insurance,insured_value,insurance_notes,receipts,watch_privacy,elo_rating').eq('user_id', uid)),
+    _q(db.from('watches').select('id,brand,name,ref,movement,price,purchase_date,color,image,url,tags,straps,owner,market_price,market_price_date,market_price_src,watch_charts_url,price_history,warranty_expiry,has_box,has_papers,insurance,insured_value,insurance_notes,receipts,watch_privacy,elo_rating').eq('user_id', uid)),
     _q(db.from('logs').select('id,watch_id,date,use_case,notes,strap_id,photo_url,visibility,club_id').eq('user_id', uid)),
     _q(db.from('wishlist').select('id,brand,name,ref,price,url,image,notes,color,tags,market_price,market_price_date,market_price_src,watch_charts_url,wish_privacy,added_date,sort_order').eq('user_id', uid)),
   ]), 15000);
@@ -4452,7 +4458,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.28.16.34';
+const APP_VERSION = '2.36.28.21.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12655,7 +12661,7 @@ function openAddWatch() {
   selColor          = PALETTE[0];
   wPendingImage     = null;
   wPendingFile      = null;
-  ['w-name','w-ref','w-price','w-date','w-url','w-ins-value','w-warranty','w-manual-mp'].forEach(id => document.getElementById(id).value = '');
+  ['w-name','w-ref','w-movement','w-price','w-date','w-url','w-ins-value','w-warranty','w-manual-mp'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('w-insurance').value = '';
   document.getElementById('w-box').value = '';
   document.getElementById('w-papers').value = '';
@@ -12690,6 +12696,7 @@ function openEditWatch(id) {
   buildBrandSelect(w.brand);
   document.getElementById('w-name').value               = w.name;
   document.getElementById('w-ref').value                = w.ref || '';
+  document.getElementById('w-movement').value           = w.movement || '';
   setPriceInput('w-price', w.price != null ? w.price : '');
   document.getElementById('w-date').value               = w.purchaseDate || '';
   document.getElementById('w-url').value                = w.url || '';
@@ -12955,6 +12962,7 @@ async function saveWatch() {
   const data = {
     brand, name,
     ref:            document.getElementById('w-ref').value.trim(),
+    movement:       document.getElementById('w-movement').value.trim(),
     price:          readPrice('w-price'),
     purchaseDate:   document.getElementById('w-date').value,
     url:            document.getElementById('w-url').value.trim(),
