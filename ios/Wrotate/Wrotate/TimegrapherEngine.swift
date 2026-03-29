@@ -109,19 +109,8 @@ class TimegrapherEngine {
         let dt = 1.0 / Float(actualSampleRate)
         let rc = 1.0 / (2.0 * Float.pi * hpCutoffHz)
         hpAlpha = rc / (rc + dt)
-        // Resize ring buffer if duration changed
-        let newDuration = max(5, min(120, bufSec))
-        if newDuration != bufferDurationSec {
-            bufferDurationSec = newDuration
-            let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
-            let newCapacity = Int(ringSampleRate * Double(bufferDurationSec))
-            if newCapacity != energyRingCapacity {
-                energyRingCapacity = newCapacity
-                energyRing = [Float](repeating: 0, count: energyRingCapacity)
-                energyRingWritePos = 0
-                energyRingCount = 0
-            }
-        }
+        // Store buffer duration for next start() — don't resize mid-recording
+        bufferDurationSec = max(5, min(120, bufSec))
     }
 
     func start(bph: Int, sensitivity: Int) {
@@ -229,11 +218,11 @@ class TimegrapherEngine {
             }
         }
 
-        // Analyze every ~2 seconds, after at least 5 seconds of data
+        // Analyze every ~2 seconds, after at least 10 seconds of data
         let now = CACurrentMediaTime() * 1000
         let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
         let elapsedSec = Double(energyRingCount) / ringSampleRate
-        if now - lastAnalysisTime > 2000 && elapsedSec >= 5 {
+        if now - lastAnalysisTime > 2000 && elapsedSec >= 10 {
             lastAnalysisTime = now
             analyzeAutocorrelation()
         }
