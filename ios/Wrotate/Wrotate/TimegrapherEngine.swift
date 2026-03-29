@@ -63,11 +63,8 @@ class TimegrapherEngine {
     private var hpPrevOut: Float = 0
     private var hpAlpha: Float = 0.97
 
-    // Short-term energy (1ms rolling window)
-    private var energyWindow: [Float] = []
-    private var energyWindowSize: Int = 48
-    private var energyWritePos: Int = 0
-    private var energySum: Float = 0
+    // Peak energy within each subsample group
+    private var subsamplePeak: Float = 0
 
     // Energy ring buffer for autocorrelation
     // At 0.1ms resolution (10kHz), 10 seconds = 100000 entries
@@ -82,7 +79,8 @@ class TimegrapherEngine {
     private var ringSubsampleTarget: Int = 5  // 48kHz / 5 ≈ 9.6kHz ≈ 0.1ms
 
     // Tuning parameters
-    private var hpCutoffHz: Float = 1000
+    private var hpCutoffHz: Float = 3000
+    private var peakRatioThreshold: Float = 2.0
 
     // Live debug values
     private var recentPeakEnergy: Float = 0
@@ -104,8 +102,10 @@ class TimegrapherEngine {
     }
 
     func setTuning(multLo: Float, multHi: Float, minThreshold: Float,
-                    percentile: Int, hpCutoff: Float) {
+                    percentile: Int, hpCutoff: Float,
+                    peakRatioThreshold thresh: Float = 2.0) {
         hpCutoffHz = max(200, min(5000, hpCutoff))
+        peakRatioThreshold = max(1.0, thresh)
         let dt = 1.0 / Float(actualSampleRate)
         let rc = 1.0 / (2.0 * Float.pi * hpCutoffHz)
         hpAlpha = rc / (rc + dt)
@@ -125,8 +125,7 @@ class TimegrapherEngine {
         lastAnalysisTime = 0
         hpPrevIn = 0
         hpPrevOut = 0
-        energySum = 0
-        energyWritePos = 0
+        subsamplePeak = 0
         energyRingWritePos = 0
         energyRingCount = 0
         energySubsampleCounter = 0
@@ -149,11 +148,6 @@ class TimegrapherEngine {
             let dt = 1.0 / Float(actualSampleRate)
             let rc = 1.0 / (2.0 * Float.pi * hpCutoffHz)
             hpAlpha = rc / (rc + dt)
-
-            energyWindowSize = max(1, Int(actualSampleRate * 0.001))  // 1ms
-            energyWindow = [Float](repeating: 0, count: energyWindowSize)
-            energyWritePos = 0
-            energySum = 0
 
             // Ring buffer: 10 seconds at ~10kHz (0.1ms) resolution
             ringSubsampleTarget = max(1, Int(actualSampleRate / 10000))  // ~5 at 48kHz
@@ -201,20 +195,19 @@ class TimegrapherEngine {
             hpPrevIn = x
             hpPrevOut = hp
 
-            // Rolling 1ms energy (mean absolute value)
+            // Track peak absolute HP value within each subsample group
             let absHp = abs(hp)
-            energySum -= energyWindow[energyWritePos]
-            energySum += absHp
-            energyWindow[energyWritePos] = absHp
-            energyWritePos = (energyWritePos + 1) % energyWindowSize
+            if absHp > subsamplePeak { subsamplePeak = absHp }
 
             sampleCounter += 1
 
-            // Store energy sample at ~10kHz (every ~5 raw samples at 48kHz)
+            // Store peak energy at ~10kHz (every ~5 raw samples at 48kHz)
+            // Using peak (not mean) preserves sub-ms tick transients
             energySubsampleCounter += 1
             if energySubsampleCounter >= ringSubsampleTarget {
                 energySubsampleCounter = 0
-                let energy = energySum / Float(energyWindowSize)
+                let energy = subsamplePeak
+                subsamplePeak = 0
                 energyRing[energyRingWritePos] = energy
                 energyRingWritePos = (energyRingWritePos + 1) % energyRingCapacity
                 energyRingCount = min(energyRingCount + 1, energyRingCapacity)
@@ -352,8 +345,9 @@ class TimegrapherEngine {
         let confidence = peakFactor * (0.3 + 0.7 * durationFactor)
 
         // Only report results if there's meaningful periodicity
-        // Require ratio > 5 to avoid false positives from ambient noise
-        if peakRatio > 5.0 {
+        // Remotely tunable threshold (default 2.0)
+        // Calibration data: ambient noise peaks at ~1.0, watch present ~2.5+
+        if peakRatio > Double(peakRatioThreshold) {
             currentRate = (rate * 10).rounded() / 10
             currentDetectedInterval = refinedIntervalSec * 1000.0  // ms
             detectedBph = targetBph

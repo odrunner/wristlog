@@ -37,10 +37,12 @@ class TimegrapherBridge {
             let multHi = body["multHi"] as? Double ?? 1.5
             let minThresh = body["minThreshold"] as? Double ?? 0.001
             let percentile = body["percentile"] as? Int ?? 50
-            let hpCutoff = body["hpCutoff"] as? Int ?? 1000
+            let hpCutoff = body["hpCutoff"] as? Int ?? 3000
+            let peakRatioThreshold = body["peakRatioThreshold"] as? Double ?? 2.0
             engine.setTuning(multLo: Float(multLo), multHi: Float(multHi),
                              minThreshold: Float(minThresh),
-                             percentile: percentile, hpCutoff: Float(hpCutoff))
+                             percentile: percentile, hpCutoff: Float(hpCutoff),
+                             peakRatioThreshold: Float(peakRatioThreshold))
 
         default:
             break
