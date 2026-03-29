@@ -2202,7 +2202,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button class="active" data-page="feed"         onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12h-6v-6h-4v6z"/></svg></span><span class="nav-label">Feed</span></button>
       <button               data-page="track"        onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg></span><span class="nav-label">Track</span></button>
       <button               data-page="collection"   onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="nav-label">Collection</span></button>
-      <button               data-page="measure"     onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span><span class="nav-label">Measure</span></button>
+      <button id="nav-measure-btn" data-page="measure" onclick="nav(this)" style="display:none;"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span><span class="nav-label">Measure</span></button>
       <button               data-page="wishlist"     onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></span><span class="nav-label">Wishlist</span></button>
       <button               data-page="stats"      onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 20h16"/><rect x="4" y="13" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/></svg></span><span class="nav-label">Stats</span></button>
     </nav>
@@ -4453,7 +4453,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.29.10.18';
+const APP_VERSION = '2.36.29.10.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17259,7 +17259,7 @@ function updateMsrRateChart() {
 }
 
 function openMeasureModal() {
-  // Navigate to the Measure tab instead of opening a modal
+  if (!_tgHasNative()) return;
   nav(document.querySelector('[data-page="measure"]'));
 }
 
@@ -17487,6 +17487,9 @@ async function bootApp(user) {
   if (helpBtn) helpBtn.style.display = '';
   const bellBtn = document.getElementById('bell-btn');
   if (bellBtn) bellBtn.style.display = '';
+  // Show Measure tab only when native timegrapher bridge is available (iOS app)
+  const navMeasure = document.getElementById('nav-measure-btn');
+  if (navMeasure && _tgHasNative()) navMeasure.style.display = '';
   // Start feed/social loading immediately — don't block on user data
   try {
     initApp();
