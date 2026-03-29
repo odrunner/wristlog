@@ -1,18 +1,15 @@
 import AVFoundation
 import Accelerate
 
-/// Measures watch accuracy via autocorrelation at a known BPH.
+/// Measures watch accuracy via Goertzel algorithm at a known BPH.
 ///
-/// Algorithm: user provides BPH → we know the exact tick interval.
-/// 1. HP-filter raw 48kHz audio to isolate transients
-/// 2. Compute 1ms rolling energy (rectified signal)
-/// 3. Accumulate energy into a ring buffer (several seconds)
-/// 4. Autocorrelate at the known BPH lag — periodic ticks produce a peak
-/// 5. No watch = no periodicity = no detection (no threshold needed!)
-/// 6. Rate = sub-sample refinement of the autocorrelation peak offset from ideal lag
-///
-/// This completely avoids amplitude thresholding — we don't need to
-/// distinguish tick loudness from noise loudness. We only detect periodicity.
+/// Algorithm: user provides BPH → we know the exact tick frequency.
+/// 1. HP-filter raw 48kHz audio (4kHz default) to isolate tick transients
+/// 2. Peak-hold energy into a ring buffer at ~12kHz
+/// 3. Goertzel at the tick frequency — measures power at that exact frequency
+/// 4. Compare to baseline power at incommensurate frequencies
+/// 5. High ratio = periodic ticks detected; low ratio = ambient noise
+/// 6. Rate = fine frequency sweep around expected, parabolic interpolation
 class TimegrapherEngine {
 
     struct Update {
@@ -32,10 +29,10 @@ class TimegrapherEngine {
         let bufferSamples: Int     // analysis window samples
         let hpCutoff: Double
         let bestLag: Int           // BPH
-        let bestCorrelation: Double // autocorrelation peak value
-        let refinedLag: Double     // refined lag in samples
-        let noiseFloor: Double     // baseline correlation
-        let threshold: Double      // peak / baseline ratio
+        let bestCorrelation: Double // Goertzel power at tick freq
+        let refinedLag: Double     // detected frequency
+        let noiseFloor: Double     // baseline power
+        let threshold: Double      // Goertzel ratio
         let peakEnergy: Double     // recent peak energy
         let allBphCorrelations: [(bph: Int, correlation: Float, lag: Int)]
     }
@@ -58,7 +55,7 @@ class TimegrapherEngine {
     // Known BPH from user
     private var targetBph: Int = 28800
 
-    // HP filter (1kHz)
+    // HP filter
     private var hpPrevIn: Float = 0
     private var hpPrevOut: Float = 0
     private var hpAlpha: Float = 0.97
@@ -66,19 +63,17 @@ class TimegrapherEngine {
     // Peak energy within each subsample group
     private var subsamplePeak: Float = 0
 
-    // Energy ring buffer for autocorrelation
-    // At 0.1ms resolution (10kHz), 30 seconds = 300000 entries
-    // Longer buffer = more tick periods averaged = better SNR
+    // Energy ring buffer
     private var energyRing: [Float] = []
-    private var energyRingCapacity: Int = 300000  // 30 seconds at 0.1ms
+    private var energyRingCapacity: Int = 360000
     private var bufferDurationSec: Float = 30.0
     private var energyRingWritePos: Int = 0
     private var energyRingCount: Int = 0
     private var energySubsampleCounter: Int = 0
-    private var ringSubsampleTarget: Int = 5  // 48kHz / 5 ≈ 9.6kHz ≈ 0.1ms
+    private var ringSubsampleTarget: Int = 4  // 48kHz / 4 = 12kHz
 
     // Tuning parameters
-    private var hpCutoffHz: Float = 3000
+    private var hpCutoffHz: Float = 4000
     private var peakRatioThreshold: Float = 2.0
 
     // Live debug values
@@ -97,19 +92,19 @@ class TimegrapherEngine {
     private var lastDebugInfo: DebugInfo? = nil
 
     func setSensitivity(_ value: Int) {
-        // Not used in autocorrelation approach, kept for bridge compatibility
+        // Kept for bridge compatibility
     }
 
     func setTuning(multLo: Float, multHi: Float, minThreshold: Float,
                     percentile: Int, hpCutoff: Float,
                     peakRatioThreshold thresh: Float = 2.0,
                     bufferSeconds bufSec: Float = 30.0) {
-        hpCutoffHz = max(200, min(5000, hpCutoff))
+        hpCutoffHz = max(200, min(8000, hpCutoff))
         peakRatioThreshold = max(1.0, thresh)
         let dt = 1.0 / Float(actualSampleRate)
         let rc = 1.0 / (2.0 * Float.pi * hpCutoffHz)
         hpAlpha = rc / (rc + dt)
-        // Store buffer duration for next start() — don't resize mid-recording
+        // Store for next start() — don't resize mid-recording
         bufferDurationSec = max(5, min(120, bufSec))
     }
 
@@ -133,6 +128,7 @@ class TimegrapherEngine {
         energySubsampleCounter = 0
         recentPeakEnergy = 0
         peakCount = 0
+        lastDebugInfo = nil
 
         do {
             let session = AVAudioSession.sharedInstance()
@@ -151,8 +147,8 @@ class TimegrapherEngine {
             let rc = 1.0 / (2.0 * Float.pi * hpCutoffHz)
             hpAlpha = rc / (rc + dt)
 
-            // Ring buffer at ~10kHz (0.1ms) resolution
-            ringSubsampleTarget = max(1, Int(actualSampleRate / 10000))  // ~5 at 48kHz
+            // Ring buffer at ~12kHz
+            ringSubsampleTarget = max(1, Int(actualSampleRate / 12000))
             let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
             energyRingCapacity = Int(ringSampleRate * Double(bufferDurationSec))
             energyRing = [Float](repeating: 0, count: energyRingCapacity)
@@ -197,14 +193,12 @@ class TimegrapherEngine {
             hpPrevIn = x
             hpPrevOut = hp
 
-            // Track peak absolute HP value within each subsample group
+            // Peak-hold within each subsample group
             let absHp = abs(hp)
             if absHp > subsamplePeak { subsamplePeak = absHp }
 
             sampleCounter += 1
 
-            // Store peak energy at ~10kHz (every ~5 raw samples at 48kHz)
-            // Using peak (not mean) preserves sub-ms tick transients
             energySubsampleCounter += 1
             if energySubsampleCounter >= ringSubsampleTarget {
                 energySubsampleCounter = 0
@@ -224,7 +218,7 @@ class TimegrapherEngine {
         let elapsedSec = Double(energyRingCount) / ringSampleRate
         if now - lastAnalysisTime > 2000 && elapsedSec >= 10 {
             lastAnalysisTime = now
-            analyzeAutocorrelation()
+            analyzeGoertzel()
         }
 
         let update = Update(
@@ -237,129 +231,101 @@ class TimegrapherEngine {
         DispatchQueue.main.async { [weak self] in self?.onUpdate?(update) }
     }
 
-    // MARK: - Autocorrelation analysis
+    // MARK: - Goertzel analysis
 
-    private func analyzeAutocorrelation() {
+    /// Compute power at a single frequency using the Goertzel algorithm.
+    /// Much more efficient than autocorrelation — O(N) for one frequency.
+    private func goertzelPower(_ signal: [Float], count: Int, targetFreq: Double, sampleRate: Double) -> Double {
+        let k = targetFreq * Double(count) / sampleRate
+        let w = 2.0 * Double.pi * k / Double(count)
+        let coeff = Float(2.0 * cos(w))
+        var s1: Float = 0, s2: Float = 0
+        for i in 0..<count {
+            let s0 = signal[i] + coeff * s1 - s2
+            s2 = s1
+            s1 = s0
+        }
+        let power = Double(s1 * s1 + s2 * s2 - coeff * s1 * s2)
+        return power / Double(count * count)
+    }
+
+    private func analyzeGoertzel() {
         let count = energyRingCount
         let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
-        guard count >= Int(ringSampleRate * 10) else { return }  // need at least 10 seconds
+        guard count >= Int(ringSampleRate * 10) else { return }
 
-        // Expected lag in ring samples
-        // BPH → interval = 3600/BPH seconds → lag = interval × ringSampleRate
-        let expectedIntervalSec = 3600.0 / Double(targetBph)
-        let lagCenter = Int(expectedIntervalSec * ringSampleRate)
+        let tickFreq = Double(targetBph) / 3600.0  // Hz
 
-        // Search window: ±5% around expected lag
-        let searchRadius = max(1, Int(Double(lagCenter) * 0.05))
-        let lagMin = max(1, lagCenter - searchRadius)
-        let lagMax = min(count / 2, lagCenter + searchRadius)
-        guard lagMin < lagMax else { return }
-
-        // Build a linear array from the ring buffer (most recent `count` samples)
+        // Build linear array from ring buffer
         var signal = [Float](repeating: 0, count: count)
         for i in 0..<count {
             let idx = (energyRingWritePos - count + i + energyRingCapacity) % energyRingCapacity
             signal[i] = energyRing[idx]
         }
 
-        // Subtract mean to remove DC bias
-        var mean: Float = 0
-        vDSP_meanv(signal, 1, &mean, vDSP_Length(count))
-        var negMean = -mean
-        vDSP_vsadd(signal, 1, &negMean, &signal, 1, vDSP_Length(count))
+        // === DETECTION: Goertzel at tick frequency vs baseline ===
+        let targetPower = goertzelPower(signal, count: count, targetFreq: tickFreq, sampleRate: ringSampleRate)
 
-        // Compute autocorrelation for lags in search window
-        var bestLag = lagCenter
-        var bestCorr: Float = -1
-        var correlations = [Float](repeating: 0, count: lagMax - lagMin + 1)
+        // Baseline: average power at several incommensurate frequencies
+        let baselineMultipliers = [0.73, 0.81, 1.19, 1.37, 1.61]
+        var baselineSum = 0.0
+        for mult in baselineMultipliers {
+            baselineSum += goertzelPower(signal, count: count, targetFreq: tickFreq * mult, sampleRate: ringSampleRate)
+        }
+        let baseline = baselineSum / Double(baselineMultipliers.count)
 
-        signal.withUnsafeBufferPointer { buf in
-            let ptr = buf.baseAddress!
-            for lag in lagMin...lagMax {
-                let n = count - lag
-                guard n > 0 else { continue }
-                var corr: Float = 0
-                vDSP_dotpr(ptr, 1, ptr + lag, 1, &corr, vDSP_Length(n))
-                corr /= Float(n)
-                correlations[lag - lagMin] = corr
-                if corr > bestCorr {
-                    bestCorr = corr
-                    bestLag = lag
+        let goertzelRatio = baseline > 0 ? targetPower / baseline : (targetPower > 0 ? 10.0 : 0)
+
+        // === RATE: Fine frequency sweep ±0.5% ===
+        var detectedFreq = tickFreq
+        if goertzelRatio > Double(peakRatioThreshold) {
+            let sweepRange = tickFreq * 0.005  // ±0.5%
+            let steps = 101
+            var bestPower = 0.0
+            var bestIdx = steps / 2
+            var sweepPowers = [Double](repeating: 0, count: steps)
+
+            for i in 0..<steps {
+                let f = tickFreq - sweepRange + (2.0 * sweepRange * Double(i) / Double(steps - 1))
+                let p = goertzelPower(signal, count: count, targetFreq: f, sampleRate: ringSampleRate)
+                sweepPowers[i] = p
+                if p > bestPower {
+                    bestPower = p
+                    bestIdx = i
                 }
             }
-        }
 
-        // Baseline: average correlation at incommensurate lags (noise floor)
-        // IMPORTANT: avoid integer multiples/fractions of lagCenter (0.5x, 2x, 3x, etc.)
-        // because periodic signals also correlate at harmonics, inflating the baseline.
-        // Use irrational-ish fractions: 0.73x, 1.37x, 1.73x — these don't align with tick harmonics.
-        let baselineLags = [
-            max(1, Int(Double(lagCenter) * 0.73)),
-            min(count / 2 - 1, Int(Double(lagCenter) * 1.37)),
-            min(count / 2 - 1, Int(Double(lagCenter) * 1.73))
-        ]
-        var baselineSum: Float = 0
-        var baselineN = 0
-
-        signal.withUnsafeBufferPointer { buf in
-            let ptr = buf.baseAddress!
-            for testLag in baselineLags {
-                if testLag < lagMin || testLag > lagMax {
-                    let n = count - testLag
-                    guard n > 0 else { continue }
-                    var corr: Float = 0
-                    vDSP_dotpr(ptr, 1, ptr + testLag, 1, &corr, vDSP_Length(n))
-                    corr /= Float(n)
-                    baselineSum += corr
-                    baselineN += 1
-                }
-            }
-        }
-        let baseline = baselineN > 0 ? baselineSum / Float(baselineN) : 0
-
-        // Peak-to-baseline ratio: strong periodicity → high ratio
-        let peakRatio = baseline > 0 ? Double(bestCorr / baseline) : (bestCorr > 0 ? 10.0 : 0)
-
-        // Sub-sample refinement via parabolic interpolation
-        var refinedLag = Double(bestLag)
-        if bestLag > lagMin && bestLag < lagMax {
-            let idxL = bestLag - lagMin - 1
-            let idxC = bestLag - lagMin
-            let idxR = bestLag - lagMin + 1
-            if idxL >= 0 && idxR < correlations.count {
-                let a = correlations[idxL]
-                let b = correlations[idxC]
-                let c = correlations[idxR]
+            // Parabolic interpolation
+            let df = 2.0 * sweepRange / Double(steps - 1)
+            detectedFreq = tickFreq - sweepRange + df * Double(bestIdx)
+            if bestIdx > 0 && bestIdx < steps - 1 {
+                let a = sweepPowers[bestIdx - 1]
+                let b = sweepPowers[bestIdx]
+                let c = sweepPowers[bestIdx + 1]
                 let denom = 2.0 * (2.0 * b - a - c)
-                if abs(denom) > 1e-10 {
-                    let delta = Double(a - c) / Double(denom)
-                    refinedLag = Double(bestLag) + delta
+                if abs(denom) > 1e-30 {
+                    let delta = (a - c) / denom
+                    detectedFreq += delta * df
                 }
             }
         }
 
-        // Rate calculation: how far is the detected interval from the expected interval?
-        // refinedLag is in ring samples, convert to seconds
-        let expectedLagSamples = Double(lagCenter)
-        let refinedIntervalSec = refinedLag / ringSampleRate
-        // rate (s/day) = (detected - expected) / expected × 86400
-        let rate = ((refinedLag - expectedLagSamples) / expectedLagSamples) * 86400.0
+        let rate = ((detectedFreq - tickFreq) / tickFreq) * 86400.0
+        let detectedIntervalSec = 1.0 / detectedFreq
 
-        // Confidence: based on peak ratio and data duration
+        // Confidence
         let elapsedSec = Double(count) / ringSampleRate
         let durationFactor = min(1.0, elapsedSec / 60.0)
-        let peakFactor = min(1.0, max(0, (peakRatio - 1.0) / 9.0))  // ratio 1=noise, 10+=strong
+        let peakFactor = min(1.0, max(0, (goertzelRatio - 1.0) / 9.0))
         let confidence = peakFactor * (0.3 + 0.7 * durationFactor)
 
-        // Only report results if there's meaningful periodicity
-        // Remotely tunable threshold (default 2.0)
-        // Calibration data: ambient noise peaks at ~1.0, watch present ~2.5+
-        if peakRatio > Double(peakRatioThreshold) {
+        // Report results
+        if goertzelRatio > Double(peakRatioThreshold) {
             currentRate = (rate * 10).rounded() / 10
-            currentDetectedInterval = refinedIntervalSec * 1000.0  // ms
+            currentDetectedInterval = detectedIntervalSec * 1000.0
             detectedBph = targetBph
             currentConfidence = min(0.99, (confidence * 100).rounded() / 100)
-            peakCount = Int(elapsedSec * Double(targetBph) / 3600.0)  // estimated ticks
+            peakCount = Int(elapsedSec * Double(targetBph) / 3600.0)
         } else {
             currentRate = nil
             currentConfidence = 0
@@ -367,7 +333,7 @@ class TimegrapherEngine {
             peakCount = 0
         }
 
-        currentBeatError = nil  // not measurable via autocorrelation alone
+        currentBeatError = nil
 
         lastDebugInfo = DebugInfo(
             sampleRate: actualSampleRate,
@@ -375,20 +341,15 @@ class TimegrapherEngine {
             bufferSamples: count,
             hpCutoff: Double(hpCutoffHz),
             bestLag: targetBph,
-            bestCorrelation: Double(bestCorr),
-            refinedLag: refinedLag,
-            noiseFloor: Double(baseline),
-            threshold: peakRatio,
+            bestCorrelation: targetPower,
+            refinedLag: detectedFreq,
+            noiseFloor: baseline,
+            threshold: goertzelRatio,
             peakEnergy: Double(recentPeakEnergy),
             allBphCorrelations: [
-                (bph: targetBph, correlation: bestCorr, lag: bestLag)
+                (bph: targetBph, correlation: Float(goertzelRatio), lag: Int(detectedFreq * 1000))
             ])
 
         recentPeakEnergy = recentPeakEnergy * 0.95
-    }
-
-    private var elapsedSeconds: Double {
-        let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
-        return Double(energyRingCount) / ringSampleRate
     }
 }
