@@ -16,6 +16,9 @@ supabase/.temp/
 # Dev credentials (never commit)
 dev-config.js
 
+# Claude Code project instructions (contains tokens)
+CLAUDE.md
+
 # Apple auth keys (sensitive)
 *.p8
 
