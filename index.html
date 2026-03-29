@@ -4458,7 +4458,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.28.21.00';
+const APP_VERSION = '2.36.28.21.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12414,6 +12414,7 @@ function getSelectedTags() {
 const INLINE_FIELDS = [
   { id: 'w-name',  fmt: v => v || null },
   { id: 'w-ref',   fmt: v => v || null },
+  { id: 'w-movement', fmt: v => v || null },
   { id: 'w-price', fmt: v => { const n = parseFloat((v||'').toString().replace(/,/g,'')); return !isNaN(n) ? fmtMoney(n) : null; } },
   { id: 'w-date',  fmt: v => v ? fmtDate(v) : null },
   { id: 'w-manual-mp', fmt: v => { const n = parseFloat((v||'').toString().replace(/,/g,'')); return !isNaN(n) ? fmtMoney(n) : null; } },
