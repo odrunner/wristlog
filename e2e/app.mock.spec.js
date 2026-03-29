@@ -687,13 +687,13 @@ test.describe('Clubs page (mocked)', () => {
     await waitForAppBoot(page);
   });
 
-  test('navigates to clubs page', async ({ page }) => {
-    await navigateTo(page, 'clubs');
+  test('navigates to clubs page from feed', async ({ page }) => {
+    await page.locator('#page-feed button', { hasText: /clubs/i }).click();
     await expect(page.locator('#page-clubs')).toBeVisible();
   });
 
   test('clubs page shows Create button', async ({ page }) => {
-    await navigateTo(page, 'clubs');
+    await page.locator('#page-feed button', { hasText: /clubs/i }).click();
     await expect(page.locator('#page-clubs button', { hasText: /create/i })).toBeVisible();
   });
 });
