@@ -2205,7 +2205,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button               data-page="measure"     onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span><span class="nav-label">Measure</span></button>
       <button               data-page="wishlist"     onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg></span><span class="nav-label">Wishlist</span></button>
       <button               data-page="stats"      onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 20h16"/><rect x="4" y="13" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="16" y="4" width="4" height="16" rx="1"/></svg></span><span class="nav-label">Stats</span></button>
-      <button               data-page="clubs"        onclick="nav(this)"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="nav-label">Clubs</span></button>
     </nav>
     <div class="header-data">
       <div id="server-dot" class="server-dot" title="Saving to local file"></div>
@@ -2310,6 +2309,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <h1 class="page-title">Feed</h1>
       <div style="display:flex;gap:.5rem;margin-left:auto;">
         <button class="btn btn-primary btn-sm" onclick="openNewPost()" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Post</button>
+        <button class="btn btn-ghost btn-sm" onclick="openDiscover()" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</button>
+        <button class="btn btn-ghost btn-sm" onclick="nav(document.querySelector('[data-page=clubs]'))" style="display:inline-flex;align-items:center;gap:.4rem;" title="Clubs"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clubs</button>
       </div>
     </div>
     <div id="ptr-indicator" class="ptr-indicator"><div class="ptr-spinner"></div><span class="ptr-text">Pull to refresh</span></div>
@@ -2330,10 +2331,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div id="page-clubs" class="page">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;">
       <h1 style="font-size:1.1rem;font-weight:700;">Clubs</h1>
-      <div style="display:flex;gap:.5rem;">
-        <button class="btn btn-ghost" onclick="openDiscover()" style="font-size:.82rem;padding:.4rem .9rem;display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People</button>
-        <button class="btn btn-primary" style="font-size:.82rem;padding:.4rem .9rem;" onclick="openCreateClub()">+ Create</button>
-      </div>
+      <button class="btn btn-primary" style="font-size:.82rem;padding:.4rem .9rem;" onclick="openCreateClub()">+ Create</button>
     </div>
     <div id="clubs-page-content"></div>
   </div>
@@ -4457,7 +4455,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.29.09.47';
+const APP_VERSION = '2.36.29.09.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7155,7 +7153,7 @@ document.addEventListener('click', e => {
 // To re-enable: remove the early return below
 (function initSwipeNav() {
   return; // DISABLED — swipe nav conflicts with vertical scrolling on feed images
-  const TAB_ORDER = ['feed', 'track', 'collection', 'measure', 'wishlist', 'stats', 'clubs'];
+  const TAB_ORDER = ['feed', 'track', 'collection', 'measure', 'wishlist', 'stats'];
   let _swX0 = 0, _swY0 = 0, _swT0 = 0, _swActive = false, _swLocked = false;
 
   document.addEventListener('touchstart', e => {

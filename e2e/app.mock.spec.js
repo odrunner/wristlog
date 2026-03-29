@@ -456,13 +456,14 @@ test.describe('Feed page (mocked)', () => {
     await expect(feedList).toBeVisible();
   });
 
-  test('feed has Post button', async ({ page }) => {
+  test('feed has Post and Find People buttons', async ({ page }) => {
     await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
     await injectSession(page);
     await page.goto('/');
     await waitForAppBoot(page);
 
     await expect(page.locator('#page-feed button', { hasText: /post/i })).toBeVisible();
+    await expect(page.locator('#page-feed button', { hasText: /find people/i })).toBeVisible();
   });
 
   test('renders feed cards when logs exist', async ({ page }) => {
@@ -539,9 +540,8 @@ test.describe('Search / Discover (mocked)', () => {
     await waitForAppBoot(page);
   });
 
-  test('opens discover modal from clubs page', async ({ page }) => {
-    await page.locator('nav button[data-page="clubs"]').click();
-    const findBtn = page.locator('#page-clubs button', { hasText: /find people/i });
+  test('opens discover modal from feed page', async ({ page }) => {
+    const findBtn = page.locator('#page-feed button', { hasText: /find people/i });
     await expect(findBtn).toBeVisible();
     await findBtn.click();
 
@@ -550,8 +550,7 @@ test.describe('Search / Discover (mocked)', () => {
   });
 
   test('discover search input accepts text', async ({ page }) => {
-    await page.locator('nav button[data-page="clubs"]').click();
-    await page.locator('#page-clubs button', { hasText: /find people/i }).click();
+    await page.locator('#page-feed button', { hasText: /find people/i }).click();
     await expect(page.locator('#discover-modal')).toBeVisible();
 
     await page.locator('#discover-search').fill('watchfan');
