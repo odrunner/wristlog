@@ -3310,36 +3310,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
         </div>
         <div style="font-size:.68rem;color:var(--muted);line-height:1.4;margin-bottom:.4rem;">Place the watch caseback on the microphone in a quiet room. Works best with exhibition, sapphire, or ceramic casebacks. Solid metal casebacks may block the tick sound.</div>
-        <div id="msr-sensitivity-row" style="margin-top:.4rem;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Sensitivity</label>
-            <span id="msr-sens-val" style="font-size:.7rem;color:var(--muted);">50%</span>
-          </div>
-          <input type="range" id="msr-sensitivity" min="0" max="100" value="50" oninput="onMsrSensitivityChange(this.value)" style="width:100%;margin-top:.2rem;accent-color:var(--gold);">
+        <!-- Debug (hidden, used by remote tuning) -->
+        <div id="msr-sensitivity-row" style="display:none;">
+          <input type="range" id="msr-sensitivity" min="0" max="100" value="50">
+          <input type="hidden" id="msr-tune-mult-lo" value="8">
+          <input type="hidden" id="msr-tune-mult-hi" value="1.5">
+          <input type="hidden" id="msr-tune-min-thresh" value="0.001">
+          <input type="hidden" id="msr-tune-percentile" value="50">
+          <input type="hidden" id="msr-tune-hp-cutoff" value="4000">
+          <div id="msr-tune-live" style="display:none;"></div>
         </div>
-        <!-- Debug tuning controls -->
-        <details id="msr-tuning" style="margin-top:.5rem;font-size:.7rem;">
-          <summary style="color:var(--muted);cursor:pointer;user-select:none;">Tuning</summary>
-          <div style="margin-top:.4rem;display:grid;grid-template-columns:1fr 1fr;gap:.3rem .6rem;">
-            <label style="color:var(--muted);">Mult @ 0%</label>
-            <input type="number" id="msr-tune-mult-lo" value="8" min="1" max="20" step="0.5" style="width:100%;background:var(--hover);border:1px solid var(--border);border-radius:4px;padding:2px 4px;color:var(--text);font-size:.7rem;" onchange="sendMsrTuning()">
-            <label style="color:var(--muted);">Mult @ 100%</label>
-            <input type="number" id="msr-tune-mult-hi" value="1.5" min="1" max="10" step="0.1" style="width:100%;background:var(--hover);border:1px solid var(--border);border-radius:4px;padding:2px 4px;color:var(--text);font-size:.7rem;" onchange="sendMsrTuning()">
-            <label style="color:var(--muted);">Min threshold</label>
-            <input type="number" id="msr-tune-min-thresh" value="0.001" min="0" max="0.1" step="0.0005" style="width:100%;background:var(--hover);border:1px solid var(--border);border-radius:4px;padding:2px 4px;color:var(--text);font-size:.7rem;" onchange="sendMsrTuning()">
-            <label style="color:var(--muted);">Noise %ile</label>
-            <input type="number" id="msr-tune-percentile" value="50" min="10" max="90" step="5" style="width:100%;background:var(--hover);border:1px solid var(--border);border-radius:4px;padding:2px 4px;color:var(--text);font-size:.7rem;" onchange="sendMsrTuning()">
-            <label style="color:var(--muted);">HP cutoff Hz</label>
-            <input type="number" id="msr-tune-hp-cutoff" value="1000" min="200" max="5000" step="100" style="width:100%;background:var(--hover);border:1px solid var(--border);border-radius:4px;padding:2px 4px;color:var(--text);font-size:.7rem;" onchange="sendMsrTuning()">
-          </div>
-          <div style="margin-top:.4rem;display:flex;align-items:center;gap:.5rem;">
-            <label style="color:var(--muted);white-space:nowrap;">Watch near mic</label>
-            <button id="msr-watch-present-btn" onclick="toggleWatchPresent()" style="flex:1;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:#ef4444;color:#fff;font-size:.7rem;font-weight:600;cursor:pointer;">NO — away</button>
-          </div>
-          <div id="msr-tune-live" style="margin-top:.4rem;padding:.3rem;background:var(--hover);border-radius:6px;font-family:monospace;font-size:.62rem;color:var(--muted);line-height:1.5;white-space:pre;">Noise floor: —
-Threshold: —
-Peak energy: —</div>
-        </details>
       </div>
     </div>
     <!-- Save section (shown when measurement has data — live or stopped) -->
@@ -4465,7 +4445,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.29.08.30';
+const APP_VERSION = '2.36.29.08.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
