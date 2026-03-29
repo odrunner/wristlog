@@ -74,7 +74,7 @@ class TimegrapherEngine {
 
     // Tuning parameters
     private var hpCutoffHz: Float = 4000
-    private var peakRatioThreshold: Float = 2.0
+    private var peakRatioThreshold: Float = 2.5
 
     // Live debug values
     private var recentPeakEnergy: Float = 0
@@ -97,7 +97,7 @@ class TimegrapherEngine {
 
     func setTuning(multLo: Float, multHi: Float, minThreshold: Float,
                     percentile: Int, hpCutoff: Float,
-                    peakRatioThreshold thresh: Float = 2.0,
+                    peakRatioThreshold thresh: Float = 2.5,
                     bufferSeconds bufSec: Float = 30.0) {
         hpCutoffHz = max(200, min(8000, hpCutoff))
         peakRatioThreshold = max(1.0, thresh)
@@ -319,8 +319,9 @@ class TimegrapherEngine {
         let peakFactor = min(1.0, max(0, (goertzelRatio - 1.0) / 9.0))
         let confidence = peakFactor * (0.3 + 0.7 * durationFactor)
 
-        // Report results
-        if goertzelRatio > Double(peakRatioThreshold) {
+        // Report results — require both ratio above threshold AND plausible rate
+        // Any mechanical watch running beyond ±120 s/day is almost certainly a false positive
+        if goertzelRatio > Double(peakRatioThreshold) && abs(rate) <= 120.0 {
             currentRate = (rate * 10).rounded() / 10
             currentDetectedInterval = detectedIntervalSec * 1000.0
             detectedBph = targetBph

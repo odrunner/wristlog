@@ -4465,7 +4465,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.29.08.19';
+const APP_VERSION = '2.36.29.08.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17322,11 +17322,11 @@ function sendMsrTuning() {
     minThreshold: Number(document.getElementById('msr-tune-min-thresh').value),
     percentile: Number(document.getElementById('msr-tune-percentile').value),
     hpCutoff: Number(document.getElementById('msr-tune-hp-cutoff').value),
-    peakRatioThreshold: _remotePeakRatioThreshold ?? 2.0,
+    peakRatioThreshold: _remotePeakRatioThreshold ?? 2.5,
     bufferSeconds: _remoteBufferSeconds ?? 30.0
   });
 }
-var _remotePeakRatioThreshold = 2.0;
+var _remotePeakRatioThreshold = 2.5;
 var _remoteBufferSeconds = 30.0;
 
 function selectMsrPos(pos) {
