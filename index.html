@@ -3273,12 +3273,27 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </button>
       <div id="msr-mic-warning" style="display:none;font-size:.75rem;color:#ef4444;margin-bottom:.5rem;line-height:1.4;"></div>
       <div id="msr-live-status" style="display:none;">
+        <!-- Countdown + BPH status bar -->
+        <div id="msr-status-bar" style="margin-bottom:.5rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem;">
+            <span id="msr-status-text" style="font-size:.75rem;color:var(--muted);">Listening...</span>
+            <span id="msr-detected-bph" style="font-size:.75rem;font-weight:600;color:var(--muted);display:none;"></span>
+          </div>
+          <div style="background:var(--hover);border-radius:6px;height:6px;overflow:hidden;">
+            <div id="msr-countdown-bar" style="height:100%;width:0%;border-radius:6px;transition:width .3s;background:var(--gold);"></div>
+          </div>
+        </div>
+        <!-- Noise level -->
         <div style="margin-bottom:.4rem;">
           <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Noise Level</label>
           <div style="background:var(--hover);border-radius:6px;height:8px;overflow:hidden;">
             <div id="msr-noise-bar" style="height:100%;width:0%;border-radius:6px;transition:width .15s,background .15s;background:#22c55e;"></div>
           </div>
           <div id="msr-noise-label" style="font-size:.68rem;color:var(--muted);margin-top:.1rem;">Listening...</div>
+        </div>
+        <!-- Rate chart -->
+        <div id="msr-chart-wrap" style="margin-bottom:.5rem;background:var(--hover);border-radius:8px;padding:.4rem .3rem;height:120px;display:none;">
+          <canvas id="msr-rate-chart"></canvas>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.4rem;">
           <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
@@ -3294,7 +3309,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div style="font-size:.65rem;color:var(--muted);">Ticks</div>
           </div>
         </div>
-        <div style="font-size:.68rem;color:var(--muted);line-height:1.4;margin-bottom:.4rem;">Place the watch crown-side down near the microphone in a quiet room.</div>
+        <div style="font-size:.68rem;color:var(--muted);line-height:1.4;margin-bottom:.4rem;">Place the watch caseback on the microphone in a quiet room.</div>
         <div id="msr-sensitivity-row" style="margin-top:.4rem;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Sensitivity</label>
@@ -3327,24 +3342,16 @@ Peak energy: —</div>
         </details>
       </div>
     </div>
-    <!-- Save section (shown after measurement has data) -->
+    <!-- Save section (shown when measurement has data — live or stopped) -->
     <div id="msr-save-section" style="display:none;border-top:1px solid var(--border);padding-top:.65rem;">
       <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;" id="msr-pos-chips"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem;">
-        <div>
-          <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Rate (s/day)</label>
-          <input type="number" id="msr-rate-input" step="0.1" readonly style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
-        </div>
-        <div>
-          <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Beat Error (ms)</label>
-          <input type="number" id="msr-be-input" step="0.01" readonly style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
-        </div>
-      </div>
       <div style="margin-bottom:.5rem;">
         <label for="msr-notes-input" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Notes</label>
         <input type="text" id="msr-notes-input" placeholder="e.g. After full wind" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
       </div>
-      <button class="btn btn-primary btn-sm" onclick="saveMsrReading()" style="width:100%;">Save Reading</button>
+      <button id="msr-save-btn" class="btn btn-primary btn-sm" onclick="saveMsrReading()" style="width:100%;" disabled>Save Reading</button>
+      <input type="hidden" id="msr-rate-input">
+      <input type="hidden" id="msr-be-input">
     </div>
     <div class="modal-actions" style="margin-top:.65rem;">
       <button class="btn btn-ghost" onclick="closeMeasureModal()">Close</button>
@@ -4458,7 +4465,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.28.22.23';
+const APP_VERSION = '2.36.29.08.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17003,28 +17010,67 @@ window._tgNativeCallback = function(data) {
       rateEl.textContent = (r >= 0 ? '+' : '') + r.toFixed(1);
       rateEl.style.color = Math.abs(r) <= 5 ? '#22c55e' : Math.abs(r) <= 15 ? '#eab308' : '#ef4444';
       beEl.textContent = data.beatError != null ? data.beatError.toFixed(2) : '—';
-      if (isMsr) { _msrLastRate = data.rate; _msrLastBe = data.beatError; }
+      if (isMsr) {
+        _msrLastRate = data.rate;
+        _msrLastBe = data.beatError;
+        // Update hidden inputs for save
+        document.getElementById('msr-rate-input').value = r.toFixed(1);
+        if (data.beatError != null) document.getElementById('msr-be-input').value = data.beatError.toFixed(2);
+        // Enable save button + show save section
+        const saveBtn = document.getElementById('msr-save-btn');
+        if (saveBtn) saveBtn.disabled = false;
+        document.getElementById('msr-save-section').style.display = '';
+        // Add to rate chart
+        _msrRateHistory.push({ t: Date.now(), r: r });
+        if (_msrRateHistory.length > 60) _msrRateHistory.shift();
+        updateMsrRateChart();
+      }
     }
     ticksEl.textContent = data.tickCount || 0;
 
     const noisePct = Math.min(100, (data.noiseLevel || 0) * 100);
     bar.style.width = noisePct + '%';
     bar.style.background = data.confidence > 0.3 ? '#22c55e' : '#eab308';
+
+    // BPH detection display
     if (data.detectedBph) {
       const bphSel = document.getElementById(prefix + '-bph-select');
       if (bphSel && bphSel.value !== String(data.detectedBph)) bphSel.value = String(data.detectedBph);
-      if (isMsr) _msrLastBph = data.detectedBph;
+      if (isMsr) {
+        _msrLastBph = data.detectedBph;
+        const bphEl = document.getElementById('msr-detected-bph');
+        if (bphEl) { bphEl.textContent = data.detectedBph.toLocaleString() + ' BPH detected'; bphEl.style.display = ''; bphEl.style.color = '#22c55e'; }
+      }
     }
+
+    // Countdown / status bar
+    if (isMsr) {
+      const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
+      const target = 30; // seconds to full buffer
+      const pct = Math.min(100, (elapsed / target) * 100);
+      const cdBar = document.getElementById('msr-countdown-bar');
+      const statusText = document.getElementById('msr-status-text');
+      if (cdBar) cdBar.style.width = pct + '%';
+      if (statusText) {
+        if (elapsed < target) {
+          const remaining = Math.ceil(target - elapsed);
+          statusText.textContent = data.confidence > 0.1 ? 'Measuring... ' + remaining + 's' : 'Analyzing... ' + remaining + 's';
+        } else {
+          statusText.textContent = data.confidence > 0.1 ? 'Measurement ready' : 'Analyzing...';
+        }
+      }
+    }
+
     lbl.textContent = data.confidence > 0.1
-      ? 'Confidence: ' + (data.confidence * 100).toFixed(0) + '%' + (data.detectedBph ? ' | ' + data.detectedBph.toLocaleString() + ' bph' : '') + ' | Interval: ' + (data.detectedIntervalMs || 0).toFixed(1) + 'ms'
+      ? 'Confidence: ' + (data.confidence * 100).toFixed(0) + '%' + ' | Ratio: ' + (data.debug?.threshold || 0).toFixed(1)
       : 'Analyzing...';
     // Live tuning readout
     if (data.debug) {
       const el = document.getElementById('msr-tune-live');
-      if (el) el.textContent = 'Noise floor: ' + (data.debug.noiseFloor != null ? data.debug.noiseFloor.toFixed(6) : '—')
-        + '\nThreshold: ' + (data.debug.threshold != null ? data.debug.threshold.toFixed(6) : '—')
+      if (el) el.textContent = 'Noise floor: ' + (data.debug.noiseFloor != null ? data.debug.noiseFloor.toExponential(2) : '—')
+        + '\nGoertzel ratio: ' + (data.debug.threshold != null ? data.debug.threshold.toFixed(3) : '—')
         + '\nPeak energy: ' + (data.debug.peakEnergy != null ? data.debug.peakEnergy.toFixed(6) : '—')
-        + '\nTicks: ' + (data.tickCount || 0) + ' | Matched: ' + (data.debug.bufferSamples || 0);
+        + '\nBuffer: ' + (data.debug.bufferSamples || 0) + ' samples';
     }
   } else if (data.event === 'stopped') {
     if (isMsr) {
@@ -17161,6 +17207,41 @@ let _msrPosition = 'dial_up';
 let _msrLastRate = null;
 let _msrLastBe = null;
 let _msrLastBph = null;
+let _msrListenStart = null;
+let _msrRateHistory = [];
+let _msrRateChart = null;
+
+function updateMsrRateChart() {
+  const wrap = document.getElementById('msr-chart-wrap');
+  const canvas = document.getElementById('msr-rate-chart');
+  if (!wrap || !canvas || _msrRateHistory.length < 2) return;
+  wrap.style.display = '';
+  if (!_msrRateChart) {
+    _msrRateChart = new Chart(canvas, {
+      type: 'line',
+      data: { labels: [], datasets: [{
+        data: [], borderColor: '#c9a84c', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false
+      }] },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { display: false },
+          y: {
+            position: 'right',
+            ticks: { font: { size: 9 }, color: '#888', callback: v => (v >= 0 ? '+' : '') + v },
+            grid: { color: ctx => ctx.tick.value === 0 ? '#555' : 'rgba(255,255,255,0.05)' }
+          }
+        }
+      }
+    });
+  }
+  const labels = _msrRateHistory.map((_, i) => i);
+  const values = _msrRateHistory.map(h => h.r);
+  _msrRateChart.data.labels = labels;
+  _msrRateChart.data.datasets[0].data = values;
+  _msrRateChart.update();
+}
 
 function openMeasureModal() {
   if (!currentUser) { toast('Sign in to measure accuracy', 'error'); return; }
@@ -17263,6 +17344,16 @@ function toggleMsrListen() {
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: sens });
     _msrListening = true;
     _msrTarget = 'measure';
+    _msrListenStart = Date.now();
+    _msrRateHistory = [];
+    if (_msrRateChart) { _msrRateChart.destroy(); _msrRateChart = null; }
+    document.getElementById('msr-chart-wrap').style.display = 'none';
+    document.getElementById('msr-countdown-bar').style.width = '0%';
+    document.getElementById('msr-status-text').textContent = 'Analyzing...';
+    document.getElementById('msr-detected-bph').style.display = 'none';
+    document.getElementById('msr-save-section').style.display = 'none';
+    const saveBtn = document.getElementById('msr-save-btn');
+    if (saveBtn) saveBtn.disabled = true;
     // Send tuning params if user has customized them
     setTimeout(() => sendMsrTuning(), 200);
     // Start remote tuning poll
@@ -17337,12 +17428,15 @@ function stopMsrListen() {
   if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
   if (_tgAudioCtx) { _tgAudioCtx.close(); _tgAudioCtx = null; }
   document.getElementById('msr-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Start Listening';
-  // Show save section if we have data
+  _msrListenStart = null;
+  // Keep save section visible if we have data
   if (_msrLastRate != null) {
     document.getElementById('msr-save-section').style.display = '';
     document.getElementById('msr-rate-input').value = _msrLastRate.toFixed(1);
     if (_msrLastBe != null) document.getElementById('msr-be-input').value = _msrLastBe.toFixed(2);
     if (_msrLastBph) document.getElementById('msr-bph-select').value = String(_msrLastBph);
+    const saveBtn = document.getElementById('msr-save-btn');
+    if (saveBtn) saveBtn.disabled = false;
   }
 }
 
