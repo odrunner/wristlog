@@ -4465,7 +4465,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.29.18.10';
+const APP_VERSION = '2.36.29.18.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17030,7 +17030,11 @@ window._tgNativeCallback = function(data) {
     const lbl = document.getElementById(prefix + '-noise-label');
     if (!rateEl) return;
 
-    if (data.rate != null && data.confidence > 0.1) {
+    // Sticky detection: treat as detected if confidence > 0.1 OR we detected within last 8s
+    const stickyDetected = isMsr && _msrLastDetectTime > 0 && (Date.now() - _msrLastDetectTime) < 8000;
+    const isConfident = data.rate != null && data.confidence > 0.1;
+    if (isConfident) {
+      if (isMsr) _msrLastDetectTime = Date.now();
       const r = data.rate;
       rateEl.textContent = (r >= 0 ? '+' : '') + r.toFixed(1);
       rateEl.style.color = Math.abs(r) <= 5 ? '#22c55e' : Math.abs(r) <= 15 ? '#eab308' : '#ef4444';
@@ -17104,13 +17108,14 @@ window._tgNativeCallback = function(data) {
       const donePrompt = document.getElementById('msr-done-prompt');
       const noSigTip = document.getElementById('msr-no-signal-tip');
       if (statusText) {
+        const hasDetection = isConfident || stickyDetected;
         if (elapsed < target) {
           const remaining = Math.ceil(target - elapsed);
-          statusText.textContent = data.confidence > 0.1 ? 'Measuring... ' + remaining + 's' : 'Analyzing... ' + remaining + 's';
+          statusText.textContent = hasDetection ? 'Measuring... ' + remaining + 's' : 'Analyzing... ' + remaining + 's';
           if (donePrompt) donePrompt.style.display = 'none';
           if (noSigTip) noSigTip.style.display = 'none';
         } else {
-          if (data.confidence > 0.1) {
+          if (hasDetection) {
             statusText.textContent = 'Measurement ready';
             statusText.style.color = '#22c55e';
             if (donePrompt) donePrompt.style.display = '';
@@ -17139,10 +17144,15 @@ window._tgNativeCallback = function(data) {
       lbl.textContent = 'Too noisy — move to a quieter room';
       lbl.style.color = '#ef4444';
     } else if (isMsr) {
-      if (data.confidence > 0.1) {
+      if (isConfident || stickyDetected) {
         const ratio = data.debug?.threshold || 0;
-        lbl.textContent = ratio >= 6 ? 'Strong signal — hold steady' : ratio >= 4 ? 'Good signal — keep listening' : 'Weak signal — press caseback firmly on mic';
-        lbl.style.color = ratio >= 4 ? '#22c55e' : '#eab308';
+        if (isConfident) {
+          lbl.textContent = ratio >= 6 ? 'Strong signal — hold steady' : ratio >= 4 ? 'Good signal — keep listening' : 'Weak signal — press caseback firmly on mic';
+          lbl.style.color = ratio >= 4 ? '#22c55e' : '#eab308';
+        } else {
+          lbl.textContent = 'Signal intermittent — hold steady';
+          lbl.style.color = '#eab308';
+        }
       } else {
         lbl.style.color = '';
         lbl.textContent = 'Listening...';
@@ -17297,6 +17307,7 @@ let _msrLastRate = null;
 let _msrLastBe = null;
 let _msrLastBph = null;
 let _msrListenStart = null;
+let _msrLastDetectTime = 0; // timestamp of last confident detection
 let _msrRateHistory = [];
 let _msrRateChart = null;
 
@@ -17428,6 +17439,7 @@ function toggleMsrListen() {
     _msrTarget = 'measure';
     _msrListenStart = Date.now();
     _msrRateHistory = [];
+    _msrLastDetectTime = 0;
     if (_msrRateChart) { _msrRateChart.destroy(); _msrRateChart = null; }
     document.getElementById('msr-chart-wrap').style.display = 'none';
     document.getElementById('msr-countdown-bar').style.width = '0%';

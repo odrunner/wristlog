@@ -79,6 +79,11 @@ class TimegrapherEngine {
     // Live debug values
     private var recentPeakEnergy: Float = 0
 
+    // Ratio smoothing + hysteresis
+    private var smoothedRatio: Double = 0
+    private let ratioSmoothAlpha: Double = 0.3  // EMA smoothing factor (lower = smoother)
+    private var isDetected: Bool = false          // hysteresis state
+
     // Results
     private var currentRate: Double? = nil
     private var currentBeatError: Double? = nil
@@ -128,6 +133,8 @@ class TimegrapherEngine {
         energySubsampleCounter = 0
         recentPeakEnergy = 0
         peakCount = 0
+        smoothedRatio = 0
+        isDetected = false
         lastDebugInfo = nil
 
         do {
@@ -274,11 +281,25 @@ class TimegrapherEngine {
         }
         let baseline = baselineSum / Double(baselineMultipliers.count)
 
-        let goertzelRatio = baseline > 0 ? targetPower / baseline : (targetPower > 0 ? 10.0 : 0)
+        let rawRatio = baseline > 0 ? targetPower / baseline : (targetPower > 0 ? 10.0 : 0)
+
+        // Smooth ratio with EMA to prevent flicker on borderline signals
+        smoothedRatio = smoothedRatio == 0 ? rawRatio : (ratioSmoothAlpha * rawRatio + (1 - ratioSmoothAlpha) * smoothedRatio)
+        let goertzelRatio = smoothedRatio
+
+        // Hysteresis: detect at threshold, maintain at 70% of threshold
+        let detectThreshold = Double(peakRatioThreshold)
+        let maintainThreshold = detectThreshold * 0.7
+        if goertzelRatio >= detectThreshold {
+            isDetected = true
+        } else if goertzelRatio < maintainThreshold {
+            isDetected = false
+        }
+        // else: between maintain and detect thresholds — keep current state
 
         // === RATE: Fine frequency sweep ±0.5% ===
         var detectedFreq = tickFreq
-        if goertzelRatio > Double(peakRatioThreshold) {
+        if isDetected {
             let sweepRange = tickFreq * 0.005  // ±0.5%
             let steps = 101
             var bestPower = 0.0
@@ -319,9 +340,9 @@ class TimegrapherEngine {
         let peakFactor = min(1.0, max(0, (goertzelRatio - 1.0) / 9.0))
         let confidence = peakFactor * (0.3 + 0.7 * durationFactor)
 
-        // Report results — require both ratio above threshold AND plausible rate
+        // Report results — require detection (with hysteresis) AND plausible rate
         // Any mechanical watch running beyond ±120 s/day is almost certainly a false positive
-        if goertzelRatio > Double(peakRatioThreshold) && abs(rate) <= 120.0 {
+        if isDetected && abs(rate) <= 120.0 {
             currentRate = (rate * 10).rounded() / 10
             currentDetectedInterval = detectedIntervalSec * 1000.0
             detectedBph = targetBph
