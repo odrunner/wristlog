@@ -3029,7 +3029,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <!-- Save section (shown when measurement has data — live or stopped) -->
       <div id="msr-save-section" style="display:none;border-top:1px solid var(--border);padding-top:.65rem;">
-        <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;" id="msr-pos-chips"></div>
         <div style="margin-bottom:.5rem;">
           <label for="msr-notes-input" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Notes</label>
           <input type="text" id="msr-notes-input" placeholder="e.g. After full wind" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
@@ -4465,7 +4464,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.29.19.42';
+const APP_VERSION = '2.36.29.19.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17302,7 +17301,6 @@ async function deleteTgResult(id) {
 
 // ── Standalone Measure Modal ──
 let _msrListening = false;
-let _msrPosition = 'dial_up';
 let _msrLastRate = null;
 let _msrLastBe = null;
 let _msrLastBph = null;
@@ -17364,11 +17362,6 @@ function openMeasureInline() {
   const sel = document.getElementById('msr-watch-select');
   sel.innerHTML = watches.map(w => `<option value="${w.id}">${escHtml(w.brand + ' ' + w.name)}</option>`).join('');
   onMsrWatchChange();
-  // Populate position chips
-  const chipsEl = document.getElementById('msr-pos-chips');
-  chipsEl.innerHTML = TG_POSITIONS.map(p =>
-    `<button class="chip${p.val === 'dial_up' ? ' selected' : ''}" data-pos="${p.val}" onclick="selectMsrPos('${p.val}')">${p.lbl}</button>`
-  ).join('');
   document.getElementById('msr-rate-input').value = '';
   document.getElementById('msr-be-input').value = '';
   document.getElementById('msr-notes-input').value = '';
@@ -17422,12 +17415,6 @@ function sendMsrTuning() {
 }
 var _remotePeakRatioThreshold = 2.5;
 var _remoteBufferSeconds = 30.0;
-
-function selectMsrPos(pos) {
-  _msrPosition = pos;
-  document.querySelectorAll('#msr-pos-chips .chip').forEach(c =>
-    c.classList.toggle('selected', c.dataset.pos === pos));
-}
 
 function toggleMsrListen() {
   if (_msrListening) { stopMsrListen(); return; }
@@ -17569,7 +17556,7 @@ async function saveMsrReading() {
   const notes = document.getElementById('msr-notes-input').value.trim() || null;
   const { error } = await db.from('timegrapher_results').insert({
     user_id: currentUser.id, watch_id: watchId,
-    rate, beat_error: beatError, bph, position: _msrPosition, source: 'auto', notes
+    rate, beat_error: beatError, bph, source: 'auto', notes
   });
   if (error) { toast('Could not save — ' + error.message, 'error'); return; }
   toast('Reading saved!');
