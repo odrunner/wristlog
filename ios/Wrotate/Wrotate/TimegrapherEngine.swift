@@ -322,7 +322,7 @@ class TimegrapherEngine {
             sampleRate: actualSampleRate, fftSize: energyRingCount, bufferSamples: count,
             hpCutoff: Double(hpCutoffs[0]), bestLag: targetBph,
             bestCorrelation: 0, refinedLag: tickFreq, noiseFloor: 0,
-            threshold: bestGoertzelRatio, peakEnergy: Double(recentPeakEnergy),
+            threshold: 0, peakEnergy: Double(recentPeakEnergy),
             allBphCorrelations: [])
         recentPeakEnergy *= 0.95
     }
@@ -532,37 +532,43 @@ class TimegrapherEngine {
         var padded = [Float](repeating: 0, count: fftSize)
         for i in 0..<count { padded[i] = signal[i] }
 
-        // Convert to split complex
+        // FFT via split complex
         let halfN = fftSize / 2
         var realp = [Float](repeating: 0, count: halfN)
         var imagp = [Float](repeating: 0, count: halfN)
-        var splitComplex = DSPSplitComplex(realp: &realp, imagp: &imagp)
-
-        padded.withUnsafeBufferPointer { ptr in
-            ptr.baseAddress!.withMemoryRebound(to: DSPComplex.self, capacity: halfN) { complexPtr in
-                vDSP_ctoz(complexPtr, 2, &splitComplex, 1, vDSP_Length(halfN))
-            }
-        }
-
-        // Forward FFT
-        vDSP_fft_zrip(fftSetup, &splitComplex, 1, log2n, FFTDirection(kFFTDirection_Forward))
-
-        // Power spectrum: |FFT|^2
-        for i in 0..<halfN {
-            let r = realp[i]
-            let im = imagp[i]
-            realp[i] = r * r + im * im
-            imagp[i] = 0
-        }
-
-        // Inverse FFT
-        vDSP_fft_zrip(fftSetup, &splitComplex, 1, log2n, FFTDirection(kFFTDirection_Inverse))
-
-        // Convert back to real
         var result = [Float](repeating: 0, count: fftSize)
-        result.withUnsafeMutableBufferPointer { ptr in
-            ptr.baseAddress!.withMemoryRebound(to: DSPComplex.self, capacity: halfN) { complexPtr in
-                vDSP_ztoc(&splitComplex, 1, complexPtr, 2, vDSP_Length(halfN))
+
+        realp.withUnsafeMutableBufferPointer { rBuf in
+            imagp.withUnsafeMutableBufferPointer { iBuf in
+                var split = DSPSplitComplex(realp: rBuf.baseAddress!, imagp: iBuf.baseAddress!)
+
+                // Interleaved real → split complex
+                padded.withUnsafeBufferPointer { pBuf in
+                    pBuf.baseAddress!.withMemoryRebound(to: DSPComplex.self, capacity: halfN) { complexPtr in
+                        vDSP_ctoz(complexPtr, 2, &split, 1, vDSP_Length(halfN))
+                    }
+                }
+
+                // Forward FFT
+                vDSP_fft_zrip(fftSetup, &split, 1, log2n, FFTDirection(kFFTDirection_Forward))
+
+                // Power spectrum: |FFT|^2
+                for i in 0..<halfN {
+                    let r = rBuf[i]
+                    let im = iBuf[i]
+                    rBuf[i] = r * r + im * im
+                    iBuf[i] = 0
+                }
+
+                // Inverse FFT
+                vDSP_fft_zrip(fftSetup, &split, 1, log2n, FFTDirection(kFFTDirection_Inverse))
+
+                // Split complex → interleaved real
+                result.withUnsafeMutableBufferPointer { resBuf in
+                    resBuf.baseAddress!.withMemoryRebound(to: DSPComplex.self, capacity: halfN) { complexPtr in
+                        vDSP_ztoc(&split, 1, complexPtr, 2, vDSP_Length(halfN))
+                    }
+                }
             }
         }
 
