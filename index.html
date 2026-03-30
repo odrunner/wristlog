@@ -4465,7 +4465,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.29.11.49';
+const APP_VERSION = '2.36.29.18.10';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17120,6 +17120,16 @@ window._tgNativeCallback = function(data) {
             statusText.style.color = '#eab308';
             if (noSigTip) noSigTip.style.display = '';
             if (donePrompt) donePrompt.style.display = 'none';
+            // Clear stale detection UI
+            const sigRow2 = document.getElementById('msr-signal-row'); if (sigRow2) sigRow2.style.display = 'none';
+            const tipText2 = document.getElementById('msr-tip-text'); if (tipText2) tipText2.style.display = '';
+            document.getElementById('msr-live-rate').textContent = '—';
+            document.getElementById('msr-live-rate').style.color = '';
+            const bphEl2 = document.getElementById('msr-detected-bph'); if (bphEl2) bphEl2.style.display = 'none';
+            if (_msrRateChart) { _msrRateChart.destroy(); _msrRateChart = null; }
+            document.getElementById('msr-chart-wrap').style.display = 'none';
+            document.getElementById('msr-save-section').style.display = 'none';
+            _msrLastRate = null;
           }
         }
       }
