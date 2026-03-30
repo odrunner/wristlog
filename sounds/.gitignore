@@ -1,0 +1,3 @@
+# Audio recordings — kept locally for UAT testing, not tracked in git
+*.m4a
+*.wav

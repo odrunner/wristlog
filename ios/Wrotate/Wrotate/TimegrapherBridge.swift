@@ -72,6 +72,12 @@ class TimegrapherBridge {
                         "detectedIntervalMs": update.detectedIntervalMs,
                         "detectedBph": update.detectedBph as Any
                     ]
+                    if let waveform = update.beatWaveform {
+                        payload["beatWaveform"] = waveform
+                    }
+                    if let tickPos = update.tickPositions {
+                        payload["tickPositions"] = tickPos
+                    }
                     if let dbg = update.debug {
                         let bphCorrs = dbg.allBphCorrelations.map { ["bph": $0.bph, "corr": $0.correlation, "lag": $0.lag] as [String: Any] }
                         payload["debug"] = [

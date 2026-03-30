@@ -1,15 +1,15 @@
 import AVFoundation
 import Accelerate
 
-/// Measures watch accuracy via Goertzel algorithm at a known BPH.
+/// Measures watch accuracy via Goertzel + autocorrelation at a known BPH.
 ///
 /// Algorithm: user provides BPH → we know the exact tick frequency.
-/// 1. HP-filter raw 48kHz audio (4kHz default) to isolate tick transients
-/// 2. Peak-hold energy into a ring buffer at ~12kHz
-/// 3. Goertzel at the tick frequency — measures power at that exact frequency
-/// 4. Compare to baseline power at incommensurate frequencies
-/// 5. High ratio = periodic ticks detected; low ratio = ambient noise
-/// 6. Rate = fine frequency sweep around expected, parabolic interpolation
+/// 1. Three parallel 2nd-order Butterworth HP filters (4kHz, 6kHz, 8kHz)
+/// 2. Three parallel peak-hold energy ring buffers at ~12kHz
+/// 3. Primary: Goertzel detection at each cutoff (best ratio wins)
+/// 4. Fallback: FFT autocorrelation when Goertzel fails at all cutoffs
+/// 5. Rate via fine frequency sweep (Goertzel) or period refinement (autocorr)
+/// 6. Beat error via epoch folding
 class TimegrapherEngine {
 
     struct Update {
@@ -21,19 +21,21 @@ class TimegrapherEngine {
         let detectedIntervalMs: Double
         let detectedBph: Int?
         let debug: DebugInfo?
+        let beatWaveform: [Float]?
+        let tickPositions: [Int]?
     }
 
     struct DebugInfo {
         let sampleRate: Double
-        let fftSize: Int           // energy ring buffer fill count
-        let bufferSamples: Int     // analysis window samples
+        let fftSize: Int
+        let bufferSamples: Int
         let hpCutoff: Double
-        let bestLag: Int           // BPH
-        let bestCorrelation: Double // Goertzel power at tick freq
-        let refinedLag: Double     // detected frequency
-        let noiseFloor: Double     // baseline power
-        let threshold: Double      // Goertzel ratio
-        let peakEnergy: Double     // recent peak energy
+        let bestLag: Int
+        let bestCorrelation: Double
+        let refinedLag: Double
+        let noiseFloor: Double
+        let threshold: Double
+        let peakEnergy: Double
         let allBphCorrelations: [(bph: Int, correlation: Float, lag: Int)]
     }
 
@@ -55,16 +57,21 @@ class TimegrapherEngine {
     // Known BPH from user
     private var targetBph: Int = 28800
 
-    // HP filter
-    private var hpPrevIn: Float = 0
-    private var hpPrevOut: Float = 0
-    private var hpAlpha: Float = 0.97
+    // 2nd-order Butterworth HP filter state (biquad)
+    private struct BiquadState {
+        var b0: Float = 0; var b1: Float = 0; var b2: Float = 0
+        var a1: Float = 0; var a2: Float = 0
+        var x1: Float = 0; var x2: Float = 0
+        var y1: Float = 0; var y2: Float = 0
+        var cutoffHz: Float = 4000
+    }
 
-    // Peak energy within each subsample group
-    private var subsamplePeak: Float = 0
+    // Three parallel HP filters at different cutoffs
+    private let hpCutoffs: [Float] = [4000, 6000, 8000]
+    private var hpFilters: [BiquadState] = []
 
-    // Energy ring buffer
-    private var energyRing: [Float] = []
+    // Three parallel energy ring buffers
+    private var energyRings: [[Float]] = []
     private var energyRingCapacity: Int = 360000
     private var bufferDurationSec: Float = 30.0
     private var energyRingWritePos: Int = 0
@@ -72,12 +79,17 @@ class TimegrapherEngine {
     private var energySubsampleCounter: Int = 0
     private var ringSubsampleTarget: Int = 4  // 48kHz / 4 = 12kHz
 
+    // Per-filter subsample peaks
+    private var subsamplePeaks: [Float] = [0, 0, 0]
+
     // Tuning parameters
-    private var hpCutoffHz: Float = 4000
-    private var peakRatioThreshold: Float = 2.5
+    private var peakRatioThreshold: Float = 3.0
 
     // Live debug values
     private var recentPeakEnergy: Float = 0
+
+    // Which cutoff index was used for the active detection
+    private var activeHpIndex: Int = 0
 
     // Results
     private var currentRate: Double? = nil
@@ -87,9 +99,12 @@ class TimegrapherEngine {
     private var detectedBph: Int? = nil
     private var currentNoiseLevel: Double = 0
     private var peakCount: Int = 0
+    private var detectionMethod: String = ""
 
     private var lastAnalysisTime: Double = 0
     private var lastDebugInfo: DebugInfo? = nil
+    private var lastBeatWaveform: [Float]? = nil
+    private var lastTickPositions: [Int]? = nil
 
     func setSensitivity(_ value: Int) {
         // Kept for bridge compatibility
@@ -97,15 +112,36 @@ class TimegrapherEngine {
 
     func setTuning(multLo: Float, multHi: Float, minThreshold: Float,
                     percentile: Int, hpCutoff: Float,
-                    peakRatioThreshold thresh: Float = 2.5,
+                    peakRatioThreshold thresh: Float = 3.0,
                     bufferSeconds bufSec: Float = 30.0) {
-        hpCutoffHz = max(200, min(8000, hpCutoff))
         peakRatioThreshold = max(1.0, thresh)
-        let dt = 1.0 / Float(actualSampleRate)
-        let rc = 1.0 / (2.0 * Float.pi * hpCutoffHz)
-        hpAlpha = rc / (rc + dt)
-        // Store for next start() — don't resize mid-recording
         bufferDurationSec = max(5, min(120, bufSec))
+    }
+
+    // MARK: - Biquad HP filter
+
+    private func makeBiquadHP(cutoff: Float, sampleRate: Double) -> BiquadState {
+        let w0 = 2.0 * Float.pi * cutoff / Float(sampleRate)
+        let cosW0 = cos(w0)
+        let sinW0 = sin(w0)
+        let alpha = sinW0 / (2.0 * 0.7071) // Q = 0.7071 (Butterworth)
+        let a0 = 1.0 + alpha
+        var state = BiquadState()
+        state.b0 = (1.0 + cosW0) / 2.0 / a0
+        state.b1 = -(1.0 + cosW0) / a0
+        state.b2 = (1.0 + cosW0) / 2.0 / a0
+        state.a1 = -2.0 * cosW0 / a0
+        state.a2 = (1.0 - alpha) / a0
+        state.cutoffHz = cutoff
+        return state
+    }
+
+    private func applyBiquad(_ state: inout BiquadState, sample x: Float) -> Float {
+        let y = state.b0 * x + state.b1 * state.x1 + state.b2 * state.x2
+                - state.a1 * state.y1 - state.a2 * state.y2
+        state.x2 = state.x1; state.x1 = x
+        state.y2 = state.y1; state.y1 = y
+        return y
     }
 
     func start(bph: Int, sensitivity: Int) {
@@ -120,15 +156,17 @@ class TimegrapherEngine {
         currentNoiseLevel = 0
         sampleCounter = 0
         lastAnalysisTime = 0
-        hpPrevIn = 0
-        hpPrevOut = 0
-        subsamplePeak = 0
         energyRingWritePos = 0
         energyRingCount = 0
         energySubsampleCounter = 0
         recentPeakEnergy = 0
         peakCount = 0
+        activeHpIndex = 0
+        detectionMethod = ""
         lastDebugInfo = nil
+        lastBeatWaveform = nil
+        lastTickPositions = nil
+        subsamplePeaks = [0, 0, 0]
 
         do {
             let session = AVAudioSession.sharedInstance()
@@ -143,15 +181,14 @@ class TimegrapherEngine {
             let format = inputNode.outputFormat(forBus: 0)
             actualSampleRate = format.sampleRate
 
-            let dt = 1.0 / Float(actualSampleRate)
-            let rc = 1.0 / (2.0 * Float.pi * hpCutoffHz)
-            hpAlpha = rc / (rc + dt)
+            // Initialize 3 biquad HP filters
+            hpFilters = hpCutoffs.map { makeBiquadHP(cutoff: $0, sampleRate: actualSampleRate) }
 
             // Ring buffer at ~12kHz
             ringSubsampleTarget = max(1, Int(actualSampleRate / 12000))
             let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
             energyRingCapacity = Int(ringSampleRate * Double(bufferDurationSec))
-            energyRing = [Float](repeating: 0, count: energyRingCapacity)
+            energyRings = (0..<3).map { _ in [Float](repeating: 0, count: energyRingCapacity) }
 
             inputNode.installTap(onBus: 0, bufferSize: 4096, format: format) { [weak self] buffer, time in
                 self?.processAudioBuffer(buffer)
@@ -188,27 +225,27 @@ class TimegrapherEngine {
         for i in 0..<frameCount {
             let x = channelData[i]
 
-            // High-pass filter
-            let hp = hpAlpha * (hpPrevOut + x - hpPrevIn)
-            hpPrevIn = x
-            hpPrevOut = hp
-
-            // Peak-hold within each subsample group
-            let absHp = abs(hp)
-            if absHp > subsamplePeak { subsamplePeak = absHp }
+            // Run through all 3 HP filters
+            for f in 0..<3 {
+                let hp = applyBiquad(&hpFilters[f], sample: x)
+                let absHp = abs(hp)
+                if absHp > subsamplePeaks[f] { subsamplePeaks[f] = absHp }
+            }
 
             sampleCounter += 1
 
             energySubsampleCounter += 1
             if energySubsampleCounter >= ringSubsampleTarget {
                 energySubsampleCounter = 0
-                let energy = subsamplePeak
-                subsamplePeak = 0
-                energyRing[energyRingWritePos] = energy
+                let peakEnergy = subsamplePeaks[0]
+                for f in 0..<3 {
+                    energyRings[f][energyRingWritePos] = subsamplePeaks[f]
+                    subsamplePeaks[f] = 0
+                }
                 energyRingWritePos = (energyRingWritePos + 1) % energyRingCapacity
                 energyRingCount = min(energyRingCount + 1, energyRingCapacity)
 
-                if energy > recentPeakEnergy { recentPeakEnergy = energy }
+                if peakEnergy > recentPeakEnergy { recentPeakEnergy = peakEnergy }
             }
         }
 
@@ -218,7 +255,7 @@ class TimegrapherEngine {
         let elapsedSec = Double(energyRingCount) / ringSampleRate
         if now - lastAnalysisTime > 2000 && elapsedSec >= 10 {
             lastAnalysisTime = now
-            analyzeGoertzel()
+            analyze()
         }
 
         let update = Update(
@@ -227,14 +264,105 @@ class TimegrapherEngine {
             confidence: currentConfidence, noiseLevel: currentNoiseLevel,
             detectedIntervalMs: currentDetectedInterval,
             detectedBph: detectedBph,
-            debug: lastDebugInfo)
+            debug: lastDebugInfo,
+            beatWaveform: lastBeatWaveform,
+            tickPositions: lastTickPositions)
         DispatchQueue.main.async { [weak self] in self?.onUpdate?(update) }
     }
 
-    // MARK: - Goertzel analysis
+    // MARK: - Combined analysis: Goertzel primary + autocorrelation fallback
 
-    /// Compute power at a single frequency using the Goertzel algorithm.
-    /// Much more efficient than autocorrelation — O(N) for one frequency.
+    private func analyze() {
+        let count = energyRingCount
+        let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
+        guard count >= Int(ringSampleRate * 10) else { return }
+
+        let tickFreq = Double(targetBph) / 3600.0
+
+        // Try Goertzel at each HP cutoff — prefer lower cutoffs for rate accuracy.
+        // 4kHz gives the most accurate rates; higher cutoffs help detection but
+        // introduce rate error. Use the first cutoff that exceeds threshold.
+        for f in 0..<3 {
+            let signal = linearize(ringIndex: f, count: count)
+            let (ratio, rate, detFreq) = tryGoertzel(signal, count: count, tickFreq: tickFreq, ringSampleRate: ringSampleRate)
+            if ratio > Double(peakRatioThreshold) && rate != nil && abs(rate!) <= 120.0 {
+                activeHpIndex = f
+                detectionMethod = "Goertzel"
+                applyResult(rate: rate!, ratio: ratio, detectedFreq: detFreq,
+                            ringSampleRate: ringSampleRate, count: count)
+                detectTickEvents()
+                return
+            }
+        }
+
+        // Fallback: autocorrelation at each HP cutoff — prefer lower cutoffs first
+        for f in 0..<3 {
+            let signal = linearize(ringIndex: f, count: count)
+            let (conf, rate, detFreq) = tryAutocorrelation(signal, count: count, tickFreq: tickFreq, ringSampleRate: ringSampleRate)
+            if conf > 1.5 && rate != nil && abs(rate!) <= 120.0 {
+                activeHpIndex = f
+                detectionMethod = "Autocorr"
+                applyResult(rate: rate!, ratio: conf, detectedFreq: detFreq,
+                            ringSampleRate: ringSampleRate, count: count)
+                detectTickEvents()
+                return
+            }
+        }
+
+        // Nothing detected
+        currentRate = nil
+        currentConfidence = 0
+        detectedBph = nil
+        peakCount = 0
+        currentBeatError = nil
+        lastBeatWaveform = nil
+        lastTickPositions = nil
+
+        lastDebugInfo = DebugInfo(
+            sampleRate: actualSampleRate, fftSize: energyRingCount, bufferSamples: count,
+            hpCutoff: Double(hpCutoffs[0]), bestLag: targetBph,
+            bestCorrelation: 0, refinedLag: tickFreq, noiseFloor: 0,
+            threshold: bestGoertzelRatio, peakEnergy: Double(recentPeakEnergy),
+            allBphCorrelations: [])
+        recentPeakEnergy *= 0.95
+    }
+
+    private func applyResult(rate: Double, ratio: Double, detectedFreq: Double,
+                             ringSampleRate: Double, count: Int) {
+        currentRate = (rate * 10).rounded() / 10
+        currentDetectedInterval = (1.0 / detectedFreq) * 1000.0
+        detectedBph = targetBph
+
+        let elapsedSec = Double(count) / ringSampleRate
+        let durationFactor = min(1.0, elapsedSec / 60.0)
+        let peakFactor = min(1.0, max(0, (ratio - 1.0) / 9.0))
+        currentConfidence = min(0.99, ((peakFactor * (0.3 + 0.7 * durationFactor)) * 100).rounded() / 100)
+        peakCount = Int(elapsedSec * Double(targetBph) / 3600.0)
+
+        lastDebugInfo = DebugInfo(
+            sampleRate: actualSampleRate, fftSize: energyRingCount, bufferSamples: count,
+            hpCutoff: Double(hpCutoffs[activeHpIndex]), bestLag: targetBph,
+            bestCorrelation: ratio, refinedLag: detectedFreq, noiseFloor: 0,
+            threshold: ratio, peakEnergy: Double(recentPeakEnergy),
+            allBphCorrelations: [
+                (bph: targetBph, correlation: Float(ratio), lag: Int(detectedFreq * 1000))
+            ])
+        recentPeakEnergy *= 0.95
+    }
+
+    // MARK: - Linearize ring buffer
+
+    private func linearize(ringIndex f: Int, count: Int) -> [Float] {
+        var signal = [Float](repeating: 0, count: count)
+        for i in 0..<count {
+            let idx = (energyRingWritePos - count + i + energyRingCapacity) % energyRingCapacity
+            signal[i] = energyRings[f][idx]
+        }
+        return signal
+    }
+
+    // MARK: - Goertzel detection + rate sweep
+
     private func goertzelPower(_ signal: [Float], count: Int, targetFreq: Double, sampleRate: Double) -> Double {
         let k = targetFreq * Double(count) / sampleRate
         let w = 2.0 * Double.pi * k / Double(count)
@@ -249,108 +377,321 @@ class TimegrapherEngine {
         return power / Double(count * count)
     }
 
-    private func analyzeGoertzel() {
-        let count = energyRingCount
-        let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
-        guard count >= Int(ringSampleRate * 10) else { return }
-
-        let tickFreq = Double(targetBph) / 3600.0  // Hz
-
-        // Build linear array from ring buffer
-        var signal = [Float](repeating: 0, count: count)
-        for i in 0..<count {
-            let idx = (energyRingWritePos - count + i + energyRingCapacity) % energyRingCapacity
-            signal[i] = energyRing[idx]
-        }
-
-        // === DETECTION: Goertzel at tick frequency vs baseline ===
+    /// Returns (ratio, rate, detectedFreq). rate is nil if ratio below threshold.
+    private func tryGoertzel(_ signal: [Float], count: Int, tickFreq: Double, ringSampleRate: Double) -> (Double, Double?, Double) {
         let targetPower = goertzelPower(signal, count: count, targetFreq: tickFreq, sampleRate: ringSampleRate)
 
-        // Baseline: average power at several incommensurate frequencies
         let baselineMultipliers = [0.73, 0.81, 1.19, 1.37, 1.61]
         var baselineSum = 0.0
         for mult in baselineMultipliers {
             baselineSum += goertzelPower(signal, count: count, targetFreq: tickFreq * mult, sampleRate: ringSampleRate)
         }
         let baseline = baselineSum / Double(baselineMultipliers.count)
+        let ratio = baseline > 0 ? targetPower / baseline : (targetPower > 0 ? 10.0 : 0)
 
-        let goertzelRatio = baseline > 0 ? targetPower / baseline : (targetPower > 0 ? 10.0 : 0)
+        guard ratio > Double(peakRatioThreshold) else {
+            return (ratio, nil, tickFreq)
+        }
 
-        // === RATE: Fine frequency sweep ±0.5% ===
-        var detectedFreq = tickFreq
-        if goertzelRatio > Double(peakRatioThreshold) {
-            let sweepRange = tickFreq * 0.005  // ±0.5%
-            let steps = 101
-            var bestPower = 0.0
-            var bestIdx = steps / 2
-            var sweepPowers = [Double](repeating: 0, count: steps)
+        // Fine frequency sweep ±0.5%
+        let sweepRange = tickFreq * 0.005
+        let steps = 201
+        var bestPower = 0.0
+        var bestIdx = steps / 2
+        var sweepPowers = [Double](repeating: 0, count: steps)
 
-            for i in 0..<steps {
-                let f = tickFreq - sweepRange + (2.0 * sweepRange * Double(i) / Double(steps - 1))
-                let p = goertzelPower(signal, count: count, targetFreq: f, sampleRate: ringSampleRate)
-                sweepPowers[i] = p
-                if p > bestPower {
-                    bestPower = p
-                    bestIdx = i
-                }
-            }
+        for i in 0..<steps {
+            let f = tickFreq - sweepRange + (2.0 * sweepRange * Double(i) / Double(steps - 1))
+            let p = goertzelPower(signal, count: count, targetFreq: f, sampleRate: ringSampleRate)
+            sweepPowers[i] = p
+            if p > bestPower { bestPower = p; bestIdx = i }
+        }
 
-            // Parabolic interpolation
-            let df = 2.0 * sweepRange / Double(steps - 1)
-            detectedFreq = tickFreq - sweepRange + df * Double(bestIdx)
-            if bestIdx > 0 && bestIdx < steps - 1 {
-                let a = sweepPowers[bestIdx - 1]
-                let b = sweepPowers[bestIdx]
-                let c = sweepPowers[bestIdx + 1]
-                let denom = 2.0 * (2.0 * b - a - c)
-                if abs(denom) > 1e-30 {
-                    let delta = (a - c) / denom
-                    detectedFreq += delta * df
-                }
+        let df = 2.0 * sweepRange / Double(steps - 1)
+        var detectedFreq = tickFreq - sweepRange + df * Double(bestIdx)
+        if bestIdx > 0 && bestIdx < steps - 1 {
+            let a = sweepPowers[bestIdx - 1]
+            let b = sweepPowers[bestIdx]
+            let c = sweepPowers[bestIdx + 1]
+            let denom = 2.0 * (2.0 * b - a - c)
+            if abs(denom) > 1e-30 {
+                detectedFreq += (a - c) / denom * df
             }
         }
 
         let rate = ((detectedFreq - tickFreq) / tickFreq) * 86400.0
-        let detectedIntervalSec = 1.0 / detectedFreq
+        return (ratio, abs(rate) <= 120.0 ? rate : nil, detectedFreq)
+    }
 
-        // Confidence
-        let elapsedSec = Double(count) / ringSampleRate
-        let durationFactor = min(1.0, elapsedSec / 60.0)
-        let peakFactor = min(1.0, max(0, (goertzelRatio - 1.0) / 9.0))
-        let confidence = peakFactor * (0.3 + 0.7 * durationFactor)
+    // MARK: - FFT Autocorrelation fallback
 
-        // Report results — require both ratio above threshold AND plausible rate
-        // Any mechanical watch running beyond ±120 s/day is almost certainly a false positive
-        if goertzelRatio > Double(peakRatioThreshold) && abs(rate) <= 120.0 {
-            currentRate = (rate * 10).rounded() / 10
-            currentDetectedInterval = detectedIntervalSec * 1000.0
-            detectedBph = targetBph
-            currentConfidence = min(0.99, (confidence * 100).rounded() / 100)
-            peakCount = Int(elapsedSec * Double(targetBph) / 3600.0)
-        } else {
-            currentRate = nil
-            currentConfidence = 0
-            detectedBph = nil
-            peakCount = 0
+    /// Returns (confidence, rate, detectedFreq). rate is nil if not confident.
+    private func tryAutocorrelation(_ signal: [Float], count: Int, tickFreq: Double, ringSampleRate: Double) -> (Double, Double?, Double) {
+        // Rectify and remove mean
+        var rect = [Float](repeating: 0, count: count)
+        for i in 0..<count { rect[i] = abs(signal[i]) }
+        var mean: Float = 0
+        vDSP_meanv(rect, 1, &mean, vDSP_Length(count))
+        var negMean = -mean
+        vDSP_vsadd(rect, 1, &negMean, &rect, 1, vDSP_Length(count))
+
+        // Cosine taper (10% each end)
+        let tl = Int(Double(count) * 0.1)
+        for i in 0..<tl {
+            let w = Float(0.5 * (1.0 - cos(Double.pi * Double(i) / Double(tl))))
+            rect[i] *= w
+            rect[count - 1 - i] *= w
         }
 
-        currentBeatError = nil
+        // FFT autocorrelation via Accelerate
+        let acorr = fftAutocorrelation(rect, count: count)
+        guard acorr.count >= count else { return (0, nil, tickFreq) }
 
-        lastDebugInfo = DebugInfo(
-            sampleRate: actualSampleRate,
-            fftSize: energyRingCount,
-            bufferSamples: count,
-            hpCutoff: Double(hpCutoffHz),
-            bestLag: targetBph,
-            bestCorrelation: targetPower,
-            refinedLag: detectedFreq,
-            noiseFloor: baseline,
-            threshold: goertzelRatio,
-            peakEnergy: Double(recentPeakEnergy),
-            allBphCorrelations: [
-                (bph: targetBph, correlation: Float(goertzelRatio), lag: Int(detectedFreq * 1000))
-            ])
+        // Search for peak near expected period
+        let expectedPeriod = ringSampleRate / tickFreq
+        let lo = max(1, Int(expectedPeriod * 0.95))
+        let hi = min(count - 2, Int(expectedPeriod * 1.05))
+        guard lo < hi else { return (0, nil, tickFreq) }
 
-        recentPeakEnergy = recentPeakEnergy * 0.95
+        var peakIdx = lo
+        var peakVal = acorr[lo]
+        for i in (lo + 1)...hi {
+            if acorr[i] > peakVal { peakVal = acorr[i]; peakIdx = i }
+        }
+
+        // Confidence: peak vs mean in search range
+        var segMean: Float = 0
+        var segAbs = [Float](repeating: 0, count: hi - lo + 1)
+        for i in lo...hi { segAbs[i - lo] = abs(acorr[i]) }
+        vDSP_meanv(segAbs, 1, &segMean, vDSP_Length(segAbs.count))
+        let conf = segMean > 0 ? Double(peakVal / segMean) : 0
+
+        guard conf > 1.5 else { return (conf, nil, tickFreq) }
+
+        // Parabolic interpolation for sub-sample precision
+        var refined: Double
+        if peakIdx > 0 && peakIdx < count - 1 {
+            let a = Double(acorr[peakIdx - 1])
+            let b = Double(acorr[peakIdx])
+            let c = Double(acorr[peakIdx + 1])
+            let d = 2.0 * (2.0 * b - a - c)
+            refined = abs(d) > 1e-30 ? Double(peakIdx) + (a - c) / d : Double(peakIdx)
+        } else {
+            refined = Double(peakIdx)
+        }
+
+        // Harmonic refinement: check 2nd–5th harmonics
+        var periods = [refined]
+        for mult in 2...5 {
+            let expM = refined * Double(mult)
+            let loM = Int(expM - refined * 0.01)
+            let hiM = Int(expM + refined * 0.01)
+            guard hiM < count - 1 && loM > 0 else { break }
+
+            var pkIdx = loM
+            var pkVal = acorr[loM]
+            for i in (loM + 1)...hiM {
+                if acorr[i] > pkVal { pkVal = acorr[i]; pkIdx = i }
+            }
+
+            var pkR: Double
+            if pkIdx > 0 && pkIdx < count - 1 {
+                let a = Double(acorr[pkIdx - 1])
+                let b = Double(acorr[pkIdx])
+                let c = Double(acorr[pkIdx + 1])
+                let d = 2.0 * (2.0 * b - a - c)
+                pkR = abs(d) > 1e-30 ? Double(pkIdx) + (a - c) / d : Double(pkIdx)
+            } else {
+                pkR = Double(pkIdx)
+            }
+            periods.append(pkR / Double(mult))
+        }
+
+        // Median of all period estimates
+        periods.sort()
+        let finalPeriod = periods[periods.count / 2]
+        let detFreq = ringSampleRate / finalPeriod
+        let rate = ((detFreq - tickFreq) / tickFreq) * 86400.0
+
+        return (conf, abs(rate) <= 120.0 ? rate : nil, detFreq)
+    }
+
+    /// FFT-based autocorrelation using Accelerate's vDSP.
+    private func fftAutocorrelation(_ signal: [Float], count: Int) -> [Float] {
+        // Next power of 2 for FFT (>= 2*count for linear autocorrelation)
+        var fftSize = 1
+        while fftSize < 2 * count { fftSize *= 2 }
+        let log2n = vDSP_Length(log2(Double(fftSize)))
+
+        guard let fftSetup = vDSP_create_fftsetup(log2n, FFTRadix(kFFTRadix2)) else {
+            return [Float](repeating: 0, count: count)
+        }
+        defer { vDSP_destroy_fftsetup(fftSetup) }
+
+        // Zero-pad signal
+        var padded = [Float](repeating: 0, count: fftSize)
+        for i in 0..<count { padded[i] = signal[i] }
+
+        // Convert to split complex
+        let halfN = fftSize / 2
+        var realp = [Float](repeating: 0, count: halfN)
+        var imagp = [Float](repeating: 0, count: halfN)
+        var splitComplex = DSPSplitComplex(realp: &realp, imagp: &imagp)
+
+        padded.withUnsafeBufferPointer { ptr in
+            ptr.baseAddress!.withMemoryRebound(to: DSPComplex.self, capacity: halfN) { complexPtr in
+                vDSP_ctoz(complexPtr, 2, &splitComplex, 1, vDSP_Length(halfN))
+            }
+        }
+
+        // Forward FFT
+        vDSP_fft_zrip(fftSetup, &splitComplex, 1, log2n, FFTDirection(kFFTDirection_Forward))
+
+        // Power spectrum: |FFT|^2
+        for i in 0..<halfN {
+            let r = realp[i]
+            let im = imagp[i]
+            realp[i] = r * r + im * im
+            imagp[i] = 0
+        }
+
+        // Inverse FFT
+        vDSP_fft_zrip(fftSetup, &splitComplex, 1, log2n, FFTDirection(kFFTDirection_Inverse))
+
+        // Convert back to real
+        var result = [Float](repeating: 0, count: fftSize)
+        result.withUnsafeMutableBufferPointer { ptr in
+            ptr.baseAddress!.withMemoryRebound(to: DSPComplex.self, capacity: halfN) { complexPtr in
+                vDSP_ztoc(&splitComplex, 1, complexPtr, 2, vDSP_Length(halfN))
+            }
+        }
+
+        // Scale
+        var scale = 1.0 / Float(fftSize)
+        vDSP_vsmul(result, 1, &scale, &result, 1, vDSP_Length(fftSize))
+
+        return Array(result.prefix(count))
+    }
+
+    // MARK: - Beat error via epoch folding
+
+    private func detectTickEvents() {
+        let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
+        let tickFreq = Double(targetBph) / 3600.0
+        let beatFreq = tickFreq / 2.0
+        let beatPeriod = ringSampleRate / beatFreq
+        let periodSamples = Int(round(beatPeriod))
+        let count = energyRingCount
+
+        guard count >= periodSamples * 8 else { return }
+
+        let signal = linearize(ringIndex: activeHpIndex, count: count)
+
+        // Epoch fold at beat period
+        var folded = [Double](repeating: 0, count: periodSamples)
+        var foldCount = [Int](repeating: 0, count: periodSamples)
+        for i in 0..<count {
+            let idx = i % periodSamples
+            folded[idx] += Double(signal[i])
+            foldCount[idx] += 1
+        }
+        for i in 0..<periodSamples {
+            if foldCount[i] > 0 { folded[i] /= Double(foldCount[i]) }
+        }
+
+        // Smooth the folded profile
+        let smoothW = max(1, periodSamples / 50)
+        var smoothed = [Double](repeating: 0, count: periodSamples)
+        for i in 0..<periodSamples {
+            var s = 0.0; var c = 0
+            for j in -smoothW...smoothW {
+                let idx = (i + j + periodSamples) % periodSamples
+                s += folded[idx]; c += 1
+            }
+            smoothed[i] = s / Double(c)
+        }
+
+        // Find peak 1 (global max)
+        var peak1Idx = 0
+        var peak1Val = smoothed[0]
+        for i in 1..<periodSamples {
+            if smoothed[i] > peak1Val { peak1Val = smoothed[i]; peak1Idx = i }
+        }
+
+        // Find peak 2 (max outside ±25% exclusion zone)
+        let exclusion = periodSamples / 4
+        var peak2Idx = -1
+        var peak2Val = -1.0
+        for i in 0..<periodSamples {
+            let dist = min(abs(i - peak1Idx), periodSamples - abs(i - peak1Idx))
+            if dist > exclusion && smoothed[i] > peak2Val {
+                peak2Val = smoothed[i]; peak2Idx = i
+            }
+        }
+        guard peak2Idx >= 0 else {
+            currentBeatError = nil; return
+        }
+
+        // Quality gate: both peaks must have good prominence
+        let floor = smoothed.min() ?? 0
+        let prom1 = peak1Val - floor
+        let prom2 = peak2Val - floor
+        let promRatio = prom1 > 0 ? prom2 / prom1 : 0
+        guard promRatio > 0.25 else {
+            currentBeatError = nil; return
+        }
+
+        // Compute beat error
+        let gap1 = (peak2Idx - peak1Idx + periodSamples) % periodSamples
+        let gap2 = periodSamples - gap1
+        let gap1Ms = Double(gap1) / ringSampleRate * 1000.0
+        let gap2Ms = Double(gap2) / ringSampleRate * 1000.0
+        let be = abs(gap1Ms - gap2Ms)
+
+        let halfPeriodMs = Double(periodSamples) / ringSampleRate * 1000.0 / 2.0
+        let minGapFraction = 0.35
+        guard be < 5.0
+            && gap1Ms > halfPeriodMs * minGapFraction
+            && gap2Ms > halfPeriodMs * minGapFraction else {
+            currentBeatError = nil; return
+        }
+
+        currentBeatError = (be * 100).rounded() / 100
+
+        // Waveform: downsample the active ring's last 500ms for visualization
+        let vizRingSamples = min(count, Int(ringSampleRate * 0.5))
+        let vizStart = count - vizRingSamples
+        let targetPoints = 200
+        let step = max(1, vizRingSamples / targetPoints)
+        var waveform = [Float]()
+        waveform.reserveCapacity(targetPoints)
+        for i in stride(from: 0, to: vizRingSamples, by: step) {
+            var maxVal: Float = 0
+            let end = min(i + step, vizRingSamples)
+            for j in i..<end {
+                if signal[vizStart + j] > maxVal { maxVal = signal[vizStart + j] }
+            }
+            waveform.append(maxVal)
+        }
+        lastBeatWaveform = waveform
+
+        // Tick positions in waveform
+        let ticksInViz = Int(Double(vizRingSamples) / beatPeriod * 2)
+        var tickPos: [Int] = []
+        for t in 0..<ticksInViz {
+            let sampleInViz = Int(Double(t) * beatPeriod / 2.0) % vizRingSamples
+            let wfIdx = sampleInViz / step
+            if wfIdx >= 0 && wfIdx < waveform.count { tickPos.append(wfIdx) }
+        }
+        lastTickPositions = tickPos
+    }
+
+    /// Trimmed mean: removes top/bottom fraction of values, averages the rest.
+    private func trimmedMean(_ values: [Double], fraction: Double) -> Double {
+        let sorted = values.sorted()
+        let trimCount = max(0, Int(Double(sorted.count) * fraction))
+        let trimmed = Array(sorted[trimCount..<(sorted.count - trimCount)])
+        guard !trimmed.isEmpty else { return sorted[sorted.count / 2] }
+        return trimmed.reduce(0, +) / Double(trimmed.count)
     }
 }

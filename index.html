@@ -2945,8 +2945,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <!-- Measure content (shown when user has watches) -->
     <div id="measure-content" style="display:none;">
-      <!-- Watch + BPH selection -->
-      <div style="display:grid;grid-template-columns:1fr auto;gap:.5rem;margin-bottom:.65rem;">
+      <!-- Watch + BPH + Lift Angle selection -->
+      <div style="display:grid;grid-template-columns:1fr auto auto;gap:.5rem;margin-bottom:.65rem;">
         <div>
           <label for="msr-watch-select" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Watch</label>
           <select id="msr-watch-select" onchange="onMsrWatchChange()" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;"></select>
@@ -2988,6 +2988,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             </div>
             <div id="msr-noise-label" aria-live="polite" style="font-size:.68rem;color:var(--muted);margin-top:.1rem;">Listening...</div>
           </div>
+          <!-- Beat noise waveform -->
+          <div id="msr-waveform-wrap" style="margin-bottom:.4rem;background:var(--hover);border-radius:8px;padding:.3rem;height:70px;display:none;">
+            <canvas id="msr-waveform-canvas" style="width:100%;height:100%;"></canvas>
+          </div>
           <!-- Rate chart -->
           <div id="msr-chart-wrap" style="margin-bottom:.4rem;background:var(--hover);border-radius:8px;padding:.3rem .3rem;height:80px;display:none;">
             <canvas id="msr-rate-chart"></canvas>
@@ -2997,10 +3001,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div id="msr-signal-badge" style="display:inline-block;font-size:.68rem;font-weight:600;padding:.15rem .5rem;border-radius:10px;"></div>
             <span id="msr-rate-interpret" style="font-size:.68rem;color:var(--muted);margin-left:.4rem;"></span>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.4rem;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.4rem;">
             <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
               <div id="msr-live-rate" aria-live="polite" aria-label="Rate in seconds per day" style="font-size:1rem;font-weight:700;">---</div>
               <div style="font-size:.65rem;color:var(--muted);">s/day</div>
+            </div>
+            <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
+              <div id="msr-live-be" style="font-size:1rem;font-weight:700;">—</div>
+              <div style="font-size:.65rem;color:var(--muted);">Beat Error</div>
             </div>
             <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
               <div id="msr-live-ticks" style="font-size:1rem;font-weight:700;">0</div>
@@ -4464,7 +4472,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.29.19.59';
+const APP_VERSION = '2.36.30.16.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17037,7 +17045,7 @@ window._tgNativeCallback = function(data) {
       const r = data.rate;
       rateEl.textContent = (r >= 0 ? '+' : '') + r.toFixed(1);
       rateEl.style.color = Math.abs(r) <= 5 ? '#22c55e' : Math.abs(r) <= 15 ? '#eab308' : '#ef4444';
-      if (beEl) beEl.textContent = data.beatError != null ? data.beatError.toFixed(2) : '—';
+      if (beEl) beEl.textContent = data.beatError != null ? data.beatError.toFixed(2) + ' ms' : '—';
       if (isMsr) {
         _msrLastRate = data.rate;
         _msrLastBe = data.beatError;
@@ -17049,6 +17057,8 @@ window._tgNativeCallback = function(data) {
         _msrRateHistory.push({ t: Date.now(), r: r });
         if (_msrRateHistory.length > 60) _msrRateHistory.shift();
         updateMsrRateChart();
+        // Beat waveform visualization
+        if (data.beatWaveform) renderBeatWaveform(data.beatWaveform, data.tickPositions);
         // Signal strength badge
         const ratio = data.debug?.threshold || 0;
         const sigRow = document.getElementById('msr-signal-row');
@@ -17129,6 +17139,8 @@ window._tgNativeCallback = function(data) {
             const tipText2 = document.getElementById('msr-tip-text'); if (tipText2) tipText2.style.display = '';
             document.getElementById('msr-live-rate').textContent = '—';
             document.getElementById('msr-live-rate').style.color = '';
+            const beEl2 = document.getElementById('msr-live-be'); if (beEl2) beEl2.textContent = '—';
+            const wfWrap2 = document.getElementById('msr-waveform-wrap'); if (wfWrap2) wfWrap2.style.display = 'none';
             const bphEl2 = document.getElementById('msr-detected-bph'); if (bphEl2) bphEl2.style.display = 'none';
             if (_msrRateChart) { _msrRateChart.destroy(); _msrRateChart = null; }
             document.getElementById('msr-chart-wrap').style.display = 'none';
@@ -17341,6 +17353,56 @@ function updateMsrRateChart() {
   _msrRateChart.update();
 }
 
+function renderBeatWaveform(waveform, tickPositions) {
+  const wrap = document.getElementById('msr-waveform-wrap');
+  const canvas = document.getElementById('msr-waveform-canvas');
+  if (!wrap || !canvas || !waveform || waveform.length < 10) { if (wrap) wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.offsetWidth * dpr;
+  const h = canvas.offsetHeight * dpr;
+  canvas.width = w; canvas.height = h;
+  ctx.clearRect(0, 0, w, h);
+
+  const maxVal = Math.max(...waveform) || 1;
+  const len = waveform.length;
+  const xStep = w / len;
+
+  // Draw waveform
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(201,168,76,0.6)';
+  ctx.lineWidth = 1 * dpr;
+  for (let i = 0; i < len; i++) {
+    const x = i * xStep;
+    const y = h - (waveform[i] / maxVal) * h * 0.85;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Fill under curve
+  ctx.lineTo((len - 1) * xStep, h);
+  ctx.lineTo(0, h);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(201,168,76,0.08)';
+  ctx.fill();
+
+  // Draw tick markers
+  if (tickPositions && tickPositions.length > 0) {
+    ctx.strokeStyle = 'rgba(34,197,94,0.7)';
+    ctx.lineWidth = 1 * dpr;
+    for (const pos of tickPositions) {
+      if (pos < 0 || pos >= len) continue;
+      const x = pos * xStep;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+  }
+}
+
+
 function openMeasureModal() {
   if (!_tgHasNative()) return;
   nav(document.querySelector('[data-page="measure"]'));
@@ -17444,6 +17506,8 @@ function toggleMsrListen() {
     document.getElementById('msr-live-rate').textContent = '—';
     document.getElementById('msr-live-ticks').textContent = '0';
     // Reset new UI elements
+    const beEl = document.getElementById('msr-live-be'); if (beEl) beEl.textContent = '—';
+    const wfWrap = document.getElementById('msr-waveform-wrap'); if (wfWrap) wfWrap.style.display = 'none';
     const sigRow = document.getElementById('msr-signal-row'); if (sigRow) sigRow.style.display = 'none';
     const noSigTip = document.getElementById('msr-no-signal-tip'); if (noSigTip) noSigTip.style.display = 'none';
     const donePrompt = document.getElementById('msr-done-prompt'); if (donePrompt) donePrompt.style.display = 'none';
@@ -17533,10 +17597,12 @@ function discardMsrReading() {
   document.getElementById('msr-live-status').style.display = 'none';
   document.getElementById('msr-live-rate').textContent = '---';
   document.getElementById('msr-live-ticks').textContent = '0';
+  const beEl = document.getElementById('msr-live-be'); if (beEl) beEl.textContent = '—';
   document.getElementById('msr-rate-input').value = '';
   document.getElementById('msr-be-input').value = '';
   if (_msrRateChart) { _msrRateChart.destroy(); _msrRateChart = null; }
   document.getElementById('msr-chart-wrap').style.display = 'none';
+  const wfWrap = document.getElementById('msr-waveform-wrap'); if (wfWrap) wfWrap.style.display = 'none';
   const sigRow = document.getElementById('msr-signal-row'); if (sigRow) sigRow.style.display = 'none';
   const noSigTip = document.getElementById('msr-no-signal-tip'); if (noSigTip) noSigTip.style.display = 'none';
   const donePrompt = document.getElementById('msr-done-prompt'); if (donePrompt) donePrompt.style.display = 'none';
