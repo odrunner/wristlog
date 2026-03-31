@@ -184,13 +184,6 @@ class TimegrapherEngine {
 
     func start(bph: Int, sensitivity: Int) {
         guard !isRunning else { return }
-        if bph == 0 {
-            autoBph = true
-            targetBph = 28800 // default until detected
-        } else {
-            autoBph = false
-            targetBph = bph
-        }
 
         currentRate = nil
         currentBeatError = nil
@@ -227,6 +220,16 @@ class TimegrapherEngine {
         lastTickPositions = nil
         subsamplePeaks = [0, 0, 0]
 
+        // Set BPH mode after all resets
+        if bph == 0 {
+            autoBph = true
+            targetBph = 28800 // default until auto-detected
+        } else {
+            autoBph = false
+            targetBph = bph
+            detectedBph = bph // user-selected = immediately locked
+        }
+
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.record, mode: .measurement, options: [])
@@ -255,6 +258,11 @@ class TimegrapherEngine {
 
             try engine.start()
             isRunning = true
+
+            // If BPH is user-selected, start tick detection immediately
+            if !autoBph {
+                activateTickDetection(ringSampleRate: ringSampleRate)
+            }
 
         } catch {
             print("[Timegrapher] Audio setup error: \(error.localizedDescription)")
@@ -395,8 +403,8 @@ class TimegrapherEngine {
         pendingTicks = []
 
         // Compute rate from tick regression (converges as ticks accumulate)
-        var rateForUpdate = currentRate
-        if regN >= 20 {
+        var rateForUpdate: Double? = nil
+        if regN >= 10 {
             let denom = Double(regN) * regSumXX - regSumX * regSumX
             if abs(denom) > 1e-20 {
                 let slope = (Double(regN) * regSumXY - regSumX * regSumY) / denom // ms/sec
@@ -407,18 +415,21 @@ class TimegrapherEngine {
             }
         }
 
+        // Confidence based on tick count — more ticks = more confident
+        let tickConfidence = regN >= 10 ? min(0.99, Double(regN) / 500.0 + 0.3) : 0.0
+
         let update = Update(
             rate: rateForUpdate, beatError: currentBeatError,
-            tickCount: tickCount > 0 ? tickCount : peakCount,
-            confidence: currentConfidence, noiseLevel: currentNoiseLevel,
-            detectedIntervalMs: currentDetectedInterval,
+            tickCount: tickCount,
+            confidence: tickConfidence, noiseLevel: currentNoiseLevel,
+            detectedIntervalMs: expectedTickInterval > 0 ? 1000.0 / (actualSampleRate / Double(ringSubsampleTarget) / expectedTickInterval) : 0,
             detectedBph: detectedBph,
             debug: lastDebugInfo,
             beatWaveform: lastBeatWaveform,
             tickPositions: lastTickPositions,
-            cumulativeOffset: cumulativeOffsetMs,
+            cumulativeOffset: tickDeviationMs,
             elapsedSec: elapsedSec,
-            method: detectionMethod,
+            method: regN >= 10 ? "Ticks" : "",
             newTicks: ticks)
         DispatchQueue.main.async { [weak self] in self?.onUpdate?(update) }
     }
@@ -426,101 +437,45 @@ class TimegrapherEngine {
     // MARK: - Combined analysis: Goertzel primary + autocorrelation fallback
 
     private func analyze(signals: [[Float]], count: Int, ringSampleRate: Double) {
-        let elapsedSec = Double(count) / ringSampleRate
-
-        // Auto BPH: lightweight ratio-only scan at 4kHz only (no expensive sweep)
+        // Phase 1: Auto BPH detection (only if BPH not yet locked)
         if autoBph && detectedBph == nil {
-            let signal4k = signals[0] // 4kHz cutoff
-            var ratios: [(bph: Int, ratio: Double)] = []
-            for candidate in TimegrapherEngine.bphCandidates {
-                let tf = Double(candidate) / 3600.0
-                let ratio = goertzelRatio(signal4k, count: count, tickFreq: tf, sampleRate: ringSampleRate)
-                ratios.append((bph: candidate, ratio: ratio))
+            // Try all 3 HP cutoffs for better discrimination
+            var bestCandidate: (bph: Int, ratio: Double) = (0, 0)
+            var secondBestRatio: Double = 0
+            for f in 0..<3 {
+                var ratios: [(bph: Int, ratio: Double)] = []
+                for candidate in TimegrapherEngine.bphCandidates {
+                    let tf = Double(candidate) / 3600.0
+                    let ratio = goertzelRatio(signals[f], count: count, tickFreq: tf, sampleRate: ringSampleRate)
+                    ratios.append((bph: candidate, ratio: ratio))
+                }
+                ratios.sort { $0.ratio > $1.ratio }
+                if ratios[0].ratio > bestCandidate.ratio {
+                    bestCandidate = ratios[0]
+                    secondBestRatio = ratios.count > 1 ? ratios[1].ratio : 0
+                }
             }
-            ratios.sort { $0.ratio > $1.ratio }
-            let best = ratios[0]
-            let secondBest = ratios.count > 1 ? ratios[1].ratio : 0
 
             // Require: (1) above threshold, (2) decisively better than runner-up (1.5x)
-            if best.ratio > Double(peakRatioThreshold) && (secondBest < 1.0 || best.ratio >= secondBest * 1.5) {
-                targetBph = best.bph
-                detectedBph = best.bph
-                consecutiveFailures = 0
+            if bestCandidate.ratio > Double(peakRatioThreshold) && (secondBestRatio < 1.0 || bestCandidate.ratio >= secondBestRatio * 1.5) {
+                targetBph = bestCandidate.bph
+                detectedBph = bestCandidate.bph
                 activateTickDetection(ringSampleRate: ringSampleRate)
-            } else {
-                currentRate = nil
-                currentConfidence = 0
-                lastDebugInfo = DebugInfo(
-                    sampleRate: actualSampleRate, fftSize: energyRingCount, bufferSamples: count,
-                    hpCutoff: Double(hpCutoffs[0]), bestLag: 0,
-                    bestCorrelation: best.ratio, refinedLag: 0, noiseFloor: 0,
-                    threshold: best.ratio, peakEnergy: Double(recentPeakEnergy),
-                    allBphCorrelations: [])
+            }
+            // If not locked yet, just return — ticks will start once BPH locks
+            if detectedBph == nil {
                 recentPeakEnergy *= 0.95
                 return
             }
         }
 
-        let tickFreq = Double(targetBph) / 3600.0
-
-        // Try Goertzel at each HP cutoff — prefer lower cutoffs for rate accuracy.
-        for f in 0..<3 {
-            let (ratio, rate, detFreq) = tryGoertzel(signals[f], count: count, tickFreq: tickFreq, ringSampleRate: ringSampleRate)
-            if ratio > Double(peakRatioThreshold) && rate != nil && abs(rate!) <= 120.0 {
-                activeHpIndex = f
-                detectionMethod = "Goertzel"
-                updateCumulativeOffset(rate: rate!, elapsedSec: elapsedSec)
-                applyResult(rate: rate!, ratio: ratio, detectedFreq: detFreq,
-                            ringSampleRate: ringSampleRate, count: count)
-                detectTickEvents(signal: signals[f], count: count, ringSampleRate: ringSampleRate)
-                return
-            }
+        // Phase 2: BPH is locked — only compute beat error via epoch folding
+        // Rate comes from tick regression (computed in processAudioBuffer), not Goertzel
+        if !tickDetectionActive {
+            activateTickDetection(ringSampleRate: ringSampleRate)
         }
-
-        // Fallback: autocorrelation at each HP cutoff — prefer lower cutoffs first
-        for f in 0..<3 {
-            let (conf, rate, detFreq) = tryAutocorrelation(signals[f], count: count, tickFreq: tickFreq, ringSampleRate: ringSampleRate)
-            if conf > 1.5 && rate != nil && abs(rate!) <= 120.0 {
-                activeHpIndex = f
-                detectionMethod = "Autocorr"
-                updateCumulativeOffset(rate: rate!, elapsedSec: elapsedSec)
-                applyResult(rate: rate!, ratio: conf, detectedFreq: detFreq,
-                            ringSampleRate: ringSampleRate, count: count)
-                detectTickEvents(signal: signals[f], count: count, ringSampleRate: ringSampleRate)
-                return
-            }
-        }
-
-        // Nothing detected
-        currentRate = nil
-        currentConfidence = 0
-        peakCount = 0
-        currentBeatError = nil
-        lastBeatWaveform = nil
-        lastTickPositions = nil
-
-        // If auto BPH and we keep failing, unlock and re-scan
-        if autoBph && detectedBph != nil {
-            consecutiveFailures += 1
-            if consecutiveFailures >= 3 {
-                detectedBph = nil
-                tickDetectionActive = false
-                pendingTicks = []
-                tickCount = 0
-                tickDeviationMs = 0
-                regN = 0; regSumX = 0; regSumY = 0; regSumXX = 0; regSumXY = 0
-                consecutiveFailures = 0
-            }
-        } else if !autoBph {
-            detectedBph = nil
-        }
-
-        lastDebugInfo = DebugInfo(
-            sampleRate: actualSampleRate, fftSize: energyRingCount, bufferSamples: count,
-            hpCutoff: Double(hpCutoffs[0]), bestLag: targetBph,
-            bestCorrelation: 0, refinedLag: tickFreq, noiseFloor: 0,
-            threshold: 0, peakEnergy: Double(recentPeakEnergy),
-            allBphCorrelations: [])
+        // Epoch fold for beat error on the lowest HP cutoff signal
+        detectTickEvents(signal: signals[0], count: count, ringSampleRate: ringSampleRate)
         recentPeakEnergy *= 0.95
     }
 
