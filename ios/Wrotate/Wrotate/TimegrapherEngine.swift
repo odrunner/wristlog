@@ -98,8 +98,16 @@ class TimegrapherEngine {
     private var lastTickFracOffset: Double = 0      // fractional ring position offset of last tick
     private var tickStartSample: Int64 = 0          // sampleCounter at tick activation (for relative elapsed)
 
+    // Wall-clock tick timestamps — eliminates audio sample rate drift
+    private var bufferWallTime: Double = 0           // CACurrentMediaTime() at buffer callback start
+    private var bufferStartSampleCounter: Int64 = 0  // sampleCounter at buffer callback start
+    private var currentRingWallTime: Double = 0      // wall time of current ring sample write
+    private var lastTickWallTime: Double = 0         // wall time of last detected tick
+    private var tickStartWallTime: Double = 0        // wall time when tick detection activated
+    private var expectedTickIntervalSec: Double = 0  // expected tick interval in real seconds
+
     // Pair-based regression: accumulate every 2 ticks to cancel beat error
-    private var pairIntervalAccum: Double = 0       // sum of last 2 tick intervals (fractional)
+    private var pairIntervalAccum: Double = 0       // sum of last 2 tick intervals (wall-clock seconds)
     private var pairTickPhase: Int = 0              // 0 or 1, alternates each tick
     private var pairDeviationMs: Double = 0         // cumulative pair deviation
     // Stashed first-tick info (held until pair is validated)
@@ -302,6 +310,8 @@ class TimegrapherEngine {
         regPoints = []; regN = 0; totalPairsAccepted = 0
         pairIntervalAccum = 0.0; pairTickPhase = 0; pairDeviationMs = 0
         lastTickFracOffset = 0; tickStartSample = 0
+        bufferWallTime = 0; bufferStartSampleCounter = 0; currentRingWallTime = 0
+        lastTickWallTime = 0; tickStartWallTime = 0; expectedTickIntervalSec = 0
         pendingFirstTickDev = 0; pendingFirstTickTime = 0; pendingFirstTickInterval = 0; pendingFirstTickEnergy = 0
         recentPairDevs = []
         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []
@@ -376,6 +386,10 @@ class TimegrapherEngine {
         guard isRunning, let channelData = buffer.floatChannelData?[0] else { return }
         let frameCount = Int(buffer.frameLength)
 
+        // Capture wall-clock time at buffer start for tick timestamps
+        bufferWallTime = CACurrentMediaTime()
+        bufferStartSampleCounter = sampleCounter
+
         var rms: Float = 0
         vDSP_rmsqv(channelData, 1, &rms, vDSP_Length(frameCount))
         currentNoiseLevel = min(1.0, Double(rms) * 10)
@@ -403,6 +417,9 @@ class TimegrapherEngine {
                 energyRingWritePos = (energyRingWritePos + 1) % energyRingCapacity
                 energyRingCount = min(energyRingCount + 1, energyRingCapacity)
 
+                // Wall-clock time of this ring sample (for tick timestamps)
+                currentRingWallTime = bufferWallTime + Double(sampleCounter - bufferStartSampleCounter) / actualSampleRate
+
                 if peakEnergy > recentPeakEnergy { recentPeakEnergy = peakEnergy }
 
                 // Real-time tick detection on the active HP filter's energy
@@ -417,6 +434,7 @@ class TimegrapherEngine {
                             tickCalibrating = false
                             // tickThreshold is now the peak energy seen during calibration
                             tickStartSample = sampleCounter // reset elapsed to exclude calibration
+                            tickStartWallTime = currentRingWallTime // wall-clock start for tick timestamps
                             debugLog("[TGCALIBRATED] tickThreshold=\(String(format: "%.6f", tickThreshold)) after \(calibrationSamples) samples")
                         }
                         continue
@@ -435,14 +453,13 @@ class TimegrapherEngine {
                     // Debug: log every ~1 second
                     tickDebugInterval += 1
                     if tickDebugInterval % Int(ringSR) == 0 {
-                        let elDbg = Double(sampleCounter - tickStartSample) / actualSampleRate
+                        let elDbg = tickStartWallTime > 0 ? currentRingWallTime - tickStartWallTime : Double(sampleCounter - tickStartSample) / actualSampleRate
                         let rateStr = smoothedRate != nil ? String(format: "%.1f", smoothedRate!) : "nil"
                         debugLog("[TGDEBUG \(String(format: "%.1f", elDbg))s] energy=\(String(format: "%.6f", energy)) thresh=\(String(format: "%.6f", threshold)) tickThresh=\(String(format: "%.6f", tickThreshold)) tickCount=\(tickCount) regN=\(regN) pairDev=\(String(format: "%.2f", pairDeviationMs)) rate=\(rateStr)")
                     }
 
                     if energy > threshold && ringPosSinceLastTick >= minSpacing {
                         let intInterval = ringPosSinceLastTick
-                        let elapsedSec = Double(sampleCounter - tickStartSample) / actualSampleRate
 
                         // Sub-sample peak interpolation: parabolic fit on 3 energy values
                         var tickFracOffset: Double = 0.0
@@ -456,51 +473,57 @@ class TimegrapherEngine {
                             let enm2 = Double(ring[nm2])
 
                             if enm1 >= en && enm1 >= enm2 && enm1 > 0 {
-                                // Peak at nm1: parabola through nm2(-1), nm1(0), n(+1)
                                 let d = enm2 - 2.0 * enm1 + en
                                 if abs(d) > 1e-10 {
-                                    let p = 0.5 * (enm2 - en) / d // offset from nm1
+                                    let p = 0.5 * (enm2 - en) / d
                                     tickFracOffset = -1.0 + max(-0.5, min(0.5, p))
                                 } else {
                                     tickFracOffset = -1.0
                                 }
                             }
-                            // else: peak at current position, offset = 0
                         }
 
-                        // Fractional interval = integer interval + this offset - last offset
+                        // Fractional interval in ring samples (still used for coarse outlier check)
                         let actualInterval = Double(intInterval) + tickFracOffset - lastTickFracOffset
                         lastTickFracOffset = tickFracOffset
 
+                        // Wall-clock time of this tick (sub-sample precision via fractional offset)
+                        let secPerRingSample = Double(ringSubsampleTarget) / actualSampleRate
+                        let tickWallTime = currentRingWallTime + tickFracOffset * secPerRingSample
+                        let elapsedSec = tickWallTime - tickStartWallTime
+
                         if lastTickRingPos >= 0 {
-                            // Outlier gate: discard intervals > ±15% of expected
+                            // Coarse outlier gate (ring domain — fine for ±15% check)
                             let ratio = actualInterval / expectedTickInterval
                             if ratio < 0.85 || ratio > 1.15 {
-                                // Outlier — skip this tick, don't update deviation or regression
                                 debugLog("[TGTICK SKIP @ \(String(format: "%.2f", elapsedSec))s] interval=\(String(format: "%.1f", actualInterval)) ratio=\(String(format: "%.3f", ratio)) OUTLIER")
                                 lastTickRingPos = energyRingWritePos
+                                lastTickWallTime = tickWallTime
                                 ringPosSinceLastTick = 0
                             } else {
-                                let deviationThisTick = (expectedTickInterval - actualInterval) / ringSR * 1000.0
+                                // Wall-clock tick interval and deviation (eliminates audio sample rate drift)
+                                let tickIntervalSec = tickWallTime - lastTickWallTime
+                                let deviationThisTick = (expectedTickIntervalSec - tickIntervalSec) * 1000.0
 
-                                // Pair-based: accumulate 2 ticks, validate pair before plotting
-                                pairIntervalAccum += actualInterval
+                                // Pair-based: accumulate 2 wall-clock intervals, validate pair before plotting
+                                pairIntervalAccum += tickIntervalSec
                                 pairTickPhase += 1
 
                                 if pairTickPhase == 1 {
                                     // First tick of pair — stash info, don't plot yet
                                     pendingFirstTickDev = deviationThisTick
                                     pendingFirstTickTime = elapsedSec
-                                    pendingFirstTickInterval = actualInterval
+                                    pendingFirstTickInterval = tickIntervalSec
                                     pendingFirstTickEnergy = energy
                                     lastTickRingPos = energyRingWritePos
+                                    lastTickWallTime = tickWallTime
                                     ringPosSinceLastTick = 0
                                     continue  // wait for second tick
                                 }
 
                                 // Second tick — validate the pair
-                                let pairExpected = expectedTickInterval * 2.0
-                                let pairDevThisPair = (pairExpected - pairIntervalAccum) / ringSR * 1000.0
+                                let pairExpectedSec = 2.0 * expectedTickIntervalSec
+                                let pairDevThisPair = (pairExpectedSec - pairIntervalAccum) * 1000.0
                                 pairIntervalAccum = 0.0
                                 pairTickPhase = 0
 
@@ -508,6 +531,7 @@ class TimegrapherEngine {
                                 if abs(pendingFirstTickDev) > maxTickDev || abs(deviationThisTick) > maxTickDev {
                                     debugLog("[TGPAIR SKIP @ \(String(format: "%.2f", elapsedSec))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms tickDevs=\(String(format: "%.1f", pendingFirstTickDev)),\(String(format: "%.1f", deviationThisTick))ms TICK_OUTLIER")
                                     lastTickRingPos = energyRingWritePos
+                                    lastTickWallTime = tickWallTime
                                     ringPosSinceLastTick = 0
                                     continue
                                 }
@@ -523,6 +547,7 @@ class TimegrapherEngine {
                                 if abs(pairDevThisPair) > pairThresh {
                                     debugLog("[TGPAIR SKIP @ \(String(format: "%.2f", elapsedSec))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms thresh=\(String(format: "%.2f", pairThresh))ms PAIR_OUTLIER")
                                     lastTickRingPos = energyRingWritePos
+                                    lastTickWallTime = tickWallTime
                                     ringPosSinceLastTick = 0
                                     continue
                                 }
@@ -564,6 +589,7 @@ class TimegrapherEngine {
                                         pairDeviationMs = 0; pairIntervalAccum = 0.0; pairTickPhase = 0; lastTickFracOffset = 0
                                         regPoints = []; regN = 0; recentPairDevs = []; totalPairsAccepted = 0
                                         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
+                                        lastTickWallTime = 0
                                         if autoBph { detectedBph = nil; consecutiveFailures = 0 }
                                     }
                                     lastTickCountCheck = tickCount
@@ -575,6 +601,7 @@ class TimegrapherEngine {
                             debugLog("[TGTICK FIRST @ \(String(format: "%.2f", elapsedSec))s] energy=\(String(format: "%.6f", energy)) threshold=\(String(format: "%.6f", threshold))")
                         }
                         lastTickRingPos = energyRingWritePos
+                        lastTickWallTime = tickWallTime
                         ringPosSinceLastTick = 0
                     }
                 }
@@ -605,7 +632,8 @@ class TimegrapherEngine {
 
         // Compute rate from Theil-Sen median regression on ALL accepted pairs
         var rateForUpdate: Double? = nil
-        let wallElapsed = Double(sampleCounter - tickStartSample) / actualSampleRate
+        // Wall-clock elapsed (immune to audio sample rate drift)
+        let wallElapsed = tickStartWallTime > 0 ? CACurrentMediaTime() - tickStartWallTime : Double(sampleCounter - tickStartSample) / actualSampleRate
         if regN >= 20 {  // 20 pairs minimum — need enough signal above quantization noise
             if let slope = theilSenSlope() {
                 let regRate = slope * 86.4 // → s/day
@@ -739,8 +767,10 @@ class TimegrapherEngine {
         guard !tickDetectionActive else { return }
         tickDetectionActive = true
         expectedTickInterval = ringSampleRate / (Double(targetBph) / 3600.0)
+        expectedTickIntervalSec = 3600.0 / Double(targetBph)
         tickDeviationMs = 0
         lastTickRingPos = -1
+        lastTickWallTime = 0
         ringPosSinceLastTick = 0
         tickCount = 0
         pendingTicks = []
