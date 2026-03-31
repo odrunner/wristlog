@@ -23,6 +23,9 @@ class TimegrapherEngine {
         let debug: DebugInfo?
         let beatWaveform: [Float]?
         let tickPositions: [Int]?
+        let cumulativeOffset: Double
+        let elapsedSec: Double
+        let method: String
     }
 
     struct DebugInfo {
@@ -54,8 +57,14 @@ class TimegrapherEngine {
     private var actualSampleRate: Double = 48000
     private var sampleCounter: Int64 = 0
 
-    // Known BPH from user
+    // BPH — user-provided or auto-detected
     private var targetBph: Int = 28800
+    private var autoBph: Bool = false
+    private static let bphCandidates = [18000, 21600, 25200, 28800, 36000]
+
+    // Cumulative offset tracking for scatter plot
+    private var cumulativeOffsetMs: Double = 0
+    private var lastAnalysisElapsed: Double = 0
 
     // 2nd-order Butterworth HP filter state (biquad)
     private struct BiquadState {
@@ -146,7 +155,13 @@ class TimegrapherEngine {
 
     func start(bph: Int, sensitivity: Int) {
         guard !isRunning else { return }
-        targetBph = bph
+        if bph == 0 {
+            autoBph = true
+            targetBph = 28800 // default until detected
+        } else {
+            autoBph = false
+            targetBph = bph
+        }
 
         currentRate = nil
         currentBeatError = nil
@@ -163,6 +178,8 @@ class TimegrapherEngine {
         peakCount = 0
         activeHpIndex = 0
         detectionMethod = ""
+        cumulativeOffsetMs = 0
+        lastAnalysisElapsed = 0
         lastDebugInfo = nil
         lastBeatWaveform = nil
         lastTickPositions = nil
@@ -249,11 +266,11 @@ class TimegrapherEngine {
             }
         }
 
-        // Analyze every ~2 seconds, after at least 10 seconds of data
+        // Analyze every ~1 second, after at least 5 seconds of data
         let now = CACurrentMediaTime() * 1000
         let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
         let elapsedSec = Double(energyRingCount) / ringSampleRate
-        if now - lastAnalysisTime > 2000 && elapsedSec >= 10 {
+        if now - lastAnalysisTime > 1000 && elapsedSec >= 5 {
             lastAnalysisTime = now
             analyze()
         }
@@ -266,7 +283,10 @@ class TimegrapherEngine {
             detectedBph: detectedBph,
             debug: lastDebugInfo,
             beatWaveform: lastBeatWaveform,
-            tickPositions: lastTickPositions)
+            tickPositions: lastTickPositions,
+            cumulativeOffset: cumulativeOffsetMs,
+            elapsedSec: elapsedSec,
+            method: detectionMethod)
         DispatchQueue.main.async { [weak self] in self?.onUpdate?(update) }
     }
 
@@ -275,19 +295,50 @@ class TimegrapherEngine {
     private func analyze() {
         let count = energyRingCount
         let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
-        guard count >= Int(ringSampleRate * 10) else { return }
+        guard count >= Int(ringSampleRate * 5) else { return }
+
+        let elapsedSec = Double(count) / ringSampleRate
+
+        // Auto BPH: try all candidates, pick the one with highest ratio
+        if autoBph && detectedBph == nil {
+            var bestBph = 0
+            var bestRatio = 0.0
+            for candidate in TimegrapherEngine.bphCandidates {
+                let tf = Double(candidate) / 3600.0
+                for f in 0..<3 {
+                    let signal = linearize(ringIndex: f, count: count)
+                    let (ratio, _, _) = tryGoertzel(signal, count: count, tickFreq: tf, ringSampleRate: ringSampleRate)
+                    if ratio > bestRatio { bestRatio = ratio; bestBph = candidate }
+                }
+            }
+            if bestRatio > Double(peakRatioThreshold) && bestBph > 0 {
+                targetBph = bestBph
+                detectedBph = bestBph
+            } else {
+                // Not yet detected — keep trying next cycle
+                currentRate = nil
+                currentConfidence = 0
+                lastDebugInfo = DebugInfo(
+                    sampleRate: actualSampleRate, fftSize: energyRingCount, bufferSamples: count,
+                    hpCutoff: Double(hpCutoffs[0]), bestLag: 0,
+                    bestCorrelation: bestRatio, refinedLag: 0, noiseFloor: 0,
+                    threshold: bestRatio, peakEnergy: Double(recentPeakEnergy),
+                    allBphCorrelations: [])
+                recentPeakEnergy *= 0.95
+                return
+            }
+        }
 
         let tickFreq = Double(targetBph) / 3600.0
 
         // Try Goertzel at each HP cutoff — prefer lower cutoffs for rate accuracy.
-        // 4kHz gives the most accurate rates; higher cutoffs help detection but
-        // introduce rate error. Use the first cutoff that exceeds threshold.
         for f in 0..<3 {
             let signal = linearize(ringIndex: f, count: count)
             let (ratio, rate, detFreq) = tryGoertzel(signal, count: count, tickFreq: tickFreq, ringSampleRate: ringSampleRate)
             if ratio > Double(peakRatioThreshold) && rate != nil && abs(rate!) <= 120.0 {
                 activeHpIndex = f
                 detectionMethod = "Goertzel"
+                updateCumulativeOffset(rate: rate!, elapsedSec: elapsedSec)
                 applyResult(rate: rate!, ratio: ratio, detectedFreq: detFreq,
                             ringSampleRate: ringSampleRate, count: count)
                 detectTickEvents()
@@ -302,6 +353,7 @@ class TimegrapherEngine {
             if conf > 1.5 && rate != nil && abs(rate!) <= 120.0 {
                 activeHpIndex = f
                 detectionMethod = "Autocorr"
+                updateCumulativeOffset(rate: rate!, elapsedSec: elapsedSec)
                 applyResult(rate: rate!, ratio: conf, detectedFreq: detFreq,
                             ringSampleRate: ringSampleRate, count: count)
                 detectTickEvents()
@@ -312,7 +364,7 @@ class TimegrapherEngine {
         // Nothing detected
         currentRate = nil
         currentConfidence = 0
-        detectedBph = nil
+        if !autoBph { detectedBph = nil }
         peakCount = 0
         currentBeatError = nil
         lastBeatWaveform = nil
@@ -325,6 +377,14 @@ class TimegrapherEngine {
             threshold: 0, peakEnergy: Double(recentPeakEnergy),
             allBphCorrelations: [])
         recentPeakEnergy *= 0.95
+    }
+
+    private func updateCumulativeOffset(rate: Double, elapsedSec: Double) {
+        if lastAnalysisElapsed > 0 {
+            let dt = elapsedSec - lastAnalysisElapsed
+            cumulativeOffsetMs += (rate / 86400.0) * dt * 1000.0
+        }
+        lastAnalysisElapsed = elapsedSec
     }
 
     private func applyResult(rate: Double, ratio: Double, detectedFreq: Double,

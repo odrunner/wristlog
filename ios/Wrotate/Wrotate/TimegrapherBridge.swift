@@ -70,7 +70,10 @@ class TimegrapherBridge {
                         "confidence": update.confidence,
                         "noiseLevel": update.noiseLevel,
                         "detectedIntervalMs": update.detectedIntervalMs,
-                        "detectedBph": update.detectedBph as Any
+                        "detectedBph": update.detectedBph as Any,
+                        "cumulativeOffset": update.cumulativeOffset,
+                        "elapsedSec": update.elapsedSec,
+                        "method": update.method
                     ]
                     if let waveform = update.beatWaveform {
                         payload["beatWaveform"] = waveform

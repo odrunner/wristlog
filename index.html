@@ -2954,10 +2954,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div>
           <label for="msr-bph-select" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">BPH</label>
           <select id="msr-bph-select" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+            <option value="0" selected>Auto</option>
             <option value="18000">18,000</option>
             <option value="21600">21,600</option>
             <option value="25200">25,200</option>
-            <option value="28800" selected>28,800</option>
+            <option value="28800">28,800</option>
             <option value="36000">36,000</option>
           </select>
         </div>
@@ -2970,60 +2971,30 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </button>
         <div id="msr-mic-warning" role="alert" style="display:none;font-size:.75rem;color:#ef4444;margin-bottom:.5rem;line-height:1.4;"></div>
         <div id="msr-live-status" style="display:none;">
-          <!-- Countdown + BPH status bar -->
-          <div id="msr-status-bar" style="margin-bottom:.5rem;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem;">
-              <span id="msr-status-text" aria-live="polite" style="font-size:.75rem;color:var(--muted);">Listening...</span>
-              <span id="msr-detected-bph" aria-live="polite" style="font-size:.75rem;font-weight:600;color:var(--muted);display:none;"></span>
-            </div>
-            <div style="background:var(--hover);border-radius:6px;height:6px;overflow:hidden;">
-              <div id="msr-countdown-bar" role="progressbar" aria-label="Measurement progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="height:100%;width:0%;border-radius:6px;transition:width .3s;background:var(--gold);"></div>
-            </div>
+          <!-- Status line -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
+            <span id="msr-status-text" aria-live="polite" style="font-size:.75rem;color:var(--muted);">Listening...</span>
+            <span id="msr-detected-bph" aria-live="polite" style="font-size:.75rem;font-weight:600;color:var(--muted);display:none;"></span>
           </div>
-          <!-- Noise level -->
-          <div style="margin-bottom:.4rem;">
-            <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Noise Level</label>
-            <div style="background:var(--hover);border-radius:6px;height:8px;overflow:hidden;">
-              <div id="msr-noise-bar" role="progressbar" aria-label="Noise level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="height:100%;width:0%;border-radius:6px;transition:width .15s,background .15s;background:#22c55e;"></div>
-            </div>
-            <div id="msr-noise-label" aria-live="polite" style="font-size:.68rem;color:var(--muted);margin-top:.1rem;">Listening...</div>
+          <!-- Scatter plot (timegrapher chart) -->
+          <div id="msr-scatter-wrap" style="margin-bottom:.5rem;background:#111;border-radius:8px;padding:.3rem;height:160px;">
+            <canvas id="msr-scatter-plot" style="width:100%;height:100%;"></canvas>
           </div>
-          <!-- Beat noise waveform -->
-          <div id="msr-waveform-wrap" style="margin-bottom:.4rem;background:var(--hover);border-radius:8px;padding:.3rem;height:70px;display:none;">
-            <canvas id="msr-waveform-canvas" style="width:100%;height:100%;"></canvas>
-          </div>
-          <!-- Rate chart -->
-          <div id="msr-chart-wrap" style="margin-bottom:.4rem;background:var(--hover);border-radius:8px;padding:.3rem .3rem;height:80px;display:none;">
-            <canvas id="msr-rate-chart"></canvas>
-          </div>
-          <!-- Signal strength + rate -->
-          <div id="msr-signal-row" style="display:none;margin-bottom:.4rem;">
-            <div id="msr-signal-badge" style="display:inline-block;font-size:.68rem;font-weight:600;padding:.15rem .5rem;border-radius:10px;"></div>
-            <span id="msr-rate-interpret" style="font-size:.68rem;color:var(--muted);margin-left:.4rem;"></span>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.4rem;">
-            <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
-              <div id="msr-live-rate" aria-live="polite" aria-label="Rate in seconds per day" style="font-size:1rem;font-weight:700;">---</div>
+          <!-- Live stats: Rate + Beat Error -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.4rem;">
+            <div style="background:var(--hover);border-radius:8px;padding:.6rem;text-align:center;">
+              <div id="msr-live-rate" aria-live="polite" aria-label="Rate in seconds per day" style="font-size:1.3rem;font-weight:700;">—</div>
               <div style="font-size:.65rem;color:var(--muted);">s/day</div>
             </div>
-            <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
-              <div id="msr-live-be" style="font-size:1rem;font-weight:700;">—</div>
+            <div style="background:var(--hover);border-radius:8px;padding:.6rem;text-align:center;">
+              <div id="msr-live-be" style="font-size:1.3rem;font-weight:700;">—</div>
               <div style="font-size:.65rem;color:var(--muted);">Beat Error</div>
             </div>
-            <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
-              <div id="msr-live-ticks" style="font-size:1rem;font-weight:700;">0</div>
-              <div style="font-size:.65rem;color:var(--muted);">Ticks</div>
-            </div>
           </div>
-          <!-- No-signal guidance (shown after 30s with no detection) -->
-          <div id="msr-no-signal-tip" style="display:none;font-size:.72rem;line-height:1.45;color:#eab308;background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.2);border-radius:8px;padding:.5rem .65rem;margin-bottom:.4rem;">
-            No ticks detected yet. Try pressing the caseback firmly on the mic. Thick sport cases (Oyster, Royal Oak) may not transmit enough sound.
+          <!-- Method + ticks (subtle) -->
+          <div id="msr-method-row" style="display:none;font-size:.68rem;color:var(--muted);margin-bottom:.4rem;text-align:center;">
+            <span id="msr-method-label"></span> · <span id="msr-live-ticks">0</span> ticks
           </div>
-          <!-- Done prompt (shown after 30s when detected) -->
-          <div id="msr-done-prompt" style="display:none;font-size:.72rem;line-height:1.45;color:#22c55e;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:.5rem .65rem;margin-bottom:.4rem;">
-            Measurement ready — you can stop now or keep listening for a more stable reading.
-          </div>
-          <div id="msr-tip-text" style="font-size:.68rem;color:var(--muted);line-height:1.4;margin-bottom:.4rem;">Place the watch caseback on the microphone in a quiet room. Works best with exhibition, sapphire, or ceramic casebacks. Solid metal casebacks may block the tick sound.</div>
           <!-- Hidden tuning inputs (used by remote tuning) -->
           <div style="display:none;">
             <input type="hidden" id="msr-tune-mult-lo" value="8">
@@ -4472,7 +4443,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.30.16.49';
+const APP_VERSION = '2.36.30.17.13';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17033,8 +17004,6 @@ window._tgNativeCallback = function(data) {
     const rateEl = document.getElementById(prefix + '-live-rate');
     const beEl = document.getElementById(prefix + '-live-be');
     const ticksEl = document.getElementById(prefix + '-live-ticks');
-    const bar = document.getElementById(prefix + '-noise-bar');
-    const lbl = document.getElementById(prefix + '-noise-label');
     if (!rateEl) return;
 
     // Sticky detection: treat as detected if confidence > 0.1 OR we detected within last 8s
@@ -17054,133 +17023,51 @@ window._tgNativeCallback = function(data) {
         const saveBtn = document.getElementById('msr-save-btn');
         if (saveBtn) saveBtn.disabled = false;
         document.getElementById('msr-save-section').style.display = '';
-        _msrRateHistory.push({ t: Date.now(), r: r });
-        if (_msrRateHistory.length > 60) _msrRateHistory.shift();
-        updateMsrRateChart();
-        // Beat waveform visualization
-        if (data.beatWaveform) renderBeatWaveform(data.beatWaveform, data.tickPositions);
-        // Signal strength badge
-        const ratio = data.debug?.threshold || 0;
-        const sigRow = document.getElementById('msr-signal-row');
-        const sigBadge = document.getElementById('msr-signal-badge');
-        const rateInterp = document.getElementById('msr-rate-interpret');
-        if (sigRow) {
-          sigRow.style.display = '';
-          if (ratio >= 6) { sigBadge.textContent = 'Strong signal'; sigBadge.style.background = 'rgba(34,197,94,.15)'; sigBadge.style.color = '#22c55e'; }
-          else if (ratio >= 4) { sigBadge.textContent = 'Good signal'; sigBadge.style.background = 'rgba(34,197,94,.1)'; sigBadge.style.color = '#22c55e'; }
-          else { sigBadge.textContent = 'Weak signal'; sigBadge.style.background = 'rgba(234,179,8,.12)'; sigBadge.style.color = '#eab308'; }
+        // Scatter plot
+        if (data.elapsedSec != null) updateMsrScatterPlot(data.elapsedSec, data.cumulativeOffset || 0);
+        // Method + ticks
+        const methodRow = document.getElementById('msr-method-row');
+        const methodLabel = document.getElementById('msr-method-label');
+        if (methodRow) {
+          methodRow.style.display = '';
+          if (methodLabel) methodLabel.textContent = data.method || '';
         }
-        // Rate interpretation
-        if (rateInterp) {
-          const absR = Math.abs(r);
-          if (absR <= 2) rateInterp.textContent = 'Excellent — near-perfect accuracy';
-          else if (absR <= 5) rateInterp.textContent = 'Great — within COSC spec';
-          else if (absR <= 15) rateInterp.textContent = 'Normal — within manufacturer spec';
-          else if (absR <= 30) rateInterp.textContent = 'Slightly off — may need regulation';
-          else rateInterp.textContent = 'Needs attention — consider servicing';
-        }
-        // Hide tip text once detected
-        const tipText = document.getElementById('msr-tip-text');
-        if (tipText) tipText.style.display = 'none';
-        // Hide no-signal tip
-        const noSigTip = document.getElementById('msr-no-signal-tip');
-        if (noSigTip) noSigTip.style.display = 'none';
       }
     }
-    ticksEl.textContent = data.tickCount || 0;
+    if (ticksEl) ticksEl.textContent = data.tickCount || 0;
 
-    const noisePct = Math.min(100, (data.noiseLevel || 0) * 100);
-    bar.style.width = noisePct + '%';
-    if (bar.hasAttribute('aria-valuenow')) bar.setAttribute('aria-valuenow', Math.round(noisePct));
-    const tooNoisy = noisePct > 3 && data.confidence < 0.1;
-    bar.style.background = tooNoisy ? '#ef4444' : data.confidence > 0.3 ? '#22c55e' : '#eab308';
-
-    // BPH detection display
+    // BPH detection display (auto mode)
     if (data.detectedBph) {
-      const bphSel = document.getElementById(prefix + '-bph-select');
-      if (bphSel && bphSel.value !== String(data.detectedBph)) bphSel.value = String(data.detectedBph);
       if (isMsr) {
         _msrLastBph = data.detectedBph;
         const bphEl = document.getElementById('msr-detected-bph');
-        if (bphEl) { bphEl.textContent = data.detectedBph.toLocaleString() + ' BPH detected'; bphEl.style.display = ''; bphEl.style.color = '#22c55e'; }
+        if (bphEl) { bphEl.textContent = data.detectedBph.toLocaleString() + ' BPH'; bphEl.style.display = ''; bphEl.style.color = '#22c55e'; }
       }
+      // Update BPH selector for non-auto modes or tg prefix
+      const bphSel = document.getElementById(prefix + '-bph-select');
+      if (bphSel && bphSel.value !== '0' && bphSel.value !== String(data.detectedBph)) bphSel.value = String(data.detectedBph);
     }
 
-    // Countdown / status bar
+    // Status text
     if (isMsr) {
-      const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
-      const target = 30;
-      const pct = Math.min(100, (elapsed / target) * 100);
-      const cdBar = document.getElementById('msr-countdown-bar');
       const statusText = document.getElementById('msr-status-text');
-      if (cdBar) { cdBar.style.width = pct + '%'; cdBar.setAttribute('aria-valuenow', Math.round(pct)); }
-      const donePrompt = document.getElementById('msr-done-prompt');
-      const noSigTip = document.getElementById('msr-no-signal-tip');
       if (statusText) {
-        const hasDetection = isConfident || stickyDetected;
-        if (elapsed < target) {
-          const remaining = Math.ceil(target - elapsed);
-          statusText.textContent = hasDetection ? 'Measuring... ' + remaining + 's' : 'Analyzing... ' + remaining + 's';
-          if (donePrompt) donePrompt.style.display = 'none';
-          if (noSigTip) noSigTip.style.display = 'none';
+        const elapsed = data.elapsedSec || (_msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0);
+        if (isConfident || stickyDetected) {
+          statusText.textContent = 'Measuring \u2014 ' + Math.round(elapsed) + 's';
+          statusText.style.color = '#22c55e';
         } else {
-          if (hasDetection) {
-            statusText.textContent = 'Measurement ready';
-            statusText.style.color = '#22c55e';
-            if (donePrompt) donePrompt.style.display = '';
-            if (noSigTip) noSigTip.style.display = 'none';
-          } else {
-            statusText.textContent = 'No ticks detected';
-            statusText.style.color = '#eab308';
-            if (noSigTip) noSigTip.style.display = '';
-            if (donePrompt) donePrompt.style.display = 'none';
-            // Clear stale detection UI
-            const sigRow2 = document.getElementById('msr-signal-row'); if (sigRow2) sigRow2.style.display = 'none';
-            const tipText2 = document.getElementById('msr-tip-text'); if (tipText2) tipText2.style.display = '';
-            document.getElementById('msr-live-rate').textContent = '—';
-            document.getElementById('msr-live-rate').style.color = '';
-            const beEl2 = document.getElementById('msr-live-be'); if (beEl2) beEl2.textContent = '—';
-            const wfWrap2 = document.getElementById('msr-waveform-wrap'); if (wfWrap2) wfWrap2.style.display = 'none';
-            const bphEl2 = document.getElementById('msr-detected-bph'); if (bphEl2) bphEl2.style.display = 'none';
-            if (_msrRateChart) { _msrRateChart.destroy(); _msrRateChart = null; }
-            document.getElementById('msr-chart-wrap').style.display = 'none';
-            document.getElementById('msr-save-section').style.display = 'none';
-            _msrLastRate = null;
-          }
+          statusText.textContent = 'Analyzing \u2014 ' + Math.round(elapsed) + 's';
+          statusText.style.color = '';
         }
       }
     }
 
-    if (tooNoisy) {
-      lbl.textContent = 'Too noisy — move to a quieter room';
-      lbl.style.color = '#ef4444';
-    } else if (isMsr) {
-      if (isConfident || stickyDetected) {
-        const ratio = data.debug?.threshold || 0;
-        if (isConfident) {
-          lbl.textContent = ratio >= 6 ? 'Strong signal — hold steady' : ratio >= 4 ? 'Good signal — keep listening' : 'Weak signal — press caseback firmly on mic';
-          lbl.style.color = ratio >= 4 ? '#22c55e' : '#eab308';
-        } else {
-          lbl.textContent = 'Signal intermittent — hold steady';
-          lbl.style.color = '#eab308';
-        }
-      } else {
-        lbl.style.color = '';
-        lbl.textContent = 'Listening...';
-      }
-    } else {
-      lbl.style.color = '';
-      lbl.textContent = data.confidence > 0.1
-        ? 'Confidence: ' + (data.confidence * 100).toFixed(0) + '%'
-        : 'Listening...';
-    }
-    // Live tuning readout
+    // Live tuning readout (remote debug)
     if (data.debug) {
       const el = document.getElementById('msr-tune-live');
-      if (el) el.textContent = 'Noise floor: ' + (data.debug.noiseFloor != null ? data.debug.noiseFloor.toExponential(2) : '—')
-        + '\nGoertzel ratio: ' + (data.debug.threshold != null ? data.debug.threshold.toFixed(3) : '—')
-        + '\nPeak energy: ' + (data.debug.peakEnergy != null ? data.debug.peakEnergy.toFixed(6) : '—')
-        + '\nBuffer: ' + (data.debug.bufferSamples || 0) + ' samples';
+      if (el) el.textContent = 'Ratio: ' + (data.debug.threshold != null ? data.debug.threshold.toFixed(3) : '—')
+        + ' | Buffer: ' + (data.debug.bufferSamples || 0);
     }
   } else if (data.event === 'stopped') {
     if (isMsr) {
@@ -17318,46 +17205,12 @@ let _msrLastBe = null;
 let _msrLastBph = null;
 let _msrListenStart = null;
 let _msrLastDetectTime = 0; // timestamp of last confident detection
-let _msrRateHistory = [];
-let _msrRateChart = null;
+let _msrScatterData = []; // [{t: elapsedSec, offset: cumulativeOffsetMs}]
 
-function updateMsrRateChart() {
-  const wrap = document.getElementById('msr-chart-wrap');
-  const canvas = document.getElementById('msr-rate-chart');
-  if (!wrap || !canvas || _msrRateHistory.length < 2) return;
-  wrap.style.display = '';
-  if (!_msrRateChart) {
-    _msrRateChart = new Chart(canvas, {
-      type: 'line',
-      data: { labels: [], datasets: [{
-        data: [], borderColor: '#c9a84c', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false
-      }] },
-      options: {
-        responsive: true, maintainAspectRatio: false, animation: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { display: false },
-          y: {
-            position: 'right',
-            ticks: { font: { size: 9 }, color: '#888', callback: v => (v >= 0 ? '+' : '') + v },
-            grid: { color: ctx => ctx.tick.value === 0 ? '#555' : 'rgba(255,255,255,0.05)' }
-          }
-        }
-      }
-    });
-  }
-  const labels = _msrRateHistory.map((_, i) => i);
-  const values = _msrRateHistory.map(h => h.r);
-  _msrRateChart.data.labels = labels;
-  _msrRateChart.data.datasets[0].data = values;
-  _msrRateChart.update();
-}
-
-function renderBeatWaveform(waveform, tickPositions) {
-  const wrap = document.getElementById('msr-waveform-wrap');
-  const canvas = document.getElementById('msr-waveform-canvas');
-  if (!wrap || !canvas || !waveform || waveform.length < 10) { if (wrap) wrap.style.display = 'none'; return; }
-  wrap.style.display = '';
+function updateMsrScatterPlot(elapsedSec, cumulativeOffset) {
+  _msrScatterData.push({ t: elapsedSec, offset: cumulativeOffset });
+  const canvas = document.getElementById('msr-scatter-plot');
+  if (!canvas || _msrScatterData.length < 1) return;
   const ctx = canvas.getContext('2d');
   const dpr = window.devicePixelRatio || 1;
   const w = canvas.offsetWidth * dpr;
@@ -17365,43 +17218,81 @@ function renderBeatWaveform(waveform, tickPositions) {
   canvas.width = w; canvas.height = h;
   ctx.clearRect(0, 0, w, h);
 
-  const maxVal = Math.max(...waveform) || 1;
-  const len = waveform.length;
-  const xStep = w / len;
+  const pad = { l: 8 * dpr, r: 42 * dpr, t: 8 * dpr, b: 20 * dpr };
+  const pw = w - pad.l - pad.r;
+  const ph = h - pad.t - pad.b;
 
-  // Draw waveform
-  ctx.beginPath();
-  ctx.strokeStyle = 'rgba(201,168,76,0.6)';
+  const data = _msrScatterData;
+  const tMin = data[0].t;
+  const tMax = Math.max(data[data.length - 1].t, tMin + 10);
+  const tRange = tMax - tMin;
+
+  // Y range: auto-center on data with minimum ±0.5ms
+  let oMin = Infinity, oMax = -Infinity;
+  for (const d of data) { if (d.offset < oMin) oMin = d.offset; if (d.offset > oMax) oMax = d.offset; }
+  const oMid = (oMin + oMax) / 2;
+  const oHalf = Math.max(0.5, (oMax - oMin) / 2 * 1.3);
+  const yMin = oMid - oHalf;
+  const yMax = oMid + oHalf;
+  const yRange = yMax - yMin;
+
+  function xPos(t) { return pad.l + ((t - tMin) / tRange) * pw; }
+  function yPos(o) { return pad.t + (1 - (o - yMin) / yRange) * ph; }
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
   ctx.lineWidth = 1 * dpr;
-  for (let i = 0; i < len; i++) {
-    const x = i * xStep;
-    const y = h - (waveform[i] / maxVal) * h * 0.85;
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  // Horizontal: zero line + adaptive
+  const yZero = yPos(0);
+  if (yZero > pad.t && yZero < h - pad.b) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.beginPath(); ctx.moveTo(pad.l, yZero); ctx.lineTo(w - pad.r, yZero); ctx.stroke();
   }
-  ctx.stroke();
+  // Vertical grid every 10s
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  const tStep = tRange > 120 ? 30 : tRange > 60 ? 15 : 10;
+  for (let t = Math.ceil(tMin / tStep) * tStep; t <= tMax; t += tStep) {
+    const x = xPos(t);
+    ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, h - pad.b); ctx.stroke();
+  }
 
-  // Fill under curve
-  ctx.lineTo((len - 1) * xStep, h);
-  ctx.lineTo(0, h);
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(201,168,76,0.08)';
-  ctx.fill();
-
-  // Draw tick markers
-  if (tickPositions && tickPositions.length > 0) {
-    ctx.strokeStyle = 'rgba(34,197,94,0.7)';
-    ctx.lineWidth = 1 * dpr;
-    for (const pos of tickPositions) {
-      if (pos < 0 || pos >= len) continue;
-      const x = pos * xStep;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, h);
-      ctx.stroke();
+  // Draw connecting line
+  if (data.length >= 2) {
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(201,168,76,0.4)';
+    ctx.lineWidth = 1.5 * dpr;
+    for (let i = 0; i < data.length; i++) {
+      const x = xPos(data[i].t), y = yPos(data[i].offset);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
+    ctx.stroke();
+  }
+
+  // Draw dots
+  ctx.fillStyle = '#c9a84c';
+  for (const d of data) {
+    const x = xPos(d.t), y = yPos(d.offset);
+    ctx.beginPath(); ctx.arc(x, y, 2.5 * dpr, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Y-axis labels (right side)
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = (9 * dpr) + 'px monospace';
+  ctx.textAlign = 'left';
+  const yTicks = 4;
+  for (let i = 0; i <= yTicks; i++) {
+    const val = yMin + (yRange * i / yTicks);
+    const y = yPos(val);
+    ctx.fillText((val >= 0 ? '+' : '') + val.toFixed(1), w - pad.r + 4 * dpr, y + 3 * dpr);
+  }
+
+  // X-axis labels
+  ctx.textAlign = 'center';
+  for (let t = Math.ceil(tMin / tStep) * tStep; t <= tMax; t += tStep) {
+    const x = xPos(t);
+    ctx.fillText(Math.round(t) + 's', x, h - 2 * dpr);
   }
 }
-
 
 function openMeasureModal() {
   if (!_tgHasNative()) return;
@@ -17415,6 +17306,7 @@ function openMeasureInline() {
   _msrLastRate = null;
   _msrLastBe = null;
   _msrLastBph = null;
+  _msrScatterData = [];
   _msrPosition = 'dial_up';
   document.getElementById('msr-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Start Listening';
   document.getElementById('msr-live-status').style.display = 'none';
@@ -17441,7 +17333,7 @@ async function onMsrWatchChange() {
   if (data && data.length > 0 && data[0].bph) {
     document.getElementById('msr-bph-select').value = String(data[0].bph);
   } else {
-    document.getElementById('msr-bph-select').value = '28800';
+    document.getElementById('msr-bph-select').value = '0'; // Auto
   }
 }
 
@@ -17482,37 +17374,32 @@ function toggleMsrListen() {
   if (_msrListening) { stopMsrListen(); return; }
   // Use native bridge if available
   if (_tgHasNative()) {
-    const bph = parseInt(document.getElementById('msr-bph-select').value) || 28800;
+    const bphVal = parseInt(document.getElementById('msr-bph-select').value);
+    const bph = isNaN(bphVal) ? 0 : bphVal; // 0 = auto detect
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
     _msrListening = true;
     _msrTarget = 'measure';
     _msrListenStart = Date.now();
-    _msrRateHistory = [];
+    _msrScatterData = [];
     _msrLastDetectTime = 0;
-    if (_msrRateChart) { _msrRateChart.destroy(); _msrRateChart = null; }
-    document.getElementById('msr-chart-wrap').style.display = 'none';
-    document.getElementById('msr-countdown-bar').style.width = '0%';
     document.getElementById('msr-status-text').textContent = 'Analyzing...';
+    document.getElementById('msr-status-text').style.color = '';
     document.getElementById('msr-detected-bph').style.display = 'none';
     document.getElementById('msr-save-section').style.display = 'none';
     const saveBtn = document.getElementById('msr-save-btn');
     if (saveBtn) saveBtn.disabled = true;
     // Send tuning params if user has customized them
     setTimeout(() => sendMsrTuning(), 200);
-    // Start remote tuning poll
     startTuningPoll();
     document.getElementById('msr-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
     document.getElementById('msr-live-status').style.display = '';
     document.getElementById('msr-live-rate').textContent = '—';
     document.getElementById('msr-live-ticks').textContent = '0';
-    // Reset new UI elements
     const beEl = document.getElementById('msr-live-be'); if (beEl) beEl.textContent = '—';
-    const wfWrap = document.getElementById('msr-waveform-wrap'); if (wfWrap) wfWrap.style.display = 'none';
-    const sigRow = document.getElementById('msr-signal-row'); if (sigRow) sigRow.style.display = 'none';
-    const noSigTip = document.getElementById('msr-no-signal-tip'); if (noSigTip) noSigTip.style.display = 'none';
-    const donePrompt = document.getElementById('msr-done-prompt'); if (donePrompt) donePrompt.style.display = 'none';
-    const tipText = document.getElementById('msr-tip-text'); if (tipText) tipText.style.display = '';
-    const statusText = document.getElementById('msr-status-text'); if (statusText) statusText.style.color = '';
+    const methodRow = document.getElementById('msr-method-row'); if (methodRow) methodRow.style.display = 'none';
+    // Clear scatter canvas
+    const scCanvas = document.getElementById('msr-scatter-plot');
+    if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
     return;
   }
   // Web Audio fallback
@@ -17554,8 +17441,6 @@ function toggleMsrListen() {
         const buf = e.inputBuffer.getChannelData(0);
         let mx = 0;
         for (let i = 0; i < buf.length; i++) { const a = Math.abs(buf[i]); if (a > mx) mx = a; }
-        const noisePct = Math.min(100, mx * 200);
-        document.getElementById('msr-noise-bar').style.width = noisePct + '%';
         ticks++;
         document.getElementById('msr-live-ticks').textContent = ticks;
       };
@@ -17593,20 +17478,16 @@ function discardMsrReading() {
   _msrLastRate = null;
   _msrLastBe = null;
   _msrLastBph = null;
+  _msrScatterData = [];
   document.getElementById('msr-save-section').style.display = 'none';
   document.getElementById('msr-live-status').style.display = 'none';
-  document.getElementById('msr-live-rate').textContent = '---';
-  document.getElementById('msr-live-ticks').textContent = '0';
+  document.getElementById('msr-live-rate').textContent = '—';
   const beEl = document.getElementById('msr-live-be'); if (beEl) beEl.textContent = '—';
   document.getElementById('msr-rate-input').value = '';
   document.getElementById('msr-be-input').value = '';
-  if (_msrRateChart) { _msrRateChart.destroy(); _msrRateChart = null; }
-  document.getElementById('msr-chart-wrap').style.display = 'none';
-  const wfWrap = document.getElementById('msr-waveform-wrap'); if (wfWrap) wfWrap.style.display = 'none';
-  const sigRow = document.getElementById('msr-signal-row'); if (sigRow) sigRow.style.display = 'none';
-  const noSigTip = document.getElementById('msr-no-signal-tip'); if (noSigTip) noSigTip.style.display = 'none';
-  const donePrompt = document.getElementById('msr-done-prompt'); if (donePrompt) donePrompt.style.display = 'none';
-  const tipText = document.getElementById('msr-tip-text'); if (tipText) tipText.style.display = '';
+  const methodRow = document.getElementById('msr-method-row'); if (methodRow) methodRow.style.display = 'none';
+  const scCanvas = document.getElementById('msr-scatter-plot');
+  if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
   const statusText = document.getElementById('msr-status-text'); if (statusText) statusText.style.color = '';
 }
 
