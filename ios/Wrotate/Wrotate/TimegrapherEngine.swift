@@ -65,6 +65,15 @@ class TimegrapherEngine {
     private var actualSampleRate: Double = 48000
     private var sampleCounter: Int64 = 0
 
+    // Per-session drift calibration: tracks wallclock vs sample count
+    // to measure actual sample rate and correct for hardware drift
+    private var driftCalibrationPoints: [(wallTime: Double, sampleCount: Int64)] = []
+    private var driftCalibrationApplied = false
+    private var driftCorrectionFactor: Double = 1.0  // actual_rate / reported_rate
+    private let driftCalibrationMinSeconds: Double = 20.0  // wait this long before calibrating
+    private let driftCalibrationInterval: Int = 10  // record a point every N callbacks
+    private var driftCallbackCounter: Int = 0
+
     // BPH — user-provided or auto-detected
     private var targetBph: Int = 28800
     private var autoBph: Bool = false
@@ -305,6 +314,7 @@ class TimegrapherEngine {
         pendingFirstTickDev = 0; pendingFirstTickTime = 0; pendingFirstTickInterval = 0; pendingFirstTickEnergy = 0
         recentPairDevs = []
         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []
+        driftCalibrationPoints = []; driftCalibrationApplied = false; driftCorrectionFactor = 1.0; driftCallbackCounter = 0
         lastDebugInfo = nil
         lastBeatWaveform = nil
         lastTickPositions = nil
@@ -372,9 +382,73 @@ class TimegrapherEngine {
 
     // MARK: - Per-sample processing
 
+    /// Compute drift correction factor from wallclock vs sample count.
+    /// Linear regression of wallclock on sampleCount → slope = 1/actual_sample_rate.
+    /// Correction factor = reported_rate / actual_rate (applied to tick intervals).
+    private func computeDriftCorrection() {
+        let n = driftCalibrationPoints.count
+        guard n >= 20 else { return }
+
+        // Linear regression: wallTime = a + b * sampleCount
+        // b = actual seconds per sample = 1/actual_sample_rate
+        var sumX: Double = 0, sumY: Double = 0, sumXX: Double = 0, sumXY: Double = 0
+        let x0 = Double(driftCalibrationPoints[0].sampleCount)
+        let y0 = driftCalibrationPoints[0].wallTime
+        for pt in driftCalibrationPoints {
+            let x = Double(pt.sampleCount) - x0
+            let y = pt.wallTime - y0
+            sumX += x; sumY += y; sumXX += x * x; sumXY += x * y
+        }
+        let dn = Double(n)
+        let denom = dn * sumXX - sumX * sumX
+        guard abs(denom) > 1e-20 else { return }
+        let b = (dn * sumXY - sumX * sumY) / denom  // seconds per sample
+
+        let actualRate = 1.0 / b
+        let reportedRate = actualSampleRate
+        let ppm = (actualRate - reportedRate) / reportedRate * 1e6
+
+        // Only apply if drift is plausible (< 500 ppm = 0.05%)
+        guard abs(ppm) < 500 else {
+            debugLog("[TGDRIFT SKIP] ppm=\(String(format: "%.1f", ppm)) — too large, ignoring")
+            return
+        }
+
+        driftCorrectionFactor = actualRate / reportedRate
+        driftCalibrationApplied = true
+
+        // Correction in s/day terms: ppm * 86400 / 1e6 = ppm * 0.0864
+        let correctionSday = ppm * 0.0864
+        debugLog("[TGDRIFT CALIBRATED] actual=\(String(format: "%.2f", actualRate))Hz reported=\(String(format: "%.0f", reportedRate))Hz ppm=\(String(format: "%.1f", ppm)) correction=\(String(format: "%.1f", correctionSday))s/day factor=\(String(format: "%.8f", driftCorrectionFactor)) points=\(n)")
+
+        // Reset regression data — pre-correction pairs had wrong expected intervals.
+        // Keep tick detection active, keep cumulative state for UI continuity,
+        // but restart the regression from scratch with corrected intervals.
+        let oldRegN = regN
+        regPoints = []; regN = 0
+        pairDeviationMs = 0; totalPairsAccepted = 0; recentPairDevs = []
+        smoothedRate = nil; rateHistory = []; wasStable = false
+        debugLog("[TGDRIFT RESET] cleared \(oldRegN) pre-correction regression points, restarting with drift-corrected intervals")
+    }
+
     private func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
         guard isRunning, let channelData = buffer.floatChannelData?[0] else { return }
         let frameCount = Int(buffer.frameLength)
+
+        // Record wallclock vs sample count for drift calibration
+        driftCallbackCounter += 1
+        if driftCallbackCounter % driftCalibrationInterval == 0 {
+            let wallTime = CACurrentMediaTime()
+            driftCalibrationPoints.append((wallTime: wallTime, sampleCount: sampleCounter))
+
+            // Try calibration after enough time has passed
+            if !driftCalibrationApplied && driftCalibrationPoints.count >= 20 {
+                let elapsed = wallTime - driftCalibrationPoints[0].wallTime
+                if elapsed >= driftCalibrationMinSeconds {
+                    computeDriftCorrection()
+                }
+            }
+        }
 
         var rms: Float = 0
         vDSP_rmsqv(channelData, 1, &rms, vDSP_Length(frameCount))
@@ -481,7 +555,12 @@ class TimegrapherEngine {
                                 lastTickRingPos = energyRingWritePos
                                 ringPosSinceLastTick = 0
                             } else {
-                                let deviationThisTick = (expectedTickInterval - actualInterval) / ringSR * 1000.0
+                                // Apply drift correction: if actual sample rate differs from reported,
+                                // the expected interval in ring samples needs adjustment.
+                                // correctedExpected = expected * driftCorrectionFactor
+                                // (faster clock = more samples per real tick = larger expected interval)
+                                let correctedExpected = expectedTickInterval * driftCorrectionFactor
+                                let deviationThisTick = (correctedExpected - actualInterval) / ringSR * 1000.0
 
                                 // Pair-based: accumulate 2 ticks, validate pair before plotting
                                 pairIntervalAccum += actualInterval
@@ -499,7 +578,7 @@ class TimegrapherEngine {
                                 }
 
                                 // Second tick — validate the pair
-                                let pairExpected = expectedTickInterval * 2.0
+                                let pairExpected = expectedTickInterval * driftCorrectionFactor * 2.0
                                 let pairDevThisPair = (pairExpected - pairIntervalAccum) / ringSR * 1000.0
                                 pairIntervalAccum = 0.0
                                 pairTickPhase = 0
