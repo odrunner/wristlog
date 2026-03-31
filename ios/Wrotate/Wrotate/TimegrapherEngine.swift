@@ -86,6 +86,7 @@ class TimegrapherEngine {
     private var tickCount: Int = 0
     private var lastTickDeviationCheck: Double = 0  // deviation at last sanity check
     private var lastTickCountCheck: Int = 0         // tick count at last sanity check
+    private var tickDebugInterval: Int = 0          // throttle debug logging
 
     // Linear regression on tick deviations → converging rate
     private var regN: Int = 0
@@ -229,6 +230,7 @@ class TimegrapherEngine {
             targetBph = bph
             detectedBph = bph // user-selected = immediately locked
         }
+        print("[TG START] bph=\(bph) autoBph=\(autoBph) targetBph=\(targetBph) detectedBph=\(String(describing: detectedBph))")
 
         do {
             let session = AVAudioSession.sharedInstance()
@@ -327,10 +329,17 @@ class TimegrapherEngine {
                     // Minimum spacing: 90% of expected interval (tight gate, less room for false triggers)
                     let minSpacing = Int(expectedTickInterval * 0.9)
 
+                    // Debug: log threshold/energy every ~1 second
+                    tickDebugInterval += 1
+                    let ringSR = actualSampleRate / Double(ringSubsampleTarget)
+                    if tickDebugInterval % Int(ringSR) == 0 {
+                        let elDbg = Double(sampleCounter) / actualSampleRate
+                        print("[TG DEBUG \(String(format: "%.1f", elDbg))s] energy=\(String(format: "%.6f", energy)) thresh=\(String(format: "%.6f", threshold)) tickThresh=\(String(format: "%.6f", tickThreshold)) ringPosSinceLast=\(ringPosSinceLastTick) minSpacing=\(minSpacing) expectedInterval=\(String(format: "%.1f", expectedTickInterval)) tickCount=\(tickCount) regN=\(regN)")
+                    }
+
                     if energy > threshold && ringPosSinceLastTick >= minSpacing {
                         // Tick detected!
                         let actualInterval = ringPosSinceLastTick
-                        let ringSR = actualSampleRate / Double(ringSubsampleTarget)
                         // Use sampleCounter for elapsed time (never caps, unlike energyRingCount)
                         let elapsedSec = Double(sampleCounter) / actualSampleRate
 
@@ -346,13 +355,27 @@ class TimegrapherEngine {
                             regSumY += tickDeviationMs
                             regSumXX += elapsedSec * elapsedSec
                             regSumXY += elapsedSec * tickDeviationMs
+
+                            // Debug: log every tick
+                            print("[TG TICK #\(tickCount) @ \(String(format: "%.2f", elapsedSec))s] interval=\(actualInterval) expected=\(String(format: "%.1f", expectedTickInterval)) devThis=\(String(format: "%.3f", deviationThisTick))ms cumDev=\(String(format: "%.3f", tickDeviationMs))ms energy=\(String(format: "%.6f", energy))")
                         } else {
                             // First tick — no deviation yet
                             tickCount += 1
                             pendingTicks.append(TickDot(timeSec: elapsedSec, deviationMs: 0))
+                            print("[TG TICK #1 FIRST @ \(String(format: "%.2f", elapsedSec))s] energy=\(String(format: "%.6f", energy)) threshold=\(String(format: "%.6f", threshold))")
                         }
                         lastTickRingPos = energyRingWritePos
                         ringPosSinceLastTick = 0
+
+                        // Debug: log regression rate every 50 ticks
+                        if tickCount % 50 == 0 && regN >= 10 {
+                            let denom = Double(regN) * regSumXX - regSumX * regSumX
+                            if abs(denom) > 1e-20 {
+                                let slope = (Double(regN) * regSumXY - regSumX * regSumY) / denom
+                                let regRate = slope * 86.4
+                                print("[TG RATE @ tick \(tickCount)] regN=\(regN) slope=\(String(format: "%.6f", slope))ms/s rate=\(String(format: "%.1f", regRate))s/day cumDev=\(String(format: "%.3f", tickDeviationMs))ms elapsed=\(String(format: "%.1f", elapsedSec))s")
+                            }
+                        }
 
                         // Sanity check every 50 ticks: if deviation is growing > 50ms/sec, reset
                         if tickCount - lastTickCountCheck >= 50 && lastTickCountCheck > 0 {
@@ -360,6 +383,7 @@ class TimegrapherEngine {
                             let dtCheck = elapsedCheck > 0 ? elapsedCheck : 1
                             let deviationRate = abs(tickDeviationMs) / dtCheck // ms per sec
                             if deviationRate > 50.0 {
+                                print("[TG SANITY RESET] deviationRate=\(String(format: "%.1f", deviationRate))ms/s cumDev=\(String(format: "%.1f", tickDeviationMs))ms elapsed=\(String(format: "%.1f", dtCheck))s tickCount=\(tickCount)")
                                 // Wrong BPH or bad detection — reset tick tracking
                                 tickDetectionActive = false
                                 pendingTicks = []
@@ -418,6 +442,11 @@ class TimegrapherEngine {
         // Confidence based on tick count — more ticks = more confident
         let tickConfidence = regN >= 10 ? min(0.99, Double(regN) / 500.0 + 0.3) : 0.0
 
+        // Debug: log rate update every ~2 seconds
+        if Int(wallElapsed * 2) % 2 == 0 && regN > 0 && tickCount % 16 == 0 {
+            print("[TG UPDATE] elapsed=\(String(format: "%.1f", wallElapsed))s rate=\(rateForUpdate != nil ? String(format: "%.1f", rateForUpdate!) : "nil") conf=\(String(format: "%.2f", tickConfidence)) regN=\(regN) tickCount=\(tickCount) cumDev=\(String(format: "%.2f", tickDeviationMs))ms")
+        }
+
         let wallElapsed = Double(sampleCounter) / actualSampleRate
 
         let update = Update(
@@ -459,9 +488,12 @@ class TimegrapherEngine {
             }
 
             // Require: (1) above threshold, (2) decisively better than runner-up (1.5x)
+            let elSec = Double(count) / ringSampleRate
+            print("[TG AUTO BPH @ \(String(format: "%.1f", elSec))s] best=\(bestCandidate.bph) ratio=\(String(format: "%.2f", bestCandidate.ratio)) 2nd=\(String(format: "%.2f", secondBestRatio)) threshold=\(peakRatioThreshold) decisive=\(bestCandidate.ratio >= secondBestRatio * 1.5)")
             if bestCandidate.ratio > Double(peakRatioThreshold) && (secondBestRatio < 1.0 || bestCandidate.ratio >= secondBestRatio * 1.5) {
                 targetBph = bestCandidate.bph
                 detectedBph = bestCandidate.bph
+                print("[TG AUTO BPH LOCKED] \(bestCandidate.bph)")
                 activateTickDetection(ringSampleRate: ringSampleRate)
             }
             // If not locked yet, just return — ticks will start once BPH locks
@@ -508,9 +540,11 @@ class TimegrapherEngine {
         ringPosSinceLastTick = 0
         tickCount = 0
         pendingTicks = []
+        tickDebugInterval = 0
         regN = 0; regSumX = 0; regSumY = 0; regSumXX = 0; regSumXY = 0
         // Seed threshold from recent peak energy
         tickThreshold = recentPeakEnergy > 0 ? recentPeakEnergy : 0.01
+        print("[TG ACTIVATE] bph=\(targetBph) autoBph=\(autoBph) expectedInterval=\(String(format: "%.1f", expectedTickInterval)) ringSR=\(String(format: "%.0f", ringSampleRate)) tickThreshold=\(String(format: "%.6f", tickThreshold)) recentPeak=\(String(format: "%.6f", recentPeakEnergy))")
     }
 
     private func applyResult(rate: Double, ratio: Double, detectedFreq: Double,
