@@ -378,19 +378,13 @@ class TimegrapherEngine {
                                     // One full tick-tock pair completed
                                     let pairExpected = expectedTickInterval * 2.0
                                     let pairDevThisPair = (Double(pairIntervalAccum) - pairExpected) / ringSR * 1000.0
-                                    // Pair-level outlier gate: a clean tick-tock pair should deviate <4ms
-                                    // (beat error cancels in pairs, so large pair deviation = noise/misdetection)
-                                    if abs(pairDevThisPair) > 4.0 {
-                                        debugLog("[TGPAIR SKIP @ \(String(format: "%.2f", elapsedSec))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms OUTLIER")
-                                    } else {
-                                        pairDeviationMs += pairDevThisPair
-                                        // Feed pair into regression
-                                        regN += 1
-                                        regSumX += elapsedSec
-                                        regSumY += pairDeviationMs
-                                        regSumXX += elapsedSec * elapsedSec
-                                        regSumXY += elapsedSec * pairDeviationMs
-                                    }
+                                    pairDeviationMs += pairDevThisPair
+                                    // Feed pair into regression
+                                    regN += 1
+                                    regSumX += elapsedSec
+                                    regSumY += pairDeviationMs
+                                    regSumXX += elapsedSec * elapsedSec
+                                    regSumXY += elapsedSec * pairDeviationMs
                                     pairIntervalAccum = 0
                                     pairTickPhase = 0
                                 }
@@ -463,7 +457,7 @@ class TimegrapherEngine {
 
         // Compute rate from pair-based regression (converges as pairs accumulate)
         var rateForUpdate: Double? = nil
-        if regN >= 20 {  // 20 pairs = 40 ticks (~5s)
+        if regN >= 5 {  // 5 pairs = 10 ticks
             let denom = Double(regN) * regSumXX - regSumX * regSumX
             if abs(denom) > 1e-20 {
                 let slope = (Double(regN) * regSumXY - regSumX * regSumY) / denom // ms/sec
