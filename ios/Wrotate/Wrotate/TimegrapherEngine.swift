@@ -87,6 +87,13 @@ class TimegrapherEngine {
     private var lastTickDeviationCheck: Double = 0  // deviation at last sanity check
     private var lastTickCountCheck: Int = 0         // tick count at last sanity check
 
+    // Linear regression on tick deviations → converging rate
+    private var regN: Int = 0
+    private var regSumX: Double = 0    // sum of timeSec
+    private var regSumY: Double = 0    // sum of deviationMs
+    private var regSumXX: Double = 0   // sum of timeSec^2
+    private var regSumXY: Double = 0   // sum of timeSec * deviationMs
+
     // 2nd-order Butterworth HP filter state (biquad)
     private struct BiquadState {
         var b0: Float = 0; var b1: Float = 0; var b2: Float = 0
@@ -214,6 +221,7 @@ class TimegrapherEngine {
         consecutiveFailures = 0
         lastTickDeviationCheck = 0
         lastTickCountCheck = 0
+        regN = 0; regSumX = 0; regSumY = 0; regSumXX = 0; regSumXY = 0
         lastDebugInfo = nil
         lastBeatWaveform = nil
         lastTickPositions = nil
@@ -322,6 +330,12 @@ class TimegrapherEngine {
                             tickDeviationMs += deviationThisTick
                             tickCount += 1
                             pendingTicks.append(TickDot(timeSec: elapsedSec, deviationMs: tickDeviationMs))
+                            // Feed linear regression for converging rate
+                            regN += 1
+                            regSumX += elapsedSec
+                            regSumY += tickDeviationMs
+                            regSumXX += elapsedSec * elapsedSec
+                            regSumXY += elapsedSec * tickDeviationMs
                         } else {
                             // First tick — no deviation yet
                             tickCount += 1
@@ -342,6 +356,7 @@ class TimegrapherEngine {
                                 pendingTicks = []
                                 tickCount = 0
                                 tickDeviationMs = 0
+                                regN = 0; regSumX = 0; regSumY = 0; regSumXX = 0; regSumXY = 0
                                 // Also unlock auto BPH so it re-scans
                                 if autoBph {
                                     detectedBph = nil
@@ -378,8 +393,21 @@ class TimegrapherEngine {
         let ticks = pendingTicks
         pendingTicks = []
 
+        // Compute rate from tick regression (converges as ticks accumulate)
+        var rateForUpdate = currentRate
+        if regN >= 20 {
+            let denom = Double(regN) * regSumXX - regSumX * regSumX
+            if abs(denom) > 1e-20 {
+                let slope = (Double(regN) * regSumXY - regSumX * regSumY) / denom // ms/sec
+                let regRate = slope * 86.4 // → s/day
+                if abs(regRate) <= 200.0 {
+                    rateForUpdate = (regRate * 10).rounded() / 10
+                }
+            }
+        }
+
         let update = Update(
-            rate: currentRate, beatError: currentBeatError,
+            rate: rateForUpdate, beatError: currentBeatError,
             tickCount: tickCount > 0 ? tickCount : peakCount,
             confidence: currentConfidence, noiseLevel: currentNoiseLevel,
             detectedIntervalMs: currentDetectedInterval,
@@ -479,6 +507,7 @@ class TimegrapherEngine {
                 pendingTicks = []
                 tickCount = 0
                 tickDeviationMs = 0
+                regN = 0; regSumX = 0; regSumY = 0; regSumXX = 0; regSumXY = 0
                 consecutiveFailures = 0
             }
         } else if !autoBph {
@@ -521,6 +550,7 @@ class TimegrapherEngine {
         ringPosSinceLastTick = 0
         tickCount = 0
         pendingTicks = []
+        regN = 0; regSumX = 0; regSumY = 0; regSumXX = 0; regSumXY = 0
         // Seed threshold from recent peak energy
         tickThreshold = recentPeakEnergy > 0 ? recentPeakEnergy : 0.01
     }
