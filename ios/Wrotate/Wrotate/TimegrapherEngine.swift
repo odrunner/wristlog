@@ -331,7 +331,8 @@ class TimegrapherEngine {
                         // Tick detected!
                         let actualInterval = ringPosSinceLastTick
                         let ringSR = actualSampleRate / Double(ringSubsampleTarget)
-                        let elapsedSec = Double(energyRingCount) / ringSR
+                        // Use sampleCounter for elapsed time (never caps, unlike energyRingCount)
+                        let elapsedSec = Double(sampleCounter) / actualSampleRate
 
                         if lastTickRingPos >= 0 {
                             // Deviation = actual interval - expected interval, in ms
@@ -355,9 +356,8 @@ class TimegrapherEngine {
 
                         // Sanity check every 50 ticks: if deviation is growing > 50ms/sec, reset
                         if tickCount - lastTickCountCheck >= 50 && lastTickCountCheck > 0 {
-                            let ringSR2 = actualSampleRate / Double(ringSubsampleTarget)
-                            let elapsed2 = Double(energyRingCount) / ringSR2
-                            let dtCheck = elapsed2 > 0 ? elapsed2 : 1
+                            let elapsedCheck = Double(sampleCounter) / actualSampleRate
+                            let dtCheck = elapsedCheck > 0 ? elapsedCheck : 1
                             let deviationRate = abs(tickDeviationMs) / dtCheck // ms per sec
                             if deviationRate > 50.0 {
                                 // Wrong BPH or bad detection — reset tick tracking
@@ -418,6 +418,8 @@ class TimegrapherEngine {
         // Confidence based on tick count — more ticks = more confident
         let tickConfidence = regN >= 10 ? min(0.99, Double(regN) / 500.0 + 0.3) : 0.0
 
+        let wallElapsed = Double(sampleCounter) / actualSampleRate
+
         let update = Update(
             rate: rateForUpdate, beatError: currentBeatError,
             tickCount: tickCount,
@@ -428,7 +430,7 @@ class TimegrapherEngine {
             beatWaveform: lastBeatWaveform,
             tickPositions: lastTickPositions,
             cumulativeOffset: tickDeviationMs,
-            elapsedSec: elapsedSec,
+            elapsedSec: wallElapsed,
             method: regN >= 10 ? "Ticks" : "",
             newTicks: ticks)
         DispatchQueue.main.async { [weak self] in self?.onUpdate?(update) }
