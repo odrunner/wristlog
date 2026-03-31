@@ -93,6 +93,7 @@ class TimegrapherEngine {
 
     // Sub-sample interpolation for tick timing
     private var lastTickFracOffset: Double = 0      // fractional ring position offset of last tick
+    private var tickStartSample: Int64 = 0          // sampleCounter at tick activation (for relative elapsed)
 
     // Pair-based regression: accumulate every 2 ticks to cancel beat error
     private var pairIntervalAccum: Double = 0       // sum of last 2 tick intervals (fractional)
@@ -293,7 +294,7 @@ class TimegrapherEngine {
         lastTickCountCheck = 0
         regPoints = []; regN = 0
         pairIntervalAccum = 0.0; pairTickPhase = 0; pairDeviationMs = 0
-        lastTickFracOffset = 0
+        lastTickFracOffset = 0; tickStartSample = 0
         pendingFirstTickDev = 0; pendingFirstTickTime = 0; pendingFirstTickInterval = 0; pendingFirstTickEnergy = 0
         recentPairDevs = []
         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []
@@ -413,14 +414,14 @@ class TimegrapherEngine {
                     // Debug: log every ~1 second
                     tickDebugInterval += 1
                     if tickDebugInterval % Int(ringSR) == 0 {
-                        let elDbg = Double(sampleCounter) / actualSampleRate
+                        let elDbg = Double(sampleCounter - tickStartSample) / actualSampleRate
                         let rateStr = smoothedRate != nil ? String(format: "%.1f", smoothedRate!) : "nil"
                         debugLog("[TGDEBUG \(String(format: "%.1f", elDbg))s] energy=\(String(format: "%.6f", energy)) thresh=\(String(format: "%.6f", threshold)) tickThresh=\(String(format: "%.6f", tickThreshold)) tickCount=\(tickCount) regN=\(regN) pairDev=\(String(format: "%.2f", pairDeviationMs)) rate=\(rateStr)")
                     }
 
                     if energy > threshold && ringPosSinceLastTick >= minSpacing {
                         let intInterval = ringPosSinceLastTick
-                        let elapsedSec = Double(sampleCounter) / actualSampleRate
+                        let elapsedSec = Double(sampleCounter - tickStartSample) / actualSampleRate
 
                         // Sub-sample peak interpolation: parabolic fit on 3 energy values
                         var tickFracOffset: Double = 0.0
@@ -578,7 +579,7 @@ class TimegrapherEngine {
 
         // Compute rate from Theil-Sen median regression on ALL accepted pairs
         var rateForUpdate: Double? = nil
-        let wallElapsed = Double(sampleCounter) / actualSampleRate
+        let wallElapsed = Double(sampleCounter - tickStartSample) / actualSampleRate
         if regN >= 20 {  // 20 pairs minimum — need enough signal above quantization noise
             if let slope = theilSenSlope() {
                 let regRate = slope * 86.4 // → s/day
@@ -716,9 +717,10 @@ class TimegrapherEngine {
         recentPairDevs = []
         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []
         regPoints = []; regN = 0
-        // Seed threshold from recent peak energy
-        tickThreshold = recentPeakEnergy > 0 ? recentPeakEnergy : 0.01
-        debugLog("[TGACTIVATE] bph=\(targetBph) autoBph=\(autoBph) expectedInterval=\(String(format: "%.1f", expectedTickInterval)) ringSR=\(String(format: "%.0f", ringSampleRate)) tickThreshold=\(String(format: "%.6f", tickThreshold)) recentPeak=\(String(format: "%.6f", recentPeakEnergy))")
+        // Always seed threshold at 0.01 for parity between auto and manual BPH
+        tickThreshold = 0.01
+        tickStartSample = sampleCounter
+        debugLog("[TGACTIVATE] bph=\(targetBph) autoBph=\(autoBph) expectedInterval=\(String(format: "%.1f", expectedTickInterval)) ringSR=\(String(format: "%.0f", ringSampleRate)) tickThreshold=\(String(format: "%.6f", tickThreshold)) tickStartSample=\(tickStartSample)")
     }
 
     private func applyResult(rate: Double, ratio: Double, detectedFreq: Double,

@@ -2982,9 +2982,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
           <!-- Live stats: Rate + Beat Error -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.4rem;">
-            <div style="background:var(--hover);border-radius:8px;padding:.6rem;text-align:center;">
+            <div id="msr-rate-box" style="background:var(--hover);border-radius:8px;padding:.6rem;text-align:center;transition:background .3s,border .3s;border:2px solid transparent;">
               <div id="msr-live-rate" aria-live="polite" aria-label="Rate in seconds per day" style="font-size:1.3rem;font-weight:700;">—</div>
               <div style="font-size:.65rem;color:var(--muted);">s/day</div>
+              <div id="msr-converged-badge" style="display:none;font-size:.6rem;font-weight:600;color:#22c55e;margin-top:.2rem;">&#10003; Converged</div>
             </div>
             <div style="background:var(--hover);border-radius:8px;padding:.6rem;text-align:center;">
               <div id="msr-live-be" style="font-size:1.3rem;font-weight:700;">—</div>
@@ -4439,7 +4440,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.30.21.48';
+const APP_VERSION = '2.36.30.22.09';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17022,6 +17023,23 @@ window._tgNativeCallback = function(data) {
       if (bphSel && bphSel.value !== '0' && bphSel.value !== String(data.detectedBph)) bphSel.value = String(data.detectedBph);
     }
 
+    // Convergence indicator
+    if (isMsr) {
+      const badge = document.getElementById('msr-converged-badge');
+      const rateBox = document.getElementById('msr-rate-box');
+      if (badge && rateBox) {
+        if (data.rateStable) {
+          badge.style.display = '';
+          rateBox.style.borderColor = '#22c55e';
+          rateBox.style.background = 'rgba(34,197,94,0.08)';
+        } else {
+          badge.style.display = 'none';
+          rateBox.style.borderColor = 'transparent';
+          rateBox.style.background = 'var(--hover)';
+        }
+      }
+    }
+
     // Status text — just show elapsed time, green when measuring
     if (isMsr) {
       const statusText = document.getElementById('msr-status-text');
@@ -17393,6 +17411,8 @@ function toggleMsrListen() {
     document.getElementById('msr-save-section').style.display = 'none';
     const saveBtn = document.getElementById('msr-save-btn');
     if (saveBtn) saveBtn.disabled = true;
+    const convBadge = document.getElementById('msr-converged-badge'); if (convBadge) convBadge.style.display = 'none';
+    const rBox = document.getElementById('msr-rate-box'); if (rBox) { rBox.style.borderColor = 'transparent'; rBox.style.background = 'var(--hover)'; }
     // Send tuning params if user has customized them
     setTimeout(() => sendMsrTuning(), 200);
     startTuningPoll();
@@ -17496,6 +17516,8 @@ function discardMsrReading() {
   const scCanvas = document.getElementById('msr-scatter-plot');
   if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
   const statusText = document.getElementById('msr-status-text'); if (statusText) statusText.style.color = '';
+  const convBadge = document.getElementById('msr-converged-badge'); if (convBadge) convBadge.style.display = 'none';
+  const rBox = document.getElementById('msr-rate-box'); if (rBox) { rBox.style.borderColor = 'transparent'; rBox.style.background = 'var(--hover)'; }
 }
 
 async function saveMsrReading() {
