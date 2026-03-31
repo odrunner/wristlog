@@ -84,6 +84,9 @@ class TimegrapherEngine {
     private var tickThreshold: Float = 0            // adaptive threshold for tick detection
     private var pendingTicks: [TickDot] = []        // ticks to send in next update
     private var tickDetectionActive = false
+    private var tickCalibrating = false              // true during calibration phase (no ticks accepted)
+    private var calibrationSamples: Int = 0          // ring samples seen during calibration
+    private let calibrationDuration: Int = 24000     // ~2s at 12kHz ring rate
     private var ringPosSinceLastTick: Int = 0       // samples since last tick
     private var tickCount: Int = 0
     private var lastTickDeviationCheck: Double = 0  // deviation at last sanity check
@@ -112,6 +115,8 @@ class TimegrapherEngine {
     private let maxAdaptiveThreshold: Double = 2.0  // ceiling
     private let adaptiveMultiplier: Double = 3.0    // MAD multiplier
     private let maxTickDev: Double = 8.0            // individual tick sanity limit (ms)
+    private let regressionSkipPairs: Int = 10        // skip first N pairs from regression (threshold still adapting)
+    private var totalPairsAccepted: Int = 0          // total clean pairs (including skipped)
 
     // Rate display and stability tracking
     private var smoothedRate: Double? = nil
@@ -294,7 +299,7 @@ class TimegrapherEngine {
         consecutiveFailures = 0
         lastTickDeviationCheck = 0
         lastTickCountCheck = 0
-        regPoints = []; regN = 0
+        regPoints = []; regN = 0; totalPairsAccepted = 0
         pairIntervalAccum = 0.0; pairTickPhase = 0; pairDeviationMs = 0
         lastTickFracOffset = 0; tickStartSample = 0
         pendingFirstTickDev = 0; pendingFirstTickTime = 0; pendingFirstTickInterval = 0; pendingFirstTickEnergy = 0
@@ -403,6 +408,20 @@ class TimegrapherEngine {
                 // Real-time tick detection on the active HP filter's energy
                 if tickDetectionActive {
                     let energy = subsamplePeaks.isEmpty ? peakEnergy : energyRings[activeHpIndex][(energyRingWritePos - 1 + energyRingCapacity) % energyRingCapacity]
+
+                    // Calibration phase: observe energy to learn tick amplitude, no ticks accepted
+                    if tickCalibrating {
+                        if energy > tickThreshold { tickThreshold = energy }
+                        calibrationSamples += 1
+                        if calibrationSamples >= calibrationDuration {
+                            tickCalibrating = false
+                            // tickThreshold is now the peak energy seen during calibration
+                            tickStartSample = sampleCounter // reset elapsed to exclude calibration
+                            debugLog("[TGCALIBRATED] tickThreshold=\(String(format: "%.6f", tickThreshold)) after \(calibrationSamples) samples")
+                        }
+                        continue
+                    }
+
                     ringPosSinceLastTick += 1
 
                     // Track peak energy (slow decay) — represents tick impulse height
@@ -508,11 +527,16 @@ class TimegrapherEngine {
                                     continue
                                 }
 
-                                // Clean pair — commit to regression and plot ONE dot per pair
+                                // Clean pair — always update cumulative deviation and tick count
                                 pairDeviationMs += pairDevThisPair
-                                regPoints.append((x: elapsedSec, y: pairDeviationMs))
-                                regN = regPoints.count
-                                tickCount += 2  // both ticks counted
+                                tickCount += 2
+                                totalPairsAccepted += 1
+
+                                // Skip first N pairs from regression (threshold still adapting)
+                                if totalPairsAccepted > regressionSkipPairs {
+                                    regPoints.append((x: elapsedSec, y: pairDeviationMs))
+                                    regN = regPoints.count
+                                }
 
                                 // Plot single dot at pair midpoint using cumulative pairDev
                                 let pairMidTime = (pendingFirstTickTime + elapsedSec) / 2.0
@@ -538,7 +562,7 @@ class TimegrapherEngine {
                                         tickCount = 0
                                         tickDeviationMs = 0
                                         pairDeviationMs = 0; pairIntervalAccum = 0.0; pairTickPhase = 0; lastTickFracOffset = 0
-                                        regPoints = []; regN = 0; recentPairDevs = []
+                                        regPoints = []; regN = 0; recentPairDevs = []; totalPairsAccepted = 0
                                         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
                                         if autoBph { detectedBph = nil; consecutiveFailures = 0 }
                                     }
@@ -601,7 +625,7 @@ class TimegrapherEngine {
         var isStable = wasStable
         if let currentRate = smoothedRate {
             let recentRates = rateHistory.filter { wallElapsed - $0.time <= stabilityWindow }
-            if recentRates.count >= 5 && wallElapsed >= stabilityWindow {
+            if recentRates.count >= 5 && wallElapsed >= 40.0 {
                 let rateMin = recentRates.map(\.rate).min()!
                 let rateMax = recentRates.map(\.rate).max()!
                 let spread = rateMax - rateMin
@@ -725,11 +749,13 @@ class TimegrapherEngine {
         lastTickFracOffset = 0
         recentPairDevs = []
         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
-        regPoints = []; regN = 0
-        // Always seed threshold at 0.01 for parity between auto and manual BPH
-        tickThreshold = 0.01
+        regPoints = []; regN = 0; totalPairsAccepted = 0
+        // Start calibration: observe energy for 2s to learn tick amplitude before accepting ticks
+        tickThreshold = 0
+        tickCalibrating = true
+        calibrationSamples = 0
         tickStartSample = sampleCounter
-        debugLog("[TGACTIVATE] bph=\(targetBph) autoBph=\(autoBph) expectedInterval=\(String(format: "%.1f", expectedTickInterval)) ringSR=\(String(format: "%.0f", ringSampleRate)) tickThreshold=\(String(format: "%.6f", tickThreshold)) tickStartSample=\(tickStartSample)")
+        debugLog("[TGACTIVATE] bph=\(targetBph) autoBph=\(autoBph) expectedInterval=\(String(format: "%.1f", expectedTickInterval)) ringSR=\(String(format: "%.0f", ringSampleRate)) CALIBRATING for \(calibrationDuration) samples")
     }
 
     private func applyResult(rate: Double, ratio: Double, detectedFreq: Double,
