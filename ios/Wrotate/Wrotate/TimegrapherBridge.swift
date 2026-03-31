@@ -16,6 +16,8 @@ class TimegrapherBridge {
     func handleMessage(_ body: [String: Any]) {
         guard let action = body["action"] as? String else { return }
 
+        print("[TG BRIDGE] action=\(action) body=\(body)")
+
         switch action {
         case "ping":
             sendToJS(["event": "pong"])
@@ -23,9 +25,11 @@ class TimegrapherBridge {
         case "start":
             let bph = body["bph"] as? Int ?? 28800
             let sensitivity = body["sensitivity"] as? Int ?? 50
+            print("[TG BRIDGE START] bph=\(bph) (0=auto) sensitivity=\(sensitivity)")
             startMeasurement(bph: bph, sensitivity: sensitivity)
 
         case "stop":
+            print("[TG BRIDGE STOP]")
             stopMeasurement()
 
         case "sensitivity":
@@ -40,6 +44,7 @@ class TimegrapherBridge {
             let hpCutoff = body["hpCutoff"] as? Int ?? 3000
             let peakRatioThreshold = body["peakRatioThreshold"] as? Double ?? 2.0
             let bufferSeconds = body["bufferSeconds"] as? Double ?? 30.0
+            print("[TG BRIDGE TUNING] peakRatio=\(peakRatioThreshold) bufSec=\(bufferSeconds) hpCutoff=\(hpCutoff)")
             engine.setTuning(multLo: Float(multLo), multHi: Float(multHi),
                              minThreshold: Float(minThresh),
                              percentile: percentile, hpCutoff: Float(hpCutoff),
@@ -47,6 +52,7 @@ class TimegrapherBridge {
                              bufferSeconds: Float(bufferSeconds))
 
         default:
+            print("[TG BRIDGE] unknown action: \(action)")
             break
         }
     }

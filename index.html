@@ -4439,7 +4439,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.30.18.57';
+const APP_VERSION = '2.36.30.18.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17360,10 +17360,13 @@ var _remoteBufferSeconds = 30.0;
 
 function onMsrBphChange() {
   // If currently measuring, restart engine with new BPH
+  const bphDropdown = document.getElementById('msr-bph-select').value;
+  console.log('[TG JS] BPH dropdown changed to:', bphDropdown, 'listening:', _msrListening);
   if (_msrListening && _tgHasNative()) {
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'stop' });
-    const bphVal = parseInt(document.getElementById('msr-bph-select').value);
+    const bphVal = parseInt(bphDropdown);
     const bph = isNaN(bphVal) ? 0 : bphVal;
+    console.log('[TG JS] Restarting engine with bph:', bph);
     _msrScatterData = [];
     _msrLastDetectTime = 0;
     const scCanvas = document.getElementById('msr-scatter-plot');
@@ -17378,11 +17381,12 @@ function onMsrBphChange() {
 }
 
 function toggleMsrListen() {
-  if (_msrListening) { stopMsrListen(); return; }
+  if (_msrListening) { console.log('[TG JS] Stop button pressed'); stopMsrListen(); return; }
   // Use native bridge if available
   if (_tgHasNative()) {
     const bphVal = parseInt(document.getElementById('msr-bph-select').value);
     const bph = isNaN(bphVal) ? 0 : bphVal; // 0 = auto detect
+    console.log('[TG JS] Start button pressed, bph:', bph, '(0=auto), dropdown:', document.getElementById('msr-bph-select').value);
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
     _msrListening = true;
     _msrTarget = 'measure';
