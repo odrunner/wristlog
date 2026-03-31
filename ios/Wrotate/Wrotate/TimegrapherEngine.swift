@@ -90,15 +90,23 @@ class TimegrapherEngine {
     private var tickDebugInterval: Int = 0          // throttle debug logging
     private var debugMessages: [String] = []        // accumulated for Supabase
 
+    // Pair-based regression: accumulate every 2 ticks to cancel beat error
+    private var pairIntervalAccum: Int = 0          // sum of last 2 tick intervals
+    private var pairTickPhase: Int = 0              // 0 or 1, alternates each tick
+    private var pairDeviationMs: Double = 0         // cumulative pair deviation
+
+    // Smoothed rate display
+    private var smoothedRate: Double? = nil
+
     private func debugLog(_ msg: String) {
         print(msg)
         debugMessages.append(msg)
     }
 
-    // Linear regression on tick deviations → converging rate
+    // Linear regression on PAIR deviations → stable converging rate
     private var regN: Int = 0
     private var regSumX: Double = 0    // sum of timeSec
-    private var regSumY: Double = 0    // sum of deviationMs
+    private var regSumY: Double = 0    // sum of pairDeviationMs
     private var regSumXX: Double = 0   // sum of timeSec^2
     private var regSumXY: Double = 0   // sum of timeSec * deviationMs
 
@@ -223,6 +231,8 @@ class TimegrapherEngine {
         lastTickDeviationCheck = 0
         lastTickCountCheck = 0
         regN = 0; regSumX = 0; regSumY = 0; regSumXX = 0; regSumXY = 0
+        pairIntervalAccum = 0; pairTickPhase = 0; pairDeviationMs = 0
+        smoothedRate = nil
         lastDebugInfo = nil
         lastBeatWaveform = nil
         lastTickPositions = nil
@@ -330,41 +340,86 @@ class TimegrapherEngine {
 
                     // Track peak energy (slow decay) — represents tick impulse height
                     if energy > tickThreshold { tickThreshold = energy }
-                    else { tickThreshold *= 0.9999 }  // slow decay so it follows tick peaks
-                    let threshold = tickThreshold * 0.3 // 30% of peak = well above noise floor
+                    else { tickThreshold *= 0.9999 }
+                    let threshold = tickThreshold * 0.3
 
-                    // Minimum spacing: 90% of expected interval (tight gate, less room for false triggers)
                     let minSpacing = Int(expectedTickInterval * 0.9)
-
-                    // Debug: log threshold/energy every ~1 second
-                    tickDebugInterval += 1
                     let ringSR = actualSampleRate / Double(ringSubsampleTarget)
+
+                    // Debug: log every ~1 second
+                    tickDebugInterval += 1
                     if tickDebugInterval % Int(ringSR) == 0 {
                         let elDbg = Double(sampleCounter) / actualSampleRate
-                        debugLog("[TGDEBUG \(String(format: "%.1f", elDbg))s] energy=\(String(format: "%.6f", energy)) thresh=\(String(format: "%.6f", threshold)) tickThresh=\(String(format: "%.6f", tickThreshold)) ringPosSinceLast=\(ringPosSinceLastTick) minSpacing=\(minSpacing) expectedInterval=\(String(format: "%.1f", expectedTickInterval)) tickCount=\(tickCount) regN=\(regN)")
+                        debugLog("[TGDEBUG \(String(format: "%.1f", elDbg))s] energy=\(String(format: "%.6f", energy)) thresh=\(String(format: "%.6f", threshold)) tickThresh=\(String(format: "%.6f", tickThreshold)) tickCount=\(tickCount) regN=\(regN) pairDev=\(String(format: "%.2f", pairDeviationMs))")
                     }
 
                     if energy > threshold && ringPosSinceLastTick >= minSpacing {
-                        // Tick detected!
                         let actualInterval = ringPosSinceLastTick
-                        // Use sampleCounter for elapsed time (never caps, unlike energyRingCount)
                         let elapsedSec = Double(sampleCounter) / actualSampleRate
 
                         if lastTickRingPos >= 0 {
-                            // Deviation = actual interval - expected interval, in ms
-                            let deviationThisTick = (Double(actualInterval) - expectedTickInterval) / ringSR * 1000.0
-                            tickDeviationMs += deviationThisTick
-                            tickCount += 1
-                            pendingTicks.append(TickDot(timeSec: elapsedSec, deviationMs: tickDeviationMs))
-                            // Feed linear regression for converging rate
-                            regN += 1
-                            regSumX += elapsedSec
-                            regSumY += tickDeviationMs
-                            regSumXX += elapsedSec * elapsedSec
-                            regSumXY += elapsedSec * tickDeviationMs
+                            // Outlier gate: discard intervals > ±15% of expected
+                            let ratio = Double(actualInterval) / expectedTickInterval
+                            if ratio < 0.85 || ratio > 1.15 {
+                                // Outlier — skip this tick, don't update deviation or regression
+                                debugLog("[TGTICK SKIP @ \(String(format: "%.2f", elapsedSec))s] interval=\(actualInterval) ratio=\(String(format: "%.3f", ratio)) OUTLIER")
+                                lastTickRingPos = energyRingWritePos
+                                ringPosSinceLastTick = 0
+                            } else {
+                                let deviationThisTick = (Double(actualInterval) - expectedTickInterval) / ringSR * 1000.0
+                                tickDeviationMs += deviationThisTick
+                                tickCount += 1
+                                pendingTicks.append(TickDot(timeSec: elapsedSec, deviationMs: tickDeviationMs))
 
-                            // Debug: log every tick
-                            debugLog("[TGTICK #\(tickCount) @ \(String(format: "%.2f", elapsedSec))s] interval=\(actualInterval) expected=\(String(format: "%.1f", expectedTickInterval)) devThis=\(String(format: "%.3f", deviationThisTick))ms cumDev=\(String(format: "%.3f", tickDeviationMs))ms energy=\(String(format: "%.6f", energy))")
+                                // Pair-based regression: accumulate 2 ticks, then feed one pair
+                                pairIntervalAccum += actualInterval
+                                pairTickPhase += 1
+                                if pairTickPhase >= 2 {
+                                    // One full tick-tock pair completed
+                                    let pairExpected = expectedTickInterval * 2.0
+                                    let pairDevThisPair = (Double(pairIntervalAccum) - pairExpected) / ringSR * 1000.0
+                                    pairDeviationMs += pairDevThisPair
+                                    // Feed pair into regression
+                                    regN += 1
+                                    regSumX += elapsedSec
+                                    regSumY += pairDeviationMs
+                                    regSumXX += elapsedSec * elapsedSec
+                                    regSumXY += elapsedSec * pairDeviationMs
+                                    pairIntervalAccum = 0
+                                    pairTickPhase = 0
+                                }
+
+                                debugLog("[TGTICK #\(tickCount) @ \(String(format: "%.2f", elapsedSec))s] interval=\(actualInterval) devThis=\(String(format: "%.3f", deviationThisTick))ms cumDev=\(String(format: "%.3f", tickDeviationMs))ms pairDev=\(String(format: "%.3f", pairDeviationMs))ms energy=\(String(format: "%.6f", energy))")
+
+                                // Debug: log regression rate every 50 ticks
+                                if tickCount % 50 == 0 && regN >= 5 {
+                                    let denom = Double(regN) * regSumXX - regSumX * regSumX
+                                    if abs(denom) > 1e-20 {
+                                        let slope = (Double(regN) * regSumXY - regSumX * regSumY) / denom
+                                        let regRate = slope * 86.4
+                                        debugLog("[TGRATE @ tick \(tickCount)] regN=\(regN) slope=\(String(format: "%.6f", slope))ms/s rate=\(String(format: "%.1f", regRate))s/day pairDev=\(String(format: "%.3f", pairDeviationMs))ms")
+                                    }
+                                }
+
+                                // Sanity check every 100 ticks
+                                if tickCount - lastTickCountCheck >= 100 && lastTickCountCheck > 0 {
+                                    let dtCheck = max(1.0, elapsedSec)
+                                    let deviationRate = abs(pairDeviationMs) / dtCheck
+                                    if deviationRate > 50.0 {
+                                        debugLog("[TGSANITY RESET] devRate=\(String(format: "%.1f", deviationRate))ms/s pairDev=\(String(format: "%.1f", pairDeviationMs))ms")
+                                        tickDetectionActive = false
+                                        pendingTicks = []
+                                        tickCount = 0
+                                        tickDeviationMs = 0
+                                        pairDeviationMs = 0; pairIntervalAccum = 0; pairTickPhase = 0
+                                        regN = 0; regSumX = 0; regSumY = 0; regSumXX = 0; regSumXY = 0
+                                        smoothedRate = nil
+                                        if autoBph { detectedBph = nil; consecutiveFailures = 0 }
+                                    }
+                                    lastTickCountCheck = tickCount
+                                    lastTickDeviationCheck = pairDeviationMs
+                                }
+                            }
                         } else {
                             // First tick — no deviation yet
                             tickCount += 1
@@ -373,39 +428,6 @@ class TimegrapherEngine {
                         }
                         lastTickRingPos = energyRingWritePos
                         ringPosSinceLastTick = 0
-
-                        // Debug: log regression rate every 50 ticks
-                        if tickCount % 50 == 0 && regN >= 10 {
-                            let denom = Double(regN) * regSumXX - regSumX * regSumX
-                            if abs(denom) > 1e-20 {
-                                let slope = (Double(regN) * regSumXY - regSumX * regSumY) / denom
-                                let regRate = slope * 86.4
-                                debugLog("[TGRATE @ tick \(tickCount)] regN=\(regN) slope=\(String(format: "%.6f", slope))ms/s rate=\(String(format: "%.1f", regRate))s/day cumDev=\(String(format: "%.3f", tickDeviationMs))ms elapsed=\(String(format: "%.1f", elapsedSec))s")
-                            }
-                        }
-
-                        // Sanity check every 50 ticks: if deviation is growing > 50ms/sec, reset
-                        if tickCount - lastTickCountCheck >= 50 && lastTickCountCheck > 0 {
-                            let elapsedCheck = Double(sampleCounter) / actualSampleRate
-                            let dtCheck = elapsedCheck > 0 ? elapsedCheck : 1
-                            let deviationRate = abs(tickDeviationMs) / dtCheck // ms per sec
-                            if deviationRate > 50.0 {
-                                debugLog("[TGSANITY RESET] deviationRate=\(String(format: "%.1f", deviationRate))ms/s cumDev=\(String(format: "%.1f", tickDeviationMs))ms elapsed=\(String(format: "%.1f", dtCheck))s tickCount=\(tickCount)")
-                                // Wrong BPH or bad detection — reset tick tracking
-                                tickDetectionActive = false
-                                pendingTicks = []
-                                tickCount = 0
-                                tickDeviationMs = 0
-                                regN = 0; regSumX = 0; regSumY = 0; regSumXX = 0; regSumXY = 0
-                                // Also unlock auto BPH so it re-scans
-                                if autoBph {
-                                    detectedBph = nil
-                                    consecutiveFailures = 0
-                                }
-                            }
-                            lastTickCountCheck = tickCount
-                            lastTickDeviationCheck = tickDeviationMs
-                        }
                     }
                 }
             }
@@ -433,21 +455,29 @@ class TimegrapherEngine {
         let ticks = pendingTicks
         pendingTicks = []
 
-        // Compute rate from tick regression (converges as ticks accumulate)
+        // Compute rate from pair-based regression (converges as pairs accumulate)
         var rateForUpdate: Double? = nil
-        if regN >= 10 {
+        if regN >= 5 {  // 5 pairs = 10 ticks
             let denom = Double(regN) * regSumXX - regSumX * regSumX
             if abs(denom) > 1e-20 {
                 let slope = (Double(regN) * regSumXY - regSumX * regSumY) / denom // ms/sec
                 let regRate = slope * 86.4 // → s/day
                 if abs(regRate) <= 200.0 {
-                    rateForUpdate = (regRate * 10).rounded() / 10
+                    // Exponential moving average for smooth display
+                    if let prev = smoothedRate {
+                        // Heavier smoothing with more data: alpha goes from 0.3 → 0.05
+                        let alpha = max(0.05, 0.3 / (1.0 + Double(regN) / 20.0))
+                        smoothedRate = prev * (1.0 - alpha) + regRate * alpha
+                    } else {
+                        smoothedRate = regRate
+                    }
+                    rateForUpdate = (smoothedRate! * 10).rounded() / 10
                 }
             }
         }
 
-        // Confidence based on tick count — more ticks = more confident
-        let tickConfidence = regN >= 10 ? min(0.99, Double(regN) / 500.0 + 0.3) : 0.0
+        // Confidence based on pair count
+        let tickConfidence = regN >= 5 ? min(0.99, Double(regN) / 250.0 + 0.3) : 0.0
         let wallElapsed = Double(sampleCounter) / actualSampleRate
 
         // Debug: log rate update every ~2 seconds
@@ -552,6 +582,8 @@ class TimegrapherEngine {
         tickCount = 0
         pendingTicks = []
         tickDebugInterval = 0
+        pairIntervalAccum = 0; pairTickPhase = 0; pairDeviationMs = 0
+        smoothedRate = nil
         regN = 0; regSumX = 0; regSumY = 0; regSumXX = 0; regSumXY = 0
         // Seed threshold from recent peak energy
         tickThreshold = recentPeakEnergy > 0 ? recentPeakEnergy : 0.01
