@@ -2965,8 +2965,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <!-- Listen button + live results -->
       <div style="margin-bottom:.65rem;">
-        <button id="msr-listen-btn" class="btn btn-ghost btn-sm" onclick="toggleMsrListen()" aria-label="Start listening for watch ticks" style="width:100%;margin-bottom:.5rem;display:flex;align-items:center;justify-content:center;gap:.4rem;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        <button id="msr-listen-btn" onclick="toggleMsrListen()" aria-label="Start listening for watch ticks" style="width:100%;margin-bottom:.5rem;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.85rem 1rem;font-size:.95rem;font-weight:600;border-radius:12px;border:none;background:var(--hover);color:var(--fg);cursor:pointer;transition:background .2s,box-shadow .2s;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
           Start Listening
         </button>
         <div id="msr-mic-warning" role="alert" style="display:none;font-size:.75rem;color:#ef4444;margin-bottom:.5rem;line-height:1.4;"></div>
@@ -2977,7 +2977,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <span id="msr-detected-bph" aria-live="polite" style="font-size:.75rem;font-weight:600;color:var(--muted);display:none;"></span>
           </div>
           <!-- Scatter plot (timegrapher chart) -->
-          <div id="msr-scatter-wrap" style="margin-bottom:.5rem;background:#111;border-radius:8px;padding:.3rem;height:160px;">
+          <div id="msr-scatter-wrap" style="margin-bottom:.5rem;background:#0a1a12;border-radius:8px;padding:.3rem;height:160px;">
             <canvas id="msr-scatter-plot" style="width:100%;height:100%;"></canvas>
           </div>
           <!-- Live stats: Rate + Beat Error -->
@@ -4440,7 +4440,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.31.08.36';
+const APP_VERSION = '2.36.31.08.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17040,7 +17040,7 @@ window._tgNativeCallback = function(data) {
       }
     }
 
-    // Status text — just show elapsed time, green when measuring
+    // Status phases — progressive feedback to reduce perceived wait
     if (isMsr) {
       const statusText = document.getElementById('msr-status-text');
       if (statusText) {
@@ -17049,12 +17049,45 @@ window._tgNativeCallback = function(data) {
         const mm = Math.floor(sec / 60);
         const ss = sec % 60;
         const timeStr = mm > 0 ? mm + ':' + String(ss).padStart(2, '0') : ss + 's';
-        if (isConfident || stickyDetected) {
-          statusText.textContent = timeStr;
-          statusText.style.color = '#22c55e';
-        } else {
-          statusText.textContent = 'Listening... ' + timeStr;
-          statusText.style.color = 'var(--muted)';
+
+        // Advance phases based on engine state
+        if (data.rateStable && _msrPhase !== 'converged') {
+          _msrPhase = 'converged';
+        } else if (data.rate != null && _msrPhase !== 'converged') {
+          _msrPhase = 'measuring';
+        } else if (data.tickCount > 0 && _msrPhase === 'calibrating') {
+          _msrPhase = 'measuring';
+        } else if (data.detectedBph && _msrPhase === 'acquiring') {
+          _msrPhase = 'bph_detected';
+        } else if (data.tickCount === 0 && data.confidence === 0 && elapsed > 3 && _msrPhase === 'acquiring') {
+          _msrPhase = 'calibrating';
+        }
+
+        // Display phase
+        switch (_msrPhase) {
+          case 'acquiring':
+            statusText.textContent = 'Acquiring signal... ' + timeStr;
+            statusText.style.color = 'var(--muted)';
+            break;
+          case 'calibrating':
+            statusText.textContent = 'Calibrating... ' + timeStr;
+            statusText.style.color = '#eab308';
+            break;
+          case 'bph_detected':
+            statusText.textContent = 'BPH detected — listening... ' + timeStr;
+            statusText.style.color = '#eab308';
+            break;
+          case 'measuring':
+            statusText.textContent = 'Measuring... ' + timeStr;
+            statusText.style.color = '#22c55e';
+            break;
+          case 'converged':
+            statusText.textContent = 'Accuracy estimated ' + timeStr;
+            statusText.style.color = '#22c55e';
+            break;
+          default:
+            statusText.textContent = 'Listening... ' + timeStr;
+            statusText.style.color = 'var(--muted)';
         }
       }
     }
@@ -17202,13 +17235,19 @@ let _msrLastBph = null;
 let _msrListenStart = null;
 let _msrLastDetectTime = 0; // timestamp of last confident detection
 let _msrScatterData = []; // [{t: timeSec, d: deviationMs}] — one per tick
+let _msrPhase = ''; // acquiring → calibrating → bph_detected → measuring → converged
 
+let _msrScatterRafPending = false;
 function addMsrTickDots(newTicks) {
   if (!newTicks || !newTicks.length) return;
   // Detect reset: if we have data and new tick starts at 0, engine reset tick tracking
   if (_msrScatterData.length > 10 && newTicks[0].d === 0) _msrScatterData = [];
   for (const tk of newTicks) _msrScatterData.push({ t: tk.t, d: tk.d });
-  renderMsrScatterPlot();
+  // Throttle redraws to animation frames for smooth updates
+  if (!_msrScatterRafPending) {
+    _msrScatterRafPending = true;
+    requestAnimationFrame(() => { _msrScatterRafPending = false; renderMsrScatterPlot(); });
+  }
 }
 
 function renderMsrScatterPlot() {
@@ -17227,7 +17266,9 @@ function renderMsrScatterPlot() {
 
   const data = _msrScatterData;
   const tMin = data[0].t;
-  const tMax = Math.max(data[data.length - 1].t, tMin + 10);
+  // X range: snap to next 10s boundary ahead of data so axis doesn't constantly shift
+  const tDataMax = data[data.length - 1].t;
+  const tMax = Math.max(tMin + 10, Math.ceil(tDataMax / 10) * 10 + 5);
   const tRange = tMax - tMin;
 
   // Y range: auto-center on data, minimum ±5ms so tight data looks tight
@@ -17242,43 +17283,58 @@ function renderMsrScatterPlot() {
   function xPos(t) { return pad.l + ((t - tMin) / tRange) * pw; }
   function yPos(d) { return pad.t + (1 - (d - yMin) / yRange) * ph; }
 
-  // Zero line
+  // Background fill (dark green CRT look)
+  ctx.fillStyle = '#0a1a12';
+  ctx.fillRect(0, 0, w, h);
+
+  // Zero line — phosphor green
   const yZero = yPos(0);
   if (yZero > pad.t && yZero < h - pad.b) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.strokeStyle = 'rgba(34,197,94,0.25)';
     ctx.lineWidth = 1 * dpr;
     ctx.beginPath(); ctx.moveTo(pad.l, yZero); ctx.lineTo(w - pad.r, yZero); ctx.stroke();
   }
 
-  // Vertical grid
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  // Horizontal grid lines
+  ctx.strokeStyle = 'rgba(34,197,94,0.08)';
   ctx.lineWidth = 1 * dpr;
+  const yTicks = 4;
+  for (let i = 0; i <= yTicks; i++) {
+    const val = yMin + (yRange * i / yTicks);
+    const y = yPos(val);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+  }
+
+  // Vertical grid
+  ctx.strokeStyle = 'rgba(34,197,94,0.08)';
   const tStep = tRange > 120 ? 30 : tRange > 60 ? 15 : 10;
   for (let t = Math.ceil(tMin / tStep) * tStep; t <= tMax; t += tStep) {
     const x = xPos(t);
     ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, h - pad.b); ctx.stroke();
   }
 
-  // Draw tick dots — small, dense
-  ctx.fillStyle = '#c9a84c';
-  const dotR = Math.max(1.2, 1.8 * dpr);
+  // Draw tick dots — phosphor green glow
+  ctx.fillStyle = '#4ade80';
+  ctx.shadowColor = '#22c55e';
+  ctx.shadowBlur = 3 * dpr;
+  const dotR = Math.max(1.5, 2.0 * dpr);
   for (const pt of data) {
     const x = xPos(pt.t), y = yPos(pt.d);
     ctx.beginPath(); ctx.arc(x, y, dotR, 0, Math.PI * 2); ctx.fill();
   }
+  ctx.shadowBlur = 0;
 
-  // Y-axis labels (right side, in ms)
-  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  // Y-axis labels (right side, in ms) — dim green
+  ctx.fillStyle = 'rgba(74,222,128,0.6)';
   ctx.font = (9 * dpr) + 'px monospace';
   ctx.textAlign = 'left';
-  const yTicks = 4;
   for (let i = 0; i <= yTicks; i++) {
     const val = yMin + (yRange * i / yTicks);
     const y = yPos(val);
     ctx.fillText((val >= 0 ? '+' : '') + val.toFixed(1) + 'ms', w - pad.r + 4 * dpr, y + 3 * dpr);
   }
 
-  // X-axis labels
+  // X-axis labels — dim green
   ctx.textAlign = 'center';
   for (let t = Math.ceil(tMin / tStep) * tStep; t <= tMax; t += tStep) {
     const x = xPos(t);
@@ -17300,7 +17356,10 @@ function openMeasureInline() {
   _msrLastBph = null;
   _msrScatterData = [];
   _msrPosition = 'dial_up';
-  document.getElementById('msr-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Start Listening';
+  const listenBtn = document.getElementById('msr-listen-btn');
+  listenBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Start Listening';
+  listenBtn.style.background = 'var(--hover)'; listenBtn.style.color = 'var(--fg)';
+  _msrPhase = '';
   document.getElementById('msr-live-status').style.display = 'none';
   document.getElementById('msr-mic-warning').style.display = 'none';
   document.getElementById('msr-save-section').style.display = 'none';
@@ -17379,11 +17438,17 @@ function onMsrBphChange() {
     console.log('[TG JS] Restarting engine with bph:', bph, 'new session:', _tgDebugSessionId);
     _msrScatterData = [];
     _msrLastDetectTime = 0;
+    _msrPhase = 'acquiring';
     const scCanvas = document.getElementById('msr-scatter-plot');
     if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
     document.getElementById('msr-live-rate').textContent = '—';
     const beEl = document.getElementById('msr-live-be'); if (beEl) beEl.textContent = '—';
     document.getElementById('msr-detected-bph').style.display = 'none';
+    // Reset convergence indicator
+    const convBadge = document.getElementById('msr-converged-badge'); if (convBadge) convBadge.style.display = 'none';
+    const rBox = document.getElementById('msr-rate-box'); if (rBox) { rBox.style.borderColor = 'transparent'; rBox.style.background = 'var(--hover)'; }
+    document.getElementById('msr-status-text').textContent = 'Acquiring signal...';
+    document.getElementById('msr-status-text').style.color = 'var(--muted)';
     _msrListenStart = Date.now();
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
     setTimeout(() => sendMsrTuning(), 200);
@@ -17405,8 +17470,9 @@ function toggleMsrListen() {
     _msrListenStart = Date.now();
     _msrScatterData = [];
     _msrLastDetectTime = 0;
-    document.getElementById('msr-status-text').textContent = 'Analyzing...';
-    document.getElementById('msr-status-text').style.color = '';
+    _msrPhase = 'acquiring';
+    document.getElementById('msr-status-text').textContent = 'Acquiring signal...';
+    document.getElementById('msr-status-text').style.color = 'var(--muted)';
     document.getElementById('msr-detected-bph').style.display = 'none';
     document.getElementById('msr-save-section').style.display = 'none';
     const saveBtn = document.getElementById('msr-save-btn');
@@ -17416,7 +17482,9 @@ function toggleMsrListen() {
     // Send tuning params if user has customized them
     setTimeout(() => sendMsrTuning(), 200);
     startTuningPoll();
-    document.getElementById('msr-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
+    const listenBtn = document.getElementById('msr-listen-btn');
+    listenBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="6" fill="#ef4444" stroke="none"/></svg> Recording';
+    listenBtn.style.background = '#7f1d1d'; listenBtn.style.color = '#fca5a5';
     document.getElementById('msr-live-status').style.display = '';
     document.getElementById('msr-live-rate').textContent = '—';
     const beEl = document.getElementById('msr-live-be'); if (beEl) beEl.textContent = '—';
@@ -17450,7 +17518,7 @@ function toggleMsrListen() {
       _tgScriptNode = scriptNode;
       _msrListening = true;
       _msrTarget = 'measure';
-      document.getElementById('msr-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
+      const lb = document.getElementById('msr-listen-btn'); lb.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="6" fill="#ef4444" stroke="none"/></svg> Recording'; lb.style.background = '#7f1d1d'; lb.style.color = '#fca5a5';
       document.getElementById('msr-live-status').style.display = '';
       warn.innerHTML = 'Web audio mode — accuracy may be limited. For best results, use the <b>WRotate iOS app</b>.';
       warn.style.color = '#eab308';
@@ -17490,7 +17558,10 @@ function stopMsrListen() {
   if (_tgScriptNode) { _tgScriptNode.disconnect(); _tgScriptNode = null; }
   if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
   if (_tgAudioCtx) { _tgAudioCtx.close().catch(() => {}); _tgAudioCtx = null; }
-  document.getElementById('msr-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Start Listening';
+  const listenBtn = document.getElementById('msr-listen-btn');
+  listenBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Start Listening';
+  listenBtn.style.background = 'var(--hover)'; listenBtn.style.color = 'var(--fg)';
+  _msrPhase = '';
   _msrListenStart = null;
   // Keep save section visible if we have data
   if (_msrLastRate != null) {
