@@ -102,6 +102,7 @@ class TimegrapherEngine {
 
     // Smoothed rate display
     private var smoothedRate: Double? = nil
+    private var lastUpdateLogRegN: Int = 0
 
     private func debugLog(_ msg: String) {
         print(msg)
@@ -262,7 +263,8 @@ class TimegrapherEngine {
         lastTickCountCheck = 0
         regPoints = []; regN = 0
         pairIntervalAccum = 0; pairTickPhase = 0; pairDeviationMs = 0
-        smoothedRate = nil
+        pendingFirstTickDev = 0; pendingFirstTickTime = 0; pendingFirstTickInterval = 0; pendingFirstTickEnergy = 0
+        smoothedRate = nil; lastUpdateLogRegN = 0
         lastDebugInfo = nil
         lastBeatWaveform = nil
         lastTickPositions = nil
@@ -380,7 +382,8 @@ class TimegrapherEngine {
                     tickDebugInterval += 1
                     if tickDebugInterval % Int(ringSR) == 0 {
                         let elDbg = Double(sampleCounter) / actualSampleRate
-                        debugLog("[TGDEBUG \(String(format: "%.1f", elDbg))s] energy=\(String(format: "%.6f", energy)) thresh=\(String(format: "%.6f", threshold)) tickThresh=\(String(format: "%.6f", tickThreshold)) tickCount=\(tickCount) regN=\(regN) pairDev=\(String(format: "%.2f", pairDeviationMs))")
+                        let rateStr = smoothedRate != nil ? String(format: "%.1f", smoothedRate!) : "nil"
+                        debugLog("[TGDEBUG \(String(format: "%.1f", elDbg))s] energy=\(String(format: "%.6f", energy)) thresh=\(String(format: "%.6f", threshold)) tickThresh=\(String(format: "%.6f", tickThreshold)) tickCount=\(tickCount) regN=\(regN) pairDev=\(String(format: "%.2f", pairDeviationMs)) rate=\(rateStr)")
                     }
 
                     if energy > threshold && ringPosSinceLastTick >= minSpacing {
@@ -444,8 +447,8 @@ class TimegrapherEngine {
                                 pendingTicks.append(TickDot(timeSec: elapsedSec, deviationMs: tickDeviationMs))
                                 debugLog("[TGTICK #\(tickCount) @ \(String(format: "%.2f", elapsedSec))s] interval=\(actualInterval) devThis=\(String(format: "%.3f", deviationThisTick))ms cumDev=\(String(format: "%.3f", tickDeviationMs))ms pairDev=\(String(format: "%.3f", pairDeviationMs))ms energy=\(String(format: "%.6f", energy))")
 
-                                // Debug: log regression rate every 50 ticks
-                                if tickCount % 50 == 0 && regN >= 10 {
+                                // Debug: log regression rate every 25 pairs (~50 ticks)
+                                if regN % 25 == 0 && regN >= 10 {
                                     if let slope = theilSenSlope() {
                                         let regRate = slope * 86.4
                                         debugLog("[TGRATE @ tick \(tickCount)] regN=\(regN) slope=\(String(format: "%.6f", slope))ms/s rate=\(String(format: "%.1f", regRate))s/day pairDev=\(String(format: "%.3f", pairDeviationMs))ms")
@@ -464,7 +467,7 @@ class TimegrapherEngine {
                                         tickDeviationMs = 0
                                         pairDeviationMs = 0; pairIntervalAccum = 0; pairTickPhase = 0
                                         regPoints = []; regN = 0
-                                        smoothedRate = nil
+                                        smoothedRate = nil; lastUpdateLogRegN = 0
                                         if autoBph { detectedBph = nil; consecutiveFailures = 0 }
                                     }
                                     lastTickCountCheck = tickCount
@@ -528,8 +531,9 @@ class TimegrapherEngine {
         let tickConfidence = regN >= 5 ? min(0.99, Double(regN) / 250.0 + 0.3) : 0.0
         let wallElapsed = Double(sampleCounter) / actualSampleRate
 
-        // Debug: log rate update every ~2 seconds
-        if Int(wallElapsed * 2) % 2 == 0 && regN > 0 && tickCount % 16 == 0 {
+        // Debug: log rate update every 8 new pairs
+        if regN > 0 && regN - lastUpdateLogRegN >= 8 {
+            lastUpdateLogRegN = regN
             debugLog("[TGUPDATE] elapsed=\(String(format: "%.1f", wallElapsed))s rate=\(rateForUpdate != nil ? String(format: "%.1f", rateForUpdate!) : "nil") conf=\(String(format: "%.2f", tickConfidence)) regN=\(regN) tickCount=\(tickCount) cumDev=\(String(format: "%.2f", tickDeviationMs))ms")
         }
 
@@ -631,7 +635,7 @@ class TimegrapherEngine {
         pendingTicks = []
         tickDebugInterval = 0
         pairIntervalAccum = 0; pairTickPhase = 0; pairDeviationMs = 0
-        smoothedRate = nil
+        smoothedRate = nil; lastUpdateLogRegN = 0
         regPoints = []; regN = 0
         // Seed threshold from recent peak energy
         tickThreshold = recentPeakEnergy > 0 ? recentPeakEnergy : 0.01
