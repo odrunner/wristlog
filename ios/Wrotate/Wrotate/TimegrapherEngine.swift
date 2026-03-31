@@ -72,6 +72,9 @@ class TimegrapherEngine {
     private var cumulativeOffsetMs: Double = 0
     private var lastAnalysisElapsed: Double = 0
 
+    // Auto BPH re-detection
+    private var consecutiveFailures: Int = 0
+
     // Real-time tick detection for timegrapher chart
     private var tickDeviationMs: Double = 0        // cumulative deviation
     private var expectedTickInterval: Double = 0   // ring samples between ticks
@@ -81,6 +84,8 @@ class TimegrapherEngine {
     private var tickDetectionActive = false
     private var ringPosSinceLastTick: Int = 0       // samples since last tick
     private var tickCount: Int = 0
+    private var lastTickDeviationCheck: Double = 0  // deviation at last sanity check
+    private var lastTickCountCheck: Int = 0         // tick count at last sanity check
 
     // 2nd-order Butterworth HP filter state (biquad)
     private struct BiquadState {
@@ -206,6 +211,9 @@ class TimegrapherEngine {
         tickCount = 0
         pendingTicks = []
         tickThreshold = 0
+        consecutiveFailures = 0
+        lastTickDeviationCheck = 0
+        lastTickCountCheck = 0
         lastDebugInfo = nil
         lastBeatWaveform = nil
         lastTickPositions = nil
@@ -321,6 +329,28 @@ class TimegrapherEngine {
                         }
                         lastTickRingPos = energyRingWritePos
                         ringPosSinceLastTick = 0
+
+                        // Sanity check every 50 ticks: if deviation is growing > 50ms/sec, reset
+                        if tickCount - lastTickCountCheck >= 50 && lastTickCountCheck > 0 {
+                            let ringSR2 = actualSampleRate / Double(ringSubsampleTarget)
+                            let elapsed2 = Double(energyRingCount) / ringSR2
+                            let dtCheck = elapsed2 > 0 ? elapsed2 : 1
+                            let deviationRate = abs(tickDeviationMs) / dtCheck // ms per sec
+                            if deviationRate > 50.0 {
+                                // Wrong BPH or bad detection — reset tick tracking
+                                tickDetectionActive = false
+                                pendingTicks = []
+                                tickCount = 0
+                                tickDeviationMs = 0
+                                // Also unlock auto BPH so it re-scans
+                                if autoBph {
+                                    detectedBph = nil
+                                    consecutiveFailures = 0
+                                }
+                            }
+                            lastTickCountCheck = tickCount
+                            lastTickDeviationCheck = tickDeviationMs
+                        }
                     }
                 }
             }
@@ -372,16 +402,21 @@ class TimegrapherEngine {
         // Auto BPH: lightweight ratio-only scan at 4kHz only (no expensive sweep)
         if autoBph && detectedBph == nil {
             let signal4k = signals[0] // 4kHz cutoff
-            var bestBph = 0
-            var bestRatio = 0.0
+            var ratios: [(bph: Int, ratio: Double)] = []
             for candidate in TimegrapherEngine.bphCandidates {
                 let tf = Double(candidate) / 3600.0
                 let ratio = goertzelRatio(signal4k, count: count, tickFreq: tf, sampleRate: ringSampleRate)
-                if ratio > bestRatio { bestRatio = ratio; bestBph = candidate }
+                ratios.append((bph: candidate, ratio: ratio))
             }
-            if bestRatio > Double(peakRatioThreshold) && bestBph > 0 {
-                targetBph = bestBph
-                detectedBph = bestBph
+            ratios.sort { $0.ratio > $1.ratio }
+            let best = ratios[0]
+            let secondBest = ratios.count > 1 ? ratios[1].ratio : 0
+
+            // Require: (1) above threshold, (2) decisively better than runner-up (1.5x)
+            if best.ratio > Double(peakRatioThreshold) && (secondBest < 1.0 || best.ratio >= secondBest * 1.5) {
+                targetBph = best.bph
+                detectedBph = best.bph
+                consecutiveFailures = 0
                 activateTickDetection(ringSampleRate: ringSampleRate)
             } else {
                 currentRate = nil
@@ -389,8 +424,8 @@ class TimegrapherEngine {
                 lastDebugInfo = DebugInfo(
                     sampleRate: actualSampleRate, fftSize: energyRingCount, bufferSamples: count,
                     hpCutoff: Double(hpCutoffs[0]), bestLag: 0,
-                    bestCorrelation: bestRatio, refinedLag: 0, noiseFloor: 0,
-                    threshold: bestRatio, peakEnergy: Double(recentPeakEnergy),
+                    bestCorrelation: best.ratio, refinedLag: 0, noiseFloor: 0,
+                    threshold: best.ratio, peakEnergy: Double(recentPeakEnergy),
                     allBphCorrelations: [])
                 recentPeakEnergy *= 0.95
                 return
@@ -430,11 +465,25 @@ class TimegrapherEngine {
         // Nothing detected
         currentRate = nil
         currentConfidence = 0
-        if !autoBph { detectedBph = nil }
         peakCount = 0
         currentBeatError = nil
         lastBeatWaveform = nil
         lastTickPositions = nil
+
+        // If auto BPH and we keep failing, unlock and re-scan
+        if autoBph && detectedBph != nil {
+            consecutiveFailures += 1
+            if consecutiveFailures >= 3 {
+                detectedBph = nil
+                tickDetectionActive = false
+                pendingTicks = []
+                tickCount = 0
+                tickDeviationMs = 0
+                consecutiveFailures = 0
+            }
+        } else if !autoBph {
+            detectedBph = nil
+        }
 
         lastDebugInfo = DebugInfo(
             sampleRate: actualSampleRate, fftSize: energyRingCount, bufferSamples: count,
@@ -483,6 +532,7 @@ class TimegrapherEngine {
         detectedBph = targetBph
 
         // Activate tick detection on first successful detection
+        consecutiveFailures = 0
         if !tickDetectionActive { activateTickDetection(ringSampleRate: ringSampleRate) }
 
         let elapsedSec = Double(count) / ringSampleRate

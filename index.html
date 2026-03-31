@@ -4439,7 +4439,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.30.17.45';
+const APP_VERSION = '2.36.30.17.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17201,6 +17201,8 @@ let _msrScatterData = []; // [{t: timeSec, d: deviationMs}] — one per tick
 
 function addMsrTickDots(newTicks) {
   if (!newTicks || !newTicks.length) return;
+  // Detect reset: if we have data and new tick starts at 0, engine reset tick tracking
+  if (_msrScatterData.length > 10 && newTicks[0].d === 0) _msrScatterData = [];
   for (const tk of newTicks) _msrScatterData.push({ t: tk.t, d: tk.d });
   renderMsrScatterPlot();
 }
