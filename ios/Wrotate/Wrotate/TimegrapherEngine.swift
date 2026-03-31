@@ -94,6 +94,11 @@ class TimegrapherEngine {
     private var pairIntervalAccum: Int = 0          // sum of last 2 tick intervals
     private var pairTickPhase: Int = 0              // 0 or 1, alternates each tick
     private var pairDeviationMs: Double = 0         // cumulative pair deviation
+    // Stashed first-tick info (held until pair is validated)
+    private var pendingFirstTickDev: Double = 0
+    private var pendingFirstTickTime: Double = 0
+    private var pendingFirstTickInterval: Int = 0
+    private var pendingFirstTickEnergy: Float = 0
 
     // Smoothed rate display
     private var smoothedRate: Double? = nil
@@ -392,25 +397,51 @@ class TimegrapherEngine {
                                 ringPosSinceLastTick = 0
                             } else {
                                 let deviationThisTick = (Double(actualInterval) - expectedTickInterval) / ringSR * 1000.0
+
+                                // Pair-based: accumulate 2 ticks, validate pair before plotting
+                                pairIntervalAccum += actualInterval
+                                pairTickPhase += 1
+
+                                if pairTickPhase == 1 {
+                                    // First tick of pair — stash info, don't plot yet
+                                    pendingFirstTickDev = deviationThisTick
+                                    pendingFirstTickTime = elapsedSec
+                                    pendingFirstTickInterval = actualInterval
+                                    pendingFirstTickEnergy = energy
+                                    lastTickRingPos = energyRingWritePos
+                                    ringPosSinceLastTick = 0
+                                    continue  // wait for second tick
+                                }
+
+                                // Second tick — validate the pair
+                                let pairExpected = expectedTickInterval * 2.0
+                                let pairDevThisPair = (Double(pairIntervalAccum) - pairExpected) / ringSR * 1000.0
+                                pairIntervalAccum = 0
+                                pairTickPhase = 0
+
+                                if abs(pairDevThisPair) > 3.0 {
+                                    // Bad pair: discard both ticks (no plot, no regression, no deviation)
+                                    debugLog("[TGPAIR SKIP @ \(String(format: "%.2f", elapsedSec))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms OUTLIER (2 ticks discarded)")
+                                    lastTickRingPos = energyRingWritePos
+                                    ringPosSinceLastTick = 0
+                                    continue
+                                }
+
+                                // Clean pair — commit both ticks
+                                pairDeviationMs += pairDevThisPair
+                                regPoints.append((x: elapsedSec, y: pairDeviationMs))
+                                regN = regPoints.count
+
+                                // Plot first tick of pair
+                                tickDeviationMs += pendingFirstTickDev
+                                tickCount += 1
+                                pendingTicks.append(TickDot(timeSec: pendingFirstTickTime, deviationMs: tickDeviationMs))
+                                debugLog("[TGTICK #\(tickCount) @ \(String(format: "%.2f", pendingFirstTickTime))s] interval=\(pendingFirstTickInterval) devThis=\(String(format: "%.3f", pendingFirstTickDev))ms cumDev=\(String(format: "%.3f", tickDeviationMs))ms pairDev=\(String(format: "%.3f", pairDeviationMs))ms energy=\(String(format: "%.6f", pendingFirstTickEnergy))")
+
+                                // Plot second tick of pair
                                 tickDeviationMs += deviationThisTick
                                 tickCount += 1
                                 pendingTicks.append(TickDot(timeSec: elapsedSec, deviationMs: tickDeviationMs))
-
-                                // Pair-based regression: accumulate 2 ticks, then feed one pair
-                                pairIntervalAccum += actualInterval
-                                pairTickPhase += 1
-                                if pairTickPhase >= 2 {
-                                    // One full tick-tock pair completed
-                                    let pairExpected = expectedTickInterval * 2.0
-                                    let pairDevThisPair = (Double(pairIntervalAccum) - pairExpected) / ringSR * 1000.0
-                                    pairDeviationMs += pairDevThisPair
-                                    // Feed pair into Theil-Sen regression
-                                    regPoints.append((x: elapsedSec, y: pairDeviationMs))
-                                    regN = regPoints.count
-                                    pairIntervalAccum = 0
-                                    pairTickPhase = 0
-                                }
-
                                 debugLog("[TGTICK #\(tickCount) @ \(String(format: "%.2f", elapsedSec))s] interval=\(actualInterval) devThis=\(String(format: "%.3f", deviationThisTick))ms cumDev=\(String(format: "%.3f", tickDeviationMs))ms pairDev=\(String(format: "%.3f", pairDeviationMs))ms energy=\(String(format: "%.6f", energy))")
 
                                 // Debug: log regression rate every 50 ticks
