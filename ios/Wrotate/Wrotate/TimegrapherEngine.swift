@@ -99,6 +99,14 @@ class TimegrapherEngine {
     private var pendingFirstTickTime: Double = 0
     private var pendingFirstTickInterval: Int = 0
     private var pendingFirstTickEnergy: Float = 0
+    // Adaptive pair gate: starts at 2ms, tightens as we learn the noise profile
+    private var recentPairDevs: [Double] = []       // last N |pairDev| values (ALL pairs, not just accepted)
+    private let adaptiveWindowSize = 30             // pairs to track for MAD
+    private let coldStartThreshold: Double = 2.0    // ms, before we have enough data
+    private let minAdaptiveThreshold: Double = 1.0  // floor
+    private let maxAdaptiveThreshold: Double = 2.0  // ceiling
+    private let adaptiveMultiplier: Double = 3.0    // MAD multiplier
+    private let maxTickDev: Double = 8.0            // individual tick sanity limit (ms)
 
     // Smoothed rate display
     private var smoothedRate: Double? = nil
@@ -107,6 +115,18 @@ class TimegrapherEngine {
     private func debugLog(_ msg: String) {
         print(msg)
         debugMessages.append(msg)
+    }
+
+    /// Adaptive pair gate threshold based on median + MAD of ALL recent pairs.
+    /// Tracks all pairs (accepted + rejected) to see the true noise profile.
+    private func currentPairThreshold() -> Double {
+        guard recentPairDevs.count >= 10 else { return coldStartThreshold }
+        let sorted = recentPairDevs.sorted()
+        let median = sorted[sorted.count / 2]
+        let absDevs = sorted.map { abs($0 - median) }.sorted()
+        let mad = absDevs[absDevs.count / 2]
+        let threshold = max(minAdaptiveThreshold, min(maxAdaptiveThreshold, median + adaptiveMultiplier * mad))
+        return threshold
     }
 
     /// Windowed Theil-Sen estimator: median of pairwise slopes over last ~60 pairs.
@@ -264,6 +284,7 @@ class TimegrapherEngine {
         regPoints = []; regN = 0
         pairIntervalAccum = 0; pairTickPhase = 0; pairDeviationMs = 0
         pendingFirstTickDev = 0; pendingFirstTickTime = 0; pendingFirstTickInterval = 0; pendingFirstTickEnergy = 0
+        recentPairDevs = []
         smoothedRate = nil; lastUpdateLogRegN = 0
         lastDebugInfo = nil
         lastBeatWaveform = nil
@@ -422,30 +443,39 @@ class TimegrapherEngine {
                                 pairIntervalAccum = 0
                                 pairTickPhase = 0
 
-                                if abs(pairDevThisPair) > 3.0 {
-                                    // Bad pair: discard both ticks (no plot, no regression, no deviation)
-                                    debugLog("[TGPAIR SKIP @ \(String(format: "%.2f", elapsedSec))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms OUTLIER (2 ticks discarded)")
+                                // Gate 1: individual tick sanity — reject if either tick deviates too much
+                                if abs(pendingFirstTickDev) > maxTickDev || abs(deviationThisTick) > maxTickDev {
+                                    debugLog("[TGPAIR SKIP @ \(String(format: "%.2f", elapsedSec))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms tickDevs=\(String(format: "%.1f", pendingFirstTickDev)),\(String(format: "%.1f", deviationThisTick))ms TICK_OUTLIER")
                                     lastTickRingPos = energyRingWritePos
                                     ringPosSinceLastTick = 0
                                     continue
                                 }
 
-                                // Clean pair — commit both ticks
+                                // Track ALL pair deviations (that pass tick sanity) for adaptive threshold
+                                recentPairDevs.append(abs(pairDevThisPair))
+                                if recentPairDevs.count > adaptiveWindowSize {
+                                    recentPairDevs.removeFirst()
+                                }
+
+                                // Gate 2: adaptive pair gate — starts at 2ms, tightens as we learn noise profile
+                                let pairThresh = currentPairThreshold()
+                                if abs(pairDevThisPair) > pairThresh {
+                                    debugLog("[TGPAIR SKIP @ \(String(format: "%.2f", elapsedSec))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms thresh=\(String(format: "%.2f", pairThresh))ms PAIR_OUTLIER")
+                                    lastTickRingPos = energyRingWritePos
+                                    ringPosSinceLastTick = 0
+                                    continue
+                                }
+
+                                // Clean pair — commit to regression and plot ONE dot per pair
                                 pairDeviationMs += pairDevThisPair
                                 regPoints.append((x: elapsedSec, y: pairDeviationMs))
                                 regN = regPoints.count
+                                tickCount += 2  // both ticks counted
 
-                                // Plot first tick of pair
-                                tickDeviationMs += pendingFirstTickDev
-                                tickCount += 1
-                                pendingTicks.append(TickDot(timeSec: pendingFirstTickTime, deviationMs: tickDeviationMs))
-                                debugLog("[TGTICK #\(tickCount) @ \(String(format: "%.2f", pendingFirstTickTime))s] interval=\(pendingFirstTickInterval) devThis=\(String(format: "%.3f", pendingFirstTickDev))ms cumDev=\(String(format: "%.3f", tickDeviationMs))ms pairDev=\(String(format: "%.3f", pairDeviationMs))ms energy=\(String(format: "%.6f", pendingFirstTickEnergy))")
-
-                                // Plot second tick of pair
-                                tickDeviationMs += deviationThisTick
-                                tickCount += 1
-                                pendingTicks.append(TickDot(timeSec: elapsedSec, deviationMs: tickDeviationMs))
-                                debugLog("[TGTICK #\(tickCount) @ \(String(format: "%.2f", elapsedSec))s] interval=\(actualInterval) devThis=\(String(format: "%.3f", deviationThisTick))ms cumDev=\(String(format: "%.3f", tickDeviationMs))ms pairDev=\(String(format: "%.3f", pairDeviationMs))ms energy=\(String(format: "%.6f", energy))")
+                                // Plot single dot at pair midpoint using cumulative pairDev
+                                let pairMidTime = (pendingFirstTickTime + elapsedSec) / 2.0
+                                pendingTicks.append(TickDot(timeSec: pairMidTime, deviationMs: pairDeviationMs))
+                                debugLog("[TGTICK #\(tickCount) @ \(String(format: "%.2f", pairMidTime))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms cumPairDev=\(String(format: "%.3f", pairDeviationMs))ms thresh=\(String(format: "%.2f", pairThresh))ms ticks=\(String(format: "%.1f", pendingFirstTickDev)),\(String(format: "%.1f", deviationThisTick))ms energy=\(String(format: "%.6f", energy))")
 
                                 // Debug: log regression rate every 25 pairs (~50 ticks)
                                 if regN % 25 == 0 && regN >= 10 {
@@ -466,7 +496,7 @@ class TimegrapherEngine {
                                         tickCount = 0
                                         tickDeviationMs = 0
                                         pairDeviationMs = 0; pairIntervalAccum = 0; pairTickPhase = 0
-                                        regPoints = []; regN = 0
+                                        regPoints = []; regN = 0; recentPairDevs = []
                                         smoothedRate = nil; lastUpdateLogRegN = 0
                                         if autoBph { detectedBph = nil; consecutiveFailures = 0 }
                                     }
@@ -475,10 +505,8 @@ class TimegrapherEngine {
                                 }
                             }
                         } else {
-                            // First tick — no deviation yet
-                            tickCount += 1
-                            pendingTicks.append(TickDot(timeSec: elapsedSec, deviationMs: 0))
-                            debugLog("[TGTICK #1 FIRST @ \(String(format: "%.2f", elapsedSec))s] energy=\(String(format: "%.6f", energy)) threshold=\(String(format: "%.6f", threshold))")
+                            // First tick — reference point, no plot (will be part of first pair)
+                            debugLog("[TGTICK FIRST @ \(String(format: "%.2f", elapsedSec))s] energy=\(String(format: "%.6f", energy)) threshold=\(String(format: "%.6f", threshold))")
                         }
                         lastTickRingPos = energyRingWritePos
                         ringPosSinceLastTick = 0
@@ -550,7 +578,7 @@ class TimegrapherEngine {
             debug: lastDebugInfo,
             beatWaveform: lastBeatWaveform,
             tickPositions: lastTickPositions,
-            cumulativeOffset: tickDeviationMs,
+            cumulativeOffset: pairDeviationMs,
             elapsedSec: wallElapsed,
             method: regN >= 10 ? "Ticks" : "",
             newTicks: ticks,
@@ -635,6 +663,7 @@ class TimegrapherEngine {
         pendingTicks = []
         tickDebugInterval = 0
         pairIntervalAccum = 0; pairTickPhase = 0; pairDeviationMs = 0
+        recentPairDevs = []
         smoothedRate = nil; lastUpdateLogRegN = 0
         regPoints = []; regN = 0
         // Seed threshold from recent peak energy
