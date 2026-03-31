@@ -103,12 +103,51 @@ class TimegrapherEngine {
         debugMessages.append(msg)
     }
 
-    // Linear regression on PAIR deviations → stable converging rate
-    private var regN: Int = 0
-    private var regSumX: Double = 0    // sum of timeSec
-    private var regSumY: Double = 0    // sum of pairDeviationMs
-    private var regSumXX: Double = 0   // sum of timeSec^2
-    private var regSumXY: Double = 0   // sum of timeSec * deviationMs
+    /// Theil-Sen estimator: median of all pairwise slopes. Robust to ~29% outliers.
+    /// For efficiency, samples up to 200 points when there are many.
+    private func theilSenSlope() -> Double? {
+        let pts = regPoints
+        let n = pts.count
+        guard n >= 10 else { return nil }
+
+        var slopes: [Double] = []
+        if n <= 200 {
+            // All pairwise slopes
+            slopes.reserveCapacity(n * (n - 1) / 2)
+            for i in 0..<n {
+                for j in (i+1)..<n {
+                    let dx = pts[j].x - pts[i].x
+                    if dx > 0.01 {
+                        slopes.append((pts[j].y - pts[i].y) / dx)
+                    }
+                }
+            }
+        } else {
+            // Sample: use every 2nd point to keep it fast
+            let step = max(1, n / 200)
+            var sampled: [(x: Double, y: Double)] = []
+            for i in stride(from: 0, to: n, by: step) { sampled.append(pts[i]) }
+            // Always include the last point
+            if sampled.last?.x != pts.last?.x { sampled.append(pts[n-1]) }
+            let sn = sampled.count
+            slopes.reserveCapacity(sn * (sn - 1) / 2)
+            for i in 0..<sn {
+                for j in (i+1)..<sn {
+                    let dx = sampled[j].x - sampled[i].x
+                    if dx > 0.01 {
+                        slopes.append((sampled[j].y - sampled[i].y) / dx)
+                    }
+                }
+            }
+        }
+        guard !slopes.isEmpty else { return nil }
+        slopes.sort()
+        return slopes[slopes.count / 2]
+    }
+
+    // Theil-Sen median regression on PAIR deviations → robust to outliers
+    private var regPoints: [(x: Double, y: Double)] = []  // (elapsedSec, pairDeviationMs)
+    private var regN: Int = 0  // kept for compatibility (= regPoints.count)
 
     // 2nd-order Butterworth HP filter state (biquad)
     private struct BiquadState {
@@ -230,7 +269,7 @@ class TimegrapherEngine {
         consecutiveFailures = 0
         lastTickDeviationCheck = 0
         lastTickCountCheck = 0
-        regN = 0; regSumX = 0; regSumY = 0; regSumXX = 0; regSumXY = 0
+        regPoints = []; regN = 0
         pairIntervalAccum = 0; pairTickPhase = 0; pairDeviationMs = 0
         smoothedRate = nil
         lastDebugInfo = nil
@@ -379,12 +418,9 @@ class TimegrapherEngine {
                                     let pairExpected = expectedTickInterval * 2.0
                                     let pairDevThisPair = (Double(pairIntervalAccum) - pairExpected) / ringSR * 1000.0
                                     pairDeviationMs += pairDevThisPair
-                                    // Feed pair into regression
-                                    regN += 1
-                                    regSumX += elapsedSec
-                                    regSumY += pairDeviationMs
-                                    regSumXX += elapsedSec * elapsedSec
-                                    regSumXY += elapsedSec * pairDeviationMs
+                                    // Feed pair into Theil-Sen regression
+                                    regPoints.append((x: elapsedSec, y: pairDeviationMs))
+                                    regN = regPoints.count
                                     pairIntervalAccum = 0
                                     pairTickPhase = 0
                                 }
@@ -392,10 +428,8 @@ class TimegrapherEngine {
                                 debugLog("[TGTICK #\(tickCount) @ \(String(format: "%.2f", elapsedSec))s] interval=\(actualInterval) devThis=\(String(format: "%.3f", deviationThisTick))ms cumDev=\(String(format: "%.3f", tickDeviationMs))ms pairDev=\(String(format: "%.3f", pairDeviationMs))ms energy=\(String(format: "%.6f", energy))")
 
                                 // Debug: log regression rate every 50 ticks
-                                if tickCount % 50 == 0 && regN >= 5 {
-                                    let denom = Double(regN) * regSumXX - regSumX * regSumX
-                                    if abs(denom) > 1e-20 {
-                                        let slope = (Double(regN) * regSumXY - regSumX * regSumY) / denom
+                                if tickCount % 50 == 0 && regN >= 10 {
+                                    if let slope = theilSenSlope() {
                                         let regRate = slope * 86.4
                                         debugLog("[TGRATE @ tick \(tickCount)] regN=\(regN) slope=\(String(format: "%.6f", slope))ms/s rate=\(String(format: "%.1f", regRate))s/day pairDev=\(String(format: "%.3f", pairDeviationMs))ms")
                                     }
@@ -412,7 +446,7 @@ class TimegrapherEngine {
                                         tickCount = 0
                                         tickDeviationMs = 0
                                         pairDeviationMs = 0; pairIntervalAccum = 0; pairTickPhase = 0
-                                        regN = 0; regSumX = 0; regSumY = 0; regSumXX = 0; regSumXY = 0
+                                        regPoints = []; regN = 0
                                         smoothedRate = nil
                                         if autoBph { detectedBph = nil; consecutiveFailures = 0 }
                                     }
@@ -455,17 +489,14 @@ class TimegrapherEngine {
         let ticks = pendingTicks
         pendingTicks = []
 
-        // Compute rate from pair-based regression (converges as pairs accumulate)
+        // Compute rate from Theil-Sen median regression (robust to outlier pairs)
         var rateForUpdate: Double? = nil
-        if regN >= 5 {  // 5 pairs = 10 ticks
-            let denom = Double(regN) * regSumXX - regSumX * regSumX
-            if abs(denom) > 1e-20 {
-                let slope = (Double(regN) * regSumXY - regSumX * regSumY) / denom // ms/sec
+        if regN >= 10 {  // 10 pairs = 20 ticks
+            if let slope = theilSenSlope() {
                 let regRate = slope * 86.4 // → s/day
                 if abs(regRate) <= 200.0 {
                     // Exponential moving average for smooth display
                     if let prev = smoothedRate {
-                        // Heavier smoothing with more data: alpha goes from 0.3 → 0.05
                         let alpha = max(0.05, 0.3 / (1.0 + Double(regN) / 20.0))
                         smoothedRate = prev * (1.0 - alpha) + regRate * alpha
                     } else {
@@ -584,7 +615,7 @@ class TimegrapherEngine {
         tickDebugInterval = 0
         pairIntervalAccum = 0; pairTickPhase = 0; pairDeviationMs = 0
         smoothedRate = nil
-        regN = 0; regSumX = 0; regSumY = 0; regSumXX = 0; regSumXY = 0
+        regPoints = []; regN = 0
         // Seed threshold from recent peak energy
         tickThreshold = recentPeakEnergy > 0 ? recentPeakEnergy : 0.01
         debugLog("[TGACTIVATE] bph=\(targetBph) autoBph=\(autoBph) expectedInterval=\(String(format: "%.1f", expectedTickInterval)) ringSR=\(String(format: "%.0f", ringSampleRate)) tickThreshold=\(String(format: "%.6f", tickThreshold)) recentPeak=\(String(format: "%.6f", recentPeakEnergy))")
