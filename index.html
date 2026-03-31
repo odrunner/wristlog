@@ -2991,10 +2991,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
               <div style="font-size:.65rem;color:var(--muted);">Beat Error</div>
             </div>
           </div>
-          <!-- Method + ticks (subtle) -->
-          <div id="msr-method-row" style="display:none;font-size:.68rem;color:var(--muted);margin-bottom:.4rem;text-align:center;">
-            <span id="msr-method-label"></span> · <span id="msr-live-ticks">0</span> ticks
-          </div>
           <!-- Hidden tuning inputs (used by remote tuning) -->
           <div style="display:none;">
             <input type="hidden" id="msr-tune-mult-lo" value="8">
@@ -4443,7 +4439,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.30.17.13';
+const APP_VERSION = '2.36.30.17.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17003,12 +16999,20 @@ window._tgNativeCallback = function(data) {
   if (data.event === 'update') {
     const rateEl = document.getElementById(prefix + '-live-rate');
     const beEl = document.getElementById(prefix + '-live-be');
-    const ticksEl = document.getElementById(prefix + '-live-ticks');
     if (!rateEl) return;
 
     // Sticky detection: treat as detected if confidence > 0.1 OR we detected within last 8s
     const stickyDetected = isMsr && _msrLastDetectTime > 0 && (Date.now() - _msrLastDetectTime) < 8000;
     const isConfident = data.rate != null && data.confidence > 0.1;
+
+    // Scatter plot: update continuously on every callback (throttled to ~500ms)
+    if (isMsr && data.elapsedSec != null) {
+      const lastPt = _msrScatterData.length > 0 ? _msrScatterData[_msrScatterData.length - 1] : null;
+      if (!lastPt || data.elapsedSec - lastPt.t >= 0.4) {
+        updateMsrScatterPlot(data.elapsedSec, data.cumulativeOffset || 0);
+      }
+    }
+
     if (isConfident) {
       if (isMsr) _msrLastDetectTime = Date.now();
       const r = data.rate;
@@ -17023,18 +17027,8 @@ window._tgNativeCallback = function(data) {
         const saveBtn = document.getElementById('msr-save-btn');
         if (saveBtn) saveBtn.disabled = false;
         document.getElementById('msr-save-section').style.display = '';
-        // Scatter plot
-        if (data.elapsedSec != null) updateMsrScatterPlot(data.elapsedSec, data.cumulativeOffset || 0);
-        // Method + ticks
-        const methodRow = document.getElementById('msr-method-row');
-        const methodLabel = document.getElementById('msr-method-label');
-        if (methodRow) {
-          methodRow.style.display = '';
-          if (methodLabel) methodLabel.textContent = data.method || '';
-        }
       }
     }
-    if (ticksEl) ticksEl.textContent = data.tickCount || 0;
 
     // BPH detection display (auto mode)
     if (data.detectedBph) {
@@ -17043,22 +17037,25 @@ window._tgNativeCallback = function(data) {
         const bphEl = document.getElementById('msr-detected-bph');
         if (bphEl) { bphEl.textContent = data.detectedBph.toLocaleString() + ' BPH'; bphEl.style.display = ''; bphEl.style.color = '#22c55e'; }
       }
-      // Update BPH selector for non-auto modes or tg prefix
       const bphSel = document.getElementById(prefix + '-bph-select');
       if (bphSel && bphSel.value !== '0' && bphSel.value !== String(data.detectedBph)) bphSel.value = String(data.detectedBph);
     }
 
-    // Status text
+    // Status text — just show elapsed time, green when measuring
     if (isMsr) {
       const statusText = document.getElementById('msr-status-text');
       if (statusText) {
         const elapsed = data.elapsedSec || (_msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0);
+        const sec = Math.floor(elapsed);
+        const mm = Math.floor(sec / 60);
+        const ss = sec % 60;
+        const timeStr = mm > 0 ? mm + ':' + String(ss).padStart(2, '0') : ss + 's';
         if (isConfident || stickyDetected) {
-          statusText.textContent = 'Measuring \u2014 ' + Math.round(elapsed) + 's';
+          statusText.textContent = timeStr;
           statusText.style.color = '#22c55e';
         } else {
-          statusText.textContent = 'Analyzing \u2014 ' + Math.round(elapsed) + 's';
-          statusText.style.color = '';
+          statusText.textContent = timeStr;
+          statusText.style.color = 'var(--muted)';
         }
       }
     }
@@ -17394,9 +17391,7 @@ function toggleMsrListen() {
     document.getElementById('msr-listen-btn').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
     document.getElementById('msr-live-status').style.display = '';
     document.getElementById('msr-live-rate').textContent = '—';
-    document.getElementById('msr-live-ticks').textContent = '0';
     const beEl = document.getElementById('msr-live-be'); if (beEl) beEl.textContent = '—';
-    const methodRow = document.getElementById('msr-method-row'); if (methodRow) methodRow.style.display = 'none';
     // Clear scatter canvas
     const scCanvas = document.getElementById('msr-scatter-plot');
     if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
@@ -17442,7 +17437,6 @@ function toggleMsrListen() {
         let mx = 0;
         for (let i = 0; i < buf.length; i++) { const a = Math.abs(buf[i]); if (a > mx) mx = a; }
         ticks++;
-        document.getElementById('msr-live-ticks').textContent = ticks;
       };
       source.connect(scriptNode);
       scriptNode.connect(_tgAudioCtx.destination);
@@ -17485,7 +17479,6 @@ function discardMsrReading() {
   const beEl = document.getElementById('msr-live-be'); if (beEl) beEl.textContent = '—';
   document.getElementById('msr-rate-input').value = '';
   document.getElementById('msr-be-input').value = '';
-  const methodRow = document.getElementById('msr-method-row'); if (methodRow) methodRow.style.display = 'none';
   const scCanvas = document.getElementById('msr-scatter-plot');
   if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
   const statusText = document.getElementById('msr-status-text'); if (statusText) statusText.style.color = '';
