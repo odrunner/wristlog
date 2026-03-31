@@ -75,6 +75,11 @@ class TimegrapherBridge {
                         "elapsedSec": update.elapsedSec,
                         "method": update.method
                     ]
+                    if !update.newTicks.isEmpty {
+                        payload["newTicks"] = update.newTicks.map {
+                            ["t": $0.timeSec, "d": $0.deviationMs] as [String: Any]
+                        }
+                    }
                     if let waveform = update.beatWaveform {
                         payload["beatWaveform"] = waveform
                     }

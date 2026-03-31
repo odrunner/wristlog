@@ -12,6 +12,11 @@ import Accelerate
 /// 6. Beat error via epoch folding
 class TimegrapherEngine {
 
+    struct TickDot {
+        let timeSec: Double      // seconds since measurement start
+        let deviationMs: Double  // cumulative timing deviation in ms
+    }
+
     struct Update {
         let rate: Double?
         let beatError: Double?
@@ -26,6 +31,7 @@ class TimegrapherEngine {
         let cumulativeOffset: Double
         let elapsedSec: Double
         let method: String
+        let newTicks: [TickDot]  // new tick dots since last update
     }
 
     struct DebugInfo {
@@ -65,6 +71,16 @@ class TimegrapherEngine {
     // Cumulative offset tracking for scatter plot
     private var cumulativeOffsetMs: Double = 0
     private var lastAnalysisElapsed: Double = 0
+
+    // Real-time tick detection for timegrapher chart
+    private var tickDeviationMs: Double = 0        // cumulative deviation
+    private var expectedTickInterval: Double = 0   // ring samples between ticks
+    private var lastTickRingPos: Int = -1           // ring position of last detected tick
+    private var tickThreshold: Float = 0            // adaptive threshold for tick detection
+    private var pendingTicks: [TickDot] = []        // ticks to send in next update
+    private var tickDetectionActive = false
+    private var ringPosSinceLastTick: Int = 0       // samples since last tick
+    private var tickCount: Int = 0
 
     // 2nd-order Butterworth HP filter state (biquad)
     private struct BiquadState {
@@ -182,6 +198,14 @@ class TimegrapherEngine {
         cumulativeOffsetMs = 0
         lastAnalysisElapsed = 0
         isAnalyzing = false
+        tickDetectionActive = false
+        tickDeviationMs = 0
+        expectedTickInterval = 0
+        lastTickRingPos = -1
+        ringPosSinceLastTick = 0
+        tickCount = 0
+        pendingTicks = []
+        tickThreshold = 0
         lastDebugInfo = nil
         lastBeatWaveform = nil
         lastTickPositions = nil
@@ -265,6 +289,40 @@ class TimegrapherEngine {
                 energyRingCount = min(energyRingCount + 1, energyRingCapacity)
 
                 if peakEnergy > recentPeakEnergy { recentPeakEnergy = peakEnergy }
+
+                // Real-time tick detection on the active HP filter's energy
+                if tickDetectionActive {
+                    let energy = subsamplePeaks.isEmpty ? peakEnergy : energyRings[activeHpIndex][(energyRingWritePos - 1 + energyRingCapacity) % energyRingCapacity]
+                    ringPosSinceLastTick += 1
+
+                    // Adaptive threshold: track running peak and set threshold at 30%
+                    tickThreshold = tickThreshold * 0.9995 + energy * 0.0005
+                    let threshold = tickThreshold * 0.3
+
+                    // Minimum spacing: 80% of expected interval (avoid double-triggers)
+                    let minSpacing = Int(expectedTickInterval * 0.8)
+
+                    if energy > threshold && ringPosSinceLastTick >= minSpacing {
+                        // Tick detected!
+                        let actualInterval = ringPosSinceLastTick
+                        let ringSR = actualSampleRate / Double(ringSubsampleTarget)
+                        let elapsedSec = Double(energyRingCount) / ringSR
+
+                        if lastTickRingPos >= 0 {
+                            // Deviation = actual interval - expected interval, in ms
+                            let deviationThisTick = (Double(actualInterval) - expectedTickInterval) / ringSR * 1000.0
+                            tickDeviationMs += deviationThisTick
+                            tickCount += 1
+                            pendingTicks.append(TickDot(timeSec: elapsedSec, deviationMs: tickDeviationMs))
+                        } else {
+                            // First tick — no deviation yet
+                            tickCount += 1
+                            pendingTicks.append(TickDot(timeSec: elapsedSec, deviationMs: 0))
+                        }
+                        lastTickRingPos = energyRingWritePos
+                        ringPosSinceLastTick = 0
+                    }
+                }
             }
         }
 
@@ -286,9 +344,13 @@ class TimegrapherEngine {
             }
         }
 
+        // Drain pending ticks
+        let ticks = pendingTicks
+        pendingTicks = []
+
         let update = Update(
             rate: currentRate, beatError: currentBeatError,
-            tickCount: peakCount,
+            tickCount: tickCount > 0 ? tickCount : peakCount,
             confidence: currentConfidence, noiseLevel: currentNoiseLevel,
             detectedIntervalMs: currentDetectedInterval,
             detectedBph: detectedBph,
@@ -297,7 +359,8 @@ class TimegrapherEngine {
             tickPositions: lastTickPositions,
             cumulativeOffset: cumulativeOffsetMs,
             elapsedSec: elapsedSec,
-            method: detectionMethod)
+            method: detectionMethod,
+            newTicks: ticks)
         DispatchQueue.main.async { [weak self] in self?.onUpdate?(update) }
     }
 
@@ -319,6 +382,7 @@ class TimegrapherEngine {
             if bestRatio > Double(peakRatioThreshold) && bestBph > 0 {
                 targetBph = bestBph
                 detectedBph = bestBph
+                activateTickDetection(ringSampleRate: ringSampleRate)
             } else {
                 currentRate = nil
                 currentConfidence = 0
@@ -399,17 +463,33 @@ class TimegrapherEngine {
         lastAnalysisElapsed = elapsedSec
     }
 
+    private func activateTickDetection(ringSampleRate: Double) {
+        guard !tickDetectionActive else { return }
+        tickDetectionActive = true
+        expectedTickInterval = ringSampleRate / (Double(targetBph) / 3600.0)
+        tickDeviationMs = 0
+        lastTickRingPos = -1
+        ringPosSinceLastTick = 0
+        tickCount = 0
+        pendingTicks = []
+        // Seed threshold from recent peak energy
+        tickThreshold = recentPeakEnergy > 0 ? recentPeakEnergy : 0.01
+    }
+
     private func applyResult(rate: Double, ratio: Double, detectedFreq: Double,
                              ringSampleRate: Double, count: Int) {
         currentRate = (rate * 10).rounded() / 10
         currentDetectedInterval = (1.0 / detectedFreq) * 1000.0
         detectedBph = targetBph
 
+        // Activate tick detection on first successful detection
+        if !tickDetectionActive { activateTickDetection(ringSampleRate: ringSampleRate) }
+
         let elapsedSec = Double(count) / ringSampleRate
         let durationFactor = min(1.0, elapsedSec / 60.0)
         let peakFactor = min(1.0, max(0, (ratio - 1.0) / 9.0))
         currentConfidence = min(0.99, ((peakFactor * (0.3 + 0.7 * durationFactor)) * 100).rounded() / 100)
-        peakCount = Int(elapsedSec * Double(targetBph) / 3600.0)
+        peakCount = tickCount > 0 ? tickCount : Int(elapsedSec * Double(targetBph) / 3600.0)
 
         lastDebugInfo = DebugInfo(
             sampleRate: actualSampleRate, fftSize: energyRingCount, bufferSamples: count,

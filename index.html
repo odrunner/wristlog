@@ -4439,7 +4439,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.30.17.31';
+const APP_VERSION = '2.36.30.17.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17005,13 +17005,8 @@ window._tgNativeCallback = function(data) {
     const stickyDetected = isMsr && _msrLastDetectTime > 0 && (Date.now() - _msrLastDetectTime) < 8000;
     const isConfident = data.rate != null && data.confidence > 0.1;
 
-    // Scatter plot: update continuously on every callback (throttled to ~500ms)
-    if (isMsr && data.elapsedSec != null) {
-      const lastPt = _msrScatterData.length > 0 ? _msrScatterData[_msrScatterData.length - 1] : null;
-      if (!lastPt || data.elapsedSec - lastPt.t >= 0.4) {
-        updateMsrScatterPlot(data.elapsedSec, data.cumulativeOffset || 0);
-      }
-    }
+    // Timegrapher chart: add per-tick dots
+    if (isMsr && data.newTicks) addMsrTickDots(data.newTicks);
 
     if (isConfident) {
       if (isMsr) _msrLastDetectTime = Date.now();
@@ -17202,10 +17197,15 @@ let _msrLastBe = null;
 let _msrLastBph = null;
 let _msrListenStart = null;
 let _msrLastDetectTime = 0; // timestamp of last confident detection
-let _msrScatterData = []; // [{t: elapsedSec, offset: cumulativeOffsetMs}]
+let _msrScatterData = []; // [{t: timeSec, d: deviationMs}] — one per tick
 
-function updateMsrScatterPlot(elapsedSec, cumulativeOffset) {
-  _msrScatterData.push({ t: elapsedSec, offset: cumulativeOffset });
+function addMsrTickDots(newTicks) {
+  if (!newTicks || !newTicks.length) return;
+  for (const tk of newTicks) _msrScatterData.push({ t: tk.t, d: tk.d });
+  renderMsrScatterPlot();
+}
+
+function renderMsrScatterPlot() {
   const canvas = document.getElementById('msr-scatter-plot');
   if (!canvas || _msrScatterData.length < 1) return;
   const ctx = canvas.getContext('2d');
@@ -17215,7 +17215,7 @@ function updateMsrScatterPlot(elapsedSec, cumulativeOffset) {
   canvas.width = w; canvas.height = h;
   ctx.clearRect(0, 0, w, h);
 
-  const pad = { l: 8 * dpr, r: 42 * dpr, t: 8 * dpr, b: 20 * dpr };
+  const pad = { l: 8 * dpr, r: 50 * dpr, t: 8 * dpr, b: 20 * dpr };
   const pw = w - pad.l - pad.r;
   const ph = h - pad.t - pad.b;
 
@@ -17224,55 +17224,44 @@ function updateMsrScatterPlot(elapsedSec, cumulativeOffset) {
   const tMax = Math.max(data[data.length - 1].t, tMin + 10);
   const tRange = tMax - tMin;
 
-  // Y range: auto-center on data with minimum ±0.5ms
-  let oMin = Infinity, oMax = -Infinity;
-  for (const d of data) { if (d.offset < oMin) oMin = d.offset; if (d.offset > oMax) oMax = d.offset; }
-  const oMid = (oMin + oMax) / 2;
-  const oHalf = Math.max(0.5, (oMax - oMin) / 2 * 1.3);
-  const yMin = oMid - oHalf;
-  const yMax = oMid + oHalf;
+  // Y range: auto-center on data, minimum ±0.2ms
+  let dMin = Infinity, dMax = -Infinity;
+  for (const d of data) { if (d.d < dMin) dMin = d.d; if (d.d > dMax) dMax = d.d; }
+  const dMid = (dMin + dMax) / 2;
+  const dHalf = Math.max(0.2, (dMax - dMin) / 2 * 1.3);
+  const yMin = dMid - dHalf;
+  const yMax = dMid + dHalf;
   const yRange = yMax - yMin;
 
   function xPos(t) { return pad.l + ((t - tMin) / tRange) * pw; }
-  function yPos(o) { return pad.t + (1 - (o - yMin) / yRange) * ph; }
+  function yPos(d) { return pad.t + (1 - (d - yMin) / yRange) * ph; }
 
-  // Grid lines
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-  ctx.lineWidth = 1 * dpr;
-  // Horizontal: zero line + adaptive
+  // Zero line
   const yZero = yPos(0);
   if (yZero > pad.t && yZero < h - pad.b) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1 * dpr;
     ctx.beginPath(); ctx.moveTo(pad.l, yZero); ctx.lineTo(w - pad.r, yZero); ctx.stroke();
   }
-  // Vertical grid every 10s
+
+  // Vertical grid
   ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1 * dpr;
   const tStep = tRange > 120 ? 30 : tRange > 60 ? 15 : 10;
   for (let t = Math.ceil(tMin / tStep) * tStep; t <= tMax; t += tStep) {
     const x = xPos(t);
     ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, h - pad.b); ctx.stroke();
   }
 
-  // Draw connecting line
-  if (data.length >= 2) {
-    ctx.beginPath();
-    ctx.strokeStyle = 'rgba(201,168,76,0.4)';
-    ctx.lineWidth = 1.5 * dpr;
-    for (let i = 0; i < data.length; i++) {
-      const x = xPos(data[i].t), y = yPos(data[i].offset);
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-  }
-
-  // Draw dots
+  // Draw tick dots — small, dense
   ctx.fillStyle = '#c9a84c';
-  for (const d of data) {
-    const x = xPos(d.t), y = yPos(d.offset);
-    ctx.beginPath(); ctx.arc(x, y, 2.5 * dpr, 0, Math.PI * 2); ctx.fill();
+  const dotR = Math.max(1.2, 1.8 * dpr);
+  for (const pt of data) {
+    const x = xPos(pt.t), y = yPos(pt.d);
+    ctx.beginPath(); ctx.arc(x, y, dotR, 0, Math.PI * 2); ctx.fill();
   }
 
-  // Y-axis labels (right side)
+  // Y-axis labels (right side, in ms)
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.font = (9 * dpr) + 'px monospace';
   ctx.textAlign = 'left';
@@ -17280,7 +17269,7 @@ function updateMsrScatterPlot(elapsedSec, cumulativeOffset) {
   for (let i = 0; i <= yTicks; i++) {
     const val = yMin + (yRange * i / yTicks);
     const y = yPos(val);
-    ctx.fillText((val >= 0 ? '+' : '') + val.toFixed(1), w - pad.r + 4 * dpr, y + 3 * dpr);
+    ctx.fillText((val >= 0 ? '+' : '') + val.toFixed(1) + 'ms', w - pad.r + 4 * dpr, y + 3 * dpr);
   }
 
   // X-axis labels
