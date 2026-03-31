@@ -86,6 +86,9 @@ class TimegrapherBridge {
                             ["t": $0.timeSec, "d": $0.deviationMs] as [String: Any]
                         }
                     }
+                    if !update.debugMessages.isEmpty {
+                        payload["debugMessages"] = update.debugMessages
+                    }
                     if let waveform = update.beatWaveform {
                         payload["beatWaveform"] = waveform
                     }

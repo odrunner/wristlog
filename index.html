@@ -4439,7 +4439,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.30.18.58';
+const APP_VERSION = '2.36.30.19.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16960,35 +16960,21 @@ function stopTuningPoll() {
 let _msrTarget = null; // 'measure' when measure modal is open, null for watch modal
 let _tgDebugSessionId = null;
 let _tgLastDebugLogTime = 0;
+let _tgTickDebugBuffer = [];
+let _tgTickDebugLastFlush = 0;
 window._tgNativeCallback = function(data) {
-  // Log debug data to Supabase every ~5 seconds
-  if (data.event === 'update' && data.debug && currentUser) {
+  // Accumulate tick debug messages and flush to Supabase every ~3 seconds
+  if (data.event === 'update' && data.debugMessages && data.debugMessages.length > 0) {
+    if (!_tgDebugSessionId) _tgDebugSessionId = crypto.randomUUID();
+    for (const msg of data.debugMessages) _tgTickDebugBuffer.push(msg);
     const now = Date.now();
-    if (now - _tgLastDebugLogTime > 5000) {
-      _tgLastDebugLogTime = now;
-      if (!_tgDebugSessionId) _tgDebugSessionId = crypto.randomUUID();
-      db.from('timegrapher_debug_logs').insert({
-        user_id: currentUser.id,
+    if (now - _tgTickDebugLastFlush > 3000 && _tgTickDebugBuffer.length > 0) {
+      _tgTickDebugLastFlush = now;
+      const batch = _tgTickDebugBuffer.join('\n');
+      _tgTickDebugBuffer = [];
+      db.from('timegrapher_tick_logs').insert({
         session_id: _tgDebugSessionId,
-        sample_rate: data.debug.sampleRate,
-        fft_size: data.debug.fftSize,
-        buffer_samples: data.debug.bufferSamples,
-        hp_filter_cutoff: data.debug.hpCutoff,
-        best_bph: data.detectedBph,
-        best_lag: data.debug.bestLag,
-        best_correlation: data.debug.bestCorrelation,
-        refined_lag: data.debug.refinedLag,
-        detected_interval_ms: data.detectedIntervalMs,
-        expected_interval_ms: data.detectedBph ? 3600000 / data.detectedBph : null,
-        rate_spd: data.rate,
-        confidence: data.confidence,
-        beat_error: data.beatError,
-        noise_level: data.noiseLevel,
-        all_bph_correlations: data.debug.allBphCorrelations,
-        watch_present: _msrWatchPresent,
-        noise_floor: data.debug.noiseFloor,
-        threshold: data.debug.threshold,
-        peak_energy: data.debug.peakEnergy
+        messages: batch
       }).then(() => {});
     }
   }
@@ -17366,7 +17352,13 @@ function onMsrBphChange() {
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'stop' });
     const bphVal = parseInt(bphDropdown);
     const bph = isNaN(bphVal) ? 0 : bphVal;
-    console.log('[TG JS] Restarting engine with bph:', bph);
+    // Flush old session debug, start new session
+    if (_tgTickDebugBuffer.length > 0 && _tgDebugSessionId) {
+      db.from('timegrapher_tick_logs').insert({ session_id: _tgDebugSessionId, messages: _tgTickDebugBuffer.join('\n') }).then(() => {});
+    }
+    _tgDebugSessionId = crypto.randomUUID();
+    _tgTickDebugBuffer = [];
+    console.log('[TG JS] Restarting engine with bph:', bph, 'new session:', _tgDebugSessionId);
     _msrScatterData = [];
     _msrLastDetectTime = 0;
     const scCanvas = document.getElementById('msr-scatter-plot');
@@ -17387,6 +17379,8 @@ function toggleMsrListen() {
     const bphVal = parseInt(document.getElementById('msr-bph-select').value);
     const bph = isNaN(bphVal) ? 0 : bphVal; // 0 = auto detect
     console.log('[TG JS] Start button pressed, bph:', bph, '(0=auto), dropdown:', document.getElementById('msr-bph-select').value);
+    _tgDebugSessionId = crypto.randomUUID();
+    _tgTickDebugBuffer = [];
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
     _msrListening = true;
     _msrTarget = 'measure';
@@ -17466,6 +17460,12 @@ function stopMsrListen() {
   stopTuningPoll();
   if (_tgHasNative()) {
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'stop' });
+  }
+  // Flush remaining debug messages to Supabase
+  if (_tgTickDebugBuffer.length > 0 && _tgDebugSessionId) {
+    const batch = _tgTickDebugBuffer.join('\n');
+    _tgTickDebugBuffer = [];
+    db.from('timegrapher_tick_logs').insert({ session_id: _tgDebugSessionId, messages: batch }).then(() => {});
   }
   if (_tgScriptNode) { _tgScriptNode.disconnect(); _tgScriptNode = null; }
   if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
