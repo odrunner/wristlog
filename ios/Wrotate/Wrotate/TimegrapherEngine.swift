@@ -311,12 +311,13 @@ class TimegrapherEngine {
                     let energy = subsamplePeaks.isEmpty ? peakEnergy : energyRings[activeHpIndex][(energyRingWritePos - 1 + energyRingCapacity) % energyRingCapacity]
                     ringPosSinceLastTick += 1
 
-                    // Adaptive threshold: track running peak and set threshold at 30%
-                    tickThreshold = tickThreshold * 0.9995 + energy * 0.0005
-                    let threshold = tickThreshold * 0.3
+                    // Track peak energy (slow decay) — represents tick impulse height
+                    if energy > tickThreshold { tickThreshold = energy }
+                    else { tickThreshold *= 0.9999 }  // slow decay so it follows tick peaks
+                    let threshold = tickThreshold * 0.3 // 30% of peak = well above noise floor
 
-                    // Minimum spacing: 80% of expected interval (avoid double-triggers)
-                    let minSpacing = Int(expectedTickInterval * 0.8)
+                    // Minimum spacing: 90% of expected interval (tight gate, less room for false triggers)
+                    let minSpacing = Int(expectedTickInterval * 0.9)
 
                     if energy > threshold && ringPosSinceLastTick >= minSpacing {
                         // Tick detected!

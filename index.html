@@ -2953,7 +2953,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
         <div>
           <label for="msr-bph-select" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">BPH</label>
-          <select id="msr-bph-select" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+          <select id="msr-bph-select" onchange="onMsrBphChange()" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
             <option value="0" selected>Auto</option>
             <option value="18000">18,000</option>
             <option value="21600">21,600</option>
@@ -4439,7 +4439,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.30.18.03';
+const APP_VERSION = '2.36.30.18.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17357,6 +17357,25 @@ function sendMsrTuning() {
 }
 var _remotePeakRatioThreshold = 2.5;
 var _remoteBufferSeconds = 30.0;
+
+function onMsrBphChange() {
+  // If currently measuring, restart engine with new BPH
+  if (_msrListening && _tgHasNative()) {
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'stop' });
+    const bphVal = parseInt(document.getElementById('msr-bph-select').value);
+    const bph = isNaN(bphVal) ? 0 : bphVal;
+    _msrScatterData = [];
+    _msrLastDetectTime = 0;
+    const scCanvas = document.getElementById('msr-scatter-plot');
+    if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
+    document.getElementById('msr-live-rate').textContent = '—';
+    const beEl = document.getElementById('msr-live-be'); if (beEl) beEl.textContent = '—';
+    document.getElementById('msr-detected-bph').style.display = 'none';
+    _msrListenStart = Date.now();
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
+    setTimeout(() => sendMsrTuning(), 200);
+  }
+}
 
 function toggleMsrListen() {
   if (_msrListening) { stopMsrListen(); return; }
