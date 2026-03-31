@@ -31,7 +31,8 @@ class TimegrapherEngine {
         let cumulativeOffset: Double
         let elapsedSec: Double
         let method: String
-        let newTicks: [TickDot]  // new tick dots since last update
+        let rateStable: Bool      // true when rate has converged (±2 s/day for 15s)
+        let newTicks: [TickDot]   // new tick dots since last update
         let debugMessages: [String] // debug log lines for Supabase
     }
 
@@ -108,9 +109,12 @@ class TimegrapherEngine {
     private let adaptiveMultiplier: Double = 3.0    // MAD multiplier
     private let maxTickDev: Double = 8.0            // individual tick sanity limit (ms)
 
-    // Smoothed rate display
+    // Rate display and stability tracking
     private var smoothedRate: Double? = nil
     private var lastUpdateLogRegN: Int = 0
+    private var rateHistory: [(time: Double, rate: Double)] = []  // recent rates for stability check
+    private let stabilityWindow: Double = 15.0   // seconds to check stability over
+    private let stabilityThreshold: Double = 2.0 // s/day — rate must stay within this range
 
     private func debugLog(_ msg: String) {
         print(msg)
@@ -129,26 +133,29 @@ class TimegrapherEngine {
         return threshold
     }
 
-    /// Windowed Theil-Sen estimator: median of pairwise slopes over last ~60 pairs.
-    /// Window means old corruption ages out. Theil-Sen means in-window outliers are ignored.
-    private let theilSenWindow = 60  // pairs (~15 seconds of data at 28800 BPH)
-
+    /// Theil-Sen estimator on ALL accepted pairs. Uses all data for maximum stability.
+    /// When n > 120, subsamples to keep O(n²) manageable (~7000 slope pairs max).
     private func theilSenSlope() -> Double? {
         let n = regPoints.count
         guard n >= 10 else { return nil }
 
-        // Use only the last `theilSenWindow` points
-        let startIdx = max(0, n - theilSenWindow)
-        let window = Array(regPoints[startIdx..<n])
-        let wn = window.count
+        // For large n, subsample evenly to ~120 points (keeps O(n²) fast)
+        let points: [(x: Double, y: Double)]
+        if n > 120 {
+            let step = Double(n - 1) / 119.0
+            points = (0..<120).map { i in regPoints[Int(Double(i) * step)] }
+        } else {
+            points = regPoints
+        }
+        let wn = points.count
 
         var slopes: [Double] = []
         slopes.reserveCapacity(wn * (wn - 1) / 2)
         for i in 0..<wn {
             for j in (i+1)..<wn {
-                let dx = window[j].x - window[i].x
+                let dx = points[j].x - points[i].x
                 if dx > 0.01 {
-                    slopes.append((window[j].y - window[i].y) / dx)
+                    slopes.append((points[j].y - points[i].y) / dx)
                 }
             }
         }
@@ -285,7 +292,7 @@ class TimegrapherEngine {
         pairIntervalAccum = 0; pairTickPhase = 0; pairDeviationMs = 0
         pendingFirstTickDev = 0; pendingFirstTickTime = 0; pendingFirstTickInterval = 0; pendingFirstTickEnergy = 0
         recentPairDevs = []
-        smoothedRate = nil; lastUpdateLogRegN = 0
+        smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []
         lastDebugInfo = nil
         lastBeatWaveform = nil
         lastTickPositions = nil
@@ -497,7 +504,7 @@ class TimegrapherEngine {
                                         tickDeviationMs = 0
                                         pairDeviationMs = 0; pairIntervalAccum = 0; pairTickPhase = 0
                                         regPoints = []; regN = 0; recentPairDevs = []
-                                        smoothedRate = nil; lastUpdateLogRegN = 0
+                                        smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []
                                         if autoBph { detectedBph = nil; consecutiveFailures = 0 }
                                     }
                                     lastTickCountCheck = tickCount
@@ -537,32 +544,41 @@ class TimegrapherEngine {
         let ticks = pendingTicks
         pendingTicks = []
 
-        // Compute rate from Theil-Sen median regression (robust to outlier pairs)
+        // Compute rate from Theil-Sen median regression on ALL accepted pairs
         var rateForUpdate: Double? = nil
-        if regN >= 10 {  // 10 pairs = 20 ticks
+        let wallElapsed = Double(sampleCounter) / actualSampleRate
+        if regN >= 10 {  // 10 pairs minimum
             if let slope = theilSenSlope() {
                 let regRate = slope * 86.4 // → s/day
                 if abs(regRate) <= 200.0 {
-                    // Exponential moving average for smooth display
-                    if let prev = smoothedRate {
-                        let alpha = max(0.05, 0.3 / (1.0 + Double(regN) / 20.0))
-                        smoothedRate = prev * (1.0 - alpha) + regRate * alpha
-                    } else {
-                        smoothedRate = regRate
-                    }
-                    rateForUpdate = (smoothedRate! * 10).rounded() / 10
+                    smoothedRate = regRate
+                    rateForUpdate = (regRate * 10).rounded() / 10
+                    // Track rate history for stability detection
+                    rateHistory.append((time: wallElapsed, rate: regRate))
+                    // Prune old entries beyond stability window
+                    rateHistory.removeAll { wallElapsed - $0.time > stabilityWindow + 5 }
                 }
+            }
+        }
+
+        // Stability: rate has stayed within ±threshold for the full stability window
+        var isStable = false
+        if let currentRate = smoothedRate {
+            let recentRates = rateHistory.filter { wallElapsed - $0.time <= stabilityWindow }
+            if recentRates.count >= 5 && wallElapsed >= stabilityWindow {
+                let rateMin = recentRates.map(\.rate).min()!
+                let rateMax = recentRates.map(\.rate).max()!
+                isStable = (rateMax - rateMin) <= stabilityThreshold
             }
         }
 
         // Confidence based on pair count
         let tickConfidence = regN >= 5 ? min(0.99, Double(regN) / 250.0 + 0.3) : 0.0
-        let wallElapsed = Double(sampleCounter) / actualSampleRate
 
         // Debug: log rate update every 8 new pairs
         if regN > 0 && regN - lastUpdateLogRegN >= 8 {
             lastUpdateLogRegN = regN
-            debugLog("[TGUPDATE] elapsed=\(String(format: "%.1f", wallElapsed))s rate=\(rateForUpdate != nil ? String(format: "%.1f", rateForUpdate!) : "nil") conf=\(String(format: "%.2f", tickConfidence)) regN=\(regN) tickCount=\(tickCount) cumDev=\(String(format: "%.2f", tickDeviationMs))ms")
+            debugLog("[TGUPDATE] elapsed=\(String(format: "%.1f", wallElapsed))s rate=\(rateForUpdate != nil ? String(format: "%.1f", rateForUpdate!) : "nil") stable=\(isStable) conf=\(String(format: "%.2f", tickConfidence)) regN=\(regN) tickCount=\(tickCount) cumDev=\(String(format: "%.2f", pairDeviationMs))ms")
         }
 
         // Drain debug messages
@@ -581,6 +597,7 @@ class TimegrapherEngine {
             cumulativeOffset: pairDeviationMs,
             elapsedSec: wallElapsed,
             method: regN >= 10 ? "Ticks" : "",
+            rateStable: isStable,
             newTicks: ticks,
             debugMessages: dbgMsgs)
         DispatchQueue.main.async { [weak self] in self?.onUpdate?(update) }
@@ -664,7 +681,7 @@ class TimegrapherEngine {
         tickDebugInterval = 0
         pairIntervalAccum = 0; pairTickPhase = 0; pairDeviationMs = 0
         recentPairDevs = []
-        smoothedRate = nil; lastUpdateLogRegN = 0
+        smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []
         regPoints = []; regN = 0
         // Seed threshold from recent peak energy
         tickThreshold = recentPeakEnergy > 0 ? recentPeakEnergy : 0.01

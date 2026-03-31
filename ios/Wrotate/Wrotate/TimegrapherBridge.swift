@@ -79,7 +79,8 @@ class TimegrapherBridge {
                         "detectedBph": update.detectedBph as Any,
                         "cumulativeOffset": update.cumulativeOffset,
                         "elapsedSec": update.elapsedSec,
-                        "method": update.method
+                        "method": update.method,
+                        "rateStable": update.rateStable
                     ]
                     if !update.newTicks.isEmpty {
                         payload["newTicks"] = update.newTicks.map {
