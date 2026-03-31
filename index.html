@@ -4440,7 +4440,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.31.08.54';
+const APP_VERSION = '2.36.31.10.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17004,6 +17004,8 @@ window._tgNativeCallback = function(data) {
       if (isMsr) {
         _msrLastRate = data.rate;
         _msrLastBe = data.beatError;
+        _msrRateHistory.push(r);
+        if (_msrRateHistory.length > 30) _msrRateHistory.shift(); // keep last ~30 readings
         document.getElementById('msr-rate-input').value = r.toFixed(1);
         if (data.beatError != null) document.getElementById('msr-be-input').value = data.beatError.toFixed(2);
         const saveBtn = document.getElementById('msr-save-btn');
@@ -17041,6 +17043,8 @@ window._tgNativeCallback = function(data) {
     }
 
     // Status phases — progressive feedback to reduce perceived wait
+    // Manual: acquiring → calibrating → measuring → converged
+    // Auto:   acquiring → estimating_bph → bph_estimated → calibrating → measuring → converged
     if (isMsr) {
       const statusText = document.getElementById('msr-status-text');
       if (statusText) {
@@ -17050,31 +17054,41 @@ window._tgNativeCallback = function(data) {
         const ss = sec % 60;
         const timeStr = mm > 0 ? mm + ':' + String(ss).padStart(2, '0') : ss + 's';
 
-        // Advance phases based on engine state
-        if (data.rateStable && _msrPhase !== 'converged') {
+        // Track state transitions
+        if (data.tickCount > 0) _msrHadTicks = true;
+        if (data.detectedBph && _msrIsAuto) _msrBphLocked = true;
+
+        // Advance phase (only forward, never backward except on reset)
+        if (data.rateStable) {
           _msrPhase = 'converged';
-        } else if (data.rate != null && _msrPhase !== 'converged') {
+        } else if (_msrHadTicks && data.rate != null) {
           _msrPhase = 'measuring';
-        } else if (data.tickCount > 0 && _msrPhase === 'calibrating') {
+        } else if (_msrHadTicks) {
           _msrPhase = 'measuring';
-        } else if (data.detectedBph && _msrPhase === 'acquiring') {
-          _msrPhase = 'bph_detected';
-        } else if (data.tickCount === 0 && data.confidence === 0 && elapsed > 3 && _msrPhase === 'acquiring') {
+        } else if (_msrIsAuto && _msrBphLocked) {
+          // Auto mode: BPH locked, now calibrating tick detection
+          _msrPhase = 'calibrating';
+        } else if (_msrIsAuto && elapsed > 2) {
+          // Auto mode: still detecting BPH
+          _msrPhase = 'estimating_bph';
+        } else if (!_msrIsAuto && elapsed > 1) {
+          // Manual mode: engine started, calibrating
           _msrPhase = 'calibrating';
         }
 
         // Display phase
+        const bphStr = data.detectedBph ? data.detectedBph.toLocaleString() : '';
         switch (_msrPhase) {
           case 'acquiring':
             statusText.textContent = 'Acquiring signal... ' + timeStr;
             statusText.style.color = 'var(--muted)';
             break;
-          case 'calibrating':
-            statusText.textContent = 'Calibrating... ' + timeStr;
+          case 'estimating_bph':
+            statusText.textContent = 'Estimating BPH... ' + timeStr;
             statusText.style.color = '#eab308';
             break;
-          case 'bph_detected':
-            statusText.textContent = 'BPH detected — listening... ' + timeStr;
+          case 'calibrating':
+            statusText.textContent = (_msrIsAuto && bphStr ? bphStr + ' BPH — ' : '') + 'Calibrating... ' + timeStr;
             statusText.style.color = '#eab308';
             break;
           case 'measuring':
@@ -17086,7 +17100,7 @@ window._tgNativeCallback = function(data) {
             statusText.style.color = '#22c55e';
             break;
           default:
-            statusText.textContent = 'Listening... ' + timeStr;
+            statusText.textContent = 'Acquiring signal... ' + timeStr;
             statusText.style.color = 'var(--muted)';
         }
       }
@@ -17235,7 +17249,12 @@ let _msrLastBph = null;
 let _msrListenStart = null;
 let _msrLastDetectTime = 0; // timestamp of last confident detection
 let _msrScatterData = []; // [{t: timeSec, d: deviationMs}] — one per tick
-let _msrPhase = ''; // acquiring → calibrating → bph_detected → measuring → converged
+let _msrPhase = ''; // manual: acquiring → calibrating → measuring → converged
+                     // auto: acquiring → estimating_bph → bph_estimated → calibrating → measuring → converged
+let _msrIsAuto = false; // whether current session is auto BPH
+let _msrHadTicks = false; // whether we've seen tickCount > 0 (calibration done)
+let _msrBphLocked = false; // whether BPH has been detected (auto mode)
+let _msrRateHistory = []; // recent rate values for error bar computation
 
 let _msrScatterRafPending = false;
 function addMsrTickDots(newTicks) {
@@ -17439,6 +17458,10 @@ function onMsrBphChange() {
     _msrScatterData = [];
     _msrLastDetectTime = 0;
     _msrPhase = 'acquiring';
+    _msrIsAuto = (bph === 0);
+    _msrHadTicks = false;
+    _msrBphLocked = false;
+    _msrRateHistory = [];
     const scCanvas = document.getElementById('msr-scatter-plot');
     if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
     document.getElementById('msr-live-rate').textContent = '—';
@@ -17471,6 +17494,10 @@ function toggleMsrListen() {
     _msrScatterData = [];
     _msrLastDetectTime = 0;
     _msrPhase = 'acquiring';
+    _msrIsAuto = (bph === 0);
+    _msrHadTicks = false;
+    _msrBphLocked = false;
+    _msrRateHistory = [];
     document.getElementById('msr-status-text').textContent = 'Acquiring signal...';
     document.getElementById('msr-status-text').style.color = 'var(--muted)';
     document.getElementById('msr-detected-bph').style.display = 'none';
@@ -17563,6 +17590,26 @@ function stopMsrListen() {
   listenBtn.style.background = 'var(--hover)'; listenBtn.style.color = 'var(--fg)';
   _msrPhase = '';
   _msrListenStart = null;
+  // Show summary with error bars
+  const statusText = document.getElementById('msr-status-text');
+  if (_msrLastRate != null && statusText) {
+    const r = _msrLastRate;
+    let errorBar = 0;
+    if (_msrRateHistory.length >= 5) {
+      const sorted = [..._msrRateHistory].sort((a, b) => a - b);
+      const lo = sorted[Math.floor(sorted.length * 0.1)];
+      const hi = sorted[Math.floor(sorted.length * 0.9)];
+      errorBar = Math.max(0.5, ((hi - lo) / 2 * 10).toFixed(0) / 10);
+    } else {
+      errorBar = _msrRateHistory.length >= 2 ? Math.max(0.5, (Math.max(..._msrRateHistory) - Math.min(..._msrRateHistory)) / 2) : 5;
+    }
+    const sign = r >= 0 ? '+' : '';
+    statusText.textContent = 'Result: ' + sign + r.toFixed(1) + ' \u00b1' + errorBar.toFixed(1) + ' s/day';
+    statusText.style.color = '#22c55e';
+  } else if (statusText) {
+    statusText.textContent = 'No measurement data';
+    statusText.style.color = 'var(--muted)';
+  }
   // Keep save section visible if we have data
   if (_msrLastRate != null) {
     document.getElementById('msr-save-section').style.display = '';
