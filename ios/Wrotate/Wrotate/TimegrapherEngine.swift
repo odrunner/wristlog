@@ -118,7 +118,9 @@ class TimegrapherEngine {
     private var lastUpdateLogRegN: Int = 0
     private var rateHistory: [(time: Double, rate: Double)] = []  // recent rates for stability check
     private let stabilityWindow: Double = 15.0   // seconds to check stability over
-    private let stabilityThreshold: Double = 2.0 // s/day — rate must stay within this range
+    private let stabilityThreshold: Double = 3.0 // s/day — rate must stay within this range
+    private let stabilityLoseThreshold: Double = 5.0 // s/day — wider threshold to LOSE stability (prevents flicker)
+    private var wasStable: Bool = false
 
     private func debugLog(_ msg: String) {
         print(msg)
@@ -460,7 +462,7 @@ class TimegrapherEngine {
                                 lastTickRingPos = energyRingWritePos
                                 ringPosSinceLastTick = 0
                             } else {
-                                let deviationThisTick = (actualInterval - expectedTickInterval) / ringSR * 1000.0
+                                let deviationThisTick = (expectedTickInterval - actualInterval) / ringSR * 1000.0
 
                                 // Pair-based: accumulate 2 ticks, validate pair before plotting
                                 pairIntervalAccum += actualInterval
@@ -479,7 +481,7 @@ class TimegrapherEngine {
 
                                 // Second tick — validate the pair
                                 let pairExpected = expectedTickInterval * 2.0
-                                let pairDevThisPair = (pairIntervalAccum - pairExpected) / ringSR * 1000.0
+                                let pairDevThisPair = (pairExpected - pairIntervalAccum) / ringSR * 1000.0
                                 pairIntervalAccum = 0.0
                                 pairTickPhase = 0
 
@@ -537,7 +539,7 @@ class TimegrapherEngine {
                                         tickDeviationMs = 0
                                         pairDeviationMs = 0; pairIntervalAccum = 0.0; pairTickPhase = 0; lastTickFracOffset = 0
                                         regPoints = []; regN = 0; recentPairDevs = []
-                                        smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []
+                                        smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
                                         if autoBph { detectedBph = nil; consecutiveFailures = 0 }
                                     }
                                     lastTickCountCheck = tickCount
@@ -595,15 +597,22 @@ class TimegrapherEngine {
         }
 
         // Stability: rate has stayed within ±threshold for the full stability window
-        var isStable = false
+        // Uses hysteresis: easier to gain stability (3 s/day), harder to lose it (5 s/day)
+        var isStable = wasStable
         if let currentRate = smoothedRate {
             let recentRates = rateHistory.filter { wallElapsed - $0.time <= stabilityWindow }
             if recentRates.count >= 5 && wallElapsed >= stabilityWindow {
                 let rateMin = recentRates.map(\.rate).min()!
                 let rateMax = recentRates.map(\.rate).max()!
-                isStable = (rateMax - rateMin) <= stabilityThreshold
+                let spread = rateMax - rateMin
+                if wasStable {
+                    isStable = spread <= stabilityLoseThreshold
+                } else {
+                    isStable = spread <= stabilityThreshold
+                }
             }
         }
+        wasStable = isStable
 
         // Confidence based on pair count
         let tickConfidence = regN >= 5 ? min(0.99, Double(regN) / 250.0 + 0.3) : 0.0
@@ -715,7 +724,7 @@ class TimegrapherEngine {
         pairIntervalAccum = 0.0; pairTickPhase = 0; pairDeviationMs = 0
         lastTickFracOffset = 0
         recentPairDevs = []
-        smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []
+        smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
         regPoints = []; regN = 0
         // Always seed threshold at 0.01 for parity between auto and manual BPH
         tickThreshold = 0.01
