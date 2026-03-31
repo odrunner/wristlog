@@ -4439,7 +4439,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.30.21.29';
+const APP_VERSION = '2.36.30.21.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17212,11 +17212,11 @@ function renderMsrScatterPlot() {
   const tMax = Math.max(data[data.length - 1].t, tMin + 10);
   const tRange = tMax - tMin;
 
-  // Y range: auto-center on data, minimum ±0.2ms
+  // Y range: auto-center on data, minimum ±5ms so tight data looks tight
   let dMin = Infinity, dMax = -Infinity;
   for (const d of data) { if (d.d < dMin) dMin = d.d; if (d.d > dMax) dMax = d.d; }
   const dMid = (dMin + dMax) / 2;
-  const dHalf = Math.max(0.2, (dMax - dMin) / 2 * 1.3);
+  const dHalf = Math.max(5.0, (dMax - dMin) / 2 * 1.3);
   const yMin = dMid - dHalf;
   const yMax = dMid + dHalf;
   const yRange = yMax - yMin;

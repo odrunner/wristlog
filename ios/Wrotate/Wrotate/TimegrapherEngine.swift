@@ -91,14 +91,17 @@ class TimegrapherEngine {
     private var tickDebugInterval: Int = 0          // throttle debug logging
     private var debugMessages: [String] = []        // accumulated for Supabase
 
+    // Sub-sample interpolation for tick timing
+    private var lastTickFracOffset: Double = 0      // fractional ring position offset of last tick
+
     // Pair-based regression: accumulate every 2 ticks to cancel beat error
-    private var pairIntervalAccum: Int = 0          // sum of last 2 tick intervals
+    private var pairIntervalAccum: Double = 0       // sum of last 2 tick intervals (fractional)
     private var pairTickPhase: Int = 0              // 0 or 1, alternates each tick
     private var pairDeviationMs: Double = 0         // cumulative pair deviation
     // Stashed first-tick info (held until pair is validated)
     private var pendingFirstTickDev: Double = 0
     private var pendingFirstTickTime: Double = 0
-    private var pendingFirstTickInterval: Int = 0
+    private var pendingFirstTickInterval: Double = 0
     private var pendingFirstTickEnergy: Float = 0
     // Adaptive pair gate: starts at 2ms, tightens as we learn the noise profile
     private var recentPairDevs: [Double] = []       // last N |pairDev| values (ALL pairs, not just accepted)
@@ -137,7 +140,7 @@ class TimegrapherEngine {
     /// When n > 120, subsamples to keep O(n²) manageable (~7000 slope pairs max).
     private func theilSenSlope() -> Double? {
         let n = regPoints.count
-        guard n >= 10 else { return nil }
+        guard n >= 20 else { return nil }
 
         // For large n, subsample evenly to ~120 points (keeps O(n²) fast)
         let points: [(x: Double, y: Double)]
@@ -289,7 +292,8 @@ class TimegrapherEngine {
         lastTickDeviationCheck = 0
         lastTickCountCheck = 0
         regPoints = []; regN = 0
-        pairIntervalAccum = 0; pairTickPhase = 0; pairDeviationMs = 0
+        pairIntervalAccum = 0.0; pairTickPhase = 0; pairDeviationMs = 0
+        lastTickFracOffset = 0
         pendingFirstTickDev = 0; pendingFirstTickTime = 0; pendingFirstTickInterval = 0; pendingFirstTickEnergy = 0
         recentPairDevs = []
         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []
@@ -415,19 +419,47 @@ class TimegrapherEngine {
                     }
 
                     if energy > threshold && ringPosSinceLastTick >= minSpacing {
-                        let actualInterval = ringPosSinceLastTick
+                        let intInterval = ringPosSinceLastTick
                         let elapsedSec = Double(sampleCounter) / actualSampleRate
+
+                        // Sub-sample peak interpolation: parabolic fit on 3 energy values
+                        var tickFracOffset: Double = 0.0
+                        if intInterval >= 3 {
+                            let ring = energyRings[activeHpIndex]
+                            let n = (energyRingWritePos - 1 + energyRingCapacity) % energyRingCapacity
+                            let nm1 = (n - 1 + energyRingCapacity) % energyRingCapacity
+                            let nm2 = (n - 2 + energyRingCapacity) % energyRingCapacity
+                            let en = Double(ring[n])
+                            let enm1 = Double(ring[nm1])
+                            let enm2 = Double(ring[nm2])
+
+                            if enm1 >= en && enm1 >= enm2 && enm1 > 0 {
+                                // Peak at nm1: parabola through nm2(-1), nm1(0), n(+1)
+                                let d = enm2 - 2.0 * enm1 + en
+                                if abs(d) > 1e-10 {
+                                    let p = 0.5 * (enm2 - en) / d // offset from nm1
+                                    tickFracOffset = -1.0 + max(-0.5, min(0.5, p))
+                                } else {
+                                    tickFracOffset = -1.0
+                                }
+                            }
+                            // else: peak at current position, offset = 0
+                        }
+
+                        // Fractional interval = integer interval + this offset - last offset
+                        let actualInterval = Double(intInterval) + tickFracOffset - lastTickFracOffset
+                        lastTickFracOffset = tickFracOffset
 
                         if lastTickRingPos >= 0 {
                             // Outlier gate: discard intervals > ±15% of expected
-                            let ratio = Double(actualInterval) / expectedTickInterval
+                            let ratio = actualInterval / expectedTickInterval
                             if ratio < 0.85 || ratio > 1.15 {
                                 // Outlier — skip this tick, don't update deviation or regression
-                                debugLog("[TGTICK SKIP @ \(String(format: "%.2f", elapsedSec))s] interval=\(actualInterval) ratio=\(String(format: "%.3f", ratio)) OUTLIER")
+                                debugLog("[TGTICK SKIP @ \(String(format: "%.2f", elapsedSec))s] interval=\(String(format: "%.1f", actualInterval)) ratio=\(String(format: "%.3f", ratio)) OUTLIER")
                                 lastTickRingPos = energyRingWritePos
                                 ringPosSinceLastTick = 0
                             } else {
-                                let deviationThisTick = (Double(actualInterval) - expectedTickInterval) / ringSR * 1000.0
+                                let deviationThisTick = (actualInterval - expectedTickInterval) / ringSR * 1000.0
 
                                 // Pair-based: accumulate 2 ticks, validate pair before plotting
                                 pairIntervalAccum += actualInterval
@@ -446,8 +478,8 @@ class TimegrapherEngine {
 
                                 // Second tick — validate the pair
                                 let pairExpected = expectedTickInterval * 2.0
-                                let pairDevThisPair = (Double(pairIntervalAccum) - pairExpected) / ringSR * 1000.0
-                                pairIntervalAccum = 0
+                                let pairDevThisPair = (pairIntervalAccum - pairExpected) / ringSR * 1000.0
+                                pairIntervalAccum = 0.0
                                 pairTickPhase = 0
 
                                 // Gate 1: individual tick sanity — reject if either tick deviates too much
@@ -485,7 +517,7 @@ class TimegrapherEngine {
                                 debugLog("[TGTICK #\(tickCount) @ \(String(format: "%.2f", pairMidTime))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms cumPairDev=\(String(format: "%.3f", pairDeviationMs))ms thresh=\(String(format: "%.2f", pairThresh))ms ticks=\(String(format: "%.1f", pendingFirstTickDev)),\(String(format: "%.1f", deviationThisTick))ms energy=\(String(format: "%.6f", energy))")
 
                                 // Debug: log regression rate every 25 pairs (~50 ticks)
-                                if regN % 25 == 0 && regN >= 10 {
+                                if regN % 25 == 0 && regN >= 20 {
                                     if let slope = theilSenSlope() {
                                         let regRate = slope * 86.4
                                         debugLog("[TGRATE @ tick \(tickCount)] regN=\(regN) slope=\(String(format: "%.6f", slope))ms/s rate=\(String(format: "%.1f", regRate))s/day pairDev=\(String(format: "%.3f", pairDeviationMs))ms")
@@ -502,7 +534,7 @@ class TimegrapherEngine {
                                         pendingTicks = []
                                         tickCount = 0
                                         tickDeviationMs = 0
-                                        pairDeviationMs = 0; pairIntervalAccum = 0; pairTickPhase = 0
+                                        pairDeviationMs = 0; pairIntervalAccum = 0.0; pairTickPhase = 0; lastTickFracOffset = 0
                                         regPoints = []; regN = 0; recentPairDevs = []
                                         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []
                                         if autoBph { detectedBph = nil; consecutiveFailures = 0 }
@@ -547,7 +579,7 @@ class TimegrapherEngine {
         // Compute rate from Theil-Sen median regression on ALL accepted pairs
         var rateForUpdate: Double? = nil
         let wallElapsed = Double(sampleCounter) / actualSampleRate
-        if regN >= 10 {  // 10 pairs minimum
+        if regN >= 20 {  // 20 pairs minimum — need enough signal above quantization noise
             if let slope = theilSenSlope() {
                 let regRate = slope * 86.4 // → s/day
                 if abs(regRate) <= 200.0 {
@@ -596,7 +628,7 @@ class TimegrapherEngine {
             tickPositions: lastTickPositions,
             cumulativeOffset: pairDeviationMs,
             elapsedSec: wallElapsed,
-            method: regN >= 10 ? "Ticks" : "",
+            method: regN >= 20 ? "Ticks" : "",
             rateStable: isStable,
             newTicks: ticks,
             debugMessages: dbgMsgs)
@@ -679,7 +711,8 @@ class TimegrapherEngine {
         tickCount = 0
         pendingTicks = []
         tickDebugInterval = 0
-        pairIntervalAccum = 0; pairTickPhase = 0; pairDeviationMs = 0
+        pairIntervalAccum = 0.0; pairTickPhase = 0; pairDeviationMs = 0
+        lastTickFracOffset = 0
         recentPairDevs = []
         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []
         regPoints = []; regN = 0
