@@ -103,40 +103,26 @@ class TimegrapherEngine {
         debugMessages.append(msg)
     }
 
-    /// Theil-Sen estimator: median of all pairwise slopes. Robust to ~29% outliers.
-    /// For efficiency, samples up to 200 points when there are many.
+    /// Windowed Theil-Sen estimator: median of pairwise slopes over last ~60 pairs.
+    /// Window means old corruption ages out. Theil-Sen means in-window outliers are ignored.
+    private let theilSenWindow = 60  // pairs (~15 seconds of data at 28800 BPH)
+
     private func theilSenSlope() -> Double? {
-        let pts = regPoints
-        let n = pts.count
+        let n = regPoints.count
         guard n >= 10 else { return nil }
 
+        // Use only the last `theilSenWindow` points
+        let startIdx = max(0, n - theilSenWindow)
+        let window = Array(regPoints[startIdx..<n])
+        let wn = window.count
+
         var slopes: [Double] = []
-        if n <= 200 {
-            // All pairwise slopes
-            slopes.reserveCapacity(n * (n - 1) / 2)
-            for i in 0..<n {
-                for j in (i+1)..<n {
-                    let dx = pts[j].x - pts[i].x
-                    if dx > 0.01 {
-                        slopes.append((pts[j].y - pts[i].y) / dx)
-                    }
-                }
-            }
-        } else {
-            // Sample: use every 2nd point to keep it fast
-            let step = max(1, n / 200)
-            var sampled: [(x: Double, y: Double)] = []
-            for i in stride(from: 0, to: n, by: step) { sampled.append(pts[i]) }
-            // Always include the last point
-            if sampled.last?.x != pts.last?.x { sampled.append(pts[n-1]) }
-            let sn = sampled.count
-            slopes.reserveCapacity(sn * (sn - 1) / 2)
-            for i in 0..<sn {
-                for j in (i+1)..<sn {
-                    let dx = sampled[j].x - sampled[i].x
-                    if dx > 0.01 {
-                        slopes.append((sampled[j].y - sampled[i].y) / dx)
-                    }
+        slopes.reserveCapacity(wn * (wn - 1) / 2)
+        for i in 0..<wn {
+            for j in (i+1)..<wn {
+                let dx = window[j].x - window[i].x
+                if dx > 0.01 {
+                    slopes.append((window[j].y - window[i].y) / dx)
                 }
             }
         }
