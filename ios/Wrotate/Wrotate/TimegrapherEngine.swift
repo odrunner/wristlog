@@ -111,6 +111,7 @@ class TimegrapherEngine {
     private var detectionMethod: String = ""
 
     private var lastAnalysisTime: Double = 0
+    private var isAnalyzing = false
     private var lastDebugInfo: DebugInfo? = nil
     private var lastBeatWaveform: [Float]? = nil
     private var lastTickPositions: [Int]? = nil
@@ -180,6 +181,7 @@ class TimegrapherEngine {
         detectionMethod = ""
         cumulativeOffsetMs = 0
         lastAnalysisElapsed = 0
+        isAnalyzing = false
         lastDebugInfo = nil
         lastBeatWaveform = nil
         lastTickPositions = nil
@@ -267,12 +269,21 @@ class TimegrapherEngine {
         }
 
         // Analyze every ~1 second, after at least 5 seconds of data
+        // Run on background queue to avoid blocking audio thread
         let now = CACurrentMediaTime() * 1000
         let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
         let elapsedSec = Double(energyRingCount) / ringSampleRate
-        if now - lastAnalysisTime > 1000 && elapsedSec >= 5 {
+        if now - lastAnalysisTime > 1000 && elapsedSec >= 5 && !isAnalyzing {
             lastAnalysisTime = now
-            analyze()
+            isAnalyzing = true
+            // Snapshot ring data for background analysis
+            let count = energyRingCount
+            var signals = [[Float]]()
+            for f in 0..<3 { signals.append(linearize(ringIndex: f, count: count)) }
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                self?.analyze(signals: signals, count: count, ringSampleRate: ringSampleRate)
+                self?.isAnalyzing = false
+            }
         }
 
         let update = Update(
@@ -292,30 +303,23 @@ class TimegrapherEngine {
 
     // MARK: - Combined analysis: Goertzel primary + autocorrelation fallback
 
-    private func analyze() {
-        let count = energyRingCount
-        let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
-        guard count >= Int(ringSampleRate * 5) else { return }
-
+    private func analyze(signals: [[Float]], count: Int, ringSampleRate: Double) {
         let elapsedSec = Double(count) / ringSampleRate
 
-        // Auto BPH: try all candidates, pick the one with highest ratio
+        // Auto BPH: lightweight ratio-only scan at 4kHz only (no expensive sweep)
         if autoBph && detectedBph == nil {
+            let signal4k = signals[0] // 4kHz cutoff
             var bestBph = 0
             var bestRatio = 0.0
             for candidate in TimegrapherEngine.bphCandidates {
                 let tf = Double(candidate) / 3600.0
-                for f in 0..<3 {
-                    let signal = linearize(ringIndex: f, count: count)
-                    let (ratio, _, _) = tryGoertzel(signal, count: count, tickFreq: tf, ringSampleRate: ringSampleRate)
-                    if ratio > bestRatio { bestRatio = ratio; bestBph = candidate }
-                }
+                let ratio = goertzelRatio(signal4k, count: count, tickFreq: tf, sampleRate: ringSampleRate)
+                if ratio > bestRatio { bestRatio = ratio; bestBph = candidate }
             }
             if bestRatio > Double(peakRatioThreshold) && bestBph > 0 {
                 targetBph = bestBph
                 detectedBph = bestBph
             } else {
-                // Not yet detected — keep trying next cycle
                 currentRate = nil
                 currentConfidence = 0
                 lastDebugInfo = DebugInfo(
@@ -333,30 +337,28 @@ class TimegrapherEngine {
 
         // Try Goertzel at each HP cutoff — prefer lower cutoffs for rate accuracy.
         for f in 0..<3 {
-            let signal = linearize(ringIndex: f, count: count)
-            let (ratio, rate, detFreq) = tryGoertzel(signal, count: count, tickFreq: tickFreq, ringSampleRate: ringSampleRate)
+            let (ratio, rate, detFreq) = tryGoertzel(signals[f], count: count, tickFreq: tickFreq, ringSampleRate: ringSampleRate)
             if ratio > Double(peakRatioThreshold) && rate != nil && abs(rate!) <= 120.0 {
                 activeHpIndex = f
                 detectionMethod = "Goertzel"
                 updateCumulativeOffset(rate: rate!, elapsedSec: elapsedSec)
                 applyResult(rate: rate!, ratio: ratio, detectedFreq: detFreq,
                             ringSampleRate: ringSampleRate, count: count)
-                detectTickEvents()
+                detectTickEvents(signal: signals[f], count: count, ringSampleRate: ringSampleRate)
                 return
             }
         }
 
         // Fallback: autocorrelation at each HP cutoff — prefer lower cutoffs first
         for f in 0..<3 {
-            let signal = linearize(ringIndex: f, count: count)
-            let (conf, rate, detFreq) = tryAutocorrelation(signal, count: count, tickFreq: tickFreq, ringSampleRate: ringSampleRate)
+            let (conf, rate, detFreq) = tryAutocorrelation(signals[f], count: count, tickFreq: tickFreq, ringSampleRate: ringSampleRate)
             if conf > 1.5 && rate != nil && abs(rate!) <= 120.0 {
                 activeHpIndex = f
                 detectionMethod = "Autocorr"
                 updateCumulativeOffset(rate: rate!, elapsedSec: elapsedSec)
                 applyResult(rate: rate!, ratio: conf, detectedFreq: detFreq,
                             ringSampleRate: ringSampleRate, count: count)
-                detectTickEvents()
+                detectTickEvents(signal: signals[f], count: count, ringSampleRate: ringSampleRate)
                 return
             }
         }
@@ -377,6 +379,16 @@ class TimegrapherEngine {
             threshold: 0, peakEnergy: Double(recentPeakEnergy),
             allBphCorrelations: [])
         recentPeakEnergy *= 0.95
+    }
+
+    /// Lightweight ratio-only Goertzel — no sweep, just target vs baselines.
+    private func goertzelRatio(_ signal: [Float], count: Int, tickFreq: Double, sampleRate: Double) -> Double {
+        let tp = goertzelPower(signal, count: count, targetFreq: tickFreq, sampleRate: sampleRate)
+        let mults = [0.73, 0.81, 1.19, 1.37, 1.61]
+        var blSum = 0.0
+        for m in mults { blSum += goertzelPower(signal, count: count, targetFreq: tickFreq * m, sampleRate: sampleRate) }
+        let bl = blSum / Double(mults.count)
+        return bl > 0 ? tp / bl : (tp > 0 ? 10.0 : 0)
     }
 
     private func updateCumulativeOffset(rate: Double, elapsedSec: Double) {
@@ -641,17 +653,13 @@ class TimegrapherEngine {
 
     // MARK: - Beat error via epoch folding
 
-    private func detectTickEvents() {
-        let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
+    private func detectTickEvents(signal: [Float], count: Int, ringSampleRate: Double) {
         let tickFreq = Double(targetBph) / 3600.0
         let beatFreq = tickFreq / 2.0
         let beatPeriod = ringSampleRate / beatFreq
         let periodSamples = Int(round(beatPeriod))
-        let count = energyRingCount
 
         guard count >= periodSamples * 8 else { return }
-
-        let signal = linearize(ringIndex: activeHpIndex, count: count)
 
         // Epoch fold at beat period
         var folded = [Double](repeating: 0, count: periodSamples)

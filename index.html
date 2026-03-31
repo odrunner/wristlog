@@ -4439,7 +4439,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.30.17.22';
+const APP_VERSION = '2.36.30.17.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17045,7 +17045,7 @@ window._tgNativeCallback = function(data) {
     if (isMsr) {
       const statusText = document.getElementById('msr-status-text');
       if (statusText) {
-        const elapsed = data.elapsedSec || (_msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0);
+        const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
         const sec = Math.floor(elapsed);
         const mm = Math.floor(sec / 60);
         const ss = sec % 60;
@@ -17054,7 +17054,7 @@ window._tgNativeCallback = function(data) {
           statusText.textContent = timeStr;
           statusText.style.color = '#22c55e';
         } else {
-          statusText.textContent = timeStr;
+          statusText.textContent = 'Listening... ' + timeStr;
           statusText.style.color = 'var(--muted)';
         }
       }
