@@ -2088,6 +2088,38 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <input type="hidden" id="review-measurement-threshold" value="5">
 <input type="hidden" id="review-cooldown-days" value="60">
 
+<!-- ════ MEASURE HELP MODAL ════ -->
+<div id="msr-help-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="msr-help-title">
+  <div class="modal" style="max-width:380px;padding:2rem 1.75rem;">
+    <div style="font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:1.25rem;">How to Measure</div>
+    <div id="msr-help-title" style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:1.25rem;">Measure Your Watch's Accuracy</div>
+    <div style="display:flex;flex-direction:column;gap:1rem;margin-bottom:1.5rem;">
+      <div style="display:flex;gap:.75rem;align-items:flex-start;">
+        <div style="min-width:28px;height:28px;border-radius:50%;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;">1</div>
+        <div>
+          <div style="font-size:.85rem;font-weight:600;color:var(--text);margin-bottom:.15rem;">Find a quiet spot</div>
+          <div style="font-size:.78rem;color:var(--muted);line-height:1.5;">Background noise interferes with tick detection. A quiet room works best.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:.75rem;align-items:flex-start;">
+        <div style="min-width:28px;height:28px;border-radius:50%;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;">2</div>
+        <div>
+          <div style="font-size:.85rem;font-weight:600;color:var(--text);margin-bottom:.15rem;">Position the watch</div>
+          <div style="font-size:.78rem;color:var(--muted);line-height:1.5;">Place the caseback near the iPhone microphone (bottom edge, next to the charging port). The crown side tends to be loudest.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:.75rem;align-items:flex-start;">
+        <div style="min-width:28px;height:28px;border-radius:50%;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;">3</div>
+        <div>
+          <div style="font-size:.85rem;font-weight:600;color:var(--text);margin-bottom:.15rem;">Tap Measure and hold still</div>
+          <div style="font-size:.78rem;color:var(--muted);line-height:1.5;">Keep the watch steady for 20-45 seconds. The measurement will auto-stop when it has a confident reading.</div>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-ghost" onclick="closeMsrHelp()" style="width:100%;border-color:var(--gold);color:var(--gold);">Got it</button>
+  </div>
+</div>
+
 <div id="followers-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="followers-modal-title">
   <div class="modal" style="max-width:400px;">
     <div class="modal-title" id="followers-modal-title">Followers</div>
@@ -2984,6 +3016,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div id="page-measure" class="page">
     <div class="page-header">
       <h1 class="page-title">Measure Accuracy</h1>
+      <button onclick="showMsrHelp()" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="How to measure">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </button>
     </div>
     <!-- No-watches callout (shown when collection is empty) -->
     <div id="measure-no-watches" style="display:none;text-align:center;padding:2rem 1rem;">
@@ -3039,7 +3074,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button id="msr-listen-btn" onclick="toggleMsrListen()" style="width:100%;padding:.65rem;border-radius:8px;border:1.5px solid rgba(74,222,128,.3);background:#0a1a12;color:#4ade80;font-size:.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.45rem;transition:all .2s;margin-bottom:.5rem;">
         <svg id="msr-btn-mic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
         <svg id="msr-btn-stop" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
-        <span id="msr-btn-label">Record</span>
+        <span id="msr-btn-label">Measure</span>
       </button>
       <div id="msr-mic-warning" role="alert" style="display:none;font-size:.75rem;color:#ef4444;margin-bottom:.5rem;line-height:1.4;"></div>
       <!-- Live status container (hidden, used by JS to toggle visibility) -->
@@ -4506,7 +4541,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.01.09.40';
+const APP_VERSION = '2.36.01.10.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10578,6 +10613,7 @@ function nav(btn) {
       document.getElementById('measure-no-watches').style.display = 'none';
       document.getElementById('measure-content').style.display = '';
       openMeasureInline();
+      maybeShowMsrHelp();
     }
   }
 }
@@ -16839,6 +16875,7 @@ const _overlayCloseMap = {
   'whats-new-modal':     closeWhatsNew,
   'anniversary-modal':   dismissAnniversary,
   'review-prompt-modal': closeReviewPrompt,
+  'msr-help-modal':      closeMsrHelp,
   // eula-modal: intentionally excluded — must not close on overlay click or Escape
   'report-modal':        closeReport,
 };
@@ -17394,7 +17431,7 @@ window._tgNativeCallback = function(data) {
       _msrTarget = null;
       const _errBtnMic = document.getElementById('msr-btn-mic'); if (_errBtnMic) _errBtnMic.style.display = '';
       const _errBtnStop = document.getElementById('msr-btn-stop'); if (_errBtnStop) _errBtnStop.style.display = 'none';
-      const _errBtnLabel = document.getElementById('msr-btn-label'); if (_errBtnLabel) _errBtnLabel.textContent = 'Record';
+      const _errBtnLabel = document.getElementById('msr-btn-label'); if (_errBtnLabel) _errBtnLabel.textContent = 'Measure';
       const _errListenBtn = document.getElementById('msr-listen-btn'); if (_errListenBtn) { _errListenBtn.style.borderColor = 'rgba(74,222,128,.3)'; _errListenBtn.style.color = '#4ade80'; _errListenBtn.style.background = '#0a1a12'; }
     } else {
       _tgListening = false;
@@ -17714,7 +17751,7 @@ function openMeasureInline() {
   const btnLabel = document.getElementById('msr-btn-label');
   if (btnMic) btnMic.style.display = '';
   if (btnStop) btnStop.style.display = 'none';
-  if (btnLabel) btnLabel.textContent = 'Record';
+  if (btnLabel) btnLabel.textContent = 'Measure';
   listenBtn.style.background = '#0a1a12'; listenBtn.style.color = '#4ade80'; listenBtn.style.borderColor = 'rgba(74,222,128,.3)';
   _msrPhase = '';
   document.getElementById('msr-live-status').style.display = 'none';
@@ -17827,6 +17864,20 @@ function onMsrBphChange() {
     _msrListenStart = Date.now();
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
     setTimeout(() => sendMsrTuning(), 200);
+  }
+}
+
+// ── Measure help modal ──────────────────────────────────────────────────────
+function showMsrHelp() {
+  document.getElementById('msr-help-modal').classList.remove('hidden');
+}
+function closeMsrHelp() {
+  document.getElementById('msr-help-modal').classList.add('hidden');
+  localStorage.setItem('wristlog_msr_help_seen', '1');
+}
+function maybeShowMsrHelp() {
+  if (!localStorage.getItem('wristlog_msr_help_seen')) {
+    showMsrHelp();
   }
 }
 
@@ -17964,7 +18015,7 @@ function stopMsrListen() {
   const listenBtnEl = document.getElementById('msr-listen-btn');
   if (btnMic) btnMic.style.display = '';
   if (btnStop) btnStop.style.display = 'none';
-  if (btnLabel) btnLabel.textContent = 'Record';
+  if (btnLabel) btnLabel.textContent = 'Measure';
   if (listenBtnEl) { listenBtnEl.style.borderColor = 'rgba(74,222,128,.3)'; listenBtnEl.style.color = '#4ade80'; listenBtnEl.style.background = '#0a1a12'; }
   _msrPhase = '';
   _msrListenStart = null;
@@ -18053,9 +18104,14 @@ async function saveMsrReading() {
   const beatError = beVal !== '' ? parseFloat(beVal) : null;
   const bph = parseInt(document.getElementById('msr-bph-select').value);
   const notes = document.getElementById('msr-notes-input').value.trim() || null;
+  // Save raw tick data for algorithm tuning (round to reduce payload)
+  const tickData = _msrScatterData.length > 0
+    ? _msrScatterData.map(d => ({ t: Math.round(d.t * 100) / 100, d: Math.round(d.d * 1000) / 1000 }))
+    : null;
   const { error } = await db.from('timegrapher_results').insert({
     user_id: currentUser.id, watch_id: watchId,
-    rate, beat_error: beatError, bph, source: 'auto', notes
+    rate, beat_error: beatError, bph, source: 'auto', notes,
+    tick_data: tickData
   });
   if (error) { toast('Could not save — ' + error.message, 'error'); return; }
   // Track measurement count for review prompt
