@@ -2984,7 +2984,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
         <!-- Status bar — bottom of instrument -->
         <div style="display:flex;align-items:center;justify-content:center;padding:.45rem .75rem;border-top:1px solid rgba(74,222,128,.08);">
-          <span id="msr-status-text" aria-live="polite" style="font-size:.7rem;color:rgba(74,222,128,.5);letter-spacing:.03em;">Ready</span>
+          <span id="msr-status-text" aria-live="polite" style="font-size:.7rem;color:rgba(74,222,128,.5);letter-spacing:.03em;"></span>
         </div>
       </div>
       <!-- Record / Stop button -->
@@ -3008,11 +3008,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <!-- Save section -->
       <div id="msr-save-section" style="display:none;">
-        <div style="display:grid;grid-template-columns:1fr auto;gap:.4rem;">
-          <button id="msr-save-btn" class="btn btn-primary btn-sm" onclick="saveMsrReading()" disabled>Save Reading</button>
+        <div id="msr-complete-msg" style="font-size:.8rem;font-weight:600;color:#4ade80;margin-bottom:.5rem;text-align:center;">Measurement complete</div>
+        <div style="display:grid;grid-template-columns:auto 1fr auto;gap:.4rem;align-items:center;">
+          <div style="display:flex;align-items:center;gap:.3rem;">
+            <input type="text" id="msr-rate-input" style="width:70px;padding:.35rem .4rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;font-weight:600;text-align:center;" value="">
+            <span style="font-size:.75rem;color:var(--muted);">s/day</span>
+          </div>
+          <button id="msr-save-btn" class="btn btn-primary btn-sm" onclick="saveMsrReading()" disabled>Save</button>
           <button class="btn btn-ghost btn-sm" onclick="discardMsrReading()" style="color:var(--muted);">Discard</button>
         </div>
-        <input type="hidden" id="msr-rate-input">
         <input type="hidden" id="msr-be-input">
         <input type="hidden" id="msr-notes-input" value="">
       </div>
@@ -4440,7 +4444,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.31.19.27';
+const APP_VERSION = '2.36.31.19.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17517,7 +17521,9 @@ function onMsrBphChange() {
 }
 
 function toggleMsrListen() {
+  console.log('[TG JS] toggleMsrListen called, _msrListening:', _msrListening, 'hasNative:', _tgHasNative());
   if (_msrListening) { console.log('[TG JS] Stop button pressed'); stopMsrListen(); return; }
+  try {
   // Use native bridge if available
   if (_tgHasNative()) {
     const bphVal = parseInt(document.getElementById('msr-bph-select').value);
@@ -17620,6 +17626,7 @@ function toggleMsrListen() {
       warn.style.display = 'block';
     }
   })();
+  } catch (ex) { console.error('[TG JS] toggleMsrListen error:', ex); }
 }
 
 function stopMsrListen() {
@@ -17674,18 +17681,25 @@ function stopMsrListen() {
     const idleOv = document.getElementById('msr-idle-overlay');
     if (idleOv) idleOv.style.display = 'none';
   } else if (statusText) {
-    statusText.textContent = 'Ready';
-    statusText.style.color = 'rgba(74,222,128,.4)';
+    statusText.textContent = '';
     const idleOv = document.getElementById('msr-idle-overlay');
     if (idleOv) idleOv.style.display = 'flex';
   }
   // Keep save section visible if we have data
   if (_msrLastRate != null) {
     document.getElementById('msr-save-section').style.display = '';
-    document.getElementById('msr-rate-input').value = _msrLastRate.toFixed(1);
+    const sign = _msrLastRate >= 0 ? '+' : '';
+    document.getElementById('msr-rate-input').value = sign + _msrLastRate.toFixed(1);
     if (_msrLastBph) document.getElementById('msr-bph-select').value = String(_msrLastBph);
     const saveBtn = document.getElementById('msr-save-btn');
     if (saveBtn) saveBtn.disabled = false;
+    // Show completion message
+    const completeMsg = document.getElementById('msr-complete-msg');
+    if (completeMsg) {
+      const wasConverged = document.getElementById('msr-converged-badge')?.style.display !== 'none';
+      completeMsg.textContent = wasConverged ? 'Measurement complete — converged' : 'Measurement complete — estimate';
+      completeMsg.style.color = wasConverged ? '#4ade80' : '#eab308';
+    }
   }
 }
 
@@ -17706,7 +17720,7 @@ function discardMsrReading() {
   const convBadge = document.getElementById('msr-converged-badge'); if (convBadge) convBadge.style.display = 'none';
   // Show idle overlay
   const idleOv = document.getElementById('msr-idle-overlay'); if (idleOv) idleOv.style.display = 'flex';
-  const statusText2 = document.getElementById('msr-status-text'); if (statusText2) { statusText2.textContent = 'Ready'; statusText2.style.color = 'rgba(74,222,128,.4)'; statusText2.style.fontSize = ''; statusText2.style.fontWeight = ''; }
+  const statusText2 = document.getElementById('msr-status-text'); if (statusText2) { statusText2.textContent = ''; statusText2.style.color = ''; statusText2.style.fontSize = ''; statusText2.style.fontWeight = ''; }
 }
 
 async function saveMsrReading() {
