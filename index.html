@@ -4451,7 +4451,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.31.20.18';
+const APP_VERSION = '2.36.31.20.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17016,8 +17016,16 @@ window._tgNativeCallback = function(data) {
         _msrLastRate = data.rate;
         _msrLastBe = data.beatError;
         _msrRateHistory.push(r);
+        _msrAllRates.push(r);
         if (_msrRateHistory.length > 30) _msrRateHistory.shift(); // keep last ~30 readings
-        document.getElementById('msr-rate-input').value = r.toFixed(1);
+        // Use mode as the displayed rate once we have enough samples
+        const modeVal = _msrAllRates.length >= 5 ? computeRateMode(_msrAllRates) : null;
+        if (modeVal != null) {
+          _msrLastRate = modeVal;
+          rateEl.textContent = (modeVal >= 0 ? '+' : '') + modeVal.toFixed(1);
+          rateEl.style.color = Math.abs(modeVal) <= 5 ? '#22c55e' : Math.abs(modeVal) <= 15 ? '#eab308' : '#ef4444';
+        }
+        document.getElementById('msr-rate-input').value = (_msrLastRate || r).toFixed(1);
         if (data.beatError != null) document.getElementById('msr-be-input').value = data.beatError.toFixed(2);
       }
     }
@@ -17303,6 +17311,7 @@ let _msrIsAuto = false; // whether current session is auto BPH
 let _msrHadTicks = false; // whether we've seen tickCount > 0 (calibration done)
 let _msrBphLocked = false; // whether BPH has been detected (auto mode)
 let _msrRateHistory = []; // recent rate values for error bar computation
+let _msrAllRates = [];    // ALL rate samples for mode computation (not capped)
 
 let _msrScatterRafPending = false;
 function addMsrTickDots(newTicks) {
@@ -17315,6 +17324,25 @@ function addMsrTickDots(newTicks) {
     _msrScatterRafPending = true;
     requestAnimationFrame(() => { _msrScatterRafPending = false; renderMsrScatterPlot(); });
   }
+}
+
+// Compute mode of rate samples using kernel density estimation (bandwidth = 1.0 s/day)
+function computeRateMode(rates) {
+  if (rates.length < 3) return null;
+  const bw = 1.0; // bandwidth in s/day
+  const step = 0.2;
+  const min = Math.min(...rates) - bw;
+  const max = Math.max(...rates) + bw;
+  let bestVal = 0, bestDensity = 0;
+  for (let x = min; x <= max; x += step) {
+    let density = 0;
+    for (const r of rates) {
+      const u = (x - r) / bw;
+      density += Math.exp(-0.5 * u * u); // Gaussian kernel
+    }
+    if (density > bestDensity) { bestDensity = density; bestVal = x; }
+  }
+  return Math.round(bestVal * 10) / 10;
 }
 
 function renderMsrScatterPlot() {
@@ -17390,6 +17418,37 @@ function renderMsrScatterPlot() {
     ctx.beginPath(); ctx.arc(x, y, dotR, 0, Math.PI * 2); ctx.fill();
   }
   ctx.shadowBlur = 0;
+
+  // Mode reference line — dotted slope line showing what the mode rate looks like as deviation
+  const modeRate = computeRateMode(_msrAllRates);
+  if (modeRate != null) {
+    // deviation_ms = rate_s_day * elapsed_sec / 86.4  (converts rate to ms/s cumulative drift)
+    // But scatter data shows raw pair deviation, not pure rate-implied deviation
+    // Draw a slope line: at time t, expected deviation = modeRate * (t - tMin) / 86.4
+    ctx.save();
+    ctx.setLineDash([4 * dpr, 4 * dpr]);
+    ctx.strokeStyle = 'rgba(250,204,21,0.5)'; // yellow-gold
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.beginPath();
+    // Use first data point's deviation as baseline
+    const baseD = data[0].d;
+    const t0x = xPos(tMin);
+    const t0y = yPos(baseD);
+    ctx.moveTo(t0x, t0y);
+    const tEndx = xPos(tDataMax);
+    const endD = baseD + modeRate * (tDataMax - tMin) / 86.4;
+    const tEndy = yPos(endD);
+    ctx.lineTo(tEndx, tEndy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Label the mode line
+    ctx.fillStyle = 'rgba(250,204,21,0.7)';
+    ctx.font = 'bold ' + (9 * dpr) + 'px monospace';
+    ctx.textAlign = 'right';
+    const modeSign = modeRate >= 0 ? '+' : '';
+    ctx.fillText(modeSign + modeRate.toFixed(1), tEndx - 2 * dpr, tEndy - 4 * dpr);
+    ctx.restore();
+  }
 
   // Y-axis labels (right side, in ms) — dim green
   ctx.fillStyle = 'rgba(74,222,128,0.6)';
@@ -17520,7 +17579,7 @@ function onMsrBphChange() {
     _msrIsAuto = (bph === 0);
     _msrHadTicks = false;
     _msrBphLocked = false;
-    _msrRateHistory = [];
+    _msrRateHistory = []; _msrAllRates = [];
     const scCanvas = document.getElementById('msr-scatter-plot');
     if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
     document.getElementById('msr-live-rate').textContent = '—';
@@ -17562,7 +17621,7 @@ function toggleMsrListen() {
     _msrIsAuto = (bph === 0);
     _msrHadTicks = false;
     _msrBphLocked = false;
-    _msrRateHistory = [];
+    _msrRateHistory = []; _msrAllRates = [];
     document.getElementById('msr-status-text').textContent = 'ACQUIRING \u00b7 0s';
     document.getElementById('msr-status-text').style.color = 'rgba(74,222,128,.35)';
     document.getElementById('msr-status-text').style.fontSize = '';
@@ -17680,16 +17739,21 @@ function stopMsrListen() {
   // Show result in the rate HUD and status bar
   const statusText = document.getElementById('msr-status-text');
   const rateEl = document.getElementById('msr-live-rate');
+  // Use mode as final rate if available
+  const finalMode = _msrAllRates.length >= 5 ? computeRateMode(_msrAllRates) : null;
+  if (finalMode != null) _msrLastRate = finalMode;
   if (_msrLastRate != null && statusText) {
     const r = _msrLastRate;
+    // Error bar: IQR of rates around the mode
     let errorBar = 0;
-    if (_msrRateHistory.length >= 5) {
-      const sorted = [..._msrRateHistory].sort((a, b) => a - b);
-      const lo = sorted[Math.floor(sorted.length * 0.1)];
-      const hi = sorted[Math.floor(sorted.length * 0.9)];
-      errorBar = Math.max(0.5, ((hi - lo) / 2 * 10).toFixed(0) / 10);
+    const rates = _msrAllRates.length >= 5 ? _msrAllRates : _msrRateHistory;
+    if (rates.length >= 5) {
+      const sorted = [...rates].sort((a, b) => a - b);
+      const q1 = sorted[Math.floor(sorted.length * 0.25)];
+      const q3 = sorted[Math.floor(sorted.length * 0.75)];
+      errorBar = Math.max(0.5, Math.round((q3 - q1) / 2 * 10) / 10);
     } else {
-      errorBar = _msrRateHistory.length >= 2 ? Math.max(0.5, (Math.max(..._msrRateHistory) - Math.min(..._msrRateHistory)) / 2) : 5;
+      errorBar = rates.length >= 2 ? Math.max(0.5, (Math.max(...rates) - Math.min(...rates)) / 2) : 5;
     }
     const sign = r >= 0 ? '+' : '';
     // Keep the rate shown in HUD
