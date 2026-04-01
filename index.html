@@ -2041,14 +2041,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <!-- ════ ANNIVERSARY MODAL ════ -->
 <div id="anniversary-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="anniversary-modal-title">
-  <div class="modal" style="max-width:380px;text-align:center;">
-    <div style="font-size:2.2rem;margin-bottom:.5rem;">🎂</div>
-    <div class="modal-title" id="anniversary-modal-title" style="font-size:1.15rem;margin-bottom:.5rem;">Happy Anniversary!</div>
-    <div id="anniversary-watch-img" style="margin-bottom:.75rem;"></div>
-    <div id="anniversary-text" style="font-size:.9rem;color:var(--muted);line-height:1.6;margin-bottom:1rem;"></div>
-    <div class="modal-actions" style="justify-content:center;">
-      <button class="btn btn-ghost" onclick="dismissAnniversary()">Thanks!</button>
-    </div>
+  <div class="modal" style="max-width:360px;text-align:center;padding:2rem 1.75rem;">
+    <div style="font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:1.25rem;">Anniversary</div>
+    <div id="anniversary-watch-img" style="margin-bottom:1.25rem;"></div>
+    <div id="anniversary-modal-title" style="font-size:1.05rem;font-weight:700;color:var(--text);line-height:1.5;margin-bottom:.4rem;"></div>
+    <div id="anniversary-text" style="font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:1.5rem;"></div>
+    <button class="btn btn-ghost" onclick="dismissAnniversary()" style="width:100%;border-color:var(--gold);color:var(--gold);">Dismiss</button>
   </div>
 </div>
 
@@ -4471,7 +4469,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.01.08.58';
+const APP_VERSION = '2.36.01.09.13';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9774,13 +9772,14 @@ function showNextAnniversary() {
   const { watch: w, years } = _annivQueue[0];
   const imgEl = document.getElementById('anniversary-watch-img');
   if (w.image) {
-    imgEl.innerHTML = `<img src="${escHtml(w.image)}" alt="" style="width:120px;height:120px;object-fit:cover;border-radius:12px;border:2px solid var(--gold);">`;
+    imgEl.innerHTML = `<img src="${escHtml(w.image)}" alt="" style="width:140px;height:140px;object-fit:cover;border-radius:14px;border:1.5px solid var(--gold);box-shadow:0 2px 16px rgba(0,0,0,.15);">`;
   } else {
     imgEl.innerHTML = '';
   }
   const plural = years !== 1 ? 's' : '';
+  document.getElementById('anniversary-modal-title').textContent = `${years} Year${plural} Together`;
   const textEl = document.getElementById('anniversary-text');
-  textEl.innerHTML = `<strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong> has been in your collection for <strong>${years} year${plural}</strong> today. Congratulations!`;
+  textEl.innerHTML = `Your <strong style="color:var(--text);">${escHtml(w.brand)} ${escHtml(w.name)}</strong> joined your collection ${years} year${plural} ago today.`;
   document.getElementById('anniversary-modal').classList.remove('hidden');
 }
 function dismissAnniversary() {
