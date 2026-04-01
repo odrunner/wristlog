@@ -4451,7 +4451,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.31.21.11';
+const APP_VERSION = '2.36.31.21.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17322,6 +17322,9 @@ function addMsrTickDots(newTicks) {
   for (const tk of newTicks) {
     const indivDev = tk.d - _msrLastCumDev; // individual pair deviation
     _msrLastCumDev = tk.d;
+    // Filter outliers: ±50 s/day in pair deviation (~0.58ms) is well beyond any real watch
+    const indivSDay = indivDev * 86.4;
+    if (Math.abs(indivSDay) > 50) continue;
     _msrScatterData.push({ t: tk.t, d: indivDev });
   }
   // Throttle redraws to animation frames for smooth updates
