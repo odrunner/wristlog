@@ -4440,7 +4440,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.31.17.22';
+const APP_VERSION = '2.36.31.17.41';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17025,7 +17025,7 @@ window._tgNativeCallback = function(data) {
       if (bphSel && bphSel.value !== '0' && bphSel.value !== String(data.detectedBph)) bphSel.value = String(data.detectedBph);
     }
 
-    // Convergence indicator
+    // Convergence — auto-stop immediately when stable
     if (isMsr) {
       const badge = document.getElementById('msr-converged-badge');
       const rateBox = document.getElementById('msr-rate-box');
@@ -17034,6 +17034,12 @@ window._tgNativeCallback = function(data) {
           badge.style.display = '';
           rateBox.style.borderColor = '#22c55e';
           rateBox.style.background = 'rgba(34,197,94,0.08)';
+          // Auto-stop on convergence — we have a reliable reading
+          if (_msrListening && _msrLastRate != null) {
+            console.log('[TG JS] Auto-stop: converged');
+            stopMsrListen();
+            return;
+          }
         } else {
           badge.style.display = 'none';
           rateBox.style.borderColor = 'transparent';
@@ -17059,20 +17065,19 @@ window._tgNativeCallback = function(data) {
         if (data.detectedBph && _msrIsAuto) _msrBphLocked = true;
 
         // Advance phase (only forward, never backward except on reset)
+        // Check converged first, then auto-BPH phases, then general
         if (data.rateStable) {
           _msrPhase = 'converged';
-        } else if (_msrHadTicks && data.rate != null) {
+        } else if (data.rate != null && _msrHadTicks) {
           _msrPhase = 'measuring';
-        } else if (_msrHadTicks) {
-          _msrPhase = 'measuring';
-        } else if (_msrIsAuto && _msrBphLocked) {
-          // Auto mode: BPH locked, now calibrating tick detection
-          _msrPhase = 'calibrating';
-        } else if (_msrIsAuto && elapsed > 2) {
-          // Auto mode: still detecting BPH
+        } else if (_msrIsAuto && !_msrBphLocked && elapsed > 2) {
+          // Auto mode: still detecting BPH — must check BEFORE _msrHadTicks
           _msrPhase = 'estimating_bph';
+        } else if (_msrIsAuto && _msrBphLocked && !_msrHadTicks) {
+          _msrPhase = 'calibrating';
+        } else if (_msrHadTicks) {
+          _msrPhase = 'calibrating';
         } else if (!_msrIsAuto && elapsed > 1) {
-          // Manual mode: engine started, calibrating
           _msrPhase = 'calibrating';
         }
 
@@ -17110,15 +17115,21 @@ window._tgNativeCallback = function(data) {
     if (isMsr && _msrListening && _msrListenStart) {
       const elapsed = (Date.now() - _msrListenStart) / 1000;
       if (elapsed >= 45) {
-        if (_msrLastRate != null) {
-          console.log('[TG JS] Auto-stop at 45s with rate');
-          stopMsrListen();
-        } else {
-          console.log('[TG JS] Auto-stop at 45s — no rate, prompting restart');
-          stopMsrListen();
-          const statusText = document.getElementById('msr-status-text');
-          if (statusText) {
-            statusText.textContent = 'Could not detect ticks. Try moving the watch closer and restart.';
+        const wasConverged = _msrPhase === 'converged';
+        stopMsrListen();
+        const statusText = document.getElementById('msr-status-text');
+        if (statusText) {
+          if (_msrLastRate != null && wasConverged) {
+            // Already handled by stopMsrListen — shows "Result: +X.X ±Y.Y s/day"
+          } else if (_msrLastRate != null) {
+            const r = _msrLastRate;
+            const sign = r >= 0 ? '+' : '';
+            statusText.textContent = 'Estimate: ' + sign + r.toFixed(1) + ' s/day — not yet converged, try again for better accuracy';
+            statusText.style.color = '#eab308';
+            statusText.style.fontSize = '0.85rem';
+            statusText.style.fontWeight = '600';
+          } else {
+            statusText.textContent = 'Could not detect ticks. Move the watch closer and try again.';
             statusText.style.color = '#ef4444';
             statusText.style.fontSize = '';
             statusText.style.fontWeight = '';

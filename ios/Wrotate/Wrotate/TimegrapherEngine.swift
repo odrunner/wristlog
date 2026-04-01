@@ -625,7 +625,7 @@ class TimegrapherEngine {
         var isStable = wasStable
         if let currentRate = smoothedRate {
             let recentRates = rateHistory.filter { wallElapsed - $0.time <= stabilityWindow }
-            if recentRates.count >= 5 && wallElapsed >= 40.0 {
+            if recentRates.count >= 5 && wallElapsed >= 20.0 {
                 let rateMin = recentRates.map(\.rate).min()!
                 let rateMax = recentRates.map(\.rate).max()!
                 let spread = rateMax - rateMin
