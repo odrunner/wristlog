@@ -4458,7 +4458,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.31.21.52';
+const APP_VERSION = '2.36.01.06.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17027,7 +17027,7 @@ window._tgNativeCallback = function(data) {
         if (_msrRateHistory.length > 30) _msrRateHistory.shift(); // keep last ~30 readings
         // Compute mode from scatter dot data (individual pair devs in s/day) — same source as the chart
         const dotRates = _msrScatterData.map(d => d.d * 86.4);
-        const modeVal = dotRates.length >= 10 ? computeRateMode(dotRates) : null;
+        const modeVal = dotRates.length >= 10 ? computeBucketRate(dotRates) : null;
         if (modeVal != null) {
           _msrLastRate = modeVal;
           rateEl.textContent = (modeVal >= 0 ? '+' : '') + modeVal.toFixed(1);
@@ -17342,23 +17342,36 @@ function addMsrTickDots(newTicks) {
   }
 }
 
-// Compute mode of rate samples using kernel density estimation (bandwidth = 1.0 s/day)
-function computeRateMode(rates) {
-  if (rates.length < 3) return null;
-  const bw = 1.0; // bandwidth in s/day
-  const step = 0.2;
-  const min = Math.min(...rates) - bw;
-  const max = Math.max(...rates) + bw;
-  let bestVal = 0, bestDensity = 0;
-  for (let x = min; x <= max; x += step) {
-    let density = 0;
-    for (const r of rates) {
-      const u = (x - r) / bw;
-      density += Math.exp(-0.5 * u * u); // Gaussian kernel
-    }
-    if (density > bestDensity) { bestDensity = density; bestVal = x; }
+// Bucket-ratio interpolation: pair deviations are quantized at ~7.2 s/day steps
+// (1 ring sample at 12kHz). Interpolate between the two most populated adjacent
+// buckets to recover sub-quantum accuracy.
+function computeBucketRate(rates) {
+  if (rates.length < 10) return null;
+  const Q = 7.2; // quantization step in s/day (1 ring sample at ~12kHz)
+  // Count per bucket
+  const buckets = new Map();
+  for (const r of rates) {
+    const idx = Math.round(r / Q);
+    buckets.set(idx, (buckets.get(idx) || 0) + 1);
   }
-  return Math.round(bestVal * 10) / 10;
+  // Find the most populated bucket
+  let peakIdx = 0, peakCount = 0;
+  for (const [idx, count] of buckets) {
+    if (count > peakCount) { peakCount = count; peakIdx = idx; }
+  }
+  // Check adjacent buckets
+  const countBelow = buckets.get(peakIdx - 1) || 0;
+  const countAbove = buckets.get(peakIdx + 1) || 0;
+  const peakVal = peakIdx * Q;
+  // Interpolate toward the more populated neighbor
+  if (countAbove > countBelow) {
+    const total = peakCount + countAbove;
+    return Math.round((peakVal + (countAbove / total) * Q) * 10) / 10;
+  } else if (countBelow > 0) {
+    const total = peakCount + countBelow;
+    return Math.round((peakVal - (countBelow / total) * Q) * 10) / 10;
+  }
+  return Math.round(peakVal * 10) / 10;
 }
 
 function renderMsrScatterPlot() {
@@ -17439,7 +17452,7 @@ function renderMsrScatterPlot() {
 
   // Mode reference line — horizontal dotted line at the mode (densest cluster of dots)
   const dotRatesForLine = data.map(d => d.d * SD);
-  const lineMode = dotRatesForLine.length >= 10 ? computeRateMode(dotRatesForLine) : null;
+  const lineMode = dotRatesForLine.length >= 10 ? computeBucketRate(dotRatesForLine) : null;
   if (lineMode != null) {
     const modeY = yPos(lineMode);
     if (modeY > pad.t && modeY < h - pad.b) {
@@ -17754,7 +17767,7 @@ function stopMsrListen() {
   // Use mode as final rate if available
   // Use mode of scatter dot data (individual pair devs) — same source as chart and HUD
   const finalDotRates = _msrScatterData.map(d => d.d * 86.4);
-  const finalMode = finalDotRates.length >= 10 ? computeRateMode(finalDotRates) : null;
+  const finalMode = finalDotRates.length >= 10 ? computeBucketRate(finalDotRates) : null;
   if (finalMode != null) _msrLastRate = finalMode;
   if (_msrLastRate != null && statusText) {
     const r = _msrLastRate;
