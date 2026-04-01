@@ -4451,7 +4451,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.31.20.07';
+const APP_VERSION = '2.36.31.20.18';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17153,9 +17153,13 @@ window._tgNativeCallback = function(data) {
     }
   } else if (data.event === 'stopped') {
     if (isMsr) {
-      _msrListening = false;
-      _msrTarget = null;
-      stopMsrListen();
+      // Check if this stopped event belongs to the current session
+      // If _msrStoppedSession matches _msrSessionId, we already processed the stop from JS side
+      if (_msrStoppedSession >= _msrSessionId) {
+        console.log('[TG JS] Ignoring stale/duplicate stopped event for session', _msrSessionId);
+      } else {
+        _msrListening = false; _msrTarget = null; stopMsrListen();
+      }
     } else {
       _tgListening = false;
       document.getElementById('tg-listen-btn').textContent = 'Start Listening';
@@ -17285,6 +17289,8 @@ async function deleteTgResult(id) {
 
 // ── Standalone Measure Modal ──
 let _msrListening = false;
+let _msrSessionId = 0; // increments on each start, used to ignore stale native events
+let _msrStoppedSession = 0; // set to _msrSessionId when JS-side stop is processed
 let _msrLastRate = null;
 let _msrLastBe = null;
 let _msrLastBph = null;
@@ -17544,6 +17550,8 @@ function toggleMsrListen() {
     console.log('[TG JS] Start button pressed, bph:', bph, '(0=auto), dropdown:', document.getElementById('msr-bph-select').value);
     _tgDebugSessionId = crypto.randomUUID();
     _tgTickDebugBuffer = [];
+    _msrSessionId++;
+    const thisSession = _msrSessionId;
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
     _msrListening = true;
     _msrTarget = 'measure';
@@ -17644,6 +17652,7 @@ function toggleMsrListen() {
 
 function stopMsrListen() {
   _msrListening = false;
+  _msrStoppedSession = _msrSessionId; // mark this session as stopped so we ignore the native 'stopped' echo
   stopTuningPoll();
   if (_tgHasNative()) {
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'stop' });
