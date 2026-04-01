@@ -4458,7 +4458,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.31.21.33';
+const APP_VERSION = '2.36.31.21.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17025,8 +17025,9 @@ window._tgNativeCallback = function(data) {
         _msrRateHistory.push(r);
         _msrAllRates.push(r);
         if (_msrRateHistory.length > 30) _msrRateHistory.shift(); // keep last ~30 readings
-        // Use mode as the displayed rate once we have enough samples
-        const modeVal = _msrAllRates.length >= 5 ? computeRateMode(_msrAllRates) : null;
+        // Compute mode from scatter dot data (individual pair devs in s/day) — same source as the chart
+        const dotRates = _msrScatterData.map(d => d.d * 86.4);
+        const modeVal = dotRates.length >= 10 ? computeRateMode(dotRates) : null;
         if (modeVal != null) {
           _msrLastRate = modeVal;
           rateEl.textContent = (modeVal >= 0 ? '+' : '') + modeVal.toFixed(1);
@@ -17436,11 +17437,11 @@ function renderMsrScatterPlot() {
   }
   ctx.shadowBlur = 0;
 
-  // Mode reference line — horizontal dotted line at the median (where most dots cluster)
-  if (data.length >= 5) {
-    const sortedDevs = data.map(d => d.d * SD).sort((a, b) => a - b);
-    const medianDev = sortedDevs[Math.floor(sortedDevs.length / 2)];
-    const modeY = yPos(medianDev);
+  // Mode reference line — horizontal dotted line at the mode (densest cluster of dots)
+  const dotRatesForLine = data.map(d => d.d * SD);
+  const lineMode = dotRatesForLine.length >= 10 ? computeRateMode(dotRatesForLine) : null;
+  if (lineMode != null) {
+    const modeY = yPos(lineMode);
     if (modeY > pad.t && modeY < h - pad.b) {
       ctx.save();
       ctx.setLineDash([4 * dpr, 4 * dpr]);
@@ -17751,13 +17752,15 @@ function stopMsrListen() {
   const statusText = document.getElementById('msr-status-text');
   const rateEl = document.getElementById('msr-live-rate');
   // Use mode as final rate if available
-  const finalMode = _msrAllRates.length >= 5 ? computeRateMode(_msrAllRates) : null;
+  // Use mode of scatter dot data (individual pair devs) — same source as chart and HUD
+  const finalDotRates = _msrScatterData.map(d => d.d * 86.4);
+  const finalMode = finalDotRates.length >= 10 ? computeRateMode(finalDotRates) : null;
   if (finalMode != null) _msrLastRate = finalMode;
   if (_msrLastRate != null && statusText) {
     const r = _msrLastRate;
-    // Error bar: IQR of rates around the mode
+    // Error bar: IQR of individual pair deviations (same source as chart)
     let errorBar = 0;
-    const rates = _msrAllRates.length >= 5 ? _msrAllRates : _msrRateHistory;
+    const rates = finalDotRates.length >= 10 ? finalDotRates : (_msrAllRates.length >= 5 ? _msrAllRates : _msrRateHistory);
     if (rates.length >= 5) {
       const sorted = [...rates].sort((a, b) => a - b);
       const q1 = sorted[Math.floor(sorted.length * 0.25)];
