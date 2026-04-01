@@ -1,6 +1,7 @@
 import SwiftUI
 import WebKit
 import UIKit
+import StoreKit
 
 struct WebView: UIViewRepresentable {
     let url: URL
@@ -18,10 +19,11 @@ struct WebView: UIViewRepresentable {
         config.mediaTypesRequiringUserActionForPlayback = []
         config.websiteDataStore = WKWebsiteDataStore.default()
 
-        // JS → Native bridge for auth state changes + timegrapher
+        // JS → Native bridge for auth state changes + timegrapher + app actions
         let contentController = config.userContentController
         contentController.add(context.coordinator, name: "auth")
         contentController.add(context.coordinator, name: "timegrapher")
+        contentController.add(context.coordinator, name: "appAction")
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
@@ -284,6 +286,22 @@ struct WebView: UIViewRepresentable {
             if message.name == "timegrapher" {
                 if let body = message.body as? [String: Any] {
                     timegrapherBridge.handleMessage(body)
+                }
+                return
+            }
+
+            // App actions (review prompt, etc.)
+            if message.name == "appAction" {
+                if let body = message.body as? [String: Any],
+                   let action = body["action"] as? String {
+                    if action == "requestReview" {
+                        DispatchQueue.main.async {
+                            if let scene = UIApplication.shared.connectedScenes
+                                .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+                                SKStoreReviewController.requestReview(in: scene)
+                            }
+                        }
+                    }
                 }
                 return
             }

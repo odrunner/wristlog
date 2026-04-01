@@ -2051,6 +2051,43 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <!-- ════ FOLLOWERS MODAL ════ -->
+<!-- ════ REVIEW PROMPT MODAL ════ -->
+<div id="review-prompt-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="review-prompt-title">
+  <div class="modal" style="max-width:340px;text-align:center;padding:2rem 1.75rem;">
+    <!-- Step 1: Enjoying WRotate? -->
+    <div id="review-step-ask">
+      <div style="font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem;">Quick question</div>
+      <div id="review-prompt-title" style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.5rem;">Enjoying WRotate?</div>
+      <div style="font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:1.5rem;">Your feedback helps us make WRotate better for watch enthusiasts everywhere.</div>
+      <div style="display:flex;gap:.5rem;">
+        <button class="btn btn-ghost" onclick="reviewPromptNo()" style="flex:1;border-color:var(--border);color:var(--muted);">Not really</button>
+        <button class="btn btn-ghost" onclick="reviewPromptYes()" style="flex:1;border-color:var(--gold);color:var(--gold);">Yes!</button>
+      </div>
+    </div>
+    <!-- Step 2a: Feedback form (unhappy path) -->
+    <div id="review-step-feedback" style="display:none;">
+      <div style="font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem;">Feedback</div>
+      <div style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.5rem;">What could be better?</div>
+      <div style="font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:1rem;">We read every response. Tell us what's on your mind.</div>
+      <textarea id="review-feedback-text" rows="4" placeholder="What would make WRotate better for you?" style="width:100%;padding:.6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem;resize:vertical;margin-bottom:1rem;font-family:inherit;"></textarea>
+      <div style="display:flex;gap:.5rem;">
+        <button class="btn btn-ghost" onclick="closeReviewPrompt()" style="flex:1;border-color:var(--border);color:var(--muted);">Skip</button>
+        <button class="btn btn-ghost" onclick="submitReviewFeedback()" style="flex:1;border-color:var(--gold);color:var(--gold);">Send</button>
+      </div>
+    </div>
+    <!-- Step 2b: Thank you (after happy or after feedback sent) -->
+    <div id="review-step-thanks" style="display:none;">
+      <div style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.5rem;">Thank you!</div>
+      <div style="font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:1.25rem;">Your feedback means a lot to us.</div>
+      <button class="btn btn-ghost" onclick="closeReviewPrompt()" style="width:100%;border-color:var(--gold);color:var(--gold);">Close</button>
+    </div>
+  </div>
+</div>
+<!-- Hidden config for review prompt thresholds (adjustable without App Store rebuild) -->
+<input type="hidden" id="review-wear-threshold" value="5">
+<input type="hidden" id="review-measurement-threshold" value="5">
+<input type="hidden" id="review-cooldown-days" value="60">
+
 <div id="followers-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="followers-modal-title">
   <div class="modal" style="max-width:400px;">
     <div class="modal-title" id="followers-modal-title">Followers</div>
@@ -4469,7 +4506,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.01.09.13';
+const APP_VERSION = '2.36.01.09.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9793,6 +9830,97 @@ function dismissAnniversary() {
   if (_annivQueue.length > 0) setTimeout(showNextAnniversary, 400);
 }
 
+// ── Review prompt logic ─────────────────────────────────────────────────────
+// Thresholds read from hidden inputs (adjustable without App Store rebuild)
+let _reviewTriggerSource = null; // 'wear_log' or 'measurement'
+
+function _reviewGetThresholds() {
+  return {
+    wears: parseInt(document.getElementById('review-wear-threshold')?.value) || 5,
+    measurements: parseInt(document.getElementById('review-measurement-threshold')?.value) || 5,
+    cooldownDays: parseInt(document.getElementById('review-cooldown-days')?.value) || 60,
+  };
+}
+
+function shouldShowReviewPrompt(source) {
+  if (!currentUser) return false;
+  // Check cooldown: don't show if dismissed/completed recently
+  const lastAction = localStorage.getItem('wristlog_review_last');
+  if (lastAction) {
+    const { cooldownDays } = _reviewGetThresholds();
+    const daysSince = (Date.now() - parseInt(lastAction)) / (1000 * 60 * 60 * 24);
+    if (daysSince < cooldownDays) return false;
+  }
+  // Check if already rated via native prompt (permanent suppress)
+  if (localStorage.getItem('wristlog_review_rated')) return false;
+  const th = _reviewGetThresholds();
+  if (source === 'wear_log') {
+    const wearCount = logs.length;
+    return wearCount === th.wears; // only on exact threshold hit (not every log after)
+  }
+  if (source === 'measurement') {
+    const msrCount = parseInt(localStorage.getItem('wristlog_msr_count') || '0');
+    return msrCount === th.measurements;
+  }
+  return false;
+}
+
+function maybeShowReviewPrompt(source) {
+  if (shouldShowReviewPrompt(source)) {
+    _reviewTriggerSource = source;
+    // Small delay so the save toast shows first
+    setTimeout(() => {
+      document.getElementById('review-step-ask').style.display = '';
+      document.getElementById('review-step-feedback').style.display = 'none';
+      document.getElementById('review-step-thanks').style.display = 'none';
+      document.getElementById('review-prompt-modal').classList.remove('hidden');
+    }, 800);
+  }
+}
+
+function reviewPromptYes() {
+  document.getElementById('review-step-ask').style.display = 'none';
+  // Try native App Store review (only works on iOS)
+  if (window.webkit?.messageHandlers?.appAction) {
+    window.webkit.messageHandlers.appAction.postMessage({ action: 'requestReview' });
+    localStorage.setItem('wristlog_review_rated', '1');
+  }
+  document.getElementById('review-step-thanks').style.display = '';
+  localStorage.setItem('wristlog_review_last', String(Date.now()));
+}
+
+function reviewPromptNo() {
+  document.getElementById('review-step-ask').style.display = 'none';
+  document.getElementById('review-step-feedback').style.display = '';
+  document.getElementById('review-feedback-text').value = '';
+  setTimeout(() => document.getElementById('review-feedback-text').focus(), 100);
+}
+
+async function submitReviewFeedback() {
+  const text = document.getElementById('review-feedback-text').value.trim();
+  if (!text) { closeReviewPrompt(); return; }
+  if (currentUser) {
+    db.from('app_feedback').insert({
+      user_id: currentUser.id,
+      feedback: text.slice(0, 2000),
+      trigger_source: _reviewTriggerSource
+    }).then(({ error }) => {
+      if (error) console.error('[WristLog] feedback save error:', error.message);
+    });
+  }
+  document.getElementById('review-step-feedback').style.display = 'none';
+  document.getElementById('review-step-thanks').style.display = '';
+  localStorage.setItem('wristlog_review_last', String(Date.now()));
+}
+
+function closeReviewPrompt() {
+  document.getElementById('review-prompt-modal').classList.add('hidden');
+  // Set cooldown even on dismiss
+  if (!localStorage.getItem('wristlog_review_last')) {
+    localStorage.setItem('wristlog_review_last', String(Date.now()));
+  }
+}
+
 // Internal accounts — excluded from public-facing traffic/usage metrics
 const INTERNAL_IDS = new Set([
   'd70b1a85-4f31-4431-b3b7-db76543daaf5', // ozgur
@@ -11615,6 +11743,7 @@ async function saveLog() {
   feedLoadedAt = 0; // force feed to re-fetch after new log
   renderTrack();
   toast(isUpdate ? 'Wear log updated!' : 'Wear logged!');
+  if (!isUpdate) maybeShowReviewPrompt('wear_log');
   } finally { if (_slBtn) { _slBtn.disabled = false; _slBtn.textContent = 'Log This Wear'; } }
 }
 
@@ -16709,6 +16838,7 @@ const _overlayCloseMap = {
   'create-club-modal':   closeCreateClub,
   'whats-new-modal':     closeWhatsNew,
   'anniversary-modal':   dismissAnniversary,
+  'review-prompt-modal': closeReviewPrompt,
   // eula-modal: intentionally excluded — must not close on overlay click or Escape
   'report-modal':        closeReport,
 };
@@ -17309,8 +17439,11 @@ async function saveTimegrapherManual() {
       rate, beat_error: beatError, amplitude, bph, position: _tgPosition, source: src, notes
     });
     if (error) { toast('Could not save — ' + error.message, 'error'); return; }
+    const msrCount = parseInt(localStorage.getItem('wristlog_msr_count') || '0') + 1;
+    localStorage.setItem('wristlog_msr_count', String(msrCount));
     toast('Reading saved!');
     if (window.posthog) posthog.capture('accuracy_reading_saved', { source: src });
+    maybeShowReviewPrompt('measurement');
   }
   _tgFromListening = false;
   document.getElementById('tg-rate-input').value = '';
@@ -17925,8 +18058,12 @@ async function saveMsrReading() {
     rate, beat_error: beatError, bph, source: 'auto', notes
   });
   if (error) { toast('Could not save — ' + error.message, 'error'); return; }
+  // Track measurement count for review prompt
+  const msrCount = parseInt(localStorage.getItem('wristlog_msr_count') || '0') + 1;
+  localStorage.setItem('wristlog_msr_count', String(msrCount));
   toast('Reading saved!');
   if (window.posthog) posthog.capture('accuracy_reading_saved', { source: 'auto', from: 'measure_modal' });
+  maybeShowReviewPrompt('measurement');
   closeMeasureModal();
 }
 
