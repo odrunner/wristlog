@@ -4458,7 +4458,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.01.06.11';
+const APP_VERSION = '2.36.01.06.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17049,16 +17049,34 @@ window._tgNativeCallback = function(data) {
       if (bphSel && bphSel.value !== '0' && bphSel.value !== String(data.detectedBph)) bphSel.value = String(data.detectedBph);
     }
 
-    // Convergence — auto-stop immediately when stable
+    // Convergence — JS-side check using bucket rate stability
+    // Don't trust native rateStable (it uses Theil-Sen regression, not bucket rate).
+    // Instead, track recent bucket rate values and check if they've settled.
     if (isMsr) {
       const badge = document.getElementById('msr-converged-badge');
       const rateBox = document.getElementById('msr-rate-box');
       if (badge && rateBox) {
-        if (data.rateStable) {
+        const dotRatesConv = _msrScatterData.map(d => d.d * 86.4);
+        const bucketNow = dotRatesConv.length >= 10 ? computeBucketRate(dotRatesConv) : null;
+        const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
+        let jsConverged = false;
+        if (bucketNow != null) {
+          _msrBucketRateHistory.push({ t: Date.now(), v: bucketNow });
+          // Keep last 15 seconds of bucket rate samples
+          const cutoff = Date.now() - 15000;
+          _msrBucketRateHistory = _msrBucketRateHistory.filter(x => x.t >= cutoff);
+          // Need at least 20s elapsed AND 8+ bucket rate samples in the window
+          if (elapsed >= 20 && _msrBucketRateHistory.length >= 8) {
+            const vals = _msrBucketRateHistory.map(x => x.v);
+            const minV = Math.min(...vals);
+            const maxV = Math.max(...vals);
+            jsConverged = (maxV - minV) <= 3.0; // spread within 3 s/day
+          }
+        }
+        if (jsConverged) {
           badge.style.display = '';
-          // Auto-stop on convergence — we have a reliable reading
           if (_msrListening && _msrLastRate != null) {
-            console.log('[TG JS] Auto-stop: converged');
+            console.log('[TG JS] Auto-stop: JS converged, bucket rate stable at', bucketNow);
             stopMsrListen();
             return;
           }
@@ -17169,13 +17187,11 @@ window._tgNativeCallback = function(data) {
     }
   } else if (data.event === 'stopped') {
     if (isMsr) {
-      // Check if this stopped event belongs to the current session
-      // If _msrStoppedSession matches _msrSessionId, we already processed the stop from JS side
-      if (_msrStoppedSession >= _msrSessionId) {
-        console.log('[TG JS] Ignoring stale/duplicate stopped event for session', _msrSessionId);
-      } else {
-        _msrListening = false; _msrTarget = null; stopMsrListen();
-      }
+      // Always ignore native 'stopped' events for measure sessions.
+      // We control stop entirely from JS (stopMsrListen), so native stopped
+      // is always an echo. Letting it through kills new sessions started
+      // between the JS stop and the async native echo arriving.
+      console.log('[TG JS] Ignoring native stopped event (JS controls stop)');
     } else {
       _tgListening = false;
       document.getElementById('tg-listen-btn').textContent = 'Start Listening';
@@ -17320,6 +17336,7 @@ let _msrHadTicks = false; // whether we've seen tickCount > 0 (calibration done)
 let _msrBphLocked = false; // whether BPH has been detected (auto mode)
 let _msrRateHistory = []; // recent rate values for error bar computation
 let _msrAllRates = [];    // ALL rate samples for mode computation (not capped)
+let _msrBucketRateHistory = []; // history of bucket rate computations for JS-side convergence
 
 let _msrScatterRafPending = false;
 let _msrLastCumDev = 0; // track last cumulative deviation to compute individual pair devs
@@ -17604,7 +17621,7 @@ function onMsrBphChange() {
     _msrIsAuto = (bph === 0);
     _msrHadTicks = false;
     _msrBphLocked = false;
-    _msrRateHistory = []; _msrAllRates = [];
+    _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = [];
     const scCanvas = document.getElementById('msr-scatter-plot');
     if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
     document.getElementById('msr-live-rate').textContent = '—';
@@ -17646,7 +17663,7 @@ function toggleMsrListen() {
     _msrIsAuto = (bph === 0);
     _msrHadTicks = false;
     _msrBphLocked = false;
-    _msrRateHistory = []; _msrAllRates = [];
+    _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = [];
     document.getElementById('msr-status-text').textContent = 'ACQUIRING \u00b7 0s';
     document.getElementById('msr-status-text').style.color = 'rgba(74,222,128,.35)';
     document.getElementById('msr-status-text').style.fontSize = '';
