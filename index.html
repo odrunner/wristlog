@@ -2039,6 +2039,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
+<!-- ════ ANNIVERSARY MODAL ════ -->
+<div id="anniversary-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="anniversary-modal-title">
+  <div class="modal" style="max-width:380px;text-align:center;">
+    <div style="font-size:2.2rem;margin-bottom:.5rem;">🎂</div>
+    <div class="modal-title" id="anniversary-modal-title" style="font-size:1.15rem;margin-bottom:.5rem;">Happy Anniversary!</div>
+    <div id="anniversary-watch-img" style="margin-bottom:.75rem;"></div>
+    <div id="anniversary-text" style="font-size:.9rem;color:var(--muted);line-height:1.6;margin-bottom:1rem;"></div>
+    <div class="modal-actions" style="justify-content:center;">
+      <button class="btn btn-ghost" onclick="dismissAnniversary()">Thanks!</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ FOLLOWERS MODAL ════ -->
 <div id="followers-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="followers-modal-title">
   <div class="modal" style="max-width:400px;">
@@ -4458,7 +4471,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.01.06.57';
+const APP_VERSION = '2.36.01.08.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9736,6 +9749,50 @@ function closeWhatsNew() {
   document.getElementById('whats-new-modal').classList.add('hidden');
 }
 
+// ── Anniversary check ──────────────────────────────────────────────────────
+let _annivQueue = []; // watches with anniversaries today, shown one at a time
+function checkAnniversary() {
+  if (!watches || !watches.length) return;
+  const now = new Date();
+  const todayM = now.getMonth(), todayD = now.getDate(), todayY = now.getFullYear();
+  _annivQueue = [];
+  for (const w of watches) {
+    if (!w.purchaseDate) continue;
+    const pd = new Date(w.purchaseDate + 'T12:00:00');
+    if (pd.getMonth() === todayM && pd.getDate() === todayD) {
+      const yrs = todayY - pd.getFullYear();
+      if (yrs < 1) continue; // not an anniversary if < 1 year
+      const key = `wristlog_anniv_${todayY}_${w.id}`;
+      if (localStorage.getItem(key)) continue; // already dismissed this year
+      _annivQueue.push({ watch: w, years: yrs });
+    }
+  }
+  if (_annivQueue.length > 0) showNextAnniversary();
+}
+function showNextAnniversary() {
+  if (!_annivQueue.length) return;
+  const { watch: w, years } = _annivQueue[0];
+  const imgEl = document.getElementById('anniversary-watch-img');
+  if (w.image) {
+    imgEl.innerHTML = `<img src="${escHtml(w.image)}" alt="" style="width:120px;height:120px;object-fit:cover;border-radius:12px;border:2px solid var(--gold);">`;
+  } else {
+    imgEl.innerHTML = '';
+  }
+  const plural = years !== 1 ? 's' : '';
+  const textEl = document.getElementById('anniversary-text');
+  textEl.innerHTML = `<strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong> has been in your collection for <strong>${years} year${plural}</strong> today. Congratulations!`;
+  document.getElementById('anniversary-modal').classList.remove('hidden');
+}
+function dismissAnniversary() {
+  if (_annivQueue.length > 0) {
+    const { watch: w } = _annivQueue.shift();
+    const key = `wristlog_anniv_${new Date().getFullYear()}_${w.id}`;
+    localStorage.setItem(key, '1');
+  }
+  document.getElementById('anniversary-modal').classList.add('hidden');
+  // Show next anniversary if there are more
+  if (_annivQueue.length > 0) setTimeout(showNextAnniversary, 400);
+}
 
 // Internal accounts — excluded from public-facing traffic/usage metrics
 const INTERNAL_IDS = new Set([
@@ -16652,6 +16709,7 @@ const _overlayCloseMap = {
   'edit-log-modal':      closeEditLog,
   'create-club-modal':   closeCreateClub,
   'whats-new-modal':     closeWhatsNew,
+  'anniversary-modal':   dismissAnniversary,
   // eula-modal: intentionally excluded — must not close on overlay click or Escape
   'report-modal':        closeReport,
 };
@@ -17909,6 +17967,8 @@ async function bootApp(user) {
   }
   // Re-check reminder now that logs are loaded (initApp ran before data was ready)
   checkReminderNow();
+  // Show anniversary modal if any watch has an anniversary today
+  checkAnniversary();
   // Resolve official account ID (for badge rendering and admin drafts)
   if (!OFFICIAL_USER_ID) {
     db.from('profiles').select('id').eq('is_official', true).limit(1).single().then(({ data }) => {
