@@ -2974,11 +2974,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div id="msr-live-be" style="font-size:.75rem;font-weight:600;color:rgba(74,222,128,.6);">—</div>
             <span id="msr-detected-bph" aria-live="polite" style="font-size:.6rem;color:rgba(74,222,128,.4);display:none;"></span>
           </div>
-          <!-- Record/Stop button — bottom right, always visible -->
-          <button id="msr-listen-btn" onclick="toggleMsrListen()" aria-label="Start or stop recording" style="position:absolute;bottom:10px;right:10px;width:40px;height:40px;border-radius:50%;border:2px solid rgba(74,222,128,.25);background:rgba(10,26,18,.7);color:#4ade80;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;z-index:2;backdrop-filter:blur(4px);">
-            <svg id="msr-btn-mic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-            <svg id="msr-btn-stop" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
-          </button>
+          <!-- (Record/Stop button moved below instrument panel) -->
           <!-- Idle overlay — shown when not recording, click-through for button -->
           <div id="msr-idle-overlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,26,18,.8);pointer-events:none;">
             <div style="text-align:center;">
@@ -2991,6 +2987,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <span id="msr-status-text" aria-live="polite" style="font-size:.7rem;color:rgba(74,222,128,.5);letter-spacing:.03em;">Ready</span>
         </div>
       </div>
+      <!-- Record / Stop button -->
+      <button id="msr-listen-btn" onclick="toggleMsrListen()" style="width:100%;padding:.65rem;border-radius:8px;border:1.5px solid rgba(74,222,128,.3);background:#0a1a12;color:#4ade80;font-size:.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.45rem;transition:all .2s;margin-bottom:.5rem;">
+        <svg id="msr-btn-mic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        <svg id="msr-btn-stop" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+        <span id="msr-btn-label">Record</span>
+      </button>
       <div id="msr-mic-warning" role="alert" style="display:none;font-size:.75rem;color:#ef4444;margin-bottom:.5rem;line-height:1.4;"></div>
       <!-- Live status container (hidden, used by JS to toggle visibility) -->
       <div id="msr-live-status" style="display:none;"></div>
@@ -4438,7 +4440,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.31.18.09';
+const APP_VERSION = '2.36.31.19.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17156,7 +17158,10 @@ window._tgNativeCallback = function(data) {
     if (isMsr) {
       _msrListening = false;
       _msrTarget = null;
-      document.getElementById('msr-listen-btn').textContent = 'Start Listening';
+      const _errBtnMic = document.getElementById('msr-btn-mic'); if (_errBtnMic) _errBtnMic.style.display = '';
+      const _errBtnStop = document.getElementById('msr-btn-stop'); if (_errBtnStop) _errBtnStop.style.display = 'none';
+      const _errBtnLabel = document.getElementById('msr-btn-label'); if (_errBtnLabel) _errBtnLabel.textContent = 'Record';
+      const _errListenBtn = document.getElementById('msr-listen-btn'); if (_errListenBtn) { _errListenBtn.style.borderColor = 'rgba(74,222,128,.3)'; _errListenBtn.style.color = '#4ade80'; _errListenBtn.style.background = '#0a1a12'; }
     } else {
       _tgListening = false;
       document.getElementById('tg-listen-btn').textContent = 'Start Listening';
@@ -17402,8 +17407,13 @@ function openMeasureInline() {
   _msrScatterData = [];
   _msrPosition = 'dial_up';
   const listenBtn = document.getElementById('msr-listen-btn');
-  listenBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Start Listening';
-  listenBtn.style.background = 'var(--hover)'; listenBtn.style.color = 'var(--fg)';
+  const btnMic = document.getElementById('msr-btn-mic');
+  const btnStop = document.getElementById('msr-btn-stop');
+  const btnLabel = document.getElementById('msr-btn-label');
+  if (btnMic) btnMic.style.display = '';
+  if (btnStop) btnStop.style.display = 'none';
+  if (btnLabel) btnLabel.textContent = 'Record';
+  listenBtn.style.background = '#0a1a12'; listenBtn.style.color = '#4ade80'; listenBtn.style.borderColor = 'rgba(74,222,128,.3)';
   _msrPhase = '';
   document.getElementById('msr-live-status').style.display = 'none';
   document.getElementById('msr-mic-warning').style.display = 'none';
@@ -17539,15 +17549,17 @@ function toggleMsrListen() {
     // Send tuning params if user has customized them
     setTimeout(() => sendMsrTuning(), 200);
     startTuningPoll();
-    // Hide idle overlay, swap button to stop icon
+    // Hide idle overlay, swap button to stop state
     const idleOv = document.getElementById('msr-idle-overlay');
     if (idleOv) idleOv.style.display = 'none';
     const btnMic = document.getElementById('msr-btn-mic');
     const btnStop = document.getElementById('msr-btn-stop');
+    const btnLabel = document.getElementById('msr-btn-label');
     const listenBtnEl = document.getElementById('msr-listen-btn');
     if (btnMic) btnMic.style.display = 'none';
     if (btnStop) btnStop.style.display = '';
-    if (listenBtnEl) { listenBtnEl.style.borderColor = 'rgba(239,68,68,.4)'; listenBtnEl.style.color = '#ef4444'; }
+    if (btnLabel) btnLabel.textContent = 'Stop';
+    if (listenBtnEl) { listenBtnEl.style.borderColor = 'rgba(239,68,68,.4)'; listenBtnEl.style.color = '#ef4444'; listenBtnEl.style.background = 'rgba(127,29,29,.3)'; }
     document.getElementById('msr-live-status').style.display = '';
     document.getElementById('msr-live-rate').textContent = '—';
     const beEl = document.getElementById('msr-live-be'); if (beEl) beEl.textContent = '—';
@@ -17581,7 +17593,11 @@ function toggleMsrListen() {
       _tgScriptNode = scriptNode;
       _msrListening = true;
       _msrTarget = 'measure';
-      const lb = document.getElementById('msr-listen-btn'); lb.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="6" fill="#ef4444" stroke="none"/></svg> Recording'; lb.style.background = '#7f1d1d'; lb.style.color = '#fca5a5';
+      const lb = document.getElementById('msr-listen-btn');
+      const _wMic = document.getElementById('msr-btn-mic'); if (_wMic) _wMic.style.display = 'none';
+      const _wStop = document.getElementById('msr-btn-stop'); if (_wStop) _wStop.style.display = '';
+      const _wLabel = document.getElementById('msr-btn-label'); if (_wLabel) _wLabel.textContent = 'Stop';
+      lb.style.background = 'rgba(127,29,29,.3)'; lb.style.color = '#ef4444'; lb.style.borderColor = 'rgba(239,68,68,.4)';
       document.getElementById('msr-live-status').style.display = '';
       warn.innerHTML = 'Web audio mode — accuracy may be limited. For best results, use the <b>WRotate iOS app</b>.';
       warn.style.color = '#eab308';
@@ -17621,13 +17637,15 @@ function stopMsrListen() {
   if (_tgScriptNode) { _tgScriptNode.disconnect(); _tgScriptNode = null; }
   if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
   if (_tgAudioCtx) { _tgAudioCtx.close().catch(() => {}); _tgAudioCtx = null; }
-  // Reset button to mic icon
+  // Reset button to record state
   const btnMic = document.getElementById('msr-btn-mic');
   const btnStop = document.getElementById('msr-btn-stop');
+  const btnLabel = document.getElementById('msr-btn-label');
   const listenBtnEl = document.getElementById('msr-listen-btn');
   if (btnMic) btnMic.style.display = '';
   if (btnStop) btnStop.style.display = 'none';
-  if (listenBtnEl) { listenBtnEl.style.borderColor = 'rgba(74,222,128,.25)'; listenBtnEl.style.color = '#4ade80'; }
+  if (btnLabel) btnLabel.textContent = 'Record';
+  if (listenBtnEl) { listenBtnEl.style.borderColor = 'rgba(74,222,128,.3)'; listenBtnEl.style.color = '#4ade80'; listenBtnEl.style.background = '#0a1a12'; }
   _msrPhase = '';
   _msrListenStart = null;
   // Show result in the rate HUD and status bar
