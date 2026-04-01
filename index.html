@@ -4451,7 +4451,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.31.20.34';
+const APP_VERSION = '2.36.31.20.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17419,35 +17419,23 @@ function renderMsrScatterPlot() {
   }
   ctx.shadowBlur = 0;
 
-  // Mode reference line — dotted slope line showing what the mode rate looks like as deviation
-  const modeRate = computeRateMode(_msrAllRates);
-  if (modeRate != null) {
-    // deviation_ms = rate_s_day * elapsed_sec / 86.4  (converts rate to ms/s cumulative drift)
-    // But scatter data shows raw pair deviation, not pure rate-implied deviation
-    // Draw a slope line: at time t, expected deviation = modeRate * (t - tMin) / 86.4
-    ctx.save();
-    ctx.setLineDash([4 * dpr, 4 * dpr]);
-    ctx.strokeStyle = 'rgba(250,204,21,0.5)'; // yellow-gold
-    ctx.lineWidth = 1.5 * dpr;
-    ctx.beginPath();
-    // Use first data point's deviation as baseline
-    const baseD = data[0].d;
-    const t0x = xPos(tMin);
-    const t0y = yPos(baseD);
-    ctx.moveTo(t0x, t0y);
-    const tEndx = xPos(tDataMax);
-    const endD = baseD + modeRate * (tDataMax - tMin) / 86.4;
-    const tEndy = yPos(endD);
-    ctx.lineTo(tEndx, tEndy);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    // Label the mode line
-    ctx.fillStyle = 'rgba(250,204,21,0.7)';
-    ctx.font = 'bold ' + (9 * dpr) + 'px monospace';
-    ctx.textAlign = 'right';
-    const modeSign = modeRate >= 0 ? '+' : '';
-    ctx.fillText(modeSign + modeRate.toFixed(1), tEndx - 2 * dpr, tEndy - 4 * dpr);
-    ctx.restore();
+  // Mode reference line — horizontal dotted line at the median deviation (where most dots cluster)
+  if (data.length >= 5) {
+    const sortedDevs = data.map(d => d.d).sort((a, b) => a - b);
+    const medianDev = sortedDevs[Math.floor(sortedDevs.length / 2)];
+    const modeY = yPos(medianDev);
+    if (modeY > pad.t && modeY < h - pad.b) {
+      ctx.save();
+      ctx.setLineDash([4 * dpr, 4 * dpr]);
+      ctx.strokeStyle = 'rgba(250,204,21,0.5)';
+      ctx.lineWidth = 1.5 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(pad.l, modeY);
+      ctx.lineTo(w - pad.r, modeY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
   }
 
   // Y-axis labels (right side, in ms) — dim green
