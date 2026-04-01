@@ -4451,7 +4451,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.31.20.48';
+const APP_VERSION = '2.36.31.20.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17314,11 +17314,16 @@ let _msrRateHistory = []; // recent rate values for error bar computation
 let _msrAllRates = [];    // ALL rate samples for mode computation (not capped)
 
 let _msrScatterRafPending = false;
+let _msrLastCumDev = 0; // track last cumulative deviation to compute individual pair devs
 function addMsrTickDots(newTicks) {
   if (!newTicks || !newTicks.length) return;
   // Detect reset: if we have data and new tick starts at 0, engine reset tick tracking
-  if (_msrScatterData.length > 10 && newTicks[0].d === 0) _msrScatterData = [];
-  for (const tk of newTicks) _msrScatterData.push({ t: tk.t, d: tk.d });
+  if (_msrScatterData.length > 10 && newTicks[0].d === 0) { _msrScatterData = []; _msrLastCumDev = 0; }
+  for (const tk of newTicks) {
+    const indivDev = tk.d - _msrLastCumDev; // individual pair deviation
+    _msrLastCumDev = tk.d;
+    _msrScatterData.push({ t: tk.t, d: indivDev });
+  }
   // Throttle redraws to animation frames for smooth updates
   if (!_msrScatterRafPending) {
     _msrScatterRafPending = true;
@@ -17468,7 +17473,7 @@ function openMeasureInline() {
   _msrLastRate = null;
   _msrLastBe = null;
   _msrLastBph = null;
-  _msrScatterData = [];
+  _msrScatterData = []; _msrLastCumDev = 0;
   _msrPosition = 'dial_up';
   const listenBtn = document.getElementById('msr-listen-btn');
   const btnMic = document.getElementById('msr-btn-mic');
@@ -17561,7 +17566,7 @@ function onMsrBphChange() {
     _tgDebugSessionId = crypto.randomUUID();
     _tgTickDebugBuffer = [];
     console.log('[TG JS] Restarting engine with bph:', bph, 'new session:', _tgDebugSessionId);
-    _msrScatterData = [];
+    _msrScatterData = []; _msrLastCumDev = 0;
     _msrLastDetectTime = 0;
     _msrPhase = 'acquiring';
     _msrIsAuto = (bph === 0);
@@ -17603,7 +17608,7 @@ function toggleMsrListen() {
     _msrListening = true;
     _msrTarget = 'measure';
     _msrListenStart = Date.now();
-    _msrScatterData = [];
+    _msrScatterData = []; _msrLastCumDev = 0;
     _msrLastDetectTime = 0;
     _msrPhase = 'acquiring';
     _msrIsAuto = (bph === 0);
@@ -17781,7 +17786,7 @@ function discardMsrReading() {
   _msrLastRate = null;
   _msrLastBe = null;
   _msrLastBph = null;
-  _msrScatterData = [];
+  _msrScatterData = []; _msrLastCumDev = 0;
   document.getElementById('msr-save-section').style.display = 'none';
   document.getElementById('msr-live-status').style.display = 'none';
   document.getElementById('msr-live-rate').textContent = '—';
