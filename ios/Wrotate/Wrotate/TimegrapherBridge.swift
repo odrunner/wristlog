@@ -50,7 +50,13 @@ class TimegrapherBridge {
             let stabWindow = body["stabWindow"] as? Double
             let stabThresh = body["stabThresh"] as? Double
             let stabLoseThresh = body["stabLoseThresh"] as? Double
-            print("[TG BRIDGE TUNING] peakRatio=\(peakRatioThreshold) bufSec=\(bufferSeconds) regSkip=\(regSkipPairs ?? -1) regMinN=\(regMinN ?? -1) wallMin=\(wallMinSec ?? -1) stabWin=\(stabWindow ?? -1)")
+            let maxPairThresh = body["maxPairThresh"] as? Double
+            let minPairThresh = body["minPairThresh"] as? Double
+            let coldStartThresh = body["coldStartThresh"] as? Double
+            let pairMadMult = body["pairMadMult"] as? Double
+            let maxTickDevMs = body["maxTickDevMs"] as? Double
+            let calibDuration = body["calibDuration"] as? Int
+            print("[TG BRIDGE TUNING] peakRatio=\(peakRatioThreshold) bufSec=\(bufferSeconds) regSkip=\(regSkipPairs ?? -1) regMinN=\(regMinN ?? -1) maxPairTh=\(maxPairThresh ?? -1)")
             engine.setTuning(multLo: Float(multLo), multHi: Float(multHi),
                              minThreshold: Float(minThresh),
                              percentile: percentile, hpCutoff: Float(hpCutoff),
@@ -61,7 +67,13 @@ class TimegrapherBridge {
                              wallMinSec: wallMinSec,
                              stabWindow: stabWindow,
                              stabThresh: stabThresh,
-                             stabLoseThresh: stabLoseThresh)
+                             stabLoseThresh: stabLoseThresh,
+                             maxPairThresh: maxPairThresh,
+                             minPairThresh: minPairThresh,
+                             coldStartThresh: coldStartThresh,
+                             pairMadMult: pairMadMult,
+                             maxTickDevMs: maxTickDevMs,
+                             calibDuration: calibDuration)
 
         default:
             print("[TG BRIDGE] unknown action: \(action)")

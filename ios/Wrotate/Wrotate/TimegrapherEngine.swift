@@ -86,7 +86,7 @@ class TimegrapherEngine {
     private var tickDetectionActive = false
     private var tickCalibrating = false              // true during calibration phase (no ticks accepted)
     private var calibrationSamples: Int = 0          // ring samples seen during calibration
-    private let calibrationDuration: Int = 24000     // ~2s at 12kHz ring rate
+    private var calibrationDuration: Int = 24000     // ~2s at 12kHz ring rate
     private var ringPosSinceLastTick: Int = 0       // samples since last tick
     private var tickCount: Int = 0
     private var lastTickDeviationCheck: Double = 0  // deviation at last sanity check
@@ -109,12 +109,12 @@ class TimegrapherEngine {
     private var pendingFirstTickEnergy: Float = 0
     // Adaptive pair gate: starts at 2ms, tightens as we learn the noise profile
     private var recentPairDevs: [Double] = []       // last N |pairDev| values (ALL pairs, not just accepted)
-    private let adaptiveWindowSize = 30             // pairs to track for MAD
-    private let coldStartThreshold: Double = 2.0    // ms, before we have enough data
-    private let minAdaptiveThreshold: Double = 1.0  // floor
-    private let maxAdaptiveThreshold: Double = 2.0  // ceiling
-    private let adaptiveMultiplier: Double = 3.0    // MAD multiplier
-    private let maxTickDev: Double = 8.0            // individual tick sanity limit (ms)
+    private var adaptiveWindowSize: Int = 30        // pairs to track for MAD
+    private var coldStartThreshold: Double = 2.0    // ms, before we have enough data
+    private var minAdaptiveThreshold: Double = 1.0  // floor
+    private var maxAdaptiveThreshold: Double = 2.0  // ceiling
+    private var adaptiveMultiplier: Double = 3.0    // MAD multiplier
+    private var maxTickDev: Double = 8.0            // individual tick sanity limit (ms)
     private var regressionSkipPairs: Int = 5         // skip first N pairs from regression (threshold still adapting)
     private var totalPairsAccepted: Int = 0          // total clean pairs (including skipped)
 
@@ -244,7 +244,13 @@ class TimegrapherEngine {
                     wallMinSec: Double? = nil,
                     stabWindow: Double? = nil,
                     stabThresh: Double? = nil,
-                    stabLoseThresh: Double? = nil) {
+                    stabLoseThresh: Double? = nil,
+                    maxPairThresh: Double? = nil,
+                    minPairThresh: Double? = nil,
+                    coldStartThresh: Double? = nil,
+                    pairMadMult: Double? = nil,
+                    maxTickDevMs: Double? = nil,
+                    calibDuration: Int? = nil) {
         peakRatioThreshold = max(1.0, thresh)
         bufferDurationSec = max(5, min(120, bufSec))
         if let v = regSkipPairs { regressionSkipPairs = max(0, min(30, v)) }
@@ -253,7 +259,13 @@ class TimegrapherEngine {
         if let v = stabWindow { stabilityWindow = max(5, min(60, v)) }
         if let v = stabThresh { stabilityThreshold = max(0.5, min(20, v)) }
         if let v = stabLoseThresh { stabilityLoseThreshold = max(1, min(30, v)) }
-        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold)")
+        if let v = maxPairThresh { maxAdaptiveThreshold = max(0.1, min(5, v)) }
+        if let v = minPairThresh { minAdaptiveThreshold = max(0.05, min(2, v)) }
+        if let v = coldStartThresh { coldStartThreshold = max(0.1, min(5, v)) }
+        if let v = pairMadMult { adaptiveMultiplier = max(1, min(10, v)) }
+        if let v = maxTickDevMs { maxTickDev = max(1, min(20, v)) }
+        if let v = calibDuration { calibrationDuration = max(6000, min(60000, v)) }
+        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration)")
     }
 
     // MARK: - Biquad HP filter

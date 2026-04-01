@@ -3010,6 +3010,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input type="hidden" id="msr-tune-stab-window" value="15">
         <input type="hidden" id="msr-tune-stab-thresh" value="3">
         <input type="hidden" id="msr-tune-stab-lose" value="5">
+        <!-- Pair gate & tick detection tuning -->
+        <input type="hidden" id="msr-tune-max-pair-thresh" value="0.58">
+        <input type="hidden" id="msr-tune-min-pair-thresh" value="0.2">
+        <input type="hidden" id="msr-tune-cold-start" value="0.58">
+        <input type="hidden" id="msr-tune-pair-mad-mult" value="3">
+        <input type="hidden" id="msr-tune-max-tick-dev" value="4">
+        <input type="hidden" id="msr-tune-calib-duration" value="24000">
         <div id="msr-tune-live" style="display:none;"></div>
         <div id="msr-scatter-wrap"></div>
       </div>
@@ -4451,7 +4458,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.31.21.17';
+const APP_VERSION = '2.36.31.21.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17550,7 +17557,13 @@ function sendMsrTuning() {
     wallMinSec: Number(document.getElementById('msr-tune-wall-min').value),
     stabWindow: Number(document.getElementById('msr-tune-stab-window').value),
     stabThresh: Number(document.getElementById('msr-tune-stab-thresh').value),
-    stabLoseThresh: Number(document.getElementById('msr-tune-stab-lose').value)
+    stabLoseThresh: Number(document.getElementById('msr-tune-stab-lose').value),
+    maxPairThresh: Number(document.getElementById('msr-tune-max-pair-thresh').value),
+    minPairThresh: Number(document.getElementById('msr-tune-min-pair-thresh').value),
+    coldStartThresh: Number(document.getElementById('msr-tune-cold-start').value),
+    pairMadMult: Number(document.getElementById('msr-tune-pair-mad-mult').value),
+    maxTickDevMs: Number(document.getElementById('msr-tune-max-tick-dev').value),
+    calibDuration: Number(document.getElementById('msr-tune-calib-duration').value)
   });
 }
 var _remotePeakRatioThreshold = 2.5;
