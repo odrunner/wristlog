@@ -563,6 +563,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .ptr-indicator.refreshing .ptr-spinner { animation: spin .6s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes msr-blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
     /* ── BRAND SELECT ── */
     .brand-ac-wrap { position: relative; }
@@ -2945,69 +2946,69 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <!-- Measure content (shown when user has watches) -->
     <div id="measure-content" style="display:none;">
-      <!-- Watch + BPH + Lift Angle selection -->
-      <div style="display:grid;grid-template-columns:1fr auto auto;gap:.5rem;margin-bottom:.65rem;">
-        <div>
-          <label for="msr-watch-select" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Watch</label>
-          <select id="msr-watch-select" onchange="onMsrWatchChange()" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;"></select>
+      <!-- Watch + BPH selection — compact row -->
+      <div style="display:grid;grid-template-columns:1fr auto;gap:.5rem;margin-bottom:.75rem;">
+        <select id="msr-watch-select" onchange="onMsrWatchChange()" style="width:100%;padding:.45rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;"></select>
+        <select id="msr-bph-select" onchange="onMsrBphChange()" style="padding:.45rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+          <option value="0" selected>Auto</option>
+          <option value="18000">18,000</option>
+          <option value="21600">21,600</option>
+          <option value="25200">25,200</option>
+          <option value="28800">28,800</option>
+          <option value="36000">36,000</option>
+        </select>
+      </div>
+      <!-- Instrument panel -->
+      <div id="msr-instrument" style="background:#0a1a12;border-radius:10px;overflow:hidden;margin-bottom:.75rem;">
+        <!-- Chart with HUD overlay -->
+        <div style="position:relative;height:200px;">
+          <canvas id="msr-scatter-plot" style="width:100%;height:100%;"></canvas>
+          <!-- Rate HUD overlay — top right -->
+          <div id="msr-rate-box" style="position:absolute;top:10px;right:12px;text-align:right;transition:opacity .3s;pointer-events:none;">
+            <div id="msr-live-rate" aria-live="polite" aria-label="Rate in seconds per day" style="font-size:1.6rem;font-weight:700;color:#4ade80;text-shadow:0 0 12px rgba(74,222,128,.3);line-height:1;">—</div>
+            <div style="font-size:.6rem;color:rgba(74,222,128,.5);letter-spacing:.05em;">s/day</div>
+            <div id="msr-converged-badge" style="display:none;font-size:.55rem;font-weight:600;color:#4ade80;margin-top:2px;letter-spacing:.04em;">LOCKED</div>
+          </div>
+          <!-- Beat error + BPH — top left -->
+          <div style="position:absolute;top:10px;left:12px;pointer-events:none;">
+            <div id="msr-live-be" style="font-size:.75rem;font-weight:600;color:rgba(74,222,128,.6);">—</div>
+            <span id="msr-detected-bph" aria-live="polite" style="font-size:.6rem;color:rgba(74,222,128,.4);display:none;"></span>
+          </div>
+          <!-- REC indicator — bottom right, shown during recording -->
+          <div id="msr-rec-indicator" onclick="toggleMsrListen()" style="display:none;position:absolute;bottom:8px;right:10px;cursor:pointer;display:none;align-items:center;gap:4px;">
+            <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ef4444;animation:msr-blink 1.2s infinite;"></span>
+            <span style="font-size:.6rem;font-weight:600;color:rgba(239,68,68,.8);letter-spacing:.06em;">REC</span>
+          </div>
+          <!-- Idle state: record prompt (shown when not recording) -->
+          <div id="msr-idle-overlay" onclick="toggleMsrListen()" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,26,18,.85);cursor:pointer;">
+            <button id="msr-listen-btn" aria-label="Start listening for watch ticks" style="width:56px;height:56px;border-radius:50%;border:3px solid rgba(74,222,128,.3);background:rgba(74,222,128,.08);color:#4ade80;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;pointer-events:none;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            </button>
+            <div style="font-size:.7rem;color:rgba(74,222,128,.5);margin-top:.5rem;letter-spacing:.03em;">Tap to measure</div>
+          </div>
         </div>
-        <div>
-          <label for="msr-bph-select" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">BPH</label>
-          <select id="msr-bph-select" onchange="onMsrBphChange()" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
-            <option value="0" selected>Auto</option>
-            <option value="18000">18,000</option>
-            <option value="21600">21,600</option>
-            <option value="25200">25,200</option>
-            <option value="28800">28,800</option>
-            <option value="36000">36,000</option>
-          </select>
+        <!-- Status bar — bottom of instrument -->
+        <div style="display:flex;align-items:center;justify-content:center;padding:.45rem .75rem;border-top:1px solid rgba(74,222,128,.08);">
+          <span id="msr-status-text" aria-live="polite" style="font-size:.7rem;color:rgba(74,222,128,.5);letter-spacing:.03em;">Ready</span>
         </div>
       </div>
-      <!-- Listen button + live results -->
-      <div style="margin-bottom:.65rem;">
-        <button id="msr-listen-btn" onclick="toggleMsrListen()" aria-label="Start listening for watch ticks" style="width:100%;margin-bottom:.5rem;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.85rem 1rem;font-size:.95rem;font-weight:600;border-radius:12px;border:none;background:var(--hover);color:var(--fg);cursor:pointer;transition:background .2s,box-shadow .2s;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-          Start Listening
-        </button>
-        <div id="msr-mic-warning" role="alert" style="display:none;font-size:.75rem;color:#ef4444;margin-bottom:.5rem;line-height:1.4;"></div>
-        <div id="msr-live-status" style="display:none;">
-          <!-- Status line -->
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
-            <span id="msr-status-text" aria-live="polite" style="font-size:.75rem;color:var(--muted);">Listening...</span>
-            <span id="msr-detected-bph" aria-live="polite" style="font-size:.75rem;font-weight:600;color:var(--muted);display:none;"></span>
-          </div>
-          <!-- Scatter plot (timegrapher chart) -->
-          <div id="msr-scatter-wrap" style="margin-bottom:.5rem;background:#0a1a12;border-radius:8px;padding:.3rem;height:160px;">
-            <canvas id="msr-scatter-plot" style="width:100%;height:100%;"></canvas>
-          </div>
-          <!-- Live stats: Rate + Beat Error -->
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.4rem;">
-            <div id="msr-rate-box" style="background:var(--hover);border-radius:8px;padding:.6rem;text-align:center;transition:background .3s,border .3s;border:2px solid transparent;">
-              <div id="msr-live-rate" aria-live="polite" aria-label="Rate in seconds per day" style="font-size:1.3rem;font-weight:700;">—</div>
-              <div style="font-size:.65rem;color:var(--muted);">s/day</div>
-              <div id="msr-converged-badge" style="display:none;font-size:.6rem;font-weight:600;color:#22c55e;margin-top:.2rem;">&#10003; Converged</div>
-            </div>
-            <div style="background:var(--hover);border-radius:8px;padding:.6rem;text-align:center;">
-              <div id="msr-live-be" style="font-size:1.3rem;font-weight:700;">—</div>
-              <div style="font-size:.65rem;color:var(--muted);">Beat Error</div>
-            </div>
-          </div>
-          <!-- Hidden tuning inputs (used by remote tuning) -->
-          <div style="display:none;">
-            <input type="hidden" id="msr-tune-mult-lo" value="8">
-            <input type="hidden" id="msr-tune-mult-hi" value="1.5">
-            <input type="hidden" id="msr-tune-min-thresh" value="0.001">
-            <input type="hidden" id="msr-tune-percentile" value="50">
-            <input type="hidden" id="msr-tune-hp-cutoff" value="4000">
-            <div id="msr-tune-live" style="display:none;"></div>
-          </div>
-        </div>
+      <div id="msr-mic-warning" role="alert" style="display:none;font-size:.75rem;color:#ef4444;margin-bottom:.5rem;line-height:1.4;"></div>
+      <!-- Live status container (hidden, used by JS to toggle visibility) -->
+      <div id="msr-live-status" style="display:none;"></div>
+      <!-- Hidden tuning inputs (used by remote tuning) -->
+      <div style="display:none;">
+        <input type="hidden" id="msr-tune-mult-lo" value="8">
+        <input type="hidden" id="msr-tune-mult-hi" value="1.5">
+        <input type="hidden" id="msr-tune-min-thresh" value="0.001">
+        <input type="hidden" id="msr-tune-percentile" value="50">
+        <input type="hidden" id="msr-tune-hp-cutoff" value="4000">
+        <div id="msr-tune-live" style="display:none;"></div>
+        <div id="msr-scatter-wrap"></div>
       </div>
-      <!-- Save section (shown when measurement has data — live or stopped) -->
-      <div id="msr-save-section" style="display:none;border-top:1px solid var(--border);padding-top:.65rem;">
+      <!-- Save section -->
+      <div id="msr-save-section" style="display:none;">
         <div style="margin-bottom:.5rem;">
-          <label for="msr-notes-input" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Notes</label>
-          <input type="text" id="msr-notes-input" placeholder="e.g. After full wind" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+          <input type="text" id="msr-notes-input" placeholder="Notes (e.g. after full wind)" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
         </div>
         <div style="display:grid;grid-template-columns:1fr auto;gap:.4rem;">
           <button id="msr-save-btn" class="btn btn-primary btn-sm" onclick="saveMsrReading()" disabled>Save Reading</button>
@@ -4440,7 +4441,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.31.17.41';
+const APP_VERSION = '2.36.31.17.55';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17032,8 +17033,6 @@ window._tgNativeCallback = function(data) {
       if (badge && rateBox) {
         if (data.rateStable) {
           badge.style.display = '';
-          rateBox.style.borderColor = '#22c55e';
-          rateBox.style.background = 'rgba(34,197,94,0.08)';
           // Auto-stop on convergence — we have a reliable reading
           if (_msrListening && _msrLastRate != null) {
             console.log('[TG JS] Auto-stop: converged');
@@ -17042,8 +17041,6 @@ window._tgNativeCallback = function(data) {
           }
         } else {
           badge.style.display = 'none';
-          rateBox.style.borderColor = 'transparent';
-          rateBox.style.background = 'var(--hover)';
         }
       }
     }
@@ -17085,28 +17082,28 @@ window._tgNativeCallback = function(data) {
         const bphStr = data.detectedBph ? data.detectedBph.toLocaleString() : '';
         switch (_msrPhase) {
           case 'acquiring':
-            statusText.textContent = 'Acquiring signal... ' + timeStr;
-            statusText.style.color = 'var(--muted)';
+            statusText.textContent = 'ACQUIRING \u00b7 ' + timeStr;
+            statusText.style.color = 'rgba(74,222,128,.35)';
             break;
           case 'estimating_bph':
-            statusText.textContent = 'Estimating BPH... ' + timeStr;
-            statusText.style.color = '#eab308';
+            statusText.textContent = 'DETECTING BPH \u00b7 ' + timeStr;
+            statusText.style.color = 'rgba(234,179,8,.6)';
             break;
           case 'calibrating':
-            statusText.textContent = (_msrIsAuto && bphStr ? bphStr + ' BPH — ' : '') + 'Calibrating... ' + timeStr;
-            statusText.style.color = '#eab308';
+            statusText.textContent = (_msrIsAuto && bphStr ? bphStr + ' \u00b7 ' : '') + 'CALIBRATING \u00b7 ' + timeStr;
+            statusText.style.color = 'rgba(234,179,8,.6)';
             break;
           case 'measuring':
-            statusText.textContent = 'Estimating accuracy... ' + timeStr;
-            statusText.style.color = '#22c55e';
+            statusText.textContent = 'MEASURING \u00b7 ' + timeStr;
+            statusText.style.color = 'rgba(74,222,128,.6)';
             break;
           case 'converged':
-            statusText.textContent = 'Accuracy estimated ' + timeStr;
-            statusText.style.color = '#22c55e';
+            statusText.textContent = 'LOCKED \u00b7 ' + timeStr;
+            statusText.style.color = '#4ade80';
             break;
           default:
-            statusText.textContent = 'Acquiring signal... ' + timeStr;
-            statusText.style.color = 'var(--muted)';
+            statusText.textContent = 'ACQUIRING \u00b7 ' + timeStr;
+            statusText.style.color = 'rgba(74,222,128,.35)';
         }
       }
     }
@@ -17124,14 +17121,17 @@ window._tgNativeCallback = function(data) {
           } else if (_msrLastRate != null) {
             const r = _msrLastRate;
             const sign = r >= 0 ? '+' : '';
-            statusText.textContent = 'Estimate: ' + sign + r.toFixed(1) + ' s/day — not yet converged, try again for better accuracy';
-            statusText.style.color = '#eab308';
-            statusText.style.fontSize = '0.85rem';
+            statusText.textContent = sign + r.toFixed(1) + ' s/day \u00b7 not converged \u00b7 tap to retry';
+            statusText.style.color = 'rgba(234,179,8,.7)';
+            statusText.style.fontSize = '.7rem';
             statusText.style.fontWeight = '600';
+            // Keep chart visible, hide idle overlay
+            const idleOv2 = document.getElementById('msr-idle-overlay');
+            if (idleOv2) idleOv2.style.display = 'none';
           } else {
-            statusText.textContent = 'Could not detect ticks. Move the watch closer and try again.';
-            statusText.style.color = '#ef4444';
-            statusText.style.fontSize = '';
+            statusText.textContent = 'No ticks detected \u00b7 move closer and retry';
+            statusText.style.color = 'rgba(239,68,68,.7)';
+            statusText.style.fontSize = '.7rem';
             statusText.style.fontWeight = '';
           }
         }
@@ -17312,7 +17312,7 @@ function renderMsrScatterPlot() {
   canvas.width = w; canvas.height = h;
   ctx.clearRect(0, 0, w, h);
 
-  const pad = { l: 8 * dpr, r: 50 * dpr, t: 8 * dpr, b: 20 * dpr };
+  const pad = { l: 8 * dpr, r: 55 * dpr, t: 40 * dpr, b: 20 * dpr };
   const pw = w - pad.l - pad.r;
   const ph = h - pad.t - pad.b;
 
@@ -17502,9 +17502,11 @@ function onMsrBphChange() {
     document.getElementById('msr-detected-bph').style.display = 'none';
     // Reset convergence indicator
     const convBadge = document.getElementById('msr-converged-badge'); if (convBadge) convBadge.style.display = 'none';
-    const rBox = document.getElementById('msr-rate-box'); if (rBox) { rBox.style.borderColor = 'transparent'; rBox.style.background = 'var(--hover)'; }
-    document.getElementById('msr-status-text').textContent = 'Acquiring signal...';
-    document.getElementById('msr-status-text').style.color = 'var(--muted)';
+    const rBox = document.getElementById('msr-rate-box'); // no-op: overlay style
+    document.getElementById('msr-status-text').textContent = 'ACQUIRING \u00b7 0s';
+    document.getElementById('msr-status-text').style.color = 'rgba(74,222,128,.35)';
+    document.getElementById('msr-status-text').style.fontSize = '';
+    document.getElementById('msr-status-text').style.fontWeight = '';
     _msrListenStart = Date.now();
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
     setTimeout(() => sendMsrTuning(), 200);
@@ -17531,20 +17533,24 @@ function toggleMsrListen() {
     _msrHadTicks = false;
     _msrBphLocked = false;
     _msrRateHistory = [];
-    document.getElementById('msr-status-text').textContent = 'Acquiring signal...';
-    document.getElementById('msr-status-text').style.color = 'var(--muted)';
+    document.getElementById('msr-status-text').textContent = 'ACQUIRING \u00b7 0s';
+    document.getElementById('msr-status-text').style.color = 'rgba(74,222,128,.35)';
+    document.getElementById('msr-status-text').style.fontSize = '';
+    document.getElementById('msr-status-text').style.fontWeight = '';
     document.getElementById('msr-detected-bph').style.display = 'none';
     document.getElementById('msr-save-section').style.display = 'none';
     const saveBtn = document.getElementById('msr-save-btn');
     if (saveBtn) saveBtn.disabled = true;
     const convBadge = document.getElementById('msr-converged-badge'); if (convBadge) convBadge.style.display = 'none';
-    const rBox = document.getElementById('msr-rate-box'); if (rBox) { rBox.style.borderColor = 'transparent'; rBox.style.background = 'var(--hover)'; }
+    const rBox = document.getElementById('msr-rate-box'); // no-op: overlay style
     // Send tuning params if user has customized them
     setTimeout(() => sendMsrTuning(), 200);
     startTuningPoll();
-    const listenBtn = document.getElementById('msr-listen-btn');
-    listenBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="6" fill="#ef4444" stroke="none"/></svg> Recording';
-    listenBtn.style.background = '#7f1d1d'; listenBtn.style.color = '#fca5a5';
+    // Hide idle overlay, show recording state on instrument
+    const idleOv = document.getElementById('msr-idle-overlay');
+    if (idleOv) idleOv.style.display = 'none';
+    const recInd = document.getElementById('msr-rec-indicator');
+    if (recInd) recInd.style.display = 'flex';
     document.getElementById('msr-live-status').style.display = '';
     document.getElementById('msr-live-rate').textContent = '—';
     const beEl = document.getElementById('msr-live-be'); if (beEl) beEl.textContent = '—';
@@ -17618,13 +17624,16 @@ function stopMsrListen() {
   if (_tgScriptNode) { _tgScriptNode.disconnect(); _tgScriptNode = null; }
   if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
   if (_tgAudioCtx) { _tgAudioCtx.close().catch(() => {}); _tgAudioCtx = null; }
-  const listenBtn = document.getElementById('msr-listen-btn');
-  listenBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Start Listening';
-  listenBtn.style.background = 'var(--hover)'; listenBtn.style.color = 'var(--fg)';
+  // Show idle overlay, hide REC indicator
+  const idleOv = document.getElementById('msr-idle-overlay');
+  if (idleOv) idleOv.style.display = 'flex';
+  const recInd = document.getElementById('msr-rec-indicator');
+  if (recInd) recInd.style.display = 'none';
   _msrPhase = '';
   _msrListenStart = null;
-  // Show summary with error bars
+  // Show result in the rate HUD and status bar
   const statusText = document.getElementById('msr-status-text');
+  const rateEl = document.getElementById('msr-live-rate');
   if (_msrLastRate != null && statusText) {
     const r = _msrLastRate;
     let errorBar = 0;
@@ -17637,13 +17646,18 @@ function stopMsrListen() {
       errorBar = _msrRateHistory.length >= 2 ? Math.max(0.5, (Math.max(..._msrRateHistory) - Math.min(..._msrRateHistory)) / 2) : 5;
     }
     const sign = r >= 0 ? '+' : '';
-    statusText.textContent = 'Result: ' + sign + r.toFixed(1) + ' \u00b1' + errorBar.toFixed(1) + ' s/day';
-    statusText.style.color = '#22c55e';
-    statusText.style.fontSize = '1.1rem';
-    statusText.style.fontWeight = '700';
+    // Keep the rate shown in HUD
+    if (rateEl) rateEl.textContent = sign + r.toFixed(1);
+    // Show result in status bar
+    statusText.textContent = sign + r.toFixed(1) + ' \u00b1' + errorBar.toFixed(1) + ' s/day';
+    statusText.style.color = '#4ade80';
+    statusText.style.fontSize = '.75rem';
+    statusText.style.fontWeight = '600';
+    // Hide idle overlay so result stays visible on chart
+    if (idleOv) idleOv.style.display = 'none';
   } else if (statusText) {
-    statusText.textContent = 'No measurement data';
-    statusText.style.color = 'var(--muted)';
+    statusText.textContent = 'No data recorded';
+    statusText.style.color = 'rgba(74,222,128,.4)';
   }
   // Keep save section visible if we have data
   if (_msrLastRate != null) {
@@ -17670,7 +17684,9 @@ function discardMsrReading() {
   if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
   const statusText = document.getElementById('msr-status-text'); if (statusText) statusText.style.color = '';
   const convBadge = document.getElementById('msr-converged-badge'); if (convBadge) convBadge.style.display = 'none';
-  const rBox = document.getElementById('msr-rate-box'); if (rBox) { rBox.style.borderColor = 'transparent'; rBox.style.background = 'var(--hover)'; }
+  // Show idle overlay
+  const idleOv = document.getElementById('msr-idle-overlay'); if (idleOv) idleOv.style.display = 'flex';
+  const statusText2 = document.getElementById('msr-status-text'); if (statusText2) { statusText2.textContent = 'Ready'; statusText2.style.color = 'rgba(74,222,128,.4)'; statusText2.style.fontSize = ''; statusText2.style.fontWeight = ''; }
 }
 
 async function saveMsrReading() {
