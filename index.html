@@ -2974,17 +2974,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div id="msr-live-be" style="font-size:.75rem;font-weight:600;color:rgba(74,222,128,.6);">—</div>
             <span id="msr-detected-bph" aria-live="polite" style="font-size:.6rem;color:rgba(74,222,128,.4);display:none;"></span>
           </div>
-          <!-- REC indicator — bottom right, shown during recording -->
-          <div id="msr-rec-indicator" onclick="toggleMsrListen()" style="display:none;position:absolute;bottom:8px;right:10px;cursor:pointer;display:none;align-items:center;gap:4px;">
-            <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ef4444;animation:msr-blink 1.2s infinite;"></span>
-            <span style="font-size:.6rem;font-weight:600;color:rgba(239,68,68,.8);letter-spacing:.06em;">REC</span>
-          </div>
-          <!-- Idle state: record prompt (shown when not recording) -->
-          <div id="msr-idle-overlay" onclick="toggleMsrListen()" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,26,18,.85);cursor:pointer;">
-            <button id="msr-listen-btn" aria-label="Start listening for watch ticks" style="width:56px;height:56px;border-radius:50%;border:3px solid rgba(74,222,128,.3);background:rgba(74,222,128,.08);color:#4ade80;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;pointer-events:none;">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-            </button>
-            <div style="font-size:.7rem;color:rgba(74,222,128,.5);margin-top:.5rem;letter-spacing:.03em;">Tap to measure</div>
+          <!-- Record/Stop button — bottom right, always visible -->
+          <button id="msr-listen-btn" onclick="toggleMsrListen()" aria-label="Start or stop recording" style="position:absolute;bottom:10px;right:10px;width:40px;height:40px;border-radius:50%;border:2px solid rgba(74,222,128,.25);background:rgba(10,26,18,.7);color:#4ade80;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;z-index:2;backdrop-filter:blur(4px);">
+            <svg id="msr-btn-mic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            <svg id="msr-btn-stop" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+          </button>
+          <!-- Idle overlay — shown when not recording, click-through for button -->
+          <div id="msr-idle-overlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,26,18,.8);pointer-events:none;">
+            <div style="text-align:center;">
+              <div style="font-size:.75rem;color:rgba(74,222,128,.4);letter-spacing:.04em;">READY</div>
+            </div>
           </div>
         </div>
         <!-- Status bar — bottom of instrument -->
@@ -3007,15 +3006,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <!-- Save section -->
       <div id="msr-save-section" style="display:none;">
-        <div style="margin-bottom:.5rem;">
-          <input type="text" id="msr-notes-input" placeholder="Notes (e.g. after full wind)" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
-        </div>
         <div style="display:grid;grid-template-columns:1fr auto;gap:.4rem;">
           <button id="msr-save-btn" class="btn btn-primary btn-sm" onclick="saveMsrReading()" disabled>Save Reading</button>
           <button class="btn btn-ghost btn-sm" onclick="discardMsrReading()" style="color:var(--muted);">Discard</button>
         </div>
         <input type="hidden" id="msr-rate-input">
         <input type="hidden" id="msr-be-input">
+        <input type="hidden" id="msr-notes-input" value="">
       </div>
     </div>
   </div>
@@ -4441,7 +4438,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.31.17.55';
+const APP_VERSION = '2.36.31.18.09';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17009,9 +17006,6 @@ window._tgNativeCallback = function(data) {
         if (_msrRateHistory.length > 30) _msrRateHistory.shift(); // keep last ~30 readings
         document.getElementById('msr-rate-input').value = r.toFixed(1);
         if (data.beatError != null) document.getElementById('msr-be-input').value = data.beatError.toFixed(2);
-        const saveBtn = document.getElementById('msr-save-btn');
-        if (saveBtn) saveBtn.disabled = false;
-        document.getElementById('msr-save-section').style.display = '';
       }
     }
 
@@ -17062,13 +17056,12 @@ window._tgNativeCallback = function(data) {
         if (data.detectedBph && _msrIsAuto) _msrBphLocked = true;
 
         // Advance phase (only forward, never backward except on reset)
-        // Check converged first, then auto-BPH phases, then general
         if (data.rateStable) {
           _msrPhase = 'converged';
-        } else if (data.rate != null && _msrHadTicks) {
+        } else if (_msrHadTicks && data.tickCount > 4) {
+          // Have ticks → measuring (even if rate not yet computed)
           _msrPhase = 'measuring';
         } else if (_msrIsAuto && !_msrBphLocked && elapsed > 2) {
-          // Auto mode: still detecting BPH — must check BEFORE _msrHadTicks
           _msrPhase = 'estimating_bph';
         } else if (_msrIsAuto && _msrBphLocked && !_msrHadTicks) {
           _msrPhase = 'calibrating';
@@ -17546,11 +17539,15 @@ function toggleMsrListen() {
     // Send tuning params if user has customized them
     setTimeout(() => sendMsrTuning(), 200);
     startTuningPoll();
-    // Hide idle overlay, show recording state on instrument
+    // Hide idle overlay, swap button to stop icon
     const idleOv = document.getElementById('msr-idle-overlay');
     if (idleOv) idleOv.style.display = 'none';
-    const recInd = document.getElementById('msr-rec-indicator');
-    if (recInd) recInd.style.display = 'flex';
+    const btnMic = document.getElementById('msr-btn-mic');
+    const btnStop = document.getElementById('msr-btn-stop');
+    const listenBtnEl = document.getElementById('msr-listen-btn');
+    if (btnMic) btnMic.style.display = 'none';
+    if (btnStop) btnStop.style.display = '';
+    if (listenBtnEl) { listenBtnEl.style.borderColor = 'rgba(239,68,68,.4)'; listenBtnEl.style.color = '#ef4444'; }
     document.getElementById('msr-live-status').style.display = '';
     document.getElementById('msr-live-rate').textContent = '—';
     const beEl = document.getElementById('msr-live-be'); if (beEl) beEl.textContent = '—';
@@ -17624,11 +17621,13 @@ function stopMsrListen() {
   if (_tgScriptNode) { _tgScriptNode.disconnect(); _tgScriptNode = null; }
   if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
   if (_tgAudioCtx) { _tgAudioCtx.close().catch(() => {}); _tgAudioCtx = null; }
-  // Show idle overlay, hide REC indicator
-  const idleOv = document.getElementById('msr-idle-overlay');
-  if (idleOv) idleOv.style.display = 'flex';
-  const recInd = document.getElementById('msr-rec-indicator');
-  if (recInd) recInd.style.display = 'none';
+  // Reset button to mic icon
+  const btnMic = document.getElementById('msr-btn-mic');
+  const btnStop = document.getElementById('msr-btn-stop');
+  const listenBtnEl = document.getElementById('msr-listen-btn');
+  if (btnMic) btnMic.style.display = '';
+  if (btnStop) btnStop.style.display = 'none';
+  if (listenBtnEl) { listenBtnEl.style.borderColor = 'rgba(74,222,128,.25)'; listenBtnEl.style.color = '#4ade80'; }
   _msrPhase = '';
   _msrListenStart = null;
   // Show result in the rate HUD and status bar
@@ -17654,10 +17653,13 @@ function stopMsrListen() {
     statusText.style.fontSize = '.75rem';
     statusText.style.fontWeight = '600';
     // Hide idle overlay so result stays visible on chart
+    const idleOv = document.getElementById('msr-idle-overlay');
     if (idleOv) idleOv.style.display = 'none';
   } else if (statusText) {
-    statusText.textContent = 'No data recorded';
+    statusText.textContent = 'Ready';
     statusText.style.color = 'rgba(74,222,128,.4)';
+    const idleOv = document.getElementById('msr-idle-overlay');
+    if (idleOv) idleOv.style.display = 'flex';
   }
   // Keep save section visible if we have data
   if (_msrLastRate != null) {
