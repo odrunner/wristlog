@@ -2967,7 +2967,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div id="msr-rate-box" style="position:absolute;top:10px;right:12px;text-align:right;transition:opacity .3s;pointer-events:none;">
             <div id="msr-live-rate" aria-live="polite" aria-label="Rate in seconds per day" style="font-size:1.6rem;font-weight:700;color:#4ade80;text-shadow:0 0 12px rgba(74,222,128,.3);line-height:1;">—</div>
             <div style="font-size:.6rem;color:rgba(74,222,128,.5);letter-spacing:.05em;">s/day</div>
-            <div id="msr-converged-badge" style="display:none;font-size:.55rem;font-weight:600;color:#4ade80;margin-top:2px;letter-spacing:.04em;">LOCKED</div>
+            <div id="msr-converged-badge" style="display:none;font-size:.55rem;font-weight:600;color:#4ade80;margin-top:2px;letter-spacing:.04em;">CONVERGED</div>
           </div>
           <!-- Beat error + BPH — top left -->
           <div style="position:absolute;top:10px;left:12px;pointer-events:none;">
@@ -3015,7 +3015,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <!-- Save section -->
       <div id="msr-save-section" style="display:none;">
-        <div id="msr-complete-msg" style="font-size:.8rem;font-weight:600;color:#4ade80;margin-bottom:.5rem;text-align:center;">Measurement complete</div>
+        <div id="msr-complete-msg" style="font-size:.8rem;font-weight:600;color:var(--text);margin-bottom:.5rem;text-align:center;">Measurement complete</div>
         <div style="display:grid;grid-template-columns:auto 1fr auto;gap:.4rem;align-items:center;">
           <div style="display:flex;align-items:center;gap:.3rem;">
             <input type="text" id="msr-rate-input" style="width:70px;padding:.35rem .4rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;font-weight:600;text-align:center;" value="">
@@ -4451,7 +4451,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.31.21.09';
+const APP_VERSION = '2.36.31.21.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17112,7 +17112,7 @@ window._tgNativeCallback = function(data) {
             statusText.style.color = 'rgba(74,222,128,.6)';
             break;
           case 'converged':
-            statusText.textContent = 'LOCKED \u00b7 ' + timeStr;
+            statusText.textContent = 'CONVERGED \u00b7 ' + timeStr;
             statusText.style.color = '#4ade80';
             break;
           default:
@@ -17779,7 +17779,7 @@ function stopMsrListen() {
     if (completeMsg) {
       const wasConverged = document.getElementById('msr-converged-badge')?.style.display !== 'none';
       completeMsg.textContent = wasConverged ? 'Measurement complete — converged' : 'Measurement complete — estimate';
-      completeMsg.style.color = wasConverged ? '#4ade80' : '#eab308';
+      completeMsg.style.color = 'var(--text)';
     }
   }
 }
