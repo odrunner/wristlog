@@ -4440,7 +4440,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.31.10.52';
+const APP_VERSION = '2.36.31.17.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17092,7 +17092,7 @@ window._tgNativeCallback = function(data) {
             statusText.style.color = '#eab308';
             break;
           case 'measuring':
-            statusText.textContent = 'Measuring... ' + timeStr;
+            statusText.textContent = 'Estimating accuracy... ' + timeStr;
             statusText.style.color = '#22c55e';
             break;
           case 'converged':
@@ -17103,6 +17103,16 @@ window._tgNativeCallback = function(data) {
             statusText.textContent = 'Acquiring signal... ' + timeStr;
             statusText.style.color = 'var(--muted)';
         }
+      }
+    }
+
+    // Auto-stop at 45s to prevent drift degradation
+    if (isMsr && _msrListening && _msrListenStart) {
+      const elapsed = (Date.now() - _msrListenStart) / 1000;
+      if (elapsed >= 45 && _msrLastRate != null) {
+        console.log('[TG JS] Auto-stop at 45s');
+        stopMsrListen();
+        return;
       }
     }
 
@@ -17606,6 +17616,8 @@ function stopMsrListen() {
     const sign = r >= 0 ? '+' : '';
     statusText.textContent = 'Result: ' + sign + r.toFixed(1) + ' \u00b1' + errorBar.toFixed(1) + ' s/day';
     statusText.style.color = '#22c55e';
+    statusText.style.fontSize = '1.1rem';
+    statusText.style.fontWeight = '700';
   } else if (statusText) {
     statusText.textContent = 'No measurement data';
     statusText.style.color = 'var(--muted)';

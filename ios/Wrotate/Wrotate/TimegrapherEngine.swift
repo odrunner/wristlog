@@ -115,7 +115,7 @@ class TimegrapherEngine {
     private let maxAdaptiveThreshold: Double = 2.0  // ceiling
     private let adaptiveMultiplier: Double = 3.0    // MAD multiplier
     private let maxTickDev: Double = 8.0            // individual tick sanity limit (ms)
-    private let regressionSkipPairs: Int = 10        // skip first N pairs from regression (threshold still adapting)
+    private let regressionSkipPairs: Int = 5         // skip first N pairs from regression (threshold still adapting)
     private var totalPairsAccepted: Int = 0          // total clean pairs (including skipped)
 
     // Rate display and stability tracking
@@ -148,7 +148,7 @@ class TimegrapherEngine {
     /// When n > 120, subsamples to keep O(n²) manageable (~7000 slope pairs max).
     private func theilSenSlope() -> Double? {
         let n = regPoints.count
-        guard n >= 20 else { return nil }
+        guard n >= 10 else { return nil }
 
         // For large n, subsample evenly to ~120 points (keeps O(n²) fast)
         let points: [(x: Double, y: Double)]
@@ -606,7 +606,7 @@ class TimegrapherEngine {
         // Compute rate from Theil-Sen median regression on ALL accepted pairs
         var rateForUpdate: Double? = nil
         let wallElapsed = Double(sampleCounter - tickStartSample) / actualSampleRate
-        if regN >= 20 {  // 20 pairs minimum — need enough signal above quantization noise
+        if regN >= 10 {  // 10 pairs minimum — show rate earlier
             if let slope = theilSenSlope() {
                 let regRate = slope * 86.4 // → s/day
                 if abs(regRate) <= 200.0 {
@@ -662,7 +662,7 @@ class TimegrapherEngine {
             tickPositions: lastTickPositions,
             cumulativeOffset: pairDeviationMs,
             elapsedSec: wallElapsed,
-            method: regN >= 20 ? "Ticks" : "",
+            method: regN >= 10 ? "Ticks" : "",
             rateStable: isStable,
             newTicks: ticks,
             debugMessages: dbgMsgs)
