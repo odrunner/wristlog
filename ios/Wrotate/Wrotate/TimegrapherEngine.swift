@@ -115,16 +115,18 @@ class TimegrapherEngine {
     private let maxAdaptiveThreshold: Double = 2.0  // ceiling
     private let adaptiveMultiplier: Double = 3.0    // MAD multiplier
     private let maxTickDev: Double = 8.0            // individual tick sanity limit (ms)
-    private let regressionSkipPairs: Int = 5         // skip first N pairs from regression (threshold still adapting)
+    private var regressionSkipPairs: Int = 5         // skip first N pairs from regression (threshold still adapting)
     private var totalPairsAccepted: Int = 0          // total clean pairs (including skipped)
 
-    // Rate display and stability tracking
+    // Rate display and stability tracking (all tunable from JS)
     private var smoothedRate: Double? = nil
     private var lastUpdateLogRegN: Int = 0
     private var rateHistory: [(time: Double, rate: Double)] = []  // recent rates for stability check
-    private let stabilityWindow: Double = 15.0   // seconds to check stability over
-    private let stabilityThreshold: Double = 3.0 // s/day — rate must stay within this range
-    private let stabilityLoseThreshold: Double = 5.0 // s/day — wider threshold to LOSE stability (prevents flicker)
+    private var regNMinimum: Int = 10                // minimum regression points before showing rate
+    private var stabilityWindow: Double = 15.0       // seconds to check stability over
+    private var stabilityThreshold: Double = 3.0     // s/day — rate must stay within this range
+    private var stabilityLoseThreshold: Double = 5.0 // s/day — wider threshold to LOSE stability (prevents flicker)
+    private var wallElapsedMinimum: Double = 20.0    // minimum elapsed time before allowing convergence
     private var wasStable: Bool = false
 
     private func debugLog(_ msg: String) {
@@ -148,7 +150,7 @@ class TimegrapherEngine {
     /// When n > 120, subsamples to keep O(n²) manageable (~7000 slope pairs max).
     private func theilSenSlope() -> Double? {
         let n = regPoints.count
-        guard n >= 10 else { return nil }
+        guard n >= regNMinimum else { return nil }
 
         // For large n, subsample evenly to ~120 points (keeps O(n²) fast)
         let points: [(x: Double, y: Double)]
@@ -236,9 +238,22 @@ class TimegrapherEngine {
     func setTuning(multLo: Float, multHi: Float, minThreshold: Float,
                     percentile: Int, hpCutoff: Float,
                     peakRatioThreshold thresh: Float = 3.0,
-                    bufferSeconds bufSec: Float = 30.0) {
+                    bufferSeconds bufSec: Float = 30.0,
+                    regSkipPairs: Int? = nil,
+                    regMinN: Int? = nil,
+                    wallMinSec: Double? = nil,
+                    stabWindow: Double? = nil,
+                    stabThresh: Double? = nil,
+                    stabLoseThresh: Double? = nil) {
         peakRatioThreshold = max(1.0, thresh)
         bufferDurationSec = max(5, min(120, bufSec))
+        if let v = regSkipPairs { regressionSkipPairs = max(0, min(30, v)) }
+        if let v = regMinN { regNMinimum = max(3, min(50, v)) }
+        if let v = wallMinSec { wallElapsedMinimum = max(5, min(120, v)) }
+        if let v = stabWindow { stabilityWindow = max(5, min(60, v)) }
+        if let v = stabThresh { stabilityThreshold = max(0.5, min(20, v)) }
+        if let v = stabLoseThresh { stabilityLoseThreshold = max(1, min(30, v)) }
+        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold)")
     }
 
     // MARK: - Biquad HP filter
@@ -606,7 +621,7 @@ class TimegrapherEngine {
         // Compute rate from Theil-Sen median regression on ALL accepted pairs
         var rateForUpdate: Double? = nil
         let wallElapsed = Double(sampleCounter - tickStartSample) / actualSampleRate
-        if regN >= 10 {  // 10 pairs minimum — show rate earlier
+        if regN >= regNMinimum {  // tunable minimum pairs before showing rate
             if let slope = theilSenSlope() {
                 let regRate = slope * 86.4 // → s/day
                 if abs(regRate) <= 200.0 {
@@ -625,7 +640,7 @@ class TimegrapherEngine {
         var isStable = wasStable
         if let currentRate = smoothedRate {
             let recentRates = rateHistory.filter { wallElapsed - $0.time <= stabilityWindow }
-            if recentRates.count >= 5 && wallElapsed >= 20.0 {
+            if recentRates.count >= 5 && wallElapsed >= wallElapsedMinimum {
                 let rateMin = recentRates.map(\.rate).min()!
                 let rateMax = recentRates.map(\.rate).max()!
                 let spread = rateMax - rateMin
@@ -662,7 +677,7 @@ class TimegrapherEngine {
             tickPositions: lastTickPositions,
             cumulativeOffset: pairDeviationMs,
             elapsedSec: wallElapsed,
-            method: regN >= 10 ? "Ticks" : "",
+            method: regN >= regNMinimum ? "Ticks" : "",
             rateStable: isStable,
             newTicks: ticks,
             debugMessages: dbgMsgs)

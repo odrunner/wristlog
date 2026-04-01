@@ -3003,6 +3003,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input type="hidden" id="msr-tune-min-thresh" value="0.001">
         <input type="hidden" id="msr-tune-percentile" value="50">
         <input type="hidden" id="msr-tune-hp-cutoff" value="4000">
+        <!-- Regression & stability tuning (sent to Swift engine) -->
+        <input type="hidden" id="msr-tune-reg-skip" value="10">
+        <input type="hidden" id="msr-tune-reg-min-n" value="10">
+        <input type="hidden" id="msr-tune-wall-min" value="20">
+        <input type="hidden" id="msr-tune-stab-window" value="15">
+        <input type="hidden" id="msr-tune-stab-thresh" value="3">
+        <input type="hidden" id="msr-tune-stab-lose" value="5">
         <div id="msr-tune-live" style="display:none;"></div>
         <div id="msr-scatter-wrap"></div>
       </div>
@@ -4444,7 +4451,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.31.19.40';
+const APP_VERSION = '2.36.31.20.07';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17474,7 +17481,13 @@ function sendMsrTuning() {
     percentile: Number(document.getElementById('msr-tune-percentile').value),
     hpCutoff: Number(document.getElementById('msr-tune-hp-cutoff').value),
     peakRatioThreshold: _remotePeakRatioThreshold ?? 2.5,
-    bufferSeconds: _remoteBufferSeconds ?? 30.0
+    bufferSeconds: _remoteBufferSeconds ?? 30.0,
+    regSkipPairs: Number(document.getElementById('msr-tune-reg-skip').value),
+    regMinN: Number(document.getElementById('msr-tune-reg-min-n').value),
+    wallMinSec: Number(document.getElementById('msr-tune-wall-min').value),
+    stabWindow: Number(document.getElementById('msr-tune-stab-window').value),
+    stabThresh: Number(document.getElementById('msr-tune-stab-thresh').value),
+    stabLoseThresh: Number(document.getElementById('msr-tune-stab-lose').value)
   });
 }
 var _remotePeakRatioThreshold = 2.5;

@@ -44,12 +44,24 @@ class TimegrapherBridge {
             let hpCutoff = body["hpCutoff"] as? Int ?? 3000
             let peakRatioThreshold = body["peakRatioThreshold"] as? Double ?? 2.0
             let bufferSeconds = body["bufferSeconds"] as? Double ?? 30.0
-            print("[TG BRIDGE TUNING] peakRatio=\(peakRatioThreshold) bufSec=\(bufferSeconds) hpCutoff=\(hpCutoff)")
+            let regSkipPairs = body["regSkipPairs"] as? Int
+            let regMinN = body["regMinN"] as? Int
+            let wallMinSec = body["wallMinSec"] as? Double
+            let stabWindow = body["stabWindow"] as? Double
+            let stabThresh = body["stabThresh"] as? Double
+            let stabLoseThresh = body["stabLoseThresh"] as? Double
+            print("[TG BRIDGE TUNING] peakRatio=\(peakRatioThreshold) bufSec=\(bufferSeconds) regSkip=\(regSkipPairs ?? -1) regMinN=\(regMinN ?? -1) wallMin=\(wallMinSec ?? -1) stabWin=\(stabWindow ?? -1)")
             engine.setTuning(multLo: Float(multLo), multHi: Float(multHi),
                              minThreshold: Float(minThresh),
                              percentile: percentile, hpCutoff: Float(hpCutoff),
                              peakRatioThreshold: Float(peakRatioThreshold),
-                             bufferSeconds: Float(bufferSeconds))
+                             bufferSeconds: Float(bufferSeconds),
+                             regSkipPairs: regSkipPairs,
+                             regMinN: regMinN,
+                             wallMinSec: wallMinSec,
+                             stabWindow: stabWindow,
+                             stabThresh: stabThresh,
+                             stabLoseThresh: stabLoseThresh)
 
         default:
             print("[TG BRIDGE] unknown action: \(action)")
