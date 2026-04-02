@@ -214,7 +214,7 @@ If no watches visible: {"count": 0, "watches": []}`,
       method: "POST",
       headers: apiHeaders,
       body: JSON.stringify({
-        model: "claude-opus-4-6",
+        model: "claude-sonnet-4-6",
         max_tokens: 8192,
         messages: [{
           role: "user",
