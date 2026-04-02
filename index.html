@@ -4544,7 +4544,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.01.20.05';
+const APP_VERSION = '2.36.01.20.07';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17266,13 +17266,7 @@ window._tgNativeCallback = function(data) {
         _msrRateHistory.push(r);
         _msrAllRates.push(r);
         if (_msrRateHistory.length > 30) _msrRateHistory.shift();
-        // Compute bucket rate at most once per second (debounced)
-        const now = Date.now();
-        if (now - _msrLastBucketCalcTime >= 1000 && _msrScatterData.length >= 10) {
-          _msrLastBucketCalcTime = now;
-          const dotRates = _msrScatterData.map(d => d.d * 86.4);
-          _msrCachedBucketRate = computeBucketRate(dotRates);
-        }
+        // Rate display uses _msrCachedBucketRate, updated by scatter plot renderer (2-3/sec)
         if (_msrCachedBucketRate != null) {
           _msrLastRate = _msrCachedBucketRate;
           rateEl.textContent = (_msrCachedBucketRate >= 0 ? '+' : '') + _msrCachedBucketRate.toFixed(1);
@@ -17721,8 +17715,11 @@ function renderMsrScatterPlot() {
   }
   ctx.shadowBlur = 0;
 
-  // Mode reference line — use cached bucket rate so line and number stay in sync
-  const lineMode = _msrCachedBucketRate;
+  // Mode reference line — compute fresh from current scatter data (2-3/sec via RAF)
+  // This is the authoritative rate; update the cache so the rate number stays in sync.
+  const dotRatesForLine = data.map(d => d.d * SD);
+  const lineMode = dotRatesForLine.length >= 10 ? computeBucketRate(dotRatesForLine) : null;
+  if (lineMode != null) _msrCachedBucketRate = lineMode;
   if (lineMode != null) {
     const modeY = yPos(lineMode);
     if (modeY > pad.t && modeY < h - pad.b) {
