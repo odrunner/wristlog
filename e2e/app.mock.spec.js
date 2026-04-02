@@ -892,3 +892,199 @@ test.describe('Admin chips (mocked)', () => {
     await expect(chips).toHaveCount(3);
   });
 });
+
+// ── Measure page (mocked) ───────────────────────────────────────────────
+
+test.describe('Measure page (mocked)', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    // Inject a fake native bridge so the Measure tab becomes visible
+    await page.addInitScript(() => {
+      window.webkit = { messageHandlers: { timegrapher: { postMessage: () => {} }, appAction: { postMessage: () => {} } } };
+    });
+    await page.goto('/');
+    await waitForAppBoot(page);
+  });
+
+  test('navigates to Measure tab and shows content', async ({ page }) => {
+    await navigateTo(page, 'measure');
+    await expect(page.locator('#page-measure')).toBeVisible();
+    await expect(page.locator('h1:has-text("Measure Accuracy")')).toBeVisible();
+  });
+
+  test('shows first-time help modal on initial visit', async ({ page }) => {
+    await navigateTo(page, 'measure');
+    const helpModal = page.locator('#msr-help-modal');
+    await expect(helpModal).toBeVisible({ timeout: 3000 });
+    await expect(helpModal.locator('text=Find a quiet spot')).toBeVisible();
+    await expect(helpModal.locator('text=Position the watch')).toBeVisible();
+    await expect(helpModal.locator('text=Tap Measure and hold still')).toBeVisible();
+    await helpModal.locator('button:has-text("Got it")').click();
+    await expect(helpModal).toBeHidden();
+  });
+
+  test('help modal does not show on second visit', async ({ page }) => {
+    await navigateTo(page, 'measure');
+    const helpModal = page.locator('#msr-help-modal');
+    await expect(helpModal).toBeVisible({ timeout: 3000 });
+    await helpModal.locator('button:has-text("Got it")').click();
+    await expect(helpModal).toBeHidden();
+    await navigateTo(page, 'feed');
+    await navigateTo(page, 'measure');
+    await page.waitForTimeout(500);
+    await expect(helpModal).toBeHidden();
+  });
+
+  test('help button (?) reopens help modal', async ({ page }) => {
+    await navigateTo(page, 'measure');
+    await page.locator('#msr-help-modal button:has-text("Got it")').click();
+    await page.locator('#page-measure button[aria-label="How to measure"]').click();
+    await expect(page.locator('#msr-help-modal')).toBeVisible();
+  });
+
+  test('Measure button is visible with correct label', async ({ page }) => {
+    await navigateTo(page, 'measure');
+    await page.locator('#msr-help-modal button:has-text("Got it")').click();
+    const btn = page.locator('#msr-listen-btn');
+    await expect(btn).toBeVisible();
+    await expect(page.locator('#msr-btn-label')).toHaveText('Measure');
+  });
+
+  test('watch selector is populated', async ({ page }) => {
+    await navigateTo(page, 'measure');
+    await page.locator('#msr-help-modal button:has-text("Got it")').click();
+    const select = page.locator('#msr-watch-select');
+    await expect(select).toBeVisible();
+    const options = await select.locator('option').count();
+    expect(options).toBeGreaterThanOrEqual(2);
+  });
+});
+
+// ── Anniversary modal (mocked) ──────────────────────────────────────────
+
+test.describe('Anniversary modal (mocked)', () => {
+  test('shows anniversary modal for watch with matching purchase date', async ({ page }) => {
+    const today = new Date();
+    const purchaseDate = `${today.getFullYear() - 3}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const annivWatch = [{
+      ...SAMPLE_WATCHES[0],
+      id: 'watch-anniv',
+      brand: 'Tudor',
+      name: 'Black Bay',
+      purchase_date: purchaseDate,
+    }];
+    await mockSupabase(page, { watches: annivWatch, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    // Clear any previous dismissal
+    await page.addInitScript((pd) => {
+      const key = `wristlog_anniv_${new Date().getFullYear()}_watch-anniv`;
+      localStorage.removeItem(key);
+    });
+    await page.goto('/');
+    await waitForAppBoot(page);
+
+    const modal = page.locator('#anniversary-modal');
+    await expect(modal).toBeVisible({ timeout: 5000 });
+    await expect(modal.locator('text=3 Years Together')).toBeVisible();
+    await expect(modal.locator('text=Tudor Black Bay')).toBeVisible();
+  });
+
+  test('dismiss sets localStorage key to prevent re-showing', async ({ page }) => {
+    const today = new Date();
+    const purchaseDate = `${today.getFullYear() - 2}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const annivWatch = [{
+      ...SAMPLE_WATCHES[0],
+      id: 'watch-anniv2',
+      purchase_date: purchaseDate,
+    }];
+    await mockSupabase(page, { watches: annivWatch, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.addInitScript(() => {
+      const key = `wristlog_anniv_${new Date().getFullYear()}_watch-anniv2`;
+      localStorage.removeItem(key);
+    });
+    await page.goto('/');
+    await waitForAppBoot(page);
+
+    const modal = page.locator('#anniversary-modal');
+    await expect(modal).toBeVisible({ timeout: 5000 });
+    await modal.locator('button:has-text("Dismiss")').click();
+    await expect(modal).toBeHidden();
+
+    // Verify localStorage was set
+    const key = await page.evaluate(() => {
+      const k = `wristlog_anniv_${new Date().getFullYear()}_watch-anniv2`;
+      return localStorage.getItem(k);
+    });
+    expect(key).toBe('1');
+  });
+
+  test('does not show for watch < 1 year old', async ({ page }) => {
+    const today = new Date();
+    // Same month/day but same year = 0 years
+    const purchaseDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const newWatch = [{
+      ...SAMPLE_WATCHES[0],
+      id: 'watch-new',
+      purchase_date: purchaseDate,
+    }];
+    await mockSupabase(page, { watches: newWatch, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await page.waitForTimeout(1000);
+    await expect(page.locator('#anniversary-modal')).toBeHidden();
+  });
+});
+
+// ── Review prompt (mocked) ──────────────────────────────────────────────
+
+test.describe('Review prompt (mocked)', () => {
+  test('review prompt modal structure exists', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    // Modal should exist but be hidden
+    await expect(page.locator('#review-prompt-modal')).toBeHidden();
+    await expect(page.locator('#review-step-ask')).toBeAttached();
+    await expect(page.locator('#review-step-feedback')).toBeAttached();
+    await expect(page.locator('#review-step-thanks')).toBeAttached();
+  });
+
+  test('feedback form appears on "Not really" click', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    // Force-show the modal for testing
+    await page.evaluate(() => {
+      document.getElementById('review-step-ask').style.display = '';
+      document.getElementById('review-step-feedback').style.display = 'none';
+      document.getElementById('review-step-thanks').style.display = 'none';
+      document.getElementById('review-prompt-modal').classList.remove('hidden');
+    });
+    await page.locator('#review-step-ask button:has-text("Not really")').click();
+    await expect(page.locator('#review-step-feedback')).toBeVisible();
+    await expect(page.locator('#review-feedback-text')).toBeVisible();
+  });
+
+  test('thank you appears after submitting feedback', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    // Open modal in feedback step
+    await page.evaluate(() => {
+      document.getElementById('review-step-ask').style.display = 'none';
+      document.getElementById('review-step-feedback').style.display = '';
+      document.getElementById('review-step-thanks').style.display = 'none';
+      document.getElementById('review-prompt-modal').classList.remove('hidden');
+    });
+    await page.fill('#review-feedback-text', 'Would love dark mode improvements');
+    await page.locator('#review-step-feedback button:has-text("Send")').click();
+    await expect(page.locator('#review-step-thanks')).toBeVisible();
+    await expect(page.locator('text=Thank you!')).toBeVisible();
+  });
+});

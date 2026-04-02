@@ -110,6 +110,23 @@ export async function mockSupabase(page, opts = {}) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(profile) });
   });
 
+  // ── Timegrapher results & app feedback ──
+  await page.route('**/rest/v1/timegrapher_results*', route => {
+    if (route.request().method() === 'GET') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    }
+    if (route.request().method() === 'POST') {
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify([{}]) });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+  });
+  await page.route('**/rest/v1/app_feedback*', route =>
+    route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify([{}]) })
+  );
+  await page.route('**/rest/v1/timegrapher_tick_logs*', route =>
+    route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify([{}]) })
+  );
+
   // ── Social: friends, follows, likes, comments, notifications ──
   for (const table of ['friend_requests', 'follows', 'likes', 'comments', 'notifications', 'clubs', 'club_members', 'page_visits', 'feed_posts']) {
     await page.route(`**/rest/v1/${table}*`, route =>
