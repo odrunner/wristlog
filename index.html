@@ -4311,6 +4311,13 @@ async function signOut() {
   try { await db.auth.signOut(); } catch(e) { console.warn('[WristLog] signOut error (ignored):', e.message); }
   currentUser = null;
   clearUserState();
+  // Switch to feed page so auth screen background shows feed, not profile
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  const feedPage = document.getElementById('page-feed');
+  if (feedPage) feedPage.classList.add('active');
+  const feedBtn = document.querySelector('nav button[data-page="feed"]');
+  if (feedBtn) feedBtn.classList.add('active');
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('signout-btn').style.display = 'none';
   const profileBtn = document.getElementById('profile-btn');
@@ -4544,7 +4551,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.01.20.16';
+const APP_VERSION = '2.36.01.20.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18057,7 +18064,7 @@ function stopMsrListen() {
     // This reflects actual measurement uncertainty, not quantization spread of raw dots.
     let errorBar = 0;
     if (_msrBucketRateHistory.length >= 3) {
-      const vals = _msrBucketRateHistory.map(x => x.v);
+      const vals = _msrBucketRateHistory.slice(-10).map(x => x.v);
       const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
       const variance = vals.reduce((a, v) => a + (v - mean) ** 2, 0) / vals.length;
       // Use 2× standard deviation as the error bar (95% confidence-ish)
