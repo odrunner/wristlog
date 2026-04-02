@@ -1876,7 +1876,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
         </svg><span>W<span style="font-weight:400;letter-spacing:.04em;">rotate</span></span>
       </div>
-      <div class="landing-cta-sub">Track your watches, log every wear, share with friends.</div>
+      <div class="landing-cta-sub">Track your watches, measure accuracy, log every wear, share with friends.</div>
       <div id="auth-error" class="auth-error"></div>
       <button class="btn-google" onclick="signInWithGoogle()">
         <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
@@ -1920,9 +1920,21 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New
     </div>
     <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;">
-      <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(74,222,128,.12);color:#4ade80;padding:.15rem .5rem;border-radius:6px;">March 2026</span>
+      <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(74,222,128,.12);color:#4ade80;padding:.15rem .5rem;border-radius:6px;">April 2026</span>
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Measure Accuracy</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">A new Measure tab turns your phone into a timegrapher. Hold the caseback near the microphone, tap Measure, and get a rate reading in seconds&#8212;beats per hour, rate in s/day, and beat error plotted live on a scatter chart. Readings save to each watch&#8217;s accuracy history.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Private Clubs</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Private clubs are now fully invite-only. They no longer appear in search results, so members can only join via a direct invite from the club owner.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Anniversary Celebrations</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">On the anniversary of adding a watch to your collection, a celebration card appears when you open the app&#8212;a little reminder of how long that piece has been on your wrist.</div>
+      </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Reliability &amp; Error Handling</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Editing a post now rolls back changes if the server save fails, so your feed stays consistent. Club creation and user unblocking also handle errors gracefully with clear feedback.</div>
@@ -2973,6 +2985,42 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
               <div class="help-step-desc">Below your collection, a 3&#215;3 photo grid shows your latest posts and wears. Photo posts display the photo, wear logs show the watch image, and entries without images show watch initials. Tap any cell to jump to that post in the feed.</div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ── MEASURE ACCURACY ── -->
+      <div class="help-section">
+        <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Measure Accuracy</div>
+        <div class="help-card">
+          <div class="help-step">
+            <div class="help-step-num">1</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Open the Measure tab</div>
+              <div class="help-step-desc">The Measure tab appears in the bottom navigation on supported devices. Select the watch you want to test from the dropdown at the top of the page.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">2</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Find a quiet spot and position the watch</div>
+              <div class="help-step-desc">Background noise interferes with tick detection. Hold the caseback against the bottom edge of your iPhone, near the charging port — the crown side tends to be loudest.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">3</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Tap Measure and hold still</div>
+              <div class="help-step-desc">Keep the watch steady for 20–45 seconds. The scatter chart plots each tick deviation in real time, and measurement stops automatically once a confident reading is reached.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">4</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Read your results</div>
+              <div class="help-step-desc">The HUD shows <strong>rate</strong> in seconds per day (negative = running slow, positive = running fast), detected <strong>BPH</strong>, and <strong>beat error</strong>. Tap <strong>Save Reading</strong> to log it to the watch&#8217;s accuracy history.</div>
+            </div>
+          </div>
+          <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> If BPH isn&#8217;t detected automatically, select it manually from the BPH dropdown. Most modern movements run at 28,800 BPH (8 Hz).</span></div>
         </div>
       </div>
 
