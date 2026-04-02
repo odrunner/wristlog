@@ -4553,7 +4553,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.01.20.50';
+const APP_VERSION = '2.36.01.20.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17802,16 +17802,18 @@ async function onMsrWatchChange() {
   const watchId = document.getElementById('msr-watch-select').value;
   if (!watchId || !currentUser) return;
   // Look up last BPH used for this watch
-  const { data } = await db.from('timegrapher_results')
-    .select('bph')
-    .eq('watch_id', watchId)
-    .order('created_at', { ascending: false })
-    .limit(1);
-  if (data && data.length > 0 && data[0].bph) {
-    document.getElementById('msr-bph-select').value = String(data[0].bph);
-  } else {
-    document.getElementById('msr-bph-select').value = '0'; // Auto
-  }
+  try {
+    const { data } = await db.from('timegrapher_results')
+      .select('bph')
+      .eq('watch_id', watchId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (data && data.length > 0 && data[0].bph) {
+      document.getElementById('msr-bph-select').value = String(data[0].bph);
+    } else {
+      document.getElementById('msr-bph-select').value = '0'; // Auto
+    }
+  } catch(e) { console.warn('[Measure] BPH lookup failed:', e?.message); }
 }
 
 function closeMeasureModal() {
