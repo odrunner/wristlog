@@ -3351,39 +3351,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="modal-section-chevron" id="chv-sec-accuracy">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-accuracy">
-        <!-- Listen button + live results -->
-        <div style="margin-bottom:.65rem;">
-          <button id="tg-listen-btn" class="btn btn-ghost btn-sm" onclick="toggleTgListen()" style="width:100%;margin-bottom:.5rem;display:flex;align-items:center;justify-content:center;gap:.4rem;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-            Start Listening
-          </button>
-          <div id="tg-mic-warning" style="display:none;font-size:.75rem;color:#ef4444;margin-bottom:.5rem;line-height:1.4;"></div>
-          <div id="tg-live-status" style="display:none;">
-            <div style="margin-bottom:.4rem;">
-              <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Noise Level</label>
-              <div style="background:var(--hover);border-radius:6px;height:8px;overflow:hidden;">
-                <div id="tg-noise-bar" style="height:100%;width:0%;border-radius:6px;transition:width .15s,background .15s;background:#22c55e;"></div>
-              </div>
-              <div id="tg-noise-label" style="font-size:.68rem;color:var(--muted);margin-top:.1rem;">Listening...</div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.4rem;">
-              <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
-                <div id="tg-live-rate" style="font-size:1rem;font-weight:700;">—</div>
-                <div style="font-size:.65rem;color:var(--muted);">s/day</div>
-              </div>
-              <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
-                <div id="tg-live-be" style="font-size:1rem;font-weight:700;">—</div>
-                <div style="font-size:.65rem;color:var(--muted);">Beat Error</div>
-              </div>
-              <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
-                <div id="tg-live-ticks" style="font-size:1rem;font-weight:700;">0</div>
-                <div style="font-size:.65rem;color:var(--muted);">Ticks</div>
-              </div>
-            </div>
-            <div style="font-size:.68rem;color:var(--muted);line-height:1.4;margin-bottom:.4rem;">Place the watch crown-side down near the microphone in a quiet room.</div>
-          </div>
-        </div>
-        <hr style="border:none;border-top:1px solid var(--border);margin:0 0 .65rem 0;">
         <!-- Manual entry form -->
         <div style="margin-bottom:.65rem;">
           <div style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em;">Manual Entry</div>
