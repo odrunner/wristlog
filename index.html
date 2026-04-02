@@ -4553,7 +4553,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.01.20.58';
+const APP_VERSION = '2.36.01.21.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17665,10 +17665,10 @@ function renderMsrScatterPlot() {
   // Convert pair deviations from ms to s/day for display
   const SD = 86.4; // conversion factor: ms pair deviation → s/day
   const data = _msrScatterData;
-  const tMin = data[0].t;
+  const tMin = 0; // anchor x-axis to session start so chart doesn't shift on BPH reset
   // X range: snap to next 10s boundary ahead of data so axis doesn't constantly shift
   const tDataMax = data[data.length - 1].t;
-  const tMax = Math.max(tMin + 10, Math.ceil(tDataMax / 10) * 10 + 5);
+  const tMax = Math.max(10, Math.ceil(tDataMax / 10) * 10 + 5);
   const tRange = tMax - tMin;
 
   // Y range in s/day: auto-center on data, minimum ±5 s/day
