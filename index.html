@@ -4544,7 +4544,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.01.18.58';
+const APP_VERSION = '2.36.01.19.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6003,24 +6003,8 @@ async function createClub(name, desc, privacy) {
 async function joinClub(clubId, privacy) {
   if (!currentUser) return;
   if (privacy === 'private') {
-    const { error } = await db.from('club_join_requests').insert({ club_id: clubId, user_id: currentUser.id });
-    if (error && error.code !== '23505') { toast('Could not send request', 'error'); return; }
-    pendingClubRequests.add(clubId);
-    // Non-members can't see club_members rows for private clubs (RLS).
-    // Fall back to created_by from clubs table, which is always readable.
-    const { data: owners } = await db.from('club_members').select('user_id').eq('club_id', clubId).eq('role', 'owner');
-    let ownerIds = (owners || []).map(o => o.user_id);
-    if (!ownerIds.length) {
-      const { data: clubRow } = await db.from('clubs').select('created_by').eq('id', clubId).maybeSingle();
-      if (clubRow?.created_by) ownerIds = [clubRow.created_by];
-    }
-    if (ownerIds.length) {
-      await db.from('notifications').insert(ownerIds.map(oid => ({
-        user_id: oid, type: 'club_join_request',
-        actor_id: currentUser.id, ref_id: clubId, is_read: false
-      })));
-    }
-    renderClubsPage();
+    toast('Private clubs are invite-only', 'info');
+    return;
   } else {
     const { error } = await db.from('club_members').insert({ club_id: clubId, user_id: currentUser.id, role: 'member' });
     if (error && error.code !== '23505') { toast('Could not join', 'error'); return; }
@@ -6253,7 +6237,7 @@ async function renderClubDetail(clubId) {
       : `<button class="follow-btn following" onclick="leaveClub('${clubId}')">Joined ✓</button>`;
   } else if (isPending) {
     joinBtnHtml = `<button class="follow-btn requested" onclick="cancelClubRequest('${clubId}')">Requested</button>`;
-  } else {
+  } else if (club.privacy !== 'private') {
     joinBtnHtml = `<button class="follow-btn follow" onclick="joinClub('${clubId}','${club.privacy}')">Join Club</button>`;
   }
 
@@ -6643,7 +6627,7 @@ async function searchClubs(query) {
     el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:.25rem 0;">Type to search for clubs.</div>';
     return;
   }
-  let q = db.from('clubs').select('id, name, description, privacy, created_by').order('created_at', { ascending: false }).limit(20);
+  let q = db.from('clubs').select('id, name, description, privacy, created_by').eq('privacy', 'public').order('created_at', { ascending: false }).limit(20);
   q = q.ilike('name', `%${sanitizeSearch(query)}%`);
   const { data: clubs } = await q;
   if (!clubs || !clubs.length) {
