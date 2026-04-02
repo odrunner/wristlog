@@ -4544,7 +4544,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.01.19.49';
+const APP_VERSION = '2.36.01.20.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17265,14 +17265,18 @@ window._tgNativeCallback = function(data) {
         _msrLastBe = data.beatError;
         _msrRateHistory.push(r);
         _msrAllRates.push(r);
-        if (_msrRateHistory.length > 30) _msrRateHistory.shift(); // keep last ~30 readings
-        // Compute mode from scatter dot data (individual pair devs in s/day) — same source as the chart
-        const dotRates = _msrScatterData.map(d => d.d * 86.4);
-        const modeVal = dotRates.length >= 10 ? computeBucketRate(dotRates) : null;
-        if (modeVal != null) {
-          _msrLastRate = modeVal;
-          rateEl.textContent = (modeVal >= 0 ? '+' : '') + modeVal.toFixed(1);
-          rateEl.style.color = Math.abs(modeVal) <= 5 ? '#22c55e' : Math.abs(modeVal) <= 15 ? '#eab308' : '#ef4444';
+        if (_msrRateHistory.length > 30) _msrRateHistory.shift();
+        // Compute bucket rate at most once per second (debounced)
+        const now = Date.now();
+        if (now - _msrLastBucketCalcTime >= 1000 && _msrScatterData.length >= 10) {
+          _msrLastBucketCalcTime = now;
+          const dotRates = _msrScatterData.map(d => d.d * 86.4);
+          _msrCachedBucketRate = computeBucketRate(dotRates);
+        }
+        if (_msrCachedBucketRate != null) {
+          _msrLastRate = _msrCachedBucketRate;
+          rateEl.textContent = (_msrCachedBucketRate >= 0 ? '+' : '') + _msrCachedBucketRate.toFixed(1);
+          rateEl.style.color = Math.abs(_msrCachedBucketRate) <= 5 ? '#22c55e' : Math.abs(_msrCachedBucketRate) <= 15 ? '#eab308' : '#ef4444';
         }
         document.getElementById('msr-rate-input').value = (_msrLastRate || r).toFixed(1);
         if (data.beatError != null) document.getElementById('msr-be-input').value = data.beatError.toFixed(2);
@@ -17297,15 +17301,19 @@ window._tgNativeCallback = function(data) {
       const badge = document.getElementById('msr-converged-badge');
       const rateBox = document.getElementById('msr-rate-box');
       if (badge && rateBox) {
-        const dotRatesConv = _msrScatterData.map(d => d.d * 86.4);
-        const bucketNow = dotRatesConv.length >= 10 ? computeBucketRate(dotRatesConv) : null;
+        const bucketNow = _msrCachedBucketRate;
         const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
         let jsConverged = false;
         if (bucketNow != null) {
-          _msrBucketRateHistory.push({ t: Date.now(), v: bucketNow });
-          // Keep last 15 seconds of bucket rate samples
+          // Only push to history when bucket rate was freshly computed (1/sec)
+          const lastH = _msrBucketRateHistory.length ? _msrBucketRateHistory[_msrBucketRateHistory.length - 1] : null;
+          if (!lastH || lastH.v !== bucketNow || Date.now() - lastH.t >= 1000) {
+            _msrBucketRateHistory.push({ t: Date.now(), v: bucketNow });
+          }
           const cutoff = Date.now() - 15000;
-          _msrBucketRateHistory = _msrBucketRateHistory.filter(x => x.t >= cutoff);
+          if (_msrBucketRateHistory.length && _msrBucketRateHistory[0].t < cutoff) {
+            _msrBucketRateHistory = _msrBucketRateHistory.filter(x => x.t >= cutoff);
+          }
           // Need at least 20s elapsed AND 8+ bucket rate samples in the window
           if (elapsed >= 20 && _msrBucketRateHistory.length >= 8) {
             const vals = _msrBucketRateHistory.map(x => x.v);
@@ -17581,6 +17589,8 @@ let _msrBphLocked = false; // whether BPH has been detected (auto mode)
 let _msrRateHistory = []; // recent rate values for error bar computation
 let _msrAllRates = [];    // ALL rate samples for mode computation (not capped)
 let _msrBucketRateHistory = []; // history of bucket rate computations for JS-side convergence
+let _msrLastBucketCalcTime = 0; // timestamp of last bucket rate computation (debounce)
+let _msrCachedBucketRate = null; // cached result from last computeBucketRate call
 
 let _msrScatterRafPending = false;
 let _msrLastCumDev = 0; // track last cumulative deviation to compute individual pair devs
@@ -17865,7 +17875,7 @@ function onMsrBphChange() {
     _msrIsAuto = (bph === 0);
     _msrHadTicks = false;
     _msrBphLocked = false;
-    _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = [];
+    _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = []; _msrLastBucketCalcTime = 0; _msrCachedBucketRate = null;
     const scCanvas = document.getElementById('msr-scatter-plot');
     if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
     document.getElementById('msr-live-rate').textContent = '—';
@@ -17921,7 +17931,7 @@ function toggleMsrListen() {
     _msrIsAuto = (bph === 0);
     _msrHadTicks = false;
     _msrBphLocked = false;
-    _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = [];
+    _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = []; _msrLastBucketCalcTime = 0; _msrCachedBucketRate = null;
     document.getElementById('msr-status-text').textContent = 'ACQUIRING \u00b7 0s';
     document.getElementById('msr-status-text').style.color = 'rgba(74,222,128,.35)';
     document.getElementById('msr-status-text').style.fontSize = '';
