@@ -4284,6 +4284,9 @@ async function deleteAccount() {
   await del('content_reports', { eq: ['reporter_id', uid] });
   await del('device_tokens',  { eq: ['user_id', uid] });
   await del('official_drafts', { eq: ['created_by', uid] });
+  await del('timegrapher_results', { eq: ['user_id', uid] });
+  await del('app_feedback',   { eq: ['user_id', uid] });
+  await del('rate_limits',    { eq: ['user_id', uid] });
   await del('logs',           { eq: ['user_id', uid] });
   await del('wishlist',       { eq: ['user_id', uid] });
   await del('watches',        { eq: ['user_id', uid] });
@@ -4541,7 +4544,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.01.17.17';
+const APP_VERSION = '2.36.01.18.38';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
