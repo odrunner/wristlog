@@ -4544,7 +4544,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.01.19.10';
+const APP_VERSION = '2.36.01.19.41';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7645,16 +7645,13 @@ function scrollToFeedPost(postId) {
   const highlightCard = () => {
     const card = document.getElementById('feedcard-' + postId);
     if (card) {
-      // Use instant scroll first, then fine-tune position after layout settles
-      const scrollToCard = () => {
-        const rect = card.getBoundingClientRect();
-        const target = window.scrollY + rect.top - 70; // 70px below viewport top (clears header)
-        window.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
-      };
-      scrollToCard();
-      // Re-scroll after comments expand and images load (layout shift)
-      setTimeout(scrollToCard, 300);
-      setTimeout(scrollToCard, 800);
+      // Scroll card into view — use instant scroll to avoid racing with layout shifts
+      card.scrollIntoView({ behavior: 'instant', block: 'center' });
+      // Re-scroll after comments expand and images load cause layout shifts
+      setTimeout(() => {
+        const c = document.getElementById('feedcard-' + postId);
+        if (c) c.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 600);
       card.style.transition = 'box-shadow .3s';
       card.style.boxShadow = '0 0 0 2px var(--gold)';
       setTimeout(() => { card.style.boxShadow = ''; }, 2500);
