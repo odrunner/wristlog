@@ -4307,7 +4307,9 @@ async function deleteAccount() {
   await signOut();
 }
 
+let _manualSignOut = false;
 async function signOut() {
+  _manualSignOut = true;
   try { await db.auth.signOut(); } catch(e) { console.warn('[WristLog] signOut error (ignored):', e.message); }
   currentUser = null;
   clearUserState();
@@ -4551,7 +4553,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.01.20.48';
+const APP_VERSION = '2.36.01.20.50';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18285,7 +18287,8 @@ db.auth.onAuthStateChange((event, session) => {
     document.getElementById('auth-screen').style.display = 'flex';
     loadPublicFeed();
     document.getElementById('signout-btn').style.display = 'none';
-    if (wasLoggedIn) toast('Session expired — please sign in again.', 'error');
+    if (wasLoggedIn && !_manualSignOut) toast('Session expired — please sign in again.', 'error');
+    _manualSignOut = false;
     const profileBtn2 = document.getElementById('profile-btn');
     if (profileBtn2) profileBtn2.style.display = 'none';
     const helpBtn2 = document.getElementById('help-btn');
