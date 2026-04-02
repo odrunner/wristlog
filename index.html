@@ -4544,7 +4544,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.01.20.00';
+const APP_VERSION = '2.36.01.20.05';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17721,9 +17721,8 @@ function renderMsrScatterPlot() {
   }
   ctx.shadowBlur = 0;
 
-  // Mode reference line — horizontal dotted line at the mode (densest cluster of dots)
-  const dotRatesForLine = data.map(d => d.d * SD);
-  const lineMode = dotRatesForLine.length >= 10 ? computeBucketRate(dotRatesForLine) : null;
+  // Mode reference line — use cached bucket rate so line and number stay in sync
+  const lineMode = _msrCachedBucketRate;
   if (lineMode != null) {
     const modeY = yPos(lineMode);
     if (modeY > pad.t && modeY < h - pad.b) {
