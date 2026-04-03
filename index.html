@@ -3385,7 +3385,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <!-- Manual entry form -->
         <div style="margin-bottom:.65rem;">
           <div style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em;">Manual Entry</div>
-          <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;" id="tg-pos-chips"></div>
+          <div style="display:none;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;" id="tg-pos-chips"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem;">
             <div>
               <label for="tg-rate-input" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Rate (s/day) *</label>
@@ -4102,6 +4102,7 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 let currentUser = null; // set after sign-in
 const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
+const _isDevUser = () => currentUser?.id === ADMIN_USER_ID;
 let OFFICIAL_USER_ID = null; // resolved at init from profiles.is_official
 
 function officialBadgeHtml(profile) {
@@ -4551,7 +4552,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.02.20.29';
+const APP_VERSION = '2.36.03.06.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
