@@ -4603,7 +4603,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.03.14.49';
+const APP_VERSION = '2.36.03.15.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17378,11 +17378,13 @@ window._tgNativeCallback = function(data) {
             prelimBadge.style.display = hasPrelim && !jsConverged ? '' : 'none';
           }
 
-          // Need at least 20s elapsed AND 8+ bucket rate samples in the window
-          // AND native engine must have computed a rate (prevents noise convergence)
+          // Convergence floor: 12s if signal is strong (acceptRate > 0.3), otherwise 20s
+          const acceptNow = _msrScatterData.length / Math.max(1, elapsed * 3);
+          const minElapsed = acceptNow > 0.3 ? 12 : 20;
+          // Native engine must have computed a rate (prevents noise convergence)
           // Dev user: allow convergence from JS dots alone if enough dots accumulated
           const canConverge = _msrNativeHasRate || (_isDevUser() && _msrScatterData.length >= 30);
-          if (elapsed >= 20 && _msrBucketRateHistory.length >= 8 && canConverge) {
+          if (elapsed >= minElapsed && _msrBucketRateHistory.length >= 8 && canConverge) {
             const vals = _msrBucketRateHistory.map(x => x.v);
             const minV = Math.min(...vals);
             const maxV = Math.max(...vals);
@@ -17693,13 +17695,12 @@ function addMsrTickDots(newTicks) {
 function updateMsrSignalBars(acceptRate, elapsed, tickCount) {
   const container = document.getElementById('msr-signal-bars');
   if (!container) return;
-  if (elapsed < 3) { container.style.display = 'none'; return; }
+  if (elapsed < 3 || tickCount === 0) { container.style.display = 'none'; return; }
   container.style.display = '';
-  // Determine signal strength: 0-4 bars
+  // Determine signal strength: 1-4 bars (hidden when no ticks yet)
   let bars = 0;
   const label = document.getElementById('msr-signal-label');
-  if (tickCount === 0) {
-    bars = 0;
+  if (acceptRate < 0.1) {
   } else if (acceptRate < 0.1) {
     bars = 1;
   } else if (acceptRate < 0.3) {
