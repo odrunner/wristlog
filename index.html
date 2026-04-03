@@ -4551,7 +4551,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.03.07.11';
+const APP_VERSION = '2.36.03.07.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18077,6 +18077,28 @@ function stopMsrListen() {
     const batch = _tgTickDebugBuffer.join('\n');
     _tgTickDebugBuffer = [];
     db.from('timegrapher_tick_logs').insert({ session_id: _tgDebugSessionId, messages: batch }).then(() => {});
+  }
+  // Capture tick data for every session (even unsaved) for debugging
+  if (_tgDebugSessionId && _msrScatterData.length > 0 && currentUser) {
+    const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
+    const tickSnap = _msrScatterData.map(d => ({ t: Math.round(d.t * 100) / 100, d: Math.round(d.d * 1000) / 1000 }));
+    const watchId = document.getElementById('msr-watch-select')?.value || null;
+    const bph = parseInt(document.getElementById('msr-bph-select')?.value) || null;
+    const dotRates = _msrScatterData.map(d => d.d * 86.4);
+    const bucketRate = dotRates.length >= 10 ? computeBucketRate(dotRates) : null;
+    db.from('timegrapher_tick_logs').insert({
+      session_id: _tgDebugSessionId,
+      messages: JSON.stringify({
+        type: 'session_summary',
+        user_id: currentUser.id,
+        watch_id: watchId,
+        bph: bph,
+        duration_sec: Math.round(elapsed),
+        dot_count: _msrScatterData.length,
+        bucket_rate: bucketRate,
+        tick_data: tickSnap
+      })
+    }).then(() => {});
   }
   if (_tgScriptNode) { _tgScriptNode.disconnect(); _tgScriptNode = null; }
   if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
