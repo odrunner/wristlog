@@ -4603,7 +4603,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.03.15.04';
+const APP_VERSION = '2.36.03.15.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17310,10 +17310,11 @@ window._tgNativeCallback = function(data) {
           statusText.style.color = 'rgba(234,179,8,.7)';
         }
       }
-      // Graceful early stop: if 20s elapsed with zero accepted ticks, no point continuing
+      // Graceful early stop: no ticks = no watch. 8s for dev, 10s for everyone else.
       // Dev user: also check JS dots — don't stop if JS is getting data even when native rejects
       const hasJsDots = _isDevUser() && _msrScatterData.length > 0;
-      if (elapsed >= 20 && data.tickCount === 0 && !_msrNativeHasRate && !hasJsDots) {
+      const noSignalTimeout = _isDevUser() ? 8 : 10;
+      if (elapsed >= noSignalTimeout && data.tickCount === 0 && !_msrNativeHasRate && !hasJsDots) {
         stopMsrListen();
         const statusText = document.getElementById('msr-status-text');
         if (statusText) {
