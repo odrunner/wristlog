@@ -4606,7 +4606,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.03.15.36';
+const APP_VERSION = '2.36.03.15.38';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17314,7 +17314,7 @@ window._tgNativeCallback = function(data) {
         }
       }
       // Graceful early stop: no ticks = no watch on mic
-      if (elapsed >= 10 && data.tickCount === 0) {
+      if (elapsed >= 8 && data.tickCount === 0) {
         stopMsrListen();
         const statusText = document.getElementById('msr-status-text');
         if (statusText) {
