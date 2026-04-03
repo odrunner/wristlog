@@ -4603,7 +4603,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.03.15.29';
+const APP_VERSION = '2.36.03.15.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17668,8 +17668,7 @@ function addMsrTickDots(newTicks) {
   if (!newTicks || !newTicks.length) return;
   // Detect reset: if we have data and new tick starts at 0, engine reset tick tracking
   if (_msrScatterData.length > 10 && newTicks[0].d === 0) { _msrScatterData = []; _msrLastCumDev = 0; }
-  // Dev user: wider outlier threshold to accept noisy signals (e.g. closed caseback)
-  const outlierLimit = _isDevUser() ? 150 : 50;
+  const outlierLimit = 50;
   for (const tk of newTicks) {
     const indivDev = tk.d - _msrLastCumDev; // individual pair deviation
     _msrLastCumDev = tk.d;
