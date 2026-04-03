@@ -4551,7 +4551,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.03.06.49';
+const APP_VERSION = '2.36.03.07.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17244,9 +17244,11 @@ window._tgNativeCallback = function(data) {
       if (data.rate != null) _msrNativeHasRate = true;
       // Track tick acceptance rate: expected ~8 ticks/sec for 28800 BPH (conservative: use 3/sec as baseline)
       const expectedTicks = Math.max(1, elapsed * 3);
-      const acceptRate = data.tickCount > 0 ? data.tickCount / expectedTicks : 0;
+      // Dev user: use JS dot count if native acceptance is 0 but JS has dots
+      const effectiveTickCount = _isDevUser() && data.tickCount === 0 && _msrScatterData.length > 0 ? _msrScatterData.length : data.tickCount;
+      const acceptRate = effectiveTickCount > 0 ? effectiveTickCount / expectedTicks : 0;
       // Update signal bars
-      updateMsrSignalBars(acceptRate, elapsed, data.tickCount);
+      updateMsrSignalBars(acceptRate, elapsed, effectiveTickCount);
       // Dot starvation: warn if no new dots for 5+ seconds during active measurement
       if (elapsed > 10 && _msrLastDotTime > 0 && (Date.now() - _msrLastDotTime) > 5000 && !_msrWeakSignalShown) {
         _msrWeakSignalShown = true;
@@ -17257,7 +17259,9 @@ window._tgNativeCallback = function(data) {
         }
       }
       // Graceful early stop: if 20s elapsed with zero accepted ticks, no point continuing
-      if (elapsed >= 20 && data.tickCount === 0 && !_msrNativeHasRate) {
+      // Dev user: also check JS dots — don't stop if JS is getting data even when native rejects
+      const hasJsDots = _isDevUser() && _msrScatterData.length > 0;
+      if (elapsed >= 20 && data.tickCount === 0 && !_msrNativeHasRate && !hasJsDots) {
         stopMsrListen();
         const statusText = document.getElementById('msr-status-text');
         if (statusText) {
@@ -17303,7 +17307,9 @@ window._tgNativeCallback = function(data) {
           }
           // Need at least 20s elapsed AND 8+ bucket rate samples in the window
           // AND native engine must have computed a rate (prevents noise convergence)
-          if (elapsed >= 20 && _msrBucketRateHistory.length >= 8 && _msrNativeHasRate) {
+          // Dev user: allow convergence from JS dots alone if enough dots accumulated
+          const canConverge = _msrNativeHasRate || (_isDevUser() && _msrScatterData.length >= 30);
+          if (elapsed >= 20 && _msrBucketRateHistory.length >= 8 && canConverge) {
             const vals = _msrBucketRateHistory.map(x => x.v);
             const minV = Math.min(...vals);
             const maxV = Math.max(...vals);
@@ -17336,13 +17342,13 @@ window._tgNativeCallback = function(data) {
         const timeStr = mm > 0 ? mm + ':' + String(ss).padStart(2, '0') : ss + 's';
 
         // Track state transitions
-        if (data.tickCount > 0) _msrHadTicks = true;
+        if (data.tickCount > 0 || (_isDevUser() && _msrScatterData.length > 0)) _msrHadTicks = true;
         if (data.detectedBph && _msrIsAuto) _msrBphLocked = true;
 
         // Advance phase (only forward, never backward except on reset)
         if (data.rateStable) {
           _msrPhase = 'converged';
-        } else if (_msrHadTicks && data.tickCount > 4) {
+        } else if (_msrHadTicks && (data.tickCount > 4 || (_isDevUser() && _msrScatterData.length > 4))) {
           // Have ticks → measuring (even if rate not yet computed)
           _msrPhase = 'measuring';
         } else if (_msrIsAuto && !_msrBphLocked && elapsed > 2) {
@@ -17588,12 +17594,14 @@ function addMsrTickDots(newTicks) {
   if (!newTicks || !newTicks.length) return;
   // Detect reset: if we have data and new tick starts at 0, engine reset tick tracking
   if (_msrScatterData.length > 10 && newTicks[0].d === 0) { _msrScatterData = []; _msrLastCumDev = 0; }
+  // Dev user: wider outlier threshold to accept noisy signals (e.g. closed caseback)
+  const outlierLimit = _isDevUser() ? 150 : 50;
   for (const tk of newTicks) {
     const indivDev = tk.d - _msrLastCumDev; // individual pair deviation
     _msrLastCumDev = tk.d;
     // Filter outliers: ±50 s/day in pair deviation (~0.58ms) is well beyond any real watch
     const indivSDay = indivDev * 86.4;
-    if (Math.abs(indivSDay) > 50) continue;
+    if (Math.abs(indivSDay) > outlierLimit) continue;
     _msrScatterData.push({ t: tk.t, d: indivDev });
     _msrLastDotTime = Date.now();
   }
