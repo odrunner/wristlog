@@ -77,51 +77,29 @@ test.describe('Landing page (mocked)', () => {
     await page.route('**/realtime/**', route => route.abort());
   });
 
-  test('shows blurred feed preview with CTA overlay', async ({ page }) => {
+  test('shows feature callouts and auth buttons', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(12000);
+    await page.waitForTimeout(2000);
 
-    // CTA overlay visible with sign-in buttons
-    await expect(page.locator('.landing-overlay')).toBeVisible();
-    await expect(page.locator('.landing-cta .btn-google')).toBeVisible();
-    await expect(page.locator('.landing-cta .btn-apple')).toBeVisible();
+    // Feature callouts visible
+    await expect(page.locator('.landing-features')).toBeVisible();
+    const features = await page.locator('.landing-feature').count();
+    expect(features).toBe(3);
   });
 
-  test('feed cards load behind the blur', async ({ page }) => {
+  test('Google and Apple sign-in buttons visible', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(12000);
+    await page.waitForTimeout(2000);
 
-    const feedCards = await page.locator('#landing-feed-list .feed-card').count();
-    expect(feedCards).toBeGreaterThan(0);
+    await expect(page.locator('.landing-auth .btn-google')).toBeVisible();
+    await expect(page.locator('.landing-auth .btn-apple')).toBeVisible();
   });
 
-  test('feed preview has blur applied', async ({ page }) => {
+  test('App Store badge visible above sign-in buttons', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(12000);
+    await page.waitForTimeout(2000);
 
-    const blur = await page.evaluate(() => {
-      const el = document.querySelector('.landing-feed-preview');
-      return el ? getComputedStyle(el).filter : '';
-    });
-    expect(blur).toContain('blur');
-  });
-
-  test('fake nav appears after feed loads', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(12000);
-
-    const navDisplay = await page.evaluate(() =>
-      document.getElementById('landing-fake-nav')?.style.display
-    );
-    expect(navDisplay).toBe('flex');
-  });
-
-  test('CTA has App Store badge and privacy link', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(12000);
-
-    await expect(page.locator('.landing-cta .landing-app-badge img')).toBeVisible();
-    await expect(page.locator('.landing-cta .landing-fine-print a[href="/privacy.html"]')).toBeVisible();
+    await expect(page.locator('.landing-app-badge img')).toBeVisible();
   });
 });
 
