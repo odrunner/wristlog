@@ -3385,7 +3385,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <!-- Manual entry form -->
         <div style="margin-bottom:.65rem;">
           <div style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em;">Manual Entry</div>
-          <div style="display:none;flex-wrap:wrap;gap:.4rem;margin-bottom:.5rem;" id="tg-pos-chips"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem;">
             <div>
               <label for="tg-rate-input" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Rate (s/day) *</label>
@@ -4552,7 +4551,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.03.06.12';
+const APP_VERSION = '2.36.03.06.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16967,26 +16966,16 @@ function clearUserState() {
 
 // ── Timegrapher / Accuracy (inside watch edit modal) ─────────────────────
 function _tgHasNative() { return !!(window._wrotateNativeTimegrapher || window.webkit?.messageHandlers?.timegrapher); }
-let _tgPosition = 'dial_up';
 let _tgWatchId = null;
 let _tgEditingId = null;
 let _tgListening = false;
 let _tgFromListening = false; // true if rate was auto-filled from mic measurement
-const TG_POSITIONS = [
-  { val: 'dial_up', lbl: 'Dial Up' }, { val: 'dial_down', lbl: 'Dial Down' },
-  { val: 'crown_up', lbl: 'Crown Up' }, { val: 'crown_down', lbl: 'Crown Down' },
-  { val: 'crown_left', lbl: 'Crown Left' }, { val: 'crown_right', lbl: 'Crown Right' }
-];
 
 function initTgSection(watchId) {
   _tgWatchId = watchId;
   _tgEditingId = null;
   _tgListening = false;
   _tgFromListening = false;
-  _tgPosition = 'dial_up';
-  document.getElementById('tg-pos-chips').innerHTML = TG_POSITIONS.map(p =>
-    `<div class="chip${p.val === _tgPosition ? ' selected' : ''}" data-pos="${p.val}" onclick="selectTgPos('${p.val}')">${p.lbl}</div>`
-  ).join('');
   document.getElementById('tg-rate-input').value = '';
   document.getElementById('tg-be-input').value = '';
   document.getElementById('tg-amplitude-input').value = '';
@@ -17475,12 +17464,6 @@ window._tgNativeCallback = function(data) {
   }
 };
 
-function selectTgPos(pos) {
-  _tgPosition = pos;
-  document.querySelectorAll('#tg-pos-chips .chip').forEach(c =>
-    c.classList.toggle('selected', c.dataset.pos === pos));
-}
-
 async function saveTimegrapherManual() {
   if (!currentUser || !_tgWatchId) return;
   const rateVal = document.getElementById('tg-rate-input').value.trim();
@@ -17497,7 +17480,7 @@ async function saveTimegrapherManual() {
   if (_tgEditingId) {
     // Update existing
     const { error } = await db.from('timegrapher_results').update({
-      rate, beat_error: beatError, amplitude, bph, position: _tgPosition, notes, source: _tgFromListening ? 'auto' : 'manual'
+      rate, beat_error: beatError, amplitude, bph, notes, source: _tgFromListening ? 'auto' : 'manual'
     }).eq('id', _tgEditingId).eq('user_id', currentUser.id);
     if (error) { toast('Update failed — ' + error.message, 'error'); return; }
     toast('Reading updated!');
@@ -17507,7 +17490,7 @@ async function saveTimegrapherManual() {
     const src = _tgFromListening ? 'auto' : 'manual';
     const { error } = await db.from('timegrapher_results').insert({
       user_id: currentUser.id, watch_id: _tgWatchId,
-      rate, beat_error: beatError, amplitude, bph, position: _tgPosition, source: src, notes
+      rate, beat_error: beatError, amplitude, bph, source: src, notes
     });
     if (error) { toast('Could not save — ' + error.message, 'error'); return; }
     const msrCount = parseInt(localStorage.getItem('wristlog_msr_count') || '0') + 1;
@@ -17537,7 +17520,6 @@ async function loadTgHistory() {
     const rateStr = r.rate !== null ? (r.rate > 0 ? '+' : '') + Number(r.rate).toFixed(1) + ' s/d' : '—';
     const beStr = r.beat_error !== null ? 'BE: ' + Number(r.beat_error).toFixed(2) + 'ms' : '';
     const ampStr = r.amplitude ? 'Amp: ' + r.amplitude + '°' : '';
-    const posStr = TG_POSITIONS.find(p => p.val === r.position)?.lbl || '';
     const noteStr = r.notes ? `<div style="font-size:.7rem;color:var(--muted);margin-top:.15rem;font-style:italic;">${escHtml(r.notes)}</div>` : '';
     const rateColor = r.rate !== null ? (Math.abs(r.rate) <= 5 ? '#22c55e' : Math.abs(r.rate) <= 15 ? '#eab308' : '#ef4444') : 'var(--muted)';
     const details = [beStr, ampStr].filter(Boolean).join(' · ');
@@ -17548,7 +17530,7 @@ async function loadTgHistory() {
           ${details ? `<span style="color:var(--muted);margin-left:.4rem;">${details}</span>` : ''}
         </div>
         <div style="display:flex;align-items:center;gap:.5rem;">
-          <span style="color:var(--muted);font-size:.72rem;">${posStr} · ${dateStr}</span>
+          <span style="color:var(--muted);font-size:.72rem;">${dateStr}</span>
           <button onclick="editTgResult('${r.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;font-size:.75rem;" title="Edit">✎</button>
           <button onclick="deleteTgResult('${r.id}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:0;font-size:.75rem;" title="Delete">✕</button>
         </div>
@@ -17569,7 +17551,6 @@ function editTgResult(id) {
   document.getElementById('tg-amplitude-input').value = r.amplitude ?? '';
   document.getElementById('tg-bph-select').value = r.bph || '28800';
   document.getElementById('tg-notes-input').value = r.notes || '';
-  if (r.position) selectTgPos(r.position);
   toast('Editing reading — modify and save');
 }
 
