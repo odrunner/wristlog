@@ -4606,7 +4606,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.03.15.38';
+const APP_VERSION = '2.36.03.15.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17362,7 +17362,7 @@ window._tgNativeCallback = function(data) {
 
           // Preliminary rate: show early estimate after 5s with 10+ dots
           // Display the rate immediately so user gets fast feedback
-          const hasPrelim = _isDevUser() && elapsed >= 5 && _msrScatterData.length >= 10 && bucketNow != null;
+          const hasPrelim = elapsed >= 5 && _msrScatterData.length >= 10 && bucketNow != null;
           if (hasPrelim && !_msrPrelimShown) {
             _msrPrelimShown = true;
             // Show the rate in the HUD
