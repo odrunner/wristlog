@@ -1941,9 +1941,24 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New
     </div>
     <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;">
-      <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(74,222,128,.12);color:#4ade80;padding:.15rem .5rem;border-radius:6px;">March 2026</span>
+      <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(74,222,128,.12);color:#4ade80;padding:.15rem .5rem;border-radius:6px;">April 2026</span>
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Faster Watch Recognition</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Snap-to-track and post tagging now identify watches from your collection significantly faster with an optimized matching engine.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Timegrapher &#8212; Measure Watch Accuracy</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Place your watch on the iPhone microphone and measure its accuracy in seconds per day &#8212; just like a professional timegrapher. Real-time scatter chart, signal quality bars, and automatic convergence. Available on the iOS app.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Streamlined Experience</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Fewer interruptions throughout the app &#8212; unnecessary confirmation prompts have been removed from saving watches, logging wears, and other everyday actions.</div>
+      </div>
+      <div style="margin:.75rem 0;border-top:1px solid var(--border);padding-top:.75rem;">
+        <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">March 2026</span>
+      </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Reliability &amp; Error Handling</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Editing a post now rolls back changes if the server save fails, so your feed stays consistent. Club creation and user unblocking also handle errors gracefully with clear feedback.</div>
@@ -2997,6 +3012,42 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
       </div>
 
+      <!-- ── MEASURE ACCURACY ── -->
+      <div class="help-section">
+        <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Measure Accuracy <span style="font-size:.6rem;font-weight:600;color:var(--gold);margin-left:.35rem;letter-spacing:.04em;">iOS APP</span></div>
+        <div class="help-card">
+          <div class="help-step">
+            <div class="help-step-num">1</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Go to the Measure tab</div>
+              <div class="help-step-desc">Select the watch you want to measure and its beat rate (BPH). Leave BPH on Auto if you&#8217;re not sure &#8212; the app detects it automatically.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">2</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Place the watch on the microphone</div>
+              <div class="help-step-desc">Place the watch touching the iPhone microphone (bottom edge, next to the charging port). The caseback should face the mic. Keep still during measurement.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">3</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Tap Measure and wait for convergence</div>
+              <div class="help-step-desc">Dots appear on the scatter chart as ticks are detected. A preliminary rate shows within seconds, then refines until it converges (usually 30&#8211;60 seconds). The signal bars in the bottom-left show how strong the signal is.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">4</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Save or enter manually</div>
+              <div class="help-step-desc">Once converged, tap Save to record the reading. You can also enter a rate manually in the Accuracy section of the watch edit form if you measured with an external tool.</div>
+            </div>
+          </div>
+          <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Measure in a quiet environment for best results. Watches with display casebacks (transparent backs) produce a stronger signal than solid steel cases.</span></div>
+        </div>
+      </div>
+
       <!-- ── STATS ── -->
       <div class="help-section">
         <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Stats</div>
@@ -3071,6 +3122,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div id="msr-rate-box" style="position:absolute;top:10px;right:12px;text-align:right;transition:opacity .3s;pointer-events:none;">
             <div id="msr-live-rate" aria-live="polite" aria-label="Rate in seconds per day" style="font-size:1.6rem;font-weight:700;color:#4ade80;text-shadow:0 0 12px rgba(74,222,128,.3);line-height:1;">—</div>
             <div style="font-size:.6rem;color:rgba(74,222,128,.5);letter-spacing:.05em;">s/day</div>
+            <div id="msr-preliminary-badge" style="display:none;font-size:.55rem;font-weight:600;color:rgba(234,179,8,.8);margin-top:2px;letter-spacing:.04em;">PRELIMINARY</div>
             <div id="msr-converged-badge" style="display:none;font-size:.55rem;font-weight:600;color:#4ade80;margin-top:2px;letter-spacing:.04em;">CONVERGED</div>
           </div>
           <!-- Beat error + BPH — top left -->
@@ -4551,7 +4603,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.03.07.17';
+const APP_VERSION = '2.36.03.14.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17290,6 +17342,7 @@ window._tgNativeCallback = function(data) {
     // Instead, track recent bucket rate values and check if they've settled.
     if (isMsr) {
       const badge = document.getElementById('msr-converged-badge');
+      const prelimBadge = document.getElementById('msr-preliminary-badge');
       const rateBox = document.getElementById('msr-rate-box');
       if (badge && rateBox) {
         const bucketNow = _msrCachedBucketRate;
@@ -17305,6 +17358,26 @@ window._tgNativeCallback = function(data) {
           if (_msrBucketRateHistory.length && _msrBucketRateHistory[0].t < cutoff) {
             _msrBucketRateHistory = _msrBucketRateHistory.filter(x => x.t >= cutoff);
           }
+
+          // Preliminary rate: show early estimate after 5s with 10+ dots
+          // Display the rate immediately so user gets fast feedback
+          const hasPrelim = _isDevUser() && elapsed >= 5 && _msrScatterData.length >= 10 && bucketNow != null;
+          if (hasPrelim && !_msrPrelimShown) {
+            _msrPrelimShown = true;
+            // Show the rate in the HUD
+            const rateEl = document.getElementById('msr-live-rate');
+            if (rateEl) {
+              rateEl.textContent = (bucketNow >= 0 ? '+' : '') + bucketNow.toFixed(1);
+              rateEl.style.color = Math.abs(bucketNow) <= 5 ? '#22c55e' : Math.abs(bucketNow) <= 15 ? '#eab308' : '#ef4444';
+            }
+            document.getElementById('msr-rate-input').value = bucketNow.toFixed(1);
+            _msrLastRate = bucketNow;
+          }
+          // Show/hide preliminary badge (visible until converged)
+          if (prelimBadge) {
+            prelimBadge.style.display = hasPrelim && !jsConverged ? '' : 'none';
+          }
+
           // Need at least 20s elapsed AND 8+ bucket rate samples in the window
           // AND native engine must have computed a rate (prevents noise convergence)
           // Dev user: allow convergence from JS dots alone if enough dots accumulated
@@ -17318,6 +17391,7 @@ window._tgNativeCallback = function(data) {
         }
         if (jsConverged) {
           badge.style.display = '';
+          if (prelimBadge) prelimBadge.style.display = 'none';
           if (_msrListening && _msrLastRate != null) {
             console.log('[TG JS] Auto-stop: JS converged, bucket rate stable at', bucketNow);
             stopMsrListen();
@@ -17587,6 +17661,7 @@ let _msrTicksSkipped = 0;  // count of skipped tick pairs (signal health)
 let _msrLastDotTime = 0;   // timestamp of last scatter dot added (starvation detection)
 let _msrNativeHasRate = false; // whether native engine has computed a rate (regN >= regMinN)
 let _msrWeakSignalShown = false; // whether the weak signal warning has been shown
+let _msrPrelimShown = false; // whether the preliminary rate has been shown
 
 let _msrScatterRafPending = false;
 let _msrLastCumDev = 0; // track last cumulative deviation to compute individual pair devs
@@ -17919,7 +17994,7 @@ function onMsrBphChange() {
     _msrHadTicks = false;
     _msrBphLocked = false;
     _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = []; _msrLastBucketCalcTime = 0; _msrCachedBucketRate = null;
-    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false;
+    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false; _msrPrelimShown = false;
     const scCanvas = document.getElementById('msr-scatter-plot');
     if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
     document.getElementById('msr-live-rate').textContent = '—';
@@ -17927,6 +18002,7 @@ function onMsrBphChange() {
     document.getElementById('msr-detected-bph').style.display = 'none';
     // Reset convergence indicator
     const convBadge = document.getElementById('msr-converged-badge'); if (convBadge) convBadge.style.display = 'none';
+    const prelimBadge2 = document.getElementById('msr-preliminary-badge'); if (prelimBadge2) prelimBadge2.style.display = 'none';
     const rBox = document.getElementById('msr-rate-box'); // no-op: overlay style
     document.getElementById('msr-status-text').textContent = 'ACQUIRING \u00b7 0s';
     document.getElementById('msr-status-text').style.color = 'rgba(74,222,128,.35)';
@@ -17976,7 +18052,7 @@ function toggleMsrListen() {
     _msrHadTicks = false;
     _msrBphLocked = false;
     _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = []; _msrLastBucketCalcTime = 0; _msrCachedBucketRate = null;
-    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false;
+    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false; _msrPrelimShown = false;
     document.getElementById('msr-status-text').textContent = 'ACQUIRING \u00b7 0s';
     document.getElementById('msr-status-text').style.color = 'rgba(74,222,128,.35)';
     document.getElementById('msr-status-text').style.fontSize = '';
@@ -17986,6 +18062,7 @@ function toggleMsrListen() {
     const saveBtn = document.getElementById('msr-save-btn');
     if (saveBtn) saveBtn.disabled = true;
     const convBadge = document.getElementById('msr-converged-badge'); if (convBadge) convBadge.style.display = 'none';
+    const prelimBadge2 = document.getElementById('msr-preliminary-badge'); if (prelimBadge2) prelimBadge2.style.display = 'none';
     const rBox = document.getElementById('msr-rate-box'); // no-op: overlay style
     // Send tuning params if user has customized them
     setTimeout(() => sendMsrTuning(), 200);
