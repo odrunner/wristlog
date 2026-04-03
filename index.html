@@ -3057,6 +3057,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div id="msr-live-be" style="font-size:.75rem;font-weight:600;color:rgba(74,222,128,.6);">—</div>
             <span id="msr-detected-bph" aria-live="polite" style="font-size:.6rem;color:rgba(74,222,128,.4);display:none;"></span>
           </div>
+          <!-- Signal quality indicator — bottom left -->
+          <div id="msr-signal-bars" style="position:absolute;bottom:8px;left:12px;display:none;pointer-events:none;">
+            <div style="display:flex;align-items:flex-end;gap:2px;height:16px;">
+              <div id="msr-bar-1" style="width:3px;height:4px;border-radius:1px;background:rgba(74,222,128,.2);"></div>
+              <div id="msr-bar-2" style="width:3px;height:8px;border-radius:1px;background:rgba(74,222,128,.2);"></div>
+              <div id="msr-bar-3" style="width:3px;height:12px;border-radius:1px;background:rgba(74,222,128,.2);"></div>
+              <div id="msr-bar-4" style="width:3px;height:16px;border-radius:1px;background:rgba(74,222,128,.2);"></div>
+            </div>
+            <div id="msr-signal-label" style="font-size:.5rem;color:rgba(74,222,128,.4);letter-spacing:.03em;margin-top:1px;text-align:center;"></div>
+          </div>
           <!-- (Record/Stop button moved below instrument panel) -->
           <!-- Idle overlay — shown when not recording, click-through for button -->
           <div id="msr-idle-overlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,26,18,.8);pointer-events:none;">
@@ -3351,39 +3361,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="modal-section-chevron" id="chv-sec-accuracy">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-accuracy">
-        <!-- Listen button + live results -->
-        <div style="margin-bottom:.65rem;">
-          <button id="tg-listen-btn" class="btn btn-ghost btn-sm" onclick="toggleTgListen()" style="width:100%;margin-bottom:.5rem;display:flex;align-items:center;justify-content:center;gap:.4rem;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-            Start Listening
-          </button>
-          <div id="tg-mic-warning" style="display:none;font-size:.75rem;color:#ef4444;margin-bottom:.5rem;line-height:1.4;"></div>
-          <div id="tg-live-status" style="display:none;">
-            <div style="margin-bottom:.4rem;">
-              <label style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Noise Level</label>
-              <div style="background:var(--hover);border-radius:6px;height:8px;overflow:hidden;">
-                <div id="tg-noise-bar" style="height:100%;width:0%;border-radius:6px;transition:width .15s,background .15s;background:#22c55e;"></div>
-              </div>
-              <div id="tg-noise-label" style="font-size:.68rem;color:var(--muted);margin-top:.1rem;">Listening...</div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.4rem;">
-              <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
-                <div id="tg-live-rate" style="font-size:1rem;font-weight:700;">—</div>
-                <div style="font-size:.65rem;color:var(--muted);">s/day</div>
-              </div>
-              <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
-                <div id="tg-live-be" style="font-size:1rem;font-weight:700;">—</div>
-                <div style="font-size:.65rem;color:var(--muted);">Beat Error</div>
-              </div>
-              <div style="background:var(--hover);border-radius:8px;padding:.5rem;text-align:center;">
-                <div id="tg-live-ticks" style="font-size:1rem;font-weight:700;">0</div>
-                <div style="font-size:.65rem;color:var(--muted);">Ticks</div>
-              </div>
-            </div>
-            <div style="font-size:.68rem;color:var(--muted);line-height:1.4;margin-bottom:.4rem;">Place the watch crown-side down near the microphone in a quiet room.</div>
-          </div>
-        </div>
-        <hr style="border:none;border-top:1px solid var(--border);margin:0 0 .65rem 0;">
         <!-- Manual entry form -->
         <div style="margin-bottom:.65rem;">
           <div style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.05em;">Manual Entry</div>
@@ -4553,7 +4530,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.02.07.27';
+const APP_VERSION = '2.36.02.18.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17255,6 +17232,49 @@ window._tgNativeCallback = function(data) {
       if (bphSel && bphSel.value !== '0' && bphSel.value !== String(data.detectedBph)) bphSel.value = String(data.detectedBph);
     }
 
+    // Signal quality tracking & display
+    if (isMsr && _msrListening) {
+      const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
+      if (data.rate != null) _msrNativeHasRate = true;
+      // Track tick acceptance rate: expected ~8 ticks/sec for 28800 BPH (conservative: use 3/sec as baseline)
+      const expectedTicks = Math.max(1, elapsed * 3);
+      const acceptRate = data.tickCount > 0 ? data.tickCount / expectedTicks : 0;
+      // Update signal bars
+      updateMsrSignalBars(acceptRate, elapsed, data.tickCount);
+      // Dot starvation: warn if no new dots for 5+ seconds during active measurement
+      if (elapsed > 10 && _msrLastDotTime > 0 && (Date.now() - _msrLastDotTime) > 5000 && !_msrWeakSignalShown) {
+        _msrWeakSignalShown = true;
+        const statusText = document.getElementById('msr-status-text');
+        if (statusText && _msrPhase !== 'converged') {
+          statusText.textContent = 'WEAK SIGNAL \u00b7 move watch closer to mic';
+          statusText.style.color = 'rgba(234,179,8,.7)';
+        }
+      }
+      // Graceful early stop: if 20s elapsed with zero accepted ticks, no point continuing
+      if (elapsed >= 20 && data.tickCount === 0 && !_msrNativeHasRate) {
+        stopMsrListen();
+        const statusText = document.getElementById('msr-status-text');
+        if (statusText) {
+          statusText.textContent = 'No signal detected \u00b7 try placing watch on mic';
+          statusText.style.color = 'rgba(239,68,68,.7)';
+          statusText.style.fontSize = '.7rem';
+          statusText.style.fontWeight = '600';
+        }
+        const idleOv2 = document.getElementById('msr-idle-overlay');
+        if (idleOv2) idleOv2.style.display = 'none';
+        return;
+      }
+      // Low acceptance warning: if 15s elapsed and acceptance rate < 15%, show warning
+      if (elapsed >= 15 && data.tickCount > 0 && acceptRate < 0.15 && !_msrWeakSignalShown) {
+        _msrWeakSignalShown = true;
+        const statusText = document.getElementById('msr-status-text');
+        if (statusText && _msrPhase !== 'converged') {
+          statusText.textContent = 'WEAK SIGNAL \u00b7 result may be unreliable';
+          statusText.style.color = 'rgba(234,179,8,.7)';
+        }
+      }
+    }
+
     // Convergence — JS-side check using bucket rate stability
     // Don't trust native rateStable (it uses Theil-Sen regression, not bucket rate).
     // Instead, track recent bucket rate values and check if they've settled.
@@ -17276,7 +17296,8 @@ window._tgNativeCallback = function(data) {
             _msrBucketRateHistory = _msrBucketRateHistory.filter(x => x.t >= cutoff);
           }
           // Need at least 20s elapsed AND 8+ bucket rate samples in the window
-          if (elapsed >= 20 && _msrBucketRateHistory.length >= 8) {
+          // AND native engine must have computed a rate (prevents noise convergence)
+          if (elapsed >= 20 && _msrBucketRateHistory.length >= 8 && _msrNativeHasRate) {
             const vals = _msrBucketRateHistory.map(x => x.v);
             const minV = Math.min(...vals);
             const maxV = Math.max(...vals);
@@ -17328,32 +17349,35 @@ window._tgNativeCallback = function(data) {
           _msrPhase = 'calibrating';
         }
 
-        // Display phase
-        const bphStr = data.detectedBph ? data.detectedBph.toLocaleString() : '';
-        switch (_msrPhase) {
-          case 'acquiring':
-            statusText.textContent = 'ACQUIRING \u00b7 ' + timeStr;
-            statusText.style.color = 'rgba(74,222,128,.35)';
-            break;
-          case 'estimating_bph':
-            statusText.textContent = 'DETECTING BPH \u00b7 ' + timeStr;
-            statusText.style.color = 'rgba(234,179,8,.6)';
-            break;
-          case 'calibrating':
-            statusText.textContent = (_msrIsAuto && bphStr ? bphStr + ' \u00b7 ' : '') + 'CALIBRATING \u00b7 ' + timeStr;
-            statusText.style.color = 'rgba(234,179,8,.6)';
-            break;
-          case 'measuring':
-            statusText.textContent = 'MEASURING \u00b7 ' + timeStr;
-            statusText.style.color = 'rgba(74,222,128,.6)';
-            break;
-          case 'converged':
-            statusText.textContent = 'CONVERGED \u00b7 ' + timeStr;
-            statusText.style.color = '#4ade80';
-            break;
-          default:
-            statusText.textContent = 'ACQUIRING \u00b7 ' + timeStr;
-            statusText.style.color = 'rgba(74,222,128,.35)';
+        // Display phase (skip if weak signal warning is active — don't overwrite it)
+        if (!_msrWeakSignalShown || _msrPhase === 'measuring' || _msrPhase === 'converged') {
+          const bphStr = data.detectedBph ? data.detectedBph.toLocaleString() : '';
+          switch (_msrPhase) {
+            case 'acquiring':
+              statusText.textContent = 'ACQUIRING \u00b7 ' + timeStr;
+              statusText.style.color = 'rgba(74,222,128,.35)';
+              break;
+            case 'estimating_bph':
+              statusText.textContent = 'DETECTING BPH \u00b7 ' + timeStr;
+              statusText.style.color = 'rgba(234,179,8,.6)';
+              break;
+            case 'calibrating':
+              statusText.textContent = (_msrIsAuto && bphStr ? bphStr + ' \u00b7 ' : '') + 'CALIBRATING \u00b7 ' + timeStr;
+              statusText.style.color = 'rgba(234,179,8,.6)';
+              break;
+            case 'measuring':
+              statusText.textContent = 'MEASURING \u00b7 ' + timeStr;
+              statusText.style.color = 'rgba(74,222,128,.6)';
+              _msrWeakSignalShown = false; // clear warning once measuring properly
+              break;
+            case 'converged':
+              statusText.textContent = 'CONVERGED \u00b7 ' + timeStr;
+              statusText.style.color = '#4ade80';
+              break;
+            default:
+              statusText.textContent = 'ACQUIRING \u00b7 ' + timeStr;
+              statusText.style.color = 'rgba(74,222,128,.35)';
+          }
         }
       }
     }
@@ -17552,6 +17576,11 @@ let _msrAllRates = [];    // ALL rate samples for mode computation (not capped)
 let _msrBucketRateHistory = []; // history of bucket rate computations for JS-side convergence
 let _msrLastBucketCalcTime = 0; // timestamp of last bucket rate computation (debounce)
 let _msrCachedBucketRate = null; // cached result from last computeBucketRate call
+let _msrTicksAccepted = 0; // count of accepted tick pairs (signal health)
+let _msrTicksSkipped = 0;  // count of skipped tick pairs (signal health)
+let _msrLastDotTime = 0;   // timestamp of last scatter dot added (starvation detection)
+let _msrNativeHasRate = false; // whether native engine has computed a rate (regN >= regMinN)
+let _msrWeakSignalShown = false; // whether the weak signal warning has been shown
 
 let _msrScatterRafPending = false;
 let _msrLastCumDev = 0; // track last cumulative deviation to compute individual pair devs
@@ -17566,6 +17595,7 @@ function addMsrTickDots(newTicks) {
     const indivSDay = indivDev * 86.4;
     if (Math.abs(indivSDay) > 50) continue;
     _msrScatterData.push({ t: tk.t, d: indivDev });
+    _msrLastDotTime = Date.now();
   }
   // Throttle redraws to animation frames for smooth updates
   if (!_msrScatterRafPending) {
@@ -17577,6 +17607,45 @@ function addMsrTickDots(newTicks) {
 // Bucket-ratio interpolation: pair deviations are quantized at ~7.2 s/day steps
 // (1 ring sample at 12kHz). Interpolate between the two most populated adjacent
 // buckets to recover sub-quantum accuracy.
+function updateMsrSignalBars(acceptRate, elapsed, tickCount) {
+  const container = document.getElementById('msr-signal-bars');
+  if (!container) return;
+  if (elapsed < 3) { container.style.display = 'none'; return; }
+  container.style.display = '';
+  // Determine signal strength: 0-4 bars
+  let bars = 0;
+  const label = document.getElementById('msr-signal-label');
+  if (tickCount === 0) {
+    bars = 0;
+  } else if (acceptRate < 0.1) {
+    bars = 1;
+  } else if (acceptRate < 0.3) {
+    bars = 2;
+  } else if (acceptRate < 0.6) {
+    bars = 3;
+  } else {
+    bars = 4;
+  }
+  const dimColor = 'rgba(74,222,128,.15)';
+  const colors = [
+    'rgba(239,68,68,.8)',   // 1 bar: red
+    'rgba(234,179,8,.8)',   // 2 bars: yellow
+    'rgba(74,222,128,.7)',  // 3 bars: green
+    '#4ade80'               // 4 bars: bright green
+  ];
+  const barColor = bars > 0 ? colors[bars - 1] : dimColor;
+  for (let i = 1; i <= 4; i++) {
+    const bar = document.getElementById('msr-bar-' + i);
+    if (bar) bar.style.background = i <= bars ? barColor : dimColor;
+  }
+  if (label) {
+    if (bars === 0) { label.textContent = 'NO SIGNAL'; label.style.color = 'rgba(239,68,68,.6)'; }
+    else if (bars === 1) { label.textContent = 'WEAK'; label.style.color = 'rgba(239,68,68,.6)'; }
+    else if (bars === 2) { label.textContent = 'FAIR'; label.style.color = 'rgba(234,179,8,.6)'; }
+    else { label.textContent = ''; }
+  }
+}
+
 function computeBucketRate(rates) {
   if (rates.length < 10) return null;
   const Q = 7.2; // quantization step in s/day (1 ring sample at ~12kHz)
@@ -17747,6 +17816,7 @@ function openMeasureInline() {
   document.getElementById('msr-live-status').style.display = 'none';
   document.getElementById('msr-mic-warning').style.display = 'none';
   document.getElementById('msr-save-section').style.display = 'none';
+  const sigBarsInit = document.getElementById('msr-signal-bars'); if (sigBarsInit) sigBarsInit.style.display = 'none';
   // Populate watch dropdown
   const sel = document.getElementById('msr-watch-select');
   sel.innerHTML = watches.map(w => `<option value="${w.id}">${escHtml(w.brand + ' ' + w.name)}</option>`).join('');
@@ -17841,6 +17911,7 @@ function onMsrBphChange() {
     _msrHadTicks = false;
     _msrBphLocked = false;
     _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = []; _msrLastBucketCalcTime = 0; _msrCachedBucketRate = null;
+    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false;
     const scCanvas = document.getElementById('msr-scatter-plot');
     if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
     document.getElementById('msr-live-rate').textContent = '—';
@@ -17897,6 +17968,7 @@ function toggleMsrListen() {
     _msrHadTicks = false;
     _msrBphLocked = false;
     _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = []; _msrLastBucketCalcTime = 0; _msrCachedBucketRate = null;
+    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false;
     document.getElementById('msr-status-text').textContent = 'ACQUIRING \u00b7 0s';
     document.getElementById('msr-status-text').style.color = 'rgba(74,222,128,.35)';
     document.getElementById('msr-status-text').style.fontSize = '';
@@ -18012,6 +18084,9 @@ function stopMsrListen() {
   if (listenBtnEl) { listenBtnEl.style.borderColor = 'rgba(74,222,128,.3)'; listenBtnEl.style.color = '#4ade80'; listenBtnEl.style.background = '#0a1a12'; }
   _msrPhase = '';
   _msrListenStart = null;
+  // Hide signal bars
+  const sigBars = document.getElementById('msr-signal-bars');
+  if (sigBars) sigBars.style.display = 'none';
   // Show result in the rate HUD and status bar
   const statusText = document.getElementById('msr-status-text');
   const rateEl = document.getElementById('msr-live-rate');
