@@ -4603,7 +4603,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.03.15.19';
+const APP_VERSION = '2.36.03.15.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17382,9 +17382,8 @@ window._tgNativeCallback = function(data) {
           // Convergence floor: 12s if signal is strong (acceptRate > 0.3), otherwise 20s
           const acceptNow = _msrScatterData.length / Math.max(1, elapsed * 3);
           const minElapsed = acceptNow > 0.3 ? 12 : 20;
-          // Native engine must have computed a rate (prevents noise convergence)
-          // Dev user: allow convergence from JS dots alone if enough dots accumulated
-          const canConverge = _msrNativeHasRate || (_isDevUser() && _msrScatterData.length >= 30);
+          // JS-only convergence: native engine is just a tick detector, JS decides the rate
+          const canConverge = _msrScatterData.length >= 30;
           if (elapsed >= minElapsed && _msrBucketRateHistory.length >= 8 && canConverge) {
             const vals = _msrBucketRateHistory.map(x => x.v);
             const minV = Math.min(...vals);
