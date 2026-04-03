@@ -186,14 +186,12 @@ If no watches visible: {"count": 0, "watches": []}`,
       });
     }
 
-    // ── IDENTIFY MODE (default): full identification of a single watch ──
-    let collectionHint = "";
-    if (Array.isArray(collection) && collection.length > 0) {
-      const items = collection.map((w: any) =>
-        `${w.brand} ${w.name}${w.ref ? ` (ref: ${w.ref})` : ""}`
-      ).join(", ");
-      collectionHint = `\nThe user owns these watches: ${items}\nIf you recognize a watch as one of these, use the exact names. Do NOT force a match — accuracy over matching.`;
-    }
+    // ── IDENTIFY MODE (default): full identification ──
+    // Use Sonnet for snap-to-track/post (has collection → fast matching)
+    // Use Opus for add-from-photo (no collection → accurate cold identification)
+    const hasCollection = Array.isArray(collection) && collection.length > 0;
+    const identifyModel = hasCollection ? "claude-sonnet-4-6" : "claude-opus-4-6";
+
 
     const BRAND_CUES = `Brand identification guide:
 - Rolex: Crown logo at 12 o'clock, "ROLEX" on dial, Cyclops lens over date, Oyster/Jubilee/President bracelets, fluted or smooth bezel
@@ -210,19 +208,20 @@ If no watches visible: {"count": 0, "watches": []}`,
 - GRØNE: "GRØNE" on dial, Danish microbrand, minimalist Scandinavian design
 - Anoma: "Anoma" on dial, microbrand`;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: apiHeaders,
-      body: JSON.stringify({
-        model: "claude-opus-4-6",
-        max_tokens: 8192,
-        messages: [{
-          role: "user",
-          content: [
-            imageContent,
-            {
-              type: "text",
-              text: `Look at this image carefully. Identify every watch visible.
+    // Use a fast, concise prompt when matching against known collection
+    // Use the full analytical prompt for cold identification (no collection)
+    const identifyPrompt = hasCollection
+      ? `Identify the watch in this image. The user owns: ${collection.map((w: any) => `${w.brand} ${w.name}${w.ref ? ` (ref: ${w.ref})` : ""}`).join(", ")}
+
+If you recognize it as one of these, use the exact names. Do NOT force a match — if it's not in the list, identify it independently.
+
+Return JSON only, no explanation:
+{"watches": [{"brand": "BrandName", "model": "ModelName", "reference": "ref or empty string", "dialText": "text on dial", "estimatedColor": "#hex", "confidence": "high/medium/low", "productUrl": "", "boundingBox": [x, y, width, height]}]}
+
+boundingBox: [x, y, width, height] as percentages (0-100) of image, centered on dial.
+estimatedColor: #c9a84c (gold), #94a3b8 (silver), #818cf8 (indigo), #fbbf24 (amber), #38bdf8 (blue), #a78bfa (purple), #f43f5e (rose), #4caf7d (teal)
+If no watches: {"watches": []}`
+      : `Look at this image carefully. Identify every watch visible.
 
 For each watch, describe what you see: read the text on the dial, look at the logo, note the case shape, bezel, bracelet/strap, and any distinguishing features. Then give your best identification.
 
@@ -235,8 +234,19 @@ For boundingBox: provide [x, y, width, height] as percentages (0-100) of the ima
 
 For estimatedColor pick from: #c9a84c (gold), #94a3b8 (slate/silver), #818cf8 (indigo), #fbbf24 (amber), #38bdf8 (sky blue), #a78bfa (purple), #f43f5e (rose), #4caf7d (teal)
 
-If no watches: {"watches": []}${collectionHint}`,
-            },
+If no watches: {"watches": []}`;
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: apiHeaders,
+      body: JSON.stringify({
+        model: identifyModel,
+        max_tokens: hasCollection ? 1024 : 8192,
+        messages: [{
+          role: "user",
+          content: [
+            imageContent,
+            { type: "text", text: identifyPrompt },
           ],
         }],
       }),
