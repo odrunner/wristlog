@@ -4551,7 +4551,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.03.06.33';
+const APP_VERSION = '2.36.03.06.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5444,7 +5444,6 @@ async function cycleWishPrivacy(wishId) {
 }
 
 async function saveProfileFromPage() {
-  if (!(await checkEulaAcceptance())) return;
   if (currentUser) delete _profileCache[currentUser.id]; // invalidate cache
   const name  = (document.getElementById('pp-display-name')?.value || '').trim();
   const bio   = (document.getElementById('pp-bio')?.value || '').trim();
@@ -11699,7 +11698,6 @@ function renderTrackHistory() {
 }
 
 async function saveLog() {
-  if (!(await checkEulaAcceptance())) return;
   const date = document.getElementById('track-date').value;
   if (!date)       { showFieldError('track-date', 'Please select a date'); return; }
   if (!selWatchId) { toast('Please select a watch', 'error'); return; }
@@ -13166,7 +13164,6 @@ function marketPriceRowHTML(w) {
 }
 
 async function saveWatch() {
-  if (!(await checkEulaAcceptance())) return;
   const brand = document.getElementById('w-brand').value;
   const name  = document.getElementById('w-name').value.trim();
   if (!brand) { showFieldError('w-brand-display', 'Please select a brand'); return; }
@@ -15987,7 +15984,6 @@ function wlDeleteFromEdit() {
 function closeWishlistModal() { clearInlineEdits(WL_INLINE_FIELDS); if (wlPendingImage) { URL.revokeObjectURL(wlPendingImage); wlPendingImage = null; wlPendingFile = null; } document.getElementById('wishlist-modal').classList.add('hidden'); }
 
 async function saveWishlistItem() {
-  if (!(await checkEulaAcceptance())) return;
   const brand = document.getElementById('wl-brand').value;
   const name  = document.getElementById('wl-name').value.trim();
   if (!brand) { showFieldError('wl-brand-display', 'Please select a brand'); return; }
@@ -16758,7 +16754,6 @@ ${handle ? `Find me @${handle} — ` : ''}Join free 👉 https://wrotate.com`;
 
 
 async function submitFeedback() {
-  if (!(await checkEulaAcceptance())) return;
   const details = document.getElementById('fb-desc').value.trim();
   if (!details) { showFieldError('fb-desc', 'Please describe your feedback'); return; }
 
