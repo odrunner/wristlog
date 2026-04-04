@@ -4612,7 +4612,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.03.17.12';
+const APP_VERSION = '2.36.03.17.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17316,6 +17316,15 @@ window._tgNativeCallback = function(data) {
         const statusText = document.getElementById('msr-status-text');
         if (statusText && _msrPhase !== 'converged') {
           statusText.textContent = 'WEAK SIGNAL \u00b7 move watch closer to mic';
+          statusText.style.color = 'rgba(234,179,8,.7)';
+        }
+      }
+      // Early warning at 4s: no ticks yet, nudge user to reposition
+      if (elapsed >= 4 && elapsed < 8 && data.tickCount === 0 && !_msrWeakSignalShown) {
+        _msrWeakSignalShown = true;
+        const statusText = document.getElementById('msr-status-text');
+        if (statusText && _msrPhase !== 'converged') {
+          statusText.textContent = 'No ticks yet \u00b7 try moving watch closer to mic';
           statusText.style.color = 'rgba(234,179,8,.7)';
         }
       }
