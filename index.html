@@ -4612,7 +4612,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.03.16.24';
+const APP_VERSION = '2.36.03.17.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17397,7 +17397,9 @@ window._tgNativeCallback = function(data) {
             const vals = _msrBucketRateHistory.map(x => x.v);
             const minV = Math.min(...vals);
             const maxV = Math.max(...vals);
-            jsConverged = (maxV - minV) <= 3.0; // spread within 3 s/day
+            const activeBph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;
+            const convSpread = 86400 / activeBph; // one quantization step
+            jsConverged = (maxV - minV) <= convSpread;
           }
 
           // Progress bar — dev only for now
