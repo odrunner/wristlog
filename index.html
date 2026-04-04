@@ -4623,7 +4623,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.03.17.53';
+const APP_VERSION = '2.36.03.18.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6462,7 +6462,11 @@ async function saveClubEdit(clubId) {
   }
 
   const { error } = await db.from('clubs').update(updates).eq('id', clubId);
-  if (error) { toast('Could not save — ' + error.message, 'error'); return; }
+  if (error) {
+    // Cleanup orphaned storage file if we just uploaded one
+    if (updates.image_url) { const _p = storagePathFrom(updates.image_url); if (_p) deleteStorageFile(_p); }
+    toast('Could not save — ' + error.message, 'error'); return;
+  }
 
   // Update local cache
   const cached = myClubs.find(c => c.id === clubId);
@@ -8474,6 +8478,8 @@ async function saveEditPost() {
       if (fi && oldFi) Object.assign(fi, oldFi);
       if (log && oldLog) { Object.assign(log, oldLog); save(); }
       refreshFeedCard(editPostLogId);
+      // Cleanup orphaned storage file if we uploaded a new one
+      if (finalPhoto && finalPhoto !== oldPhoto) { const _p = storagePathFrom(finalPhoto); if (_p) deleteStorageFile(_p); }
       toast('Save failed — ' + error.message, 'error'); return;
     }
     // Send mention notifications for NEW @usernames added in the edit
@@ -8726,6 +8732,8 @@ async function saveNewPost() {
       _dataGen++;
       rebuildLogsByWatch();
       safeSetJSON(STORE_L, logs);
+      // Cleanup orphaned storage file
+      if (entry.photoUrl) { const _p = storagePathFrom(entry.photoUrl); if (_p) deleteStorageFile(_p); }
       toast('Post failed — ' + error.message, 'error');
       return;
     }
@@ -8795,6 +8803,8 @@ async function handleFeedPhoto(input) {
         if (log) { log.photoUrl = oldLogPhoto; save(); }
         if (fi) fi.photo_url = oldFiPhoto;
         refreshFeedCard(logId);
+        // Cleanup orphaned storage file
+        if (photoUrl) { const _p = storagePathFrom(photoUrl); if (_p) deleteStorageFile(_p); }
         toast('Could not save photo', 'error');
         return;
       }
@@ -11037,7 +11047,10 @@ async function saveOfficialDraft() {
     caption: caption || null,
     created_by: currentUser.id,
   });
-  if (error) { toast('Save failed: ' + error.message, 'error'); return; }
+  if (error) {
+    if (storedUrl) { const _p = storagePathFrom(storedUrl); if (_p) deleteStorageFile(_p); }
+    toast('Save failed: ' + error.message, 'error'); return;
+  }
   toast('Draft saved');
   // Clear form
   document.getElementById('official-url-input').value = '';
@@ -16944,6 +16957,40 @@ document.addEventListener('keydown', e => {
   const top = open[open.length - 1];
   const fn = _overlayCloseMap[top.id];
   if (fn) { e.preventDefault(); fn(); }
+});
+
+// Back button closes the topmost open modal instead of navigating away
+let _modalHistoryCount = 0;
+let _closingViaPopstate = false;
+new MutationObserver(mutations => {
+  for (const m of mutations) {
+    if (m.type !== 'attributes' || m.attributeName !== 'class') continue;
+    const el = m.target;
+    if (!el.classList.contains('overlay') || !_overlayCloseMap[el.id]) continue;
+    if (!el.classList.contains('hidden')) {
+      // Modal opened — push history entry so back button can close it
+      _modalHistoryCount++;
+      history.pushState({ modal: true }, '');
+    } else if (_modalHistoryCount > 0 && !_closingViaPopstate) {
+      // Modal closed via close button/Escape/overlay — go back to consume the history entry
+      _modalHistoryCount--;
+      history.back();
+    }
+  }
+}).observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
+
+window.addEventListener('popstate', () => {
+  if (_modalHistoryCount <= 0) return;
+  const open = [...document.querySelectorAll('.overlay:not(.hidden)')];
+  if (!open.length) { _modalHistoryCount = 0; return; }
+  const top = open[open.length - 1];
+  const fn = _overlayCloseMap[top.id];
+  if (fn) {
+    _closingViaPopstate = true;
+    _modalHistoryCount--;
+    fn();
+    _closingViaPopstate = false;
+  }
 });
 
 function initApp() {
