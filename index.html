@@ -4623,7 +4623,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.04.11.14';
+const APP_VERSION = '2.36.04.11.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18052,7 +18052,7 @@ function openMeasureInline() {
 async function onMsrWatchChange() {
   const watchId = document.getElementById('msr-watch-select').value;
   if (!watchId || !currentUser) return;
-  // Look up last BPH used for this watch
+  // Look up last BPH used for this watch (saved results first, then tick log summaries)
   try {
     const { data } = await db.from('timegrapher_results')
       .select('bph')
@@ -18062,7 +18062,24 @@ async function onMsrWatchChange() {
     if (data && data.length > 0 && data[0].bph) {
       document.getElementById('msr-bph-select').value = String(data[0].bph);
     } else {
-      document.getElementById('msr-bph-select').value = '0'; // Auto
+      // No saved results — check tick log summaries for last used BPH
+      const { data: logs } = await db.from('timegrapher_tick_logs')
+        .select('messages')
+        .like('messages', `%"watch_id":"${watchId}"%`)
+        .like('messages', '%session_summary%')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      let foundBph = null;
+      if (logs) {
+        for (const row of logs) {
+          try {
+            const idx = row.messages.indexOf('{');
+            const summary = JSON.parse(row.messages.slice(idx));
+            if (summary.bph) { foundBph = summary.bph; break; }
+          } catch {}
+        }
+      }
+      document.getElementById('msr-bph-select').value = foundBph ? String(foundBph) : '0';
     }
   } catch(e) { console.warn('[Measure] BPH lookup failed:', e?.message); }
 }

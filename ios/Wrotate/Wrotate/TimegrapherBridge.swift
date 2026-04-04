@@ -140,12 +140,14 @@ class TimegrapherBridge {
                 }
 
                 self.engine.start(bph: bph, sensitivity: sensitivity)
+                UIApplication.shared.isIdleTimerDisabled = true
                 self.sendToJS(["event": "started"])
             }
         }
     }
 
     private func stopMeasurement() {
+        UIApplication.shared.isIdleTimerDisabled = false
         let result = engine.stop()
         sendToJS([
             "event": "stopped",
