@@ -4623,7 +4623,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.04.07.51';
+const APP_VERSION = '2.36.04.11.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16791,6 +16791,25 @@ function closeFeedback() {
   document.getElementById('feedback-modal').classList.add('hidden');
 }
 
+function scrollToPost(postId) {
+  // Navigate to feed page
+  const feedBtn = document.querySelector('nav button[data-page="feed"]');
+  if (feedBtn) nav(feedBtn);
+  // Try to scroll immediately, retry after feed loads
+  const tryScroll = (attempts) => {
+    const el = document.getElementById('feedcard-' + postId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.transition = 'box-shadow .3s';
+      el.style.boxShadow = '0 0 0 2px rgba(201,168,76,.6)';
+      setTimeout(() => { el.style.boxShadow = ''; }, 2000);
+    } else if (attempts > 0) {
+      setTimeout(() => tryScroll(attempts - 1), 500);
+    }
+  };
+  setTimeout(() => tryScroll(10), 300);
+}
+
 async function sharePost(logId) {
   const url = `https://api.wrotate.com/functions/v1/share-post?id=${logId}`;
   const item = feedItems.find(i => i.id === logId);
@@ -17387,6 +17406,21 @@ window._tgNativeCallback = function(data) {
           statusText.style.color = 'rgba(234,179,8,.7)';
         }
       }
+      // Ambient noise check during calibration (~first 4s)
+      if (elapsed < 4 && data.noiseLevel != null) {
+        _msrNoiseSamples.push(data.noiseLevel);
+      }
+      if (elapsed >= 3 && !_msrNoiseWarningShown && _msrNoiseSamples.length >= 3) {
+        _msrNoiseWarningShown = true;
+        const avgNoise = _msrNoiseSamples.reduce((a, b) => a + b, 0) / _msrNoiseSamples.length;
+        if (avgNoise > 0.15) {
+          const statusText = document.getElementById('msr-status-text');
+          if (statusText && _msrPhase !== 'converged' && _msrPhase !== 'measuring') {
+            statusText.textContent = 'Noisy environment \u00b7 results may be less accurate';
+            statusText.style.color = 'rgba(234,179,8,.7)';
+          }
+        }
+      }
       // Graceful early stop: no ticks = no watch on mic
       if (elapsed >= 8 && data.tickCount === 0) {
         stopMsrListen();
@@ -17509,6 +17543,9 @@ window._tgNativeCallback = function(data) {
           }
           if (_msrListening && _msrLastRate != null) {
             console.log('[TG JS] Auto-stop: JS converged, bucket rate stable at', bucketNow);
+            if (window.webkit?.messageHandlers?.haptic) {
+              window.webkit.messageHandlers.haptic.postMessage({ type: 'success' });
+            }
             stopMsrListen();
             return;
           }
@@ -17783,6 +17820,8 @@ let _msrTicksSkipped = 0;  // count of skipped tick pairs (signal health)
 let _msrLastDotTime = 0;   // timestamp of last scatter dot added (starvation detection)
 let _msrNativeHasRate = false; // whether native engine has computed a rate (regN >= regMinN)
 let _msrWeakSignalShown = false; // whether the weak signal warning has been shown
+let _msrNoiseWarningShown = false; // whether the noisy environment warning has been shown
+let _msrNoiseSamples = [];    // noise level readings during calibration phase
 let _msrPrelimShown = false; // whether the preliminary rate has been shown
 
 let _msrScatterRafPending = false;
@@ -18095,7 +18134,7 @@ function onMsrBphChange() {
     _msrHadTicks = false;
     _msrBphLocked = false;
     _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = []; _msrLastBucketCalcTime = 0; _msrCachedBucketRate = null;
-    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false; _msrPrelimShown = false; _msrAcceptRate = 0;
+    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false; _msrNoiseWarningShown = false; _msrNoiseSamples = []; _msrPrelimShown = false; _msrAcceptRate = 0;
     const scCanvas = document.getElementById('msr-scatter-plot');
     if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
     document.getElementById('msr-live-rate').textContent = '—';
@@ -18153,7 +18192,7 @@ function toggleMsrListen() {
     _msrHadTicks = false;
     _msrBphLocked = false;
     _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = []; _msrLastBucketCalcTime = 0; _msrCachedBucketRate = null;
-    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false; _msrPrelimShown = false; _msrAcceptRate = 0;
+    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false; _msrNoiseWarningShown = false; _msrNoiseSamples = []; _msrPrelimShown = false; _msrAcceptRate = 0;
     document.getElementById('msr-status-text').textContent = 'ACQUIRING \u00b7 0s';
     document.getElementById('msr-status-text').style.color = 'rgba(74,222,128,.35)';
     document.getElementById('msr-status-text').style.fontSize = '';

@@ -19,11 +19,12 @@ struct WebView: UIViewRepresentable {
         config.mediaTypesRequiringUserActionForPlayback = []
         config.websiteDataStore = WKWebsiteDataStore.default()
 
-        // JS → Native bridge for auth state changes + timegrapher + app actions
+        // JS → Native bridge for auth state changes + timegrapher + app actions + haptics
         let contentController = config.userContentController
         contentController.add(context.coordinator, name: "auth")
         contentController.add(context.coordinator, name: "timegrapher")
         contentController.add(context.coordinator, name: "appAction")
+        contentController.add(context.coordinator, name: "haptic")
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
@@ -286,6 +287,30 @@ struct WebView: UIViewRepresentable {
             if message.name == "timegrapher" {
                 if let body = message.body as? [String: Any] {
                     timegrapherBridge.handleMessage(body)
+                }
+                return
+            }
+
+            // Haptic feedback from JS
+            if message.name == "haptic" {
+                if let body = message.body as? [String: Any],
+                   let type = body["type"] as? String {
+                    switch type {
+                    case "success":
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    case "warning":
+                        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                    case "error":
+                        UINotificationFeedbackGenerator().notificationOccurred(.error)
+                    case "light":
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    case "medium":
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    case "heavy":
+                        UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+                    default:
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    }
                 }
                 return
             }

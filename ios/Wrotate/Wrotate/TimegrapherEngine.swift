@@ -531,28 +531,12 @@ class TimegrapherEngine {
                                 pairIntervalAccum = 0.0
                                 pairTickPhase = 0
 
-                                // Gate 1: individual tick sanity — reject if either tick deviates too much
-                                if abs(pendingFirstTickDev) > maxTickDev || abs(deviationThisTick) > maxTickDev {
-                                    debugLog("[TGPAIR SKIP @ \(String(format: "%.2f", elapsedSec))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms tickDevs=\(String(format: "%.1f", pendingFirstTickDev)),\(String(format: "%.1f", deviationThisTick))ms TICK_OUTLIER")
-                                    lastTickRingPos = energyRingWritePos
-                                    ringPosSinceLastTick = 0
-                                    continue
-                                }
-
-                                // Track ALL pair deviations (that pass tick sanity) for adaptive threshold
+                                // Track pair deviations for adaptive threshold (used for debug logging)
                                 recentPairDevs.append(abs(pairDevThisPair))
                                 if recentPairDevs.count > adaptiveWindowSize {
                                     recentPairDevs.removeFirst()
                                 }
-
-                                // Gate 2: adaptive pair gate — starts at 2ms, tightens as we learn noise profile
                                 let pairThresh = currentPairThreshold()
-                                if abs(pairDevThisPair) > pairThresh {
-                                    debugLog("[TGPAIR SKIP @ \(String(format: "%.2f", elapsedSec))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms thresh=\(String(format: "%.2f", pairThresh))ms PAIR_OUTLIER")
-                                    lastTickRingPos = energyRingWritePos
-                                    ringPosSinceLastTick = 0
-                                    continue
-                                }
 
                                 // Clean pair — always update cumulative deviation and tick count
                                 pairDeviationMs += pairDevThisPair
