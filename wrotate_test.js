@@ -1181,29 +1181,12 @@ export function computeTgResults(ticks, bph) {
 //  BUCKET-RATIO INTERPOLATION (rate from pair deviations)
 // ══════════════════════════════════════════
 
-export function computeBucketRate(rates) {
+export function computeMedianRate(rates) {
   if (rates.length < 10) return null;
-  const Q = 7.2; // quantization step in s/day (1 ring sample at ~12kHz)
-  const buckets = new Map();
-  for (const r of rates) {
-    const idx = Math.round(r / Q);
-    buckets.set(idx, (buckets.get(idx) || 0) + 1);
-  }
-  let peakIdx = 0, peakCount = 0;
-  for (const [idx, count] of buckets) {
-    if (count > peakCount) { peakCount = count; peakIdx = idx; }
-  }
-  const countBelow = buckets.get(peakIdx - 1) || 0;
-  const countAbove = buckets.get(peakIdx + 1) || 0;
-  const peakVal = peakIdx * Q;
-  if (countAbove > countBelow) {
-    const total = peakCount + countAbove;
-    return Math.round((peakVal + (countAbove / total) * Q) * 10) / 10;
-  } else if (countBelow > 0) {
-    const total = peakCount + countBelow;
-    return Math.round((peakVal - (countBelow / total) * Q) * 10) / 10;
-  }
-  return Math.round(peakVal * 10) / 10;
+  const sorted = [...rates].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  return Math.round(median * 10) / 10;
 }
 
 // ══════════════════════════════════════════

@@ -4623,7 +4623,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.03.18.32';
+const APP_VERSION = '2.36.03.21.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17366,9 +17366,9 @@ window._tgNativeCallback = function(data) {
       const expectedTicks = Math.max(1, elapsed * 3);
       // Dev user: use JS dot count if native acceptance is 0 but JS has dots
       const effectiveTickCount = _isDevUser() && data.tickCount === 0 && _msrScatterData.length > 0 ? _msrScatterData.length : data.tickCount;
-      const acceptRate = effectiveTickCount > 0 ? effectiveTickCount / expectedTicks : 0;
+      _msrAcceptRate = effectiveTickCount > 0 ? effectiveTickCount / expectedTicks : 0;
       // Update signal bars
-      updateMsrSignalBars(acceptRate, elapsed, effectiveTickCount);
+      updateMsrSignalBars(_msrAcceptRate, elapsed, effectiveTickCount);
       // Dot starvation: warn if no new dots for 5+ seconds during active measurement
       if (elapsed > 10 && _msrLastDotTime > 0 && (Date.now() - _msrLastDotTime) > 5000 && !_msrWeakSignalShown) {
         _msrWeakSignalShown = true;
@@ -17457,8 +17457,7 @@ window._tgNativeCallback = function(data) {
           }
 
           // Convergence floor: 12s if signal is strong (acceptRate > 0.3), otherwise 20s
-          const acceptNow = _msrScatterData.length / Math.max(1, elapsed * 3);
-          const minElapsed = acceptNow > 0.3 ? 12 : 20;
+          const minElapsed = _msrAcceptRate > 0.3 ? 12 : 20;
           // JS-only convergence: native engine is just a tick detector, JS decides the rate
           const canConverge = _msrScatterData.length >= 30;
           if (elapsed >= minElapsed && _msrBucketRateHistory.length >= 8 && canConverge) {
@@ -17775,8 +17774,9 @@ let _msrRateHistory = []; // recent rate values for error bar computation
 let _msrAllRates = [];    // ALL rate samples for mode computation (not capped)
 let _msrBucketRateHistory = []; // history of bucket rate computations for JS-side convergence
 let _msrLastBucketCalcTime = 0; // timestamp of last bucket rate computation (debounce)
-let _msrCachedBucketRate = null; // cached result from last computeBucketRate call
+let _msrCachedBucketRate = null; // cached result from last computeMedianRate call
 let _msrTicksAccepted = 0; // count of accepted tick pairs (signal health)
+let _msrAcceptRate = 0;    // shared signal quality metric (updated once per tick event)
 let _msrTicksSkipped = 0;  // count of skipped tick pairs (signal health)
 let _msrLastDotTime = 0;   // timestamp of last scatter dot added (starvation detection)
 let _msrNativeHasRate = false; // whether native engine has computed a rate (regN >= regMinN)
@@ -17789,11 +17789,12 @@ function addMsrTickDots(newTicks) {
   if (!newTicks || !newTicks.length) return;
   // Detect reset: if we have data and new tick starts at 0, engine reset tick tracking
   if (_msrScatterData.length > 10 && newTicks[0].d === 0) { _msrScatterData = []; _msrLastCumDev = 0; }
-  const outlierLimit = 50;
+  const activeBph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;
+  const outlierLimit = Math.max(30, 3 * (86400 / activeBph));
   for (const tk of newTicks) {
     const indivDev = tk.d - _msrLastCumDev; // individual pair deviation
     _msrLastCumDev = tk.d;
-    // Filter outliers: ±50 s/day in pair deviation (~0.58ms) is well beyond any real watch
+    // Filter outliers: BPH-aware gate (~3 quantization steps)
     const indivSDay = indivDev * 86.4;
     if (Math.abs(indivSDay) > outlierLimit) continue;
     _msrScatterData.push({ t: tk.t, d: indivDev });
@@ -17817,7 +17818,8 @@ function updateMsrSignalBars(acceptRate, elapsed, tickCount) {
   // Determine signal strength: 1-4 bars (hidden when no ticks yet)
   let bars = 0;
   const label = document.getElementById('msr-signal-label');
-  if (acceptRate < 0.1) {
+  if (acceptRate === 0) {
+    bars = 0;
   } else if (acceptRate < 0.1) {
     bars = 1;
   } else if (acceptRate < 0.3) {
@@ -17847,7 +17849,7 @@ function updateMsrSignalBars(acceptRate, elapsed, tickCount) {
   }
 }
 
-function computeBucketRate(rates) {
+function computeMedianRate(rates) {
   if (rates.length < 10) return null;
   const sorted = [...rates].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
@@ -17934,7 +17936,7 @@ function renderMsrScatterPlot() {
   // Mode reference line — compute fresh from current scatter data (2-3/sec via RAF)
   // This is the authoritative rate; update the cache so the rate number stays in sync.
   const dotRatesForLine = data.map(d => d.d * SD);
-  const lineMode = dotRatesForLine.length >= 10 ? computeBucketRate(dotRatesForLine) : null;
+  const lineMode = dotRatesForLine.length >= 10 ? computeMedianRate(dotRatesForLine) : null;
   if (lineMode != null) _msrCachedBucketRate = lineMode;
   if (lineMode != null) {
     const modeY = yPos(lineMode);
@@ -18091,7 +18093,7 @@ function onMsrBphChange() {
     _msrHadTicks = false;
     _msrBphLocked = false;
     _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = []; _msrLastBucketCalcTime = 0; _msrCachedBucketRate = null;
-    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false; _msrPrelimShown = false;
+    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false; _msrPrelimShown = false; _msrAcceptRate = 0;
     const scCanvas = document.getElementById('msr-scatter-plot');
     if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
     document.getElementById('msr-live-rate').textContent = '—';
@@ -18149,7 +18151,7 @@ function toggleMsrListen() {
     _msrHadTicks = false;
     _msrBphLocked = false;
     _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = []; _msrLastBucketCalcTime = 0; _msrCachedBucketRate = null;
-    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false; _msrPrelimShown = false;
+    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false; _msrPrelimShown = false; _msrAcceptRate = 0;
     document.getElementById('msr-status-text').textContent = 'ACQUIRING \u00b7 0s';
     document.getElementById('msr-status-text').style.color = 'rgba(74,222,128,.35)';
     document.getElementById('msr-status-text').style.fontSize = '';
@@ -18259,7 +18261,7 @@ function stopMsrListen() {
     const watchId = document.getElementById('msr-watch-select')?.value || null;
     const bph = parseInt(document.getElementById('msr-bph-select')?.value) || null;
     const dotRates = _msrScatterData.map(d => d.d * 86.4);
-    const bucketRate = dotRates.length >= 10 ? computeBucketRate(dotRates) : null;
+    const bucketRate = dotRates.length >= 10 ? computeMedianRate(dotRates) : null;
     db.from('timegrapher_tick_logs').insert({
       session_id: _tgDebugSessionId,
       messages: JSON.stringify({
@@ -18301,7 +18303,7 @@ function stopMsrListen() {
   // Use mode as final rate if available
   // Use mode of scatter dot data (individual pair devs) — same source as chart and HUD
   const finalDotRates = _msrScatterData.map(d => d.d * 86.4);
-  const finalMode = finalDotRates.length >= 10 ? computeBucketRate(finalDotRates) : null;
+  const finalMode = finalDotRates.length >= 10 ? computeMedianRate(finalDotRates) : null;
   if (finalMode != null) _msrLastRate = finalMode;
   if (_msrLastRate != null && statusText) {
     const r = _msrLastRate;
