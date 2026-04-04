@@ -41,11 +41,16 @@ struct ContentView: View {
         // Universal Links — open wrotate.com links in the app's WebView
         .onOpenURL { url in
             guard let host = url.host, host.hasSuffix("wrotate.com") else { return }
-            // Deep link to specific post: /functions/v1/share-post?id=<uuid> or /p/?id=<uuid>
+            // Deep link to specific post or collection
             let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
             if let postId = components?.queryItems?.first(where: { $0.name == "id" })?.value,
                (url.path.contains("share-post") || url.path.hasPrefix("/p/")) {
                 webViewRef?.evaluateJavaScript("if(typeof scrollToPost==='function') scrollToPost('\(postId)');", completionHandler: nil)
+                return
+            }
+            if let username = components?.queryItems?.first(where: { $0.name == "u" })?.value,
+               url.path.contains("share-collection") {
+                webViewRef?.evaluateJavaScript("if(typeof viewUserByUsername==='function') viewUserByUsername('\(username)');", completionHandler: nil)
                 return
             }
             webViewRef?.load(URLRequest(url: url))
