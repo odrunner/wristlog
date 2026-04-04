@@ -4481,10 +4481,19 @@ function rowToWish(r) {
 // ══════════════════════════════════════════
 async function loadUserData() {
   const uid = currentUser.id;
-  // Flush any pending local changes before loading cloud state (prevents overwriting unsynced edits)
-  const hasPending = _dirty.watches.size || _dirty.logs.size || _dirty.wishlist.size || _dirty.elo.size || _pendingDeletes.length;
-  if (hasPending && navigator.onLine) {
-    try { await cloudSync(); } catch(_) {}
+  // Flush pending DELETES before pulling cloud state (prevents re-inserting deleted items)
+  // Skip dirty upserts here — cloud data is authoritative on load; local edits will
+  // be re-dirtied if they differ after merge.
+  if (_pendingDeletes.length && navigator.onLine) {
+    try {
+      const remaining = [];
+      for (const d of _pendingDeletes) {
+        const { error } = await db.from(d.table).delete().eq('id', d.id).eq('user_id', uid);
+        if (error) { console.error(`[WristLog] pre-load delete ${d.table} error:`, error.message); remaining.push(d); }
+      }
+      _pendingDeletes = remaining;
+      savePendingDeletes();
+    } catch(_) {}
   }
   // Each query is individually fault-tolerant so one table failure doesn't block the others
   // Promise.resolve() converts the Supabase thenable to a real Promise (thenables lack .catch())
@@ -4575,7 +4584,9 @@ async function cloudSync() {
     if (_dirty.wishlist.size) {
       const ids = [..._dirty.wishlist];
       // Always sync all items when any are dirty to preserve rank order
-      if (await upsert('wishlist', wishlist.map((w, i) => wishToRow(w, i))))
+      // Filter out items pending deletion to avoid re-inserting them
+      const pendingDelIds = new Set(_pendingDeletes.filter(d => d.table === 'wishlist').map(d => d.id));
+      if (await upsert('wishlist', wishlist.filter(w => !pendingDelIds.has(w.id)).map((w, i) => wishToRow(w, i))))
         ids.forEach(id => _dirty.wishlist.delete(id));
     }
     if (_dirty.elo.size) {
@@ -4612,7 +4623,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.03.17.24';
+const APP_VERSION = '2.36.03.17.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18518,12 +18529,14 @@ document.addEventListener('visibilitychange', () => {
   const feedPage = document.getElementById('page-feed');
   if (!feedPage || !feedPage.classList.contains('active')) return;
 
-  // Long background (>= 5 min): aggressively reset all feed state
+  // Long background (>= 5 min): aggressively reset all feed state + re-pull user data
   if (bgDuration >= 300000) {
     feedLoading = false;
     _feedLoadStartedAt = 0;
     feedLoadedAt = 0;
     feedError = false;
+    // Re-pull collection/wishlist from DB to catch changes made on other devices
+    loadUserData().then(() => { renderCollection(true); renderWishlist(true); }).catch(() => {});
   } else {
     feedLoadedAt = 0; // short background: just bust the 60s cache
   }
