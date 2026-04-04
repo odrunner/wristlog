@@ -4623,7 +4623,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.03.18.06';
+const APP_VERSION = '2.36.03.18.32';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16895,13 +16895,16 @@ new MutationObserver(mutations => {
     if (!el.classList.contains('hidden')) {
       // Modal just opened — save focus and move into modal
       _focusStack.push(document.activeElement);
+      document.body.style.overflow = 'hidden';
       requestAnimationFrame(() => {
         const focusable = el.querySelectorAll('button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])');
         if (focusable.length) focusable[0].focus();
       });
     } else {
-      // Modal just closed — restore focus
+      // Modal just closed — restore focus and scroll
       releaseFocus();
+      // Only unlock scroll if no other modals are open
+      if (!document.querySelector('.overlay:not(.hidden)')) document.body.style.overflow = '';
     }
   }
 }).observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
