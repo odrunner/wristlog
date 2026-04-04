@@ -4503,20 +4503,17 @@ async function loadUserData() {
     _q(db.from('logs').select('id,watch_id,date,use_case,notes,strap_id,photo_url,visibility,club_id').eq('user_id', uid)),
     _q(db.from('wishlist').select('id,brand,name,ref,price,url,image,notes,color,tags,market_price,market_price_date,market_price_src,watch_charts_url,wish_privacy,added_date,sort_order').eq('user_id', uid)),
   ]), 15000);
-  if (wRes.error)  console.error('[WristLog] watches SELECT error:', wRes.error.message, wRes.error);
-  if (lRes.error)  console.error('[WristLog] logs SELECT error:',    lRes.error.message, lRes.error);
+  // Only overwrite each table if the query succeeded — keep localStorage cache on failure
+  if (wRes.error) console.error('[WristLog] watches SELECT error:', wRes.error.message, wRes.error);
+  else { watches = (wRes.data || []).map(rowToWatch); safeSetJSON(STORE_W, watches); }
+  if (lRes.error) console.error('[WristLog] logs SELECT error:', lRes.error.message, lRes.error);
+  else { logs = (lRes.data || []).map(rowToLog); safeSetJSON(STORE_L, logs); }
   if (wlRes.error) console.error('[WristLog] wishlist SELECT error:', wlRes.error.message, wlRes.error);
-  watches  = (wRes.data  || []).map(rowToWatch);
-  logs     = (lRes.data  || []).map(rowToLog);
-  wishlist = (wlRes.data || []).map(rowToWish).sort((a, b) => (a._rank ?? 0) - (b._rank ?? 0));
+  else { wishlist = (wlRes.data || []).map(rowToWish).sort((a, b) => (a._rank ?? 0) - (b._rank ?? 0)); safeSetJSON(STORE_WL, wishlist); }
   // Rebuild eloRatings map from watch rows
   eloRatings = {};
   (wRes.data || []).forEach(r => { if (r.elo_rating) eloRatings[r.id] = r.elo_rating; });
   rebuildLogsByWatch();
-  // Persist locally as cache
-  safeSetJSON(STORE_W,  watches);
-  safeSetJSON(STORE_L,  logs);
-  safeSetJSON(STORE_WL, wishlist);
   safeSetJSON(STORE_ELO, eloRatings);
 }
 
@@ -4551,7 +4548,10 @@ async function cloudSync() {
   if (!navigator.onLine) return;
   const hasDirty = _dirty.watches.size || _dirty.logs.size || _dirty.wishlist.size || _dirty.elo.size || _pendingDeletes.length;
   if (!hasDirty) return; // nothing changed — skip network call
-  if (_syncInFlight) return; // prevent concurrent syncs — next save() will retry
+  if (_syncInFlight) { // prevent concurrent syncs — schedule retry after current finishes
+    if (!_syncRetryTimer) _syncRetryTimer = setTimeout(cloudSync, 2000);
+    return;
+  }
   _syncInFlight = true;
   const upsert = async (table, rows) => {
     if (!rows.length) return true;
@@ -4623,7 +4623,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.03.17.33';
+const APP_VERSION = '2.36.03.17.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9757,18 +9757,18 @@ let _wlSavePending = 0;
 const save = () => {
   _dataGen++;
   rebuildLogsByWatch();
-  // Debounce localStorage writes — immediate on first call, coalesced within 500ms
+  // Persist to localStorage immediately (survives tab close)
+  safeSetJSON(STORE_W, watches);
+  safeSetJSON(STORE_L, logs);
+  // Debounce network sync only (expensive, batches well)
   clearTimeout(_savePending);
-  _savePending = setTimeout(() => {
-    safeSetJSON(STORE_W, watches);
-    safeSetJSON(STORE_L, logs);
-    cloudSync();
-  }, 500);
+  _savePending = setTimeout(() => cloudSync(), 500);
 };
 const saveWishlist = () => {
   _dataGen++;
+  safeSetJSON(STORE_WL, wishlist);
   clearTimeout(_wlSavePending);
-  _wlSavePending = setTimeout(() => { safeSetJSON(STORE_WL, wishlist); cloudSync(); }, 500);
+  _wlSavePending = setTimeout(() => cloudSync(), 500);
 };
 const saveBrands   = () => { safeSetJSON(STORE_B,  brands); };
 
@@ -10638,6 +10638,7 @@ function nav(btn) {
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
   btn.classList.add('active');
+  window.scrollTo(0, 0);
   if (page === 'collection') renderCollection();
   if (page === 'track')    { _trackHistoryLimit = 50; renderTrack(); }
   if (page === 'wishlist') renderWishlist();
@@ -13342,10 +13343,7 @@ async function saveWatch() {
       if (p) deleteStorageFile(p);
     }
     wishlist = wishlist.filter(x => x.id !== wlId);
-    if (currentUser) {
-      db.from('wishlist').delete().eq('id', wlId).eq('user_id', currentUser.id)
-        .then(({ error }) => { if (error) console.error('[WristLog] Delete wishlist error:', error.message); });
-    }
+    queueDelete('wishlist', wlId);
     saveWishlist();
     renderWishlist();
   }
@@ -18525,6 +18523,9 @@ document.addEventListener('visibilitychange', () => {
     });
     return;
   }
+
+  // Flush any pending dirty data that may have accumulated while backgrounded
+  cloudSync();
 
   const feedPage = document.getElementById('page-feed');
   if (!feedPage || !feedPage.classList.contains('active')) return;
