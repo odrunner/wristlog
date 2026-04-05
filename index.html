@@ -3191,7 +3191,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input type="hidden" id="msr-tune-percentile" value="50">
         <input type="hidden" id="msr-tune-hp-cutoff" value="4000">
         <!-- Regression & stability tuning (sent to Swift engine) -->
-        <input type="hidden" id="msr-tune-reg-skip" value="10">
+        <input type="hidden" id="msr-tune-reg-skip" value="5">
         <input type="hidden" id="msr-tune-reg-min-n" value="10">
         <input type="hidden" id="msr-tune-wall-min" value="20">
         <input type="hidden" id="msr-tune-stab-window" value="15">
@@ -3199,7 +3199,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input type="hidden" id="msr-tune-stab-lose" value="5">
         <!-- Pair gate & tick detection tuning -->
         <input type="hidden" id="msr-tune-max-pair-thresh" value="0.58">
-        <input type="hidden" id="msr-tune-min-pair-thresh" value="0.2">
+        <input type="hidden" id="msr-tune-min-pair-thresh" value="0.5">
         <input type="hidden" id="msr-tune-cold-start" value="0.58">
         <input type="hidden" id="msr-tune-pair-mad-mult" value="3">
         <input type="hidden" id="msr-tune-max-tick-dev" value="8">
@@ -4700,7 +4700,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.05.07.03';
+const APP_VERSION = '2.36.05.10.26';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17641,9 +17641,8 @@ window._tgNativeCallback = function(data) {
             prelimBadge.style.display = hasPrelim && !jsConverged ? '' : 'none';
           }
 
-          // Convergence floor: 12s if signal is strong (acceptRate > 0.3), otherwise 20s
-          const minElapsed = _msrAcceptRate > 0.3 ? 12 : 20;
-          // JS-only convergence: native engine is just a tick detector, JS decides the rate
+          // Convergence floor: 15s if signal is strong (acceptRate > 0.3), otherwise 20s
+          const minElapsed = _msrAcceptRate > 0.3 ? 15 : 20;
           const activeBph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;
           const minDots = Math.max(20, Math.round(activeBph / 1200));
           const canConverge = _msrScatterData.length >= minDots;
@@ -17653,7 +17652,18 @@ window._tgNativeCallback = function(data) {
             // Trimmed range: drop single highest and lowest to resist one outlier sample
             const sorted = [...vals].sort((a, b) => a - b);
             const trimmed = sorted.length >= 4 ? sorted.slice(1, -1) : sorted;
-            jsConverged = (trimmed[trimmed.length - 1] - trimmed[0]) <= convSpread;
+            const bucketStable = (trimmed[trimmed.length - 1] - trimmed[0]) <= convSpread;
+
+            // Native rate stability: last 8 native rates must span ≤ 5 s/day
+            // This prevents converging while Theil-Sen rate is still drifting
+            let nativeStable = false;
+            if (_msrRateHistory.length >= 8) {
+              const recent = _msrRateHistory.slice(-8);
+              const nativeSpread = Math.max(...recent) - Math.min(...recent);
+              nativeStable = nativeSpread <= 5;
+            }
+
+            jsConverged = bucketStable && nativeStable;
           }
 
           // Progress bar — dev only for now
