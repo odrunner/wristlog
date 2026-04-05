@@ -4700,7 +4700,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.05.14.50';
+const APP_VERSION = '2.36.05.14.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10415,7 +10415,7 @@ async function loadAdminStats() {
       db.from('watches').select('user_id').limit(ADMIN_ROW_LIMIT),
       db.from('logs').select('user_id, watch_id').limit(ADMIN_ROW_LIMIT),
       db.from('profiles').select('id, username, display_name, avatar_url, created_at').order('created_at', { ascending: false }).limit(500),
-      db.from('timegrapher_results').select('user_id').limit(ADMIN_ROW_LIMIT),
+      db.from('timegrapher_tick_logs').select('messages').like('messages', '%session_summary%').limit(ADMIN_ROW_LIMIT),
     ]);
     const allWatches = watchesR.data || [];
     const watchByUser = {};
@@ -10428,7 +10428,10 @@ async function loadAdminStats() {
       else { postByUser[r.user_id] = (postByUser[r.user_id] || 0) + 1; }
     });
 
-    const allMsr = msrR.data || [];
+    const allMsr = [];
+    (msrR.data || []).forEach(r => {
+      try { const d = JSON.parse(r.messages); if (d.user_id) allMsr.push({ user_id: d.user_id }); } catch(e) {}
+    });
     const msrByUser = {};
     allMsr.forEach(r => { msrByUser[r.user_id] = (msrByUser[r.user_id] || 0) + 1; });
 
