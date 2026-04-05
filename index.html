@@ -4700,7 +4700,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.04.18.32';
+const APP_VERSION = '2.36.04.23.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17498,13 +17498,9 @@ window._tgNativeCallback = function(data) {
         _msrRateHistory.push(r);
         _msrAllRates.push(r);
         if (_msrRateHistory.length > 30) _msrRateHistory.shift();
-        // Rate display uses _msrCachedBucketRate, updated by scatter plot renderer (2-3/sec)
-        if (_msrCachedBucketRate != null) {
-          _msrLastRate = _msrCachedBucketRate;
-          rateEl.textContent = (_msrCachedBucketRate >= 0 ? '+' : '') + _msrCachedBucketRate.toFixed(1);
-          rateEl.style.color = Math.abs(_msrCachedBucketRate) <= 5 ? '#22c55e' : Math.abs(_msrCachedBucketRate) <= 15 ? '#eab308' : '#ef4444';
-        }
-        document.getElementById('msr-rate-input').value = (_msrLastRate || r).toFixed(1);
+        // Native Theil-Sen rate is authoritative — bucket rate is too coarse
+        // (quantized at 7.2 s/day steps, median stays at 0 for small rates)
+        document.getElementById('msr-rate-input').value = r.toFixed(1);
         if (data.beatError != null) document.getElementById('msr-be-input').value = data.beatError.toFixed(2);
       }
     }
@@ -17619,14 +17615,15 @@ window._tgNativeCallback = function(data) {
           const hasPrelim = elapsed >= 5 && _msrScatterData.length >= 10 && bucketNow != null;
           if (hasPrelim && !_msrPrelimShown) {
             _msrPrelimShown = true;
-            // Show the rate in the HUD
+            // Show early rate in the HUD — prefer native rate if available, else bucket rate
+            const prelimRate = _msrLastRate != null ? _msrLastRate : bucketNow;
             const rateEl = document.getElementById('msr-live-rate');
             if (rateEl) {
-              rateEl.textContent = (bucketNow >= 0 ? '+' : '') + bucketNow.toFixed(1);
-              rateEl.style.color = Math.abs(bucketNow) <= 5 ? '#22c55e' : Math.abs(bucketNow) <= 15 ? '#eab308' : '#ef4444';
+              rateEl.textContent = (prelimRate >= 0 ? '+' : '') + prelimRate.toFixed(1);
+              rateEl.style.color = Math.abs(prelimRate) <= 5 ? '#22c55e' : Math.abs(prelimRate) <= 15 ? '#eab308' : '#ef4444';
             }
-            document.getElementById('msr-rate-input').value = bucketNow.toFixed(1);
-            _msrLastRate = bucketNow;
+            document.getElementById('msr-rate-input').value = prelimRate.toFixed(1);
+            if (_msrLastRate == null) _msrLastRate = bucketNow;
           }
           // Show/hide preliminary badge (visible until converged)
           if (prelimBadge) {
