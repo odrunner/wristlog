@@ -4700,7 +4700,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.05.15.00';
+const APP_VERSION = '2.36.05.15.07';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10429,7 +10429,9 @@ async function loadAdminStats() {
     });
 
     const msrByUser = {};
+    console.log('[ADMIN] msrR:', JSON.stringify(msrR));
     (msrR.data || []).forEach(r => { msrByUser[r.user_id] = (msrByUser[r.user_id] || 0) + Number(r.count); });
+    console.log('[ADMIN] msrByUser:', JSON.stringify(msrByUser));
 
     const allProfiles = profilesR.data || [];
 
