@@ -4700,7 +4700,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.04.23.03';
+const APP_VERSION = '2.36.04.23.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18116,13 +18116,13 @@ function renderMsrScatterPlot() {
   }
   ctx.shadowBlur = 0;
 
-  // Mode reference line — compute fresh from current scatter data (2-3/sec via RAF)
-  // This is the authoritative rate; update the cache so the rate number stays in sync.
+  // Reference line — use native Theil-Sen rate (matches HUD), fall back to bucket median
   const dotRatesForLine = data.map(d => d.d * SD);
-  const lineMode = dotRatesForLine.length >= 10 ? computeMedianRate(dotRatesForLine) : null;
-  if (lineMode != null) _msrCachedBucketRate = lineMode;
-  if (lineMode != null) {
-    const modeY = yPos(lineMode);
+  const bucketMedian = dotRatesForLine.length >= 10 ? computeMedianRate(dotRatesForLine) : null;
+  if (bucketMedian != null) _msrCachedBucketRate = bucketMedian;
+  const lineRate = _msrLastRate != null ? _msrLastRate : bucketMedian;
+  if (lineRate != null) {
+    const modeY = yPos(lineRate);
     if (modeY > pad.t && modeY < h - pad.b) {
       ctx.save();
       ctx.setLineDash([4 * dpr, 4 * dpr]);
