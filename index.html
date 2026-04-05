@@ -4700,7 +4700,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.04.23.14';
+const APP_VERSION = '2.36.05.07.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8548,6 +8548,8 @@ async function saveEditPost() {
   if (demoGuard()) return;
   if (!(await checkEulaAcceptance())) return;
   if (!editPostLogId) return;
+  const saveBtn = document.querySelector('#edit-post-modal .btn-primary');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
   const fi  = feedItems.find(i => i.id === editPostLogId);
   const log = logs.find(l => l.id === editPostLogId);
   const newNotes = (document.getElementById('ep-body').value || '').trim();
@@ -8560,7 +8562,10 @@ async function saveEditPost() {
   } else if (editPostNewFile && currentUser) {
     try {
       finalPhoto = await uploadImage(editPostNewFile, `logs/${currentUser.id}/${editPostLogId}.jpg`);
-    } catch(e) { toast('Photo upload failed — ' + e.message, 'error'); return; }
+    } catch(e) {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+      toast('Photo upload failed — ' + e.message, 'error'); return;
+    }
   }
   // Cleanup old storage file if replaced or removed
   if (oldPhoto && oldPhoto !== finalPhoto) {
@@ -8591,6 +8596,7 @@ async function saveEditPost() {
       refreshFeedCard(editPostLogId);
       // Cleanup orphaned storage file if we uploaded a new one
       if (finalPhoto && finalPhoto !== oldPhoto) { const _p = storagePathFrom(finalPhoto); if (_p) deleteStorageFile(_p); }
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
       toast('Save failed — ' + error.message, 'error'); return;
     }
     // Send mention notifications for NEW @usernames added in the edit
@@ -14623,7 +14629,8 @@ async function uploadImage(blob, path) {
   });
   if (error) throw new Error('Upload failed: ' + error.message);
   const { data: urlData } = db.storage.from('media').getPublicUrl(path);
-  return urlData.publicUrl;
+  // Cache-bust: upsert overwrites same URL, so append version to force CDN/browser refresh
+  return urlData.publicUrl + '?v=' + Date.now();
 }
 
 // Upload a raw file (PDF, etc.) to Supabase Storage without resize
@@ -14655,7 +14662,11 @@ function storagePathFrom(url) {
   if (!url) return null;
   const marker = '/storage/v1/object/public/media/';
   const idx = url.indexOf(marker);
-  return idx >= 0 ? url.slice(idx + marker.length) : null;
+  if (idx < 0) return null;
+  const path = url.slice(idx + marker.length);
+  // Strip query params (cache-bust ?v=...) to get clean storage path
+  const qIdx = path.indexOf('?');
+  return qIdx >= 0 ? path.slice(0, qIdx) : path;
 }
 
 // ── Add-photo modal (paste / drop / browse — no clipboard permission dialog) ──
@@ -17970,8 +17981,6 @@ let _msrScatterRafPending = false;
 let _msrLastCumDev = 0; // track last cumulative deviation to compute individual pair devs
 function addMsrTickDots(newTicks) {
   if (!newTicks || !newTicks.length) return;
-  // Detect reset: if we have data and new tick starts at 0, engine reset tick tracking
-  if (_msrScatterData.length > 10 && newTicks[0].d === 0) { _msrScatterData = []; _msrLastCumDev = 0; }
   const activeBph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;
   const outlierLimit = Math.max(30, 3 * (86400 / activeBph));
   for (const tk of newTicks) {
