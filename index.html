@@ -220,7 +220,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .landing-logo span span { font-weight:400; letter-spacing:.04em; }
     .landing-tagline { font-size:1rem; color:var(--muted); line-height:1.55; text-align:center; margin-bottom:1.5rem; }
     .landing-auth { display:flex; flex-direction:column; gap:.55rem; margin-top:2rem; margin-bottom:1.5rem; }
-    .landing-auth .btn-google, .landing-auth .btn-apple { font-size:.82rem; padding:.65rem .9rem; max-width:280px; margin-left:auto; margin-right:auto; }
+    .landing-auth .btn-google, .landing-auth .btn-apple, .landing-auth .btn-demo { font-size:.82rem; padding:.65rem .9rem; max-width:280px; margin-left:auto; margin-right:auto; }
     .landing-app-badge { text-align:center; margin-bottom:.25rem; }
     .landing-app-badge img { height:34px; }
     .landing-fine-print { font-size:.7rem; color:var(--muted); text-align:center; line-height:1.5; margin-bottom:2rem; }
@@ -1898,7 +1898,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <!-- Auth buttons -->
     <div class="landing-auth">
-      <div id="auth-error" class="auth-error"></div>
+      <div id="auth-error" class="auth-error" style="display:none"></div>
       <div class="landing-app-badge" id="landing-app-badge">
         <a href="https://apps.apple.com/us/app/wrotate/id6760091102" target="_blank" rel="noopener noreferrer" onclick="trackAppStoreClick()">
           <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store">
@@ -1916,6 +1916,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button class="btn-apple" onclick="signInWithApple()">
         <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="#fff"/></svg>
         Continue with Apple
+      </button>
+      <button class="btn-demo" onclick="bootDemoMode()" style="background:none;border:1px solid #555;color:#aaa;border-radius:10px;padding:.55rem 1.2rem;font-size:.85rem;cursor:pointer;font-family:inherit;margin-top:.25rem;">
+        Try Demo
       </button>
     </div>
     <div class="landing-fine-print">
@@ -2347,6 +2350,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </header>
 
 <main>
+
+  <!-- ════ DEMO MODE BANNER ════ -->
+  <div id="demo-banner" class="demo-banner hidden" style="background:linear-gradient(135deg,#c9a84c 0%,#b8963f 50%,#a6842e 100%);color:#16161e;padding:.6rem 1.2rem;margin:-.8rem .8rem .5rem;display:flex;align-items:center;justify-content:space-between;font-size:.8rem;font-weight:600;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.12);">
+    <span>Demo Mode — read-only preview of Alex Rivera's collection</span>
+    <div style="display:flex;gap:.5rem;align-items:center;">
+      <button onclick="exitDemoMode()" style="background:#16161e;color:#f5f5f8;border:none;border-radius:8px;padding:.35rem .8rem;font-size:.75rem;cursor:pointer;font-family:inherit;font-weight:600;">Sign Up Free</button>
+      <button onclick="exitDemoMode()" style="background:rgba(22,22,30,.1);border:1px solid rgba(22,22,30,.3);color:#16161e;border-radius:8px;padding:.35rem .8rem;font-size:.75rem;cursor:pointer;font-family:inherit;">Exit</button>
+    </div>
+  </div>
 
   <!-- ════ GLOBAL REMINDER BANNER ════ -->
   <div id="reminder-banner" class="reminder-banner hidden">
@@ -4005,7 +4017,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <!-- Photo (compact strip) -->
     <div class="tl-field">
       <div class="tl-label">Photo <span class="tl-opt">optional</span></div>
-      <div id="track-photo-area" class="log-photo-area tl-photo" onclick="document.getElementById('track-photo-input').click()">
+      <div id="track-photo-area" class="log-photo-area tl-photo" onclick="if(demoGuard())return;document.getElementById('track-photo-input').click()">
         <div id="track-photo-placeholder" class="log-photo-placeholder" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add a photo</div>
         <img id="track-photo-preview" class="log-photo-preview" style="display:none;" alt="">
         <button type="button" id="track-photo-clear" class="log-photo-clear" style="display:none;"
@@ -4161,6 +4173,8 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 
 let currentUser = null; // set after sign-in
+let _isDemoMode = false;
+const DEMO_USER_EMAIL = 'demo@wrotate.com';
 const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
 const _isDevUser = () => currentUser?.id === ADMIN_USER_ID;
 let OFFICIAL_USER_ID = null; // resolved at init from profiles.is_official
@@ -4254,7 +4268,7 @@ async function authedFetch(url, opts = {}, timeoutMs = 30000) {
 function showAuthError(msg) {
   const el = document.getElementById('auth-error');
   el.textContent = msg;
-  el.style.display = 'block';
+  el.style.display = msg ? 'block' : 'none';
 }
 
 async function devLogin(which) {
@@ -4264,6 +4278,68 @@ async function devLogin(which) {
   const { error } = await db.auth.signInWithPassword(creds);
   if (error) showAuthError('Dev login failed: ' + error.message);
 }
+
+// ── Demo mode ───────────────────────────────────────────────────────────────
+function demoGuard() {
+  if (!_isDemoMode) return false;
+  showDemoSignupModal();
+  return true;
+}
+
+function showDemoSignupModal() {
+  if (document.getElementById('demo-signup-modal')) return;
+  const m = document.createElement('div');
+  m.id = 'demo-signup-modal';
+  m.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);';
+  m.innerHTML = `
+    <div style="background:var(--bg,#f5f5f8);border-radius:16px;padding:2rem;max-width:340px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+      <div style="font-size:1.3rem;font-weight:700;color:var(--text,#16161e);margin-bottom:.3rem;">Like what you see?</div>
+      <div style="font-size:.85rem;color:var(--muted,#6e6e7a);margin-bottom:1.4rem;">Sign up free to start tracking your own collection.</div>
+      <button onclick="exitDemoMode();setTimeout(signInWithGoogle,300)" style="display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.7rem;border-radius:10px;border:1px solid #ddd;background:#fff;color:#333;font-size:.9rem;font-weight:500;cursor:pointer;font-family:inherit;margin-bottom:.5rem;">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+        Continue with Google
+      </button>
+      <button onclick="exitDemoMode();setTimeout(signInWithApple,300)" style="display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.7rem;border-radius:10px;border:none;background:#000;color:#fff;font-size:.9rem;font-weight:500;cursor:pointer;font-family:inherit;margin-bottom:.8rem;">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="#fff"/></svg>
+        Continue with Apple
+      </button>
+      <button onclick="closeDemoSignupModal()" style="background:none;border:none;color:var(--muted,#6e6e7a);font-size:.8rem;cursor:pointer;font-family:inherit;padding:.3rem;">Keep exploring demo</button>
+    </div>`;
+  m.addEventListener('click', (e) => { if (e.target === m) closeDemoSignupModal(); });
+  document.body.appendChild(m);
+}
+
+function closeDemoSignupModal() {
+  const m = document.getElementById('demo-signup-modal');
+  if (m) m.remove();
+}
+
+async function bootDemoMode() {
+  showAuthError('');
+  try {
+    const resp = await fetch(SUPABASE_URL + '/functions/v1/demo-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY }
+    });
+    const data = await resp.json();
+    if (!data.access_token) { showAuthError('Demo login failed'); return; }
+    const { error } = await db.auth.setSession({
+      access_token: data.access_token, refresh_token: data.refresh_token
+    });
+    if (error) { showAuthError('Demo login failed: ' + error.message); return; }
+    _isDemoMode = true;
+    localStorage.setItem('wrotate_demo', '1');
+  } catch(e) {
+    showAuthError('Demo login failed: ' + e.message);
+  }
+}
+
+function exitDemoMode() {
+  _isDemoMode = false;
+  localStorage.removeItem('wrotate_demo');
+  signOut();
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function signInWithGoogle() {
   if (window.posthog) posthog.capture('signup_clicked', { provider: 'google' });
@@ -4303,6 +4379,7 @@ function deleteAccountStep2() {
   document.getElementById('da-step-2').classList.remove('hidden');
 }
 async function deleteAccount() {
+  if (demoGuard()) return;
   if (!currentUser) return;
   const uid = currentUser.id;
   const btn = document.getElementById('da-final-btn');
@@ -4623,7 +4700,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.04.11.52';
+const APP_VERSION = '2.36.04.18.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5457,6 +5534,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
 }
 
 async function cycleWatchPrivacy(watchId) {
+  if (demoGuard()) return;
   const w = watches.find(x => x.id === watchId);
   if (!w) return;
   // null = Default → public → followers → friends → private → null
@@ -5487,6 +5565,7 @@ async function cycleWatchPrivacy(watchId) {
 }
 
 async function cycleWishPrivacy(wishId) {
+  if (demoGuard()) return;
   const w = wishlist.find(x => x.id === wishId);
   if (!w) return;
   // null = Default → public → followers → friends → private → null
@@ -5516,6 +5595,7 @@ async function cycleWishPrivacy(wishId) {
 }
 
 async function saveProfileFromPage() {
+  if (demoGuard()) return;
   if (currentUser) delete _profileCache[currentUser.id]; // invalidate cache
   const name  = (document.getElementById('pp-display-name')?.value || '').trim();
   const bio   = (document.getElementById('pp-bio')?.value || '').trim();
@@ -5631,6 +5711,7 @@ async function uploadProfilePic() {
 }
 
 async function removeProfilePic() {
+  if (demoGuard()) return;
   if (!currentUser) return;
   delete _profileCache[currentUser.id];
   try {
@@ -5695,6 +5776,7 @@ async function loadBlockedUsers() {
 }
 
 function blockUser(userId, displayName) {
+  if (demoGuard()) return;
   if (!userId || userId === currentUser?.id) return;
   _pendingBlockAction = { userId, displayName: displayName || 'this user' };
   const t = document.getElementById('toast');
@@ -5736,6 +5818,7 @@ async function _execBlock() {
 }
 
 async function unblockUser(userId) {
+  if (demoGuard()) return;
   const { error } = await db.from('user_blocks').delete().eq('blocker_id', currentUser.id).eq('blocked_id', userId);
   if (error) { toast('Could not unblock — please try again', 'error'); return; }
   blockedUsers.delete(userId);
@@ -5791,6 +5874,7 @@ function computeFriendships() {
 }
 
 async function initiateFriendRequest(userId) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   if (!following.has(userId)) { toast('You must follow each other first', 'error'); return; }
   const { data: theyFollow } = await db.from('follows')
@@ -5825,6 +5909,7 @@ async function initiateFriendRequest(userId) {
 }
 
 async function removeFriend(userId) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   // RLS scopes delete to rows where auth.uid() is a party; filtering by userId
   // picks the specific pair without needing nested and() inside or().
@@ -5838,6 +5923,7 @@ async function removeFriend(userId) {
 }
 
 async function acceptFriendRequest(initiatorId, notifId) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   const { error } = await db.from('friend_requests')
     .update({ status: 'accepted' })
@@ -5865,6 +5951,7 @@ async function acceptFriendRequest(initiatorId, notifId) {
 }
 
 async function declineFriendRequest(initiatorId, notifId) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   const { error: delErr } = await db.from('friend_requests').delete()
     .eq('initiator_id', initiatorId)
@@ -5884,6 +5971,7 @@ async function declineFriendRequest(initiatorId, notifId) {
 }
 
 async function acceptFriendRequestFromPopover(userId) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   const { error } = await db.from('friend_requests')
     .update({ status: 'accepted' })
@@ -6058,6 +6146,7 @@ async function loadPendingClubRequests() {
 }
 
 async function createClub(name, desc, privacy) {
+  if (demoGuard()) return;
   if (!(await checkEulaAcceptance())) return;
   if (!currentUser || !name.trim()) return;
   const clubId = uid();
@@ -6079,6 +6168,7 @@ async function createClub(name, desc, privacy) {
 }
 
 async function joinClub(clubId, privacy) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   if (privacy === 'private') {
     toast('Private clubs are invite-only', 'info');
@@ -6094,6 +6184,7 @@ async function joinClub(clubId, privacy) {
 }
 
 async function leaveClub(clubId) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   if (!await showConfirm('You will lose access to this club\'s posts.', { title: 'Leave this club?', confirmLabel: 'Leave Club' })) return;
   const { error } = await db.from('club_members').delete().eq('club_id', clubId).eq('user_id', currentUser.id);
@@ -6104,6 +6195,7 @@ async function leaveClub(clubId) {
 }
 
 async function cancelClubRequest(clubId) {
+  if (demoGuard()) return;
   const { error } = await db.from('club_join_requests').delete().eq('club_id', clubId).eq('user_id', currentUser.id);
   if (error) { toast('Could not cancel request — ' + error.message, 'error'); return; }
   pendingClubRequests.delete(clubId);
@@ -6112,6 +6204,7 @@ async function cancelClubRequest(clubId) {
 }
 
 async function acceptClubJoinRequest(requesterId, clubId, notifId) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   const { error } = await db.from('club_members').insert({ club_id: clubId, user_id: requesterId, role: 'member' });
   if (error && error.code !== '23505') { toast('Could not approve — ' + (error.message || error.code), 'error'); return; }
@@ -6140,6 +6233,7 @@ async function declineClubJoinRequest(requesterId, clubId, notifId) {
 }
 
 async function promoteToOwner(userId, clubId) {
+  if (demoGuard()) return;
   // No UPDATE policy on club_members — use delete + re-insert with new role
   const { error: delErr } = await db.from('club_members').delete().eq('club_id', clubId).eq('user_id', userId);
   if (delErr) { toast('Could not promote — ' + (delErr.message || delErr.code), 'error'); return; }
@@ -6160,6 +6254,7 @@ async function promoteToOwner(userId, clubId) {
 }
 
 async function removeMember(userId, clubId) {
+  if (demoGuard()) return;
   if (!await showConfirm('This member will lose access to the club.', { title: 'Remove member?', confirmLabel: 'Remove' })) return;
   const { error } = await db.from('club_members').delete().eq('club_id', clubId).eq('user_id', userId);
   if (error) { toast('Could not remove — ' + (error.message || error.code), 'error'); return; }
@@ -6444,6 +6539,7 @@ function handleClubImageUpload(input, clubId) {
 }
 
 async function saveClubEdit(clubId) {
+  if (demoGuard()) return;
   const name    = document.getElementById('club-edit-name')?.value.trim();
   const desc    = document.getElementById('club-edit-desc')?.value.trim();
   const privacy = document.querySelector('#club-edit-privacy-chips .chip.selected')?.dataset.val || 'public';
@@ -6491,6 +6587,7 @@ function closeDeleteClubModal() {
   _deleteClubId = null;
 }
 async function deleteClub() {
+  if (demoGuard()) return;
   if (!currentUser || !_deleteClubId) return;
   const clubId = _deleteClubId;
   closeDeleteClubModal();
@@ -6570,6 +6667,7 @@ async function searchInviteUsers(query, clubId) {
 }
 
 async function sendClubInvite(inviteeId, inviteeName, clubId, btn) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   const { error } = await db.from('club_invites').insert({
     club_id: clubId, invitee_id: inviteeId, invited_by: currentUser.id
@@ -6587,6 +6685,7 @@ async function sendClubInvite(inviteeId, inviteeName, clubId, btn) {
 }
 
 async function rescindClubInvite(inviteeId, inviteeName, clubId, btn) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   const { error } = await db.from('club_invites').delete().eq('club_id', clubId).eq('invitee_id', inviteeId);
   if (error) { toast('Could not rescind invite — ' + error.message, 'error'); return; }
@@ -6628,6 +6727,7 @@ async function renderPendingInvites(clubId) {
 }
 
 async function acceptClubInvite(clubId, notifId) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   // Check if invite still exists (owner may have rescinded it)
   const { data: invite } = await db.from('club_invites')
@@ -6657,6 +6757,7 @@ async function acceptClubInvite(clubId, notifId) {
 }
 
 async function declineClubInvite(clubId, notifId) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   await db.from('club_invites').delete().eq('club_id', clubId).eq('invitee_id', currentUser.id);
   await db.from('notifications').delete().eq('id', notifId);
@@ -6907,6 +7008,7 @@ function updateBellBadge() {
   }
 }
 async function followUser(userId, btn) {
+  if (demoGuard()) return;
   if (!currentUser || userId === currentUser.id) return;
   const { error } = await db.from('follows').insert({ follower_id: currentUser.id, following_id: userId });
   if (!error) {
@@ -6928,6 +7030,7 @@ async function followUser(userId, btn) {
   } else { toast('Could not follow — please try again', 'error'); }
 }
 async function sendFollowRequest(userId, btn) {
+  if (demoGuard()) return;
   if (!currentUser || userId === currentUser.id) return;
   const { error } = await db.from('follow_requests').insert({ requester_id: currentUser.id, target_id: userId });
   if (!error) {
@@ -6947,6 +7050,7 @@ async function sendFollowRequest(userId, btn) {
   } else { toast('Could not send request — please try again', 'error'); }
 }
 async function cancelFollowRequest(userId) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   const { error } = await db.from('follow_requests').delete()
     .eq('requester_id', currentUser.id).eq('target_id', userId);
@@ -6956,6 +7060,7 @@ async function cancelFollowRequest(userId) {
   renderDiscoverUsers();
 }
 async function acceptFollowRequest(requesterId, notifId) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   const { error: followErr } = await db.from('follows').insert({ follower_id: requesterId, following_id: currentUser.id });
   if (followErr) { toast('Could not accept request', 'error'); return; }
@@ -6976,6 +7081,7 @@ async function acceptFollowRequest(requesterId, notifId) {
   renderNotificationPanel();
 }
 async function declineFollowRequest(requesterId, notifId) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   const { error: delErr } = await db.from('follow_requests').delete()
     .eq('requester_id', requesterId).eq('target_id', currentUser.id);
@@ -7050,6 +7156,7 @@ function confirmUnfriend(userId, btn) {
   }
 }
 async function unfriendFromCard(userId, btn) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   const { error } = await db.from('friend_requests').delete()
     .or(`initiator_id.eq.${userId},target_id.eq.${userId}`);
@@ -7072,6 +7179,7 @@ async function unfriendFromCard(userId, btn) {
   }
 }
 async function unfollowUser(userId, btn) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   const { error } = await db.from('follows').delete()
     .eq('follower_id', currentUser.id).eq('following_id', userId);
@@ -7115,6 +7223,7 @@ async function unfollowUser(userId, btn) {
 
 
 async function markAllNotifsRead() {
+  if (demoGuard()) return;
   if (!currentUser) return;
   // Never auto-mark actionable notifications — they need explicit Accept/Decline
   const actionable = new Set(['follow_request', 'club_join_request', 'club_invite', 'friend_request']);
@@ -8176,6 +8285,7 @@ function closeReport() {
 }
 
 async function submitReport() {
+  if (demoGuard()) return;
   const btn = document.getElementById('report-submit-btn');
   btn.disabled = true; btn.textContent = 'Submitting...';
 
@@ -8435,6 +8545,7 @@ function handleEditPostPhoto(input) {
 }
 
 async function saveEditPost() {
+  if (demoGuard()) return;
   if (!(await checkEulaAcceptance())) return;
   if (!editPostLogId) return;
   const fi  = feedItems.find(i => i.id === editPostLogId);
@@ -8508,6 +8619,7 @@ async function saveEditPost() {
 }
 
 function deletePostFromFeed() {
+  if (demoGuard()) return;
   const btn = document.getElementById('ep-delete-btn');
   if (!btn || btn.dataset.confirm) return;
   btn.dataset.confirm = '1';
@@ -8517,6 +8629,7 @@ function deletePostFromFeed() {
 }
 
 async function confirmDeletePost() {
+  if (demoGuard()) return;
   if (!editPostLogId) return;
   const logId = editPostLogId;
   const fi = feedItems.find(i => i.id === logId);
@@ -8537,6 +8650,7 @@ let newPostFile  = null;   // raw File for deferred upload
 let npIdentifiedWatchId = null; // watchId from AI identification (or null)
 
 function openNewPost() {
+  if (demoGuard()) return;
   newPostPhoto = null;
   newPostFile  = null;
   npIdentifiedWatchId = null;
@@ -8691,6 +8805,7 @@ function dismissNpWatchSuggestion() {
 }
 
 async function saveNewPost() {
+  if (demoGuard()) return;
   if (!(await checkEulaAcceptance())) return;
   const body = (document.getElementById('np-body')?.value || '').trim();
   if (!body && !newPostFile) { toast('Add a photo or write something', 'error'); return; }
@@ -8817,6 +8932,7 @@ async function handleFeedPhoto(input) {
 // ── Likes ─────────────────────────────────────────────────────────────────
 const _likePending = new Set();
 async function toggleLike(logId) {
+  if (demoGuard()) return;
   if (!currentUser || _likePending.has(logId)) return;
   _likePending.add(logId);
   const cur = feedLikes[logId] || { count: 0, liked: false };
@@ -8852,6 +8968,7 @@ async function toggleLike(logId) {
 
 const _commentLikePending = new Set();
 async function toggleCommentLike(commentId, logId) {
+  if (demoGuard()) return;
   if (!currentUser || _commentLikePending.has(commentId)) return;
   _commentLikePending.add(commentId);
   const cur = commentLikes[commentId] || { count: 0, liked: false };
@@ -9100,6 +9217,7 @@ function renderCommentBody(body) {
 }
 
 async function postComment(logId) {
+  if (demoGuard()) return;
   if (!(await checkEulaAcceptance())) return;
   const input = document.getElementById(`comment-input-${logId}`);
   if (!input) return;
@@ -9214,6 +9332,7 @@ async function checkEulaAcceptance() {
 }
 
 async function acceptEula() {
+  if (demoGuard()) return;
   if (!currentUser) return;
   const { error: eulaErr } = await db.from('eula_acceptances').upsert({ user_id: currentUser.id, version: '1.0' }, { onConflict: 'user_id,version', ignoreDuplicates: true });
   if (eulaErr && !eulaErr.message?.includes('duplicate')) { toast('Could not save agreement — please try again', 'error'); return; }
@@ -9234,6 +9353,7 @@ function declineEula() {
   signOut();
 }
 async function saveWelcomeProfile() {
+  if (demoGuard()) return;
   const name = (document.getElementById('ws-display-name').value || '').trim();
   const usernameRaw = (document.getElementById('ws-username')?.value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
   const bio  = (document.getElementById('ws-bio').value || '').trim();
@@ -9263,6 +9383,7 @@ async function saveWelcomeProfile() {
 
 // ── Discover ──────────────────────────────────────────────────────────────
 function openDiscover() {
+  if (demoGuard()) return;
   discoverUsers = [];
   document.getElementById('discover-search').value = '';
   document.getElementById('discover-results').innerHTML =
@@ -9435,6 +9556,7 @@ function getVisChip(cId) {
   return document.querySelector(`#${cId} .chip.selected`)?.dataset.vis || 'public';
 }
 async function savePrivacyField(field, value) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   const { error } = await db.from('profiles').update({ [field]: value }).eq('id', currentUser.id);
   if (!error && window.myProfile) window.myProfile[field] = value;
@@ -9451,6 +9573,7 @@ function toggleProfSection(sectionId, storageKey) {
 }
 
 async function saveEmailPref(category, enabled) {
+  if (demoGuard()) return;
   if (!currentUser) return;
   const prefs = (myProfile && myProfile.email_prefs) ? { ...myProfile.email_prefs } : { comments: true, mentions: true, clubs: false, friends: true, updates: true };
   prefs[category] = enabled;
@@ -9468,6 +9591,7 @@ function getRecSettings() {
 }
 
 async function saveRecSetting(key, value) {
+  if (demoGuard()) return;
   const settings = getRecSettings();
   settings[key] = value;
   if (currentUser) {
@@ -9480,6 +9604,7 @@ async function saveRecSetting(key, value) {
 }
 
 async function toggleRecExclude(watchId) {
+  if (demoGuard()) return;
   const settings = getRecSettings();
   const excluded = new Set(settings.excluded || []);
   if (excluded.has(watchId)) excluded.delete(watchId); else excluded.add(watchId);
@@ -10683,6 +10808,7 @@ function nav(btn) {
 }
 
 function showClubsPage() {
+  if (demoGuard()) return;
   if (typeof _tgListening !== 'undefined' && _tgListening) stopTgListen();
   if (typeof _msrListening !== 'undefined' && _msrListening) stopMsrListen();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -11784,6 +11910,7 @@ function renderTrackHistory() {
 }
 
 async function saveLog() {
+  if (demoGuard()) return;
   const date = document.getElementById('track-date').value;
   if (!date)       { showFieldError('track-date', 'Please select a date'); return; }
   if (!selWatchId) { toast('Please select a watch', 'error'); return; }
@@ -12042,6 +12169,7 @@ function closeSnapMatch() {
 }
 
 function deleteLog(id, btn) {
+  if (demoGuard()) return;
   if (btn && !btn.dataset.confirm) {
     btn.dataset.confirm = '1'; btn.textContent = 'Sure?'; btn.style.color = 'var(--danger,#e55)';
     setTimeout(() => { if (btn) { delete btn.dataset.confirm; btn.textContent = '✕'; btn.style.color = ''; } }, 3000);
@@ -12226,6 +12354,7 @@ function renderGamePair() {
 }
 
 function pickWatch(winnerId, loserId) {
+  if (demoGuard()) return;
   clearGameTimer();
   // Flash result
   const isA = gamePair.aId === winnerId;
@@ -12974,6 +13103,7 @@ function selStrap(id) {
 }
 
 function openAddWatch() {
+  if (demoGuard()) return;
   editingId         = null;
   selColor          = PALETTE[0];
   wPendingImage     = null;
@@ -13126,6 +13256,7 @@ async function openModalCropAdjuster() {
 }
 
 function pickWatchModalImage() {
+  if (demoGuard()) return;
   const input = document.createElement('input');
   input.type = 'file'; input.accept = 'image/*';
   input.onchange = () => {
@@ -13214,6 +13345,7 @@ function watchCardTagsHTML(w, wLogs) {
 
 // ── Quick-log (wear today) — used from Collection cards ──────────────────────
 function quickLog(watchId) {
+  if (demoGuard()) return;
   const today = todayStr();
   const alreadyWorn = logsForWatch(watchId).some(l => l.date === today);
   if (alreadyWorn) return;
@@ -13250,6 +13382,7 @@ function marketPriceRowHTML(w) {
 }
 
 async function saveWatch() {
+  if (demoGuard()) return;
   const brand = document.getElementById('w-brand').value;
   const name  = document.getElementById('w-name').value.trim();
   if (!brand) { showFieldError('w-brand-display', 'Please select a brand'); return; }
@@ -14220,6 +14353,7 @@ function setCollSort(field) {
 }
 
 function deleteLogFromStats(id) {
+  if (demoGuard()) return;
   logs = logs.filter(l => l.id !== id);
   save();
   if (currentUser) queueDelete('logs', id);
@@ -14597,6 +14731,7 @@ function _saveWatchImage(watchId, url) {
 }
 
 function removeWatchImage(watchId) {
+  if (demoGuard()) return;
   const idx = watches.findIndex(x => x.id === watchId);
   if (idx < 0) return;
   const oldImage = watches[idx].image;
@@ -14952,6 +15087,7 @@ function brandToDomain(brand) {
 }
 
 function openPhotoIdentify() {
+  if (demoGuard()) return;
   if (!currentUser) { toast('Sign in to use photo identification', 'error'); return; }
   window._identifyAborted = false;
   const input = document.createElement('input');
@@ -16067,6 +16203,7 @@ function wlDeleteFromEdit() {
 function closeWishlistModal() { clearInlineEdits(WL_INLINE_FIELDS); if (wlPendingImage) { URL.revokeObjectURL(wlPendingImage); wlPendingImage = null; wlPendingFile = null; } document.getElementById('wishlist-modal').classList.add('hidden'); }
 
 async function saveWishlistItem() {
+  if (demoGuard()) return;
   const brand = document.getElementById('wl-brand').value;
   const name  = document.getElementById('wl-name').value.trim();
   if (!brand) { showFieldError('wl-brand-display', 'Please select a brand'); return; }
@@ -16135,6 +16272,7 @@ function closeDelWlModal() {
   deletingWlId = null;
 }
 function confirmDeleteWishlist() {
+  if (demoGuard()) return;
   if (!deletingWlId) return;
   const id = deletingWlId;
   const item = wishlist.find(x => x.id === id);
@@ -16811,6 +16949,7 @@ function scrollToPost(postId) {
 }
 
 async function sharePost(logId) {
+  if (demoGuard()) return;
   const url = `https://api.wrotate.com/functions/v1/share-post?id=${logId}`;
   const item = feedItems.find(i => i.id === logId);
   const watchName = item?.watch ? `${item.watch.brand || ''} ${item.watch.name || ''}`.trim() : '';
@@ -16856,6 +16995,7 @@ ${handle ? `Find me @${handle} — ` : ''}Join free 👉 https://wrotate.com`;
 
 
 async function submitFeedback() {
+  if (demoGuard()) return;
   const details = document.getElementById('fb-desc').value.trim();
   if (!details) { showFieldError('fb-desc', 'Please describe your feedback'); return; }
 
@@ -17079,6 +17219,9 @@ function initApp() {
 
 // Wipe all per-user data from memory and localStorage (called on sign-out and before new sign-in)
 function clearUserState() {
+  _isDemoMode = false;
+  const demoBanner = document.getElementById('demo-banner');
+  if (demoBanner) demoBanner.classList.add('hidden');
   watches = []; logs = []; wishlist = []; eloRatings = {};
   _dirty.watches.clear(); _dirty.logs.clear(); _dirty.wishlist.clear(); _dirty.elo.clear();
   _pendingDeletes = []; savePendingDeletes();
@@ -17439,7 +17582,7 @@ window._tgNativeCallback = function(data) {
         return;
       }
       // Low acceptance warning: if 15s elapsed and acceptance rate < 15%, show warning
-      if (elapsed >= 15 && data.tickCount > 0 && acceptRate < 0.15 && !_msrWeakSignalShown) {
+      if (elapsed >= 15 && data.tickCount > 0 && _msrAcceptRate < 0.15 && !_msrWeakSignalShown) {
         _msrWeakSignalShown = true;
         const statusText = document.getElementById('msr-status-text');
         if (statusText && _msrPhase !== 'converged') {
@@ -17698,6 +17841,7 @@ window._tgNativeCallback = function(data) {
 };
 
 async function saveTimegrapherManual() {
+  if (demoGuard()) return;
   if (!currentUser || !_tgWatchId) return;
   const rateVal = document.getElementById('tg-rate-input').value.trim();
   if (rateVal === '') { toast('Please enter a rate (s/day)', 'error'); return; }
@@ -17788,6 +17932,7 @@ function editTgResult(id) {
 }
 
 async function deleteTgResult(id) {
+  if (demoGuard()) return;
   const { error } = await db.from('timegrapher_results').delete().eq('id', id).eq('user_id', currentUser.id);
   if (error) { toast('Delete failed', 'error'); return; }
   toast('Deleted');
@@ -18113,6 +18258,7 @@ var _remotePeakRatioThreshold = 2.5;
 var _remoteBufferSeconds = 30.0;
 
 function onMsrBphChange() {
+  if (demoGuard()) return;
   // If currently measuring, restart engine with new BPH
   const bphDropdown = document.getElementById('msr-bph-select').value;
   console.log('[TG JS] BPH dropdown changed to:', bphDropdown, 'listening:', _msrListening);
@@ -18424,6 +18570,7 @@ function discardMsrReading() {
 }
 
 async function saveMsrReading() {
+  if (demoGuard()) return;
   if (!currentUser) return;
   const watchId = document.getElementById('msr-watch-select').value;
   if (!watchId) { toast('Select a watch', 'error'); return; }
@@ -18459,7 +18606,15 @@ async function bootApp(user) {
   if (currentUser?.id === user.id) return; // already running for this user
   clearUserState();
   currentUser = user;
-  if (window.posthog) posthog.identify(user.id, { email: user.email });
+  // Check if this is a demo session
+  if (user.email === DEMO_USER_EMAIL) _isDemoMode = true;
+  const demoBanner = document.getElementById('demo-banner');
+  if (demoBanner) demoBanner.classList.toggle('hidden', !_isDemoMode);
+  if (_isDemoMode) {
+    const soBtn = document.getElementById('signout-btn');
+    if (soBtn) { soBtn.textContent = 'Exit Demo'; soBtn.onclick = exitDemoMode; }
+  }
+  if (window.posthog && !_isDemoMode) posthog.identify(user.id, { email: user.email });
   // Force scroll to top — iOS PWA restores previous scroll position on launch
   window.scrollTo(0, 0);
   document.getElementById('auth-screen').style.display = 'none';
