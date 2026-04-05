@@ -4700,7 +4700,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.05.10.26';
+const APP_VERSION = '2.36.05.10.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18503,11 +18503,13 @@ function stopMsrListen() {
   // Show result in the rate HUD and status bar
   const statusText = document.getElementById('msr-status-text');
   const rateEl = document.getElementById('msr-live-rate');
-  // Use mode as final rate if available
-  // Use mode of scatter dot data (individual pair devs) — same source as chart and HUD
+  // Final rate: native Theil-Sen is authoritative. Only fall back to bucket median
+  // if native rate was never set (e.g. web-only mode with no native engine).
   const finalDotRates = _msrScatterData.map(d => d.d * 86.4);
-  const finalMode = finalDotRates.length >= 10 ? computeMedianRate(finalDotRates) : null;
-  if (finalMode != null) _msrLastRate = finalMode;
+  if (_msrLastRate == null) {
+    const finalMode = finalDotRates.length >= 10 ? computeMedianRate(finalDotRates) : null;
+    if (finalMode != null) _msrLastRate = finalMode;
+  }
   if (_msrLastRate != null && statusText) {
     const r = _msrLastRate;
     // Error bar: based on bucket rate stability (how much the estimate varied recently)
