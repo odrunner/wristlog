@@ -83,3 +83,65 @@ IWC Portugieser dial-down measurement converged at +0.0 s/day when real rate is 
 | Variable | Old | New | Reason |
 |---|---|---|---|
 | JS convergence: native rate stability check | (none) | Last 8 native rates must span ≤ 5 s/day | Prevents converging while Theil-Sen rate is still drifting. Bucket rate stability alone is insufficient — it's blind to rates below one quantization step (7.2 s/day). IWC session: native rate swung 18 s/day over 35 seconds but bucket rate was "stable" at 0 the entire time. |
+
+---
+
+## 2026-04-05 — Bug Fix (SW v357)
+
+**HUD/reference line mismatch after convergence.** HUD showed converged rate (+0.0) but the dashed yellow reference line showed ~7 s/day.
+
+### Root cause
+
+`stopMsrListen()` (line ~18510) overwrote `_msrLastRate` with the bucket median of all scatter dots after the measurement stopped:
+```js
+const finalMode = computeMedianRate(finalDotRates);
+if (finalMode != null) _msrLastRate = finalMode;  // ← overwrote native rate
+```
+The HUD was set at convergence time (native rate), but then `stopMsrListen` replaced `_msrLastRate` with the bucket median (~7), and the chart's reference line picked up the new value on redraw.
+
+### Fix
+
+Only fall back to bucket median if native rate was never set (web-only mode with no Swift engine). On iOS, `_msrLastRate` is left unchanged — HUD, reference line, and save input all show the same native Theil-Sen rate.
+
+This was a pre-existing bug from before native Theil-Sen was made authoritative — the old code always preferred bucket median as the final rate.
+
+---
+
+## 2026-04-05 — Bug Fix (SW v358)
+
+**False "No ticks yet" warning in auto-BPH mode.** Users in auto mode were told to "move watch closer to mic" at 4s even though ticks physically can't appear until ~7s (5s BPH detection + 2s calibration).
+
+### Root cause
+
+The "no ticks yet" warning (line ~17551) checked `elapsed >= 4 && data.tickCount === 0`. In manual mode this is correct — calibration takes ~2s, so no ticks by 4s is a real signal problem. But in auto mode, the Goertzel BPH detection takes ~5s and calibration adds another ~2s, so `tickCount` is always 0 at 4s regardless of signal quality.
+
+### Fix
+
+Differentiated the warning window by mode:
+- **Manual mode**: warn at 4–8s (unchanged)
+- **Auto mode**: warn at 10–15s (gives BPH detection + calibration + grace period)
+
+This prevents new users (who won't know their BPH and will use auto mode) from being incorrectly told their signal is weak before the engine has even started looking for ticks.
+
+---
+
+## 2026-04-05 — Tuning Update #3 (SW v359)
+
+Tested 4 watches × 2 positions (dial-down and dial-up), 25 sessions total. Only 3 converged. Most sessions ended in 15–20s with <60 ticks — rates were unreliable.
+
+### Changes
+
+| Variable | Old | New | Reason |
+|---|---|---|---|
+| `minElapsed` | 15s (strong) / 20s (weak) | 25s (both) | Two-tier wasn't helping — even "strong signal" sessions converged with bad rates at 15s. Unified to 25s for all signals. |
+
+### Test results that motivated this
+
+| Watch | Dial-Down (us vs ref) | Dial-Up (us vs ref) |
+|---|---|---|
+| IWC Portugieser | +0 to +6 vs +13 | -1 to -2 vs +1/+2 |
+| JLC Reverso | +9 to +11 vs +9/+15 | +6 vs +7 |
+| Omega Speedmaster | -3 to -4 vs -3/-4 | -6 to -16 (phase-flip) |
+| Tudor BBC | +0 to +6 vs ~0 | +3 to +6 vs ~0 |
+
+JLC was accurate. Omega dial-down matched. IWC dial-down was 10+ off (separate issue, not convergence-related). Omega dial-up dominated by phase-flip bias (queued for Swift fix).

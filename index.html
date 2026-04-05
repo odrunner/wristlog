@@ -4700,7 +4700,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.05.10.40';
+const APP_VERSION = '2.36.05.14.10';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17547,8 +17547,12 @@ window._tgNativeCallback = function(data) {
           statusText.style.color = 'rgba(234,179,8,.7)';
         }
       }
-      // Early warning at 4s: no ticks yet, nudge user to reposition
-      if (elapsed >= 4 && elapsed < 8 && data.tickCount === 0 && !_msrWeakSignalShown) {
+      // Early warning: no ticks yet, nudge user to reposition.
+      // Manual mode: ticks expected by ~2s (calibration only), warn at 4s.
+      // Auto mode: BPH detection ~5s + calibration ~2s = ticks expected ~7s, warn at 10s.
+      const tickWarnStart = _msrIsAuto ? 10 : 4;
+      const tickWarnEnd = _msrIsAuto ? 15 : 8;
+      if (elapsed >= tickWarnStart && elapsed < tickWarnEnd && data.tickCount === 0 && !_msrWeakSignalShown) {
         _msrWeakSignalShown = true;
         const statusText = document.getElementById('msr-status-text');
         if (statusText && _msrPhase !== 'converged') {
@@ -17641,8 +17645,8 @@ window._tgNativeCallback = function(data) {
             prelimBadge.style.display = hasPrelim && !jsConverged ? '' : 'none';
           }
 
-          // Convergence floor: 15s if signal is strong (acceptRate > 0.3), otherwise 20s
-          const minElapsed = _msrAcceptRate > 0.3 ? 15 : 20;
+          // Convergence floor: 25s minimum regardless of signal strength
+          const minElapsed = 25;
           const activeBph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;
           const minDots = Math.max(20, Math.round(activeBph / 1200));
           const canConverge = _msrScatterData.length >= minDots;
