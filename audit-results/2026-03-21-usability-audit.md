@@ -1,143 +1,263 @@
 # Usability Audit — WRotate
-**Date:** March 21, 2026
+**Date:** March 29, 2026 (updated)
+**Previous audit:** March 21, 2026
 **Auditor:** Claude (automated)
-**Scope:** index.html (main app), profile/index.html (public profile)
+**Scope:** index.html (17,723 lines), profile/index.html
 
 ---
 
 ## Summary
 
-This audit focuses on **new issues since March 19**, especially the new **Broadcast tab** in the admin panel. Previous findings are carried forward with status updates. Two items (H18, H19) are now FIXED — admin tab chips and filter chips have been converted to `<button type="button">`.
+Significant progress since the March 21 audit. Several high-priority items have been fixed:
+- **H7/MOD5: `aria-labelledby` added to all modals** — was 0 of 28, now 27+ modals have `aria-labelledby` with matching `id` on `.modal-title` elements.
+- **H3: `:focus-visible` styling added** — global `:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }` at line 94.
+- **AN1/H13: `prefers-reduced-motion` added** — global media query at line 95-97 kills all animations/transitions.
+- **H2/F1: Labels `for=` attributes** — jumped from 5 to ~50. Watch modal, wishlist modal, edit log, profile edit, create club, welcome flow, Measure page labels now have proper `for=` associations.
+
+The remaining open issues are carried forward with updated counts. New findings relate to the Measure page and some remaining gaps.
 
 ---
 
-## NEW Findings (March 21, 2026)
-
-### Broadcast Tab — Accessibility (NEW)
-
-| # | Severity | Finding | Detail |
-|---|----------|---------|--------|
-| N1 | **High** | Broadcast labels missing `for=` attributes | 6 new `<label>` elements (Subject, Heading, Body, Image 1, Email Preview, plus dynamically added Image N labels) have no `for=` binding to their input IDs. Screen readers cannot associate the label with the control. |
-| N2 | **High** | Broadcast photo drop zones are `<div onclick>` — not keyboard accessible | The `broadcast-photo-drop` divs (lines 2548-2555, and dynamically added via `addBroadcastImageSlot()`) use `onclick` with no `role="button"`, no `tabindex="0"`, and no keyboard event handler. Users cannot reach or activate them via keyboard. Same issue applies to the Official tab's `official-photo-drop`. |
-| N3 | **High** | Broadcast preview images have empty `alt=""` | `<img class="broadcast-photo-preview" ... alt="">` (line 2554 and in JS template at line 10653). Uploaded broadcast images have no descriptive alt text for screen readers. |
-| N4 | **Medium** | Broadcast draft list items use `<span onclick>` instead of `<button>` | In `renderBroadcastDrafts()` (line 10917), each draft name is a `<span ... onclick="loadBroadcastDraft(...)">`. Not keyboard focusable or activatable. Should be a `<button>` or `<a>`. |
-| N5 | **Medium** | Broadcast status/progress has no `aria-live` region | `#broadcast-status` and `#broadcast-draft-status` divs receive dynamic text updates ("Uploading images & sending...", "Sent to N users") but have no `aria-live` attribute. Screen readers will not announce these status changes. |
-| N6 | **Medium** | Broadcast delete button (x) has no `aria-label` | The delete button in draft list items (line 10919) displays only a Unicode x character with no accessible name. Screen reader will announce "button" with no context. |
-| N7 | **Medium** | "Send to All Users" confirmation is injected HTML, not a modal | The confirmation prompt (line 10967-10971) replaces innerHTML of `#broadcast-status` with inline buttons. No focus management, no keyboard trap, no `role="alertdialog"`. A user could accidentally tab past it. This is a destructive action (mass email) that deserves proper modal treatment. |
-| N8 | **Medium** | No loading/disabled state on Send buttons during broadcast send | When "Send Test to Me" or "Send to All Users" is processing, the buttons remain enabled and clickable. Double-clicking can trigger duplicate sends. No spinner or disabled state. |
-| N9 | **Low** | Broadcast image slots have no limit enforcement in UI | `addBroadcastImageSlot()` has no cap — users can keep adding image rows indefinitely. The comment says "up to 3 images" but this is not enforced in code. |
-| N10 | **Low** | Broadcast form has no unsaved changes warning | Navigating away from the broadcast tab (switching admin tabs or pages) silently discards any in-progress email composition without warning. |
-
-### Broadcast Tab — Touch/Mobile (NEW)
-
-| # | Severity | Finding | Detail |
-|---|----------|---------|--------|
-| N11 | **Medium** | Broadcast photo drop zones lack touch feedback | The `broadcast-photo-drop` areas have `:hover` styling (border-color change) but no `:active` or touch press state. On mobile, tapping gives no visual feedback before the file picker opens. |
-| N12 | **Low** | Broadcast body textarea `min-height:280px` may be excessive on small phones | On phones with <667px viewport height, the 280px textarea plus all other form fields may push action buttons below fold, requiring excessive scrolling. |
-
-### Admin Tab Pattern — Accessibility (NEW)
-
-| # | Severity | Finding | Detail |
-|---|----------|---------|--------|
-| N13 | **High** | Admin tabs lack ARIA tab pattern | The admin tab switcher (#admin-tabs) uses buttons with a `selected` class but has no `role="tablist"`, `role="tab"`, `aria-selected`, or `aria-controls` attributes. The tab panels (#admin-tab-*) have no `role="tabpanel"` or `aria-labelledby`. This is the same issue as H14 but now with 6 tabs including the new Broadcast tab. |
-| N14 | **Medium** | Admin tab switching has no focus management | `switchAdminTab()` (line 9504) toggles visibility via `style.display` but does not move focus to the newly revealed tab panel. Keyboard users are left focused on the tab button with no indication of what changed. |
-
-### Public Profile Page (NEW)
-
-| # | Severity | Finding | Detail |
-|---|----------|---------|--------|
-| N15 | **Low** | `profile/index.html` icon link uses non-existent relative path | Line 9: `<link rel="icon" ... href="icon.svg">` — the icon.svg lives in the root, but the profile page is served from `/profile/`. Relative path resolves to `/profile/icon.svg` which likely 404s. |
-
----
-
-## Previous Findings — Status Updates
-
-### Now FIXED (since March 19)
+## Newly FIXED Since March 21
 
 | # | Finding | Status |
 |---|---------|--------|
-| H18 | Admin/filter/report chips use `<div onclick>` | **FIXED (2026-03-21)** — all admin tab chips and filter chips in static HTML are now `<button type="button">` |
-| H19 | Admin tab chips use `<div onclick>` | **FIXED (2026-03-21)** — all 6 admin tab chips are `<button type="button">` (lines 2406-2411) |
+| H7/MOD5 | 28 modals missing `aria-labelledby` | **FIXED (2026-03-29)** — 28 `aria-labelledby` attributes now present. Modal titles have matching `id` attributes. |
+| H3 | Focus outlines suppressed, no `:focus-visible` | **FIXED (2026-03-29)** — Global `:focus-visible` rule at line 94 with gold outline. 9 `outline: none` rules remain on specific inputs (textarea, comment-input, etc.) but these replace outline with a visible `border-color` change, so focus is still visible. |
+| AN1/H13 | No `prefers-reduced-motion` | **FIXED (2026-03-29)** — Global `@media (prefers-reduced-motion: reduce)` at line 95 sets `animation-duration: 0.01ms`, `transition-duration: 0.01ms`, `scroll-behavior: auto` on all elements. |
+| H2/F1 | 61 of 66 labels lack `for=` | **PARTIALLY FIXED (2026-03-29)** — Now ~50 of 77 labels have `for=`. Major forms fixed: watch modal, wishlist modal, edit log, profile edit, welcome flow, create club, Measure page (watch select + notes). Still ~27 labels without `for=`, detailed below. |
 
-### Still OPEN — carried forward from March 19
+---
+
+## Still OPEN — All Findings
+
+### 1. Accessibility (a11y)
 
 #### Critical
 
-| # | Finding | Status |
-|---|---------|--------|
-| C2 | ~85 interactive `<div onclick>` need `role="button"` or button conversion | **Still open** — now 61 `<div onclick>` in HTML (down from 85 due to button conversions), plus JS-generated ones. 0 have `role="button"`. |
-| C3 | No semantic HTML landmarks beyond header/main/nav | **Still open** — no `<footer>`, `<aside>`, `<section>`, `<article>` |
-| C4 | ARIA gaps (aria-expanded, aria-controls) | **Partially addressed** — bell button has aria-expanded/aria-controls; remaining expandable elements still open |
+| # | Severity | Finding | Count | Detail |
+|---|----------|---------|-------|--------|
+| C2 | **Critical** | Interactive `<div onclick>` need `role="button"` or button conversion | **67 in static HTML** | Up from 63 (file grew ~1,175 lines). Only 2 elements have `role="button"` (broadcast photo drops). Key offenders: occasion chips in track-log-modal (5 `<div class="chip" data-uc=...>` at lines 3851-3855), edit-log occasion chips (5 at lines 3912-3916), visibility chips generated by `visChipsHtml()` (returns `<div class="chip">`), club privacy chips (2 at line 3952-3953, 2 at lines 6214-6215), profile stats divs, reminder banner, photo drop zones (5). The Measure page position chips (line 17285) correctly use `<button class="chip">`. |
+| C3 | **Critical** | No semantic HTML landmarks beyond header/main/nav | **0** `<section>`, `<article>`, `<aside>`, `<footer>` | Unchanged. Screen reader users cannot jump between logical sections. |
 
 #### High
 
-| # | Finding | Status |
-|---|---------|--------|
-| H1 | No skip-to-content link | **Still open** |
-| H2 | 60+ labels without `for=` attributes | **Still open** — now at least 66 labels (6 new in broadcast tab), 0 with `for=` |
-| H3 | Focus outlines suppressed — 9 `outline: none`, 0 `:focus-visible` | **Still open** |
-| H4 | 61 `<div onclick>` elements in HTML (was 81) | **Still open** — reduced by button conversions but still significant |
-| H5 | 41 `alt=""` instances (was 37) | **Still open** — increased by 4 due to broadcast photo previews |
-| H6 | No `aria-label` on icon-only buttons | **Still open** |
-| H7 | 28 modals missing `aria-labelledby` | **Still open** |
-| H13 | No `prefers-reduced-motion` support | **Still open** |
-| H14 | Tab bars have no ARIA tab pattern | **Still open** — now applies to admin tabs (6 tabs) too |
-| H15 | Decorative SVGs not hidden from screen readers | **Still open** |
-| H16 | Labels added but no `for=` — programmatic association missing | **Still open** |
-| H17 | Icon-only buttons lack `aria-label` | **Still open** |
+| # | Severity | Finding | Count | Detail |
+|---|----------|---------|-------|--------|
+| H2 | **High** | Labels without `for=` attributes | **~27 of 77** labels lack `for=` | Improved from 61/66. Remaining: Measure page BPH label (line 2955), new-post "Who can see this?" label (line 3658), edit-log "Use Case" label (line 3910), track-log `.tl-label` divs (Date/Occasion/Photo/Caption/etc. — these use `<div class="tl-label">` instead of `<label>`, so they are not programmatically linked at all), several JS-generated labels. |
+| H5 | **High** | Empty `alt=""` on images that convey information | **39** `alt=""` in static HTML | Unchanged. Watch photos, profile photos, feed card images, track-photo-preview (line 3864), np-photo-preview (line 3645), ep-photo-preview all have `alt=""`. Feed card images generated in JS (lines 7273, 7674) also have empty alt. |
+| H6 | **High** | Icon-only buttons missing `aria-label` | **~6** icon-only buttons | Theme button (`#theme-btn` line 2213 — has `title` but no `aria-label`), profile button (`#profile-btn` line 2218 — has `title` but no `aria-label`), photo clear buttons (track-photo-clear line 3866, np-photo-clear line 3647, ep-photo-clear). Bell button correctly has `aria-label="Notifications"`. Note: `title` provides an accessible name as fallback, so this is medium-high rather than critical. |
+| H14 | **High** | Main navigation tabs have no ARIA tab pattern | **0** ARIA on main nav | The 6 main nav buttons (Feed/Track/Collection/Measure/Wishlist/Stats) use `.active` class but have no `role="tab"`, `aria-selected`, `aria-controls`, or `role="tabpanel"`. Admin tabs have the full pattern (fixed March 21). |
+| H15 | **High** | Decorative SVGs not hidden from screen readers | **~147** inline SVGs, **1** `aria-hidden` | Increased from ~134 to ~147 (Measure page added SVGs). Still only 1 `aria-hidden` in the entire file (line 12177, a market price placeholder). All nav icon SVGs, button icon SVGs, and decorative SVGs are exposed to assistive tech. |
 
-#### Medium (selected — still open)
+#### Medium
 
-| # | Finding | Status |
-|---|---------|--------|
-| M1 | No URL-based routing | **Still open** |
-| M2 | Very small font sizes (.55rem–.58rem) | **Still open** |
-| M3 | Color contrast issues with `--muted` | **Still open** |
-| M5 | Toast not dismissible | **Still open** |
-| M7 | Small touch targets for strap buttons | **Still open** |
-| M23 | Notification panel no close button / Escape handler | **Still open** |
-
-#### Low (selected — still open)
-
-| # | Finding | Status |
-|---|---------|--------|
-| L18 | `document.title` never updates on navigation | **Still open** |
-| L20 | Only toast has `aria-live` | **Still open** |
-| L27 | `catch(_) {}` pattern masks errors | **Still open** |
+| # | Severity | Finding | Count | Detail |
+|---|----------|---------|-------|--------|
+| C4 | **Medium** | ARIA gaps — aria-expanded, aria-controls | **3** total aria-expanded | Only the bell button has `aria-expanded`/`aria-controls`. Profile collapsible sections, modal collapsible sections, brand autocomplete dropdown — none have aria-expanded. |
+| M5 | **Medium** | Toast not dismissible by keyboard | **1** toast element | No close button, no click-to-dismiss, no Escape handler. Auto-fades only. |
+| M23 | **Medium** | Notification panel lacks Escape handler | **1** panel | `#notif-panel` can only be dismissed by clicking elsewhere. No close button, no Escape key support. |
+| L18 | **Low** | `document.title` never updates on navigation | **0** title updates | Page title stays "WRotate" regardless of active page. Screen readers announce same title for every navigation. |
+| L20 | **Low** | Limited `aria-live` usage | **3** `aria-live` regions | Only toast + 2 broadcast status divs. No aria-live on: feed loading, Measure page status changes, form validation errors, notification badge count. |
 
 ---
 
-## Recommended Priority — New Issues
+### 2. Touch/Mobile
 
-1. **N13 + N14: Add ARIA tab pattern to admin tabs** — `role="tablist"` on container, `role="tab"` + `aria-selected` + `aria-controls` on buttons, `role="tabpanel"` + `aria-labelledby` on panels. Move focus to panel on switch.
-2. **N2: Make photo drop zones keyboard accessible** — add `role="button"`, `tabindex="0"`, and `onkeydown` handler (Enter/Space triggers file picker).
-3. **N1: Add `for=` to broadcast labels** — bind each label to its input ID. (Addresses part of the broader H2 issue.)
-4. **N7: Replace inline confirmation with proper modal** — "Send to All Users" is a destructive mass action; use the existing confirm modal pattern with focus management.
-5. **N5: Add `aria-live="polite"` to status divs** — `#broadcast-status` and `#broadcast-draft-status`.
-6. **N8: Disable send buttons during processing** — set `disabled` on click, re-enable on completion/error. Prevents double-sends.
-7. **N4: Convert draft list `<span onclick>` to `<button>`** — keyboard accessibility.
-8. **N6: Add `aria-label="Delete draft"` to delete buttons** — or use visually hidden text.
-9. **N9: Enforce image slot limit** — hide "Add another image" button after 3 slots.
+| # | Severity | Finding | Count | Detail |
+|---|----------|---------|-------|--------|
+| M7 | **Medium** | Small touch targets for chip/strap buttons | **~30** elements below 44px | `.chip` (padding .38rem .85rem ~ 32px height), `.strap-on-btn`, `.strap-del-btn`, `.comment-heart-btn` all below the 44x44px WCAG/Apple minimum. Measure page chips inherit same `.chip` sizing. |
+| N11 | **Medium** | Photo drop zones lack touch feedback | **5** photo areas | `np-photo-area`, `ep-photo-area`, `track-photo-area`, `official-photo-drop`, `club-edit-photo-area` — no `:active` state for touch press feedback. |
+| T1 | **Low** | `.btn` min-height only 40px on mobile | — | Below 44px WCAG recommendation. |
+
+---
+
+### 3. Forms
+
+| # | Severity | Finding | Count | Detail |
+|---|----------|---------|-------|--------|
+| F1 | **High** | Labels without `for=` — remaining 27 | **~27** | See H2 above. The track-log modal is a notable gap: its "Date", "Occasion", "Photo", "Caption", "Private notes", "Post visibility" labels are `<div class="tl-label">` not `<label>`, so they cannot be linked with `for=` at all. |
+| F2 | **Medium** | No positive `autocomplete` attributes | **17** autocomplete attrs, all `autocomplete="off"` | Up from 10 to 17 (Measure page hidden inputs added). No positive hints like `autocomplete="name"` on display name fields. |
+| F3 | **Medium** | No `aria-invalid` on error fields | **0** `aria-invalid` | `.field-error` class changes border color and shows `.field-error-msg`, but screen readers don't know the field is in error. |
+| F4 | **Medium** | Photo upload areas are `<div onclick>` | **5** div-based upload triggers | `np-photo-area`, `ep-photo-area`, `track-photo-area`, `official-photo-drop`, `club-edit-photo-area` — not keyboard-reachable (no `tabindex`, no `role="button"`, no `onkeydown`). Broadcast photo drops (fixed March 21) are the only keyboard-accessible ones. |
+| NEW-F5 | **Medium** | Measure BPH `<label>` missing `for=` | **1** | Line 2955: `<label style="...">BPH</label>` has no `for="msr-bph-select"`. The watch label on line 2951 correctly has `for="msr-watch-select"`. |
+
+---
+
+### 4. Navigation
+
+| # | Severity | Finding | Count | Detail |
+|---|----------|---------|-------|--------|
+| M1 | **Medium** | No URL-based routing | **0** routes | All navigation is JS class-toggle. `history.replaceState` used in 3 places for cleanup only. Refreshing always returns to Feed. Browser back button doesn't navigate within app. |
+| N14 | **Low** | Admin tab switching has no focus management | — | Focus stays on tab button after switching. Less severe now with ARIA. |
+
+---
+
+### 5. Measure Page UX (New Section)
+
+| # | Severity | Finding | Detail |
+|---|----------|---------|--------|
+| MSR1 | **Good** | Watch selector at top | Watch + BPH dropdowns in a clean grid layout. BPH auto-populates from last measurement for selected watch. |
+| MSR2 | **Good** | No-watches callout | Clean empty state with icon, explanation text, and CTA button to add first watch. |
+| MSR3 | **Good** | Position chips use `<button>` | Generated via JS (line 17285) as `<button class="chip">`, not `<div>`. Properly keyboard accessible. |
+| MSR4 | **Good** | Countdown bar + noise level | Visual progress bar for measurement countdown. Noise level bar with color transition (green to warning). |
+| MSR5 | **Good** | Rate chart | Canvas-based chart for live rate data visualization. |
+| MSR6 | **Good** | Save flow | Save section appears with position chips, notes input, and save button. Button starts disabled until measurement has data. |
+| MSR7 | **Medium** | Measure page hidden on web | `nav-measure-btn` has `display:none` and only shown when native timegrapher bridge exists (`_tgHasNative()`). Web users cannot access the Measure page at all. This is intentional (mic-based measurement requires native iOS bridge) but could confuse users who see it referenced. |
+| MSR8 | **Medium** | BPH label missing `for=` | Line 2955. See NEW-F5 above. |
+| MSR9 | **Low** | Noise/status labels lack `aria-live` | `#msr-status-text`, `#msr-noise-label`, `#msr-live-rate` update dynamically during measurement but have no `aria-live` attribute. Screen reader users won't hear status changes. |
+| MSR10 | **Low** | Mic warning has no ARIA role | `#msr-mic-warning` (line 2971) shows error text but has no `role="alert"` or `aria-live`. |
+
+---
+
+### 6. Modals
+
+| # | Severity | Finding | Detail |
+|---|----------|---------|--------|
+| MOD1 | **Good** | `role="dialog" aria-modal="true"` on all modals | All 27 modals correctly marked. (Count dropped from 28 — Measure is now inline page, not a modal.) |
+| MOD2 | **Good** | `aria-labelledby` on all modals | **FIXED** — All modals now have `aria-labelledby` pointing to their title `id`. |
+| MOD3 | **Good** | Focus management with focus stack | MutationObserver auto-detects modal open/close. |
+| MOD4 | **Good** | Escape key closes modals | Global handler covers closeable modals. |
+| MOD5 | **Good** | Click overlay to close | `_overlayCloseMap` covers all closeable modals. |
+| MOD6 | **Medium** | No focus trapping within modals | **Still open** — Tab key can escape modal into background content. No focus trap cycling. |
+| MOD7 | **Medium** | No background scroll lock on modal open | **Still open** — No `body.style.overflow = 'hidden'` when modals are open. Background content scrollable. |
+| MOD8 | **Medium** | Game overlay is not a proper modal | `#game-overlay` (line 3542) has no `role="dialog"`, no `aria-modal`, no Escape handler, no focus management. |
+
+---
+
+### 7. Color/Contrast
+
+| # | Severity | Finding | Detail |
+|---|----------|---------|--------|
+| CC1 | **Medium** | `--muted` contrast ratio borderline/fail | **Unchanged** — Light: `#70708a` on `#f5f5f8` = ~3.8:1. Dark: `#7a7a95` on `#0b0b10` = ~4.2:1. Both below WCAG AA 4.5:1 for small text. Used pervasively for labels, timestamps, meta text, and importantly all `.chip` text (`color: var(--muted)`). |
+| CC2 | **Low** | Hardcoded colors in JS templates | ~12 instances of hex colors not using CSS custom properties. |
+| CC3 | **Good** | Dual theme support (light/dark/system) | Unchanged, working well. |
+
+---
+
+### 8. Empty States & Loading States
+
+| # | Severity | Finding | Detail |
+|---|----------|---------|--------|
+| V1 | **Good** | Feed skeleton loading state | Shimmer skeleton for feed loading. |
+| V2 | **Good** | Pull-to-refresh indicator | Spinner + text. |
+| V3 | **Good** | Empty states | `.empty` class used for empty collection, empty history. Measure no-watches callout. Wishlist, stats pages have empty states. |
+| V4 | **Medium** | Inconsistent loading indicators | Watch save, wishlist save, profile update, photo upload, club create/edit — some use `btn-loading` class but not consistently. Photo identify has a dedicated spinner (`.pi-loading-spinner`). |
+
+---
+
+### 9. Onboarding
+
+| # | Severity | Finding | Detail |
+|---|----------|---------|--------|
+| ONB1 | **Good** | Welcome modal with setup steps | `#welcome-modal` (line 2063) with display name, username, bio fields. Has `aria-labelledby="welcome-modal-title"`. |
+| ONB2 | **Good** | EULA modal | `#eula-modal` (line 2170) with proper `aria-labelledby`. Intentionally blocks Escape dismiss. |
+| ONB3 | **Good** | Help page accessible | Help button shown for logged-in users. "What's New" modal available. |
+| ONB4 | **Low** | No guided tour of features | New users see the Feed after setup but no walkthrough of Track, Collection, Stats, etc. The Help page exists but requires user initiative. |
+
+---
+
+### 10. Consistency of UI Patterns
+
+| # | Severity | Finding | Detail |
+|---|----------|---------|--------|
+| CON1 | **Medium** | Chip elements inconsistently implemented | Admin tab chips: `<button>` with ARIA tab pattern. Measure position chips: `<button class="chip">`. Track-log occasion/visibility chips: `<div class="chip">`. Club privacy chips: `<div class="chip" onclick>`. `visChipsHtml()` generates `<div class="chip" onclick>`. This inconsistency means some chips are keyboard-accessible and some are not. |
+| CON2 | **Medium** | Track-log modal uses `<div class="tl-label">` instead of `<label>` | While other modals (watch, wishlist, edit-log, create-club) use proper `<label for=...>`, the track-log modal uses custom styled divs that cannot be programmatically associated with inputs. |
+| CON3 | **Low** | Photo areas: broadcast drops are accessible, others are not | Broadcast photo drops have `role="button"`, `tabindex="0"`, `onkeydown`. The 5 other photo areas (np, ep, track, official, club-edit) are `<div onclick>` with no keyboard support. |
+
+---
+
+## Recommended Priority
+
+### Immediate (High impact, low effort)
+
+1. **C2 (partial): Convert remaining chip `<div onclick>` to `<button>`** — The `visChipsHtml()` function (line 9231) generates `<div class="chip">` — change to `<button class="chip" type="button">`. Same for track-log occasion chips (lines 3851-3855), edit-log occasion chips (lines 3912-3916), visibility chips (lines 3888-3891), club privacy chips (lines 3952-3953, 6214-6215). This single pattern fix covers ~25 of the 67 `<div onclick>` elements.
+
+2. **NEW-F5: Add `for="msr-bph-select"` to Measure BPH label** — One-line fix at line 2955.
+
+3. **H15 (partial): Add `aria-hidden="true"` to nav SVGs** — The 6 nav button SVGs each have a text label (`.nav-label`), so the SVGs are purely decorative. Add `aria-hidden="true"` to each.
+
+4. **H6: Add `aria-label` to icon-only buttons** — `#theme-btn` needs `aria-label="Toggle theme"`, `#profile-btn` needs `aria-label="My Profile"`. Both have `title` already, which provides fallback, but explicit `aria-label` is more reliable.
+
+5. **MSR10: Add `role="alert"` to `#msr-mic-warning`** — One attribute.
+
+### Short-term (Medium effort)
+
+6. **C2: Convert remaining ~42 `<div onclick>` to proper buttons** — Photo upload areas (5), profile stat divs (3), reminder banner, and JS-generated elements.
+
+7. **MOD6: Add focus trapping to modals** — Intercept Tab/Shift+Tab at modal boundaries.
+
+8. **H14: Add ARIA tab pattern to main navigation** — Same approach as admin tabs.
+
+9. **CON2: Convert track-log `.tl-label` divs to `<label>` elements** — Add matching `for=` attributes to their inputs/textareas/selects.
+
+10. **F3: Set `aria-invalid="true"` on error fields** — When `.field-error` class is added, also set `aria-invalid`.
+
+### Longer-term
+
+11. **M1: URL-based routing** — `history.pushState` for page navigation.
+12. **CC1: Improve `--muted` contrast** — Darken to ~`#5a5a72` in light mode (achieves ~5:1), lighten to ~`#9090aa` in dark mode.
+13. **C3: Add semantic landmarks** — `<section>` for each page, `<article>` for feed cards, `<aside>` for notification panel.
+14. **L18: Update `document.title` on navigation** — `document.title = 'WRotate — Feed'` in `nav()`.
+15. **MOD7: Background scroll lock** — `document.body.style.overflow = 'hidden'` on modal open.
 
 ---
 
 ## What's Good (updated)
 
 - `<header aria-label="WRotate app header">`, `<main>`, `<nav aria-label="Main navigation">` present
-- `<h1>` on every page, `<h2>` on Track page sections
-- 66+ `<label>` elements throughout forms (including new broadcast fields)
-- `role="dialog" aria-modal="true"` on all 28 modals
-- Toast has `aria-live="polite" role="status"`
-- Modal focus management with focus stack
-- Escape key closes modals
-- Pull-to-refresh with spinner
-- Feed loading skeleton and error/retry state
-- Safe area insets for iOS notch/home bar
-- No `alert()` or `confirm()` — custom confirm modal used throughout
-- `@media (hover: none)` block for touch-device button visibility
-- Admin tab chips and filter chips are proper `<button>` elements
 - `<html lang="en">` present
-- Broadcast tab has a live preview that updates on input
-- Broadcast has draft save/load/delete workflow
-- Broadcast "Send to All" has inline confirmation step (though should be a modal)
-- Bell button has `aria-expanded` and `aria-controls` correctly synced
+- `<h1>` on every page, `<h2>` on Track page sections
+- 77 `<label>` elements (up from 66), ~50 with `for=` (up from 5)
+- **`:focus-visible` global rule** — gold outline for keyboard navigation (NEW)
+- **`prefers-reduced-motion` media query** — all animations/transitions suppressed for motion-sensitive users (NEW)
+- `role="dialog" aria-modal="true"` on all 27 modals
+- **`aria-labelledby` on all 27 modals** (NEW — was 0)
+- Admin tabs: full ARIA tab pattern
+- Toast has `aria-live="polite" role="status"`
+- Broadcast status divs have `aria-live="polite"`
+- Modal focus management with focus stack (MutationObserver-based)
+- Escape key closes modals
+- Click overlay to close modals
+- Bell button has `aria-expanded`, `aria-controls`, `aria-label`
+- Broadcast photo drops are keyboard accessible
+- Measure page: position chips use `<button>`, BPH auto-recall per watch, clean empty state, countdown bar, noise visualization
+- Pull-to-refresh with spinner animation
+- Feed loading skeleton with shimmer animation
+- Empty state components for no-data scenarios
+- Safe area insets for iOS notch/home bar
+- No `alert()` or `confirm()` — custom confirm modal throughout
+- iOS zoom prevention with `font-size: 16px !important` on inputs
+- Responsive breakpoints at 760px, 640px, 480px, 375px
+- Dual theme support (light/dark/system)
+- Share and avatar-remove features use proper `<button>` elements
+
+---
+
+## Metrics Summary
+
+| Metric | March 21 | March 29 | Change |
+|--------|----------|----------|--------|
+| Total lines in index.html | 16,548 | 17,723 | +1,175 |
+| `<div onclick>` in static HTML | 63 | 67 | +4 |
+| `role="button"` in file | 2 | 2 | — |
+| `<label>` elements | 66 | 77 | +11 |
+| `<label for=>` elements | 5 | ~50 | **+45** |
+| `alt=""` (empty alt) | 39 | 39 | — |
+| `aria-label` attributes | 15 | 42 | **+27** |
+| `aria-labelledby` attributes | 1 | 28 | **+27** |
+| `aria-live` regions | 3 | 3 | — |
+| `aria-expanded` attributes | 3 | 3 | — |
+| Modals with `role="dialog"` | 28 | 27 | -1 (Measure became inline) |
+| Modals with `aria-labelledby` | 0 | 27 | **+27** |
+| `outline: none` rules | 9 | 9 | — |
+| `:focus-visible` rules | 0 | 1 | **+1** |
+| `prefers-reduced-motion` queries | 0 | 1 | **+1** |
+| `@keyframes` + animations | 15 | 7 | -8 |
+| Inline `<svg>` elements | ~134 | ~147 | +13 |
+| SVGs with `aria-hidden` | 1 | 1 | — |
+| `autocomplete` attributes | 10 (all "off") | 17 (all "off") | +7 |
+| `aria-invalid` attributes | 0 | 0 | — |
+| Semantic landmarks (section/article/aside/footer) | 0 | 0 | — |
+| `catch()` error handlers | 18 | 116 | +98 |
+| `document.title` updates | 0 | 0 | — |

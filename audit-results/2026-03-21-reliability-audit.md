@@ -1,129 +1,199 @@
 # Reliability Audit — WRotate
-**Date:** March 21, 2026
+**Date:** March 21, 2026 (updated)
 **Auditor:** Claude (automated)
-**Scope:** index.html (~16,300 lines), supabase/functions/ (10 edge functions), sw.js
+**Scope:** index.html (~16,500 lines), supabase/functions/ (11 edge functions), sw.js
 
 ---
 
 ## Summary
 
-This audit focuses on new code since March 19: the **broadcast email system** (send-broadcast edge function + admin UI), **official drafts** admin feature, **extract-url-meta** edge function, and all edge functions. Three high-severity issues from this audit were **FIXED on 2026-03-21**: double-submit guards on broadcast sends (H-2, M-1), batch API refactor for send-broadcast scalability (H-1), and orphan log rollback in approveOfficialDraft (H-3). Remaining open items are carried-forward medium/low issues.
+Deep reliability audit covering all 10 audit categories. Three high-severity items from March 21 morning audit were FIXED same-day (H-1 batch API, H-2 broadcast double-submit, H-3 approveOfficialDraft rollback). Previously fixed items R1-R8 are all verified still in place. This update adds **4 new findings** (1 high, 3 medium) and re-validates all carried-forward items.
 
 ---
 
-## NEW Findings (since March 19)
+## Verification of Previously Fixed Items (R1–R8)
 
-### H-1 (Mar 21) — `send-broadcast` edge function can timeout on large user bases
-**Severity: HIGH** | **File:** `supabase/functions/send-broadcast/index.ts`
-~~The function fetches all eligible profiles, then loops through batches of 10 with 500ms delays between batches. At scale (500+ users), this will reliably timeout mid-send.~~
-**Status: FIXED (2026-03-21)** — Refactored to use Resend batch API (100 emails/request), email resolution in batches of 50, 500KB body size limit. Can now handle 500+ users within Supabase timeout.
-
-### H-2 (Mar 21) — `confirmBroadcastAll` has no double-submit protection
-**Severity: HIGH** | **File:** `index.html`
-~~The "Yes, send it" button calls `confirmBroadcastAll()` but is never disabled during execution. Rapid double-clicks will trigger two full broadcast sends to all users.~~
-**Status: FIXED (2026-03-21)** — `_broadcastSending` flag added as double-submit guard to `confirmBroadcastAll`.
-
-### H-3 (Mar 21) — `approveOfficialDraft` creates orphan log on draft update failure
-**Severity: HIGH** | **File:** `index.html`
-~~At line 10559, a log entry is inserted into the `logs` table. If that succeeds but the subsequent draft update fails, the log entry remains published with no rollback.~~
-**Status: FIXED (2026-03-21)** — `approveOfficialDraft` now rolls back (deletes orphan log entry) if draft status update fails.
-
-### M-1 (Mar 21) — `sendBroadcastTest` has no double-submit protection
-**Severity: MEDIUM** | **File:** `index.html`
-~~Same pattern as H-2: the "Send Test to Me" button is never disabled. Rapid clicks send multiple test emails.~~
-**Status: FIXED (2026-03-21)** — `_broadcastSending` flag added as double-submit guard to `sendBroadcastTest`.
-
-### M-2 (Mar 21) — `adminConfirmRemoval` / `adminRestoreContent` lack error handling
-**Severity: MEDIUM** | **File:** `index.html` lines 9615-9634
-Both functions fire two sequential `await db.from(...)` calls without checking `{ error }`. If the moderation_status update fails, the function proceeds to update the report status and local state anyway, causing desync between actual content state and the admin panel display. (Carried forward from M-3 Mar 14, still open.)
-**Status: Still open**
-
-### M-3 (Mar 21) — `report-notify` edge function embeds unsanitized user content in HTML email
-**Severity: MEDIUM** | **File:** `supabase/functions/report-notify/index.ts` lines 47-59
-`record.details`, `record.reason`, and `record.content_type` are inserted directly into the HTML email body without escaping. A malicious reporter could inject HTML/JS into the admin notification email via the report details field.
-**Fix:** Add an `esc()` function (like in send-email) and escape all user-provided fields.
-
-### M-4 (Mar 21) — `extract-url-meta` edge function has no URL validation (SSRF risk)
-**Severity: MEDIUM** | **File:** `supabase/functions/extract-url-meta/index.ts` lines 113-120
-The function fetches any URL provided by the admin user without validating the scheme or host. While admin-only, a compromised admin token could be used to probe internal network addresses (`http://169.254.169.254/...` for cloud metadata, `http://localhost:...` for internal services). There's also no response size limit on `pageRes.text()` — a URL pointing to a multi-GB file would exhaust memory.
-**Fix:** Validate URL scheme (https only), block private IP ranges, add a response size limit via streaming with early abort.
-
-### M-5 (Mar 21) — `send-broadcast` does not validate HTML content length
-**Severity: MEDIUM** | **File:** `supabase/functions/send-broadcast/index.ts` lines 60-65
-The `html` field from the request body is accepted without size limits. An extremely large HTML payload (multi-MB) would be sent to every user via Resend, potentially exceeding Resend's per-email size limits and causing partial sends with no clear error.
-**Fix:** Add a reasonable size check (e.g., 500KB max for the HTML body).
-
-### M-6 (Mar 21) — `uploadBroadcastImages` failures crash the whole send
-**Severity: MEDIUM** | **File:** `index.html` lines 10779-10797
-`uploadBroadcastImages()` calls `uploadImage()` at line 10790 without try/catch. If any image upload fails, the entire `sendBroadcastTest` or `confirmBroadcastAll` flow crashes with an unhandled error that only shows as a generic failure toast. The user gets no indication which image failed.
-**Fix:** Wrap individual image uploads in try/catch with per-image error reporting.
-
-### M-7 (Mar 21) — `saveOfficialDraft` image upload generates unused UUID on failure
-**Severity: LOW** (reclassified) | **File:** `index.html` lines 10455-10463
-The function generates `crypto.randomUUID()` for the image path before attempting upload. If upload fails, it returns early (correctly), but the random ID is wasted. More importantly, if the user retries, a new UUID is generated, so the failed upload path is never cleaned up from Storage if a partial upload occurred.
-Not a reliability issue per se, just a minor storage hygiene concern.
-
-### L-1 (Mar 21) — `send-push` edge function does not check error on expired token cleanup
-**Severity: LOW** | **File:** `supabase/functions/send-push/index.ts` lines 218-222
-The delete of expired device tokens at line 219-222 does not check the `{ error }` return. If the delete fails, expired tokens accumulate and every future notification for that user will attempt (and fail) delivery to dead tokens.
-**Fix:** Log the error if the delete fails.
-
-### L-2 (Mar 21) — Broadcast photo blob URLs are never revoked
-**Severity: LOW** | **File:** `index.html` lines 10589-10623
-`handleBroadcastPhotoFile` and `handleBroadcastPhotoDrop` use `reader.readAsDataURL(file)` which creates a base64 data URL (not an object URL), so there's no blob URL leak here. However, `clearBroadcastPhoto` sets `preview.src = ''` but does not clear `_broadcastPhotoBlobs[idx]` — wait, it does at line 10626. This is actually fine.
-**Status: Not an issue** (data URLs, not blob URLs)
-
-### L-3 (Mar 21) — `send-email` edge function comment lookup may match wrong comment
-**Severity: LOW** | **File:** `supabase/functions/send-email/index.ts` lines 191-203
-The comment lookup uses `.eq('log_id', record.ref_id).eq('user_id', actor_id).order('created_at', { ascending: false }).limit(1)`. If the same user posts multiple comments on the same log entry, this always returns the latest one, which may not be the comment that triggered the notification. Typically harmless since the notification fires on insert, but in a batch/delayed scenario, the wrong comment text could be included.
-**Fix:** Store the comment ID in the notification's `ref_id` or a separate field.
+| # | Fix | Status |
+|---|-----|--------|
+| R1 | `_broadcastSending` double-submit guard | **VERIFIED** — line 10987 flag, checked in both `sendBroadcastTest` (line 10997) and `confirmBroadcastAll` (line 11056), cleared in finally blocks |
+| R2 | `send-broadcast` batch API with 500KB limit | **VERIFIED** — `supabase/functions/send-broadcast/index.ts` uses Resend batch API (100/req, line 120), email resolution in batches of 50 (line 100), 500KB HTML limit (line 68) |
+| R3 | `approveOfficialDraft` rollback on draft update failure | **VERIFIED** — lines 10630-10633: `if (draftErr) { await db.from('logs').delete().eq('id', logId); throw draftErr; }` |
+| R4 | Admin moderation error handling | **PARTIALLY VERIFIED** — `adminConfirmRemoval` (line 9667) and `adminRestoreContent` (line 9680) DO check `{ error: modErr }` and toast on failure. The report update errors (lines 9669, 9682) are also checked with separate toast. **This was previously listed as open but is actually fixed.** |
+| R5 | Per-image error handling in `uploadBroadcastImages` | **VERIFIED** — lines 10849-10855: individual try/catch per image with per-image toast error |
+| R6 | `blockUser` follow delete error logging | **VERIFIED** — lines 5395-5398: both deletes destructure `{ error: delErr1/delErr2 }` and `console.error` on failure |
+| R7 | `initiateFriendRequest` notification error check | **VERIFIED** — lines 5476-5479: `{ error: notifErr }` checked, logged with `console.error` |
+| R8 | `cloudSync` toast after 3 retries | **VERIFIED** — lines 4287-4288: `if (_syncRetryCount >= 3) toast('Some changes haven\'t synced yet...')` |
 
 ---
 
-## Previously Open Findings — Status Check
+## Verified FIXED Items (from earlier today)
 
-| # | Finding | Status |
-|---|---------|--------|
-| M-1 (Mar 14) | Track photo blob URL not revoked on upload error | **Still open** |
-| M-2 (Mar 14) | `saveNewPost` local log not cleaned up on upsert failure | **Still open** — log pushed at line 8306 before upsert at 8311; on error at 8318, only returns without removing from `logs` array or localStorage |
-| M-3 (Mar 14) | Admin moderation functions lack error handling | **Still open** — see M-2 (Mar 21) above |
-| M-6 (Mar 14) | `blockUser` follow deletes no error check | **Still open** — lines 5354-5355, two `await db.from('follows').delete()` calls with no error destructuring |
-| M-5 (Mar 14) | `loadNotifications` profile enrichment no timeout | **Still open** — line 6513, `db.from('profiles').select(...)` not wrapped in `withTimeout()` |
-| M-3 (Mar 16) | `initiateFriendRequest` notification insert error not checked | **Still open** — line 5433, `await db.from('notifications').insert(...)` result not checked |
-| M-4 (Mar 19) | cloudSync permanent failures not surfaced to user | **Still open** |
-| M-5 (Mar 19) | Deleted logs may reappear after failed sync | **Still open** |
-| L-1 thru L-5 (Mar 14-16) | Various blob URL leaks, club operation error handling, weather API | **All still open** |
+### H-1 (Mar 21) — `send-broadcast` batch API scalability
+**Status: FIXED (2026-03-21)** — Resend batch API (100/req), email resolution (50/batch), 500KB body limit.
+
+### H-2 (Mar 21) — Broadcast double-submit guard
+**Status: FIXED (2026-03-21)** — `_broadcastSending` flag + `setBroadcastBtnsDisabled`.
+
+### H-3 (Mar 21) — `approveOfficialDraft` orphan log rollback
+**Status: FIXED (2026-03-21)** — Deletes orphan log entry on draft update failure.
+
+### M-1 (Mar 21) — `sendBroadcastTest` double-submit
+**Status: FIXED (2026-03-21)** — Same `_broadcastSending` guard.
+
+### M-3 (Mar 21) — `report-notify` HTML injection
+**Status: FIXED (2026-03-21)** — `esc()` function applied to all user fields (verified in source: lines 47-50).
+
+### M-4 (Mar 21) — `extract-url-meta` SSRF
+**Status: FIXED (2026-03-21)** — URL scheme validation, private IP blocking (lines 114-125), all verified in source.
+
+### M-5 (Mar 21) — `send-broadcast` HTML size limit
+**Status: FIXED (2026-03-21)** — 500KB limit at line 68.
+
+### M-6 (Mar 21) — `uploadBroadcastImages` per-image error handling
+**Status: FIXED (2026-03-21)** — try/catch per image with per-image toast.
+
+### R4 (reclassified) — Admin moderation error handling
+**Status: FIXED** — Both `adminConfirmRemoval` and `adminRestoreContent` properly check `{ error: modErr }` and `{ error: repErr }` with user-facing toast messages. Previously misreported as open.
+
+---
+
+## NEW Findings
+
+### H-4 — `deleteAccount` missing 5 tables — orphan records survive deletion
+**Severity: HIGH** | **File:** `index.html` lines 4034-4049
+**Category:** Data integrity (6), Error recovery (7)
+
+The `deleteAccount()` function deletes from 13 tables but misses at least 5:
+- `club_invites` — orphan invites from/to the deleted user remain, can cause errors when other users try to accept
+- `content_reports` — reports filed by or against the user survive, cluttering admin panel
+- `club_join_requests` — pending join requests remain, showing ghost users to club owners
+- `device_tokens` — APNs tokens remain, causing `send-push` to attempt delivery to a nonexistent user
+- `official_drafts` — if the admin deletes their account (unlikely but possible), published drafts become orphaned
+
+**Impact:** Orphan records in `club_invites` are actionable — another user accepting a stale invite from a deleted user will succeed (inserting a club member row for a nonexistent user). `device_tokens` cause wasted APNs calls on every notification to deleted user's followers.
+
+**Fix:** Add `del('club_invites', ...)`, `del('content_reports', ...)`, `del('club_join_requests', ...)`, `del('device_tokens', ...)` before the existing deletes. Order them before `club_members` since they reference the user.
+
+---
+
+### M-8 — `saveNewPost` does not rollback local state on upsert failure
+**Severity: MEDIUM** | **File:** `index.html` lines 8353-8365
+**Category:** Optimistic UI without rollback (3), State consistency (9)
+
+At line 8353, the log entry is pushed to the local `logs` array, `_dataGen` is incremented, and localStorage is written. Then at line 8358, the upsert to Supabase happens. If the upsert fails (line 8365), the function toasts an error and returns — but never removes the entry from `logs`, never decrements `_dataGen`, never clears it from localStorage.
+
+**Impact:** The user sees a "ghost post" in their local state that does not exist on the server. On next `loadUserData`, the server state overwrites local, so the post disappears — confusing the user. Worse, if the user is offline, the post persists in localStorage and may never sync (it was created with `upsert` not through the `_dirty` tracking).
+
+**Fix:** On upsert failure, splice the entry out of `logs`, re-call `rebuildLogsByWatch()` and `safeSetJSON(STORE_L, logs)`.
+
+**Status: Carried forward from M-2 (Mar 14) — still open**
+
+---
+
+### M-9 — `submitReport` flag update unchecked — content appears unflagged on failure
+**Severity: MEDIUM** | **File:** `index.html` line 7855
+**Category:** Unchecked Supabase errors (1), Optimistic UI without rollback (3)
+
+After the report is successfully inserted, line 7855 fires:
+```
+await db.from(table).update({ moderation_status: 'flagged' }).eq('id', contentId);
+```
+The `{ error }` return is not checked. If this update fails (e.g., RLS denies the update), the report exists in `content_reports` but the content remains visible and unflagged. The local state optimistically sets `moderation_status = 'flagged'` (lines 7860/7866), so the reporter sees it as flagged, but other users (and the admin) see unflagged content.
+
+**Fix:** Check `{ error }` and toast a warning if the flag fails.
+
+---
+
+### M-10 — `acceptFriendRequest` / `acceptFriendRequestFromPopover` notification insert unchecked
+**Severity: MEDIUM** | **File:** `index.html` lines 5519-5521 and 5563-5565
+**Category:** Unchecked Supabase errors (1), Fire-and-forget (8)
+
+Both functions fire `await db.from('notifications').insert(...)` for the `friend_accepted` notification without checking `{ error }`. If the insert fails, the friend relationship is accepted (DB updated) but the initiator never gets notified. Unlike the `followUser` notification (which uses `.then({error})` with logging), these are fully unchecked awaits.
+
+Similarly, lines 5524 and 5544 fire `await db.from('notifications').update({ is_read: true })` without checking error — if marking as read fails, the notification badge stays lit.
+
+**Fix:** Destructure `{ error }` and `console.error` if it fails (same pattern used in `initiateFriendRequest` at line 5479).
+
+---
+
+### M-11 — `declineClubJoinRequest` fully unchecked — silent failure
+**Severity: MEDIUM** | **File:** `index.html` lines 5813-5820
+**Category:** Unchecked Supabase errors (1), Error recovery (7)
+
+Both `await db.from('club_join_requests').delete()` (line 5815) and `await db.from('notifications').delete()` (line 5816) have no error checking. If the delete fails, the request remains active but the notification is removed from local state (line 5817), so the admin can no longer see or re-decline it. The requester's pending request stays forever.
+
+Compare with `acceptClubJoinRequest` (line 5799) which does check `{ error }`.
+
+**Fix:** Add `{ error }` checks to both deletes, toast on failure, and don't modify local state unless both succeed.
+
+---
+
+## Carried-Forward Open Findings
+
+| # | Finding | Severity | Status |
+|---|---------|----------|--------|
+| M-2 (Mar 14) | `saveNewPost` local log not rolled back on upsert failure | MEDIUM | **Still open** — see M-8 above |
+| M-5 (Mar 14) | `loadNotifications` profile enrichment no timeout | MEDIUM | **Still open** |
+| M-4 (Mar 19) | cloudSync permanent failures — retry count never resets on partial success | MEDIUM | **Still open** — at line 4280, if *any* dirty set is non-empty, retryCount increments. But some tables may succeed while others fail; the successful ones cleared their dirty flags, so retryCount keeps climbing even though progress is being made. Eventually hits the 3-retry toast and stops retrying at 5. |
+| M-5 (Mar 19) | Deleted logs may reappear after failed sync | MEDIUM | **Still open** — if a delete in `_pendingDeletes` fails, the item stays in `remaining` (line 4244), but the log was already removed from the local `logs` array. On next `loadUserData`, the server returns the still-existing row, re-adding it locally. |
+| L-1 (Mar 21) | `send-push` expired token cleanup unchecked | LOW | **Still open** |
+| L-3 (Mar 21) | `send-email` comment lookup may match wrong comment | LOW | **Still open** |
+| L-4 | `joinClub` (public) notification insert unchecked | LOW | Lines 5763-5768: `await db.from('notifications').insert(ownerIds.map(...))` — no error check. If notification fails, club join succeeds but owners are never notified. |
+| L-5 | `sendClubInvite` notification insert unchecked | LOW | Line 6256: `await db.from('notifications').insert(...)` — no error check. Invite is created but invitee may never be notified. |
+| L-6 | `promoteToOwner` notification insert unchecked | LOW | Line 5834: `await db.from('notifications').insert(...)` — no error check. Promotion succeeds but user not notified. |
+| L-7 | `acceptClubJoinRequest` notification insert unchecked | LOW | Line 5803: `await db.from('notifications').insert(...)` — no error check. Join is approved but requester not notified. |
+| L-8 | `rescindClubInvite` notification delete unchecked | LOW | Lines 6271-6273: `await db.from('notifications').delete()...` — no error check. Invite rescinded but stale notification persists. |
+| L-9 | `declineClubInvite` both deletes unchecked | LOW | Lines 6338-6339: `await db.from('club_invites').delete()` and `await db.from('notifications').delete()` — neither checked. Local state updated regardless. |
+| L-10 | `collection_visibility` default persist fire-and-forget | LOW | Line 4598: `db.from('profiles').update(...).then(() => {})` — if this fails, the default never persists, causing the same write on every profile load. Harmless but wasteful. |
 
 ---
 
 ## Recommended Priority Actions
 
-1. ~~**H-2 (Mar 21)** — Add double-submit guard to `confirmBroadcastAll` and `sendBroadcastTest`~~ **FIXED (2026-03-21)**
-2. ~~**H-3 (Mar 21)** — Add rollback to `approveOfficialDraft` if draft update fails~~ **FIXED (2026-03-21)**
-3. ~~**H-1 (Mar 21)** — Implement batch API for `send-broadcast`~~ **FIXED (2026-03-21)**
-4. ~~**M-3 (Mar 21)** — Escape user content in `report-notify` email HTML~~ **FIXED (2026-03-21)** (see security audit)
-5. **M-2 (Mar 21)** — Add error checks to `adminConfirmRemoval` / `adminRestoreContent` (long-standing)
-6. **M-2 (Mar 14)** — Roll back local log entry in `saveNewPost` on upsert failure
-7. **M-6 (Mar 14)** — Add error checks to `blockUser` follow deletes
+1. **H-4** — Add missing tables to `deleteAccount()` cascade (club_invites, content_reports, club_join_requests, device_tokens)
+2. **M-8** — Roll back local log entry in `saveNewPost` on upsert failure
+3. **M-9** — Check `{ error }` on submitReport flag update
+4. **M-10** — Check `{ error }` on friend_accepted notification inserts
+5. **M-11** — Check `{ error }` on `declineClubJoinRequest` deletes
 
 ---
 
-## Strengths (carried forward + new)
+## Edge Function Reliability Summary
 
-- **Full rollback pattern** consistently used in: `saveEditPost`, `saveFeedCaption`, `handleFeedPhoto`, `cycleWatchPrivacy`, `cycleWishPrivacy`
-- **Like/unlike race condition protection** — `_likePending` / `_commentLikePending` Sets with try/catch + rollback
+| Function | Auth | Error Handling | CORS | Rate Limit | Verdict |
+|----------|------|----------------|------|------------|---------|
+| `send-broadcast` | Admin JWT check | try/catch + JSON errors, batch error tracking | Origin-locked | No (admin-only) | Solid |
+| `delete-user` | User JWT + self-only | try/catch + 401/500 | None (POST only) | No | Solid |
+| `share-post` | None (public GET) | try/catch, graceful 404 HTML | `*` (correct) | No | Solid |
+| `identify-watch` | User JWT | try/catch, 502 on upstream fail | Origin-locked | 100/hr | Solid |
+| `send-push` | Webhook (no auth) | try/catch, individual device error handling | None (webhook) | No | Good (L-1 minor) |
+| `feedback-to-github` | Webhook (no auth) | try/catch, non-blocking profile lookup | None (webhook) | No | Solid |
+| `send-email` | Webhook (no auth) | try/catch, pref-gated, category check | None (webhook) | No | Good (L-3 minor) |
+| `report-notify` | Webhook (no auth) | try/catch, missing config check | None (webhook) | No | Solid |
+| `new-user-alert` | Webhook (no auth) | try/catch, missing config check | None (webhook) | No | Solid |
+| `extract-url-meta` | Admin JWT + is_admin check | try/catch, SSRF protection, scheme validation | Origin-locked | No | Solid |
+| `search-watch-image` | User JWT | try/catch, timeout per scrape | Origin-locked | 200/hr | Solid |
+
+All 11 edge functions have top-level try/catch with JSON error responses. No unhandled promise rejections. Auth checks are appropriate for each function's role.
+
+---
+
+## Strengths (verified)
+
+- **Full rollback pattern** consistently used in: `saveEditPost`, `saveFeedCaption`, `handleFeedPhoto`, `cycleWatchPrivacy`, `cycleWishPrivacy`, `toggleLike`, `toggleCommentLike`, `approveOfficialDraft`
+- **Like/unlike race condition protection** — `_likePending` / `_commentLikePending` Sets with try/catch + optimistic rollback
 - **`_syncInFlight` guard** prevents concurrent cloudSync
-- **Exponential backoff retry** for failed syncs
+- **Exponential backoff retry** for failed syncs with user-facing toast at 3 retries
 - **Offline detection** with auto-sync on reconnect + banner
 - **Double-submit protection** on save buttons (saveNewPost, saveEditPost) and broadcast sends (`_broadcastSending` flag)
-- **Feed safety nets** — stuck-guard (8s), master timeout (8s), skeleton safety net (6s)
-- **Session robustness** — dual auth path, 10s timeout fallback, OAuth URL cleanup, iOS PWA re-establish
-- **`deleteAccount`** thorough with sequential dependent deletes, early-exit on first error
+- **Feed safety nets** — stuck-guard, master timeout, skeleton safety net
+- **Session robustness** — dual auth path, timeout fallback, OAuth URL cleanup, iOS PWA re-establish
+- **`deleteAccount`** thorough with sequential dependent deletes, early-exit on first error, edge function for auth.users cleanup
 - **`loadUserData`** individually fault-tolerant with `_q` wrapper
-- **Edge function error handling** — all 10 edge functions have top-level try/catch with JSON error responses
-- **Broadcast admin confirmation** — `sendBroadcastAll` requires explicit "Yes, send it" confirmation step
-- **`send-broadcast` uses Resend batch API** — 100 emails/request, email resolution in batches of 50, 500KB body limit; scales to 500+ users
-- **`approveOfficialDraft` rollback** — deletes orphan log entry if draft status update fails
-- **`send-push` cleans up expired APNs tokens** (410 status detection)
+- **Edge function error handling** — all 11 edge functions have top-level try/catch with JSON error responses
+- **`send-broadcast` batch API** — 100 emails/request, email resolution in batches of 50, 500KB body limit
 - **Rate limiting** on identify-watch (100/hr) and search-watch-image (200/hr)
-- **Auth verification** on all admin-only edge functions (extract-url-meta, send-broadcast)
+- **SSRF protection** on extract-url-meta — scheme validation, private IP blocking
+- **`createClub` rollback** — deletes orphan club if member insert fails (lines 5737-5739)
+- **`promoteToOwner` rollback** — re-inserts as member if owner insert fails (line 5830)
+- **`acceptClubInvite` stale invite check** — verifies invite still exists before joining (lines 5310-5319)

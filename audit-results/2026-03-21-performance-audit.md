@@ -1,139 +1,203 @@
 # Performance Audit — WRotate
-**Date:** March 21, 2026
+**Date:** March 29, 2026 (updated)
 **Auditor:** Claude (automated)
-**Scope:** index.html (~16,427 lines), sw.js (SW v152)
+**Scope:** index.html (~17,723 lines, ~1,091,178 bytes), sw.js (SW v231)
 
 ---
 
 ## Summary
 
-File has grown from ~15,880 to ~16,427 lines (+547 lines, now ~3.5% larger). SW version jumped from v136 to v152 (+16 deploys in 2 days). Four previously reported issues (H1, H2, M2, M8) confirmed FIXED. M1 appears partially mitigated (logsForWatch now called once per watch in list mode). Seven NEW findings identified (N1-N7), mostly related to recent features (profile page, public feed, collection report).
+File has grown to ~17,723 lines / 1,091,178 bytes (+1,175 lines / +65 KB since last audit). SW version at v231 (+69 deploys since last audit). Several previously open items have been fixed since March 21. Core architecture strengths remain solid. Two new findings identified.
 
 ---
 
-## Previously Reported — Status Update
+## Previously Fixed Items — Verification
 
-| # | Finding | Status |
-|---|---------|--------|
-| H1 | `SELECT *` on `loadUserData()` | **FIXED** (2026-03-19) |
-| H2 | `skipRec()` triple `computeWatchRec()` | **FIXED** |
-| H3 | Admin dashboard fetches 10,000 rows | **Still open** — `ADMIN_ROW_LIMIT = 10000` at line 9694. As user base grows past 10K watches/logs, this will silently truncate results AND transfer large payloads. |
-| M1 | `renderCollectionList()` double `logsForWatch()` | **Partially fixed** — list mode now calls `logsForWatch` once per watch (line 11931) and reuses the array. However, grid mode still calls it twice per watch when `collGridSort === 'wears'`: once in the pre-sort Map (line 11821) and again in the render loop (line 11847). |
-| M2 | `renderWatchSelector()` double `logsForWatch()` | **FIXED** |
-| M3 | `renderCollSortBar()` O(watches x logs) for `anyPostPhoto` | **Still open** — line 11727: `watches.some(w => logsForWatch(w.id).some(l => l.photoUrl))`. Runs on every collection render. |
-| M4 | Watch picker sort — `logsForWatch()` + `reduce()` in comparator | **Still open** — not verified in current codebase; may be in a different function now |
-| M5 | File size — single-file architecture | **Still open** — now ~16,427 lines. SW v152 means 152 full re-downloads for cache busting. |
-| M6 | MutationObserver on `document.body` | **Still open** |
-| M7 | `renderDowReport()` Date per log per DOW | **Still open** — line 12968: `fLogs.filter(l => new Date(l.date+'T12:00:00').getDay() === dow)` runs 7 times, creating N Date objects each pass = 7N total Date constructions. |
-| M8 | Collection grid "wears" sort — `logsForWatch()` in comparator | **FIXED (2026-03-21)** — pre-computed into wearCounts Map at line 11821 before sort. However, still called again per-watch in the render loop (see M1 note). |
-| M9 | `computeWatchRec()` Date per log for DOW | **Still open** — line 13051: `new Date(l.date+'T12:00:00').getDay()` inside inner loop. |
-| L1 | Inline `style="..."` attributes | **Still open** — appears to have increased |
-| L3-L7 | `new Date()` in feed sort, `select('*')` in admin/clubs/comments | **Still open** |
-| L8 | `friend_requests` uses `select('*')` | **Still open** — line 5399 |
-| L9 | `profiles` own-profile uses `select('*')` | **Still open** — line 4374 |
-| L10 | `clubs` detail uses `select('*')` | **Still open** — line 5851 |
-| L11 | `official_drafts` admin uses `select('*')` | **Still open** — line 10288 |
-| L12 | `feedback` admin uses `select('*')` | **Still open** — line 10038 |
+| # | Fix | Status |
+|---|-----|--------|
+| P1 | `renderCollectionReport` uses first/last date for avg frequency | **CONFIRMED FIXED** — unchanged |
+| P2 | `renderDowReport` single-pass DOW grouping | **CONFIRMED FIXED** — unchanged |
+| P3 | `renderCollectionList` hoisted `new Date()` | **CONFIRMED FIXED** — unchanged |
+| P4 | `skipRec()` caches current rec ID | **CONFIRMED FIXED** — unchanged |
+| M3 | `renderCollSortBar()` O(watches * logs) for `anyPostPhoto` | **FIXED** — Line 9601: `_anyLogHasPhoto` set in `rebuildLogsByWatch()`. Line 12045 reads it directly. No more O(w*l) scan. |
+| M9 | `computeWatchRec()` Date per log for DOW check | **FIXED** — Lines 9602-9605: `l._dow` pre-computed in `rebuildLogsByWatch()`. Line 13398 uses `l._dow === todayDOW` — zero Date constructions in hot loop. |
+| N8 | `watchCardTagsHTML()` redundant logsForWatch + Date objects | **PARTIALLY FIXED** — Line 12208 now passes `wLogs` as parameter. Line 12870 caches `_getTagNow()` (refreshed every 60s). But `new Date(lastDate + 'T12:00:00')` (line 12879) and `new Date(w.purchaseDate + 'T12:00:00')` (line 12898) still create Date objects per card. Minor impact with cached `now`. |
+| N9 | `renderTrackHistory()` O(n*m) watches.find | **FIXED** — Line 11459: `const watchMap = new Map(watches.map(w => [w.id, w]))`. Line 11461 uses `watchMap.get()`. |
 
 ---
 
-## NEW Findings (March 21, 2026)
+## Carried-Forward Findings — Status Update
 
-### N1 — MEDIUM: `renderCollectionReport` creates O(n * m) Date objects for avg frequency
+### HIGH
 
-**Location:** Lines 13453–13459
+| # | Finding | Severity | Status | Lines |
+|---|---------|----------|--------|-------|
+| H3 | Admin dashboard fetches 10,000 rows | HIGH | **Still open** | Line 9953: `ADMIN_ROW_LIMIT = 10000`. Fetches up to 10K watches + 10K logs into memory for client-side aggregation. Should use server-side aggregation (Supabase RPC / view). Admin-only, so limited user impact, but will hit Supabase row limits and cause slow renders as the platform grows. |
+
+### MEDIUM
+
+| # | Finding | Severity | Status | Lines |
+|---|---------|----------|--------|-------|
+| M1 | Grid mode calls `logsForWatch()` redundantly in some code paths | MEDIUM | **Mostly fixed** | Line 12165 calls `logsForWatch(w.id)` and passes to `watchCardTagsHTML` at line 12208. However, `logsForWatch` is still O(1) via Map lookup, so the real issue (repeated array scans) is resolved. Remaining redundancy is negligible. **Downgraded to LOW.** |
+| M5 | Single-file architecture — 1.09 MB monolith | MEDIUM | **Still open — WORSE** | 17,723 lines / ~1,091,178 bytes (up from 16,548 / 1,025,795). CSS is ~1,755 lines (lines 92-1837). Every SW version bump (v231, +69 bumps since last audit) forces a full ~1 MB re-download. Extracting CSS alone would save ~35 KB independently cached and reduce churn. |
+| M6 | MutationObserver on `document.body` | MEDIUM | **Still open** | Line 16599-16616: Observes `{ attributes: true, subtree: true, attributeFilter: ['class'] }` on `document.body`. Fires on every class change of any element in the DOM. Purpose is modal focus management — could be replaced with direct `focus()` calls in modal open/close functions. |
+
+### LOW
+
+| # | Finding | Severity | Status | Lines |
+|---|---------|----------|--------|-------|
+| L1 | Inline `style="..."` everywhere | LOW | **Still open** | 1,063 occurrences of `style="` in the file. Increases HTML string size in innerHTML calls and prevents browser CSS caching of generated content. |
+| L3 | `new Date()` in feed sort comparator | LOW | **Still open** | Line 7422: `.sort((a, b) => b.date.localeCompare(a.date) || new Date(b.created_at) - new Date(a.created_at))` — creates 2 Date objects per comparison as a tiebreaker. Used as secondary sort (only when dates match), so actual impact is small. Could use string comparison on ISO timestamps instead. |
+| L8 | `friend_requests` uses `select('*')` | LOW | **Still open** | Line 4772 |
+| L9 | Own profile uses `select('*')` | LOW | **Still open** | Line 4542 |
+| L10 | `clubs` detail uses `select('*')` | LOW | **Still open** | Line 6061 |
+| L11 | `official_drafts` admin uses `select('*')` | LOW | **Still open** | Line 10297 |
+| L12 | `feedback` admin uses `select('*')` | LOW | **Still open** | Line 10571 (approximate) |
+| L13 | `comments` uses `select('*')` | LOW | **Still open** | Line 8715 |
+| L14 | `content_reports` admin uses `select('*')` | LOW | **Still open** | Line 9777 (approximate) |
+| L15 | `timegrapher_tuning` uses `select('*')` | LOW | **New** | Line 16938 |
+| L16 | `timegrapher_results` uses `select('*')` | LOW | **New** | Line 17166 |
+
+---
+
+## NEW Findings
+
+### N10 — MEDIUM: `watches.find()` called 22+ times across codebase without pre-built Map
+
+**Location:** Scattered (lines 5290, 8171, 8282, 8436, 8567, 11346, 11405, 11776, 11804, 11909, 11910, 12665, 12708, 13084, 13154, 13267, 13319, 13647, 13944, 13966, 14424, etc.)
+
+**Issue:** While `renderTrackHistory` was fixed to use a Map (line 11459), most other call sites still use `watches.find(x => x.id === id)` which is O(n) per lookup. There are 22+ call sites. Most are single lookups (acceptable) but several are inside loops or maps:
+- Line 11346: `renderWornNotice()` — `watches.find()` inside `worn.map()` (typically 1-3 items, low impact)
+- Line 13319: `renderDowReport()` — inside `.map()` for 7 DOW cells (minor)
+- Lines 11909-11910: `renderGameRound()` — two lookups (minor)
+
+**Severity:** LOW overall. Individual lookups on a 20-50 item array are sub-microsecond. Only becomes meaningful if collection sizes reach 200+. A global `_watchById` Map rebuilt alongside `_logsByWatch` would eliminate all O(n) lookups project-wide.
+
+**Fix:** Add `_watchById = new Map(watches.map(w => [w.id, w]))` in `rebuildLogsByWatch()` and replace `watches.find(x => x.id === id)` with `_watchById.get(id)` across all call sites.
+
+### N11 — MEDIUM: PostHog analytics script is render-blocking in `<head>`
+
+**Location:** Lines 29-35
+
 **Code:**
-```javascript
-const allWLogs = logsForWatch(w.id).map(l => l.date).sort();
-if (allWLogs.length >= 2) {
-  let totalGap = 0;
-  for (let i = 1; i < allWLogs.length; i++) {
-    totalGap += (new Date(allWLogs[i]+'T12:00:00') - new Date(allWLogs[i-1]+'T12:00:00')) / 86400000;
-  }
-  avgFreq = Math.round(totalGap / (allWLogs.length - 1));
-}
+```html
+<script>
+  !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,...
+  posthog.init('phc_...', { api_host: 'https://us.i.posthog.com', ... });
+</script>
 ```
-**Issue:** For each watch, this creates 2 * (logCount - 1) Date objects. With 20 watches averaging 50 logs each, that's ~1,960 Date constructions per stats render. Since the dates are already sorted ISO strings, the first-to-last gap divided by count gives the same result:
-```javascript
-// Fix: just use first and last date
-if (allWLogs.length >= 2) {
-  const gap = (new Date(allWLogs[allWLogs.length-1]+'T12:00:00') - new Date(allWLogs[0]+'T12:00:00')) / 86400000;
-  avgFreq = Math.round(gap / (allWLogs.length - 1));
-}
-```
-**Impact:** Reduces Date constructions from ~2000 to ~40 (2 per watch).
 
-### N2 — MEDIUM: `renderMonthlyReview` creates Date per log for DOW analysis
+**Issue:** The PostHog stub script (lines 29-35) runs synchronously in `<head>` before any content renders. While the stub itself is small (~1.2 KB), it injects a `<script async>` tag that starts downloading the full PostHog library (~45 KB gzipped) immediately, competing for bandwidth with the actual page content during initial load. The `async` on the injected script prevents blocking, but the bandwidth contention on slow connections delays the critical path.
 
-**Location:** Line 12935
-**Code:**
-```javascript
-mLogs.forEach(l => { const d = new Date(l.date+'T12:00:00').getDay(); dowm[d]=(dowm[d]||0)+1; });
-```
-**Issue:** Same pattern as M7/M9. Creates a Date object per log in the month just to get the day of week. A lookup table or Zeller's formula avoids Date entirely.
-**Impact:** Low-medium. Monthly logs are typically 20-60, so ~60 Date constructions. Less critical than M7 (all logs) but same easy fix pattern.
+**Severity:** MEDIUM on slow mobile connections (3G), LOW on broadband.
 
-### N3 — MEDIUM: `renderCollectionList` creates `new Date()` twice per watch for lastDays
+**Fix:** Move the PostHog init script to end of `<body>` (after the main `<script>` tag), or wrap in `requestIdleCallback` / `setTimeout(..., 0)` to defer the library download until after initial render.
 
-**Location:** Line 11935
-**Code:**
-```javascript
-const lastDays = lastDate ? Math.floor((new Date() - new Date(lastDate+'T12:00:00')) / 86400000) : null;
-```
-**Issue:** `new Date()` (current time) is called once per watch instead of once outside the loop. With 30 watches, 30 unnecessary `new Date()` calls. Also, `new Date(lastDate+'T12:00:00')` per watch could be avoided using string comparison against today's date.
-**Fix:** Hoist `const now = new Date();` before the `.map()` call.
-**Impact:** Minor per-call but demonstrates a pattern to fix consistently.
+---
 
-### N4 — MEDIUM: `skipRec()` still calls `computeWatchRec()` twice on normal flow
+## Initial Load Analysis
 
-**Location:** Lines 13183-13187
-**Code:**
-```javascript
-function skipRec() {
-  const current = computeWatchRec(recSkips);      // Call 1: find current to add to skips
-  if (current) recSkips.add(current.w.id);
-  let next = computeWatchRec(recSkips);            // Call 2: find next recommendation
-  if (!next) { recSkips = new Set(); next = computeWatchRec(recSkips); }  // Call 3 (only on reset)
-  ...
-}
-```
-**Issue:** The H2 fix eliminated the third call in the common path but the first call (to identify the current recommendation just to skip it) is wasteful — the current recommendation is what was already rendered. It could be cached from the last render:
-```javascript
-// Store the rendered rec in a module variable
-let _currentRec = null;
-function renderWatchRecommendation() {
-  _currentRec = computeWatchRec(recSkips);
-  el.innerHTML = recCardHTML(_currentRec);
-}
-function skipRec() {
-  if (_currentRec) recSkips.add(_currentRec.w.id);
-  let next = computeWatchRec(recSkips);
-  ...
-}
-```
-**Impact:** Eliminates one full `computeWatchRec()` call per skip tap (~200-600 Date constructions saved).
+### File Size Breakdown (estimated)
 
-### N5 — LOW: `renderCollectionList` redundant `wornToday` computation
+| Component | Lines | Est. Size | % of Total |
+|-----------|-------|-----------|------------|
+| HTML `<head>` (meta, scripts, styles) | 1-1837 | ~95 KB | 9% |
+| CSS (inline `<style>`) | 92-1837 | ~55 KB | 5% |
+| HTML body (DOM structure) | 1838-3970 | ~120 KB | 11% |
+| JavaScript (main `<script>`) | 3971-17723 | ~816 KB | 75% |
+| **Total** | 17,723 | **~1,091 KB** | 100% |
 
-**Location:** Line 11936
-**Code:**
-```javascript
-const wornToday = wLogs.some(l => l.date === today);
-```
-**Issue:** This value is computed but never used in the rendered output for list view. The list view table rows don't display a "worn today" indicator — only the grid view uses it (line 11850). This is a wasted O(n) scan per watch.
-**Fix:** Remove the `wornToday` computation from `renderCollectionList` or use it to add a visual indicator.
+### Render-Blocking Resources
 
-### N6 — LOW: `loadFeed` fires up to 5 parallel queries with limit(50) each, then deduplicates
+| Resource | Blocking? | Notes |
+|----------|-----------|-------|
+| PostHog stub (lines 29-35) | **Yes** — sync in `<head>` | Small (~1.2 KB) but initiates async download |
+| Favicon generator (lines 50-70) | **Yes** — sync in `<head>` | Creates canvas, converts SVG; runs once, fast |
+| Theme detection (lines 83-91) | **Yes** — sync in `<head>` | Necessary to prevent FOUC; tiny |
+| Inline `<style>` (lines 92-1837) | **Yes** — sync in `<head>` | ~55 KB CSS parsed before first paint |
+| Chart.js CDN (line 71) | **No** — `defer` attribute | Correct usage |
+| Main `<script>` (line 3971) | **Partially** — at end of body | Blocks interactive until parsed (~816 KB JS) |
 
-**Location:** Lines 7162-7208
-**Issue:** For users who follow many people, the feed loads public posts (Q1), own posts (Q2), followers-vis posts (Q3a), friends-vis posts (Q3b), and null-vis posts (Q4) — each limited to 50. That's up to 250 rows fetched, then merged/deduped/sliced to 50. In practice, most of these overlap heavily. A single RPC or view with proper `OR` conditions would be more efficient.
-**Impact:** Low in practice — Supabase queries are fast and the dedup is O(n). But as user counts grow, Q3a/Q4 will return increasingly overlapping sets with Q1.
+### Critical Path
 
-### N7 — LOW: Notification polling triple-start path
+1. Browser receives ~1.09 MB HTML
+2. Parses `<head>`: PostHog stub + favicon + theme + 55 KB CSS
+3. Renders `<body>` HTML skeleton (~120 KB DOM)
+4. Hits main `<script>` at line 3971 — parses ~816 KB JS
+5. Fast session pre-check shows/hides auth screen synchronously
+6. Two-track boot fires parallel data loads (Track A: feed, Track B: profile/notifications)
 
-**Location:** Lines 8806, 16168, 16321
-**Issue:** `setInterval(loadNotifications, 30000)` can be registered at three different points: EULA accept (8806), Track B social init (16168), and visibility change resume (16321). Each checks `!window._notifPollId` before creating, but if `acceptEula()` fires while Track B hasn't completed yet (race window), two intervals could briefly coexist. In practice, `clearInterval` on hide (16314) and `clearUserState` (16194) clean up, so this is unlikely to cause real issues.
-**Impact:** Theoretical only. The guards are sufficient.
+**Estimated time to first meaningful paint:** ~0.8s on broadband (SW cache hit), ~2-4s on 3G (first visit, full download).
+
+### Service Worker Strategy (v231)
+
+| Aspect | Assessment |
+|--------|------------|
+| Install | Pre-caches `/`, `/index.html`, `/manifest.json`, `/icon.svg`, `/profile/`, `/p/` — good |
+| Navigation | Network-first with 1.5s timeout, falls back to cache — excellent |
+| Assets | Stale-while-revalidate — good for icons/manifest |
+| Cross-origin | Correctly bypassed (Supabase, CDN, OAuth) — good |
+| Cache cleanup | Deletes old caches on activate — good |
+| **Issue** | Every code change bumps SW version, forcing full ~1.09 MB re-download of `index.html`. With 69 deploys in 8 days, that's 69 x ~1 MB re-downloads for returning users. |
+
+### Image Optimization
+
+| Aspect | Assessment |
+|--------|------------|
+| `loading="lazy"` | 13 of 56 static `<img>` tags use it. All 13 are in dynamically generated HTML (good — they're below the fold). Static images in modals/forms don't need lazy since they're hidden. **OK.** |
+| Compression | `blobToResizedBase64()` resizes to 800px max, JPEG 0.82 quality — good |
+| `onerror` handling | Most dynamic images have `onerror="this.style.display='none'"` — good graceful degradation |
+| Format | JPEG only. No WebP/AVIF conversion. Minor improvement opportunity. |
+
+### DOM Complexity
+
+| Metric | Value | Assessment |
+|--------|-------|------------|
+| Static DOM elements (body HTML) | ~2,133 lines of HTML (lines 1838-3970) | Moderate — many overlay modals pre-exist in DOM |
+| `getElementById`/`querySelector` calls | 936 | High but normal for a SPA of this size |
+| `innerHTML =` assignments | 206 | Primary rendering method; causes full reflow per assignment |
+| `innerHTML +=` | 1 (line 11483) | Good — almost no incremental innerHTML appends |
+| `addEventListener` | 50 | Reasonable |
+| `removeEventListener` | 15 | Present for key handlers; some delta may indicate minor leaks |
+
+### Memory Usage Patterns
+
+| Pattern | Assessment |
+|---------|------------|
+| Chart.js instances | 3 charts (`chUsecase`, `chCollValue`, `_msrRateChart`). All properly `.destroy()`ed before recreation. No leaks. |
+| `setInterval` timers | 4 active (notification polling 30s x3 locations, tuning poll, game carousel, notification duplicate). All have corresponding `clearInterval`. |
+| Feed items | Kept in memory as array. Pagination via virtual rendering (good). |
+| Watches + Logs | Kept in memory with `_logsByWatch` Map index. Good for collections <500 watches. |
+| Blob URLs | All `createObjectURL`/`revokeObjectURL` properly paired (confirmed still true). |
+
+### Network Request Efficiency
+
+| Pattern | Assessment |
+|---------|------------|
+| Two-track parallel boot | Excellent — `Promise.all` for both tracks with safety timeouts |
+| Feed column selection | `FEED_LOG_COLS` specifies exact columns — no over-fetching |
+| Profile caching | `_profileCache` prevents redundant fetches |
+| `select('*')` usage | 10 call sites still use `select('*')` instead of specific columns (see L8-L16). Minor bandwidth waste. |
+| Dirty sync | `cloudSync()` only sends changed records — excellent |
+| Debounced saves | 500ms coalescing — good |
+
+### CSS Performance
+
+| Pattern | Assessment |
+|---------|------------|
+| Inline styles | 1,063 `style="..."` occurrences. Each `innerHTML =` generates HTML with inline styles, increasing string size and preventing browser optimization. |
+| Transitions/animations | 101 `transition`/`@keyframes`/`animation:` rules. `prefers-reduced-motion` respected (line 95-97). Good. |
+| No external fonts | No `@font-face` or `@import` — system fonts only. Excellent for load time. |
+| CSS containment | Not used. Adding `contain: content` to feed cards and watch cards could improve rendering. |
+
+### Third-Party Script Impact
+
+| Script | Size (gzipped) | Blocking? | Impact |
+|--------|----------------|-----------|--------|
+| PostHog analytics | ~45 KB (async loaded) | Stub sync, library async | Bandwidth contention on slow connections |
+| Chart.js 4.4.0 CDN | ~65 KB | No (`defer`) | Only used on Stats page — loaded for all pages |
+| Supabase JS (bundled) | ~90 lines inline | Yes (inline) | Minimal — already inlined |
+| Google OAuth | External | No (frame-src) | Only loaded when auth screen shown |
 
 ---
 
@@ -143,42 +207,56 @@ const wornToday = wLogs.some(l => l.date === today);
 
 | # | Fix | Effort | Impact |
 |---|-----|--------|--------|
-| N1 | Use first/last date for avg frequency in `renderCollectionReport` | 3 min | ~2000 fewer Date constructions |
-| N4 | Cache rendered rec to avoid redundant `computeWatchRec()` in `skipRec()` | 5 min | Halves work per skip tap |
-| M1 | In grid mode with wears sort, reuse `wearCounts` Map in render loop | 3 min | Eliminates duplicate `logsForWatch` |
-| M3 | Cache `_anyLogHasPhoto` flag in `rebuildLogsByWatch` | 10 min | Eliminates O(w x l) per collection render |
-| M7 | Single-pass DOW grouping in `renderDowReport` | 5 min | Reduces Date constructions from 7N to N |
-| M9 | Pre-compute DOW lookup for dates in `computeWatchRec` | 10 min | ~200-600 fewer Date constructions per tap |
-| N3 | Hoist `new Date()` outside `.map()` in `renderCollectionList` | 1 min | Minor cleanup |
-| N5 | Remove unused `wornToday` from `renderCollectionList` | 1 min | Dead code cleanup |
+| N11 | Move PostHog init to end of body or wrap in `setTimeout` | 3 min | Faster first paint on slow connections |
+| L3 | Replace `new Date(b.created_at) - new Date(a.created_at)` with `b.created_at.localeCompare(a.created_at)` at line 7422 | 2 min | Eliminates Date constructions in sort tiebreaker |
+| N10 | Add `_watchById` Map in `rebuildLogsByWatch()` | 10 min | Eliminates all O(n) `watches.find()` lookups globally |
 
 ### Medium-term
 
 | # | Fix | Effort | Impact |
 |---|-----|--------|--------|
-| M5 | Extract CSS + Supabase SDK into separate files | 2 hrs | ~60% wire size reduction, independent caching |
-| H3 | Server-side aggregation for admin stats | 2 hrs | Future-proofs as user base grows beyond 10K rows |
-| M6 | Replace MutationObserver with direct focus calls | 20 min | Eliminates spurious mutation callbacks |
+| M5 | Extract CSS into separate file | 1 hr | ~55 KB independently cached; SW bumps don't re-download CSS |
+| M6 | Replace MutationObserver with direct focus calls | 30 min | Eliminates per-class-change callback overhead |
+| H3 | Server-side admin aggregation via Supabase RPC | 2 hrs | Future-proofs past 10K rows |
+| — | Add `contain: content` to `.feed-card` and `.watch-card` CSS | 10 min | Limits reflow scope during feed/collection renders |
+
+### Long-term
+
+| # | Fix | Effort | Impact |
+|---|-----|--------|--------|
+| M5+ | Split JS into modules (auth, feed, collection, stats) | 4-8 hrs | Smaller per-page downloads, independent caching, easier maintenance |
+| — | Lazy-load Chart.js only when Stats page is opened | 1 hr | Saves ~65 KB download for non-Stats users |
+| — | Convert image uploads to WebP where supported | 2 hrs | 25-35% smaller image files |
 
 ---
 
-## Strengths (carried forward + new)
+## Strengths (confirmed still in place)
 
-- **Blob URL management** — 40+ `createObjectURL`/`revokeObjectURL` properly paired; no leaks found
-- **Admin stats `head: true` counts** — avoids downloading rows for aggregate statistics
-- **Public feed uses column selection** — no `select('*')` on hot user-facing paths
-- **`Promise.all()`** used extensively for parallel queries (profile page fires 6-8 queries concurrently)
-- **Generation-based render skipping** — `_lastRenderedGen` prevents wasteful re-renders
-- **On-demand page rendering** — pages only render when navigated to
-- **Dirty tracking** — `cloudSync()` only sends changed records
-- **Debounced saves** — coalesced within 500ms
-- **Image compression** — `blobToResizedBlob()` before upload
-- **Optimistic UI** — likes update instantly before server confirmation
-- **`_logsByWatch` Map** — O(1) lookup per watch via pre-computed index
-- **Safety nets** — multiple timeout guards (skeleton 6s, session 10s, feed 8s, feedLoading stuck 8s)
-- **Good SW strategy** — network-first for navigation (1.5s timeout), stale-while-revalidate for assets
-- **Notification polling pauses in background tabs** (visibilitychange listener)
-- **NEW: Profile page caching** — `_profileCache` avoids re-fetching recently viewed profiles (line 4542)
-- **NEW: Two-track boot** — Feed-critical and non-critical social data load in parallel tracks for sub-2s feed (lines 16126-16174)
-- **NEW: Feed 2-phase rendering** — Phase 1 renders posts immediately, Phase 2 enriches with profiles/likes/comments (lines 7155-7325)
-- **NEW: Grid sort pre-computation** — wearCounts Map built before sort when sorting by wears (line 11821)
+- **Blob URL management** — All `createObjectURL`/`revokeObjectURL` calls properly paired; no leaks found
+- **`_logsByWatch` Map** — O(1) lookup per watch via pre-computed index (line 9608)
+- **`_anyLogHasPhoto` cached** — FIXED since last audit. Set in `rebuildLogsByWatch()` (line 9601), read at line 12045
+- **`l._dow` pre-computed** — FIXED since last audit. DOW cached per log in `rebuildLogsByWatch()` (lines 9602-9605)
+- **`watchMap` in renderTrackHistory** — FIXED since last audit. Line 11459 builds Map before loop
+- **`_getTagNow()` cached Date** — FIXED since last audit. Line 12870 refreshes every 60s, not per card
+- **`wLogs` passed to `watchCardTagsHTML`** — FIXED since last audit. Line 12208 passes pre-fetched wLogs
+- **Generation-based render skipping** — `_lastRenderedGen` prevents wasteful re-renders on all major pages
+- **On-demand page rendering** — Pages only render when navigated to
+- **Dirty tracking** — `cloudSync()` only sends changed records via `_dirty` sets
+- **Debounced saves** — 500ms coalescing
+- **Image compression** — `blobToResizedBlob()` / `blobToResizedBase64()` resize to 800px max, JPEG 0.82
+- **Feed column selection** — `FEED_LOG_COLS` specifies exact columns, no `select('*')` on user-facing feed
+- **Two-track boot** — Feed-critical social data loads in parallel Track A; non-critical in Track B
+- **Feed 2-phase rendering** — Phase 1 kills skeletons with posts; Phase 2 enriches in background
+- **Good SW strategy** — Network-first for navigation (1.5s timeout), stale-while-revalidate for assets, proper cache cleanup
+- **Profile page caching** — `_profileCache` avoids re-fetching recently viewed profiles
+- **Notification polling pauses** — `visibilitychange` listener stops polling in background tabs
+- **Feed safety nets** — Multiple timeout guards (stuck detection, master safety, query timeout)
+- **Grid sort pre-computation** — `wearCounts` Map built before sort
+- **Optimistic UI** — Likes, follows, friend requests update instantly before server confirmation
+- **`Promise.all()`** used extensively for parallel queries
+- **loadUserData selects specific columns** — Explicit column list, not `select('*')`
+- **Interval cleanup** — All `clearInterval` / `clearTimeout` calls properly paired
+- **Event listener cleanup** — `removeEventListener` called for scroll, blur, paste, click-outside, touch handlers
+- **No external fonts** — System font stack only, zero font download delay
+- **`prefers-reduced-motion` respected** — Line 95-97 disables animations for accessibility
+- **Chart.js `defer`** — Line 71 uses `defer` attribute, non-blocking
