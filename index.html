@@ -4701,7 +4701,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.05.20.26';
+const APP_VERSION = '2.36.05.20.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5242,7 +5242,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   const privacyHtml = isOwn ? (() => {
     const pChip = (cId, val, label, current, field) =>
       `<div class="chip${current === val ? ' selected' : ''}" data-vis="${val}"
-        onclick="selVisChip('${cId}','${val}');savePrivacyField('${field}','${val}')">${label}</div>`;
+        onclick="if(demoGuard())return;selVisChip('${cId}','${val}');savePrivacyField('${field}','${val}')">${label}</div>`;
     const cur = privacy || 'public';
     const curCol = visibility || 'followers';
     const prvOpen = localStorage.getItem('prv-collapse') !== '1';
@@ -5289,7 +5289,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           ${['public','followers','friends','private'].map(v => {
             const label = v === 'public' ? 'Public' : v === 'followers' ? 'Followers' : v === 'friends' ? 'Close Friends' : 'Private';
             return `<div class="chip${v === getDefaultVis() ? ' selected' : ''}" data-vis="${v}"
-              onclick="selVisChip('pp-default-vis-chips','${v}');setDefaultVis('${v}')">${label}</div>`;
+              onclick="if(demoGuard())return;selVisChip('pp-default-vis-chips','${v}');setDefaultVis('${v}')">${label}</div>`;
           }).join('')}
         </div>
         <div style="font-size:.71rem;color:var(--muted);margin-top:.25rem;">New posts default to this. You can change each post individually.</div>
