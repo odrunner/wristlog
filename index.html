@@ -4700,7 +4700,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.05.16.03';
+const APP_VERSION = '2.36.05.18.16';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17834,6 +17834,7 @@ window._tgNativeCallback = function(data) {
 
     // Live tuning readout (remote debug)
     if (data.debug) {
+      if (data.debug.sampleRate && !_msrActualSampleRate) _msrActualSampleRate = data.debug.sampleRate;
       const el = document.getElementById('msr-tune-live');
       if (el) el.textContent = 'Ratio: ' + (data.debug.threshold != null ? data.debug.threshold.toFixed(3) : '—')
         + ' | Buffer: ' + (data.debug.bufferSamples || 0);
@@ -17984,6 +17985,7 @@ let _msrScatterData = []; // [{t: timeSec, d: deviationMs}] — one per tick
 let _msrPhase = ''; // manual: acquiring → calibrating → measuring → converged
                      // auto: acquiring → estimating_bph → bph_estimated → calibrating → measuring → converged
 let _msrIsAuto = false; // whether current session is auto BPH
+let _msrActualSampleRate = null; // actual audio sample rate from iOS (for drift analysis)
 let _msrHadTicks = false; // whether we've seen tickCount > 0 (calibration done)
 let _msrBphLocked = false; // whether BPH has been detected (auto mode)
 let _msrRateHistory = []; // recent rate values for error bar computation
@@ -18200,6 +18202,7 @@ function openMeasureInline() {
   _msrLastRate = null;
   _msrLastBe = null;
   _msrLastBph = null;
+  _msrActualSampleRate = null;
   _msrScatterData = []; _msrLastCumDev = 0;
   _msrPosition = 'dial_up';
   const listenBtn = document.getElementById('msr-listen-btn');
@@ -18489,6 +18492,8 @@ function stopMsrListen() {
         duration_sec: Math.round(elapsed),
         dot_count: _msrScatterData.length,
         bucket_rate: bucketRate,
+        native_rate: _msrLastRate,
+        actual_sample_rate: _msrActualSampleRate,
         tick_data: tickSnap
       })
     }).then(() => {});
