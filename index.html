@@ -4709,7 +4709,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.06.17.15';
+const APP_VERSION = '2.36.06.17.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15675,7 +15675,9 @@ function closePhotoIdentify() {
     _photoIdentifyResults = [];
     window._photoIdentifyBlob = null;
   }
-  resumeWelcome();
+  // Don't resume welcome wizard if we're transitioning to the add-watch form —
+  // the welcome modal would cover it. Welcome resumes after save/cancel instead.
+  if (!window._addingFromIdentify) resumeWelcome();
 }
 
 /**
