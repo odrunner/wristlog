@@ -4709,7 +4709,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.06.17.17';
+const APP_VERSION = '2.36.06.17.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13230,7 +13230,11 @@ function closeWatchModal() {
     _photoIdentifyResults = [];
     window._photoIdentifyBlob = null; window._addingFromIdentify = false;
   }
+  // When swapping back to identify modal, suppress history.back() from the watch modal close
+  // to prevent the delayed popstate from immediately closing the identify modal.
+  if (returning) _closingViaPopstate = true;
   document.getElementById('watch-modal').classList.add('hidden');
+  if (returning) _closingViaPopstate = false;
   movingFromWishlistId = null; movingFromWishlistData = null;
   // Return to identify modal if more watches remain
   if (returning) {
@@ -15420,8 +15424,11 @@ async function addFromIdentified(idx) {
     // Flag so saveWatch knows to return to identify modal
     window._addingFromIdentify = true;
 
-    // Close identify modal (but keep blob for crop)
+    // Swap modals atomically: suppress history.back() from closing the identify modal,
+    // otherwise the delayed popstate event kills the watch modal right after it opens.
+    _closingViaPopstate = true;
     closePhotoIdentify();
+    _closingViaPopstate = false;
 
     // Open the add watch form
     openAddWatch();
