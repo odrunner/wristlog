@@ -3196,7 +3196,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input type="hidden" id="msr-tune-percentile" value="50">
         <input type="hidden" id="msr-tune-hp-cutoff" value="4000">
         <!-- Regression & stability tuning (sent to Swift engine) -->
-        <input type="hidden" id="msr-tune-reg-skip" value="5">
+        <input type="hidden" id="msr-tune-reg-skip" value="10">
         <input type="hidden" id="msr-tune-reg-min-n" value="10">
         <input type="hidden" id="msr-tune-wall-min" value="20">
         <input type="hidden" id="msr-tune-stab-window" value="15">
@@ -3204,12 +3204,23 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input type="hidden" id="msr-tune-stab-lose" value="5">
         <!-- Pair gate & tick detection tuning -->
         <input type="hidden" id="msr-tune-max-pair-thresh" value="0.58">
-        <input type="hidden" id="msr-tune-min-pair-thresh" value="0.5">
+        <input type="hidden" id="msr-tune-min-pair-thresh" value="0.2">
         <input type="hidden" id="msr-tune-cold-start" value="0.58">
         <input type="hidden" id="msr-tune-pair-mad-mult" value="3">
         <input type="hidden" id="msr-tune-max-tick-dev" value="8">
         <input type="hidden" id="msr-tune-calib-duration" value="24000">
-        <input type="hidden" id="msr-tune-ring-target-rate" value="16000">
+        <input type="hidden" id="msr-tune-ring-target-rate" value="12000">
+        <input type="hidden" id="msr-tune-early-pair-count" value="0">
+        <input type="hidden" id="msr-tune-early-pair-thresh" value="0.3">
+        <input type="hidden" id="msr-tune-calib-dur-sec" value="2.0">
+        <input type="hidden" id="msr-tune-beat-err-window" value="20">
+        <input type="hidden" id="msr-tune-phase-rec-trigger" value="2">
+        <input type="hidden" id="msr-tune-phase-rec-band-lo" value="0.6">
+        <input type="hidden" id="msr-tune-phase-rec-band-hi" value="1.4">
+        <input type="hidden" id="msr-tune-auto-bph-decisive" value="1.5">
+        <input type="hidden" id="msr-tune-per-tick-dev-check" value="false">
+        <input type="hidden" id="msr-tune-skip-pair-no-accum" value="false">
+        <input type="hidden" id="msr-tune-phase-recovery-enabled" value="false">
         <div id="msr-tune-live" style="display:none;"></div>
         <div id="msr-scatter-wrap"></div>
       </div>
@@ -3300,7 +3311,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="form-group">
       <label for="w-url">Manufacturer / Listing URL</label>
       <div class="url-row">
-        <input type="url" id="w-url" placeholder="https://www.rolex.com/watches/submariner/…" oninput="updateUrlBtn()">
+        <input type="url" id="w-url" placeholder="Paste a manufacturer or listing URL" oninput="updateUrlBtn()">
         <button id="w-fetch-btn" class="url-open-btn" onclick="fetchCollectionDetails()" style="color:var(--text);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Fetch</button>
         <a id="url-open-btn" href="#" target="_blank" rel="noopener noreferrer" class="url-open-btn hidden">Open ↗</a>
       </div>
@@ -3327,11 +3338,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="form-row">
       <div class="form-group">
         <label for="w-ref">Reference No.</label>
-        <input type="text" id="w-ref" placeholder="116610LN" maxlength="60">
+        <input type="text" id="w-ref" placeholder="Reference number" maxlength="60">
       </div>
       <div class="form-group">
         <label for="w-movement">Movement / Calibre</label>
-        <input type="text" id="w-movement" placeholder="Cal. 3235" maxlength="80">
+        <input type="text" id="w-movement" placeholder="Caliber or movement type" maxlength="80">
       </div>
     </div>
     <div class="form-row">
@@ -4710,7 +4721,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.06.19.30';
+const APP_VERSION = '2.36.07.07.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18310,7 +18321,18 @@ function sendMsrTuning() {
     pairMadMult: Number(document.getElementById('msr-tune-pair-mad-mult').value),
     maxTickDevMs: Number(document.getElementById('msr-tune-max-tick-dev').value),
     calibDuration: Number(document.getElementById('msr-tune-calib-duration').value),
-    ringTargetRate: Number(document.getElementById('msr-tune-ring-target-rate').value)
+    ringTargetRate: Number(document.getElementById('msr-tune-ring-target-rate').value),
+    earlyPairCount: Number(document.getElementById('msr-tune-early-pair-count').value),
+    earlyPairThresh: Number(document.getElementById('msr-tune-early-pair-thresh').value),
+    calibDurSec: Number(document.getElementById('msr-tune-calib-dur-sec').value),
+    beatErrWindow: Number(document.getElementById('msr-tune-beat-err-window').value),
+    phaseRecTrigger: Number(document.getElementById('msr-tune-phase-rec-trigger').value),
+    phaseRecBandLo: Number(document.getElementById('msr-tune-phase-rec-band-lo').value),
+    phaseRecBandHi: Number(document.getElementById('msr-tune-phase-rec-band-hi').value),
+    autoBphDecisive: Number(document.getElementById('msr-tune-auto-bph-decisive').value),
+    perTickDevCheck: document.getElementById('msr-tune-per-tick-dev-check').value === 'true',
+    skipPairNoAccum: document.getElementById('msr-tune-skip-pair-no-accum').value === 'true',
+    phaseRecoveryEnabled: document.getElementById('msr-tune-phase-recovery-enabled').value === 'true'
   });
 }
 var _remotePeakRatioThreshold = 2.5;
