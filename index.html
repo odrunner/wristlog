@@ -4710,7 +4710,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.06.18.54';
+const APP_VERSION = '2.36.06.19.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17608,7 +17608,9 @@ window._tgNativeCallback = function(data) {
         }
       }
       // Graceful early stop: no ticks = no watch on mic
-      if (elapsed >= 8 && data.tickCount === 0) {
+      // Auto mode needs longer: 5s BPH detect + 2s calibration before ticks start
+      const noTickTimeout = _msrIsAuto ? 15 : 8;
+      if (elapsed >= noTickTimeout && data.tickCount === 0) {
         stopMsrListen();
         const statusText = document.getElementById('msr-status-text');
         if (statusText) {
