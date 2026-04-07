@@ -4709,7 +4709,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.06.17.23';
+const APP_VERSION = '2.36.06.17.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13230,11 +13230,7 @@ function closeWatchModal() {
     _photoIdentifyResults = [];
     window._photoIdentifyBlob = null; window._addingFromIdentify = false;
   }
-  // When swapping back to identify modal, suppress history.back() from the watch modal close
-  // to prevent the delayed popstate from immediately closing the identify modal.
-  if (returning) _closingViaPopstate = true;
   document.getElementById('watch-modal').classList.add('hidden');
-  if (returning) _closingViaPopstate = false;
   movingFromWishlistId = null; movingFromWishlistData = null;
   // Return to identify modal if more watches remain
   if (returning) {
@@ -15424,11 +15420,8 @@ async function addFromIdentified(idx) {
     // Flag so saveWatch knows to return to identify modal
     window._addingFromIdentify = true;
 
-    // Swap modals atomically: suppress history.back() from closing the identify modal,
-    // otherwise the delayed popstate event kills the watch modal right after it opens.
-    _closingViaPopstate = true;
+    // Close identify modal (but keep blob for crop)
     closePhotoIdentify();
-    _closingViaPopstate = false;
 
     // Open the add watch form
     openAddWatch();
@@ -17167,16 +17160,23 @@ document.addEventListener('keydown', e => {
 let _modalHistoryCount = 0;
 let _closingViaPopstate = false;
 new MutationObserver(mutations => {
+  // Count opens and closes in this batch. When one modal closes and another opens
+  // in the same synchronous block (modal swap), they pair up — no history change needed.
+  let opens = 0, closes = 0;
   for (const m of mutations) {
     if (m.type !== 'attributes' || m.attributeName !== 'class') continue;
     const el = m.target;
     if (!el.classList.contains('overlay') || !_overlayCloseMap[el.id]) continue;
-    if (!el.classList.contains('hidden')) {
-      // Modal opened — push history entry so back button can close it
-      _modalHistoryCount++;
-      history.pushState({ modal: true }, '');
-    } else if (_modalHistoryCount > 0 && !_closingViaPopstate) {
-      // Modal closed via close button/Escape/overlay — go back to consume the history entry
+    if (!el.classList.contains('hidden')) opens++;
+    else closes++;
+  }
+  const paired = Math.min(opens, closes); // modal swaps — cancel out
+  for (let i = 0; i < opens - paired; i++) {
+    _modalHistoryCount++;
+    history.pushState({ modal: true }, '');
+  }
+  for (let i = 0; i < closes - paired; i++) {
+    if (_modalHistoryCount > 0 && !_closingViaPopstate) {
       _modalHistoryCount--;
       history.back();
     }
