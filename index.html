@@ -4710,7 +4710,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.06.17.33';
+const APP_VERSION = '2.36.06.18.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17769,7 +17769,8 @@ window._tgNativeCallback = function(data) {
         if (data.detectedBph && _msrIsAuto) _msrBphLocked = true;
 
         // Advance phase (only forward, never backward except on reset)
-        if (data.rateStable) {
+        // Guard: ignore native rateStable in first 10s (prevents stale state from previous session)
+        if (data.rateStable && elapsed >= 10) {
           _msrPhase = 'converged';
         } else if (_msrHadTicks && (data.tickCount > 4 || (_isDevUser() && _msrScatterData.length > 4))) {
           // Have ticks → measuring (even if rate not yet computed)
@@ -18328,6 +18329,7 @@ function onMsrBphChange() {
     }
     _tgDebugSessionId = crypto.randomUUID();
     _tgTickDebugBuffer = [];
+    _msrSessionId++;
     console.log('[TG JS] Restarting engine with bph:', bph, 'new session:', _tgDebugSessionId);
     _msrScatterData = []; _msrLastCumDev = 0;
     _msrLastDetectTime = 0;
@@ -18335,6 +18337,7 @@ function onMsrBphChange() {
     _msrIsAuto = (bph === 0);
     _msrHadTicks = false;
     _msrBphLocked = false;
+    _msrLastRate = null; _msrLastBe = null; _msrLastBph = null;
     _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = []; _msrLastBucketCalcTime = 0; _msrCachedBucketRate = null;
     _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false; _msrNoiseWarningShown = false; _msrNoiseSamples = []; _msrPrelimShown = false; _msrAcceptRate = 0;
     const scCanvas = document.getElementById('msr-scatter-plot');

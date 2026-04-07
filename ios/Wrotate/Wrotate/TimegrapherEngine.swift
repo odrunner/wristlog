@@ -5,7 +5,7 @@ import Accelerate
 ///
 /// Algorithm: user provides BPH → we know the exact tick frequency.
 /// 1. Three parallel 2nd-order Butterworth HP filters (4kHz, 6kHz, 8kHz)
-/// 2. Three parallel peak-hold energy ring buffers at ~12kHz
+/// 2. Three parallel peak-hold energy ring buffers at ~24kHz (web-tunable)
 /// 3. Primary: Goertzel detection at each cutoff (best ratio wins)
 /// 4. Fallback: FFT autocorrelation when Goertzel fails at all cutoffs
 /// 5. Rate via fine frequency sweep (Goertzel) or period refinement (autocorr)
@@ -97,6 +97,13 @@ class TimegrapherEngine {
     // Sub-sample interpolation for tick timing
     private var lastTickFracOffset: Double = 0      // fractional ring position offset of last tick
     private var tickStartSample: Int64 = 0          // sampleCounter at tick activation (for relative elapsed)
+
+    // Phase recovery for high beat error watches
+    private var consecutivePairRejects: Int = 0     // consecutive pair rejections (pairDev > threshold)
+    private var rejectDevSum: Double = 0            // sum of |pairDev| during reject streak
+    private var knownBeatError: Double = 0          // estimated beat error from individual tick deviations (ms)
+    private var recentTickDevs: [Double] = []       // last N individual tick deviations (signed)
+    private var beatErrorWindowSize: Int = 20       // how many tick devs to track for beat error estimation
 
     // Pair-based regression: accumulate every 2 ticks to cancel beat error
     private var pairIntervalAccum: Double = 0       // sum of last 2 tick intervals (fractional)
@@ -202,6 +209,7 @@ class TimegrapherEngine {
     private var energyRingCount: Int = 0
     private var energySubsampleCounter: Int = 0
     private var ringSubsampleTarget: Int = 4  // 48kHz / 4 = 12kHz
+    private var ringTargetRate: Double = 16000 // target ring sample rate (web-tunable)
 
     // Per-filter subsample peaks
     private var subsamplePeaks: [Float] = [0, 0, 0]
@@ -250,7 +258,8 @@ class TimegrapherEngine {
                     coldStartThresh: Double? = nil,
                     pairMadMult: Double? = nil,
                     maxTickDevMs: Double? = nil,
-                    calibDuration: Int? = nil) {
+                    calibDuration: Int? = nil,
+                    ringTargetRate: Double? = nil) {
         peakRatioThreshold = max(1.0, thresh)
         bufferDurationSec = max(5, min(120, bufSec))
         if let v = regSkipPairs { regressionSkipPairs = max(0, min(30, v)) }
@@ -264,8 +273,9 @@ class TimegrapherEngine {
         if let v = coldStartThresh { coldStartThreshold = max(0.1, min(5, v)) }
         if let v = pairMadMult { adaptiveMultiplier = max(1, min(10, v)) }
         if let v = maxTickDevMs { maxTickDev = max(1, min(20, v)) }
-        if let v = calibDuration { calibrationDuration = max(6000, min(60000, v)) }
-        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration)")
+        // calibDuration ignored — activateTickDetection() always auto-scales to 2 seconds
+        if let v = ringTargetRate { self.ringTargetRate = max(12000, min(48000, v)) }
+        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate)")
     }
 
     // MARK: - Biquad HP filter
@@ -331,6 +341,7 @@ class TimegrapherEngine {
         lastTickFracOffset = 0; tickStartSample = 0
         pendingFirstTickDev = 0; pendingFirstTickTime = 0; pendingFirstTickInterval = 0; pendingFirstTickEnergy = 0
         recentPairDevs = []
+        consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []
         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []
         lastDebugInfo = nil
         lastBeatWaveform = nil
@@ -364,8 +375,8 @@ class TimegrapherEngine {
             // Initialize 3 biquad HP filters
             hpFilters = hpCutoffs.map { makeBiquadHP(cutoff: $0, sampleRate: actualSampleRate) }
 
-            // Ring buffer at ~12kHz
-            ringSubsampleTarget = max(1, Int(actualSampleRate / 12000))
+            // Ring buffer at target rate (default 24kHz, web-tunable)
+            ringSubsampleTarget = max(1, Int(actualSampleRate / ringTargetRate))
             let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
             energyRingCapacity = Int(ringSampleRate * Double(bufferDurationSec))
             energyRings = (0..<3).map { _ in [Float](repeating: 0, count: energyRingCapacity) }
@@ -510,6 +521,30 @@ class TimegrapherEngine {
                             } else {
                                 let deviationThisTick = (expectedTickInterval - actualInterval) / ringSR * 1000.0
 
+                                // Individual tick deviation sanity check
+                                if abs(deviationThisTick) > maxTickDev {
+                                    debugLog("[TGTICK DEV_SKIP @ \(String(format: "%.2f", elapsedSec))s] dev=\(String(format: "%.1f", deviationThisTick))ms maxTickDev=\(String(format: "%.1f", maxTickDev))ms")
+                                    // If mid-pair, discard the pair
+                                    if pairTickPhase == 1 {
+                                        pairIntervalAccum = 0
+                                        pairTickPhase = 0
+                                    }
+                                    lastTickRingPos = energyRingWritePos
+                                    ringPosSinceLastTick = 0
+                                    continue
+                                }
+
+                                // Track individual tick deviations for beat error estimation
+                                recentTickDevs.append(deviationThisTick)
+                                if recentTickDevs.count > beatErrorWindowSize {
+                                    recentTickDevs.removeFirst()
+                                }
+                                // Estimate beat error: median of |tickDev| (alternating ±BE pattern)
+                                if recentTickDevs.count >= 10 {
+                                    let absDevs = recentTickDevs.map { abs($0) }.sorted()
+                                    knownBeatError = absDevs[absDevs.count / 2]
+                                }
+
                                 // Pair-based: accumulate 2 ticks, validate pair before plotting
                                 pairIntervalAccum += actualInterval
                                 pairTickPhase += 1
@@ -528,8 +563,6 @@ class TimegrapherEngine {
                                 // Second tick — validate the pair
                                 let pairExpected = expectedTickInterval * 2.0
                                 let pairDevThisPair = (pairExpected - pairIntervalAccum) / ringSR * 1000.0
-                                pairIntervalAccum = 0.0
-                                pairTickPhase = 0
 
                                 // Track pair deviations for adaptive threshold (used for debug logging)
                                 recentPairDevs.append(abs(pairDevThisPair))
@@ -538,21 +571,84 @@ class TimegrapherEngine {
                                 }
                                 let pairThresh = currentPairThreshold()
 
-                                // Clean pair — always update cumulative deviation and tick count
-                                pairDeviationMs += pairDevThisPair
+                                // Phase recovery: detect mis-phased pairs (tick+tick or tock+tock)
+                                // A mis-phased pair has |pairDev| ≈ knownBeatError (within ±40%)
+                                let isMisPhased = knownBeatError >= 1.0 &&
+                                    abs(pairDevThisPair) >= knownBeatError * 0.6 &&
+                                    abs(pairDevThisPair) <= knownBeatError * 1.4
+
+                                if isMisPhased {
+                                    consecutivePairRejects += 1
+                                    rejectDevSum += abs(pairDevThisPair)
+                                    debugLog("[TGPHASE REJECT #\(consecutivePairRejects) @ \(String(format: "%.2f", elapsedSec))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms beatErr=\(String(format: "%.1f", knownBeatError))ms")
+
+                                    if consecutivePairRejects >= 2 {
+                                        // Phase flip confirmed — skip one tick to realign
+                                        // Keep current tick as "first" of next pair
+                                        debugLog("[TGPHASE RECOVER @ \(String(format: "%.2f", elapsedSec))s] skipping tick to realign after \(consecutivePairRejects) rejects, avgDev=\(String(format: "%.1f", rejectDevSum / Double(consecutivePairRejects)))ms")
+                                        pairTickPhase = 1
+                                        pairIntervalAccum = actualInterval
+                                        pendingFirstTickDev = deviationThisTick
+                                        pendingFirstTickTime = elapsedSec
+                                        pendingFirstTickInterval = actualInterval
+                                        pendingFirstTickEnergy = energy
+                                        consecutivePairRejects = 0
+                                        rejectDevSum = 0
+                                        lastTickRingPos = energyRingWritePos
+                                        ringPosSinceLastTick = 0
+                                        continue  // wait for second tick of realigned pair
+                                    }
+
+                                    // Not enough rejects yet — discard this pair, reset for next
+                                    pairIntervalAccum = 0.0
+                                    pairTickPhase = 0
+                                    lastTickRingPos = energyRingWritePos
+                                    ringPosSinceLastTick = 0
+                                    continue
+                                }
+
+                                // Clean pair — reset reject streak
+                                consecutivePairRejects = 0
+                                rejectDevSum = 0
+
+                                // Pair gate: reject pairs with deviation above adaptive threshold
+                                // Use tighter threshold for first 10 pairs after skip (adaptive not yet reliable)
+                                let earlyPairLimit = regressionSkipPairs + 10
+                                let effectiveThresh = totalPairsAccepted < earlyPairLimit ? min(pairThresh, 0.3) : pairThresh
+                                if abs(pairDevThisPair) > effectiveThresh {
+                                    debugLog("[TGTICK PAIR_REJECT @ \(String(format: "%.2f", elapsedSec))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms thresh=\(String(format: "%.2f", effectiveThresh))ms\(totalPairsAccepted < earlyPairLimit ? " EARLY" : "")")
+                                    pairIntervalAccum = 0.0
+                                    pairTickPhase = 0
+                                    lastTickRingPos = energyRingWritePos
+                                    ringPosSinceLastTick = 0
+                                    continue
+                                }
+
+                                pairIntervalAccum = 0.0
+                                pairTickPhase = 0
+
+                                // Update tick count
                                 tickCount += 2
                                 totalPairsAccepted += 1
 
-                                // Skip first N pairs from regression (threshold still adapting)
-                                if totalPairsAccepted > regressionSkipPairs {
-                                    regPoints.append((x: elapsedSec, y: pairDeviationMs))
-                                    regN = regPoints.count
+                                // Skip first N pairs entirely (threshold still adapting,
+                                // early pairs can have huge deviations that corrupt cumulative tracking)
+                                if totalPairsAccepted <= regressionSkipPairs {
+                                    debugLog("[TGTICK SKIP-EARLY #\(tickCount) @ \(String(format: "%.2f", elapsedSec))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms (skipped, pair \(totalPairsAccepted)/\(regressionSkipPairs))")
+                                    lastTickRingPos = energyRingWritePos
+                                    ringPosSinceLastTick = 0
+                                    continue
                                 }
+
+                                // Accumulate cumulative deviation only after skip period
+                                pairDeviationMs += pairDevThisPair
+                                regPoints.append((x: elapsedSec, y: pairDeviationMs))
+                                regN = regPoints.count
 
                                 // Plot single dot at pair midpoint using cumulative pairDev
                                 let pairMidTime = (pendingFirstTickTime + elapsedSec) / 2.0
                                 pendingTicks.append(TickDot(timeSec: pairMidTime, deviationMs: pairDeviationMs))
-                                debugLog("[TGTICK #\(tickCount) @ \(String(format: "%.2f", pairMidTime))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms cumPairDev=\(String(format: "%.3f", pairDeviationMs))ms thresh=\(String(format: "%.2f", pairThresh))ms ticks=\(String(format: "%.1f", pendingFirstTickDev)),\(String(format: "%.1f", deviationThisTick))ms energy=\(String(format: "%.6f", energy))")
+                                debugLog("[TGTICK #\(tickCount) @ \(String(format: "%.2f", pairMidTime))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms cumPairDev=\(String(format: "%.3f", pairDeviationMs))ms thresh=\(String(format: "%.2f", pairThresh))ms beatErr=\(String(format: "%.1f", knownBeatError))ms ticks=\(String(format: "%.1f", pendingFirstTickDev)),\(String(format: "%.1f", deviationThisTick))ms energy=\(String(format: "%.6f", energy))")
 
                                 // Debug: log regression rate every 25 pairs (~50 ticks)
                                 if regN % 25 == 0 && regN >= 20 {
@@ -573,6 +669,7 @@ class TimegrapherEngine {
                                         tickCount = 0
                                         tickDeviationMs = 0
                                         pairDeviationMs = 0; pairIntervalAccum = 0.0; pairTickPhase = 0; lastTickFracOffset = 0
+                                        consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []
                                         regPoints = []; regN = 0; recentPairDevs = []; totalPairsAccepted = 0
                                         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
                                         if autoBph { detectedBph = nil; consecutiveFailures = 0 }
@@ -759,9 +856,13 @@ class TimegrapherEngine {
         pairIntervalAccum = 0.0; pairTickPhase = 0; pairDeviationMs = 0
         lastTickFracOffset = 0
         recentPairDevs = []
+        consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []
         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
         regPoints = []; regN = 0; totalPairsAccepted = 0
         // Start calibration: observe energy for 2s to learn tick amplitude before accepting ticks
+        // Always calibrate for 2 seconds regardless of ring rate or JS-supplied value
+        let calibSamples = Int(ringSampleRate * 2.0)
+        calibrationDuration = calibSamples
         tickThreshold = 0
         tickCalibrating = true
         calibrationSamples = 0
