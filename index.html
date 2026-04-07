@@ -1307,6 +1307,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     @keyframes spin { to { transform:rotate(360deg); } }
     .spin { animation:spin .8s linear infinite; }
 
+    /* ── AI PRE-FILL BANNER ── */
+    .ai-prefill-banner { display:flex; align-items:center; justify-content:space-between; background:var(--gold); color:#1a1a2e; padding:.55rem .75rem; border-radius:8px; margin-bottom:.75rem; font-size:.82rem; line-height:1.3; }
+    .ai-prefill-banner.hidden { display:none; }
+
     /* ── SNAP TO TRACK ── */
     .snap-btn { width:100%; display:flex; align-items:center; justify-content:center; gap:.6rem; padding:.9rem 1rem; border:2px dashed var(--border); border-radius:var(--radius); background:transparent; color:var(--muted); font-size:.85rem; font-weight:500; cursor:pointer; transition:border-color .2s, color .2s; }
     .snap-btn:hover, .snap-btn:active { border-color:var(--gold); color:var(--gold); }
@@ -1917,7 +1921,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M15.1 14.05c-.29.67-.63 1.28-1.03 1.85-.54.77-.99 1.3-1.33 1.6-.53.5-1.1.75-1.7.77-.44 0-.96-.12-1.58-.37-.62-.25-1.18-.37-1.7-.37-.54 0-1.12.12-1.74.37-.62.25-1.12.38-1.51.39-.58.02-1.16-.24-1.74-.78-.37-.33-.84-.89-1.39-1.69-.59-.85-1.08-1.84-1.46-2.97C.31 11.44.1 10.1.1 8.8c0-1.47.32-2.74.95-3.8A5.6 5.6 0 0 1 3.04 3a5.4 5.4 0 0 1 2.7-.76c.46 0 1.07.14 1.83.42.75.27 1.24.41 1.45.41.16 0 .7-.17 1.61-.5.86-.3 1.59-.43 2.18-.37 1.61.13 2.82.77 3.62 1.93-1.44.87-2.15 2.1-2.13 3.67.02 1.22.46 2.24 1.3 3.05.39.37.82.65 1.3.85-.1.3-.21.59-.34.87zM11.53.37c0 .96-.35 1.86-1.05 2.68-.84.99-1.86 1.56-2.97 1.47a3 3 0 0 1-.02-.36c0-.92.4-1.9 1.11-2.7.36-.41.81-.75 1.36-1.02.55-.27 1.07-.41 1.55-.44.02.12.02.25.02.37z" fill="#fff"/></svg>
         Continue with Apple
       </button>
-      <button class="btn-demo" onclick="bootDemoMode()" style="background:none;border:1px solid #b8860b;color:#222;border-radius:10px;padding:.55rem 1.2rem;font-size:.85rem;cursor:pointer;font-family:inherit;margin-top:.25rem;">
+      <button class="btn-demo" onclick="bootDemoMode()" style="background:linear-gradient(135deg,#c5a44e,#a8893a);border:none;color:#fff;border-radius:10px;padding:.65rem 1.2rem;font-size:.85rem;cursor:pointer;font-family:inherit;margin-top:.25rem;font-weight:500;letter-spacing:.02em;">
         Explore Without an Account
       </button>
     </div>
@@ -3288,6 +3292,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="watch-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="watch-modal-title">
   <div class="modal">
     <div class="modal-title" id="watch-modal-title">Add Watch</div>
+    <div id="ai-prefill-banner" class="ai-prefill-banner hidden">
+      <span>Identified from your photo — review the details below, then tap <b>Save Watch</b></span>
+      <button onclick="document.getElementById('ai-prefill-banner').classList.add('hidden')" style="background:none;border:none;color:inherit;font-size:1.1rem;padding:0 0 0 .5rem;cursor:pointer;line-height:1;">&times;</button>
+    </div>
     <div class="form-group">
       <label for="w-url">Manufacturer / Listing URL</label>
       <div class="url-row">
@@ -4701,7 +4709,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.05.21.32';
+const APP_VERSION = '2.36.06.17.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13132,6 +13140,7 @@ function openAddWatch() {
   document.getElementById('w-ins-value-group').style.display = 'none';
   document.getElementById('watch-modal-title').textContent = 'Add Watch';
   document.getElementById('modal-delete-btn').style.display = 'none';
+  document.getElementById('ai-prefill-banner').classList.add('hidden');
   buildBrandSelect();
   renderTagPicker([], []);
   wEditStraps = [];
@@ -13157,6 +13166,7 @@ function openEditWatch(id) {
   wPendingFile  = null;
   document.getElementById('watch-modal-title').textContent    = 'Edit Watch';
   document.getElementById('modal-delete-btn').style.display = '';
+  document.getElementById('ai-prefill-banner').classList.add('hidden');
   buildBrandSelect(w.brand);
   document.getElementById('w-name').value               = w.name;
   document.getElementById('w-ref').value                = w.ref || '';
@@ -15143,7 +15153,7 @@ function openPhotoIdentify() {
       if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error || 'Identification failed'); }
       const data = await resp.json();
       if (!data.watches || data.watches.length === 0) {
-        list.innerHTML = `<div class="pi-loading"><div style="font-size:.85rem;">No watches identified</div><div style="font-size:.75rem;color:var(--muted);margin-top:.3rem;">Try a clearer photo with watch faces visible</div></div>`;
+        list.innerHTML = `<div class="pi-loading"><div style="font-size:.85rem;">No watches identified</div><div style="font-size:.75rem;color:var(--muted);margin-top:.5rem;text-align:left;max-width:260px;line-height:1.5;">Tips for better results:<br>• Use a close-up of the watch dial<br>• Make sure the brand name is readable<br>• Avoid heavy shadows or glare<br>• Try a photo from directly above</div><button onclick="closePhotoIdentify();openPhotoIdentify()" style="margin-top:.75rem;padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.82rem;cursor:pointer;">Try another photo</button></div>`;
         return;
       }
       _photoIdentifyResults = data.watches;
@@ -15448,7 +15458,8 @@ async function addFromIdentified(idx) {
     // Remove this item from the results (mark as added)
     _photoIdentifyResults.splice(idx, 1);
 
-    toast(`${escHtml(aiBrand)} ${escHtml(aiModel)} pre-filled — review and save`, 'success');
+    // Show persistent banner instead of a quick toast
+    document.getElementById('ai-prefill-banner').classList.remove('hidden');
   } catch (e) {
     console.error('[WristLog] addFromIdentified error:', e);
     toast('Add failed: ' + (e?.message || e), 'error');
