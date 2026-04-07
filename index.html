@@ -1012,6 +1012,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .modal-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 1.4rem; }
     .modal-actions { display: flex; gap: .65rem; margin-top: 1.4rem; }
+    #watch-modal > .modal > .modal-actions { position:sticky; bottom:-1.75rem; margin-left:-1.75rem; margin-right:-1.75rem; margin-bottom:-1.75rem; margin-top:1rem; padding:1rem 1.75rem; background:var(--surface); border-top:1px solid var(--border); z-index:1; }
 
     /* ── STATS PAGE ── */
     .stats-row {
@@ -4709,7 +4710,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.06.17.27';
+const APP_VERSION = '2.36.06.17.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
