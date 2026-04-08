@@ -4721,7 +4721,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.07.18.37';
+const APP_VERSION = '2.36.07.20.08';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17751,14 +17751,9 @@ window._tgNativeCallback = function(data) {
             const progFill = document.getElementById('msr-progress-fill');
             if (progFill) { progFill.style.width = '100%'; progFill.style.background = '#4ade80'; }
           }
-          if (_msrListening && _msrLastRate != null) {
-            console.log('[TG JS] Auto-stop: JS converged, bucket rate stable at', bucketNow);
-            if (window.webkit?.messageHandlers?.haptic) {
-              window.webkit.messageHandlers.haptic.postMessage({ type: 'success' });
-            }
-            stopMsrListen();
-            return;
-          }
+          // Set phase to converged — auto-stop handled by single path below
+          _msrPhase = 'converged';
+          console.log('[TG JS] Converged: bucket rate stable at', bucketNow);
         } else {
           badge.style.display = 'none';
         }
@@ -17772,22 +17767,16 @@ window._tgNativeCallback = function(data) {
       const statusText = document.getElementById('msr-status-text');
       if (statusText) {
         const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
-        // Display timer: show time since measuring started (excludes calibration)
-        const displayElapsed = (_msrMeasureStart && (_msrPhase === 'measuring' || _msrPhase === 'converged'))
-          ? (Date.now() - _msrMeasureStart) / 1000 : elapsed;
-        const sec = Math.floor(displayElapsed);
-        const mm = Math.floor(sec / 60);
-        const ss = sec % 60;
-        const timeStr = mm > 0 ? mm + ':' + String(ss).padStart(2, '0') : ss + 's';
 
         // Track state transitions
         if (data.tickCount > 0 || (_isDevUser() && _msrScatterData.length > 0)) _msrHadTicks = true;
         if (data.detectedBph && _msrIsAuto) _msrBphLocked = true;
 
         // Advance phase (only forward, never backward except on reset)
-        // Guard: ignore native rateStable in first 10s (prevents stale state from previous session)
-        if (data.rateStable && elapsed >= 10) {
-          _msrPhase = 'converged';
+        // Convergence is determined solely by JS bucket rate stability (set above)
+        const prevPhase = _msrPhase;
+        if (_msrPhase === 'converged') {
+          // Already converged — don't regress
         } else if (_msrHadTicks && (data.tickCount > 4 || (_isDevUser() && _msrScatterData.length > 4))) {
           // Have ticks → measuring (even if rate not yet computed)
           if (_msrPhase !== 'measuring' && _msrPhase !== 'converged') _msrMeasureStart = Date.now();
@@ -17801,6 +17790,15 @@ window._tgNativeCallback = function(data) {
         } else if (!_msrIsAuto && elapsed > 1) {
           _msrPhase = 'calibrating';
         }
+        // Reset phase timer on every phase transition
+        if (_msrPhase !== prevPhase) _msrPhaseStart = Date.now();
+
+        // Display timer: show time since current phase started (resets to 0 on each phase change)
+        const displayElapsed = _msrPhaseStart ? (Date.now() - _msrPhaseStart) / 1000 : elapsed;
+        const sec = Math.floor(displayElapsed);
+        const mm = Math.floor(sec / 60);
+        const ss = sec % 60;
+        const timeStr = mm > 0 ? mm + ':' + String(ss).padStart(2, '0') : ss + 's';
 
         // Display phase (skip if weak signal warning is active — don't overwrite it)
         if (!_msrWeakSignalShown || _msrPhase === 'measuring' || _msrPhase === 'converged') {
@@ -18028,6 +18026,7 @@ let _msrLastDetectTime = 0; // timestamp of last confident detection
 let _msrScatterData = []; // [{t: timeSec, d: deviationMs}] — one per tick
 let _msrPhase = ''; // manual: acquiring → calibrating → measuring → converged
 let _msrMeasureStart = null; // timestamp when measuring phase begins (for display timer)
+let _msrPhaseStart = null; // timestamp when current phase began (for phase-relative timer)
                      // auto: acquiring → estimating_bph → bph_estimated → calibrating → measuring → converged
 let _msrIsAuto = false; // whether current session is auto BPH
 let _msrActualSampleRate = null; // actual audio sample rate from iOS (for drift analysis)
@@ -18388,6 +18387,7 @@ function onMsrBphChange() {
     document.getElementById('msr-status-text').style.fontWeight = '';
     _msrListenStart = Date.now();
     _msrMeasureStart = null;
+    _msrPhaseStart = null;
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
     setTimeout(() => sendMsrTuning(), 200);
   }
@@ -18425,6 +18425,7 @@ function toggleMsrListen() {
     _msrTarget = 'measure';
     _msrListenStart = Date.now();
     _msrMeasureStart = null;
+    _msrPhaseStart = null;
     _msrScatterData = []; _msrLastCumDev = 0;
     _msrLastDetectTime = 0;
     _msrPhase = 'acquiring';
