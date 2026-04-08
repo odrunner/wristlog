@@ -4721,7 +4721,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.07.07.15';
+const APP_VERSION = '2.36.07.18.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17831,10 +17831,10 @@ window._tgNativeCallback = function(data) {
       }
     }
 
-    // Auto-stop at 45s to prevent drift degradation
+    // Auto-stop on convergence or at 45s timeout
     if (isMsr && _msrListening && _msrListenStart) {
       const elapsed = (Date.now() - _msrListenStart) / 1000;
-      if (elapsed >= 45) {
+      if (_msrPhase === 'converged' || elapsed >= 45) {
         const wasConverged = _msrPhase === 'converged';
         stopMsrListen();
         const statusText = document.getElementById('msr-status-text');
