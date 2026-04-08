@@ -4721,7 +4721,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.07.18.06';
+const APP_VERSION = '2.36.07.18.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17772,7 +17772,10 @@ window._tgNativeCallback = function(data) {
       const statusText = document.getElementById('msr-status-text');
       if (statusText) {
         const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
-        const sec = Math.floor(elapsed);
+        // Display timer: show time since measuring started (excludes calibration)
+        const displayElapsed = (_msrMeasureStart && (_msrPhase === 'measuring' || _msrPhase === 'converged'))
+          ? (Date.now() - _msrMeasureStart) / 1000 : elapsed;
+        const sec = Math.floor(displayElapsed);
         const mm = Math.floor(sec / 60);
         const ss = sec % 60;
         const timeStr = mm > 0 ? mm + ':' + String(ss).padStart(2, '0') : ss + 's';
@@ -17787,6 +17790,7 @@ window._tgNativeCallback = function(data) {
           _msrPhase = 'converged';
         } else if (_msrHadTicks && (data.tickCount > 4 || (_isDevUser() && _msrScatterData.length > 4))) {
           // Have ticks → measuring (even if rate not yet computed)
+          if (_msrPhase !== 'measuring' && _msrPhase !== 'converged') _msrMeasureStart = Date.now();
           _msrPhase = 'measuring';
         } else if (_msrIsAuto && !_msrBphLocked && elapsed > 2) {
           _msrPhase = 'estimating_bph';
@@ -17836,6 +17840,10 @@ window._tgNativeCallback = function(data) {
       const elapsed = (Date.now() - _msrListenStart) / 1000;
       if (_msrPhase === 'converged' || elapsed >= 45) {
         const wasConverged = _msrPhase === 'converged';
+        // Haptic feedback on finish — success for converged, warning for timeout
+        if (window.webkit?.messageHandlers?.haptic) {
+          window.webkit.messageHandlers.haptic.postMessage({ type: wasConverged ? 'success' : 'warning' });
+        }
         stopMsrListen();
         const statusText = document.getElementById('msr-status-text');
         if (statusText) {
@@ -18019,6 +18027,7 @@ let _msrListenStart = null;
 let _msrLastDetectTime = 0; // timestamp of last confident detection
 let _msrScatterData = []; // [{t: timeSec, d: deviationMs}] — one per tick
 let _msrPhase = ''; // manual: acquiring → calibrating → measuring → converged
+let _msrMeasureStart = null; // timestamp when measuring phase begins (for display timer)
                      // auto: acquiring → estimating_bph → bph_estimated → calibrating → measuring → converged
 let _msrIsAuto = false; // whether current session is auto BPH
 let _msrActualSampleRate = null; // actual audio sample rate from iOS (for drift analysis)
@@ -18378,6 +18387,7 @@ function onMsrBphChange() {
     document.getElementById('msr-status-text').style.fontSize = '';
     document.getElementById('msr-status-text').style.fontWeight = '';
     _msrListenStart = Date.now();
+    _msrMeasureStart = null;
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
     setTimeout(() => sendMsrTuning(), 200);
   }
@@ -18414,6 +18424,7 @@ function toggleMsrListen() {
     _msrListening = true;
     _msrTarget = 'measure';
     _msrListenStart = Date.now();
+    _msrMeasureStart = null;
     _msrScatterData = []; _msrLastCumDev = 0;
     _msrLastDetectTime = 0;
     _msrPhase = 'acquiring';
