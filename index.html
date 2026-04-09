@@ -3204,7 +3204,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input type="hidden" id="msr-tune-stab-lose" value="5">
         <!-- Pair gate & tick detection tuning -->
         <input type="hidden" id="msr-tune-max-pair-thresh" value="0.58">
-        <input type="hidden" id="msr-tune-min-pair-thresh" value="0.2">
+        <input type="hidden" id="msr-tune-min-pair-thresh" value="0.5">
         <input type="hidden" id="msr-tune-cold-start" value="0.58">
         <input type="hidden" id="msr-tune-pair-mad-mult" value="3">
         <input type="hidden" id="msr-tune-max-tick-dev" value="8">
@@ -4721,7 +4721,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.07.20.08';
+const APP_VERSION = '2.36.08.19.08';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17307,6 +17307,12 @@ function initTgSection(watchId) {
   _tgEditingId = null;
   _tgListening = false;
   _tgFromListening = false;
+  // Demo mode: hide manual entry form, only show sign-up CTA in history area
+  const secBody = document.getElementById('sec-accuracy');
+  if (_isDemoMode && secBody) {
+    const manualEntry = secBody.querySelector('div[style*="margin-bottom:.65rem"]');
+    if (manualEntry) manualEntry.style.display = 'none';
+  }
   document.getElementById('tg-rate-input').value = '';
   document.getElementById('tg-be-input').value = '';
   document.getElementById('tg-amplitude-input').value = '';
@@ -17322,6 +17328,7 @@ function initTgSection(watchId) {
 let _tgAudioCtx = null, _tgStream = null, _tgScriptNode = null;
 
 async function toggleTgListen() {
+  if (demoGuard()) return;
   if (_tgListening) {
     stopTgListen();
     return;
@@ -17966,6 +17973,14 @@ async function loadTgHistory() {
     .eq('user_id', currentUser.id).eq('watch_id', _tgWatchId)
     .order('created_at', { ascending: false }).limit(20);
   if (error || !data || data.length === 0) { listEl.innerHTML = '<div style="color:var(--muted);font-size:.82rem;">No readings yet.</div>'; return; }
+  // Demo mode: hide all readings, prompt sign-up
+  if (_isDemoMode) {
+    listEl.innerHTML = `<div style="text-align:center;padding:1rem 0;">
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem;">Sign up to track your watch accuracy.</div>
+      <button onclick="showDemoSignupModal()" style="padding:.45rem 1.2rem;border-radius:8px;border:none;background:var(--accent,#4f46e5);color:#fff;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;">Sign up free</button>
+    </div>`;
+    return;
+  }
   listEl.innerHTML = data.map(r => {
     const d = new Date(r.created_at);
     const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -18235,11 +18250,13 @@ function renderMsrScatterPlot() {
 }
 
 function openMeasureModal() {
+  if (demoGuard()) return;
   if (!_tgHasNative()) return;
   nav(document.querySelector('[data-page="measure"]'));
 }
 
 function openMeasureInline() {
+  if (demoGuard()) return;
   _tgDebugSessionId = null;
   _tgLastDebugLogTime = 0;
   _msrListening = false;
@@ -18408,6 +18425,7 @@ function maybeShowMsrHelp() {
 }
 
 function toggleMsrListen() {
+  if (demoGuard()) return;
   console.log('[TG JS] toggleMsrListen called, _msrListening:', _msrListening, 'hasNative:', _tgHasNative());
   if (_msrListening) { console.log('[TG JS] Stop button pressed'); stopMsrListen(); return; }
   try {
