@@ -19,14 +19,14 @@ These live in `index.html` as hidden inputs. On iOS, JS reads them and sends to 
 | `minThreshold` | `msr-tune-min-thresh` | 0.001 | Minimum energy threshold for tick detection |
 | `percentile` | `msr-tune-percentile` | 50 | Percentile for noise floor estimation |
 | `hpCutoff` | `msr-tune-hp-cutoff` | 4000 | High-pass filter cutoff (Hz) — removes low-freq noise before tick detection |
-| `regSkipPairs` | `msr-tune-reg-skip` | 10 | Number of initial pairs to skip before Theil-Sen regression starts |
+| `regSkipPairs` | `msr-tune-reg-skip` | 5 | Number of initial pairs to skip before Theil-Sen regression starts |
 | `regMinN` | `msr-tune-reg-min-n` | 10 | Minimum pair count before regression reports a rate |
 | `wallMinSec` | `msr-tune-wall-min` | 20 | Minimum wall-clock seconds before regression reports a rate |
 | `stabWindow` | `msr-tune-stab-window` | 15 | Window (seconds) over which native rate stability is evaluated |
 | `stabThresh` | `msr-tune-stab-thresh` | 3 | Rate stability threshold (s/day) — rate is "stable" if range within window ≤ this |
 | `stabLoseThresh` | `msr-tune-stab-lose` | 5 | Threshold (s/day) to lose stable status once gained |
 | `maxPairThresh` | `msr-tune-max-pair-thresh` | 0.58 | Maximum pair deviation threshold (ms) — adaptive gate ceiling |
-| `minPairThresh` | `msr-tune-min-pair-thresh` | 0.2 | Minimum pair deviation threshold (ms) — adaptive gate floor |
+| `minPairThresh` | `msr-tune-min-pair-thresh` | 0.5 | Minimum pair deviation threshold (ms) — adaptive gate floor |
 | `coldStartThresh` | `msr-tune-cold-start` | 0.58 | Fixed pair threshold during calibration phase (ms) |
 | `pairMadMult` | `msr-tune-pair-mad-mult` | 3 | Multiplier on MAD to compute adaptive pair threshold |
 | `maxTickDevMs` | `msr-tune-max-tick-dev` | 8 | Maximum allowed tick deviation from expected interval (ms) |
@@ -145,3 +145,18 @@ Tested 4 watches × 2 positions (dial-down and dial-up), 25 sessions total. Only
 | Tudor BBC | +0 to +6 vs ~0 | +3 to +6 vs ~0 |
 
 JLC was accurate. Omega dial-down matched. IWC dial-down was 10+ off (separate issue, not convergence-related). Omega dial-up dominated by phase-flip bias (queued for Swift fix).
+
+---
+
+## 2026-04-08 — Tuning Update #4 (restore minPairThresh, SW v384)
+
+After 24kHz ring buffer was reverted back to 12kHz (24kHz caused issues), `minPairThresh` was left at 0.2ms — a value that only works at 24kHz resolution. At 12kHz, pair deviations are quantized to 0.083ms steps, so a 0.2ms floor gives only 2–3 valid quantization levels. The adaptive gate tightens to 0.2ms on accurate watches and rejects pairs landing at ±0.167ms or above — perfectly valid data that just happens to round to the next quantization step.
+
+Analysis of April 8 user sessions confirmed ~50% pair rejection rates across multiple users and watches, consistent with the same over-filtering that Update #1 originally fixed.
+
+### Changes
+
+| Variable | Old | New | Reason |
+|---|---|---|---|
+| `minPairThresh` | 0.2 | 0.5 | Restores the Update #1 fix. At 12kHz (0.083ms quantization), 0.5ms gives ~6 quantization levels of headroom. Prevents adaptive gate from crushing valid pairs on accurate watches. Same value and rationale as Update #1 — was inadvertently regressed when 24kHz was reverted. |
+| `regSkipPairs` | 10 | 5 | Restores the Update #1 fix. With minPairThresh back at 0.5 and coldStartThresh at 0.58ms, early pairs are well-filtered. 10 skipped pairs created a 6-7s dead zone after calibration (longer in noisy environments where rejected pairs don't count toward skip quota). Theil-Sen median-of-slopes is inherently robust to noisy early data. |

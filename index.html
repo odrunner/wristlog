@@ -3196,7 +3196,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input type="hidden" id="msr-tune-percentile" value="50">
         <input type="hidden" id="msr-tune-hp-cutoff" value="4000">
         <!-- Regression & stability tuning (sent to Swift engine) -->
-        <input type="hidden" id="msr-tune-reg-skip" value="10">
+        <input type="hidden" id="msr-tune-reg-skip" value="5">
         <input type="hidden" id="msr-tune-reg-min-n" value="10">
         <input type="hidden" id="msr-tune-wall-min" value="20">
         <input type="hidden" id="msr-tune-stab-window" value="15">
@@ -4721,7 +4721,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.08.19.08';
+const APP_VERSION = '2.36.08.21.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18250,13 +18250,11 @@ function renderMsrScatterPlot() {
 }
 
 function openMeasureModal() {
-  if (demoGuard()) return;
   if (!_tgHasNative()) return;
   nav(document.querySelector('[data-page="measure"]'));
 }
 
 function openMeasureInline() {
-  if (demoGuard()) return;
   _tgDebugSessionId = null;
   _tgLastDebugLogTime = 0;
   _msrListening = false;
