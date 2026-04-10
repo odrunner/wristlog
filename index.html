@@ -408,11 +408,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .profile-post-cell img { width:100%; height:100%; object-fit:cover; display:block; }
     .profile-post-cell .pp-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.1rem; color:#000; }
     .profile-post-label { position:absolute; bottom:0; left:0; right:0; padding:4px 6px; font-size:.65rem; color:var(--gold); background:linear-gradient(transparent, rgba(0,0,0,.7)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .profile-post-vis { position:absolute; top:3px; right:3px; font-size:.5rem; font-weight:700; padding:1px 4px; border-radius:6px; letter-spacing:.02em; line-height:1.4; }
-    .profile-post-vis.public { background:rgba(74,222,128,.2); color:#4ade80; }
-    .profile-post-vis.followers { background:rgba(201,168,76,.2); color:var(--gold); }
-    .profile-post-vis.friends { background:rgba(168,130,255,.2); color:#a882ff; }
-    .profile-post-vis.private { background:rgba(224,85,85,.2); color:#e05555; }
+    .profile-post-vis { position:absolute; top:4px; right:4px; font-size:.58rem; font-weight:700; padding:2px 5px; border-radius:6px; letter-spacing:.03em; line-height:1.4; backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); text-shadow:0 1px 2px rgba(0,0,0,.5); }
+    .profile-post-vis.public { background:rgba(74,222,128,.35); color:#fff; }
+    .profile-post-vis.followers { background:rgba(201,168,76,.4); color:#fff; }
+    .profile-post-vis.friends { background:rgba(168,130,255,.4); color:#fff; }
+    .profile-post-vis.private { background:rgba(224,85,85,.4); color:#fff; }
     .showcase-priv-label.pub  { color:var(--success); }
     .showcase-priv-label.fri  { color:var(--gold); }
     .showcase-priv-label.priv { color:var(--danger); }
@@ -4726,7 +4726,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.09.21.16';
+const APP_VERSION = '2.36.09.21.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
