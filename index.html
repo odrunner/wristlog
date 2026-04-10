@@ -2486,8 +2486,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <!-- Admin Tabs -->
     <div class="chips" id="admin-tabs" role="tablist" aria-label="Admin sections" style="margin-bottom:1rem;">
-      <button type="button" class="chip selected" data-tab="traffic" role="tab" aria-selected="true" aria-controls="admin-tab-traffic" onclick="switchAdminTab('traffic')">Traffic</button>
-      <button type="button" class="chip" data-tab="usage" role="tab" aria-selected="false" aria-controls="admin-tab-usage" onclick="switchAdminTab('usage')">Usage</button>
+      <button type="button" class="chip selected" data-tab="usage" role="tab" aria-selected="true" aria-controls="admin-tab-usage" onclick="switchAdminTab('usage')">Usage</button>
+      <button type="button" class="chip" data-tab="traffic" role="tab" aria-selected="false" aria-controls="admin-tab-traffic" onclick="switchAdminTab('traffic')">Traffic</button>
       <button type="button" class="chip" data-tab="feedback" role="tab" aria-selected="false" aria-controls="admin-tab-feedback" onclick="switchAdminTab('feedback')">Feedback</button>
       <button type="button" class="chip" data-tab="reports" role="tab" aria-selected="false" aria-controls="admin-tab-reports" onclick="switchAdminTab('reports')">Reports</button>
       <button type="button" class="chip" data-tab="official" role="tab" aria-selected="false" aria-controls="admin-tab-official" onclick="switchAdminTab('official')">Official</button>
@@ -2495,7 +2495,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
 
     <!-- Tab: Traffic -->
-    <div id="admin-tab-traffic" class="admin-tab" role="tabpanel">
+    <div id="admin-tab-traffic" class="admin-tab" role="tabpanel" style="display:none;">
       <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
         <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Traffic</div>
         <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="renderAdminTraffic()">↻ Refresh</button>
@@ -2504,7 +2504,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
 
     <!-- Tab: Usage -->
-    <div id="admin-tab-usage" class="admin-tab" role="tabpanel" style="display:none;">
+    <div id="admin-tab-usage" class="admin-tab" role="tabpanel">
       <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
         <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Site Usage</div>
         <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadAdminStats()">↻ Refresh</button>
@@ -4721,7 +4721,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.08.21.06';
+const APP_VERSION = '2.36.09.18.16';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10220,6 +10220,7 @@ const INTERNAL_IDS = new Set([
   'e0af1615-b151-4260-b6bd-c23e497efa6d', // testuser
   '86ea0f82-044d-4730-82af-b942e3b09380', // testuser2
   '3aa24417-214c-467d-b3aa-e76d63d73476', // wrotate official
+  '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', // alexrivera (demo)
 ]);
 
 function showAdminPage() {
@@ -10479,28 +10480,28 @@ async function loadAdminStats() {
     const userTableHtml = (list, title) => {
       const rows = list.map(u => {
         const initHTML = u.avatar
-          ? `<img src="${escHtml(u.avatar)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
-          : `<div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;">${(u.name[0]||'?').toUpperCase()}</div>`;
+          ? `<img src="${escHtml(u.avatar)}" style="width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+          : `<div style="width:22px;height:22px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:700;flex-shrink:0;">${(u.name[0]||'?').toUpperCase()}</div>`;
         return `<tr>
-          <td style="padding:.45rem .3rem;border-bottom:1px solid var(--border);"><div style="display:flex;align-items:center;gap:.45rem;">
+          <td style="padding:.4rem .25rem;border-bottom:1px solid var(--border);max-width:0;"><div style="display:flex;align-items:center;gap:.4rem;min-width:0;">
             ${initHTML}
-            <div><div style="font-weight:600;font-size:.82rem;">${escHtml(u.name)} <span style="font-weight:400;font-size:.62rem;color:var(--muted);">${u.joined}</span></div><div style="font-size:.68rem;color:var(--muted);">@${escHtml(u.username)}</div></div>
+            <div style="min-width:0;overflow:hidden;"><div style="font-weight:600;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(u.name)}</div><div style="font-size:.62rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@${escHtml(u.username)} · ${u.joined}</div></div>
           </div></td>
-          <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;border-bottom:1px solid var(--border);">${u.watches}</td>
-          <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;border-bottom:1px solid var(--border);">${u.wears}</td>
-          <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;border-bottom:1px solid var(--border);">${u.posts}</td>
-          <td style="padding:.45rem .3rem;text-align:center;font-size:.82rem;border-bottom:1px solid var(--border);">${u.measurements}</td>
+          <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.watches}</td>
+          <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.wears}</td>
+          <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.posts}</td>
+          <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.measurements}</td>
         </tr>`;
       }).join('');
       return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">${title}</div>
-        <table style="width:100%;border-collapse:collapse;">
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
           <thead><tr style="border-bottom:2px solid var(--border);">
-            <th style="text-align:left;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">User</th>
-            <th style="text-align:center;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Watches</th>
-            <th style="text-align:center;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Wears</th>
-            <th style="text-align:center;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Posts</th>
-            <th style="text-align:center;padding:.35rem .3rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">Msr</th>
+            <th style="text-align:left;padding:.35rem .25rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">User</th>
+            <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Wtc</th>
+            <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Wrs</th>
+            <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Pst</th>
+            <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Msr</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
