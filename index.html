@@ -408,6 +408,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .profile-post-cell img { width:100%; height:100%; object-fit:cover; display:block; }
     .profile-post-cell .pp-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.1rem; color:#000; }
     .profile-post-label { position:absolute; bottom:0; left:0; right:0; padding:4px 6px; font-size:.65rem; color:var(--gold); background:linear-gradient(transparent, rgba(0,0,0,.7)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .profile-post-vis { position:absolute; top:3px; right:3px; font-size:.5rem; font-weight:700; padding:1px 4px; border-radius:6px; letter-spacing:.02em; line-height:1.4; }
+    .profile-post-vis.public { background:rgba(74,222,128,.2); color:#4ade80; }
+    .profile-post-vis.followers { background:rgba(201,168,76,.2); color:var(--gold); }
+    .profile-post-vis.friends { background:rgba(168,130,255,.2); color:#a882ff; }
+    .profile-post-vis.private { background:rgba(224,85,85,.2); color:#e05555; }
     .showcase-priv-label.pub  { color:var(--success); }
     .showcase-priv-label.fri  { color:var(--gold); }
     .showcase-priv-label.priv { color:var(--danger); }
@@ -4721,7 +4726,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.09.20.21';
+const APP_VERSION = '2.36.09.21.16';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4981,6 +4986,7 @@ async function loadAndRenderProfile(userId) {
   const el = document.getElementById('profile-page-content');
   if (!el) return;
 
+  _profilePostsOffset = 9; // reset lazy-load offset on profile switch
   // Use cached result if fresh (30s TTL)
   const cached = _profileCache[userId];
   if (cached && Date.now() - cached.ts < 30000) {
@@ -5053,7 +5059,7 @@ async function loadAndRenderProfile(userId) {
   // Recent posts (logs with photos + wear logs)
   _pi.recentLogs = _pp.length;
   _pp.push(db.from('logs')
-    .select('id, date, use_case, notes, photo_url, created_at, watch_id, watches!watch_id(id, brand, name, color, image)')
+    .select('id, date, use_case, notes, photo_url, visibility, created_at, watch_id, watches!watch_id(id, brand, name, color, image)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false }).limit(9));
 
@@ -5146,6 +5152,54 @@ async function loadAndRenderProfile(userId) {
 
   if (isOwn) {
     document.getElementById('profile-save-btn')?.addEventListener('click', saveProfileFromPage);
+  }
+}
+
+function profilePostCellHTML(l, isOwn) {
+  const w = l.watches;
+  const label = w ? escHtml((w.brand || '') + ' ' + (w.name || '')) : (l.notes ? escHtml(l.notes.slice(0, 40)) : '');
+  let inner;
+  if (l.photo_url) {
+    inner = `<img src="${escHtml(l.photo_url)}" alt="" loading="lazy" onerror="this.style.display='none'">`;
+  } else if (w?.image) {
+    inner = `<img src="${escHtml(w.image)}" alt="" loading="lazy" onerror="this.style.display='none'">`;
+  } else {
+    const bg = w?.color || '#c9a84c';
+    inner = `<div class="pp-fallback" style="background:${escHtml(bg)}">${initials(w?.brand || '', w?.name || '')}</div>`;
+  }
+  const vis = l.visibility || 'public';
+  const visLabels = { public: 'Public', followers: 'Followers', friends: 'Close Friends', private: 'Private' };
+  const visPill = isOwn ? `<div class="profile-post-vis ${vis}">${visLabels[vis] || vis}</div>` : '';
+  return `<div class="profile-post-cell" onclick="scrollToFeedPost('${l.id}')">
+    ${inner}
+    ${visPill}
+    ${label ? `<div class="profile-post-label">${label}</div>` : ''}
+  </div>`;
+}
+
+let _profilePostsOffset = 9;
+const PROFILE_POSTS_BATCH = 12;
+
+async function loadMoreProfilePosts(userId, isOwn) {
+  const btn = document.getElementById('profile-posts-load-more');
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+  try {
+    const { data } = await db.from('logs')
+      .select('id, date, use_case, notes, photo_url, visibility, created_at, watch_id, watches!watch_id(id, brand, name, color, image)')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .range(_profilePostsOffset, _profilePostsOffset + PROFILE_POSTS_BATCH - 1);
+    const grid = document.getElementById('profile-posts-grid');
+    if (!grid || !data) return;
+    data.forEach(l => { grid.insertAdjacentHTML('beforeend', profilePostCellHTML(l, isOwn)); });
+    _profilePostsOffset += data.length;
+    if (data.length < PROFILE_POSTS_BATCH) {
+      if (btn) btn.remove();
+    } else {
+      if (btn) { btn.disabled = false; btn.textContent = 'Load more'; }
+    }
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Load more'; }
   }
 }
 
@@ -5478,30 +5532,16 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     }
   }
 
-  // Recent posts grid (Instagram-style)
+  // Recent posts grid (Instagram-style) with lazy loading
   let logsHtml = '';
   if (recentLogs.length > 0) {
-    const cells = recentLogs.map(l => {
-      const w = l.watches;
-      const label = w ? escHtml((w.brand || '') + ' ' + (w.name || '')) : (l.notes ? escHtml(l.notes.slice(0, 40)) : '');
-      let inner;
-      if (l.photo_url) {
-        inner = `<img src="${escHtml(l.photo_url)}" alt="" loading="lazy" onerror="this.style.display='none'">`;
-      } else if (w?.image) {
-        inner = `<img src="${escHtml(w.image)}" alt="" loading="lazy" onerror="this.style.display='none'">`;
-      } else {
-        const bg = w?.color || '#c9a84c';
-        inner = `<div class="pp-fallback" style="background:${escHtml(bg)}">${initials(w?.brand || '', w?.name || '')}</div>`;
-      }
-      return `<div class="profile-post-cell" onclick="scrollToFeedPost('${l.id}')">
-        ${inner}
-        ${label ? `<div class="profile-post-label">${label}</div>` : ''}
-      </div>`;
-    }).join('');
+    const cells = recentLogs.map(l => profilePostCellHTML(l, isOwn)).join('');
+    const hasMore = recentLogs.length >= 9;
     logsHtml = `
       <div class="profile-page-card">
-        <div class="profile-page-section-title">Recent Posts</div>
-        <div class="profile-posts-grid">${cells}</div>
+        <div class="profile-page-section-title">Posts</div>
+        <div class="profile-posts-grid" id="profile-posts-grid">${cells}</div>
+        ${hasMore ? `<button id="profile-posts-load-more" class="btn btn-ghost" style="width:100%;margin-top:.5rem;font-size:.78rem;padding:.4rem;" onclick="loadMoreProfilePosts('${escHtml(profile.id)}', ${isOwn})">Load more</button>` : ''}
       </div>`;
   }
 
