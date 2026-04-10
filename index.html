@@ -4721,7 +4721,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.09.18.16';
+const APP_VERSION = '2.36.09.20.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13849,6 +13849,14 @@ function computeWatchRec(skipSet) {
   const totalLogs = logs.length;
   const fairShare = watches.length > 0 ? totalLogs / watches.length : 0;
 
+  // Top-ranked set: watches in the top 20% (min 1, max 5) of Elo ratings.
+  // Used for the "top-ranked" recommendation reason — membership-based, not threshold-based,
+  // so it stays meaningful regardless of how Elo values get assigned (match game vs drag-reorder).
+  const rankedEntries = Object.entries(eloRatings).filter(([id]) => watches.some(w => w.id === id));
+  rankedEntries.sort((a, b) => b[1] - a[1]);
+  const topCount = Math.min(5, Math.max(1, Math.ceil(rankedEntries.length * 0.2)));
+  const topRankedIds = new Set(rankedEntries.slice(0, topCount).map(([id]) => id));
+
   const candidates = watches.map(w => {
     if (skipSet && skipSet.has(w.id)) return null; // skipped by user
     if (excludedSet.has(w.id)) return null; // excluded in settings
@@ -13901,7 +13909,8 @@ function computeWatchRec(skipSet) {
     if (elo != null) {
       // Scale: 1000 = default (0 pts), 1200+ = strong favorite (20 pts)
       eloScore = Math.max(0, Math.min(Math.round((elo - ELO_DEFAULT) / 10), 20));
-      if (eloScore >= 10) eloReason = 'One of your top-ranked watches';
+      // "Top-ranked" label only if this watch is actually in the top 20% of rated watches
+      if (topRankedIds.has(w.id)) eloReason = 'One of your top-ranked watches';
     }
 
     // ── 6. NEW: Use case × day type matching ──
