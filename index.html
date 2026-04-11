@@ -4729,7 +4729,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.11.12.19';
+const APP_VERSION = '2.36.11.12.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7354,7 +7354,8 @@ function renderNotificationPanel() {
                : n.type === 'club_invite'        ? `${nm} invited you to join ${n.club?.name ? escHtml(n.club.name) : 'a club'}`
                : n.type === 'club_promoted'        ? `${nm} made you an owner of ${n.club?.name ? escHtml(n.club.name) : 'a club'}`
                : n.type === 'friend_request'       ? (n._accepted || friendships.has(n.actor_id) || friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'accepted') ? `You and ${nm} are now close friends` : n._declined || !friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'pending') ? `Close friend request from ${nm} declined` : `${nm} wants to be close friends`)
-               : n.type === 'friend_accepted'      ? `You and ${nm} are now close friends` : '';
+               : n.type === 'friend_accepted'      ? `You and ${nm} are now close friends`
+               : n.type === 'system'               ? (n.ref_id ? `Your requested brand "${escHtml(n.ref_id)}" has been added to WRotate!` : 'System notification') : '';
     const actionsHtml = (n.type === 'follow_request' && !n._declined && !frAccepted) ? `
       <div class="notif-follow-actions">
         <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
@@ -7390,7 +7391,7 @@ function renderNotificationPanel() {
       </div>` : '';
     const notifClick = (n.type === 'like' || n.type === 'comment' || n.type === 'comment_also' || n.type === 'comment_like' || n.type === 'mention')
       ? `toggleNotifPanel();scrollToFeedPost('${n.ref_id}')`
-      : (n.type === 'follow_request' || n.type === 'club_join_request' || n.type === 'club_invite' || n.type === 'friend_request') ? ''
+      : (n.type === 'follow_request' || n.type === 'club_join_request' || n.type === 'club_invite' || n.type === 'friend_request' || n.type === 'system') ? ''
       : (n.type === 'club_join_accepted' || n.type === 'club_promoted') ? `toggleNotifPanel();openClubDetail('${n.ref_id}')`
       : `viewUserProfile('${n.actor_id}')`;
     return `
