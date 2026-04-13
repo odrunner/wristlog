@@ -58,7 +58,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { subject, html, test_email } = body;
+    const { subject, html, test_email, segment = "all" } = body;
 
     if (!subject || !html) {
       return jsonResponse({ error: "subject and html are required" }, 400);
@@ -90,10 +90,22 @@ serve(async (req) => {
     }
 
     // Filter out users who have disabled "Updates & new features" emails
-    const eligibleProfiles = (profiles || []).filter(p => {
+    let eligibleProfiles = (profiles || []).filter(p => {
       const prefs = p.email_prefs || {};
       return prefs.updates !== false; // default is opted-in
     });
+
+    // Segment filter: "never_measured" excludes users with any timegrapher_results row
+    if (segment === "never_measured") {
+      const { data: measuredRows, error: measuredErr } = await supabase
+        .from("timegrapher_results")
+        .select("user_id");
+      if (measuredErr) {
+        return jsonResponse({ error: "Failed to fetch measurement users", details: measuredErr }, 500);
+      }
+      const measuredSet = new Set((measuredRows || []).map(r => r.user_id).filter(Boolean));
+      eligibleProfiles = eligibleProfiles.filter(p => !measuredSet.has(p.id));
+    }
 
     // Resolve emails from auth.users in parallel batches of 50
     const emails: string[] = [];
@@ -154,7 +166,7 @@ serve(async (req) => {
     }
 
     console.log(`[send-broadcast] Sent ${sent}, failed ${failed}, total eligible ${emails.length}`);
-    return jsonResponse({ sent, failed, total: emails.length, errors: errors.slice(0, 5) });
+    return jsonResponse({ sent, failed, total: emails.length, segment, errors: errors.slice(0, 5) });
 
   } catch (err) {
     console.error("[send-broadcast] Error:", err);
