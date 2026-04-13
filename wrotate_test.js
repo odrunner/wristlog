@@ -1356,7 +1356,7 @@ export function filterWatchChartsUrls(html, brandKey) {
 // Build inline image HTML snippet for email
 export function imgSnippet(img) {
   return `</div></td></tr><tr><td style="padding:8px 28px;">
-    <img src="${escHtml(img.src)}" alt="" style="max-width:100%;border-radius:8px;display:block;">
+    <a href="https://wrotate.com" style="text-decoration:none;display:block;"><img src="${escHtml(img.src)}" alt="" style="max-width:100%;border-radius:8px;display:block;border:0;"></a>
     ${img.caption ? `<div style="font-size:12px;color:#888;margin-top:4px;text-align:center;">${escHtml(img.caption)}</div>` : ''}
   </td></tr><tr><td style="padding:0 28px;"><div style="font-size:14px;color:#555;line-height:1.6;">`;
 }
