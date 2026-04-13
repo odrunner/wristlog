@@ -2677,6 +2677,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <select id="broadcast-segment">
             <option value="all">All users (updates opt-in)</option>
             <option value="never_measured">Haven't tried measurement (updates opt-in)</option>
+            <option value="apple_private_relay">Apple Private Relay users (resend after bounce)</option>
           </select>
         </div>
 
@@ -4738,7 +4739,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.12.21.08';
+const APP_VERSION = '2.36.12.22.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11789,7 +11790,9 @@ async function sendBroadcastAll() {
 
   // Confirmation with focus management
   const segment = document.getElementById('broadcast-segment')?.value || 'all';
-  const segmentLabel = segment === 'never_measured' ? 'users who haven\'t tried measurement' : 'ALL users';
+  const segmentLabel = segment === 'never_measured' ? 'users who haven\'t tried measurement'
+    : segment === 'apple_private_relay' ? 'Apple Private Relay users'
+    : 'ALL users';
   const statusEl = document.getElementById('broadcast-status');
   statusEl.innerHTML = `<div style="display:flex;gap:.5rem;align-items:center;padding:.5rem;background:var(--surface2);border-radius:8px;" role="alertdialog" aria-label="Confirm broadcast">
     <span style="color:var(--danger);font-weight:600;">Send to ${segmentLabel}?</span>

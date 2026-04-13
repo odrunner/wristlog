@@ -123,14 +123,20 @@ serve(async (req) => {
       }
     }
 
+    // Post-filter by email domain for the Apple Private Relay segment
+    let filteredEmails = emails;
+    if (segment === "apple_private_relay") {
+      filteredEmails = emails.filter(e => e.toLowerCase().endsWith("@privaterelay.appleid.com"));
+    }
+
     // Send via Resend batch API (up to 100 per request)
     let sent = 0;
     let failed = 0;
     const errors: string[] = [];
     const batchSize = 100;
 
-    for (let i = 0; i < emails.length; i += batchSize) {
-      const batch = emails.slice(i, i + batchSize);
+    for (let i = 0; i < filteredEmails.length; i += batchSize) {
+      const batch = filteredEmails.slice(i, i + batchSize);
       const batchPayload = batch.map(email => ({
         from: FROM_EMAIL,
         to: [email],
@@ -160,13 +166,13 @@ serve(async (req) => {
       }
 
       // Small delay between batches
-      if (i + batchSize < emails.length) {
+      if (i + batchSize < filteredEmails.length) {
         await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
 
-    console.log(`[send-broadcast] Sent ${sent}, failed ${failed}, total eligible ${emails.length}`);
-    return jsonResponse({ sent, failed, total: emails.length, segment, errors: errors.slice(0, 5) });
+    console.log(`[send-broadcast] Sent ${sent}, failed ${failed}, total eligible ${filteredEmails.length} (segment=${segment})`);
+    return jsonResponse({ sent, failed, total: filteredEmails.length, segment, errors: errors.slice(0, 5) });
 
   } catch (err) {
     console.error("[send-broadcast] Error:", err);
