@@ -87,6 +87,9 @@ class TimegrapherEngine {
     private var tickCalibrating = false              // true during calibration phase (no ticks accepted)
     private var calibrationSamples: Int = 0          // ring samples seen during calibration
     private var calibrationDuration: Int = 24000     // ~2s at 12kHz ring rate
+    private var calibrationEnergies: [Float] = []    // per-sample energies during calibration (for percentile)
+    private var recalibrationsDone: Int = 0          // how many times we've auto-recalibrated this session
+    private let maxRecalibrations: Int = 2           // cap to avoid infinite loops
     private var ringPosSinceLastTick: Int = 0       // samples since last tick
     private var tickCount: Int = 0
     private var lastTickDeviationCheck: Double = 0  // deviation at last sanity check
@@ -449,22 +452,28 @@ class TimegrapherEngine {
 
                     // Calibration phase: observe energy to learn tick amplitude, no ticks accepted
                     if tickCalibrating {
-                        if energy > tickThreshold { tickThreshold = energy }
+                        calibrationEnergies.append(energy)
                         calibrationSamples += 1
                         if calibrationSamples >= calibrationDuration {
                             tickCalibrating = false
-                            // tickThreshold is now the peak energy seen during calibration
+                            // Robust percentile instead of peak: resists transient spikes (bumps, taps)
+                            var sorted = calibrationEnergies
+                            sorted.sort()
+                            let p98Idx = max(0, min(sorted.count - 1, Int(Double(sorted.count) * 0.98)))
+                            let p98 = sorted[p98Idx]
+                            tickThreshold = p98 * 1.2
+                            calibrationEnergies.removeAll(keepingCapacity: false)
                             tickStartSample = sampleCounter // reset elapsed to exclude calibration
-                            debugLog("[TGCALIBRATED] tickThreshold=\(String(format: "%.6f", tickThreshold)) after \(calibrationSamples) samples")
+                            debugLog("[TGCALIBRATED] tickThreshold=\(String(format: "%.6f", tickThreshold)) (p98=\(String(format: "%.6f", p98))) after \(calibrationSamples) samples recal=\(recalibrationsDone)")
                         }
                         continue
                     }
 
                     ringPosSinceLastTick += 1
 
-                    // Track peak energy (slow decay) — represents tick impulse height
+                    // Track peak energy; decay faster while starved of ticks to recover from bad calibration
                     if energy > tickThreshold { tickThreshold = energy }
-                    else { tickThreshold *= 0.9999 }
+                    else { tickThreshold *= (tickCount == 0 ? 0.995 : 0.9999) }
                     let threshold = tickThreshold * 0.3
 
                     let minSpacing = Int(expectedTickInterval * 0.9)
@@ -476,6 +485,18 @@ class TimegrapherEngine {
                         let elDbg = Double(sampleCounter - tickStartSample) / actualSampleRate
                         let rateStr = smoothedRate != nil ? String(format: "%.1f", smoothedRate!) : "nil"
                         debugLog("[TGDEBUG \(String(format: "%.1f", elDbg))s] energy=\(String(format: "%.6f", energy)) thresh=\(String(format: "%.6f", threshold)) tickThresh=\(String(format: "%.6f", tickThreshold)) tickCount=\(tickCount) regN=\(regN) pairDev=\(String(format: "%.2f", pairDeviationMs)) rate=\(rateStr)")
+
+                        // Fallback recalibration: if calibration latched onto a transient and no ticks
+                        // have been detected after 3s, restart calibration with a fresh window.
+                        if tickCount == 0 && elDbg > 3.0 && recalibrationsDone < maxRecalibrations {
+                            recalibrationsDone += 1
+                            tickCalibrating = true
+                            calibrationSamples = 0
+                            calibrationEnergies.removeAll(keepingCapacity: true)
+                            tickThreshold = 0
+                            tickStartSample = sampleCounter
+                            debugLog("[TGRECALIBRATE] no ticks after \(String(format: "%.1f", elDbg))s — restarting calibration (attempt \(recalibrationsDone)/\(maxRecalibrations))")
+                        }
                     }
 
                     if energy > threshold && ringPosSinceLastTick >= minSpacing {
@@ -866,6 +887,8 @@ class TimegrapherEngine {
         tickThreshold = 0
         tickCalibrating = true
         calibrationSamples = 0
+        calibrationEnergies.removeAll(keepingCapacity: true)
+        recalibrationsDone = 0
         tickStartSample = sampleCounter
         debugLog("[TGACTIVATE] bph=\(targetBph) autoBph=\(autoBph) expectedInterval=\(String(format: "%.1f", expectedTickInterval)) ringSR=\(String(format: "%.0f", ringSampleRate)) CALIBRATING for \(calibrationDuration) samples")
     }
