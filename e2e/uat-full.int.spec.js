@@ -135,7 +135,7 @@ test.describe('4. Feed', () => {
     await page.click('nav button[data-page="feed"]');
     await page.waitForSelector('#page-feed', { state: 'visible' });
     await expect(page.locator('#page-feed button', { hasText: /post/i })).toBeVisible();
-    await expect(page.locator('#page-feed button', { hasText: /find people/i })).toBeVisible();
+    await expect(page.locator('#page-feed button', { hasText: /people/i })).toBeVisible();
   });
 
   test('new post modal opens and has visibility chips', async ({ page }) => {
@@ -172,7 +172,7 @@ test.describe('5. Social', () => {
     await page.click('nav button[data-page="feed"]');
     await page.waitForSelector('#page-feed', { state: 'visible' });
 
-    await page.locator('#page-feed button', { hasText: /find people/i }).click();
+    await page.locator('#page-feed button', { hasText: /people/i }).click();
     await expect(page.locator('#discover-modal')).toBeVisible({ timeout: 3_000 });
     await expect(page.locator('#discover-search')).toBeVisible();
     await page.keyboard.press('Escape');
@@ -196,7 +196,7 @@ test.describe('5. Social', () => {
     await page.waitForSelector('#page-feed', { state: 'visible' });
 
     // Open discover and search for testuser2
-    await page.locator('#page-feed button', { hasText: /find people/i }).click();
+    await page.locator('#page-feed button', { hasText: /people/i }).click();
     await page.waitForSelector('#discover-modal', { state: 'visible' });
     await page.fill('#discover-search', 'testuser2');
     await page.waitForTimeout(1500); // wait for search results

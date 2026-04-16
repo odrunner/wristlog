@@ -4739,7 +4739,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.15.21.33';
+const APP_VERSION = '2.36.16.00.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10211,6 +10211,17 @@ function shouldShowReviewPrompt(source) {
   return false;
 }
 
+function _logReviewEvent(event) {
+  if (!currentUser || !_reviewTriggerSource) return;
+  try {
+    db.from('review_prompt_events').insert({
+      user_id: currentUser.id,
+      event: event,
+      trigger_source: _reviewTriggerSource
+    }).then(() => {});
+  } catch (_) { /* ignore */ }
+}
+
 function maybeShowReviewPrompt(source) {
   if (shouldShowReviewPrompt(source)) {
     _reviewTriggerSource = source;
@@ -10220,6 +10231,7 @@ function maybeShowReviewPrompt(source) {
       document.getElementById('review-step-feedback').style.display = 'none';
       document.getElementById('review-step-thanks').style.display = 'none';
       document.getElementById('review-prompt-modal').classList.remove('hidden');
+      _logReviewEvent('shown');
     }, 800);
   }
 }
@@ -10233,6 +10245,7 @@ function reviewPromptYes() {
   }
   document.getElementById('review-step-thanks').style.display = '';
   localStorage.setItem('wristlog_review_last', String(Date.now()));
+  _logReviewEvent('yes');
 }
 
 function reviewPromptNo() {
@@ -10244,7 +10257,7 @@ function reviewPromptNo() {
 
 async function submitReviewFeedback() {
   const text = document.getElementById('review-feedback-text').value.trim();
-  if (!text) { closeReviewPrompt(); return; }
+  if (!text) { _logReviewEvent('no_no_text'); closeReviewPrompt(); return; }
   if (currentUser) {
     db.from('app_feedback').insert({
       user_id: currentUser.id,
@@ -10257,14 +10270,20 @@ async function submitReviewFeedback() {
   document.getElementById('review-step-feedback').style.display = 'none';
   document.getElementById('review-step-thanks').style.display = '';
   localStorage.setItem('wristlog_review_last', String(Date.now()));
+  _logReviewEvent('no_with_text');
 }
 
 function closeReviewPrompt() {
-  document.getElementById('review-prompt-modal').classList.add('hidden');
+  const modal = document.getElementById('review-prompt-modal');
+  const wasOpen = !modal.classList.contains('hidden');
+  const onAsk = document.getElementById('review-step-ask').style.display !== 'none';
+  modal.classList.add('hidden');
   // Set cooldown even on dismiss
   if (!localStorage.getItem('wristlog_review_last')) {
     localStorage.setItem('wristlog_review_last', String(Date.now()));
   }
+  // Only log 'dismissed' if they closed from the initial ask step (not after yes/no)
+  if (wasOpen && onAsk) _logReviewEvent('dismissed');
 }
 
 // Internal accounts — excluded from public-facing traffic/usage metrics
