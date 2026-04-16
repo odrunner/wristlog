@@ -148,23 +148,55 @@ def recommend(results):
                 "first-run guidance for positioning the watch on the mic."
             )
 
-    # High abort rate → calibration still too aggressive
+    # High abort rate — but diagnose the shape before recommending calibration
     if abort_pct > 50:
-        recs.append(
-            f"Abort rate {abort_pct:.0f}% ({aborts}/{n}). Still high. "
-            "Consider: lower calibration multiplier (p98*1.2 → p98*1.1), "
-            "raise auto-recalibrate retries (2 → 3), or lengthen the "
-            "tickCount==0 grace window (3s → 4s)."
-        )
+        abort_rows = [r for r in results if not r["summary"]]
+        # "Silent" abort: ticks never detected (calibration never fired)
+        silent = [r for r in abort_rows
+                  if r["tick_outliers"] == 0 and r["native_skips"] == 0]
+        # "Rejected" abort: ticks detected but all rejected as out-of-range
+        rejected = [r for r in abort_rows
+                    if r["tick_outliers"] >= 5 and r["native_skips"] <= 2]
 
-    # Many sessions noisy → tighten tick acceptance OR investigate mic noise
+        silent_share = len(silent) / max(len(abort_rows), 1)
+        rejected_share = len(rejected) / max(len(abort_rows), 1)
+
+        if rejected_share >= 0.40:
+            recs.append(
+                f"Abort rate {abort_pct:.0f}% ({aborts}/{n}). "
+                f"{len(rejected)} aborts ({rejected_share*100:.0f}%) show "
+                "'0 skips, many tick_outliers' — ticks are being detected but "
+                "maxTickDev is rejecting all of them. Consider loosening "
+                "maxTickDev (8ms → 10ms) or adaptive-widening it based on "
+                "observed tick jitter."
+            )
+        elif silent_share >= 0.40:
+            recs.append(
+                f"Abort rate {abort_pct:.0f}% ({aborts}/{n}). "
+                f"{len(silent)} aborts ({silent_share*100:.0f}%) are silent "
+                "(0 outliers, 0 skips) — calibration never caught any ticks. "
+                "Consider: lower calibration multiplier (p98*1.2 → p98*1.1), "
+                "raise autoRecalRetries (2 → 3), or lengthen the tickCount==0 "
+                "grace window (3s → 4s)."
+            )
+        else:
+            recs.append(
+                f"Abort rate {abort_pct:.0f}% ({aborts}/{n}) but no single "
+                "cause dominates (mix of rejected ticks, silent calibration, "
+                "and user quits). Need stop_reason coverage on abort path "
+                "before tuning further."
+            )
+
+    # Many sessions noisy → mic noise / band-pass issue, not a tick-gate issue
     noisy = fail_reasons.get("noisy", 0)
     if noisy >= 3 and noisy >= 0.15 * n:
         avg_out = sum(outlier_shares) / len(outlier_shares) if outlier_shares else 0
         recs.append(
-            f"{noisy} sessions failed due to noisy ticks (avg outlier share "
-            f"{avg_out*100:.0f}%). Consider tightening maxTickDev "
-            "(8ms → 6ms) or adding a band-pass around the dominant tick frequency."
+            f"{noisy} sessions completed but outlier share averaged "
+            f"{avg_out*100:.0f}%. These sessions still produced a rate, just a "
+            "noisy one. Consider a tighter band-pass around the dominant tick "
+            "frequency, or surfacing a 'quieter environment' nudge when "
+            "outliers dominate."
         )
 
     # Many sessions slow → loosen thresholds so rate converges faster
