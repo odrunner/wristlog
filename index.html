@@ -2134,7 +2134,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 <!-- Hidden config for review prompt thresholds (adjustable without App Store rebuild) -->
 <input type="hidden" id="review-wear-threshold" value="5">
-<input type="hidden" id="review-measurement-threshold" value="5">
+<input type="hidden" id="review-measurement-threshold" value="4">
 <input type="hidden" id="review-cooldown-days" value="60">
 
 <!-- ════ MEASURE HELP MODAL ════ -->
@@ -4739,7 +4739,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.15.20.49';
+const APP_VERSION = '2.36.15.21.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18030,11 +18030,8 @@ async function saveTimegrapherManual() {
       rate, beat_error: beatError, amplitude, bph, source: src, notes
     });
     if (error) { toast('Could not save — ' + error.message, 'error'); return; }
-    const msrCount = parseInt(localStorage.getItem('wristlog_msr_count') || '0') + 1;
-    localStorage.setItem('wristlog_msr_count', String(msrCount));
     toast('Reading saved!');
     if (window.posthog) posthog.capture('accuracy_reading_saved', { source: src });
-    maybeShowReviewPrompt('measurement');
   }
   _tgFromListening = false;
   document.getElementById('tg-rate-input').value = '';
@@ -18726,6 +18723,14 @@ function stopMsrListen(reason) {
     // Hide idle overlay so result stays visible on chart
     const idleOv = document.getElementById('msr-idle-overlay');
     if (idleOv) idleOv.style.display = 'none';
+    // Count only successful measurements (engine converged on a normal-looking rate)
+    if (_msrPhase === 'converged' && Math.abs(r) <= 60 && _msrScatterData.length >= 15) {
+      try {
+        const n = parseInt(localStorage.getItem('wristlog_msr_count') || '0') + 1;
+        localStorage.setItem('wristlog_msr_count', String(n));
+        maybeShowReviewPrompt('measurement');
+      } catch (_) { /* storage unavailable */ }
+    }
   } else if (statusText) {
     statusText.textContent = '';
     const idleOv = document.getElementById('msr-idle-overlay');
@@ -18790,12 +18795,8 @@ async function saveMsrReading() {
     tick_data: tickData
   });
   if (error) { toast('Could not save — ' + error.message, 'error'); return; }
-  // Track measurement count for review prompt
-  const msrCount = parseInt(localStorage.getItem('wristlog_msr_count') || '0') + 1;
-  localStorage.setItem('wristlog_msr_count', String(msrCount));
   toast('Reading saved!');
   if (window.posthog) posthog.capture('accuracy_reading_saved', { source: 'auto', from: 'measure_modal' });
-  maybeShowReviewPrompt('measurement');
   closeMeasureModal();
 }
 
