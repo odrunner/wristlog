@@ -4739,7 +4739,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.15.17.22';
+const APP_VERSION = '2.36.15.20.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16926,6 +16926,10 @@ function dismissWarrantyBanner() {
 }
 
 async function checkReminderNow() {
+  // 5 PM reminder disabled 2026-04-15 — keep code for future re-enable.
+  // To restore: remove this early return.
+  return;
+  // eslint-disable-next-line no-unreachable
   if (sessionStorage.getItem('wl_reminder_dismissed')) return;
   const now = new Date();
   if (now.getHours() >= 17) {
@@ -16949,6 +16953,10 @@ async function checkReminderNow() {
 
 let _reminderTimer;
 function scheduleReminderAt5PM() {
+  // 5 PM reminder disabled 2026-04-15 — keep code for future re-enable.
+  // To restore: remove this early return.
+  return;
+  // eslint-disable-next-line no-unreachable
   clearTimeout(_reminderTimer);
   const now   = new Date();
   const fivePM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 0, 0);
