@@ -105,9 +105,30 @@ Deno.serve(async (req: Request) => {
     // Fail open: allow the request if rate limit check fails
   }
 
+  const t0 = Date.now();
+  let loggedMode = "identify";
+  let loggedHasCollection = false;
+  const logAttempt = async (watchesDetected: number | null, errMsg: string | null) => {
+    try {
+      await supabase.from("identify_attempts").insert({
+        user_id: user.id,
+        mode: loggedMode,
+        has_collection: loggedHasCollection,
+        watches_detected: watchesDetected,
+        duration_ms: Date.now() - t0,
+        error: errMsg,
+      });
+    } catch (logErr) {
+      console.error("[identify-watch] log insert failed:", logErr);
+    }
+  };
+
   try {
     const { image, collection, mode } = await req.json();
+    loggedMode = mode === "detect" ? "detect" : "identify";
+    loggedHasCollection = Array.isArray(collection) && collection.length > 0;
     if (!image) {
+      await logAttempt(null, "no_image");
       return new Response(JSON.stringify({ error: "No image provided" }), {
         status: 400,
         headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
@@ -165,6 +186,7 @@ If no watches visible: {"count": 0, "watches": []}`,
       if (!response.ok) {
         const errText = await response.text();
         console.error("[identify-watch] Detect error:", response.status, errText);
+        await logAttempt(null, `detect_http_${response.status}`);
         return new Response(
           JSON.stringify({ error: "Watch detection failed", detail: response.status }),
           { status: 502, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
@@ -175,12 +197,14 @@ If no watches visible: {"count": 0, "watches": []}`,
       const text = result.content?.[0]?.text ?? "";
       const parsed = extractJson(text);
       if (!parsed) {
+        await logAttempt(null, "detect_parse_failed");
         return new Response(
           JSON.stringify({ error: "Could not parse detection response" }),
           { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
         );
       }
       parsed.count = parsed.count ?? parsed.watches?.length ?? 0;
+      await logAttempt(parsed.count, null);
       return new Response(JSON.stringify(parsed), {
         headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       });
@@ -255,6 +279,7 @@ If no watches: {"watches": []}`;
     if (!response.ok) {
       const errText = await response.text();
       console.error("[identify-watch] API error:", response.status, errText);
+      await logAttempt(null, `identify_http_${response.status}`);
       return new Response(
         JSON.stringify({ error: "AI identification failed", detail: response.status }),
         { status: 502, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
@@ -265,17 +290,20 @@ If no watches: {"watches": []}`;
     const text = result.content?.[0]?.text ?? "";
     const parsed = extractJson(text);
     if (!parsed) {
+      await logAttempt(null, "identify_parse_failed");
       return new Response(
         JSON.stringify({ error: "Could not parse AI response", raw: text }),
         { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
       );
     }
 
+    await logAttempt(Array.isArray(parsed.watches) ? parsed.watches.length : 0, null);
     return new Response(JSON.stringify(parsed), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("[identify-watch] Error:", err);
+    await logAttempt(null, `exception:${(err as Error).message?.slice(0, 100) || "unknown"}`);
     return new Response(
       JSON.stringify({ error: (err as Error).message || "Internal error" }),
       { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
