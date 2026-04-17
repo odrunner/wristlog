@@ -3254,6 +3254,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input type="hidden" id="msr-be-input">
         <input type="hidden" id="msr-notes-input" value="">
       </div>
+      <!-- Share-to-feed CTA shown after a successful save -->
+      <div id="msr-share-cta" style="display:none;">
+        <div style="font-size:.82rem;font-weight:600;color:var(--text);margin-bottom:.5rem;text-align:center;">Saved &mdash; share result to feed?</div>
+        <div style="display:flex;gap:.4rem;">
+          <button id="msr-share-btn" class="btn btn-primary btn-sm" style="flex:1;">Share</button>
+          <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--muted);" onclick="dismissMsrShareCta()">Done</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -4739,7 +4747,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.16.17.54';
+const APP_VERSION = '2.36.16.18.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -4844,7 +4852,7 @@ async function loadMyProfile() {
     if (!/^[a-z]/.test(username)) username = 'u' + username;
     const abVariant = localStorage.getItem('ab_landing') || null;
     const { data: created, error: createErr } = await db.from('profiles').upsert(
-      { id: currentUser.id, username, display_name: googleName, theme_preference: 'light', profile_privacy: 'followers', ab_variant: abVariant },
+      { id: currentUser.id, username, display_name: googleName, theme_preference: 'light', profile_privacy: 'followers', default_post_visibility: 'public', ab_variant: abVariant },
       { onConflict: 'id' }
     ).select().single();
     if (createErr) {
@@ -4852,7 +4860,7 @@ async function loadMyProfile() {
       // Retry with a guaranteed-unique username (e.g. username conflict)
       const fallback = 'user' + Math.random().toString(36).slice(2, 8);
       const { data: retry, error: retryErr } = await db.from('profiles').upsert(
-        { id: currentUser.id, username: fallback, display_name: googleName, theme_preference: 'light', profile_privacy: 'followers', ab_variant: abVariant },
+        { id: currentUser.id, username: fallback, display_name: googleName, theme_preference: 'light', profile_privacy: 'followers', default_post_visibility: 'public', ab_variant: abVariant },
         { onConflict: 'id' }
       ).select().single();
       if (retryErr) console.error('[WristLog] Profile create retry error:', retryErr.message, retryErr);
@@ -8730,17 +8738,34 @@ let newPostPhoto = null;   // objectURL for preview (or null)
 let newPostFile  = null;   // raw File for deferred upload
 let npIdentifiedWatchId = null; // watchId from AI identification (or null)
 
-function openNewPost() {
+function openNewPost(opts) {
   if (demoGuard()) return;
+  const o = opts || {};
   newPostPhoto = null;
   newPostFile  = null;
-  npIdentifiedWatchId = null;
   clearNewPostPhoto();
   dismissNpWatchSuggestion();
-  document.getElementById('np-body').value = '';
+  document.getElementById('np-body').value = o.prefillBody || '';
   document.getElementById('np-vis-chips').innerHTML = visChipsHtml('np-vis-chips', getDefaultVis());
+  // Pre-select a watch if caller passed context (e.g. after measurement)
+  if (o.watchId && watches.some(w => w.id === o.watchId)) {
+    npIdentifiedWatchId = o.watchId;
+    renderNpWatchDisplay();
+  } else {
+    npIdentifiedWatchId = null;
+  }
   document.getElementById('new-post-modal').classList.remove('hidden');
   setTimeout(() => document.getElementById('np-body').focus(), 50);
+}
+
+// Instrumentation for "share-to-feed" CTAs shown after measurement / watch-add / etc.
+function _logPostCtaEvent(event, source) {
+  if (!currentUser || _isDemoMode) return;
+  try {
+    db.from('post_cta_events').insert({
+      user_id: currentUser.id, event, source
+    }).then(() => {}).catch(() => {});
+  } catch (_) { /* ignore */ }
 }
 
 function closeNewPost() {
@@ -18377,6 +18402,8 @@ function openMeasureInline() {
   document.getElementById('msr-live-status').style.display = 'none';
   document.getElementById('msr-mic-warning').style.display = 'none';
   document.getElementById('msr-save-section').style.display = 'none';
+  const shareCtaInit = document.getElementById('msr-share-cta');
+  if (shareCtaInit) shareCtaInit.style.display = 'none';
   const sigBarsInit = document.getElementById('msr-signal-bars'); if (sigBarsInit) sigBarsInit.style.display = 'none';
   // Populate watch dropdown
   const sel = document.getElementById('msr-watch-select');
@@ -18557,6 +18584,8 @@ function toggleMsrListen() {
     document.getElementById('msr-status-text').style.fontWeight = '';
     document.getElementById('msr-detected-bph').style.display = 'none';
     document.getElementById('msr-save-section').style.display = 'none';
+    const _shareCta = document.getElementById('msr-share-cta');
+    if (_shareCta) _shareCta.style.display = 'none';
     const saveBtn = document.getElementById('msr-save-btn');
     if (saveBtn) saveBtn.disabled = true;
     const convBadge = document.getElementById('msr-converged-badge'); if (convBadge) convBadge.style.display = 'none';
@@ -18786,6 +18815,8 @@ function discardMsrReading() {
   _msrLastBph = null;
   _msrScatterData = []; _msrLastCumDev = 0;
   document.getElementById('msr-save-section').style.display = 'none';
+  const shareCta = document.getElementById('msr-share-cta');
+  if (shareCta) shareCta.style.display = 'none';
   document.getElementById('msr-live-status').style.display = 'none';
   document.getElementById('msr-live-rate').textContent = '—';
   const beEl = document.getElementById('msr-live-be'); if (beEl) beEl.textContent = '—';
@@ -18823,7 +18854,43 @@ async function saveMsrReading() {
   if (error) { toast('Could not save — ' + error.message, 'error'); return; }
   toast('Reading saved!');
   if (window.posthog) posthog.capture('accuracy_reading_saved', { source: 'auto', from: 'measure_modal' });
+  showMsrShareCta(watchId, rate);
+}
+
+// Show a "Share to feed?" CTA after a successful measurement save.
+// Hides the save section, reveals a sibling CTA block. Non-intrusive:
+// user can tap Share or Done. Both outcomes logged for funnel analysis.
+function showMsrShareCta(watchId, rate) {
+  const saveSection = document.getElementById('msr-save-section');
+  const cta = document.getElementById('msr-share-cta');
+  if (!cta) { closeMeasureModal(); return; }
+  if (saveSection) saveSection.style.display = 'none';
+  const btn = document.getElementById('msr-share-btn');
+  if (btn) btn.onclick = () => shareMsrToFeed(watchId, Number(rate));
+  cta.style.display = '';
+  _logPostCtaEvent('shown', 'measurement');
+}
+
+function dismissMsrShareCta() {
+  const cta = document.getElementById('msr-share-cta');
+  if (cta) cta.style.display = 'none';
   closeMeasureModal();
+}
+
+function shareMsrToFeed(watchId, rate) {
+  _logPostCtaEvent('clicked', 'measurement');
+  const w = watches.find(x => x.id === watchId);
+  const name = w ? `${w.brand} ${w.name}` : 'my watch';
+  const r = Number(rate);
+  const rateStr = (r > 0 ? '+' : '') + r.toFixed(1);
+  const cta = document.getElementById('msr-share-cta');
+  if (cta) cta.style.display = 'none';
+  closeMeasureModal();
+  openNewPost({
+    prefillBody: `Measured my ${name}: ${rateStr} s/d.`,
+    watchId,
+    source: 'measurement',
+  });
 }
 
 // ── APP BOOT ──────────────────────────────────────────────────────────────
