@@ -85,6 +85,27 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs';
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
 
+    // Track visit on shared post page
+    (function() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const utm_source = params.get('utm_source');
+        const ref = document.referrer || null;
+        const externalRef = ref && !ref.includes(window.location.hostname) ? ref : null;
+        const effectiveSource = utm_source || (externalRef ? null : 'direct');
+        const dedupKey = 'wristlog_visit_' + (effectiveSource || '') + '_' + (params.get('utm_campaign') || '');
+        const lastVisit = Number(localStorage.getItem(dedupKey) || 0);
+        if (Date.now() - lastVisit < 1800000) return;
+        localStorage.setItem(dedupKey, String(Date.now()));
+        db.from('page_visits').insert({
+          utm_source: effectiveSource, utm_medium: params.get('utm_medium'), utm_campaign: params.get('utm_campaign'),
+          utm_content: params.get('utm_content'), utm_term: params.get('utm_term'),
+          referrer: externalRef, path: window.location.pathname,
+          user_agent: navigator.userAgent || null, user_id: null,
+        }).then(() => {}).catch(() => {});
+      } catch(e) {}
+    })();
+
     function esc(s) {
       return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
