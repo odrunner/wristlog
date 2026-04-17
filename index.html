@@ -4236,17 +4236,17 @@ function officialBadgeHtml(profile) {
     const utm_campaign = params.get('utm_campaign');
     const utm_content = params.get('utm_content');
     const utm_term = params.get('utm_term');
-    // Only track if there's a UTM param or a referrer from another site
     const ref = document.referrer || null;
     const externalRef = ref && !ref.includes(window.location.hostname) ? ref : null;
-    if (!utm_source && !utm_medium && !utm_campaign && !externalRef) return;
+    // Classify direct visits (no UTM, no external referrer) so they're still counted.
+    const effectiveSource = utm_source || (externalRef ? null : 'direct');
     // Deduplicate: don't re-track within 30 min from same source
-    const dedupKey = 'wristlog_visit_' + (utm_source || '') + '_' + (utm_campaign || '');
+    const dedupKey = 'wristlog_visit_' + (effectiveSource || '') + '_' + (utm_campaign || '');
     const lastVisit = Number(localStorage.getItem(dedupKey) || 0);
     if (Date.now() - lastVisit < 1800000) return;
     localStorage.setItem(dedupKey, String(Date.now()));
     db.from('page_visits').insert({
-      utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+      utm_source: effectiveSource, utm_medium, utm_campaign, utm_content, utm_term,
       referrer: externalRef,
       path: window.location.pathname,
       user_agent: navigator.userAgent || null,
@@ -4739,7 +4739,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.16.16.20';
+const APP_VERSION = '2.36.16.17.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10639,61 +10639,63 @@ async function renderAdminTraffic() {
     ]);
     const total = allRes.count || 0;
     const last30 = week30.count || 0;
-    // Filter out internal accounts from all visit data
     const isInternal = (v) => v.user_id && INTERNAL_IDS.has(v.user_id);
     const visits = (week7.data || []).filter(v => !isInternal(v));
-    const last7 = visits.length;
 
-    // Separate traffic visits from funnel events and OAuth redirects
-    const funnelSources = new Set(['signin_google', 'signin_apple', 'appstore_click']);
-    for (let i = 1; i <= 6; i++) funnelSources.add('onboarding_step_' + i);
     const oauthRedirects = new Set(['accounts.google.com', 'appleid.apple.com']);
-    const trafficVisits = visits.filter(v => {
-      if (funnelSources.has(v.utm_source) || v.utm_medium === 'funnel') return false;
+    const onboardingSources = new Set();
+    for (let i = 1; i <= 6; i++) onboardingSources.add('onboarding_step_' + i);
+
+    // Categorize every visit — no silent drops
+    const categorize = (v) => {
+      if (v.utm_medium === 'funnel' || onboardingSources.has(v.utm_source)) return 'Onboarding funnel';
+      if (v.utm_source === 'signin_google' || v.utm_source === 'signin_apple') return 'Sign-in tap';
+      if (v.utm_source === 'appstore_click') return 'App Store click';
       if (!v.utm_source && v.referrer) {
-        try { if (oauthRedirects.has(new URL(v.referrer).hostname)) return false; } catch(e) {}
+        try { if (oauthRedirects.has(new URL(v.referrer).hostname)) return 'OAuth return'; } catch(e) {}
       }
-      return true;
+      if (v.utm_source === 'direct' || (!v.utm_source && !v.referrer)) return 'Direct';
+      return 'External referrer';
+    };
+    const byCategory = {};
+    visits.forEach(v => { const c = categorize(v); byCategory[c] = (byCategory[c] || 0) + 1; });
+    const catOrder = ['External referrer', 'Direct', 'App Store click', 'OAuth return', 'Sign-in tap', 'Onboarding funnel'];
+    const categoryRows = catOrder.filter(k => byCategory[k])
+      .map(k => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${escHtml(k)}</span><span style="color:var(--gold);font-weight:600;">${byCategory[k]}</span></div>`).join('');
+
+    // "Real external traffic" = external referrer + direct + app-store click. These are people discovering the site.
+    const externalVisits = visits.filter(v => {
+      const c = categorize(v);
+      return c === 'External referrer' || c === 'Direct' || c === 'App Store click';
     });
 
-    // Friendly source names — merge duplicates into single labels
     const sourceLabel = (src) => {
-      const labels = { 'www.google.com': 'Google (organic)', 'google.com': 'Google (organic)', 'www.reddit.com': 'Reddit', 'old.reddit.com': 'Reddit', 'reddit_lp': 'Reddit', 'reddit': 'Reddit', 'www.bing.com': 'Bing (organic)', 't.co': 'Twitter / X' };
+      const labels = { 'www.google.com': 'Google (organic)', 'google.com': 'Google (organic)', 'www.reddit.com': 'Reddit', 'old.reddit.com': 'Reddit', 'reddit_lp': 'Reddit', 'reddit': 'Reddit', 'www.bing.com': 'Bing (organic)', 'duckduckgo.com': 'DuckDuckGo', 't.co': 'Twitter / X', 'appstore_click': 'App Store (in-page click)', 'direct': 'Direct / bookmark' };
       return labels[src] || src;
     };
+    const sourceOf = (v) => {
+      if (v.utm_source) return sourceLabel(v.utm_source);
+      if (v.referrer) { try { return sourceLabel(new URL(v.referrer).hostname); } catch(e) {} }
+      return 'Direct / bookmark';
+    };
 
-    // Group by source (traffic only)
     const bySource = {};
-    trafficVisits.forEach(v => {
-      const raw = v.utm_source || (v.referrer ? new URL(v.referrer).hostname : 'direct');
-      const src = sourceLabel(raw);
-      bySource[src] = (bySource[src] || 0) + 1;
-    });
-    const sourceRows = Object.entries(bySource)
-      .sort((a, b) => b[1] - a[1])
-      .map(([src, cnt]) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${escHtml(src)}</span><span style="color:var(--gold);font-weight:600;">${cnt}</span></div>`)
-      .join('');
+    externalVisits.forEach(v => { const s = sourceOf(v); bySource[s] = (bySource[s] || 0) + 1; });
+    const sourceRows = Object.entries(bySource).sort((a, b) => b[1] - a[1])
+      .map(([src, cnt]) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${escHtml(src)}</span><span style="color:var(--gold);font-weight:600;">${cnt}</span></div>`).join('');
 
-    // Device breakdown (7 days, traffic only)
     const byDevice = { mobile: 0, tablet: 0, desktop: 0, unknown: 0 };
-    trafficVisits.forEach(v => { byDevice[classifyDevice(v.user_agent)]++; });
-    const deviceRows = Object.entries(byDevice).filter(([, c]) => c > 0)
-      .sort((a, b) => b[1] - a[1])
-      .map(([dev, cnt]) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${dev}</span><span style="color:var(--gold);font-weight:600;">${cnt}</span></div>`)
-      .join('');
+    externalVisits.forEach(v => { byDevice[classifyDevice(v.user_agent)]++; });
+    const deviceRows = Object.entries(byDevice).filter(([, c]) => c > 0).sort((a, b) => b[1] - a[1])
+      .map(([dev, cnt]) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${dev}</span><span style="color:var(--gold);font-weight:600;">${cnt}</span></div>`).join('');
 
-    // Device breakdown per source (7 days, traffic only)
     const sourceDevice = {};
-    trafficVisits.forEach(v => {
-      const raw = v.utm_source || (v.referrer ? new URL(v.referrer).hostname : 'direct');
-      const src = sourceLabel(raw);
-      const dev = classifyDevice(v.user_agent);
+    externalVisits.forEach(v => {
+      const src = sourceOf(v); const dev = classifyDevice(v.user_agent);
       if (!sourceDevice[src]) sourceDevice[src] = { mobile: 0, tablet: 0, desktop: 0, unknown: 0, total: 0 };
-      sourceDevice[src][dev]++;
-      sourceDevice[src].total++;
+      sourceDevice[src][dev]++; sourceDevice[src].total++;
     });
-    const sourceDeviceRows = Object.entries(sourceDevice)
-      .sort((a, b) => b[1].total - a[1].total)
+    const sourceDeviceRows = Object.entries(sourceDevice).sort((a, b) => b[1].total - a[1].total)
       .map(([src, d]) => {
         const parts = ['mobile','tablet','desktop'].filter(k => d[k] > 0).map(k => `${k}: ${d[k]}`).join(', ');
         return `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${escHtml(src)}</span><span style="color:var(--muted);font-size:.75rem;">${parts || 'unknown'}</span></div>`;
@@ -10704,14 +10706,19 @@ async function renderAdminTraffic() {
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Traffic Overview</div>
         <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>Total visits (all time)</span><span style="color:var(--gold);font-weight:600;">${total}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>Last 30 days</span><span style="color:var(--gold);font-weight:600;">${last30}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;"><span>Last 7 days</span><span style="color:var(--gold);font-weight:600;">${trafficVisits.length}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>Last 7 days (all events)</span><span style="color:var(--gold);font-weight:600;">${visits.length}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;"><span style="color:var(--muted);">&nbsp;&nbsp;↳ external traffic only</span><span style="color:var(--muted);font-weight:600;">${externalVisits.length}</span></div>
       </div>
+      ${categoryRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">By Category (7 days)</div>
+        ${categoryRows}
+      </div>` : ''}
       ${sourceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">By Source (7 days)</div>
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">External Traffic by Source (7 days)</div>
         ${sourceRows}
       </div>` : ''}
       ${deviceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Device Type (7 days)</div>
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Device Type — external traffic (7 days)</div>
         ${deviceRows}
       </div>` : ''}
       ${sourceDeviceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
