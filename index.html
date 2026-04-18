@@ -4764,7 +4764,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.16.42';
+const APP_VERSION = '2.36.18.16.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12733,11 +12733,11 @@ function openUpdatePrices() {
   eligible.forEach(w => {
     const payload = { brand: w.brand, model: w.name, condition: 'good' };
     if (w.ref) payload.reference = w.ref;
-    fetch(SUPABASE_URL + '/functions/v1/watch-value', {
+    authedFetch(SUPABASE_URL + '/functions/v1/watch-value', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    })
+    }, 60000)
     .then(r => r.json())
     .then(data => {
       done++;
