@@ -1947,6 +1947,22 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 
 
+<!-- ════ UPDATE PRICES MODAL ════ -->
+<div id="update-prices-modal" class="overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:560px;padding:1.5rem;">
+    <div class="modal-title" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>Update Market Prices</span>
+      <button class="btn btn-ghost" onclick="closeUpdatePrices()" style="padding:.2rem .5rem;font-size:.8rem;">Close</button>
+    </div>
+    <div id="update-prices-status" style="font-size:.78rem;color:var(--muted);margin-bottom:.75rem;">Loading...</div>
+    <div id="update-prices-body" style="max-height:65vh;overflow-y:auto;"></div>
+    <div id="update-prices-actions" style="margin-top:1rem;display:none;gap:.5rem;justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeUpdatePrices()">Cancel</button>
+      <button class="btn btn-primary" id="update-prices-save-btn" onclick="saveUpdatedPrices()">Save Selected</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ WHAT'S NEW MODAL ════ -->
 <div id="whats-new-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="whats-new-modal-title">
   <div class="modal" style="max-width:440px;">
@@ -2435,6 +2451,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="btn btn-ghost" onclick="startGame()" title="Ranking Game" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="btn-label"> Ranking Game</span></button>
         <button class="btn btn-ghost" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="btn-label"> Add From Photo</span></button>
         <button class="btn btn-primary" onclick="openAddWatch()" title="Add Watch"><span class="btn-label-full">+ Add Watch</span><span class="btn-label-short">+ Add</span></button>
+        <button id="coll-update-prices-btn" class="btn btn-ghost" onclick="openUpdatePrices()" title="Update Market Prices" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="m16.24 7.76 2.83-2.83"/></svg></button>
       </div>
     </div>
     <div id="coll-sort-bar"></div>
@@ -4747,7 +4764,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.14.09';
+const APP_VERSION = '2.36.18.16.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12678,6 +12695,129 @@ document.getElementById('edit-log-usecase-chips').addEventListener('click', e =>
 });
 
 // ══════════════════════════════════════════
+//  UPDATE MARKET PRICES (dev-only)
+// ══════════════════════════════════════════
+let _priceUpdateResults = {};
+
+function openUpdatePrices() {
+  _priceUpdateResults = {};
+  const modal = document.getElementById('update-prices-modal');
+  modal.classList.remove('hidden');
+  const body = document.getElementById('update-prices-body');
+  const status = document.getElementById('update-prices-status');
+  const actions = document.getElementById('update-prices-actions');
+  actions.style.display = 'none';
+
+  const eligible = watches.filter(w => w.brand && w.name);
+  if (eligible.length === 0) { status.textContent = 'No watches to update.'; return; }
+
+  body.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:.78rem;">
+    <thead><tr style="text-align:left;border-bottom:1px solid var(--border);">
+      <th style="padding:.4rem .3rem;">Watch</th>
+      <th style="padding:.4rem .3rem;text-align:right;">Current</th>
+      <th style="padding:.4rem .3rem;text-align:right;">WRotate</th>
+      <th style="padding:.4rem .3rem;text-align:center;">Use</th>
+    </tr></thead>
+    <tbody id="update-prices-rows">${eligible.map(w => `
+      <tr id="upr-${w.id}" style="border-bottom:1px solid var(--border);">
+        <td style="padding:.45rem .3rem;"><div style="font-weight:600;font-size:.78rem;">${escHtml(w.brand)}</div><div style="font-size:.72rem;color:var(--muted);">${escHtml(w.name)}${w.ref ? ' · ' + escHtml(w.ref) : ''}</div></td>
+        <td style="padding:.45rem .3rem;text-align:right;white-space:nowrap;">${w.marketPrice ? fmtMoney(w.marketPrice) : '—'}<div style="font-size:.65rem;color:var(--muted);">${w.marketPriceSrc || ''}</div></td>
+        <td id="upr-val-${w.id}" style="padding:.45rem .3rem;text-align:right;color:var(--muted);">...</td>
+        <td id="upr-chk-${w.id}" style="padding:.45rem .3rem;text-align:center;"></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+
+  let done = 0;
+  status.textContent = `Looking up prices... 0 / ${eligible.length}`;
+
+  eligible.forEach(w => {
+    const payload = { brand: w.brand, model: w.name, condition: 'good' };
+    if (w.ref) payload.reference = w.ref;
+    fetch(SUPABASE_URL + '/functions/v1/watch-value', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    .then(r => r.json())
+    .then(data => {
+      done++;
+      status.textContent = `Looking up prices... ${done} / ${eligible.length}`;
+      const ev = data.estimated_value_usd || {};
+      const mid = ev.mid;
+      const valCell = document.getElementById('upr-val-' + w.id);
+      const chkCell = document.getElementById('upr-chk-' + w.id);
+      if (!mid) {
+        valCell.innerHTML = '<span style="color:var(--muted);">N/A</span>';
+        return;
+      }
+      _priceUpdateResults[w.id] = { mid, low: ev.low, high: ev.high, confidence: data.confidence, notes: data.notes };
+      const delta = w.marketPrice ? ((mid - w.marketPrice) / w.marketPrice * 100) : null;
+      const deltaStr = delta != null ? ` <span style="color:${delta >= 0 ? '#4ade80' : '#f87171'};font-size:.68rem;">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}%</span>` : '';
+      valCell.innerHTML = `<span style="color:var(--text);font-weight:600;">${fmtMoney(mid)}</span>${deltaStr}<div style="font-size:.65rem;color:var(--muted);">${fmtMoney(ev.low)} – ${fmtMoney(ev.high)}</div>`;
+      chkCell.innerHTML = `<input type="checkbox" checked data-wid="${w.id}" class="upr-toggle" style="width:16px;height:16px;accent-color:#4ade80;">`;
+      if (done === eligible.length) {
+        status.textContent = `Done — ${Object.keys(_priceUpdateResults).length} prices found.`;
+        actions.style.display = 'flex';
+      }
+    })
+    .catch(() => {
+      done++;
+      status.textContent = `Looking up prices... ${done} / ${eligible.length}`;
+      const valCell = document.getElementById('upr-val-' + w.id);
+      if (valCell) valCell.innerHTML = '<span style="color:#f87171;">Error</span>';
+      if (done === eligible.length) {
+        status.textContent = `Done — ${Object.keys(_priceUpdateResults).length} prices found.`;
+        actions.style.display = 'flex';
+      }
+    });
+  });
+}
+
+function closeUpdatePrices() {
+  document.getElementById('update-prices-modal').classList.add('hidden');
+}
+
+async function saveUpdatedPrices() {
+  const btn = document.getElementById('update-prices-save-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  const today = todayStr();
+  const toggles = document.querySelectorAll('.upr-toggle:checked');
+  let saved = 0;
+  for (const toggle of toggles) {
+    const wid = toggle.dataset.wid;
+    const result = _priceUpdateResults[wid];
+    if (!result) continue;
+    const w = watches.find(x => x.id === wid);
+    if (!w) continue;
+    const history = Array.isArray(w.priceHistory) ? [...w.priceHistory] : [];
+    if (w.marketPrice && w.marketPriceDate) {
+      const already = history.some(h => h.date === w.marketPriceDate && h.price === Number(w.marketPrice));
+      if (!already) history.push({ src: w.marketPriceSrc || 'previous', date: w.marketPriceDate, price: Number(w.marketPrice) });
+    }
+    history.push({ src: 'Claude', date: today, price: result.mid });
+    const { error } = await db.from('watches').update({
+      market_price: result.mid,
+      market_price_date: today,
+      market_price_src: 'Claude',
+      price_history: history,
+    }).eq('id', wid);
+    if (!error) {
+      w.marketPrice = result.mid;
+      w.marketPriceDate = today;
+      w.marketPriceSrc = 'Claude';
+      w.priceHistory = history;
+      saved++;
+    }
+  }
+  toast(`Updated ${saved} watch price${saved !== 1 ? 's' : ''}.`);
+  btn.disabled = false;
+  btn.textContent = 'Save Selected';
+  closeUpdatePrices();
+  renderCollection(true);
+}
+
+// ══════════════════════════════════════════
 //  COLLECTION PAGE
 // ══════════════════════════════════════════
 function setTagFilter(tag) {
@@ -12704,6 +12844,8 @@ function renderTagFilterBar() {
 function renderCollection(force) {
   if (!force && _lastRenderedGen.collection === _dataGen) return;
   _lastRenderedGen.collection = _dataGen;
+  const priceBtn = document.getElementById('coll-update-prices-btn');
+  if (priceBtn) priceBtn.style.display = _isDevUser() ? '' : 'none';
   renderCollSortBar();
   renderTagFilterBar();
   const el = document.getElementById('watches-grid');
