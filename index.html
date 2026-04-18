@@ -4747,7 +4747,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.12.15';
+const APP_VERSION = '2.36.18.13.16';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7778,7 +7778,7 @@ async function loadFeed() {
         .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50), 8000);
       rawLogs = res.data; logsErr = res.error;
     }
-    if (logsErr) { console.warn('Feed logs error:', logsErr.message); feedItems = []; renderFeed(); return; }
+    if (logsErr) { console.warn('Feed logs error:', logsErr.message); feedError = true; renderFeed(); return; }
     if (!rawLogs || rawLogs.length === 0) { feedItems = []; renderFeed(); return; }
     // Filter out blocked users' posts
     rawLogs = rawLogs.filter(l => !blockedUsers.has(l.user_id));
@@ -10353,10 +10353,10 @@ async function loadAdminReports() {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const el = document.getElementById('admin-reports-list');
   el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">Loading…</div>';
-  const { data, error } = await db.from('content_reports')
+  const { data, error } = await withTimeout(db.from('content_reports')
     .select('*')
-    .order('created_at', { ascending: false });
-  if (error) { el.innerHTML = `<div style="color:var(--danger);">Error: ${escHtml(error.message)}</div>`; return; }
+    .order('created_at', { ascending: false }), 10000);
+  if (error) { el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;"><div style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;">Error: ${escHtml(error.message)}</div><button class="btn btn-ghost" onclick="loadAdminReports()" style="font-size:.78rem;">↻ Retry</button></div>`; return; }
   _adminReportsData = data || [];
 
   // Fetch profiles for reporters and reported users
@@ -10502,7 +10502,7 @@ async function loadAdminStats() {
   el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">Loading…</div>';
   try {
     // Parallel queries for all stats
-    const [usersRes, watchesRes, logsRes, postsRes, wishlistRes, clubsRes, followsRes, friendsRes, likesRes, commentsRes] = await Promise.all([
+    const [usersRes, watchesRes, logsRes, postsRes, wishlistRes, clubsRes, followsRes, friendsRes, likesRes, commentsRes] = await withTimeout(Promise.all([
       db.from('profiles').select('id', { count: 'exact', head: true }),
       db.from('watches').select('id', { count: 'exact', head: true }),
       db.from('logs').select('id', { count: 'exact', head: true }).not('watch_id', 'is', null),
@@ -10513,7 +10513,7 @@ async function loadAdminStats() {
       db.from('friend_requests').select('id', { count: 'exact', head: true }).eq('status', 'accepted'),
       db.from('likes').select('id', { count: 'exact', head: true }),
       db.from('comments').select('id', { count: 'exact', head: true }),
-    ]);
+    ]), 10000);
 
     const users     = usersRes.count    || 0;
     const totalWatches = watchesRes.count || 0;
@@ -10531,12 +10531,12 @@ async function loadAdminStats() {
 
     // Per-user breakdowns — fetch in parallel with pagination safety
     const ADMIN_ROW_LIMIT = 10000;
-    const [watchesR, logsR, profilesR, msrR] = await Promise.all([
+    const [watchesR, logsR, profilesR, msrR] = await withTimeout(Promise.all([
       db.from('watches').select('user_id').limit(ADMIN_ROW_LIMIT),
       db.from('logs').select('user_id, watch_id').limit(ADMIN_ROW_LIMIT),
       db.from('profiles').select('id, username, display_name, avatar_url, created_at').order('created_at', { ascending: false }).limit(500),
       db.rpc('admin_measurement_counts'),
-    ]);
+    ]), 10000);
     const allWatches = watchesR.data || [];
     const watchByUser = {};
     allWatches.forEach(r => { watchByUser[r.user_id] = (watchByUser[r.user_id] || 0) + 1; });
@@ -10632,7 +10632,10 @@ async function loadAdminStats() {
       ${userTableHtml(profileList, 'Users (' + profileList.length + ')')}
       ${userTableHtml(internalList, 'Internal Accounts (' + internalList.length + ')')}`;
   } catch(e) {
-    el.innerHTML = `<div style="color:var(--danger);font-size:.85rem;">Failed to load stats: ${escHtml(e.message)}</div>`;
+    el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;">
+      <div style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;">Failed to load stats: ${escHtml(e.message)}</div>
+      <button class="btn btn-ghost" onclick="loadAdminStats()" style="font-size:.78rem;">↻ Retry</button>
+    </div>`;
   }
 }
 
@@ -10756,7 +10759,10 @@ async function renderAdminTraffic() {
         (allProfilesR.data || []).filter(p => !INTERNAL_IDS.has(p.id))
       )}`;
   } catch(e) {
-    el.innerHTML = `<div style="color:var(--danger);font-size:.85rem;">Failed to load traffic: ${escHtml(e.message)}</div>`;
+    el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;">
+      <div style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;">Failed to load traffic: ${escHtml(e.message)}</div>
+      <button class="btn btn-ghost" onclick="renderAdminTraffic()" style="font-size:.78rem;">↻ Retry</button>
+    </div>`;
   }
 }
 
@@ -10848,10 +10854,10 @@ async function loadAdminFeedback() {
   const el = document.getElementById('admin-feedback-list');
   if (!el) return;
   el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">Loading…</div>';
-  const { data, error } = await db.from('feedback')
+  const { data, error } = await withTimeout(db.from('feedback')
     .select('*')
-    .order('created_at', { ascending: false });
-  if (error) { el.innerHTML = `<div style="color:var(--danger);">Error: ${escHtml(error.message)}</div>`; return; }
+    .order('created_at', { ascending: false }), 10000);
+  if (error) { el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;"><div style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;">Error: ${escHtml(error.message)}</div><button class="btn btn-ghost" onclick="loadAdminFeedback()" style="font-size:.78rem;">↻ Retry</button></div>`; return; }
   _adminFeedbackData = (data || []).map(f => ({ ...f, status: (!f.status || f.status === 'new') ? 'pending' : f.status }));
   // Sort: pending first (oldest first), then rest by newest first
   const order = { pending: 0, resolved: 1, reviewed: 2, ignored: 3 };
