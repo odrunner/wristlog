@@ -4747,7 +4747,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.13.16';
+const APP_VERSION = '2.36.18.14.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18722,6 +18722,7 @@ function stopMsrListen(reason) {
   if (_tgScriptNode) { _tgScriptNode.disconnect(); _tgScriptNode = null; }
   if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
   if (_tgAudioCtx) { _tgAudioCtx.close().catch(() => {}); _tgAudioCtx = null; }
+  const wasConverged = _msrPhase === 'converged';
   // Reset button to record state
   const btnMic = document.getElementById('msr-btn-mic');
   const btnStop = document.getElementById('msr-btn-stop');
@@ -18785,7 +18786,7 @@ function stopMsrListen(reason) {
     const idleOv = document.getElementById('msr-idle-overlay');
     if (idleOv) idleOv.style.display = 'none';
     // Count only successful measurements (engine converged on a normal-looking rate)
-    if (_msrPhase === 'converged' && Math.abs(r) <= 60 && _msrScatterData.length >= 15) {
+    if (wasConverged && Math.abs(r) <= 60 && _msrScatterData.length >= 15) {
       try {
         const n = parseInt(localStorage.getItem('wristlog_msr_count') || '0') + 1;
         localStorage.setItem('wristlog_msr_count', String(n));
