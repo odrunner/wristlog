@@ -4747,7 +4747,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.14.06';
+const APP_VERSION = '2.36.18.14.09';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8981,6 +8981,7 @@ async function saveNewPost() {
   closeNewPost();
   if (window.posthog) posthog.capture('post_created', { has_photo: !!entry.photoUrl, has_watch: !!trackWatchId });
   toast(postedWatch ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : 'Posted!');
+  maybeShowReviewPrompt('post');
   feedLoadedAt = 0; // force feed to re-fetch after posting
   if (document.getElementById('page-feed').classList.contains('active')) loadFeed();
   } finally { if (_npBtn) { _npBtn.disabled = false; _npBtn.textContent = 'Post'; } }
@@ -10225,13 +10226,13 @@ function shouldShowReviewPrompt(source) {
   // Check if already rated via native prompt (permanent suppress)
   if (localStorage.getItem('wristlog_review_rated')) return false;
   const th = _reviewGetThresholds();
-  if (source === 'wear_log') {
+  if (source === 'wear_log' || source === 'post') {
     const wearCount = logs.length;
-    return wearCount === th.wears; // only on exact threshold hit (not every log after)
+    return wearCount >= th.wears;
   }
   if (source === 'measurement') {
     const msrCount = parseInt(localStorage.getItem('wristlog_msr_count') || '0');
-    return msrCount === th.measurements;
+    return msrCount >= th.measurements;
   }
   return false;
 }
