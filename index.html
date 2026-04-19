@@ -4764,7 +4764,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.17.02';
+const APP_VERSION = '2.36.18.17.16';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12701,6 +12701,7 @@ let _priceUpdateResults = {};
 
 function openUpdatePrices() {
   _priceUpdateResults = {};
+  const _uprT0 = Date.now();
   const modal = document.getElementById('update-prices-modal');
   modal.classList.remove('hidden');
   const body = document.getElementById('update-prices-body');
@@ -12710,6 +12711,8 @@ function openUpdatePrices() {
 
   const eligible = watches.filter(w => w.brand && w.name);
   if (eligible.length === 0) { status.textContent = 'No watches to update.'; return; }
+
+  db.from('valuation_events').insert({ user_id: currentUser.id, action: 'open', watches_total: eligible.length }).then(() => {});
 
   body.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:.78rem;">
     <thead><tr style="text-align:left;border-bottom:1px solid var(--border);">
@@ -12728,6 +12731,12 @@ function openUpdatePrices() {
     </tbody></table>`;
 
   let done = 0;
+  let _uprCompleteLogged = false;
+  const _uprLogComplete = () => {
+    if (_uprCompleteLogged) return;
+    _uprCompleteLogged = true;
+    db.from('valuation_events').insert({ user_id: currentUser.id, action: 'complete', watches_total: eligible.length, watches_priced: Object.keys(_priceUpdateResults).length, duration_ms: Date.now() - _uprT0 }).then(() => {});
+  };
   status.textContent = `Looking up prices... 0 / ${eligible.length}`;
 
   eligible.forEach(w => {
@@ -12758,6 +12767,7 @@ function openUpdatePrices() {
       if (done === eligible.length) {
         status.textContent = `Done — ${Object.keys(_priceUpdateResults).length} prices found.`;
         actions.style.display = 'flex';
+        _uprLogComplete();
       }
     })
     .catch(() => {
@@ -12768,6 +12778,7 @@ function openUpdatePrices() {
       if (done === eligible.length) {
         status.textContent = `Done — ${Object.keys(_priceUpdateResults).length} prices found.`;
         actions.style.display = 'flex';
+        _uprLogComplete();
       }
     });
   });
@@ -12810,6 +12821,7 @@ async function saveUpdatedPrices() {
       saved++;
     }
   }
+  db.from('valuation_events').insert({ user_id: currentUser.id, action: 'save', watches_total: watches.length, watches_priced: Object.keys(_priceUpdateResults).length, watches_saved: saved }).then(() => {});
   toast(`Updated ${saved} watch price${saved !== 1 ? 's' : ''}.`);
   btn.disabled = false;
   btn.textContent = 'Save Selected';
@@ -12845,7 +12857,7 @@ function renderCollection(force) {
   if (!force && _lastRenderedGen.collection === _dataGen) return;
   _lastRenderedGen.collection = _dataGen;
   const priceBtn = document.getElementById('coll-update-prices-btn');
-  if (priceBtn) priceBtn.style.display = _isDevUser() ? '' : 'none';
+  if (priceBtn) priceBtn.style.display = currentUser ? '' : 'none';
   renderCollSortBar();
   renderTagFilterBar();
   const el = document.getElementById('watches-grid');
