@@ -1955,7 +1955,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button class="btn btn-ghost" onclick="closeUpdatePrices()" style="padding:.2rem .5rem;font-size:.8rem;">Close</button>
     </div>
     <div id="update-prices-status" style="font-size:.78rem;color:var(--muted);margin-bottom:.75rem;">Loading...</div>
-    <div id="update-prices-body" style="max-height:65vh;overflow-y:auto;"></div>
+    <div id="update-prices-body" style="max-height:65vh;overflow-y:auto;overflow-x:hidden;"></div>
     <div id="update-prices-actions" style="margin-top:1rem;display:none;gap:.5rem;justify-content:flex-end;">
       <button class="btn btn-ghost" onclick="closeUpdatePrices()">Cancel</button>
       <button class="btn btn-primary" id="update-prices-save-btn" onclick="saveUpdatedPrices()">Save Selected</button>
@@ -4767,7 +4767,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.19.08.51';
+const APP_VERSION = '2.36.19.09.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12737,7 +12737,8 @@ function openUpdatePrices() {
 
   db.from('valuation_events').insert({ user_id: currentUser.id, action: 'open', watches_total: eligible.length }).then(() => {});
 
-  body.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:.78rem;">
+  body.innerHTML = `<table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:.78rem;">
+    <colgroup><col style="width:42%"><col style="width:22%"><col style="width:26%"><col style="width:10%"></colgroup>
     <thead><tr style="text-align:left;border-bottom:1px solid var(--border);">
       <th style="padding:.4rem .3rem;">Watch</th>
       <th style="padding:.4rem .3rem;text-align:right;">Current</th>
@@ -12746,8 +12747,8 @@ function openUpdatePrices() {
     </tr></thead>
     <tbody id="update-prices-rows">${eligible.map(w => `
       <tr id="upr-${w.id}" style="border-bottom:1px solid var(--border);">
-        <td style="padding:.45rem .3rem;"><div style="font-weight:600;font-size:.78rem;">${escHtml(w.brand)}</div><div style="font-size:.72rem;color:var(--muted);">${escHtml(w.name)}${w.ref ? ' · ' + escHtml(w.ref) : ''}</div></td>
-        <td style="padding:.45rem .3rem;text-align:right;white-space:nowrap;">${w.marketPrice ? fmtMoney(w.marketPrice) : '—'}<div style="font-size:.65rem;color:var(--muted);">${w.marketPriceSrc || ''}</div></td>
+        <td style="padding:.45rem .3rem;overflow:hidden;text-overflow:ellipsis;"><div style="font-weight:600;font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.brand)}</div><div style="font-size:.72rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.name)}${w.ref ? ' · ' + escHtml(w.ref) : ''}</div></td>
+        <td style="padding:.45rem .3rem;text-align:right;white-space:nowrap;">${w.marketPrice ? fmtMoney(w.marketPrice) : '—'}</td>
         <td id="upr-val-${w.id}" style="padding:.45rem .3rem;text-align:right;color:var(--muted);">...</td>
         <td id="upr-chk-${w.id}" style="padding:.45rem .3rem;text-align:center;"></td>
       </tr>`).join('')}
@@ -12760,7 +12761,7 @@ function openUpdatePrices() {
     _uprCompleteLogged = true;
     db.from('valuation_events').insert({ user_id: currentUser.id, action: 'complete', watches_total: eligible.length, watches_priced: Object.keys(_priceUpdateResults).length, duration_ms: Date.now() - _uprT0 }).then(() => {});
   };
-  status.textContent = `Looking up prices... 0 / ${eligible.length}`;
+  status.innerHTML = `<span style="display:inline-flex;align-items:center;gap:.4rem;"><span class="spinner" style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Searching ${eligible.length} watches — this may take a moment...</span>`;
 
   eligible.forEach(w => {
     const payload = { brand: w.brand, model: w.name, condition: 'good' };
@@ -12773,7 +12774,9 @@ function openUpdatePrices() {
     .then(r => r.json())
     .then(data => {
       done++;
-      status.textContent = `Looking up prices... ${done} / ${eligible.length}`;
+      status.innerHTML = done < eligible.length
+        ? `<span style="display:inline-flex;align-items:center;gap:.4rem;"><span class="spinner" style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Found ${done} of ${eligible.length}...</span>`
+        : `Done — checking results...`;
       const ev = data.estimated_value_usd || {};
       const mid = ev.mid;
       const valCell = document.getElementById('upr-val-' + w.id);
@@ -12795,7 +12798,9 @@ function openUpdatePrices() {
     })
     .catch(() => {
       done++;
-      status.textContent = `Looking up prices... ${done} / ${eligible.length}`;
+      status.innerHTML = done < eligible.length
+        ? `<span style="display:inline-flex;align-items:center;gap:.4rem;"><span class="spinner" style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Found ${done} of ${eligible.length}...</span>`
+        : `Done — checking results...`;
       const valCell = document.getElementById('upr-val-' + w.id);
       if (valCell) valCell.innerHTML = '<span style="color:#f87171;">Error</span>';
       if (done === eligible.length) {
