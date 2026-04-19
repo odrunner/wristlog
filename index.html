@@ -4446,45 +4446,54 @@ async function deleteAccount() {
     const sess = (await db.auth.getSession()).data.session;
     if (sess) accessToken = sess.access_token;
   } catch(e) {}
-  let failed = false;
   const del = async (table, filter) => {
-    if (failed) return; // stop on first error — don't leave partial state
     let q = db.from(table).delete();
     if (filter.eq)  q = q.eq(filter.eq[0], filter.eq[1]);
     if (filter.or)  q = q.or(filter.or);
     const { error } = await q;
-    if (error) {
-      failed = true;
-      console.error(`[WristLog] deleteAccount failed at ${table}:`, error.message);
-      toast(`Delete failed at ${escHtml(table)}. Please try again.`, 'error');
-      if (btn) { btn.disabled = false; btn.textContent = 'Permanently Delete Everything'; }
-    }
+    if (error) throw new Error(table);
   };
-  // Order: dependents first (likes, comments, notifications, follows), then core data, then profile last
-  await del('likes',          { eq: ['user_id', uid] });
-  await del('comments',       { eq: ['user_id', uid] });
-  await del('notifications',  { or: `user_id.eq.${uid},actor_id.eq.${uid}` });
-  await del('follows',        { or: `follower_id.eq.${uid},following_id.eq.${uid}` });
-  await del('follow_requests', { or: `requester_id.eq.${uid},target_id.eq.${uid}` });
-  await del('friend_requests', { or: `initiator_id.eq.${uid},target_id.eq.${uid}` });
-  await del('club_members',   { eq: ['user_id', uid] });
-  await del('user_blocks',    { or: `blocker_id.eq.${uid},blocked_id.eq.${uid}` });
-  await del('comment_likes',  { eq: ['user_id', uid] });
-  await del('eula_acceptances', { eq: ['user_id', uid] });
-  await del('club_invites',   { or: `invited_by.eq.${uid},invitee_id.eq.${uid}` });
-  await del('club_join_requests', { eq: ['user_id', uid] });
-  await del('content_reports', { eq: ['reporter_id', uid] });
-  await del('device_tokens',  { eq: ['user_id', uid] });
-  await del('official_drafts', { eq: ['created_by', uid] });
-  await del('timegrapher_results', { eq: ['user_id', uid] });
-  await del('app_feedback',   { eq: ['user_id', uid] });
-  await del('rate_limits',    { eq: ['user_id', uid] });
-  await del('logs',           { eq: ['user_id', uid] });
-  await del('wishlist',       { eq: ['user_id', uid] });
-  await del('watches',        { eq: ['user_id', uid] });
-  await del('feedback',       { eq: ['user_id', uid] });
-  await del('profiles',       { eq: ['id', uid] });
-  if (failed) return; // user can retry — already-deleted tables will no-op on re-run
+  const batch = (...fns) => Promise.all(fns.map(fn => fn()));
+  try {
+    // Phase 1: independent leaf tables (no FK dependencies between them)
+    if (btn) btn.textContent = 'Deleting data…';
+    await batch(
+      () => del('likes',            { eq: ['user_id', uid] }),
+      () => del('comments',         { eq: ['user_id', uid] }),
+      () => del('comment_likes',    { eq: ['user_id', uid] }),
+      () => del('notifications',    { or: `user_id.eq.${uid},actor_id.eq.${uid}` }),
+      () => del('follows',          { or: `follower_id.eq.${uid},following_id.eq.${uid}` }),
+      () => del('follow_requests',  { or: `requester_id.eq.${uid},target_id.eq.${uid}` }),
+      () => del('friend_requests',  { or: `initiator_id.eq.${uid},target_id.eq.${uid}` }),
+      () => del('club_members',     { eq: ['user_id', uid] }),
+      () => del('club_invites',     { or: `invited_by.eq.${uid},invitee_id.eq.${uid}` }),
+      () => del('club_join_requests', { eq: ['user_id', uid] }),
+      () => del('user_blocks',      { or: `blocker_id.eq.${uid},blocked_id.eq.${uid}` }),
+      () => del('content_reports',   { eq: ['reporter_id', uid] }),
+      () => del('device_tokens',    { eq: ['user_id', uid] }),
+      () => del('eula_acceptances', { eq: ['user_id', uid] }),
+      () => del('official_drafts',  { eq: ['created_by', uid] }),
+      () => del('timegrapher_results', { eq: ['user_id', uid] }),
+      () => del('app_feedback',     { eq: ['user_id', uid] }),
+      () => del('rate_limits',      { eq: ['user_id', uid] }),
+      () => del('feedback',         { eq: ['user_id', uid] })
+    );
+    // Phase 2: logs depend on watches being present for FK, delete logs first
+    if (btn) btn.textContent = 'Removing collection…';
+    await del('logs',     { eq: ['user_id', uid] });
+    await batch(
+      () => del('wishlist', { eq: ['user_id', uid] }),
+      () => del('watches',  { eq: ['user_id', uid] })
+    );
+    // Phase 3: profile last
+    if (btn) btn.textContent = 'Finalizing…';
+    await del('profiles', { eq: ['id', uid] });
+  } catch (e) {
+    console.error(`[WristLog] deleteAccount failed at ${e.message}:`, e);
+    toast(`Delete failed at ${escHtml(e.message)}. Please try again — already-deleted data will be skipped.`, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Permanently Delete Everything'; }
+    return;
+  }
   // Delete from auth.users via edge function (requires service role)
   if (accessToken) {
     try {
@@ -4758,7 +4767,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.19.01';
+const APP_VERSION = '2.36.18.19.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5139,7 +5148,14 @@ async function loadAndRenderProfile(userId) {
   }
 
   // ── Await all at once ──────────────────────────────────────────────────
-  const _pr = await withTimeout(Promise.all(_pp), 12000);
+  let _pr;
+  try {
+    _pr = await withTimeout(Promise.all(_pp), 12000);
+  } catch (e) {
+    console.error('[WristLog] Profile load failed:', e);
+    el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Could not load profile. <button class="btn btn-sm" onclick="viewUserProfile(\'' + escAttr(userId) + '\')">Retry</button></div>';
+    return;
+  }
 
   // Destructure results
   const isMutual = (_pi.mutual !== undefined) ? !!_pr[_pi.mutual].data : false;
@@ -8644,6 +8660,7 @@ async function saveEditPost() {
   if (!editPostLogId) return;
   const saveBtn = document.querySelector('#edit-post-modal .btn-primary');
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
+  try {
   const fi  = feedItems.find(i => i.id === editPostLogId);
   const log = logs.find(l => l.id === editPostLogId);
   const newNotes = (document.getElementById('ep-body').value || '').trim();
@@ -8657,7 +8674,6 @@ async function saveEditPost() {
     try {
       finalPhoto = await uploadImage(editPostNewFile, `logs/${currentUser.id}/${editPostLogId}.jpg`);
     } catch(e) {
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
       toast('Photo upload failed — ' + e.message, 'error'); return;
     }
   }
@@ -8690,7 +8706,6 @@ async function saveEditPost() {
       refreshFeedCard(editPostLogId);
       // Cleanup orphaned storage file if we uploaded a new one
       if (finalPhoto && finalPhoto !== oldPhoto) { const _p = storagePathFrom(finalPhoto); if (_p) deleteStorageFile(_p); }
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
       toast('Save failed — ' + error.message, 'error'); return;
     }
     // Send mention notifications for NEW @usernames added in the edit
@@ -8716,6 +8731,7 @@ async function saveEditPost() {
   refreshFeedCard(editPostLogId);
   closeEditPost();
   toast('Post updated!');
+  } finally { if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; } }
 }
 
 function deletePostFromFeed() {

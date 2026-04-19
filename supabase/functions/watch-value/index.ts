@@ -30,7 +30,25 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { brand, model, reference, condition, year, watch_id, user_id } = await req.json();
+    // Verify authenticated user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Missing authorization" }), {
+        status: 401,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+
+    const { brand, model, reference, condition, year, watch_id } = await req.json();
 
     if (!brand) {
       return new Response(JSON.stringify({ error: "brand is required" }), { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
@@ -44,7 +62,7 @@ Deno.serve(async (req: Request) => {
       condition ? `in ${condition} condition` : "",
     ].filter(Boolean).join(" ");
 
-    console.log(`[watch-value] Looking up: ${watchDesc}`);
+    console.log(`[watch-value] user=${user.id} Looking up: ${watchDesc}`);
 
     const prompt = `What is the current market value (in USD) of this watch: ${watchDesc}?
 
@@ -108,51 +126,50 @@ Rules:
     const mid = parsed.estimated_value_usd?.mid;
     console.log(`[watch-value] ${watchDesc} → $${parsed.estimated_value_usd?.low}-${parsed.estimated_value_usd?.high} (${parsed.confidence})`);
 
-    // Save to DB if watch_id provided
+    // Save to DB if watch_id provided — verify caller owns the watch
     if (watch_id && mid) {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-      // Fetch current price_history to append
       const { data: watch } = await supabase
         .from("watches")
         .select("market_price, market_price_date, price_history")
         .eq("id", watch_id)
+        .eq("user_id", user.id)
         .single();
 
-      const history: { src: string; date: string; price: number }[] =
-        Array.isArray(watch?.price_history) ? watch.price_history : [];
+      if (watch) {
+        const history: { src: string; date: string; price: number }[] =
+          Array.isArray(watch.price_history) ? watch.price_history : [];
 
-      // Push previous market_price into history before overwriting
-      if (watch?.market_price && watch?.market_price_date) {
-        const already = history.some(
-          (h) => h.date === watch.market_price_date && h.price === Number(watch.market_price)
-        );
-        if (!already) {
-          history.push({
-            src: "previous",
-            date: watch.market_price_date,
-            price: Number(watch.market_price),
-          });
+        if (watch.market_price && watch.market_price_date) {
+          const already = history.some(
+            (h) => h.date === watch.market_price_date && h.price === Number(watch.market_price)
+          );
+          if (!already) {
+            history.push({
+              src: "previous",
+              date: watch.market_price_date,
+              price: Number(watch.market_price),
+            });
+          }
         }
-      }
 
-      // Append new Claude valuation
-      history.push({ src: "WRotate", date: today, price: mid });
+        history.push({ src: "WRotate", date: today, price: mid });
 
-      const { error } = await supabase
-        .from("watches")
-        .update({
-          market_price: mid,
-          market_price_date: today,
-          market_price_src: "WRotate",
-          price_history: history,
-        })
-        .eq("id", watch_id);
+        const { error } = await supabase
+          .from("watches")
+          .update({
+            market_price: mid,
+            market_price_date: today,
+            market_price_src: "WRotate",
+            price_history: history,
+          })
+          .eq("id", watch_id)
+          .eq("user_id", user.id);
 
-      if (error) {
-        console.error("[watch-value] DB update failed:", error.message);
-      } else {
-        console.log(`[watch-value] Saved $${mid} for watch ${watch_id}`);
+        if (error) {
+          console.error("[watch-value] DB update failed:", error.message);
+        } else {
+          console.log(`[watch-value] Saved $${mid} for watch ${watch_id}`);
+        }
       }
     }
 
