@@ -48,7 +48,42 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Rate limit: 20 lookups per user per day
+    const { brand, model, reference, condition, year, watch_id } = await req.json();
+
+    if (!brand) {
+      return new Response(JSON.stringify({ error: "brand is required" }), { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+    }
+
+    // If watch_id provided, check for a recent cached price (< 7 days old)
+    if (watch_id) {
+      const { data: cached } = await supabase
+        .from("watches")
+        .select("market_price, market_price_date, price_history")
+        .eq("id", watch_id)
+        .eq("user_id", user.id)
+        .single();
+
+      if (cached?.market_price && cached?.market_price_date) {
+        const ageMs = Date.now() - new Date(cached.market_price_date).getTime();
+        const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+        if (ageMs < SEVEN_DAYS) {
+          console.log(`[watch-value] Returning cached price $${cached.market_price} (${cached.market_price_date}) for watch ${watch_id}`);
+          return new Response(JSON.stringify({
+            estimated_value_usd: { low: null, mid: Number(cached.market_price), high: null },
+            confidence: "cached",
+            notes: `Cached price from ${cached.market_price_date}. Prices refresh weekly.`,
+            query: { brand, model, reference, condition, year },
+            looked_up_at: cached.market_price_date,
+            cached: true,
+          }), {
+            status: 200,
+            headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+          });
+        }
+      }
+    }
+
+    // Rate limit: 20 lookups per user per day (only counted for actual API calls)
     const DAILY_LIMIT = 20;
     const todayStart = new Date();
     todayStart.setUTCHours(0, 0, 0, 0);
@@ -75,12 +110,6 @@ Deno.serve(async (req: Request) => {
       await supabase.from("rate_limits")
         .upsert({ user_id: user.id, function_name: rlKey, window_start: todayStart.toISOString(), request_count: 1 },
           { onConflict: "user_id,function_name" });
-    }
-
-    const { brand, model, reference, condition, year, watch_id } = await req.json();
-
-    if (!brand) {
-      return new Response(JSON.stringify({ error: "brand is required" }), { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
     }
 
     const watchDesc = [
