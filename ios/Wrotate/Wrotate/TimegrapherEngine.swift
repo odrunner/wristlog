@@ -212,7 +212,7 @@ class TimegrapherEngine {
     private var energyRingCount: Int = 0
     private var energySubsampleCounter: Int = 0
     private var ringSubsampleTarget: Int = 4  // 48kHz / 4 = 12kHz
-    private var ringTargetRate: Double = 48000 // target ring sample rate (web-tunable)
+    private var ringTargetRate: Double = 12000 // target ring sample rate (web-tunable)
 
     // Per-filter subsample peaks
     private var subsamplePeaks: [Float] = [0, 0, 0]
