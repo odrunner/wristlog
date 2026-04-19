@@ -1,7 +1,7 @@
 // WristLog — Service Worker
 // Enables "Add to Home Screen" (PWA) and offline fallback
 
-const CACHE = 'wristlog-v445';
+const CACHE = 'wristlog-v448';
 const PRECACHE = ['/', '/index.html', '/manifest.json', '/icon.svg', '/profile/', '/p/'];
 
 self.addEventListener('install', e => {
@@ -42,7 +42,7 @@ self.addEventListener('fetch', e => {
           }
           return res;
         }),
-        new Promise(resolve => setTimeout(() => resolve(null), 1500))
+        new Promise(resolve => setTimeout(() => resolve(null), 5000))
       ]).then(res => res || caches.match(e.request))
         .catch(() => caches.match(e.request))
     );

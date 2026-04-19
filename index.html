@@ -275,6 +275,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .server-dot.on { display: block; }
 
+    .offline-banner { background: var(--danger); color: #fff; text-align: center; font-size: .78rem; padding: .35rem .5rem; font-weight: 500; }
+    .offline-banner.hidden { display: none; }
+    .msr-badge { display: none; font-size: .65rem; color: var(--gold); font-weight: 600; margin-left: 2px; white-space: nowrap; }
+    .msr-badge.on { display: inline-flex; align-items: center; gap: .25rem; }
+
     /* ── USERNAME FIELD ── */
     .username-field { display: flex; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: border-color .15s; }
     .username-field:focus-within { border-color: var(--gold); }
@@ -2360,6 +2365,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="header-data">
       <div id="server-dot" class="server-dot" title="Saving to local file"></div>
 
+      <span id="msr-badge" class="msr-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg><span id="msr-badge-time"></span></span>
       <span id="app-ver" class="app-ver"></span>
       <button id="theme-btn" onclick="cycleTheme()" title="Toggle theme"></button>
       <button class="help-btn" id="help-btn" onclick="showHelpPage()" style="display:none;" title="Help &amp; Guide">?</button>
@@ -2379,6 +2385,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
   </div>
 </header>
+<div id="offline-banner" class="offline-banner hidden" role="status" aria-live="polite">Offline — changes will sync when back online</div>
 
 <main>
 
@@ -4673,10 +4680,24 @@ async function loadUserData() {
 // ══════════════════════════════════════════
 //  DIRTY TRACKING (only sync what changed)
 // ══════════════════════════════════════════
+const STORE_DIRTY = 'wr_dirtyIds';
 const _dirty = { watches: new Set(), logs: new Set(), wishlist: new Set(), elo: new Set() };
+// Re-seed dirty sets from localStorage on cold start
+try {
+  const saved = JSON.parse(localStorage.getItem(STORE_DIRTY) || '{}');
+  for (const k of ['watches','logs','wishlist','elo']) {
+    if (Array.isArray(saved[k])) saved[k].forEach(id => _dirty[k].add(id));
+  }
+} catch (_) {}
+function _persistDirty() {
+  try { localStorage.setItem(STORE_DIRTY, JSON.stringify({
+    watches: [..._dirty.watches], logs: [..._dirty.logs],
+    wishlist: [..._dirty.wishlist], elo: [..._dirty.elo],
+  })); } catch (_) {}
+}
 function markDirty(type, id) {
   const s = _dirty[type];
-  if (s) Array.isArray(id) ? id.forEach(i => s.add(i)) : s.add(id);
+  if (s) { Array.isArray(id) ? id.forEach(i => s.add(i)) : s.add(id); _persistDirty(); }
 }
 
 // ── Pending deletes queue (persisted to localStorage for offline resilience) ──
@@ -4727,12 +4748,12 @@ async function cloudSync() {
     if (_dirty.watches.size) {
       const ids = [..._dirty.watches];
       if (await upsert('watches', watches.filter(w => ids.includes(w.id)).map(watchToRow)))
-        ids.forEach(id => _dirty.watches.delete(id));
+        { ids.forEach(id => _dirty.watches.delete(id)); _persistDirty(); }
     }
     if (_dirty.logs.size) {
       const ids = [..._dirty.logs];
       if (await upsert('logs', logs.filter(l => ids.includes(l.id)).map(logToRow)))
-        ids.forEach(id => _dirty.logs.delete(id));
+        { ids.forEach(id => _dirty.logs.delete(id)); _persistDirty(); }
     }
     if (_dirty.wishlist.size) {
       const ids = [..._dirty.wishlist];
@@ -4740,7 +4761,7 @@ async function cloudSync() {
       // Filter out items pending deletion to avoid re-inserting them
       const pendingDelIds = new Set(_pendingDeletes.filter(d => d.table === 'wishlist').map(d => d.id));
       if (await upsert('wishlist', wishlist.filter(w => !pendingDelIds.has(w.id)).map((w, i) => wishToRow(w, i))))
-        ids.forEach(id => _dirty.wishlist.delete(id));
+        { ids.forEach(id => _dirty.wishlist.delete(id)); _persistDirty(); }
     }
     if (_dirty.elo.size) {
       const ids = [..._dirty.elo];
@@ -4750,9 +4771,9 @@ async function cloudSync() {
       if (eloUpdates.length) {
         const { error } = await db.from('watches').upsert(eloUpdates, { onConflict: 'id', ignoreDuplicates: false });
         if (error) console.error('[WristLog] cloudSync elo error:', error.message, error);
-        else ids.forEach(id => _dirty.elo.delete(id));
+        else { ids.forEach(id => _dirty.elo.delete(id)); _persistDirty(); }
       } else {
-        ids.forEach(id => _dirty.elo.delete(id));
+        { ids.forEach(id => _dirty.elo.delete(id)); _persistDirty(); }
       }
     }
     // Retry with exponential backoff if anything still pending
@@ -4768,6 +4789,7 @@ async function cloudSync() {
       }
     } else {
       _syncRetryCount = 0;
+      _persistDirty();
     }
   } catch(e) { console.error('[WristLog] cloudSync exception:', e.message); }
   finally { _syncInFlight = false; }
@@ -4776,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.19.13.20';
+const APP_VERSION = '2.36.19.16.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7133,9 +7155,14 @@ function updateBellBadge() {
     try { window.webkit.messageHandlers.auth.postMessage({ event: 'BADGE_UPDATE', count: unreadNotifCount }); } catch(e) {}
   }
 }
+const _followInFlight = new Set();
 async function followUser(userId, btn) {
   if (demoGuard()) return;
   if (!currentUser || userId === currentUser.id) return;
+  if (_followInFlight.has(userId)) return;
+  _followInFlight.add(userId);
+  if (btn) btn.disabled = true;
+  try {
   const { error } = await db.from('follows').insert({ follower_id: currentUser.id, following_id: userId });
   if (!error) {
     following.add(userId);
@@ -7154,6 +7181,7 @@ async function followUser(userId, btn) {
     if (btn) { btn.className = 'follow-btn following'; btn.textContent = 'Following'; btn.onclick = function() { confirmUnfollow(userId, this); }; }
     renderDiscoverUsers();
   } else { toast('Could not follow — please try again', 'error'); }
+  } finally { _followInFlight.delete(userId); if (btn) btn.disabled = false; }
 }
 async function sendFollowRequest(userId, btn) {
   if (demoGuard()) return;
@@ -7234,6 +7262,7 @@ async function followBackFromNotif(userId, notifId) {
   toast('Following!');
 }
 function confirmUnfollow(userId, btn) {
+  if (_followInFlight.has(userId)) return;
   if (btn.dataset.confirming) {
     delete btn.dataset.confirming;
     // Optimistically show Follow immediately — no confusing "Following" flash.
@@ -17792,6 +17821,16 @@ function initApp() {
   // Safety: if non-feed loaders hang >3s, fire EULA/notifications anyway
   setTimeout(_fireSocial, 3000);
   // Collection renders on-demand when user taps the tab (nav → renderCollection)
+
+  // ── Offline indicator ──────────────────────────────────────────────────
+  const _offBanner = document.getElementById('offline-banner');
+  function _updateOnlineStatus() {
+    if (_offBanner) _offBanner.classList.toggle('hidden', navigator.onLine);
+    if (navigator.onLine) cloudSync();
+  }
+  window.addEventListener('online', _updateOnlineStatus);
+  window.addEventListener('offline', _updateOnlineStatus);
+  _updateOnlineStatus();
 }
 
 // Wipe all per-user data from memory and localStorage (called on sign-out and before new sign-in)
@@ -17800,7 +17839,7 @@ function clearUserState() {
   const demoBanner = document.getElementById('demo-banner');
   if (demoBanner) demoBanner.classList.add('hidden');
   watches = []; logs = []; wishlist = []; eloRatings = {};
-  _dirty.watches.clear(); _dirty.logs.clear(); _dirty.wishlist.clear(); _dirty.elo.clear();
+  _dirty.watches.clear(); _dirty.logs.clear(); _dirty.wishlist.clear(); _dirty.elo.clear(); _persistDirty();
   _pendingDeletes = []; savePendingDeletes();
   try { localStorage.removeItem(STORE_W); localStorage.removeItem(STORE_L); localStorage.removeItem(STORE_WL); localStorage.removeItem(STORE_ELO); localStorage.removeItem(STORE_THEME); } catch(e) {}
   applyTheme('light'); // reset to light default on sign-out
@@ -18251,7 +18290,8 @@ window._tgNativeCallback = function(data) {
           const canConverge = _msrScatterData.length >= minDots;
           if (elapsed >= minElapsed && _msrBucketRateHistory.length >= 8 && canConverge) {
             const vals = _msrBucketRateHistory.map(x => x.v);
-            const convSpread = 86400 / activeBph; // one quantization step
+            const ppsConv = activeBph / 7200;
+            const convSpread = (86400 / activeBph) * ppsConv; // one quantization step (BPH-scaled)
             // Trimmed range: drop single highest and lowest to resist one outlier sample
             const sorted = [...vals].sort((a, b) => a - b);
             const trimmed = sorted.length >= 4 ? sorted.slice(1, -1) : sorted;
@@ -18611,16 +18651,19 @@ let _msrLastCumDev = 0; // track last cumulative deviation to compute individual
 function addMsrTickDots(newTicks) {
   if (!newTicks || !newTicks.length) return;
   const activeBph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;
-  const outlierLimit = Math.max(30, 3 * (86400 / activeBph));
+  const pairsPerSec = activeBph / 7200;
+  const sdFactor = 86.4 * pairsPerSec;
+  const outlierLimit = Math.max(30, 3 * (86400 / activeBph) * pairsPerSec);
   for (const tk of newTicks) {
     const indivDev = tk.d - _msrLastCumDev; // individual pair deviation
     _msrLastCumDev = tk.d;
     // Filter outliers: BPH-aware gate (~3 quantization steps)
-    const indivSDay = indivDev * 86.4;
+    const indivSDay = indivDev * sdFactor;
     if (Math.abs(indivSDay) > outlierLimit) continue;
     _msrScatterData.push({ t: tk.t, d: indivDev });
     _msrLastDotTime = Date.now();
   }
+  if (_msrScatterData.length > 2000) _msrScatterData = _msrScatterData.slice(-2000);
   // Throttle redraws to animation frames for smooth updates
   if (!_msrScatterRafPending) {
     _msrScatterRafPending = true;
@@ -18693,7 +18736,8 @@ function renderMsrScatterPlot() {
   const ph = h - pad.t - pad.b;
 
   // Convert pair deviations from ms to s/day for display
-  const SD = 86.4; // conversion factor: ms pair deviation → s/day
+  const activeBph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;
+  const SD = 86.4 * (activeBph / 7200); // ms pair deviation → s/day (BPH-dependent)
   const data = _msrScatterData;
   const tMin = 0; // anchor x-axis to session start so chart doesn't shift on BPH reset
   // X range: snap to next 10s boundary ahead of data so axis doesn't constantly shift
@@ -18962,6 +19006,26 @@ function maybeShowMsrHelp() {
   }
 }
 
+let _msrBadgeTimer = null;
+function _startMsrBadge() {
+  const badge = document.getElementById('msr-badge');
+  const timeEl = document.getElementById('msr-badge-time');
+  if (!badge || !timeEl) return;
+  badge.classList.add('on');
+  clearInterval(_msrBadgeTimer);
+  _msrBadgeTimer = setInterval(() => {
+    if (!_msrListenStart) return;
+    const sec = Math.floor((Date.now() - _msrListenStart) / 1000);
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    timeEl.textContent = m + ':' + String(s).padStart(2, '0');
+  }, 1000);
+}
+function _stopMsrBadge() {
+  const badge = document.getElementById('msr-badge');
+  if (badge) badge.classList.remove('on');
+  clearInterval(_msrBadgeTimer);
+}
 function toggleMsrListen() {
   if (demoGuard()) return;
   console.log('[TG JS] toggleMsrListen called, _msrListening:', _msrListening, 'hasNative:', _tgHasNative());
@@ -18980,6 +19044,7 @@ function toggleMsrListen() {
     _msrListening = true;
     _msrTarget = 'measure';
     _msrListenStart = Date.now();
+    _startMsrBadge();
     _msrMeasureStart = null;
     _msrPhaseStart = null;
     _msrScatterData = []; _msrLastCumDev = 0;
@@ -19050,6 +19115,8 @@ function toggleMsrListen() {
       _tgScriptNode = scriptNode;
       _msrListening = true;
       _msrTarget = 'measure';
+      _msrListenStart = Date.now();
+      _startMsrBadge();
       const lb = document.getElementById('msr-listen-btn');
       const _wMic = document.getElementById('msr-btn-mic'); if (_wMic) _wMic.style.display = 'none';
       const _wStop = document.getElementById('msr-btn-stop'); if (_wStop) _wStop.style.display = '';
@@ -19082,6 +19149,7 @@ function toggleMsrListen() {
 
 function stopMsrListen(reason) {
   _msrListening = false;
+  _stopMsrBadge();
   const stopReason = reason || (
     (_msrScatterData.length === 0 && (!_msrListenStart || (Date.now() - _msrListenStart) / 1000 < 3)) ? 'user_quit_early'
     : (_msrScatterData.length === 0) ? 'no_ticks'
@@ -19105,7 +19173,8 @@ function stopMsrListen(reason) {
     const tickSnap = _msrScatterData.map(d => ({ t: Math.round(d.t * 100) / 100, d: Math.round(d.d * 1000) / 1000 }));
     const watchId = document.getElementById('msr-watch-select')?.value || null;
     const bph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || null;
-    const dotRates = _msrScatterData.map(d => d.d * 86.4);
+    const sdLog = 86.4 * ((bph || 28800) / 7200);
+    const dotRates = _msrScatterData.map(d => d.d * sdLog);
     const bucketRate = dotRates.length >= 10 ? computeMedianRate(dotRates) : null;
     db.from('timegrapher_tick_logs').insert({
       session_id: _tgDebugSessionId,
@@ -19152,7 +19221,9 @@ function stopMsrListen(reason) {
   const rateEl = document.getElementById('msr-live-rate');
   // Final rate: native Theil-Sen is authoritative. Only fall back to bucket median
   // if native rate was never set (e.g. web-only mode with no native engine).
-  const finalDotRates = _msrScatterData.map(d => d.d * 86.4);
+  const finalBph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;
+  const finalSD = 86.4 * (finalBph / 7200);
+  const finalDotRates = _msrScatterData.map(d => d.d * finalSD);
   if (_msrLastRate == null) {
     const finalMode = finalDotRates.length >= 10 ? computeMedianRate(finalDotRates) : null;
     if (finalMode != null) _msrLastRate = finalMode;
@@ -19351,6 +19422,9 @@ async function bootApp(user) {
     console.error('[WristLog] bootApp loadUserData error:', e.message, e);
   }
   syncWidgetData();
+  // Retry any dirty state persisted from a previous session
+  const _hasPersisted = _dirty.watches.size || _dirty.logs.size || _dirty.wishlist.size || _dirty.elo.size || _pendingDeletes.length;
+  if (_hasPersisted) { console.log('[WRotate] Retrying persisted dirty state'); cloudSync(); }
   // Re-check reminder now that logs are loaded (initApp ran before data was ready)
   checkReminderNow();
   // Show anniversary modal if any watch has an anniversary today
