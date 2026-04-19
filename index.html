@@ -3223,11 +3223,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div id="msr-live-status" style="display:none;"></div>
       <!-- Hidden tuning inputs (used by remote tuning) -->
       <div style="display:none;">
-        <input type="hidden" id="msr-tune-mult-lo" value="8">
-        <input type="hidden" id="msr-tune-mult-hi" value="1.5">
-        <input type="hidden" id="msr-tune-min-thresh" value="0.001">
-        <input type="hidden" id="msr-tune-percentile" value="50">
-        <input type="hidden" id="msr-tune-hp-cutoff" value="4000">
         <!-- Regression & stability tuning (sent to Swift engine) -->
         <input type="hidden" id="msr-tune-reg-skip" value="5">
         <input type="hidden" id="msr-tune-reg-min-n" value="10">
@@ -3241,7 +3236,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input type="hidden" id="msr-tune-cold-start" value="0.58">
         <input type="hidden" id="msr-tune-pair-mad-mult" value="3">
         <input type="hidden" id="msr-tune-max-tick-dev" value="10">
-        <input type="hidden" id="msr-tune-calib-duration" value="24000">
         <input type="hidden" id="msr-tune-ring-target-rate" value="48000">
         <input type="hidden" id="msr-tune-early-pair-count" value="0">
         <input type="hidden" id="msr-tune-early-pair-thresh" value="0.3">
@@ -4764,7 +4758,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.17.16';
+const APP_VERSION = '2.36.18.18.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8998,6 +8992,8 @@ async function saveNewPost() {
   closeNewPost();
   if (window.posthog) posthog.capture('post_created', { has_photo: !!entry.photoUrl, has_watch: !!trackWatchId });
   toast(postedWatch ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : 'Posted!');
+  haptic('success');
+  syncWidgetData();
   maybeShowReviewPrompt('post');
   feedLoadedAt = 0; // force feed to re-fetch after posting
   if (document.getElementById('page-feed').classList.contains('active')) loadFeed();
@@ -9064,6 +9060,7 @@ async function toggleLike(logId) {
   feedLikes[logId] = cur.liked
     ? { count: Math.max(0, cur.count - 1), liked: false }
     : { count: cur.count + 1, liked: true };
+  if (!cur.liked) haptic('light');
   refreshFeedCard(logId);
   try {
     if (cur.liked) {
@@ -12145,6 +12142,8 @@ async function saveLog() {
   feedLoadedAt = 0; // force feed to re-fetch after new log
   renderTrack();
   toast(isUpdate ? 'Wear log updated!' : 'Wear logged!');
+  haptic('success');
+  syncWidgetData();
   if (!isUpdate) maybeShowReviewPrompt('wear_log');
   } finally { if (_slBtn) { _slBtn.disabled = false; _slBtn.textContent = 'Log This Wear'; } }
 }
@@ -13668,6 +13667,8 @@ function quickLog(watchId) {
   if (document.getElementById('page-collection').classList.contains('active')) renderCollection();
   dismissReminder();
   toast('Wear logged!');
+  haptic('success');
+  syncWidgetData();
 }
 
 // ── Today's Pick log modal ────────────────────────────────────────────────────
@@ -17659,6 +17660,41 @@ function clearUserState() {
 
 // ── Timegrapher / Accuracy (inside watch edit modal) ─────────────────────
 function _tgHasNative() { return !!(window._wrotateNativeTimegrapher || window.webkit?.messageHandlers?.timegrapher); }
+function haptic(type) { try { window.webkit.messageHandlers.haptic.postMessage({ type: type || 'light' }); } catch(e) {} }
+function handleSharedImage(base64) {
+  if (!currentUser) return;
+  nav(document.querySelector('nav button[data-page="collection"]'));
+  setTimeout(() => {
+    window._photoIdentifyBase64 = base64;
+    const modal = document.getElementById('photo-identify-modal');
+    const list = document.getElementById('photo-identify-list');
+    list.innerHTML = '<div class="pi-loading"><div class="pi-loading-spinner"></div><div style="font-size:.85rem;">Identifying watches\u2026</div><div style="font-size:.75rem;margin-top:.3rem;">This may take up to 20 seconds</div></div>';
+    modal.classList.remove('hidden');
+    authedFetch(SUPABASE_URL + '/functions/v1/identify-watch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64, mode: 'identify' }),
+    }).then(r => r.json()).then(data => {
+      _photoIdentifyResults = data.watches || [];
+      renderPhotoIdentifyResults();
+    }).catch(() => {
+      list.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted);">Identification failed. Try again.</div>';
+    });
+  }, 300);
+}
+function syncWidgetData() {
+  try {
+    const today = todayStr();
+    const todayLog = logs.find(l => l.date === today);
+    const tw = todayLog ? watches.find(w => w.id === todayLog.watchId) : null;
+    const val = watches.reduce((s, w) => s + (Number(w.marketPrice) || Number(w.price) || 0), 0);
+    window.webkit.messageHandlers.widgetData.postMessage({
+      watchCount: watches.length,
+      collectionValue: val,
+      todayWatch: tw ? { brand: tw.brand, name: tw.name, color: tw.color || '#c9a84c' } : null
+    });
+  } catch(e) {}
+}
 let _tgWatchId = null;
 let _tgEditingId = null;
 let _tgListening = false;
@@ -17848,17 +17884,6 @@ function startTuningPoll() {
       if (ts === _lastTuningTs) return;
       _lastTuningTs = ts;
       // Update UI controls
-      const fields = {
-        'msr-tune-mult-lo': data.mult_at_zero,
-        'msr-tune-mult-hi': data.mult_at_hundred,
-        'msr-tune-min-thresh': data.min_threshold,
-        'msr-tune-percentile': data.noise_percentile,
-        'msr-tune-hp-cutoff': data.hp_cutoff_hz
-      };
-      for (const [id, val] of Object.entries(fields)) {
-        const el = document.getElementById(id);
-        if (el && val != null) el.value = val;
-      }
       if (data.peak_ratio_threshold != null) _remotePeakRatioThreshold = data.peak_ratio_threshold;
       if (data.buffer_seconds != null) _remoteBufferSeconds = data.buffer_seconds;
       // Send to native
@@ -18209,7 +18234,7 @@ window._tgNativeCallback = function(data) {
         const wasConverged = _msrPhase === 'converged';
         // Haptic feedback on finish — success for converged, warning for timeout
         if (window.webkit?.messageHandlers?.haptic) {
-          window.webkit.messageHandlers.haptic.postMessage({ type: wasConverged ? 'success' : 'warning' });
+          haptic(wasConverged ? 'success' : 'warning');
         }
         stopMsrListen(wasConverged ? 'converged' : 'duration_timeout');
         const statusText = document.getElementById('msr-status-text');
@@ -18686,11 +18711,6 @@ function sendMsrTuning() {
   if (!_msrListening || !_tgHasNative()) return;
   window.webkit.messageHandlers.timegrapher.postMessage({
     action: 'tuning',
-    multLo: Number(document.getElementById('msr-tune-mult-lo').value),
-    multHi: Number(document.getElementById('msr-tune-mult-hi').value),
-    minThreshold: Number(document.getElementById('msr-tune-min-thresh').value),
-    percentile: Number(document.getElementById('msr-tune-percentile').value),
-    hpCutoff: Number(document.getElementById('msr-tune-hp-cutoff').value),
     peakRatioThreshold: _remotePeakRatioThreshold ?? 2.5,
     bufferSeconds: _remoteBufferSeconds ?? 30.0,
     regSkipPairs: Number(document.getElementById('msr-tune-reg-skip').value),
@@ -18704,7 +18724,6 @@ function sendMsrTuning() {
     coldStartThresh: Number(document.getElementById('msr-tune-cold-start').value),
     pairMadMult: Number(document.getElementById('msr-tune-pair-mad-mult').value),
     maxTickDevMs: Number(document.getElementById('msr-tune-max-tick-dev').value),
-    calibDuration: Number(document.getElementById('msr-tune-calib-duration').value),
     ringTargetRate: Number(document.getElementById('msr-tune-ring-target-rate').value),
     earlyPairCount: Number(document.getElementById('msr-tune-early-pair-count').value),
     earlyPairThresh: Number(document.getElementById('msr-tune-early-pair-thresh').value),
@@ -19171,6 +19190,7 @@ async function bootApp(user) {
   } catch(e) {
     console.error('[WristLog] bootApp loadUserData error:', e.message, e);
   }
+  syncWidgetData();
   // Re-check reminder now that logs are loaded (initApp ran before data was ready)
   checkReminderNow();
   // Show anniversary modal if any watch has an anniversary today

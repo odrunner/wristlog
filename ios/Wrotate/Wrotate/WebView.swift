@@ -2,6 +2,7 @@ import SwiftUI
 import WebKit
 import UIKit
 import StoreKit
+import WidgetKit
 
 struct WebView: UIViewRepresentable {
     let url: URL
@@ -25,6 +26,7 @@ struct WebView: UIViewRepresentable {
         contentController.add(context.coordinator, name: "timegrapher")
         contentController.add(context.coordinator, name: "appAction")
         contentController.add(context.coordinator, name: "haptic")
+        contentController.add(context.coordinator, name: "widgetData")
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
@@ -311,6 +313,22 @@ struct WebView: UIViewRepresentable {
                     default:
                         UINotificationFeedbackGenerator().notificationOccurred(.success)
                     }
+                }
+                return
+            }
+
+            // Widget data sync
+            if message.name == "widgetData" {
+                if let body = message.body as? [String: Any] {
+                    let watchCount = body["watchCount"] as? Int ?? 0
+                    let collectionValue = body["collectionValue"] as? Double ?? 0
+                    let todayWatch = body["todayWatch"] as? [String: Any]
+                    SharedData.save(
+                        watches: Array(repeating: [:], count: watchCount),
+                        todayWatch: todayWatch,
+                        collectionValue: collectionValue
+                    )
+                    WidgetKit.WidgetCenter.shared.reloadAllTimelines()
                 }
                 return
             }

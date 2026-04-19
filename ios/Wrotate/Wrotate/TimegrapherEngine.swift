@@ -124,7 +124,7 @@ class TimegrapherEngine {
     private var minAdaptiveThreshold: Double = 1.0  // floor
     private var maxAdaptiveThreshold: Double = 2.0  // ceiling
     private var adaptiveMultiplier: Double = 3.0    // MAD multiplier
-    private var maxTickDev: Double = 8.0            // individual tick sanity limit (ms)
+    private var maxTickDev: Double = 10.0            // individual tick sanity limit (ms)
     private var regressionSkipPairs: Int = 5         // skip first N pairs from regression (threshold still adapting)
     private var totalPairsAccepted: Int = 0          // total clean pairs (including skipped)
 
@@ -212,7 +212,7 @@ class TimegrapherEngine {
     private var energyRingCount: Int = 0
     private var energySubsampleCounter: Int = 0
     private var ringSubsampleTarget: Int = 4  // 48kHz / 4 = 12kHz
-    private var ringTargetRate: Double = 16000 // target ring sample rate (web-tunable)
+    private var ringTargetRate: Double = 48000 // target ring sample rate (web-tunable)
 
     // Per-filter subsample peaks
     private var subsamplePeaks: [Float] = [0, 0, 0]
@@ -634,10 +634,9 @@ class TimegrapherEngine {
 
                                 // Pair gate: reject pairs with deviation above adaptive threshold
                                 // Use tighter threshold for first 10 pairs after skip (adaptive not yet reliable)
-                                let earlyPairLimit = regressionSkipPairs + 10
-                                let effectiveThresh = totalPairsAccepted < earlyPairLimit ? min(pairThresh, 0.3) : pairThresh
+                                let effectiveThresh = pairThresh
                                 if abs(pairDevThisPair) > effectiveThresh {
-                                    debugLog("[TGTICK PAIR_REJECT @ \(String(format: "%.2f", elapsedSec))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms thresh=\(String(format: "%.2f", effectiveThresh))ms\(totalPairsAccepted < earlyPairLimit ? " EARLY" : "")")
+                                    debugLog("[TGTICK PAIR_REJECT @ \(String(format: "%.2f", elapsedSec))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms thresh=\(String(format: "%.2f", effectiveThresh))ms")
                                     pairIntervalAccum = 0.0
                                     pairTickPhase = 0
                                     lastTickRingPos = energyRingWritePos

@@ -40,6 +40,11 @@ struct ContentView: View {
         .animation(.easeInOut(duration: 0.25), value: hasError)
         // Universal Links — open wrotate.com links in the app's WebView
         .onOpenURL { url in
+            // Share extension: shared image for identification
+            if url.scheme == "wrotate" && url.host == "share-image" {
+                handleSharedImage()
+                return
+            }
             guard let host = url.host, host.hasSuffix("wrotate.com") else { return }
             // Deep link to specific post or collection
             let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
@@ -55,6 +60,41 @@ struct ContentView: View {
             }
             webViewRef?.load(URLRequest(url: url))
         }
+        .onChange(of: isLoading) {
+            if !isLoading { dispatchPendingQuickAction() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            if !isLoading { dispatchPendingQuickAction() }
+        }
+    }
+
+    private func handleSharedImage() {
+        guard let defaults = UserDefaults(suiteName: "group.com.wrotate.Wrotate"),
+              let path = defaults.string(forKey: "sharedImagePath") else { return }
+        defaults.removeObject(forKey: "sharedImagePath")
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else { return }
+        let base64 = data.base64EncodedString()
+        let js = "if(typeof handleSharedImage==='function') handleSharedImage('data:image/jpeg;base64,\(base64)');"
+        webViewRef?.evaluateJavaScript(js, completionHandler: nil)
+        // Clean up shared file
+        try? FileManager.default.removeItem(atPath: path)
+    }
+
+    private func dispatchPendingQuickAction() {
+        guard let action = QuickActionManager.shared.pendingAction else { return }
+        QuickActionManager.shared.pendingAction = nil
+        let js: String
+        switch action {
+        case "logwear":
+            js = "nav(document.querySelector('nav button[data-page=\"track\"]'));"
+        case "measure":
+            js = "nav(document.querySelector('nav button[data-page=\"measure\"]'));"
+        case "post":
+            js = "if(typeof openNewPost==='function') openNewPost();"
+        default:
+            return
+        }
+        webViewRef?.evaluateJavaScript(js, completionHandler: nil)
     }
 }
 
