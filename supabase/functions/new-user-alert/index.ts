@@ -27,14 +27,25 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "No record in payload" }), { status: 400 });
     }
 
+    // Webhook verification: confirm record exists in database
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: verifyRecord, error: verifyError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", record.id)
+      .maybeSingle();
+    if (verifyError || !verifyRecord) {
+      console.warn(`[new-user-alert] Record ${record.id} not found in profiles table — rejecting`);
+      return new Response(JSON.stringify({ error: "Record not found" }), { status: 400 });
+    }
+
     if (!RESEND_API_KEY || !ADMIN_EMAIL) {
       console.warn("[new-user-alert] Missing RESEND_API_KEY or ADMIN_EMAIL");
       return new Response(JSON.stringify({ skipped: true, reason: "Missing config" }), { status: 200 });
     }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get the user's email from auth.users
     let userEmail = "Unknown";

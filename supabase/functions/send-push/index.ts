@@ -156,17 +156,27 @@ serve(async (req) => {
 
     const { user_id, type, actor_id } = record;
 
+    // Webhook verification: confirm record exists in database
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: verifyRecord, error: verifyError } = await supabase
+      .from("notifications")
+      .select("id")
+      .eq("id", record.id)
+      .maybeSingle();
+    if (verifyError || !verifyRecord) {
+      console.warn(`[send-push] Record ${record.id} not found in notifications table — rejecting`);
+      return new Response(JSON.stringify({ error: "Record not found" }), { status: 400 });
+    }
+
     // Don't send push for self-notifications
     if (user_id === actor_id) {
       return new Response(JSON.stringify({ skipped: "self-notification" }), {
         status: 200,
       });
     }
-
-    // Create Supabase admin client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Look up recipient's device tokens
     const { data: tokens, error: tokensError } = await supabase

@@ -4767,7 +4767,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.19.30';
+const APP_VERSION = '2.36.18.19.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5089,10 +5089,10 @@ async function loadAndRenderProfile(userId) {
   }
   // Follower count
   _pi.followers = _pp.length;
-  _pp.push(db.from('follows').select('follower_id').eq('following_id', userId));
+  _pp.push(db.from('follows').select('follower_id', { count: 'exact', head: true }).eq('following_id', userId));
   // Following count
   _pi.following = _pp.length;
-  _pp.push(db.from('follows').select('following_id').eq('follower_id', userId));
+  _pp.push(db.from('follows').select('following_id', { count: 'exact', head: true }).eq('follower_id', userId));
   // Log count
   _pi.logCount = _pp.length;
   _pp.push(db.from('logs').select('*', { count: 'exact', head: true })
@@ -5167,8 +5167,8 @@ async function loadAndRenderProfile(userId) {
       (r.initiator_id === userId && r.target_id === currentUser.id)
     ) || null;
   }
-  const followerCount = (_pr[_pi.followers].data || []).length;
-  const followingCount = isOwn ? following.size : (_pr[_pi.following].data || []).length;
+  const followerCount = _pr[_pi.followers].count || 0;
+  const followingCount = isOwn ? following.size : (_pr[_pi.following].count || 0);
   const logCount = _pr[_pi.logCount].count;
   const recentLogs = _pr[_pi.recentLogs].data;
   const showcase = showcaseGated ? [] : (_pi.showcase !== undefined ? (_pr[_pi.showcase].data || []) : []);
@@ -5847,10 +5847,18 @@ async function removeProfilePic() {
 async function loadFollowing() {
   if (!currentUser) return;
   const hadFollowing = following.size > 0;
-  const [{ data }, { data: fData }] = await Promise.all([
-    db.from('follows').select('following_id').eq('follower_id', currentUser.id),
-    db.from('follows').select('follower_id').eq('following_id', currentUser.id),
-  ]);
+  let data, fData;
+  try {
+    const results = await Promise.all([
+      db.from('follows').select('following_id').eq('follower_id', currentUser.id),
+      db.from('follows').select('follower_id').eq('following_id', currentUser.id),
+    ]);
+    data = results[0].data;
+    fData = results[1].data;
+  } catch (e) {
+    console.error('[WristLog] loadFollowing failed:', e);
+    return;
+  }
   following = new Set((data || []).map(r => r.following_id));
   myFollowers = new Set((fData || []).map(r => r.follower_id));
   // Also load profiles for @mention autocomplete
@@ -12810,6 +12818,7 @@ async function saveUpdatedPrices() {
   const today = todayStr();
   const toggles = document.querySelectorAll('.upr-toggle:checked');
   let saved = 0;
+  const failed = [];
   for (const toggle of toggles) {
     const wid = toggle.dataset.wid;
     const result = _priceUpdateResults[wid];
@@ -12834,10 +12843,16 @@ async function saveUpdatedPrices() {
       w.marketPriceSrc = 'WRotate';
       w.priceHistory = history;
       saved++;
+    } else {
+      failed.push(w.brand + ' ' + w.name);
     }
   }
   db.from('valuation_events').insert({ user_id: currentUser.id, action: 'save', watches_total: watches.length, watches_priced: Object.keys(_priceUpdateResults).length, watches_saved: saved }).then(() => {});
-  toast(`Updated ${saved} watch price${saved !== 1 ? 's' : ''}.`);
+  if (failed.length) {
+    toast(`Updated ${saved} price${saved !== 1 ? 's' : ''}, ${failed.length} failed: ${failed.slice(0, 3).join(', ')}${failed.length > 3 ? '...' : ''}`, 'error');
+  } else {
+    toast(`Updated ${saved} watch price${saved !== 1 ? 's' : ''}.`);
+  }
   btn.disabled = false;
   btn.textContent = 'Save Selected';
   closeUpdatePrices();

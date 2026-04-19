@@ -26,6 +26,21 @@ serve(async (req) => {
       });
     }
 
+    // Webhook verification: confirm record exists in database
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: verifyRecord, error: verifyError } = await supabase
+      .from("feedback")
+      .select("id")
+      .eq("id", record.id)
+      .maybeSingle();
+    if (verifyError || !verifyRecord) {
+      console.warn(`[feedback-to-github] Record ${record.id} not found in feedback table — rejecting`);
+      return new Response(JSON.stringify({ error: "Record not found" }), { status: 400 });
+    }
+
     // Only process bug reports — skip feature requests
     if (record.type !== "bug") {
       return new Response(
@@ -38,10 +53,6 @@ serve(async (req) => {
     let username = "anonymous";
     if (record.user_id) {
       try {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
         const { data: profile } = await supabase
           .from("profiles")
           .select("username, display_name")

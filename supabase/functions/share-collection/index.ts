@@ -174,7 +174,8 @@ async function fetchCollectionData(db: ReturnType<typeof createClient>, username
       .from("logs")
       .select("watch_id, date")
       .eq("user_id", profile.id)
-      .in("watch_id", watches.map((w: { id: string }) => w.id));
+      .in("watch_id", watches.map((w: { id: string }) => w.id))
+      .limit(10000);
     const seen = new Set();
     for (const log of (logs || [])) {
       const k = log.watch_id + "|" + log.date;

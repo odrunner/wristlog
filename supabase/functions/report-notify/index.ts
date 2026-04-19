@@ -29,14 +29,25 @@ serve(async (req) => {
       });
     }
 
+    // Webhook verification: confirm record exists in database
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: verifyRecord, error: verifyError } = await supabase
+      .from("content_reports")
+      .select("id")
+      .eq("id", record.id)
+      .maybeSingle();
+    if (verifyError || !verifyRecord) {
+      console.warn(`[report-notify] Record ${record.id} not found in content_reports table — rejecting`);
+      return new Response(JSON.stringify({ error: "Record not found" }), { status: 400 });
+    }
+
     if (!RESEND_API_KEY || !ADMIN_EMAIL) {
       console.warn("[report-notify] Missing RESEND_API_KEY or ADMIN_EMAIL");
       return new Response(JSON.stringify({ skipped: true, reason: "Missing config" }), { status: 200 });
     }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Look up reporter and reported user
     const [{ data: reporter }, { data: reported }] = await Promise.all([
