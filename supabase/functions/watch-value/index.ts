@@ -48,6 +48,35 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // Rate limit: 20 lookups per user per day
+    const DAILY_LIMIT = 20;
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const rlKey = `watch-value:${user.id}`;
+    const { data: rl } = await supabase
+      .from("rate_limits")
+      .select("request_count, window_start")
+      .eq("function_name", rlKey)
+      .eq("user_id", user.id)
+      .single();
+
+    const inWindow = rl && rl.window_start >= todayStart.toISOString();
+    if (inWindow && rl.request_count >= DAILY_LIMIT) {
+      return new Response(JSON.stringify({ error: "daily_limit", message: "Price lookups are limited to once per day. Try again tomorrow." }), {
+        status: 429, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+
+    if (inWindow) {
+      await supabase.from("rate_limits")
+        .update({ request_count: rl.request_count + 1 })
+        .eq("function_name", rlKey).eq("user_id", user.id);
+    } else {
+      await supabase.from("rate_limits")
+        .upsert({ user_id: user.id, function_name: rlKey, window_start: todayStart.toISOString(), request_count: 1 },
+          { onConflict: "user_id,function_name" });
+    }
+
     const { brand, model, reference, condition, year, watch_id } = await req.json();
 
     if (!brand) {

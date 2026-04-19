@@ -4767,7 +4767,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.19.09.36';
+const APP_VERSION = '2.36.19.09.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12722,7 +12722,7 @@ document.getElementById('edit-log-usecase-chips').addEventListener('click', e =>
 // ══════════════════════════════════════════
 let _priceUpdateResults = {};
 
-function openUpdatePrices() {
+async function openUpdatePrices() {
   _priceUpdateResults = {};
   const _uprT0 = Date.now();
   const modal = document.getElementById('update-prices-modal');
@@ -12731,9 +12731,22 @@ function openUpdatePrices() {
   const status = document.getElementById('update-prices-status');
   const actions = document.getElementById('update-prices-actions');
   actions.style.display = 'none';
+  body.innerHTML = '';
 
   const eligible = watches.filter(w => w.brand && w.name);
   if (eligible.length === 0) { status.textContent = 'No watches to update.'; return; }
+
+  // Check if user already did a lookup today
+  const todayStart = new Date(); todayStart.setUTCHours(0,0,0,0);
+  const { data: rl } = await db.from('rate_limits')
+    .select('request_count, window_start')
+    .eq('function_name', 'watch-value:' + currentUser.id)
+    .eq('user_id', currentUser.id)
+    .single();
+  if (rl && rl.window_start >= todayStart.toISOString() && rl.request_count >= 20) {
+    status.textContent = 'You already updated prices today. Try again tomorrow.';
+    return;
+  }
 
   db.from('valuation_events').insert({ user_id: currentUser.id, action: 'open', watches_total: eligible.length }).then(() => {});
 
@@ -12755,6 +12768,7 @@ function openUpdatePrices() {
     </tbody></table>`;
 
   let done = 0;
+  let _uprRateLimited = false;
   let _uprCompleteLogged = false;
   const _uprLogComplete = () => {
     if (_uprCompleteLogged) return;
@@ -12771,8 +12785,16 @@ function openUpdatePrices() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     }, 60000)
-    .then(r => r.json())
+    .then(r => {
+      if (r.status === 429) { _uprRateLimited = true; }
+      return r.json();
+    })
     .then(data => {
+      if (_uprRateLimited) {
+        status.textContent = 'Daily limit reached. Try again tomorrow.';
+        actions.style.display = 'none';
+        return;
+      }
       done++;
       status.innerHTML = done < eligible.length
         ? `<span style="display:inline-flex;align-items:center;gap:.4rem;"><span class="spinner" style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Found ${done} of ${eligible.length}...</span>`
