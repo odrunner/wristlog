@@ -4767,7 +4767,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.19.09.22';
+const APP_VERSION = '2.36.19.09.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12738,19 +12738,19 @@ function openUpdatePrices() {
   db.from('valuation_events').insert({ user_id: currentUser.id, action: 'open', watches_total: eligible.length }).then(() => {});
 
   body.innerHTML = `<table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:.78rem;">
-    <colgroup><col style="width:42%"><col style="width:22%"><col style="width:26%"><col style="width:10%"></colgroup>
+    <colgroup><col style="width:38%"><col style="width:20%"><col style="width:30%"><col style="width:12%"></colgroup>
     <thead><tr style="text-align:left;border-bottom:1px solid var(--border);">
-      <th style="padding:.4rem .3rem;">Watch</th>
-      <th style="padding:.4rem .3rem;text-align:right;">Current</th>
-      <th style="padding:.4rem .3rem;text-align:right;">WRotate</th>
-      <th style="padding:.4rem .3rem;text-align:center;">Use</th>
+      <th style="padding:.4rem .2rem;">Watch</th>
+      <th style="padding:.4rem .2rem;text-align:right;">Current</th>
+      <th style="padding:.4rem .2rem;text-align:right;">WRotate</th>
+      <th style="padding:.4rem .2rem;text-align:center;">Use</th>
     </tr></thead>
     <tbody id="update-prices-rows">${eligible.map(w => `
       <tr id="upr-${w.id}" style="border-bottom:1px solid var(--border);">
-        <td style="padding:.45rem .3rem;overflow:hidden;text-overflow:ellipsis;"><div style="font-weight:600;font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.brand)}</div><div style="font-size:.72rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.name)}${w.ref ? ' · ' + escHtml(w.ref) : ''}</div></td>
-        <td style="padding:.45rem .3rem;text-align:right;white-space:nowrap;">${w.marketPrice ? fmtMoney(w.marketPrice) : '—'}</td>
-        <td id="upr-val-${w.id}" style="padding:.45rem .3rem;text-align:right;color:var(--muted);">...</td>
-        <td id="upr-chk-${w.id}" style="padding:.45rem .3rem;text-align:center;"></td>
+        <td style="padding:.45rem .2rem;vertical-align:top;overflow:hidden;"><div style="font-weight:600;font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.brand)}</div><div style="font-size:.72rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.name)}${w.ref ? ' · ' + escHtml(w.ref) : ''}</div></td>
+        <td style="padding:.45rem .2rem;text-align:right;vertical-align:top;white-space:nowrap;">${w.marketPrice ? fmtMoney(w.marketPrice) : '—'}</td>
+        <td id="upr-val-${w.id}" style="padding:.45rem .2rem;text-align:right;vertical-align:top;color:var(--muted);white-space:nowrap;">...</td>
+        <td id="upr-chk-${w.id}" style="padding:.45rem .2rem;text-align:center;vertical-align:top;"></td>
       </tr>`).join('')}
     </tbody></table>`;
 
@@ -12787,8 +12787,8 @@ function openUpdatePrices() {
       }
       _priceUpdateResults[w.id] = { mid, low: ev.low, high: ev.high, confidence: data.confidence, notes: data.notes };
       const delta = w.marketPrice ? ((mid - w.marketPrice) / w.marketPrice * 100) : null;
-      const deltaStr = delta != null ? ` <span style="color:${delta >= 0 ? 'var(--gold)' : '#f87171'};font-size:.68rem;">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}%</span>` : '';
-      valCell.innerHTML = `<span style="color:var(--text);font-weight:600;">${fmtMoney(mid)}</span>${deltaStr}<div style="font-size:.65rem;color:var(--muted);">${fmtMoney(ev.low)} – ${fmtMoney(ev.high)}</div>`;
+      const deltaStr = delta != null ? `<span style="color:${delta >= 0 ? 'var(--gold)' : '#f87171'};font-size:.68rem;margin-left:.2rem;">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}%</span>` : '';
+      valCell.innerHTML = `<div style="white-space:nowrap;"><span style="color:var(--text);font-weight:600;">${fmtMoney(mid)}</span>${deltaStr}</div><div style="font-size:.65rem;color:var(--muted);white-space:nowrap;">${fmtMoney(ev.low)} – ${fmtMoney(ev.high)}</div>`;
       chkCell.innerHTML = `<input type="checkbox" checked data-wid="${w.id}" class="upr-toggle" style="width:16px;height:16px;accent-color:var(--gold);">`;
       if (done === eligible.length) {
         status.textContent = `Done — ${Object.keys(_priceUpdateResults).length} prices found.`;
