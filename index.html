@@ -4767,7 +4767,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.19.11.55';
+const APP_VERSION = '2.36.19.12.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14452,7 +14452,22 @@ function renderStatsRow(fl) {
   const favId = Object.keys(wm).sort((a,b)=>wm[b]-wm[a])[0];
   const fav   = favId ? watches.find(x=>x.id===favId) : null;
 
-  const val = watches.reduce((s,w)=>s+(w.price||0), 0);
+  const pricePaid = watches.reduce((s,w)=>s+(w.price||0), 0);
+  const marketVal = watches.reduce((s,w)=>s+(Number(w.marketPrice)||0), 0);
+  const hasMarket = marketVal > 0 && pricePaid > 0;
+  const pctDelta = hasMarket ? ((marketVal - pricePaid) / pricePaid * 100) : 0;
+  const pctSign = pctDelta >= 0 ? '+' : '';
+  const pctColor = pctDelta >= 0 ? '#2a9d5c' : '#d64040';
+
+  let valHtml = '';
+  if (pricePaid) {
+    valHtml += `<div class="stat-sub" style="white-space:nowrap;">Paid ${fmtMoney(pricePaid)}</div>`;
+    if (hasMarket) {
+      valHtml += `<div class="stat-sub" style="white-space:nowrap;">Market ${fmtMoney(marketVal)} <span style="color:${pctColor};font-size:.85em;">${pctSign}${pctDelta.toFixed(1)}%</span></div>`;
+    }
+  } else {
+    valHtml = '<div class="stat-sub">—</div>';
+  }
 
   el.innerHTML = `
     <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-lbl">Total Wears</div></div>
@@ -14465,7 +14480,7 @@ function renderStatsRow(fl) {
     </div>
     <div class="stat-card">
       <div class="stat-lbl" style="margin-bottom:.3rem">Collection Value</div>
-      <div class="stat-sub">${val ? fmtMoney(val) : '—'}</div>
+      ${valHtml}
     </div>`;
 }
 
