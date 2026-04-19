@@ -4771,7 +4771,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.19.12.38';
+const APP_VERSION = '2.36.19.12.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13776,15 +13776,17 @@ async function checkSingleWatchValue() {
       btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:.3rem;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Check Value';
       return;
     }
-    // Update the market value input
-    setPriceInput('w-manual-mp', mid);
-    // Show result details
+    // Show result with Apply button
     const rangeStr = ev.low && ev.high ? ` (${fmtMoney(ev.low)} – ${fmtMoney(ev.high)})` : '';
-    const cachedStr = data.cached ? ' · cached' : '';
-    const confStr = data.confidence ? ` · ${data.confidence} confidence` : '';
-    status.innerHTML = `<span style="color:var(--gold);font-weight:600;">${fmtMoney(mid)}</span>${rangeStr}<br><span style="font-size:.7rem;">${confStr}${cachedStr}</span>`;
-    // If not cached, save to DB immediately
-    if (!data.cached) {
+    const confLine = data.cached
+      ? 'Cached from ' + (data.looked_up_at || 'recent lookup')
+      : (data.confidence && data.confidence !== 'cached' ? data.confidence + ' confidence' : '');
+    const applyId = '_cv_apply_' + Date.now();
+    status.innerHTML = `<span style="color:var(--gold);font-weight:600;">${fmtMoney(mid)}</span>${rangeStr}${confLine ? '<br><span style="font-size:.7rem;color:var(--muted);">' + confLine + '</span>' : ''}<br><button type="button" id="${applyId}" class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .6rem;margin-top:.3rem;">Apply ${fmtMoney(mid)}</button>`;
+    document.getElementById(applyId).onclick = async function() {
+      this.disabled = true;
+      this.textContent = 'Saving...';
+      setPriceInput('w-manual-mp', mid);
       const today = todayStr();
       const history = Array.isArray(w.priceHistory) ? [...w.priceHistory] : [];
       if (w.marketPrice && w.marketPriceDate) {
@@ -13799,7 +13801,9 @@ async function checkSingleWatchValue() {
       w.marketPriceDate = today;
       w.marketPriceSrc = 'WRotate';
       w.priceHistory = history;
-    }
+      this.textContent = 'Applied ✓';
+      this.style.color = '#2a9d5c';
+    };
   } catch (e) {
     status.textContent = 'Error looking up value. Try again later.';
   }
