@@ -1,0 +1,167 @@
+// Supabase Edge Function: watch-value
+// Uses Claude web search to look up current market value for a watch.
+// Called from the app when a user taps "Check Value" on a watch.
+//
+// Required Supabase secrets:
+//   ANTHROPIC_API_KEY — for Claude web search
+//   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY — auto-provided
+
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
+
+const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "https://wrotate.com",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+function extractJson(text: string) {
+  const m = text.match(/\{[\s\S]*\}/);
+  return m ? JSON.parse(m[0]) : null;
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: CORS_HEADERS });
+  }
+
+  try {
+    const { brand, model, reference, condition, year, watch_id, user_id } = await req.json();
+
+    if (!brand) {
+      return new Response(JSON.stringify({ error: "brand is required" }), { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+    }
+
+    const watchDesc = [
+      brand,
+      model || "",
+      reference ? `ref. ${reference}` : "",
+      year ? `(${year})` : "",
+      condition ? `in ${condition} condition` : "",
+    ].filter(Boolean).join(" ");
+
+    console.log(`[watch-value] Looking up: ${watchDesc}`);
+
+    const prompt = `What is the current market value (in USD) of this watch: ${watchDesc}?
+
+Search for recent sold prices and current listings. Check Chrono24, WatchCharts, eBay sold listings, and dealer sites.
+
+Respond with ONLY a JSON object, no other text:
+{
+  "estimated_value_usd": { "low": <number>, "mid": <number>, "high": <number> },
+  "retail_price_usd": <number or null>,
+  "currency_note": "all values in USD",
+  "data_points": [
+    { "source": "<site name>", "price_usd": <number>, "condition": "<new/used/etc>", "url": "<url if available>" }
+  ],
+  "confidence": "<high|medium|low>",
+  "notes": "<brief note on price range, trends, or caveats>"
+}
+
+Rules:
+- low/mid/high should reflect the realistic range for this watch in typical pre-owned condition with box and papers
+- Include at least 2-3 data points from different sources
+- If you cannot find reliable pricing, set confidence to "low" and explain in notes
+- retail_price_usd is the current MSRP if available, null otherwise
+- All prices in USD`;
+
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "anthropic-beta": "web-search-2025-03-05",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 2048,
+        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }],
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.error("[watch-value] Claude API error:", resp.status, errText);
+      return new Response(JSON.stringify({ error: "api_failed", status: resp.status }), { status: 502, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+    }
+
+    const result = await resp.json();
+    const textBlock = result.content?.find((b: { type: string }) => b.type === "text");
+    const parsed = extractJson(textBlock?.text ?? "");
+
+    if (!parsed) {
+      console.error("[watch-value] Could not parse response:", textBlock?.text);
+      return new Response(JSON.stringify({ error: "parse_failed", raw: textBlock?.text?.slice(0, 500) }), { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+    }
+
+    // Add metadata
+    parsed.query = { brand, model, reference, condition, year };
+    const today = new Date().toISOString().slice(0, 10);
+    parsed.looked_up_at = new Date().toISOString();
+
+    const mid = parsed.estimated_value_usd?.mid;
+    console.log(`[watch-value] ${watchDesc} → $${parsed.estimated_value_usd?.low}-${parsed.estimated_value_usd?.high} (${parsed.confidence})`);
+
+    // Save to DB if watch_id provided
+    if (watch_id && mid) {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+      // Fetch current price_history to append
+      const { data: watch } = await supabase
+        .from("watches")
+        .select("market_price, market_price_date, price_history")
+        .eq("id", watch_id)
+        .single();
+
+      const history: { src: string; date: string; price: number }[] =
+        Array.isArray(watch?.price_history) ? watch.price_history : [];
+
+      // Push previous market_price into history before overwriting
+      if (watch?.market_price && watch?.market_price_date) {
+        const already = history.some(
+          (h) => h.date === watch.market_price_date && h.price === Number(watch.market_price)
+        );
+        if (!already) {
+          history.push({
+            src: "previous",
+            date: watch.market_price_date,
+            price: Number(watch.market_price),
+          });
+        }
+      }
+
+      // Append new Claude valuation
+      history.push({ src: "WRotate", date: today, price: mid });
+
+      const { error } = await supabase
+        .from("watches")
+        .update({
+          market_price: mid,
+          market_price_date: today,
+          market_price_src: "WRotate",
+          price_history: history,
+        })
+        .eq("id", watch_id);
+
+      if (error) {
+        console.error("[watch-value] DB update failed:", error.message);
+      } else {
+        console.log(`[watch-value] Saved $${mid} for watch ${watch_id}`);
+      }
+    }
+
+    return new Response(JSON.stringify(parsed), {
+      status: 200,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    console.error("[watch-value] Error:", err);
+    return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+  }
+});

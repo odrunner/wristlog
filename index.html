@@ -2451,7 +2451,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="btn btn-ghost" onclick="startGame()" title="Ranking Game" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="btn-label"> Ranking Game</span></button>
         <button class="btn btn-ghost" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="btn-label"> Add From Photo</span></button>
         <button class="btn btn-primary" onclick="openAddWatch()" title="Add Watch"><span class="btn-label-full">+ Add Watch</span><span class="btn-label-short">+ Add</span></button>
-        <button id="coll-update-prices-btn" class="btn btn-ghost" onclick="openUpdatePrices()" title="Update Market Prices" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="m16.24 7.76 2.83-2.83"/></svg></button>
+        <button id="coll-update-prices-btn" class="btn btn-ghost" onclick="openUpdatePrices()" title="Update Market Prices" style="display:none;font-weight:700;font-size:.9rem;">$</button>
       </div>
     </div>
     <div id="coll-sort-bar"></div>
@@ -4764,7 +4764,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.16.45';
+const APP_VERSION = '2.36.18.17.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12752,9 +12752,9 @@ function openUpdatePrices() {
       }
       _priceUpdateResults[w.id] = { mid, low: ev.low, high: ev.high, confidence: data.confidence, notes: data.notes };
       const delta = w.marketPrice ? ((mid - w.marketPrice) / w.marketPrice * 100) : null;
-      const deltaStr = delta != null ? ` <span style="color:${delta >= 0 ? '#4ade80' : '#f87171'};font-size:.68rem;">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}%</span>` : '';
+      const deltaStr = delta != null ? ` <span style="color:${delta >= 0 ? 'var(--gold)' : '#f87171'};font-size:.68rem;">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}%</span>` : '';
       valCell.innerHTML = `<span style="color:var(--text);font-weight:600;">${fmtMoney(mid)}</span>${deltaStr}<div style="font-size:.65rem;color:var(--muted);">${fmtMoney(ev.low)} – ${fmtMoney(ev.high)}</div>`;
-      chkCell.innerHTML = `<input type="checkbox" checked data-wid="${w.id}" class="upr-toggle" style="width:16px;height:16px;accent-color:#4ade80;">`;
+      chkCell.innerHTML = `<input type="checkbox" checked data-wid="${w.id}" class="upr-toggle" style="width:16px;height:16px;accent-color:var(--gold);">`;
       if (done === eligible.length) {
         status.textContent = `Done — ${Object.keys(_priceUpdateResults).length} prices found.`;
         actions.style.display = 'flex';
@@ -12795,17 +12795,17 @@ async function saveUpdatedPrices() {
       const already = history.some(h => h.date === w.marketPriceDate && h.price === Number(w.marketPrice));
       if (!already) history.push({ src: w.marketPriceSrc || 'previous', date: w.marketPriceDate, price: Number(w.marketPrice) });
     }
-    history.push({ src: 'Claude', date: today, price: result.mid });
+    history.push({ src: 'WRotate', date: today, price: result.mid });
     const { error } = await db.from('watches').update({
       market_price: result.mid,
       market_price_date: today,
-      market_price_src: 'Claude',
+      market_price_src: 'WRotate',
       price_history: history,
     }).eq('id', wid);
     if (!error) {
       w.marketPrice = result.mid;
       w.marketPriceDate = today;
-      w.marketPriceSrc = 'Claude';
+      w.marketPriceSrc = 'WRotate';
       w.priceHistory = history;
       saved++;
     }
@@ -14473,40 +14473,112 @@ function renderChCollectionValue() {
   const hasData = pts.length > 0;
   toggleChart('ch-collvalue','ch-collvalue-empty', hasData);
   if (!hasData) return;
-  // Extend line to today with same value
   const today = todayStr();
   const displayPts = [...pts, { x: today, y: cum, label: '', price: 0 }];
+
+  // Build market value timeline from price_history + current marketPrice
+  const mvEvents = [];
+  watches.forEach(w => {
+    if (Array.isArray(w.priceHistory)) {
+      w.priceHistory.forEach(h => {
+        if (h.date && h.price) mvEvents.push({ date: h.date, watchId: w.id, price: Number(h.price) });
+      });
+    }
+    if (w.marketPrice && w.marketPriceDate) {
+      const already = mvEvents.some(e => e.watchId === w.id && e.date === w.marketPriceDate && e.price === Number(w.marketPrice));
+      if (!already) mvEvents.push({ date: w.marketPriceDate, watchId: w.id, price: Number(w.marketPrice) });
+    }
+  });
+  mvEvents.sort((a, b) => a.date.localeCompare(b.date));
+
+  // Compute cumulative market value at each event date (latest price per watch)
+  const latestByWatch = {};
+  const mvPts = [];
+  mvEvents.forEach(e => {
+    latestByWatch[e.watchId] = e.price;
+    const total = Object.values(latestByWatch).reduce((s, v) => s + v, 0);
+    mvPts.push({ x: e.date, y: total });
+  });
+  // Extend to today
+  if (mvPts.length > 0) {
+    const lastVal = mvPts[mvPts.length - 1].y;
+    if (mvPts[mvPts.length - 1].x !== today) mvPts.push({ x: today, y: lastVal });
+  }
+
+  const hasMV = mvPts.length > 0;
+  // Merge all dates for shared x-axis
+  const allDatesSet = new Set();
+  displayPts.forEach(p => allDatesSet.add(p.x));
+  mvPts.forEach(p => allDatesSet.add(p.x));
+  const allDates = [...allDatesSet].sort();
+
+  // Interpolate purchase cost (stepped) at each date
+  const costAtDate = allDates.map(d => {
+    let val = null;
+    for (let i = displayPts.length - 1; i >= 0; i--) {
+      if (displayPts[i].x <= d) { val = displayPts[i].y; break; }
+    }
+    return val;
+  });
+  // Interpolate market value (stepped) at each date
+  const mvAtDate = allDates.map(d => {
+    let val = null;
+    for (let i = mvPts.length - 1; i >= 0; i--) {
+      if (mvPts[i].x <= d) { val = mvPts[i].y; break; }
+    }
+    return val;
+  });
+
+  const labels = allDates.map(d => {
+    const dt = new Date(d + 'T12:00:00');
+    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+  });
+
+  const datasets = [{
+    label: 'Cost',
+    data: costAtDate,
+    borderColor: '#c9a84c',
+    backgroundColor: 'rgba(201,168,76,.07)',
+    borderWidth: 2,
+    pointBackgroundColor: costAtDate.map((v, i) => v != null && i < allDates.length - 1 ? '#c9a84c' : 'transparent'),
+    pointBorderColor: costAtDate.map((v, i) => v != null && i < allDates.length - 1 ? '#c9a84c' : 'transparent'),
+    pointRadius: costAtDate.map((v, i) => v != null && i < allDates.length - 1 ? 3 : 0),
+    pointHoverRadius: 5,
+    fill: true,
+    stepped: 'before',
+    spanGaps: true,
+  }];
+  if (hasMV) {
+    datasets.push({
+      label: 'Market Value',
+      data: mvAtDate,
+      borderColor: '#818cf8',
+      backgroundColor: 'rgba(129,140,248,.07)',
+      borderWidth: 2,
+      borderDash: [4, 3],
+      pointBackgroundColor: mvAtDate.map(v => v != null ? '#818cf8' : 'transparent'),
+      pointBorderColor: mvAtDate.map(v => v != null ? '#818cf8' : 'transparent'),
+      pointRadius: mvAtDate.map(v => v != null ? 3 : 0),
+      pointHoverRadius: 5,
+      fill: false,
+      stepped: 'before',
+      spanGaps: true,
+    });
+  }
+
   chCollValue = new Chart(document.getElementById('ch-collvalue'), {
     type: 'line',
-    data: {
-      labels: displayPts.map(p => {
-        const d = new Date(p.x + 'T12:00:00');
-        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
-      }),
-      datasets: [{
-        data: displayPts.map(p => p.y),
-        borderColor: '#c9a84c',
-        backgroundColor: 'rgba(201,168,76,.07)',
-        borderWidth: 2,
-        pointBackgroundColor: displayPts.map((p,i) => i < displayPts.length-1 ? '#c9a84c' : 'transparent'),
-        pointBorderColor:     displayPts.map((p,i) => i < displayPts.length-1 ? '#c9a84c' : 'transparent'),
-        pointRadius:          displayPts.map((p,i) => i < displayPts.length-1 ? 3 : 0),
-        pointHoverRadius: 5,
-        fill: true,
-        stepped: 'before',
-      }]
-    },
+    data: { labels, datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
+        legend: { display: hasMV, labels: { color: '#7a7a95', boxWidth: 12, padding: 10, font: { size: 11 } } },
         tooltip: {
           callbacks: {
             label: ctx => {
-              const p = displayPts[ctx.dataIndex];
-              const parts = [fmtMoney(p.y)];
-              if (p.label) parts.push('+ ' + p.label + ' (' + fmtMoney(p.price) + ')');
-              return parts;
+              const val = ctx.parsed.y;
+              if (val == null) return '';
+              return ctx.dataset.label + ': ' + fmtMoney(val);
             }
           }
         }
