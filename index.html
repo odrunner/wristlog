@@ -3455,14 +3455,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="modal-section-chevron" id="chv-sec-market">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-market">
-        <div class="form-group" style="margin-bottom:.5rem">
-          <label for="w-manual-mp">Market Value ($)</label>
-          <input type="text" inputmode="decimal" id="w-manual-mp" placeholder="0" autocomplete="off" oninput="fmtPriceInput(this)">
+        <div style="display:flex;align-items:flex-end;gap:.5rem;">
+          <div class="form-group" style="margin-bottom:0;flex:1;">
+            <label for="w-manual-mp">Market Value ($)</label>
+            <input type="text" inputmode="decimal" id="w-manual-mp" placeholder="0" autocomplete="off" oninput="fmtPriceInput(this)">
+          </div>
+          <button type="button" id="check-value-btn" class="btn btn-ghost" onclick="checkSingleWatchValue()" style="font-size:.8rem;padding:.45rem .7rem;display:none;white-space:nowrap;margin-bottom:1px;">Check Value</button>
         </div>
-        <button type="button" id="check-value-btn" class="btn btn-ghost" onclick="checkSingleWatchValue()" style="font-size:.8rem;padding:.35rem .7rem;display:none;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:.3rem;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Check Value
-        </button>
-        <div id="check-value-status" style="font-size:.75rem;color:var(--muted);margin-top:.3rem;"></div>
+        <div id="check-value-status" style="font-size:.75rem;color:var(--muted);margin-top:.35rem;"></div>
       </div>
     </div>
 
@@ -4771,7 +4771,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.19.12.40';
+const APP_VERSION = '2.36.19.12.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13764,7 +13764,7 @@ async function checkSingleWatchValue() {
     if (r.status === 429) {
       status.textContent = 'Daily limit reached. Try again tomorrow.';
       btn.disabled = false;
-      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:.3rem;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Check Value';
+      btn.textContent = 'Check Value';
       return;
     }
     const data = await r.json();
@@ -13773,16 +13773,14 @@ async function checkSingleWatchValue() {
     if (!mid) {
       status.textContent = 'Could not find pricing for this watch.';
       btn.disabled = false;
-      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:.3rem;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Check Value';
+      btn.textContent = 'Check Value';
       return;
     }
-    // Show result with Apply button
-    const rangeStr = ev.low && ev.high ? ` (${fmtMoney(ev.low)} – ${fmtMoney(ev.high)})` : '';
-    const confLine = data.cached
-      ? 'Cached from ' + (data.looked_up_at || 'recent lookup')
-      : (data.confidence && data.confidence !== 'cached' ? data.confidence + ' confidence' : '');
+    // Show result with Apply button — compact inline layout
+    const rangeStr = ev.low && ev.high ? `${fmtMoney(ev.low)} – ${fmtMoney(ev.high)}` : '';
+    const note = data.cached ? 'cached' : (data.confidence && data.confidence !== 'cached' ? data.confidence : '');
     const applyId = '_cv_apply_' + Date.now();
-    status.innerHTML = `<span style="color:var(--gold);font-weight:600;">${fmtMoney(mid)}</span>${rangeStr}${confLine ? '<br><span style="font-size:.7rem;color:var(--muted);">' + confLine + '</span>' : ''}<br><button type="button" id="${applyId}" class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .6rem;margin-top:.3rem;">Apply ${fmtMoney(mid)}</button>`;
+    status.innerHTML = `<span style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;"><span style="color:var(--gold);font-weight:600;">${fmtMoney(mid)}</span>${rangeStr ? '<span style="color:var(--muted);font-size:.7rem;">' + rangeStr + '</span>' : ''}${note ? '<span style="color:var(--muted);font-size:.7rem;">· ' + note + '</span>' : ''}<button type="button" id="${applyId}" class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .5rem;">Apply</button></span>`;
     document.getElementById(applyId).onclick = async function() {
       this.disabled = true;
       this.textContent = 'Saving...';
@@ -13808,7 +13806,7 @@ async function checkSingleWatchValue() {
     status.textContent = 'Error looking up value. Try again later.';
   }
   btn.disabled = false;
-  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:.3rem;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Check Value';
+  btn.textContent = 'Check Value';
 }
 
 // ── Market price card row ────────────────────────────────────────────────────
