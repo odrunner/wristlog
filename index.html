@@ -4758,7 +4758,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.18.18.35';
+const APP_VERSION = '2.36.18.19.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17691,7 +17691,7 @@ function syncWidgetData() {
     window.webkit.messageHandlers.widgetData.postMessage({
       watchCount: watches.length,
       collectionValue: val,
-      todayWatch: tw ? { brand: tw.brand, name: tw.name, color: tw.color || '#c9a84c' } : null
+      todayWatch: tw ? { brand: tw.brand, name: tw.name, color: tw.color || '#c9a84c', image: tw.image || null } : null
     });
   } catch(e) {}
 }
