@@ -3455,10 +3455,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="modal-section-chevron" id="chv-sec-market">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-market">
-        <div class="form-group" style="margin-bottom:0">
+        <div class="form-group" style="margin-bottom:.5rem">
           <label for="w-manual-mp">Market Value ($)</label>
           <input type="text" inputmode="decimal" id="w-manual-mp" placeholder="0" autocomplete="off" oninput="fmtPriceInput(this)">
         </div>
+        <button type="button" id="check-value-btn" class="btn btn-ghost" onclick="checkSingleWatchValue()" style="font-size:.8rem;padding:.35rem .7rem;display:none;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:.3rem;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Check Value
+        </button>
+        <div id="check-value-status" style="font-size:.75rem;color:var(--muted);margin-top:.3rem;"></div>
       </div>
     </div>
 
@@ -4767,7 +4771,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.19.12.35';
+const APP_VERSION = '2.36.19.12.38';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13491,6 +13495,9 @@ function openAddWatch() {
   hideAddStrapRow();
   document.getElementById('edit-receipts-list').innerHTML = `<div style="color:var(--muted);font-size:.82rem;">No receipts yet.</div>`;
   updateUrlBtn();
+  // Hide Check Value for new watches
+  document.getElementById('check-value-btn').style.display = 'none';
+  document.getElementById('check-value-status').textContent = '';
   // All sections collapsed for a fresh add
   ['sec-condition','sec-market','sec-tags','sec-straps','sec-receipts'].forEach(closeSection);
   document.getElementById('sec-accuracy-wrap').style.display = 'none';
@@ -13538,6 +13545,9 @@ function openEditWatch(id) {
   hideAddStrapRow();
   renderEditReceiptsList(w);
   updateUrlBtn();
+  // Check Value button — show for existing watches
+  document.getElementById('check-value-btn').style.display = '';
+  document.getElementById('check-value-status').textContent = '';
   // Auto-open sections that have data; collapse empty ones
   const hasCondition = w.warrantyExpiry || w.hasBox || w.hasPapers || w.insurance;
   const hasMarket    = w.marketPrice;
@@ -13732,6 +13742,70 @@ function quickLog(watchId) {
 // ── Today's Pick log modal ────────────────────────────────────────────────────
 // Recommendation card "Log This Wear" — reuses the shared track modal
 function openRecLog(watchId) { openTrackModal(watchId); }
+
+// ── Check Value (single watch) ───────────────────────────────────────────────
+async function checkSingleWatchValue() {
+  if (!editingId) return;
+  const w = watches.find(x => x.id === editingId);
+  if (!w) return;
+  const btn = document.getElementById('check-value-btn');
+  const status = document.getElementById('check-value-status');
+  btn.disabled = true;
+  btn.textContent = 'Searching...';
+  status.innerHTML = '<span style="display:inline-flex;align-items:center;gap:.4rem;"><span class="spinner" style="width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Looking up market value...</span>';
+  try {
+    const payload = { brand: w.brand, model: w.name, condition: 'good', watch_id: w.id };
+    if (w.ref) payload.reference = w.ref;
+    const r = await authedFetch(SUPABASE_URL + '/functions/v1/watch-value', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }, 60000);
+    if (r.status === 429) {
+      status.textContent = 'Daily limit reached. Try again tomorrow.';
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:.3rem;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Check Value';
+      return;
+    }
+    const data = await r.json();
+    const ev = data.estimated_value_usd || {};
+    const mid = ev.mid;
+    if (!mid) {
+      status.textContent = 'Could not find pricing for this watch.';
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:.3rem;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Check Value';
+      return;
+    }
+    // Update the market value input
+    setPriceInput('w-manual-mp', mid);
+    // Show result details
+    const rangeStr = ev.low && ev.high ? ` (${fmtMoney(ev.low)} – ${fmtMoney(ev.high)})` : '';
+    const cachedStr = data.cached ? ' · cached' : '';
+    const confStr = data.confidence ? ` · ${data.confidence} confidence` : '';
+    status.innerHTML = `<span style="color:var(--gold);font-weight:600;">${fmtMoney(mid)}</span>${rangeStr}<br><span style="font-size:.7rem;">${confStr}${cachedStr}</span>`;
+    // If not cached, save to DB immediately
+    if (!data.cached) {
+      const today = todayStr();
+      const history = Array.isArray(w.priceHistory) ? [...w.priceHistory] : [];
+      if (w.marketPrice && w.marketPriceDate) {
+        const already = history.some(h => h.date === w.marketPriceDate && h.price === Number(w.marketPrice));
+        if (!already) history.push({ src: w.marketPriceSrc || 'previous', date: w.marketPriceDate, price: Number(w.marketPrice) });
+      }
+      history.push({ src: 'WRotate', date: today, price: mid });
+      await db.from('watches').update({
+        market_price: mid, market_price_date: today, market_price_src: 'WRotate', price_history: history,
+      }).eq('id', w.id);
+      w.marketPrice = mid;
+      w.marketPriceDate = today;
+      w.marketPriceSrc = 'WRotate';
+      w.priceHistory = history;
+    }
+  } catch (e) {
+    status.textContent = 'Error looking up value. Try again later.';
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:.3rem;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Check Value';
+}
 
 // ── Market price card row ────────────────────────────────────────────────────
 function marketPriceRowHTML(w) {
