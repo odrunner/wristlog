@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.19.16.46';
+const APP_VERSION = '2.36.19.16.55';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18647,7 +18647,7 @@ let _msrNoiseSamples = [];    // noise level readings during calibration phase
 let _msrPrelimShown = false; // whether the preliminary rate has been shown
 
 let _msrScatterRafPending = false;
-let _msrLastCumDev = 0; // track last cumulative deviation to compute individual pair devs
+let _msrLastCumDev = 0; // track last cumulative deviation to reject outlier ticks
 function addMsrTickDots(newTicks) {
   if (!newTicks || !newTicks.length) return;
   const activeBph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;
@@ -18655,12 +18655,11 @@ function addMsrTickDots(newTicks) {
   const sdFactor = 86.4 * pairsPerSec;
   const outlierLimit = Math.max(30, 3 * (86400 / activeBph) * pairsPerSec);
   for (const tk of newTicks) {
-    const indivDev = tk.d - _msrLastCumDev; // individual pair deviation
+    const indivDev = tk.d - _msrLastCumDev; // individual pair deviation for outlier check
     _msrLastCumDev = tk.d;
-    // Filter outliers: BPH-aware gate (~3 quantization steps)
     const indivSDay = indivDev * sdFactor;
     if (Math.abs(indivSDay) > outlierLimit) continue;
-    _msrScatterData.push({ t: tk.t, d: indivDev });
+    _msrScatterData.push({ t: tk.t, d: tk.d }); // cumulative deviation (ms)
     _msrLastDotTime = Date.now();
   }
   if (_msrScatterData.length > 2000) _msrScatterData = _msrScatterData.slice(-2000);
@@ -18735,21 +18734,20 @@ function renderMsrScatterPlot() {
   const pw = w - pad.l - pad.r;
   const ph = h - pad.t - pad.b;
 
-  // Convert pair deviations from ms to s/day for display
+  // Cumulative deviation chart: dots show total drift (ms) over time
   const activeBph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;
-  const SD = 86.4 * (activeBph / 7200); // ms pair deviation → s/day (BPH-dependent)
   const data = _msrScatterData;
-  const tMin = 0; // anchor x-axis to session start so chart doesn't shift on BPH reset
-  // X range: snap to next 10s boundary ahead of data so axis doesn't constantly shift
+  const tMin = 0;
   const tDataMax = data[data.length - 1].t;
   const tMax = Math.max(10, Math.ceil(tDataMax / 10) * 10 + 5);
   const tRange = tMax - tMin;
 
-  // Y range in s/day: auto-center on data, minimum ±5 s/day
+  // Y range in ms: auto-fit cumulative deviation, minimum ±0.5ms
   let dMin = Infinity, dMax = -Infinity;
-  for (const d of data) { const v = d.d * SD; if (v < dMin) dMin = v; if (v > dMax) dMax = v; }
+  for (const d of data) { if (d.d < dMin) dMin = d.d; if (d.d > dMax) dMax = d.d; }
+  dMin = Math.min(dMin, 0); dMax = Math.max(dMax, 0);
   const dMid = (dMin + dMax) / 2;
-  const dHalf = Math.max(5.0, (dMax - dMin) / 2 * 1.3);
+  const dHalf = Math.max(0.5, (dMax - dMin) / 2 * 1.3);
   const yMin = dMid - dHalf;
   const yMax = dMid + dHalf;
   const yRange = yMax - yMin;
@@ -18787,46 +18785,56 @@ function renderMsrScatterPlot() {
     ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, h - pad.b); ctx.stroke();
   }
 
-  // Draw tick dots — phosphor green glow
+  // Draw tick dots — phosphor green glow (cumulative deviation in ms)
   ctx.fillStyle = '#4ade80';
   ctx.shadowColor = '#22c55e';
   ctx.shadowBlur = 3 * dpr;
   const dotR = Math.max(1.5, 2.0 * dpr);
   for (const pt of data) {
-    const x = xPos(pt.t), y = yPos(pt.d * SD);
+    const x = xPos(pt.t), y = yPos(pt.d);
     ctx.beginPath(); ctx.arc(x, y, dotR, 0, Math.PI * 2); ctx.fill();
   }
   ctx.shadowBlur = 0;
 
-  // Reference line — use native Theil-Sen rate (matches HUD), fall back to bucket median
-  const dotRatesForLine = data.map(d => d.d * SD);
-  const bucketMedian = dotRatesForLine.length >= 10 ? computeMedianRate(dotRatesForLine) : null;
+  // Reference slope line — shows expected drift based on native rate
+  // Compute bucket rate from individual deviations for convergence check
+  const ppsChart = activeBph / 7200;
+  const sdChart = 86.4 * ppsChart;
+  let bucketMedian = null;
+  if (data.length >= 11) {
+    const indivRates = [];
+    for (let i = 1; i < data.length; i++) indivRates.push((data[i].d - data[i-1].d) * sdChart);
+    bucketMedian = computeMedianRate(indivRates);
+  }
   if (bucketMedian != null) _msrCachedBucketRate = bucketMedian;
   const lineRate = _msrLastRate != null ? _msrLastRate : bucketMedian;
-  if (lineRate != null) {
-    const modeY = yPos(lineRate);
-    if (modeY > pad.t && modeY < h - pad.b) {
-      ctx.save();
-      ctx.setLineDash([4 * dpr, 4 * dpr]);
-      ctx.strokeStyle = 'rgba(250,204,21,0.5)';
-      ctx.lineWidth = 1.5 * dpr;
-      ctx.beginPath();
-      ctx.moveTo(pad.l, modeY);
-      ctx.lineTo(w - pad.r, modeY);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
-    }
+  if (lineRate != null && data.length >= 2) {
+    const slopeMs = lineRate / 86400; // s/day → ms/ms → ms/s (/1000 then *1000 cancel)
+    const t0 = data[0].t, t1 = data[data.length - 1].t;
+    const d0 = data[0].d;
+    const y0 = yPos(d0);
+    const y1 = yPos(d0 + slopeMs * (t1 - t0));
+    ctx.save();
+    ctx.setLineDash([4 * dpr, 4 * dpr]);
+    ctx.strokeStyle = 'rgba(250,204,21,0.5)';
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.beginPath();
+    ctx.moveTo(xPos(t0), y0);
+    ctx.lineTo(xPos(t1), y1);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
   }
 
-  // Y-axis labels (right side, in s/day) — dim green
+  // Y-axis labels (right side, in ms) — dim green
   ctx.fillStyle = 'rgba(74,222,128,0.6)';
   ctx.font = (9 * dpr) + 'px monospace';
   ctx.textAlign = 'left';
   for (let i = 0; i <= yTicks; i++) {
     const val = yMin + (yRange * i / yTicks);
     const y = yPos(val);
-    ctx.fillText((val >= 0 ? '+' : '') + val.toFixed(0) + 's/d', w - pad.r + 4 * dpr, y + 3 * dpr);
+    const label = Math.abs(val) >= 1 ? val.toFixed(1) + 'ms' : val.toFixed(2) + 'ms';
+    ctx.fillText((val >= 0 ? '+' : '') + label, w - pad.r + 4 * dpr, y + 3 * dpr);
   }
 
   // X-axis labels — dim green
@@ -19174,8 +19182,9 @@ function stopMsrListen(reason) {
     const watchId = document.getElementById('msr-watch-select')?.value || null;
     const bph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || null;
     const sdLog = 86.4 * ((bph || 28800) / 7200);
-    const dotRates = _msrScatterData.map(d => d.d * sdLog);
-    const bucketRate = dotRates.length >= 10 ? computeMedianRate(dotRates) : null;
+    const indivRatesLog = [];
+    for (let i = 1; i < _msrScatterData.length; i++) indivRatesLog.push((_msrScatterData[i].d - _msrScatterData[i-1].d) * sdLog);
+    const bucketRate = indivRatesLog.length >= 10 ? computeMedianRate(indivRatesLog) : null;
     db.from('timegrapher_tick_logs').insert({
       session_id: _tgDebugSessionId,
       messages: JSON.stringify({
@@ -19223,7 +19232,9 @@ function stopMsrListen(reason) {
   // if native rate was never set (e.g. web-only mode with no native engine).
   const finalBph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;
   const finalSD = 86.4 * (finalBph / 7200);
-  const finalDotRates = _msrScatterData.map(d => d.d * finalSD);
+  const finalIndivRates = [];
+  for (let i = 1; i < _msrScatterData.length; i++) finalIndivRates.push((_msrScatterData[i].d - _msrScatterData[i-1].d) * finalSD);
+  const finalDotRates = finalIndivRates;
   if (_msrLastRate == null) {
     const finalMode = finalDotRates.length >= 10 ? computeMedianRate(finalDotRates) : null;
     if (finalMode != null) _msrLastRate = finalMode;
