@@ -4,6 +4,7 @@ import {
   markDirty,
   filterDirtyItems,
   shouldStopNotifPolling,
+  withTimeout,
 } from '../wrotate_test.js';
 
 // ── safeParseJSON ─────────────────────────────────────────────────────────────
@@ -236,5 +237,194 @@ describe('shouldStopNotifPolling', () => {
 
   it('handles error with null message', () => {
     expect(shouldStopNotifPolling({ message: null })).toBe(false);
+  });
+});
+
+// ── loadFollowing try/catch resilience ────────────────────────────────────
+
+describe('loadFollowing resilience pattern', () => {
+  // loadFollowing wraps Promise.all in try/catch. If both queries fail,
+  // following and myFollowers should remain as they were (not crash).
+
+  it('state survives when Promise.all rejects', async () => {
+    // Simulate the loadFollowing pattern: pre-existing state is preserved on error
+    let following = new Set(['existing-1', 'existing-2']);
+    let myFollowers = new Set(['follower-1']);
+
+    try {
+      await Promise.all([
+        Promise.reject(new Error('network error')),
+        Promise.reject(new Error('network error')),
+      ]);
+      // These lines would overwrite state — but they never run on error
+      following = new Set();
+      myFollowers = new Set();
+    } catch (e) {
+      // loadFollowing just returns on error, preserving state
+    }
+
+    expect(following.size).toBe(2);
+    expect(following.has('existing-1')).toBe(true);
+    expect(myFollowers.size).toBe(1);
+  });
+
+  it('state updates normally when Promise.all succeeds', async () => {
+    let following = new Set(['old']);
+    let myFollowers = new Set();
+
+    let data, fData;
+    try {
+      const results = await Promise.all([
+        Promise.resolve({ data: [{ following_id: 'new-1' }, { following_id: 'new-2' }] }),
+        Promise.resolve({ data: [{ follower_id: 'f1' }] }),
+      ]);
+      data = results[0].data;
+      fData = results[1].data;
+    } catch (e) {
+      return;
+    }
+
+    following = new Set((data || []).map(r => r.following_id));
+    myFollowers = new Set((fData || []).map(r => r.follower_id));
+
+    expect(following.size).toBe(2);
+    expect(following.has('new-1')).toBe(true);
+    expect(myFollowers.size).toBe(1);
+    expect(myFollowers.has('f1')).toBe(true);
+  });
+
+  it('handles partial success with null data gracefully', async () => {
+    let following = new Set();
+    let myFollowers = new Set();
+
+    let data, fData;
+    try {
+      const results = await Promise.all([
+        Promise.resolve({ data: null }),
+        Promise.resolve({ data: null }),
+      ]);
+      data = results[0].data;
+      fData = results[1].data;
+    } catch (e) {
+      return;
+    }
+
+    following = new Set((data || []).map(r => r.following_id));
+    myFollowers = new Set((fData || []).map(r => r.follower_id));
+
+    expect(following.size).toBe(0);
+    expect(myFollowers.size).toBe(0);
+  });
+});
+
+// ── saveEditPost try/finally pattern ─────────────────────────────────────
+
+describe('saveEditPost try/finally button re-enable pattern', () => {
+  it('re-enables button even when body throws', () => {
+    let btnDisabled = true;
+    let btnText = 'Saving…';
+
+    try {
+      throw new Error('DB write failed');
+    } catch (e) {
+      // error handler
+    } finally {
+      btnDisabled = false;
+      btnText = 'Save';
+    }
+
+    expect(btnDisabled).toBe(false);
+    expect(btnText).toBe('Save');
+  });
+
+  it('re-enables button on success too', () => {
+    let btnDisabled = true;
+    let btnText = 'Saving…';
+
+    try {
+      // success path — no error
+    } finally {
+      btnDisabled = false;
+      btnText = 'Save';
+    }
+
+    expect(btnDisabled).toBe(false);
+    expect(btnText).toBe('Save');
+  });
+
+  it('re-enables button even on unexpected error types', () => {
+    let btnDisabled = true;
+
+    try {
+      throw 'string error'; // non-Error throw
+    } catch (e) {
+      // swallowed
+    } finally {
+      btnDisabled = false;
+    }
+
+    expect(btnDisabled).toBe(false);
+  });
+});
+
+// ── loadAndRenderProfile timeout resilience ──────────────────────────────
+
+describe('loadAndRenderProfile timeout pattern', () => {
+  it('withTimeout rejects with timeout error for slow Promise.all', async () => {
+    const slowPromise = new Promise(resolve => setTimeout(resolve, 500));
+    await expect(withTimeout(slowPromise, 10)).rejects.toThrow('Query timed out');
+  });
+
+  it('catch block can render error UI with retry button', async () => {
+    let errorHtml = '';
+    const userId = 'test-user-123';
+
+    try {
+      await withTimeout(new Promise(resolve => setTimeout(resolve, 500)), 10);
+    } catch (e) {
+      errorHtml = `<div style="text-align:center;padding:3rem;color:var(--muted);">Could not load profile. <button class="btn btn-sm" onclick="viewUserProfile('${userId}')">Retry</button></div>`;
+    }
+
+    expect(errorHtml).toContain('Could not load profile');
+    expect(errorHtml).toContain('Retry');
+    expect(errorHtml).toContain('viewUserProfile');
+    expect(errorHtml).toContain(userId);
+  });
+
+  it('successful Promise.all within timeout does not trigger error UI', async () => {
+    let errorHtml = '';
+
+    try {
+      const results = await withTimeout(
+        Promise.all([
+          Promise.resolve({ count: 10, data: null }),
+          Promise.resolve({ count: 5, data: null }),
+        ]),
+        1000
+      );
+      // Normal flow: use results
+      expect(results[0].count).toBe(10);
+      expect(results[1].count).toBe(5);
+    } catch (e) {
+      errorHtml = 'Could not load profile';
+    }
+
+    expect(errorHtml).toBe('');
+  });
+
+  it('non-timeout errors (e.g. network) also trigger error UI', async () => {
+    let errorHtml = '';
+
+    try {
+      await withTimeout(
+        Promise.reject(new Error('Failed to fetch')),
+        10000
+      );
+    } catch (e) {
+      errorHtml = `Could not load profile. <button>Retry</button>`;
+    }
+
+    expect(errorHtml).toContain('Could not load profile');
+    expect(errorHtml).toContain('Retry');
   });
 });

@@ -1411,3 +1411,53 @@ export function deleteAccountFilters(uid) {
     official_drafts: { eq: ['created_by', uid] },
   };
 }
+
+// ══════════════════════════════════════════
+//  PROFILE COUNT PARSING
+// ══════════════════════════════════════════
+
+/**
+ * Parse a Supabase count response (head: true query).
+ * Returns the count value, defaulting to 0 on missing/null.
+ * Used by loadAndRenderProfile for follower/following counts.
+ */
+export function parseCountResponse(response) {
+  return response.count || 0;
+}
+
+// ══════════════════════════════════════════
+//  PRICE UPDATE TOAST MESSAGE
+// ══════════════════════════════════════════
+
+/**
+ * Build the toast message for saveUpdatedPrices.
+ * @param {number} saved - number of successfully saved prices
+ * @param {string[]} failed - names of watches that failed to save
+ * @returns {{ message: string, type: string }}
+ */
+export function formatPriceUpdateToast(saved, failed) {
+  if (failed.length) {
+    return {
+      message: `Updated ${saved} price${saved !== 1 ? 's' : ''}, ${failed.length} failed: ${failed.slice(0, 3).join(', ')}${failed.length > 3 ? '...' : ''}`,
+      type: 'error',
+    };
+  }
+  return {
+    message: `Updated ${saved} watch price${saved !== 1 ? 's' : ''}.`,
+    type: 'success',
+  };
+}
+
+// ══════════════════════════════════════════
+//  DELETE ACCOUNT ERROR MESSAGE
+// ══════════════════════════════════════════
+
+/**
+ * Build the error message when a deleteAccount phase fails.
+ * The del() helper throws new Error(tableName), so e.message is the table name.
+ * @param {string} tableName - the name of the table that failed
+ * @returns {string}
+ */
+export function formatDeleteError(tableName) {
+  return `Delete failed at ${tableName}. Please try again — already-deleted data will be skipped.`;
+}

@@ -4,6 +4,7 @@ import {
   computeFriendships,
   aggregateLikes, aggregateCommentCounts,
   reorderList,
+  parseCountResponse,
 } from '../wrotate_test.js';
 
 // ── computeFriendState ───────────────────────────────────────────────────────
@@ -314,5 +315,44 @@ describe('reorderList', () => {
     const result = reorderList(list, 'a', 'd');
     const ids = result.map(x => x.id);
     expect(ids.indexOf('a')).toBeGreaterThan(ids.indexOf('d') - 1);
+  });
+});
+
+// ── parseCountResponse (follower/following count queries) ───────────────
+
+describe('parseCountResponse', () => {
+  it('returns count from head:true response with count property', () => {
+    // Supabase returns { count: N, data: null } for head:true queries
+    expect(parseCountResponse({ count: 42, data: null })).toBe(42);
+  });
+
+  it('returns 0 when count is null', () => {
+    expect(parseCountResponse({ count: null, data: null })).toBe(0);
+  });
+
+  it('returns 0 when count is undefined', () => {
+    expect(parseCountResponse({ data: null })).toBe(0);
+  });
+
+  it('returns 0 when count is 0', () => {
+    expect(parseCountResponse({ count: 0, data: null })).toBe(0);
+  });
+
+  it('returns correct count for large numbers', () => {
+    expect(parseCountResponse({ count: 9999, data: null })).toBe(9999);
+  });
+
+  it('returns 1 for single follower', () => {
+    expect(parseCountResponse({ count: 1, data: null })).toBe(1);
+  });
+
+  it('does not use data.length (old pattern)', () => {
+    // Old pattern used (data || []).length — new pattern ignores data entirely
+    const response = { count: 5, data: [1, 2, 3] };
+    expect(parseCountResponse(response)).toBe(5);
+  });
+
+  it('works when data is absent (head:true returns no data)', () => {
+    expect(parseCountResponse({ count: 10 })).toBe(10);
   });
 });

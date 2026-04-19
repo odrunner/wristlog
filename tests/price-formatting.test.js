@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatPriceString, parsePrice, fmtMoney } from '../wrotate_test.js';
+import { formatPriceString, parsePrice, fmtMoney, formatPriceUpdateToast } from '../wrotate_test.js';
 
 describe('formatPriceString', () => {
   it('adds commas to thousands', () => {
@@ -99,5 +99,63 @@ describe('fmtMoney', () => {
 
   it('handles string number input', () => {
     expect(fmtMoney('6500')).toBe('$6,500');
+  });
+});
+
+// ── formatPriceUpdateToast (saveUpdatedPrices error reporting) ──────────
+
+describe('formatPriceUpdateToast', () => {
+  it('returns success message when no failures', () => {
+    const result = formatPriceUpdateToast(3, []);
+    expect(result.type).toBe('success');
+    expect(result.message).toBe('Updated 3 watch prices.');
+  });
+
+  it('returns singular form for 1 price', () => {
+    const result = formatPriceUpdateToast(1, []);
+    expect(result.message).toBe('Updated 1 watch price.');
+  });
+
+  it('returns error message with failed watch names', () => {
+    const result = formatPriceUpdateToast(2, ['Rolex Submariner']);
+    expect(result.type).toBe('error');
+    expect(result.message).toBe('Updated 2 prices, 1 failed: Rolex Submariner');
+  });
+
+  it('includes multiple failed watch names', () => {
+    const result = formatPriceUpdateToast(1, ['Rolex Submariner', 'Omega Speedmaster']);
+    expect(result.type).toBe('error');
+    expect(result.message).toContain('2 failed');
+    expect(result.message).toContain('Rolex Submariner');
+    expect(result.message).toContain('Omega Speedmaster');
+  });
+
+  it('truncates to 3 failed names with ellipsis', () => {
+    const failed = ['Rolex Sub', 'Omega Speed', 'Tudor BB', 'Seiko SPB'];
+    const result = formatPriceUpdateToast(0, failed);
+    expect(result.message).toContain('4 failed');
+    expect(result.message).toContain('Rolex Sub');
+    expect(result.message).toContain('Omega Speed');
+    expect(result.message).toContain('Tudor BB');
+    expect(result.message).not.toContain('Seiko SPB');
+    expect(result.message.endsWith('...')).toBe(true);
+  });
+
+  it('shows exactly 3 names without ellipsis when 3 fail', () => {
+    const failed = ['Watch A', 'Watch B', 'Watch C'];
+    const result = formatPriceUpdateToast(5, failed);
+    expect(result.message).toContain('3 failed');
+    expect(result.message).not.toContain('...');
+  });
+
+  it('uses singular "price" for 1 success with failures', () => {
+    const result = formatPriceUpdateToast(1, ['Failed Watch']);
+    expect(result.message).toContain('Updated 1 price,');
+  });
+
+  it('handles 0 saved with all failures', () => {
+    const result = formatPriceUpdateToast(0, ['Watch A']);
+    expect(result.type).toBe('error');
+    expect(result.message).toContain('Updated 0 prices');
   });
 });
