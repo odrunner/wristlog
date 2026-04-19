@@ -4767,7 +4767,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.19.12.34';
+const APP_VERSION = '2.36.19.12.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14461,9 +14461,10 @@ function renderStatsRow(fl) {
 
   let valHtml = '';
   if (pricePaid) {
-    valHtml += `<div class="stat-sub" style="white-space:nowrap;">Paid ${fmtMoney(pricePaid)}</div>`;
     if (hasMarket) {
-      valHtml += `<div class="stat-sub" style="white-space:nowrap;">Market ${fmtMoney(marketVal)} <span style="color:${pctColor};font-size:.85em;">${pctSign}${pctDelta.toFixed(1)}%</span></div>`;
+      valHtml = `<table style="border-collapse:collapse;margin:0 auto;"><tr><td style="text-align:right;padding:0 .3rem 0 0;white-space:nowrap;">Paid</td><td style="text-align:right;padding:0;white-space:nowrap;">${fmtMoney(pricePaid)}</td><td></td></tr><tr><td style="text-align:right;padding:0 .3rem 0 0;white-space:nowrap;">Market</td><td style="text-align:right;padding:0;white-space:nowrap;">${fmtMoney(marketVal)}</td><td style="padding:0 0 0 .3rem;white-space:nowrap;"><span style="color:${pctColor};font-size:.85em;">${pctSign}${pctDelta.toFixed(1)}%</span></td></tr></table>`;
+    } else {
+      valHtml = `<div class="stat-sub" style="white-space:nowrap;">${fmtMoney(pricePaid)}</div>`;
     }
   } else {
     valHtml = '<div class="stat-sub">—</div>';
