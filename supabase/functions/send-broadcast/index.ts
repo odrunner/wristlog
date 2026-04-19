@@ -123,10 +123,12 @@ serve(async (req) => {
       }
     }
 
-    // Post-filter by email domain for the Apple Private Relay segment
+    // Batch segments: split all emails into 3 roughly equal groups
     let filteredEmails = emails;
-    if (segment === "apple_private_relay") {
-      filteredEmails = emails.filter(e => e.toLowerCase().endsWith("@privaterelay.appleid.com"));
+    if (segment === "batch_1" || segment === "batch_2" || segment === "batch_3") {
+      const batchSize = Math.ceil(filteredEmails.length / 3);
+      const batchNum = parseInt(segment.split("_")[1]) - 1;
+      filteredEmails = filteredEmails.slice(batchNum * batchSize, (batchNum + 1) * batchSize);
     }
 
     // Send via Resend batch API (up to 100 per request)
