@@ -4776,7 +4776,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.19.13.12';
+const APP_VERSION = '2.36.19.13.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10579,11 +10579,12 @@ async function loadAdminStats() {
 
     // Per-user breakdowns — fetch in parallel with pagination safety
     const ADMIN_ROW_LIMIT = 10000;
-    const [watchesR, logsR, profilesR, msrR] = await withTimeout(Promise.all([
+    const [watchesR, logsR, profilesR, msrR, valR] = await withTimeout(Promise.all([
       db.from('watches').select('user_id').limit(ADMIN_ROW_LIMIT),
       db.from('logs').select('user_id, watch_id').limit(ADMIN_ROW_LIMIT),
       db.from('profiles').select('id, username, display_name, avatar_url, created_at').order('created_at', { ascending: false }).limit(500),
       db.rpc('admin_measurement_counts'),
+      db.from('valuation_events').select('user_id').limit(ADMIN_ROW_LIMIT),
     ]), 10000);
     const allWatches = watchesR.data || [];
     const watchByUser = {};
@@ -10598,6 +10599,9 @@ async function loadAdminStats() {
 
     const msrByUser = {};
     (msrR.data || []).forEach(r => { msrByUser[r.user_id] = (msrByUser[r.user_id] || 0) + Number(r.count); });
+
+    const valByUser = {};
+    (valR.data || []).forEach(r => { valByUser[r.user_id] = (valByUser[r.user_id] || 0) + 1; });
 
     const allProfiles = profilesR.data || [];
 
@@ -10615,7 +10619,7 @@ async function loadAdminStats() {
       joined: p.created_at ? fmtDate(p.created_at.slice(0, 10)) : '—',
       watches: watchByUser[p.id] || 0,
       wears: wearByUser[p.id] || 0,
-      posts: postByUser[p.id] || 0,
+      priceChecks: valByUser[p.id] || 0,
       measurements: msrByUser[p.id] || 0,
     });
     const profileList = allProfiles.filter(p => !INTERNAL_IDS.has(p.id)).map(toProfileItem);
@@ -10635,7 +10639,7 @@ async function loadAdminStats() {
           </div></td>
           <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.watches}</td>
           <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.wears}</td>
-          <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.posts}</td>
+          <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.priceChecks}</td>
           <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.measurements}</td>
         </tr>`;
       }).join('');
@@ -10646,7 +10650,7 @@ async function loadAdminStats() {
             <th style="text-align:left;padding:.35rem .25rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">User</th>
             <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Wtc</th>
             <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Wrs</th>
-            <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Pst</th>
+            <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Val</th>
             <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Msr</th>
           </tr></thead>
           <tbody>${rows}</tbody>
@@ -10660,7 +10664,7 @@ async function loadAdminStats() {
         ${statRow('Users', extUsers)}
         ${statRow('Watches', extWatches)}
         ${statRow('Wears', extWears)}
-        ${statRow('Posts', extPosts)}
+        ${statRow('Price Checks', Object.entries(valByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0))}
         ${statRow('Measurements', extMsr)}
         ${statRow('Wishlist Items', wishItems)}
         ${statRow('Clubs', clubs)}
@@ -10673,7 +10677,7 @@ async function loadAdminStats() {
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Per-User Averages (external)</div>
         ${statRow('Watches / User', avg(extWatches, extUsers))}
         ${statRow('Wears / User', avg(extWears, extUsers))}
-        ${statRow('Posts / User', avg(extPosts, extUsers))}
+        ${statRow('Price Checks / User', avg(Object.entries(valByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0), extUsers))}
         ${statRow('Measurements / User', avg(extMsr, extUsers))}
         ${statRow('Follows / User', avg(follows, extUsers))}
       </div>
