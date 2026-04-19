@@ -4776,7 +4776,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.19.12.59';
+const APP_VERSION = '2.36.19.13.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13780,6 +13780,7 @@ async function checkSingleWatchValue() {
       btn.textContent = 'Check Value';
       return;
     }
+    db.from('valuation_events').insert({ user_id: currentUser.id, action: data.cached ? 'check_cached' : 'check', watches_total: watches.length, watches_priced: 1 }).then(() => {});
     // Show result with Apply button — compact inline layout
     const rangeStr = ev.low && ev.high ? `${fmtMoney(ev.low)} – ${fmtMoney(ev.high)}` : '';
     const note = !data.cached && data.confidence && data.confidence !== 'cached' ? data.confidence : '';
@@ -13803,6 +13804,7 @@ async function checkSingleWatchValue() {
       w.marketPriceDate = today;
       w.marketPriceSrc = 'WRotate';
       w.priceHistory = history;
+      db.from('valuation_events').insert({ user_id: currentUser.id, action: 'check_apply', watches_total: watches.length, watches_saved: 1 }).then(() => {});
       this.textContent = 'Applied ✓';
       this.style.color = '#2a9d5c';
     };
