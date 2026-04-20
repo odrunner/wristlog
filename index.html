@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.12.46';
+const APP_VERSION = '20.12.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15758,8 +15758,13 @@ function openPhotoIdentify() {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
-  input.addEventListener('cancel', () => resumeWelcome());
+  input.style.position = 'absolute';
+  input.style.opacity = '0';
+  input.style.pointerEvents = 'none';
+  document.body.appendChild(input);
+  input.addEventListener('cancel', () => { input.remove(); resumeWelcome(); });
   input.onchange = async () => {
+    input.remove();
     if (!input.files || !input.files[0]) return;
     const file = input.files[0];
     if (!validateImageFile(file)) return;
