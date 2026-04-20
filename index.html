@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.17.19.17.23';
+const APP_VERSION = '19.17.19.17.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10579,19 +10579,19 @@ async function loadAdminStats() {
   el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">Loading…</div>';
   try {
     // Parallel queries for all stats
-    const [usersRes, watchesRes, logsRes, postsRes, wishlistRes, clubsRes, followsRes, friendsRes, likesRes, commentsRes] = await withTimeout(Promise.all([
+    const [usersRes, watchesRes, logsRes, postsRes, wishlistRes, clubsRes, friendsRes, commentsRes, totalsRes] = await withTimeout(Promise.all([
       db.from('profiles').select('id', { count: 'exact', head: true }),
       db.from('watches').select('id', { count: 'exact', head: true }),
       db.from('logs').select('id', { count: 'exact', head: true }).not('watch_id', 'is', null),
       db.from('logs').select('id', { count: 'exact', head: true }).is('watch_id', null),
       db.from('wishlist').select('id', { count: 'exact', head: true }),
       db.from('clubs').select('id', { count: 'exact', head: true }),
-      db.from('follows').select('follower_id', { count: 'exact', head: true }),
       db.from('friend_requests').select('id', { count: 'exact', head: true }).eq('status', 'accepted'),
-      db.from('likes').select('user_id', { count: 'exact', head: true }),
       db.from('comments').select('id', { count: 'exact', head: true }),
+      db.rpc('admin_totals'),
     ]), 10000);
 
+    const adminTotals = (totalsRes.data || [])[0] || {};
     const users     = usersRes.count    || 0;
     const totalWatches = watchesRes.count || 0;
     const wearLogs  = logsRes.count     || 0;
@@ -10599,9 +10599,9 @@ async function loadAdminStats() {
     const totalLogs = wearLogs + posts;
     const wishItems = wishlistRes.count || 0;
     const clubs     = clubsRes.count    || 0;
-    const follows   = followsRes.count  || 0;
+    const follows   = Number(adminTotals.follows_count) || 0;
     const friends   = friendsRes.count  || 0;
-    const likes     = likesRes.count    || 0;
+    const likes     = Number(adminTotals.likes_count)   || 0;
     const comments  = commentsRes.count || 0;
 
     const avg = (n, d) => d > 0 ? (n / d).toFixed(1) : '0';
@@ -10613,7 +10613,7 @@ async function loadAdminStats() {
       db.from('logs').select('user_id, watch_id').limit(ADMIN_ROW_LIMIT),
       db.from('profiles').select('id, username, display_name, avatar_url, created_at').order('created_at', { ascending: false }).limit(500),
       db.rpc('admin_measurement_counts'),
-      db.from('valuation_events').select('user_id').limit(ADMIN_ROW_LIMIT),
+      db.rpc('admin_valuation_counts'),
     ]), 10000);
     const allWatches = watchesR.data || [];
     const watchByUser = {};
@@ -10630,7 +10630,7 @@ async function loadAdminStats() {
     (msrR.data || []).forEach(r => { msrByUser[r.user_id] = (msrByUser[r.user_id] || 0) + Number(r.count); });
 
     const valByUser = {};
-    (valR.data || []).forEach(r => { valByUser[r.user_id] = (valByUser[r.user_id] || 0) + 1; });
+    (valR.data || []).forEach(r => { valByUser[r.user_id] = (valByUser[r.user_id] || 0) + Number(r.count); });
 
     const allProfiles = profilesR.data || [];
 
