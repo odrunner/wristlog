@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.17.19.17.25';
+const APP_VERSION = '19.17.19.17.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10606,38 +10606,29 @@ async function loadAdminStats() {
 
     const avg = (n, d) => d > 0 ? (n / d).toFixed(1) : '0';
 
-    // Per-user breakdowns — fetch in parallel with pagination safety
-    const ADMIN_ROW_LIMIT = 10000;
-    const [watchesR, logsR, profilesR, msrR, valR] = await withTimeout(Promise.all([
-      db.from('watches').select('user_id').limit(ADMIN_ROW_LIMIT),
-      db.from('logs').select('user_id, watch_id').limit(ADMIN_ROW_LIMIT),
+    // Per-user breakdowns via SECURITY DEFINER RPCs (bypass RLS)
+    const [profilesR, msrR, userStatsR] = await withTimeout(Promise.all([
       db.from('profiles').select('id, username, display_name, avatar_url, created_at').order('created_at', { ascending: false }).limit(500),
       db.rpc('admin_measurement_counts'),
-      db.rpc('admin_valuation_counts'),
+      db.rpc('admin_user_stats'),
     ]), 10000);
-    const allWatches = watchesR.data || [];
-    const watchByUser = {};
-    allWatches.forEach(r => { watchByUser[r.user_id] = (watchByUser[r.user_id] || 0) + 1; });
 
-    const allLogs = logsR.data || [];
-    const wearByUser = {}, postByUser = {};
-    allLogs.forEach(r => {
-      if (r.watch_id) { wearByUser[r.user_id] = (wearByUser[r.user_id] || 0) + 1; }
-      else { postByUser[r.user_id] = (postByUser[r.user_id] || 0) + 1; }
+    const watchByUser = {}, wearByUser = {}, valByUser = {};
+    (userStatsR.data || []).forEach(r => {
+      watchByUser[r.user_id] = Number(r.watches) || 0;
+      wearByUser[r.user_id] = Number(r.wears) || 0;
+      valByUser[r.user_id] = Number(r.price_checks) || 0;
     });
 
     const msrByUser = {};
     (msrR.data || []).forEach(r => { msrByUser[r.user_id] = (msrByUser[r.user_id] || 0) + Number(r.count); });
 
-    const valByUser = {};
-    (valR.data || []).forEach(r => { valByUser[r.user_id] = (valByUser[r.user_id] || 0) + Number(r.count); });
-
     const allProfiles = profilesR.data || [];
 
     // Compute external-only totals (excluding internal accounts)
-    const extWatches = allWatches.filter(r => !INTERNAL_IDS.has(r.user_id)).length;
-    const extWears = allLogs.filter(r => r.watch_id && !INTERNAL_IDS.has(r.user_id)).length;
-    const extPosts = allLogs.filter(r => !r.watch_id && !INTERNAL_IDS.has(r.user_id)).length;
+    const extWatches = Object.entries(watchByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0);
+    const extWears = Object.entries(wearByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0);
+    const extVal = Object.entries(valByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0);
     const extMsr = Object.entries(msrByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0);
     const extUsers = allProfiles.filter(p => !INTERNAL_IDS.has(p.id)).length;
     const toProfileItem = (p) => ({
@@ -10693,7 +10684,7 @@ async function loadAdminStats() {
         ${statRow('Users', extUsers)}
         ${statRow('Watches', extWatches)}
         ${statRow('Wears', extWears)}
-        ${statRow('Price Checks', Object.entries(valByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0))}
+        ${statRow('Price Checks', extVal)}
         ${statRow('Measurements', extMsr)}
         ${statRow('Wishlist Items', wishItems)}
         ${statRow('Clubs', clubs)}
@@ -10706,7 +10697,7 @@ async function loadAdminStats() {
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Per-User Averages (external)</div>
         ${statRow('Watches / User', avg(extWatches, extUsers))}
         ${statRow('Wears / User', avg(extWears, extUsers))}
-        ${statRow('Price Checks / User', avg(Object.entries(valByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0), extUsers))}
+        ${statRow('Price Checks / User', avg(extVal, extUsers))}
         ${statRow('Measurements / User', avg(extMsr, extUsers))}
         ${statRow('Follows / User', avg(follows, extUsers))}
       </div>
