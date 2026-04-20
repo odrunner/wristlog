@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.17.20.07.46';
+const APP_VERSION = '20.10.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18210,6 +18210,8 @@ window._tgNativeCallback = function(data) {
     // Timegrapher chart: add per-tick dots
     if (isMsr && data.newTicks) addMsrTickDots(data.newTicks);
 
+    if (isMsr && data.confidence != null) _msrLastConf = data.confidence;
+
     if (isConfident) {
       if (isMsr) _msrLastDetectTime = Date.now();
       const r = data.rate;
@@ -18484,13 +18486,22 @@ window._tgNativeCallback = function(data) {
               statusText.style.color = 'rgba(234,179,8,.6)';
               break;
             case 'calibrating':
-              statusText.textContent = (_msrIsAuto && bphStr ? bphStr + ' \u00b7 ' : '') + 'CALIBRATING \u00b7 ' + timeStr;
-              statusText.style.color = 'rgba(234,179,8,.6)';
+              if (data.tickCount > 0 && data.tickCount <= 4) {
+                statusText.textContent = (_msrIsAuto && bphStr ? bphStr + ' \u00b7 ' : '') + 'HEARING TICKS \u00b7 ' + timeStr;
+                statusText.style.color = 'rgba(74,222,128,.5)';
+              } else {
+                statusText.textContent = (_msrIsAuto && bphStr ? bphStr + ' \u00b7 ' : '') + 'CALIBRATING \u00b7 ' + timeStr;
+                statusText.style.color = 'rgba(234,179,8,.6)';
+              }
               break;
             case 'measuring':
-              statusText.textContent = 'MEASURING \u00b7 ' + timeStr;
+              if (_msrScatterData.length > 0 && _msrScatterData.length <= 10) {
+                statusText.textContent = 'MEASURING \u00b7 ' + _msrScatterData.length + ' ticks \u00b7 ' + timeStr;
+              } else {
+                statusText.textContent = 'MEASURING \u00b7 ' + timeStr;
+              }
               statusText.style.color = 'rgba(74,222,128,.6)';
-              _msrWeakSignalShown = false; // clear warning once measuring properly
+              _msrWeakSignalShown = false;
               break;
             case 'converged':
               statusText.textContent = 'CONVERGED \u00b7 ' + timeStr;
@@ -18518,17 +18529,26 @@ window._tgNativeCallback = function(data) {
         if (statusText) {
           if (_msrLastRate != null && wasConverged) {
             // Already handled by stopMsrListen — shows "Result: +X.X ±Y.Y s/day"
+          } else if (_msrLastRate != null && _msrLastConf >= 0.45) {
+            const r = _msrLastRate;
+            const sign = r >= 0 ? '+' : '';
+            statusText.innerHTML = sign + r.toFixed(1) + ' s/day <span style="color:rgba(234,179,8,.6);font-size:.6rem;font-weight:400;">· lower confidence · retry for better accuracy</span>';
+            statusText.style.color = 'rgba(234,179,8,.8)';
+            statusText.style.fontSize = '.75rem';
+            statusText.style.fontWeight = '600';
+            const idleOv2 = document.getElementById('msr-idle-overlay');
+            if (idleOv2) idleOv2.style.display = 'none';
+            const _retryLabel2 = document.getElementById('msr-btn-label');
+            if (_retryLabel2) _retryLabel2.textContent = 'Retry';
           } else if (_msrLastRate != null) {
             const r = _msrLastRate;
             const sign = r >= 0 ? '+' : '';
-            statusText.textContent = sign + r.toFixed(1) + ' s/day \u00b7 not converged';
+            statusText.textContent = sign + r.toFixed(1) + ' s/day \u00b7 low confidence \u00b7 retry recommended';
             statusText.style.color = 'rgba(234,179,8,.7)';
             statusText.style.fontSize = '.7rem';
             statusText.style.fontWeight = '600';
-            // Keep chart visible, hide idle overlay
             const idleOv2 = document.getElementById('msr-idle-overlay');
             if (idleOv2) idleOv2.style.display = 'none';
-            // Change button to "Retry"
             const _retryLabel2 = document.getElementById('msr-btn-label');
             if (_retryLabel2) _retryLabel2.textContent = 'Retry';
           } else {
@@ -18536,7 +18556,6 @@ window._tgNativeCallback = function(data) {
             statusText.style.color = 'rgba(239,68,68,.7)';
             statusText.style.fontSize = '.7rem';
             statusText.style.fontWeight = '';
-            // Change button to "Retry"
             const _retryLabel3 = document.getElementById('msr-btn-label');
             if (_retryLabel3) _retryLabel3.textContent = 'Retry';
           }
@@ -18722,6 +18741,7 @@ let _msrWeakSignalShown = false; // whether the weak signal warning has been sho
 let _msrNoiseWarningShown = false; // whether the noisy environment warning has been shown
 let _msrNoiseSamples = [];    // noise level readings during calibration phase
 let _msrPrelimShown = false; // whether the preliminary rate has been shown
+let _msrLastConf = 0;        // latest native confidence (0-1)
 
 let _msrScatterRafPending = false;
 let _msrLastCumDev = 0; // track last cumulative deviation to reject outlier ticks
@@ -19063,7 +19083,7 @@ function onMsrBphChange() {
     _msrBphLocked = false;
     _msrLastRate = null; _msrLastBe = null; _msrLastBph = null;
     _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = []; _msrLastBucketCalcTime = 0; _msrCachedBucketRate = null;
-    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false; _msrNoiseWarningShown = false; _msrNoiseSamples = []; _msrPrelimShown = false; _msrAcceptRate = 0;
+    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false; _msrNoiseWarningShown = false; _msrNoiseSamples = []; _msrPrelimShown = false; _msrAcceptRate = 0; _msrLastConf = 0;
     const scCanvas = document.getElementById('msr-scatter-plot');
     if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
     document.getElementById('msr-live-rate').textContent = '—';
@@ -19147,7 +19167,7 @@ function toggleMsrListen() {
     _msrHadTicks = false;
     _msrBphLocked = false;
     _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = []; _msrLastBucketCalcTime = 0; _msrCachedBucketRate = null;
-    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false; _msrNoiseWarningShown = false; _msrNoiseSamples = []; _msrPrelimShown = false; _msrAcceptRate = 0;
+    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false; _msrNoiseWarningShown = false; _msrNoiseSamples = []; _msrPrelimShown = false; _msrAcceptRate = 0; _msrLastConf = 0;
     document.getElementById('msr-status-text').textContent = 'ACQUIRING \u00b7 0s';
     document.getElementById('msr-status-text').style.color = 'rgba(74,222,128,.35)';
     document.getElementById('msr-status-text').style.fontSize = '';
@@ -19284,6 +19304,7 @@ function stopMsrListen(reason) {
         actual_sample_rate: _msrActualSampleRate,
         stop_reason: stopReason,
         converged: _msrPhase === 'converged',
+        final_confidence: _msrLastConf,
         tick_data: tickSnap
       })
     }).then(() => {});
@@ -19383,7 +19404,16 @@ function stopMsrListen(reason) {
     const completeMsg = document.getElementById('msr-complete-msg');
     if (completeMsg) {
       const wasConverged = document.getElementById('msr-converged-badge')?.style.display !== 'none';
-      completeMsg.textContent = wasConverged ? 'Measurement complete — converged' : 'Measurement complete — estimate';
+      if (wasConverged) {
+        completeMsg.textContent = 'Measurement complete';
+        completeMsg.style.color = 'var(--text)';
+      } else if (_msrLastConf >= 0.45) {
+        completeMsg.textContent = 'Lower confidence — retry for better accuracy';
+        completeMsg.style.color = 'rgba(234,179,8,.8)';
+      } else {
+        completeMsg.textContent = 'Low confidence — retry recommended';
+        completeMsg.style.color = 'rgba(234,179,8,.7)';
+      }
       completeMsg.style.color = 'var(--text)';
     }
   }
