@@ -2461,7 +2461,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
         <button class="btn btn-ghost" onclick="startGame()" title="Ranking Game" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="btn-label"> Ranking Game</span></button>
         <button class="btn btn-ghost" onclick="openAddWatch()" title="Add Manually" style="padding:.35rem .45rem;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-        <button class="btn btn-primary" onclick="openPhotoIdentify()" title="Add from Photo" style="padding:.35rem .5rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
+        <button class="btn btn-primary" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="btn-label">Add from Photo</span></button>
         <button id="coll-update-prices-btn" class="btn btn-ghost" onclick="openUpdatePrices()" title="Update Market Prices" style="display:none;font-weight:700;font-size:.9rem;">$</button>
       </div>
     </div>
@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.15.21';
+const APP_VERSION = '20.15.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15988,7 +15988,7 @@ async function _identifyMultipleWatches(detectData, fullBase64, listEl) {
   }
   // Add "Add All" button after all watches identified
   if (_photoIdentifyResults.length > 1 && !window._identifyAborted) {
-    listEl.insertAdjacentHTML('afterbegin', `<div style="display:flex;justify-content:flex-end;margin-bottom:.5rem;"><button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .9rem;" onclick="addAllFromIdentified()">Add All</button></div>`);
+    listEl.insertAdjacentHTML('beforeend', `<div style="display:flex;justify-content:flex-end;margin-top:.5rem;"><button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .9rem;" onclick="addAllFromIdentified()">Add All</button></div>`);
   }
 }
 
@@ -16018,7 +16018,7 @@ function renderPhotoIdentifyResults() {
     </div>`;
   }).join('');
   if (_photoIdentifyResults.length > 1) {
-    list.insertAdjacentHTML('afterbegin', `<div style="display:flex;justify-content:flex-end;margin-bottom:.5rem;"><button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .9rem;" onclick="addAllFromIdentified()">Add All</button></div>`);
+    list.insertAdjacentHTML('beforeend', `<div style="display:flex;justify-content:flex-end;margin-top:.5rem;"><button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .9rem;" onclick="addAllFromIdentified()">Add All</button></div>`);
   }
   _photoIdentifyResults.forEach((w, i) => { if (w._imageSearched) updateIdentifyCard(i); });
   prefetchIdentifiedImages();
