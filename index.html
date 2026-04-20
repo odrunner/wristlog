@@ -4802,7 +4802,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.16.17';
+const APP_VERSION = '20.16.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14039,7 +14039,7 @@ async function saveWatch() {
     const newId = uid();
     watches.push({ id: newId, ...data });
     markDirty('watches', newId);
-    if (window.posthog) posthog.capture('watch_added', { brand: data.brand, from_wishlist: !!movingFromWishlistId });
+    if (window.posthog) posthog.capture('watch_added', { brand: data.brand, from_wishlist: !!movingFromWishlistId, source: movingFromWishlistId ? 'wishlist' : window._addingFromIdentify ? 'photo_edit' : 'manual' });
     toast(movingFromWishlistId ? 'Moved to collection!' : 'Watch added to collection!');
   }
   const pendingWlId = movingFromWishlistId;  // capture before closeWatchModal clears it
@@ -16171,6 +16171,7 @@ async function quickAddFromIdentified(idx) {
     };
     watches.push(data);
     markDirty('watches', newId);
+    if (window.posthog) posthog.capture('watch_added', { brand: data.brand, source: 'photo_quick' });
     save();
     if (w._prefetchedImageUrl) URL.revokeObjectURL(w._prefetchedImageUrl);
     _photoIdentifyResults.splice(idx, 1);
@@ -16217,6 +16218,7 @@ async function addAllFromIdentified() {
     } catch (e) { console.error('[WristLog] addAll item error:', e); }
   }
   _photoIdentifyResults = [];
+  if (window.posthog) posthog.capture('watch_added', { source: 'photo_add_all', count: added });
   save();
   closePhotoIdentify();
   renderCollection();
