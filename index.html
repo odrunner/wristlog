@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.17.19.18.02';
+const APP_VERSION = '19.17.19.18.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10737,13 +10737,14 @@ async function renderAdminTraffic() {
     ]);
 
     const isInternal = (v) => v.user_id && INTERNAL_IDS.has(v.user_id);
+    const isBot = (v) => /HeadlessChrome|Playwright|Puppeteer|Electron/i.test(v.user_agent || '');
     const isFunnelNoise = (v) => v.utm_medium === 'funnel' || /^(signin_google|signin_apple|onboarding_step_\d)$/.test(v.utm_source || '');
     const isOAuthReturn = (v) => {
       if (v.utm_source || !v.referrer) return false;
       try { const h = new URL(v.referrer).hostname; return h === 'accounts.google.com' || h === 'appleid.apple.com'; } catch(e) { return false; }
     };
 
-    const allRaw = (allVisitsR.data || []).filter(v => !isInternal(v) && !isFunnelNoise(v) && !isOAuthReturn(v));
+    const allRaw = (allVisitsR.data || []).filter(v => !isInternal(v) && !isBot(v) && !isFunnelNoise(v) && !isOAuthReturn(v));
     const visits7 = allRaw.filter(v => v.created_at >= d7);
     const visits30 = allRaw.filter(v => v.created_at >= d30);
 
