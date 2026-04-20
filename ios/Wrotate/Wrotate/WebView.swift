@@ -328,7 +328,6 @@ struct WebView: UIViewRepresentable {
                         todayWatch: todayWatch,
                         collectionValue: collectionValue
                     )
-                    WidgetKit.WidgetCenter.shared.reloadAllTimelines()
                 }
                 return
             }
