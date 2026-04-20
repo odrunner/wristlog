@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '2.36.19.16.55';
+const APP_VERSION = '2.36.19.17.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18742,12 +18742,12 @@ function renderMsrScatterPlot() {
   const tMax = Math.max(10, Math.ceil(tDataMax / 10) * 10 + 5);
   const tRange = tMax - tMin;
 
-  // Y range in ms: auto-fit cumulative deviation, minimum ±0.5ms
+  // Y range in ms: auto-fit cumulative deviation, minimum ±3ms (~±10 s/day over 30s)
   let dMin = Infinity, dMax = -Infinity;
   for (const d of data) { if (d.d < dMin) dMin = d.d; if (d.d > dMax) dMax = d.d; }
   dMin = Math.min(dMin, 0); dMax = Math.max(dMax, 0);
   const dMid = (dMin + dMax) / 2;
-  const dHalf = Math.max(0.5, (dMax - dMin) / 2 * 1.3);
+  const dHalf = Math.max(3.0, (dMax - dMin) / 2 * 1.3);
   const yMin = dMid - dHalf;
   const yMax = dMid + dHalf;
   const yRange = yMax - yMin;
@@ -18809,7 +18809,7 @@ function renderMsrScatterPlot() {
   if (bucketMedian != null) _msrCachedBucketRate = bucketMedian;
   const lineRate = _msrLastRate != null ? _msrLastRate : bucketMedian;
   if (lineRate != null && data.length >= 2) {
-    const slopeMs = lineRate / 86400; // s/day → ms/ms → ms/s (/1000 then *1000 cancel)
+    const slopeMs = lineRate / 86.4; // s/day → ms/s (÷86400 for s/s, ×1000 for ms/s)
     const t0 = data[0].t, t1 = data[data.length - 1].t;
     const d0 = data[0].d;
     const y0 = yPos(d0);
