@@ -364,7 +364,7 @@ class TimegrapherEngine {
 
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playAndRecord, mode: .measurement, options: [.mixWithOthers, .allowBluetooth])
+            try session.setCategory(.playAndRecord, mode: .measurement, options: [.mixWithOthers, .allowBluetoothA2DP])
             try session.setPreferredSampleRate(48000)
             try session.setActive(true)
 
@@ -751,7 +751,7 @@ class TimegrapherEngine {
         // Stability: rate has stayed within ±threshold for the full stability window
         // Uses hysteresis: easier to gain stability (3 s/day), harder to lose it (5 s/day)
         var isStable = wasStable
-        if let currentRate = smoothedRate {
+        if smoothedRate != nil {
             let recentRates = rateHistory.filter { wallElapsed - $0.time <= stabilityWindow }
             if recentRates.count >= 5 && wallElapsed >= wallElapsedMinimum {
                 let rateMin = recentRates.map(\.rate).min()!
