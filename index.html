@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.17.19.18.00';
+const APP_VERSION = '19.17.19.18.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19458,6 +19458,12 @@ async function bootApp(user) {
   if (currentUser?.id === user.id) return; // already running for this user
   clearUserState();
   currentUser = user;
+  // Backfill user_id on the page_visit from this page load (tracked before auth resolved)
+  const _visitCutoff = new Date(Date.now() - 120000).toISOString();
+  db.from('page_visits').update({ user_id: user.id })
+    .is('user_id', null).eq('user_agent', navigator.userAgent || '')
+    .gte('created_at', _visitCutoff).order('created_at', { ascending: false }).limit(1)
+    .then(() => {}).catch(() => {});
   // Check if this is a demo session
   if (user.email === DEMO_USER_EMAIL) _isDemoMode = true;
   const demoBanner = document.getElementById('demo-banner');
