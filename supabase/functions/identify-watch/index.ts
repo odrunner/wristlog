@@ -300,11 +300,14 @@ Rules:
     // Try Gemini 2.5 Pro with grounded search first
     if (GEMINI_API_KEY) {
       try {
+        const geminiAbort = new AbortController();
+        const geminiTimer = setTimeout(() => geminiAbort.abort(), 60000);
         const geminiResponse = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            signal: geminiAbort.signal,
             body: JSON.stringify({
               contents: [{
                 parts: [
@@ -321,6 +324,7 @@ Rules:
           }
         );
 
+        clearTimeout(geminiTimer);
         if (geminiResponse.ok) {
           const geminiResult = await geminiResponse.json();
           const parts = geminiResult.candidates?.[0]?.content?.parts ?? [];

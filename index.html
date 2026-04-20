@@ -1306,7 +1306,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* Crop adjuster overlay */
     .crop-adjuster { position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,.92); display:flex; flex-direction:column; }
-    .crop-adjuster-header { display:flex; justify-content:space-between; align-items:center; padding:.8rem 1rem; flex-shrink:0; }
+    .crop-adjuster-header { display:flex; justify-content:space-between; align-items:center; padding:.8rem 1rem; padding-top:max(.8rem, env(safe-area-inset-top, .8rem)); flex-shrink:0; }
     .crop-adjuster-header button { background:none; border:none; color:#fff; font-size:.88rem; padding:.4rem .8rem; cursor:pointer; border-radius:6px; }
     .crop-adjuster-header .crop-done { background:var(--gold); color:#000; font-weight:600; }
     .crop-viewport { flex:1; overflow:hidden; position:relative; touch-action:none; }
@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.12.18';
+const APP_VERSION = '20.12.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
