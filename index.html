@@ -1979,20 +1979,20 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
       <div style="margin-bottom:.75rem;">
-        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">AI Market Value Lookup</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Check the current market value of any watch with one tap. Open a watch and tap <strong>Check Value</strong>, or use <strong>Update Prices</strong> (the $ button) to check your entire collection at once. Values are saved and tracked over time so you can see how your collection&#8217;s worth changes.</div>
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Market Values</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">See what your watches are worth with AI-based valuations. Open a watch and tap <strong>Check Value</strong>, or use <strong>Update Prices</strong> (the $ button) to check your entire collection at once. Values are tracked over time so you can see how your collection&#8217;s worth changes.</div>
       </div>
       <div style="margin-bottom:.75rem;">
-        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Faster Watch Recognition</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Snap-to-track and post tagging now identify watches from your collection significantly faster with an optimized matching engine.</div>
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Home Screen Widgets</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Your daily watch, right on your home screen. Long-press your home screen and add the WRotate widget to see today&#8217;s watch at a glance.</div>
       </div>
       <div style="margin-bottom:.75rem;">
-        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Timegrapher &#8212; Measure Watch Accuracy</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Place your watch on the iPhone microphone and measure its accuracy in seconds per day &#8212; just like a professional timegrapher. Real-time scatter chart, signal quality bars, and automatic convergence. Available on the iOS app.</div>
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Share to WRotate</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Share a photo from your camera roll and AI identifies your watch. Use the share sheet from Photos or any app to send an image directly to WRotate.</div>
       </div>
       <div style="margin-bottom:.75rem;">
-        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Streamlined Experience</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Fewer interruptions throughout the app &#8212; unnecessary confirmation prompts have been removed from saving watches, logging wears, and other everyday actions.</div>
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Timegrapher &#8212; Improved Accuracy</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">The audio timegrapher has been tuned for more reliable measurements. Place your watch on the iPhone microphone and measure its accuracy in seconds per day &#8212; just like a professional timegrapher.</div>
       </div>
       <div style="margin:.75rem 0;border-top:1px solid var(--border);padding-top:.75rem;">
         <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">March 2026</span>
@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.17.19.20.33';
+const APP_VERSION = '19.17.19.21.50';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19510,6 +19510,13 @@ async function bootApp(user) {
   checkReminderNow();
   // Show anniversary modal if any watch has an anniversary today
   checkAnniversary();
+  // Auto-show What's New once per version (iOS 1.4+ only)
+  const _wnKey = 'whatsNewSeen';
+  const _wnVer = '2026-04';
+  if (window.webkit?.messageHandlers?.widgetData && localStorage.getItem(_wnKey) !== _wnVer) {
+    localStorage.setItem(_wnKey, _wnVer);
+    setTimeout(() => openWhatsNew(), 600);
+  }
   // Resolve official account ID (for badge rendering and admin drafts)
   if (!OFFICIAL_USER_ID) {
     db.from('profiles').select('id').eq('is_official', true).limit(1).single().then(({ data }) => {
