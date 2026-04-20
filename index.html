@@ -3645,7 +3645,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Identified Watches
     </div>
     <div id="photo-identify-list" style="max-height:60vh;overflow-y:auto;"></div>
-    <div class="modal-actions" style="margin-top:1rem;">
+    <div id="photo-identify-actions" class="modal-actions" style="margin-top:1rem;">
       <button class="btn btn-ghost" onclick="closePhotoIdentify()">Skip for now</button>
     </div>
   </div>
@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.12.54';
+const APP_VERSION = '20.14.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15948,12 +15948,8 @@ async function _identifyMultipleWatches(detectData, fullBase64, listEl) {
         refEl.textContent = `Ref. ${w.reference}`;
         card.querySelector('.pi-card-info')?.appendChild(refEl);
       }
-      const confSpan = document.createElement('span');
-      confSpan.className = `pi-card-conf ${w.confidence || 'medium'}`;
-      confSpan.textContent = w.confidence || 'medium';
-      card.querySelector('.pi-card-actions')?.before(confSpan);
       const actionsEl = card.querySelector('.pi-card-actions');
-      if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .7rem;" onclick="addFromIdentified(${i})">+ Add</button>`;
+      if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .55rem;" onclick="addFromIdentified(${i})" title="Review before adding">Edit</button><button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .7rem;" onclick="quickAddFromIdentified(${i})">Add</button>`;
     }
   }
 }
@@ -15977,13 +15973,15 @@ function renderPhotoIdentifyResults() {
         ${specs ? `<div class="pi-card-ref" style="color:var(--muted);font-size:.68rem;">${escHtml(specs)}</div>` : ''}
         ${w.yearRange ? `<div class="pi-card-ref" style="color:var(--muted);font-size:.68rem;">Years: ${escHtml(w.yearRange)}</div>` : ''}
       </div>
-      <span class="pi-card-conf ${w.confidence || 'medium'}">${w.confidence || 'medium'}</span>
       <div class="pi-card-actions">
-        <button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .7rem;" onclick="addFromIdentified(${i})">+ Add</button>
+        <button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .55rem;" onclick="addFromIdentified(${i})" title="Review before adding">Edit</button>
+        <button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .7rem;" onclick="quickAddFromIdentified(${i})">Add</button>
       </div>
     </div>`;
   }).join('');
-  // Re-apply image state for already-searched items, then search any new ones
+  if (_photoIdentifyResults.length > 1) {
+    list.insertAdjacentHTML('afterbegin', `<div style="display:flex;justify-content:flex-end;margin-bottom:.5rem;"><button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .9rem;" onclick="addAllFromIdentified()">Add All</button></div>`);
+  }
   _photoIdentifyResults.forEach((w, i) => { if (w._imageSearched) updateIdentifyCard(i); });
   prefetchIdentifiedImages();
 }
@@ -16107,6 +16105,80 @@ async function addFromIdentified(idx) {
     console.error('[WristLog] addFromIdentified error:', e);
     toast('Add failed: ' + (e?.message || e), 'error');
   }
+}
+
+async function quickAddFromIdentified(idx) {
+  const w = _photoIdentifyResults[idx];
+  if (!w || !currentUser) return;
+  const btn = document.querySelector(`.pi-card[data-pi-idx="${idx}"] .btn-primary`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Adding…'; }
+  try {
+    const newId = uid();
+    let imageUrl = null;
+    if (w._prefetchedCroppedBlob) {
+      imageUrl = await uploadImage(w._prefetchedCroppedBlob, `watches/${currentUser.id}/${newId}.jpg`);
+    }
+    const data = {
+      id: newId,
+      brand: w.brand || '',
+      name: w.model || '',
+      ref: w.reference || '',
+      movement: w.caliber || w.movementType || '',
+      color: w.estimatedColor || '#94a3b8',
+      ...(imageUrl ? { image: imageUrl } : {}),
+    };
+    watches.push(data);
+    markDirty('watches', newId);
+    save();
+    if (w._prefetchedImageUrl) URL.revokeObjectURL(w._prefetchedImageUrl);
+    _photoIdentifyResults.splice(idx, 1);
+    if (_photoIdentifyResults.length === 0) {
+      closePhotoIdentify();
+      renderCollection();
+      toast('Watch added to collection!');
+    } else {
+      renderPhotoIdentifyResults();
+      toast(`${w.brand} ${w.model} added!`);
+    }
+  } catch (e) {
+    console.error('[WristLog] quickAdd error:', e);
+    toast('Add failed: ' + (e?.message || e), 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Add'; }
+  }
+}
+
+async function addAllFromIdentified() {
+  if (!currentUser || !_photoIdentifyResults.length) return;
+  const allBtn = document.querySelector('#photo-identify-list .btn-primary');
+  const total = _photoIdentifyResults.length;
+  let added = 0;
+  for (let i = _photoIdentifyResults.length - 1; i >= 0; i--) {
+    const w = _photoIdentifyResults[i];
+    try {
+      const newId = uid();
+      let imageUrl = null;
+      if (w._prefetchedCroppedBlob) {
+        imageUrl = await uploadImage(w._prefetchedCroppedBlob, `watches/${currentUser.id}/${newId}.jpg`);
+      }
+      watches.push({
+        id: newId,
+        brand: w.brand || '',
+        name: w.model || '',
+        ref: w.reference || '',
+        movement: w.caliber || w.movementType || '',
+        color: w.estimatedColor || '#94a3b8',
+        ...(imageUrl ? { image: imageUrl } : {}),
+      });
+      markDirty('watches', newId);
+      if (w._prefetchedImageUrl) URL.revokeObjectURL(w._prefetchedImageUrl);
+      added++;
+    } catch (e) { console.error('[WristLog] addAll item error:', e); }
+  }
+  _photoIdentifyResults = [];
+  save();
+  closePhotoIdentify();
+  renderCollection();
+  toast(`${added} watch${added !== 1 ? 'es' : ''} added to collection!`);
 }
 
 /**
