@@ -139,9 +139,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       position: sticky;
       top: 0;
       z-index: 100;
-      /* needed for notification panel absolute positioning */
       overflow: visible;
       padding-top: env(safe-area-inset-top, 0);
+    }
+    @supports (-webkit-touch-callout: none) {
+      header { contain: none; }
     }
     .header-inner {
       max-width: 1160px;
@@ -1356,13 +1358,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
       /* Fixed bottom tab bar */
       nav {
-        position: fixed; bottom: 0; left: 0; right: 0;
+        position: fixed !important; bottom: 0; left: 0; right: 0;
         z-index: 300;
         background: var(--surface);
         border-top: 1px solid var(--border);
         border-bottom: none;
         padding: 0 1rem calc(.15rem + env(safe-area-inset-bottom, 0)) 1rem;
         gap: 0; justify-content: stretch;
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
       }
       nav button {
         flex: 1; flex-direction: column; align-items: center; justify-content: center;
@@ -4798,7 +4802,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.15.31';
+const APP_VERSION = '20.16.10';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
