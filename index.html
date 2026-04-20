@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.10.06';
+const APP_VERSION = '20.12.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15962,12 +15962,15 @@ function renderPhotoIdentifyResults() {
   list.innerHTML = _photoIdentifyResults.map((w, i) => {
     const color = w.estimatedColor || '#c9a84c';
     const ini = initials(w.brand || '?', w.model || '?');
+    const specs = [w.caseDiameter, w.caseMaterial, w.movementType].filter(Boolean).join(' · ');
     return `<div class="pi-card" data-pi-idx="${i}">
       <div class="pi-card-avatar" style="background:${escHtml(color)}">${ini}</div>
       <div class="pi-card-info">
         <div class="pi-card-name">${escHtml(w.model || 'Unknown')}</div>
         <div class="pi-card-brand">${escHtml(w.brand || 'Unknown')}</div>
         ${w.reference ? `<div class="pi-card-ref">Ref. ${escHtml(w.reference)}</div>` : ''}
+        ${specs ? `<div class="pi-card-ref" style="color:var(--muted);font-size:.68rem;">${escHtml(specs)}</div>` : ''}
+        ${w.yearRange ? `<div class="pi-card-ref" style="color:var(--muted);font-size:.68rem;">Years: ${escHtml(w.yearRange)}</div>` : ''}
       </div>
       <span class="pi-card-conf ${w.confidence || 'medium'}">${w.confidence || 'medium'}</span>
       <div class="pi-card-actions">
@@ -16071,6 +16074,8 @@ async function addFromIdentified(idx) {
     }
     if (aiModel) document.getElementById('w-name').value = aiModel;
     if (aiRef)   document.getElementById('w-ref').value = aiRef;
+    const aiMovement = w.caliber || w.movementType || '';
+    if (aiMovement) document.getElementById('w-movement').value = aiMovement;
     if (w.estimatedColor) {
       selColor = w.estimatedColor;
       buildSwatches();

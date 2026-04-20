@@ -8,6 +8,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
@@ -211,12 +212,138 @@ If no watches visible: {"count": 0, "watches": []}`,
     }
 
     // ── IDENTIFY MODE (default): full identification ──
-    // Use Sonnet for snap-to-track/post (has collection → fast matching)
-    // Use Opus for add-from-photo (no collection → accurate cold identification)
+    // Collection matching: Claude Sonnet (fast, cheap, good enough for known watches)
+    // Cold identification: Gemini 2.5 Pro with grounded search (best accuracy for ref numbers + specs)
+    // Fallback: Claude Opus if Gemini key not set or Gemini fails
     const hasCollection = Array.isArray(collection) && collection.length > 0;
-    const identifyModel = hasCollection ? "claude-sonnet-4-6" : "claude-opus-4-6";
 
+    if (hasCollection) {
+      // ── COLLECTION MATCHING (Claude Sonnet) ──
+      const collectionPrompt = `Identify the watch in this image. The user owns: ${collection.map((w: any) => `${w.brand} ${w.name}${w.ref ? ` (ref: ${w.ref})` : ""}`).join(", ")}
 
+If you recognize it as one of these, use the exact names. Do NOT force a match — if it's not in the list, identify it independently.
+
+Return JSON only, no explanation:
+{"watches": [{"brand": "BrandName", "model": "ModelName", "reference": "ref or empty string", "dialText": "text on dial", "estimatedColor": "#hex", "confidence": "high/medium/low", "productUrl": "", "boundingBox": [x, y, width, height]}]}
+
+boundingBox: [x, y, width, height] as percentages (0-100) of image, centered on dial.
+estimatedColor: #c9a84c (gold), #94a3b8 (silver), #818cf8 (indigo), #fbbf24 (amber), #38bdf8 (blue), #a78bfa (purple), #f43f5e (rose), #4caf7d (teal)
+If no watches: {"watches": []}`;
+
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: apiHeaders,
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 1024,
+          messages: [{
+            role: "user",
+            content: [imageContent, { type: "text", text: collectionPrompt }],
+          }],
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("[identify-watch] Claude collection match error:", response.status, errText);
+        await logAttempt(null, `identify_http_${response.status}`);
+        return new Response(
+          JSON.stringify({ error: "AI identification failed", detail: response.status }),
+          { status: 502, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+        );
+      }
+
+      const result = await response.json();
+      const text = result.content?.[0]?.text ?? "";
+      const parsed = extractJson(text);
+      if (!parsed) {
+        await logAttempt(null, "identify_parse_failed");
+        return new Response(
+          JSON.stringify({ error: "Could not parse AI response", raw: text }),
+          { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+        );
+      }
+
+      await logAttempt(Array.isArray(parsed.watches) ? parsed.watches.length : 0, null);
+      return new Response(JSON.stringify(parsed), {
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── COLD IDENTIFICATION (Gemini 2.5 Pro with grounded search → Claude Opus fallback) ──
+    const coldPrompt = `Look at this image carefully. Identify every watch visible.
+
+For each watch: read all text on the dial, examine the logo, note the case shape, bezel style, bracelet/strap type, and any distinguishing features. Then use search to verify your identification and find the exact reference number, manufacturing years, and specifications.
+
+Brand identification guide:
+- Rolex: Crown logo at 12 o'clock, Cyclops lens over date, Oyster/Jubilee/President bracelets
+- Tudor: Shield logo, snowflake hands on Black Bay models
+- Omega: Ω symbol, Speedmaster has tachymeter bezel, Seamaster has wave dial
+- Patek Philippe: Calatrava cross logo, typically dress watches
+- Audemars Piguet: Royal Oak octagonal bezel with 8 hex screws, Tapisserie dial
+- Vacheron Constantin: Maltese cross logo
+- Cartier: Roman numerals, blue sword hands, cursive "Cartier"
+- IWC: "IWC SCHAFFHAUSEN" on dial
+- Breitling: Winged B logo, slide rule bezel
+- Panerai: Cushion case, crown-protecting bridge
+- Grand Seiko: "GS" logo, zaratsu polishing
+
+Return a JSON object with your identifications:
+{"watches": [{"brand": "BrandName", "model": "ModelName", "reference": "exact reference number or empty string", "dialText": "text you read on dial", "estimatedColor": "#hex", "confidence": "high/medium/low", "yearRange": "e.g. 2018-2023 or empty string", "movementType": "automatic/manual-wind/quartz or empty string", "caliber": "movement caliber name or empty string", "caseMaterial": "e.g. stainless steel, 18k yellow gold, titanium or empty string", "caseDiameter": "e.g. 41mm or empty string", "waterResistance": "e.g. 300m or empty string", "retailPrice": "estimated retail USD or empty string", "productUrl": "", "boundingBox": [x, y, width, height]}]}
+
+Rules:
+- Only provide reference if you can confirm it via search or clear visual evidence. Do NOT guess.
+- boundingBox: [x, y, width, height] as percentages (0-100) of image, centered on dial.
+- estimatedColor: #c9a84c (gold), #94a3b8 (silver), #818cf8 (indigo), #fbbf24 (amber), #38bdf8 (blue), #a78bfa (purple), #f43f5e (rose), #4caf7d (teal)
+- If no watches: {"watches": []}`;
+
+    // Try Gemini 2.5 Pro with grounded search first
+    if (GEMINI_API_KEY) {
+      try {
+        const geminiResponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-06-05:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { inline_data: { mime_type: mediaType, data: base64Data } },
+                  { text: coldPrompt },
+                ],
+              }],
+              tools: [{ google_search: {} }],
+              generationConfig: {
+                temperature: 0.2,
+                maxOutputTokens: 8192,
+              },
+            }),
+          }
+        );
+
+        if (geminiResponse.ok) {
+          const geminiResult = await geminiResponse.json();
+          const parts = geminiResult.candidates?.[0]?.content?.parts ?? [];
+          const textParts = parts.filter((p: any) => p.text).map((p: any) => p.text).join("");
+          const parsed = extractJson(textParts);
+          if (parsed && Array.isArray(parsed.watches)) {
+            parsed._engine = "gemini";
+            await logAttempt(parsed.watches.length, null);
+            return new Response(JSON.stringify(parsed), {
+              headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+            });
+          }
+          console.error("[identify-watch] Gemini parse failed, falling back to Claude. Raw:", textParts.slice(0, 500));
+        } else {
+          const errText = await geminiResponse.text();
+          console.error("[identify-watch] Gemini error:", geminiResponse.status, errText.slice(0, 300));
+        }
+      } catch (geminiErr) {
+        console.error("[identify-watch] Gemini exception, falling back to Claude:", (geminiErr as Error).message);
+      }
+    }
+
+    // Fallback: Claude Opus for cold identification
     const BRAND_CUES = `Brand identification guide:
 - Rolex: Crown logo at 12 o'clock, "ROLEX" on dial, Cyclops lens over date, Oyster/Jubilee/President bracelets, fluted or smooth bezel
 - Tudor: Shield logo at 12 o'clock, "TUDOR" on dial, snowflake hands on Black Bay models, rose or shield emblem
@@ -232,53 +359,36 @@ If no watches visible: {"count": 0, "watches": []}`,
 - GRØNE: "GRØNE" on dial, Danish microbrand, minimalist Scandinavian design
 - Anoma: "Anoma" on dial, microbrand`;
 
-    // Use a fast, concise prompt when matching against known collection
-    // Use the full analytical prompt for cold identification (no collection)
-    const identifyPrompt = hasCollection
-      ? `Identify the watch in this image. The user owns: ${collection.map((w: any) => `${w.brand} ${w.name}${w.ref ? ` (ref: ${w.ref})` : ""}`).join(", ")}
-
-If you recognize it as one of these, use the exact names. Do NOT force a match — if it's not in the list, identify it independently.
-
-Return JSON only, no explanation:
-{"watches": [{"brand": "BrandName", "model": "ModelName", "reference": "ref or empty string", "dialText": "text on dial", "estimatedColor": "#hex", "confidence": "high/medium/low", "productUrl": "", "boundingBox": [x, y, width, height]}]}
-
-boundingBox: [x, y, width, height] as percentages (0-100) of image, centered on dial.
-estimatedColor: #c9a84c (gold), #94a3b8 (silver), #818cf8 (indigo), #fbbf24 (amber), #38bdf8 (blue), #a78bfa (purple), #f43f5e (rose), #4caf7d (teal)
-If no watches: {"watches": []}`
-      : `Look at this image carefully. Identify every watch visible.
+    const claudeFallbackPrompt = `Look at this image carefully. Identify every watch visible.
 
 For each watch, describe what you see: read the text on the dial, look at the logo, note the case shape, bezel, bracelet/strap, and any distinguishing features. Then give your best identification.
 
 ${BRAND_CUES}
 
 After your analysis, return a JSON object with your identifications:
-{"watches": [{"brand": "BrandName", "model": "ModelName", "reference": "ref or empty string", "dialText": "text you read on dial", "estimatedColor": "#hex", "confidence": "high/medium/low", "productUrl": "", "boundingBox": [x, y, width, height]}]}
+{"watches": [{"brand": "BrandName", "model": "ModelName", "reference": "ref or empty string", "dialText": "text you read on dial", "estimatedColor": "#hex", "confidence": "high/medium/low", "yearRange": "e.g. 2018-2023 or empty string", "movementType": "automatic/manual-wind/quartz or empty string", "caliber": "movement caliber name or empty string", "caseMaterial": "e.g. stainless steel or empty string", "caseDiameter": "e.g. 41mm or empty string", "waterResistance": "e.g. 300m or empty string", "retailPrice": "estimated retail USD or empty string", "productUrl": "", "boundingBox": [x, y, width, height]}]}
 
 For boundingBox: provide [x, y, width, height] as percentages (0-100) of the image dimensions, centered on the watch dial. Order watches from top to bottom.
-
 For estimatedColor pick from: #c9a84c (gold), #94a3b8 (slate/silver), #818cf8 (indigo), #fbbf24 (amber), #38bdf8 (sky blue), #a78bfa (purple), #f43f5e (rose), #4caf7d (teal)
-
+Only provide reference if you are confident. Do NOT guess reference numbers.
 If no watches: {"watches": []}`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: apiHeaders,
       body: JSON.stringify({
-        model: identifyModel,
-        max_tokens: hasCollection ? 1024 : 8192,
+        model: "claude-opus-4-6",
+        max_tokens: 8192,
         messages: [{
           role: "user",
-          content: [
-            imageContent,
-            { type: "text", text: identifyPrompt },
-          ],
+          content: [imageContent, { type: "text", text: claudeFallbackPrompt }],
         }],
       }),
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error("[identify-watch] API error:", response.status, errText);
+      console.error("[identify-watch] Claude fallback error:", response.status, errText);
       await logAttempt(null, `identify_http_${response.status}`);
       return new Response(
         JSON.stringify({ error: "AI identification failed", detail: response.status }),
@@ -297,6 +407,7 @@ If no watches: {"watches": []}`;
       );
     }
 
+    parsed._engine = "claude";
     await logAttempt(Array.isArray(parsed.watches) ? parsed.watches.length : 0, null);
     return new Response(JSON.stringify(parsed), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
