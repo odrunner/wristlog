@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.17.19.17.13';
+const APP_VERSION = '19.17.19.17.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10586,9 +10586,9 @@ async function loadAdminStats() {
       db.from('logs').select('id', { count: 'exact', head: true }).is('watch_id', null),
       db.from('wishlist').select('id', { count: 'exact', head: true }),
       db.from('clubs').select('id', { count: 'exact', head: true }),
-      db.from('follows').select('id', { count: 'exact', head: true }),
+      db.from('follows').select('follower_id', { count: 'exact', head: true }),
       db.from('friend_requests').select('id', { count: 'exact', head: true }).eq('status', 'accepted'),
-      db.from('likes').select('id', { count: 'exact', head: true }),
+      db.from('likes').select('user_id', { count: 'exact', head: true }),
       db.from('comments').select('id', { count: 'exact', head: true }),
     ]), 10000);
 
