@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.17.19.18.36';
+const APP_VERSION = '19.17.19.20.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18240,10 +18240,10 @@ window._tgNativeCallback = function(data) {
         }
       }
       // Early warning: no ticks yet, nudge user to reposition.
-      // Manual mode: ticks expected by ~2s (calibration only), warn at 4s.
+      // Manual mode: calibration ~2s + engine lock-on ~3-4s = ticks expected ~5s, warn at 7s.
       // Auto mode: BPH detection ~5s + calibration ~2s = ticks expected ~7s, warn at 10s.
-      const tickWarnStart = _msrIsAuto ? 10 : 4;
-      const tickWarnEnd = _msrIsAuto ? 15 : 8;
+      const tickWarnStart = _msrIsAuto ? 10 : 7;
+      const tickWarnEnd = _msrIsAuto ? 15 : 12;
       if (elapsed >= tickWarnStart && elapsed < tickWarnEnd && data.tickCount === 0 && !_msrWeakSignalShown) {
         _msrWeakSignalShown = true;
         const statusText = document.getElementById('msr-status-text');
@@ -18269,7 +18269,7 @@ window._tgNativeCallback = function(data) {
       }
       // Graceful early stop: no ticks = no watch on mic
       // Auto mode needs longer: 5s BPH detect + 2s calibration before ticks start
-      const noTickTimeout = _msrIsAuto ? 15 : 8;
+      const noTickTimeout = _msrIsAuto ? 15 : 12;
       if (elapsed >= noTickTimeout && data.tickCount === 0) {
         stopMsrListen('no_ticks_after_recal');
         const statusText = document.getElementById('msr-status-text');
