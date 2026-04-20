@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.15.17';
+const APP_VERSION = '20.15.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15781,69 +15781,58 @@ function openPhotoIdentify() {
       window._photoIdentifyBase64 = base64;
       try { window._photoIdentifyBlob = await blobToResizedBlob(file); } catch (_) { window._photoIdentifyBlob = file; }
 
-      // Send full image to Opus 4.6 for identification (single or multi-watch)
-      // Don't send collection hint — this flow adds NEW watches, not matching existing ones
-      list.innerHTML = `<div class="pi-loading"><div class="pi-loading-spinner"></div><div class="pi-status-msg" style="font-size:.85rem;">Identifying watches\u2026</div><div class="pi-status-sub" style="font-size:.75rem;margin-top:.3rem;color:var(--muted);">Analyzing your photo</div></div>`;
-      const _piMsgs = [
-        ['Reading dial text\u2026', 'Looking for brand and model clues'],
-        ['Searching watch databases\u2026', 'Cross-referencing with manufacturers'],
-        ['Verifying reference numbers\u2026', 'Checking specs and year ranges'],
-        ['Looking up specifications\u2026', 'Case size, movement, materials'],
-        ['Cross-checking results\u2026', 'Verifying against manufacturer catalogs'],
-        ['Almost there\u2026', 'Finalizing identification'],
-        ['Still working\u2026', 'Complex photos take a bit longer'],
-        ['Wrapping up\u2026', 'Just a few more seconds'],
-      ];
-      let _piMsgIdx = 0;
-      const _piMsgTimer = setInterval(() => {
-        if (_piMsgIdx < _piMsgs.length) {
-          const msg = _piMsgs[_piMsgIdx++];
-          const el = list.querySelector('.pi-status-msg');
-          const sub = list.querySelector('.pi-status-sub');
-          if (el) el.textContent = msg[0];
-          if (sub) sub.textContent = msg[1];
-        }
-      }, 8000);
-      const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+      // Step 1: Detect how many watches are in the photo (~4s)
+      list.innerHTML = `<div class="pi-loading"><div class="pi-loading-spinner"></div><div class="pi-status-msg" style="font-size:.85rem;">Scanning your photo\u2026</div><div class="pi-status-sub" style="font-size:.75rem;margin-top:.3rem;color:var(--muted);">Detecting watches</div></div>`;
+      const detectResp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
         method: 'POST',
-        body: JSON.stringify({ image: base64, mode: 'identify' }),
-      }, 120000);
-      clearInterval(_piMsgTimer);
-      if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error || 'Identification failed'); }
-      const data = await resp.json();
-      if (!data.watches || data.watches.length === 0) {
-        list.innerHTML = `<div class="pi-loading"><div style="font-size:.85rem;">No watches identified</div><div style="font-size:.75rem;color:var(--muted);margin-top:.5rem;text-align:left;max-width:260px;line-height:1.5;">Tips for better results:<br>• Use a close-up of the watch dial<br>• Make sure the brand name is readable<br>• Avoid heavy shadows or glare<br>• Try a photo from directly above</div><button onclick="closePhotoIdentify();openPhotoIdentify()" style="margin-top:.75rem;padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.82rem;cursor:pointer;">Try another photo</button></div>`;
+        body: JSON.stringify({ image: base64, mode: 'detect' }),
+      }, 30000);
+      if (!detectResp.ok) throw new Error('Watch detection failed');
+      const detectData = await detectResp.json();
+      const watchCount = detectData.count || detectData.watches?.length || 0;
+
+      if (watchCount === 0) {
+        list.innerHTML = `<div class="pi-loading"><div style="font-size:.85rem;">No watches identified</div><div style="font-size:.75rem;color:var(--muted);margin-top:.5rem;text-align:left;max-width:260px;line-height:1.5;">Tips for better results:<br>\u2022 Use a close-up of the watch dial<br>\u2022 Make sure the brand name is readable<br>\u2022 Avoid heavy shadows or glare<br>\u2022 Try a photo from directly above</div><button onclick="closePhotoIdentify();openPhotoIdentify()" style="margin-top:.75rem;padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.82rem;cursor:pointer;">Try another photo</button></div>`;
         return;
       }
-      _photoIdentifyResults = data.watches;
-      renderPhotoIdentifyResults();
 
-      // After rendering, get better bounding boxes from Sonnet for cropping
-      if (data.watches.length > 1) {
-        try {
-          const detectResp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
-            method: 'POST',
-            body: JSON.stringify({ image: base64, mode: 'detect' }),
-          }, 30000);
-          if (detectResp.ok) {
-            const detectData = await detectResp.json();
-            if (detectData.watches && detectData.watches.length === data.watches.length) {
-              // Apply Sonnet's bounding boxes to the results and re-crop
-              detectData.watches.forEach((dw, i) => {
-                if (dw.boundingBox && _photoIdentifyResults[i] && !_photoIdentifyResults[i]._userCropped) {
-                  _photoIdentifyResults[i].boundingBox = dw.boundingBox;
-                  _photoIdentifyResults[i]._imageSearched = false;
-                  _photoIdentifyResults[i]._imageFound = false;
-                  if (_photoIdentifyResults[i]._prefetchedImageUrl) {
-                    URL.revokeObjectURL(_photoIdentifyResults[i]._prefetchedImageUrl);
-                    _photoIdentifyResults[i]._prefetchedImageUrl = null;
-                  }
-                }
-              });
-              prefetchIdentifiedImages();
-            }
+      // Step 2: Single watch → identify with status messages; multiple → progressive one-by-one
+      if (watchCount === 1) {
+        list.innerHTML = `<div class="pi-loading"><div class="pi-loading-spinner"></div><div class="pi-status-msg" style="font-size:.85rem;">Identifying watch\u2026</div><div class="pi-status-sub" style="font-size:.75rem;margin-top:.3rem;color:var(--muted);">Analyzing your photo</div></div>`;
+        const _piMsgs = [
+          ['Reading dial text\u2026', 'Looking for brand and model clues'],
+          ['Searching watch databases\u2026', 'Cross-referencing with manufacturers'],
+          ['Verifying reference number\u2026', 'Checking specs and year range'],
+          ['Looking up specifications\u2026', 'Case size, movement, materials'],
+          ['Almost there\u2026', 'Finalizing identification'],
+        ];
+        let _piMsgIdx = 0;
+        const _piMsgTimer = setInterval(() => {
+          if (_piMsgIdx < _piMsgs.length) {
+            const msg = _piMsgs[_piMsgIdx++];
+            const el = list.querySelector('.pi-status-msg');
+            const sub = list.querySelector('.pi-status-sub');
+            if (el) el.textContent = msg[0];
+            if (sub) sub.textContent = msg[1];
           }
-        } catch (e2) { console.error('[WristLog] Sonnet detect for crops failed:', e2); }
+        }, 6000);
+        try {
+          const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+            method: 'POST',
+            body: JSON.stringify({ image: base64, mode: 'identify' }),
+          }, 120000);
+          clearInterval(_piMsgTimer);
+          if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error || 'Identification failed'); }
+          const data = await resp.json();
+          if (!data.watches || data.watches.length === 0) {
+            list.innerHTML = `<div class="pi-loading"><div style="font-size:.85rem;">No watches identified</div><div style="font-size:.75rem;color:var(--muted);margin-top:.5rem;text-align:left;max-width:260px;line-height:1.5;">Tips for better results:<br>\u2022 Use a close-up of the watch dial<br>\u2022 Make sure the brand name is readable<br>\u2022 Avoid heavy shadows or glare<br>\u2022 Try a photo from directly above</div><button onclick="closePhotoIdentify();openPhotoIdentify()" style="margin-top:.75rem;padding:.45rem 1rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.82rem;cursor:pointer;">Try another photo</button></div>`;
+            return;
+          }
+          _photoIdentifyResults = data.watches;
+          renderPhotoIdentifyResults();
+        } catch (e1) { clearInterval(_piMsgTimer); throw e1; }
+      } else {
+        await _identifyMultipleWatches(detectData, base64, list);
       }
     } catch (e) {
       clearInterval(_piMsgTimer);
@@ -15855,24 +15844,27 @@ function openPhotoIdentify() {
 }
 
 async function _identifyMultipleWatches(detectData, fullBase64, listEl) {
-  const count = detectData.count;
-  const rows = detectData.rows || count;
-  const cols = detectData.cols || 1;
+  const count = detectData.count || detectData.watches?.length || 0;
   const blob = window._photoIdentifyBlob;
 
-  // Compute grid-based bounding boxes (no AI coordinates — just equal strips)
-  const cellW = 100 / cols;
-  const cellH = 100 / rows;
+  // Use AI bounding boxes from detect, fall back to grid
+  const boxes = (detectData.watches || []).map(w => w.boundingBox).filter(b => b && b.length === 4);
+  const useAIBoxes = boxes.length === count;
   const gridBoxes = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      if (gridBoxes.length >= count) break;
-      gridBoxes.push([c * cellW, r * cellH, cellW, cellH]);
+  if (!useAIBoxes) {
+    const rows = detectData.rows || count;
+    const cols = detectData.cols || 1;
+    const cellW = 100 / cols;
+    const cellH = 100 / rows;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (gridBoxes.length >= count) break;
+        gridBoxes.push([c * cellW, r * cellH, cellW, cellH]);
+      }
     }
   }
 
-  // Initialize results
-  _photoIdentifyResults = gridBoxes.map((bbox, i) => ({
+  _photoIdentifyResults = (useAIBoxes ? boxes : gridBoxes).map((bbox, i) => ({
     boundingBox: bbox,
     brand: null, model: null, reference: '', dialText: '',
     estimatedColor: '#94a3b8', confidence: null, productUrl: '',
@@ -15945,6 +15937,11 @@ async function _identifyMultipleWatches(detectData, fullBase64, listEl) {
           w.estimatedColor = id.estimatedColor || '#94a3b8';
           w.confidence = id.confidence || 'medium';
           w.productUrl = id.productUrl || '';
+          w.yearRange = id.yearRange || '';
+          w.movementType = id.movementType || '';
+          w.caliber = id.caliber || '';
+          w.caseMaterial = id.caseMaterial || '';
+          w.caseDiameter = id.caseDiameter || '';
         } else {
           w.brand = 'Unknown'; w.model = 'Unknown'; w.confidence = 'low';
         }
@@ -15970,9 +15967,28 @@ async function _identifyMultipleWatches(detectData, fullBase64, listEl) {
         refEl.textContent = `Ref. ${w.reference}`;
         card.querySelector('.pi-card-info')?.appendChild(refEl);
       }
+      const specs = [w.caseDiameter, w.caseMaterial, w.movementType].filter(Boolean).join(' \u00b7 ');
+      if (specs) {
+        const specEl = document.createElement('div');
+        specEl.className = 'pi-card-ref';
+        specEl.style.cssText = 'color:var(--muted);font-size:.68rem;';
+        specEl.textContent = specs;
+        card.querySelector('.pi-card-info')?.appendChild(specEl);
+      }
+      if (w.yearRange) {
+        const yrEl = document.createElement('div');
+        yrEl.className = 'pi-card-ref';
+        yrEl.style.cssText = 'color:var(--muted);font-size:.68rem;';
+        yrEl.textContent = `Years: ${w.yearRange}`;
+        card.querySelector('.pi-card-info')?.appendChild(yrEl);
+      }
       const actionsEl = card.querySelector('.pi-card-actions');
       if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-ghost" style="font-size:.72rem;padding:.3rem .55rem;" onclick="addFromIdentified(${i})" title="Review before adding">Edit</button><button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .7rem;" onclick="quickAddFromIdentified(${i})">Add</button>`;
     }
+  }
+  // Add "Add All" button after all watches identified
+  if (_photoIdentifyResults.length > 1 && !window._identifyAborted) {
+    listEl.insertAdjacentHTML('afterbegin', `<div style="display:flex;justify-content:flex-end;margin-bottom:.5rem;"><button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .9rem;" onclick="addAllFromIdentified()">Add All</button></div>`);
   }
 }
 
