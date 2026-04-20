@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.17.19.21.50';
+const APP_VERSION = '19.17.19.21.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7189,11 +7189,15 @@ async function sendFollowRequest(userId, btn) {
   const { error } = await db.from('follow_requests').insert({ requester_id: currentUser.id, target_id: userId });
   if (!error) {
     pendingRequests.add(userId);
-    const { error: notifErr } = await db.from('notifications').insert({
-      user_id: userId, type: 'follow_request',
-      actor_id: currentUser.id, is_read: false,
-    });
-    if (notifErr) console.error('follow_request notif failed:', notifErr);
+    const { data: existingNotif } = await db.from('notifications').select('id')
+      .eq('user_id', userId).eq('type', 'follow_request').eq('actor_id', currentUser.id).limit(1);
+    if (!existingNotif?.length) {
+      const { error: notifErr } = await db.from('notifications').insert({
+        user_id: userId, type: 'follow_request',
+        actor_id: currentUser.id, is_read: false,
+      });
+      if (notifErr) console.error('follow_request notif failed:', notifErr);
+    }
     if (btn) { btn.className = 'follow-btn requested'; btn.textContent = 'Requested'; btn.onclick = () => cancelFollowRequest(userId); }
     toast('Follow request sent');
     renderDiscoverUsers();
@@ -7380,9 +7384,7 @@ async function unfollowUser(userId, btn) {
 async function markAllNotifsRead() {
   if (demoGuard()) return;
   if (!currentUser) return;
-  // Never auto-mark actionable notifications — they need explicit Accept/Decline
-  const actionable = new Set(['follow_request', 'club_join_request', 'club_invite', 'friend_request']);
-  const toMark = userNotifs.filter(n => !n.is_read && !actionable.has(n.type));
+  const toMark = userNotifs.filter(n => !n.is_read);
   if (!toMark.length) return;
   const ids = toMark.map(n => n.id);
   const { error: markErr } = await db.from('notifications').update({ is_read: true })
@@ -7487,7 +7489,7 @@ function renderNotificationPanel() {
       : `viewUserProfile('${n.actor_id}')`;
     return `
       <div class="notif-item ${n.is_read ? '' : 'notif-unread'}" id="notif-${n.id}" onclick="${notifClick}">
-        <div class="feed-user-avatar" style="width:36px;height:36px;font-size:.76rem;flex-shrink:0;">${profileInitials(n.actor)}</div>
+        <div class="feed-user-avatar" style="width:36px;height:36px;font-size:.76rem;flex-shrink:0;cursor:pointer;" onclick="event.stopPropagation();toggleNotifPanel();viewUserProfile('${n.actor_id}')">${profileInitials(n.actor)}</div>
         <div style="flex:1;min-width:0;">
           <div class="notif-body">${body}</div>
           ${actionsHtml}
