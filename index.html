@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.17.19.21.53';
+const APP_VERSION = '19.17.20.07.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8318,8 +8318,8 @@ function renderFeedCard(item) {
       ${heroHtml}
       <div class="feed-actions">
         <button class="feed-action-btn${likes.liked ? ' liked' : ''}" onclick="toggleLike('${item.id}')">
-          ${likes.liked ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>' : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'} <span>${likes.count || ''}</span>
-        </button>
+          ${likes.liked ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>' : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'}</button>${likes.count ? `<span style="font-size:.8rem;cursor:pointer;" onclick="event.stopPropagation();showLikers('${item.id}')">${likes.count}</span>` : ''}
+
         <button class="feed-action-btn" onclick="toggleComments('${item.id}')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> <span>${cCount || ''}</span>
         </button>
@@ -9149,6 +9149,24 @@ async function toggleLike(logId) {
   } finally {
     _likePending.delete(logId);
   }
+}
+
+async function showLikers(logId) {
+  const modal = document.getElementById('following-modal');
+  const list  = document.getElementById('following-modal-list');
+  document.querySelector('#following-modal .modal-title').textContent = 'Liked by';
+  modal.classList.remove('hidden');
+  list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Loading…</div>';
+  const { data: rows } = await db.from('likes').select('user_id').eq('log_id', logId);
+  const ids = (rows || []).map(r => r.user_id);
+  if (!ids.length) {
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No likes yet.</div>';
+    return;
+  }
+  const { data: profiles } = await db.from('profiles')
+    .select('id, username, display_name, avatar_url, profile_privacy')
+    .in('id', ids);
+  list.innerHTML = (profiles || []).map(u => userCardHtml(u)).join('');
 }
 
 const _commentLikePending = new Set();
