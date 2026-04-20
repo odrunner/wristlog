@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.17.19.17.29';
+const APP_VERSION = '19.17.19.17.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10728,7 +10728,7 @@ async function renderAdminTraffic() {
     const now = new Date();
     const d7 = new Date(now - 7 * 86400000).toISOString();
     const d30 = new Date(now - 30 * 86400000).toISOString();
-    const [allRes, week7, week30, funnelAll, funnel7, allProfilesR] = await Promise.all([
+    const [allRes, week7, week30, funnelAll, funnel7, allProfilesR, emailEventsR] = await Promise.all([
       db.from('page_visits').select('id', { count: 'exact', head: true }),
       db.from('page_visits').select('utm_source, utm_medium, utm_campaign, referrer, user_agent, created_at, ab_variant, user_id')
         .gte('created_at', d7).order('created_at', { ascending: false }).limit(500),
@@ -10736,6 +10736,7 @@ async function renderAdminTraffic() {
       db.from('page_visits').select('utm_source, created_at, user_id').eq('utm_medium', 'funnel').order('created_at', { ascending: false }).limit(500),
       db.from('page_visits').select('utm_source, created_at, user_id').eq('utm_medium', 'funnel').gte('created_at', d7).order('created_at', { ascending: false }).limit(500),
       db.from('profiles').select('id, created_at').order('created_at', { ascending: false }),
+      db.from('email_events').select('event_type, email_to, subject, created_at').order('created_at', { ascending: false }).limit(500),
     ]);
     const total = allRes.count || 0;
     const last30 = week30.count || 0;
@@ -10829,13 +10830,83 @@ async function renderAdminTraffic() {
         (funnelAll.data || []).filter(v => !isInternal(v)),
         (funnel7.data || []).filter(v => !isInternal(v)),
         (allProfilesR.data || []).filter(p => !INTERNAL_IDS.has(p.id))
-      )}`;
+      )}
+      ${renderEmailEngagement(emailEventsR.data || [])}`;
   } catch(e) {
     el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;">
       <div style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;">Failed to load traffic: ${escHtml(e.message)}</div>
       <button class="btn btn-ghost" onclick="renderAdminTraffic()" style="font-size:.78rem;">↻ Retry</button>
     </div>`;
   }
+}
+
+function renderEmailEngagement(events) {
+  if (!events.length) return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Email Engagement</div>
+    <div style="font-size:.82rem;color:var(--muted);">No email events yet. Configure Resend webhook to start tracking.</div>
+  </div>`;
+
+  const byType = {};
+  events.forEach(e => { byType[e.event_type] = (byType[e.event_type] || 0) + 1; });
+  const sent = byType['sent'] || byType['delivered'] || 0;
+  const delivered = byType['delivered'] || 0;
+  const opened = byType['opened'] || 0;
+  const clicked = byType['clicked'] || 0;
+  const bounced = (byType['bounced'] || 0) + (byType['complained'] || 0);
+  const pct = (n, d) => d > 0 ? (n / d * 100).toFixed(1) + '%' : '—';
+
+  const statRow = (label, value, sub) => `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>${label}</span><span style="font-weight:600;"><span style="color:var(--gold);">${value}</span>${sub ? `<span style="color:var(--muted);font-size:.72rem;margin-left:.3rem;">${sub}</span>` : ''}</span></div>`;
+
+  const bySubject = {};
+  events.forEach(e => {
+    if (!e.subject) return;
+    if (!bySubject[e.subject]) bySubject[e.subject] = { sent: 0, delivered: 0, opened: 0, clicked: 0 };
+    const s = bySubject[e.subject];
+    if (e.event_type === 'sent') s.sent++;
+    if (e.event_type === 'delivered') s.delivered++;
+    if (e.event_type === 'opened') s.opened++;
+    if (e.event_type === 'clicked') s.clicked++;
+  });
+  const subjectRows = Object.entries(bySubject)
+    .sort((a, b) => (b[1].sent + b[1].delivered) - (a[1].sent + a[1].delivered))
+    .slice(0, 10)
+    .map(([subj, s]) => {
+      const base = s.delivered || s.sent || 1;
+      return `<div style="padding:.45rem 0;border-bottom:1px solid var(--border);">
+        <div style="font-size:.78rem;font-weight:600;margin-bottom:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(subj)}</div>
+        <div style="font-size:.7rem;color:var(--muted);display:flex;gap:.6rem;flex-wrap:wrap;">
+          <span>Delivered: ${s.delivered}</span>
+          <span>Opened: ${s.opened} (${pct(s.opened, base)})</span>
+          <span>Clicked: ${s.clicked} (${pct(s.clicked, base)})</span>
+        </div>
+      </div>`;
+    }).join('');
+
+  const recentOpens = events.filter(e => e.event_type === 'opened' || e.event_type === 'clicked').slice(0, 15);
+  const recentRows = recentOpens.map(e => {
+    const email = e.email_to || '—';
+    const masked = email.length > 5 ? email.slice(0, 3) + '***' + email.slice(email.indexOf('@')) : email;
+    const mins = Math.floor((Date.now() - new Date(e.created_at).getTime()) / 60000);
+    const ago = mins < 60 ? mins + 'm ago' : mins < 1440 ? Math.floor(mins / 60) + 'h ago' : Math.floor(mins / 1440) + 'd ago';
+    const icon = e.event_type === 'clicked' ? '🔗' : '👁';
+    return `<div style="display:flex;justify-content:space-between;font-size:.78rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${icon} ${escHtml(masked)}</span><span style="color:var(--muted);font-size:.7rem;">${ago}</span></div>`;
+  }).join('');
+
+  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Email Engagement</div>
+    ${statRow('Delivered', delivered)}
+    ${statRow('Opened', opened, pct(opened, delivered))}
+    ${statRow('Clicked', clicked, pct(clicked, delivered))}
+    ${bounced ? statRow('Bounced / Complained', bounced) : ''}
+  </div>
+  ${subjectRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">By Campaign</div>
+    ${subjectRows}
+  </div>` : ''}
+  ${recentRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Recent Opens & Clicks</div>
+    ${recentRows}
+  </div>` : ''}`;
 }
 
 function renderFunnelSection(allData, weekData, allProfiles) {
