@@ -4798,7 +4798,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.15.13';
+const APP_VERSION = '20.15.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15787,8 +15787,12 @@ function openPhotoIdentify() {
       const _piMsgs = [
         ['Reading dial text\u2026', 'Looking for brand and model clues'],
         ['Searching watch databases\u2026', 'Cross-referencing with manufacturers'],
-        ['Verifying reference number\u2026', 'Checking specs and year range'],
+        ['Verifying reference numbers\u2026', 'Checking specs and year ranges'],
+        ['Looking up specifications\u2026', 'Case size, movement, materials'],
+        ['Cross-checking results\u2026', 'Verifying against manufacturer catalogs'],
         ['Almost there\u2026', 'Finalizing identification'],
+        ['Still working\u2026', 'Complex photos take a bit longer'],
+        ['Wrapping up\u2026', 'Just a few more seconds'],
       ];
       let _piMsgIdx = 0;
       const _piMsgTimer = setInterval(() => {
@@ -15799,11 +15803,11 @@ function openPhotoIdentify() {
           if (el) el.textContent = msg[0];
           if (sub) sub.textContent = msg[1];
         }
-      }, 4000);
+      }, 8000);
       const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
         method: 'POST',
         body: JSON.stringify({ image: base64, mode: 'identify' }),
-      }, 90000);
+      }, 120000);
       clearInterval(_piMsgTimer);
       if (!resp.ok) { const err = await resp.json().catch(() => ({})); throw new Error(err.error || 'Identification failed'); }
       const data = await resp.json();
