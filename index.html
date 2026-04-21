@@ -4978,7 +4978,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.19.17';
+const APP_VERSION = '20.19.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15920,6 +15920,7 @@ function openPhotoIdentify() {
   if (demoGuard()) return;
   if (!currentUser) { toast('Sign in to use photo identification', 'error'); return; }
   window._identifyAborted = false;
+  _photoAddedWatchIds = [];
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
@@ -16334,6 +16335,7 @@ async function quickAddFromIdentified(idx) {
     };
     watches.push(data);
     markDirty('watches', newId);
+    _photoAddedWatchIds.push(newId);
     if (window.posthog) posthog.capture('watch_added', { brand: data.brand, source: 'photo_quick' });
     save();
     if (w._prefetchedImageUrl) URL.revokeObjectURL(w._prefetchedImageUrl);
@@ -16342,6 +16344,7 @@ async function quickAddFromIdentified(idx) {
       closePhotoIdentify();
       renderCollection();
       toast('Watch added to collection!');
+      if (_photoAddedWatchIds.length) setTimeout(() => maybeOfferPostPhotoEnhance(), 600);
     } else {
       renderPhotoIdentifyResults();
       toast(`${w.brand} ${w.model} added!`);
@@ -16377,6 +16380,7 @@ async function addAllFromIdentified() {
         ...(imageUrl ? { image: imageUrl } : {}),
       });
       markDirty('watches', newId);
+      _photoAddedWatchIds.push(newId);
       if (w._prefetchedImageUrl) URL.revokeObjectURL(w._prefetchedImageUrl);
       added++;
     } catch (e) { console.error('[WristLog] addAll item error:', e); }
@@ -16387,6 +16391,77 @@ async function addAllFromIdentified() {
   closePhotoIdentify();
   renderCollection();
   toast(`${added} watch${added !== 1 ? 'es' : ''} added to collection!`);
+  if (_photoAddedWatchIds.length) setTimeout(() => maybeOfferPostPhotoEnhance(), 600);
+}
+
+let _photoAddedWatchIds = [];
+
+async function maybeOfferPostPhotoEnhance() {
+  const ids = _photoAddedWatchIds.slice();
+  _photoAddedWatchIds = [];
+  if (!ids.length) return;
+  const count = ids.length;
+  const specPrompt = await showConfirm(
+    `Want to look up full specs, materials, dimensions, and history for ${count === 1 ? 'this watch' : `these ${count} watches`}?`,
+    { title: 'Fill in specs?', confirmLabel: 'Yes, enhance', danger: false }
+  );
+  if (specPrompt) {
+    await enhanceAllWatches(ids);
+  }
+  const valuePrompt = await showConfirm(
+    `Want to check market ${count === 1 ? 'value' : 'values'} for ${count === 1 ? 'this watch' : `these ${count} watches`}?`,
+    { title: 'Check market value?', confirmLabel: 'Yes, check value', danger: false }
+  );
+  if (valuePrompt) {
+    await checkBatchWatchValues(ids);
+  }
+}
+
+async function checkBatchWatchValues(ids) {
+  const targets = watches.filter(w => ids.includes(w.id));
+  if (!targets.length) return;
+  const count = targets.length;
+  let checked = 0, applied = 0;
+  toast(`Checking market value for ${count} watch${count !== 1 ? 'es' : ''}…`, 'info');
+  for (const w of targets) {
+    try {
+      const payload = { brand: w.brand, model: w.name, condition: 'good', watch_id: w.id };
+      if (w.ref) payload.reference = w.ref;
+      const r = await authedFetch(SUPABASE_URL + '/functions/v1/watch-value', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }, 60000);
+      if (r.status === 429) {
+        toast('Daily value check limit reached — try again tomorrow', 'error');
+        break;
+      }
+      const data = await r.json();
+      const mid = data.estimated_value_usd?.mid;
+      if (!mid) { checked++; continue; }
+      const today = todayStr();
+      const history = Array.isArray(w.priceHistory) ? [...w.priceHistory] : [];
+      history.push({ src: 'WRotate', date: today, price: mid });
+      await db.from('watches').update({
+        market_price: mid, market_price_date: today, market_price_src: 'WRotate', price_history: history,
+      }).eq('id', w.id);
+      w.marketPrice = mid;
+      w.marketPriceDate = today;
+      w.marketPriceSrc = 'WRotate';
+      w.priceHistory = history;
+      markDirty('watches', w.id);
+      applied++;
+      checked++;
+    } catch (e) { checked++; }
+  }
+  save();
+  renderCollection(true);
+  if (applied > 0) {
+    toast(`Market value found for ${applied} of ${checked} watch${checked !== 1 ? 'es' : ''}`, 'success');
+    db.from('valuation_events').insert({ user_id: currentUser.id, action: 'check_batch', watches_total: watches.length, watches_priced: applied }).then(() => {});
+  } else {
+    toast('Could not find market values for these watches', 'info');
+  }
 }
 
 async function enhanceSingleWatch() {
@@ -16554,13 +16629,21 @@ async function saveAllEnhanceResults() {
   }
 }
 
-async function enhanceAllWatches() {
+async function enhanceAllWatches(scopedIds) {
   if (demoGuard()) return;
   if (!watches.length) { toast('No watches to enhance', 'info'); return; }
-  const needsEnhance = watches.filter(w => !w.caseDiameter && !w.caliber && !w.background);
-  const target = needsEnhance.length > 0 ? needsEnhance : watches;
+  let target;
+  if (scopedIds && scopedIds.length) {
+    target = watches.filter(w => scopedIds.includes(w.id));
+    if (!target.length) return;
+  } else {
+    const needsEnhance = watches.filter(w => !w.caseDiameter && !w.caliber && !w.background);
+    target = needsEnhance.length > 0 ? needsEnhance : watches;
+  }
   const count = target.length;
-  if (!await showConfirm(`This will look up specs, dimensions, materials, caliber, and history for ${needsEnhance.length > 0 ? `${count} watch${count !== 1 ? 'es' : ''} missing details` : 'all watches'}.`, { title: `Enhance ${count} watch${count !== 1 ? 'es' : ''}?`, confirmLabel: 'Enhance', danger: false })) return;
+  if (!scopedIds) {
+    if (!await showConfirm(`This will look up specs, dimensions, materials, caliber, and history for ${count} watch${count !== 1 ? 'es' : ''}.`, { title: `Enhance ${count} watch${count !== 1 ? 'es' : ''}?`, confirmLabel: 'Enhance', danger: false })) return;
+  }
 
   _enhanceAllTargets = target;
   _enhanceAllResults = target.map(() => ({ _updates: null, _saved: false }));
@@ -16675,6 +16758,10 @@ async function enhanceAllWatches() {
     if (btn) { btn.disabled = false; btn.style.opacity = ''; }
     closeBtn.disabled = false;
     closeBtn.textContent = 'Close';
+    if (scopedIds) {
+      await saveAllEnhanceResults();
+      closeEnhanceAll();
+    }
   }
 }
 
