@@ -1193,6 +1193,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* ── 3-COLUMN FORM ROW ── */
     .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .9rem; }
+    .form-row-3 > .form-group { min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; }
 
     /* ── WISHLIST HORIZONTAL LIST ── */
     .wishlist-list { display: flex; flex-direction: column; gap: .75rem; }
@@ -4927,7 +4928,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.17.32';
+const APP_VERSION = '20.17.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10008,87 +10009,6 @@ function renderRecSettingsBody() {
 
 // [Timegrapher code removed — see shelved/timegrapher.html]
 
-const DEFAULT_BRANDS = [
-  'A. Lange & Söhne', 'Accurist', 'Accutron', 'Adidas', 'Aerowatch',
-  'Aevig', 'Aigner', 'Airain', 'Alexander Shorokhoff', 'Alpina',
-  'Andreas Strehler', 'Angelus', 'Anne Klein', 'Anoma', 'Anonimo', 'anOrdain', 'Apple',
-  'Aquadive', 'Aquastar', 'Aquatico', 'Archimede', 'Aristo',
-  'Armand Nicolet', 'Armin Strom', 'Armitron', 'Arnold & Son',
-  'Astor & Banks', 'Atelier Wen', 'Ateliers deMonaco', 'Audemars Piguet',
-  'Autodromo', 'AVI-8',
-  'B. Junge & Söhne', 'Backes & Strauss', 'Ball Watch', 'Balmain',
-  'Baltic', 'Bamford Watch Department', 'Baume & Mercier', 'Bausele', 'Bedat & Co.',
-  'Bell & Ross', 'Benjy', 'Benrus', 'Bering', 'Blancpain', 'BOLDR Supply Co.',
-  'Bovet', 'Bravur', 'Breguet', 'Breitling', 'Bremont', 'Breva',
-  'Brew Watch Co.', 'Bruno Söhnle', 'Buccellati', 'Bucherer', 'Bulgari',
-  'Bulova',
-  'Calvin Klein', 'Candino', 'Carl F. Bucherer', 'Carl Suchy & Söhne',
-  'Cartier', 'Casio', 'Certina', 'Chanel', 'Charriol', 'Chaumet',
-  'Chopard', 'Christophe Claret', 'Christopher Ward', 'Chronoswiss',
-  'Citizen', 'Clerc', 'Comex', 'Concord', 'Condor', 'Corum', 'Credor',
-  'Cvstos', 'Cyma', 'Czapek',
-  'D. Dornblüth & Sohn', 'D1 Milano', 'Damasko', 'Dan Henry',
-  'Daniel Roth', 'Daniel Wellington', 'Davosa', 'De Bethune', 'Dennison',
-  'De Grisogono', 'De Witt', 'Deep Blue', 'Defakto', 'Delbana',
-  'Depancel', 'Deutsche Uhrenfabrik (DUFA)', 'Diesel', 'Dior', 'DKNY',
-  'Dolce & Gabbana', 'Doxa', 'Dubey & Schaldenbrand', 'Dufrane', 'Dugena',
-  'Ebel', 'Eberhard & Co.', 'Edox', 'Egard Watch Co.', 'Elgin',
-  'Emporio Armani', 'Englemaan', 'Epos', 'Ernest Borel', 'Erwin Sattler', 'Eterna', 'Eza',
-  'F.P. Journe', 'Faberge', 'Farasute', 'Farer', 'Fastrack', 'Favre Leuba', 'Fears',
-  'Fendi', 'Festina', 'Flik Flak', 'Formex', 'Fortis', 'Fossil',
-  'Franck Muller', 'Frédérique Constant', 'Furlan Marri',
-  'Gallet', 'Garmin', 'Garrick', 'Geckota', 'Gevril', 'Girard-Perregaux',
-  'Glashütte Original', 'Glycine', 'Graff', 'Graham', 'Grand Seiko',
-  'Greubel Forsey', 'Grieb & Benzinger', 'Grönefeld', 'Gruppo Gamma',
-  'Gucci', 'Guess',
-  'H. Moser & Cie.', 'Habring²', 'Haim Watch Company', 'Hajime Asaoka', 'Halda Watch Co.',
-  'Haldimann', 'Halios', 'Hamilton', 'Hanhart', 'Hanowa', 'Harry Winston',
-  'Hautlence', 'Heimdallr', 'Helson', 'Hemel', 'Henry Archer', 'Hermès', 'Horage', 'Howard Miller', 'Hublot',
-  'Hugo Boss', 'HYT',
-  'Ingersoll', 'Invicta', 'Islander', 'Isotope', 'Itay Noy', 'IWC',
-  'Jacob & Co.', 'Jaeger-LeCoultre', 'Jaquet Droz', 'Jean Richard',
-  'JS Watch Co.', 'Junghans', 'Junkers', 'Juvenia',
-  'Kari Voutilainen', 'Karl Lagerfeld', 'Kate Spade', 'Kenneth Cole',
-  'Kleynod', 'Konstantin Chaykin', 'Kudoke', 'Kurono Tokyo',
-  'L. Leroy', 'Laco', 'Lacoste', 'Lang & Heyne', 'Laurent Ferrier',
-  'Lew & Huey', 'Linde Werdelin', 'Lip', 'Locman', 'Longines', 'Lorier',
-  'Louis Erard', 'Louis Moinet', 'Louis Vuitton', 'Luminox', 'Lüm-Tec',
-  'Maen Watches', 'Magrette', 'Manufacture Royale', 'Marathon',
-  'Marloe Watch Company', 'Martin Braun', 'Marvin', 'Maserati',
-  'Maurice Lacroix', 'MB&F', 'MeisterSinger', 'Melbourne Watch Company',
-  'Michael Kors', 'Michel Herbelin', 'Mido', 'Milus', 'Minase', 'Ming',
-  'Mondaine', 'Monta', 'Montblanc', 'Moritz Grossmann', 'Movado', 'MVMT',
-  'Mühle-Glashütte',
-  'Nixon', 'Nodus', 'Nomos Glashütte', 'Nordgreen',
-  'Oak & Oscar', 'Ochs und Junior', 'Omega', 'Orient', 'Oris',
-  'Out of Order', 'Pagani Design',
-  'Panerai', 'Parmigiani Fleurier', 'Patek Philippe', 'Paul Hewitt',
-  'Pequignet', 'Perrelet', 'Philippe Dufour', 'Piaget', 'Pierre Cardin',
-  'Pierre Kunz', 'Pinion', 'Pitzmann', 'Porsche Design', 'Praesidus', 'Prim',
-  'Prometheus Watch Company', 'Pulsar',
-  'Rado', 'Ralph Christian', 'Ralph Lauren', 'Raven', 'Raymond Weil',
-  'Rebel', 'Reservoir', 'Ressence', 'Revue Thommen', 'RGM Watch Co.',
-  'Richard Mille', 'Roamer', 'Roger Dubuis', 'Roger W. Smith', 'Rolex',
-  'Romain Gauthier', 'Rotary',
-  'San Martin', 'Schofield', 'Schwarz Etienne', 'Seaholm', 'Sector',
-  'Seiko', 'Serica', 'Shinola', 'Sinn', 'Sjöö Sandström', 'Skagen',
-  'Solvil et Titus', 'Speake-Marin', 'Spinnaker', 'Squale', 'Steinhart',
-  'Stepan Sarpaneva', 'Stowa', 'Straton Watch Co.', 'Struthers London',
-  'Studio Underd0g', 'Stuhrling Original', 'Sugess', 'Swarovski', 'Swatch',
-  'Swiss Military',
-  'TAG Heuer', 'Thomas Earnshaw', 'Timex', 'Tissot', 'Titoni',
-  'Tommy Hilfiger', 'Torgoen', 'Towson Watch Company', 'Traser', 'Traska',
-  'Tudor', 'Tutima Glashütte', 'TW Steel',
-  'Ulysse Nardin', 'Undone', 'Unimatic', 'Union Glashütte',
-  'Universal Genève', 'Urwerk',
-  'Vacheron Constantin', 'Vaer', 'Van Cleef & Arpels', 'Venezianico',
-  'Versace', 'Vertex', 'Victorinox', 'Vincero', 'Visitor Watch Co.',
-  'Vortic Watch Company', 'Vostok', 'Vostok Europe',
-  'Watchdives', 'Weiss Watch Company', 'Wempe', 'William Wood Watches',
-  'Xemex', 'Xeric',
-  'Yema',
-  'Zelos', 'Zenith', 'Zeno-Watch Basel', 'Zodiac',
-];
 
 // Safe localStorage reader — returns fallback on corrupted/missing data
 function safeGetJSON(key, fallback) {
@@ -10098,13 +10018,7 @@ function safeGetJSON(key, fallback) {
 
 let watches        = safeGetJSON(STORE_W,  []);
 let logs           = safeGetJSON(STORE_L,  []);
-// Merge stored brands with DEFAULT_BRANDS so users automatically get new additions
-const _storedBrands = safeGetJSON(STORE_B, null);
-let brands = (() => {
-  if (!_storedBrands) return [...DEFAULT_BRANDS];
-  const known = new Set(_storedBrands.map(b => b.toLowerCase()));
-  return [..._storedBrands, ...DEFAULT_BRANDS.filter(b => !known.has(b.toLowerCase()))];
-})();
+let brands = safeGetJSON(STORE_B, []);
 let wishlist       = safeGetJSON(STORE_WL, []);
 let eloRatings     = safeGetJSON(STORE_ELO, {}); // {watchId: score}
 
