@@ -3584,11 +3584,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
         <div class="form-group">
           <label for="w-description">Description</label>
-          <textarea id="w-description" rows="2" maxlength="500" style="resize:vertical;"></textarea>
+          <textarea id="w-description" rows="3" maxlength="500" style="resize:vertical;"></textarea>
         </div>
         <div class="form-group">
           <label for="w-background">Background &amp; History</label>
-          <textarea id="w-background" rows="3" maxlength="2000" style="resize:vertical;"></textarea>
+          <textarea id="w-background" rows="4" maxlength="2000" style="resize:vertical;"></textarea>
         </div>
       </div>
     </div>
@@ -3761,11 +3761,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="enhance-all-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="enhance-all-modal-title">
   <div class="modal" style="max-width:480px;">
     <div class="modal-title" id="enhance-all-modal-title" style="display:flex;align-items:center;gap:.5rem;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg> Enhance Collection
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg> Enhance Collection Data
     </div>
     <div id="enhance-all-list" style="max-height:60vh;overflow-y:auto;"></div>
     <div class="modal-actions" style="margin-top:1rem;">
       <button id="enhance-all-close-btn" class="btn btn-ghost" onclick="closeEnhanceAll()">Close</button>
+      <button id="enhance-all-save-all-btn" class="btn btn-primary" style="display:none;font-size:.78rem;padding:.35rem .9rem;" onclick="saveAllEnhanceResults()">Save All</button>
     </div>
   </div>
 </div>
@@ -4941,7 +4942,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.17.59';
+const APP_VERSION = '20.18.13';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16389,12 +16390,12 @@ async function enhanceSingleWatch() {
       const val = data[key];
       if (val && typeof val === 'string' && val.trim()) {
         const el = document.getElementById(elId);
-        if (el && !el.value.trim()) { el.value = val.trim(); filled++; }
+        if (el && !el.value.trim()) { el.value = stripCitations(val.trim()); filled++; }
       }
     }
     if (Array.isArray(data.functions) && data.functions.length) {
       const el = document.getElementById('w-functions-input');
-      if (el && !el.value.trim()) { el.value = data.functions.join(', '); filled++; }
+      if (el && !el.value.trim()) { el.value = data.functions.map(stripCitations).join(', '); filled++; }
     }
     if (data.productUrl && !document.getElementById('w-url').value.trim()) {
       document.getElementById('w-url').value = data.productUrl;
@@ -16416,6 +16417,8 @@ async function enhanceSingleWatch() {
   }
 }
 
+function stripCitations(s) { return s ? s.replace(/\s*\[\d+(?:,\s*\d+)*\]/g, '').trim() : s; }
+
 let _enhanceAllResults = [];
 let _enhanceAllTargets = [];
 let _enhanceAllRunning = false;
@@ -16423,6 +16426,7 @@ let _enhanceAllRunning = false;
 function closeEnhanceAll() {
   if (_enhanceAllRunning) return;
   document.getElementById('enhance-all-modal').classList.add('hidden');
+  document.getElementById('enhance-all-save-all-btn').style.display = 'none';
   _enhanceAllResults = [];
   _enhanceAllTargets = [];
 }
@@ -16536,9 +16540,9 @@ async function enhanceAllWatches() {
         };
         for (const [apiKey, wKey] of Object.entries(fieldMap)) {
           const val = data[apiKey];
-          if (val && typeof val === 'string' && val.trim() && !w[wKey]) updates[wKey] = val.trim();
+          if (val && typeof val === 'string' && val.trim() && !w[wKey]) updates[wKey] = stripCitations(val.trim());
         }
-        if (Array.isArray(data.functions) && data.functions.length && !w.functions) updates.functions = data.functions;
+        if (Array.isArray(data.functions) && data.functions.length && !w.functions) updates.functions = data.functions.map(stripCitations);
         if (data.productUrl && !w.url) updates.url = data.productUrl;
         const addedCount = Object.keys(updates).length;
         _enhanceAllResults[i]._updates = updates;
@@ -16556,7 +16560,7 @@ async function enhanceAllWatches() {
       }
     }
     if (totalWithUpdates > 1) {
-      list.insertAdjacentHTML('beforeend', `<div style="display:flex;justify-content:flex-end;margin-top:.5rem;"><button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .9rem;" onclick="saveAllEnhanceResults()">Save All</button></div>`);
+      document.getElementById('enhance-all-save-all-btn').style.display = '';
     }
   } finally {
     _enhanceAllRunning = false;
