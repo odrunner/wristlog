@@ -5020,7 +5020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.10.16';
+const APP_VERSION = '21.16.26';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13211,7 +13211,7 @@ function renderCollection(force) {
       <div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></div>
       <div class="empty-text">${watches.length === 0 ? 'No watches yet' : `No ${collTagFilter} watches`}</div>
       <div class="empty-sub">${watches.length === 0 ? 'Add your first watch — snap a photo or enter it manually.' : 'Clear the filter to see all watches'}</div>
-      ${watches.length === 0 ? `<button class="btn btn-primary" style="margin-top:1rem;margin-bottom:.5rem;" onclick="openPhotoIdentify()">Add from Photo</button><button class="btn btn-ghost" onclick="openAddWatch()">Add Manually</button>` : ''}
+      ${watches.length === 0 ? `<div style="display:flex;gap:.5rem;margin-top:1rem;"><button class="btn btn-primary" onclick="openPhotoIdentify()">Add from Photo</button><button class="btn btn-ghost" onclick="openAddWatch()">Add Manually</button></div>` : ''}
     </div></div>`;
     return;
   }
@@ -14353,7 +14353,15 @@ async function checkSingleWatchValue() {
     }
   }
 
-  if (status) status.innerHTML = '<span style="display:inline-flex;align-items:center;gap:.4rem;"><span class="spinner" style="width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Looking up market value…</span>';
+  const valSpinner = '<span class="spinner" style="width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span>';
+  if (status) status.innerHTML = `<span style="display:inline-flex;align-items:center;gap:.4rem;">${valSpinner} Looking up market value…</span>`;
+  const valMsgs = ['Searching current listings…', 'Checking retail pricing…', 'Comparing market prices…', 'Finalizing estimate…'];
+  let valMsgIdx = 0;
+  const valMsgTimer = setInterval(() => {
+    if (valMsgIdx < valMsgs.length && status) {
+      status.innerHTML = `<span style="display:inline-flex;align-items:center;gap:.4rem;">${valSpinner} ${valMsgs[valMsgIdx++]}</span>`;
+    }
+  }, 5000);
   try {
     const payload = { brand: w.brand, model: w.name, condition: 'good' };
     if (w.ref) payload.reference = w.ref;
@@ -14362,6 +14370,7 @@ async function checkSingleWatchValue() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     }, 60000);
+    clearInterval(valMsgTimer);
     if (r.status === 429) {
       if (status) status.textContent = 'Daily limit reached. Try again tomorrow.';
       if (btn) { btn.disabled = false; btn.textContent = 'Check price'; }
@@ -14379,6 +14388,7 @@ async function checkSingleWatchValue() {
     w._pendingPriceTs = todayStr();
     renderValueSection();
   } catch (e) {
+    clearInterval(valMsgTimer);
     if (status) status.textContent = 'Error looking up value. Try again later.';
     if (btn) { btn.disabled = false; btn.textContent = 'Check price'; }
   }
@@ -16557,6 +16567,12 @@ async function prefetchIdentifiedImages() {
         w._imageSource = 'cropped';
       } catch (cropErr) {
         console.error('[WristLog] crop error:', cropErr);
+        try {
+          w._prefetchedCroppedBlob = window._photoIdentifyBlob;
+          w._prefetchedImageUrl = URL.createObjectURL(window._photoIdentifyBlob);
+          w._imageFound = true;
+          w._imageSource = 'cropped';
+        } catch (_) {}
       }
     }
     if (!w._imageFound) w._imageFound = false;
