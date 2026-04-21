@@ -4992,7 +4992,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.19.55';
+const APP_VERSION = '20.20.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14064,6 +14064,8 @@ async function checkSingleWatchValue() {
       this.disabled = true;
       this.textContent = 'Saving...';
       setPriceInput('w-manual-mp', mid);
+      const mpSpan = document.getElementById('w-manual-mp')?.parentElement?.querySelector('.inline-val');
+      if (mpSpan) mpSpan.innerHTML = `<span>${escHtml(fmtMoney(mid))}</span>`;
       const today = todayStr();
       const history = Array.isArray(w.priceHistory) ? [...w.priceHistory] : [];
       if (w.marketPrice && w.marketPriceDate) {
@@ -16554,6 +16556,8 @@ async function saveValueResult(idx) {
     save();
     if (saveBtn) { saveBtn.textContent = 'Saved ✓'; saveBtn.style.color = '#2a9d5c'; }
     db.from('valuation_events').insert({ user_id: currentUser.id, action: 'check_apply', watches_total: watches.length, watches_saved: 1 }).then(() => {});
+    const allValDone = _valueCheckResults.every(vr => !vr._value || vr._saved);
+    if (allValDone) setTimeout(() => closeValueCheck(), 600);
   } catch (e) {
     toast('Save failed: ' + (e?.message || e), 'error');
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
@@ -16723,6 +16727,10 @@ async function saveEnhanceResult(idx) {
     if (saveBtn) saveBtn.disabled = false;
   } finally {
     _enhanceSavesInFlight--;
+    if (!_enhanceSaving && _enhanceSavesInFlight === 0) {
+      const allDone = _enhanceAllResults.every(r => !r._updates || !Object.keys(r._updates).length || r._saved);
+      if (allDone) setTimeout(() => closeEnhanceAll(), 600);
+    }
   }
 }
 
@@ -16929,9 +16937,6 @@ async function enhanceAllWatches(scopedIds) {
     closeBtn.disabled = false;
     closeBtn.textContent = 'Close';
     closeBtn.onclick = closeEnhanceAll;
-    if (scopedIds && totalWithUpdates > 0) {
-      document.getElementById('enhance-all-save-all-btn').style.display = '';
-    }
   }
 }
 
