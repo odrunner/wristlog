@@ -4928,7 +4928,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.17.45';
+const APP_VERSION = '20.17.47';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16409,7 +16409,7 @@ async function enhanceAllWatches() {
   const needsEnhance = watches.filter(w => !w.caseDiameter && !w.caliber && !w.background);
   const target = needsEnhance.length > 0 ? needsEnhance : watches;
   const count = target.length;
-  if (!confirm(`Enhance ${count} watch${count !== 1 ? 'es' : ''} with AI specs & details?\n\nThis will fill in missing specs like dimensions, materials, caliber, and history for ${needsEnhance.length > 0 ? 'watches missing details' : 'all watches'}.`)) return;
+  if (!await showConfirm(`Fill in missing specs like dimensions, materials, caliber, and history for ${needsEnhance.length > 0 ? 'watches missing details' : 'all watches'}.`, { title: `Enhance ${count} watch${count !== 1 ? 'es' : ''}?`, confirmLabel: 'Enhance', danger: false })) return;
   const btn = document.getElementById('coll-enhance-all-btn');
   if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
   let enhanced = 0, failed = 0;
