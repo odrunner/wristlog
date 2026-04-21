@@ -5,28 +5,28 @@
 --  INSTRUCTIONS:
 --  1. Sign up for a new account in the app (e.g. username "watchdemo")
 --  2. Copy the user UUID from Supabase → Authentication → Users
---  3. Find-and-replace EVERY occurrence of '9f6fccd3-e3d2-4595-87e7-de34ed859500' below with that UUID
+--  3. Find-and-replace EVERY occurrence of '73e4e48e-dbca-4b2e-82d2-35d5b39716d2' below with that UUID
 --     (keep the single quotes — it must be a valid UUID string)
 --  4. Run this entire script in the Supabase SQL Editor
 --
---  This script is idempotent: it deletes all existing data for 9f6fccd3-e3d2-4595-87e7-de34ed859500
+--  This script is idempotent: it deletes all existing data for 73e4e48e-dbca-4b2e-82d2-35d5b39716d2
 --  before inserting fresh seed data.
 -- ══════════════════════════════════════════════════════════════════════════════
 
 BEGIN;
 
 -- ─── Clean slate ─────────────────────────────────────────────────────────────
-DELETE FROM logs     WHERE user_id = '9f6fccd3-e3d2-4595-87e7-de34ed859500';
-DELETE FROM wishlist WHERE user_id = '9f6fccd3-e3d2-4595-87e7-de34ed859500';
-DELETE FROM watches  WHERE user_id = '9f6fccd3-e3d2-4595-87e7-de34ed859500';
+DELETE FROM logs     WHERE user_id = '73e4e48e-dbca-4b2e-82d2-35d5b39716d2';
+DELETE FROM wishlist WHERE user_id = '73e4e48e-dbca-4b2e-82d2-35d5b39716d2';
+DELETE FROM watches  WHERE user_id = '73e4e48e-dbca-4b2e-82d2-35d5b39716d2';
 
 -- ─── Profile (upsert — the auth trigger may have already created the row) ───
 INSERT INTO profiles (id, username, display_name, bio, avatar_url,
                       collection_visibility, profile_privacy, wishlist_visibility)
 VALUES (
-  '9f6fccd3-e3d2-4595-87e7-de34ed859500',
-  'watchdemo',
-  'James Collins',
+  '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
+  'alexrivera',
+  'Alex Rivera',
   'Horology enthusiast. Collecting since 2018. GMT complications and vintage chronographs.',
   NULL,
   'public',
@@ -50,7 +50,7 @@ INSERT INTO watches (id, user_id, brand, name, ref, price, purchase_date, color,
                      has_box, has_papers, elo_rating, watch_privacy)
 VALUES
 -- 1. Rolex Submariner Date
-(gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+(gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'Rolex', 'Submariner Date', '126610LN', 9500, '2021-03-15', '#006039',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/submariner.webp',
  'https://www.rolex.com/watches/submariner/m126610ln-0001',
@@ -58,7 +58,7 @@ VALUES
  TRUE, TRUE, 1180, NULL),
 
 -- 2. Omega Speedmaster Professional
-(gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+(gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'Omega', 'Speedmaster Professional Moonwatch', '310.30.42.50.01.002', 6300, '2020-06-20', '#1a1a2e',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/speedmaster.webp',
  'https://www.omegawatches.com/watch-omega-speedmaster-moonwatch-professional-co-axial-master-chronometer-chronograph-42-mm-31030425001002',
@@ -66,7 +66,7 @@ VALUES
  TRUE, TRUE, 1120, NULL),
 
 -- 3. Tudor Black Bay 58
-(gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+(gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'Tudor', 'Black Bay Fifty-Eight', 'M79030N', 3800, '2022-01-10', '#8B0000',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/blackbay58.webp',
  'https://www.tudorwatch.com/en/watches/black-bay-fifty-eight/m79030n-0001',
@@ -74,7 +74,7 @@ VALUES
  TRUE, TRUE, 1060, NULL),
 
 -- 4. Grand Seiko Spring Drive Snowflake
-(gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+(gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'Grand Seiko', 'Spring Drive Snowflake', 'SBGA211', 5800, '2021-09-05', '#e8e8e8',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/snowflake.webp',
  'https://www.grand-seiko.com/us-en/collections/sbga211',
@@ -82,7 +82,7 @@ VALUES
  TRUE, TRUE, 1040, NULL),
 
 -- 5. IWC Portugieser Chronograph
-(gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+(gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'IWC', 'Portugieser Chronograph', 'IW371605', 8200, '2023-04-18', '#1e3a5f',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/portugieser.webp',
  'https://www.iwc.com/en/watch-collections/portugieser/iw371605-portugieser-chronograph.html',
@@ -90,7 +90,7 @@ VALUES
  TRUE, TRUE, 1020, NULL),
 
 -- 6. Cartier Santos Medium
-(gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+(gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'Cartier', 'Santos de Cartier Medium', 'WSSA0029', 7200, '2022-08-22', '#c9a84c',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/santos.webp',
  'https://www.cartier.com/en-us/watches/santos-de-cartier/santos-de-cartier-watch-WSSA0029.html',
@@ -98,7 +98,7 @@ VALUES
  TRUE, TRUE, 1080, NULL),
 
 -- 7. Rolex GMT-Master II "Batman"
-(gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+(gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'Rolex', 'GMT-Master II', '126710BLNR', 10800, '2023-11-03', '#003366',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/gmtmaster.webp',
  'https://www.rolex.com/watches/gmt-master-ii/m126710blnr-0003',
@@ -106,7 +106,7 @@ VALUES
  TRUE, TRUE, 1150, NULL),
 
 -- 8. Jaeger-LeCoultre Reverso Classic
-(gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+(gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'Jaeger-LeCoultre', 'Reverso Classic Large', 'Q3858520', 7500, '2020-11-28', '#8B4513',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/reverso.webp',
  'https://www.jaeger-lecoultre.com/us-en/watches/reverso/reverso-classic-large/q3858520',
@@ -114,7 +114,7 @@ VALUES
  TRUE, TRUE, 1010, NULL),
 
 -- 9. Seiko Presage Cocktail Time
-(gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+(gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'Seiko', 'Presage Cocktail Time', 'SRPB43', 350, '2019-03-12', '#4169E1',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/presage.webp',
  'https://www.seikowatches.com/us-en/products/presage/srpb43',
@@ -122,7 +122,7 @@ VALUES
  TRUE, FALSE, 950, NULL),
 
 -- 10. Casio G-Shock GA-2100 "CasiOak"
-(gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+(gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'Casio', 'G-Shock GA-2100', 'GA-2100-1A1', 100, '2022-05-01', '#2d2d2d',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/gshock.webp',
  'https://www.casio.com/us/watches/gshock/product.GA-2100-1A1/',
@@ -130,7 +130,7 @@ VALUES
  FALSE, FALSE, 970, NULL),
 
 -- 11. Zenith Chronomaster Sport
-(gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+(gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'Zenith', 'Chronomaster Sport', '03.3100.3600', 8900, '2024-02-14', '#1a1a2e',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/chronomaster.webp',
  'https://www.zenith-watches.com/en_us/chronomaster-sport.html',
@@ -138,7 +138,7 @@ VALUES
  TRUE, TRUE, 1030, NULL),
 
 -- 12. Panerai Luminor Marina
-(gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+(gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'Panerai', 'Luminor Marina', 'PAM01312', 7800, '2023-07-09', '#3d3d2e',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/luminor.webp',
  'https://www.panerai.com/us/en/collections/watch-collection/luminor/pam01312.html',
@@ -187,18 +187,18 @@ DECLARE
   v_cases_for_w  text[];
 BEGIN
   -- ── Fetch the watch IDs we just inserted ──
-  SELECT id INTO v_sub_id     FROM watches WHERE user_id = '9f6fccd3-e3d2-4595-87e7-de34ed859500' AND ref = '126610LN';
-  SELECT id INTO v_speedy_id  FROM watches WHERE user_id = '9f6fccd3-e3d2-4595-87e7-de34ed859500' AND ref = '310.30.42.50.01.002';
-  SELECT id INTO v_bb58_id    FROM watches WHERE user_id = '9f6fccd3-e3d2-4595-87e7-de34ed859500' AND ref = 'M79030N';
-  SELECT id INTO v_gs_id      FROM watches WHERE user_id = '9f6fccd3-e3d2-4595-87e7-de34ed859500' AND ref = 'SBGA211';
-  SELECT id INTO v_iwc_id     FROM watches WHERE user_id = '9f6fccd3-e3d2-4595-87e7-de34ed859500' AND ref = 'IW371605';
-  SELECT id INTO v_santos_id  FROM watches WHERE user_id = '9f6fccd3-e3d2-4595-87e7-de34ed859500' AND ref = 'WSSA0029';
-  SELECT id INTO v_gmt_id     FROM watches WHERE user_id = '9f6fccd3-e3d2-4595-87e7-de34ed859500' AND ref = '126710BLNR';
-  SELECT id INTO v_jlc_id     FROM watches WHERE user_id = '9f6fccd3-e3d2-4595-87e7-de34ed859500' AND ref = 'Q3858520';
-  SELECT id INTO v_seiko_id   FROM watches WHERE user_id = '9f6fccd3-e3d2-4595-87e7-de34ed859500' AND ref = 'SRPB43';
-  SELECT id INTO v_gshock_id  FROM watches WHERE user_id = '9f6fccd3-e3d2-4595-87e7-de34ed859500' AND ref = 'GA-2100-1A1';
-  SELECT id INTO v_zenith_id  FROM watches WHERE user_id = '9f6fccd3-e3d2-4595-87e7-de34ed859500' AND ref = '03.3100.3600';
-  SELECT id INTO v_panerai_id FROM watches WHERE user_id = '9f6fccd3-e3d2-4595-87e7-de34ed859500' AND ref = 'PAM01312';
+  SELECT id INTO v_sub_id     FROM watches WHERE user_id = '73e4e48e-dbca-4b2e-82d2-35d5b39716d2' AND ref = '126610LN';
+  SELECT id INTO v_speedy_id  FROM watches WHERE user_id = '73e4e48e-dbca-4b2e-82d2-35d5b39716d2' AND ref = '310.30.42.50.01.002';
+  SELECT id INTO v_bb58_id    FROM watches WHERE user_id = '73e4e48e-dbca-4b2e-82d2-35d5b39716d2' AND ref = 'M79030N';
+  SELECT id INTO v_gs_id      FROM watches WHERE user_id = '73e4e48e-dbca-4b2e-82d2-35d5b39716d2' AND ref = 'SBGA211';
+  SELECT id INTO v_iwc_id     FROM watches WHERE user_id = '73e4e48e-dbca-4b2e-82d2-35d5b39716d2' AND ref = 'IW371605';
+  SELECT id INTO v_santos_id  FROM watches WHERE user_id = '73e4e48e-dbca-4b2e-82d2-35d5b39716d2' AND ref = 'WSSA0029';
+  SELECT id INTO v_gmt_id     FROM watches WHERE user_id = '73e4e48e-dbca-4b2e-82d2-35d5b39716d2' AND ref = '126710BLNR';
+  SELECT id INTO v_jlc_id     FROM watches WHERE user_id = '73e4e48e-dbca-4b2e-82d2-35d5b39716d2' AND ref = 'Q3858520';
+  SELECT id INTO v_seiko_id   FROM watches WHERE user_id = '73e4e48e-dbca-4b2e-82d2-35d5b39716d2' AND ref = 'SRPB43';
+  SELECT id INTO v_gshock_id  FROM watches WHERE user_id = '73e4e48e-dbca-4b2e-82d2-35d5b39716d2' AND ref = 'GA-2100-1A1';
+  SELECT id INTO v_zenith_id  FROM watches WHERE user_id = '73e4e48e-dbca-4b2e-82d2-35d5b39716d2' AND ref = '03.3100.3600';
+  SELECT id INTO v_panerai_id FROM watches WHERE user_id = '73e4e48e-dbca-4b2e-82d2-35d5b39716d2' AND ref = 'PAM01312';
 
   -- ── Build parallel arrays (index 1-12) ──
   -- Order: Sub, Speedy, BB58, GS, IWC, Santos, GMT, JLC, Seiko, G-Shock, Zenith, Panerai
@@ -384,7 +384,7 @@ BEGIN
     INSERT INTO logs (id, user_id, watch_id, date, use_case, notes, photo_url, visibility, club_id)
     VALUES (
       gen_random_uuid()::text,
-      '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+      '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
       v_watch_ids[v_pick],
       v_day_text,
       v_use_case,
@@ -400,43 +400,43 @@ BEGIN
   -- ── Posts (logs with no watch_id) — general musings ──
   INSERT INTO logs (id, user_id, watch_id, date, use_case, notes, photo_url, visibility, club_id)
   VALUES
-    (gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500', NULL, '2025-03-20', 'unspecified',
+    (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2025-03-20', 'unspecified',
      'Just reorganized my watch box. The collection is really coming together.',
      NULL, 'public', NULL),
 
-    (gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500', NULL, '2025-04-15', 'unspecified',
+    (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2025-04-15', 'unspecified',
      'Visited the Omega boutique today. The new Moonshine Gold Speedmaster in person is something else.',
      NULL, 'public', NULL),
 
-    (gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500', NULL, '2025-05-28', 'unspecified',
+    (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2025-05-28', 'unspecified',
      'Hot take: the best watch in any collection is the one you actually wear.',
      NULL, 'public', NULL),
 
-    (gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500', NULL, '2025-07-04', 'unspecified',
+    (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2025-07-04', 'unspecified',
      'Happy Fourth! Rocking the red, white and blue — Pepsi GMT would have been perfect but Batman will do.',
      NULL, 'public', NULL),
 
-    (gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500', NULL, '2025-08-12', 'unspecified',
+    (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2025-08-12', 'unspecified',
      'Thinking about adding a proper field watch to the rotation. Maybe a Hamilton Khaki?',
      NULL, 'public', NULL),
 
-    (gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500', NULL, '2025-09-30', 'unspecified',
+    (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2025-09-30', 'unspecified',
      'Three months of tracking wear data and the Submariner is the clear daily champion. No surprise there.',
      NULL, 'public', NULL),
 
-    (gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500', NULL, '2025-11-15', 'unspecified',
+    (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2025-11-15', 'unspecified',
      'The Snowflake dial in autumn light is unreal. Spring Drive sweep never gets old.',
      NULL, 'public', NULL),
 
-    (gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500', NULL, '2025-12-25', 'unspecified',
+    (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2025-12-25', 'unspecified',
      'Christmas gift to myself: a custom leather strap for the Reverso. Burgundy alligator.',
      NULL, 'public', NULL),
 
-    (gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500', NULL, '2026-01-10', 'unspecified',
+    (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2026-01-10', 'unspecified',
      'New year resolution: wear the JLC and Seiko more. They deserve more wrist time.',
      NULL, 'public', NULL),
 
-    (gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500', NULL, '2026-02-14', 'unspecified',
+    (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2026-02-14', 'unspecified',
      'Valentine dinner with the Santos. Cartier just has that effortless elegance for date night.',
      NULL, 'public', NULL);
 
@@ -450,7 +450,7 @@ INSERT INTO wishlist (id, user_id, brand, name, ref, price, url, image, notes,
                       color, tags, market_price, added_date)
 VALUES
 -- 1. A. Lange & Söhne Saxonia
-(gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+(gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'A. Lange & Söhne', 'Saxonia', '380.032', 23000,
  'https://www.alange-soehne.com/en/timepieces/saxonia/saxonia/380032',
  NULL,
@@ -458,7 +458,7 @@ VALUES
  '#c9a84c', ARRAY['Dress'], 23500, '2025-04-10'),
 
 -- 2. Patek Philippe Calatrava
-(gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+(gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'Patek Philippe', 'Calatrava', '5227G', 35000,
  'https://www.patek.com/en/collection/calatrava/5227G-010',
  NULL,
@@ -466,7 +466,7 @@ VALUES
  '#1a1a2e', ARRAY['Dress'], 38000, '2025-06-22'),
 
 -- 3. Omega Seamaster 300M
-(gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+(gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'Omega', 'Seamaster Diver 300M', '210.30.42.20.03.001', 5200,
  'https://www.omegawatches.com/watch-omega-seamaster-diver-300m-co-axial-master-chronometer-42-mm-21030422003001',
  NULL,
@@ -474,7 +474,7 @@ VALUES
  '#003366', ARRAY['Dive','Daily Beater'], 5000, '2025-08-05'),
 
 -- 4. Nomos Tangente 38
-(gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+(gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'Nomos', 'Tangente 38', '164', 1900,
  'https://nomos-glashuette.com/en/tangente/tangente-164',
  NULL,
@@ -482,7 +482,7 @@ VALUES
  '#e8e8e8', ARRAY['Dress'], 1850, '2025-09-18'),
 
 -- 5. Breitling Navitimer B01
-(gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+(gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'Breitling', 'Navitimer B01 Chronograph 43', 'AB0137211B1A1', 8900,
  'https://www.breitling.com/us-en/watches/navitimer/b01-chronograph-43/AB0137211B1A1/',
  NULL,
@@ -490,7 +490,7 @@ VALUES
  '#1a1a2e', ARRAY['Pilot','Chronograph'], 8500, '2025-11-02'),
 
 -- 6. H. Moser & Cie Streamliner Flyback
-(gen_random_uuid()::text, '9f6fccd3-e3d2-4595-87e7-de34ed859500',
+(gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'H. Moser & Cie', 'Streamliner Flyback Chronograph', '6902-1200', 28500,
  'https://www.h-moser.com/product/streamliner-flyback-chronograph/',
  NULL,

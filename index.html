@@ -207,7 +207,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       display: none;
       align-items: flex-start; justify-content: center;
       overflow-y: auto;
-      padding: calc(1.75rem + env(safe-area-inset-top, 0px)) 1.25rem 2rem;
+      padding: calc(1rem + env(safe-area-inset-top, 0px)) 1.25rem 1rem;
       /* Force light palette on landing page regardless of theme */
       --bg: #f5f5f8; --surface: #ffffff; --surface2: #eeeff5;
       --border: #d8d9e8; --gold: #9a7628; --gold-lt: #c9a84c;
@@ -217,25 +217,25 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* ── Landing Page ── */
     #auth-screen { overflow-y:auto; }
     .landing-inner { max-width:520px; margin:0 auto; }
-    .landing-logo { display:flex; align-items:center; gap:8px; justify-content:center; margin-bottom:2rem; }
+    .landing-logo { display:flex; align-items:center; gap:8px; justify-content:center; margin-bottom:.8rem; }
     .landing-logo span { font-size:1.6rem; font-weight:600; color:var(--gold); }
     .landing-logo span span { font-weight:400; letter-spacing:.04em; }
-    .landing-tagline { font-size:1rem; color:var(--muted); line-height:1.55; text-align:center; margin-bottom:1.5rem; }
-    .landing-auth { display:flex; flex-direction:column; gap:.55rem; margin-top:2rem; margin-bottom:1.5rem; }
-    .landing-auth .btn-google, .landing-auth .btn-apple, .landing-auth .btn-demo { font-size:.82rem; padding:.65rem .9rem; max-width:280px; margin-left:auto; margin-right:auto; }
-    .landing-app-badge { text-align:center; margin-bottom:.25rem; }
-    .landing-app-badge img { height:34px; }
-    .landing-fine-print { font-size:.7rem; color:var(--muted); text-align:center; line-height:1.5; margin-bottom:2rem; }
+    .landing-tagline { font-size:.95rem; color:var(--muted); line-height:1.45; text-align:center; margin-bottom:.8rem; }
+    .landing-auth { display:flex; flex-direction:column; gap:.45rem; margin-top:.8rem; margin-bottom:.6rem; }
+    .landing-auth .btn-google, .landing-auth .btn-apple, .landing-auth .btn-demo { font-size:.82rem; padding:.55rem .9rem; max-width:280px; margin-left:auto; margin-right:auto; }
+    .landing-app-badge { text-align:center; margin-bottom:.15rem; }
+    .landing-app-badge img { height:32px; }
+    .landing-fine-print { font-size:.7rem; color:var(--muted); text-align:center; line-height:1.5; margin-bottom:1rem; }
     .landing-fine-print a { color:var(--muted); text-decoration:underline; }
-    .landing-divider { height:1px; background:var(--border); margin:0 -1.25rem 1.5rem; }
+    .landing-divider { height:1px; background:var(--border); margin:0 -1.25rem .6rem; }
     .landing-features { display:flex; flex-direction:column; gap:0; }
-    .landing-feature { display:grid; grid-template-columns:36px 1fr; gap:14px; padding:1.25rem 0; border-bottom:1px solid var(--border); }
+    .landing-feature { display:grid; grid-template-columns:30px 1fr; gap:10px; padding:.6rem 0; border-bottom:1px solid var(--border); }
     .landing-feature:last-child { border-bottom:none; }
-    .landing-feat-num { font-size:2rem; font-weight:600; color:rgba(154,118,40,.2); line-height:1; font-variant-numeric:tabular-nums; }
-    .landing-feat-tag { font-size:.6rem; font-weight:600; color:var(--gold); letter-spacing:.12em; text-transform:uppercase; margin-bottom:4px; display:flex; align-items:center; gap:6px; }
+    .landing-feat-num { font-size:1.4rem; font-weight:600; color:rgba(154,118,40,.2); line-height:1; font-variant-numeric:tabular-nums; }
+    .landing-feat-tag { font-size:.55rem; font-weight:600; color:var(--gold); letter-spacing:.12em; text-transform:uppercase; margin-bottom:2px; display:flex; align-items:center; gap:6px; }
     .landing-feat-tag::before { content:''; display:block; width:10px; height:1px; background:var(--gold); }
-    .landing-feat-title { font-size:1.05rem; font-weight:600; line-height:1.25; margin-bottom:4px; }
-    .landing-feat-body { font-size:.78rem; color:var(--muted); line-height:1.55; }
+    .landing-feat-title { font-size:.92rem; font-weight:600; line-height:1.25; margin-bottom:2px; }
+    .landing-feat-body { font-size:.72rem; color:var(--muted); line-height:1.45; }
     @media(min-width:600px) {
       .landing-features { flex-direction:row; gap:0; }
       .landing-feature { display:block; flex:1; padding:1.25rem 1rem; border-bottom:none; border-right:1px solid var(--border); }
@@ -339,6 +339,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     input:focus, textarea:focus, select:focus { border-color: var(--gold); }
     input[type=date]::-webkit-calendar-picker-indicator { filter: invert(.6); cursor: pointer; }
+    ::placeholder { color: var(--muted); opacity: .5; }
+    input[type=date].empty-date { color: var(--muted); }
     textarea { resize: vertical; min-height: 64px; }
     .form-group { margin-bottom: .9rem; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
@@ -1885,7 +1887,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </svg><span>W<span>rotate</span></span>
     </div>
 
-    <p class="landing-tagline">Track your collection, share with fellow collectors, and measure watch accuracy. Free, forever.</p>
+    <p class="landing-tagline">Track your collection, share with fellow collectors, and measure watch accuracy. 100% free.</p>
 
     <!-- Feature callouts -->
     <div class="landing-divider"></div>
@@ -3421,7 +3423,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div class="form-group">
         <label for="w-name">Model / Name *</label>
-        <input type="text" id="w-name" placeholder="Submariner, Speedmaster…" maxlength="100">
+        <input type="text" id="w-name" placeholder="" maxlength="100">
       </div>
     </div>
     <div class="form-row">
@@ -3668,17 +3670,17 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem;">
             <div>
               <label for="tg-rate-input" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Rate (s/day) *</label>
-              <input type="number" id="tg-rate-input" step="0.1" placeholder="+5.2" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+              <input type="number" id="tg-rate-input" step="0.1" placeholder="" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
             </div>
             <div>
               <label for="tg-be-input" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Beat Error (ms)</label>
-              <input type="number" id="tg-be-input" step="0.01" min="0" placeholder="0.3" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+              <input type="number" id="tg-be-input" step="0.01" min="0" placeholder="" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
             </div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem;">
             <div>
               <label for="tg-amplitude-input" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">Amplitude (°)</label>
-              <input type="number" id="tg-amplitude-input" step="1" min="0" max="360" placeholder="275" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+              <input type="number" id="tg-amplitude-input" step="1" min="0" max="360" placeholder="" style="width:100%;padding:.4rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
             </div>
             <div>
               <label for="tg-bph-select" style="font-size:.7rem;color:var(--muted);text-transform:uppercase;">BPH</label>
@@ -4609,6 +4611,7 @@ async function signInWithApple() {
 }
 
 function openDeleteAccount() {
+  if (demoGuard()) return;
   document.getElementById('da-step-1').classList.remove('hidden');
   document.getElementById('da-step-2').classList.add('hidden');
   document.getElementById('delete-account-modal').classList.remove('hidden');
@@ -4992,7 +4995,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.20.21';
+const APP_VERSION = '20.21.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11086,7 +11089,7 @@ function renderFunnelSection(allData, weekData, allProfiles) {
   const convAll = totalSignins > 0 ? (newUsersAll / totalSignins * 100).toFixed(1) + '%' : '—';
   const conv7 = totalSignins7 > 0 ? (newUsers7d / totalSignins7 * 100).toFixed(1) + '%' : '—';
 
-  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;">
+  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
     <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Signup Funnel</div>
     ${row('Google sign-in click', signinG7, signinGAll)}
     ${row('Apple sign-in click', signinA7, signinAAll)}
@@ -13761,6 +13764,7 @@ function openAddWatch() {
   document.getElementById('sec-accuracy-wrap').style.display = 'none';
   clearInlineEdits();
   renderWatchModalImg();
+  document.getElementById('watch-modal').querySelectorAll('input[type=date]').forEach(d => d.classList.toggle('empty-date', !d.value));
   document.getElementById('watch-modal').classList.remove('hidden');
 }
 
@@ -13845,6 +13849,7 @@ function openEditWatch(id) {
   // Show existing photo in preview (use URL directly, no objectURL needed)
   if (w.image) { wPendingImage = w.image; wPendingFile = null; }
   renderWatchModalImg();
+  document.getElementById('watch-modal').querySelectorAll('input[type=date]').forEach(d => d.classList.toggle('empty-date', !d.value));
   document.getElementById('watch-modal').classList.remove('hidden');
 }
 
@@ -14241,6 +14246,7 @@ async function saveWatch() {
 }
 
 function openDelModal(id) {
+  if (demoGuard()) return;
   deletingId = id;
   document.getElementById('del-modal').classList.remove('hidden');
 }
@@ -14249,6 +14255,7 @@ function closeDelModal() {
   deletingId = null;
 }
 function confirmDelete() {
+  if (demoGuard()) return;
   if (!deletingId) return;
   const id = deletingId;
   const w = watches.find(x => x.id === id);
@@ -18693,6 +18700,10 @@ function initApp() {
     window.history.replaceState(null, '', window.location.pathname);
   }
   document.getElementById('track-date').value = todayStr();
+  document.querySelectorAll('input[type=date]').forEach(d => {
+    d.classList.toggle('empty-date', !d.value);
+    d.addEventListener('input', () => d.classList.toggle('empty-date', !d.value));
+  });
   initOEMStraps();
   fetchWeather();
   initReminder();
