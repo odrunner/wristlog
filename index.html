@@ -4941,7 +4941,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.17.56';
+const APP_VERSION = '20.17.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16418,8 +16418,10 @@ async function enhanceSingleWatch() {
 
 let _enhanceAllResults = [];
 let _enhanceAllTargets = [];
+let _enhanceAllRunning = false;
 
 function closeEnhanceAll() {
+  if (_enhanceAllRunning) return;
   document.getElementById('enhance-all-modal').classList.add('hidden');
   _enhanceAllResults = [];
   _enhanceAllTargets = [];
@@ -16469,7 +16471,10 @@ async function enhanceAllWatches() {
   const closeBtn = document.getElementById('enhance-all-close-btn');
   closeBtn.disabled = true;
   closeBtn.textContent = 'Working…';
+  _enhanceAllRunning = true;
   modal.classList.remove('hidden');
+  modal.dataset.justOpened = '1';
+  setTimeout(() => delete modal.dataset.justOpened, 600);
 
   list.innerHTML = target.map((w, i) => {
     const color = w.color || '#c9a84c';
@@ -16554,6 +16559,7 @@ async function enhanceAllWatches() {
       list.insertAdjacentHTML('beforeend', `<div style="display:flex;justify-content:flex-end;margin-top:.5rem;"><button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .9rem;" onclick="saveAllEnhanceResults()">Save All</button></div>`);
     }
   } finally {
+    _enhanceAllRunning = false;
     if (btn) { btn.disabled = false; btn.style.opacity = ''; }
     closeBtn.disabled = false;
     closeBtn.textContent = 'Close';
