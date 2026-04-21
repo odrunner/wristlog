@@ -188,70 +188,67 @@ Rules:
         });
       }
 
-      try {
-        const geminiAbort = new AbortController();
-        const geminiTimer = setTimeout(() => geminiAbort.abort(), 45000);
-
-        const parts: any[] = [{ text: enhancePrompt }];
-        // Include watch image if provided for better context
-        if (image) {
-          const b64 = image.replace(/^data:image\/[a-z]+;base64,/, "");
-          const mt = image.startsWith("data:image/png") ? "image/png" : "image/jpeg";
-          parts.unshift({ inline_data: { mime_type: mt, data: b64 } });
-        }
-
-        const geminiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            signal: geminiAbort.signal,
-            body: JSON.stringify({
-              contents: [{ parts }],
-              tools: [{ google_search: {} }],
-              generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
-            }),
-          }
-        );
-
-        clearTimeout(geminiTimer);
-        if (geminiResponse.ok) {
-          const geminiResult = await geminiResponse.json();
-          const resParts = geminiResult.candidates?.[0]?.content?.parts ?? [];
-          const textParts = resParts.filter((p: any) => p.text).map((p: any) => p.text).join("");
-
-          function extractJson(text: string) {
-            const m = text.match(/\{[\s\S]*\}/);
-            return m ? JSON.parse(m[0]) : null;
-          }
-
-          const parsed = extractJson(textParts);
-          if (parsed) {
-            parsed._engine = "gemini";
-            await logAttempt(1, null);
-            return new Response(JSON.stringify(parsed), {
-              headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-            });
-          }
-          console.error("[identify-watch] Enhance parse failed. Raw:", textParts.slice(0, 500));
-        } else {
-          const errText = await geminiResponse.text();
-          console.error("[identify-watch] Enhance Gemini error:", geminiResponse.status, errText.slice(0, 300));
-        }
-
-        await logAttempt(null, "enhance_failed");
-        return new Response(JSON.stringify({ error: "Enhancement failed" }), {
-          status: 502,
-          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-        });
-      } catch (enhErr: any) {
-        console.error("[identify-watch] Enhance error:", enhErr.message);
-        await logAttempt(null, `enhance_error_${enhErr.message?.slice(0, 50)}`);
-        return new Response(JSON.stringify({ error: "Enhancement failed" }), {
-          status: 502,
-          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-        });
+      const parts: any[] = [{ text: enhancePrompt }];
+      if (image) {
+        const b64 = image.replace(/^data:image\/[a-z]+;base64,/, "");
+        const mt = image.startsWith("data:image/png") ? "image/png" : "image/jpeg";
+        parts.unshift({ inline_data: { mime_type: mt, data: b64 } });
       }
+
+      function extractJson(text: string) {
+        const m = text.match(/\{[\s\S]*\}/);
+        return m ? JSON.parse(m[0]) : null;
+      }
+
+      const MAX_RETRIES = 2;
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+          const geminiAbort = new AbortController();
+          const geminiTimer = setTimeout(() => geminiAbort.abort(), 45000);
+
+          const geminiResponse = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              signal: geminiAbort.signal,
+              body: JSON.stringify({
+                contents: [{ parts }],
+                tools: [{ google_search: {} }],
+                generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
+              }),
+            }
+          );
+
+          clearTimeout(geminiTimer);
+          if (geminiResponse.ok) {
+            const geminiResult = await geminiResponse.json();
+            const resParts = geminiResult.candidates?.[0]?.content?.parts ?? [];
+            const textParts = resParts.filter((p: any) => p.text).map((p: any) => p.text).join("");
+
+            const parsed = extractJson(textParts);
+            if (parsed) {
+              parsed._engine = "gemini";
+              await logAttempt(1, null);
+              return new Response(JSON.stringify(parsed), {
+                headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+              });
+            }
+            console.error(`[identify-watch] Enhance parse failed (attempt ${attempt + 1}). Raw:`, textParts.slice(0, 500));
+          } else {
+            const errText = await geminiResponse.text();
+            console.error(`[identify-watch] Enhance Gemini error (attempt ${attempt + 1}):`, geminiResponse.status, errText.slice(0, 300));
+          }
+        } catch (enhErr: any) {
+          console.error(`[identify-watch] Enhance error (attempt ${attempt + 1}):`, enhErr.message);
+        }
+      }
+
+      await logAttempt(null, "enhance_failed");
+      return new Response(JSON.stringify({ error: "Enhancement failed" }), {
+        status: 502,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
     }
 
     if (!image) {

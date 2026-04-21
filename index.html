@@ -4978,7 +4978,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.19.29';
+const APP_VERSION = '20.19.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16554,6 +16554,7 @@ function stripCitations(s) { return s ? s.replace(/\s*\[\d+(?:,\s*\d+)*\]/g, '')
 let _enhanceAllResults = [];
 let _enhanceAllTargets = [];
 let _enhanceAllRunning = false;
+let _enhanceAllCancelled = false;
 
 function closeEnhanceAll() {
   if (_enhanceAllRunning || _enhanceSaving || _enhanceSavesInFlight > 0) return;
@@ -16648,12 +16649,14 @@ async function enhanceAllWatches(scopedIds) {
   _enhanceAllTargets = target;
   _enhanceAllResults = target.map(() => ({ _updates: null, _saved: false }));
   _enhanceSaveCount = 0;
+  _enhanceAllCancelled = false;
 
   const modal = document.getElementById('enhance-all-modal');
   const list = document.getElementById('enhance-all-list');
   const closeBtn = document.getElementById('enhance-all-close-btn');
-  closeBtn.disabled = true;
-  closeBtn.textContent = 'Working…';
+  closeBtn.disabled = false;
+  closeBtn.textContent = 'Cancel';
+  closeBtn.onclick = () => { _enhanceAllCancelled = true; closeBtn.disabled = true; closeBtn.textContent = 'Cancelling…'; };
   _enhanceAllRunning = true;
   modal.classList.remove('hidden');
   modal.dataset.justOpened = '1';
@@ -16682,7 +16685,29 @@ async function enhanceAllWatches(scopedIds) {
       const card = document.getElementById(`enh-card-${i}`);
       const statusEl = card?.querySelector('.enh-status');
       const actionsEl = card?.querySelector('.pi-card-actions');
+      if (_enhanceAllCancelled) {
+        if (statusEl) { statusEl.textContent = 'Cancelled'; statusEl.style.color = 'var(--muted)'; }
+        for (let j = i + 1; j < count; j++) {
+          const sk = document.getElementById(`enh-card-${j}`)?.querySelector('.enh-status');
+          if (sk) { sk.textContent = 'Cancelled'; sk.style.color = 'var(--muted)'; }
+        }
+        break;
+      }
       if (statusEl) { statusEl.textContent = 'Searching specs…'; statusEl.style.color = 'var(--gold)'; }
+      const _enhStatusMsgs = ['Looking up specifications…', 'Finding dimensions & materials…', 'Researching model history…', 'Gathering caliber details…', 'Almost there…'];
+      let _enhMsgIdx = 0;
+      const _enhMsgTimer = setInterval(() => {
+        if (statusEl && _enhMsgIdx < _enhStatusMsgs.length) { statusEl.textContent = _enhStatusMsgs[_enhMsgIdx++]; }
+      }, 4500);
+      const fieldMap = {
+        movementType: 'movementType', caliber: 'caliber',
+        caseDiameter: 'caseDiameter', caseLength: 'caseLength',
+        caseThickness: 'caseThickness', caseMaterial: 'caseMaterial',
+        crystalType: 'crystalType', waterResistance: 'waterResistance',
+        weight: 'weight', yearRange: 'yearRange',
+        gender: 'gender', origin: 'origin',
+        description: 'description', background: 'background',
+      };
       card?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       try {
         const payload = { mode: 'enhance', watchInfo: { brand: w.brand, model: w.name, reference: w.ref || '' } };
@@ -16704,6 +16729,7 @@ async function enhanceAllWatches(scopedIds) {
           signal: ac.signal,
         });
         clearTimeout(timer);
+        clearInterval(_enhMsgTimer);
         if (!resp.ok) {
           if (resp.status === 429) {
             if (statusEl) { statusEl.textContent = 'Daily limit reached'; statusEl.style.color = 'var(--danger, #e55)'; }
@@ -16720,15 +16746,6 @@ async function enhanceAllWatches(scopedIds) {
         const data = await resp.json();
         if (data.error) { if (statusEl) { statusEl.textContent = 'Failed'; statusEl.style.color = 'var(--danger, #e55)'; } continue; }
         const updates = {};
-        const fieldMap = {
-          movementType: 'movementType', caliber: 'caliber',
-          caseDiameter: 'caseDiameter', caseLength: 'caseLength',
-          caseThickness: 'caseThickness', caseMaterial: 'caseMaterial',
-          crystalType: 'crystalType', waterResistance: 'waterResistance',
-          weight: 'weight', yearRange: 'yearRange',
-          gender: 'gender', origin: 'origin',
-          description: 'description', background: 'background',
-        };
         for (const [apiKey, wKey] of Object.entries(fieldMap)) {
           const val = data[apiKey];
           if (val && typeof val === 'string' && val.trim() && !w[wKey]) updates[wKey] = stripCitations(val.trim());
@@ -16746,6 +16763,36 @@ async function enhanceAllWatches(scopedIds) {
           if (statusEl) { statusEl.textContent = 'Already complete'; statusEl.style.color = 'var(--muted)'; }
         }
       } catch(e) {
+        clearInterval(_enhMsgTimer);
+        if (statusEl) { statusEl.textContent = 'Retrying…'; statusEl.style.color = 'var(--gold)'; }
+        try {
+          const retryPayload = { mode: 'enhance', watchInfo: { brand: w.brand, model: w.name, reference: w.ref || '' } };
+          const retryResp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(retryPayload),
+          });
+          if (retryResp.ok) {
+            const retryData = await retryResp.json();
+            if (!retryData.error) {
+              const retryUpdates = {};
+              for (const [apiKey, wKey] of Object.entries(fieldMap)) {
+                const val = retryData[apiKey];
+                if (val && typeof val === 'string' && val.trim() && !w[wKey]) retryUpdates[wKey] = stripCitations(val.trim());
+              }
+              if (Array.isArray(retryData.functions) && retryData.functions.length && !w.functions) retryUpdates.functions = retryData.functions.map(stripCitations);
+              const rc = Object.keys(retryUpdates).length;
+              _enhanceAllResults[i]._updates = retryUpdates;
+              if (rc > 0) {
+                totalWithUpdates++;
+                const specs = [retryUpdates.caseDiameter, retryUpdates.caseMaterial, retryUpdates.movementType].filter(Boolean).join(' · ');
+                if (statusEl) { statusEl.innerHTML = `Found ${rc} detail${rc !== 1 ? 's' : ''} (retry)${specs ? '<br><span style="color:var(--muted)">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = 'var(--gold)'; }
+                if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .7rem;" onclick="saveEnhanceResult(${i})">Save</button>`;
+              } else {
+                if (statusEl) { statusEl.textContent = 'Already complete'; statusEl.style.color = 'var(--muted)'; }
+              }
+              continue;
+            }
+          }
+        } catch(_) {}
         if (statusEl) { statusEl.textContent = 'Failed'; statusEl.style.color = 'var(--danger, #e55)'; }
         console.error('[enhance-all]', w.brand, w.name, e);
       }
@@ -16758,6 +16805,7 @@ async function enhanceAllWatches(scopedIds) {
     if (btn) { btn.disabled = false; btn.style.opacity = ''; }
     closeBtn.disabled = false;
     closeBtn.textContent = 'Close';
+    closeBtn.onclick = closeEnhanceAll;
     if (scopedIds) {
       await saveAllEnhanceResults();
       closeEnhanceAll();
