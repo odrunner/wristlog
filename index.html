@@ -4971,7 +4971,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.19.02';
+const APP_VERSION = '20.19.10';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10744,11 +10744,12 @@ async function loadAdminStats() {
       db.rpc('admin_user_stats'),
     ]), 10000);
 
-    const watchByUser = {}, wearByUser = {}, valByUser = {};
+    const watchByUser = {}, wearByUser = {}, valByUser = {}, enhByUser = {};
     (userStatsR.data || []).forEach(r => {
       watchByUser[r.user_id] = Number(r.watches) || 0;
       wearByUser[r.user_id] = Number(r.wears) || 0;
       valByUser[r.user_id] = Number(r.price_checks) || 0;
+      enhByUser[r.user_id] = Number(r.enhances) || 0;
     });
 
     const msrByUser = {};
@@ -10760,6 +10761,7 @@ async function loadAdminStats() {
     const extWatches = Object.entries(watchByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0);
     const extWears = Object.entries(wearByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0);
     const extVal = Object.entries(valByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0);
+    const extEnh = Object.entries(enhByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0);
     const extMsr = Object.entries(msrByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0);
     const extUsers = allProfiles.filter(p => !INTERNAL_IDS.has(p.id)).length;
     const toProfileItem = (p) => ({
@@ -10771,6 +10773,7 @@ async function loadAdminStats() {
       watches: watchByUser[p.id] || 0,
       wears: wearByUser[p.id] || 0,
       priceChecks: valByUser[p.id] || 0,
+      enhances: enhByUser[p.id] || 0,
       measurements: msrByUser[p.id] || 0,
     });
     const profileList = allProfiles.filter(p => !INTERNAL_IDS.has(p.id)).map(toProfileItem);
@@ -10791,6 +10794,7 @@ async function loadAdminStats() {
           <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.watches}</td>
           <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.wears}</td>
           <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.priceChecks}</td>
+          <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.enhances}</td>
           <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.measurements}</td>
         </tr>`;
       }).join('');
@@ -10802,6 +10806,7 @@ async function loadAdminStats() {
             <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Wtc</th>
             <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Wrs</th>
             <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Val</th>
+            <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Enh</th>
             <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Msr</th>
           </tr></thead>
           <tbody>${rows}</tbody>
@@ -10816,6 +10821,7 @@ async function loadAdminStats() {
         ${statRow('Watches', extWatches)}
         ${statRow('Wears', extWears)}
         ${statRow('Price Checks', extVal)}
+        ${statRow('Enhances', extEnh)}
         ${statRow('Measurements', extMsr)}
         ${statRow('Wishlist Items', wishItems)}
         ${statRow('Clubs', clubs)}
@@ -10829,6 +10835,7 @@ async function loadAdminStats() {
         ${statRow('Watches / User', avg(extWatches, extUsers))}
         ${statRow('Wears / User', avg(extWears, extUsers))}
         ${statRow('Price Checks / User', avg(extVal, extUsers))}
+        ${statRow('Enhances / User', avg(extEnh, extUsers))}
         ${statRow('Measurements / User', avg(extMsr, extUsers))}
         ${statRow('Follows / User', avg(follows, extUsers))}
       </div>
