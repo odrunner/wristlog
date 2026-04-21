@@ -3757,6 +3757,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
+<!-- ════ ENHANCE ALL MODAL ════ -->
+<div id="enhance-all-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="enhance-all-modal-title">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title" id="enhance-all-modal-title" style="display:flex;align-items:center;gap:.5rem;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg> Enhance Collection
+    </div>
+    <div id="enhance-all-list" style="max-height:60vh;overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:1rem;">
+      <button id="enhance-all-close-btn" class="btn btn-ghost" onclick="closeEnhanceAll()">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ SNAP MATCH PICKER MODAL ════ -->
 <div id="snap-match-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="snap-match-modal-title">
   <div class="modal" style="max-width:420px;">
@@ -4928,7 +4941,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.17.52';
+const APP_VERSION = '20.17.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16403,20 +16416,86 @@ async function enhanceSingleWatch() {
   }
 }
 
+let _enhanceAllResults = [];
+let _enhanceAllTargets = [];
+
+function closeEnhanceAll() {
+  document.getElementById('enhance-all-modal').classList.add('hidden');
+  _enhanceAllResults = [];
+  _enhanceAllTargets = [];
+}
+
+async function saveEnhanceResult(idx) {
+  const r = _enhanceAllResults[idx];
+  if (!r || r._saved || !r._updates || !Object.keys(r._updates).length) return;
+  const w = _enhanceAllTargets[idx];
+  Object.assign(w, r._updates);
+  const row = watchToRow(w);
+  await db.from('watches').update(row).eq('id', w.id);
+  r._saved = true;
+  const card = document.getElementById(`enh-card-${idx}`);
+  const statusEl = card?.querySelector('.enh-status');
+  if (statusEl) { statusEl.textContent = '✓ Saved'; statusEl.style.color = '#4ade80'; }
+  const actions = card?.querySelector('.pi-card-actions');
+  if (actions) actions.innerHTML = '<span style="font-size:.72rem;color:#4ade80;">Saved</span>';
+  renderCollection(true);
+}
+
+async function saveAllEnhanceResults() {
+  let saved = 0;
+  for (let i = 0; i < _enhanceAllResults.length; i++) {
+    const r = _enhanceAllResults[i];
+    if (r && !r._saved && r._updates && Object.keys(r._updates).length) {
+      await saveEnhanceResult(i);
+      saved++;
+    }
+  }
+  toast(`Saved ${saved} watch${saved !== 1 ? 'es' : ''}`, 'success');
+}
+
 async function enhanceAllWatches() {
   if (demoGuard()) return;
   if (!watches.length) { toast('No watches to enhance', 'info'); return; }
   const needsEnhance = watches.filter(w => !w.caseDiameter && !w.caliber && !w.background);
   const target = needsEnhance.length > 0 ? needsEnhance : watches;
   const count = target.length;
-  if (!await showConfirm(`Fill in missing specs like dimensions, materials, caliber, and history for ${needsEnhance.length > 0 ? 'watches missing details' : 'all watches'}.`, { title: `Enhance ${count} watch${count !== 1 ? 'es' : ''}?`, confirmLabel: 'Enhance', danger: false })) return;
+  if (!await showConfirm(`This will look up specs, dimensions, materials, caliber, and history for ${needsEnhance.length > 0 ? `${count} watch${count !== 1 ? 'es' : ''} missing details` : 'all watches'}.`, { title: `Enhance ${count} watch${count !== 1 ? 'es' : ''}?`, confirmLabel: 'Enhance', danger: false })) return;
+
+  _enhanceAllTargets = target;
+  _enhanceAllResults = target.map(() => ({ _updates: null, _saved: false }));
+
+  const modal = document.getElementById('enhance-all-modal');
+  const list = document.getElementById('enhance-all-list');
+  const closeBtn = document.getElementById('enhance-all-close-btn');
+  closeBtn.disabled = true;
+  closeBtn.textContent = 'Working…';
+  modal.classList.remove('hidden');
+
+  list.innerHTML = target.map((w, i) => {
+    const color = w.color || '#c9a84c';
+    const ini = initials(w.brand || '?', w.name || '?');
+    return `<div class="pi-card" id="enh-card-${i}">
+      <div class="pi-card-avatar" style="background:${escHtml(color)}${w.image ? ';background-image:url('+escHtml(w.image)+');background-size:cover;background-position:center' : ''}">${w.image ? '' : ini}</div>
+      <div class="pi-card-info">
+        <div class="pi-card-name">${escHtml(w.name || 'Unknown')}</div>
+        <div class="pi-card-brand">${escHtml(w.brand || 'Unknown')}</div>
+        <div class="enh-status" style="font-size:.72rem;margin-top:.25rem;color:var(--muted);">Waiting…</div>
+      </div>
+      <div class="pi-card-actions"></div>
+    </div>`;
+  }).join('');
+
   const btn = document.getElementById('coll-enhance-all-btn');
   if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
-  let enhanced = 0, failed = 0;
+  let totalWithUpdates = 0;
   try {
     for (let i = 0; i < target.length; i++) {
       const w = target[i];
-      toast(`Enhancing ${i + 1}/${count}: ${w.brand} ${w.name}…`, 'info');
+      const card = document.getElementById(`enh-card-${i}`);
+      const statusEl = card?.querySelector('.enh-status');
+      const actionsEl = card?.querySelector('.pi-card-actions');
+      if (statusEl) { statusEl.textContent = 'Searching specs…'; statusEl.style.color = 'var(--gold)'; }
+      card?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       try {
         const payload = { mode: 'enhance', watchInfo: { brand: w.brand, model: w.name, reference: w.ref || '' } };
         if (w.image && !w.image.startsWith('data:')) {
@@ -16437,9 +16516,9 @@ async function enhanceAllWatches() {
           signal: ac.signal,
         });
         clearTimeout(timer);
-        if (!resp.ok) { failed++; toast(`Failed ${i + 1}/${count}: ${w.brand} ${w.name} (${resp.status})`, 'error'); continue; }
+        if (!resp.ok) { if (statusEl) { statusEl.textContent = `Failed (${resp.status})`; statusEl.style.color = 'var(--danger, #e55)'; } continue; }
         const data = await resp.json();
-        if (data.error) { failed++; toast(`Failed ${i + 1}/${count}: ${w.brand} ${w.name}`, 'error'); continue; }
+        if (data.error) { if (statusEl) { statusEl.textContent = 'Failed'; statusEl.style.color = 'var(--danger, #e55)'; } continue; }
         const updates = {};
         const fieldMap = {
           movementType: 'movementType', caliber: 'caliber',
@@ -16456,25 +16535,28 @@ async function enhanceAllWatches() {
         }
         if (Array.isArray(data.functions) && data.functions.length && !w.functions) updates.functions = data.functions;
         if (data.productUrl && !w.url) updates.url = data.productUrl;
-        if (Object.keys(updates).length > 0) {
-          Object.assign(w, updates);
-          const row = watchToRow(w);
-          await db.from('watches').update(row).eq('id', w.id);
-          enhanced++;
-          toast(`✓ ${i + 1}/${count}: ${w.brand} ${w.name}`, 'success');
+        const addedCount = Object.keys(updates).length;
+        _enhanceAllResults[i]._updates = updates;
+        if (addedCount > 0) {
+          totalWithUpdates++;
+          const specs = [updates.caseDiameter, updates.caseMaterial, updates.movementType].filter(Boolean).join(' · ');
+          if (statusEl) { statusEl.innerHTML = `Found ${addedCount} detail${addedCount !== 1 ? 's' : ''}${specs ? '<br><span style="color:var(--muted)">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = '#4ade80'; }
+          if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .7rem;" onclick="saveEnhanceResult(${i})">Save</button>`;
         } else {
-          toast(`${i + 1}/${count}: ${w.brand} ${w.name} — already complete`, 'info');
+          if (statusEl) { statusEl.textContent = 'Already complete'; statusEl.style.color = 'var(--muted)'; }
         }
       } catch(e) {
-        failed++;
-        toast(`Failed ${i + 1}/${count}: ${w.brand} ${w.name}`, 'error');
+        if (statusEl) { statusEl.textContent = 'Failed'; statusEl.style.color = 'var(--danger, #e55)'; }
         console.error('[enhance-all]', w.brand, w.name, e);
       }
     }
-    renderCollection(true);
-    toast(`Done: ${enhanced} enhanced${failed ? `, ${failed} failed` : ''}`, enhanced > 0 ? 'success' : 'info');
+    if (totalWithUpdates > 1) {
+      list.insertAdjacentHTML('beforeend', `<div style="display:flex;justify-content:flex-end;margin-top:.5rem;"><button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .9rem;" onclick="saveAllEnhanceResults()">Save All</button></div>`);
+    }
   } finally {
     if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    closeBtn.disabled = false;
+    closeBtn.textContent = 'Close';
   }
 }
 
@@ -18134,6 +18216,7 @@ const _overlayCloseMap = {
   'confirm-modal':       _confirmCancel,
   'photo-paste-modal':   closePhotoPasteModal,
   'photo-identify-modal': closePhotoIdentify,
+  'enhance-all-modal':    closeEnhanceAll,
   'snap-match-modal':     closeSnapMatch,
   'wishlist-modal':      closeWishlistModal,
   'watch-preview-modal': closeWatchPreview,
