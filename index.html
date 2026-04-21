@@ -3389,7 +3389,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ ADD / EDIT WATCH MODAL ════ -->
 <div id="watch-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="watch-modal-title">
   <div class="modal">
-    <div class="modal-title" id="watch-modal-title">Add Watch</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="modal-title" id="watch-modal-title" style="margin-bottom:0;">Add Watch</div>
+      <button class="btn-icon" onclick="closeWatchModal()" aria-label="Close" style="font-size:1.3rem;color:var(--muted);padding:.2rem .4rem;line-height:1;">&times;</button>
+    </div>
     <div id="ai-prefill-banner" class="ai-prefill-banner hidden">
       <span>Identified from your photo — review the details below, then tap <b>Save Watch</b></span>
       <button onclick="document.getElementById('ai-prefill-banner').classList.add('hidden')" style="background:none;border:none;color:inherit;font-size:1.1rem;padding:0 0 0 .5rem;cursor:pointer;line-height:1;">&times;</button>
@@ -3704,8 +3707,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button id="enhance-watch-btn" class="btn btn-ghost" onclick="enhanceSingleWatch()" style="display:none;white-space:nowrap;padding:.45rem .6rem;">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg> Enhance
       </button>
-      <button class="btn btn-ghost" onclick="closeWatchModal()">Cancel</button>
-      <button class="btn btn-danger" id="modal-delete-btn" style="display:none;margin-left:auto;padding:.45rem .6rem;font-size:.82rem;" onclick="openDelModal(editingId);closeWatchModal();">Delete</button>
+      <button id="value-watch-btn" class="btn btn-ghost" onclick="checkSingleWatchValue()" style="display:none;white-space:nowrap;padding:.45rem .6rem;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg> Value
+      </button>
+      <button class="btn btn-danger" id="modal-delete-btn" style="display:none;margin-left:auto;padding:.45rem .6rem;font-size:.82rem;" onclick="openDelModal(editingId);closeWatchModal();" aria-label="Delete watch">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+      </button>
     </div>
   </div>
 </div>
@@ -4971,7 +4978,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.19.10';
+const APP_VERSION = '20.19.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13735,6 +13742,7 @@ function openAddWatch() {
   document.getElementById('w-movement-type').value = '';
   document.getElementById('w-gender').value = '';
   document.getElementById('enhance-watch-btn').style.display = 'none';
+  document.getElementById('value-watch-btn').style.display = 'none';
   ['sec-condition','sec-market','sec-tags','sec-specs','sec-straps','sec-receipts'].forEach(closeSection);
   document.getElementById('sec-accuracy-wrap').style.display = 'none';
   clearInlineEdits();
@@ -13801,6 +13809,7 @@ function openEditWatch(id) {
   document.getElementById('w-description').value      = w.description || '';
   document.getElementById('w-background').value       = w.background || '';
   document.getElementById('enhance-watch-btn').style.display = '';
+  document.getElementById('value-watch-btn').style.display = '';
   // Auto-open sections that have data; collapse empty ones
   const hasCondition = w.warrantyExpiry || w.hasBox || w.hasPapers || w.insurance;
   const hasMarket    = w.marketPrice;
