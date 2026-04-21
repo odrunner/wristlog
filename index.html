@@ -4995,7 +4995,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.21.31';
+const APP_VERSION = '20.21.38';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10964,7 +10964,7 @@ async function renderAdminTraffic() {
 
     el.innerHTML = `
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Overview</div>
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Overview (All Time)</div>
         ${statRow('Total visits', allRaw.length)}
         ${statRow('Unique visitors', uniqueAll.size)}
         ${statRow('Repeat visitors', repeatAll, repeatAll > 0 ? (repeatAll / uniqueAll.size * 100).toFixed(0) + '% of unique' : '')}
