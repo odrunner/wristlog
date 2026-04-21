@@ -2143,7 +2143,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span style="font-size:1.1rem;flex-shrink:0;margin-top:.1rem;">📷</span>
         <div>
           <div style="font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.2rem;">Improved Photo Recognition</div>
-          <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Point your camera at any watch and WRotate identifies the brand, model, and reference in seconds. Accuracy has been significantly improved — works great with single watches and collection flat-lays.</div>
+          <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Point your camera at any watch and WRotate identifies the brand, model, and reference in seconds. Accuracy has been significantly improved.</div>
         </div>
       </div>
     </div>
@@ -4967,7 +4967,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.18.35';
+const APP_VERSION = '20.18.37';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10349,7 +10349,7 @@ function closeWhatsNew() {
 
 function maybeShowNewFeatures() {
   if (!currentUser || !watches.length) return;
-  const key = 'wrotate_newfeatures_v1';
+  const key = 'wrotate_newfeatures_v2';
   if (localStorage.getItem(key)) return;
   localStorage.setItem(key, '1');
   setTimeout(() => document.getElementById('new-features-modal').classList.remove('hidden'), 800);
