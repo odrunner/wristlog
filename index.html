@@ -4995,7 +4995,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.21.22';
+const APP_VERSION = '20.21.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16698,7 +16698,7 @@ function closeEnhanceAll() {
   }
 }
 
-let _enhanceSaveCount = 0;
+let _enhanceSaveCount = parseInt(localStorage.getItem('wr_enhanceSaveCount') || '0');
 let _enhanceSaving = false;
 let _enhanceSavesInFlight = 0;
 async function saveEnhanceResult(idx) {
@@ -16718,6 +16718,7 @@ async function saveEnhanceResult(idx) {
     if (error) throw error;
     r._saved = true;
     _enhanceSaveCount++;
+    localStorage.setItem('wr_enhanceSaveCount', String(_enhanceSaveCount));
     markDirty('watches', w.id);
     save();
     const statusEl = card?.querySelector('.enh-status');
@@ -16786,7 +16787,6 @@ async function enhanceAllWatches(scopedIds) {
 
   _enhanceAllTargets = target;
   _enhanceAllResults = target.map(() => ({ _updates: null, _saved: false }));
-  _enhanceSaveCount = 0;
   _enhanceAllCancelled = false;
 
   const modal = document.getElementById('enhance-all-modal');
