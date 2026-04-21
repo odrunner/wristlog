@@ -135,6 +135,19 @@ describe('sw.js fetch — cross-origin', () => {
   });
 });
 
+// ── Timeout value ────────────────────────────────────────────────────────
+
+describe('sw.js navigation timeout', () => {
+  it('uses a timeout of at least 3 seconds for navigation', () => {
+    // The timeout should be long enough that slow 4G connections are not bypassed
+    const timeoutMatch = swSource.match(/setTimeout\(\(\)\s*=>\s*resolve\(null\),\s*(\d+)\)/);
+    expect(timeoutMatch).not.toBeNull();
+    const timeoutMs = Number(timeoutMatch[1]);
+    expect(timeoutMs).toBeGreaterThanOrEqual(3000);
+    expect(timeoutMs).toBeLessThanOrEqual(10000);
+  });
+});
+
 // ── Fetch: navigation (network-first) ────────────────────────────────────
 
 describe('sw.js fetch — navigation', () => {

@@ -852,9 +852,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* ── WATCH TYPE TAG PICKER (Edit Watch modal) ── */
     .watch-tag-picker      { display: flex; flex-wrap: wrap; gap: .4rem; }
     .tag-pill              { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-size: .72rem; font-weight: 500; padding: .22rem .6rem; border-radius: 12px; cursor: pointer; transition: all .15s; font-family: inherit; }
-    .tag-pill:hover        { border-color: #818cf8; color: #818cf8; }
-    .tag-pill.active       { background: rgba(129,140,248,.15); border-color: #818cf8; color: #818cf8; font-weight: 600; }
-    .tag-pill.suggested    { border-color: rgba(129,140,248,.4); color: rgba(129,140,248,.7); border-style: dashed; }
+    .tag-pill:hover        { border-color: #BA7517; color: #854F0B; }
+    .tag-pill.active       { background: #FAEEDA; border-color: #BA7517; color: #854F0B; font-weight: 600; }
+    .tag-pill.suggested    { border-color: rgba(186,117,23,.4); color: rgba(133,79,11,.7); border-style: dashed; }
 
     /* ── Collection tag filter bar ── */
     .coll-tag-filter-bar  { display: flex; flex-wrap: wrap; gap: .4rem; padding-bottom: .65rem; }
@@ -3399,69 +3399,91 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <span>Identified from your photo — review the details below, then tap <b>Save Watch</b></span>
       <button onclick="document.getElementById('ai-prefill-banner').classList.add('hidden')" style="background:none;border:none;color:inherit;font-size:1.1rem;padding:0 0 0 .5rem;cursor:pointer;line-height:1;">&times;</button>
     </div>
-    <div class="form-group">
-      <label for="w-url">Manufacturer / Listing URL</label>
-      <div class="url-row">
-        <input type="url" id="w-url" placeholder="Paste a manufacturer or listing URL" oninput="updateUrlBtn()">
-        <button id="w-fetch-btn" class="url-open-btn" onclick="fetchCollectionDetails()" style="color:var(--text);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Fetch</button>
-        <a id="url-open-btn" href="#" target="_blank" rel="noopener noreferrer" class="url-open-btn hidden">Open ↗</a>
+    <!-- ── Identity strip (non-collapsible) ── -->
+    <div id="edit-identity-strip" style="display:none;margin-bottom:0;">
+      <div id="edit-id-name" style="font-size:14px;font-weight:500;color:var(--fg);line-height:1.3;"></div>
+      <div id="edit-id-sub" style="font-size:12px;color:var(--muted);margin-top:1px;line-height:1.3;"></div>
+      <button type="button" id="w-change-photo-btn" onclick="pickWatchModalImage()" style="margin-top:6px;background:transparent;border:0.5px solid var(--border);color:var(--muted);font-size:11px;font-family:inherit;padding:4px 10px;border-radius:6px;cursor:pointer;">Add photo</button>
+      <div style="border-bottom:0.5px solid var(--border);margin-top:10px;margin-bottom:12px;"></div>
+    </div>
+    <!-- Photo state (hidden) -->
+    <div id="w-img-area" style="display:none;">
+      <img id="w-img-preview" src="" alt="" style="display:none;">
+    </div>
+    <!-- Hidden inputs for story fields (data saved from here) -->
+    <textarea id="w-description" style="display:none;" maxlength="500"></textarea>
+    <textarea id="w-background" style="display:none;" maxlength="2000"></textarea>
+    <input type="text" id="w-functions-input" style="display:none;" maxlength="200">
+
+    <!-- ── The Story (collapsible) ── -->
+    <div class="modal-section">
+      <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-story')">
+        <span class="modal-section-hdr-label">The Story</span>
+        <span class="modal-section-summary" id="sum-sec-story" style="font-size:11px;color:var(--muted);margin-left:.5rem;font-weight:400;letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+        <span class="modal-section-chevron" id="chv-sec-story">▶</span>
+      </button>
+      <div class="modal-section-body" id="sec-story">
+        <div id="story-content"></div>
       </div>
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label for="w-brand-display">Brand *</label>
-        <div class="brand-ac-wrap">
-          <input type="text" id="w-brand-display" placeholder="Type to search brands…"
-            autocomplete="off"
-            oninput="onBrandInput(this.value);autoSizeInput(this)"
-            onfocus="onBrandFocus()"
-            onblur="setTimeout(hideBrandAC,150)"
-            onkeydown="brandKeyNav(event)">
-          <input type="hidden" id="w-brand">
-          <div id="brand-ac-list" class="brand-ac-list hidden" onmousedown="event.preventDefault()"></div>
+
+    <!-- ── Essentials (collapsible) ── -->
+    <div class="modal-section">
+      <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-essentials')">
+        <span class="modal-section-hdr-label">Essentials</span>
+        <span class="modal-section-summary" id="sum-sec-essentials" style="font-size:11px;color:var(--muted);margin-left:.5rem;font-weight:400;letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+        <span class="modal-section-chevron" id="chv-sec-essentials">▶</span>
+      </button>
+      <div class="modal-section-body collapsed" id="sec-essentials">
+        <div class="form-group">
+          <label for="w-url">Manufacturer / Listing URL</label>
+          <div class="url-row">
+            <input type="url" id="w-url" placeholder="Paste a manufacturer or listing URL" oninput="updateUrlBtn()">
+            <button id="w-fetch-btn" class="url-open-btn" onclick="fetchCollectionDetails()" style="color:var(--text);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Fetch</button>
+            <a id="url-open-btn" href="#" target="_blank" rel="noopener noreferrer" class="url-open-btn hidden">Open ↗</a>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="w-brand-display">Brand *</label>
+            <div class="brand-ac-wrap">
+              <input type="text" id="w-brand-display" placeholder="Type to search brands…"
+                autocomplete="off"
+                oninput="onBrandInput(this.value);autoSizeInput(this)"
+                onfocus="onBrandFocus()"
+                onblur="setTimeout(hideBrandAC,150)"
+                onkeydown="brandKeyNav(event)">
+              <input type="hidden" id="w-brand">
+              <div id="brand-ac-list" class="brand-ac-list hidden" onmousedown="event.preventDefault()"></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="w-ref">Reference</label>
+            <input type="text" id="w-ref" placeholder="Reference number" maxlength="60" oninput="if(editingId)updateIdentityStrip(document.getElementById('w-name').value,document.getElementById('w-brand-display').value,this.value)">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="w-name">Model / Name *</label>
+          <input type="text" id="w-name" placeholder="" maxlength="100" oninput="if(editingId)updateIdentityStrip(this.value,document.getElementById('w-brand-display').value,document.getElementById('w-ref').value)">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="w-price">Paid</label>
+            <input type="text" inputmode="decimal" id="w-price" placeholder="$" autocomplete="off" oninput="fmtPriceInput(this)">
+          </div>
+          <div class="form-group">
+            <label for="w-date">Purchased</label>
+            <input type="date" id="w-date" max="9999-12-31">
+          </div>
         </div>
       </div>
-      <div class="form-group">
-        <label for="w-name">Model / Name *</label>
-        <input type="text" id="w-name" placeholder="" maxlength="100">
-      </div>
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label for="w-ref">Reference No.</label>
-        <input type="text" id="w-ref" placeholder="Reference number" maxlength="60">
-      </div>
-      <div class="form-group">
-        <label for="w-movement">Movement / Calibre</label>
-        <input type="text" id="w-movement" placeholder="Caliber or movement type" maxlength="80">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label for="w-price">Purchase Price ($)</label>
-        <input type="text" inputmode="decimal" id="w-price" placeholder="0" autocomplete="off" oninput="fmtPriceInput(this)">
-      </div>
-      <div class="form-group">
-        <label for="w-date">Purchase Date</label>
-        <input type="date" id="w-date" max="9999-12-31">
-      </div>
-    </div>
-    <!-- Photo preview -->
-    <div class="form-group">
-      <label>Photo</label>
-      <div id="w-img-area" style="display:none;align-items:center;gap:.65rem;">
-        <img id="w-img-preview" src="" alt="" title="Click to crop" style="width:72px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0;cursor:pointer;" onclick="openModalCropAdjuster()">
-        <div style="display:flex;flex-direction:column;gap:.35rem;">
-          <button type="button" class="btn btn-ghost btn-sm" onclick="pickWatchModalImage()">Replace</button>
-          <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="clearWatchModalImage()">Remove</button>
-        </div>
-      </div>
-      <button type="button" id="w-img-upload-btn" class="btn btn-ghost btn-sm" onclick="pickWatchModalImage()" style="display:inline-flex;align-items:center;gap:.3rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Upload photo</button>
-    </div>
+
     <!-- ── Condition & Docs (collapsible) ── -->
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-condition')">
-        <span class="modal-section-hdr-label">Condition &amp; Docs</span>
+        <span class="modal-section-hdr-label">Docs &amp; Warranty</span>
+        <span class="modal-section-summary" id="sum-sec-condition" style="font-size:11px;color:var(--muted);margin-left:.5rem;font-weight:400;letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-condition">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-condition">
@@ -3504,28 +3526,24 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
 
-    <!-- ── Market Pricing (collapsible) ── -->
+    <!-- ── Value (collapsible) ── -->
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-market')">
-        <span class="modal-section-hdr-label">Market Pricing</span>
+        <span class="modal-section-hdr-label">Value</span>
+        <span class="modal-section-summary" id="sum-sec-market" style="font-size:11px;color:var(--muted);margin-left:.5rem;font-weight:400;letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-market">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-market">
-        <div style="display:flex;align-items:flex-end;gap:.5rem;">
-          <div class="form-group" style="margin-bottom:0;flex:1;">
-            <label for="w-manual-mp">Market Value ($)</label>
-            <input type="text" inputmode="decimal" id="w-manual-mp" placeholder="0" autocomplete="off" oninput="fmtPriceInput(this)">
-          </div>
-          <button type="button" id="check-value-btn" class="btn btn-ghost" onclick="checkSingleWatchValue()" style="font-size:.8rem;padding:.45rem .7rem;display:none;white-space:nowrap;margin-bottom:1px;">Check Value</button>
-        </div>
-        <div id="check-value-status" style="font-size:.75rem;color:var(--muted);margin-top:.35rem;"></div>
+        <input type="hidden" id="w-manual-mp">
+        <div id="value-section-content"></div>
       </div>
     </div>
 
-    <!-- ── Watch Type Tags (collapsible) ── -->
+    <!-- ── Type (collapsible) ── -->
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-tags')">
-        <span class="modal-section-hdr-label">Watch Type</span>
+        <span class="modal-section-hdr-label">Type</span>
+        <span class="modal-section-summary" id="sum-sec-tags" style="font-size:11px;color:var(--muted);margin-left:.5rem;font-weight:400;letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;display:flex;gap:4px;align-items:center;"></span>
         <span class="modal-section-chevron" id="chv-sec-tags">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-tags">
@@ -3534,16 +3552,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
 
 
-    <!-- ── Specs & Details (collapsible) ── -->
+    <!-- ── Specs (collapsible) ── -->
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-specs')">
-        <span class="modal-section-hdr-label">Specs &amp; Details</span>
+        <span class="modal-section-hdr-label">Specs</span>
+        <span class="modal-section-summary" id="sum-sec-specs" style="font-size:11px;color:var(--muted);margin-left:.5rem;font-weight:400;letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-specs">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-specs">
+        <!-- Movement -->
+        <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px;">Movement</div>
         <div class="form-row">
           <div class="form-group">
-            <label for="w-movement-type">Movement Type</label>
+            <label for="w-movement-type">Type</label>
             <select id="w-movement-type">
               <option value="">—</option>
               <option value="automatic">Automatic</option>
@@ -3559,70 +3580,75 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <input type="text" id="w-caliber" maxlength="60">
           </div>
         </div>
-        <div class="form-row-3">
+        <div class="form-group">
+          <label for="w-bph">BPH</label>
+          <select id="w-bph">
+            <option value="">—</option>
+            <option value="18000">18,000</option>
+            <option value="21600">21,600</option>
+            <option value="25200">25,200</option>
+            <option value="28800">28,800</option>
+            <option value="36000">36,000</option>
+          </select>
+        </div>
+        <!-- Case -->
+        <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:14px;margin-bottom:8px;">Case</div>
+        <div class="form-row">
           <div class="form-group">
             <label for="w-case-diameter">Diameter</label>
             <input type="text" id="w-case-diameter" maxlength="20">
           </div>
           <div class="form-group">
-            <label for="w-case-length">Length</label>
+            <label for="w-case-length">Lug to Lug</label>
             <input type="text" id="w-case-length" maxlength="20">
-          </div>
-          <div class="form-group">
-            <label for="w-case-thickness">Thickness</label>
-            <input type="text" id="w-case-thickness" maxlength="20">
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="w-case-material">Case Material</label>
-            <input type="text" id="w-case-material" maxlength="80">
-          </div>
-          <div class="form-group">
-            <label for="w-crystal-type">Crystal</label>
-            <input type="text" id="w-crystal-type" maxlength="40">
-          </div>
-        </div>
-        <div class="form-row-3">
-          <div class="form-group">
-            <label for="w-water-resistance">Water Resistance</label>
-            <input type="text" id="w-water-resistance" maxlength="30">
+            <label for="w-case-thickness">Thickness</label>
+            <input type="text" id="w-case-thickness" maxlength="20">
           </div>
           <div class="form-group">
             <label for="w-weight">Weight</label>
             <input type="text" id="w-weight" maxlength="20">
           </div>
+        </div>
+        <div class="form-group">
+          <label for="w-case-material">Material</label>
+          <input type="text" id="w-case-material" maxlength="80">
+        </div>
+        <!-- Glass & Water -->
+        <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:14px;margin-bottom:8px;">Glass &amp; Water</div>
+        <div class="form-row">
           <div class="form-group">
-            <label for="w-year-range">Production Years</label>
-            <input type="text" id="w-year-range" maxlength="30">
+            <label for="w-crystal-type">Crystal</label>
+            <input type="text" id="w-crystal-type" maxlength="40">
+          </div>
+          <div class="form-group">
+            <label for="w-water-resistance">Water Res.</label>
+            <input type="text" id="w-water-resistance" maxlength="30">
           </div>
         </div>
-        <div class="form-row-3">
-          <div class="form-group">
-            <label for="w-gender">Gender</label>
-            <select id="w-gender">
-              <option value="">—</option>
-              <option value="men's">Men's</option>
-              <option value="women's">Women's</option>
-              <option value="unisex">Unisex</option>
-            </select>
-          </div>
+        <!-- Provenance -->
+        <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:14px;margin-bottom:8px;">Provenance</div>
+        <div class="form-row">
           <div class="form-group">
             <label for="w-origin">Origin</label>
             <input type="text" id="w-origin" maxlength="40">
           </div>
           <div class="form-group">
-            <label for="w-functions-input">Functions</label>
-            <input type="text" id="w-functions-input" maxlength="200">
+            <label for="w-year-range">Production</label>
+            <input type="text" id="w-year-range" maxlength="30">
           </div>
         </div>
         <div class="form-group">
-          <label for="w-description">Description</label>
-          <textarea id="w-description" rows="3" maxlength="500" style="resize:vertical;"></textarea>
-        </div>
-        <div class="form-group">
-          <label for="w-background">Background &amp; History</label>
-          <textarea id="w-background" rows="4" maxlength="2000" style="resize:vertical;"></textarea>
+          <label for="w-gender">Gender</label>
+          <select id="w-gender">
+            <option value="">—</option>
+            <option value="men's">Men's</option>
+            <option value="women's">Women's</option>
+            <option value="unisex">Unisex</option>
+          </select>
         </div>
       </div>
     </div>
@@ -3630,7 +3656,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <!-- ── Straps / Bracelets (collapsible) ── -->
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-straps')">
-        <span class="modal-section-hdr-label">Straps / Bracelets</span>
+        <span class="modal-section-hdr-label">Straps</span>
+        <span class="modal-section-summary" id="sum-sec-straps" style="font-size:11px;color:var(--muted);margin-left:.5rem;font-weight:400;letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-straps">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-straps">
@@ -3648,7 +3675,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <!-- ── Receipts & Documents (collapsible) ── -->
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-receipts')">
-        <span class="modal-section-hdr-label">Receipts &amp; Documents</span>
+        <span class="modal-section-hdr-label">Receipts</span>
+        <span class="modal-section-summary" id="sum-sec-receipts" style="font-size:11px;color:var(--muted);margin-left:.5rem;font-weight:400;letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-receipts">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-receipts">
@@ -3661,6 +3689,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-section" id="sec-accuracy-wrap" style="display:none;">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-accuracy')">
         <span class="modal-section-hdr-label">Accuracy</span>
+        <span class="modal-section-summary" id="sum-sec-accuracy" style="font-size:11px;color:var(--muted);margin-left:.5rem;font-weight:400;letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
         <span class="modal-section-chevron" id="chv-sec-accuracy">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-accuracy">
@@ -3705,14 +3734,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
 
     <div class="modal-actions" style="flex-wrap:nowrap;gap:.4rem;">
-      <button id="save-watch-btn" class="btn btn-primary" onclick="saveWatch()">Save</button>
-      <button id="enhance-watch-btn" class="btn btn-ghost" onclick="enhanceSingleWatch()" style="display:none;white-space:nowrap;padding:.45rem .6rem;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg> Enhance
-      </button>
-      <button id="value-watch-btn" class="btn btn-ghost" onclick="checkSingleWatchValue()" style="display:none;white-space:nowrap;padding:.45rem .6rem;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg> Value
-      </button>
-      <button class="btn btn-danger" id="modal-delete-btn" style="display:none;margin-left:auto;padding:.45rem .6rem;font-size:.82rem;" onclick="openDelModal(editingId);closeWatchModal();" aria-label="Delete watch">
+      <button id="save-watch-btn" class="btn btn-primary" onclick="saveWatch()" style="flex:1;background:#854F0B;color:#fff;font-weight:500;padding:9px;border-radius:8px;">Save</button>
+      <button type="button" id="footer-enhance-btn" onclick="enhanceSingleWatch()" style="display:none;background:#FAEEDA;border:0.5px solid #BA7517;color:#854F0B;font-size:.78rem;font-weight:500;font-family:inherit;padding:9px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;">⭐ Enhance</button>
+      <button type="button" id="footer-value-btn" onclick="checkSingleWatchValue()" style="display:none;background:#FAEEDA;border:0.5px solid #BA7517;color:#854F0B;font-size:.78rem;font-weight:500;font-family:inherit;padding:9px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;">$ Value</button>
+      <button class="btn btn-danger" id="modal-delete-btn" style="display:none;background:#FCEBEB;color:#A32D2D;border:none;padding:9px 10px;border-radius:8px;font-size:.82rem;" onclick="openDelModal(editingId);closeWatchModal();" aria-label="Delete watch">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
       </button>
     </div>
@@ -4747,7 +4772,7 @@ function watchToRow(w) {
     water_resistance: w.waterResistance||null, crystal_type: w.crystalType||null,
     gender: w.gender||null, origin: w.origin||null,
     description: w.description||null, background: w.background||null,
-    functions: w.functions||null,
+    functions: w.functions||null, bph: w.bph||null,
   };
 }
 function rowToWatch(r) {
@@ -4776,7 +4801,7 @@ function rowToWatch(r) {
     waterResistance: r.water_resistance||null, crystalType: r.crystal_type||null,
     gender: r.gender||null, origin: r.origin||null,
     description: r.description||null, background: r.background||null,
-    functions: r.functions||null,
+    functions: r.functions||null, bph: r.bph||null,
   };
 }
 function logToRow(l) {
@@ -4848,7 +4873,7 @@ async function loadUserData() {
   // Promise.resolve() converts the Supabase thenable to a real Promise (thenables lack .catch())
   const _q = query => Promise.resolve(query).catch(e => { console.error('[WristLog] loadUserData query error:', e?.message); return { data: null, error: e }; });
   const [wRes, lRes, wlRes, brRes] = await withTimeout(Promise.all([
-    _q(db.from('watches').select('id,brand,name,ref,movement,price,purchase_date,color,image,url,tags,straps,owner,market_price,market_price_date,market_price_src,watch_charts_url,price_history,warranty_expiry,has_box,has_papers,insurance,insured_value,insurance_notes,receipts,watch_privacy,elo_rating,year_range,movement_type,caliber,case_material,case_diameter,case_length,case_thickness,weight,water_resistance,crystal_type,gender,origin,description,background,functions').eq('user_id', uid)),
+    _q(db.from('watches').select('id,brand,name,ref,movement,price,purchase_date,color,image,url,tags,straps,owner,market_price,market_price_date,market_price_src,watch_charts_url,price_history,warranty_expiry,has_box,has_papers,insurance,insured_value,insurance_notes,receipts,watch_privacy,elo_rating,year_range,movement_type,caliber,case_material,case_diameter,case_length,case_thickness,weight,water_resistance,crystal_type,gender,origin,description,background,functions,bph').eq('user_id', uid)),
     _q(db.from('logs').select('id,watch_id,date,use_case,notes,strap_id,photo_url,visibility,club_id').eq('user_id', uid)),
     _q(db.from('wishlist').select('id,brand,name,ref,price,url,image,notes,color,tags,market_price,market_price_date,market_price_src,watch_charts_url,wish_privacy,added_date,sort_order').eq('user_id', uid)),
     _q(db.from('brands').select('name')),
@@ -4995,7 +5020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.07.59';
+const APP_VERSION = '21.09.32';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13439,6 +13464,136 @@ function autoSuggestTags(brand, name, ref) {
   return r;
 }
 // ── Modal section collapse helpers ──
+function updateDocsSummary() {
+  const sum = document.getElementById('sum-sec-condition');
+  if (!sum) return;
+  const box = document.getElementById('w-box')?.value;
+  const papers = document.getElementById('w-papers')?.value;
+  const warranty = document.getElementById('w-warranty')?.value;
+  const ins = document.getElementById('w-insurance')?.value;
+  const parts = [];
+  if (box === 'yes') parts.push('Box');
+  else if (box === 'no') parts.push('No box');
+  if (papers === 'yes') parts.push('papers');
+  else if (papers === 'no') parts.push('no papers');
+  if (ins === 'insured') parts.push('Covered');
+  else if (ins === 'not_insured') parts.push('Not covered');
+  if (warranty) {
+    const d = new Date(warranty + 'T00:00:00');
+    if (!isNaN(d)) parts.push('expires ' + d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
+  }
+  sum.textContent = parts.length ? parts.join(' · ') : '—';
+}
+function updateStrapsSummary() {
+  const sum = document.getElementById('sum-sec-straps');
+  if (!sum) return;
+  const straps = wEditStraps || [];
+  if (!straps.length) { sum.innerHTML = '<span style="color:var(--muted);">Add straps</span>'; return; }
+  const onWrist = straps.find(s => s.onWrist);
+  const count = straps.length;
+  if (onWrist) {
+    sum.innerHTML = `${count} · ${escHtml(onWrist.name)} · <span style="color:#854F0B;">on wrist</span>`;
+  } else {
+    sum.textContent = String(count);
+  }
+}
+function updateReceiptsSummary() {
+  const sum = document.getElementById('sum-sec-receipts');
+  if (!sum) return;
+  const w = editingId ? watches.find(x => x.id === editingId) : null;
+  const count = (w?.receipts || []).length;
+  sum.textContent = count ? `${count} receipt${count !== 1 ? 's' : ''}` : '—';
+}
+function updateAccuracySummary() {
+  const sum = document.getElementById('sum-sec-accuracy');
+  if (!sum) return;
+  const list = document.getElementById('tg-history-list');
+  const items = list ? list.querySelectorAll('[data-tg-entry]') : [];
+  if (!items.length) { sum.textContent = 'No readings yet'; return; }
+  const count = items.length;
+  const firstDate = items[0]?.getAttribute('data-tg-date');
+  const label = firstDate ? valueFreshnessLabel(firstDate) : '';
+  sum.textContent = `${count} reading${count !== 1 ? 's' : ''}${label ? ' · last ' + label : ''}`;
+}
+function updateTypeSummary() {
+  const sum = document.getElementById('sum-sec-tags');
+  if (!sum) return;
+  const tags = getSelectedTags();
+  if (!tags.length) { sum.innerHTML = '<span style="color:var(--muted)">Add type tags</span>'; return; }
+  const pill = t => `<span style="font-size:10px;background:#FAEEDA;color:#854F0B;border:0.5px solid #BA7517;padding:1px 6px;border-radius:10px;white-space:nowrap;">${escHtml(t)}</span>`;
+  if (tags.length <= 2) { sum.innerHTML = tags.map(pill).join(' '); return; }
+  sum.innerHTML = tags.slice(0, 2).map(pill).join(' ') + ` <span style="font-size:10px;color:var(--muted);">+${tags.length - 2}</span>`;
+}
+function updateSpecsSummary() {
+  const sum = document.getElementById('sum-sec-specs');
+  if (!sum) return;
+  const diameter = document.getElementById('w-case-diameter')?.value.trim();
+  const mvtRaw = document.getElementById('w-movement-type')?.value;
+  const crystal = document.getElementById('w-crystal-type')?.value.trim();
+  const wr = document.getElementById('w-water-resistance')?.value.trim();
+  const mvtShort = { automatic: 'Auto', 'manual-wind': 'Manual', quartz: 'Quartz', digital: 'Digital', solar: 'Solar', 'spring-drive': 'Spring Drive' }[mvtRaw] || '';
+  const parts = [];
+  if (diameter) parts.push(diameter.includes('mm') ? diameter : diameter + 'mm');
+  if (mvtShort) parts.push(mvtShort);
+  if (crystal) parts.push(crystal);
+  if (wr) parts.push(wr.includes('m') ? wr : wr + 'm');
+  sum.textContent = parts.length ? parts.join(' · ') : '—';
+}
+function updateEssentialsSummary() {
+  const sum = document.getElementById('sum-sec-essentials');
+  if (!sum) return;
+  const caliber = document.getElementById('w-caliber')?.value.trim();
+  const price = document.getElementById('w-price')?.value.trim();
+  const dateVal = document.getElementById('w-date')?.value;
+  const parts = [];
+  if (caliber) parts.push(caliber);
+  if (price) parts.push(price.startsWith('$') ? price : '$' + price);
+  if (dateVal) {
+    const d = new Date(dateVal + 'T00:00:00');
+    if (!isNaN(d)) parts.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
+  }
+  sum.textContent = parts.length ? parts.join(' · ') : '—';
+}
+function renderStorySection() {
+  const desc = document.getElementById('w-description').value.trim();
+  const bg   = document.getElementById('w-background').value.trim();
+  const fns  = document.getElementById('w-functions-input').value.trim();
+  const el   = document.getElementById('story-content');
+  const sum  = document.getElementById('sum-sec-story');
+  if (!el) return;
+  const hasContent = desc || bg || fns;
+  if (sum) sum.textContent = hasContent ? (desc ? (desc.length > 40 ? desc.slice(0, 40) + '…' : desc) : '—') : '—';
+  if (!hasContent) {
+    el.innerHTML = `<div style="background:#FAEEDA;border-radius:8px;padding:10px 12px;">
+      <button type="button" class="btn btn-primary" onclick="enhanceSingleWatch()" style="width:100%;background:#854F0B;color:#fff;font-size:12px;font-weight:500;padding:9px;border-radius:8px;">⭐ Enhance with AI</button>
+    </div>`;
+    return;
+  }
+  let html = '<div style="background:#FAEEDA;border-radius:8px;padding:10px 12px;">';
+  if (desc) {
+    html += `<div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#633806;margin-bottom:3px;">Description</div>`;
+    html += `<div style="font-size:12px;line-height:1.55;color:#412402;">${escHtml(desc)}</div>`;
+  }
+  if (bg) {
+    html += `<div style="margin-top:10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#633806;margin-bottom:3px;">Background &amp; History</div>`;
+    html += `<div style="font-size:12px;line-height:1.55;color:#412402;">${escHtml(bg)}</div>`;
+  }
+  if (fns) {
+    html += `<div style="margin-top:10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#633806;margin-bottom:3px;">Functions</div>`;
+    html += `<div style="font-size:12px;line-height:1.55;color:#412402;">${escHtml(fns)}</div>`;
+  }
+  html += `<div style="margin-top:10px;"><button type="button" onclick="enhanceSingleWatch()" style="background:#fff;color:#854F0B;border:0.5px solid #BA7517;font-size:11px;font-family:inherit;padding:5px 12px;border-radius:6px;cursor:pointer;">⭐ Re-enhance</button></div>`;
+  html += '</div>';
+  el.innerHTML = html;
+}
+function updateIdentityStrip(name, brand, ref) {
+  const nameEl = document.getElementById('edit-id-name');
+  const subEl  = document.getElementById('edit-id-sub');
+  if (!nameEl || !subEl) return;
+  nameEl.textContent = name || 'Untitled';
+  const refSame = ref && ref.toLowerCase() === (name || '').toLowerCase();
+  subEl.textContent = refSame || !ref ? (brand || '') : `${brand || ''}${brand && ref ? ' · ' : ''}${ref || ''}`;
+}
 function toggleSection(id) {
   const body = document.getElementById(id);
   const chevron = document.getElementById('chv-' + id);
@@ -13476,6 +13631,7 @@ function toggleWatchTag(tag) {
   if (!btn) return;
   btn.classList.toggle('active');
   btn.classList.remove('suggested');
+  updateTypeSummary();
 }
 function getSelectedTags() {
   return [...document.querySelectorAll('#watch-tag-picker .tag-pill.active')].map(b => b.textContent);
@@ -13487,10 +13643,9 @@ function getSelectedTags() {
 const INLINE_FIELDS = [
   { id: 'w-name',  fmt: v => v || null },
   { id: 'w-ref',   fmt: v => v || null },
-  { id: 'w-movement', fmt: v => v || null },
+  { id: 'w-caliber', fmt: v => v || null },
   { id: 'w-price', fmt: v => { const n = parseFloat((v||'').toString().replace(/,/g,'')); return !isNaN(n) ? fmtMoney(n) : null; } },
   { id: 'w-date',  fmt: v => v ? fmtDate(v) : null },
-  { id: 'w-manual-mp', fmt: v => { const n = parseFloat((v||'').toString().replace(/,/g,'')); return !isNaN(n) ? fmtMoney(n) : null; } },
 ];
 
 const WL_INLINE_FIELDS = [
@@ -13588,6 +13743,7 @@ function renderStrapList() {
   if (wEditingStrapIdx !== null) {
     document.getElementById('strap-edit-name')?.focus();
   }
+  updateStrapsSummary();
 }
 function editStrap(idx) {
   wEditingStrapIdx = idx;
@@ -13736,30 +13892,39 @@ function openAddWatch() {
   selColor          = PALETTE[0];
   wPendingImage     = null;
   wPendingFile      = null;
-  ['w-name','w-ref','w-movement','w-price','w-date','w-url','w-ins-value','w-warranty','w-manual-mp','w-caliber','w-case-diameter','w-case-length','w-case-thickness','w-case-material','w-crystal-type','w-water-resistance','w-weight','w-year-range','w-origin','w-functions-input','w-description','w-background'].forEach(id => document.getElementById(id).value = '');
+  ['w-name','w-ref','w-price','w-date','w-url','w-ins-value','w-warranty','w-manual-mp','w-caliber','w-case-diameter','w-case-length','w-case-thickness','w-case-material','w-crystal-type','w-water-resistance','w-weight','w-year-range','w-origin','w-functions-input','w-description','w-background'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('w-insurance').value = '';
   document.getElementById('w-box').value = '';
   document.getElementById('w-papers').value = '';
   document.getElementById('w-ins-value-group').style.display = 'none';
   document.getElementById('watch-modal-title').textContent = 'Add Watch';
   document.getElementById('modal-delete-btn').style.display = 'none';
+  document.getElementById('footer-enhance-btn').style.display = 'none';
+  document.getElementById('footer-value-btn').style.display = 'none';
   document.getElementById('ai-prefill-banner').classList.add('hidden');
+  document.getElementById('edit-identity-strip').style.display = 'none';
   buildBrandSelect();
   renderTagPicker([], []);
+  updateTypeSummary();
   wEditStraps = [];
   wEditingStrapIdx = null;
   renderStrapList();
   hideAddStrapRow();
   document.getElementById('edit-receipts-list').innerHTML = `<div style="color:var(--muted);font-size:.82rem;">No receipts yet.</div>`;
   updateUrlBtn();
-  // Hide Check Value for new watches
-  document.getElementById('check-value-btn').style.display = 'none';
-  document.getElementById('check-value-status').textContent = '';
+  renderValueSection();
   // All sections collapsed for a fresh add
   document.getElementById('w-movement-type').value = '';
+  document.getElementById('w-bph').value = '';
   document.getElementById('w-gender').value = '';
-  document.getElementById('enhance-watch-btn').style.display = 'none';
-  document.getElementById('value-watch-btn').style.display = 'none';
+  renderStorySection();
+  updateEssentialsSummary();
+  updateSpecsSummary();
+  updateDocsSummary();
+  updateStrapsSummary();
+  updateReceiptsSummary();
+  openSection('sec-story');
+  openSection('sec-essentials');
   ['sec-condition','sec-market','sec-tags','sec-specs','sec-straps','sec-receipts'].forEach(closeSection);
   document.getElementById('sec-accuracy-wrap').style.display = 'none';
   clearInlineEdits();
@@ -13777,11 +13942,16 @@ function openEditWatch(id) {
   wPendingFile  = null;
   document.getElementById('watch-modal-title').textContent    = 'Edit Watch';
   document.getElementById('modal-delete-btn').style.display = '';
+  document.getElementById('footer-enhance-btn').style.display = '';
+  document.getElementById('footer-value-btn').style.display = '';
   document.getElementById('ai-prefill-banner').classList.add('hidden');
+  // Identity strip
+  updateIdentityStrip(w.name, w.brand, w.ref);
+  document.getElementById('edit-identity-strip').style.display = '';
   buildBrandSelect(w.brand);
   document.getElementById('w-name').value               = w.name;
   document.getElementById('w-ref').value                = w.ref || '';
-  document.getElementById('w-movement').value           = w.movement || '';
+  // Movement/calibre merged into single caliber field in Specs
   setPriceInput('w-price', w.price != null ? w.price : '');
   document.getElementById('w-date').value               = w.purchaseDate || '';
   document.getElementById('w-url').value                = w.url || '';
@@ -13801,18 +13971,18 @@ function openEditWatch(id) {
   }
   // Tags & Straps
   renderTagPicker(w.tags || [], autoSuggestTags(w.brand, w.name, w.ref));
+  updateTypeSummary();
   wEditStraps = JSON.parse(JSON.stringify(w.straps || []));
   wEditingStrapIdx = null;
   renderStrapList();
   hideAddStrapRow();
   renderEditReceiptsList(w);
   updateUrlBtn();
-  // Check Value button — show for existing watches
-  document.getElementById('check-value-btn').style.display = '';
-  document.getElementById('check-value-status').textContent = '';
+  renderValueSection();
   // Specs & Details
   document.getElementById('w-movement-type').value    = w.movementType || '';
-  document.getElementById('w-caliber').value          = w.caliber || '';
+  document.getElementById('w-caliber').value          = w.caliber || w.movement || '';
+  document.getElementById('w-bph').value              = w.bph || '';
   document.getElementById('w-case-diameter').value    = w.caseDiameter || '';
   document.getElementById('w-case-length').value      = w.caseLength || '';
   document.getElementById('w-case-thickness').value   = w.caseThickness || '';
@@ -13826,24 +13996,16 @@ function openEditWatch(id) {
   document.getElementById('w-functions-input').value  = (w.functions || []).join(', ');
   document.getElementById('w-description').value      = w.description || '';
   document.getElementById('w-background').value       = w.background || '';
-  document.getElementById('enhance-watch-btn').style.display = '';
-  document.getElementById('value-watch-btn').style.display = '';
-  // Auto-open sections that have data; collapse empty ones
-  const hasCondition = w.warrantyExpiry || w.hasBox || w.hasPapers || w.insurance;
-  const hasMarket    = w.marketPrice;
-  const hasTags      = (w.tags || []).length > 0;
-  const hasStraps    = (w.straps || []).length > 0;
-  const hasReceipts  = (w.receipts || []).length > 0;
-  const hasSpecs     = w.movementType || w.caliber || w.caseDiameter || w.caseMaterial || w.waterResistance || w.description || w.background;
-  if (hasCondition) openSection('sec-condition'); else closeSection('sec-condition');
-  if (hasMarket)    openSection('sec-market');    else closeSection('sec-market');
-  if (hasTags)      openSection('sec-tags');      else closeSection('sec-tags');
-  if (hasSpecs)     openSection('sec-specs');     else closeSection('sec-specs');
-  if (hasStraps)    openSection('sec-straps');    else closeSection('sec-straps');
-  if (hasReceipts)  openSection('sec-receipts');  else closeSection('sec-receipts');
-  // Accuracy section — always visible for edit, collapsed by default
+  renderStorySection();
+  updateEssentialsSummary();
+  updateSpecsSummary();
+  updateDocsSummary();
+  updateStrapsSummary();
+  updateReceiptsSummary();
+  // Story expanded, all others collapsed by default
+  openSection('sec-story');
+  ['sec-essentials','sec-condition','sec-market','sec-tags','sec-specs','sec-straps','sec-receipts','sec-accuracy'].forEach(closeSection);
   document.getElementById('sec-accuracy-wrap').style.display = '';
-  closeSection('sec-accuracy');
   initTgSection(id);
   setupInlineEdits();
   // Show existing photo in preview (use URL directly, no objectURL needed)
@@ -13879,19 +14041,14 @@ function closeWatchModal() {
 
 /* ── Watch modal photo preview ── */
 function renderWatchModalImg() {
-  const area = document.getElementById('w-img-area');
-  const btn  = document.getElementById('w-img-upload-btn');
   const img  = document.getElementById('w-img-preview');
-  const cropBtn = document.getElementById('w-img-crop-btn');
+  const changeBtn = document.getElementById('w-change-photo-btn');
   if (wPendingImage) {
-    img.src = wPendingImage;
-    area.style.display = 'flex';
-    btn.style.display = 'none';
-    // Show Crop button when there's any image to crop
-    if (cropBtn) cropBtn.style.display = wPendingImage ? '' : 'none';
+    if (img) img.src = wPendingImage;
+    if (changeBtn) changeBtn.textContent = 'Change photo';
   } else {
-    area.style.display = 'none';
-    btn.style.display = '';
+    if (img) img.src = '';
+    if (changeBtn) changeBtn.textContent = 'Add photo';
   }
 }
 async function openModalCropAdjuster() {
@@ -14026,18 +14183,179 @@ function quickLog(watchId) {
 // Recommendation card "Log This Wear" — reuses the shared track modal
 function openRecLog(watchId) { openTrackModal(watchId); }
 
-// ── Check Value (single watch) ───────────────────────────────────────────────
+// ── Value section (4-state flow) ─────────────────────────────────────────────
+function valueFreshnessLabel(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  const now = new Date(); now.setHours(0,0,0,0);
+  const diff = Math.floor((now - d) / 86400000);
+  if (diff <= 0) return 'just now';
+  if (diff === 1) return 'yesterday';
+  return diff + ' days ago';
+}
+function valueGainHTML(paid, market) {
+  if (!paid || !market) return '';
+  const diff = market - paid;
+  const pct = Math.round((diff / paid) * 100);
+  const sign = diff >= 0 ? '+' : '−';
+  const color = diff >= 0 ? '#3B6D11' : '#A32D2D';
+  return `<div style="margin-top:6px;"><div style="font-size:11px;color:var(--muted);">Gain vs paid</div><div style="font-size:13px;font-weight:500;color:${color};">${sign}${fmtMoney(Math.abs(diff))} · ${sign}${Math.abs(pct)}%</div></div>`;
+}
+function renderValueSection() {
+  const el = document.getElementById('value-section-content');
+  const sum = document.getElementById('sum-sec-market');
+  if (!el) return;
+  const w = editingId ? watches.find(x => x.id === editingId) : null;
+  const savedPrice = w?.marketPrice ? Number(w.marketPrice) : null;
+  const paid = w?.price ? Number(w.price) : null;
+  const pending = w?._pendingPrice;
+  const pendingTs = w?._pendingPriceTs;
+  const isSamePrice = pending != null && savedPrice != null && pending === savedPrice;
+  const hasPending = pending != null;
+
+  // Summary
+  if (sum) {
+    if (hasPending && !isSamePrice) {
+      sum.innerHTML = savedPrice ? `${fmtMoney(savedPrice)} <span style="color:#854F0B;font-weight:500;">· new price ${fmtMoney(pending)}</span>` : `<span style="color:#854F0B;font-weight:500;">new price ${fmtMoney(pending)}</span>`;
+    } else if (savedPrice && paid) {
+      const diff = savedPrice - paid;
+      const color = diff >= 0 ? '#3B6D11' : '#A32D2D';
+      const sign = diff >= 0 ? '+' : '−';
+      sum.innerHTML = `${fmtMoney(savedPrice)} · <span style="color:${color};">${sign}${fmtMoney(Math.abs(diff))} (${sign}${Math.abs(Math.round((diff/paid)*100))}%)</span>`;
+    } else if (savedPrice) {
+      sum.textContent = fmtMoney(savedPrice);
+    } else {
+      sum.innerHTML = '<span style="color:#854F0B;">Check price</span>';
+    }
+  }
+
+  let html = '';
+
+  // Saved market price row
+  const mpLabel = hasPending ? 'MARKET PRICE <span style="color:var(--muted);text-transform:none;font-weight:400;letter-spacing:0;">(saved)</span>' : 'MARKET PRICE';
+  html += `<div style="display:flex;align-items:flex-end;gap:.5rem;">
+    <div class="form-group" style="margin-bottom:0;flex:1;">
+      <label>${mpLabel}</label>
+      <input type="text" inputmode="decimal" id="w-mp-display" value="${savedPrice ? fmtMoney(savedPrice) : ''}" placeholder="$" autocomplete="off" oninput="fmtPriceInput(this);onManualMarketPriceEdit()">
+    </div>
+    <button type="button" id="check-value-btn" onclick="checkSingleWatchValue()" style="background:#FAEEDA;border:none;color:var(--fg);font-size:11px;font-family:inherit;padding:5px 10px;border-radius:5px;cursor:pointer;white-space:nowrap;margin-bottom:1px;">${hasPending ? 'Re-check' : 'Check price'}</button>
+  </div>`;
+
+  // Pending price card (State B or B2)
+  if (hasPending) {
+    const freshLabel = valueFreshnessLabel(pendingTs);
+    const delta = savedPrice ? pending - savedPrice : pending;
+    const deltaSign = delta >= 0 ? '+' : '−';
+    if (isSamePrice) {
+      // State B2 — same price
+      html += `<div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);">Market Price</div>
+          <div style="font-size:10px;color:var(--muted);">${freshLabel}</div>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px;">
+          <span style="font-size:20px;font-weight:500;color:var(--fg);">${fmtMoney(pending)}</span>
+          <span style="font-size:12px;color:var(--muted);">unchanged</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button type="button" disabled style="flex:1;background:var(--surface2);color:var(--muted);border:0.5px solid var(--border);font-size:12px;font-weight:500;font-family:inherit;padding:8px;border-radius:6px;cursor:not-allowed;">Apply ${fmtMoney(pending)}</button>
+          <button type="button" onclick="dismissPendingPrice()" style="background:transparent;color:var(--muted);border:0.5px solid var(--border);font-size:12px;font-family:inherit;padding:8px 14px;border-radius:6px;cursor:pointer;">Dismiss</button>
+        </div>
+      </div>`;
+    } else {
+      // State B — different price
+      const deltaColor = delta >= 0 ? '#3B6D11' : '#A32D2D';
+      html += `<div style="background:#FAEEDA;border:0.5px solid #BA7517;border-radius:8px;padding:10px 12px;margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#633806;">New Market Price</div>
+          <div style="font-size:10px;color:#854F0B;">${freshLabel}</div>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px;">
+          <span style="font-size:20px;font-weight:500;color:#412402;">${fmtMoney(pending)}</span>
+          ${savedPrice ? `<span style="font-size:12px;color:${deltaColor};">${deltaSign}${fmtMoney(Math.abs(delta))} vs saved</span>` : ''}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button type="button" onclick="applyPendingPrice()" style="flex:1;background:#854F0B;color:#fff;border:none;font-size:12px;font-weight:500;font-family:inherit;padding:8px;border-radius:6px;cursor:pointer;">Apply ${fmtMoney(pending)}</button>
+          <button type="button" onclick="dismissPendingPrice()" style="background:transparent;color:#854F0B;border:0.5px solid #BA7517;font-size:12px;font-family:inherit;padding:8px 14px;border-radius:6px;cursor:pointer;">Dismiss</button>
+        </div>
+      </div>`;
+    }
+  }
+
+  // Gain vs paid
+  if (savedPrice && paid) {
+    const suffix = hasPending && !isSamePrice ? ' <span style="color:var(--muted);font-weight:400;">(using saved)</span>' : '';
+    html += valueGainHTML(paid, savedPrice).replace('Gain vs paid', 'Gain vs paid' + suffix);
+  }
+
+  // Last checked
+  if (w?.marketPriceDate && !hasPending) {
+    html += `<div style="border-top:0.5px solid var(--border);margin-top:10px;padding-top:10px;font-size:11px;color:var(--muted);">Last checked ${valueFreshnessLabel(w.marketPriceDate)}</div>`;
+  }
+
+  // Loading indicator
+  html += '<div id="check-value-status" style="font-size:.75rem;color:var(--muted);margin-top:.35rem;"></div>';
+
+  el.innerHTML = html;
+}
+function onManualMarketPriceEdit() {
+  const inp = document.getElementById('w-mp-display');
+  if (inp) document.getElementById('w-manual-mp').value = inp.value;
+}
+async function applyPendingPrice() {
+  const w = watches.find(x => x.id === editingId);
+  if (!w || !w._pendingPrice) return;
+  const mid = w._pendingPrice;
+  const today = todayStr();
+  const history = Array.isArray(w.priceHistory) ? [...w.priceHistory] : [];
+  if (w.marketPrice && w.marketPriceDate) {
+    const already = history.some(h => h.date === w.marketPriceDate && h.price === Number(w.marketPrice));
+    if (!already) history.push({ src: w.marketPriceSrc || 'previous', date: w.marketPriceDate, price: Number(w.marketPrice) });
+  }
+  history.push({ src: 'WRotate', date: today, price: mid });
+  await db.from('watches').update({
+    market_price: mid, market_price_date: today, market_price_src: 'WRotate', price_history: history,
+  }).eq('id', w.id);
+  w.marketPrice = mid;
+  w.marketPriceDate = today;
+  w.marketPriceSrc = 'WRotate';
+  w.priceHistory = history;
+  w._pendingPrice = null;
+  w._pendingPriceTs = null;
+  document.getElementById('w-manual-mp').value = fmtMoney(mid);
+  db.from('valuation_events').insert({ user_id: currentUser.id, action: 'check_apply', watches_total: watches.length, watches_saved: 1 }).then(() => {});
+  renderValueSection();
+  toast('Market price updated', 'success');
+}
+function dismissPendingPrice() {
+  const w = watches.find(x => x.id === editingId);
+  if (w) { w._pendingPrice = null; w._pendingPriceTs = null; }
+  renderValueSection();
+}
 async function checkSingleWatchValue() {
   if (!editingId) return;
   const w = watches.find(x => x.id === editingId);
   if (!w) return;
-  const btn = document.getElementById('check-value-btn');
   const status = document.getElementById('check-value-status');
-  btn.disabled = true;
-  btn.textContent = 'Searching...';
-  status.innerHTML = '<span style="display:inline-flex;align-items:center;gap:.4rem;"><span class="spinner" style="width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Looking up market value...</span>';
+  const btn = document.getElementById('check-value-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Searching…'; }
+
+  // Client-side 7-day cache: if market price was checked recently, return cached
+  if (w.marketPrice && w.marketPriceDate) {
+    const ageMs = Date.now() - new Date(w.marketPriceDate + 'T00:00:00').getTime();
+    if (ageMs < 7 * 86400000) {
+      w._pendingPrice = Number(w.marketPrice);
+      w._pendingPriceTs = w.marketPriceDate;
+      db.from('valuation_events').insert({ user_id: currentUser.id, action: 'check_cached', watches_total: watches.length, watches_priced: 1 }).then(() => {});
+      if (btn) { btn.disabled = false; btn.textContent = 'Re-check'; }
+      renderValueSection();
+      return;
+    }
+  }
+
+  if (status) status.innerHTML = '<span style="display:inline-flex;align-items:center;gap:.4rem;"><span class="spinner" style="width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Looking up market value…</span>';
   try {
-    const payload = { brand: w.brand, model: w.name, condition: 'good', watch_id: w.id };
+    const payload = { brand: w.brand, model: w.name, condition: 'good' };
     if (w.ref) payload.reference = w.ref;
     const r = await authedFetch(SUPABASE_URL + '/functions/v1/watch-value', {
       method: 'POST',
@@ -14045,55 +14363,25 @@ async function checkSingleWatchValue() {
       body: JSON.stringify(payload),
     }, 60000);
     if (r.status === 429) {
-      status.textContent = 'Daily limit reached. Try again tomorrow.';
-      btn.disabled = false;
-      btn.textContent = 'Check Value';
+      if (status) status.textContent = 'Daily limit reached. Try again tomorrow.';
+      if (btn) { btn.disabled = false; btn.textContent = 'Check price'; }
       return;
     }
     const data = await r.json();
-    const ev = data.estimated_value_usd || {};
-    const mid = ev.mid;
+    const mid = (data.estimated_value_usd || {}).mid;
     if (!mid) {
-      status.textContent = 'Could not find pricing for this watch.';
-      btn.disabled = false;
-      btn.textContent = 'Check Value';
+      if (status) status.textContent = 'Could not find pricing for this watch.';
+      if (btn) { btn.disabled = false; btn.textContent = 'Check price'; }
       return;
     }
-    db.from('valuation_events').insert({ user_id: currentUser.id, action: data.cached ? 'check_cached' : 'check', watches_total: watches.length, watches_priced: 1 }).then(() => {});
-    // Show result with Apply button — compact inline layout
-    const rangeStr = ev.low && ev.high ? `${fmtMoney(ev.low)} – ${fmtMoney(ev.high)}` : '';
-    const note = !data.cached && data.confidence && data.confidence !== 'cached' ? data.confidence : '';
-    const applyId = '_cv_apply_' + Date.now();
-    status.innerHTML = `<span style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;"><span style="color:var(--gold);font-weight:600;">${fmtMoney(mid)}</span>${rangeStr ? '<span style="color:var(--muted);font-size:.7rem;">' + rangeStr + '</span>' : ''}${note ? '<span style="color:var(--muted);font-size:.7rem;">· ' + note + '</span>' : ''}<button type="button" id="${applyId}" class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .5rem;">Apply</button></span>`;
-    document.getElementById(applyId).onclick = async function() {
-      this.disabled = true;
-      this.textContent = 'Saving...';
-      setPriceInput('w-manual-mp', mid);
-      const mpSpan = document.getElementById('w-manual-mp')?.parentElement?.querySelector('.inline-val');
-      if (mpSpan) mpSpan.innerHTML = `<span>${escHtml(fmtMoney(mid))}</span>`;
-      const today = todayStr();
-      const history = Array.isArray(w.priceHistory) ? [...w.priceHistory] : [];
-      if (w.marketPrice && w.marketPriceDate) {
-        const already = history.some(h => h.date === w.marketPriceDate && h.price === Number(w.marketPrice));
-        if (!already) history.push({ src: w.marketPriceSrc || 'previous', date: w.marketPriceDate, price: Number(w.marketPrice) });
-      }
-      history.push({ src: 'WRotate', date: today, price: mid });
-      await db.from('watches').update({
-        market_price: mid, market_price_date: today, market_price_src: 'WRotate', price_history: history,
-      }).eq('id', w.id);
-      w.marketPrice = mid;
-      w.marketPriceDate = today;
-      w.marketPriceSrc = 'WRotate';
-      w.priceHistory = history;
-      db.from('valuation_events').insert({ user_id: currentUser.id, action: 'check_apply', watches_total: watches.length, watches_saved: 1 }).then(() => {});
-      this.textContent = 'Applied ✓';
-      this.style.color = '#2a9d5c';
-    };
+    db.from('valuation_events').insert({ user_id: currentUser.id, action: 'check', watches_total: watches.length, watches_priced: 1 }).then(() => {});
+    w._pendingPrice = mid;
+    w._pendingPriceTs = todayStr();
+    renderValueSection();
   } catch (e) {
-    status.textContent = 'Error looking up value. Try again later.';
+    if (status) status.textContent = 'Error looking up value. Try again later.';
+    if (btn) { btn.disabled = false; btn.textContent = 'Check price'; }
   }
-  btn.disabled = false;
-  btn.textContent = 'Check Value';
 }
 
 // ── Market price card row ────────────────────────────────────────────────────
@@ -14145,7 +14433,7 @@ async function saveWatch() {
   const data = {
     brand, name,
     ref:            document.getElementById('w-ref').value.trim(),
-    movement:       document.getElementById('w-movement').value.trim(),
+    movement:       document.getElementById('w-caliber').value.trim(),
     price:          readPrice('w-price'),
     purchaseDate:   document.getElementById('w-date').value,
     url:            document.getElementById('w-url').value.trim(),
@@ -14174,6 +14462,7 @@ async function saveWatch() {
     functions:       document.getElementById('w-functions-input').value.trim() ? document.getElementById('w-functions-input').value.split(',').map(s=>s.trim()).filter(Boolean) : null,
     description:     document.getElementById('w-description').value.trim() || null,
     background:      document.getElementById('w-background').value.trim() || null,
+    bph:             parseInt(document.getElementById('w-bph').value) || null,
   };
 
   // Market price: if field has a value, save it as User Entry.
@@ -15872,6 +16161,7 @@ function selectBrand(name) {
   document.getElementById('w-brand-display').value = name;
   document.getElementById('w-brand').value = name;
   hideBrandAC();
+  if (editingId) updateIdentityStrip(document.getElementById('w-name').value, name, document.getElementById('w-ref').value);
 }
 
 function hideBrandAC() {
@@ -16306,7 +16596,7 @@ async function addFromIdentified(idx) {
     if (aiModel) document.getElementById('w-name').value = aiModel;
     if (aiRef)   document.getElementById('w-ref').value = aiRef;
     const aiMovement = w.caliber || w.movementType || '';
-    if (aiMovement) document.getElementById('w-movement').value = aiMovement;
+    if (aiMovement) document.getElementById('w-caliber').value = aiMovement;
     if (w.estimatedColor) {
       selColor = w.estimatedColor;
       buildSwatches();
@@ -16599,7 +16889,7 @@ async function enhanceSingleWatch() {
   if (!editingId) return;
   const w = watches.find(x => x.id === editingId);
   if (!w) return;
-  const btn = document.getElementById('enhance-watch-btn');
+  const btn = document.querySelector('#story-content button');
   const origHtml = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner-sm"></span> Enhancing…';
@@ -16666,17 +16956,18 @@ async function enhanceSingleWatch() {
       filled++;
     }
     openSection('sec-specs');
+    renderStorySection();
+    openSection('sec-story');
     setTimeout(() => {
-      const specsEl = document.getElementById('sec-specs');
-      if (specsEl) specsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const storyEl = document.getElementById('sec-story');
+      if (storyEl) storyEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
     toast(filled > 0 ? `Enhanced: ${filled} detail${filled !== 1 ? 's' : ''} added` : 'No new details found — specs already filled', filled > 0 ? 'success' : 'info');
   } catch(e) {
     toast('Enhance failed: ' + (e?.message || e), 'error');
   } finally {
     clearInterval(msgInterval);
-    btn.disabled = false;
-    btn.innerHTML = origHtml;
+    renderStorySection();
   }
 }
 
@@ -19512,7 +19803,7 @@ async function loadTgHistory() {
   const { data, error } = await db.from('timegrapher_results').select('*')
     .eq('user_id', currentUser.id).eq('watch_id', _tgWatchId)
     .order('created_at', { ascending: false }).limit(20);
-  if (error || !data || data.length === 0) { listEl.innerHTML = '<div style="color:var(--muted);font-size:.82rem;">No readings yet.</div>'; return; }
+  if (error || !data || data.length === 0) { listEl.innerHTML = '<div style="color:var(--muted);font-size:.82rem;">No readings yet.</div>'; updateAccuracySummary(); return; }
   // Demo mode: hide all readings, prompt sign-up
   if (_isDemoMode) {
     listEl.innerHTML = `<div style="text-align:center;padding:1rem 0;">
@@ -19530,7 +19821,8 @@ async function loadTgHistory() {
     const noteStr = r.notes ? `<div style="font-size:.7rem;color:var(--muted);margin-top:.15rem;font-style:italic;">${escHtml(r.notes)}</div>` : '';
     const rateColor = r.rate !== null ? (Math.abs(r.rate) <= 5 ? '#22c55e' : Math.abs(r.rate) <= 15 ? '#eab308' : '#ef4444') : 'var(--muted)';
     const details = [beStr, ampStr].filter(Boolean).join(' · ');
-    return `<div style="padding:.45rem 0;border-bottom:1px solid var(--border);font-size:.8rem;">
+    const isoDate = d.toISOString().slice(0, 10);
+    return `<div data-tg-entry data-tg-date="${isoDate}" style="padding:.45rem 0;border-bottom:1px solid var(--border);font-size:.8rem;">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div>
           <span style="font-weight:600;color:${rateColor};">${rateStr}</span>
@@ -19546,6 +19838,7 @@ async function loadTgHistory() {
   }).join('');
   // Store data for edit lookups
   listEl._tgData = data;
+  updateAccuracySummary();
 }
 
 function editTgResult(id) {

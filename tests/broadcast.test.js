@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { imgSnippet, inlineImages, sharePostUrl, escHtml } from '../wrotate_test.js';
+import { imgSnippet, inlineImages, sharePostUrl, escHtml, sanitizeHtml } from '../wrotate_test.js';
 
 // ── imgSnippet ──────────────────────────────────────────────────────────
 
@@ -93,5 +93,81 @@ describe('sharePostUrl', () => {
   it('handles UUID format', () => {
     const url = sharePostUrl('d70b1a85-4f31-4431-b3b7-db76543daaf5');
     expect(url).toContain('d70b1a85-4f31-4431-b3b7-db76543daaf5');
+  });
+});
+
+// ── sanitizeHtml ────────────────────────────────────────────────────────
+
+describe('sanitizeHtml', () => {
+  it('strips script tags and content', () => {
+    expect(sanitizeHtml('<p>Hello</p><script>alert(1)</script>')).toBe('<p>Hello</p>');
+  });
+
+  it('strips script tags case-insensitively', () => {
+    expect(sanitizeHtml('<SCRIPT>xss</SCRIPT>')).toBe('');
+  });
+
+  it('strips iframe tags and content', () => {
+    expect(sanitizeHtml('<iframe src="evil.com"></iframe>')).toBe('');
+  });
+
+  it('strips object tags and content', () => {
+    expect(sanitizeHtml('<object data="flash.swf"></object>')).toBe('');
+  });
+
+  it('strips embed tags', () => {
+    expect(sanitizeHtml('<embed src="evil.swf">')).toBe('');
+  });
+
+  it('strips form tags and content', () => {
+    expect(sanitizeHtml('<form action="/steal"><input></form>')).toBe('');
+  });
+
+  it('strips inline event handlers with double quotes', () => {
+    expect(sanitizeHtml('<div onclick="alert(1)">click</div>')).toBe('<div>click</div>');
+  });
+
+  it('strips inline event handlers with single quotes', () => {
+    expect(sanitizeHtml("<img onerror='alert(1)' src='x'>")).toBe("<img src='x'>");
+  });
+
+  it('strips unquoted event handlers', () => {
+    expect(sanitizeHtml('<div onmouseover=alert(1)>hover</div>')).toBe('<div>hover</div>');
+  });
+
+  it('replaces javascript: URIs', () => {
+    const result = sanitizeHtml('<a href="javascript:alert(1)">click</a>');
+    expect(result).not.toContain('javascript:');
+    expect(result).toContain('blocked:');
+  });
+
+  it('replaces vbscript: URIs', () => {
+    const result = sanitizeHtml('<a href="vbscript:run">click</a>');
+    expect(result).not.toContain('vbscript:');
+    expect(result).toContain('blocked:');
+  });
+
+  it('preserves safe HTML', () => {
+    const safe = '<h1>Hello</h1><p>Welcome to <strong>WRotate</strong></p><a href="https://wrotate.com">Visit</a>';
+    expect(sanitizeHtml(safe)).toBe(safe);
+  });
+
+  it('preserves inline styles', () => {
+    const styled = '<div style="color:red;font-size:14px;">styled</div>';
+    expect(sanitizeHtml(styled)).toBe(styled);
+  });
+
+  it('handles multiline script tags', () => {
+    const html = '<p>before</p><script>\nvar x = 1;\nalert(x);\n</script><p>after</p>';
+    expect(sanitizeHtml(html)).toBe('<p>before</p><p>after</p>');
+  });
+
+  it('handles multiple dangerous elements', () => {
+    const html = '<script>a</script><iframe>b</iframe><p onclick="c">d</p>';
+    expect(sanitizeHtml(html)).toBe('<p>d</p>');
+  });
+
+  it('handles empty input', () => {
+    expect(sanitizeHtml('')).toBe('');
   });
 });

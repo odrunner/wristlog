@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeTgResults } from '../wrotate_test.js';
+import { computeTgResults, capScatterData } from '../wrotate_test.js';
 
 describe('computeTgResults', () => {
   it('returns nulls for fewer than 2 ticks', () => {
@@ -122,5 +122,44 @@ describe('computeTgResults', () => {
     // Rate should still be close to 0 (jitter averages out with sine)
     expect(Math.abs(r.rate)).toBeLessThan(3);
     expect(r.tickCount).toBe(200);
+  });
+});
+
+// ── capScatterData ──────────────────────────────────────────────────────
+
+describe('capScatterData', () => {
+  it('returns data unchanged when under limit', () => {
+    const data = [{ t: 1, d: 0.1 }, { t: 2, d: 0.2 }];
+    expect(capScatterData(data)).toEqual(data);
+  });
+
+  it('returns data unchanged when exactly at limit', () => {
+    const data = Array.from({ length: 2000 }, (_, i) => ({ t: i, d: 0 }));
+    expect(capScatterData(data).length).toBe(2000);
+  });
+
+  it('caps to last 2000 points when over limit', () => {
+    const data = Array.from({ length: 3000 }, (_, i) => ({ t: i, d: i * 0.01 }));
+    const result = capScatterData(data);
+    expect(result.length).toBe(2000);
+    expect(result[0].t).toBe(1000);
+    expect(result[result.length - 1].t).toBe(2999);
+  });
+
+  it('supports custom limit', () => {
+    const data = Array.from({ length: 100 }, (_, i) => ({ t: i, d: 0 }));
+    const result = capScatterData(data, 50);
+    expect(result.length).toBe(50);
+    expect(result[0].t).toBe(50);
+  });
+
+  it('handles empty array', () => {
+    expect(capScatterData([])).toEqual([]);
+  });
+
+  it('does not mutate original array', () => {
+    const data = Array.from({ length: 2500 }, (_, i) => ({ t: i, d: 0 }));
+    capScatterData(data);
+    expect(data.length).toBe(2500);
   });
 });
