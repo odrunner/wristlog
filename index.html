@@ -4919,7 +4919,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.17.19';
+const APP_VERSION = '20.17.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10231,6 +10231,14 @@ const saveWishlist = () => {
   _wlSavePending = setTimeout(() => cloudSync(), 500);
 };
 const saveBrands   = () => { safeSetJSON(STORE_B,  brands); };
+
+function ensureBrand(name) {
+  if (!name) return;
+  const lower = name.trim().toLowerCase();
+  if (brands.some(b => b.toLowerCase() === lower)) return;
+  brands.push(name.trim());
+  saveBrands();
+}
 
 // ── Pre-computed logs-by-watch map (avoids O(n*m) in render loops) ──────────
 let _logsByWatch = new Map();
@@ -16268,6 +16276,7 @@ async function addFromIdentified(idx) {
     const aiModel = w.model || '';
     const aiRef   = w.reference || '';
     if (aiBrand) {
+      ensureBrand(aiBrand);
       buildBrandSelect(aiBrand);
       document.getElementById('w-brand').value = aiBrand;
       document.getElementById('w-brand-display').value = aiBrand;
@@ -16316,6 +16325,7 @@ async function quickAddFromIdentified(idx) {
     if (w._prefetchedCroppedBlob) {
       imageUrl = await uploadImage(w._prefetchedCroppedBlob, `watches/${currentUser.id}/${newId}.jpg`);
     }
+    ensureBrand(w.brand);
     const data = {
       id: newId,
       brand: w.brand || '',
@@ -16359,6 +16369,7 @@ async function addAllFromIdentified() {
       if (w._prefetchedCroppedBlob) {
         imageUrl = await uploadImage(w._prefetchedCroppedBlob, `watches/${currentUser.id}/${newId}.jpg`);
       }
+      ensureBrand(w.brand);
       watches.push({
         id: newId,
         brand: w.brand || '',
