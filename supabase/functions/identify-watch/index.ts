@@ -244,6 +244,49 @@ Rules:
         }
       }
 
+      // Fallback: Claude with web search when Gemini fails
+      console.log("[identify-watch] Gemini enhance failed, falling back to Claude web search");
+      try {
+        const claudeAbort = new AbortController();
+        const claudeTimer = setTimeout(() => claudeAbort.abort(), 60000);
+        const claudeMessages: any[] = [{ role: "user", content: enhancePrompt }];
+        const claudeResp = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01",
+            "anthropic-beta": "web-search-2025-03-05",
+          },
+          signal: claudeAbort.signal,
+          body: JSON.stringify({
+            model: "claude-sonnet-4-6",
+            max_tokens: 4096,
+            tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }],
+            messages: claudeMessages,
+          }),
+        });
+        clearTimeout(claudeTimer);
+        if (claudeResp.ok) {
+          const claudeResult = await claudeResp.json();
+          const textBlock = claudeResult.content?.find((b: any) => b.type === "text");
+          const parsed = extractJson(textBlock?.text ?? "");
+          if (parsed) {
+            parsed._engine = "claude-fallback";
+            await logAttempt(1, null);
+            return new Response(JSON.stringify(parsed), {
+              headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+            });
+          }
+          console.error("[identify-watch] Claude enhance fallback parse failed:", textBlock?.text?.slice(0, 300));
+        } else {
+          const errText = await claudeResp.text();
+          console.error("[identify-watch] Claude enhance fallback error:", claudeResp.status, errText.slice(0, 300));
+        }
+      } catch (claudeErr: any) {
+        console.error("[identify-watch] Claude enhance fallback exception:", claudeErr.message);
+      }
+
       await logAttempt(null, "enhance_failed");
       return new Response(JSON.stringify({ error: "Enhancement failed" }), {
         status: 502,

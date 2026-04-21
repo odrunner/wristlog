@@ -5020,7 +5020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.09.32';
+const APP_VERSION = '21.09.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16889,10 +16889,10 @@ async function enhanceSingleWatch() {
   if (!editingId) return;
   const w = watches.find(x => x.id === editingId);
   if (!w) return;
-  const btn = document.querySelector('#story-content button');
-  const origHtml = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-sm"></span> Enhancing…';
+  const storyBtn = document.querySelector('#story-content button');
+  const footerBtn = document.getElementById('footer-enhance-btn');
+  if (storyBtn) { storyBtn.disabled = true; storyBtn.innerHTML = '<span class="spinner-sm"></span> Enhancing…'; }
+  if (footerBtn) { footerBtn.disabled = true; footerBtn.textContent = 'Enhancing…'; }
   const statusMsgs = [
     'Searching watch databases…',
     'Looking up specifications…',
@@ -16968,6 +16968,8 @@ async function enhanceSingleWatch() {
   } finally {
     clearInterval(msgInterval);
     renderStorySection();
+    const fb = document.getElementById('footer-enhance-btn');
+    if (fb) { fb.disabled = false; fb.textContent = '⭐ Enhance'; }
   }
 }
 
