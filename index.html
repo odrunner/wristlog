@@ -5020,7 +5020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.16.26';
+const APP_VERSION = '21.16.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10471,6 +10471,8 @@ function _reviewGetThresholds() {
 
 function shouldShowReviewPrompt(source) {
   if (!currentUser) return false;
+  // TEMP: force show for Ozgur's account (remove after testing)
+  if (currentUser.id === 'd70b1a85-4f31-4431-b3b7-db76543daaf5') return true;
   // Check cooldown: don't show if dismissed/completed recently
   const lastAction = localStorage.getItem('wristlog_review_last');
   if (lastAction) {
@@ -16318,6 +16320,7 @@ function openPhotoIdentify() {
             return;
           }
           _photoIdentifyResults = data.watches;
+          console.log('[WristLog] identify result', {engine: data._engine, watches: data.watches.map(w => ({brand: w.brand, model: w.model, bbox: w.boundingBox}))});
           renderPhotoIdentifyResults();
         } catch (e1) { clearInterval(_piMsgTimer); throw e1; }
       } else {
@@ -16559,6 +16562,7 @@ async function prefetchIdentifiedImages() {
     if (!w._imageFound && window._photoIdentifyBlob) {
       const hasBbox = w.boundingBox && Array.isArray(w.boundingBox) && w.boundingBox.length === 4;
       const bbox = hasBbox ? w.boundingBox : [0, 0, 100, 100];
+      console.log('[WristLog] prefetch crop attempt', i, {bbox, hasBbox, rawBbox: w.boundingBox, blobSize: window._photoIdentifyBlob.size});
       try {
         const cropped = await cropWatchFromPhoto(window._photoIdentifyBlob, bbox);
         w._prefetchedCroppedBlob = cropped;
@@ -16566,7 +16570,7 @@ async function prefetchIdentifiedImages() {
         w._imageFound = true;
         w._imageSource = 'cropped';
       } catch (cropErr) {
-        console.error('[WristLog] crop error:', cropErr);
+        console.error('[WristLog] crop failed', i, {bbox, error: cropErr.message, blobSize: window._photoIdentifyBlob.size, blobType: window._photoIdentifyBlob.type});
         try {
           w._prefetchedCroppedBlob = window._photoIdentifyBlob;
           w._prefetchedImageUrl = URL.createObjectURL(window._photoIdentifyBlob);
@@ -16574,6 +16578,8 @@ async function prefetchIdentifiedImages() {
           w._imageSource = 'cropped';
         } catch (_) {}
       }
+    } else if (!w._imageFound) {
+      console.warn('[WristLog] prefetch skip', i, {imageFound: w._imageFound, hasBlob: !!window._photoIdentifyBlob});
     }
     if (!w._imageFound) w._imageFound = false;
 
