@@ -145,9 +145,14 @@ Brand: ${brand}
 Model: ${model}
 ${reference ? `Reference: ${reference}` : ""}
 
-Find as much verified information as possible from official manufacturer pages, watch databases (e.g. watchbase.com, chrono24.com), and authoritative sources.
+Search thoroughly for this watch's full specifications. Check these sources in order:
+1. The official manufacturer website (e.g. rolex.com/watches, audemarspiguet.com/en/watch-collection, omegawatches.com, patek.com) — these ALWAYS have case dimensions, movement info, and water resistance
+2. Watch databases: watchbase.com, chrono24.com, watchuseek forums
+3. Review sites and spec sheets
 
-Return a JSON object with all fields you can verify. Use empty string "" for any field you cannot confirm — do NOT guess or fabricate:
+IMPORTANT: Major watch brands (Rolex, Omega, AP, Patek, Tudor, IWC, Breitling, Cartier, etc.) publish complete specs on their official websites including diameter, thickness, lug-to-lug, weight, water resistance, and crystal type. Search the manufacturer site directly — these specs ARE available, do not leave them empty.
+
+Return a JSON object. Fill every field you can find — only use empty string "" if the information truly does not exist anywhere:
 {
   "movementType": "automatic/manual-wind/quartz/digital/solar/spring-drive or empty",
   "caliber": "movement caliber name/number or empty",
@@ -169,10 +174,11 @@ Return a JSON object with all fields you can verify. Use empty string "" for any
 }
 
 Rules:
-- Only provide information you can verify via search. Accuracy over completeness.
+- Search the official manufacturer website FIRST — it has the most accurate and complete specs.
 - For description: describe what makes this watch visually distinctive.
 - For background: focus on what makes this model interesting or significant — history, heritage, notable wearers, records, etc.
-- For functions: list complications and key features (e.g. "date", "chronograph", "GMT", "200m water resistance", "power reserve indicator")`;
+- For functions: list complications and key features (e.g. "date", "chronograph", "GMT", "200m water resistance", "power reserve indicator")
+- If a field like caseDiameter or caseThickness is commonly published for this brand, search harder before returning empty.`;
 
       if (!GEMINI_API_KEY) {
         await logAttempt(null, "enhance_no_gemini_key");

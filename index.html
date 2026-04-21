@@ -2474,6 +2474,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="btn btn-ghost" onclick="startGame()" title="Ranking Game" style="padding:.55rem;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></button>
         <button class="btn btn-ghost" onclick="openAddWatch()" title="Add Manually" style="padding:.55rem;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
         <button class="btn btn-primary" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;align-items:center;gap:.4rem;white-space:nowrap;padding:.55rem .85rem;font-size:.82rem;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
+        <button id="coll-enhance-all-btn" class="btn btn-ghost" onclick="enhanceAllWatches()" title="Enhance All with AI" style="display:none;padding:.55rem;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg></button>
         <button id="coll-update-prices-btn" class="btn btn-ghost" onclick="openUpdatePrices()" title="Update Market Prices" style="display:none;padding:.55rem .7rem;font-weight:400;font-size:.9rem;">$</button>
       </div>
     </div>
@@ -3592,9 +3593,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <label for="w-background">Background &amp; History</label>
           <textarea id="w-background" rows="3" maxlength="2000" style="resize:vertical;"></textarea>
         </div>
-        <button type="button" id="enhance-watch-btn" class="btn btn-ghost btn-sm" onclick="enhanceSingleWatch()" style="display:none;width:100%;margin-top:.25rem;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg> Enhance with AI
-        </button>
       </div>
     </div>
 
@@ -3677,6 +3675,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <div class="modal-actions" style="flex-wrap:nowrap;">
       <button id="save-watch-btn" class="btn btn-primary" onclick="saveWatch()">Save Watch</button>
+      <button id="enhance-watch-btn" class="btn btn-ghost" onclick="enhanceSingleWatch()" style="display:none;white-space:nowrap;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg> Enhance
+      </button>
       <button class="btn btn-ghost"   onclick="closeWatchModal()">Cancel</button>
       <button class="btn btn-danger" id="modal-delete-btn" style="display:none;margin-left:auto;" onclick="openDelModal(editingId);closeWatchModal();">Delete Watch</button>
     </div>
@@ -4922,7 +4923,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.17.04';
+const APP_VERSION = '20.17.10';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13157,6 +13158,8 @@ function renderCollection(force) {
   _lastRenderedGen.collection = _dataGen;
   const priceBtn = document.getElementById('coll-update-prices-btn');
   if (priceBtn) priceBtn.style.display = currentUser ? '' : 'none';
+  const enhAllBtn = document.getElementById('coll-enhance-all-btn');
+  if (enhAllBtn) enhAllBtn.style.display = currentUser ? '' : 'none';
   renderCollSortBar();
   renderTagFilterBar();
   const el = document.getElementById('watches-grid');
@@ -16461,6 +16464,70 @@ async function enhanceSingleWatch() {
     btn.disabled = false;
     btn.innerHTML = origHtml;
   }
+}
+
+async function enhanceAllWatches() {
+  if (demoGuard()) return;
+  if (!watches.length) { toast('No watches to enhance', 'info'); return; }
+  const needsEnhance = watches.filter(w => !w.caseDiameter && !w.caliber && !w.background);
+  const target = needsEnhance.length > 0 ? needsEnhance : watches;
+  const count = target.length;
+  if (!confirm(`Enhance ${count} watch${count !== 1 ? 'es' : ''} with AI specs & details?\n\nThis will fill in missing specs like dimensions, materials, caliber, and history for ${needsEnhance.length > 0 ? 'watches missing details' : 'all watches'}.`)) return;
+  const btn = document.getElementById('coll-enhance-all-btn');
+  if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
+  let enhanced = 0, failed = 0;
+  toast(`Enhancing ${count} watches…`, 'info');
+  for (let i = 0; i < target.length; i++) {
+    const w = target[i];
+    try {
+      const payload = { mode: 'enhance', watchInfo: { brand: w.brand, model: w.name, reference: w.ref || '' } };
+      if (w.image && !w.image.startsWith('data:')) {
+        try {
+          const imgResp = await fetch(w.image);
+          const blob = await imgResp.blob();
+          const reader = new FileReader();
+          const b64 = await new Promise(resolve => { reader.onload = () => resolve(reader.result); reader.readAsDataURL(blob); });
+          payload.image = b64;
+        } catch(e) { /* proceed without image */ }
+      }
+      const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!resp.ok) { failed++; continue; }
+      const data = await resp.json();
+      if (data.error) { failed++; continue; }
+      const updates = {};
+      const fieldMap = {
+        movementType: 'movementType', caliber: 'caliber',
+        caseDiameter: 'caseDiameter', caseLength: 'caseLength',
+        caseThickness: 'caseThickness', caseMaterial: 'caseMaterial',
+        crystalType: 'crystalType', waterResistance: 'waterResistance',
+        weight: 'weight', yearRange: 'yearRange',
+        gender: 'gender', origin: 'origin',
+        description: 'description', background: 'background',
+      };
+      for (const [apiKey, wKey] of Object.entries(fieldMap)) {
+        const val = data[apiKey];
+        if (val && typeof val === 'string' && val.trim() && !w[wKey]) updates[wKey] = val.trim();
+      }
+      if (Array.isArray(data.functions) && data.functions.length && !w.functions) updates.functions = data.functions;
+      if (data.productUrl && !w.url) updates.url = data.productUrl;
+      if (Object.keys(updates).length > 0) {
+        Object.assign(w, updates);
+        const row = watchToRow(w);
+        await supabase.from('watches').update(row).eq('id', w.id);
+        enhanced++;
+      }
+      toast(`Enhanced ${i + 1}/${count}: ${w.brand} ${w.name}`, 'info');
+    } catch(e) {
+      failed++;
+    }
+  }
+  renderCollection(true);
+  if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+  toast(`Done: ${enhanced} enhanced${failed ? `, ${failed} failed` : ''}`, enhanced > 0 ? 'success' : 'info');
 }
 
 /**
