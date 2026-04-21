@@ -2466,11 +2466,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div id="page-collection" class="page">
     <div class="page-header">
       <h1 class="page-title">My Collection</h1>
-      <div style="display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;">
-        <div class="view-toggle">
-          <button class="view-btn active" id="view-grid-btn" onclick="setCollView('grid')" title="Grid view"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
-          <button class="view-btn" id="view-list-btn" onclick="setCollView('list')" title="List view"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
-        </div>
+      <div style="display:flex;gap:.45rem;align-items:center;">
         <button class="btn btn-ghost" onclick="startGame()" title="Ranking Game" style="padding:.45rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></button>
         <button class="btn btn-ghost" onclick="openAddWatch()" title="Add Manually" style="padding:.45rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
         <button class="btn btn-primary" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;align-items:center;gap:.35rem;white-space:nowrap;padding:.45rem .7rem;font-size:.8rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
@@ -4923,7 +4919,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.17.16';
+const APP_VERSION = '20.17.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13371,8 +13367,8 @@ function setCollListSort(field) {
 
 function setCollView(mode) {
   collView = mode;
-  document.getElementById('view-grid-btn').classList.toggle('active', mode === 'grid');
-  document.getElementById('view-list-btn').classList.toggle('active', mode === 'list');
+  document.getElementById('view-grid-btn')?.classList.toggle('active', mode === 'grid');
+  document.getElementById('view-list-btn')?.classList.toggle('active', mode === 'list');
   renderCollection(true);
 }
 
@@ -16456,6 +16452,10 @@ async function enhanceSingleWatch() {
       filled++;
     }
     openSection('sec-specs');
+    setTimeout(() => {
+      const specsEl = document.getElementById('sec-specs');
+      if (specsEl) specsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
     toast(filled > 0 ? `Enhanced: ${filled} detail${filled !== 1 ? 's' : ''} added` : 'No new details found — specs already filled', filled > 0 ? 'success' : 'info');
   } catch(e) {
     toast('Enhance failed: ' + (e?.message || e), 'error');
