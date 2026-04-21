@@ -4992,7 +4992,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.20.04';
+const APP_VERSION = '20.20.09';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16462,6 +16462,8 @@ async function checkBatchWatchValues(ids) {
   closeBtn.textContent = 'Working…';
   document.getElementById('value-check-save-all-btn').style.display = 'none';
   modal.classList.remove('hidden');
+  modal.dataset.justOpened = '1';
+  setTimeout(() => delete modal.dataset.justOpened, 600);
 
   list.innerHTML = targets.map((w, i) => {
     const color = w.color || '#c9a84c';
