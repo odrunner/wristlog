@@ -2126,6 +2126,31 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
+<!-- ════ NEW FEATURES POPOVER ════ -->
+<div id="new-features-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="new-features-title">
+  <div class="modal" style="max-width:380px;text-align:center;padding:2rem 1.75rem;">
+    <div style="font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem;">New in WRotate</div>
+    <div id="new-features-title" style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.75rem;">We're excited to bring you two new features we'd like you to give a try.</div>
+    <div style="text-align:left;margin-bottom:1rem;">
+      <div style="display:flex;gap:.6rem;align-items:flex-start;margin-bottom:.85rem;">
+        <span style="font-size:1.1rem;flex-shrink:0;margin-top:.1rem;">☆</span>
+        <div>
+          <div style="font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.2rem;">Enhance Your Collection</div>
+          <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Tap <strong>Enhance</strong> on any watch to auto-fill specs, history, and background — powered by AI. Or use the ☆ button in your collection header to enhance all your watches at once.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:.6rem;align-items:flex-start;">
+        <span style="font-size:1.1rem;flex-shrink:0;margin-top:.1rem;">📷</span>
+        <div>
+          <div style="font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.2rem;">Improved Photo Recognition</div>
+          <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Point your camera at any watch and WRotate identifies the brand, model, and reference in seconds. Accuracy has been significantly improved — works great with single watches and collection flat-lays.</div>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-ghost" onclick="closeNewFeatures()" style="width:100%;border-color:var(--gold);color:var(--gold);">Got it</button>
+  </div>
+</div>
+
 <!-- ════ ANNIVERSARY MODAL ════ -->
 <div id="anniversary-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="anniversary-modal-title">
   <div class="modal" style="max-width:360px;text-align:center;padding:2rem 1.75rem;">
@@ -4942,7 +4967,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.18.13';
+const APP_VERSION = '20.18.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10322,6 +10347,17 @@ function closeWhatsNew() {
   document.getElementById('whats-new-modal').classList.add('hidden');
 }
 
+function maybeShowNewFeatures() {
+  if (!currentUser || !watches.length) return;
+  const key = 'wrotate_newfeatures_v1';
+  if (localStorage.getItem(key)) return;
+  localStorage.setItem(key, '1');
+  setTimeout(() => document.getElementById('new-features-modal').classList.remove('hidden'), 800);
+}
+function closeNewFeatures() {
+  document.getElementById('new-features-modal').classList.add('hidden');
+}
+
 // ── Anniversary check ──────────────────────────────────────────────────────
 let _annivQueue = []; // watches with anniversaries today, shown one at a time
 function checkAnniversary() {
@@ -10400,6 +10436,7 @@ function shouldShowReviewPrompt(source) {
     const msrCount = parseInt(localStorage.getItem('wristlog_msr_count') || '0');
     return msrCount >= th.measurements;
   }
+  if (source === 'enhance') return true;
   return false;
 }
 
@@ -16431,6 +16468,7 @@ function closeEnhanceAll() {
   _enhanceAllTargets = [];
 }
 
+let _enhanceSaveCount = 0;
 async function saveEnhanceResult(idx) {
   const r = _enhanceAllResults[idx];
   if (!r || r._saved || !r._updates || !Object.keys(r._updates).length) return;
@@ -16439,12 +16477,14 @@ async function saveEnhanceResult(idx) {
   const row = watchToRow(w);
   await db.from('watches').update(row).eq('id', w.id);
   r._saved = true;
+  _enhanceSaveCount++;
   const card = document.getElementById(`enh-card-${idx}`);
   const statusEl = card?.querySelector('.enh-status');
-  if (statusEl) { statusEl.textContent = '✓ Saved'; statusEl.style.color = '#4ade80'; }
+  if (statusEl) { statusEl.textContent = '✓ Saved'; statusEl.style.color = 'var(--gold)'; }
   const actions = card?.querySelector('.pi-card-actions');
-  if (actions) actions.innerHTML = '<span style="font-size:.72rem;color:#4ade80;">Saved</span>';
+  if (actions) actions.innerHTML = '<span style="font-size:.72rem;color:var(--gold);">Saved</span>';
   renderCollection(true);
+  if (_enhanceSaveCount === 2) maybeShowReviewPrompt('enhance');
 }
 
 async function saveAllEnhanceResults() {
@@ -16457,6 +16497,7 @@ async function saveAllEnhanceResults() {
     }
   }
   toast(`Saved ${saved} watch${saved !== 1 ? 'es' : ''}`, 'success');
+  if (saved > 0) maybeShowReviewPrompt('enhance');
 }
 
 async function enhanceAllWatches() {
@@ -16469,6 +16510,7 @@ async function enhanceAllWatches() {
 
   _enhanceAllTargets = target;
   _enhanceAllResults = target.map(() => ({ _updates: null, _saved: false }));
+  _enhanceSaveCount = 0;
 
   const modal = document.getElementById('enhance-all-modal');
   const list = document.getElementById('enhance-all-list');
@@ -16549,7 +16591,7 @@ async function enhanceAllWatches() {
         if (addedCount > 0) {
           totalWithUpdates++;
           const specs = [updates.caseDiameter, updates.caseMaterial, updates.movementType].filter(Boolean).join(' · ');
-          if (statusEl) { statusEl.innerHTML = `Found ${addedCount} detail${addedCount !== 1 ? 's' : ''}${specs ? '<br><span style="color:var(--muted)">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = '#4ade80'; }
+          if (statusEl) { statusEl.innerHTML = `Found ${addedCount} detail${addedCount !== 1 ? 's' : ''} including${specs ? '<br><span style="color:var(--muted)">' + escHtml(specs) + '</span>' : ''}`; statusEl.style.color = 'var(--gold)'; }
           if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .7rem;" onclick="saveEnhanceResult(${i})">Save</button>`;
         } else {
           if (statusEl) { statusEl.textContent = 'Already complete'; statusEl.style.color = 'var(--muted)'; }
@@ -18227,6 +18269,7 @@ const _overlayCloseMap = {
   'photo-paste-modal':   closePhotoPasteModal,
   'photo-identify-modal': closePhotoIdentify,
   'enhance-all-modal':    closeEnhanceAll,
+  'new-features-modal':   closeNewFeatures,
   'snap-match-modal':     closeSnapMatch,
   'wishlist-modal':      closeWishlistModal,
   'watch-preview-modal': closeWatchPreview,
@@ -20033,6 +20076,8 @@ async function bootApp(user) {
   checkReminderNow();
   // Show anniversary modal if any watch has an anniversary today
   checkAnniversary();
+  // Show new features popover for repeat users (once)
+  maybeShowNewFeatures();
   // Auto-show What's New once per version (iOS 1.4+ only)
   const _wnKey = 'whatsNewSeen';
   const _wnVer = '2026-04';
