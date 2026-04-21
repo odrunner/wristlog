@@ -4971,7 +4971,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.18.47';
+const APP_VERSION = '20.18.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16465,7 +16465,7 @@ let _enhanceAllTargets = [];
 let _enhanceAllRunning = false;
 
 function closeEnhanceAll() {
-  if (_enhanceAllRunning) return;
+  if (_enhanceAllRunning || _enhanceSaving) return;
   document.getElementById('enhance-all-modal').classList.add('hidden');
   document.getElementById('enhance-all-save-all-btn').style.display = 'none';
   _enhanceAllResults = [];
@@ -16473,35 +16473,65 @@ function closeEnhanceAll() {
 }
 
 let _enhanceSaveCount = 0;
+let _enhanceSaving = false;
 async function saveEnhanceResult(idx) {
   const r = _enhanceAllResults[idx];
   if (!r || r._saved || !r._updates || !Object.keys(r._updates).length) return;
-  const w = _enhanceAllTargets[idx];
-  Object.assign(w, r._updates);
-  const row = watchToRow(w);
-  await db.from('watches').update(row).eq('id', w.id);
-  r._saved = true;
-  _enhanceSaveCount++;
   const card = document.getElementById(`enh-card-${idx}`);
-  const statusEl = card?.querySelector('.enh-status');
-  if (statusEl) { statusEl.textContent = '✓ Saved'; statusEl.style.color = 'var(--gold)'; }
-  const actions = card?.querySelector('.pi-card-actions');
-  if (actions) actions.innerHTML = '<span style="font-size:.72rem;color:var(--gold);">Saved</span>';
-  renderCollection(true);
-  if (_enhanceSaveCount === 2) maybeShowReviewPrompt('enhance');
+  const saveBtn = card?.querySelector('.pi-card-actions button');
+  if (saveBtn) saveBtn.disabled = true;
+  const w = _enhanceAllTargets[idx];
+  const backup = {};
+  for (const k of Object.keys(r._updates)) backup[k] = w[k];
+  try {
+    Object.assign(w, r._updates);
+    const row = watchToRow(w);
+    const { error } = await db.from('watches').update(row).eq('id', w.id);
+    if (error) throw error;
+    r._saved = true;
+    _enhanceSaveCount++;
+    markDirty('watches', w.id);
+    save();
+    const statusEl = card?.querySelector('.enh-status');
+    if (statusEl) { statusEl.textContent = '✓ Saved'; statusEl.style.color = 'var(--gold)'; }
+    const actions = card?.querySelector('.pi-card-actions');
+    if (actions) actions.innerHTML = '<span style="font-size:.72rem;color:var(--gold);">Saved</span>';
+    if (!_enhanceSaving) renderCollection(true);
+    if (_enhanceSaveCount === 2) maybeShowReviewPrompt('enhance');
+  } catch (e) {
+    Object.assign(w, backup);
+    toast('Save failed: ' + (e?.message || e), 'error');
+    const statusEl = card?.querySelector('.enh-status');
+    if (statusEl) { statusEl.textContent = 'Save failed'; statusEl.style.color = 'var(--error)'; }
+    if (saveBtn) saveBtn.disabled = false;
+  }
 }
 
 async function saveAllEnhanceResults() {
-  let saved = 0;
-  for (let i = 0; i < _enhanceAllResults.length; i++) {
-    const r = _enhanceAllResults[i];
-    if (r && !r._saved && r._updates && Object.keys(r._updates).length) {
-      await saveEnhanceResult(i);
-      saved++;
+  if (_enhanceSaving) return;
+  _enhanceSaving = true;
+  const saveAllBtn = document.getElementById('enhance-all-save-all-btn');
+  if (saveAllBtn) saveAllBtn.disabled = true;
+  let saved = 0, failed = 0;
+  try {
+    for (let i = 0; i < _enhanceAllResults.length; i++) {
+      const r = _enhanceAllResults[i];
+      if (r && !r._saved && r._updates && Object.keys(r._updates).length) {
+        try {
+          await saveEnhanceResult(i);
+          if (r._saved) saved++;
+          else failed++;
+        } catch (_) { failed++; }
+      }
     }
+    const msg = failed ? `Saved ${saved}, ${failed} failed` : `Saved ${saved} watch${saved !== 1 ? 'es' : ''}`;
+    toast(msg, failed ? 'error' : 'success');
+    if (saved > 0) maybeShowReviewPrompt('enhance');
+  } finally {
+    _enhanceSaving = false;
+    if (saveAllBtn) saveAllBtn.disabled = false;
+    renderCollection(true);
   }
-  toast(`Saved ${saved} watch${saved !== 1 ? 'es' : ''}`, 'success');
-  if (saved > 0) maybeShowReviewPrompt('enhance');
 }
 
 async function enhanceAllWatches() {
