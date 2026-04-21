@@ -125,9 +125,129 @@ Deno.serve(async (req: Request) => {
   };
 
   try {
-    const { image, collection, mode } = await req.json();
-    loggedMode = mode === "detect" ? "detect" : "identify";
+    const { image, collection, mode, watchInfo } = await req.json();
+    loggedMode = mode === "detect" ? "detect" : mode === "enhance" ? "enhance" : "identify";
     loggedHasCollection = Array.isArray(collection) && collection.length > 0;
+
+    // ── ENHANCE MODE: enrich watch data with specs, history, dimensions ──
+    if (mode === "enhance" && watchInfo) {
+      const { brand, model, reference } = watchInfo;
+      if (!brand || !model) {
+        await logAttempt(null, "enhance_no_info");
+        return new Response(JSON.stringify({ error: "Brand and model required" }), {
+          status: 400,
+          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        });
+      }
+
+      const enhancePrompt = `Search for detailed specifications of this watch:
+Brand: ${brand}
+Model: ${model}
+${reference ? `Reference: ${reference}` : ""}
+
+Find as much verified information as possible from official manufacturer pages, watch databases (e.g. watchbase.com, chrono24.com), and authoritative sources.
+
+Return a JSON object with all fields you can verify. Use empty string "" for any field you cannot confirm — do NOT guess or fabricate:
+{
+  "movementType": "automatic/manual-wind/quartz/digital/solar/spring-drive or empty",
+  "caliber": "movement caliber name/number or empty",
+  "caseMaterial": "e.g. stainless steel, 18k yellow gold, titanium or empty",
+  "caseDiameter": "e.g. 41mm or empty",
+  "caseLength": "lug-to-lug e.g. 48mm or empty",
+  "caseThickness": "e.g. 12.5mm or empty",
+  "weight": "e.g. 155g or empty",
+  "waterResistance": "e.g. 300m or empty",
+  "crystalType": "sapphire/mineral/plexiglas/hardlex or empty",
+  "yearRange": "production years e.g. 2018-present or empty",
+  "gender": "men's/women's/unisex or empty",
+  "origin": "country of manufacture e.g. Switzerland, Japan or empty",
+  "functions": ["list", "of", "key", "features/complications"],
+  "description": "Short 1-2 sentence physical description of the watch",
+  "background": "2-4 sentences about the model's history, significance, or notable facts. Include any interesting stories (e.g. NASA certification, celebrity associations, design heritage).",
+  "productUrl": "official manufacturer product page URL or empty",
+  "retailPrice": "current retail price USD or empty"
+}
+
+Rules:
+- Only provide information you can verify via search. Accuracy over completeness.
+- For description: describe what makes this watch visually distinctive.
+- For background: focus on what makes this model interesting or significant — history, heritage, notable wearers, records, etc.
+- For functions: list complications and key features (e.g. "date", "chronograph", "GMT", "200m water resistance", "power reserve indicator")`;
+
+      if (!GEMINI_API_KEY) {
+        await logAttempt(null, "enhance_no_gemini_key");
+        return new Response(JSON.stringify({ error: "Enhancement not available" }), {
+          status: 503,
+          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        });
+      }
+
+      try {
+        const geminiAbort = new AbortController();
+        const geminiTimer = setTimeout(() => geminiAbort.abort(), 45000);
+
+        const parts: any[] = [{ text: enhancePrompt }];
+        // Include watch image if provided for better context
+        if (image) {
+          const b64 = image.replace(/^data:image\/[a-z]+;base64,/, "");
+          const mt = image.startsWith("data:image/png") ? "image/png" : "image/jpeg";
+          parts.unshift({ inline_data: { mime_type: mt, data: b64 } });
+        }
+
+        const geminiResponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: geminiAbort.signal,
+            body: JSON.stringify({
+              contents: [{ parts }],
+              tools: [{ google_search: {} }],
+              generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
+            }),
+          }
+        );
+
+        clearTimeout(geminiTimer);
+        if (geminiResponse.ok) {
+          const geminiResult = await geminiResponse.json();
+          const resParts = geminiResult.candidates?.[0]?.content?.parts ?? [];
+          const textParts = resParts.filter((p: any) => p.text).map((p: any) => p.text).join("");
+
+          function extractJson(text: string) {
+            const m = text.match(/\{[\s\S]*\}/);
+            return m ? JSON.parse(m[0]) : null;
+          }
+
+          const parsed = extractJson(textParts);
+          if (parsed) {
+            parsed._engine = "gemini";
+            await logAttempt(1, null);
+            return new Response(JSON.stringify(parsed), {
+              headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+            });
+          }
+          console.error("[identify-watch] Enhance parse failed. Raw:", textParts.slice(0, 500));
+        } else {
+          const errText = await geminiResponse.text();
+          console.error("[identify-watch] Enhance Gemini error:", geminiResponse.status, errText.slice(0, 300));
+        }
+
+        await logAttempt(null, "enhance_failed");
+        return new Response(JSON.stringify({ error: "Enhancement failed" }), {
+          status: 502,
+          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        });
+      } catch (enhErr: any) {
+        console.error("[identify-watch] Enhance error:", enhErr.message);
+        await logAttempt(null, `enhance_error_${enhErr.message?.slice(0, 50)}`);
+        return new Response(JSON.stringify({ error: "Enhancement failed" }), {
+          status: 502,
+          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     if (!image) {
       await logAttempt(null, "no_image");
       return new Response(JSON.stringify({ error: "No image provided" }), {

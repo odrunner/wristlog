@@ -1983,6 +1983,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Smarter Photo Identification</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Add from Photo is powered by a new model with substantially better image recognition. Watches are detected in seconds, then each one is identified individually with high accuracy &#8212; brand, model, reference, and specs. Works great with single watches and collection flat-lays alike.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Add All &amp; Quick Add</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">After a photo identifies multiple watches, tap <strong>Add All</strong> to save them to your collection in one go. Each card also has a quick <strong>Add</strong> button for instant saves, or <strong>Edit</strong> to review details first.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Market Values</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">See what your watches are worth with AI-based valuations. Open a watch and tap <strong>Check Value</strong>, or use <strong>Update Prices</strong> (the $ button) to check your entire collection at once. Values are tracked over time so you can see how your collection&#8217;s worth changes.</div>
       </div>
@@ -3494,6 +3502,102 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
 
 
+    <!-- ── Specs & Details (collapsible) ── -->
+    <div class="modal-section">
+      <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-specs')">
+        <span class="modal-section-hdr-label">Specs &amp; Details</span>
+        <span class="modal-section-chevron" id="chv-sec-specs">▶</span>
+      </button>
+      <div class="modal-section-body collapsed" id="sec-specs">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="w-movement-type">Movement Type</label>
+            <select id="w-movement-type">
+              <option value="">—</option>
+              <option value="automatic">Automatic</option>
+              <option value="manual-wind">Manual Wind</option>
+              <option value="quartz">Quartz</option>
+              <option value="digital">Digital</option>
+              <option value="solar">Solar</option>
+              <option value="spring-drive">Spring Drive</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="w-caliber">Caliber</label>
+            <input type="text" id="w-caliber" placeholder="e.g. 3235, 9SA5" maxlength="60">
+          </div>
+        </div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label for="w-case-diameter">Diameter</label>
+            <input type="text" id="w-case-diameter" placeholder="41mm" maxlength="20">
+          </div>
+          <div class="form-group">
+            <label for="w-case-length">Length</label>
+            <input type="text" id="w-case-length" placeholder="48mm" maxlength="20">
+          </div>
+          <div class="form-group">
+            <label for="w-case-thickness">Thickness</label>
+            <input type="text" id="w-case-thickness" placeholder="12mm" maxlength="20">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="w-case-material">Case Material</label>
+            <input type="text" id="w-case-material" placeholder="Stainless steel" maxlength="80">
+          </div>
+          <div class="form-group">
+            <label for="w-crystal-type">Crystal</label>
+            <input type="text" id="w-crystal-type" placeholder="Sapphire" maxlength="40">
+          </div>
+        </div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label for="w-water-resistance">Water Resistance</label>
+            <input type="text" id="w-water-resistance" placeholder="300m" maxlength="30">
+          </div>
+          <div class="form-group">
+            <label for="w-weight">Weight</label>
+            <input type="text" id="w-weight" placeholder="155g" maxlength="20">
+          </div>
+          <div class="form-group">
+            <label for="w-year-range">Production Years</label>
+            <input type="text" id="w-year-range" placeholder="2018-present" maxlength="30">
+          </div>
+        </div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label for="w-gender">Gender</label>
+            <select id="w-gender">
+              <option value="">—</option>
+              <option value="men's">Men's</option>
+              <option value="women's">Women's</option>
+              <option value="unisex">Unisex</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="w-origin">Origin</label>
+            <input type="text" id="w-origin" placeholder="Switzerland" maxlength="40">
+          </div>
+          <div class="form-group">
+            <label for="w-functions-input">Functions</label>
+            <input type="text" id="w-functions-input" placeholder="Date, chrono…" maxlength="200">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="w-description">Description</label>
+          <textarea id="w-description" rows="2" placeholder="Short physical description…" maxlength="500" style="resize:vertical;"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="w-background">Background &amp; History</label>
+          <textarea id="w-background" rows="3" placeholder="Model history, significance, notable facts…" maxlength="2000" style="resize:vertical;"></textarea>
+        </div>
+        <button type="button" id="enhance-watch-btn" class="btn btn-ghost btn-sm" onclick="enhanceSingleWatch()" style="display:none;width:100%;margin-top:.25rem;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg> Enhance with AI
+        </button>
+      </div>
+    </div>
+
     <!-- ── Straps / Bracelets (collapsible) ── -->
     <div class="modal-section">
       <button type="button" class="modal-section-hdr" onclick="toggleSection('sec-straps')">
@@ -4571,6 +4675,14 @@ function watchToRow(w) {
     insurance_notes: w.insuranceNotes||null, receipts: w.receipts||[],
     elo_rating: eloRatings[w.id] || 1000,
     watch_privacy: w.watchPrivacy ?? null,
+    year_range: w.yearRange||null, movement_type: w.movementType||null,
+    caliber: w.caliber||null, case_material: w.caseMaterial||null,
+    case_diameter: w.caseDiameter||null, case_length: w.caseLength||null,
+    case_thickness: w.caseThickness||null, weight: w.weight||null,
+    water_resistance: w.waterResistance||null, crystal_type: w.crystalType||null,
+    gender: w.gender||null, origin: w.origin||null,
+    description: w.description||null, background: w.background||null,
+    functions: w.functions||null,
   };
 }
 function rowToWatch(r) {
@@ -4592,6 +4704,14 @@ function rowToWatch(r) {
     insurance: r.insurance||null, insuredValue: r.insured_value||null,
     insuranceNotes: r.insurance_notes||null, receipts: r.receipts||[],
     watchPrivacy: r.watch_privacy ?? null,
+    yearRange: r.year_range||null, movementType: r.movement_type||null,
+    caliber: r.caliber||null, caseMaterial: r.case_material||null,
+    caseDiameter: r.case_diameter||null, caseLength: r.case_length||null,
+    caseThickness: r.case_thickness||null, weight: r.weight||null,
+    waterResistance: r.water_resistance||null, crystalType: r.crystal_type||null,
+    gender: r.gender||null, origin: r.origin||null,
+    description: r.description||null, background: r.background||null,
+    functions: r.functions||null,
   };
 }
 function logToRow(l) {
@@ -4802,7 +4922,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.16.23';
+const APP_VERSION = '20.17.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13597,7 +13717,7 @@ function openAddWatch() {
   selColor          = PALETTE[0];
   wPendingImage     = null;
   wPendingFile      = null;
-  ['w-name','w-ref','w-movement','w-price','w-date','w-url','w-ins-value','w-warranty','w-manual-mp'].forEach(id => document.getElementById(id).value = '');
+  ['w-name','w-ref','w-movement','w-price','w-date','w-url','w-ins-value','w-warranty','w-manual-mp','w-caliber','w-case-diameter','w-case-length','w-case-thickness','w-case-material','w-crystal-type','w-water-resistance','w-weight','w-year-range','w-origin','w-functions-input','w-description','w-background'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('w-insurance').value = '';
   document.getElementById('w-box').value = '';
   document.getElementById('w-papers').value = '';
@@ -13617,7 +13737,10 @@ function openAddWatch() {
   document.getElementById('check-value-btn').style.display = 'none';
   document.getElementById('check-value-status').textContent = '';
   // All sections collapsed for a fresh add
-  ['sec-condition','sec-market','sec-tags','sec-straps','sec-receipts'].forEach(closeSection);
+  document.getElementById('w-movement-type').value = '';
+  document.getElementById('w-gender').value = '';
+  document.getElementById('enhance-watch-btn').style.display = 'none';
+  ['sec-condition','sec-market','sec-tags','sec-specs','sec-straps','sec-receipts'].forEach(closeSection);
   document.getElementById('sec-accuracy-wrap').style.display = 'none';
   clearInlineEdits();
   renderWatchModalImg();
@@ -13666,15 +13789,34 @@ function openEditWatch(id) {
   // Check Value button — show for existing watches
   document.getElementById('check-value-btn').style.display = '';
   document.getElementById('check-value-status').textContent = '';
+  // Specs & Details
+  document.getElementById('w-movement-type').value    = w.movementType || '';
+  document.getElementById('w-caliber').value          = w.caliber || '';
+  document.getElementById('w-case-diameter').value    = w.caseDiameter || '';
+  document.getElementById('w-case-length').value      = w.caseLength || '';
+  document.getElementById('w-case-thickness').value   = w.caseThickness || '';
+  document.getElementById('w-case-material').value    = w.caseMaterial || '';
+  document.getElementById('w-crystal-type').value     = w.crystalType || '';
+  document.getElementById('w-water-resistance').value = w.waterResistance || '';
+  document.getElementById('w-weight').value           = w.weight || '';
+  document.getElementById('w-year-range').value       = w.yearRange || '';
+  document.getElementById('w-gender').value           = w.gender || '';
+  document.getElementById('w-origin').value           = w.origin || '';
+  document.getElementById('w-functions-input').value  = (w.functions || []).join(', ');
+  document.getElementById('w-description').value      = w.description || '';
+  document.getElementById('w-background').value       = w.background || '';
+  document.getElementById('enhance-watch-btn').style.display = '';
   // Auto-open sections that have data; collapse empty ones
   const hasCondition = w.warrantyExpiry || w.hasBox || w.hasPapers || w.insurance;
   const hasMarket    = w.marketPrice;
   const hasTags      = (w.tags || []).length > 0;
   const hasStraps    = (w.straps || []).length > 0;
   const hasReceipts  = (w.receipts || []).length > 0;
+  const hasSpecs     = w.movementType || w.caliber || w.caseDiameter || w.caseMaterial || w.waterResistance || w.description || w.background;
   if (hasCondition) openSection('sec-condition'); else closeSection('sec-condition');
   if (hasMarket)    openSection('sec-market');    else closeSection('sec-market');
   if (hasTags)      openSection('sec-tags');      else closeSection('sec-tags');
+  if (hasSpecs)     openSection('sec-specs');     else closeSection('sec-specs');
   if (hasStraps)    openSection('sec-straps');    else closeSection('sec-straps');
   if (hasReceipts)  openSection('sec-receipts');  else closeSection('sec-receipts');
   // Accuracy section — always visible for edit, collapsed by default
@@ -13992,6 +14134,21 @@ async function saveWatch() {
     tags:           getSelectedTags(),
     straps:         wEditStraps,
     ...(pendingImageUrl ? { image: pendingImageUrl } : {}),
+    movementType:    document.getElementById('w-movement-type').value || null,
+    caliber:         document.getElementById('w-caliber').value.trim() || null,
+    caseDiameter:    document.getElementById('w-case-diameter').value.trim() || null,
+    caseLength:      document.getElementById('w-case-length').value.trim() || null,
+    caseThickness:   document.getElementById('w-case-thickness').value.trim() || null,
+    caseMaterial:    document.getElementById('w-case-material').value.trim() || null,
+    crystalType:     document.getElementById('w-crystal-type').value.trim() || null,
+    waterResistance: document.getElementById('w-water-resistance').value.trim() || null,
+    weight:          document.getElementById('w-weight').value.trim() || null,
+    yearRange:       document.getElementById('w-year-range').value.trim() || null,
+    gender:          document.getElementById('w-gender').value || null,
+    origin:          document.getElementById('w-origin').value.trim() || null,
+    functions:       document.getElementById('w-functions-input').value.trim() ? document.getElementById('w-functions-input').value.split(',').map(s=>s.trim()).filter(Boolean) : null,
+    description:     document.getElementById('w-description').value.trim() || null,
+    background:      document.getElementById('w-background').value.trim() || null,
   };
 
   // Market price: if field has a value, save it as User Entry.
@@ -16223,6 +16380,87 @@ async function addAllFromIdentified() {
   closePhotoIdentify();
   renderCollection();
   toast(`${added} watch${added !== 1 ? 'es' : ''} added to collection!`);
+}
+
+async function enhanceSingleWatch() {
+  if (!editingId) return;
+  const w = watches.find(x => x.id === editingId);
+  if (!w) return;
+  const btn = document.getElementById('enhance-watch-btn');
+  const origHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-sm"></span> Enhancing…';
+  const statusMsgs = [
+    'Searching watch databases…',
+    'Looking up specifications…',
+    'Finding dimensions & materials…',
+    'Researching model history…',
+    'Gathering details…',
+  ];
+  let msgIdx = 0;
+  const msgInterval = setInterval(() => {
+    msgIdx++;
+    if (msgIdx < statusMsgs.length) btn.innerHTML = '<span class="spinner-sm"></span> ' + statusMsgs[msgIdx];
+  }, 5000);
+  try {
+    const payload = {
+      mode: 'enhance',
+      watchInfo: { brand: w.brand, model: w.name, reference: w.ref || '' },
+    };
+    if (w.image && !w.image.startsWith('data:')) {
+      try {
+        const imgResp = await fetch(w.image);
+        const blob = await imgResp.blob();
+        const reader = new FileReader();
+        const b64 = await new Promise(resolve => { reader.onload = () => resolve(reader.result); reader.readAsDataURL(blob); });
+        payload.image = b64;
+      } catch(e) { /* proceed without image */ }
+    } else if (w.image) {
+      payload.image = w.image;
+    }
+    const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) throw new Error('Server error ' + resp.status);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    let filled = 0;
+    const fieldMap = {
+      movementType: 'w-movement-type', caliber: 'w-caliber',
+      caseDiameter: 'w-case-diameter', caseLength: 'w-case-length',
+      caseThickness: 'w-case-thickness', caseMaterial: 'w-case-material',
+      crystalType: 'w-crystal-type', waterResistance: 'w-water-resistance',
+      weight: 'w-weight', yearRange: 'w-year-range',
+      gender: 'w-gender', origin: 'w-origin',
+      description: 'w-description', background: 'w-background',
+    };
+    for (const [key, elId] of Object.entries(fieldMap)) {
+      const val = data[key];
+      if (val && typeof val === 'string' && val.trim()) {
+        const el = document.getElementById(elId);
+        if (el && !el.value.trim()) { el.value = val.trim(); filled++; }
+      }
+    }
+    if (Array.isArray(data.functions) && data.functions.length) {
+      const el = document.getElementById('w-functions-input');
+      if (el && !el.value.trim()) { el.value = data.functions.join(', '); filled++; }
+    }
+    if (data.productUrl && !document.getElementById('w-url').value.trim()) {
+      document.getElementById('w-url').value = data.productUrl;
+      updateUrlBtn();
+      filled++;
+    }
+    openSection('sec-specs');
+    toast(filled > 0 ? `Enhanced: ${filled} detail${filled !== 1 ? 's' : ''} added` : 'No new details found — specs already filled', filled > 0 ? 'success' : 'info');
+  } catch(e) {
+    toast('Enhance failed: ' + (e?.message || e), 'error');
+  } finally {
+    clearInterval(msgInterval);
+    btn.disabled = false;
+    btn.innerHTML = origHtml;
+  }
 }
 
 /**
