@@ -3807,6 +3807,20 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
+<!-- ════ BATCH VALUE CHECK MODAL ════ -->
+<div id="value-check-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="value-check-modal-title">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title" id="value-check-modal-title" style="display:flex;align-items:center;gap:.5rem;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Market Value Check
+    </div>
+    <div id="value-check-list" style="max-height:60vh;overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:1rem;">
+      <button id="value-check-close-btn" class="btn btn-ghost" onclick="closeValueCheck()">Close</button>
+      <button id="value-check-save-all-btn" class="btn btn-primary" style="display:none;font-size:.78rem;padding:.35rem .9rem;" onclick="saveAllValueResults()">Save All</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ SNAP MATCH PICKER MODAL ════ -->
 <div id="snap-match-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="snap-match-modal-title">
   <div class="modal" style="max-width:420px;">
@@ -4978,7 +4992,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.19.36';
+const APP_VERSION = '20.19.55';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16396,18 +16410,30 @@ async function addAllFromIdentified() {
 
 let _photoAddedWatchIds = [];
 
+let _postEnhanceValueIds = null;
+
 async function maybeOfferPostPhotoEnhance() {
   const ids = _photoAddedWatchIds.slice();
   _photoAddedWatchIds = [];
   if (!ids.length) return;
   const count = ids.length;
+  _postEnhanceValueIds = ids;
   const specPrompt = await showConfirm(
     `Want to look up full specs, materials, dimensions, and history for ${count === 1 ? 'this watch' : `these ${count} watches`}?`,
     { title: 'Fill in specs?', confirmLabel: 'Yes, enhance', danger: false }
   );
   if (specPrompt) {
     await enhanceAllWatches(ids);
+  } else {
+    maybeOfferPostPhotoValue();
   }
+}
+
+async function maybeOfferPostPhotoValue() {
+  const ids = _postEnhanceValueIds;
+  _postEnhanceValueIds = null;
+  if (!ids || !ids.length) return;
+  const count = ids.length;
   const valuePrompt = await showConfirm(
     `Want to check market ${count === 1 ? 'value' : 'values'} for ${count === 1 ? 'this watch' : `these ${count} watches`}?`,
     { title: 'Check market value?', confirmLabel: 'Yes, check value', danger: false }
@@ -16417,13 +16443,45 @@ async function maybeOfferPostPhotoEnhance() {
   }
 }
 
+let _valueCheckResults = [];
+let _valueCheckTargets = [];
+
 async function checkBatchWatchValues(ids) {
   const targets = watches.filter(w => ids.includes(w.id));
   if (!targets.length) return;
+  _valueCheckTargets = targets;
+  _valueCheckResults = targets.map(() => ({ _value: null, _data: null, _saved: false }));
   const count = targets.length;
-  let checked = 0, applied = 0;
-  toast(`Checking market value for ${count} watch${count !== 1 ? 'es' : ''}…`, 'info');
-  for (const w of targets) {
+
+  const modal = document.getElementById('value-check-modal');
+  const list = document.getElementById('value-check-list');
+  const closeBtn = document.getElementById('value-check-close-btn');
+  closeBtn.disabled = true;
+  closeBtn.textContent = 'Working…';
+  document.getElementById('value-check-save-all-btn').style.display = 'none';
+  modal.classList.remove('hidden');
+
+  list.innerHTML = targets.map((w, i) => {
+    const color = w.color || '#c9a84c';
+    const ini = initials(w.brand || '?', w.name || '?');
+    return `<div class="pi-card" id="val-card-${i}">
+      <div class="pi-card-avatar" style="background:${escHtml(color)}${w.image ? ';background-image:url('+escHtml(w.image)+');background-size:cover;background-position:center' : ''}">${w.image ? '' : ini}</div>
+      <div class="pi-card-info">
+        <div class="pi-card-name">${escHtml(w.name || 'Unknown')}</div>
+        <div class="pi-card-brand">${escHtml(w.brand || 'Unknown')}</div>
+        <div class="val-status" style="font-size:.72rem;margin-top:.25rem;color:var(--muted);">Searching…</div>
+      </div>
+      <div class="pi-card-actions"></div>
+    </div>`;
+  }).join('');
+
+  let totalWithValues = 0;
+  for (let i = 0; i < targets.length; i++) {
+    const w = targets[i];
+    const card = document.getElementById(`val-card-${i}`);
+    const statusEl = card?.querySelector('.val-status');
+    const actionsEl = card?.querySelector('.pi-card-actions');
+    if (statusEl) { statusEl.textContent = 'Looking up market value…'; statusEl.style.color = 'var(--gold)'; }
     try {
       const payload = { brand: w.brand, model: w.name, condition: 'good', watch_id: w.id };
       if (w.ref) payload.reference = w.ref;
@@ -16433,35 +16491,97 @@ async function checkBatchWatchValues(ids) {
         body: JSON.stringify(payload),
       }, 60000);
       if (r.status === 429) {
-        toast('Daily value check limit reached — try again tomorrow', 'error');
+        if (statusEl) { statusEl.textContent = 'Daily limit reached'; statusEl.style.color = 'var(--danger, #e55)'; }
+        for (let j = i + 1; j < count; j++) {
+          const sk = document.getElementById(`val-card-${j}`)?.querySelector('.val-status');
+          if (sk) { sk.textContent = 'Skipped (limit)'; sk.style.color = 'var(--muted)'; }
+        }
         break;
       }
       const data = await r.json();
-      const mid = data.estimated_value_usd?.mid;
-      if (!mid) { checked++; continue; }
-      const today = todayStr();
-      const history = Array.isArray(w.priceHistory) ? [...w.priceHistory] : [];
-      history.push({ src: 'WRotate', date: today, price: mid });
-      await db.from('watches').update({
-        market_price: mid, market_price_date: today, market_price_src: 'WRotate', price_history: history,
-      }).eq('id', w.id);
-      w.marketPrice = mid;
-      w.marketPriceDate = today;
-      w.marketPriceSrc = 'WRotate';
-      w.priceHistory = history;
-      markDirty('watches', w.id);
-      applied++;
-      checked++;
-    } catch (e) { checked++; }
+      const ev = data.estimated_value_usd || {};
+      const mid = ev.mid;
+      if (!mid) {
+        if (statusEl) { statusEl.textContent = 'No pricing found'; statusEl.style.color = 'var(--muted)'; }
+        continue;
+      }
+      _valueCheckResults[i]._value = mid;
+      _valueCheckResults[i]._data = data;
+      totalWithValues++;
+      const rangeStr = ev.low && ev.high ? `${fmtMoney(ev.low)} – ${fmtMoney(ev.high)}` : '';
+      if (statusEl) {
+        statusEl.innerHTML = `<span style="color:var(--gold);font-weight:600;">${fmtMoney(mid)}</span>${rangeStr ? ' <span style="color:var(--muted);font-size:.68rem;">' + rangeStr + '</span>' : ''}`;
+      }
+      if (actionsEl) actionsEl.innerHTML = `<button class="btn btn-primary" style="font-size:.78rem;padding:.35rem .7rem;" onclick="saveValueResult(${i})">Save</button>`;
+    } catch (e) {
+      if (statusEl) { statusEl.textContent = 'Failed'; statusEl.style.color = 'var(--danger, #e55)'; }
+    }
   }
-  save();
+
+  if (totalWithValues > 1) {
+    document.getElementById('value-check-save-all-btn').style.display = '';
+  }
+  closeBtn.disabled = false;
+  closeBtn.textContent = 'Close';
+}
+
+async function saveValueResult(idx) {
+  const r = _valueCheckResults[idx];
+  const w = _valueCheckTargets[idx];
+  if (!r || !w || r._saved || !r._value) return;
+  const card = document.getElementById(`val-card-${idx}`);
+  const saveBtn = card?.querySelector('.pi-card-actions button');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
+  try {
+    const mid = r._value;
+    const today = todayStr();
+    const history = Array.isArray(w.priceHistory) ? [...w.priceHistory] : [];
+    if (w.marketPrice && w.marketPriceDate) {
+      const already = history.some(h => h.date === w.marketPriceDate && h.price === Number(w.marketPrice));
+      if (!already) history.push({ src: w.marketPriceSrc || 'previous', date: w.marketPriceDate, price: Number(w.marketPrice) });
+    }
+    history.push({ src: 'WRotate', date: today, price: mid });
+    const { error } = await db.from('watches').update({
+      market_price: mid, market_price_date: today, market_price_src: 'WRotate', price_history: history,
+    }).eq('id', w.id);
+    if (error) throw error;
+    w.marketPrice = mid;
+    w.marketPriceDate = today;
+    w.marketPriceSrc = 'WRotate';
+    w.priceHistory = history;
+    r._saved = true;
+    markDirty('watches', w.id);
+    save();
+    if (saveBtn) { saveBtn.textContent = 'Saved ✓'; saveBtn.style.color = '#2a9d5c'; }
+    db.from('valuation_events').insert({ user_id: currentUser.id, action: 'check_apply', watches_total: watches.length, watches_saved: 1 }).then(() => {});
+  } catch (e) {
+    toast('Save failed: ' + (e?.message || e), 'error');
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+  }
+}
+
+async function saveAllValueResults() {
+  const saveAllBtn = document.getElementById('value-check-save-all-btn');
+  if (saveAllBtn) saveAllBtn.disabled = true;
+  let saved = 0;
+  for (let i = 0; i < _valueCheckResults.length; i++) {
+    if (_valueCheckResults[i]._value && !_valueCheckResults[i]._saved) {
+      await saveValueResult(i);
+      if (_valueCheckResults[i]._saved) saved++;
+    }
+  }
+  if (saveAllBtn) { saveAllBtn.disabled = false; }
+  if (saved > 0) {
+    renderCollection(true);
+    toast(`Saved ${saved} market value${saved !== 1 ? 's' : ''}`, 'success');
+  }
+}
+
+function closeValueCheck() {
+  document.getElementById('value-check-modal').classList.add('hidden');
+  _valueCheckResults = [];
+  _valueCheckTargets = [];
   renderCollection(true);
-  if (applied > 0) {
-    toast(`Market value found for ${applied} of ${checked} watch${checked !== 1 ? 'es' : ''}`, 'success');
-    db.from('valuation_events').insert({ user_id: currentUser.id, action: 'check_batch', watches_total: watches.length, watches_priced: applied }).then(() => {});
-  } else {
-    toast('Could not find market values for these watches', 'info');
-  }
 }
 
 async function enhanceSingleWatch() {
@@ -16562,6 +16682,9 @@ function closeEnhanceAll() {
   document.getElementById('enhance-all-save-all-btn').style.display = 'none';
   _enhanceAllResults = [];
   _enhanceAllTargets = [];
+  if (_postEnhanceValueIds) {
+    setTimeout(() => maybeOfferPostPhotoValue(), 400);
+  }
 }
 
 let _enhanceSaveCount = 0;
@@ -16806,9 +16929,8 @@ async function enhanceAllWatches(scopedIds) {
     closeBtn.disabled = false;
     closeBtn.textContent = 'Close';
     closeBtn.onclick = closeEnhanceAll;
-    if (scopedIds) {
-      await saveAllEnhanceResults();
-      closeEnhanceAll();
+    if (scopedIds && totalWithUpdates > 0) {
+      document.getElementById('enhance-all-save-all-btn').style.display = '';
     }
   }
 }
@@ -18470,6 +18592,7 @@ const _overlayCloseMap = {
   'photo-paste-modal':   closePhotoPasteModal,
   'photo-identify-modal': closePhotoIdentify,
   'enhance-all-modal':    closeEnhanceAll,
+  'value-check-modal':    closeValueCheck,
   'new-features-modal':   closeNewFeatures,
   'snap-match-modal':     closeSnapMatch,
   'wishlist-modal':      closeWishlistModal,
