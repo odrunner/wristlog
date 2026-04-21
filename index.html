@@ -5020,7 +5020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.09.34';
+const APP_VERSION = '21.10.16';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16926,9 +16926,8 @@ async function enhanceSingleWatch() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    if (!resp.ok) throw new Error('Server error ' + resp.status);
     const data = await resp.json();
-    if (data.error) throw new Error(data.error);
+    if (!resp.ok || data.error) throw new Error(data.message || data.error || 'Server error ' + resp.status);
     let filled = 0;
     const fieldMap = {
       movementType: 'w-movement-type', caliber: 'w-caliber',

@@ -200,7 +200,8 @@ Rules:
         return m ? JSON.parse(m[0]) : null;
       }
 
-      const MAX_RETRIES = 2;
+      const MAX_RETRIES = 3;
+      let lastGeminiError = "";
       for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         try {
           const geminiAbort = new AbortController();
@@ -223,8 +224,16 @@ Rules:
           clearTimeout(geminiTimer);
           if (geminiResponse.ok) {
             const geminiResult = await geminiResponse.json();
-            const resParts = geminiResult.candidates?.[0]?.content?.parts ?? [];
+            const candidate = geminiResult.candidates?.[0];
+            const finishReason = candidate?.finishReason || "unknown";
+            const resParts = candidate?.content?.parts ?? [];
             const textParts = resParts.filter((p: any) => p.text).map((p: any) => p.text).join("");
+
+            if (finishReason === "RECITATION" || finishReason === "SAFETY") {
+              lastGeminiError = `blocked_${finishReason}`;
+              console.error(`[identify-watch] Enhance blocked by ${finishReason} (attempt ${attempt + 1})`);
+              continue;
+            }
 
             const parsed = extractJson(textParts);
             if (parsed) {
@@ -234,61 +243,24 @@ Rules:
                 headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
               });
             }
-            console.error(`[identify-watch] Enhance parse failed (attempt ${attempt + 1}). Raw:`, textParts.slice(0, 500));
+            lastGeminiError = `parse_fail(${finishReason}):${textParts.slice(0, 200)}`;
+            console.error(`[identify-watch] Enhance parse failed (attempt ${attempt + 1}, finish=${finishReason}). Raw:`, textParts.slice(0, 500));
           } else {
             const errText = await geminiResponse.text();
+            lastGeminiError = `gemini_${geminiResponse.status}:${errText.slice(0, 200)}`;
             console.error(`[identify-watch] Enhance Gemini error (attempt ${attempt + 1}):`, geminiResponse.status, errText.slice(0, 300));
+            if (geminiResponse.status === 429) {
+              await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+            }
           }
         } catch (enhErr: any) {
+          lastGeminiError = `exception:${enhErr.message}`;
           console.error(`[identify-watch] Enhance error (attempt ${attempt + 1}):`, enhErr.message);
         }
       }
 
-      // Fallback: Claude with web search when Gemini fails
-      console.log("[identify-watch] Gemini enhance failed, falling back to Claude web search");
-      try {
-        const claudeAbort = new AbortController();
-        const claudeTimer = setTimeout(() => claudeAbort.abort(), 60000);
-        const claudeMessages: any[] = [{ role: "user", content: enhancePrompt }];
-        const claudeResp = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01",
-            "anthropic-beta": "web-search-2025-03-05",
-          },
-          signal: claudeAbort.signal,
-          body: JSON.stringify({
-            model: "claude-sonnet-4-6",
-            max_tokens: 4096,
-            tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }],
-            messages: claudeMessages,
-          }),
-        });
-        clearTimeout(claudeTimer);
-        if (claudeResp.ok) {
-          const claudeResult = await claudeResp.json();
-          const textBlock = claudeResult.content?.find((b: any) => b.type === "text");
-          const parsed = extractJson(textBlock?.text ?? "");
-          if (parsed) {
-            parsed._engine = "claude-fallback";
-            await logAttempt(1, null);
-            return new Response(JSON.stringify(parsed), {
-              headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-            });
-          }
-          console.error("[identify-watch] Claude enhance fallback parse failed:", textBlock?.text?.slice(0, 300));
-        } else {
-          const errText = await claudeResp.text();
-          console.error("[identify-watch] Claude enhance fallback error:", claudeResp.status, errText.slice(0, 300));
-        }
-      } catch (claudeErr: any) {
-        console.error("[identify-watch] Claude enhance fallback exception:", claudeErr.message);
-      }
-
-      await logAttempt(null, "enhance_failed");
-      return new Response(JSON.stringify({ error: "Enhancement failed" }), {
+      await logAttempt(null, `enhance_failed:${lastGeminiError.slice(0, 200)}`);
+      return new Response(JSON.stringify({ error: "enhance_temporary", message: "Enhancement is temporarily unavailable. Please try again in a moment." }), {
         status: 502,
         headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       });
