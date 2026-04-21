@@ -3673,13 +3673,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
 
-    <div class="modal-actions" style="flex-wrap:nowrap;">
-      <button id="save-watch-btn" class="btn btn-primary" onclick="saveWatch()">Save Watch</button>
-      <button id="enhance-watch-btn" class="btn btn-ghost" onclick="enhanceSingleWatch()" style="display:none;white-space:nowrap;">
+    <div class="modal-actions" style="flex-wrap:nowrap;gap:.4rem;">
+      <button id="save-watch-btn" class="btn btn-primary" onclick="saveWatch()">Save</button>
+      <button id="enhance-watch-btn" class="btn btn-ghost" onclick="enhanceSingleWatch()" style="display:none;white-space:nowrap;padding:.45rem .6rem;">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg> Enhance
       </button>
-      <button class="btn btn-ghost"   onclick="closeWatchModal()">Cancel</button>
-      <button class="btn btn-danger" id="modal-delete-btn" style="display:none;margin-left:auto;" onclick="openDelModal(editingId);closeWatchModal();">Delete Watch</button>
+      <button class="btn btn-ghost" onclick="closeWatchModal()">Cancel</button>
+      <button class="btn btn-danger" id="modal-delete-btn" style="display:none;margin-left:auto;padding:.45rem .6rem;font-size:.82rem;" onclick="openDelModal(editingId);closeWatchModal();">Delete</button>
     </div>
   </div>
 </div>
@@ -4923,7 +4923,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.17.10';
+const APP_VERSION = '20.17.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
