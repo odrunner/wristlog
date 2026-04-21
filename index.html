@@ -4971,7 +4971,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.18.57';
+const APP_VERSION = '20.19.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16465,7 +16465,7 @@ let _enhanceAllTargets = [];
 let _enhanceAllRunning = false;
 
 function closeEnhanceAll() {
-  if (_enhanceAllRunning || _enhanceSaving) return;
+  if (_enhanceAllRunning || _enhanceSaving || _enhanceSavesInFlight > 0) return;
   document.getElementById('enhance-all-modal').classList.add('hidden');
   document.getElementById('enhance-all-save-all-btn').style.display = 'none';
   _enhanceAllResults = [];
@@ -16474,9 +16474,11 @@ function closeEnhanceAll() {
 
 let _enhanceSaveCount = 0;
 let _enhanceSaving = false;
+let _enhanceSavesInFlight = 0;
 async function saveEnhanceResult(idx) {
   const r = _enhanceAllResults[idx];
   if (!r || r._saved || !r._updates || !Object.keys(r._updates).length) return;
+  _enhanceSavesInFlight++;
   const card = document.getElementById(`enh-card-${idx}`);
   const saveBtn = card?.querySelector('.pi-card-actions button');
   if (saveBtn) saveBtn.disabled = true;
@@ -16504,6 +16506,8 @@ async function saveEnhanceResult(idx) {
     const statusEl = card?.querySelector('.enh-status');
     if (statusEl) { statusEl.textContent = 'Save failed'; statusEl.style.color = 'var(--error)'; }
     if (saveBtn) saveBtn.disabled = false;
+  } finally {
+    _enhanceSavesInFlight--;
   }
 }
 
@@ -16601,7 +16605,19 @@ async function enhanceAllWatches() {
           signal: ac.signal,
         });
         clearTimeout(timer);
-        if (!resp.ok) { if (statusEl) { statusEl.textContent = `Failed (${resp.status})`; statusEl.style.color = 'var(--danger, #e55)'; } continue; }
+        if (!resp.ok) {
+          if (resp.status === 429) {
+            if (statusEl) { statusEl.textContent = 'Daily limit reached'; statusEl.style.color = 'var(--danger, #e55)'; }
+            toast('Daily enhance limit reached — try again tomorrow', 'error');
+            for (let j = i + 1; j < count; j++) {
+              const sk = document.getElementById(`enh-card-${j}`)?.querySelector('.enh-status');
+              if (sk) { sk.textContent = 'Skipped (limit)'; sk.style.color = 'var(--muted)'; }
+            }
+            break;
+          }
+          if (statusEl) { statusEl.textContent = `Failed (${resp.status})`; statusEl.style.color = 'var(--danger, #e55)'; }
+          continue;
+        }
         const data = await resp.json();
         if (data.error) { if (statusEl) { statusEl.textContent = 'Failed'; statusEl.style.color = 'var(--danger, #e55)'; } continue; }
         const updates = {};
