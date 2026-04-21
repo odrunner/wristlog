@@ -4779,10 +4779,11 @@ async function loadUserData() {
   // Each query is individually fault-tolerant so one table failure doesn't block the others
   // Promise.resolve() converts the Supabase thenable to a real Promise (thenables lack .catch())
   const _q = query => Promise.resolve(query).catch(e => { console.error('[WristLog] loadUserData query error:', e?.message); return { data: null, error: e }; });
-  const [wRes, lRes, wlRes] = await withTimeout(Promise.all([
-    _q(db.from('watches').select('id,brand,name,ref,movement,price,purchase_date,color,image,url,tags,straps,owner,market_price,market_price_date,market_price_src,watch_charts_url,price_history,warranty_expiry,has_box,has_papers,insurance,insured_value,insurance_notes,receipts,watch_privacy,elo_rating').eq('user_id', uid)),
+  const [wRes, lRes, wlRes, brRes] = await withTimeout(Promise.all([
+    _q(db.from('watches').select('id,brand,name,ref,movement,price,purchase_date,color,image,url,tags,straps,owner,market_price,market_price_date,market_price_src,watch_charts_url,price_history,warranty_expiry,has_box,has_papers,insurance,insured_value,insurance_notes,receipts,watch_privacy,elo_rating,year_range,movement_type,caliber,case_material,case_diameter,case_length,case_thickness,weight,water_resistance,crystal_type,gender,origin,description,background,functions').eq('user_id', uid)),
     _q(db.from('logs').select('id,watch_id,date,use_case,notes,strap_id,photo_url,visibility,club_id').eq('user_id', uid)),
     _q(db.from('wishlist').select('id,brand,name,ref,price,url,image,notes,color,tags,market_price,market_price_date,market_price_src,watch_charts_url,wish_privacy,added_date,sort_order').eq('user_id', uid)),
+    _q(db.from('brands').select('name')),
   ]), 15000);
   // Only overwrite each table if the query succeeded — keep localStorage cache on failure
   if (wRes.error) console.error('[WristLog] watches SELECT error:', wRes.error.message, wRes.error);
@@ -4791,6 +4792,13 @@ async function loadUserData() {
   else { logs = (lRes.data || []).map(rowToLog); safeSetJSON(STORE_L, logs); }
   if (wlRes.error) console.error('[WristLog] wishlist SELECT error:', wlRes.error.message, wlRes.error);
   else { wishlist = (wlRes.data || []).map(rowToWish).sort((a, b) => (a._rank ?? 0) - (b._rank ?? 0)); safeSetJSON(STORE_WL, wishlist); }
+  if (!brRes.error && brRes.data) {
+    const known = new Set(brands.map(b => b.toLowerCase()));
+    for (const r of brRes.data) {
+      if (r.name && !known.has(r.name.toLowerCase())) { brands.push(r.name); known.add(r.name.toLowerCase()); }
+    }
+    saveBrands();
+  }
   // Rebuild eloRatings map from watch rows
   eloRatings = {};
   (wRes.data || []).forEach(r => { if (r.elo_rating) eloRatings[r.id] = r.elo_rating; });
@@ -4919,7 +4927,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.17.22';
+const APP_VERSION = '20.17.26';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10234,10 +10242,14 @@ const saveBrands   = () => { safeSetJSON(STORE_B,  brands); };
 
 function ensureBrand(name) {
   if (!name) return;
-  const lower = name.trim().toLowerCase();
+  const n = name.trim();
+  const lower = n.toLowerCase();
   if (brands.some(b => b.toLowerCase() === lower)) return;
-  brands.push(name.trim());
+  brands.push(n);
   saveBrands();
+  if (db) {
+    db.from('brands').upsert({ name: n }, { onConflict: 'name' }).then(() => {});
+  }
 }
 
 // ── Pre-computed logs-by-watch map (avoids O(n*m) in render loops) ──────────
