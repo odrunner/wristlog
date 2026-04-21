@@ -4928,7 +4928,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.17.47';
+const APP_VERSION = '20.17.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16413,28 +16413,32 @@ async function enhanceAllWatches() {
   const btn = document.getElementById('coll-enhance-all-btn');
   if (btn) { btn.disabled = true; btn.style.opacity = '.5'; }
   let enhanced = 0, failed = 0;
-  toast(`Enhancing ${count} watches…`, 'info');
   for (let i = 0; i < target.length; i++) {
     const w = target[i];
+    toast(`Enhancing ${i + 1}/${count}: ${w.brand} ${w.name}…`, 'info');
     try {
       const payload = { mode: 'enhance', watchInfo: { brand: w.brand, model: w.name, reference: w.ref || '' } };
       if (w.image && !w.image.startsWith('data:')) {
         try {
-          const imgResp = await fetch(w.image);
+          const imgResp = await Promise.race([fetch(w.image), new Promise((_, rej) => setTimeout(() => rej('timeout'), 5000))]);
           const blob = await imgResp.blob();
           const reader = new FileReader();
           const b64 = await new Promise(resolve => { reader.onload = () => resolve(reader.result); reader.readAsDataURL(blob); });
           payload.image = b64;
         } catch(e) { /* proceed without image */ }
       }
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 55000);
       const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+        signal: ac.signal,
       });
-      if (!resp.ok) { failed++; continue; }
+      clearTimeout(timer);
+      if (!resp.ok) { failed++; toast(`Failed ${i + 1}/${count}: ${w.brand} ${w.name} (${resp.status})`, 'error'); continue; }
       const data = await resp.json();
-      if (data.error) { failed++; continue; }
+      if (data.error) { failed++; toast(`Failed ${i + 1}/${count}: ${w.brand} ${w.name}`, 'error'); continue; }
       const updates = {};
       const fieldMap = {
         movementType: 'movementType', caliber: 'caliber',
@@ -16454,12 +16458,16 @@ async function enhanceAllWatches() {
       if (Object.keys(updates).length > 0) {
         Object.assign(w, updates);
         const row = watchToRow(w);
-        await supabase.from('watches').update(row).eq('id', w.id);
+        await db.from('watches').update(row).eq('id', w.id);
         enhanced++;
+        toast(`✓ ${i + 1}/${count}: ${w.brand} ${w.name}`, 'success');
+      } else {
+        toast(`${i + 1}/${count}: ${w.brand} ${w.name} — already complete`, 'info');
       }
-      toast(`Enhanced ${i + 1}/${count}: ${w.brand} ${w.name}`, 'info');
     } catch(e) {
       failed++;
+      toast(`Failed ${i + 1}/${count}: ${w.brand} ${w.name}`, 'error');
+      console.error('[enhance-all]', w.brand, w.name, e);
     }
   }
   renderCollection(true);
