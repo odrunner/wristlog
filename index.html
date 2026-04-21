@@ -1927,7 +1927,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </a>
       </div>
       <script>
-        if (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
+        if (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches || window.webkit?.messageHandlers?.auth) {
           document.getElementById('landing-app-badge').style.display = 'none';
         }
       </script>
@@ -4995,7 +4995,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.21.20';
+const APP_VERSION = '20.21.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
