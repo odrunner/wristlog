@@ -4992,7 +4992,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.20.09';
+const APP_VERSION = '20.20.13';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16360,7 +16360,6 @@ async function quickAddFromIdentified(idx) {
       closePhotoIdentify();
       renderCollection();
       toast('Watch added to collection!');
-      if (_photoAddedWatchIds.length) setTimeout(() => maybeOfferPostPhotoEnhance(), 600);
     } else {
       renderPhotoIdentifyResults();
       toast(`${w.brand} ${w.model} added!`);
@@ -16407,7 +16406,6 @@ async function addAllFromIdentified() {
   closePhotoIdentify();
   renderCollection();
   toast(`${added} watch${added !== 1 ? 'es' : ''} added to collection!`);
-  if (_photoAddedWatchIds.length) setTimeout(() => maybeOfferPostPhotoEnhance(), 600);
 }
 
 let _photoAddedWatchIds = [];
@@ -17153,7 +17151,10 @@ function closePhotoIdentify() {
   }
   // Don't resume welcome wizard if we're transitioning to the add-watch form —
   // the welcome modal would cover it. Welcome resumes after save/cancel instead.
-  if (!window._addingFromIdentify) resumeWelcome();
+  if (!window._addingFromIdentify) {
+    resumeWelcome();
+    if (_photoAddedWatchIds.length) setTimeout(() => maybeOfferPostPhotoEnhance(), 600);
+  }
 }
 
 /**
