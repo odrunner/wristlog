@@ -127,6 +127,14 @@ export function watchToRow(w, userId, eloRatings = {}) {
     insurance_notes: w.insuranceNotes || null, receipts: w.receipts || [],
     elo_rating: eloRatings[w.id] || 1000,
     watch_privacy: w.watchPrivacy ?? null,
+    year_range: w.yearRange||null, movement_type: w.movementType||null,
+    caliber: w.caliber||null, case_material: w.caseMaterial||null,
+    case_diameter: w.caseDiameter||null, case_length: w.caseLength||null,
+    case_thickness: w.caseThickness||null, weight: w.weight||null,
+    water_resistance: w.waterResistance||null, crystal_type: w.crystalType||null,
+    gender: w.gender||null, origin: w.origin||null,
+    description: w.description||null, background: w.background||null,
+    functions: w.functions||null,
   };
 }
 
@@ -146,6 +154,14 @@ export function rowToWatch(r) {
     insurance: r.insurance || null, insuredValue: r.insured_value || null,
     insuranceNotes: r.insurance_notes || null, receipts: r.receipts || [],
     watchPrivacy: r.watch_privacy ?? null,
+    yearRange: r.year_range||null, movementType: r.movement_type||null,
+    caliber: r.caliber||null, caseMaterial: r.case_material||null,
+    caseDiameter: r.case_diameter||null, caseLength: r.case_length||null,
+    caseThickness: r.case_thickness||null, weight: r.weight||null,
+    waterResistance: r.water_resistance||null, crystalType: r.crystal_type||null,
+    gender: r.gender||null, origin: r.origin||null,
+    description: r.description||null, background: r.background||null,
+    functions: r.functions||null,
   };
 }
 
@@ -438,6 +454,21 @@ export function buildSaveWatchData({ formData, editingId, watches, todayFn = tod
     tags: formData.tags || [],
     straps: formData.straps || [],
     ...(formData.image ? { image: formData.image } : {}),
+    movementType: formData.movementType || null,
+    caliber: formData.caliber || null,
+    caseDiameter: formData.caseDiameter || null,
+    caseLength: formData.caseLength || null,
+    caseThickness: formData.caseThickness || null,
+    caseMaterial: formData.caseMaterial || null,
+    crystalType: formData.crystalType || null,
+    waterResistance: formData.waterResistance || null,
+    weight: formData.weight || null,
+    yearRange: formData.yearRange || null,
+    gender: formData.gender || null,
+    origin: formData.origin || null,
+    functions: formData.functions || null,
+    description: formData.description || null,
+    background: formData.background || null,
   };
 
   // Market price logic
@@ -1460,4 +1491,21 @@ export function formatPriceUpdateToast(saved, failed) {
  */
 export function formatDeleteError(tableName) {
   return `Delete failed at ${tableName}. Please try again — already-deleted data will be skipped.`;
+}
+
+export function sanitizeHtml(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/<object[\s\S]*?<\/object>/gi, '')
+    .replace(/<embed[\s\S]*?>/gi, '')
+    .replace(/<form[\s\S]*?<\/form>/gi, '')
+    .replace(/\son\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/\son\w+\s*=\s*[^\s>]+/gi, '')
+    .replace(/javascript\s*:/gi, 'blocked:')
+    .replace(/vbscript\s*:/gi, 'blocked:');
+}
+
+export function capScatterData(data, limit = 2000) {
+  return data.length > limit ? data.slice(-limit) : data;
 }

@@ -11,6 +11,11 @@ const baseFormData = {
   hasPapers: 'yes', watchChartsUrl: null, tags: ['Chrono'],
   straps: [], image: null,
   manualMp: 0,
+  movementType: null, caliber: null, caseMaterial: null,
+  caseDiameter: null, caseLength: null, caseThickness: null,
+  weight: null, waterResistance: null, crystalType: null,
+  gender: null, origin: null, yearRange: null,
+  description: null, background: null, functions: null,
 };
 
 describe('buildSaveWatchData', () => {
@@ -60,6 +65,33 @@ describe('buildSaveWatchData', () => {
       editingId: null, watches: [], todayFn: baseTodayFn,
     });
     expect(result.data.image).toBe('data:image/png;base64,abc');
+  });
+
+  it('includes spec fields when provided', () => {
+    const result = buildSaveWatchData({
+      formData: { ...baseFormData, movementType: 'Automatic', caliber: '1861', caseDiameter: '42mm', origin: 'Switzerland', description: 'Moonwatch' },
+      editingId: null, watches: [], todayFn: baseTodayFn,
+    });
+    expect(result.data.movementType).toBe('Automatic');
+    expect(result.data.caliber).toBe('1861');
+    expect(result.data.caseDiameter).toBe('42mm');
+    expect(result.data.origin).toBe('Switzerland');
+    expect(result.data.description).toBe('Moonwatch');
+  });
+
+  it('defaults spec fields to null when not provided', () => {
+    const result = buildSaveWatchData({
+      formData: baseFormData,
+      editingId: null, watches: [], todayFn: baseTodayFn,
+    });
+    expect(result.data.movementType).toBeNull();
+    expect(result.data.caliber).toBeNull();
+    expect(result.data.caseDiameter).toBeNull();
+    expect(result.data.weight).toBeNull();
+    expect(result.data.waterResistance).toBeNull();
+    expect(result.data.description).toBeNull();
+    expect(result.data.background).toBeNull();
+    expect(result.data.functions).toBeNull();
   });
 
   it('does not include image key when null', () => {

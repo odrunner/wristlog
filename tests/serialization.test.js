@@ -19,6 +19,14 @@ const fullWatch = {
   insurance: 'insured', insuredValue: 7000, insuranceNotes: null,
   receipts: [{ id: 'r1', name: 'Purchase receipt' }],
   watchPrivacy: 'public',
+  yearRange: '2019-present', movementType: 'Automatic',
+  caliber: '1861', caseMaterial: 'Stainless Steel',
+  caseDiameter: '42mm', caseLength: '47.8mm',
+  caseThickness: '13.2mm', weight: '155g',
+  waterResistance: '50m', crystalType: 'Hesalite',
+  gender: "Men's", origin: 'Switzerland',
+  description: 'Legendary moonwatch', background: 'First watch on the moon',
+  functions: 'chronograph, tachymeter',
 };
 
 const fullRow = {
@@ -33,6 +41,14 @@ const fullRow = {
   insurance: 'insured', insured_value: 7000, insurance_notes: null,
   receipts: [{ id: 'r1', name: 'Purchase receipt' }],
   watch_privacy: 'public',
+  year_range: '2019-present', movement_type: 'Automatic',
+  caliber: '1861', case_material: 'Stainless Steel',
+  case_diameter: '42mm', case_length: '47.8mm',
+  case_thickness: '13.2mm', weight: '155g',
+  water_resistance: '50m', crystal_type: 'Hesalite',
+  gender: "Men's", origin: 'Switzerland',
+  description: 'Legendary moonwatch', background: 'First watch on the moon',
+  functions: 'chronograph, tachymeter',
 };
 
 // ── watchToRow / rowToWatch ─────────────────────────────────────────────────
@@ -59,6 +75,21 @@ describe('watchToRow', () => {
     expect(row.insured_value).toBe(7000);
     expect(row.receipts).toEqual([{ id: 'r1', name: 'Purchase receipt' }]);
     expect(row.watch_privacy).toBe('public');
+    expect(row.year_range).toBe('2019-present');
+    expect(row.movement_type).toBe('Automatic');
+    expect(row.caliber).toBe('1861');
+    expect(row.case_material).toBe('Stainless Steel');
+    expect(row.case_diameter).toBe('42mm');
+    expect(row.case_length).toBe('47.8mm');
+    expect(row.case_thickness).toBe('13.2mm');
+    expect(row.weight).toBe('155g');
+    expect(row.water_resistance).toBe('50m');
+    expect(row.crystal_type).toBe('Hesalite');
+    expect(row.gender).toBe("Men's");
+    expect(row.origin).toBe('Switzerland');
+    expect(row.description).toBe('Legendary moonwatch');
+    expect(row.background).toBe('First watch on the moon');
+    expect(row.functions).toBe('chronograph, tachymeter');
   });
 
   it('converts hasBox/hasPapers yes/no to boolean', () => {
@@ -103,6 +134,14 @@ describe('watchToRow', () => {
     expect(row.has_papers).toBeNull();
     expect(row.insured_value).toBeNull();
     expect(row.insurance_notes).toBeNull();
+    expect(row.year_range).toBeNull();
+    expect(row.movement_type).toBeNull();
+    expect(row.caliber).toBeNull();
+    expect(row.case_material).toBeNull();
+    expect(row.case_diameter).toBeNull();
+    expect(row.weight).toBeNull();
+    expect(row.description).toBeNull();
+    expect(row.functions).toBeNull();
   });
 });
 
@@ -120,6 +159,21 @@ describe('rowToWatch', () => {
     expect(w.hasPapers).toBe('yes');
     expect(w.insuredValue).toBe(7000);
     expect(w.watchPrivacy).toBe('public');
+    expect(w.yearRange).toBe('2019-present');
+    expect(w.movementType).toBe('Automatic');
+    expect(w.caliber).toBe('1861');
+    expect(w.caseMaterial).toBe('Stainless Steel');
+    expect(w.caseDiameter).toBe('42mm');
+    expect(w.caseLength).toBe('47.8mm');
+    expect(w.caseThickness).toBe('13.2mm');
+    expect(w.weight).toBe('155g');
+    expect(w.waterResistance).toBe('50m');
+    expect(w.crystalType).toBe('Hesalite');
+    expect(w.gender).toBe("Men's");
+    expect(w.origin).toBe('Switzerland');
+    expect(w.description).toBe('Legendary moonwatch');
+    expect(w.background).toBe('First watch on the moon');
+    expect(w.functions).toBe('chronograph, tachymeter');
   });
 
   it('converts has_box/has_papers booleans to yes/no strings', () => {
@@ -187,6 +241,14 @@ describe('watchToRow/rowToWatch round-trip', () => {
     expect(restored.hasBox).toBe(fullWatch.hasBox);
     expect(restored.hasPapers).toBe(fullWatch.hasPapers);
     expect(restored.insuredValue).toBe(fullWatch.insuredValue);
+    expect(restored.yearRange).toBe(fullWatch.yearRange);
+    expect(restored.movementType).toBe(fullWatch.movementType);
+    expect(restored.caliber).toBe(fullWatch.caliber);
+    expect(restored.caseMaterial).toBe(fullWatch.caseMaterial);
+    expect(restored.caseDiameter).toBe(fullWatch.caseDiameter);
+    expect(restored.weight).toBe(fullWatch.weight);
+    expect(restored.description).toBe(fullWatch.description);
+    expect(restored.functions).toBe(fullWatch.functions);
   });
 
   it('round-trip with minimal watch preserves id', () => {
