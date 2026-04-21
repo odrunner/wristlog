@@ -4992,7 +4992,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.20.13';
+const APP_VERSION = '20.20.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18655,6 +18655,7 @@ new MutationObserver(mutations => {
     if (m.type !== 'attributes' || m.attributeName !== 'class') continue;
     const el = m.target;
     if (!el.classList.contains('overlay') || !_overlayCloseMap[el.id]) continue;
+    if (el.id === 'confirm-modal') continue;
     if (!el.classList.contains('hidden')) opens++;
     else closes++;
   }
@@ -18676,6 +18677,7 @@ window.addEventListener('popstate', () => {
   const open = [...document.querySelectorAll('.overlay:not(.hidden)')];
   if (!open.length) { _modalHistoryCount = 0; return; }
   const top = open[open.length - 1];
+  if (top.dataset.justOpened) return;
   const fn = _overlayCloseMap[top.id];
   if (fn) {
     _closingViaPopstate = true;
