@@ -5020,7 +5020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.18.18';
+const APP_VERSION = '21.18.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10791,6 +10791,18 @@ async function loadAdminStats() {
 
     const avg = (n, d) => d > 0 ? (n / d).toFixed(1) : '0';
 
+    // Day-over-day: counts from last 24h
+    const d24h = new Date(Date.now() - 86400000).toISOString();
+    const [usersD, watchesD, wearsD, postsD, wishD, commentsD] = await withTimeout(Promise.all([
+      db.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', d24h),
+      db.from('watches').select('id', { count: 'exact', head: true }).gte('created_at', d24h),
+      db.from('logs').select('id', { count: 'exact', head: true }).not('watch_id', 'is', null).gte('created_at', d24h),
+      db.from('logs').select('id', { count: 'exact', head: true }).is('watch_id', null).gte('created_at', d24h),
+      db.from('wishlist').select('id', { count: 'exact', head: true }).gte('created_at', d24h),
+      db.from('comments').select('id', { count: 'exact', head: true }).gte('created_at', d24h),
+    ]), 10000);
+    const dod = { users: usersD.count || 0, watches: watchesD.count || 0, wears: wearsD.count || 0, posts: postsD.count || 0, wish: wishD.count || 0, comments: commentsD.count || 0 };
+
     // Per-user breakdowns via SECURITY DEFINER RPCs (bypass RLS)
     const [profilesR, msrR, userStatsR] = await withTimeout(Promise.all([
       db.from('profiles').select('id, username, display_name, avatar_url, created_at').order('created_at', { ascending: false }).limit(500),
@@ -10834,7 +10846,10 @@ async function loadAdminStats() {
     const profileList = allProfiles.filter(p => !INTERNAL_IDS.has(p.id)).map(toProfileItem);
     const internalList = allProfiles.filter(p => INTERNAL_IDS.has(p.id)).map(toProfileItem);
 
-    const statRow = (label, value) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span style="color:var(--text);">${label}</span><span style="color:var(--gold);font-weight:600;">${value}</span></div>`;
+    const statRow = (label, value, delta) => {
+      const deltaHtml = delta != null && delta > 0 ? `<span style="color:#4ade80;font-size:.68rem;font-weight:500;margin-left:.4rem;">+${delta}</span>` : '';
+      return `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span style="color:var(--text);">${label}</span><span style="color:var(--gold);font-weight:600;">${value}${deltaHtml}</span></div>`;
+    };
 
     window._adminTableSort = window._adminTableSort || {};
     window._adminUserLists = { 'admin-users': profileList, 'admin-internal': internalList };
@@ -10908,18 +10923,18 @@ async function loadAdminStats() {
     el.innerHTML = `
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Totals (external users only)</div>
-        ${statRow('Users', extUsers)}
-        ${statRow('Watches', extWatches)}
-        ${statRow('Wears', extWears)}
+        ${statRow('Users', extUsers, dod.users)}
+        ${statRow('Watches', extWatches, dod.watches)}
+        ${statRow('Wears', extWears, dod.wears)}
         ${statRow('Price Checks', extVal)}
         ${statRow('Enhances', extEnh)}
         ${statRow('Measurements', extMsr)}
-        ${statRow('Wishlist Items', wishItems)}
+        ${statRow('Wishlist Items', wishItems, dod.wish)}
         ${statRow('Clubs', clubs)}
         ${statRow('Follows', follows)}
         ${statRow('Friends', friends)}
         ${statRow('Likes', likes)}
-        ${statRow('Comments', comments)}
+        ${statRow('Comments', comments, dod.comments)}
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Per-User Averages (external)</div>
