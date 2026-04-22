@@ -3866,7 +3866,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#854F0B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
       <span id="af2-title-text" style="flex:1;">Identifying Watches</span>
       <span id="af2-progress-chip" style="font-size:11px;color:var(--muted);display:none;"></span>
-      <button type="button" onclick="closeAf2Sheet()" style="background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;padding:0 2px;line-height:1;">&times;</button>
     </div>
     <div id="af2-rows" style="max-height:60vh;overflow-y:auto;"></div>
     <div id="af2-footer" class="modal-actions" style="margin-top:1rem;"></div>
@@ -5096,7 +5095,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.16.39';
+const APP_VERSION = '22.16.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16565,8 +16564,9 @@ function af2RenderSheet() {
   if (anyIdentifying && awaitingConfirm.length === 0) {
     footerEl.innerHTML = '';
   } else if (awaitingConfirm.length > 0) {
-    footerEl.innerHTML = `<button class="btn btn-primary" style="flex:1;" onclick="af2ConfirmAll()">Confirm all</button>`
-      + `<button class="btn btn-ghost" style="flex-shrink:0;" onclick="af2SkipAll()">Skip all</button>`;
+    const single = awaitingConfirm.length === 1 && _af2Watches.length === 1;
+    footerEl.innerHTML = `<button class="btn btn-primary" style="flex:1;" onclick="af2ConfirmAll()">${single ? 'Confirm' : 'Confirm all'}</button>`
+      + `<button class="btn btn-ghost" style="flex-shrink:0;" onclick="af2SkipAll()">${single ? 'Skip' : 'Skip all'}</button>`;
   } else if (allDoneOrSkipped) {
     footerEl.innerHTML = `<button class="btn btn-primary" style="width:100%;" onclick="closeAf2Sheet();renderCollection(true);">View collection →</button>`;
   } else if (inAutopilot.length > 0 && awaitingConfirm.length === 0) {
