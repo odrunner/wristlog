@@ -1323,6 +1323,36 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     @keyframes spin { to { transform:rotate(360deg); } }
     .spin { animation:spin .8s linear infinite; }
 
+    /* ── ADD FLOW V2 ── */
+    .af2-row { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:.75rem .85rem; margin-bottom:.5rem; display:flex; gap:.75rem; align-items:center; transition:opacity .3s; }
+    .af2-row.af2-skipped { opacity:.5; }
+    .af2-avatar { width:40px; height:40px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:500; color:#fff; position:relative; }
+    .af2-avatar-gray { background:var(--bg-secondary, #2a2a3e); color:var(--muted); }
+    .af2-avatar-gold { background:#854F0B; }
+    .af2-spinner-sm { display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
+    .af2-spinner-gold { display:inline-block; width:16px; height:16px; border:2px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:spin .7s linear infinite; }
+    .af2-info { flex:1; min-width:0; }
+    .af2-model { font-size:14px; font-weight:500; }
+    .af2-brand { font-size:12px; color:var(--muted); margin-top:1px; }
+    .af2-ref { font-size:12px; color:var(--muted); margin-top:1px; }
+    .af2-specs { font-size:11px; color:var(--tertiary, var(--muted)); margin-top:2px; }
+    .af2-status { font-size:11px; margin-top:3px; }
+    .af2-status-gold { color:#854F0B; }
+    .af2-status-green { color:#3B6D11; }
+    .af2-status-muted { color:var(--muted); }
+    .af2-actions { display:flex; flex-direction:column; gap:4px; flex-shrink:0; align-items:flex-end; }
+    .af2-btn-confirm { background:#854F0B; color:#fff; border:none; font-size:12px; font-weight:500; padding:6px 12px; border-radius:6px; cursor:pointer; font-family:inherit; }
+    .af2-btn-edit { background:transparent; color:#854F0B; border:1px solid #854F0B; font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer; font-family:inherit; }
+    .af2-btn-skip { background:none; border:none; color:var(--muted); font-size:14px; cursor:pointer; padding:2px 4px; line-height:1; }
+    .af2-btn-undo { background:none; border:none; color:#854F0B; font-size:11px; cursor:pointer; font-family:inherit; padding:2px 4px; }
+    .af2-check-gold { color:var(--gold); font-size:14px; }
+    .af2-check-green { color:#3B6D11; font-size:13px; }
+    .af2-theater-text { transition:opacity .2s; }
+    .af2-warn-chip { display:inline-block; background:rgba(251,191,36,.15); color:#92400E; font-size:10px; font-weight:500; padding:2px 6px; border-radius:4px; margin-top:3px; }
+    .af2-strikethrough { text-decoration:line-through; }
+    .af2-view-link { background:none; border:none; color:#854F0B; font-size:11px; cursor:pointer; font-family:inherit; padding:0; }
+    .af2-dot-gray { width:6px; height:6px; border-radius:50%; background:var(--muted); opacity:.5; }
+
     /* ── AI PRE-FILL BANNER ── */
     .ai-prefill-banner { display:flex; align-items:center; justify-content:space-between; background:var(--gold); color:#1a1a2e; padding:.55rem .75rem; border-radius:8px; margin-bottom:.75rem; font-size:.82rem; line-height:1.3; }
     .ai-prefill-banner.hidden { display:none; }
@@ -2567,6 +2597,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button type="button" class="chip" data-tab="reports" role="tab" aria-selected="false" aria-controls="admin-tab-reports" onclick="switchAdminTab('reports')">Reports</button>
       <button type="button" class="chip" data-tab="official" role="tab" aria-selected="false" aria-controls="admin-tab-official" onclick="switchAdminTab('official')">Official</button>
       <button type="button" class="chip" data-tab="broadcast" role="tab" aria-selected="false" aria-controls="admin-tab-broadcast" onclick="switchAdminTab('broadcast')">Broadcast</button>
+      <button type="button" class="chip" data-tab="dev" role="tab" aria-selected="false" aria-controls="admin-tab-dev" onclick="switchAdminTab('dev')">Dev</button>
     </div>
 
     <!-- Tab: Traffic -->
@@ -2758,6 +2789,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
         <div id="broadcast-status" aria-live="polite" style="font-size:.82rem;margin-top:.5rem;"></div>
       </div>
+    </div>
+
+    <!-- Tab: Dev -->
+    <div id="admin-tab-dev" class="admin-tab" role="tabpanel" style="display:none;">
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Feature Flags</div>
+      </div>
+      <div id="admin-dev-flags"></div>
     </div>
   </div>
 
@@ -3820,6 +3859,31 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
+<!-- ════ ADD FLOW V2 SHEET ════ -->
+<div id="af2-sheet" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="af2-sheet-title">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title" id="af2-sheet-title" style="display:flex;align-items:center;gap:.5rem;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#854F0B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <span style="flex:1;">Identified Watches</span>
+      <span id="af2-progress-chip" style="font-size:11px;color:var(--muted);display:none;"></span>
+      <button type="button" onclick="closeAf2Sheet()" style="background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;padding:0 2px;line-height:1;">&times;</button>
+    </div>
+    <div id="af2-rows" style="max-height:60vh;overflow-y:auto;"></div>
+    <div id="af2-footer" class="modal-actions" style="margin-top:1rem;"></div>
+  </div>
+</div>
+
+<!-- ════ ADD FLOW V2 DEBUG PREVIEW ════ -->
+<div id="af2-debug-sheet" class="overlay hidden" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>Add Flow V2 — State Preview</span>
+      <button type="button" onclick="document.getElementById('af2-debug-sheet').classList.add('hidden')" style="background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;padding:0 2px;line-height:1;">&times;</button>
+    </div>
+    <div id="af2-debug-rows" style="max-height:70vh;overflow-y:auto;"></div>
+  </div>
+</div>
+
 <!-- ════ ENHANCE ALL MODAL ════ -->
 <div id="enhance-all-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="enhance-all-modal-title">
   <div class="modal" style="max-width:480px;">
@@ -4446,6 +4510,18 @@ let _isDemoMode = false;
 const DEMO_USER_EMAIL = 'demo@wrotate.com';
 const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
 const _isDevUser = () => currentUser?.id === ADMIN_USER_ID;
+
+const FEATURE_FLAGS = {
+  add_flow_v2: { label: 'New Add from Photo flow', default: false },
+};
+function featureFlag(name) {
+  const stored = localStorage.getItem('ff_' + name);
+  if (stored !== null) return stored === 'true';
+  return FEATURE_FLAGS[name]?.default ?? false;
+}
+function setFeatureFlag(name, val) {
+  localStorage.setItem('ff_' + name, val ? 'true' : 'false');
+}
 let OFFICIAL_USER_ID = null; // resolved at init from profiles.is_official
 
 function officialBadgeHtml(profile) {
@@ -5020,7 +5096,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.21.43';
+const APP_VERSION = '22.08.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10592,6 +10668,26 @@ function showAdminPage() {
   loadAdminReports();
   loadOfficialDrafts();
   renderBroadcastDrafts();
+  renderDevFlags();
+}
+
+function renderDevFlags() {
+  const el = document.getElementById('admin-dev-flags');
+  if (!el) return;
+  el.innerHTML = Object.entries(FEATURE_FLAGS).map(([key, cfg]) => {
+    const on = featureFlag(key);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.7rem 0;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-size:.85rem;font-weight:500;">${escHtml(cfg.label)}</div>
+        <div style="font-size:.72rem;color:var(--muted);font-family:monospace;">${escHtml(key)}</div>
+      </div>
+      <label style="position:relative;display:inline-block;width:40px;height:22px;cursor:pointer;">
+        <input type="checkbox" ${on ? 'checked' : ''} onchange="setFeatureFlag('${escHtml(key)}',this.checked);renderDevFlags()" style="opacity:0;width:0;height:0;">
+        <span style="position:absolute;inset:0;background:${on ? 'var(--gold)' : 'var(--border)'};border-radius:11px;transition:background .2s;"></span>
+        <span style="position:absolute;top:2px;left:${on ? '20px' : '2px'};width:18px;height:18px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
+      </label>
+    </div>`;
+  }).join('') + `<div style="margin-top:1rem;"><button class="btn btn-ghost" style="font-size:.78rem;padding:.4rem .8rem;" onclick="openAf2DebugPreview()">Preview Add Flow V2 States</button></div>`;
 }
 
 function switchAdminTab(tab) {
@@ -16288,9 +16384,175 @@ function brandToDomain(brand) {
   return lc.replace(/\s+/g, '') + '.com';
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// ADD FLOW V2 — behind featureFlag('add_flow_v2')
+// ════════════════════════════════════════════════════════════════════════════
+
+// Row states: waiting, identifying, identified, confirmed, enhancing, enhanced, pricing, done, skipped, failed
+function af2RenderRow(watch, idx) {
+  const s = watch._af2State || 'waiting';
+  const ini = ((watch.brand || '?')[0] + (watch.model || '?')[0]).toUpperCase();
+
+  // Avatar
+  let avatarCls = 'af2-avatar ';
+  let avatarContent = '';
+  if (s === 'waiting' || s === 'failed') {
+    avatarCls += 'af2-avatar-gray';
+    avatarContent = s === 'failed' ? '??' : ini;
+  } else if (s === 'identifying') {
+    avatarCls += 'af2-avatar-gray';
+    avatarContent = '<span class="af2-spinner-sm"></span>';
+  } else if (s === 'skipped') {
+    avatarCls += 'af2-avatar-gray';
+    avatarContent = ini;
+  } else {
+    avatarCls += 'af2-avatar-gold';
+    avatarContent = ini;
+  }
+
+  // Content lines
+  let contentHtml = '';
+  const modelName = escHtml(watch.model || 'Unknown');
+  const brand = escHtml(watch.brand || 'Unknown');
+  const ref = watch.reference ? `<div class="af2-ref">Ref. ${escHtml(watch.reference)}</div>` : '';
+  const specParts = [watch.caseDiameter, watch.caseMaterial, watch.movementType].filter(Boolean);
+  const specLine = specParts.length ? `<div class="af2-specs">${escHtml(specParts.join(' · '))}</div>` : '';
+  const yearLine = watch.yearRange ? `<div class="af2-specs">Years: ${escHtml(watch.yearRange)}</div>` : '';
+  const dupWarn = watch._af2Duplicate ? '<div class="af2-warn-chip">⚠ Already in collection</div>' : '';
+
+  switch (s) {
+    case 'waiting':
+      contentHtml = `<div class="af2-brand af2-status-muted">Waiting…</div>`;
+      break;
+    case 'identifying':
+      contentHtml = `<div class="af2-model af2-theater-text">${escHtml(watch._af2Theater || 'Scanning photo…')}</div>`
+        + (watch._af2TheaterSub ? `<div class="af2-brand af2-theater-text">${escHtml(watch._af2TheaterSub)}</div>` : '');
+      break;
+    case 'identified':
+      contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}${specLine}${yearLine}${dupWarn}`;
+      break;
+    case 'confirmed':
+      contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}`
+        + `<div class="af2-status af2-check-green">✓ Added</div>`;
+      break;
+    case 'enhancing':
+      contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}`
+        + `<div class="af2-status af2-status-gold af2-theater-text">${escHtml(watch._af2Theater || 'Enhancing…')}</div>`;
+      break;
+    case 'enhanced':
+      contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}`
+        + `<div class="af2-status af2-status-green">Found ${watch._af2EnhanceCount || 0} details</div>`;
+      break;
+    case 'pricing':
+      contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}`
+        + `<div class="af2-status af2-status-gold af2-theater-text">${escHtml(watch._af2Theater || 'Checking market price…')}</div>`;
+      break;
+    case 'done': {
+      let priceLine = '';
+      if (watch._af2PriceFailed) {
+        priceLine = `<div class="af2-status af2-status-green">Enhanced</div>`;
+      } else if (watch._af2Price) {
+        const priceStr = '$' + Number(watch._af2Price).toLocaleString();
+        if (watch.price && watch._af2Price) {
+          const delta = watch._af2Price - watch.price;
+          const pct = ((delta / watch.price) * 100).toFixed(0);
+          const sign = delta >= 0 ? '+' : '';
+          const cls = delta >= 0 ? 'af2-status-green' : 'af2-status-muted';
+          priceLine = `<div class="af2-status ${cls}">${priceStr} · ${sign}$${Math.abs(delta).toLocaleString()} (${sign}${pct}%)</div>`;
+        } else {
+          priceLine = `<div class="af2-status af2-status-green">${priceStr}</div>`;
+        }
+      }
+      contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}${priceLine}`;
+      break;
+    }
+    case 'skipped':
+      contentHtml = `<div class="af2-model af2-strikethrough">${modelName}</div>`
+        + `<div class="af2-brand af2-status-muted">Skipped</div>`;
+      break;
+    case 'failed':
+      contentHtml = `<div class="af2-model">Couldn't identify</div>`
+        + `<div class="af2-brand" style="color:#854F0B;cursor:pointer;">Tap to add manually</div>`;
+      break;
+  }
+
+  // Right-side actions
+  let actionsHtml = '';
+  switch (s) {
+    case 'waiting':
+      actionsHtml = '<div class="af2-dot-gray"></div>';
+      break;
+    case 'identifying':
+    case 'enhancing':
+    case 'pricing':
+      actionsHtml = '<span class="af2-spinner-gold"></span>';
+      break;
+    case 'identified':
+      actionsHtml = `<button class="af2-btn-confirm" onclick="af2Confirm(${idx})">${watch._af2Duplicate ? 'Add anyway' : 'Confirm'}</button>`
+        + `<button class="af2-btn-edit" onclick="af2Edit(${idx})">Edit</button>`
+        + `<button class="af2-btn-skip" onclick="af2Skip(${idx})" title="Skip">×</button>`;
+      break;
+    case 'confirmed':
+    case 'enhanced':
+      break;
+    case 'done':
+      actionsHtml = `<span class="af2-check-gold">✓</span>`;
+      break;
+    case 'skipped':
+      if (watch._af2UndoTimer) actionsHtml = `<button class="af2-btn-undo" onclick="af2Undo(${idx})">↩ Undo</button>`;
+      break;
+    case 'failed':
+      actionsHtml = `<button class="af2-btn-edit" onclick="af2Edit(${idx})">Edit</button>`;
+      break;
+  }
+
+  const rowCls = 'af2-row' + (s === 'skipped' ? ' af2-skipped' : '');
+  return `<div class="${rowCls}" data-af2-idx="${idx}" data-af2-state="${s}">
+    <div class="${avatarCls}">${avatarContent}</div>
+    <div class="af2-info">${contentHtml}</div>
+    <div class="af2-actions">${actionsHtml}</div>
+  </div>`;
+}
+
+// Stubs — wired up in later steps
+function openAddFlowV2() { toast('Add Flow V2 coming soon', 'info'); }
+function handleSharedImageV2(base64) { toast('Add Flow V2 coming soon', 'info'); }
+function closeAf2Sheet() { document.getElementById('af2-sheet').classList.add('hidden'); }
+function af2Confirm(idx) {}
+function af2Edit(idx) {}
+function af2Skip(idx) {}
+function af2Undo(idx) {}
+
+// Debug preview — renders all 10 states with sample data
+function openAf2DebugPreview() {
+  const sample = [
+    { _af2State: 'waiting', brand: 'Rolex', model: 'Submariner' },
+    { _af2State: 'identifying', brand: '?', model: '?', _af2Theater: 'Reading dial text…', _af2TheaterSub: 'Looking for brand and model clues' },
+    { _af2State: 'identified', brand: 'Vacheron Constantin', model: 'Overseas', reference: '4500V/110A-B128', caseDiameter: '41mm', caseMaterial: 'Stainless Steel', movementType: 'Automatic', yearRange: '2016-present' },
+    { _af2State: 'identified', brand: 'Omega', model: 'Speedmaster', reference: '310.30.42.50.01.001', caseDiameter: '42mm', caseMaterial: 'Steel', movementType: 'Manual', _af2Duplicate: true },
+    { _af2State: 'confirmed', brand: 'Rolex', model: 'Submariner', reference: '126610LN' },
+    { _af2State: 'enhancing', brand: 'Rolex', model: 'Submariner', reference: '126610LN', _af2Theater: 'Finding dimensions and materials…' },
+    { _af2State: 'enhanced', brand: 'Rolex', model: 'Submariner', reference: '126610LN', _af2EnhanceCount: 8 },
+    { _af2State: 'pricing', brand: 'Rolex', model: 'Submariner', reference: '126610LN', _af2Theater: 'Comparing recent sales…' },
+    { _af2State: 'done', brand: 'Rolex', model: 'Submariner', reference: '126610LN', _af2Price: 27500, price: 24915 },
+    { _af2State: 'done', brand: 'Tudor', model: 'Black Bay 58', reference: 'M79030N', _af2Price: 3800 },
+    { _af2State: 'done', brand: 'Seiko', model: 'Presage', reference: 'SPB167', _af2PriceFailed: true },
+    { _af2State: 'skipped', brand: 'Casio', model: 'G-Shock', _af2UndoTimer: true },
+    { _af2State: 'skipped', brand: 'Timex', model: 'Weekender' },
+    { _af2State: 'failed' },
+  ];
+  const el = document.getElementById('af2-debug-rows');
+  el.innerHTML = sample.map((w, i) => {
+    const stateLabel = `<div style="font-size:10px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:.06em;margin:${i > 0 ? '12px' : '0'} 0 4px;">${w._af2State}${w._af2Duplicate ? ' (duplicate)' : ''}${w._af2PriceFailed ? ' (price failed)' : ''}</div>`;
+    return stateLabel + af2RenderRow(w, i);
+  }).join('');
+  document.getElementById('af2-debug-sheet').classList.remove('hidden');
+}
+
 function openPhotoIdentify() {
   if (demoGuard()) return;
   if (!currentUser) { toast('Sign in to use photo identification', 'error'); return; }
+  if (featureFlag('add_flow_v2')) { openAddFlowV2(); return; }
   window._identifyAborted = false;
   _photoAddedWatchIds = [];
   const input = document.createElement('input');
@@ -18983,6 +19245,8 @@ const _overlayCloseMap = {
   'confirm-modal':       _confirmCancel,
   'photo-paste-modal':   closePhotoPasteModal,
   'photo-identify-modal': closePhotoIdentify,
+  'af2-sheet':            closeAf2Sheet,
+  'af2-debug-sheet':      () => document.getElementById('af2-debug-sheet').classList.add('hidden'),
   'enhance-all-modal':    closeEnhanceAll,
   'value-check-modal':    closeValueCheck,
   'new-features-modal':   closeNewFeatures,
@@ -19176,6 +19440,7 @@ function _tgHasNative() { return !!(window._wrotateNativeTimegrapher || window.w
 function haptic(type) { try { window.webkit.messageHandlers.haptic.postMessage({ type: type || 'light' }); } catch(e) {} }
 function handleSharedImage(base64) {
   if (!currentUser) return;
+  if (featureFlag('add_flow_v2')) { handleSharedImageV2(base64); return; }
   nav(document.querySelector('nav button[data-page="collection"]'));
   setTimeout(() => {
     window._photoIdentifyBase64 = base64;
