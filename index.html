@@ -5096,7 +5096,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.16.27';
+const APP_VERSION = '22.16.37';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16524,13 +16524,19 @@ function af2RenderRow(watch, idx) {
 let _af2Watches = [];
 let _af2Aborted = false;
 let _af2Timers = {};
+let _af2TotalDetected = 0;
 
 function af2RenderSheet() {
   const rowsEl = document.getElementById('af2-rows');
   const footerEl = document.getElementById('af2-footer');
   const chipEl = document.getElementById('af2-progress-chip');
   if (!rowsEl) return;
-  rowsEl.innerHTML = _af2Watches.map((w, i) => af2RenderRow(w, i)).join('');
+  let rowsHtml = _af2Watches.map((w, i) => af2RenderRow(w, i)).join('');
+  if (_af2TotalDetected > 5) {
+    const extra = _af2TotalDetected - 5;
+    rowsHtml += `<div style="text-align:center;padding:.6rem;font-size:.75rem;color:var(--muted);">+ ${extra} more detected. Save these first, then add more.</div>`;
+  }
+  rowsEl.innerHTML = rowsHtml;
 
   // Dynamic title
   const total = _af2Watches.length;
@@ -16636,7 +16642,10 @@ async function af2RunDetectAndIdentify(base64) {
   }, 30000);
   if (!detectResp.ok) throw new Error('Watch detection failed');
   const detectData = await detectResp.json();
-  const watchCount = Math.min(detectData.count || detectData.watches?.length || 0, 5);
+  const totalDetected = detectData.count || detectData.watches?.length || 0;
+  _af2TotalDetected = totalDetected;
+  const watchCount = Math.min(totalDetected, 5);
+  if (totalDetected > 5) console.log(`[WRotate] Detected ${totalDetected} watches, showing first 5`);
 
   if (watchCount === 0) {
     _af2Watches = [{ _af2State: 'failed' }];
