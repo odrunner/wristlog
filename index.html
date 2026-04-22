@@ -5020,7 +5020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.17.00';
+const APP_VERSION = '21.17.07';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16739,6 +16739,7 @@ async function maybeOfferPostPhotoEnhance() {
   _photoAddedWatchIds = [];
   if (!ids.length) return;
   const count = ids.length;
+  if (count === 1) window._photoFlowSingleWatchId = ids[0];
   _postEnhanceValueIds = ids;
   const specPrompt = await showConfirm(
     `Want to look up full specs, materials, dimensions, and history for ${count === 1 ? 'this watch' : `these ${count} watches`}?`,
@@ -16762,6 +16763,10 @@ async function maybeOfferPostPhotoValue() {
   );
   if (valuePrompt) {
     await checkBatchWatchValues(ids);
+  } else if (window._photoFlowSingleWatchId) {
+    const wid = window._photoFlowSingleWatchId;
+    window._photoFlowSingleWatchId = null;
+    openEditWatch(wid);
   }
 }
 
@@ -16905,9 +16910,16 @@ async function saveAllValueResults() {
 
 function closeValueCheck() {
   document.getElementById('value-check-modal').classList.add('hidden');
+  const singleId = _valueCheckTargets.length === 1 && window._photoFlowSingleWatchId;
   _valueCheckResults = [];
   _valueCheckTargets = [];
-  renderCollection(true);
+  if (singleId) {
+    window._photoFlowSingleWatchId = null;
+    renderCollection(true);
+    setTimeout(() => openEditWatch(singleId), 300);
+  } else {
+    renderCollection(true);
+  }
 }
 
 async function enhanceSingleWatch() {
@@ -17012,6 +17024,10 @@ function closeEnhanceAll() {
   _enhanceAllTargets = [];
   if (_postEnhanceValueIds) {
     setTimeout(() => maybeOfferPostPhotoValue(), 400);
+  } else if (window._photoFlowSingleWatchId) {
+    const wid = window._photoFlowSingleWatchId;
+    window._photoFlowSingleWatchId = null;
+    setTimeout(() => openEditWatch(wid), 400);
   }
 }
 
