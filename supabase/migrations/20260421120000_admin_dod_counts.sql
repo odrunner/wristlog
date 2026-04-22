@@ -1,3 +1,27 @@
+-- internal_accounts table: single source of truth for internal/test accounts
+CREATE TABLE IF NOT EXISTS internal_accounts (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  label TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE internal_accounts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Authenticated users can read internal_accounts"
+  ON internal_accounts FOR SELECT
+  TO authenticated
+  USING (true);
+
+INSERT INTO internal_accounts (user_id, label) VALUES
+  ('d70b1a85-4f31-4431-b3b7-db76543daaf5', 'ozgur'),
+  ('9f6fccd3-e3d2-4595-87e7-de34ed859500', 'watchdemo'),
+  ('e0af1615-b151-4260-b6bd-c23e497efa6d', 'testuser'),
+  ('86ea0f82-044d-4730-82af-b942e3b09380', 'testuser2'),
+  ('3aa24417-214c-467d-b3aa-e76d63d73476', 'wrotate'),
+  ('73e4e48e-dbca-4b2e-82d2-35d5b39716d2', 'alexrivera')
+ON CONFLICT (user_id) DO NOTHING;
+
+-- admin_dod_counts RPC: reads from internal_accounts table
 CREATE OR REPLACE FUNCTION admin_dod_counts()
 RETURNS json
 LANGUAGE plpgsql
@@ -5,14 +29,7 @@ SECURITY DEFINER
 AS $$
 DECLARE
   d24h timestamptz := now() - interval '24 hours';
-  internal_ids uuid[] := ARRAY[
-    'd70b1a85-4f31-4431-b3b7-db76543daaf5',
-    '9f6fccd3-e3d2-4595-87e7-de34ed859500',
-    'e0af1615-b151-4260-b6bd-c23e497efa6d',
-    '86ea0f82-044d-4730-82af-b942e3b09380',
-    '3aa24417-214c-467d-b3aa-e76d63d73476',
-    '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'
-  ]::uuid[];
+  internal_ids uuid[] := ARRAY(SELECT user_id FROM internal_accounts);
   result json;
 BEGIN
   IF auth.uid() IS NULL THEN RETURN '{}'::json; END IF;

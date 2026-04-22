@@ -7,21 +7,10 @@
 ## Deployment
 - **Production deploys via `git push origin main`** — hosting auto-deploys from the repo (GitHub: odrunner/wristlog)
 - **Always test locally first** (http://192.168.1.246:3000 from MacBook Pro/phone, or localhost:3000 on the Mac Mini) before deploying
-- **Supabase edge functions** are deployed via `SUPABASE_ACCESS_TOKEN="sbp_1371b160865a2c9f14745c30e5d216e5761ad41c" npx supabase functions deploy <name> --no-verify-jwt` — token saved, Claude can deploy directly without user intervention
+- **Supabase edge functions** are deployed via `npx supabase functions deploy <name> --no-verify-jwt` — access token is loaded from `~/.config/supabase/env` via `.zshrc`
 
 ## Internal Accounts
-These accounts must be excluded from all external-facing metrics (admin totals, D/D counts, traffic stats). The canonical list lives in `index.html` as `INTERNAL_IDS`. Any server-side code (RPCs, edge functions) that filters internal accounts must use the same set.
-
-| Username | UUID | Role |
-|----------|------|------|
-| ozgur (admin) | `d70b1a85-4f31-4431-b3b7-db76543daaf5` | Owner |
-| watchdemo (James Collins) | `9f6fccd3-e3d2-4595-87e7-de34ed859500` | Demo |
-| testuser | `e0af1615-b151-4260-b6bd-c23e497efa6d` | Test |
-| testuser2 | `86ea0f82-044d-4730-82af-b942e3b09380` | Test |
-| wrotate (official) | `3aa24417-214c-467d-b3aa-e76d63d73476` | Official |
-| alexrivera | `73e4e48e-dbca-4b2e-82d2-35d5b39716d2` | Demo |
-
-**When writing server-side SQL or RPCs that need these IDs, always read `INTERNAL_IDS` from `index.html` first.** Do not hardcode from memory — the set may change.
+These accounts are excluded from all external-facing metrics (admin totals, D/D counts, traffic stats). The canonical list lives in the **`internal_accounts` Supabase table** — single source of truth for both client JS and server-side RPCs. To add or remove an internal account, update the table. Never hardcode UUIDs in JS or SQL.
 
 ## Development Workflow
 - **Note the stable commit hash** before making changes (for rollback)
@@ -53,7 +42,7 @@ Node is installed via Homebrew at `/opt/homebrew/bin` (v25.8.1)
 One-time setup for E2E: `npx playwright install chromium`
 
 ## Supabase Database
-- **Query remote DB**: `SUPABASE_ACCESS_TOKEN="sbp_1371b160865a2c9f14745c30e5d216e5761ad41c" npx supabase db query --linked "SQL"`
+- **Query remote DB**: `npx supabase db query --linked "SQL"`
 - **Check table schema before writing SQL**: `SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='TABLE_NAME';`
 - **Check if a table exists**: `SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE '%keyword%';`
 - **Deploy RPCs directly** (migration push doesn't work due to remote-only migrations): use `supabase db query --linked` with the CREATE OR REPLACE FUNCTION statement
@@ -62,7 +51,7 @@ One-time setup for E2E: `npx playwright install chromium`
 ## Edge Function Deployment
 - **Always deploy with `--no-verify-jwt`** — the functions handle their own auth internally. The Supabase gateway JWT check causes false 401s.
 - **Run `npm run test:smoke` after every deploy** to verify functions respond correctly.
-- Deploy command: `SUPABASE_ACCESS_TOKEN="sbp_1371b160865a2c9f14745c30e5d216e5761ad41c" npx supabase functions deploy <name> --no-verify-jwt`
+- Deploy command: `npx supabase functions deploy <name> --no-verify-jwt`
 
 ## After Each Working Day
 - **Update the Help page** (in-app guide) and **"What's New"** section to reflect changes shipped that day
