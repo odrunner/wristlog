@@ -5020,7 +5020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.18.54';
+const APP_VERSION = '21.19.41';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10791,37 +10791,9 @@ async function loadAdminStats() {
 
     const avg = (n, d) => d > 0 ? (n / d).toFixed(1) : '0';
 
-    // Day-over-day: counts from last 24h (excluding internal accounts)
-    const d24h = new Date(Date.now() - 86400000).toISOString();
-    const [usersD, watchesD, wearsD, wishD, commentsD, clubsD, friendsD, followsD, likesD, enhD, msrD, valD] = await withTimeout(Promise.all([
-      db.from('profiles').select('id').gte('created_at', d24h),
-      db.from('watches').select('user_id').gte('created_at', d24h),
-      db.from('logs').select('user_id').not('watch_id', 'is', null).gte('created_at', d24h),
-      db.from('wishlist').select('user_id').gte('created_at', d24h),
-      db.from('comments').select('user_id').gte('created_at', d24h),
-      db.from('clubs').select('id').gte('created_at', d24h),
-      db.from('friend_requests').select('user_id').eq('status', 'accepted').gte('created_at', d24h),
-      db.from('follows').select('follower_id').gte('created_at', d24h),
-      db.from('likes').select('user_id').gte('created_at', d24h),
-      db.from('identify_attempts').select('user_id,mode').gte('created_at', d24h),
-      db.from('timegrapher_sessions').select('user_id').gte('created_at', d24h),
-      db.from('rate_limits').select('user_id,request_count').like('function_name', 'watch-value:%').gte('window_start', d24h),
-    ]), 10000);
-    const extOnly = (rows, key) => (rows || []).filter(r => !INTERNAL_IDS.has(r[key])).length;
-    const dod = {
-      users: extOnly(usersD.data, 'id'),
-      watches: extOnly(watchesD.data, 'user_id'),
-      wears: extOnly(wearsD.data, 'user_id'),
-      wish: extOnly(wishD.data, 'user_id'),
-      comments: extOnly(commentsD.data, 'user_id'),
-      clubs: (clubsD.data || []).length,
-      friends: extOnly(friendsD.data, 'user_id'),
-      follows: extOnly(followsD.data, 'follower_id'),
-      likes: extOnly(likesD.data, 'user_id'),
-      enhances: (enhD.data || []).filter(r => r.mode === 'enhance' && !INTERNAL_IDS.has(r.user_id)).length,
-      priceChecks: (valD.data || []).filter(r => !INTERNAL_IDS.has(r.user_id)).reduce((s, r) => s + (Number(r.request_count) || 0), 0),
-      measurements: extOnly(msrD.data, 'user_id'),
-    };
+    // Day-over-day: single RPC (SECURITY DEFINER, excludes internal accounts)
+    const dodRes = await withTimeout(db.rpc('admin_dod_counts'), 10000);
+    const dod = dodRes.data || {};
 
     // Per-user breakdowns via SECURITY DEFINER RPCs (bypass RLS)
     const [profilesR, msrR, userStatsR] = await withTimeout(Promise.all([
