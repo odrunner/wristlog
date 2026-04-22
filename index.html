@@ -5020,7 +5020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.18.16';
+const APP_VERSION = '21.18.18';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10824,6 +10824,7 @@ async function loadAdminStats() {
       username: p.username || '—',
       avatar: p.avatar_url,
       joined: p.created_at ? fmtDate(p.created_at.slice(0, 10)) : '—',
+      joinedAt: p.created_at ? new Date(p.created_at).getTime() : 0,
       watches: watchByUser[p.id] || 0,
       wears: wearByUser[p.id] || 0,
       priceChecks: valByUser[p.id] || 0,
@@ -10862,14 +10863,16 @@ async function loadAdminStats() {
         { key: 'measurements', label: 'Msr' },
       ];
       const thStyle = 'text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;cursor:pointer;user-select:none;';
+      const userArrow = sort && sort.col === 'joinedAt' ? (sort.asc ? ' ↑' : ' ↓') : '';
+      const userThStyle = 'text-align:left;padding:.35rem .25rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);cursor:pointer;user-select:none;';
       const rows = sorted.map(u => {
         const initHTML = u.avatar
           ? `<img src="${escHtml(u.avatar)}" style="width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
           : `<div style="width:22px;height:22px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:700;flex-shrink:0;">${(u.name[0]||'?').toUpperCase()}</div>`;
         return `<tr>
-          <td style="padding:.4rem .25rem;border-bottom:1px solid var(--border);max-width:0;"><div style="display:flex;align-items:center;gap:.4rem;min-width:0;cursor:pointer;" onclick="viewUserProfile('${u.id}')">
-            ${initHTML}
-            <div style="min-width:0;overflow:hidden;"><div style="font-weight:600;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(u.name)}</div><div style="font-size:.62rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@${escHtml(u.username)} · ${u.joined}</div></div>
+          <td style="padding:.4rem .25rem;border-bottom:1px solid var(--border);max-width:0;"><div style="display:flex;align-items:center;gap:.4rem;min-width:0;">
+            <div style="cursor:pointer;flex-shrink:0;" onclick="viewUserProfile('${u.id}')">${initHTML}</div>
+            <div style="min-width:0;overflow:hidden;cursor:pointer;" onclick="viewUserProfile('${u.id}')"><div style="font-weight:600;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(u.name)}</div><div style="font-size:.62rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@${escHtml(u.username)} · ${u.joined}</div></div>
           </div></td>
           ${cols.map(c => `<td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u[c.key]}</td>`).join('')}
         </tr>`;
@@ -10880,7 +10883,7 @@ async function loadAdminStats() {
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">${title}</div>
         <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
           <thead><tr style="border-bottom:2px solid var(--border);">
-            <th style="text-align:left;padding:.35rem .25rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">User</th>
+            <th style="${userThStyle}" onclick="_adminSortCol('${tableId}','joinedAt')">User${userArrow}</th>
             ${cols.map(c => {
               const arrow = sort && sort.col === c.key ? (sort.asc ? ' ↑' : ' ↓') : '';
               return `<th style="${thStyle}" onclick="_adminSortCol('${tableId}','${c.key}')">${c.label}${arrow}</th>`;
@@ -10893,7 +10896,7 @@ async function loadAdminStats() {
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">${title}</div>
         <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
           <thead><tr style="border-bottom:2px solid var(--border);">
-            <th style="text-align:left;padding:.35rem .25rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">User</th>
+            <th style="${userThStyle}" onclick="_adminSortCol('${tableId}','joinedAt')">User${userArrow}</th>
             ${cols.map(c => `<th style="${thStyle}" onclick="_adminSortCol('${tableId}','${c.key}')">${c.label}</th>`).join('')}
           </tr></thead>
           <tbody>${rows}</tbody>
