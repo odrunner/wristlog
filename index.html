@@ -5020,7 +5020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.16.57';
+const APP_VERSION = '21.17.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10471,8 +10471,6 @@ function _reviewGetThresholds() {
 
 function shouldShowReviewPrompt(source) {
   if (!currentUser) return false;
-  // TEMP: force show for Ozgur's account (remove after testing)
-  if (currentUser.id === 'd70b1a85-4f31-4431-b3b7-db76543daaf5') return true;
   // Check cooldown: don't show if dismissed/completed recently
   const lastAction = localStorage.getItem('wristlog_review_last');
   if (lastAction) {
@@ -10522,14 +10520,19 @@ function maybeShowReviewPrompt(source) {
 
 function reviewPromptYes() {
   document.getElementById('review-step-ask').style.display = 'none';
-  // Try native App Store review (only works on iOS)
-  if (window.webkit?.messageHandlers?.appAction) {
+  const isNative = !!window.webkit?.messageHandlers?.appAction;
+  if (isNative) {
     window.webkit.messageHandlers.appAction.postMessage({ action: 'requestReview' });
     localStorage.setItem('wristlog_review_rated', '1');
+    _logReviewEvent('yes_native');
+  } else {
+    _logReviewEvent('yes_web');
   }
-  document.getElementById('review-step-thanks').style.display = '';
+  // Delay "Thank you" so the native App Store sheet has time to appear
+  setTimeout(() => {
+    document.getElementById('review-step-thanks').style.display = '';
+  }, isNative ? 1500 : 0);
   localStorage.setItem('wristlog_review_last', String(Date.now()));
-  _logReviewEvent('yes');
 }
 
 function reviewPromptNo() {
