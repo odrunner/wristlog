@@ -3864,7 +3864,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:480px;">
     <div class="modal-title" id="af2-sheet-title" style="display:flex;align-items:center;gap:.5rem;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#854F0B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-      <span style="flex:1;">Identified Watches</span>
+      <span id="af2-title-text" style="flex:1;">Identifying Watches</span>
       <span id="af2-progress-chip" style="font-size:11px;color:var(--muted);display:none;"></span>
       <button type="button" onclick="closeAf2Sheet()" style="background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;padding:0 2px;line-height:1;">&times;</button>
     </div>
@@ -5096,7 +5096,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.08.51';
+const APP_VERSION = '22.16.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16393,10 +16393,16 @@ function af2RenderRow(watch, idx) {
   const s = watch._af2State || 'waiting';
   const ini = ((watch.brand || '?')[0] + (watch.model || '?')[0]).toUpperCase();
 
-  // Avatar
+  // Avatar — show cropped photo when available, otherwise initials
+  const hasCrop = !!watch._croppedUrl;
   let avatarCls = 'af2-avatar ';
   let avatarContent = '';
-  if (s === 'waiting' || s === 'failed') {
+  let avatarStyle = '';
+  if (hasCrop && s !== 'waiting' && s !== 'failed') {
+    avatarCls += (s === 'skipped') ? 'af2-avatar-gray' : '';
+    avatarStyle = `background-image:url(${watch._croppedUrl});background-size:cover;background-position:center;`;
+    avatarContent = (s === 'identifying') ? '<span class="af2-spinner-sm"></span>' : '';
+  } else if (s === 'waiting' || s === 'failed') {
     avatarCls += 'af2-avatar-gray';
     avatarContent = s === 'failed' ? '??' : ini;
   } else if (s === 'identifying') {
@@ -16508,7 +16514,7 @@ function af2RenderRow(watch, idx) {
 
   const rowCls = 'af2-row' + (s === 'skipped' ? ' af2-skipped' : '');
   return `<div class="${rowCls}" data-af2-idx="${idx}" data-af2-state="${s}">
-    <div class="${avatarCls}">${avatarContent}</div>
+    <div class="${avatarCls}"${avatarStyle ? ` style="${avatarStyle}"` : ''}>${avatarContent}</div>
     <div class="af2-info">${contentHtml}</div>
     <div class="af2-actions">${actionsHtml}</div>
   </div>`;
@@ -16526,10 +16532,14 @@ function af2RenderSheet() {
   if (!rowsEl) return;
   rowsEl.innerHTML = _af2Watches.map((w, i) => af2RenderRow(w, i)).join('');
 
-  // Progress chip: "2 of 3 identified" when >1 watch and some still identifying
+  // Dynamic title
   const total = _af2Watches.length;
   const identified = _af2Watches.filter(w => w._af2State !== 'waiting' && w._af2State !== 'identifying').length;
   const anyIdentifying = _af2Watches.some(w => w._af2State === 'identifying' || w._af2State === 'waiting');
+  const titleEl = document.getElementById('af2-title-text');
+  if (titleEl) titleEl.textContent = anyIdentifying ? 'Identifying Watches' : 'Identified Watches';
+
+  // Progress chip: "2 of 3 identified" when >1 watch and some still identifying
   if (chipEl) {
     if (total > 1 && anyIdentifying) {
       chipEl.textContent = `${identified} of ${total} identified`;
@@ -16554,7 +16564,7 @@ function af2RenderSheet() {
   } else if (allDoneOrSkipped) {
     footerEl.innerHTML = `<button class="btn btn-primary" style="width:100%;" onclick="closeAf2Sheet();renderCollection(true);">View collection →</button>`;
   } else if (inAutopilot.length > 0 && awaitingConfirm.length === 0) {
-    footerEl.innerHTML = `<button class="btn btn-ghost" style="width:100%;" onclick="af2DismissToBackground()">Keep enriching in background</button>`;
+    footerEl.innerHTML = `<button class="btn btn-ghost" style="width:100%;" onclick="af2DismissToBackground()">Keep working in background</button>`;
   } else {
     footerEl.innerHTML = '';
   }
@@ -16897,10 +16907,10 @@ async function af2RunEnhance(idx) {
 
     let filled = 0;
     const fieldMap = {
-      movementType: 'movement_type', caliber: 'caliber', caseDiameter: 'case_diameter',
-      caseLength: 'case_length', caseThickness: 'case_thickness', caseMaterial: 'case_material',
-      crystalType: 'crystal_type', waterResistance: 'water_resistance', weight: 'weight',
-      yearRange: 'year_range', gender: 'gender', origin: 'origin',
+      movementType: 'movementType', caliber: 'caliber', caseDiameter: 'caseDiameter',
+      caseLength: 'caseLength', caseThickness: 'caseThickness', caseMaterial: 'caseMaterial',
+      crystalType: 'crystalType', waterResistance: 'waterResistance', weight: 'weight',
+      yearRange: 'yearRange', gender: 'gender', origin: 'origin',
       description: 'description', background: 'background',
     };
     for (const [key, field] of Object.entries(fieldMap)) {
