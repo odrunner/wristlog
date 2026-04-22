@@ -5096,7 +5096,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.08.34';
+const APP_VERSION = '22.08.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16514,14 +16514,577 @@ function af2RenderRow(watch, idx) {
   </div>`;
 }
 
-// Stubs — wired up in later steps
-function openAddFlowV2() { toast('Add Flow V2 coming soon', 'info'); }
-function handleSharedImageV2(base64) { toast('Add Flow V2 coming soon', 'info'); }
-function closeAf2Sheet() { document.getElementById('af2-sheet').classList.add('hidden'); }
-function af2Confirm(idx) {}
-function af2Edit(idx) {}
-function af2Skip(idx) {}
-function af2Undo(idx) {}
+// ── Add Flow V2 state ──
+let _af2Watches = [];
+let _af2Aborted = false;
+let _af2Timers = {};
+
+function af2RenderSheet() {
+  const rowsEl = document.getElementById('af2-rows');
+  const footerEl = document.getElementById('af2-footer');
+  const chipEl = document.getElementById('af2-progress-chip');
+  if (!rowsEl) return;
+  rowsEl.innerHTML = _af2Watches.map((w, i) => af2RenderRow(w, i)).join('');
+
+  // Progress chip: "2 of 3 identified" when >1 watch and some still identifying
+  const total = _af2Watches.length;
+  const identified = _af2Watches.filter(w => w._af2State !== 'waiting' && w._af2State !== 'identifying').length;
+  const anyIdentifying = _af2Watches.some(w => w._af2State === 'identifying' || w._af2State === 'waiting');
+  if (chipEl) {
+    if (total > 1 && anyIdentifying) {
+      chipEl.textContent = `${identified} of ${total} identified`;
+      chipEl.style.display = '';
+    } else {
+      chipEl.style.display = 'none';
+    }
+  }
+
+  // Footer logic per Section 5.3
+  if (!footerEl) return;
+  const awaitingConfirm = _af2Watches.filter(w => w._af2State === 'identified');
+  const inAutopilot = _af2Watches.filter(w => ['confirmed','enhancing','enhanced','pricing'].includes(w._af2State));
+  const allDoneOrSkipped = _af2Watches.every(w => ['done','skipped','failed'].includes(w._af2State));
+  const allSettled = _af2Watches.every(w => ['done','skipped','failed','identified'].includes(w._af2State));
+
+  if (anyIdentifying && awaitingConfirm.length === 0) {
+    footerEl.innerHTML = '';
+  } else if (awaitingConfirm.length > 0) {
+    footerEl.innerHTML = `<button class="btn btn-primary" style="flex:1;" onclick="af2ConfirmAll()">Confirm all</button>`
+      + `<button class="btn btn-ghost" style="flex-shrink:0;" onclick="af2SkipAll()">Skip all</button>`;
+  } else if (allDoneOrSkipped) {
+    footerEl.innerHTML = `<button class="btn btn-primary" style="width:100%;" onclick="closeAf2Sheet();renderCollection(true);">View collection →</button>`;
+  } else if (inAutopilot.length > 0 && awaitingConfirm.length === 0) {
+    footerEl.innerHTML = `<button class="btn btn-ghost" style="width:100%;" onclick="af2DismissToBackground()">Keep enriching in background</button>`;
+  } else {
+    footerEl.innerHTML = '';
+  }
+}
+
+function openAddFlowV2() {
+  _af2Aborted = false;
+  _af2Watches = [];
+  Object.values(_af2Timers).forEach(t => clearInterval(t));
+  _af2Timers = {};
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.style.cssText = 'position:absolute;opacity:0;pointer-events:none;';
+  document.body.appendChild(input);
+  input.addEventListener('cancel', () => { input.remove(); resumeWelcome(); });
+  input.onchange = async () => {
+    input.remove();
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    if (!validateImageFile(file)) return;
+    af2StartWithFile(file);
+  };
+  input.click();
+}
+
+function handleSharedImageV2(base64) {
+  nav(document.querySelector('nav button[data-page="collection"]'));
+  setTimeout(() => af2StartWithBase64(base64), 300);
+}
+
+async function af2StartWithFile(file) {
+  const sheet = document.getElementById('af2-sheet');
+  sheet.classList.remove('hidden');
+  _af2Watches = [{ _af2State: 'identifying', _af2Theater: 'Scanning photo…', _af2TheaterSub: 'Detecting watches' }];
+  af2RenderSheet();
+  try {
+    const base64 = await blobToResizedBase64ForIdentify(file);
+    window._af2Base64 = base64;
+    try { window._af2Blob = await blobToResizedBlob(file); } catch (_) { window._af2Blob = file; }
+    await af2RunDetectAndIdentify(base64);
+  } catch (e) {
+    console.error('[WRotate] af2 error:', e);
+    _af2Watches = [{ _af2State: 'failed' }];
+    af2RenderSheet();
+  }
+}
+
+async function af2StartWithBase64(base64) {
+  const sheet = document.getElementById('af2-sheet');
+  sheet.classList.remove('hidden');
+  window._af2Base64 = base64;
+  _af2Watches = [{ _af2State: 'identifying', _af2Theater: 'Scanning photo…', _af2TheaterSub: 'Detecting watches' }];
+  af2RenderSheet();
+  try {
+    await af2RunDetectAndIdentify(base64);
+  } catch (e) {
+    console.error('[WRotate] af2 error:', e);
+    _af2Watches = [{ _af2State: 'failed' }];
+    af2RenderSheet();
+  }
+}
+
+async function af2RunDetectAndIdentify(base64) {
+  // Step 1: Detect
+  const detectResp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+    method: 'POST',
+    body: JSON.stringify({ image: base64, mode: 'detect' }),
+  }, 30000);
+  if (!detectResp.ok) throw new Error('Watch detection failed');
+  const detectData = await detectResp.json();
+  const watchCount = Math.min(detectData.count || detectData.watches?.length || 0, 5);
+
+  if (watchCount === 0) {
+    _af2Watches = [{ _af2State: 'failed' }];
+    af2RenderSheet();
+    // Replace with zero-watch UI
+    const rowsEl = document.getElementById('af2-rows');
+    rowsEl.innerHTML = `<div style="text-align:center;padding:2rem 1rem;">
+      <div style="font-size:.85rem;">No watches detected in that photo.</div>
+      <div style="font-size:.75rem;color:var(--muted);margin-top:.5rem;">Try a clearer shot or add manually.</div>
+      <div style="display:flex;gap:.5rem;justify-content:center;margin-top:1rem;">
+        <button class="btn btn-primary" onclick="closeAf2Sheet();openAddFlowV2()">Try another photo</button>
+        <button class="btn btn-ghost" onclick="closeAf2Sheet();openAddWatch()">Add manually</button>
+      </div>
+    </div>`;
+    document.getElementById('af2-footer').innerHTML = '';
+    return;
+  }
+
+  // Crop bounding boxes
+  const boxes = (detectData.watches || []).map(w => w.boundingBox).filter(b => b && b.length === 4);
+  const useAIBoxes = boxes.length === watchCount;
+  const gridBoxes = [];
+  if (!useAIBoxes) {
+    const rows = detectData.rows || watchCount;
+    const cols = detectData.cols || 1;
+    const cellW = 100 / cols, cellH = 100 / rows;
+    for (let r = 0; r < rows; r++)
+      for (let c = 0; c < cols; c++) { if (gridBoxes.length >= watchCount) break; gridBoxes.push([c * cellW, r * cellH, cellW, cellH]); }
+  }
+  const finalBoxes = useAIBoxes ? boxes : gridBoxes;
+
+  // Create rows
+  _af2Watches = finalBoxes.map((bbox, i) => ({
+    _af2State: i === 0 ? 'identifying' : 'waiting',
+    _af2Theater: 'Scanning photo…',
+    _af2TheaterSub: 'Analyzing your photo',
+    boundingBox: bbox,
+    brand: null, model: null, reference: '', dialText: '',
+    estimatedColor: '#94a3b8', confidence: null,
+    yearRange: '', movementType: '', caliber: '',
+    caseMaterial: '', caseDiameter: '',
+  }));
+
+  // Crop all watches
+  const blob = window._af2Blob;
+  if (blob) {
+    for (let i = 0; i < watchCount; i++) {
+      try {
+        const cropped = await cropWatchFromPhoto(blob, finalBoxes[i], 0.05);
+        _af2Watches[i]._croppedBlob = cropped;
+        _af2Watches[i]._croppedUrl = URL.createObjectURL(cropped);
+      } catch (_) {}
+    }
+  }
+
+  af2RenderSheet();
+
+  // Identify each watch sequentially
+  const collection = watches.map(w => ({ brand: w.brand, name: w.name, ref: w.ref || '' }));
+  for (let i = 0; i < watchCount; i++) {
+    if (_af2Aborted) break;
+    const w = _af2Watches[i];
+    if (!w) continue;
+    w._af2State = 'identifying';
+    af2StartIdentifyTheater(i);
+    af2RenderSheet();
+
+    try {
+      const cropBase64 = w._croppedBlob
+        ? await blobToResizedBase64ForIdentify(w._croppedBlob)
+        : base64;
+      const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+        method: 'POST',
+        body: JSON.stringify({ image: cropBase64, collection, mode: 'identify' }),
+      }, 120000);
+      af2ClearTimer('identify_' + i);
+      if (_af2Aborted) break;
+      if (resp.ok) {
+        const data = await resp.json();
+        const id = data.watches?.[0];
+        if (id) {
+          Object.assign(w, {
+            brand: id.brand || 'Unknown', model: id.model || 'Unknown',
+            reference: id.reference || '', dialText: id.dialText || '',
+            estimatedColor: id.estimatedColor || '#94a3b8',
+            confidence: id.confidence || 'medium', productUrl: id.productUrl || '',
+            yearRange: id.yearRange || '', movementType: id.movementType || '',
+            caliber: id.caliber || '', caseMaterial: id.caseMaterial || '',
+            caseDiameter: id.caseDiameter || '',
+          });
+          // Duplicate detection
+          w._af2Duplicate = watches.some(ew =>
+            ew.brand && w.brand && ew.brand.toLowerCase() === w.brand.toLowerCase()
+            && ew.name && w.model && ew.name.toLowerCase() === w.model.toLowerCase()
+            && w.reference && ew.ref && ew.ref.toLowerCase() === w.reference.toLowerCase()
+          );
+          w._af2State = 'identified';
+        } else {
+          w._af2State = 'failed';
+        }
+      } else {
+        w._af2State = 'failed';
+      }
+    } catch (err) {
+      console.error('[WRotate] af2 identify error:', err);
+      af2ClearTimer('identify_' + i);
+      w._af2State = 'failed';
+    }
+    af2RenderSheet();
+  }
+}
+
+// ── Theater timers ──
+const AF2_IDENTIFY_STAGES = [
+  ['Scanning photo…', 'Analyzing your photo'],
+  ['Reading dial text…', 'Looking for brand and model clues'],
+  ['Searching watch databases…', 'Cross-referencing with manufacturers'],
+  ['Verifying reference number…', 'Checking specs and year range'],
+  ['Looking up specifications…', 'Case size, movement, materials'],
+];
+const AF2_IDENTIFY_EXTRA = [
+  ['Searching more databases…', 'Expanding search'],
+  ['Double-checking reference…', 'Verifying match'],
+];
+const AF2_ENHANCE_STAGES = [
+  'Looking up specs…', 'Finding dimensions and materials…', 'Gathering history and background…',
+];
+const AF2_ENHANCE_EXTRA = ['Pulling historical context…'];
+const AF2_PRICE_STAGES = [
+  'Checking market price…', 'Comparing recent sales…', 'Calculating value…',
+];
+const AF2_PRICE_EXTRA = ['Finalizing estimate…'];
+
+function af2StartIdentifyTheater(idx) {
+  let stage = 0;
+  const w = _af2Watches[idx];
+  if (!w) return;
+  w._af2Theater = AF2_IDENTIFY_STAGES[0][0];
+  w._af2TheaterSub = AF2_IDENTIFY_STAGES[0][1];
+  _af2Timers['identify_' + idx] = setInterval(() => {
+    stage++;
+    const stages = AF2_IDENTIFY_STAGES;
+    if (stage < stages.length) {
+      w._af2Theater = stages[stage][0];
+      w._af2TheaterSub = stages[stage][1];
+    } else {
+      const extraIdx = (stage - stages.length) % AF2_IDENTIFY_EXTRA.length;
+      w._af2Theater = AF2_IDENTIFY_EXTRA[extraIdx][0];
+      w._af2TheaterSub = AF2_IDENTIFY_EXTRA[extraIdx][1];
+    }
+    if (w._af2State === 'identifying') af2RenderSheet();
+  }, 6000);
+}
+
+function af2StartEnhanceTheater(idx) {
+  let stage = 0;
+  const w = _af2Watches[idx];
+  if (!w) return;
+  w._af2Theater = AF2_ENHANCE_STAGES[0];
+  _af2Timers['enhance_' + idx] = setInterval(() => {
+    stage++;
+    if (stage < AF2_ENHANCE_STAGES.length) {
+      w._af2Theater = AF2_ENHANCE_STAGES[stage];
+    } else {
+      w._af2Theater = AF2_ENHANCE_EXTRA[(stage - AF2_ENHANCE_STAGES.length) % AF2_ENHANCE_EXTRA.length];
+    }
+    if (w._af2State === 'enhancing') af2RenderSheet();
+  }, 6000);
+}
+
+function af2StartPriceTheater(idx) {
+  let stage = 0;
+  const w = _af2Watches[idx];
+  if (!w) return;
+  w._af2Theater = AF2_PRICE_STAGES[0];
+  _af2Timers['price_' + idx] = setInterval(() => {
+    stage++;
+    if (stage < AF2_PRICE_STAGES.length) {
+      w._af2Theater = AF2_PRICE_STAGES[stage];
+    } else {
+      w._af2Theater = AF2_PRICE_EXTRA[(stage - AF2_PRICE_STAGES.length) % AF2_PRICE_EXTRA.length];
+    }
+    if (w._af2State === 'pricing') af2RenderSheet();
+  }, 1500);
+}
+
+function af2ClearTimer(key) {
+  if (_af2Timers[key]) { clearInterval(_af2Timers[key]); delete _af2Timers[key]; }
+}
+
+// ── Confirm → Autopilot (add + enhance + price) ──
+async function af2Confirm(idx) {
+  const w = _af2Watches[idx];
+  if (!w || w._af2State !== 'identified') return;
+  w._af2State = 'confirmed';
+  af2RenderSheet();
+
+  // Add to collection
+  try {
+    const newId = uid();
+    let imageUrl = null;
+    if (w._croppedBlob) {
+      imageUrl = await uploadImage(w._croppedBlob, `watches/${currentUser.id}/${newId}.jpg`);
+    }
+    ensureBrand(w.brand);
+    const watchData = {
+      id: newId, brand: w.brand || '', name: w.model || '',
+      ref: w.reference || '', movement: w.caliber || w.movementType || '',
+      color: w.estimatedColor || '#94a3b8',
+      ...(imageUrl ? { image: imageUrl } : {}),
+    };
+    watches.push(watchData);
+    markDirty('watches', newId);
+    if (window.posthog) posthog.capture('watch_added', { brand: watchData.brand, source: 'photo_v2' });
+    save();
+    w._af2WatchId = newId;
+  } catch (e) {
+    console.error('[WRotate] af2 add error:', e);
+    toast('Failed to add watch: ' + (e?.message || e), 'error');
+    w._af2State = 'identified';
+    af2RenderSheet();
+    return;
+  }
+
+  // Short pause to show "Added ✓"
+  await new Promise(r => setTimeout(r, 600));
+  if (_af2Aborted) return;
+
+  // Cautious mode: stop here with manual buttons
+  if (featureFlag('add_flow_cautious')) {
+    w._af2State = 'done';
+    af2RenderSheet();
+    return;
+  }
+
+  // Autopilot: enhance → price
+  await af2RunEnhance(idx);
+  if (_af2Aborted) return;
+  await af2RunPrice(idx);
+}
+
+async function af2RunEnhance(idx) {
+  const w = _af2Watches[idx];
+  if (!w || !w._af2WatchId) return;
+  w._af2State = 'enhancing';
+  af2StartEnhanceTheater(idx);
+  af2RenderSheet();
+
+  const watchObj = watches.find(x => x.id === w._af2WatchId);
+  if (!watchObj) { w._af2State = 'done'; af2ClearTimer('enhance_' + idx); af2RenderSheet(); return; }
+
+  try {
+    const payload = { mode: 'enhance', watchInfo: { brand: watchObj.brand, model: watchObj.name, reference: watchObj.ref || '' } };
+    if (w._croppedBlob) {
+      try {
+        const b64 = await blobToResizedBase64ForIdentify(w._croppedBlob);
+        payload.image = b64;
+      } catch (_) {}
+    }
+    const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    af2ClearTimer('enhance_' + idx);
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.message || data.error || 'Enhance failed');
+
+    let filled = 0;
+    const fieldMap = {
+      movementType: 'movement_type', caliber: 'caliber', caseDiameter: 'case_diameter',
+      caseLength: 'case_length', caseThickness: 'case_thickness', caseMaterial: 'case_material',
+      crystalType: 'crystal_type', waterResistance: 'water_resistance', weight: 'weight',
+      yearRange: 'year_range', gender: 'gender', origin: 'origin',
+      description: 'description', background: 'background',
+    };
+    for (const [key, field] of Object.entries(fieldMap)) {
+      const val = data[key];
+      if (val && typeof val === 'string' && val.trim() && !watchObj[field]) {
+        watchObj[field] = stripCitations(val.trim());
+        filled++;
+      }
+    }
+    if (Array.isArray(data.functions) && data.functions.length && !watchObj.functions) {
+      watchObj.functions = data.functions.map(stripCitations).join(', ');
+      filled++;
+    }
+    if (data.productUrl && !watchObj.url) { watchObj.url = data.productUrl; filled++; }
+    if (filled > 0) { markDirty('watches', w._af2WatchId); save(); }
+
+    w._af2EnhanceCount = filled;
+    w._af2State = 'enhanced';
+    af2RenderSheet();
+    await new Promise(r => setTimeout(r, 600));
+  } catch (e) {
+    af2ClearTimer('enhance_' + idx);
+    console.error('[WRotate] af2 enhance error:', e);
+    w._af2EnhanceFailed = true;
+    w._af2State = 'done';
+    af2RenderSheet();
+  }
+}
+
+async function af2RunPrice(idx) {
+  const w = _af2Watches[idx];
+  if (!w || !w._af2WatchId) return;
+  const watchObj = watches.find(x => x.id === w._af2WatchId);
+  if (!watchObj) { w._af2State = 'done'; af2RenderSheet(); return; }
+
+  // Check 7-day cache
+  if (watchObj.marketPrice && watchObj.marketPriceDate) {
+    const ageMs = Date.now() - new Date(watchObj.marketPriceDate + 'T00:00:00').getTime();
+    if (ageMs < 7 * 86400000) {
+      w._af2Price = Number(watchObj.marketPrice);
+      w.price = watchObj.price ? Number(watchObj.price) : null;
+      w._af2State = 'done';
+      af2RenderSheet();
+      return;
+    }
+  }
+
+  w._af2State = 'pricing';
+  af2StartPriceTheater(idx);
+  af2RenderSheet();
+
+  try {
+    const payload = { brand: watchObj.brand, model: watchObj.name, condition: 'good' };
+    if (watchObj.ref) payload.reference = watchObj.ref;
+    const r = await authedFetch(SUPABASE_URL + '/functions/v1/watch-value', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }, 60000);
+    af2ClearTimer('price_' + idx);
+    if (r.status === 429) { w._af2PriceFailed = true; w._af2State = 'done'; af2RenderSheet(); return; }
+    const data = await r.json();
+    const mid = (data.estimated_value_usd || {}).mid;
+    if (mid) {
+      watchObj.marketPrice = mid;
+      watchObj.marketPriceDate = todayStr();
+      markDirty('watches', w._af2WatchId);
+      save();
+      w._af2Price = mid;
+      w.price = watchObj.price ? Number(watchObj.price) : null;
+      db.from('valuation_events').insert({ user_id: currentUser.id, action: 'check', watches_total: watches.length, watches_priced: 1 }).then(() => {});
+    } else {
+      w._af2PriceFailed = true;
+    }
+  } catch (e) {
+    af2ClearTimer('price_' + idx);
+    console.error('[WRotate] af2 price error:', e);
+    w._af2PriceFailed = true;
+  }
+  w._af2State = 'done';
+  af2RenderSheet();
+}
+
+// ── Batch actions ──
+function af2ConfirmAll() {
+  _af2Watches.forEach((w, i) => { if (w._af2State === 'identified') af2Confirm(i); });
+}
+function af2SkipAll() {
+  _af2Watches.forEach((w, i) => { if (w._af2State === 'identified') af2Skip(i); });
+}
+
+function af2Skip(idx) {
+  const w = _af2Watches[idx];
+  if (!w || w._af2State !== 'identified') return;
+  w._af2State = 'skipped';
+  w._af2UndoTimer = true;
+  af2RenderSheet();
+  const timer = setTimeout(() => { w._af2UndoTimer = false; af2RenderSheet(); }, 5000);
+  w._af2UndoTimeout = timer;
+}
+
+function af2Undo(idx) {
+  const w = _af2Watches[idx];
+  if (!w || w._af2State !== 'skipped') return;
+  if (w._af2UndoTimeout) clearTimeout(w._af2UndoTimeout);
+  w._af2UndoTimer = false;
+  w._af2State = 'identified';
+  af2RenderSheet();
+}
+
+function af2Edit(idx) {
+  const w = _af2Watches[idx];
+  if (!w) return;
+  // Inline edit: prompt for brand/model/ref
+  const rowEl = document.querySelector(`.af2-row[data-af2-idx="${idx}"]`);
+  if (!rowEl) return;
+  const infoEl = rowEl.querySelector('.af2-info');
+  const actionsEl = rowEl.querySelector('.af2-actions');
+  if (!infoEl || !actionsEl) return;
+  infoEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:4px;">
+    <input id="af2-edit-brand-${idx}" value="${escHtml(w.brand || '')}" placeholder="Brand" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <input id="af2-edit-model-${idx}" value="${escHtml(w.model || '')}" placeholder="Model" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <input id="af2-edit-ref-${idx}" value="${escHtml(w.reference || '')}" placeholder="Reference" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+  </div>`;
+  actionsEl.innerHTML = `<button class="af2-btn-confirm" onclick="af2SaveEdit(${idx})">Save</button>`
+    + `<button class="af2-btn-edit" onclick="af2RenderSheet()">Cancel</button>`;
+}
+
+function af2SaveEdit(idx) {
+  const w = _af2Watches[idx];
+  if (!w) return;
+  const brand = document.getElementById('af2-edit-brand-' + idx)?.value?.trim();
+  const model = document.getElementById('af2-edit-model-' + idx)?.value?.trim();
+  const ref = document.getElementById('af2-edit-ref-' + idx)?.value?.trim();
+  if (brand) w.brand = brand;
+  if (model) w.model = model;
+  w.reference = ref || '';
+  if (w._af2State === 'failed') w._af2State = 'identified';
+  af2RenderSheet();
+}
+
+// ── Dismissal ──
+function closeAf2Sheet() {
+  const inAutopilot = _af2Watches.some(w => ['confirmed','enhancing','enhanced','pricing'].includes(w._af2State));
+  if (inAutopilot) {
+    af2DismissToBackground();
+  } else {
+    _af2Aborted = true;
+    Object.values(_af2Timers).forEach(t => clearInterval(t));
+    _af2Timers = {};
+    document.getElementById('af2-sheet').classList.add('hidden');
+  }
+}
+
+function af2DismissToBackground() {
+  document.getElementById('af2-sheet').classList.add('hidden');
+  af2ShowPill();
+}
+
+function af2ShowPill() {
+  let pill = document.getElementById('af2-pill');
+  if (!pill) {
+    pill = document.createElement('div');
+    pill.id = 'af2-pill';
+    pill.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--surface);border:0.5px solid var(--border);padding:10px 16px;border-radius:99px;font-size:12px;display:flex;align-items:center;gap:8px;cursor:pointer;z-index:999;box-shadow:0 2px 8px rgba(0,0,0,.15);';
+    pill.onclick = () => { pill.remove(); document.getElementById('af2-sheet').classList.remove('hidden'); };
+    document.body.appendChild(pill);
+  }
+  af2UpdatePill();
+}
+
+function af2UpdatePill() {
+  const pill = document.getElementById('af2-pill');
+  if (!pill) return;
+  const total = _af2Watches.filter(w => w._af2State !== 'skipped' && w._af2State !== 'failed').length;
+  const done = _af2Watches.filter(w => w._af2State === 'done').length;
+  if (done >= total) {
+    pill.innerHTML = `<span style="color:#3B6D11;">✓ ${total} watch${total !== 1 ? 'es' : ''} enriched</span>`;
+    setTimeout(() => pill.remove(), 3000);
+  } else {
+    pill.innerHTML = `<span class="af2-spinner-gold"></span> Enriching ${total} watch${total !== 1 ? 'es' : ''} · ${done} of ${total} done`;
+    setTimeout(() => af2UpdatePill(), 2000);
+  }
+}
 
 // Debug preview — renders all 10 states with sample data
 function openAf2DebugPreview() {
