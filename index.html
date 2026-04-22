@@ -5020,7 +5020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.17.07';
+const APP_VERSION = '21.18.16';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10835,38 +10835,72 @@ async function loadAdminStats() {
 
     const statRow = (label, value) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span style="color:var(--text);">${label}</span><span style="color:var(--gold);font-weight:600;">${value}</span></div>`;
 
-    const userTableHtml = (list, title) => {
-      const rows = list.map(u => {
+    window._adminTableSort = window._adminTableSort || {};
+    window._adminUserLists = { 'admin-users': profileList, 'admin-internal': internalList };
+    window._adminSortCol = (tableId, col) => {
+      const prev = window._adminTableSort[tableId];
+      if (prev && prev.col === col) window._adminTableSort[tableId] = { col, asc: !prev.asc };
+      else window._adminTableSort[tableId] = { col, asc: false };
+      const list = window._adminUserLists[tableId];
+      if (list) window._renderAdminUserTable(tableId, list, tableId === 'admin-users' ? 'Users (' + list.length + ')' : 'Internal Accounts (' + list.length + ')');
+    };
+
+    const renderAdminUserTable = (tableId, list, title) => {
+      const sort = window._adminTableSort[tableId];
+      let sorted = [...list];
+      if (sort) {
+        sorted.sort((a, b) => {
+          const va = a[sort.col], vb = b[sort.col];
+          return sort.asc ? va - vb : vb - va;
+        });
+      }
+      const cols = [
+        { key: 'watches', label: 'Wtc' },
+        { key: 'wears', label: 'Wrs' },
+        { key: 'priceChecks', label: 'Val' },
+        { key: 'enhances', label: 'Enh' },
+        { key: 'measurements', label: 'Msr' },
+      ];
+      const thStyle = 'text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;cursor:pointer;user-select:none;';
+      const rows = sorted.map(u => {
         const initHTML = u.avatar
           ? `<img src="${escHtml(u.avatar)}" style="width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
           : `<div style="width:22px;height:22px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:700;flex-shrink:0;">${(u.name[0]||'?').toUpperCase()}</div>`;
         return `<tr>
-          <td style="padding:.4rem .25rem;border-bottom:1px solid var(--border);max-width:0;"><div style="display:flex;align-items:center;gap:.4rem;min-width:0;">
+          <td style="padding:.4rem .25rem;border-bottom:1px solid var(--border);max-width:0;"><div style="display:flex;align-items:center;gap:.4rem;min-width:0;cursor:pointer;" onclick="viewUserProfile('${u.id}')">
             ${initHTML}
             <div style="min-width:0;overflow:hidden;"><div style="font-weight:600;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(u.name)}</div><div style="font-size:.62rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@${escHtml(u.username)} · ${u.joined}</div></div>
           </div></td>
-          <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.watches}</td>
-          <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.wears}</td>
-          <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.priceChecks}</td>
-          <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.enhances}</td>
-          <td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u.measurements}</td>
+          ${cols.map(c => `<td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u[c.key]}</td>`).join('')}
         </tr>`;
       }).join('');
-      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+      const container = document.getElementById(tableId);
+      if (container) {
+        container.innerHTML = `
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">${title}</div>
         <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
           <thead><tr style="border-bottom:2px solid var(--border);">
             <th style="text-align:left;padding:.35rem .25rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">User</th>
-            <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Wtc</th>
-            <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Wrs</th>
-            <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Val</th>
-            <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Enh</th>
-            <th style="text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;">Msr</th>
+            ${cols.map(c => {
+              const arrow = sort && sort.col === c.key ? (sort.asc ? ' ↑' : ' ↓') : '';
+              return `<th style="${thStyle}" onclick="_adminSortCol('${tableId}','${c.key}')">${c.label}${arrow}</th>`;
+            }).join('')}
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+      }
+      return `<div id="${tableId}" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">${title}</div>
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+          <thead><tr style="border-bottom:2px solid var(--border);">
+            <th style="text-align:left;padding:.35rem .25rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);">User</th>
+            ${cols.map(c => `<th style="${thStyle}" onclick="_adminSortCol('${tableId}','${c.key}')">${c.label}</th>`).join('')}
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>`;
     };
+    window._renderAdminUserTable = renderAdminUserTable;
 
     el.innerHTML = `
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
@@ -10893,8 +10927,8 @@ async function loadAdminStats() {
         ${statRow('Measurements / User', avg(extMsr, extUsers))}
         ${statRow('Follows / User', avg(follows, extUsers))}
       </div>
-      ${userTableHtml(profileList, 'Users (' + profileList.length + ')')}
-      ${userTableHtml(internalList, 'Internal Accounts (' + internalList.length + ')')}`;
+      ${renderAdminUserTable('admin-users', profileList, 'Users (' + profileList.length + ')')}
+      ${renderAdminUserTable('admin-internal', internalList, 'Internal Accounts (' + internalList.length + ')')}`;
   } catch(e) {
     el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;">
       <div style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;">Failed to load stats: ${escHtml(e.message)}</div>
