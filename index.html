@@ -5095,7 +5095,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.16.42';
+const APP_VERSION = '22.16.44';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16507,7 +16507,8 @@ function af2RenderRow(watch, idx) {
       if (watch._af2UndoTimer) actionsHtml = `<button class="af2-btn-undo" onclick="af2Undo(${idx})">↩ Undo</button>`;
       break;
     case 'failed':
-      actionsHtml = `<button class="af2-btn-edit" onclick="af2Edit(${idx})">Edit</button>`;
+      actionsHtml = `<button class="af2-btn-edit" onclick="af2Edit(${idx})">Edit</button>`
+        + `<button class="af2-btn-skip" onclick="af2Skip(${idx})" title="Skip">×</button>`;
       break;
   }
 
