@@ -5096,7 +5096,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.16.37';
+const APP_VERSION = '22.16.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16532,8 +16532,8 @@ function af2RenderSheet() {
   const chipEl = document.getElementById('af2-progress-chip');
   if (!rowsEl) return;
   let rowsHtml = _af2Watches.map((w, i) => af2RenderRow(w, i)).join('');
-  if (_af2TotalDetected > 5) {
-    const extra = _af2TotalDetected - 5;
+  if (_af2TotalDetected > 12) {
+    const extra = _af2TotalDetected - 12;
     rowsHtml += `<div style="text-align:center;padding:.6rem;font-size:.75rem;color:var(--muted);">+ ${extra} more detected. Save these first, then add more.</div>`;
   }
   rowsEl.innerHTML = rowsHtml;
@@ -16644,8 +16644,8 @@ async function af2RunDetectAndIdentify(base64) {
   const detectData = await detectResp.json();
   const totalDetected = detectData.count || detectData.watches?.length || 0;
   _af2TotalDetected = totalDetected;
-  const watchCount = Math.min(totalDetected, 5);
-  if (totalDetected > 5) console.log(`[WRotate] Detected ${totalDetected} watches, showing first 5`);
+  const watchCount = Math.min(totalDetected, 12);
+  if (totalDetected > 12) console.log(`[WRotate] Detected ${totalDetected} watches, showing first 12`);
 
   if (watchCount === 0) {
     _af2Watches = [{ _af2State: 'failed' }];
