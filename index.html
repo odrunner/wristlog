@@ -5095,7 +5095,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.16.44';
+const APP_VERSION = '22.16.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16444,10 +16444,13 @@ function af2RenderRow(watch, idx) {
       contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}`
         + `<div class="af2-status af2-status-gold af2-theater-text">${escHtml(watch._af2Theater || 'Enhancing…')}</div>`;
       break;
-    case 'enhanced':
+    case 'enhanced': {
+      const fields = watch._af2EnhanceFields || [];
+      const fieldList = fields.length ? `<div style="font-size:.7rem;color:var(--muted);margin-top:2px;">${fields.join(' · ')}</div>` : '';
       contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}`
-        + `<div class="af2-status af2-status-green">Found ${watch._af2EnhanceCount || 0} details</div>`;
+        + `<div class="af2-status af2-status-green">Found ${watch._af2EnhanceCount || 0} details</div>${fieldList}`;
       break;
+    }
     case 'pricing':
       contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}`
         + `<div class="af2-status af2-status-gold af2-theater-text">${escHtml(watch._af2Theater || 'Checking market price…')}</div>`;
@@ -16468,7 +16471,9 @@ function af2RenderRow(watch, idx) {
           priceLine = `<div class="af2-status af2-status-green">${priceStr}</div>`;
         }
       }
-      contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}${priceLine}`;
+      const doneFields = watch._af2EnhanceFields || [];
+      const doneFieldList = doneFields.length ? `<div style="font-size:.7rem;color:var(--muted);margin-top:2px;">${doneFields.join(' · ')}</div>` : '';
+      contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}${priceLine}${doneFieldList}`;
       break;
     }
     case 'skipped':
@@ -16558,9 +16563,7 @@ function af2RenderSheet() {
   // Footer logic per Section 5.3
   if (!footerEl) return;
   const awaitingConfirm = _af2Watches.filter(w => w._af2State === 'identified');
-  const inAutopilot = _af2Watches.filter(w => ['confirmed','enhancing','enhanced','pricing'].includes(w._af2State));
   const allDoneOrSkipped = _af2Watches.every(w => ['done','skipped','failed'].includes(w._af2State));
-  const allSettled = _af2Watches.every(w => ['done','skipped','failed','identified'].includes(w._af2State));
 
   if (anyIdentifying && awaitingConfirm.length === 0) {
     footerEl.innerHTML = '';
@@ -16569,9 +16572,13 @@ function af2RenderSheet() {
     footerEl.innerHTML = `<button class="btn btn-primary" style="flex:1;" onclick="af2ConfirmAll()">${single ? 'Confirm' : 'Confirm all'}</button>`
       + `<button class="btn btn-ghost" style="flex-shrink:0;" onclick="af2SkipAll()">${single ? 'Skip' : 'Skip all'}</button>`;
   } else if (allDoneOrSkipped) {
-    footerEl.innerHTML = `<button class="btn btn-primary" style="width:100%;" onclick="closeAf2Sheet();renderCollection(true);">View collection →</button>`;
-  } else if (inAutopilot.length > 0 && awaitingConfirm.length === 0) {
-    footerEl.innerHTML = `<button class="btn btn-ghost" style="width:100%;" onclick="af2DismissToBackground()">Keep working in background</button>`;
+    const doneWatches = _af2Watches.filter(w => w._af2State === 'done' && w._af2WatchId);
+    if (doneWatches.length === 1) {
+      const wId = doneWatches[0]._af2WatchId;
+      footerEl.innerHTML = `<button class="btn btn-primary" style="width:100%;" onclick="closeAf2Sheet();openEditWatch('${wId}')">View details →</button>`;
+    } else {
+      footerEl.innerHTML = `<button class="btn btn-primary" style="width:100%;" onclick="closeAf2Sheet();renderCollection(true);">View collection →</button>`;
+    }
   } else {
     footerEl.innerHTML = '';
   }
@@ -16935,9 +16942,22 @@ async function af2RunEnhance(idx) {
       filled++;
     }
     if (data.productUrl && !watchObj.url) { watchObj.url = data.productUrl; filled++; }
-    if (filled > 0) { markDirty('watches', w._af2WatchId); save(); }
+    if (filled > 0) {
+      const row = watchToRow(watchObj);
+      const { error } = await db.from('watches').update(row).eq('id', watchObj.id);
+      if (error) console.error('[WRotate] af2 enhance DB save error:', error);
+      markDirty('watches', w._af2WatchId);
+      save();
+    }
 
     w._af2EnhanceCount = filled;
+    w._af2EnhanceFields = [];
+    const labelMap = { movementType: 'Movement', caliber: 'Caliber', caseDiameter: 'Case size', caseLength: 'Case length', caseThickness: 'Thickness', caseMaterial: 'Material', crystalType: 'Crystal', waterResistance: 'Water resistance', weight: 'Weight', yearRange: 'Year', gender: 'Gender', origin: 'Origin', description: 'Description', background: 'Background', functions: 'Functions', url: 'Link' };
+    for (const [key, field] of Object.entries(fieldMap)) {
+      if (watchObj[field]) w._af2EnhanceFields.push(labelMap[field] || field);
+    }
+    if (watchObj.functions) w._af2EnhanceFields.push('Functions');
+    if (watchObj.url) w._af2EnhanceFields.push('Link');
     w._af2State = 'enhanced';
     af2RenderSheet();
     await new Promise(r => setTimeout(r, 600));
@@ -17002,6 +17022,16 @@ async function af2RunPrice(idx) {
   }
   w._af2State = 'done';
   af2RenderSheet();
+  af2MaybeAutoOpen();
+}
+
+function af2MaybeAutoOpen() {
+  const allDone = _af2Watches.every(w => ['done','skipped','failed'].includes(w._af2State));
+  if (!allDone) return;
+  const doneWatches = _af2Watches.filter(w => w._af2State === 'done' && w._af2WatchId);
+  if (doneWatches.length === 1) {
+    setTimeout(() => { closeAf2Sheet(); openEditWatch(doneWatches[0]._af2WatchId); }, 800);
+  }
 }
 
 // ── Batch actions ──
