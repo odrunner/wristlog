@@ -5020,7 +5020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.18.42';
+const APP_VERSION = '21.18.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10867,7 +10867,7 @@ async function loadAdminStats() {
     const internalList = allProfiles.filter(p => INTERNAL_IDS.has(p.id)).map(toProfileItem);
 
     const statRow = (label, value, delta) => {
-      const deltaHtml = delta != null && delta > 0 ? `<span style="color:#4ade80;font-size:.68rem;font-weight:500;margin-left:.4rem;">+${delta}</span>` : '';
+      const deltaHtml = delta != null ? `<span style="color:${delta > 0 ? '#4ade80' : 'var(--muted)'};font-size:.68rem;font-weight:500;margin-left:.4rem;">${delta > 0 ? '+' : ''}${delta}</span>` : '';
       return `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span style="color:var(--text);">${label}</span><span style="color:var(--gold);font-weight:600;">${value}${deltaHtml}</span></div>`;
     };
 
