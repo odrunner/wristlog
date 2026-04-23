@@ -5095,7 +5095,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.17.38';
+const APP_VERSION = '22.17.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16959,11 +16959,11 @@ async function af2RunEnhance(idx) {
 
     w._af2EnhanceCount = filled;
     w._af2EnhanceFields = [];
+    const skipFields = new Set(['description', 'background']);
     for (const [key, field] of Object.entries(fieldMap)) {
-      if (watchObj[field]) w._af2EnhanceFields.push(watchObj[field]);
+      if (watchObj[field] && !skipFields.has(field)) w._af2EnhanceFields.push(watchObj[field]);
     }
     if (Array.isArray(watchObj.functions) && watchObj.functions.length) w._af2EnhanceFields.push(watchObj.functions.join(', '));
-    if (watchObj.url) w._af2EnhanceFields.push('Product link');
     w._af2State = 'enhanced';
     af2RenderSheet();
     await new Promise(r => setTimeout(r, 600));
@@ -17077,13 +17077,25 @@ function af2Edit(idx) {
   const infoEl = rowEl.querySelector('.af2-info');
   const actionsEl = rowEl.querySelector('.af2-actions');
   if (!infoEl || !actionsEl) return;
-  const brandOptions = [...brands].sort((a, b) => a.localeCompare(b)).map(b => `<option value="${escHtml(b)}">`).join('');
-  infoEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:4px;">
-    <input id="af2-edit-brand-${idx}" list="af2-brand-list-${idx}" value="${escHtml(w.brand || '')}" placeholder="Brand" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
-    <datalist id="af2-brand-list-${idx}">${brandOptions}</datalist>
+  infoEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:4px;position:relative;">
+    <input id="af2-edit-brand-${idx}" value="${escHtml(w.brand || '')}" placeholder="Brand" autocomplete="off" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <div id="af2-brand-ac-${idx}" style="display:none;position:absolute;top:28px;left:0;right:0;max-height:120px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:4px;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.15);"></div>
     <input id="af2-edit-model-${idx}" value="${escHtml(w.model || '')}" placeholder="Model" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
     <input id="af2-edit-ref-${idx}" value="${escHtml(w.reference || '')}" placeholder="Reference" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
   </div>`;
+  const brandInput = document.getElementById('af2-edit-brand-' + idx);
+  const acList = document.getElementById('af2-brand-ac-' + idx);
+  const sorted = [...brands].sort((a, b) => a.localeCompare(b));
+  const updateAC = () => {
+    const q = brandInput.value.trim().toLowerCase();
+    const matches = q ? sorted.filter(b => b.toLowerCase().includes(q)) : sorted;
+    if (!matches.length) { acList.style.display = 'none'; return; }
+    acList.innerHTML = matches.map(b => `<div style="padding:6px 8px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border);" onmousedown="document.getElementById('af2-edit-brand-${idx}').value='${escHtml(b)}';document.getElementById('af2-brand-ac-${idx}').style.display='none';">${escHtml(b)}</div>`).join('');
+    acList.style.display = '';
+  };
+  brandInput.addEventListener('input', updateAC);
+  brandInput.addEventListener('focus', updateAC);
+  brandInput.addEventListener('blur', () => setTimeout(() => { acList.style.display = 'none'; }, 200));
   actionsEl.innerHTML = `<button class="af2-btn-confirm" onclick="af2SaveEdit(${idx})">Save</button>`
     + `<button class="af2-btn-edit" onclick="af2RenderSheet()">Cancel</button>`;
 }
