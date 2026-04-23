@@ -1314,6 +1314,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     @keyframes spin { to { transform:rotate(360deg); } }
     .spin { animation:spin .8s linear infinite; }
 
+    /* ── ENHANCE PREVIEW ── */
+    .enh-preview { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:1rem 1.1rem; margin-bottom:1rem; }
+    .enh-preview-title { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--gold); margin-bottom:.7rem; display:flex; align-items:center; gap:.4rem; }
+    .enh-preview-list { display:grid; grid-template-columns:auto 1fr; gap:.3rem .7rem; font-size:.82rem; }
+    .enh-preview-label { color:var(--muted); white-space:nowrap; }
+    .enh-preview-value { font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .enh-preview-note { font-size:.72rem; color:var(--muted); margin-top:.7rem; }
+    .enh-preview-actions { display:flex; gap:.5rem; margin-top:.85rem; }
+
     /* ── ADD FLOW V2 ── */
     .af2-row { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:.75rem .85rem; margin-bottom:.5rem; display:flex; gap:.75rem; align-items:center; transition:opacity .3s; }
     .af2-row.af2-skipped { opacity:.5; }
@@ -5072,7 +5081,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.20.45';
+const APP_VERSION = '22.20.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17340,51 +17349,105 @@ async function enhanceSingleWatch() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    });
+    }, 120000);
     const data = await resp.json();
     if (!resp.ok || data.error) throw new Error(data.message || data.error || 'Server error ' + resp.status);
-    let filled = 0;
     const fieldMap = {
-      movementType: 'w-movement-type', caliber: 'w-caliber',
-      caseDiameter: 'w-case-diameter', caseLength: 'w-case-length',
-      caseThickness: 'w-case-thickness', caseMaterial: 'w-case-material',
-      crystalType: 'w-crystal-type', waterResistance: 'w-water-resistance',
-      weight: 'w-weight', yearRange: 'w-year-range',
-      gender: 'w-gender', origin: 'w-origin',
-      description: 'w-description', background: 'w-background',
+      movementType: { el: 'w-movement-type', label: 'Movement' },
+      caliber: { el: 'w-caliber', label: 'Caliber' },
+      caseDiameter: { el: 'w-case-diameter', label: 'Diameter' },
+      caseLength: { el: 'w-case-length', label: 'Lug to Lug' },
+      caseThickness: { el: 'w-case-thickness', label: 'Thickness' },
+      caseMaterial: { el: 'w-case-material', label: 'Material' },
+      crystalType: { el: 'w-crystal-type', label: 'Crystal' },
+      waterResistance: { el: 'w-water-resistance', label: 'Water Res.' },
+      weight: { el: 'w-weight', label: 'Weight' },
+      yearRange: { el: 'w-year-range', label: 'Production' },
+      gender: { el: 'w-gender', label: 'Gender' },
+      origin: { el: 'w-origin', label: 'Origin' },
+      description: { el: 'w-description', label: 'Description' },
+      background: { el: 'w-background', label: 'Background' },
     };
-    for (const [key, elId] of Object.entries(fieldMap)) {
+    const pending = [];
+    for (const [key, cfg] of Object.entries(fieldMap)) {
       const val = data[key];
       if (val && typeof val === 'string' && val.trim()) {
-        const el = document.getElementById(elId);
-        if (el && !el.value.trim()) { el.value = stripCitations(val.trim()); filled++; }
+        const el = document.getElementById(cfg.el);
+        if (el && !el.value.trim()) {
+          pending.push({ elId: cfg.el, label: cfg.label, value: stripCitations(val.trim()) });
+        }
       }
     }
     if (Array.isArray(data.functions) && data.functions.length) {
       const el = document.getElementById('w-functions-input');
-      if (el && !el.value.trim()) { el.value = data.functions.map(stripCitations).join(', '); filled++; }
+      if (el && !el.value.trim()) {
+        pending.push({ elId: 'w-functions-input', label: 'Functions', value: data.functions.map(stripCitations).join(', ') });
+      }
     }
     if (data.productUrl && !document.getElementById('w-url').value.trim()) {
-      document.getElementById('w-url').value = data.productUrl;
-      updateUrlBtn();
-      filled++;
+      pending.push({ elId: 'w-url', label: 'URL', value: data.productUrl, isUrl: true });
     }
-    openSection('sec-specs');
-    renderStorySection();
-    openSection('sec-story');
-    setTimeout(() => {
-      const storyEl = document.getElementById('sec-story');
-      if (storyEl) storyEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
-    toast(filled > 0 ? `Enhanced: ${filled} detail${filled !== 1 ? 's' : ''} added` : 'No new details found — specs already filled', filled > 0 ? 'success' : 'info');
+    clearInterval(msgInterval);
+    if (pending.length === 0) {
+      toast('No new details found — specs already filled', 'info');
+      return;
+    }
+    showEnhancePreview(pending);
   } catch(e) {
+    clearInterval(msgInterval);
     toast('Enhance failed: ' + (e?.message || e), 'error');
   } finally {
-    clearInterval(msgInterval);
     renderStorySection();
     const fb = document.getElementById('footer-enhance-btn');
     if (fb) { fb.disabled = false; fb.textContent = '⭐ Enhance'; }
   }
+}
+
+function showEnhancePreview(pending) {
+  const old = document.getElementById('enh-preview-panel');
+  if (old) old.remove();
+  const truncate = (s, n) => s.length > n ? s.slice(0, n) + '…' : s;
+  let rows = '';
+  for (const p of pending) {
+    const display = p.label === 'Description' || p.label === 'Background'
+      ? truncate(p.value, 80) : p.label === 'Functions' ? truncate(p.value, 60) : p.value;
+    rows += `<span class="enh-preview-label">${p.label}</span><span class="enh-preview-value">${escHtml(display)}</span>`;
+  }
+  const panel = document.createElement('div');
+  panel.id = 'enh-preview-panel';
+  panel.className = 'enh-preview';
+  panel.innerHTML = `
+    <div class="enh-preview-title">⭐ Enhance Preview — ${pending.length} detail${pending.length !== 1 ? 's' : ''}</div>
+    <div class="enh-preview-list">${rows}</div>
+    <div class="enh-preview-note">Only empty fields will be filled. Your existing data won't change.</div>
+    <div class="enh-preview-actions">
+      <button class="btn btn-primary" style="flex:1;" id="enh-preview-apply">Apply ${pending.length} detail${pending.length !== 1 ? 's' : ''}</button>
+      <button class="btn btn-ghost" id="enh-preview-cancel">Cancel</button>
+    </div>`;
+  const specsSection = document.querySelector('#sec-specs')?.closest('.modal-section');
+  if (specsSection) specsSection.before(panel);
+  else document.querySelector('#watch-modal .modal')?.appendChild(panel);
+  panel.querySelector('#enh-preview-apply').onclick = () => {
+    for (const p of pending) {
+      const el = document.getElementById(p.elId);
+      if (el) el.value = p.value;
+      if (p.isUrl) updateUrlBtn();
+    }
+    openSection('sec-specs');
+    renderStorySection();
+    openSection('sec-story');
+    panel.remove();
+    toast(`Enhanced: ${pending.length} detail${pending.length !== 1 ? 's' : ''} added`, 'success');
+    setTimeout(() => {
+      const storyEl = document.getElementById('sec-story');
+      if (storyEl) storyEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+  panel.querySelector('#enh-preview-cancel').onclick = () => {
+    panel.remove();
+    toast('Enhance cancelled', 'info');
+  };
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function stripCitations(s) { return s ? s.replace(/\s*\[\d+(?:,\s*\d+)*\]/g, '').trim() : s; }
