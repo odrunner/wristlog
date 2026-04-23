@@ -5095,7 +5095,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.17.52';
+const APP_VERSION = '22.17.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16438,7 +16438,7 @@ function af2RenderRow(watch, idx) {
       break;
     case 'confirmed':
       contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}`
-        + `<div class="af2-status af2-check-green">✓ Added</div>`;
+        + `<div class="af2-status af2-check-green">✓ Added — getting more details…</div>`;
       break;
     case 'enhancing': {
       const enhFields = watch._af2EnhanceFields || [];
