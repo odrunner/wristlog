@@ -5082,7 +5082,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.21.31';
+const APP_VERSION = '22.21.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17430,9 +17430,9 @@ function showEnhancePreview(pending) {
       <button class="btn btn-primary" style="flex:1;" id="enh-preview-apply">Apply ${pending.length} detail${pending.length !== 1 ? 's' : ''}</button>
       <button class="btn btn-ghost" id="enh-preview-cancel">Cancel</button>
     </div>`;
-  const specsSection = document.querySelector('#sec-specs')?.closest('.modal-section');
-  if (specsSection) specsSection.before(panel);
-  else document.querySelector('#watch-modal .modal')?.appendChild(panel);
+  const identityStrip = document.getElementById('edit-identity-strip');
+  if (identityStrip) identityStrip.after(panel);
+  else document.querySelector('#watch-modal .modal')?.prepend(panel);
   panel.querySelector('#enh-preview-apply').onclick = () => {
     for (const p of pending) {
       const el = document.getElementById(p.elId);
