@@ -5095,7 +5095,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.18.21';
+const APP_VERSION = '22.20.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16942,7 +16942,7 @@ async function af2RunEnhance(idx) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    });
+    }, 120000);
     af2ClearTimer('enhance_' + idx);
     const data = await resp.json();
     if (!resp.ok || data.error) throw new Error(data.message || data.error || 'Enhance failed');
