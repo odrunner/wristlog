@@ -5095,7 +5095,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.18.00';
+const APP_VERSION = '22.18.09';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16397,8 +16397,8 @@ function af2RenderRow(watch, idx) {
   let avatarCls = 'af2-avatar ';
   let avatarContent = '';
   let avatarStyle = '';
-  if (hasCrop && s !== 'waiting' && s !== 'failed') {
-    avatarCls += (s === 'skipped') ? 'af2-avatar-gray' : '';
+  if (hasCrop && s !== 'failed') {
+    avatarCls += (s === 'skipped' || s === 'waiting') ? 'af2-avatar-gray' : '';
     avatarStyle = `background-image:url(${watch._croppedUrl});background-size:cover;background-position:center;`;
     avatarContent = (s === 'identifying') ? '<span class="af2-spinner-sm"></span>' : '';
   } else if (s === 'waiting' || s === 'failed') {
@@ -16698,7 +16698,7 @@ async function af2RunDetectAndIdentify(base64) {
 
   // Create rows
   _af2Watches = finalBoxes.map((bbox, i) => ({
-    _af2State: i === 0 ? 'identifying' : 'waiting',
+    _af2State: 'waiting',
     _af2Theater: 'Scanning photo…',
     _af2TheaterSub: 'Analyzing your photo',
     boundingBox: bbox,
@@ -16727,6 +16727,7 @@ async function af2RunDetectAndIdentify(base64) {
     if (_af2Aborted) break;
     const w = _af2Watches[i];
     if (!w) continue;
+    if (w._af2State === 'skipped') continue;
     w._af2State = 'identifying';
     af2StartIdentifyTheater(i);
     af2RenderSheet();
