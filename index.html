@@ -5095,7 +5095,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.17.54';
+const APP_VERSION = '22.18.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16496,9 +16496,11 @@ function af2RenderRow(watch, idx) {
   let actionsHtml = '';
   switch (s) {
     case 'waiting':
-      actionsHtml = '<div class="af2-dot-gray"></div>';
+      actionsHtml = `<button class="af2-btn-skip" onclick="af2Skip(${idx})" title="Skip">×</button>`;
       break;
     case 'identifying':
+      actionsHtml = `<span class="af2-spinner-gold"></span><button class="af2-btn-skip" onclick="af2Skip(${idx})" title="Skip" style="margin-left:4px;">×</button>`;
+      break;
     case 'enhancing':
     case 'pricing':
       actionsHtml = '<span class="af2-spinner-gold"></span>';
@@ -17046,7 +17048,7 @@ function af2SkipAll() {
 
 function af2Skip(idx) {
   const w = _af2Watches[idx];
-  if (!w || w._af2State !== 'identified') return;
+  if (!w || !['identified', 'failed', 'waiting', 'identifying'].includes(w._af2State)) return;
   w._af2State = 'skipped';
   w._af2UndoTimer = true;
   af2RenderSheet();
