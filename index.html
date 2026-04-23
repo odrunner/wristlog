@@ -4511,7 +4511,7 @@ const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
 const _isDevUser = () => currentUser?.id === ADMIN_USER_ID;
 
 const FEATURE_FLAGS = {
-  add_flow_v2: { label: 'New Add from Photo flow', default: false },
+  add_flow_v2: { label: 'New Add from Photo flow', default: true },
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -5095,7 +5095,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.20.11';
+const APP_VERSION = '22.20.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17193,7 +17193,7 @@ function openAf2DebugPreview() {
 function openPhotoIdentify() {
   if (demoGuard()) return;
   if (!currentUser) { toast('Sign in to use photo identification', 'error'); return; }
-  if (featureFlag('add_flow_v2')) { openAddFlowV2(); return; }
+  openAddFlowV2(); return;
   window._identifyAborted = false;
   _photoAddedWatchIds = [];
   const input = document.createElement('input');
@@ -20079,7 +20079,7 @@ function _tgHasNative() { return !!(window._wrotateNativeTimegrapher || window.w
 function haptic(type) { try { window.webkit.messageHandlers.haptic.postMessage({ type: type || 'light' }); } catch(e) {} }
 function handleSharedImage(base64) {
   if (!currentUser) return;
-  if (featureFlag('add_flow_v2')) { handleSharedImageV2(base64); return; }
+  handleSharedImageV2(base64); return;
   nav(document.querySelector('nav button[data-page="collection"]'));
   setTimeout(() => {
     window._photoIdentifyBase64 = base64;
