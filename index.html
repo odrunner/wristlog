@@ -5095,7 +5095,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.16.56';
+const APP_VERSION = '22.17.09';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16451,10 +16451,13 @@ function af2RenderRow(watch, idx) {
         + `<div class="af2-status af2-status-green">Found ${watch._af2EnhanceCount || 0} details</div>${fieldList}`;
       break;
     }
-    case 'pricing':
+    case 'pricing': {
+      const pricingFields = watch._af2EnhanceFields || [];
+      const pricingFieldList = pricingFields.length ? `<div style="font-size:.7rem;color:var(--muted);margin-top:2px;">${pricingFields.join(' · ')}</div>` : '';
       contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}`
-        + `<div class="af2-status af2-status-gold af2-theater-text">${escHtml(watch._af2Theater || 'Checking market price…')}</div>`;
+        + `<div class="af2-status af2-status-gold af2-theater-text">${escHtml(watch._af2Theater || 'Checking market price…')}</div>${pricingFieldList}`;
       break;
+    }
     case 'done': {
       let priceLine = '';
       if (watch._af2PriceFailed) {
@@ -16568,7 +16571,7 @@ function af2RenderSheet() {
   if (anyIdentifying && awaitingConfirm.length === 0) {
     footerEl.innerHTML = '';
   } else if (awaitingConfirm.length > 0) {
-    const single = awaitingConfirm.length === 1 && _af2Watches.length === 1;
+    const single = awaitingConfirm.length === 1;
     footerEl.innerHTML = `<button class="btn btn-primary" style="flex:1;" onclick="af2ConfirmAll()">${single ? 'Confirm' : 'Confirm all'}</button>`
       + `<button class="btn btn-ghost" style="flex-shrink:0;" onclick="af2SkipAll()">${single ? 'Skip' : 'Skip all'}</button>`;
   } else if (allDoneOrSkipped) {
@@ -16851,7 +16854,7 @@ async function af2Confirm(idx) {
   w._af2State = 'confirmed';
   af2RenderSheet();
 
-  // Add to collection
+  // Add to collection — direct DB write, no background sync
   try {
     const newId = uid();
     let imageUrl = null;
@@ -16866,9 +16869,15 @@ async function af2Confirm(idx) {
       ...(imageUrl ? { image: imageUrl } : {}),
     };
     watches.push(watchData);
-    markDirty('watches', newId);
-    if (window.posthog) posthog.capture('watch_added', { brand: watchData.brand, source: 'photo_v2' });
     save();
+    const { error } = await db.from('watches').upsert([watchToRow(watchData)], { onConflict: 'id' });
+    if (error) {
+      console.error('[WRotate] af2 add DB error:', error);
+      watches.splice(watches.indexOf(watchData), 1);
+      save();
+      throw new Error(error.message);
+    }
+    if (window.posthog) posthog.capture('watch_added', { brand: watchData.brand, source: 'photo_v2' });
     w._af2WatchId = newId;
   } catch (e) {
     console.error('[WRotate] af2 add error:', e);
@@ -16943,11 +16952,9 @@ async function af2RunEnhance(idx) {
     }
     if (data.productUrl && !watchObj.url) { watchObj.url = data.productUrl; filled++; }
     if (filled > 0) {
-      const row = watchToRow(watchObj);
-      const { error } = await db.from('watches').update(row).eq('id', watchObj.id);
-      if (error) console.error('[WRotate] af2 enhance DB save error:', error);
-      markDirty('watches', w._af2WatchId);
       save();
+      const { error } = await db.from('watches').upsert([watchToRow(watchObj)], { onConflict: 'id' });
+      if (error) console.error('[WRotate] af2 enhance DB save error:', error);
     }
 
     w._af2EnhanceCount = filled;
@@ -17007,8 +17014,9 @@ async function af2RunPrice(idx) {
     if (mid) {
       watchObj.marketPrice = mid;
       watchObj.marketPriceDate = todayStr();
-      markDirty('watches', w._af2WatchId);
       save();
+      const { error } = await db.from('watches').upsert([watchToRow(watchObj)], { onConflict: 'id' });
+      if (error) console.error('[WRotate] af2 price DB save error:', error);
       w._af2Price = mid;
       w.price = watchObj.price ? Number(watchObj.price) : null;
       db.from('valuation_events').insert({ user_id: currentUser.id, action: 'check', watches_total: watches.length, watches_priced: 1 }).then(() => {});
