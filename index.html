@@ -5095,7 +5095,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.18.14';
+const APP_VERSION = '22.18.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16729,6 +16729,7 @@ async function af2RunDetectAndIdentify(base64) {
     if (!w) continue;
     if (w._af2State === 'skipped') continue;
     w._af2State = 'identifying';
+    w._af2AbortCtrl = new AbortController();
     af2StartIdentifyTheater(i);
     af2RenderSheet();
 
@@ -16739,6 +16740,7 @@ async function af2RunDetectAndIdentify(base64) {
       const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
         method: 'POST',
         body: JSON.stringify({ image: cropBase64, mode: 'identify' }),
+        signal: w._af2AbortCtrl.signal,
       }, 120000);
       af2ClearTimer('identify_' + i);
       if (_af2Aborted) break;
@@ -16770,9 +16772,10 @@ async function af2RunDetectAndIdentify(base64) {
         w._af2State = 'failed';
       }
     } catch (err) {
-      console.error('[WRotate] af2 identify error:', err);
       af2ClearTimer('identify_' + i);
-      if (w._af2State !== 'skipped') w._af2State = 'failed';
+      if (err.name === 'AbortError' || w._af2State === 'skipped') continue;
+      console.error('[WRotate] af2 identify error:', err);
+      w._af2State = 'failed';
     }
     af2RenderSheet();
   }
@@ -17051,6 +17054,7 @@ function af2SkipAll() {
 function af2Skip(idx) {
   const w = _af2Watches[idx];
   if (!w || !['identified', 'failed', 'waiting', 'identifying'].includes(w._af2State)) return;
+  if (w._af2AbortCtrl) { w._af2AbortCtrl.abort(); w._af2AbortCtrl = null; }
   w._af2State = 'skipped';
   w._af2UndoTimer = true;
   af2RenderSheet();
