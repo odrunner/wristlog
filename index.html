@@ -3474,14 +3474,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="modal-section-chevron" id="chv-sec-essentials">▶</span>
       </button>
       <div class="modal-section-body collapsed" id="sec-essentials">
-        <div class="form-group">
-          <label for="w-url">Manufacturer / Listing URL</label>
-          <div class="url-row">
-            <input type="url" id="w-url" placeholder="Paste a manufacturer or listing URL" oninput="updateUrlBtn()">
-            <button id="w-fetch-btn" class="url-open-btn" onclick="fetchCollectionDetails()" style="color:var(--text);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Fetch</button>
-            <a id="url-open-btn" href="#" target="_blank" rel="noopener noreferrer" class="url-open-btn hidden">Open ↗</a>
-          </div>
-        </div>
         <div class="form-row">
           <div class="form-group">
             <label for="w-brand-display">Brand *</label>
@@ -3497,13 +3489,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             </div>
           </div>
           <div class="form-group">
-            <label for="w-ref">Reference</label>
-            <input type="text" id="w-ref" placeholder="Reference number" maxlength="60" oninput="if(editingId)updateIdentityStrip(document.getElementById('w-name').value,document.getElementById('w-brand-display').value,this.value)">
+            <label for="w-name">Model / Name *</label>
+            <input type="text" id="w-name" placeholder="" maxlength="100" oninput="if(editingId)updateIdentityStrip(this.value,document.getElementById('w-brand-display').value,document.getElementById('w-ref').value)">
           </div>
-        </div>
-        <div class="form-group">
-          <label for="w-name">Model / Name *</label>
-          <input type="text" id="w-name" placeholder="" maxlength="100" oninput="if(editingId)updateIdentityStrip(this.value,document.getElementById('w-brand-display').value,document.getElementById('w-ref').value)">
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -3513,6 +3501,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div class="form-group">
             <label for="w-date">Purchased</label>
             <input type="date" id="w-date" max="9999-12-31">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="w-ref">Reference</label>
+            <input type="text" id="w-ref" placeholder="Reference number" maxlength="60" oninput="if(editingId)updateIdentityStrip(document.getElementById('w-name').value,document.getElementById('w-brand-display').value,this.value)">
+          </div>
+          <div class="form-group">
+            <label for="w-url">URL</label>
+            <div class="url-row">
+              <input type="url" id="w-url" placeholder="Product or listing URL" oninput="updateUrlBtn()">
+              <a id="url-open-btn" href="#" target="_blank" rel="noopener noreferrer" class="url-open-btn hidden">Open ↗</a>
+            </div>
           </div>
         </div>
       </div>
@@ -5081,7 +5082,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.20.51';
+const APP_VERSION = '22.21.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16341,17 +16342,6 @@ function buildBrandSelect(selected = '') { setBrandAC(selected); }
 // ══════════════════════════════════════════
 //  PHOTO IDENTIFY (Add from Photo)
 // ══════════════════════════════════════════
-// Reverse lookup: brand name → domain (built from WL_BRAND_MAP below)
-function brandToDomain(brand) {
-  const lc = brand.toLowerCase();
-  // Check WL_BRAND_MAP values → keys
-  for (const [domain, name] of Object.entries(WL_BRAND_MAP)) {
-    if (name.toLowerCase() === lc) return domain;
-  }
-  // Fallback: try brand.com
-  return lc.replace(/\s+/g, '') + '.com';
-}
-
 // ════════════════════════════════════════════════════════════════════════════
 // ADD FLOW V2 — behind featureFlag('add_flow_v2')
 // ════════════════════════════════════════════════════════════════════════════
@@ -17930,23 +17920,6 @@ function cropWatchFromPhoto(blob, bbox, padding = 0.15) {
 // ══════════════════════════════════════════
 //  WISHLIST PAGE
 // ══════════════════════════════════════════
-const WL_BRAND_MAP = {
-  'rolex.com':'Rolex', 'omegawatches.com':'Omega', 'audemarspiguet.com':'Audemars Piguet',
-  'patek.com':'Patek Philippe', 'iwc.com':'IWC', 'breitling.com':'Breitling',
-  'tagheuer.com':'Tag Heuer', 'cartier.com':'Cartier', 'panerai.com':'Panerai',
-  'jaeger-lecoultre.com':'Jaeger-LeCoultre', 'vacheron-constantin.com':'Vacheron Constantin',
-  'richardmille.com':'Richard Mille', 'grandseikoglobal.com':'Grand Seiko',
-  'grand-seiko.com':'Grand Seiko', 'tudorwatch.com':'Tudor', 'hublot.com':'Hublot',
-  'zenith-watches.com':'Zenith', 'ulysse-nardin.com':'Ulysse Nardin',
-  'seiko.com':'Seiko', 'longines.com':'Longines', 'orient-watch.com':'Orient',
-  'bulgari.com':'Bulgari', 'citizen.co.jp':'Citizen', 'chopard.com':'Chopard',
-  'girard-perregaux.com':'Girard-Perregaux', 'frederiqueconstant.com':'Frederique Constant',
-  'breguet.com':'Breguet', 'blancpain.com':'Blancpain', 'glashütte-original.com':'Glashütte Original',
-  'glashuette-original.com':'Glashütte Original', 'montblanc.com':'Montblanc',
-  'chanel.com':'Chanel', 'hermeswatches.com':'Hermès', 'hermes.com':'Hermès',
-  'franckmuller.com':'Franck Muller', 'audemarspiguet.com':'Audemars Piguet',
-  'patek.com':'Patek Philippe', 'patekphilippe.com':'Patek Philippe'
-};
 
 function renderWishlist(force) {
   if (!force && _lastRenderedGen.wishlist === _dataGen) return;
@@ -18766,134 +18739,6 @@ async function fetchWishlistDetails() {
 }
 
 // ── Collection fetch (same logic, collection field IDs) ──────────────────────
-async function fetchCollectionDetails() {
-  const urlVal = document.getElementById('w-url').value.trim();
-  if (!urlVal) { toast('Enter a URL first', 'error'); return; }
-
-  const btn = document.getElementById('w-fetch-btn');
-  btn.disabled = true; btn.textContent = 'Fetching…';
-
-  try {
-    let html = '';
-    for (const proxy of [
-      `https://corsproxy.io/?${encodeURIComponent(urlVal)}`,
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(urlVal)}`
-    ]) {
-      try {
-        const r = await fetch(proxy, { signal: AbortSignal.timeout(12000) });
-        if (r.ok) { html = await r.text(); break; }
-      } catch (_) {}
-    }
-    if (!html) throw new Error('fetch failed');
-
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-
-    // JSON-LD
-    const jsonLds = [...doc.querySelectorAll('script[type="application/ld+json"]')]
-      .map(s => { try { return JSON.parse(s.textContent); } catch { return null; } })
-      .filter(Boolean)
-      .flatMap(j => j['@graph'] ? j['@graph'] : Array.isArray(j) ? j : [j]);
-    const product = jsonLds.find(j => j['@type'] === 'Product' || j.offers);
-
-    // Model name
-    let name = product?.name ||
-      doc.querySelector('meta[property="og:title"]')?.content ||
-      doc.querySelector('meta[name="og:title"]')?.content ||
-      doc.title || '';
-    name = name.split(/\s[\-\|–]\s[A-Z]/).shift().trim();
-
-    // Reference / SKU
-    let ref = product?.mpn || product?.sku || product?.model || product?.gtin || '';
-    if (!ref) {
-      const segs = new URL(urlVal).pathname.split('/').filter(Boolean);
-      const refSeg = segs.reverse().find(s => /[A-Z0-9]{4,}[\.\-][A-Z0-9\.]{3,}/i.test(s));
-      if (refSeg) ref = refSeg.replace(/\.html?$/i, '');
-    }
-
-    // Strip ref from name
-    if (ref) {
-      if (name.includes(ref)) {
-        name = name.replace(ref, '');
-      } else {
-        name = name.replace(/\s+[\dA-Z]{3,}[\.\-\/][A-Z\d\.\/\-]{2,}[\w\.\/\-]*\s*$/i, '');
-      }
-      name = name.replace(/[\s\-:·,]+$/, '').replace(/^[\s\-:·,]+/, '').trim();
-    }
-
-    // Price
-    let price = '';
-    const offers = product?.offers;
-    if (offers) {
-      const p = Array.isArray(offers) ? offers[0]?.price : offers.price;
-      if (p != null && !isNaN(parseFloat(String(p)))) price = String(parseFloat(String(p)));
-    }
-    if (!price) {
-      price = doc.querySelector('meta[property="product:price:amount"]')?.content ||
-              doc.querySelector('meta[property="og:price:amount"]')?.content       ||
-              doc.querySelector('meta[name="price"]')?.content || '';
-    }
-    if (!price) {
-      const m = html.match(/"price"\s*:\s*"?(\d[\d,\.]*)"?/i);
-      if (m) price = m[1].replace(/,/g, '');
-    }
-
-    // Brand
-    const hostname = new URL(urlVal).hostname.replace('www.', '');
-    const detectedBrand = Object.entries(WL_BRAND_MAP).find(([k]) => hostname.includes(k))?.[1];
-    if (detectedBrand && !brands.map(b => b.toLowerCase()).includes(detectedBrand.toLowerCase())) {
-      brands.push(detectedBrand);
-      saveBrands();
-    }
-    if (detectedBrand && name.toLowerCase().startsWith(detectedBrand.toLowerCase())) {
-      name = name.slice(detectedBrand.length).replace(/^[\s\-:·,]+/, '').trim();
-    }
-
-    // Fill form
-    if (detectedBrand) buildBrandSelect(detectedBrand);
-    if (name)  document.getElementById('w-name').value  = name;
-    if (ref)   document.getElementById('w-ref').value   = ref;
-    if (price) setPriceInput('w-price', parseFloat(price));
-
-    // Image
-    btn.textContent = 'Loading image…';
-    let imgUrl = sanitizeImageUrl(
-      doc.querySelector('meta[property="og:image"]')?.content ||
-      doc.querySelector('meta[name="og:image"]')?.content ||
-      doc.querySelector('meta[property="twitter:image"]')?.content ||
-      doc.querySelector('meta[name="twitter:image"]')?.content,
-      urlVal
-    );
-    if (!imgUrl) {
-      const wd = new URL(urlVal).hostname.replace(/^www\./, '');
-      const candidates = [...doc.querySelectorAll('img')]
-        .flatMap(i => [i.getAttribute('src'), i.getAttribute('data-src'), i.getAttribute('data-lazy-src')])
-        .map(s => sanitizeImageUrl(s, urlVal))
-        .filter(s => s && !/\.(svg|gif)(\?|$)/i.test(s) && !/logo|logotype|icon|favicon|sprite|banner/i.test(s));
-      imgUrl = candidates.find(s => s.includes(wd)) || candidates[0] || null;
-    }
-    if (imgUrl) {
-      try {
-        const result = await fetchImageBlobOrUrl(imgUrl);
-        if (result.blob) {
-          wPendingFile  = result.blob;
-          wPendingImage = URL.createObjectURL(result.blob);
-        } else {
-          wPendingFile  = null;
-          wPendingImage = result.directUrl; // fallback: store URL directly
-        }
-      } catch (_) { wPendingImage = null; wPendingFile = null; }
-    }
-    renderWatchModalImg();
-
-    const filled = [detectedBrand && 'brand', name && 'name', ref && 'ref', price && 'price', wPendingImage && 'photo'].filter(Boolean);
-    toast(`Fetched: ${filled.join(', ') || 'no data found'}`);
-
-  } catch (e) {
-    toast('Could not fetch page — fill in manually', 'error');
-  } finally {
-    btn.disabled = false; btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Fetch';
-  }
-}
 
 // ── Wishlist photo helpers (mirror collection) ──────────────────────────────
 async function fetchWishlistImage(itemId) {
