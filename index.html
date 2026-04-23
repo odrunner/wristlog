@@ -5095,7 +5095,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.17.09';
+const APP_VERSION = '22.17.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16570,10 +16570,11 @@ function af2RenderSheet() {
 
   if (anyIdentifying && awaitingConfirm.length === 0) {
     footerEl.innerHTML = '';
-  } else if (awaitingConfirm.length > 0) {
-    const single = awaitingConfirm.length === 1;
-    footerEl.innerHTML = `<button class="btn btn-primary" style="flex:1;" onclick="af2ConfirmAll()">${single ? 'Confirm' : 'Confirm all'}</button>`
-      + `<button class="btn btn-ghost" style="flex-shrink:0;" onclick="af2SkipAll()">${single ? 'Skip' : 'Skip all'}</button>`;
+  } else if (awaitingConfirm.length > 1) {
+    footerEl.innerHTML = `<button class="btn btn-primary" style="flex:1;" onclick="af2ConfirmAll()">Confirm all</button>`
+      + `<button class="btn btn-ghost" style="flex-shrink:0;" onclick="af2SkipAll()">Skip all</button>`;
+  } else if (awaitingConfirm.length === 1) {
+    footerEl.innerHTML = '';
   } else if (allDoneOrSkipped) {
     const doneWatches = _af2Watches.filter(w => w._af2State === 'done' && w._af2WatchId);
     if (doneWatches.length === 1) {
@@ -16715,7 +16716,6 @@ async function af2RunDetectAndIdentify(base64) {
   af2RenderSheet();
 
   // Identify each watch sequentially
-  const collection = watches.map(w => ({ brand: w.brand, name: w.name, ref: w.ref || '' }));
   for (let i = 0; i < watchCount; i++) {
     if (_af2Aborted) break;
     const w = _af2Watches[i];
@@ -16730,7 +16730,7 @@ async function af2RunDetectAndIdentify(base64) {
         : base64;
       const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
         method: 'POST',
-        body: JSON.stringify({ image: cropBase64, collection, mode: 'identify' }),
+        body: JSON.stringify({ image: cropBase64, mode: 'identify' }),
       }, 120000);
       af2ClearTimer('identify_' + i);
       if (_af2Aborted) break;
@@ -17078,8 +17078,10 @@ function af2Edit(idx) {
   const infoEl = rowEl.querySelector('.af2-info');
   const actionsEl = rowEl.querySelector('.af2-actions');
   if (!infoEl || !actionsEl) return;
+  const brandOptions = [...brands].sort((a, b) => a.localeCompare(b)).map(b => `<option value="${escHtml(b)}">`).join('');
   infoEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:4px;">
-    <input id="af2-edit-brand-${idx}" value="${escHtml(w.brand || '')}" placeholder="Brand" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <input id="af2-edit-brand-${idx}" list="af2-brand-list-${idx}" value="${escHtml(w.brand || '')}" placeholder="Brand" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <datalist id="af2-brand-list-${idx}">${brandOptions}</datalist>
     <input id="af2-edit-model-${idx}" value="${escHtml(w.model || '')}" placeholder="Model" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
     <input id="af2-edit-ref-${idx}" value="${escHtml(w.reference || '')}" placeholder="Reference" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
   </div>`;
@@ -17323,8 +17325,6 @@ async function _identifyMultipleWatches(detectData, fullBase64, listEl) {
   }).join('');
 
   // Sequentially identify each watch from its crop
-  const collection = watches.map(w => ({ brand: w.brand, name: w.name, ref: w.ref || '' }));
-
   for (let i = 0; i < count; i++) {
     if (window._identifyAborted) break;
     const w = _photoIdentifyResults[i];
@@ -17343,7 +17343,7 @@ async function _identifyMultipleWatches(detectData, fullBase64, listEl) {
 
       const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
         method: 'POST',
-        body: JSON.stringify({ image: cropBase64, collection, mode: 'identify' }),
+        body: JSON.stringify({ image: cropBase64, mode: 'identify' }),
       }, 90000);
 
       if (window._identifyAborted) break;
