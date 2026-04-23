@@ -5082,7 +5082,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.21.17';
+const APP_VERSION = '22.21.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5739,7 +5739,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   // Notifications section (own profile only) — collapsible, default collapsed
   const notifHtml = isOwn ? (() => {
     const ep = (profile.email_prefs || {comments:true,mentions:true,clubs:false,friends:true,updates:true});
-    const notifOpen = localStorage.getItem('notif-collapse') !== '1';
+    const notifOpen = localStorage.getItem('notif-collapse') === '0';
     const tog = (key, label) => `
       <div class="toggle-row">
         <span class="toggle-label">${label}</span>
