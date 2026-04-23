@@ -361,6 +361,7 @@ test.describe('12. Full navigation smoke', () => {
     const errors = [];
     page.on('pageerror', err => errors.push(err.message));
 
+    await page.evaluate(() => localStorage.setItem('wrotate_newfeatures_v2', '1'));
     await devLogin(page);
 
     for (const pageName of ['feed', 'track', 'collection', 'wishlist', 'stats']) {
@@ -384,6 +385,7 @@ test.describe('12. Full navigation smoke', () => {
     const errors = [];
     page.on('pageerror', err => errors.push(err.message));
 
+    await page.evaluate(() => localStorage.setItem('wrotate_newfeatures_v2', '1'));
     await devLogin(page, true);
 
     for (const pageName of ['feed', 'track', 'collection', 'wishlist', 'stats']) {

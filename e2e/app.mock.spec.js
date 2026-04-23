@@ -829,12 +829,12 @@ test.describe('Admin chips (mocked)', () => {
 
   test('admin tab chips are button elements', async ({ page }) => {
     const chips = page.locator('#admin-tabs button.chip');
-    await expect(chips).toHaveCount(6);
+    await expect(chips).toHaveCount(7);
   });
 
   test('admin tab chips have correct labels', async ({ page }) => {
     const labels = await page.locator('#admin-tabs button.chip').allTextContents();
-    expect(labels).toEqual(['Usage', 'Traffic', 'Feedback', 'Reports', 'Official', 'Broadcast']);
+    expect(labels).toEqual(['Usage', 'Traffic', 'Feedback', 'Reports', 'Official', 'Broadcast', 'Dev']);
   });
 
   test('admin tab chips are keyboard focusable', async ({ page }) => {
@@ -1064,5 +1064,139 @@ test.describe('Review prompt (mocked)', () => {
     await page.locator('#review-step-feedback button:has-text("Send")').click();
     await expect(page.locator('#review-step-thanks')).toBeVisible();
     await expect(page.locator('text=Thank you!')).toBeVisible();
+  });
+});
+
+// ── Essentials Field Order ──────────────────────────────────────────────
+
+test.describe('Essentials field order (mocked)', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    // Dismiss What's New modal if present
+    const gotIt = page.locator('button:has-text("Got it")');
+    if (await gotIt.isVisible({ timeout: 2000 }).catch(() => false)) await gotIt.click();
+    await navigateTo(page, 'collection');
+    // Open add-watch modal via JS to avoid selector issues
+    await page.evaluate(() => openAddWatch());
+    await expect(page.locator('#watch-modal')).toBeVisible();
+    // Expand essentials section
+    await page.evaluate(() => openSection('sec-essentials'));
+    await page.waitForTimeout(300);
+  });
+
+  test('brand and model are in the same form-row', async ({ page }) => {
+    // Both fields should share a parent .form-row
+    const sameRow = await page.evaluate(() => {
+      const brand = document.getElementById('w-brand-display');
+      const name = document.getElementById('w-name');
+      const brandRow = brand?.closest('.form-row');
+      return brandRow && brandRow.contains(name);
+    });
+    expect(sameRow).toBe(true);
+  });
+
+  test('paid and purchased are in the same form-row', async ({ page }) => {
+    const sameRow = await page.evaluate(() => {
+      const price = document.getElementById('w-price');
+      const date = document.getElementById('w-date');
+      const priceRow = price?.closest('.form-row');
+      return priceRow && priceRow.contains(date);
+    });
+    expect(sameRow).toBe(true);
+  });
+
+  test('reference and URL are in the same form-row', async ({ page }) => {
+    const sameRow = await page.evaluate(() => {
+      const ref = document.getElementById('w-ref');
+      const url = document.getElementById('w-url');
+      const refRow = ref?.closest('.form-row');
+      return refRow && refRow.contains(url);
+    });
+    expect(sameRow).toBe(true);
+  });
+
+  test('field order: brand before price before ref', async ({ page }) => {
+    const order = await page.evaluate(() => {
+      const sec = document.getElementById('sec-essentials');
+      const rows = [...sec.querySelectorAll('.form-row')];
+      return rows.map(r => [...r.querySelectorAll('input,select')].map(el => el.id));
+    });
+    // Row 0: brand + name, Row 1: price + date, Row 2: ref + url
+    expect(order[0]).toContain('w-brand-display');
+    expect(order[1]).toContain('w-price');
+    expect(order[2]).toContain('w-ref');
+  });
+
+  test('fetch button no longer exists', async ({ page }) => {
+    await expect(page.locator('#w-fetch-btn')).toHaveCount(0);
+  });
+});
+
+// ── Watch Modal Button Styling ──────────────────────────────────────────
+
+test.describe('Watch modal button styling (mocked)', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    const gotIt = page.locator('button:has-text("Got it")');
+    if (await gotIt.isVisible({ timeout: 2000 }).catch(() => false)) await gotIt.click();
+  });
+
+  test('save button uses btn-primary class without inline background override', async ({ page }) => {
+    await navigateTo(page, 'collection');
+    await page.evaluate(() => openAddWatch());
+    await expect(page.locator('#watch-modal')).toBeVisible();
+    const saveBtn = page.locator('#save-watch-btn');
+    await expect(saveBtn).toHaveClass(/btn-primary/);
+    const style = await saveBtn.getAttribute('style');
+    expect(style).not.toContain('#854F0B');
+  });
+
+  test('delete button uses btn-danger class without inline color override', async ({ page }) => {
+    await navigateTo(page, 'collection');
+    // Open an existing watch to see the delete button
+    const card = page.locator('#watches-grid [onclick*="previewWatch"]').first();
+    if (await card.isVisible()) {
+      await card.click();
+      const editBtn = page.locator('button:has-text("Edit")').first();
+      if (await editBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await editBtn.click();
+        await page.waitForTimeout(500);
+        const style = await page.locator('#modal-delete-btn').getAttribute('style');
+        expect(style).not.toContain('#FCEBEB');
+        expect(style).not.toContain('#A32D2D');
+      }
+    }
+  });
+});
+
+// ── Notification Section Default State ──────────────────────────────────
+
+test.describe('Profile notification section (mocked)', () => {
+  test('notification settings section defaults to collapsed', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    const gotIt = page.locator('button:has-text("Got it")');
+    if (await gotIt.isVisible({ timeout: 2000 }).catch(() => false)) await gotIt.click();
+
+    await page.evaluate(() => {
+      localStorage.removeItem('notif-collapse');
+      if (typeof viewMyProfile === 'function') viewMyProfile();
+      else if (typeof viewUserProfile === 'function') viewUserProfile(currentUser.id);
+    });
+    await expect(page.locator('#page-profile')).toBeVisible({ timeout: 5000 });
+    await page.waitForTimeout(1000);
+
+    const notifSection = page.locator('#notif-section');
+    if (await notifSection.count() > 0) {
+      await expect(notifSection).toHaveClass(/collapsed/);
+    }
   });
 });
