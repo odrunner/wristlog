@@ -5095,7 +5095,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.18.09';
+const APP_VERSION = '22.18.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16742,6 +16742,7 @@ async function af2RunDetectAndIdentify(base64) {
       }, 120000);
       af2ClearTimer('identify_' + i);
       if (_af2Aborted) break;
+      if (w._af2State === 'skipped') continue;
       if (resp.ok) {
         const data = await resp.json();
         const id = data.watches?.[0];
@@ -16771,7 +16772,7 @@ async function af2RunDetectAndIdentify(base64) {
     } catch (err) {
       console.error('[WRotate] af2 identify error:', err);
       af2ClearTimer('identify_' + i);
-      w._af2State = 'failed';
+      if (w._af2State !== 'skipped') w._af2State = 'failed';
     }
     af2RenderSheet();
   }
