@@ -5095,7 +5095,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.17.28';
+const APP_VERSION = '22.17.38';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16579,7 +16579,7 @@ function af2RenderSheet() {
     const doneWatches = _af2Watches.filter(w => w._af2State === 'done' && w._af2WatchId);
     if (doneWatches.length === 1) {
       const wId = doneWatches[0]._af2WatchId;
-      footerEl.innerHTML = `<button class="btn btn-primary" style="width:100%;" onclick="closeAf2Sheet();openEditWatch('${wId}')">View details →</button>`;
+      footerEl.innerHTML = `<button class="btn btn-primary" style="width:100%;" onclick="closeAf2Sheet();renderCollection(true);openEditWatch('${wId}')">View details →</button>`;
     } else {
       footerEl.innerHTML = `<button class="btn btn-primary" style="width:100%;" onclick="closeAf2Sheet();renderCollection(true);">View collection →</button>`;
     }
@@ -16947,7 +16947,7 @@ async function af2RunEnhance(idx) {
       }
     }
     if (Array.isArray(data.functions) && data.functions.length && !watchObj.functions) {
-      watchObj.functions = data.functions.map(stripCitations).join(', ');
+      watchObj.functions = data.functions.map(stripCitations);
       filled++;
     }
     if (data.productUrl && !watchObj.url) { watchObj.url = data.productUrl; filled++; }
@@ -16959,12 +16959,11 @@ async function af2RunEnhance(idx) {
 
     w._af2EnhanceCount = filled;
     w._af2EnhanceFields = [];
-    const labelMap = { movementType: 'Movement', caliber: 'Caliber', caseDiameter: 'Case size', caseLength: 'Case length', caseThickness: 'Thickness', caseMaterial: 'Material', crystalType: 'Crystal', waterResistance: 'Water resistance', weight: 'Weight', yearRange: 'Year', gender: 'Gender', origin: 'Origin', description: 'Description', background: 'Background', functions: 'Functions', url: 'Link' };
     for (const [key, field] of Object.entries(fieldMap)) {
-      if (watchObj[field]) w._af2EnhanceFields.push(labelMap[field] || field);
+      if (watchObj[field]) w._af2EnhanceFields.push(watchObj[field]);
     }
-    if (watchObj.functions) w._af2EnhanceFields.push('Functions');
-    if (watchObj.url) w._af2EnhanceFields.push('Link');
+    if (Array.isArray(watchObj.functions) && watchObj.functions.length) w._af2EnhanceFields.push(watchObj.functions.join(', '));
+    if (watchObj.url) w._af2EnhanceFields.push('Product link');
     w._af2State = 'enhanced';
     af2RenderSheet();
     await new Promise(r => setTimeout(r, 600));
@@ -17038,7 +17037,7 @@ function af2MaybeAutoOpen() {
   if (!allDone) return;
   const doneWatches = _af2Watches.filter(w => w._af2State === 'done' && w._af2WatchId);
   if (doneWatches.length === 1) {
-    setTimeout(() => { closeAf2Sheet(); openEditWatch(doneWatches[0]._af2WatchId); }, 800);
+    setTimeout(() => { closeAf2Sheet(); renderCollection(true); openEditWatch(doneWatches[0]._af2WatchId); }, 800);
   }
 }
 
