@@ -5095,7 +5095,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.17.45';
+const APP_VERSION = '22.17.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16440,10 +16440,13 @@ function af2RenderRow(watch, idx) {
       contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}`
         + `<div class="af2-status af2-check-green">✓ Added</div>`;
       break;
-    case 'enhancing':
+    case 'enhancing': {
+      const enhFields = watch._af2EnhanceFields || [];
+      const enhFieldList = enhFields.length ? `<div style="font-size:.7rem;color:var(--muted);margin-top:2px;">${enhFields.join(' · ')}</div>` : '';
       contentHtml = `<div class="af2-model">${modelName}</div><div class="af2-brand">${brand}</div>${ref}`
-        + `<div class="af2-status af2-status-gold af2-theater-text">${escHtml(watch._af2Theater || 'Enhancing…')}</div>`;
+        + `<div class="af2-status af2-status-gold af2-theater-text">${escHtml(watch._af2Theater || 'Enhancing…')}</div>${enhFieldList}`;
       break;
+    }
     case 'enhanced': {
       const fields = watch._af2EnhanceFields || [];
       const fieldList = fields.length ? `<div style="font-size:.7rem;color:var(--muted);margin-top:2px;">${fields.join(' · ')}</div>` : '';
@@ -16579,9 +16582,11 @@ function af2RenderSheet() {
     const doneWatches = _af2Watches.filter(w => w._af2State === 'done' && w._af2WatchId);
     if (doneWatches.length === 1) {
       const wId = doneWatches[0]._af2WatchId;
-      footerEl.innerHTML = `<button class="btn btn-primary" style="width:100%;" onclick="closeAf2Sheet();renderCollection(true);openEditWatch('${wId}')">View details →</button>`;
+      footerEl.innerHTML = `<button class="btn btn-primary" style="flex:1;" onclick="closeAf2Sheet();renderCollection(true);openEditWatch('${wId}')">See details</button>`
+        + `<button class="btn btn-ghost" style="flex-shrink:0;" onclick="closeAf2Sheet();renderCollection(true);openAddFlowV2()">Add another</button>`;
     } else {
-      footerEl.innerHTML = `<button class="btn btn-primary" style="width:100%;" onclick="closeAf2Sheet();renderCollection(true);">View collection →</button>`;
+      footerEl.innerHTML = `<button class="btn btn-primary" style="flex:1;" onclick="closeAf2Sheet();renderCollection(true);">View collection</button>`
+        + `<button class="btn btn-ghost" style="flex-shrink:0;" onclick="closeAf2Sheet();renderCollection(true);openAddFlowV2()">Add another</button>`;
     }
   } else {
     footerEl.innerHTML = '';
@@ -17029,16 +17034,6 @@ async function af2RunPrice(idx) {
   }
   w._af2State = 'done';
   af2RenderSheet();
-  af2MaybeAutoOpen();
-}
-
-function af2MaybeAutoOpen() {
-  const allDone = _af2Watches.every(w => ['done','skipped','failed'].includes(w._af2State));
-  if (!allDone) return;
-  const doneWatches = _af2Watches.filter(w => w._af2State === 'done' && w._af2WatchId);
-  if (doneWatches.length === 1) {
-    setTimeout(() => { closeAf2Sheet(); renderCollection(true); openEditWatch(doneWatches[0]._af2WatchId); }, 800);
-  }
 }
 
 // ── Batch actions ──
