@@ -16,6 +16,29 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ADMIN_USER_ID = "d70b1a85-4f31-4431-b3b7-db76543daaf5";
 const FROM_EMAIL = "WRotate <hello@wrotate.com>";
 
+async function hmacSign(uid: string, cat: string, key: string): Promise<string> {
+  const enc = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw", enc.encode(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", cryptoKey, enc.encode(`${uid}:${cat}`));
+  return btoa(String.fromCharCode(...new Uint8Array(sig)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function sanitizeHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, "")
+    .replace(/<object[\s\S]*?<\/object>/gi, "")
+    .replace(/<embed[\s\S]*?>/gi, "")
+    .replace(/<form[\s\S]*?<\/form>/gi, "")
+    .replace(/\son\w+\s*=\s*["'][^"']*["']/gi, "")
+    .replace(/\son\w+\s*=\s*[^\s>]+/gi, "")
+    .replace(/javascript\s*:/gi, "blocked:")
+    .replace(/vbscript\s*:/gi, "blocked:");
+}
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://wrotate.com",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -69,12 +92,14 @@ serve(async (req) => {
       return jsonResponse({ error: "Email body too large (max 500KB)" }, 400);
     }
 
+    const safeHtml = sanitizeHtml(html);
+
     // Use service role client for admin operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Test mode: send to a single email
     if (test_email) {
-      const result = await sendEmail(test_email, subject, html);
+      const result = await sendEmail(test_email, subject, safeHtml);
       return jsonResponse({ sent: 1, test: true, result });
     }
 
@@ -107,28 +132,28 @@ serve(async (req) => {
       eligibleProfiles = eligibleProfiles.filter(p => !measuredSet.has(p.id));
     }
 
-    // Resolve emails from auth.users in parallel batches of 50
-    const emails: string[] = [];
+    // Resolve emails + user IDs from auth.users in parallel batches of 50
+    const recipients: { uid: string; email: string }[] = [];
     const resolveSize = 50;
     for (let i = 0; i < eligibleProfiles.length; i += resolveSize) {
       const batch = eligibleProfiles.slice(i, i + resolveSize);
       const results = await Promise.allSettled(
         batch.map(async (profile) => {
           const { data: authUser } = await supabase.auth.admin.getUserById(profile.id);
-          return authUser?.user?.email || null;
+          return authUser?.user?.email ? { uid: profile.id, email: authUser.user.email } : null;
         })
       );
       for (const r of results) {
-        if (r.status === "fulfilled" && r.value) emails.push(r.value);
+        if (r.status === "fulfilled" && r.value) recipients.push(r.value);
       }
     }
 
-    // Batch segments: split all emails into 3 roughly equal groups
-    let filteredEmails = emails;
+    // Batch segments: split all recipients into 3 roughly equal groups
+    let filteredRecipients = recipients;
     if (segment === "batch_1" || segment === "batch_2" || segment === "batch_3") {
-      const batchSize = Math.ceil(filteredEmails.length / 3);
+      const batchSize = Math.ceil(filteredRecipients.length / 3);
       const batchNum = parseInt(segment.split("_")[1]) - 1;
-      filteredEmails = filteredEmails.slice(batchNum * batchSize, (batchNum + 1) * batchSize);
+      filteredRecipients = filteredRecipients.slice(batchNum * batchSize, (batchNum + 1) * batchSize);
     }
 
     // Send via Resend batch API (up to 100 per request)
@@ -137,13 +162,22 @@ serve(async (req) => {
     const errors: string[] = [];
     const batchSize = 100;
 
-    for (let i = 0; i < filteredEmails.length; i += batchSize) {
-      const batch = filteredEmails.slice(i, i + batchSize);
-      const batchPayload = batch.map(email => ({
-        from: FROM_EMAIL,
-        to: [email],
-        subject,
-        html,
+    for (let i = 0; i < filteredRecipients.length; i += batchSize) {
+      const batch = filteredRecipients.slice(i, i + batchSize);
+      const batchPayload = await Promise.all(batch.map(async (r) => {
+        const sig = await hmacSign(r.uid, "updates", supabaseServiceKey);
+        const unsubUrl = `${supabaseUrl}/functions/v1/email-unsubscribe?uid=${r.uid}&cat=updates&sig=${sig}`;
+        const unsubFooter = `<div style="text-align:center;padding:16px 28px;font-size:11px;color:#999;line-height:1.5;border-top:1px solid #eee;"><a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · <a href="https://wrotate.com" style="color:#999;text-decoration:underline;">Manage preferences</a></div>`;
+        return {
+          from: FROM_EMAIL,
+          to: [r.email],
+          subject,
+          html: safeHtml + unsubFooter,
+          headers: {
+            "List-Unsubscribe": `<${unsubUrl}>`,
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
+        };
       }));
 
       try {
@@ -168,13 +202,13 @@ serve(async (req) => {
       }
 
       // Small delay between batches
-      if (i + batchSize < filteredEmails.length) {
+      if (i + batchSize < filteredRecipients.length) {
         await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
 
-    console.log(`[send-broadcast] Sent ${sent}, failed ${failed}, total eligible ${filteredEmails.length} (segment=${segment})`);
-    return jsonResponse({ sent, failed, total: filteredEmails.length, segment, errors: errors.slice(0, 5) });
+    console.log(`[send-broadcast] Sent ${sent}, failed ${failed}, total eligible ${filteredRecipients.length} (segment=${segment})`);
+    return jsonResponse({ sent, failed, total: filteredRecipients.length, segment, errors: errors.slice(0, 5) });
 
   } catch (err) {
     console.error("[send-broadcast] Error:", err);

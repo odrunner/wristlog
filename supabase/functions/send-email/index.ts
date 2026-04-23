@@ -38,6 +38,16 @@ const DEFAULT_PREFS: Record<string, boolean> = {
   friends: true,
 };
 
+async function hmacSign(uid: string, cat: string, key: string): Promise<string> {
+  const enc = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw", enc.encode(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", cryptoKey, enc.encode(`${uid}:${cat}`));
+  return btoa(String.fromCharCode(...new Uint8Array(sig)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
 // HTML-escape user content for safe embedding in email
 function esc(s: string): string {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -88,7 +98,10 @@ function buildEmailContent(
 }
 
 // Build HTML email template — light theme with logo
-function buildHtmlEmail(subject: string, body: string): string {
+function buildHtmlEmail(subject: string, body: string, unsubUrl?: string): string {
+  const unsubLine = unsubUrl
+    ? `You're receiving this because you have email notifications enabled in WRotate.<br><a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · <a href="https://wrotate.com" style="color:#999;text-decoration:underline;">Manage preferences</a>`
+    : `You're receiving this because you have email notifications enabled in WRotate. To change your preferences, open WRotate &rarr; Profile &rarr; Notifications.`;
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -108,10 +121,7 @@ function buildHtmlEmail(subject: string, body: string): string {
           <a href="https://wrotate.com" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
         </td></tr>
         <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
-          <div style="font-size:11px;color:#999;line-height:1.5;">
-            You're receiving this because you have email notifications enabled in WRotate.
-            To change your preferences, open WRotate &rarr; Profile &rarr; Notifications.
-          </div>
+          <div style="font-size:11px;color:#999;line-height:1.5;">${unsubLine}</div>
         </td></tr>
       </table>
     </td></tr>
@@ -218,7 +228,11 @@ serve(async (req) => {
       return new Response(JSON.stringify({ skipped: "no template for type" }), { status: 200 });
     }
 
-    const html = buildHtmlEmail(content.subject, content.body);
+    // Generate signed unsubscribe URL
+    const sig = await hmacSign(user_id, category, supabaseKey);
+    const unsubUrl = `${supabaseUrl}/functions/v1/email-unsubscribe?uid=${user_id}&cat=${category}&sig=${sig}`;
+
+    const html = buildHtmlEmail(content.subject, content.body, unsubUrl);
 
     // Send via Resend API
     const resendRes = await fetch("https://api.resend.com/emails", {
@@ -232,6 +246,10 @@ serve(async (req) => {
         to: [recipientEmail],
         subject: content.subject,
         html,
+        headers: {
+          "List-Unsubscribe": `<${unsubUrl}>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
       }),
     });
 
