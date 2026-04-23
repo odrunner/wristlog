@@ -5082,7 +5082,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.21.22';
+const APP_VERSION = '22.21.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17212,13 +17212,17 @@ async function checkBatchWatchValues(ids) {
         break;
       }
       const data = await r.json();
-      if (data.cached && w.marketPrice) {
-        const ageMs = Date.now() - new Date(w.marketPriceDate + 'T00:00:00').getTime();
-        const remaining = 7 - Math.floor(ageMs / 86400000);
-        if (statusEl) {
-          statusEl.innerHTML = `<span style="color:var(--gold);font-weight:600;">${fmtMoney(Number(w.marketPrice))}</span> <span style="color:var(--muted);font-size:.68rem;">still valid — refresh in ${remaining} day${remaining !== 1 ? 's' : ''}</span>`;
+      if (data.cached) {
+        const cachedMid = (data.estimated_value_usd || {}).mid;
+        const cachedDate = data.looked_up_at || w.marketPriceDate;
+        if (cachedMid && cachedDate) {
+          const ageMs = Date.now() - new Date(cachedDate).getTime();
+          const remaining = Math.max(1, 7 - Math.floor(ageMs / 86400000));
+          if (statusEl) {
+            statusEl.innerHTML = `<span style="color:var(--gold);font-weight:600;">${fmtMoney(cachedMid)}</span> <span style="color:var(--muted);font-size:.68rem;">still valid — refresh in ${remaining} day${remaining !== 1 ? 's' : ''}</span>`;
+          }
+          continue;
         }
-        continue;
       }
       const ev = data.estimated_value_usd || {};
       const mid = ev.mid;
