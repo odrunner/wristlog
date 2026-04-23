@@ -5082,7 +5082,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.21.25';
+const APP_VERSION = '22.21.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13220,6 +13220,13 @@ async function openUpdatePrices() {
       const chkCell = document.getElementById('upr-chk-' + w.id);
       if (!mid) {
         valCell.innerHTML = '<span style="color:var(--muted);">N/A</span>';
+        return;
+      }
+      if (data.cached) {
+        const cachedDate = data.looked_up_at || w.marketPriceDate;
+        const ageMs = cachedDate ? Date.now() - new Date(cachedDate).getTime() : 0;
+        const remaining = Math.max(1, 7 - Math.floor(ageMs / 86400000));
+        valCell.innerHTML = `<div style="white-space:nowrap;"><span style="color:var(--text);font-weight:600;">${fmtMoney(mid)}</span></div><div style="font-size:.65rem;color:var(--muted);white-space:nowrap;">valid — refresh in ${remaining}d</div>`;
         return;
       }
       _priceUpdateResults[w.id] = { mid, low: ev.low, high: ev.high, confidence: data.confidence, notes: data.notes };
