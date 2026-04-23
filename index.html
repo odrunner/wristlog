@@ -5082,7 +5082,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.21.14';
+const APP_VERSION = '22.21.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14456,15 +14456,15 @@ async function checkSingleWatchValue() {
   const btn = document.getElementById('check-value-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Searching…'; }
 
-  // Client-side 7-day cache: if market price was checked recently, return cached
+  // Client-side 7-day cache: if market price was checked recently, show freshness message
   if (w.marketPrice && w.marketPriceDate) {
     const ageMs = Date.now() - new Date(w.marketPriceDate + 'T00:00:00').getTime();
-    if (ageMs < 7 * 86400000) {
-      w._pendingPrice = Number(w.marketPrice);
-      w._pendingPriceTs = w.marketPriceDate;
+    const ageDays = Math.floor(ageMs / 86400000);
+    if (ageDays < 7) {
+      const remaining = 7 - ageDays;
+      toast(`Price is still current — can refresh in ${remaining} day${remaining !== 1 ? 's' : ''}`, 'info');
       db.from('valuation_events').insert({ user_id: currentUser.id, action: 'check_cached', watches_total: watches.length, watches_priced: 1 }).then(() => {});
-      if (btn) { btn.disabled = false; btn.textContent = 'Re-check'; }
-      renderValueSection();
+      if (btn) { btn.disabled = false; btn.textContent = 'Check price'; }
       return;
     }
   }
