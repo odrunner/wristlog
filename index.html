@@ -4292,6 +4292,25 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
+<!-- ════ USERNAME PROMPT MODAL ════ -->
+<div id="username-prompt-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="username-prompt-title">
+  <div class="modal" style="max-width:380px;">
+    <div style="text-align:center;margin-bottom:.75rem;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+    <div class="modal-title" id="username-prompt-title" style="text-align:center;font-size:1.15rem;">Pick a username</div>
+    <p style="color:var(--muted);font-size:.88rem;line-height:1.55;text-align:center;margin:.4rem 0 1.1rem;">Choose a username so others can find you. You can always change it later.</p>
+    <div class="form-group" style="margin-bottom:.2rem;">
+      <div class="username-field">
+        <span class="username-prefix">@</span>
+        <input type="text" id="up-username" placeholder="username" maxlength="30"
+          oninput="onUsernameInput(this, 'up-username-status')">
+      </div>
+    </div>
+    <div id="up-username-status" class="username-status" style="margin-bottom:.75rem;"></div>
+    <button class="btn btn-primary" id="up-save-btn" style="width:100%;margin-bottom:.5rem;" onclick="saveUsernamePrompt()">Continue</button>
+    <button class="btn btn-ghost" style="width:100%;" onclick="document.getElementById('username-prompt-modal').classList.add('hidden')">Cancel</button>
+  </div>
+</div>
+
 <!-- ════ EDIT LOG MODAL ════ -->
 <!-- ════ TRACK LOG MODAL ════ -->
 <div id="track-log-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="track-log-modal-title">
@@ -5082,7 +5101,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.07.06';
+const APP_VERSION = '23.08.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5309,6 +5328,39 @@ async function checkUsernameAvailability(username, statusElId) {
 
 function _enableUsernameBtn(statusElId) {
   // Enable/disable the relevant submit button (no-op for removed onboard modal)
+}
+
+let _usernamePromptCallback = null;
+
+function requireUsername(callback) {
+  if (myProfile && myProfile.username_set) { callback(); return; }
+  _usernamePromptCallback = callback;
+  const input = document.getElementById('up-username');
+  const status = document.getElementById('up-username-status');
+  input.value = '';
+  input.dataset.original = '';
+  status.textContent = '';
+  status.className = 'username-status';
+  _usernameAvailable = false;
+  document.getElementById('username-prompt-modal').classList.remove('hidden');
+  setTimeout(() => input.focus(), 100);
+}
+
+async function saveUsernamePrompt() {
+  const input = document.getElementById('up-username');
+  const raw = (input.value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+  const { valid } = validateUsername(raw);
+  if (!valid || !_usernameAvailable) { toast('Please choose a valid available username', 'error'); return; }
+  const btn = document.getElementById('up-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const { error } = await db.from('profiles').update({ username: raw, username_set: true }).eq('id', currentUser.id);
+  btn.disabled = false; btn.textContent = 'Continue';
+  if (error) { toast('Could not save — ' + error.message, 'error'); return; }
+  myProfile.username = raw;
+  myProfile.username_set = true;
+  document.getElementById('username-prompt-modal').classList.add('hidden');
+  toast('Username saved!');
+  if (_usernamePromptCallback) { _usernamePromptCallback(); _usernamePromptCallback = null; }
 }
 
 function openProfileModal() {
@@ -6040,7 +6092,7 @@ async function saveProfileFromPage() {
   setDefaultVis(defaultVis);
 
   const updateData = { display_name: name, bio };
-  if (usernameChanged) updateData.username = rawUsername;
+  if (usernameChanged) { updateData.username = rawUsername; updateData.username_set = true; }
 
   const { error } = await db.from('profiles')
     .update(updateData)
@@ -9857,7 +9909,7 @@ async function saveWelcomeProfile() {
 
   const updateData = {};
   if (name)        updateData.display_name = name;
-  if (usernameRaw) updateData.username = usernameRaw;
+  if (usernameRaw) { updateData.username = usernameRaw; updateData.username_set = true; }
   if (bio)         updateData.bio = bio;
 
   if (Object.keys(updateData).length && currentUser) {
@@ -14026,6 +14078,7 @@ function selStrap(id) {
 
 function openAddWatch() {
   if (demoGuard()) return;
+  if (myProfile && !myProfile.username_set) { requireUsername(() => openAddWatch()); return; }
   editingId         = null;
   selColor          = PALETTE[0];
   wPendingImage     = null;
@@ -17156,6 +17209,7 @@ function openAf2DebugPreview() {
 function openPhotoIdentify() {
   if (demoGuard()) return;
   if (!currentUser) { toast('Sign in to use photo identification', 'error'); return; }
+  if (myProfile && !myProfile.username_set) { requireUsername(() => openPhotoIdentify()); return; }
   openAddFlowV2();
 }
 let _valueCheckResults = [];

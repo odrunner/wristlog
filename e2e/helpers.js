@@ -255,6 +255,7 @@ export const FAKE_PROFILE = {
   profile_privacy: 'public',
   eula_accepted_at: '2025-01-01T00:00:00Z',
   theme_preference: 'light',
+  username_set: true,
 };
 
 export const SAMPLE_WATCHES = [
