@@ -1026,7 +1026,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .modal-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 1.4rem; }
     .modal-actions { display: flex; gap: .65rem; margin-top: 1.4rem; }
-    #watch-modal > .modal > .modal-actions { position:sticky; bottom:-1.75rem; margin-left:-1.75rem; margin-right:-1.75rem; margin-bottom:-1.75rem; margin-top:1rem; padding:1rem 1.75rem; background:var(--surface); border-top:1px solid var(--border); z-index:1; }
+    #watch-modal > .modal > .modal-actions,
+    #wishlist-modal > .modal > .modal-actions { position:sticky; bottom:-1.75rem; margin-left:-1.75rem; margin-right:-1.75rem; margin-bottom:-1.75rem; margin-top:1rem; padding:1rem 1.75rem; background:var(--surface); border-top:1px solid var(--border); z-index:1; }
 
     /* ── STATS PAGE ── */
     .stats-row {
@@ -3915,17 +3916,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- ════ WISHLIST ADD / EDIT MODAL ════ -->
 <div id="wishlist-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="wishlist-modal-title">
   <div class="modal">
-    <div class="modal-title" id="wishlist-modal-title">Add to Wishlist</div>
-
-    <!-- URL first — Fetch fills the other fields -->
-    <div class="form-group">
-      <label for="wl-url">Manufacturer / Listing URL</label>
-      <div class="url-row">
-        <input type="url" id="wl-url" placeholder="https://…" oninput="updateWlUrlBtn()">
-        <a id="wl-url-open-btn" href="#" target="_blank" rel="noopener noreferrer" class="url-open-btn hidden">Open ↗</a>
-        <button id="wl-fetch-btn" class="url-open-btn" onclick="fetchWishlistDetails()" style="color:var(--text);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Fetch</button>
-      </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="modal-title" id="wishlist-modal-title" style="margin-bottom:0;">Add to Wishlist</div>
+      <button class="btn-icon" onclick="closeWishlistModal()" aria-label="Close" style="font-size:1.3rem;color:var(--muted);padding:.2rem .4rem;line-height:1;">&times;</button>
     </div>
+    <!-- Photo (hidden state) -->
+    <div id="wl-img-preview" style="display:none;">
+      <img id="wl-img-el" src="" alt="" style="display:none;">
+    </div>
+    <button type="button" id="wl-change-photo-btn" onclick="pickWlModalImage()" style="margin-top:6px;margin-bottom:10px;background:transparent;border:0.5px solid var(--border);color:var(--muted);font-size:11px;font-family:inherit;padding:4px 10px;border-radius:6px;cursor:pointer;">Add photo</button>
 
     <div class="form-row">
       <div class="form-group">
@@ -3960,31 +3959,25 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <div class="form-row">
       <div class="form-group">
-        <label for="wl-date">Date Added to Wishlist</label>
+        <label for="wl-url">URL</label>
+        <div class="url-row">
+          <input type="url" id="wl-url" placeholder="https://…" oninput="updateWlUrlBtn()">
+          <a id="wl-url-open-btn" href="#" target="_blank" rel="noopener noreferrer" class="url-open-btn hidden">Open ↗</a>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="wl-date">Date Added</label>
         <input type="date" id="wl-date">
       </div>
     </div>
 
-    <!-- Photo -->
-    <div class="form-group">
-      <label>Photo</label>
-      <div id="wl-img-preview" style="display:none;align-items:center;gap:.65rem;">
-        <img id="wl-img-el" src="" alt="" title="Click to crop" style="width:72px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0;cursor:pointer;" onclick="openWlModalCropAdjuster()">
-        <div style="display:flex;flex-direction:column;gap:.35rem;">
-          <button type="button" class="btn btn-ghost btn-sm" onclick="pickWlModalImage()">Replace</button>
-          <button type="button" class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="clearWlModalImg()">Remove</button>
-        </div>
-      </div>
-      <button type="button" id="wl-img-upload-btn" class="btn btn-ghost btn-sm" onclick="pickWlModalImage()" style="display:inline-flex;align-items:center;gap:.3rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Upload photo</button>
-    </div>
-
-    <div class="modal-actions" style="flex-wrap:wrap;">
-      <button class="btn btn-primary" onclick="saveWishlistItem()">Save</button>
+    <div class="modal-actions" style="flex-wrap:nowrap;gap:.4rem;">
+      <button class="btn btn-primary" onclick="saveWishlistItem()" style="flex:1;">Save</button>
       <button class="btn btn-ghost"   onclick="closeWishlistModal()">Cancel</button>
-      <button id="wl-move-btn" class="btn btn-ghost" onclick="moveWishlistToCollection()" style="display:none;">Move to Collection</button>
-    </div>
-    <div style="margin-top:.35rem;">
-      <button id="wl-delete-btn" class="btn btn-ghost" onclick="wlDeleteFromEdit()" style="display:none;color:var(--danger);border-color:var(--danger);">Delete</button>
+      <button id="wl-move-btn" class="btn btn-ghost" onclick="moveWishlistToCollection()" style="display:none;white-space:nowrap;">Move to Collection</button>
+      <button id="wl-delete-btn" class="btn btn-danger" onclick="wlDeleteFromEdit()" style="display:none;" aria-label="Delete">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+      </button>
     </div>
   </div>
 </div>
@@ -5101,7 +5094,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.12.30';
+const APP_VERSION = '23.21.26';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5206,7 +5199,7 @@ async function loadMyProfile() {
     if (!/^[a-z]/.test(username)) username = 'u' + username;
     const abVariant = localStorage.getItem('ab_landing') || null;
     const { data: created, error: createErr } = await db.from('profiles').upsert(
-      { id: currentUser.id, username, display_name: googleName, theme_preference: 'light', profile_privacy: 'followers', default_post_visibility: 'public', ab_variant: abVariant },
+      { id: currentUser.id, username, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'public', ab_variant: abVariant },
       { onConflict: 'id' }
     ).select().single();
     if (createErr) {
@@ -5214,7 +5207,7 @@ async function loadMyProfile() {
       // Retry with a guaranteed-unique username (e.g. username conflict)
       const fallback = 'user' + Math.random().toString(36).slice(2, 8);
       const { data: retry, error: retryErr } = await db.from('profiles').upsert(
-        { id: currentUser.id, username: fallback, display_name: googleName, theme_preference: 'light', profile_privacy: 'followers', default_post_visibility: 'public', ab_variant: abVariant },
+        { id: currentUser.id, username: fallback, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'public', ab_variant: abVariant },
         { onConflict: 'id' }
       ).select().single();
       if (retryErr) console.error('[WristLog] Profile create retry error:', retryErr.message, retryErr);
@@ -18856,24 +18849,15 @@ async function fetchWishlistImage(itemId) {
 
 // ── Wishlist modal image helpers ─────────────────────────────────────────────
 function renderWlModalImg(existingSrc) {
-  // If called without arg, derive existingSrc from the item being edited
   if (existingSrc === undefined) {
     const w = editingWlId ? wishlist.find(x => x.id === editingWlId) : null;
     existingSrc = w?.image || null;
   }
-  // If user explicitly removed the image, show nothing regardless of existing
   const src = wlRemoveImage ? null : (wlPendingImage || existingSrc);
-  const preview   = document.getElementById('wl-img-preview');
-  const uploadBtn = document.getElementById('wl-img-upload-btn');
-  if (!preview || !uploadBtn) return;
-  if (src) {
-    document.getElementById('wl-img-el').src = src;
-    preview.style.display   = 'flex';
-    uploadBtn.style.display = 'none';
-  } else {
-    preview.style.display   = 'none';
-    uploadBtn.style.display = '';
-  }
+  const img = document.getElementById('wl-img-el');
+  const changeBtn = document.getElementById('wl-change-photo-btn');
+  if (img) img.src = src || '';
+  if (changeBtn) changeBtn.textContent = src ? 'Change photo' : 'Add photo';
 }
 
 async function openWlModalCropAdjuster() {
