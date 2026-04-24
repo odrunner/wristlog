@@ -5094,7 +5094,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.21.26';
+const APP_VERSION = '23.21.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18879,27 +18879,14 @@ async function openWlModalCropAdjuster() {
   });
 }
 
-async function pickWlModalImage() {
-  if (navigator.clipboard && navigator.clipboard.read) {
-    try {
-      const items = await navigator.clipboard.read();
-      for (const item of items) {
-        const imageType = item.types.find(t => t.startsWith('image/'));
-        if (imageType) {
-          const blob = await item.getType(imageType);
-          wlPendingFile  = blob;
-          wlPendingImage = URL.createObjectURL(blob);
-          wlRemoveImage  = false;
-          renderWlModalImg(); return;
-        }
-      }
-    } catch (_) {}
-  }
+function pickWlModalImage() {
+  if (demoGuard()) return;
   const input = document.createElement('input');
   input.type = 'file'; input.accept = 'image/*';
   input.onchange = () => {
     if (!input.files[0]) return;
     if (!validateImageFile(input.files[0])) return;
+    if (wlPendingImage) URL.revokeObjectURL(wlPendingImage);
     wlPendingFile  = input.files[0];
     wlPendingImage = URL.createObjectURL(input.files[0]);
     wlRemoveImage  = false;
