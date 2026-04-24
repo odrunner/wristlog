@@ -5094,7 +5094,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.21.42';
+const APP_VERSION = '24.14.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20209,7 +20209,7 @@ function addMsrTickDots(newTicks) {
   const activeBph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;
   const pairsPerSec = activeBph / 7200;
   const sdFactor = 86.4 * pairsPerSec;
-  const outlierLimit = Math.max(30, 3 * (86400 / activeBph) * pairsPerSec);
+  const outlierLimit = Math.max(30 * pairsPerSec, 3 * (86400 / activeBph) * pairsPerSec);
   for (const tk of newTicks) {
     const indivDev = tk.d - _msrLastCumDev; // individual pair deviation for outlier check
     _msrLastCumDev = tk.d;
