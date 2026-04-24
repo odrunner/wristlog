@@ -5094,7 +5094,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.14.45';
+const APP_VERSION = '24.15.10';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20282,14 +20282,10 @@ function renderMsrScatterPlot() {
   const tMax = Math.max(10, Math.ceil(tDataMax / 10) * 10 + 5);
   const tRange = tMax - tMin;
 
-  // Reconstruct cumulative deviation from individual pair deviations,
-  // then convert to running rate (s/day) for each dot
   const rateData = [];
-  let cumDev = 0;
   for (const pt of data) {
-    cumDev += pt.d;
     if (pt.t < 3) continue;
-    rateData.push({ t: pt.t, r: (cumDev / pt.t) * 86.4 });
+    rateData.push({ t: pt.t, r: (pt.d / pt.t) * 86.4 });
   }
   if (rateData.length < 1) { ctx.fillStyle = '#0a1a12'; ctx.fillRect(0, 0, w, h); return; }
 
@@ -20352,12 +20348,13 @@ function renderMsrScatterPlot() {
   ctx.shadowBlur = 0;
 
   // Reference line — horizontal at the current rate (native or bucket)
-  const ppsChart = activeBph / 7200;
-  const sdChart = 86.4 * ppsChart;
   let bucketMedian = null;
   if (data.length >= 11) {
-    const indivRates = data.map(d => d.d * sdChart);
-    bucketMedian = computeMedianRate(indivRates);
+    const last = data[data.length - 1];
+    const cutT = last.t - 10;
+    const start = data.find(d => d.t >= cutT) || data[0];
+    const dT = last.t - start.t;
+    if (dT >= 2) bucketMedian = Math.round((last.d - start.d) / dT * 86.4 * 10) / 10;
   }
   if (bucketMedian != null) _msrCachedBucketRate = bucketMedian;
   const lineRate = _msrLastRate != null ? _msrLastRate : bucketMedian;
@@ -20730,10 +20727,14 @@ function stopMsrListen(reason) {
     const tickSnap = _msrScatterData.map(d => ({ t: Math.round(d.t * 100) / 100, d: Math.round(d.d * 1000) / 1000 }));
     const watchId = document.getElementById('msr-watch-select')?.value || null;
     const bph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || null;
-    const sdLog = 86.4 * ((bph || 28800) / 7200);
-    const indivRatesLog = [];
-    for (let i = 1; i < _msrScatterData.length; i++) indivRatesLog.push((_msrScatterData[i].d - _msrScatterData[i-1].d) * sdLog);
-    const bucketRate = indivRatesLog.length >= 10 ? computeMedianRate(indivRatesLog) : null;
+    let bucketRate = null;
+    if (_msrScatterData.length >= 11) {
+      const sLast = _msrScatterData[_msrScatterData.length - 1];
+      const sCutT = sLast.t - 10;
+      const sStart = _msrScatterData.find(d => d.t >= sCutT) || _msrScatterData[0];
+      const sDT = sLast.t - sStart.t;
+      if (sDT >= 2) bucketRate = Math.round((sLast.d - sStart.d) / sDT * 86.4 * 10) / 10;
+    }
     db.from('timegrapher_tick_logs').insert({
       session_id: _tgDebugSessionId,
       messages: JSON.stringify({
@@ -20780,14 +20781,12 @@ function stopMsrListen(reason) {
   const rateEl = document.getElementById('msr-live-rate');
   // Final rate: native Theil-Sen is authoritative. Only fall back to bucket median
   // if native rate was never set (e.g. web-only mode with no native engine).
-  const finalBph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;
-  const finalSD = 86.4 * (finalBph / 7200);
-  const finalIndivRates = [];
-  for (let i = 1; i < _msrScatterData.length; i++) finalIndivRates.push((_msrScatterData[i].d - _msrScatterData[i-1].d) * finalSD);
-  const finalDotRates = finalIndivRates;
-  if (_msrLastRate == null) {
-    const finalMode = finalDotRates.length >= 10 ? computeMedianRate(finalDotRates) : null;
-    if (finalMode != null) _msrLastRate = finalMode;
+  if (_msrLastRate == null && _msrScatterData.length >= 11) {
+    const fLast = _msrScatterData[_msrScatterData.length - 1];
+    const fCutT = fLast.t - 10;
+    const fStart = _msrScatterData.find(d => d.t >= fCutT) || _msrScatterData[0];
+    const fDT = fLast.t - fStart.t;
+    if (fDT >= 2) _msrLastRate = Math.round((fLast.d - fStart.d) / fDT * 86.4 * 10) / 10;
   }
   if (_msrLastRate != null && statusText) {
     const r = _msrLastRate;
@@ -20802,7 +20801,7 @@ function stopMsrListen(reason) {
       errorBar = Math.max(0.5, Math.round(2 * Math.sqrt(variance) * 10) / 10);
     } else {
       // Not enough history — fall back to half the IQR of raw dots
-      const rates = finalDotRates.length >= 10 ? finalDotRates : (_msrAllRates.length >= 5 ? _msrAllRates : _msrRateHistory);
+      const rates = _msrAllRates.length >= 5 ? _msrAllRates : _msrRateHistory;
       if (rates.length >= 5) {
         const sorted = [...rates].sort((a, b) => a - b);
         const q1 = sorted[Math.floor(sorted.length * 0.25)];
