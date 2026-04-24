@@ -5094,7 +5094,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.16.25';
+const APP_VERSION = '24.16.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20269,16 +20269,31 @@ function renderMsrScatterPlot() {
   const pw = w - pad.l - pad.r;
   const ph = h - pad.t - pad.b;
 
-  const SD = 86.4;
   const data = _msrScatterData;
   const tMin = 0;
   const tDataMax = data[data.length - 1].t;
   const tMax = Math.max(10, Math.ceil(tDataMax / 10) * 10 + 5);
   const tRange = tMax - tMin;
 
+  // Running rate: cumDev slope over 5s trailing window for each dot
+  const rateData = [];
+  const windowSec = 5;
+  for (let i = 0; i < data.length; i++) {
+    const pt = data[i];
+    if (pt.t < 3) continue;
+    let j = i;
+    while (j > 0 && pt.t - data[j - 1].t < windowSec) j--;
+    if (j < i && pt.t - data[j].t >= 1) {
+      rateData.push({ t: pt.t, r: ((pt.cd - data[j].cd) / (pt.t - data[j].t)) * 86.4 });
+    } else {
+      rateData.push({ t: pt.t, r: (pt.cd / pt.t) * 86.4 });
+    }
+  }
+  if (rateData.length < 1) { ctx.fillStyle = '#0a1a12'; ctx.fillRect(0, 0, w, h); return; }
+
   // Y range in s/day: auto-center on data, minimum ±5 s/day
   let dMin = Infinity, dMax = -Infinity;
-  for (const d of data) { const v = d.d * SD; if (v < dMin) dMin = v; if (v > dMax) dMax = v; }
+  for (const d of rateData) { if (d.r < dMin) dMin = d.r; if (d.r > dMax) dMax = d.r; }
   const dMid = (dMin + dMax) / 2;
   const dHalf = Math.max(5.0, (dMax - dMin) / 2 * 1.3);
   const yMin = dMid - dHalf;
@@ -20323,8 +20338,8 @@ function renderMsrScatterPlot() {
   ctx.shadowColor = '#22c55e';
   ctx.shadowBlur = 3 * dpr;
   const dotR = Math.max(1.5, 2.0 * dpr);
-  for (const pt of data) {
-    const x = xPos(pt.t), y = yPos(pt.d * SD);
+  for (const pt of rateData) {
+    const x = xPos(pt.t), y = yPos(pt.r);
     ctx.beginPath(); ctx.arc(x, y, dotR, 0, Math.PI * 2); ctx.fill();
   }
   ctx.shadowBlur = 0;
