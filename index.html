@@ -5094,7 +5094,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.15.10';
+const APP_VERSION = '24.15.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20283,9 +20283,17 @@ function renderMsrScatterPlot() {
   const tRange = tMax - tMin;
 
   const rateData = [];
-  for (const pt of data) {
+  const windowSec = 5;
+  for (let i = 0; i < data.length; i++) {
+    const pt = data[i];
     if (pt.t < 3) continue;
-    rateData.push({ t: pt.t, r: (pt.d / pt.t) * 86.4 });
+    let j = i;
+    while (j > 0 && pt.t - data[j - 1].t < windowSec) j--;
+    if (j < i && pt.t - data[j].t >= 1) {
+      rateData.push({ t: pt.t, r: ((pt.d - data[j].d) / (pt.t - data[j].t)) * 86.4 });
+    } else {
+      rateData.push({ t: pt.t, r: (pt.d / pt.t) * 86.4 });
+    }
   }
   if (rateData.length < 1) { ctx.fillStyle = '#0a1a12'; ctx.fillRect(0, 0, w, h); return; }
 
