@@ -345,7 +345,7 @@ class TimegrapherEngine {
         pendingFirstTickDev = 0; pendingFirstTickTime = 0; pendingFirstTickInterval = 0; pendingFirstTickEnergy = 0
         recentPairDevs = []
         consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []
-        smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []
+        smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
         lastDebugInfo = nil
         lastBeatWaveform = nil
         lastTickPositions = nil
@@ -364,7 +364,8 @@ class TimegrapherEngine {
 
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playAndRecord, mode: .measurement, options: [.mixWithOthers, .allowBluetoothA2DP])
+            try? session.setActive(false, options: .notifyOthersOnDeactivation)
+            try session.setCategory(.playAndRecord, mode: .measurement, options: [.mixWithOthers, .allowBluetoothA2DP, .defaultToSpeaker])
             try session.setPreferredSampleRate(48000)
             try session.setActive(true)
 
@@ -406,7 +407,7 @@ class TimegrapherEngine {
         audioEngine?.inputNode.removeTap(onBus: 0)
         audioEngine?.stop()
         audioEngine = nil
-        try? AVAudioSession.sharedInstance().setActive(false)
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         return Result(rate: currentRate, beatError: currentBeatError,
                       tickCount: peakCount, ticks: [])
     }
