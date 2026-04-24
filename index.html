@@ -5094,7 +5094,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.14.22';
+const APP_VERSION = '24.14.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9387,7 +9387,6 @@ async function saveNewPost() {
   if (window.posthog) posthog.capture('post_created', { has_photo: !!entry.photoUrl, has_watch: !!trackWatchId });
   toast(postedWatch ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : 'Posted!');
   haptic('success');
-  syncWidgetData();
   maybeShowReviewPrompt('post');
   feedLoadedAt = 0; // force feed to re-fetch after posting
   if (document.getElementById('page-feed').classList.contains('active')) loadFeed();
@@ -12627,7 +12626,6 @@ async function saveLog() {
   renderTrack();
   toast(isUpdate ? 'Wear log updated!' : 'Wear logged!');
   haptic('success');
-  syncWidgetData();
   if (!isUpdate) maybeShowReviewPrompt('wear_log');
   } finally { if (_slBtn) { _slBtn.disabled = false; _slBtn.textContent = 'Log This Wear'; } }
 }
@@ -14345,7 +14343,6 @@ function quickLog(watchId) {
   dismissReminder();
   toast('Wear logged!');
   haptic('success');
-  syncWidgetData();
 }
 
 // ── Today's Pick log modal ────────────────────────────────────────────────────
@@ -19415,19 +19412,6 @@ function handleSharedImage(base64) {
   if (!currentUser) return;
   handleSharedImageV2(base64);
 }
-function syncWidgetData() {
-  try {
-    const today = todayStr();
-    const todayLog = logs.find(l => l.date === today);
-    const tw = todayLog ? watches.find(w => w.id === todayLog.watchId) : null;
-    const val = watches.reduce((s, w) => s + (Number(w.marketPrice) || Number(w.price) || 0), 0);
-    window.webkit.messageHandlers.widgetData.postMessage({
-      watchCount: watches.length,
-      collectionValue: val,
-      todayWatch: tw ? { brand: tw.brand, name: tw.name, color: tw.color || '#c9a84c', image: tw.image || null } : null
-    });
-  } catch(e) {}
-}
 let _tgWatchId = null;
 let _tgEditingId = null;
 let _tgListening = false;
@@ -20298,12 +20282,14 @@ function renderMsrScatterPlot() {
   const tMax = Math.max(10, Math.ceil(tDataMax / 10) * 10 + 5);
   const tRange = tMax - tMin;
 
-  // Convert cumulative deviation (ms) to running rate (s/day) for each dot
-  // rate = cumDev_ms / elapsed_s * 86.4  (ms/s → s/day)
+  // Reconstruct cumulative deviation from individual pair deviations,
+  // then convert to running rate (s/day) for each dot
   const rateData = [];
+  let cumDev = 0;
   for (const pt of data) {
-    if (pt.t < 3) continue; // skip first 3s — rate is unstable with tiny denominators
-    rateData.push({ t: pt.t, r: (pt.d / pt.t) * 86.4 });
+    cumDev += pt.d;
+    if (pt.t < 3) continue;
+    rateData.push({ t: pt.t, r: (cumDev / pt.t) * 86.4 });
   }
   if (rateData.length < 1) { ctx.fillStyle = '#0a1a12'; ctx.fillRect(0, 0, w, h); return; }
 
@@ -20370,8 +20356,7 @@ function renderMsrScatterPlot() {
   const sdChart = 86.4 * ppsChart;
   let bucketMedian = null;
   if (data.length >= 11) {
-    const indivRates = [];
-    for (let i = 1; i < data.length; i++) indivRates.push((data[i].d - data[i-1].d) * sdChart);
+    const indivRates = data.map(d => d.d * sdChart);
     bucketMedian = computeMedianRate(indivRates);
   }
   if (bucketMedian != null) _msrCachedBucketRate = bucketMedian;
@@ -21012,7 +20997,6 @@ async function bootApp(user) {
   } catch(e) {
     console.error('[WristLog] bootApp loadUserData error:', e.message, e);
   }
-  syncWidgetData();
   // Retry any dirty state persisted from a previous session
   const _hasPersisted = _dirty.watches.size || _dirty.logs.size || _dirty.wishlist.size || _dirty.elo.size || _pendingDeletes.length;
   if (_hasPersisted) { console.log('[WRotate] Retrying persisted dirty state'); cloudSync(); }
@@ -21025,7 +21009,7 @@ async function bootApp(user) {
   // Auto-show What's New once per version (iOS 1.4+ only)
   const _wnKey = 'whatsNewSeen';
   const _wnVer = '2026-04';
-  if (window.webkit?.messageHandlers?.widgetData && localStorage.getItem(_wnKey) !== _wnVer) {
+  if (window._iosAppVersion && localStorage.getItem(_wnKey) !== _wnVer) {
     localStorage.setItem(_wnKey, _wnVer);
     setTimeout(() => openWhatsNew(), 600);
   }
