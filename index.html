@@ -4285,6 +4285,20 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
+<!-- ════ ADMIN USER DETAIL MODAL ════ -->
+<div id="admin-user-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="admin-user-modal-title">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title" id="admin-user-modal-title" style="display:flex;align-items:center;gap:.5rem;">User Detail</div>
+    <div id="admin-user-modal-body" style="max-height:70vh;overflow-y:auto;margin:0 -.25rem;padding:0 .25rem;">
+      <div style="color:var(--muted);font-size:.9rem;">Loading…</div>
+    </div>
+    <div class="modal-actions" style="margin-top:1rem;">
+      <button class="btn btn-ghost" onclick="viewUserProfile(window._adminDetailUserId);closeAdminUserModal()">View Profile</button>
+      <button class="btn btn-ghost" onclick="closeAdminUserModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ USERNAME PROMPT MODAL ════ -->
 <div id="username-prompt-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="username-prompt-title">
   <div class="modal" style="max-width:380px;">
@@ -5094,7 +5108,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.16.48';
+const APP_VERSION = '24.18.37';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11003,8 +11017,8 @@ async function loadAdminStats() {
           : `<div style="width:22px;height:22px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:700;flex-shrink:0;">${(u.name[0]||'?').toUpperCase()}</div>`;
         return `<tr>
           <td style="padding:.4rem .25rem;border-bottom:1px solid var(--border);max-width:0;"><div style="display:flex;align-items:center;gap:.4rem;min-width:0;">
-            <div style="cursor:pointer;flex-shrink:0;" onclick="viewUserProfile('${u.id}')">${initHTML}</div>
-            <div style="min-width:0;overflow:hidden;cursor:pointer;" onclick="viewUserProfile('${u.id}')"><div style="font-weight:600;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(u.name)}</div><div style="font-size:.62rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@${escHtml(u.username)} · ${u.joined}</div></div>
+            <div style="cursor:pointer;flex-shrink:0;" onclick="openAdminUserDetail('${u.id}')">${initHTML}</div>
+            <div style="min-width:0;overflow:hidden;cursor:pointer;" onclick="openAdminUserDetail('${u.id}')"><div style="font-weight:600;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(u.name)}</div><div style="font-size:.62rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@${escHtml(u.username)} · ${u.joined}</div></div>
           </div></td>
           ${cols.map(c => `<td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u[c.key]}</td>`).join('')}
         </tr>`;
@@ -11068,6 +11082,119 @@ async function loadAdminStats() {
     el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;">
       <div style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;">Failed to load stats: ${escHtml(e.message)}</div>
       <button class="btn btn-ghost" onclick="loadAdminStats()" style="font-size:.78rem;">↻ Retry</button>
+    </div>`;
+  }
+}
+
+// ── Admin User Detail Modal ──────────────────────────────────────────────
+function _adminTimeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return days + 'd ago';
+  const months = Math.floor(days / 30);
+  return months + 'mo ago';
+}
+
+function closeAdminUserModal() {
+  document.getElementById('admin-user-modal').classList.add('hidden');
+}
+
+async function openAdminUserDetail(userId) {
+  window._adminDetailUserId = userId;
+  const modal = document.getElementById('admin-user-modal');
+  const body = document.getElementById('admin-user-modal-body');
+  body.innerHTML = '<div style="color:var(--muted);font-size:.9rem;text-align:center;padding:2rem 0;">Loading…</div>';
+  modal.classList.remove('hidden');
+
+  try {
+    const { data, error } = await withTimeout(db.rpc('admin_user_detail', { target_user_id: userId }), 10000);
+    if (error) throw error;
+    const d = data;
+    const p = d.profile || {};
+    const name = p.display_name || p.username || userId.slice(0, 8);
+    const joinDate = p.created_at ? fmtDate(p.created_at.slice(0, 10)) : '—';
+    const lastLogin = d.last_sign_in ? fmtDate(d.last_sign_in.slice(0, 10)) : '—';
+    const lastLoginAgo = d.last_sign_in ? _adminTimeAgo(d.last_sign_in) : '';
+    const joinedAgo = p.created_at ? _adminTimeAgo(p.created_at) : '';
+    const msrRate = d.measurements_total > 0 ? Math.round(d.measurements_success / d.measurements_total * 100) + '%' : '—';
+    const isRepeat = d.active_days > 1;
+
+    const initHTML = p.avatar_url
+      ? `<img src="${escHtml(p.avatar_url)}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">`
+      : `<div style="width:48px;height:48px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;">${(name[0]||'?').toUpperCase()}</div>`;
+
+    const row = (label, value) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);">${label}</span><span style="color:var(--text);font-weight:600;">${value}</span></div>`;
+
+    const watches = (d.watch_list || []);
+    const watchListHtml = watches.length > 0
+      ? `<div style="margin-top:.5rem;">${watches.map(w => `<div style="font-size:.75rem;color:var(--muted);padding:.15rem 0;border-bottom:1px solid var(--border);">${escHtml(w.brand)} — ${escHtml(w.name)}</div>`).join('')}</div>`
+      : '<div style="font-size:.75rem;color:var(--muted);padding:.25rem 0;">No watches</div>';
+
+    document.getElementById('admin-user-modal-title').textContent = name;
+
+    body.innerHTML = `
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;">
+        ${initHTML}
+        <div>
+          <div style="font-weight:700;font-size:.95rem;">${escHtml(name)}</div>
+          <div style="font-size:.72rem;color:var(--muted);">@${escHtml(p.username || '—')}</div>
+          <div style="font-size:.68rem;color:var(--muted);">${p.profile_privacy || 'public'} profile · ${p.collection_visibility || 'public'} collection</div>
+          ${p.is_suspended ? '<div style="font-size:.68rem;color:var(--danger);font-weight:600;">SUSPENDED</div>' : ''}
+        </div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem;margin-bottom:.75rem;">
+        <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.35rem;">Activity</div>
+        ${row('Joined', joinDate + (joinedAgo ? ' <span style="font-size:.68rem;color:var(--muted);font-weight:400;">(' + joinedAgo + ')</span>' : ''))}
+        ${row('Last login', lastLogin + (lastLoginAgo ? ' <span style="font-size:.68rem;color:var(--muted);font-weight:400;">(' + lastLoginAgo + ')</span>' : ''))}
+        ${row('Active days', d.active_days)}
+        ${row('Repeat user', isRepeat ? '<span style="color:#4ade80;">Yes</span>' : '<span style="color:var(--muted);">No</span>')}
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem;margin-bottom:.75rem;">
+        <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.35rem;">Collection</div>
+        ${row('Watches', d.watches)}
+        ${row('Wears', d.wears)}
+        ${row('Posts', d.posts)}
+        ${row('Wishlist', d.wishlist)}
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem;margin-bottom:.75rem;">
+        <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.35rem;">Features Used</div>
+        ${row('Measurements', d.measurements_total + (d.measurements_total > 0 ? ' <span style="font-size:.68rem;color:var(--muted);font-weight:400;">(' + msrRate + ' success)</span>' : ''))}
+        ${row('Enhances', d.enhances)}
+        ${row('Value checks', d.price_checks)}
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem;margin-bottom:.75rem;">
+        <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.35rem;">Social</div>
+        ${row('Followers', d.followers)}
+        ${row('Following', d.following)}
+        ${row('Friends', d.friends)}
+        ${row('Comments', d.comments)}
+        ${row('Likes given', d.likes_given)}
+        ${row('Clubs', d.clubs)}
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem;margin-bottom:.75rem;">
+        <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.35rem;">Feedback</div>
+        ${row('Review prompted', d.feedback_asked)}
+        ${row('Feedback given', d.feedback_given)}
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem;">
+        <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.35rem;">Watches (${watches.length})</div>
+        ${watchListHtml}
+      </div>`;
+  } catch(e) {
+    body.innerHTML = `<div style="text-align:center;padding:1.5rem 0;">
+      <div style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;">Failed to load: ${escHtml(e.message)}</div>
+      <button class="btn btn-ghost" onclick="openAdminUserDetail('${escAttr(userId)}')" style="font-size:.78rem;">Retry</button>
     </div>`;
   }
 }
@@ -19241,6 +19368,7 @@ const _overlayCloseMap = {
   'msr-help-modal':      closeMsrHelp,
   // eula-modal: intentionally excluded — must not close on overlay click or Escape
   'report-modal':        closeReport,
+  'admin-user-modal':    closeAdminUserModal,
 };
 
 // Click overlay background to close
