@@ -4571,7 +4571,7 @@ function officialBadgeHtml(profile) {
       path: window.location.pathname,
       user_agent: navigator.userAgent || null,
       ab_variant: localStorage.getItem('ab_landing') || null,
-      user_id: window.currentUser?.id || null,
+      user_id: window.currentUser?.id || (() => { try { const t = localStorage.getItem('sb-xnzweevzrojmouzhpwzv-auth-token'); return t ? JSON.parse(t).user?.id || null : null; } catch(e) { return null; } })(),
     }).then(() => {}).catch(() => {});
     // Clean UTM params from URL without reload
     if (utm_source) {
@@ -4592,7 +4592,7 @@ function trackVisit(data) {
     db.from('page_visits').insert({
       ...data,
       user_agent: navigator.userAgent || null,
-      user_id: window.currentUser?.id || null,
+      user_id: window.currentUser?.id || (() => { try { const t = localStorage.getItem('sb-xnzweevzrojmouzhpwzv-auth-token'); return t ? JSON.parse(t).user?.id || null : null; } catch(e) { return null; } })(),
     }).then(() => {}).catch(() => {});
   } catch(e) {}
 }
@@ -5108,7 +5108,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.18.37';
+const APP_VERSION = '26.20.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11217,15 +11217,31 @@ async function renderAdminTraffic() {
     const now = new Date();
     const d7 = new Date(now - 7 * 86400000).toISOString();
     const d30 = new Date(now - 30 * 86400000).toISOString();
-    const [allVisitsR, profilesR, funnelAll, emailEventsR] = await Promise.all([
-      db.from('page_visits').select('utm_source, utm_medium, utm_campaign, referrer, user_agent, created_at, user_id')
-        .order('created_at', { ascending: false }).limit(5000),
+    // Paginate page_visits (PostgREST caps at 1000 rows per request)
+    async function fetchAllPageVisits() {
+      const PAGE = 1000, cols = 'utm_source, utm_medium, utm_campaign, referrer, user_agent, created_at, user_id';
+      let all = [], from = 0;
+      for (let i = 0; i < 10; i++) {
+        const { data } = await db.from('page_visits').select(cols)
+          .order('created_at', { ascending: false }).range(from, from + PAGE - 1);
+        if (!data || !data.length) break;
+        all = all.concat(data);
+        if (data.length < PAGE) break;
+        from += PAGE;
+      }
+      return all;
+    }
+
+    const [allVisitsData, profilesR, funnelAll, emailEventsR] = await Promise.all([
+      fetchAllPageVisits(),
       db.from('profiles').select('id, created_at').order('created_at', { ascending: false }),
       db.from('page_visits').select('utm_source, created_at, user_id').eq('utm_medium', 'funnel').order('created_at', { ascending: false }).limit(500),
       db.from('email_events').select('event_type, email_to, subject, created_at').order('created_at', { ascending: false }).limit(500),
     ]);
 
-    const isInternal = (v) => v.user_id && INTERNAL_IDS.has(v.user_id);
+    const internalUAs = new Set();
+    allVisitsData.forEach(v => { if (v.user_id && INTERNAL_IDS.has(v.user_id) && v.user_agent) internalUAs.add(v.user_agent); });
+    const isInternal = (v) => (v.user_id && INTERNAL_IDS.has(v.user_id)) || (!v.user_id && v.user_agent && internalUAs.has(v.user_agent));
     const isBot = (v) => /HeadlessChrome|Playwright|Puppeteer|Electron/i.test(v.user_agent || '');
     const isFunnelNoise = (v) => v.utm_medium === 'funnel' || /^(signin_google|signin_apple|onboarding_step_\d)$/.test(v.utm_source || '');
     const isOAuthReturn = (v) => {
@@ -11233,7 +11249,7 @@ async function renderAdminTraffic() {
       try { const h = new URL(v.referrer).hostname; return h === 'accounts.google.com' || h === 'appleid.apple.com'; } catch(e) { return false; }
     };
 
-    const allRaw = (allVisitsR.data || []).filter(v => !isInternal(v) && !isBot(v) && !isFunnelNoise(v) && !isOAuthReturn(v));
+    const allRaw = allVisitsData.filter(v => !isInternal(v) && !isBot(v) && !isFunnelNoise(v) && !isOAuthReturn(v));
     const visits7 = allRaw.filter(v => v.created_at >= d7);
     const visits30 = allRaw.filter(v => v.created_at >= d30);
 
