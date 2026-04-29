@@ -5108,7 +5108,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.20.12';
+const APP_VERSION = '28.20.55';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11239,9 +11239,7 @@ async function renderAdminTraffic() {
       db.from('email_events').select('event_type, email_to, subject, created_at').order('created_at', { ascending: false }).limit(500),
     ]);
 
-    const internalUAs = new Set();
-    allVisitsData.forEach(v => { if (v.user_id && INTERNAL_IDS.has(v.user_id) && v.user_agent) internalUAs.add(v.user_agent); });
-    const isInternal = (v) => (v.user_id && INTERNAL_IDS.has(v.user_id)) || (!v.user_id && v.user_agent && internalUAs.has(v.user_agent));
+    const isInternal = (v) => v.user_id && INTERNAL_IDS.has(v.user_id);
     const isBot = (v) => /HeadlessChrome|Playwright|Puppeteer|Electron/i.test(v.user_agent || '');
     const isFunnelNoise = (v) => v.utm_medium === 'funnel' || /^(signin_google|signin_apple|onboarding_step_\d)$/.test(v.utm_source || '');
     const isOAuthReturn = (v) => {
