@@ -5107,7 +5107,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '08.17.28';
+const APP_VERSION = '08.17.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6836,7 +6836,7 @@ async function renderClubDetail(clubId) {
     // ── Stage 2: watches + profiles + likes + comments in parallel ─────
     const [watchResult, profResult, likesResult, commentResult] = await Promise.all([
       watchIds.length
-        ? db.from('watches').select('id, brand, name, color, image, ref, url').in('id', watchIds)
+        ? db.from('watches').select('id, brand, name, color, image, ref, url, description').in('id', watchIds)
         : { data: [] },
       db.from('profiles').select('id, username, display_name, avatar_url').in('id', uids),
       db.from('likes').select('log_id, user_id').in('log_id', logIds),
@@ -8249,7 +8249,7 @@ async function loadFeed() {
 
     const [watchResult, profileResult, likesResult, commentResult] = await withTimeout(Promise.all([
       watchIds.length
-        ? db.from('watches').select('id, brand, name, color, image, ref, url').in('id', watchIds)
+        ? db.from('watches').select('id, brand, name, color, image, ref, url, description').in('id', watchIds)
         : { data: [] },
       db.from('profiles').select('id, username, display_name, avatar_url, is_official').in('id', userIds),
       db.from('likes').select('log_id, user_id').in('log_id', logIds),
@@ -8355,7 +8355,7 @@ async function scrollToFeedPost(postId) {
       // Enrich with profile and watch data
       const [profRes, watchRes] = await Promise.all([
         db.from('profiles').select('id, username, display_name, avatar_url').eq('id', post.user_id).maybeSingle(),
-        post.watch_id ? db.from('watches').select('id, brand, name, color, image, ref, url').eq('id', post.watch_id).maybeSingle() : { data: null },
+        post.watch_id ? db.from('watches').select('id, brand, name, color, image, ref, url, description').eq('id', post.watch_id).maybeSingle() : { data: null },
       ]);
       post.profile = profRes.data || null;
       post.watch = watchRes.data || null;
@@ -18446,28 +18446,25 @@ function previewWatch(w) {
   // Title: Brand - Model
   document.getElementById('watch-preview-modal-title').textContent = [w.brand, w.name].filter(Boolean).join(' - ') || 'Watch';
 
-  // Compact action row: reference | official page | wishlist
+  // Compact action row: reference | link icon | + wishlist
   const refSpan = w.ref
     ? `<span style="font-size:.78rem;color:var(--muted);font-weight:600;">${escHtml(w.ref)}</span>`
     : '';
   const urlBtn = w.url
-    ? `<a href="${escHtml(w.url)}" target="_blank" rel="noopener noreferrer"
-          style="display:inline-flex;align-items:center;gap:.3rem;
-                 padding:.35rem .7rem;border-radius:8px;background:var(--surface2);
-                 border:1px solid var(--border);color:var(--text);text-decoration:none;
-                 font-size:.78rem;font-weight:600;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    ? `<a href="${escHtml(w.url)}" target="_blank" rel="noopener noreferrer" title="Visit official page"
+          style="display:inline-flex;align-items:center;
+                 padding:.35rem;border-radius:8px;background:var(--surface2);
+                 border:1px solid var(--border);color:var(--text);text-decoration:none;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
           <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
         </svg>
-        Official
       </a>`
     : '';
   const wishBtn = `<button class="btn btn-primary" onclick="addPreviewedWatchToWishlist()"
     style="padding:.35rem .7rem;font-size:.78rem;white-space:nowrap;">+ Wishlist</button>`;
-  const actionRow = `<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.5rem;">
-    ${refSpan}${(refSpan && (urlBtn || wishBtn)) ? '<span style="color:var(--border);">|</span>' : ''}
-    ${urlBtn}${wishBtn}
+  const actionRow = `<div style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;">
+    ${refSpan}${urlBtn}${wishBtn}
   </div>`;
 
   // Description from AI enhancement
