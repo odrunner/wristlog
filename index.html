@@ -5120,7 +5120,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '09.14.18';
+const APP_VERSION = '09.14.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11331,7 +11331,8 @@ async function renderAdminTraffic() {
         <div style="height:.5rem;"></div>
         ${statRow('Last 7 days', visits7.length, unique7.size + ' unique')}
         ${statRow('Last 30 days', visits30.length, unique30.size + ' unique')}
-        ${repeat7 > 0 ? `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>Repeat (7d)</span><span style="font-weight:600;"><a href="#" onclick="event.preventDefault();document.getElementById('repeat7-list').style.display=document.getElementById('repeat7-list').style.display==='none'?'block':'none'" style="color:var(--gold);text-decoration:underline;cursor:pointer;">${repeat7}</a></span></div><div id="repeat7-list" style="display:none;padding:.25rem 0;">${repeat7Entries.sort((a,b)=>b[1]-a[1]).map(([uid, cnt]) => { const p = profileMap[uid]; const name = p ? (p.display_name || p.username || uid.slice(0,8)) : uid.slice(0,8); return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:.75rem;padding:.25rem 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="openAdminUserDetail('${uid}')"><span style="color:var(--text);">${escHtml(name)}</span><span style="color:var(--muted);">${cnt} visits</span></div>`; }).join('')}</div>` : statRow('Repeat (7d)', repeat7)}
+        ${statRow('Repeat (7d)', repeat7 > 0 ? `<span onclick="var el=document.getElementById('repeat7-list');el.style.display=el.style.display==='none'?'block':'none'" style="color:var(--gold);text-decoration:underline;cursor:pointer;">${repeat7}</span>` : repeat7)}
+        ${repeat7 > 0 ? `<div id="repeat7-list" style="display:none;">${repeat7Entries.sort((a,b)=>b[1]-a[1]).map(([uid, cnt]) => { const p = profileMap[uid]; const name = p ? (p.display_name || p.username || uid.slice(0,8)) : uid.slice(0,8); return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:.78rem;padding:.3rem 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="openAdminUserDetail('${uid}')"><span style="color:var(--text);">${escHtml(name)}</span><span style="color:var(--muted);font-weight:400;">${cnt} visits</span></div>`; }).join('')}</div>` : ''}
       </div>
       ${sourceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">By Source</div>
