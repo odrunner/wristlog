@@ -100,7 +100,7 @@ function buildEmailContent(
 // Build HTML email template — light theme with logo
 function buildHtmlEmail(subject: string, body: string, unsubUrl?: string): string {
   const unsubLine = unsubUrl
-    ? `You're receiving this because you have email notifications enabled in WRotate.<br><a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · <a href="https://wrotate.com" style="color:#999;text-decoration:underline;">Manage preferences</a>`
+    ? `You're receiving this because you have email notifications enabled in WRotate.<br><a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">Manage preferences</a>`
     : `You're receiving this because you have email notifications enabled in WRotate. To change your preferences, open WRotate &rarr; Profile &rarr; Notifications.`;
   return `<!DOCTYPE html>
 <html>
@@ -118,7 +118,7 @@ function buildHtmlEmail(subject: string, body: string, unsubUrl?: string): strin
           <div style="font-size:14px;color:#555;line-height:1.55;">${body}</div>
         </td></tr>
         <tr><td style="padding:4px 28px 28px;">
-          <a href="https://wrotate.com" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
+          <a href="https://wrotate.com/open" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
         </td></tr>
         <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
           <div style="font-size:11px;color:#999;line-height:1.5;">${unsubLine}</div>

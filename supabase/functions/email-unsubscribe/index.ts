@@ -111,5 +111,5 @@ serve(async (req) => {
     : "";
 
   console.log(`[email-unsubscribe] ${uid} unsubscribed from ${cat}`);
-  return htmlPage("Unsubscribed", `<h1>You've been unsubscribed</h1><p>You won't receive <strong>${label}</strong> emails from WRotate anymore.</p><p>You can re-enable them anytime in WRotate → Profile → Notifications.</p><a href="https://wrotate.com" class="btn">Open WRotate</a>${allLink}`);
+  return htmlPage("Unsubscribed", `<h1>You've been unsubscribed</h1><p>You won't receive <strong>${label}</strong> emails from WRotate anymore.</p><p>You can re-enable them anytime in WRotate → Profile → Notifications.</p><a href="https://wrotate.com/open" class="btn">Open WRotate</a>${allLink}`);
 });
