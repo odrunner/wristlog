@@ -1536,7 +1536,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wpm-field:last-child { border-bottom: none; }
     .wpm-field-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
     .wpm-field-value { font-size: .9rem; font-weight: 600; }
-    .wpm-actions { flex-direction: column; gap: .5rem; margin-top: 1.25rem; }
+    .wpm-actions { flex-direction: column; gap: .5rem; margin-top: .75rem; }
     .wpm-actions .btn { width: 100%; justify-content: center; }
 
     /* Actions */
@@ -3989,8 +3989,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-title" id="watch-preview-modal-title" style="margin-bottom:.75rem;"></div>
     <div id="wpm-fields"></div>
     <div class="modal-actions wpm-actions">
-      <button class="btn btn-primary" onclick="addPreviewedWatchToWishlist()">Add to Wishlist</button>
-      <button class="btn btn-ghost"   onclick="closeWatchPreview()">Close</button>
+      <button class="btn btn-ghost" onclick="closeWatchPreview()">Close</button>
     </div>
   </div>
 </div>
@@ -5108,7 +5107,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '08.14.13';
+const APP_VERSION = '08.17.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5869,7 +5868,8 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
            data-watch-ref="${escHtml(w.ref||'')}"
            data-watch-url="${escHtml(w.url||'')}"
            data-watch-image="${escHtml(w.image||'')}"
-           data-watch-color="${escHtml(w.color||'#c9a84c')}"`;
+           data-watch-color="${escHtml(w.color||'#c9a84c')}"
+           data-watch-desc="${escHtml(w.description||'')}"`;
       return `<div class="showcase-card${isOwn ? ' priv-own col-watch-card' + tintCls : ''}"${isOwn ? ` data-watch-id="${escHtml(w.id)}" data-priv="${priv||'inh'}"` : ''} ${clickAttr}>
         ${thumb}
         <div class="showcase-brand">${escHtml(w.brand || '')}</div>
@@ -8504,7 +8504,8 @@ function renderFeedCard(item) {
            data-watch-ref="${escHtml(w.ref||'')}"
            data-watch-url="${escHtml(w.url||'')}"
            data-watch-image="${escHtml(w.image||'')}"
-           data-watch-color="${escHtml(w.color||'#c9a84c')}">${escHtml((w.brand||'') + ' ' + (w.name||''))}</div>`
+           data-watch-color="${escHtml(w.color||'#c9a84c')}"
+           data-watch-desc="${escHtml(w.description||'')}">${escHtml((w.brand||'') + ' ' + (w.name||''))}</div>`
     : '';
 
   // Visibility badge — only shown to the author on non-public posts
@@ -8622,7 +8623,8 @@ function renderFeedCard(item) {
            data-watch-ref="${escHtml(w.ref||'')}"
            data-watch-url="${escHtml(w.url||'')}"
            data-watch-image="${escHtml(w.image||'')}"
-           data-watch-color="${escHtml(w.color||'#c9a84c')}">
+           data-watch-color="${escHtml(w.color||'#c9a84c')}"
+           data-watch-desc="${escHtml(w.description||'')}">
         ${wThumb}
         <span class="feed-wearing-watch-name">${escHtml(wLabel)}</span>
       </div>
@@ -18410,6 +18412,7 @@ function previewWatchFromEl(el) {
     url:   el.dataset.watchUrl   || '',
     image: el.dataset.watchImage || '',
     color: el.dataset.watchColor || '#c9a84c',
+    description: el.dataset.watchDesc || '',
   });
 }
 
@@ -18440,34 +18443,39 @@ function previewWatch(w) {
     heroEl.innerHTML = `<div class="wpm-hero-avatar">${initials(w.brand||'', w.name||'')}</div>`;
   }
 
-  // Title
-  document.getElementById('watch-preview-modal-title').textContent = [w.brand, w.name].filter(Boolean).join(' ') || 'Watch';
+  // Title: Brand - Model
+  document.getElementById('watch-preview-modal-title').textContent = [w.brand, w.name].filter(Boolean).join(' - ') || 'Watch';
 
-  // Info fields (public only — no price/value)
-  const infoRows = [
-    w.brand && ['Brand',     escHtml(w.brand)],
-    w.name  && ['Model',     escHtml(w.name)],
-    w.ref   && ['Reference', escHtml(w.ref)],
-  ].filter(Boolean);
+  // Compact action row: reference | official page | wishlist
+  const refSpan = w.ref
+    ? `<span style="font-size:.78rem;color:var(--muted);font-weight:600;">${escHtml(w.ref)}</span>`
+    : '';
   const urlBtn = w.url
     ? `<a href="${escHtml(w.url)}" target="_blank" rel="noopener noreferrer"
-          style="display:inline-flex;align-items:center;gap:.4rem;margin-top:1rem;
-                 padding:.45rem .9rem;border-radius:8px;background:var(--surface2);
+          style="display:inline-flex;align-items:center;gap:.3rem;
+                 padding:.35rem .7rem;border-radius:8px;background:var(--surface2);
                  border:1px solid var(--border);color:var(--text);text-decoration:none;
-                 font-size:.83rem;font-weight:600;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                 font-size:.78rem;font-weight:600;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
           <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
         </svg>
-        Visit official page
+        Official
       </a>`
     : '';
-  document.getElementById('wpm-fields').innerHTML =
-    infoRows.map(([label, val]) => `
-      <div class="wpm-field">
-        <div class="wpm-field-label">${label}</div>
-        <div class="wpm-field-value">${val}</div>
-      </div>`).join('') + urlBtn;
+  const wishBtn = `<button class="btn btn-primary" onclick="addPreviewedWatchToWishlist()"
+    style="padding:.35rem .7rem;font-size:.78rem;white-space:nowrap;">+ Wishlist</button>`;
+  const actionRow = `<div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.5rem;">
+    ${refSpan}${(refSpan && (urlBtn || wishBtn)) ? '<span style="color:var(--border);">|</span>' : ''}
+    ${urlBtn}${wishBtn}
+  </div>`;
+
+  // Description from AI enhancement
+  const descHtml = w.description
+    ? `<div style="margin-top:.75rem;font-size:.82rem;color:var(--muted);line-height:1.55;">${escHtml(w.description)}</div>`
+    : '';
+
+  document.getElementById('wpm-fields').innerHTML = actionRow + descHtml;
 
   document.getElementById('watch-preview-modal').classList.remove('hidden');
 }
