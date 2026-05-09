@@ -5120,7 +5120,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '09.14.41';
+const APP_VERSION = '09.14.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10951,11 +10951,17 @@ async function loadAdminStats() {
 
     // Per-user breakdowns via SECURITY DEFINER RPCs (bypass RLS)
     const d7ago = new Date(Date.now() - 7 * 86400000).toISOString();
-    const [profilesR, msrR, userStatsR, logs7R] = await withTimeout(Promise.all([
+    const d1ago = new Date(Date.now() - 24 * 3600000).toISOString();
+    const [profilesR, msrR, userStatsR, logs7R, newWatchesR, newWearsR, newMsrR, newValR, newEnhR] = await withTimeout(Promise.all([
       db.from('profiles').select('id, username, display_name, avatar_url, created_at').order('created_at', { ascending: false }).limit(500),
       db.rpc('admin_measurement_counts'),
       db.rpc('admin_user_stats'),
       db.from('logs').select('user_id, created_at').gte('created_at', d7ago),
+      db.from('watches').select('user_id').gte('created_at', d1ago),
+      db.from('logs').select('user_id').gte('created_at', d1ago),
+      db.from('timegrapher_results').select('user_id').gte('created_at', d1ago),
+      db.from('valuation_events').select('user_id').gte('created_at', d1ago),
+      db.from('identify_attempts').select('user_id').eq('mode', 'enhance').gte('created_at', d1ago),
     ]), 10000);
 
     const watchByUser = {}, wearByUser = {}, valByUser = {}, enhByUser = {};
@@ -10974,6 +10980,12 @@ async function loadAdminStats() {
       if (!activeDaysByUser[l.user_id]) activeDaysByUser[l.user_id] = new Set();
       activeDaysByUser[l.user_id].add(day);
     });
+    const _countBy = (rows) => { const m = {}; (rows || []).forEach(r => { m[r.user_id] = (m[r.user_id] || 0) + 1; }); return m; };
+    const newWtcByUser = _countBy(newWatchesR.data);
+    const newWrsByUser = _countBy(newWearsR.data);
+    const newMsrByUser = _countBy(newMsrR.data);
+    const newValByUser = _countBy(newValR.data);
+    const newEnhByUser = _countBy(newEnhR.data);
 
     const allProfiles = profilesR.data || [];
 
@@ -10997,6 +11009,11 @@ async function loadAdminStats() {
       enhances: enhByUser[p.id] || 0,
       measurements: msrByUser[p.id] || 0,
       r7: (activeDaysByUser[p.id]?.size || 0) > 1 ? 1 : 0,
+      _newWtc: newWtcByUser[p.id] || 0,
+      _newWrs: newWrsByUser[p.id] || 0,
+      _newVal: newValByUser[p.id] || 0,
+      _newEnh: newEnhByUser[p.id] || 0,
+      _newMsr: newMsrByUser[p.id] || 0,
     });
     const profileList = allProfiles.filter(p => !INTERNAL_IDS.has(p.id)).map(toProfileItem);
     const internalList = allProfiles.filter(p => INTERNAL_IDS.has(p.id)).map(toProfileItem);
@@ -11026,11 +11043,11 @@ async function loadAdminStats() {
         });
       }
       const cols = [
-        { key: 'watches', label: 'Wtc' },
-        { key: 'wears', label: 'Wrs' },
-        { key: 'priceChecks', label: 'Val' },
-        { key: 'enhances', label: 'Enh' },
-        { key: 'measurements', label: 'Msr' },
+        { key: 'watches', label: 'Wtc', newKey: '_newWtc' },
+        { key: 'wears', label: 'Wrs', newKey: '_newWrs' },
+        { key: 'priceChecks', label: 'Val', newKey: '_newVal' },
+        { key: 'enhances', label: 'Enh', newKey: '_newEnh' },
+        { key: 'measurements', label: 'Msr', newKey: '_newMsr' },
         { key: 'r7', label: 'R?' },
       ];
       const thStyle = 'text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;cursor:pointer;user-select:none;';
@@ -11045,7 +11062,7 @@ async function loadAdminStats() {
             <div style="cursor:pointer;flex-shrink:0;" onclick="openAdminUserDetail('${u.id}')">${initHTML}</div>
             <div style="min-width:0;overflow:hidden;cursor:pointer;" onclick="openAdminUserDetail('${u.id}')"><div style="font-weight:600;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(u.name)}</div><div style="font-size:.62rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@${escHtml(u.username)} · ${u.joined}</div></div>
           </div></td>
-          ${cols.map(c => `<td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;">${u[c.key]}</td>`).join('')}
+          ${cols.map(c => { const isNew = c.newKey && u[c.newKey] > 0; return `<td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;${isNew ? 'color:#4ade80;font-weight:700;' : ''}">${u[c.key]}</td>`; }).join('')}
         </tr>`;
       }).join('');
       const container = document.getElementById(tableId);
