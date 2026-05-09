@@ -3988,8 +3988,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="wpm-hero" id="wpm-hero"></div>
     <div class="modal-title" id="watch-preview-modal-title" style="margin-bottom:.75rem;"></div>
     <div id="wpm-fields"></div>
-    <div class="modal-actions wpm-actions">
-      <button class="btn btn-ghost" onclick="closeWatchPreview()">Close</button>
+    <div class="modal-actions wpm-actions" style="flex-direction:row;gap:.5rem;">
+      <button class="btn btn-primary" onclick="addPreviewedWatchToWishlist()" style="flex:1;">+ Wishlist</button>
+      <button class="btn btn-ghost" onclick="closeWatchPreview()" style="flex:1;">Close</button>
     </div>
   </div>
 </div>
@@ -5107,7 +5108,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '08.17.31';
+const APP_VERSION = '08.17.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18461,15 +18462,13 @@ function previewWatch(w) {
         </svg>
       </a>`
     : '';
-  const wishBtn = `<button class="btn btn-primary" onclick="addPreviewedWatchToWishlist()"
-    style="padding:.35rem .7rem;font-size:.78rem;white-space:nowrap;">+ Wishlist</button>`;
   const actionRow = `<div style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;">
-    ${refSpan}${urlBtn}${wishBtn}
+    ${refSpan}${urlBtn}
   </div>`;
 
   // Description from AI enhancement
   const descHtml = w.description
-    ? `<div style="margin-top:.75rem;font-size:.82rem;color:var(--muted);line-height:1.55;">${escHtml(w.description)}</div>`
+    ? `<div style="margin-top:.75rem;padding:.7rem .85rem;border-radius:8px;background:#FAEEDA;border:0.5px solid #BA7517;font-size:.82rem;color:#854F0B;line-height:1.55;">${escHtml(w.description)}</div>`
     : '';
 
   document.getElementById('wpm-fields').innerHTML = actionRow + descHtml;
