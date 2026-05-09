@@ -5120,7 +5120,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '09.13.41';
+const APP_VERSION = '09.14.18';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11249,7 +11249,7 @@ async function renderAdminTraffic() {
 
     const [allVisitsData, profilesR, funnelAll, emailEventsR] = await Promise.all([
       fetchAllPageVisits(),
-      db.from('profiles').select('id, created_at').order('created_at', { ascending: false }),
+      db.from('profiles').select('id, created_at, username, display_name').order('created_at', { ascending: false }),
       db.from('page_visits').select('utm_source, created_at, user_id').eq('utm_medium', 'funnel').order('created_at', { ascending: false }).limit(500),
       db.from('email_events').select('event_type, email_to, subject, created_at').order('created_at', { ascending: false }).limit(500),
     ]);
@@ -11277,6 +11277,10 @@ async function renderAdminTraffic() {
     const visitCounts7 = {};
     visits7.forEach(v => { const fp = fingerprint(v); visitCounts7[fp] = (visitCounts7[fp] || 0) + 1; });
     const repeat7 = Object.values(visitCounts7).filter(c => c > 1).length;
+    const repeat7Entries = Object.entries(visitCounts7).filter(([fp, c]) => c > 1 && fp.length === 36 && fp.includes('-'));
+    const repeat7UserIds = repeat7Entries.map(([fp]) => fp);
+    const profileMap = {};
+    (profilesR.data || []).forEach(p => { profileMap[p.id] = p; });
 
     const classifySource = (v) => {
       const src = v.utm_source || '';
@@ -11327,7 +11331,7 @@ async function renderAdminTraffic() {
         <div style="height:.5rem;"></div>
         ${statRow('Last 7 days', visits7.length, unique7.size + ' unique')}
         ${statRow('Last 30 days', visits30.length, unique30.size + ' unique')}
-        ${statRow('Repeat (7d)', repeat7)}
+        ${repeat7 > 0 ? `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>Repeat (7d)</span><span style="font-weight:600;"><a href="#" onclick="event.preventDefault();document.getElementById('repeat7-list').style.display=document.getElementById('repeat7-list').style.display==='none'?'block':'none'" style="color:var(--gold);text-decoration:underline;cursor:pointer;">${repeat7}</a></span></div><div id="repeat7-list" style="display:none;padding:.25rem 0;">${repeat7Entries.sort((a,b)=>b[1]-a[1]).map(([uid, cnt]) => { const p = profileMap[uid]; const name = p ? (p.display_name || p.username || uid.slice(0,8)) : uid.slice(0,8); return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:.75rem;padding:.25rem 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="openAdminUserDetail('${uid}')"><span style="color:var(--text);">${escHtml(name)}</span><span style="color:var(--muted);">${cnt} visits</span></div>`; }).join('')}</div>` : statRow('Repeat (7d)', repeat7)}
       </div>
       ${sourceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">By Source</div>
