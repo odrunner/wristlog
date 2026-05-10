@@ -1418,7 +1418,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       /* Modals: centered on mobile with side margins */
       .overlay { align-items: center; padding: 1rem; overflow-x: hidden; }
       .modal { border-radius: 14px; max-height: 88vh; max-width: 420px; padding: 1.4rem 1rem 1.2rem; }
-      #watch-preview-modal .modal { max-width: 320px; }
+      #watch-preview-modal .modal { max-width: 360px; }
 
       /* Prevent horizontal overflow in modal rows */
       .url-row { flex-wrap: wrap; }
@@ -3999,7 +3999,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal wpm-modal">
     <div class="wpm-hero" id="wpm-hero"></div>
     <div class="modal-title" id="watch-preview-modal-title" style="margin-bottom:.75rem;"></div>
-    <div id="wpm-fields"></div>
+    <div id="wpm-fields" style="max-height:50vh;overflow-y:auto;"></div>
     <div class="modal-actions wpm-actions" style="flex-direction:row;gap:.5rem;">
       <button class="btn btn-primary" onclick="addPreviewedWatchToWishlist()" style="flex:1;">+ Wishlist</button>
       <button class="btn btn-ghost" onclick="closeWatchPreview()" style="flex:1;">Close</button>
@@ -5120,7 +5120,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '09.19.02';
+const APP_VERSION = '09.20.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5882,7 +5882,9 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
            data-watch-url="${escHtml(w.url||'')}"
            data-watch-image="${escHtml(w.image||'')}"
            data-watch-color="${escHtml(w.color||'#c9a84c')}"
-           data-watch-desc="${escHtml(w.description||'')}"`;
+           data-watch-desc="${escHtml(w.description||'')}"
+           data-watch-bg="${escHtml(w.background||'')}"
+           data-watch-func="${escHtml((w.functions||[]).join(', '))}"`;
       return `<div class="showcase-card${isOwn ? ' priv-own col-watch-card' + tintCls : ''}"${isOwn ? ` data-watch-id="${escHtml(w.id)}" data-priv="${priv||'inh'}"` : ''} ${clickAttr}>
         ${thumb}
         <div class="showcase-brand">${escHtml(w.brand || '')}</div>
@@ -6849,7 +6851,7 @@ async function renderClubDetail(clubId) {
     // ── Stage 2: watches + profiles + likes + comments in parallel ─────
     const [watchResult, profResult, likesResult, commentResult] = await Promise.all([
       watchIds.length
-        ? db.from('watches').select('id, brand, name, color, image, ref, url, description').in('id', watchIds)
+        ? db.from('watches').select('id, brand, name, color, image, ref, url, description, background, functions').in('id', watchIds)
         : { data: [] },
       db.from('profiles').select('id, username, display_name, avatar_url').in('id', uids),
       db.from('likes').select('log_id, user_id').in('log_id', logIds),
@@ -8262,7 +8264,7 @@ async function loadFeed() {
 
     const [watchResult, profileResult, likesResult, commentResult] = await withTimeout(Promise.all([
       watchIds.length
-        ? db.from('watches').select('id, brand, name, color, image, ref, url, description').in('id', watchIds)
+        ? db.from('watches').select('id, brand, name, color, image, ref, url, description, background, functions').in('id', watchIds)
         : { data: [] },
       db.from('profiles').select('id, username, display_name, avatar_url, is_official').in('id', userIds),
       db.from('likes').select('log_id, user_id').in('log_id', logIds),
@@ -8368,7 +8370,7 @@ async function scrollToFeedPost(postId) {
       // Enrich with profile and watch data
       const [profRes, watchRes] = await Promise.all([
         db.from('profiles').select('id, username, display_name, avatar_url').eq('id', post.user_id).maybeSingle(),
-        post.watch_id ? db.from('watches').select('id, brand, name, color, image, ref, url, description').eq('id', post.watch_id).maybeSingle() : { data: null },
+        post.watch_id ? db.from('watches').select('id, brand, name, color, image, ref, url, description, background, functions').eq('id', post.watch_id).maybeSingle() : { data: null },
       ]);
       post.profile = profRes.data || null;
       post.watch = watchRes.data || null;
@@ -8518,7 +8520,9 @@ function renderFeedCard(item) {
            data-watch-url="${escHtml(w.url||'')}"
            data-watch-image="${escHtml(w.image||'')}"
            data-watch-color="${escHtml(w.color||'#c9a84c')}"
-           data-watch-desc="${escHtml(w.description||'')}">${escHtml((w.brand||'') + ' ' + (w.name||''))}</div>`
+           data-watch-desc="${escHtml(w.description||'')}"
+           data-watch-bg="${escHtml(w.background||'')}"
+           data-watch-func="${escHtml((w.functions||[]).join(', '))}">${escHtml((w.brand||'') + ' ' + (w.name||''))}</div>`
     : '';
 
   // Visibility badge — only shown to the author on non-public posts
@@ -8637,7 +8641,9 @@ function renderFeedCard(item) {
            data-watch-url="${escHtml(w.url||'')}"
            data-watch-image="${escHtml(w.image||'')}"
            data-watch-color="${escHtml(w.color||'#c9a84c')}"
-           data-watch-desc="${escHtml(w.description||'')}">
+           data-watch-desc="${escHtml(w.description||'')}"
+           data-watch-bg="${escHtml(w.background||'')}"
+           data-watch-func="${escHtml((w.functions||[]).join(', '))}">
         ${wThumb}
         <span class="feed-wearing-watch-name">${escHtml(wLabel)}</span>
       </div>
@@ -18453,6 +18459,8 @@ function previewWatchFromEl(el) {
     image: el.dataset.watchImage || '',
     color: el.dataset.watchColor || '#c9a84c',
     description: el.dataset.watchDesc || '',
+    background: el.dataset.watchBg || '',
+    functions: el.dataset.watchFunc || '',
   });
 }
 
@@ -18472,21 +18480,10 @@ function previewWishFromEl(el) {
 function previewWatch(w) {
   previewingWatch = w;
 
-  // Hero image or initials avatar
-  const heroEl = document.getElementById('wpm-hero');
-  heroEl.style.background = '';
-  if (w.image) {
-    heroEl.innerHTML = `<img src="${escHtml(w.image)}" alt=""
-      onerror="this.parentElement.style.background='${escAttr(w.color||'#c9a84c')}';this.replaceWith(Object.assign(document.createElement('div'),{className:'wpm-hero-avatar',textContent:'${escAttr(initials(w.brand||'',w.name||''))}'}))">`;
-  } else {
-    heroEl.style.background = w.color || '#c9a84c';
-    heroEl.innerHTML = `<div class="wpm-hero-avatar">${initials(w.brand||'', w.name||'')}</div>`;
-  }
+  document.getElementById('wpm-hero').style.display = 'none';
 
-  // Title: Brand - Model
   document.getElementById('watch-preview-modal-title').textContent = [w.brand, w.name].filter(Boolean).join(' - ') || 'Watch';
 
-  // Compact action row: reference | link icon | + wishlist
   const refSpan = w.ref
     ? `<span style="font-size:.78rem;color:var(--muted);font-weight:600;">${escHtml(w.ref)}</span>`
     : '';
@@ -18501,16 +18498,32 @@ function previewWatch(w) {
         </svg>
       </a>`
     : '';
-  const actionRow = `<div style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem;">
-    ${refSpan}${urlBtn}
-  </div>`;
+  const actionRow = (w.ref || w.url) ? `<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem;">${refSpan}${urlBtn}</div>` : '';
 
-  // Description from AI enhancement
-  const descHtml = w.description
-    ? `<div style="margin-top:.75rem;padding:.7rem .85rem;border-radius:8px;background:#FAEEDA;border:0.5px solid #BA7517;font-size:.82rem;color:#854F0B;line-height:1.55;">${escHtml(w.description)}</div>`
-    : '';
+  const desc = w.description || '';
+  const bg = w.background || '';
+  const fns = w.functions || '';
+  const hasContent = desc || bg || fns;
 
-  document.getElementById('wpm-fields').innerHTML = actionRow + descHtml;
+  let cardHtml = '';
+  if (hasContent) {
+    cardHtml = '<div style="background:#FAEEDA;border-radius:8px;padding:10px 12px;border:0.5px solid #BA7517;">';
+    if (desc) {
+      cardHtml += `<div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#633806;margin-bottom:3px;">Description</div>`;
+      cardHtml += `<div style="font-size:12px;line-height:1.55;color:#412402;">${escHtml(desc)}</div>`;
+    }
+    if (bg) {
+      cardHtml += `<div style="margin-top:10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#633806;margin-bottom:3px;">Background &amp; History</div>`;
+      cardHtml += `<div style="font-size:12px;line-height:1.55;color:#412402;">${escHtml(bg)}</div>`;
+    }
+    if (fns) {
+      cardHtml += `<div style="margin-top:10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#633806;margin-bottom:3px;">Functions</div>`;
+      cardHtml += `<div style="font-size:12px;line-height:1.55;color:#412402;">${escHtml(fns)}</div>`;
+    }
+    cardHtml += '</div>';
+  }
+
+  document.getElementById('wpm-fields').innerHTML = actionRow + cardHtml;
 
   document.getElementById('watch-preview-modal').classList.remove('hidden');
 }
