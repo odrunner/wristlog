@@ -5120,7 +5120,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '09.20.56';
+const APP_VERSION = '10.08.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13369,6 +13369,34 @@ document.getElementById('edit-log-usecase-chips').addEventListener('click', e =>
 // ══════════════════════════════════════════
 let _priceUpdateResults = {};
 
+function _fmtPriceDate(d) {
+  const dt = new Date(d + 'T12:00:00');
+  const now = new Date();
+  const opts = { month: 'short', day: 'numeric' };
+  if (dt.getFullYear() !== now.getFullYear()) opts.year = 'numeric';
+  return dt.toLocaleDateString('en-US', opts);
+}
+
+function _updatePriceSubtotals() {
+  const tfoot = document.getElementById('update-prices-totals');
+  if (!tfoot) return;
+  const checked = document.querySelectorAll('.upr-toggle:checked');
+  if (checked.length === 0) { tfoot.style.display = 'none'; return; }
+  tfoot.style.display = '';
+  let totalCurrent = 0, totalNew = 0;
+  checked.forEach(cb => {
+    const wid = cb.dataset.wid;
+    const w = watches.find(x => x.id === wid);
+    const r = _priceUpdateResults[wid];
+    if (w && w.marketPrice) totalCurrent += Number(w.marketPrice);
+    if (r) totalNew += r.mid;
+  });
+  const delta = totalCurrent ? ((totalNew - totalCurrent) / totalCurrent * 100) : null;
+  const deltaStr = delta != null ? ` <span style="color:${delta >= 0 ? 'var(--gold)' : '#f87171'};font-size:.68rem;">${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%</span>` : '';
+  document.getElementById('upr-total-current').textContent = fmtMoney(totalCurrent);
+  document.getElementById('upr-total-new').innerHTML = fmtMoney(totalNew) + deltaStr;
+}
+
 async function openUpdatePrices() {
   _priceUpdateResults = {};
   const _uprT0 = Date.now();
@@ -13407,12 +13435,23 @@ async function openUpdatePrices() {
     </tr></thead>
     <tbody id="update-prices-rows">${eligible.map(w => `
       <tr id="upr-${w.id}" style="border-bottom:1px solid var(--border);">
-        <td style="padding:.45rem .2rem;vertical-align:top;overflow:hidden;"><div style="font-weight:600;font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.brand)}</div><div style="font-size:.72rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.name)}${w.ref ? ' · ' + escHtml(w.ref) : ''}</div></td>
+        <td style="padding:.45rem .2rem;vertical-align:top;overflow:hidden;"><div style="font-weight:600;font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.brand)}</div><div style="font-size:.72rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(w.name)}${w.ref ? ' · ' + escHtml(w.ref) : ''}</div>${w.marketPriceDate ? `<div style="font-size:.62rem;color:var(--muted);opacity:.55;">Saved ${_fmtPriceDate(w.marketPriceDate)}</div>` : ''}</td>
         <td style="padding:.45rem .2rem;text-align:right;vertical-align:top;white-space:nowrap;">${w.marketPrice ? fmtMoney(w.marketPrice) : '—'}</td>
         <td id="upr-val-${w.id}" style="padding:.45rem .2rem;text-align:right;vertical-align:top;color:var(--muted);white-space:nowrap;">...</td>
         <td id="upr-chk-${w.id}" style="padding:.45rem .2rem;text-align:center;vertical-align:top;"></td>
       </tr>`).join('')}
-    </tbody></table>`;
+    </tbody>
+    <tfoot id="update-prices-totals" style="display:none;">
+      <tr style="border-top:2px solid var(--border);">
+        <td style="padding:.55rem .2rem;font-weight:600;font-size:.75rem;">Total</td>
+        <td id="upr-total-current" style="padding:.55rem .2rem;text-align:right;font-weight:600;font-size:.78rem;white-space:nowrap;"></td>
+        <td id="upr-total-new" style="padding:.55rem .2rem;text-align:right;font-weight:600;font-size:.78rem;white-space:nowrap;"></td>
+        <td></td>
+      </tr>
+    </tfoot>
+    </table>`;
+
+  body.addEventListener('change', e => { if (e.target.classList.contains('upr-toggle')) _updatePriceSubtotals(); });
 
   let done = 0;
   let _uprRateLimited = false;
@@ -13466,6 +13505,7 @@ async function openUpdatePrices() {
       const deltaStr = delta != null ? `<span style="color:${delta >= 0 ? 'var(--gold)' : '#f87171'};font-size:.68rem;margin-left:.2rem;">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}%</span>` : '';
       valCell.innerHTML = `<div style="white-space:nowrap;"><span style="color:var(--text);font-weight:600;">${fmtMoney(mid)}</span>${deltaStr}</div><div style="font-size:.65rem;color:var(--muted);white-space:nowrap;">${fmtMoney(ev.low)} – ${fmtMoney(ev.high)}</div>`;
       chkCell.innerHTML = `<input type="checkbox" checked data-wid="${w.id}" class="upr-toggle" style="width:16px;height:16px;accent-color:var(--gold);">`;
+      _updatePriceSubtotals();
       if (done === eligible.length) {
         status.textContent = `Done — ${Object.keys(_priceUpdateResults).length} prices found.`;
         actions.style.display = 'flex';
