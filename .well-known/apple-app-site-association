@@ -9,7 +9,6 @@
           { "/": "/r.html", "exclude": true },
           { "/": "/privacy.html", "exclude": true },
           { "/": "/terms.html", "exclude": true },
-          { "/": "/open" },
           { "/": "/u/*" },
           { "/": "/p/*" }
         ]

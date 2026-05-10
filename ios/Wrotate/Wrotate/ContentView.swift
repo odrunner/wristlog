@@ -46,6 +46,8 @@ struct ContentView: View {
                 return
             }
             guard let host = url.host, host.hasSuffix("wrotate.com") else { return }
+            // /open — app is already open, nothing to do
+            if url.path == "/open" || url.path == "/open.html" { return }
             // Deep link to specific post or collection
             let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
             if let postId = components?.queryItems?.first(where: { $0.name == "id" })?.value,

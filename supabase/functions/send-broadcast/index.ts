@@ -167,7 +167,7 @@ serve(async (req) => {
       const batchPayload = await Promise.all(batch.map(async (r) => {
         const sig = await hmacSign(r.uid, "updates", supabaseServiceKey);
         const unsubUrl = `${supabaseUrl}/functions/v1/email-unsubscribe?uid=${r.uid}&cat=updates&sig=${sig}`;
-        const unsubFooter = `<div style="text-align:center;padding:16px 28px;font-size:11px;color:#999;line-height:1.5;border-top:1px solid #eee;"><a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">Manage preferences</a></div>`;
+        const unsubFooter = `<div style="text-align:center;padding:16px 28px;font-size:11px;color:#999;line-height:1.5;border-top:1px solid #eee;"><a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · <a href="https://wrotate.com" style="color:#999;text-decoration:underline;">Manage preferences</a></div>`;
         return {
           from: FROM_EMAIL,
           to: [r.email],
