@@ -4641,6 +4641,12 @@ const BADGE_REGISTRY = [
     unlock: 'Have 20 watches in your collection.',
     glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="36" font-family="Georgia,serif" font-style="italic">XX</text>',
     isHidden: false },
+  // TEST badge — remove after testing
+  { ref: 999, slug: 'test_badge', name: 'Test Badge', category: 'onboarding',
+    flavor: 'You tested the badge system!',
+    unlock: 'Log any wear entry.',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="32" font-family="Georgia,serif" font-style="italic">T</text>',
+    isHidden: false },
   // Connoisseur (040-044)
   { ref: 40, slug: 'holy_trinity', name: 'Holy Trinity', category: 'connoisseur',
     flavor: 'Patek. AP. Vacheron. The trinity is complete.',
@@ -4922,6 +4928,10 @@ async function checkAndAwardBadges(context, extraData) {
   }
   if (!alreadyEarned(3) && logs.length >= 1) {
     if (await awardBadge(3)) newlyEarned.push(BADGE_BY_REF[3]);
+  }
+  // TEST badge — fires on any wear log
+  if (!alreadyEarned(999) && context === 'wear') {
+    if (await awardBadge(999)) newlyEarned.push(BADGE_BY_REF[999]);
   }
   if (!alreadyEarned(4) && logs.some(l => l.visibility && l.visibility !== 'private')) {
     if (await awardBadge(4)) newlyEarned.push(BADGE_BY_REF[4]);
@@ -5733,7 +5743,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.21.37';
+const APP_VERSION = '13.21.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
