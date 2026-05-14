@@ -1165,6 +1165,33 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .toast.error   { border-color: rgba(224,85,85,.45);  color: var(--danger);  }
     .toast.show    { transform: translateY(0); opacity: 1; }
 
+    /* Badge toast */
+    .badge-toast {
+      position: fixed; bottom: 1.75rem; left: 50%; transform: translate(-50%, 80px);
+      background: #1a1410; border: 1px solid rgba(212,175,85,0.45);
+      border-radius: 14px; padding: .8rem 1.2rem;
+      font-size: .85rem; z-index: 410;
+      box-shadow: 0 8px 32px rgba(0,0,0,.6), 0 0 20px rgba(212,175,85,0.08);
+      opacity: 0; transition: all .35s cubic-bezier(.4,0,.2,1);
+      pointer-events: none; max-width: 92vw;
+    }
+    .badge-toast.show { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; cursor: pointer; }
+
+    /* Badge wall */
+    .badge-wall-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem;
+    }
+    .badge-wall-card {
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+      padding: .6rem .3rem; border-radius: 10px; cursor: pointer;
+      transition: background .15s;
+    }
+    .badge-wall-card:active { background: rgba(212,175,85,0.08); }
+    .badge-wall-card.locked { opacity: .5; }
+    .badge-wall-name { font-size: .72rem; color: rgba(245,230,200,0.85); margin-top: .35rem; line-height: 1.2; }
+    .badge-wall-ref { font-size: .6rem; color: rgba(212,175,85,0.55); font-family: monospace; margin-top: .15rem; }
+    .badge-wall-date { font-size: .58rem; color: var(--muted); margin-top: .1rem; }
+
     /* Scrollbar */
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -4477,6 +4504,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </div>
 
 <div id="toast" class="toast" aria-live="polite" role="status"></div>
+<div id="badge-toast" class="badge-toast" aria-live="polite"></div>
+<div id="badge-wall-modal" class="overlay hidden"><div class="modal" style="max-width:520px;background:#0d0b09;border-color:rgba(212,175,85,0.3);position:relative;"><button onclick="closeBadgeWall()" style="position:absolute;top:.5rem;right:.75rem;background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;line-height:1;">&times;</button><div id="badge-wall-content"></div></div></div>
+<div id="badge-detail-modal" class="overlay hidden" style="z-index:210;"><div class="modal" style="max-width:360px;background:#0d0b09;border-color:rgba(212,175,85,0.3);position:relative;"><button onclick="closeBadgeDetail()" style="position:absolute;top:.5rem;right:.75rem;background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;line-height:1;">&times;</button><div id="badge-detail-content"></div></div></div>
 <div id="offline-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:var(--bg-card,#1e1e1e);border-bottom:1px solid var(--border,#333);text-align:center;padding:.5rem .75rem;font-size:.78rem;font-weight:500;color:var(--muted,#999);transform:translateY(-100%);transition:transform .3s ease;">
   <span style="display:inline-flex;align-items:center;gap:.4rem;">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
@@ -4537,6 +4567,7 @@ const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
 const _isDevUser = () => currentUser?.id === ADMIN_USER_ID;
 
 const FEATURE_FLAGS = {
+  badges: { label: 'Achievement Badges', default: false },
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -4547,6 +4578,574 @@ function setFeatureFlag(name, val) {
   localStorage.setItem('ff_' + name, val ? 'true' : 'false');
 }
 let OFFICIAL_USER_ID = null; // resolved at init from profiles.is_official
+
+// ── BADGE / ACHIEVEMENT SYSTEM ────────────────────────────────────────────
+const BADGE_REGISTRY = [
+  // Onboarding (001–005)
+  { ref: 1, slug: 'first_watch', name: 'First Watch', category: 'onboarding',
+    flavor: 'First watch in the box. The catalog begins.',
+    unlock: 'Add your first watch to the collection.',
+    glyph: `<path d="M50 28v44M38 32l12-4 12 4M38 68l12 4 12-4M34 50h32" stroke="#F5C95E" stroke-width="1.5" fill="none" stroke-linecap="round"/>`,
+    isHidden: false },
+  { ref: 2, slug: 'first_measurement', name: 'First Measurement', category: 'onboarding',
+    flavor: 'Your first rate reading is on the books.',
+    unlock: 'Complete your first timegrapher measurement.',
+    glyph: `<circle cx="50" cy="50" r="14" stroke="#F5C95E" stroke-width="1.4" fill="none"/><path d="M50 40v10l7 7" stroke="#F5C95E" stroke-width="1.5" fill="none" stroke-linecap="round"/>`,
+    isHidden: false },
+  { ref: 3, slug: 'first_wear', name: 'First Wear', category: 'onboarding',
+    flavor: 'First wear logged. The rotation has started.',
+    unlock: 'Log your first wear entry.',
+    glyph: `<path d="M50 34c-8 0-14 6-14 14v4c0 8 6 14 14 14s14-6 14-14v-4c0-8-6-14-14-14z" stroke="#F5C95E" stroke-width="1.4" fill="none"/><path d="M42 50h16M50 42v16" stroke="#F5C95E" stroke-width="1.2" stroke-linecap="round"/>`,
+    isHidden: false },
+  { ref: 4, slug: 'first_post', name: 'First Post', category: 'onboarding',
+    flavor: 'Your first post is live. Welcome to the feed.',
+    unlock: 'Publish your first post to the social feed.',
+    glyph: `<rect x="37" y="37" width="26" height="26" rx="3" stroke="#F5C95E" stroke-width="1.4" fill="none"/><path d="M43 47h14M43 53h10" stroke="#F5C95E" stroke-width="1.2" stroke-linecap="round"/>`,
+    isHidden: false },
+  { ref: 5, slug: 'profile_complete', name: 'Profile Complete', category: 'onboarding',
+    flavor: 'Profile complete. The community can find you.',
+    unlock: 'Set name, profile photo, and bio.',
+    glyph: `<circle cx="50" cy="43" r="7" stroke="#F5C95E" stroke-width="1.4" fill="none"/><path d="M37 64c0-7 6-13 13-13s13 6 13 13" stroke="#F5C95E" stroke-width="1.4" fill="none" stroke-linecap="round"/>`,
+    isHidden: false },
+  // Collection milestones (020–023)
+  { ref: 20, slug: 'five_in_box', name: 'Five in the Box', category: 'collection', tier: 1,
+    flavor: 'Five watches. A proper rotation.',
+    unlock: 'Have 5 watches in your collection.',
+    glyph: `<text x="50" y="56" text-anchor="middle" fill="#F5C95E" font-size="20" font-family="serif" font-weight="bold">V</text>`,
+    isHidden: false },
+  { ref: 21, slug: 'ten_in_box', name: 'Ten in the Box', category: 'collection', tier: 2,
+    flavor: 'Ten watches. Serious collector territory.',
+    unlock: 'Have 10 watches in your collection.',
+    glyph: `<text x="50" y="56" text-anchor="middle" fill="#F5C95E" font-size="20" font-family="serif" font-weight="bold">X</text>`,
+    isHidden: false },
+  { ref: 22, slug: 'fifteen_deep', name: 'Fifteen Deep', category: 'collection', tier: 3,
+    flavor: 'Fifteen deep. The vault grows.',
+    unlock: 'Have 15 watches in your collection.',
+    glyph: `<text x="50" y="56" text-anchor="middle" fill="#F5C95E" font-size="18" font-family="serif" font-weight="bold">XV</text>`,
+    isHidden: false },
+  { ref: 23, slug: 'twenty_strong', name: 'Twenty Strong', category: 'collection', tier: 4,
+    flavor: 'Twenty strong. Museum-grade.',
+    unlock: 'Have 20 watches in your collection.',
+    glyph: `<text x="50" y="56" text-anchor="middle" fill="#F5C95E" font-size="18" font-family="serif" font-weight="bold">XX</text>`,
+    isHidden: false },
+  // Connoisseur (040–044)
+  { ref: 40, slug: 'holy_trinity', name: 'Holy Trinity', category: 'connoisseur',
+    flavor: 'Patek. AP. Vacheron. The trinity is complete.',
+    unlock: 'Own at least one watch each from Patek Philippe, Audemars Piguet, and Vacheron Constantin.',
+    glyph: `<polygon points="50,33 62,62 38,62" stroke="#F5C95E" stroke-width="1.4" fill="none" stroke-linejoin="round"/><circle cx="50" cy="53" r="3" fill="#F5C95E"/>`,
+    isHidden: false },
+  { ref: 41, slug: 'independent_maker', name: 'Independent Maker', category: 'connoisseur',
+    flavor: 'You know the makers behind the brands.',
+    unlock: 'Own a watch from an independent maker.',
+    glyph: `<path d="M50 35l-3 8h-8l6.5 5-2.5 8 7-5 7 5-2.5-8 6.5-5h-8z" stroke="#F5C95E" stroke-width="1.3" fill="none" stroke-linejoin="round"/>`,
+    isHidden: false },
+  { ref: 42, slug: 'vintage_piece', name: 'Vintage Piece', category: 'connoisseur',
+    flavor: 'Vintage on the wrist. History on the dial.',
+    unlock: 'Own a watch with year ≤ 1990.',
+    glyph: `<text x="50" y="48" text-anchor="middle" fill="#F5C95E" font-size="9" font-family="monospace" letter-spacing="0.5">ANNO</text><text x="50" y="60" text-anchor="middle" fill="#F5C95E" font-size="11" font-family="serif">1990</text>`,
+    isHidden: false },
+  { ref: 43, slug: 'brand_devotee', name: 'Brand Devotee', category: 'connoisseur',
+    flavor: 'Three from one house. Devotion runs deep.',
+    unlock: 'Own 3+ watches from the same brand.',
+    glyph: `<circle cx="42" cy="50" r="5" stroke="#F5C95E" stroke-width="1.2" fill="none"/><circle cx="50" cy="50" r="5" stroke="#F5C95E" stroke-width="1.2" fill="none"/><circle cx="58" cy="50" r="5" stroke="#F5C95E" stroke-width="1.2" fill="none"/>`,
+    isHidden: false },
+  { ref: 44, slug: 'complication_collector', name: 'Complication Collector', category: 'connoisseur',
+    flavor: 'Four complications. A connoisseur’s breadth.',
+    unlock: 'Own watches representing 4+ distinct complication types.',
+    glyph: `<circle cx="44" cy="44" r="4" stroke="#F5C95E" stroke-width="1" fill="none"/><circle cx="56" cy="44" r="4" stroke="#F5C95E" stroke-width="1" fill="none"/><circle cx="44" cy="56" r="4" stroke="#F5C95E" stroke-width="1" fill="none"/><circle cx="56" cy="56" r="4" stroke="#F5C95E" stroke-width="1" fill="none"/><rect x="38" y="38" width="24" height="24" rx="2" stroke="#F5C95E" stroke-width="0.8" fill="none" opacity="0.5"/>`,
+    isHidden: false },
+  // Timegrapher (060–063)
+  { ref: 60, slug: 'chronometer_grade', name: 'Chronometer Grade', category: 'timegrapher',
+    flavor: 'Within COSC spec. Precision confirmed.',
+    unlock: 'Submit a measurement with rate between -4 and +6 s/day (≥60s duration).',
+    glyph: `<circle cx="50" cy="50" r="14" stroke="#F5C95E" stroke-width="1.4" fill="none"/><path d="M50 40v10h7" stroke="#F5C95E" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M44 34l6 2M56 34l-6 2" stroke="#F5C95E" stroke-width="0.8" opacity="0.6"/>`,
+    isHidden: false },
+  { ref: 61, slug: 'ten_measurements', name: 'Ten Measurements', category: 'timegrapher',
+    flavor: 'Ten readings in the book. The data grows.',
+    unlock: 'Log 10 total timegrapher measurements.',
+    glyph: `<text x="50" y="56" text-anchor="middle" fill="#F5C95E" font-size="18" font-family="serif" font-weight="bold">10</text>`,
+    isHidden: false },
+  { ref: 62, slug: 'full_audit', name: 'Full Audit', category: 'timegrapher',
+    flavor: 'Every watch measured. Full audit complete.',
+    unlock: 'Have at least one measurement for every watch in your collection (min 3 watches).',
+    glyph: `<path d="M40 50l6 6 14-14" stroke="#F5C95E" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="50" r="15" stroke="#F5C95E" stroke-width="1.2" fill="none"/>`,
+    isHidden: false },
+  { ref: 63, slug: 'caught_a_drifter', name: 'Caught a Drifter', category: 'timegrapher',
+    flavor: 'Spotted the drift, tracked the fix.',
+    unlock: 'Log a reading worse than ±30 s/day, then a follow-up within 90 days under ±15 s/day on the same watch.',
+    glyph: `<path d="M38 55c4-15 10-15 12 0s8 15 12 0" stroke="#F5C95E" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M38 50h24" stroke="#F5C95E" stroke-width="0.6" opacity="0.4" stroke-dasharray="2,2"/>`,
+    isHidden: false },
+  // Habit (080–082)
+  { ref: 80, slug: 'seven_day_streak', name: 'Seven-Day Streak', category: 'habit',
+    flavor: 'Seven days straight. The habit is forming.',
+    unlock: 'Log a wear entry on 7 consecutive days.',
+    glyph: `<text x="50" y="56" text-anchor="middle" fill="#F5C95E" font-size="16" font-family="serif" font-weight="bold">7</text><path d="M38 62h24" stroke="#F5C95E" stroke-width="1" opacity="0.5"/>`,
+    isHidden: false },
+  { ref: 81, slug: 'thirty_day_streak', name: 'Thirty-Day Streak', category: 'habit',
+    flavor: 'Thirty days. The rotation is a ritual.',
+    unlock: 'Log a wear entry on 30 consecutive days.',
+    glyph: `<text x="50" y="56" text-anchor="middle" fill="#F5C95E" font-size="15" font-family="serif" font-weight="bold">30</text><path d="M36 62h28" stroke="#F5C95E" stroke-width="1" opacity="0.5"/>`,
+    isHidden: false },
+  { ref: 82, slug: 'balanced_quarter', name: 'Balanced Quarter', category: 'habit',
+    flavor: 'No single watch dominates. True rotation.',
+    unlock: 'Over 90 days, no watch exceeds 40% of wear days, with 4+ watches worn.',
+    glyph: `<circle cx="43" cy="46" r="4" stroke="#F5C95E" stroke-width="1" fill="none"/><circle cx="57" cy="46" r="4" stroke="#F5C95E" stroke-width="1" fill="none"/><circle cx="43" cy="57" r="4" stroke="#F5C95E" stroke-width="1" fill="none"/><circle cx="57" cy="57" r="4" stroke="#F5C95E" stroke-width="1" fill="none"/>`,
+    isHidden: false },
+  // Hidden easter eggs (100+)
+  { ref: 100, slug: 'high_noon', name: 'High Noon', category: 'hidden',
+    flavor: 'Measured at the stroke of noon.',
+    unlock: 'Submit a measurement between 11:58 and 12:02 local time.',
+    glyph: `<circle cx="50" cy="50" r="14" stroke="#F5C95E" stroke-width="1.2" fill="none"/><path d="M50 40v10M50 40v-2" stroke="#F5C95E" stroke-width="1.5" fill="none" stroke-linecap="round"/>`,
+    isHidden: true },
+  { ref: 101, slug: 'full_moon', name: 'Full Moon', category: 'hidden',
+    flavor: 'Moonphase aligned with the real thing.',
+    unlock: 'Log wear on a moonphase watch during a full moon.',
+    glyph: `<circle cx="50" cy="50" r="12" fill="#F5C95E" opacity="0.9"/><circle cx="46" cy="50" r="12" fill="#1a1410"/>`,
+    isHidden: true },
+  { ref: 102, slug: 'birthday_boy', name: 'Birthday Boy', category: 'hidden',
+    flavor: 'A wear on your birthday. Cheers.',
+    unlock: 'Log a wear entry on your birthday.',
+    glyph: `<rect x="43" y="44" width="14" height="14" rx="2" stroke="#F5C95E" stroke-width="1.2" fill="none"/><path d="M47 44v-4M53 44v-4M47 40c0-3 6-3 6 0" stroke="#F5C95E" stroke-width="1" fill="none" stroke-linecap="round"/>`,
+    isHidden: true },
+  { ref: 103, slug: 'leap_second', name: 'Leap Second', category: 'hidden',
+    flavor: 'One extra second. You caught it.',
+    unlock: 'Submit a measurement on June 30 or December 31 near midnight UTC.',
+    glyph: `<text x="50" y="57" text-anchor="middle" fill="#F5C95E" font-size="18" font-family="monospace" font-weight="bold">:61</text>`,
+    isHidden: true },
+];
+const BADGE_BY_REF = {};
+BADGE_REGISTRY.forEach(b => BADGE_BY_REF[b.ref] = b);
+
+const INDEPENDENT_MAKERS = [
+  'fp journe','f.p. journe','voutilainen','kari voutilainen','greubel forsey',
+  'mb&f','mbandf','de bethune','akrivia','rexhep rexhepi','h. moser','h moser',
+  'moser & cie','laurent ferrier','urwerk','richard mille','gronefeld',
+  'grönefeld','habring','habring2','moritz grossmann','krayon','czapek',
+  'ferdinand berthoud','chronometrie ferdinand berthoud','ressence','singer reimagined',
+];
+const COMPLICATION_KEYWORDS = {
+  chronograph: ['chronograph','chrono'],
+  gmt: ['gmt','dual time','second timezone','world time','worldtimer'],
+  moonphase: ['moonphase','moon phase','moon'],
+  perpetual_calendar: ['perpetual calendar','perpetual','qp'],
+  annual_calendar: ['annual calendar'],
+  tourbillon: ['tourbillon'],
+  minute_repeater: ['minute repeater','repeater'],
+  power_reserve: ['power reserve'],
+  alarm: ['alarm'],
+  dive_bezel: ['dive','diver','diving'],
+  day_date: ['day-date','day date','daydate'],
+  world_time: ['world time','worldtime','worldtimer'],
+};
+
+let _earnedBadges = [];
+let _badgeScanDone = false;
+
+function badgeMedallionSvg(badge, size, earned) {
+  const op = earned ? 1 : 0.35;
+  const glyphContent = earned
+    ? badge.glyph
+    : `<rect x="45" y="44" width="10" height="12" rx="2" stroke="#D4AF55" stroke-width="1" fill="none" opacity="0.6"/><circle cx="50" cy="43" r="3" stroke="#D4AF55" stroke-width="1" fill="none" opacity="0.6"/>`;
+  return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="48" fill="#1a1410" stroke="#D4AF55" stroke-width="1" opacity="${op}"/>
+    <circle cx="50" cy="50" r="42" fill="none" stroke="#D4AF55" stroke-width="0.4" opacity="${op * 0.55}"/>
+    <g opacity="${op}">${glyphContent}</g>
+    ${earned ? `<text x="50" y="76" text-anchor="middle" fill="#D4AF55" font-size="5" font-family="monospace" letter-spacing="1" opacity="0.85">${escHtml(badge.name.toUpperCase())}</text>` : ''}
+  </svg>`;
+}
+
+function badgeRefLabel(ref) {
+  return 'REF · ' + String(ref).padStart(3, '0');
+}
+
+// ── Badge toast ──
+let _badgeToastQueue = [];
+let _badgeToastActive = false;
+
+function showBadgeToast(badges) {
+  if (!featureFlag('badges')) return;
+  if (!Array.isArray(badges)) badges = [badges];
+  _badgeToastQueue.push(...badges);
+  if (!_badgeToastActive) _drainBadgeToast();
+}
+
+function _drainBadgeToast() {
+  if (_badgeToastQueue.length === 0) { _badgeToastActive = false; return; }
+  _badgeToastActive = true;
+  const batch = _badgeToastQueue.splice(0);
+  const el = document.getElementById('badge-toast');
+  if (!el) { _badgeToastActive = false; return; }
+  if (batch.length === 1) {
+    const b = batch[0];
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:.75rem;cursor:pointer;" onclick="openBadgeWall()">
+      ${badgeMedallionSvg(b, 56, true)}
+      <div><div style="font-size:.82rem;font-weight:600;color:rgba(245,230,200,0.95);">${escHtml(b.name)}</div>
+      <div style="font-size:.72rem;color:rgba(212,175,85,0.75);margin-top:.15rem;">${escHtml(b.flavor)}</div></div>
+    </div>`;
+  } else {
+    const medallions = batch.map(b => badgeMedallionSvg(b, 44, true)).join('');
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:.75rem;cursor:pointer;" onclick="openBadgeWall()">
+      <div style="display:flex;gap:.25rem;">${medallions}</div>
+      <div style="font-size:.82rem;font-weight:600;color:rgba(245,230,200,0.95);">${batch.length} badges unlocked</div>
+    </div>`;
+  }
+  el.classList.add('show');
+  haptic('success');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.classList.remove('show'); setTimeout(_drainBadgeToast, 350); }, 3500);
+}
+
+// ── Badge wall ──
+function openBadgeWall() {
+  if (!featureFlag('badges') || !currentUser) return;
+  const visible = BADGE_REGISTRY.filter(b => !b.isHidden || _earnedBadges.some(e => e.badge_ref === b.ref));
+  const earnedRefs = new Set(_earnedBadges.map(e => e.badge_ref));
+  const earned = visible.filter(b => earnedRefs.has(b.ref))
+    .sort((a, b) => {
+      const ea = _earnedBadges.find(e => e.badge_ref === a.ref);
+      const eb = _earnedBadges.find(e => e.badge_ref === b.ref);
+      return new Date(eb.earned_at) - new Date(ea.earned_at);
+    });
+  const locked = visible.filter(b => !earnedRefs.has(b.ref));
+
+  const earnedCards = earned.map(b => {
+    const ub = _earnedBadges.find(e => e.badge_ref === b.ref);
+    const dateStr = ub ? new Date(ub.earned_at).toLocaleDateString() : '';
+    return `<div class="badge-wall-card" onclick="openBadgeDetail(${b.ref})">
+      ${badgeMedallionSvg(b, 80, true)}
+      <div class="badge-wall-name">${escHtml(b.name)}</div>
+      <div class="badge-wall-ref">${badgeRefLabel(b.ref)}</div>
+      <div class="badge-wall-date">${dateStr}</div>
+    </div>`;
+  }).join('');
+
+  const lockedCards = locked.map(b => {
+    const label = b.isHidden ? 'Hidden' : escHtml(b.name);
+    return `<div class="badge-wall-card locked">
+      ${badgeMedallionSvg(b, 80, false)}
+      <div class="badge-wall-name">${label}</div>
+      <div class="badge-wall-ref">${badgeRefLabel(b.ref)}</div>
+    </div>`;
+  }).join('');
+
+  const totalVisible = visible.length;
+  const earnedCount = earned.length;
+
+  const content = `
+    <div style="text-align:center;margin-bottom:1.2rem;">
+      <div style="font-size:1rem;font-weight:600;color:rgba(245,230,200,0.9);">Achievements</div>
+      <div style="font-size:.78rem;color:var(--muted);margin-top:.25rem;">${earnedCount} of ${totalVisible} earned</div>
+    </div>
+    ${earnedCards ? `<div style="margin-bottom:.6rem;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Earned</div><div class="badge-wall-grid">${earnedCards}</div>` : ''}
+    ${lockedCards ? `<div style="margin:1rem 0 .6rem;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Locked</div><div class="badge-wall-grid">${lockedCards}</div>` : ''}`;
+
+  document.getElementById('badge-wall-content').innerHTML = content;
+  document.getElementById('badge-wall-modal').classList.remove('hidden');
+  // Mark unseen badges as seen
+  const unseen = _earnedBadges.filter(e => !e.seen);
+  if (unseen.length && currentUser) {
+    unseen.forEach(e => e.seen = true);
+    db.from('user_badges').update({ seen: true }).eq('user_id', currentUser.id).eq('seen', false).then(() => {});
+  }
+}
+
+function closeBadgeWall() {
+  document.getElementById('badge-wall-modal').classList.add('hidden');
+}
+
+function openBadgeDetail(ref) {
+  const b = BADGE_BY_REF[ref];
+  if (!b) return;
+  const ub = _earnedBadges.find(e => e.badge_ref === ref);
+  const earned = !!ub;
+  const dateStr = ub ? new Date(ub.earned_at).toLocaleDateString() : '';
+  const el = document.getElementById('badge-detail-content');
+  el.innerHTML = `
+    <div style="text-align:center;">
+      ${badgeMedallionSvg(b, 200, earned)}
+      <div style="font-size:1.05rem;font-weight:600;color:rgba(245,230,200,0.9);margin-top:.75rem;">${escHtml(b.name)}</div>
+      <div style="font-size:.75rem;color:rgba(212,175,85,0.55);font-family:monospace;margin-top:.25rem;">${badgeRefLabel(b.ref)}</div>
+      ${earned ? `<div style="font-size:.82rem;color:rgba(245,230,200,0.75);margin-top:.6rem;font-style:italic;">${escHtml(b.flavor)}</div>` : ''}
+      ${earned ? `<div style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Unlocked: ${escHtml(b.unlock)}</div>` : ''}
+      ${earned ? `<div style="font-size:.72rem;color:var(--muted);margin-top:.3rem;">Earned ${dateStr}</div>` : `<div style="font-size:.78rem;color:var(--muted);margin-top:.6rem;">${b.isHidden ? 'This badge is hidden. Keep exploring.' : 'Not yet earned.'}</div>`}
+    </div>`;
+  document.getElementById('badge-detail-modal').classList.remove('hidden');
+}
+
+function closeBadgeDetail() {
+  document.getElementById('badge-detail-modal').classList.add('hidden');
+}
+
+// ── Badge checking ──
+async function awardBadge(ref) {
+  if (!currentUser || !featureFlag('badges')) return false;
+  if (_earnedBadges.some(e => e.badge_ref === ref)) return false;
+  const badge = BADGE_BY_REF[ref];
+  if (!badge) return false;
+  const record = { user_id: currentUser.id, badge_ref: ref, earned_at: new Date().toISOString(), seen: false };
+  const { error } = await db.from('user_badges').insert(record);
+  if (error) { console.error('[Badges] award error:', error.message); return false; }
+  _earnedBadges.push(record);
+  return true;
+}
+
+async function checkAndAwardBadges(context, extraData) {
+  if (!currentUser || !featureFlag('badges')) return;
+  const newlyEarned = [];
+
+  const alreadyEarned = (ref) => _earnedBadges.some(e => e.badge_ref === ref);
+
+  // Onboarding
+  if (!alreadyEarned(1) && watches.length >= 1) {
+    if (await awardBadge(1)) newlyEarned.push(BADGE_BY_REF[1]);
+  }
+  if (!alreadyEarned(3) && logs.length >= 1) {
+    if (await awardBadge(3)) newlyEarned.push(BADGE_BY_REF[3]);
+  }
+  if (!alreadyEarned(4) && logs.some(l => l.visibility && l.visibility !== 'private')) {
+    if (await awardBadge(4)) newlyEarned.push(BADGE_BY_REF[4]);
+  }
+  if (!alreadyEarned(5) && myProfile) {
+    const hasName = !!(myProfile.display_name || '').trim();
+    const hasAvatar = !!myProfile.avatar_url;
+    const hasBio = !!(myProfile.bio || '').trim();
+    if (hasName && hasAvatar && hasBio) {
+      if (await awardBadge(5)) newlyEarned.push(BADGE_BY_REF[5]);
+    }
+  }
+
+  // Collection milestones
+  const wCount = watches.length;
+  if (!alreadyEarned(20) && wCount >= 5) { if (await awardBadge(20)) newlyEarned.push(BADGE_BY_REF[20]); }
+  if (!alreadyEarned(21) && wCount >= 10) { if (await awardBadge(21)) newlyEarned.push(BADGE_BY_REF[21]); }
+  if (!alreadyEarned(22) && wCount >= 15) { if (await awardBadge(22)) newlyEarned.push(BADGE_BY_REF[22]); }
+  if (!alreadyEarned(23) && wCount >= 20) { if (await awardBadge(23)) newlyEarned.push(BADGE_BY_REF[23]); }
+
+  // Connoisseur badges
+  if (!alreadyEarned(40)) {
+    const brands = watches.map(w => (w.brand || '').toLowerCase().trim());
+    const hasPatek = brands.some(b => b.includes('patek'));
+    const hasAP = brands.some(b => b.includes('audemars'));
+    const hasVC = brands.some(b => b.includes('vacheron'));
+    if (hasPatek && hasAP && hasVC) { if (await awardBadge(40)) newlyEarned.push(BADGE_BY_REF[40]); }
+  }
+  if (!alreadyEarned(41)) {
+    const found = watches.some(w => {
+      const b = (w.brand || '').toLowerCase().trim();
+      return INDEPENDENT_MAKERS.some(m => b.includes(m));
+    });
+    if (found) { if (await awardBadge(41)) newlyEarned.push(BADGE_BY_REF[41]); }
+  }
+  if (!alreadyEarned(42)) {
+    const found = watches.some(w => {
+      const yr = parseInt(w.yearRange);
+      return yr && yr <= 1990;
+    });
+    if (found) { if (await awardBadge(42)) newlyEarned.push(BADGE_BY_REF[42]); }
+  }
+  if (!alreadyEarned(43)) {
+    const brandCount = {};
+    watches.forEach(w => {
+      const b = (w.brand || '').toLowerCase().trim();
+      if (b) brandCount[b] = (brandCount[b] || 0) + 1;
+    });
+    if (Object.values(brandCount).some(c => c >= 3)) {
+      if (await awardBadge(43)) newlyEarned.push(BADGE_BY_REF[43]);
+    }
+  }
+  if (!alreadyEarned(44)) {
+    const found = new Set();
+    watches.forEach(w => {
+      const funcs = ((w.functions || []).join(' ') + ' ' + (w.name || '') + ' ' + (w.description || '')).toLowerCase();
+      for (const [comp, kws] of Object.entries(COMPLICATION_KEYWORDS)) {
+        if (kws.some(kw => funcs.includes(kw))) found.add(comp);
+      }
+    });
+    if (found.size >= 4) { if (await awardBadge(44)) newlyEarned.push(BADGE_BY_REF[44]); }
+  }
+
+  // Timegrapher — need DB data
+  if (context === 'measurement' || context === 'retroactive') {
+    const { data: tgData } = await db.from('timegrapher_results')
+      .select('id, watch_id, rate, created_at, source')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(500);
+    const tgResults = tgData || [];
+
+    if (!alreadyEarned(2) && tgResults.length >= 1) {
+      if (await awardBadge(2)) newlyEarned.push(BADGE_BY_REF[2]);
+    }
+    if (!alreadyEarned(60)) {
+      const found = tgResults.some(r => r.rate >= -4 && r.rate <= 6);
+      if (found) { if (await awardBadge(60)) newlyEarned.push(BADGE_BY_REF[60]); }
+    }
+    if (!alreadyEarned(61) && tgResults.length >= 10) {
+      if (await awardBadge(61)) newlyEarned.push(BADGE_BY_REF[61]);
+    }
+    if (!alreadyEarned(62) && watches.length >= 3) {
+      const measuredWatches = new Set(tgResults.map(r => r.watch_id));
+      const allMeasured = watches.every(w => measuredWatches.has(w.id));
+      if (allMeasured) { if (await awardBadge(62)) newlyEarned.push(BADGE_BY_REF[62]); }
+    }
+    if (!alreadyEarned(63)) {
+      const byWatch = {};
+      tgResults.forEach(r => { if (!byWatch[r.watch_id]) byWatch[r.watch_id] = []; byWatch[r.watch_id].push(r); });
+      for (const [wid, readings] of Object.entries(byWatch)) {
+        const sorted = readings.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        for (let i = 0; i < sorted.length; i++) {
+          if (Math.abs(sorted[i].rate) > 30) {
+            const badDate = new Date(sorted[i].created_at);
+            for (let j = i + 1; j < sorted.length; j++) {
+              const diff = (new Date(sorted[j].created_at) - badDate) / (1000 * 60 * 60 * 24);
+              if (diff <= 90 && Math.abs(sorted[j].rate) <= 15) {
+                if (await awardBadge(63)) newlyEarned.push(BADGE_BY_REF[63]);
+                break;
+              }
+            }
+          }
+          if (alreadyEarned(63)) break;
+        }
+        if (alreadyEarned(63)) break;
+      }
+    }
+
+    // Hidden: High Noon (100)
+    if (!alreadyEarned(100) && context === 'measurement') {
+      const now = new Date();
+      const h = now.getHours(), m = now.getMinutes();
+      if ((h === 11 && m >= 58) || (h === 12 && m <= 2)) {
+        if (await awardBadge(100)) newlyEarned.push(BADGE_BY_REF[100]);
+      }
+    }
+    // Hidden: Leap Second (103)
+    if (!alreadyEarned(103) && context === 'measurement') {
+      const now = new Date();
+      const mo = now.getMonth(), day = now.getDate(), hU = now.getUTCHours(), mU = now.getUTCMinutes();
+      if (((mo === 5 && day === 30) || (mo === 11 && day === 31)) && hU === 23 && mU === 59) {
+        if (await awardBadge(103)) newlyEarned.push(BADGE_BY_REF[103]);
+      }
+    }
+  }
+
+  // Habit badges
+  if (context === 'wear' || context === 'retroactive') {
+    const sortedDates = [...new Set(logs.map(l => l.date))].sort();
+    if (!alreadyEarned(80) || !alreadyEarned(81)) {
+      let maxStreak = 1, curStreak = 1;
+      for (let i = 1; i < sortedDates.length; i++) {
+        const prev = new Date(sortedDates[i - 1]);
+        const curr = new Date(sortedDates[i]);
+        const diff = (curr - prev) / (1000 * 60 * 60 * 24);
+        if (diff === 1) { curStreak++; maxStreak = Math.max(maxStreak, curStreak); }
+        else if (diff > 1) curStreak = 1;
+      }
+      if (!alreadyEarned(80) && maxStreak >= 7) { if (await awardBadge(80)) newlyEarned.push(BADGE_BY_REF[80]); }
+      if (!alreadyEarned(81) && maxStreak >= 30) { if (await awardBadge(81)) newlyEarned.push(BADGE_BY_REF[81]); }
+    }
+
+    if (!alreadyEarned(82)) {
+      const now = new Date();
+      const cutoff = new Date(now);
+      cutoff.setDate(cutoff.getDate() - 90);
+      const cutoffStr = cutoff.toISOString().slice(0, 10);
+      const recentLogs = logs.filter(l => l.date >= cutoffStr);
+      const watchDays = {};
+      recentLogs.forEach(l => { watchDays[l.watchId] = (watchDays[l.watchId] || 0) + 1; });
+      const distinctWatches = Object.keys(watchDays).length;
+      const totalDays = new Set(recentLogs.map(l => l.date)).size;
+      if (distinctWatches >= 4 && totalDays > 0) {
+        const maxPct = Math.max(...Object.values(watchDays)) / totalDays;
+        if (maxPct <= 0.4) { if (await awardBadge(82)) newlyEarned.push(BADGE_BY_REF[82]); }
+      }
+    }
+  }
+
+  // Hidden: Full Moon (101) — check on wear log
+  if (!alreadyEarned(101) && (context === 'wear' || context === 'retroactive')) {
+    const moonWatch = watches.some(w => {
+      const funcs = ((w.functions || []).join(' ') + ' ' + (w.name || '')).toLowerCase();
+      return funcs.includes('moon');
+    });
+    if (moonWatch) {
+      const today = new Date();
+      if (_isFullMoon(today)) {
+        if (await awardBadge(101)) newlyEarned.push(BADGE_BY_REF[101]);
+      }
+    }
+  }
+
+  // Hidden: Birthday Boy (102) — check on wear log
+  if (!alreadyEarned(102) && (context === 'wear' || context === 'retroactive') && myProfile) {
+    const bday = myProfile.birthday || myProfile.birth_date;
+    if (bday) {
+      const today = new Date();
+      const bd = new Date(bday);
+      if (today.getMonth() === bd.getMonth() && today.getDate() === bd.getDate()) {
+        if (await awardBadge(102)) newlyEarned.push(BADGE_BY_REF[102]);
+      }
+    }
+  }
+
+  if (newlyEarned.length > 0) showBadgeToast(newlyEarned);
+}
+
+function _isFullMoon(date) {
+  const known = new Date(2000, 0, 6, 18, 14);
+  const cycle = 29.53058770576;
+  const diff = (date - known) / (1000 * 60 * 60 * 24);
+  const phase = ((diff % cycle) + cycle) % cycle;
+  return phase < 1.5 || phase > (cycle - 1.5);
+}
+
+async function loadEarnedBadges() {
+  if (!currentUser) return;
+  const { data, error } = await db.from('user_badges')
+    .select('*')
+    .eq('user_id', currentUser.id);
+  if (!error && data) _earnedBadges = data;
+}
+
+async function retroactiveBadgeScan() {
+  if (!currentUser || !featureFlag('badges') || _badgeScanDone) return;
+  _badgeScanDone = true;
+  await loadEarnedBadges();
+  await checkAndAwardBadges('retroactive');
+}
+
+// ── Badge wall section for profile ──
+function badgeWallProfileSection() {
+  if (!featureFlag('badges') || !currentUser) return '';
+  const earnedRefs = new Set(_earnedBadges.map(e => e.badge_ref));
+  const visible = BADGE_REGISTRY.filter(b => !b.isHidden || earnedRefs.has(b.ref));
+  const earned = visible.filter(b => earnedRefs.has(b.ref));
+  const preview = earned.slice(0, 6);
+  const previewCards = preview.map(b =>
+    `<div style="text-align:center;cursor:pointer;" onclick="openBadgeDetail(${b.ref})">
+      ${badgeMedallionSvg(b, 56, true)}
+    </div>`
+  ).join('');
+
+  const lockedCount = visible.length - earned.length;
+  const lockedPreview = lockedCount > 0 && preview.length < 6
+    ? Array.from({ length: Math.min(lockedCount, 6 - preview.length) }, () =>
+        `<div style="text-align:center;opacity:.4;">${badgeMedallionSvg(BADGE_REGISTRY[0], 56, false)}</div>`
+      ).join('')
+    : '';
+
+  return `
+    <div class="profile-page-card">
+      <div class="profile-page-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Achievements</span>
+        <span style="font-size:.72rem;color:var(--muted);font-weight:400;">${earned.length} / ${visible.length}</span>
+      </div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;padding:.5rem 0;">
+        ${previewCards}${lockedPreview}
+      </div>
+      <button class="btn btn-ghost" style="width:100%;margin-top:.5rem;font-size:.78rem;padding:.4rem;" onclick="openBadgeWall()">View All Badges</button>
+    </div>`;
+}
+// ── END BADGE SYSTEM ──────────────────────────────────────────────────────
 
 function officialBadgeHtml(profile) {
   if (!profile?.is_official) return '';
@@ -5120,7 +5719,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.20.24';
+const APP_VERSION = '13.20.38';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6024,6 +6623,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     ${editHtml}
     ${privacyHtml}
     ${notifHtml}
+    ${isOwn ? badgeWallProfileSection() : ''}
     ${showcaseHtml}
     ${logsHtml}
     ${wishlistHtml}
@@ -6131,6 +6731,7 @@ async function saveProfileFromPage() {
     }
     toast('Profile saved!');
     loadAndRenderProfile(currentUser.id);
+    checkAndAwardBadges('profile');
   } else {
     // Handle unique constraint violation from DB
     if (error.message && error.message.includes('username')) {
@@ -12816,6 +13417,7 @@ async function saveLog() {
   toast(isUpdate ? 'Wear log updated!' : 'Wear logged!');
   haptic('success');
   if (!isUpdate) maybeShowReviewPrompt('wear_log');
+  checkAndAwardBadges('wear');
   } finally { if (_slBtn) { _slBtn.disabled = false; _slBtn.textContent = 'Log This Wear'; } }
 }
 
@@ -14919,6 +15521,7 @@ async function saveWatch() {
   save();
   closeWatchModal();
   renderCollection();
+  checkAndAwardBadges('watch');
 
   // If this was a "Move from Wishlist" flow, delete the source wishlist item
   if (pendingWlId) {
@@ -19626,6 +20229,7 @@ function clearUserState() {
   const demoBanner = document.getElementById('demo-banner');
   if (demoBanner) demoBanner.classList.add('hidden');
   watches = []; logs = []; wishlist = []; eloRatings = {};
+  _earnedBadges = []; _badgeScanDone = false;
   _dirty.watches.clear(); _dirty.logs.clear(); _dirty.wishlist.clear(); _dirty.elo.clear(); _persistDirty();
   _pendingDeletes = []; savePendingDeletes();
   try { localStorage.removeItem(STORE_W); localStorage.removeItem(STORE_L); localStorage.removeItem(STORE_WL); localStorage.removeItem(STORE_ELO); localStorage.removeItem(STORE_THEME); } catch(e) {}
@@ -20317,6 +20921,7 @@ async function saveTimegrapherManual() {
     if (error) { toast('Could not save — ' + error.message, 'error'); return; }
     toast('Reading saved!');
     if (window.posthog) posthog.capture('accuracy_reading_saved', { source: src });
+    checkAndAwardBadges('measurement');
   }
   _tgFromListening = false;
   document.getElementById('tg-rate-input').value = '';
@@ -21249,6 +21854,8 @@ async function bootApp(user) {
     localStorage.setItem(_wnKey, _wnVer);
     setTimeout(() => openWhatsNew(), 600);
   }
+  // Retroactive badge scan (runs once per session, after data is loaded)
+  retroactiveBadgeScan();
   // Resolve official account ID (for badge rendering and admin drafts)
   if (!OFFICIAL_USER_ID) {
     db.from('profiles').select('id').eq('is_official', true).limit(1).single().then(({ data }) => {
