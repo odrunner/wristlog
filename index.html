@@ -1168,10 +1168,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* Badge toast */
     .badge-toast {
       position: fixed; bottom: 1.75rem; left: 50%; transform: translate(-50%, 80px);
-      background: #1a1410; border: 1px solid rgba(212,175,85,0.45);
+      background: #FBF6E8; border: 1px solid rgba(107,86,24,0.25);
       border-radius: 14px; padding: .8rem 1.2rem;
       font-size: .85rem; z-index: 410;
-      box-shadow: 0 8px 32px rgba(0,0,0,.6), 0 0 20px rgba(212,175,85,0.08);
+      box-shadow: 0 8px 32px rgba(0,0,0,.15), 0 0 12px rgba(184,149,42,0.06);
       opacity: 0; transition: all .35s cubic-bezier(.4,0,.2,1);
       pointer-events: none; max-width: 92vw;
     }
@@ -1186,11 +1186,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       padding: .6rem .3rem; border-radius: 10px; cursor: pointer;
       transition: background .15s;
     }
-    .badge-wall-card:active { background: rgba(212,175,85,0.08); }
-    .badge-wall-card.locked { opacity: .5; }
-    .badge-wall-name { font-size: .72rem; color: rgba(245,230,200,0.85); margin-top: .35rem; line-height: 1.2; }
-    .badge-wall-ref { font-size: .6rem; color: rgba(212,175,85,0.55); font-family: monospace; margin-top: .15rem; }
-    .badge-wall-date { font-size: .58rem; color: var(--muted); margin-top: .1rem; }
+    .badge-wall-card:active { background: rgba(107,86,24,0.06); }
+    .badge-wall-card.locked { opacity: .6; }
+    .badge-wall-name { font-size: .72rem; color: #3D2A14; margin-top: .35rem; line-height: 1.2; }
+    .badge-wall-ref { font-size: .6rem; color: rgba(107,86,24,0.5); font-family: monospace; margin-top: .15rem; }
+    .badge-wall-date { font-size: .58rem; color: rgba(107,86,24,0.4); margin-top: .1rem; }
+    .badge-cat-chip {
+      display: inline-block; font-size: .65rem; font-weight: 600; padding: .15rem .5rem;
+      border-radius: 6px; letter-spacing: .5px; text-transform: uppercase;
+    }
 
     /* Scrollbar */
     ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -4505,8 +4509,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <div id="toast" class="toast" aria-live="polite" role="status"></div>
 <div id="badge-toast" class="badge-toast" aria-live="polite"></div>
-<div id="badge-wall-modal" class="overlay hidden"><div class="modal" style="max-width:520px;background:#0d0b09;border-color:rgba(212,175,85,0.3);position:relative;"><button onclick="closeBadgeWall()" style="position:absolute;top:.5rem;right:.75rem;background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;line-height:1;">&times;</button><div id="badge-wall-content"></div></div></div>
-<div id="badge-detail-modal" class="overlay hidden" style="z-index:210;"><div class="modal" style="max-width:360px;background:#0d0b09;border-color:rgba(212,175,85,0.3);position:relative;"><button onclick="closeBadgeDetail()" style="position:absolute;top:.5rem;right:.75rem;background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;line-height:1;">&times;</button><div id="badge-detail-content"></div></div></div>
+<div id="badge-wall-modal" class="overlay hidden"><div class="modal" style="max-width:520px;background:#FBF6E8;border-color:rgba(107,86,24,0.2);position:relative;"><button onclick="closeBadgeWall()" style="position:absolute;top:.5rem;right:.75rem;background:none;border:none;color:#6B5618;font-size:1.4rem;cursor:pointer;line-height:1;opacity:.5;">&times;</button><div id="badge-wall-content"></div></div></div>
+<div id="badge-detail-modal" class="overlay hidden" style="z-index:210;"><div class="modal" style="max-width:360px;background:#FBF6E8;border-color:rgba(107,86,24,0.2);position:relative;"><button onclick="closeBadgeDetail()" style="position:absolute;top:.5rem;right:.75rem;background:none;border:none;color:#6B5618;font-size:1.4rem;cursor:pointer;line-height:1;opacity:.5;">&times;</button><div id="badge-detail-content"></div></div></div>
 <div id="offline-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:var(--bg-card,#1e1e1e);border-bottom:1px solid var(--border,#333);text-align:center;padding:.5rem .75rem;font-size:.78rem;font-weight:500;color:var(--muted,#999);transform:translateY(-100%);transition:transform .3s ease;">
   <span style="display:inline-flex;align-items:center;gap:.4rem;">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
@@ -4581,137 +4585,145 @@ function setFeatureFlag(name, val) {
 let OFFICIAL_USER_ID = null; // resolved at init from profiles.is_official
 
 // ── BADGE / ACHIEVEMENT SYSTEM ────────────────────────────────────────────
+const BADGE_COLORS = {
+  onboarding:  { bezel: '#7A8B5C', stroke: '#4F5C3A', chipBg: '#E8EFD9', chipText: '#4F5C3A' },
+  collection:  { bezel: '#B8952A', stroke: '#6B5618', chipBg: '#F0E4BD', chipText: '#6B5618' },
+  connoisseur: { bezel: '#6B3D52', stroke: '#3F2230', chipBg: '#ECDAE3', chipText: '#3F2230' },
+  timegrapher: { bezel: '#4A6B7D', stroke: '#2C434F', chipBg: '#DCE6EC', chipText: '#2C434F' },
+  habit:       { bezel: '#B5663F', stroke: '#6B3A1F', chipBg: '#F0DCCE', chipText: '#6B3A1F' },
+  hidden:      { bezel: '#7A7A6A', stroke: '#4A4A3E', chipBg: '#E8E6DD', chipText: '#4A4A3E' },
+};
 const BADGE_REGISTRY = [
-  // Onboarding (001–005)
+  // Onboarding (001-005)
   { ref: 1, slug: 'first_watch', name: 'First Watch', category: 'onboarding',
     flavor: 'First watch in the box. The catalog begins.',
     unlock: 'Add your first watch to the collection.',
-    glyph: `<path d="M50 28v44M38 32l12-4 12 4M38 68l12 4 12-4M34 50h32" stroke="#F5C95E" stroke-width="1.5" fill="none" stroke-linecap="round"/>`,
+    glyph: '<path d="M50 25v50M36 30l14-5 14 5M36 70l14 5 14-5M32 50h36" stroke="#3D2A14" stroke-width="2.2" fill="none" stroke-linecap="round"/>',
     isHidden: false },
   { ref: 2, slug: 'first_measurement', name: 'First Measurement', category: 'onboarding',
     flavor: 'Your first rate reading is on the books.',
     unlock: 'Complete your first timegrapher measurement.',
-    glyph: `<circle cx="50" cy="50" r="14" stroke="#F5C95E" stroke-width="1.4" fill="none"/><path d="M50 40v10l7 7" stroke="#F5C95E" stroke-width="1.5" fill="none" stroke-linecap="round"/>`,
+    glyph: '<circle cx="50" cy="50" r="18" stroke="#3D2A14" stroke-width="2" fill="none"/><path d="M50 36v14l9 9" stroke="#3D2A14" stroke-width="2.2" fill="none" stroke-linecap="round"/>',
     isHidden: false },
   { ref: 3, slug: 'first_wear', name: 'First Wear', category: 'onboarding',
     flavor: 'First wear logged. The rotation has started.',
     unlock: 'Log your first wear entry.',
-    glyph: `<path d="M50 34c-8 0-14 6-14 14v4c0 8 6 14 14 14s14-6 14-14v-4c0-8-6-14-14-14z" stroke="#F5C95E" stroke-width="1.4" fill="none"/><path d="M42 50h16M50 42v16" stroke="#F5C95E" stroke-width="1.2" stroke-linecap="round"/>`,
+    glyph: '<path d="M50 28c-12 0-20 8-20 20v4c0 12 8 20 20 20s20-8 20-20v-4c0-12-8-20-20-20z" stroke="#3D2A14" stroke-width="2" fill="none"/><path d="M40 50h20M50 40v20" stroke="#3D2A14" stroke-width="2" stroke-linecap="round"/>',
     isHidden: false },
   { ref: 4, slug: 'first_post', name: 'First Post', category: 'onboarding',
     flavor: 'Your first post is live. Welcome to the feed.',
     unlock: 'Publish your first post to the social feed.',
-    glyph: `<rect x="37" y="37" width="26" height="26" rx="3" stroke="#F5C95E" stroke-width="1.4" fill="none"/><path d="M43 47h14M43 53h10" stroke="#F5C95E" stroke-width="1.2" stroke-linecap="round"/>`,
+    glyph: '<rect x="30" y="30" width="40" height="40" rx="4" stroke="#3D2A14" stroke-width="2" fill="none"/><path d="M38 45h24M38 55h16" stroke="#3D2A14" stroke-width="2.2" stroke-linecap="round"/>',
     isHidden: false },
   { ref: 5, slug: 'profile_complete', name: 'Profile Complete', category: 'onboarding',
     flavor: 'Profile complete. The community can find you.',
     unlock: 'Set name, profile photo, and bio.',
-    glyph: `<circle cx="50" cy="43" r="7" stroke="#F5C95E" stroke-width="1.4" fill="none"/><path d="M37 64c0-7 6-13 13-13s13 6 13 13" stroke="#F5C95E" stroke-width="1.4" fill="none" stroke-linecap="round"/>`,
+    glyph: '<circle cx="50" cy="40" r="10" stroke="#3D2A14" stroke-width="2" fill="none"/><path d="M30 72c0-11 9-20 20-20s20 9 20 20" stroke="#3D2A14" stroke-width="2" fill="none" stroke-linecap="round"/>',
     isHidden: false },
-  // Collection milestones (020–023)
+  // Collection milestones (020-023)
   { ref: 20, slug: 'five_in_box', name: 'Five in the Box', category: 'collection', tier: 1,
     flavor: 'Five watches. A proper rotation.',
     unlock: 'Have 5 watches in your collection.',
-    glyph: `<text x="50" y="56" text-anchor="middle" fill="#F5C95E" font-size="20" font-family="serif" font-weight="bold">V</text>`,
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="42" font-family="Georgia,serif" font-style="italic">V</text>',
     isHidden: false },
   { ref: 21, slug: 'ten_in_box', name: 'Ten in the Box', category: 'collection', tier: 2,
     flavor: 'Ten watches. Serious collector territory.',
     unlock: 'Have 10 watches in your collection.',
-    glyph: `<text x="50" y="56" text-anchor="middle" fill="#F5C95E" font-size="20" font-family="serif" font-weight="bold">X</text>`,
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="42" font-family="Georgia,serif" font-style="italic">X</text>',
     isHidden: false },
   { ref: 22, slug: 'fifteen_deep', name: 'Fifteen Deep', category: 'collection', tier: 3,
     flavor: 'Fifteen deep. The vault grows.',
     unlock: 'Have 15 watches in your collection.',
-    glyph: `<text x="50" y="56" text-anchor="middle" fill="#F5C95E" font-size="18" font-family="serif" font-weight="bold">XV</text>`,
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="38" font-family="Georgia,serif" font-style="italic">XV</text>',
     isHidden: false },
   { ref: 23, slug: 'twenty_strong', name: 'Twenty Strong', category: 'collection', tier: 4,
     flavor: 'Twenty strong. Museum-grade.',
     unlock: 'Have 20 watches in your collection.',
-    glyph: `<text x="50" y="56" text-anchor="middle" fill="#F5C95E" font-size="18" font-family="serif" font-weight="bold">XX</text>`,
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="36" font-family="Georgia,serif" font-style="italic">XX</text>',
     isHidden: false },
-  // Connoisseur (040–044)
+  // Connoisseur (040-044)
   { ref: 40, slug: 'holy_trinity', name: 'Holy Trinity', category: 'connoisseur',
     flavor: 'Patek. AP. Vacheron. The trinity is complete.',
     unlock: 'Own at least one watch each from Patek Philippe, Audemars Piguet, and Vacheron Constantin.',
-    glyph: `<polygon points="50,33 62,62 38,62" stroke="#F5C95E" stroke-width="1.4" fill="none" stroke-linejoin="round"/><circle cx="50" cy="53" r="3" fill="#F5C95E"/>`,
+    glyph: '<polygon points="50,26 68,68 32,68" stroke="#3D2A14" stroke-width="2.2" fill="none" stroke-linejoin="round"/><circle cx="50" cy="56" r="4" fill="#3D2A14"/>',
     isHidden: false },
   { ref: 41, slug: 'independent_maker', name: 'Independent Maker', category: 'connoisseur',
     flavor: 'You know the makers behind the brands.',
     unlock: 'Own a watch from an independent maker.',
-    glyph: `<path d="M50 35l-3 8h-8l6.5 5-2.5 8 7-5 7 5-2.5-8 6.5-5h-8z" stroke="#F5C95E" stroke-width="1.3" fill="none" stroke-linejoin="round"/>`,
+    glyph: '<path d="M50 26l-5 14h-14l11 8-4 14 12-9 12 9-4-14 11-8h-14z" stroke="#3D2A14" stroke-width="2" fill="none" stroke-linejoin="round"/>',
     isHidden: false },
   { ref: 42, slug: 'vintage_piece', name: 'Vintage Piece', category: 'connoisseur',
     flavor: 'Vintage on the wrist. History on the dial.',
-    unlock: 'Own a watch with year ≤ 1990.',
-    glyph: `<text x="50" y="48" text-anchor="middle" fill="#F5C95E" font-size="9" font-family="monospace" letter-spacing="0.5">ANNO</text><text x="50" y="60" text-anchor="middle" fill="#F5C95E" font-size="11" font-family="serif">1990</text>`,
+    unlock: 'Own a watch with year <= 1990.',
+    glyph: '<circle cx="50" cy="50" r="18" stroke="#3D2A14" stroke-width="2" fill="none"/><path d="M50 36v14" stroke="#3D2A14" stroke-width="2" stroke-linecap="round"/><path d="M50 60v4M42 50h-4M58 50h4" stroke="#3D2A14" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>',
     isHidden: false },
   { ref: 43, slug: 'brand_devotee', name: 'Brand Devotee', category: 'connoisseur',
     flavor: 'Three from one house. Devotion runs deep.',
     unlock: 'Own 3+ watches from the same brand.',
-    glyph: `<circle cx="42" cy="50" r="5" stroke="#F5C95E" stroke-width="1.2" fill="none"/><circle cx="50" cy="50" r="5" stroke="#F5C95E" stroke-width="1.2" fill="none"/><circle cx="58" cy="50" r="5" stroke="#F5C95E" stroke-width="1.2" fill="none"/>`,
+    glyph: '<circle cx="38" cy="50" r="8" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="50" cy="50" r="8" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="62" cy="50" r="8" stroke="#3D2A14" stroke-width="2" fill="none"/>',
     isHidden: false },
   { ref: 44, slug: 'complication_collector', name: 'Complication Collector', category: 'connoisseur',
-    flavor: 'Four complications. A connoisseur’s breadth.',
+    flavor: 'Four complications. A connoisseur\'s breadth.',
     unlock: 'Own watches representing 4+ distinct complication types.',
-    glyph: `<circle cx="44" cy="44" r="4" stroke="#F5C95E" stroke-width="1" fill="none"/><circle cx="56" cy="44" r="4" stroke="#F5C95E" stroke-width="1" fill="none"/><circle cx="44" cy="56" r="4" stroke="#F5C95E" stroke-width="1" fill="none"/><circle cx="56" cy="56" r="4" stroke="#F5C95E" stroke-width="1" fill="none"/><rect x="38" y="38" width="24" height="24" rx="2" stroke="#F5C95E" stroke-width="0.8" fill="none" opacity="0.5"/>`,
+    glyph: '<circle cx="40" cy="40" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="60" cy="40" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="40" cy="60" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="60" cy="60" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/>',
     isHidden: false },
-  // Timegrapher (060–063)
+  // Timegrapher (060-063)
   { ref: 60, slug: 'chronometer_grade', name: 'Chronometer Grade', category: 'timegrapher',
     flavor: 'Within COSC spec. Precision confirmed.',
-    unlock: 'Submit a measurement with rate between -4 and +6 s/day (≥60s duration).',
-    glyph: `<circle cx="50" cy="50" r="14" stroke="#F5C95E" stroke-width="1.4" fill="none"/><path d="M50 40v10h7" stroke="#F5C95E" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M44 34l6 2M56 34l-6 2" stroke="#F5C95E" stroke-width="0.8" opacity="0.6"/>`,
+    unlock: 'Submit a measurement with rate between -4 and +6 s/day (>=60s duration).',
+    glyph: '<path d="M50 28l-5 14h-14l11 8-4 14 12-9 12 9-4-14 11-8h-14z" fill="#B8952A" stroke="#6B5618" stroke-width="0.6" stroke-linejoin="round"/>',
     isHidden: false },
   { ref: 61, slug: 'ten_measurements', name: 'Ten Measurements', category: 'timegrapher',
     flavor: 'Ten readings in the book. The data grows.',
     unlock: 'Log 10 total timegrapher measurements.',
-    glyph: `<text x="50" y="56" text-anchor="middle" fill="#F5C95E" font-size="18" font-family="serif" font-weight="bold">10</text>`,
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="38" font-family="Georgia,serif" font-style="italic">10</text>',
     isHidden: false },
   { ref: 62, slug: 'full_audit', name: 'Full Audit', category: 'timegrapher',
     flavor: 'Every watch measured. Full audit complete.',
     unlock: 'Have at least one measurement for every watch in your collection (min 3 watches).',
-    glyph: `<path d="M40 50l6 6 14-14" stroke="#F5C95E" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="50" r="15" stroke="#F5C95E" stroke-width="1.2" fill="none"/>`,
+    glyph: '<path d="M34 50l10 10 22-22" stroke="#3D2A14" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="50" r="20" stroke="#3D2A14" stroke-width="2" fill="none"/>',
     isHidden: false },
   { ref: 63, slug: 'caught_a_drifter', name: 'Caught a Drifter', category: 'timegrapher',
     flavor: 'Spotted the drift, tracked the fix.',
-    unlock: 'Log a reading worse than ±30 s/day, then a follow-up within 90 days under ±15 s/day on the same watch.',
-    glyph: `<path d="M38 55c4-15 10-15 12 0s8 15 12 0" stroke="#F5C95E" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M38 50h24" stroke="#F5C95E" stroke-width="0.6" opacity="0.4" stroke-dasharray="2,2"/>`,
+    unlock: 'Log a reading worse than +/-30 s/day, then a follow-up within 90 days under +/-15 s/day on the same watch.',
+    glyph: '<path d="M28 55c6-20 14-20 18 0s12 20 18 0" stroke="#3D2A14" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M28 50h44" stroke="#3D2A14" stroke-width="0.8" opacity="0.35" stroke-dasharray="3,3"/>',
     isHidden: false },
-  // Habit (080–082)
+  // Habit (080-082)
   { ref: 80, slug: 'seven_day_streak', name: 'Seven-Day Streak', category: 'habit',
     flavor: 'Seven days straight. The habit is forming.',
     unlock: 'Log a wear entry on 7 consecutive days.',
-    glyph: `<text x="50" y="56" text-anchor="middle" fill="#F5C95E" font-size="16" font-family="serif" font-weight="bold">7</text><path d="M38 62h24" stroke="#F5C95E" stroke-width="1" opacity="0.5"/>`,
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="40" font-family="Georgia,serif" font-style="italic">7</text>',
     isHidden: false },
   { ref: 81, slug: 'thirty_day_streak', name: 'Thirty-Day Streak', category: 'habit',
     flavor: 'Thirty days. The rotation is a ritual.',
     unlock: 'Log a wear entry on 30 consecutive days.',
-    glyph: `<text x="50" y="56" text-anchor="middle" fill="#F5C95E" font-size="15" font-family="serif" font-weight="bold">30</text><path d="M36 62h28" stroke="#F5C95E" stroke-width="1" opacity="0.5"/>`,
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="36" font-family="Georgia,serif" font-style="italic">30</text>',
     isHidden: false },
   { ref: 82, slug: 'balanced_quarter', name: 'Balanced Quarter', category: 'habit',
     flavor: 'No single watch dominates. True rotation.',
     unlock: 'Over 90 days, no watch exceeds 40% of wear days, with 4+ watches worn.',
-    glyph: `<circle cx="43" cy="46" r="4" stroke="#F5C95E" stroke-width="1" fill="none"/><circle cx="57" cy="46" r="4" stroke="#F5C95E" stroke-width="1" fill="none"/><circle cx="43" cy="57" r="4" stroke="#F5C95E" stroke-width="1" fill="none"/><circle cx="57" cy="57" r="4" stroke="#F5C95E" stroke-width="1" fill="none"/>`,
+    glyph: '<circle cx="38" cy="42" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="62" cy="42" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="38" cy="60" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="62" cy="60" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/>',
     isHidden: false },
   // Hidden easter eggs (100+)
   { ref: 100, slug: 'high_noon', name: 'High Noon', category: 'hidden',
     flavor: 'Measured at the stroke of noon.',
     unlock: 'Submit a measurement between 11:58 and 12:02 local time.',
-    glyph: `<circle cx="50" cy="50" r="14" stroke="#F5C95E" stroke-width="1.2" fill="none"/><path d="M50 40v10M50 40v-2" stroke="#F5C95E" stroke-width="1.5" fill="none" stroke-linecap="round"/>`,
+    glyph: '<circle cx="50" cy="50" r="18" stroke="#3D2A14" stroke-width="2" fill="none"/><path d="M50 36v14M50 33v-2" stroke="#3D2A14" stroke-width="2.2" fill="none" stroke-linecap="round"/>',
     isHidden: true },
   { ref: 101, slug: 'full_moon', name: 'Full Moon', category: 'hidden',
     flavor: 'Moonphase aligned with the real thing.',
     unlock: 'Log wear on a moonphase watch during a full moon.',
-    glyph: `<circle cx="50" cy="50" r="12" fill="#F5C95E" opacity="0.9"/><circle cx="46" cy="50" r="12" fill="#1a1410"/>`,
+    glyph: '<circle cx="52" cy="50" r="16" fill="#3D2A14"/><circle cx="44" cy="50" r="16" fill="#FEFCF6"/>',
     isHidden: true },
   { ref: 102, slug: 'birthday_boy', name: 'Birthday Boy', category: 'hidden',
     flavor: 'A wear on your birthday. Cheers.',
     unlock: 'Log a wear entry on your birthday.',
-    glyph: `<rect x="43" y="44" width="14" height="14" rx="2" stroke="#F5C95E" stroke-width="1.2" fill="none"/><path d="M47 44v-4M53 44v-4M47 40c0-3 6-3 6 0" stroke="#F5C95E" stroke-width="1" fill="none" stroke-linecap="round"/>`,
+    glyph: '<rect x="36" y="42" width="28" height="24" rx="3" stroke="#3D2A14" stroke-width="2" fill="none"/><path d="M44 42v-8M56 42v-8M44 34c0-5 12-5 12 0" stroke="#3D2A14" stroke-width="2" fill="none" stroke-linecap="round"/>',
     isHidden: true },
   { ref: 103, slug: 'leap_second', name: 'Leap Second', category: 'hidden',
     flavor: 'One extra second. You caught it.',
     unlock: 'Submit a measurement on June 30 or December 31 near midnight UTC.',
-    glyph: `<text x="50" y="57" text-anchor="middle" fill="#F5C95E" font-size="18" font-family="monospace" font-weight="bold">:61</text>`,
+    glyph: '<text x="50" y="60" text-anchor="middle" fill="#3D2A14" font-size="30" font-family="monospace" font-weight="bold">:61</text>',
     isHidden: true },
 ];
 const BADGE_BY_REF = {};
@@ -4743,15 +4755,19 @@ let _earnedBadges = [];
 let _badgeScanDone = false;
 
 function badgeMedallionSvg(badge, size, earned) {
-  const op = earned ? 1 : 0.35;
-  const glyphContent = earned
-    ? badge.glyph
-    : `<rect x="45" y="44" width="10" height="12" rx="2" stroke="#D4AF55" stroke-width="1" fill="none" opacity="0.6"/><circle cx="50" cy="43" r="3" stroke="#D4AF55" stroke-width="1" fill="none" opacity="0.6"/>`;
+  const cat = badge.category || 'hidden';
+  const c = BADGE_COLORS[cat] || BADGE_COLORS.hidden;
+  if (earned) {
+    return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="48" fill="${c.bezel}"/>
+      <circle cx="50" cy="50" r="44" fill="#FEFCF6" stroke="${c.stroke}" stroke-width="0.4"/>
+      ${badge.glyph}
+    </svg>`;
+  }
   return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="50" cy="50" r="48" fill="#1a1410" stroke="#D4AF55" stroke-width="1" opacity="${op}"/>
-    <circle cx="50" cy="50" r="42" fill="none" stroke="#D4AF55" stroke-width="0.4" opacity="${op * 0.55}"/>
-    <g opacity="${op}">${glyphContent}</g>
-    ${earned ? `<text x="50" y="76" text-anchor="middle" fill="#D4AF55" font-size="5" font-family="monospace" letter-spacing="1" opacity="0.85">${escHtml(badge.name.toUpperCase())}</text>` : ''}
+    <circle cx="50" cy="50" r="48" fill="#C9C2A8"/>
+    <circle cx="50" cy="50" r="44" fill="#FEFCF6" stroke="#A8A28C" stroke-width="0.4"/>
+    <g opacity="0.4"><rect x="44" y="42" width="12" height="16" rx="2.5" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="50" cy="40" r="4" stroke="#3D2A14" stroke-width="2" fill="none"/></g>
   </svg>`;
 }
 
@@ -4778,16 +4794,17 @@ function _drainBadgeToast() {
   if (!el) { _badgeToastActive = false; return; }
   if (batch.length === 1) {
     const b = batch[0];
+    const cc = BADGE_COLORS[b.category] || BADGE_COLORS.hidden;
     el.innerHTML = `<div style="display:flex;align-items:center;gap:.75rem;cursor:pointer;" onclick="openBadgeWall()">
       ${badgeMedallionSvg(b, 56, true)}
-      <div><div style="font-size:.82rem;font-weight:600;color:rgba(245,230,200,0.95);">${escHtml(b.name)}</div>
-      <div style="font-size:.72rem;color:rgba(212,175,85,0.75);margin-top:.15rem;">${escHtml(b.flavor)}</div></div>
+      <div><div style="font-size:.82rem;font-weight:600;color:#3D2A14;">${escHtml(b.name)}</div>
+      <div style="font-size:.72rem;color:${cc.stroke};margin-top:.15rem;">${escHtml(b.flavor)}</div></div>
     </div>`;
   } else {
     const medallions = batch.map(b => badgeMedallionSvg(b, 44, true)).join('');
     el.innerHTML = `<div style="display:flex;align-items:center;gap:.75rem;cursor:pointer;" onclick="openBadgeWall()">
       <div style="display:flex;gap:.25rem;">${medallions}</div>
-      <div style="font-size:.82rem;font-weight:600;color:rgba(245,230,200,0.95);">${batch.length} badges unlocked</div>
+      <div style="font-size:.82rem;font-weight:600;color:#3D2A14;">${batch.length} badges unlocked</div>
     </div>`;
   }
   el.classList.add('show');
@@ -4809,36 +4826,47 @@ function openBadgeWall() {
     });
   const locked = visible.filter(b => !earnedRefs.has(b.ref));
 
+  const catOrder = ['onboarding','collection','connoisseur','timegrapher','habit','hidden'];
+  const catLabels = { onboarding: 'Onboarding', collection: 'Collection', connoisseur: 'Connoisseur', timegrapher: 'Timegrapher', habit: 'Habit', hidden: 'Hidden' };
+
   const earnedCards = earned.map(b => {
     const ub = _earnedBadges.find(e => e.badge_ref === b.ref);
     const dateStr = ub ? new Date(ub.earned_at).toLocaleDateString() : '';
     return `<div class="badge-wall-card" onclick="openBadgeDetail(${b.ref})">
-      ${badgeMedallionSvg(b, 80, true)}
+      ${badgeMedallionSvg(b, 88, true)}
       <div class="badge-wall-name">${escHtml(b.name)}</div>
       <div class="badge-wall-ref">${badgeRefLabel(b.ref)}</div>
       <div class="badge-wall-date">${dateStr}</div>
     </div>`;
   }).join('');
 
-  const lockedCards = locked.map(b => {
-    const label = b.isHidden ? 'Hidden' : escHtml(b.name);
-    return `<div class="badge-wall-card locked">
-      ${badgeMedallionSvg(b, 80, false)}
-      <div class="badge-wall-name">${label}</div>
-      <div class="badge-wall-ref">${badgeRefLabel(b.ref)}</div>
-    </div>`;
-  }).join('');
+  let lockedHtml = '';
+  catOrder.forEach(cat => {
+    const catLocked = locked.filter(b => b.category === cat);
+    if (!catLocked.length) return;
+    const cc = BADGE_COLORS[cat];
+    const catChip = '<span class="badge-cat-chip" style="background:' + cc.chipBg + ';color:' + cc.chipText + ';">' + catLabels[cat] + '</span>';
+    const cards = catLocked.map(b => {
+      const label = b.isHidden ? '???' : escHtml(b.name);
+      return `<div class="badge-wall-card locked" onclick="openBadgeDetail(${b.ref})">
+        ${badgeMedallionSvg(b, 88, false)}
+        <div class="badge-wall-name">${label}</div>
+        <div class="badge-wall-ref">${badgeRefLabel(b.ref)}</div>
+      </div>`;
+    }).join('');
+    lockedHtml += '<div style="margin:1rem 0 .6rem;">' + catChip + '</div><div class="badge-wall-grid">' + cards + '</div>';
+  });
 
   const totalVisible = visible.length;
   const earnedCount = earned.length;
 
   const content = `
     <div style="text-align:center;margin-bottom:1.2rem;">
-      <div style="font-size:1rem;font-weight:600;color:rgba(245,230,200,0.9);">Achievements</div>
-      <div style="font-size:.78rem;color:var(--muted);margin-top:.25rem;">${earnedCount} of ${totalVisible} earned</div>
+      <div style="font-size:1rem;font-weight:600;color:#3D2A14;">Achievements</div>
+      <div style="font-size:.78rem;color:rgba(61,42,20,0.5);margin-top:.25rem;">${earnedCount} of ${totalVisible} earned</div>
     </div>
-    ${earnedCards ? `<div style="margin-bottom:.6rem;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Earned</div><div class="badge-wall-grid">${earnedCards}</div>` : ''}
-    ${lockedCards ? `<div style="margin:1rem 0 .6rem;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Locked</div><div class="badge-wall-grid">${lockedCards}</div>` : ''}`;
+    ${earnedCards ? '<div style="margin-bottom:.6rem;font-size:.72rem;color:rgba(61,42,20,0.45);text-transform:uppercase;letter-spacing:1px;">Earned</div><div class="badge-wall-grid">' + earnedCards + '</div>' : ''}
+    ${lockedHtml}`;
 
   document.getElementById('badge-wall-content').innerHTML = content;
   document.getElementById('badge-wall-modal').classList.remove('hidden');
@@ -4860,15 +4888,19 @@ function openBadgeDetail(ref) {
   const ub = _earnedBadges.find(e => e.badge_ref === ref);
   const earned = !!ub;
   const dateStr = ub ? new Date(ub.earned_at).toLocaleDateString() : '';
+  const cc = BADGE_COLORS[b.category] || BADGE_COLORS.hidden;
+  const catLabels = { onboarding: 'Onboarding', collection: 'Collection', connoisseur: 'Connoisseur', timegrapher: 'Timegrapher', habit: 'Habit', hidden: 'Hidden' };
+  const catChip = '<span class="badge-cat-chip" style="background:' + cc.chipBg + ';color:' + cc.chipText + ';">' + (catLabels[b.category] || b.category) + '</span>';
   const el = document.getElementById('badge-detail-content');
   el.innerHTML = `
     <div style="text-align:center;">
-      ${badgeMedallionSvg(b, 200, earned)}
-      <div style="font-size:1.05rem;font-weight:600;color:rgba(245,230,200,0.9);margin-top:.75rem;">${escHtml(b.name)}</div>
-      <div style="font-size:.75rem;color:rgba(212,175,85,0.55);font-family:monospace;margin-top:.25rem;">${badgeRefLabel(b.ref)}</div>
-      ${earned ? `<div style="font-size:.82rem;color:rgba(245,230,200,0.75);margin-top:.6rem;font-style:italic;">${escHtml(b.flavor)}</div>` : ''}
-      ${earned ? `<div style="font-size:.78rem;color:var(--muted);margin-top:.5rem;">Unlocked: ${escHtml(b.unlock)}</div>` : ''}
-      ${earned ? `<div style="font-size:.72rem;color:var(--muted);margin-top:.3rem;">Earned ${dateStr}</div>` : `<div style="font-size:.78rem;color:var(--muted);margin-top:.6rem;">${b.isHidden ? 'This badge is hidden. Keep exploring.' : 'Not yet earned.'}</div>`}
+      ${badgeMedallionSvg(b, 240, earned)}
+      <div style="font-size:1.05rem;font-weight:600;color:#3D2A14;margin-top:.75rem;">${escHtml(b.name)}</div>
+      <div style="font-size:.75rem;color:rgba(61,42,20,0.45);font-family:monospace;margin-top:.25rem;">${badgeRefLabel(b.ref)}</div>
+      <div style="margin-top:.4rem;">${catChip}</div>
+      ${earned ? `<div style="font-size:.82rem;color:rgba(61,42,20,0.7);margin-top:.6rem;font-style:italic;">${escHtml(b.flavor)}</div>` : ''}
+      ${earned ? `<div style="font-size:.78rem;color:rgba(61,42,20,0.5);margin-top:.5rem;">Unlocked: ${escHtml(b.unlock)}</div>` : ''}
+      ${earned ? `<div style="font-size:.72rem;color:rgba(61,42,20,0.4);margin-top:.3rem;">Earned ${dateStr}</div>` : `<div style="font-size:.78rem;color:rgba(61,42,20,0.5);margin-top:.6rem;">${b.isHidden ? 'This badge is hidden. Keep exploring.' : 'Not yet earned.'}</div>`}
     </div>`;
   document.getElementById('badge-detail-modal').classList.remove('hidden');
 }
@@ -5130,7 +5162,7 @@ function badgeWallProfileSection() {
   const lockedCount = visible.length - earned.length;
   const lockedPreview = lockedCount > 0 && preview.length < 6
     ? Array.from({ length: Math.min(lockedCount, 6 - preview.length) }, () =>
-        `<div style="text-align:center;opacity:.4;">${badgeMedallionSvg(BADGE_REGISTRY[0], 56, false)}</div>`
+        `<div style="text-align:center;">${badgeMedallionSvg(BADGE_REGISTRY[0], 56, false)}</div>`
       ).join('')
     : '';
 
@@ -5720,7 +5752,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.21.00';
+const APP_VERSION = '13.21.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
