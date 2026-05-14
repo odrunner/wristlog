@@ -62,19 +62,19 @@ describe('validateUsername', () => {
   it('rejects empty string', () => {
     const result = validateUsername('');
     expect(result.valid).toBe(false);
-    expect(result.error).toBe('At least 3 characters');
+    expect(result.error).toBe('At least 2 characters');
   });
 
   it('rejects 1-character username', () => {
     const result = validateUsername('a');
     expect(result.valid).toBe(false);
-    expect(result.error).toBe('At least 3 characters');
+    expect(result.error).toBe('At least 2 characters');
   });
 
-  it('rejects 2-character username', () => {
-    const result = validateUsername('ab');
-    expect(result.valid).toBe(false);
-    expect(result.error).toBe('At least 3 characters');
+  it('accepts 2-character username', () => {
+    const result = validateUsername('od');
+    expect(result.valid).toBe(true);
+    expect(result.clean).toBe('od');
   });
 
   // ── Invalid: too long ─────────────────────────────────────────────────
@@ -111,7 +111,7 @@ describe('validateUsername', () => {
     const result = validateUsername('!@#');
     expect(result.valid).toBe(false);
     expect(result.clean).toBe('');
-    expect(result.error).toBe('At least 3 characters');
+    expect(result.error).toBe('At least 2 characters');
   });
 
   it('handles email-style input (common from auto-generation)', () => {
