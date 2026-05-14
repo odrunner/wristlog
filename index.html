@@ -11789,15 +11789,20 @@ async function openAdminUserDetail(userId) {
     ]), 10000);
     if (error) throw error;
     const d = data;
-    // Override measurement counts with actual session count from tick_logs
+    // Use all sessions (tick_logs) as measurement count, not just saved readings
     let msrSessionCount = 0;
+    let msrConverged = 0;
     (msrLogs || []).forEach(r => {
       try {
         const msg = typeof r.messages === 'string' ? JSON.parse(r.messages) : r.messages;
-        if (msg?.user_id === userId && msg?.type === 'session_summary') msrSessionCount++;
+        if (msg?.user_id === userId && msg?.type === 'session_summary') {
+          msrSessionCount++;
+          if (msg.converged || msg.stop_reason === 'converged') msrConverged++;
+        }
       } catch {}
     });
-    if (msrSessionCount > d.measurements_total) d.measurements_total = msrSessionCount;
+    d.measurements_total = msrSessionCount;
+    d.measurements_success = msrConverged;
     const p = d.profile || {};
     const name = p.display_name || p.username || userId.slice(0, 8);
     const joinDate = p.created_at ? fmtDate(p.created_at.slice(0, 10)) : '—';
