@@ -4899,8 +4899,8 @@ function openBadgeDetail(ref) {
       <div style="font-size:.75rem;color:rgba(61,42,20,0.45);font-family:monospace;margin-top:.25rem;">${badgeRefLabel(b.ref)}</div>
       <div style="margin-top:.4rem;">${catChip}</div>
       ${earned ? `<div style="font-size:.82rem;color:rgba(61,42,20,0.7);margin-top:.6rem;font-style:italic;">${escHtml(b.flavor)}</div>` : ''}
-      ${earned ? `<div style="font-size:.78rem;color:rgba(61,42,20,0.5);margin-top:.5rem;">Unlocked: ${escHtml(b.unlock)}</div>` : ''}
-      ${earned ? `<div style="font-size:.72rem;color:rgba(61,42,20,0.4);margin-top:.3rem;">Earned ${dateStr}</div>` : `<div style="font-size:.78rem;color:rgba(61,42,20,0.5);margin-top:.6rem;">${b.isHidden ? 'This badge is hidden. Keep exploring.' : 'Not yet earned.'}</div>`}
+      <div style="font-size:.78rem;color:rgba(61,42,20,0.5);margin-top:.5rem;">${b.isHidden && !earned ? 'This badge is hidden. Keep exploring.' : escHtml(b.unlock)}</div>
+      ${earned ? `<div style="font-size:.72rem;color:rgba(61,42,20,0.4);margin-top:.3rem;">Earned ${dateStr}</div>` : ''}
     </div>`;
   document.getElementById('badge-detail-modal').classList.remove('hidden');
 }
@@ -5752,7 +5752,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.21.31';
+const APP_VERSION = '13.21.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
