@@ -11582,7 +11582,7 @@ async function loadAdminStats() {
       db.from('logs').select('user_id, created_at').gte('created_at', d7ago),
       db.from('watches').select('user_id').gte('created_at', d1ago),
       db.from('logs').select('user_id').gte('created_at', d1ago),
-      db.from('timegrapher_results').select('user_id').gte('created_at', d1ago),
+      db.from('timegrapher_tick_logs').select('messages').like('messages', '%session_summary%').gte('created_at', d1ago),
       db.from('valuation_events').select('user_id').gte('created_at', d1ago),
       db.from('identify_attempts').select('user_id').eq('mode', 'enhance').gte('created_at', d1ago),
     ]), 10000);
@@ -11606,7 +11606,13 @@ async function loadAdminStats() {
     const _countBy = (rows) => { const m = {}; (rows || []).forEach(r => { m[r.user_id] = (m[r.user_id] || 0) + 1; }); return m; };
     const newWtcByUser = _countBy(newWatchesR.data);
     const newWrsByUser = _countBy(newWearsR.data);
-    const newMsrByUser = _countBy(newMsrR.data);
+    const newMsrByUser = {};
+    (newMsrR.data || []).forEach(r => {
+      try {
+        const msg = typeof r.messages === 'string' ? JSON.parse(r.messages) : r.messages;
+        if (msg?.user_id) newMsrByUser[msg.user_id] = (newMsrByUser[msg.user_id] || 0) + 1;
+      } catch {}
+    });
     const newValByUser = _countBy(newValR.data);
     const newEnhByUser = _countBy(newEnhR.data);
 
@@ -11777,9 +11783,26 @@ async function openAdminUserDetail(userId) {
   modal.classList.remove('hidden');
 
   try {
-    const { data, error } = await withTimeout(db.rpc('admin_user_detail', { target_user_id: userId }), 10000);
+    const [{ data, error }, { data: msrLogs }] = await withTimeout(Promise.all([
+      db.rpc('admin_user_detail', { target_user_id: userId }),
+      db.from('timegrapher_tick_logs').select('messages').like('messages', '%session_summary%').like('messages', '%' + userId + '%'),
+    ]), 10000);
     if (error) throw error;
     const d = data;
+    // Use all sessions (tick_logs) as measurement count, not just saved readings
+    let msrSessionCount = 0;
+    let msrConverged = 0;
+    (msrLogs || []).forEach(r => {
+      try {
+        const msg = typeof r.messages === 'string' ? JSON.parse(r.messages) : r.messages;
+        if (msg?.user_id === userId && msg?.type === 'session_summary') {
+          msrSessionCount++;
+          if (msg.converged || msg.stop_reason === 'converged') msrConverged++;
+        }
+      } catch {}
+    });
+    d.measurements_total = msrSessionCount;
+    d.measurements_success = msrConverged;
     const p = d.profile || {};
     const name = p.display_name || p.username || userId.slice(0, 8);
     const joinDate = p.created_at ? fmtDate(p.created_at.slice(0, 10)) : '—';
