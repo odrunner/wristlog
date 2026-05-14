@@ -4647,11 +4647,6 @@ const BADGE_REGISTRY = [
     unlock: 'Own at least one watch each from Patek Philippe, Audemars Piguet, and Vacheron Constantin.',
     glyph: '<polygon points="50,26 68,68 32,68" stroke="#3D2A14" stroke-width="2.2" fill="none" stroke-linejoin="round"/><circle cx="50" cy="56" r="4" fill="#3D2A14"/>',
     isHidden: false },
-  { ref: 41, slug: 'independent_maker', name: 'Independent Maker', category: 'connoisseur',
-    flavor: 'You know the makers behind the brands.',
-    unlock: 'Own a watch from an independent maker.',
-    glyph: '<path d="M50 26l-5 14h-14l11 8-4 14 12-9 12 9-4-14 11-8h-14z" stroke="#3D2A14" stroke-width="2" fill="none" stroke-linejoin="round"/>',
-    isHidden: false },
   { ref: 42, slug: 'vintage_piece', name: 'Vintage Piece', category: 'connoisseur',
     flavor: 'Vintage on the wrist. History on the dial.',
     unlock: 'Own a watch with year <= 1990.',
@@ -4729,13 +4724,6 @@ const BADGE_REGISTRY = [
 const BADGE_BY_REF = {};
 BADGE_REGISTRY.forEach(b => BADGE_BY_REF[b.ref] = b);
 
-const INDEPENDENT_MAKERS = [
-  'fp journe','f.p. journe','voutilainen','kari voutilainen','greubel forsey',
-  'mb&f','mbandf','de bethune','akrivia','rexhep rexhepi','h. moser','h moser',
-  'moser & cie','laurent ferrier','urwerk','richard mille','gronefeld',
-  'grönefeld','habring','habring2','moritz grossmann','krayon','czapek',
-  'ferdinand berthoud','chronometrie ferdinand berthoud','ressence','singer reimagined',
-];
 const COMPLICATION_KEYWORDS = {
   chronograph: ['chronograph','chrono'],
   gmt: ['gmt','dual time','second timezone','world time','worldtimer'],
@@ -4961,13 +4949,6 @@ async function checkAndAwardBadges(context, extraData) {
     const hasAP = brands.some(b => b.includes('audemars'));
     const hasVC = brands.some(b => b.includes('vacheron'));
     if (hasPatek && hasAP && hasVC) { if (await awardBadge(40)) newlyEarned.push(BADGE_BY_REF[40]); }
-  }
-  if (!alreadyEarned(41)) {
-    const found = watches.some(w => {
-      const b = (w.brand || '').toLowerCase().trim();
-      return INDEPENDENT_MAKERS.some(m => b.includes(m));
-    });
-    if (found) { if (await awardBadge(41)) newlyEarned.push(BADGE_BY_REF[41]); }
   }
   if (!alreadyEarned(42)) {
     const found = watches.some(w => {
@@ -5752,7 +5733,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.21.34';
+const APP_VERSION = '13.21.37';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
