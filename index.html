@@ -4576,6 +4576,7 @@ function featureFlag(name) {
 }
 function setFeatureFlag(name, val) {
   localStorage.setItem('ff_' + name, val ? 'true' : 'false');
+  if (name === 'badges' && val) { _badgeScanDone = false; retroactiveBadgeScan(); }
 }
 let OFFICIAL_USER_ID = null; // resolved at init from profiles.is_official
 
@@ -5719,7 +5720,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.20.38';
+const APP_VERSION = '13.20.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10024,6 +10025,7 @@ async function saveNewPost() {
   toast(postedWatch ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : 'Posted!');
   haptic('success');
   maybeShowReviewPrompt('post');
+  checkAndAwardBadges('post');
   feedLoadedAt = 0; // force feed to re-fetch after posting
   if (document.getElementById('page-feed').classList.contains('active')) loadFeed();
   } finally { if (_npBtn) { _npBtn.disabled = false; _npBtn.textContent = 'Post'; } }
