@@ -5120,7 +5120,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '10.08.00';
+const APP_VERSION = '13.20.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8047,7 +8047,7 @@ function renderPublicFeed() {
     const w = item.watch;
     const likeCount = publicFeedLikes[item.id] || 0;
     const comments = publicFeedComments[item.id] || [];
-    const displayName = escHtml(p?.display_name || p?.username || 'User') + officialBadgeHtml(p);
+    const displayName = escHtml(p?.username || p?.display_name || 'User') + officialBadgeHtml(p);
     const metaStr = formatFeedDate(item.date, item.created_at);
     // Hero
     let heroHtml = '';
@@ -8075,7 +8075,7 @@ function renderPublicFeed() {
         ${preview.map(c => `<div class="comment-item">
           <div class="comment-avatar" onclick="requireLogin()" style="cursor:pointer;">${profileInitials(c.profile)}</div>
           <div class="comment-content"><div class="comment-body">
-            <span class="comment-username" onclick="requireLogin()" style="cursor:pointer;">${escHtml(c.profile?.display_name || c.profile?.username || 'User')}${officialBadgeHtml(c.profile)}</span>
+            <span class="comment-username" onclick="requireLogin()" style="cursor:pointer;">${escHtml(c.profile?.username || c.profile?.display_name || 'User')}${officialBadgeHtml(c.profile)}</span>
             ${escHtml(c.body)}
             <span class="comment-time">${formatCommentTime(c.created_at)}</span>
           </div></div>
@@ -8506,7 +8506,7 @@ function renderFeedCard(item) {
       </div>`;
   } else if (item.notes && (item.photo_url || w)) {
     // Caption below actions only for photo posts and wear logs (text posts show notes in hero)
-    captionHtml = `<div class="feed-caption"><span class="feed-caption-user">${escHtml(p?.display_name || p?.username || 'User')}${officialBadgeHtml(p)}</span>${escHtml(item.notes)}</div>`;
+    captionHtml = `<div class="feed-caption"><span class="feed-caption-user">${escHtml(p?.username || p?.display_name || 'User')}${officialBadgeHtml(p)}</span>${escHtml(item.notes)}</div>`;
   }
 
   // Watch chip — only for wear logs that also have a photo (compact wear shows it in the header)
@@ -8590,7 +8590,7 @@ function renderFeedCard(item) {
         <div class="comment-avatar">${profileInitials(c.profile)}</div>
         <div class="comment-content">
           <div class="comment-body">
-            <span class="comment-username">${escHtml(c.profile?.display_name || c.profile?.username || 'User')}${officialBadgeHtml(c.profile)}</span>
+            <span class="comment-username">${escHtml(c.profile?.username || c.profile?.display_name || 'User')}${officialBadgeHtml(c.profile)}</span>
             <span class="comment-time">${formatCommentTime(c.created_at)}</span>
             ${renderCommentBody(c.body)}
           </div>
@@ -8621,7 +8621,7 @@ function renderFeedCard(item) {
   }
 
   // Compact wear: inline watch row inside header
-  const displayName = escHtml(p?.display_name || p?.username || 'User') + officialBadgeHtml(p);
+  const displayName = escHtml(p?.username || p?.display_name || 'User') + officialBadgeHtml(p);
   let headerBody;
   if (compactWear) {
     const wThumb = w.image
@@ -8776,7 +8776,7 @@ async function openReport(contentType, contentId, userId, contextName, logIdForC
       html += `<div class="chip${preselect === logId ? ' selected' : ''}" data-target-id="${logId}" onclick="setReportTarget('log','${logId}')">The post itself</div>`;
     }
     reportableComments.forEach(c => {
-      const cName = escHtml(c.profile?.display_name || c.profile?.username || 'User');
+      const cName = escHtml(c.profile?.username || c.profile?.display_name || 'User');
       const cBody = escHtml((c.body || '').slice(0, 30)) + (c.body?.length > 30 ? '...' : '');
       html += `<div class="chip${preselect === c.id ? ' selected' : ''}" data-target-id="${c.id}" onclick="setReportTarget('comment','${c.id}')" title="${escAttr(c.body||'')}">${cName}: ${cBody}</div>`;
     });
