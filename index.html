@@ -4524,12 +4524,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="badge-toast" class="badge-toast" aria-live="polite"></div>
 <div id="badge-wall-modal" class="overlay hidden"><div class="modal" style="max-width:520px;background:#FBF6E8;border-color:rgba(107,86,24,0.2);position:relative;"><button onclick="closeBadgeWall()" style="position:absolute;top:.5rem;right:.75rem;background:none;border:none;color:#6B5618;font-size:1.4rem;cursor:pointer;line-height:1;opacity:.5;">&times;</button><div id="badge-wall-content"></div></div></div>
 <div id="badge-detail-modal" class="overlay hidden" style="z-index:210;"><div class="modal" style="max-width:360px;background:#FBF6E8;border-color:rgba(107,86,24,0.2);position:relative;"><button onclick="closeBadgeDetail()" style="position:absolute;top:.5rem;right:.75rem;background:none;border:none;color:#6B5618;font-size:1.4rem;cursor:pointer;line-height:1;opacity:.5;">&times;</button><div id="badge-detail-content"></div></div></div>
-<div id="offline-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:var(--bg-card,#1e1e1e);border-bottom:1px solid var(--border,#333);text-align:center;padding:.5rem .75rem;font-size:.78rem;font-weight:500;color:var(--muted,#999);transform:translateY(-100%);transition:transform .3s ease;">
-  <span style="display:inline-flex;align-items:center;gap:.4rem;">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
-    Offline — changes saved locally, will sync when back online
-  </span>
-</div>
 
 <script>
 // Prevent iOS PWA from restoring previous scroll position on launch
@@ -5745,7 +5739,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.15.24';
+const APP_VERSION = '15.15.32';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20068,6 +20062,8 @@ const _overlayCloseMap = {
   'report-modal':        closeReport,
   'login-prompt-modal':  closeLoginPrompt,
   'admin-user-modal':    closeAdminUserModal,
+  'update-prices-modal': closeUpdatePrices,
+  'username-prompt-modal': () => document.getElementById('username-prompt-modal').classList.add('hidden'),
 };
 
 // Click overlay background to close
@@ -22010,15 +22006,11 @@ document.addEventListener('visibilitychange', () => {
 // ── Offline detection ────────────────────────────────────────────────────────
 function showOfflineBanner() {
   const b = document.getElementById('offline-banner');
-  if (!b) return;
-  b.style.display = '';
-  requestAnimationFrame(() => requestAnimationFrame(() => { b.style.transform = 'translateY(0)'; }));
+  if (b) b.classList.remove('hidden');
 }
 function hideOfflineBanner() {
   const b = document.getElementById('offline-banner');
-  if (!b) return;
-  b.style.transform = 'translateY(-100%)';
-  setTimeout(() => { b.style.display = 'none'; }, 300);
+  if (b) b.classList.add('hidden');
 }
 window.addEventListener('offline', showOfflineBanner);
 window.addEventListener('online', () => {
