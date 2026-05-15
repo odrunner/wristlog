@@ -5736,7 +5736,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.07.59';
+const APP_VERSION = '15.08.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11372,7 +11372,7 @@ function renderDevFlags() {
         <span style="position:absolute;top:2px;left:${on ? '20px' : '2px'};width:18px;height:18px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
       </label>
     </div>`;
-  }).join('') + `<div style="margin-top:1rem;"><button class="btn btn-ghost" style="font-size:.78rem;padding:.4rem .8rem;" onclick="openAf2DebugPreview()">Preview Add Flow V2 States</button></div>`;
+  }).join('');
 }
 
 function switchAdminTab(tab) {
