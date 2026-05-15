@@ -5736,7 +5736,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.07.58';
+const APP_VERSION = '15.07.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17264,7 +17264,7 @@ function buildBrandSelect(selected = '') { setBrandAC(selected); }
 //  PHOTO IDENTIFY (Add from Photo)
 // ══════════════════════════════════════════
 // ════════════════════════════════════════════════════════════════════════════
-// ADD FLOW V2 — behind featureFlag('add_flow_v2')
+// ADD FLOW V2
 // ════════════════════════════════════════════════════════════════════════════
 
 // Row states: waiting, identifying, identified, confirmed, enhancing, enhanced, pricing, done, skipped, failed
@@ -17786,13 +17786,6 @@ async function af2Confirm(idx) {
   // Short pause to show "Added ✓"
   await new Promise(r => setTimeout(r, 600));
   if (_af2Aborted) return;
-
-  // Cautious mode: stop here with manual buttons
-  if (featureFlag('add_flow_cautious')) {
-    w._af2State = 'done';
-    af2RenderSheet();
-    return;
-  }
 
   // Autopilot: enhance → price
   await af2RunEnhance(idx);
