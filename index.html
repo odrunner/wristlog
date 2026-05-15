@@ -5745,7 +5745,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.15.06';
+const APP_VERSION = '15.15.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11919,107 +11919,44 @@ async function renderAdminTraffic() {
   const el = document.getElementById('admin-traffic');
   if (!el) return;
   el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Loading traffic…</div>';
-  await loadInternalIds();
   try {
-    const now = new Date();
-    const d7 = new Date(now - 7 * 86400000).toISOString();
-    const d30 = new Date(now - 30 * 86400000).toISOString();
-    // Paginate page_visits (PostgREST caps at 1000 rows per request)
-    async function fetchAllPageVisits() {
-      const PAGE = 1000, cols = 'utm_source, utm_medium, utm_campaign, referrer, user_agent, created_at, user_id';
-      let all = [], from = 0;
-      for (let i = 0; i < 10; i++) {
-        const { data } = await db.from('page_visits').select(cols)
-          .order('created_at', { ascending: false }).range(from, from + PAGE - 1);
-        if (!data || !data.length) break;
-        all = all.concat(data);
-        if (data.length < PAGE) break;
-        from += PAGE;
-      }
-      return all;
-    }
-
-    const [allVisitsData, profilesR, funnelAll, emailEventsR] = await Promise.all([
-      fetchAllPageVisits(),
-      db.from('profiles').select('id, created_at').order('created_at', { ascending: false }),
-      db.from('page_visits').select('utm_source, created_at, user_id').eq('utm_medium', 'funnel').order('created_at', { ascending: false }).limit(500),
+    const [trafficR, emailEventsR] = await withTimeout(Promise.all([
+      db.rpc('admin_traffic_stats'),
       db.from('email_events').select('event_type, email_to, subject, created_at').order('created_at', { ascending: false }).limit(500),
-    ]);
+    ]), 15000);
+    if (trafficR.error) throw trafficR.error;
+    const t = trafficR.data;
 
-    const isInternal = (v) => v.user_id && INTERNAL_IDS.has(v.user_id);
-    const isBot = (v) => /HeadlessChrome|Playwright|Puppeteer|Electron/i.test(v.user_agent || '');
-    const isFunnelNoise = (v) => v.utm_medium === 'funnel' || /^(signin_google|signin_apple|onboarding_step_\d)$/.test(v.utm_source || '');
-    const isOAuthReturn = (v) => {
-      if (v.utm_source || !v.referrer) return false;
-      try { const h = new URL(v.referrer).hostname; return h === 'accounts.google.com' || h === 'appleid.apple.com'; } catch(e) { return false; }
-    };
+    const sourceRows = (t.by_source || [])
+      .map(s => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${escHtml(s.source)}</span><span><span style="color:var(--muted);font-size:.75rem;margin-right:.5rem;">7d: ${s.week}</span><span style="color:var(--gold);font-weight:600;">${s.total}</span></span></div>`)
+      .join('');
 
-    const allRaw = allVisitsData.filter(v => !isInternal(v) && !isBot(v) && !isFunnelNoise(v) && !isOAuthReturn(v));
-    const visits7 = allRaw.filter(v => v.created_at >= d7);
-    const visits30 = allRaw.filter(v => v.created_at >= d30);
+    const deviceRows = (t.by_device_7d || []).filter(d => d.count > 0)
+      .map(d => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${escHtml(d.device)}</span><span style="color:var(--gold);font-weight:600;">${d.count}</span></div>`)
+      .join('');
 
-    const fingerprint = (v) => v.user_id || v.user_agent || 'unknown';
-    const uniqueAll = new Set(allRaw.map(fingerprint));
-    const unique7 = new Set(visits7.map(fingerprint));
-    const unique30 = new Set(visits30.map(fingerprint));
-
-    const visitCounts = {};
-    allRaw.forEach(v => { const fp = fingerprint(v); visitCounts[fp] = (visitCounts[fp] || 0) + 1; });
-    const repeatAll = Object.values(visitCounts).filter(c => c > 1).length;
-    const visitCounts7 = {};
-    visits7.forEach(v => { const fp = fingerprint(v); visitCounts7[fp] = (visitCounts7[fp] || 0) + 1; });
-    const repeat7 = Object.values(visitCounts7).filter(c => c > 1).length;
-
-    const classifySource = (v) => {
-      const src = v.utm_source || '';
-      const ref = v.referrer || '';
-      if (src === 'reddit' || src === 'reddit_lp' || src.startsWith('reddit_lp_') || /reddit\.com/i.test(ref)) return 'Reddit';
-      if (/google\.com/i.test(ref) && src !== 'appstore_click') return 'Google';
-      if (/bing\.com/i.test(ref)) return 'Bing';
-      if (/duckduckgo/i.test(ref)) return 'DuckDuckGo';
-      if (/t\.co/i.test(ref)) return 'Twitter / X';
-      if (src === 'appstore_click') return 'App Store link';
-      if (src === 'direct' || (!src && !ref)) return 'Direct';
-      if (ref) { try { return new URL(ref).hostname; } catch(e) {} }
-      return src || 'Other';
-    };
-
-    const bySource7 = {};
-    visits7.forEach(v => { const s = classifySource(v); bySource7[s] = (bySource7[s] || 0) + 1; });
-    const bySourceAll = {};
-    allRaw.forEach(v => { const s = classifySource(v); bySourceAll[s] = (bySourceAll[s] || 0) + 1; });
-
-    const sourceRows = Object.entries(bySourceAll).sort((a, b) => b[1] - a[1])
-      .map(([src, cnt]) => {
-        const w = bySource7[src] || 0;
-        return `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${escHtml(src)}</span><span><span style="color:var(--muted);font-size:.75rem;margin-right:.5rem;">7d: ${w}</span><span style="color:var(--gold);font-weight:600;">${cnt}</span></span></div>`;
-      }).join('');
-
-    const byDevice7 = {};
-    visits7.forEach(v => { const d = classifyDevice(v.user_agent); byDevice7[d] = (byDevice7[d] || 0) + 1; });
-    const deviceRows = Object.entries(byDevice7).filter(([, c]) => c > 0).sort((a, b) => b[1] - a[1])
-      .map(([dev, cnt]) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${dev}</span><span style="color:var(--gold);font-weight:600;">${cnt}</span></div>`).join('');
-
-    const daily = {};
-    visits30.forEach(v => { const day = v.created_at.slice(0, 10); daily[day] = (daily[day] || 0) + 1; });
-    const dailyRows = Object.entries(daily).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 14)
-      .map(([day, cnt]) => {
-        const bar = '█'.repeat(Math.min(Math.ceil(cnt / 3), 20));
-        return `<div style="display:flex;justify-content:space-between;font-size:.78rem;padding:.25rem 0;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;"><span style="color:var(--muted);width:5rem;flex-shrink:0;">${day.slice(5)}</span><span style="color:var(--gold);font-size:.65rem;flex:1;overflow:hidden;">${bar}</span><span style="color:var(--gold);font-weight:600;width:2rem;text-align:right;">${cnt}</span></div>`;
+    const dailyRows = (t.daily || [])
+      .map(d => {
+        const bar = '█'.repeat(Math.min(Math.ceil(d.count / 3), 20));
+        return `<div style="display:flex;justify-content:space-between;font-size:.78rem;padding:.25rem 0;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;"><span style="color:var(--muted);width:5rem;flex-shrink:0;">${String(d.day).slice(5)}</span><span style="color:var(--gold);font-size:.65rem;flex:1;overflow:hidden;">${bar}</span><span style="color:var(--gold);font-weight:600;width:2rem;text-align:right;">${d.count}</span></div>`;
       }).join('');
 
     const statRow = (label, value, sub) => `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>${label}</span><span style="font-weight:600;"><span style="color:var(--gold);">${value}</span>${sub ? `<span style="color:var(--muted);font-size:.72rem;margin-left:.3rem;">${sub}</span>` : ''}</span></div>`;
 
+    const f = t.funnel || {};
+    const su = t.signups || {};
+    const funnelHtml = renderFunnelFromRpc(f, su);
+
     el.innerHTML = `
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Overview (All Time)</div>
-        ${statRow('Total visits', allRaw.length)}
-        ${statRow('Unique visitors', uniqueAll.size)}
-        ${statRow('Repeat visitors', repeatAll, repeatAll > 0 ? (repeatAll / uniqueAll.size * 100).toFixed(0) + '% of unique' : '')}
+        ${statRow('Total visits', t.total_visits)}
+        ${statRow('Unique visitors', t.unique_visitors)}
+        ${statRow('Repeat visitors', t.repeat_visitors, t.repeat_visitors > 0 ? (t.repeat_visitors / t.unique_visitors * 100).toFixed(0) + '% of unique' : '')}
         <div style="height:.5rem;"></div>
-        ${statRow('Last 7 days', visits7.length, unique7.size + ' unique')}
-        ${statRow('Last 30 days', visits30.length, unique30.size + ' unique')}
-        ${statRow('Repeat (7d)', repeat7)}
+        ${statRow('Last 7 days', t.visits_7d, t.unique_7d + ' unique')}
+        ${statRow('Last 30 days', t.visits_30d, t.unique_30d + ' unique')}
+        ${statRow('Repeat (7d)', t.repeat_7d)}
       </div>
       ${sourceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">By Source</div>
@@ -12033,11 +11970,7 @@ async function renderAdminTraffic() {
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Device (7 days)</div>
         ${deviceRows}
       </div>` : ''}
-      ${renderFunnelSection(
-        (funnelAll.data || []).filter(v => !isInternal(v)),
-        (funnelAll.data || []).filter(v => !isInternal(v) && v.created_at >= d7),
-        (profilesR.data || []).filter(p => !INTERNAL_IDS.has(p.id))
-      )}
+      ${funnelHtml}
       ${renderEmailEngagement(emailEventsR.data || [])}`;
   } catch(e) {
     el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;">
@@ -12113,21 +12046,15 @@ function renderEmailEngagement(events) {
   </div>` : ''}`;
 }
 
-function renderFunnelSection(allData, weekData, allProfiles) {
-  const count = (data) => { const m = {}; data.forEach(v => { m[v.utm_source] = (m[v.utm_source] || 0) + 1; }); return m; };
-  const allCounts = count(allData);
-  const weekCounts = count(weekData);
-
-  const d7 = new Date(Date.now() - 7 * 86400000).toISOString();
-  const newUsersAll = allProfiles.length;
-  const newUsers7d = allProfiles.filter(p => p.created_at >= d7).length;
-
-  const signinGAll = allCounts.signin_google || 0;
-  const signinAAll = allCounts.signin_apple || 0;
-  const signinG7 = weekCounts.signin_google || 0;
-  const signinA7 = weekCounts.signin_apple || 0;
+function renderFunnelFromRpc(f, su) {
+  const signinGAll = f.signin_google_all || 0;
+  const signinAAll = f.signin_apple_all || 0;
+  const signinG7 = f.signin_google_7d || 0;
+  const signinA7 = f.signin_apple_7d || 0;
   const totalSignins = signinGAll + signinAAll;
   const totalSignins7 = signinG7 + signinA7;
+  const newUsersAll = su.total || 0;
+  const newUsers7d = su.last_7d || 0;
 
   const row = (label, w, all) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);">
     <span>${escHtml(label)}</span>
