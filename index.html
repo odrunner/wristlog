@@ -5136,7 +5136,7 @@ function badgeWallProfileSection() {
   const earnedRefs = new Set(_earnedBadges.map(e => e.badge_ref));
   const visible = BADGE_REGISTRY.filter(b => !b.isHidden || earnedRefs.has(b.ref));
   const earned = visible.filter(b => earnedRefs.has(b.ref));
-  const preview = earned.slice(0, 6);
+  const preview = earned.slice(0, 5);
   const previewCards = preview.map(b =>
     `<div style="text-align:center;cursor:pointer;" onclick="openBadgeDetail(${b.ref})">
       ${badgeMedallionSvg(b, 56, true)}
@@ -5144,8 +5144,8 @@ function badgeWallProfileSection() {
   ).join('');
 
   const lockedCount = visible.length - earned.length;
-  const lockedPreview = lockedCount > 0 && preview.length < 6
-    ? Array.from({ length: Math.min(lockedCount, 6 - preview.length) }, () =>
+  const lockedPreview = lockedCount > 0 && preview.length < 5
+    ? Array.from({ length: Math.min(lockedCount, 5 - preview.length) }, () =>
         `<div style="text-align:center;">${badgeMedallionSvg(BADGE_REGISTRY[0], 56, false)}</div>`
       ).join('')
     : '';
@@ -5736,7 +5736,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.10.13';
+const APP_VERSION = '15.10.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
