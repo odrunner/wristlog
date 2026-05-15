@@ -5745,7 +5745,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.13.15';
+const APP_VERSION = '15.14.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10425,9 +10425,9 @@ async function postComment(logId) {
   if (!text) return;
   const { clean } = checkContent(text);
   if (!clean) { toast('Your comment contains inappropriate content. Please revise.', 'error'); return; }
-  input.value = '';
   const { error } = await db.from('comments').insert({ log_id: logId, user_id: currentUser.id, body: text });
   if (!error) {
+    input.value = '';
     await fetchComments(logId);
     feedCommentCounts[logId] = (feedComments[logId] || []).length;
     refreshFeedCard(logId);
