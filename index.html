@@ -5745,7 +5745,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.14.54';
+const APP_VERSION = '15.14.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20572,6 +20572,7 @@ window._tgNativeCallback = function(data) {
         _msrLastBe = data.beatError;
         _msrRateHistory.push(r);
         _msrAllRates.push(r);
+        if (_msrAllRates.length > 1000) _msrAllRates = _msrAllRates.slice(-1000);
         if (_msrRateHistory.length > 30) _msrRateHistory.shift();
         // Native Theil-Sen rate is authoritative — bucket rate is too coarse
         // (quantized at 7.2 s/day steps, median stays at 0 for small rates)
@@ -21080,7 +21081,7 @@ let _msrActualSampleRate = null; // actual audio sample rate from iOS (for drift
 let _msrHadTicks = false; // whether we've seen tickCount > 0 (calibration done)
 let _msrBphLocked = false; // whether BPH has been detected (auto mode)
 let _msrRateHistory = []; // recent rate values for error bar computation
-let _msrAllRates = [];    // ALL rate samples for mode computation (not capped)
+let _msrAllRates = [];    // rate samples for IQR/mode computation (capped at 1000)
 let _msrBucketRateHistory = []; // history of bucket rate computations for JS-side convergence
 let _msrLastBucketCalcTime = 0; // timestamp of last bucket rate computation (debounce)
 let _msrCachedBucketRate = null; // cached result from last computeMedianRate call
