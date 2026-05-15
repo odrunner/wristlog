@@ -5745,7 +5745,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.14.49';
+const APP_VERSION = '15.14.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8113,19 +8113,20 @@ async function loadNotifications() {
     return;
   }
   if (!data) return;
-  const actorIds = [...new Set(data.map(n => n.actor_id).filter(Boolean))];
-  let pMap = {};
-  if (actorIds.length) {
-    const { data: ps } = await db.from('profiles').select('id, username, display_name, avatar_url, is_official').in('id', actorIds);
-    (ps || []).forEach(p => pMap[p.id] = p);
-  }
-  const clubNotifTypes = ['club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted'];
-  const clubIds = [...new Set(data.filter(n => clubNotifTypes.includes(n.type) && n.ref_id).map(n => n.ref_id))];
-  let clubMap = {};
-  if (clubIds.length) {
-    const { data: clubs } = await db.from('clubs').select('id, name').in('id', clubIds);
-    (clubs || []).forEach(c => clubMap[c.id] = c);
-  }
+  let pMap = {}, clubMap = {};
+  try {
+    const actorIds = [...new Set(data.map(n => n.actor_id).filter(Boolean))];
+    if (actorIds.length) {
+      const { data: ps } = await db.from('profiles').select('id, username, display_name, avatar_url, is_official').in('id', actorIds);
+      (ps || []).forEach(p => pMap[p.id] = p);
+    }
+    const clubNotifTypes = ['club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted'];
+    const clubIds = [...new Set(data.filter(n => clubNotifTypes.includes(n.type) && n.ref_id).map(n => n.ref_id))];
+    if (clubIds.length) {
+      const { data: clubs } = await db.from('clubs').select('id, name').in('id', clubIds);
+      (clubs || []).forEach(c => clubMap[c.id] = c);
+    }
+  } catch (_) { /* enrichment failed — render with fallback names */ }
   userNotifs = data.map(n => ({ ...n, actor: pMap[n.actor_id] || null, club: clubMap[n.ref_id] || null }));
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
   updateBellBadge();
