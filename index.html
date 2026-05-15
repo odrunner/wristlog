@@ -5736,7 +5736,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.08.01';
+const APP_VERSION = '15.10.13';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6638,9 +6638,9 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
     ${statsHtml}
     ${friendHtml}
     ${editHtml}
+    ${isOwn ? badgeWallProfileSection() : ''}
     ${privacyHtml}
     ${notifHtml}
-    ${isOwn ? badgeWallProfileSection() : ''}
     ${showcaseHtml}
     ${logsHtml}
     ${wishlistHtml}
