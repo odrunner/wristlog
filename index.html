@@ -4577,7 +4577,6 @@ const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
 const _isDevUser = () => currentUser?.id === ADMIN_USER_ID;
 
 const FEATURE_FLAGS = {
-  badges: { label: 'Achievement Badges', default: true },
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -4586,7 +4585,6 @@ function featureFlag(name) {
 }
 function setFeatureFlag(name, val) {
   localStorage.setItem('ff_' + name, val ? 'true' : 'false');
-  if (name === 'badges' && val) { _badgeScanDone = false; retroactiveBadgeScan(); }
 }
 let OFFICIAL_USER_ID = null; // resolved at init from profiles.is_official
 
@@ -4774,7 +4772,6 @@ let _badgeToastQueue = [];
 let _badgeToastActive = false;
 
 function showBadgeToast(badges) {
-  if (!featureFlag('badges')) return;
   if (!Array.isArray(badges)) badges = [badges];
   _badgeToastQueue.push(...badges);
   if (!_badgeToastActive) _drainBadgeToast();
@@ -4809,7 +4806,7 @@ function _drainBadgeToast() {
 
 // ── Badge wall ──
 function openBadgeWall() {
-  if (!featureFlag('badges') || !currentUser) return;
+  if (!currentUser) return;
   const visible = BADGE_REGISTRY.filter(b => !b.isHidden || _earnedBadges.some(e => e.badge_ref === b.ref));
   const earnedRefs = new Set(_earnedBadges.map(e => e.badge_ref));
   const earned = visible.filter(b => earnedRefs.has(b.ref))
@@ -4905,7 +4902,7 @@ function closeBadgeDetail() {
 
 // ── Badge checking ──
 async function awardBadge(ref) {
-  if (!currentUser || !featureFlag('badges')) return false;
+  if (!currentUser) return false;
   if (_earnedBadges.some(e => e.badge_ref === ref)) return false;
   const badge = BADGE_BY_REF[ref];
   if (!badge) return false;
@@ -4917,7 +4914,7 @@ async function awardBadge(ref) {
 }
 
 async function checkAndAwardBadges(context, extraData) {
-  if (!currentUser || !featureFlag('badges')) return;
+  if (!currentUser) return;
   const newlyEarned = [];
 
   const alreadyEarned = (ref) => _earnedBadges.some(e => e.badge_ref === ref);
@@ -5127,7 +5124,7 @@ async function loadEarnedBadges() {
 }
 
 async function retroactiveBadgeScan() {
-  if (!currentUser || !featureFlag('badges') || _badgeScanDone) return;
+  if (!currentUser || _badgeScanDone) return;
   _badgeScanDone = true;
   await loadEarnedBadges();
   await checkAndAwardBadges('retroactive');
@@ -5135,7 +5132,7 @@ async function retroactiveBadgeScan() {
 
 // ── Badge wall section for profile ──
 function badgeWallProfileSection() {
-  if (!featureFlag('badges') || !currentUser) return '';
+  if (!currentUser) return '';
   const earnedRefs = new Set(_earnedBadges.map(e => e.badge_ref));
   const visible = BADGE_REGISTRY.filter(b => !b.isHidden || earnedRefs.has(b.ref));
   const earned = visible.filter(b => earnedRefs.has(b.ref));
@@ -5739,7 +5736,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.07.39';
+const APP_VERSION = '15.07.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
