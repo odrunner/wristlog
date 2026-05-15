@@ -5745,7 +5745,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.14.51';
+const APP_VERSION = '15.14.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6874,6 +6874,10 @@ async function loadFollowing() {
       db.from('follows').select('following_id').eq('follower_id', currentUser.id),
       db.from('follows').select('follower_id').eq('following_id', currentUser.id),
     ]);
+    if (results[0].error || results[1].error) {
+      console.error('[WristLog] loadFollowing query error:', results[0].error?.message, results[1].error?.message);
+      return;
+    }
     data = results[0].data;
     fData = results[1].data;
   } catch (e) {
