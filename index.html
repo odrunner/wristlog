@@ -5741,7 +5741,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.12.41';
+const APP_VERSION = '15.12.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21716,8 +21716,7 @@ function stopMsrListen(reason) {
     // Hide idle overlay so result stays visible on chart
     const idleOv = document.getElementById('msr-idle-overlay');
     if (idleOv) idleOv.style.display = 'none';
-    // Count only successful measurements (engine converged on a normal-looking rate)
-    if (wasConverged && Math.abs(r) <= 60 && _msrScatterData.length >= 15) {
+    if (wasConverged) {
       try {
         const n = parseInt(localStorage.getItem('wristlog_msr_count') || '0') + 1;
         localStorage.setItem('wristlog_msr_count', String(n));
@@ -21908,6 +21907,11 @@ async function bootApp(user) {
   }
   // Retroactive badge scan (runs once per session, after data is loaded)
   retroactiveBadgeScan();
+  // Seed measurement count from DB so review prompt works across devices
+  if (currentUser) {
+    db.from('timegrapher_results').select('id', { count: 'exact', head: true }).eq('user_id', currentUser.id)
+      .then(({ count }) => { if (count != null) localStorage.setItem('wristlog_msr_count', String(count)); });
+  }
   // Resolve official account ID (for badge rendering and admin drafts)
   if (!OFFICIAL_USER_ID) {
     db.from('profiles').select('id').eq('is_official', true).limit(1).single().then(({ data }) => {
