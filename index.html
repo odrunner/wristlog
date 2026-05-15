@@ -3384,6 +3384,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input type="hidden" id="msr-tune-per-tick-dev-check" value="false">
         <input type="hidden" id="msr-tune-skip-pair-no-accum" value="true">
         <input type="hidden" id="msr-tune-phase-recovery-enabled" value="false">
+        <input type="hidden" id="msr-tune-outlier-margin" value="0.15">
+        <input type="hidden" id="msr-tune-outlier-margin-low-bph" value="0.20">
         <div id="msr-tune-live" style="display:none;"></div>
         <div id="msr-scatter-wrap"></div>
       </div>
@@ -5663,10 +5665,12 @@ let _syncRetryTimer;
 async function cloudSync() {
   if (!currentUser) return;
   if (!navigator.onLine) return;
+  clearTimeout(_syncRetryTimer);
+  _syncRetryTimer = null;
   const hasDirty = _dirty.watches.size || _dirty.logs.size || _dirty.wishlist.size || _dirty.elo.size || _pendingDeletes.length;
   if (!hasDirty) return; // nothing changed — skip network call
   if (_syncInFlight) { // prevent concurrent syncs — schedule retry after current finishes
-    if (!_syncRetryTimer) _syncRetryTimer = setTimeout(cloudSync, 2000);
+    _syncRetryTimer = setTimeout(cloudSync, 2000);
     return;
   }
   _syncInFlight = true;
@@ -5741,7 +5745,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.12.46';
+const APP_VERSION = '15.13.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21386,7 +21390,9 @@ function sendMsrTuning() {
     autoBphDecisive: Number(document.getElementById('msr-tune-auto-bph-decisive').value),
     perTickDevCheck: document.getElementById('msr-tune-per-tick-dev-check').value === 'true',
     skipPairNoAccum: document.getElementById('msr-tune-skip-pair-no-accum').value === 'true',
-    phaseRecoveryEnabled: document.getElementById('msr-tune-phase-recovery-enabled').value === 'true'
+    phaseRecoveryEnabled: document.getElementById('msr-tune-phase-recovery-enabled').value === 'true',
+    outlierMargin: Number(document.getElementById('msr-tune-outlier-margin').value),
+    outlierMarginLowBph: Number(document.getElementById('msr-tune-outlier-margin-low-bph').value)
   });
 }
 var _remotePeakRatioThreshold = 2.5;
