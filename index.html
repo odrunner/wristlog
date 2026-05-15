@@ -5733,7 +5733,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.21.43';
+const APP_VERSION = '14.21.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21602,8 +21602,8 @@ function stopMsrListen(reason) {
     _tgTickDebugBuffer = [];
     db.from('timegrapher_tick_logs').insert({ session_id: _tgDebugSessionId, messages: batch }).then(() => {});
   }
-  // Capture tick data for every session (even unsaved) for debugging
-  if (_tgDebugSessionId && _msrScatterData.length > 0 && currentUser) {
+  // Capture session data for every attempt (including zero-tick failures) for debugging
+  if (_tgDebugSessionId && currentUser) {
     const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
     const tickSnap = _msrScatterData.map(d => ({ t: Math.round(d.t * 100) / 100, d: Math.round(d.d * 1000) / 1000 }));
     const watchId = document.getElementById('msr-watch-select')?.value || null;
@@ -21631,7 +21631,8 @@ function stopMsrListen(reason) {
         stop_reason: stopReason,
         converged: _msrPhase === 'converged',
         final_confidence: _msrLastConf,
-        tick_data: tickSnap
+        noise_level: _msrNoiseSamples.length > 0 ? Math.round(_msrNoiseSamples.reduce((a, b) => a + b, 0) / _msrNoiseSamples.length * 1000) / 1000 : null,
+        tick_data: tickSnap.length > 0 ? tickSnap : null
       })
     }).then(() => {});
   }
