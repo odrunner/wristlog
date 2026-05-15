@@ -5739,7 +5739,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.06.36';
+const APP_VERSION = '15.07.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19174,7 +19174,7 @@ function previewWatch(w) {
 
   const thumbEl = document.getElementById('wpm-thumb');
   if (w.image) {
-    thumbEl.innerHTML = `<img src="${escHtml(w.image)}" style="width:64px;height:64px;object-fit:contain;border-radius:8px;flex-shrink:0;" onerror="this.parentElement.innerHTML=''">`;
+    thumbEl.innerHTML = `<img src="${escHtml(w.image)}" style="width:96px;height:96px;object-fit:contain;border-radius:8px;flex-shrink:0;" onerror="this.parentElement.innerHTML=''">`;
   } else {
     thumbEl.innerHTML = '';
   }
