@@ -5745,7 +5745,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.14.52';
+const APP_VERSION = '15.14.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8181,26 +8181,31 @@ async function followUser(userId, btn) {
 async function sendFollowRequest(userId, btn) {
   if (demoGuard()) return;
   if (!currentUser || userId === currentUser.id) return;
-  const { error } = await db.from('follow_requests').insert({ requester_id: currentUser.id, target_id: userId });
-  if (!error) {
-    pendingRequests.add(userId);
-    const { data: existingNotif } = await db.from('notifications').select('id')
-      .eq('user_id', userId).eq('type', 'follow_request').eq('actor_id', currentUser.id).limit(1);
-    if (!existingNotif?.length) {
-      const { error: notifErr } = await db.from('notifications').insert({
-        user_id: userId, type: 'follow_request',
-        actor_id: currentUser.id, is_read: false,
-      });
-      if (notifErr) console.error('follow_request notif failed:', notifErr);
-    }
-    if (btn) { btn.className = 'follow-btn requested'; btn.textContent = 'Requested'; btn.onclick = () => cancelFollowRequest(userId); }
-    toast('Follow request sent');
-    renderDiscoverUsers();
-  } else if (error.code === '23505') {
-    pendingRequests.add(userId);
-    if (btn) { btn.className = 'follow-btn requested'; btn.textContent = 'Requested'; btn.onclick = () => cancelFollowRequest(userId); }
-    renderDiscoverUsers();
-  } else { toast('Could not send request — please try again', 'error'); }
+  if (_followInFlight.has(userId)) return;
+  _followInFlight.add(userId);
+  if (btn) btn.disabled = true;
+  try {
+    const { error } = await db.from('follow_requests').insert({ requester_id: currentUser.id, target_id: userId });
+    if (!error) {
+      pendingRequests.add(userId);
+      const { data: existingNotif } = await db.from('notifications').select('id')
+        .eq('user_id', userId).eq('type', 'follow_request').eq('actor_id', currentUser.id).limit(1);
+      if (!existingNotif?.length) {
+        const { error: notifErr } = await db.from('notifications').insert({
+          user_id: userId, type: 'follow_request',
+          actor_id: currentUser.id, is_read: false,
+        });
+        if (notifErr) console.error('follow_request notif failed:', notifErr);
+      }
+      if (btn) { btn.className = 'follow-btn requested'; btn.textContent = 'Requested'; btn.onclick = () => cancelFollowRequest(userId); }
+      toast('Follow request sent');
+      renderDiscoverUsers();
+    } else if (error.code === '23505') {
+      pendingRequests.add(userId);
+      if (btn) { btn.className = 'follow-btn requested'; btn.textContent = 'Requested'; btn.onclick = () => cancelFollowRequest(userId); }
+      renderDiscoverUsers();
+    } else { toast('Could not send request — please try again', 'error'); }
+  } finally { _followInFlight.delete(userId); if (btn) btn.disabled = false; }
 }
 async function cancelFollowRequest(userId) {
   if (demoGuard()) return;
