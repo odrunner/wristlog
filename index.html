@@ -4577,7 +4577,7 @@ const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
 const _isDevUser = () => currentUser?.id === ADMIN_USER_ID;
 
 const FEATURE_FLAGS = {
-  badges: { label: 'Achievement Badges', default: false },
+  badges: { label: 'Achievement Badges', default: true },
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -5739,7 +5739,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.07.25';
+const APP_VERSION = '15.07.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
