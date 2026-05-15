@@ -4352,9 +4352,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="username-prompt-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="username-prompt-title">
   <div class="modal" style="max-width:380px;">
     <div style="text-align:center;margin-bottom:.75rem;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-    <div class="modal-title" id="username-prompt-title" style="text-align:center;font-size:1.15rem;">Pick a username</div>
-    <p style="color:var(--muted);font-size:.88rem;line-height:1.55;text-align:center;margin:.4rem 0 1.1rem;">Pick a username to make WRotate yours. You can always change it later.</p>
+    <div class="modal-title" id="username-prompt-title" style="text-align:center;font-size:1.15rem;">Set up your profile</div>
+    <p style="color:var(--muted);font-size:.88rem;line-height:1.55;text-align:center;margin:.4rem 0 1.1rem;">Add your name and pick a username so others can find you. You can always change these later.</p>
+    <div class="form-group" style="margin-bottom:.75rem;">
+      <label for="up-display-name" style="font-size:.8rem;margin-bottom:.3rem;display:block;">Display Name</label>
+      <input type="text" id="up-display-name" placeholder="Your name" maxlength="50" style="width:100%;padding:.55rem .7rem;border:1px solid var(--border);border-radius:8px;font-size:.92rem;">
+    </div>
     <div class="form-group" style="margin-bottom:.2rem;">
+      <label for="up-username" style="font-size:.8rem;margin-bottom:.3rem;display:block;">Username</label>
       <div class="username-field">
         <span class="username-prefix">@</span>
         <input type="text" id="up-username" placeholder="username" maxlength="30"
@@ -5736,7 +5741,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.10.25';
+const APP_VERSION = '15.12.41';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5986,13 +5991,17 @@ async function saveUsernamePrompt() {
   const raw = (input.value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
   const { valid } = validateUsername(raw);
   if (!valid || !_usernameAvailable) { toast('Please choose a valid available username', 'error'); return; }
+  const displayName = (document.getElementById('up-display-name').value || '').trim();
   const btn = document.getElementById('up-save-btn');
   btn.disabled = true; btn.textContent = 'Saving…';
-  const { error } = await db.from('profiles').update({ username: raw, username_set: true }).eq('id', currentUser.id);
+  const updates = { username: raw, username_set: true };
+  if (displayName) updates.display_name = displayName;
+  const { error } = await db.from('profiles').update(updates).eq('id', currentUser.id);
   btn.disabled = false; btn.textContent = 'Continue';
   if (error) { toast('Could not save — ' + error.message, 'error'); return; }
   myProfile.username = raw;
   myProfile.username_set = true;
+  if (displayName) myProfile.display_name = displayName;
   document.getElementById('username-prompt-modal').classList.add('hidden');
   toast('Username saved!');
   if (_usernamePromptCallback) { _usernamePromptCallback(); _usernamePromptCallback = null; }
