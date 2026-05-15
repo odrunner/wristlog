@@ -5745,7 +5745,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.14.56';
+const APP_VERSION = '15.15.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11599,13 +11599,11 @@ async function loadAdminStats() {
     const dod = dodRes.data || {};
 
     // Per-user breakdowns via SECURITY DEFINER RPCs (bypass RLS)
-    const d7ago = new Date(Date.now() - 7 * 86400000).toISOString();
     const d1ago = new Date(Date.now() - 24 * 3600000).toISOString();
-    const [profilesR, msrR, userStatsR, logs7R, newWatchesR, newWearsR, newMsrR, newValR, newEnhR] = await withTimeout(Promise.all([
+    const [profilesR, msrR, userStatsR, newWatchesR, newWearsR, newMsrR, newValR, newEnhR] = await withTimeout(Promise.all([
       db.from('profiles').select('id, username, display_name, avatar_url, created_at').order('created_at', { ascending: false }).limit(500),
       db.rpc('admin_measurement_counts'),
       db.rpc('admin_user_stats'),
-      db.from('logs').select('user_id, created_at').gte('created_at', d7ago),
       db.from('watches').select('user_id').gte('created_at', d1ago),
       db.from('logs').select('user_id').gte('created_at', d1ago),
       db.from('timegrapher_tick_logs').select('messages').like('messages', '%session_summary%').gte('created_at', d1ago),
@@ -11613,22 +11611,17 @@ async function loadAdminStats() {
       db.from('identify_attempts').select('user_id').eq('mode', 'enhance').gte('created_at', d1ago),
     ]), 10000);
 
-    const watchByUser = {}, wearByUser = {}, valByUser = {}, enhByUser = {};
+    const watchByUser = {}, wearByUser = {}, valByUser = {}, enhByUser = {}, activeDaysByUser = {};
     (userStatsR.data || []).forEach(r => {
       watchByUser[r.user_id] = Number(r.watches) || 0;
       wearByUser[r.user_id] = Number(r.wears) || 0;
       valByUser[r.user_id] = Number(r.price_checks) || 0;
       enhByUser[r.user_id] = Number(r.enhances) || 0;
+      activeDaysByUser[r.user_id] = Number(r.recent_active_days) || 0;
     });
 
     const msrByUser = {};
     (msrR.data || []).forEach(r => { msrByUser[r.user_id] = (msrByUser[r.user_id] || 0) + Number(r.count); });
-    const activeDaysByUser = {};
-    (logs7R.data || []).forEach(l => {
-      const day = l.created_at.slice(0, 10);
-      if (!activeDaysByUser[l.user_id]) activeDaysByUser[l.user_id] = new Set();
-      activeDaysByUser[l.user_id].add(day);
-    });
     const _countBy = (rows) => { const m = {}; (rows || []).forEach(r => { m[r.user_id] = (m[r.user_id] || 0) + 1; }); return m; };
     const newWtcByUser = _countBy(newWatchesR.data);
     const newWrsByUser = _countBy(newWearsR.data);
@@ -11663,7 +11656,7 @@ async function loadAdminStats() {
       priceChecks: valByUser[p.id] || 0,
       enhances: enhByUser[p.id] || 0,
       measurements: msrByUser[p.id] || 0,
-      r7: (activeDaysByUser[p.id]?.size || 0) > 1 ? 1 : 0,
+      r7: (activeDaysByUser[p.id] || 0) > 1 ? 1 : 0,
       _newWtc: newWtcByUser[p.id] || 0,
       _newWrs: newWrsByUser[p.id] || 0,
       _newVal: newValByUser[p.id] || 0,
