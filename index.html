@@ -2254,8 +2254,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <!-- Step 2b: Thank you (after happy or after feedback sent) -->
     <div id="review-step-thanks" style="display:none;">
       <div style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.5rem;">Thank you!</div>
-      <div style="font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:1.25rem;">Your feedback means a lot to us.</div>
-      <button class="btn btn-ghost" onclick="closeReviewPrompt()" style="width:100%;border-color:var(--gold);color:var(--gold);">Close</button>
+      <div id="review-thanks-msg" style="font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:1.25rem;">Your feedback means a lot to us.</div>
+      <a id="review-appstore-link" href="https://apps.apple.com/app/id6760091102?action=write-review" target="_blank" rel="noopener noreferrer" class="btn btn-ghost" onclick="closeReviewPrompt()" style="width:100%;border-color:var(--gold);color:var(--gold);text-decoration:none;text-align:center;display:none;">Rate on the App Store</a>
+      <button id="review-close-btn" class="btn btn-ghost" onclick="closeReviewPrompt()" style="width:100%;border-color:var(--gold);color:var(--gold);">Close</button>
     </div>
   </div>
 </div>
@@ -3360,18 +3361,18 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <!-- Hidden tuning inputs (used by remote tuning) -->
       <div style="display:none;">
         <!-- Regression & stability tuning (sent to Swift engine) -->
-        <input type="hidden" id="msr-tune-reg-skip" value="5">
+        <input type="hidden" id="msr-tune-reg-skip" value="3">
         <input type="hidden" id="msr-tune-reg-min-n" value="10">
-        <input type="hidden" id="msr-tune-wall-min" value="20">
+        <input type="hidden" id="msr-tune-wall-min" value="15">
         <input type="hidden" id="msr-tune-stab-window" value="15">
         <input type="hidden" id="msr-tune-stab-thresh" value="3">
         <input type="hidden" id="msr-tune-stab-lose" value="5">
         <!-- Pair gate & tick detection tuning -->
-        <input type="hidden" id="msr-tune-max-pair-thresh" value="1.0">
+        <input type="hidden" id="msr-tune-max-pair-thresh" value="1.5">
         <input type="hidden" id="msr-tune-min-pair-thresh" value="0.5">
-        <input type="hidden" id="msr-tune-cold-start" value="1.0">
+        <input type="hidden" id="msr-tune-cold-start" value="1.5">
         <input type="hidden" id="msr-tune-pair-mad-mult" value="3">
-        <input type="hidden" id="msr-tune-max-tick-dev" value="10">
+        <input type="hidden" id="msr-tune-max-tick-dev" value="20">
         <input type="hidden" id="msr-tune-ring-target-rate" value="48000">
         <input type="hidden" id="msr-tune-early-pair-count" value="0">
         <input type="hidden" id="msr-tune-early-pair-thresh" value="0.3">
@@ -5739,7 +5740,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.15.32';
+const APP_VERSION = '16.07.32';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11303,10 +11304,15 @@ function reviewPromptYes() {
     window.webkit.messageHandlers.appAction.postMessage({ action: 'requestReview' });
     localStorage.setItem('wristlog_review_rated', '1');
     _logReviewEvent('yes_native');
+    document.getElementById('review-thanks-msg').textContent = 'If the rating dialog didn’t appear, you can rate here:';
+    document.getElementById('review-appstore-link').style.display = '';
+    document.getElementById('review-close-btn').style.display = '';
   } else {
     _logReviewEvent('yes_web');
+    document.getElementById('review-thanks-msg').textContent = 'We’d love a quick rating — it really helps!';
+    document.getElementById('review-appstore-link').style.display = '';
+    document.getElementById('review-close-btn').style.display = 'none';
   }
-  // Delay "Thank you" so the native App Store sheet has time to appear
   setTimeout(() => {
     document.getElementById('review-step-thanks').style.display = '';
   }, isNative ? 1500 : 0);
@@ -11343,11 +11349,8 @@ function closeReviewPrompt() {
   const wasOpen = !modal.classList.contains('hidden');
   const onAsk = document.getElementById('review-step-ask').style.display !== 'none';
   modal.classList.add('hidden');
-  // Set cooldown even on dismiss
-  if (!localStorage.getItem('wristlog_review_last')) {
-    localStorage.setItem('wristlog_review_last', String(Date.now()));
-  }
-  // Only log 'dismissed' if they closed from the initial ask step (not after yes/no)
+  // Always update cooldown on close so prompt doesn't repeat after expiry
+  localStorage.setItem('wristlog_review_last', String(Date.now()));
   if (wasOpen && onAsk) _logReviewEvent('dismissed');
 }
 
@@ -20628,8 +20631,8 @@ window._tgNativeCallback = function(data) {
             prelimBadge.style.display = hasPrelim && !jsConverged ? '' : 'none';
           }
 
-          // Convergence floor: 25s minimum regardless of signal strength
-          const minElapsed = 25;
+          // Convergence floor: 15s minimum, relaxed further with strong signal
+          const minElapsed = 15;
           const activeBph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;
           const minDots = Math.max(20, Math.round(activeBph / 1200));
           const canConverge = _msrScatterData.length >= minDots;
