@@ -89,7 +89,7 @@ class TimegrapherEngine {
     private var calibrationDuration: Int = 24000     // ~2s at 12kHz ring rate
     private var calibrationEnergies: [Float] = []    // per-sample energies during calibration (for percentile)
     private var recalibrationsDone: Int = 0          // how many times we've auto-recalibrated this session
-    private let maxRecalibrations: Int = 2           // cap to avoid infinite loops
+    private var maxRecalibrations: Int = 2           // cap to avoid infinite loops
     private var ringPosSinceLastTick: Int = 0       // samples since last tick
     private var tickCount: Int = 0
     private var lastTickDeviationCheck: Double = 0  // deviation at last sanity check
@@ -108,6 +108,13 @@ class TimegrapherEngine {
     private var recentTickDevs: [Double] = []       // last N individual tick deviations (signed)
     private var beatErrorWindowSize: Int = 20       // how many tick devs to track for beat error estimation
 
+    // Adaptive BPH correction: detect consistent pair deviation or outlier ratio → switch BPH
+    private var bphCorrectionRejects: [Double] = [] // signed pairDev values during reject streak
+    private var bphCorrectionOutliers: [Double] = [] // consecutive outlier ratios
+    private var bphCorrectionAttempted: Set<Int> = [] // BPH values already tried this session
+    private var bphCorrectionCount: Int = 0         // how many BPH switches done this session
+    private var maxBphCorrections: Int = 2          // cap corrections to avoid infinite loops
+
     // Pair-based regression: accumulate every 2 ticks to cancel beat error
     private var pairIntervalAccum: Double = 0       // sum of last 2 tick intervals (fractional)
     private var pairTickPhase: Int = 0              // 0 or 1, alternates each tick
@@ -125,8 +132,20 @@ class TimegrapherEngine {
     private var maxAdaptiveThreshold: Double = 2.0  // ceiling
     private var adaptiveMultiplier: Double = 3.0    // MAD multiplier
     private var maxTickDev: Double = 10.0            // individual tick sanity limit (ms)
+    private var outlierMargin: Double = 0.15          // ±fraction for tick interval outlier gate
+    private var outlierMarginLowBph: Double = 0.20    // wider margin for ≤21600 bph
     private var regressionSkipPairs: Int = 5         // skip first N pairs from regression (threshold still adapting)
     private var totalPairsAccepted: Int = 0          // total clean pairs (including skipped)
+
+    // Calibration tunables (previously hardcoded)
+    private var calibPercentile: Double = 0.98       // energy percentile for threshold
+    private var calibMultiplier: Float = 1.2         // first calibration multiplier on percentile
+    private var calibMultiplierRecal: Float = 0.8    // recalibration multiplier (softer)
+    private var recalTriggerSec: Double = 3.0        // seconds of no ticks before recalibrating
+    private var tickThresholdDecay: Float = 0.9999   // threshold decay when ticks are flowing
+    private var tickThresholdDecayNoTicks: Float = 0.995 // faster decay when starved of ticks
+    private var tickDetectMult: Float = 0.3          // energy > tickThreshold * this = tick detected
+    private var minSpacingMult: Double = 0.9         // minSpacing = expectedInterval * this
 
     // Rate display and stability tracking (all tunable from JS)
     private var smoothedRate: Double? = nil
@@ -262,7 +281,19 @@ class TimegrapherEngine {
                     pairMadMult: Double? = nil,
                     maxTickDevMs: Double? = nil,
                     calibDuration: Int? = nil,
-                    ringTargetRate: Double? = nil) {
+                    ringTargetRate: Double? = nil,
+                    outlierMargin: Double? = nil,
+                    outlierMarginLowBph: Double? = nil,
+                    calibPercentile: Double? = nil,
+                    calibMultiplier: Double? = nil,
+                    calibMultiplierRecal: Double? = nil,
+                    maxRecalibrations: Int? = nil,
+                    recalTriggerSec: Double? = nil,
+                    thresholdDecay: Double? = nil,
+                    thresholdDecayNoTicks: Double? = nil,
+                    tickDetectMult: Double? = nil,
+                    minSpacingMult: Double? = nil,
+                    maxBphCorrections: Int? = nil) {
         peakRatioThreshold = max(1.0, thresh)
         bufferDurationSec = max(5, min(120, bufSec))
         if let v = regSkipPairs { regressionSkipPairs = max(0, min(30, v)) }
@@ -275,10 +306,22 @@ class TimegrapherEngine {
         if let v = minPairThresh { minAdaptiveThreshold = max(0.05, min(2, v)) }
         if let v = coldStartThresh { coldStartThreshold = max(0.1, min(5, v)) }
         if let v = pairMadMult { adaptiveMultiplier = max(1, min(10, v)) }
-        if let v = maxTickDevMs { maxTickDev = max(1, min(20, v)) }
+        if let v = maxTickDevMs { maxTickDev = max(1, min(50, v)) }
         // calibDuration ignored — activateTickDetection() always auto-scales to 2 seconds
         if let v = ringTargetRate { self.ringTargetRate = max(12000, min(48000, v)) }
-        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate)")
+        if let v = outlierMargin { self.outlierMargin = max(0.05, min(0.50, v)) }
+        if let v = outlierMarginLowBph { self.outlierMarginLowBph = max(0.05, min(0.50, v)) }
+        if let v = calibPercentile { self.calibPercentile = max(0.80, min(1.0, v)) }
+        if let v = calibMultiplier { self.calibMultiplier = Float(max(0.5, min(3.0, v))) }
+        if let v = calibMultiplierRecal { self.calibMultiplierRecal = Float(max(0.3, min(2.0, v))) }
+        if let v = maxRecalibrations { self.maxRecalibrations = max(1, min(10, v)) }
+        if let v = recalTriggerSec { self.recalTriggerSec = max(1.0, min(10.0, v)) }
+        if let v = thresholdDecay { self.tickThresholdDecay = Float(max(0.99, min(1.0, v))) }
+        if let v = thresholdDecayNoTicks { self.tickThresholdDecayNoTicks = Float(max(0.98, min(1.0, v))) }
+        if let v = tickDetectMult { self.tickDetectMult = Float(max(0.1, min(0.9, v))) }
+        if let v = minSpacingMult { self.minSpacingMult = max(0.5, min(0.99, v)) }
+        if let v = maxBphCorrections { self.maxBphCorrections = max(0, min(5, v)) }
+        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections)")
     }
 
     // MARK: - Biquad HP filter
@@ -345,6 +388,7 @@ class TimegrapherEngine {
         pendingFirstTickDev = 0; pendingFirstTickTime = 0; pendingFirstTickInterval = 0; pendingFirstTickEnergy = 0
         recentPairDevs = []
         consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []
+        bphCorrectionRejects = []; bphCorrectionOutliers = []; bphCorrectionAttempted = []; bphCorrectionCount = 0
         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
         lastDebugInfo = nil
         lastBeatWaveform = nil
@@ -460,12 +504,14 @@ class TimegrapherEngine {
                             // Robust percentile instead of peak: resists transient spikes (bumps, taps)
                             var sorted = calibrationEnergies
                             sorted.sort()
-                            let p98Idx = max(0, min(sorted.count - 1, Int(Double(sorted.count) * 0.98)))
-                            let p98 = sorted[p98Idx]
-                            tickThreshold = p98 * 1.2
+                            let pIdx = max(0, min(sorted.count - 1, Int(Double(sorted.count) * calibPercentile)))
+                            let p98 = sorted[pIdx]
+                            // Softer threshold on recalibrations (previous threshold was too aggressive)
+                            let calibMult: Float = recalibrationsDone == 0 ? calibMultiplier : calibMultiplierRecal
+                            tickThreshold = p98 * calibMult
                             calibrationEnergies.removeAll(keepingCapacity: false)
                             tickStartSample = sampleCounter // reset elapsed to exclude calibration
-                            debugLog("[TGCALIBRATED] tickThreshold=\(String(format: "%.6f", tickThreshold)) (p98=\(String(format: "%.6f", p98))) after \(calibrationSamples) samples recal=\(recalibrationsDone)")
+                            debugLog("[TGCALIBRATED] tickThreshold=\(String(format: "%.6f", tickThreshold)) (p98=\(String(format: "%.6f", p98)) mult=\(calibMult)) after \(calibrationSamples) samples recal=\(recalibrationsDone)")
                         }
                         continue
                     }
@@ -474,10 +520,10 @@ class TimegrapherEngine {
 
                     // Track peak energy; decay faster while starved of ticks to recover from bad calibration
                     if energy > tickThreshold { tickThreshold = energy }
-                    else { tickThreshold *= (tickCount == 0 ? 0.995 : 0.9999) }
-                    let threshold = tickThreshold * 0.3
+                    else { tickThreshold *= (tickCount == 0 ? tickThresholdDecayNoTicks : tickThresholdDecay) }
+                    let threshold = tickThreshold * tickDetectMult
 
-                    let minSpacing = Int(expectedTickInterval * 0.9)
+                    let minSpacing = Int(expectedTickInterval * minSpacingMult)
                     let ringSR = actualSampleRate / Double(ringSubsampleTarget)
 
                     // Debug: log every ~1 second
@@ -488,8 +534,8 @@ class TimegrapherEngine {
                         debugLog("[TGDEBUG \(String(format: "%.1f", elDbg))s] energy=\(String(format: "%.6f", energy)) thresh=\(String(format: "%.6f", threshold)) tickThresh=\(String(format: "%.6f", tickThreshold)) tickCount=\(tickCount) regN=\(regN) pairDev=\(String(format: "%.2f", pairDeviationMs)) rate=\(rateStr)")
 
                         // Fallback recalibration: if calibration latched onto a transient and no ticks
-                        // have been detected after 3s, restart calibration with a fresh window.
-                        if tickCount == 0 && elDbg > 3.0 && recalibrationsDone < maxRecalibrations {
+                        // have been detected after recalTriggerSec, restart calibration with a fresh window.
+                        if tickCount == 0 && elDbg > recalTriggerSec && recalibrationsDone < maxRecalibrations {
                             recalibrationsDone += 1
                             tickCalibrating = true
                             calibrationSamples = 0
@@ -533,14 +579,53 @@ class TimegrapherEngine {
                         lastTickFracOffset = tickFracOffset
 
                         if lastTickRingPos >= 0 {
-                            // Outlier gate: discard intervals > ±15% of expected
+                            // Outlier gate: wider for low-BPH (longer intervals = more timing jitter)
+                            let margin = targetBph <= 21600 ? outlierMarginLowBph : outlierMargin
                             let ratio = actualInterval / expectedTickInterval
-                            if ratio < 0.85 || ratio > 1.15 {
+                            if ratio < (1.0 - margin) || ratio > (1.0 + margin) {
                                 // Outlier — skip this tick, don't update deviation or regression
                                 debugLog("[TGTICK SKIP @ \(String(format: "%.2f", elapsedSec))s] interval=\(String(format: "%.1f", actualInterval)) ratio=\(String(format: "%.3f", ratio)) OUTLIER")
+
+                                // Track consistent outliers for BPH correction
+                                bphCorrectionOutliers.append(ratio)
+                                if bphCorrectionOutliers.count >= 8 && bphCorrectionCount < maxBphCorrections {
+                                    let ratios = bphCorrectionOutliers.suffix(8)
+                                    let meanRatio = ratios.reduce(0, +) / Double(ratios.count)
+                                    let variance = ratios.map { ($0 - meanRatio) * ($0 - meanRatio) }.reduce(0, +) / Double(ratios.count)
+                                    let stddev = sqrt(variance)
+                                    if stddev < 0.05 {
+                                        let impliedBph = Int(round(Double(targetBph) * meanRatio))
+                                        var bestCandidate: Int? = nil
+                                        var bestDist = Int.max
+                                        for candidate in TimegrapherEngine.bphCandidates {
+                                            let dist = abs(candidate - impliedBph)
+                                            if dist < bestDist && !bphCorrectionAttempted.contains(candidate) && candidate != targetBph {
+                                                bestDist = dist
+                                                bestCandidate = candidate
+                                            }
+                                        }
+                                        if let newBph = bestCandidate, Double(bestDist) / Double(impliedBph) < 0.15 {
+                                            debugLog("[TGBPH CORRECT OUTLIER] consistent ratio=\(String(format: "%.3f", meanRatio)) (stddev=\(String(format: "%.3f", stddev))) implies \(impliedBph) BPH → switching to \(newBph)")
+                                            bphCorrectionAttempted.insert(targetBph)
+                                            bphCorrectionAttempted.insert(newBph)
+                                            bphCorrectionCount += 1
+                                            targetBph = newBph
+                                            detectedBph = newBph
+                                            tickDetectionActive = false
+                                            activateTickDetection(ringSampleRate: ringSR)
+                                            lastTickRingPos = energyRingWritePos
+                                            ringPosSinceLastTick = 0
+                                            continue
+                                        } else {
+                                            bphCorrectionOutliers = []
+                                        }
+                                    }
+                                }
+
                                 lastTickRingPos = energyRingWritePos
                                 ringPosSinceLastTick = 0
                             } else {
+                                bphCorrectionOutliers = []
                                 let deviationThisTick = (expectedTickInterval - actualInterval) / ringSR * 1000.0
 
                                 // Individual tick deviation sanity check
@@ -632,12 +717,73 @@ class TimegrapherEngine {
                                 // Clean pair — reset reject streak
                                 consecutivePairRejects = 0
                                 rejectDevSum = 0
+                                bphCorrectionRejects = []
 
                                 // Pair gate: reject pairs with deviation above adaptive threshold
                                 // Use tighter threshold for first 10 pairs after skip (adaptive not yet reliable)
                                 let effectiveThresh = pairThresh
                                 if abs(pairDevThisPair) > effectiveThresh {
                                     debugLog("[TGTICK PAIR_REJECT @ \(String(format: "%.2f", elapsedSec))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms thresh=\(String(format: "%.2f", effectiveThresh))ms")
+
+                                    // Adaptive BPH correction: track consistent pair deviations
+                                    bphCorrectionRejects.append(pairDevThisPair)
+                                    if bphCorrectionRejects.count >= 4 && bphCorrectionCount < maxBphCorrections {
+                                        let devs = bphCorrectionRejects.suffix(4)
+                                        let meanDev = devs.reduce(0, +) / Double(devs.count)
+                                        let variance = devs.map { ($0 - meanDev) * ($0 - meanDev) }.reduce(0, +) / Double(devs.count)
+                                        let stddev = sqrt(variance)
+                                        // Consistent if stddev < 30% of |mean| and mean is significant (>2ms)
+                                        if abs(meanDev) > 2.0 && stddev < abs(meanDev) * 0.3 {
+                                            let ringSR = actualSampleRate / Double(ringSubsampleTarget)
+                                            let actualPairSamples = expectedTickInterval * 2.0 - (meanDev * ringSR / 1000.0)
+                                            let actualTickHz = ringSR / (actualPairSamples / 2.0)
+                                            let impliedBph = Int(round(actualTickHz * 3600.0))
+                                            // Find nearest standard BPH candidate
+                                            var bestCandidate: Int? = nil
+                                            var bestDist = Int.max
+                                            for candidate in TimegrapherEngine.bphCandidates {
+                                                let dist = abs(candidate - impliedBph)
+                                                if dist < bestDist && !bphCorrectionAttempted.contains(candidate) && candidate != targetBph {
+                                                    bestDist = dist
+                                                    bestCandidate = candidate
+                                                }
+                                            }
+                                            // Switch if nearest candidate is within 15% of implied BPH
+                                            if let newBph = bestCandidate, Double(bestDist) / Double(impliedBph) < 0.15 {
+                                                debugLog("[TGBPH CORRECT] consistent pairDev=\(String(format: "%.1f", meanDev))ms (stddev=\(String(format: "%.1f", stddev))ms) implies \(impliedBph) BPH → switching to \(newBph)")
+                                                bphCorrectionAttempted.insert(targetBph)
+                                                bphCorrectionAttempted.insert(newBph)
+                                                bphCorrectionCount += 1
+                                                targetBph = newBph
+                                                detectedBph = newBph
+                                                // Restart tick detection with new BPH
+                                                tickDetectionActive = false
+                                                activateTickDetection(ringSampleRate: ringSR)
+                                                lastTickRingPos = energyRingWritePos
+                                                ringPosSinceLastTick = 0
+                                                continue
+                                            } else {
+                                                // No standard BPH matches — likely a calibration issue
+                                                // (threshold too high, only detecting every Nth tick)
+                                                // Force softer recalibration if not already exhausted
+                                                debugLog("[TGBPH REJECT] implied \(impliedBph) BPH — no standard candidate. Forcing soft recalibration.")
+                                                bphCorrectionRejects = []
+                                                if recalibrationsDone < maxRecalibrations {
+                                                    recalibrationsDone += 1
+                                                    tickCalibrating = true
+                                                    calibrationSamples = 0
+                                                    calibrationEnergies.removeAll(keepingCapacity: true)
+                                                    tickThreshold = 0
+                                                    tickCount = 0
+                                                    pairIntervalAccum = 0; pairTickPhase = 0
+                                                    lastTickRingPos = -1
+                                                    ringPosSinceLastTick = 0
+                                                    continue
+                                                }
+                                            }
+                                        }
+                                    }
+
                                     pairIntervalAccum = 0.0
                                     pairTickPhase = 0
                                     lastTickRingPos = energyRingWritePos
@@ -878,6 +1024,8 @@ class TimegrapherEngine {
         lastTickFracOffset = 0
         recentPairDevs = []
         consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []
+        bphCorrectionOutliers = []
+        // Note: bphCorrectionRejects intentionally NOT cleared — accumulates across recalibrations
         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
         regPoints = []; regN = 0; totalPairsAccepted = 0
         // Start calibration: observe energy for 2s to learn tick amplitude before accepting ticks

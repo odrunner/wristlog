@@ -56,6 +56,18 @@ class TimegrapherBridge {
             let pairMadMult = body["pairMadMult"] as? Double
             let maxTickDevMs = body["maxTickDevMs"] as? Double
             let calibDuration = body["calibDuration"] as? Int
+            let outlierMargin = body["outlierMargin"] as? Double
+            let outlierMarginLowBph = body["outlierMarginLowBph"] as? Double
+            let calibPercentile = body["calibPercentile"] as? Double
+            let calibMultiplier = body["calibMultiplier"] as? Double
+            let calibMultiplierRecal = body["calibMultiplierRecal"] as? Double
+            let maxRecalibrations = body["maxRecalibrations"] as? Int
+            let recalTriggerSec = body["recalTriggerSec"] as? Double
+            let thresholdDecay = body["thresholdDecay"] as? Double
+            let thresholdDecayNoTicks = body["thresholdDecayNoTicks"] as? Double
+            let tickDetectMult = body["tickDetectMult"] as? Double
+            let minSpacingMult = body["minSpacingMult"] as? Double
+            let maxBphCorrections = body["maxBphCorrections"] as? Int
             print("[TG BRIDGE TUNING] peakRatio=\(peakRatioThreshold) bufSec=\(bufferSeconds) regSkip=\(regSkipPairs ?? -1) regMinN=\(regMinN ?? -1) maxPairTh=\(maxPairThresh ?? -1)")
             engine.setTuning(multLo: Float(multLo), multHi: Float(multHi),
                              minThreshold: Float(minThresh),
@@ -73,7 +85,19 @@ class TimegrapherBridge {
                              coldStartThresh: coldStartThresh,
                              pairMadMult: pairMadMult,
                              maxTickDevMs: maxTickDevMs,
-                             calibDuration: calibDuration)
+                             calibDuration: calibDuration,
+                             outlierMargin: outlierMargin,
+                             outlierMarginLowBph: outlierMarginLowBph,
+                             calibPercentile: calibPercentile,
+                             calibMultiplier: calibMultiplier,
+                             calibMultiplierRecal: calibMultiplierRecal,
+                             maxRecalibrations: maxRecalibrations,
+                             recalTriggerSec: recalTriggerSec,
+                             thresholdDecay: thresholdDecay,
+                             thresholdDecayNoTicks: thresholdDecayNoTicks,
+                             tickDetectMult: tickDetectMult,
+                             minSpacingMult: minSpacingMult,
+                             maxBphCorrections: maxBphCorrections)
 
         default:
             print("[TG BRIDGE] unknown action: \(action)")

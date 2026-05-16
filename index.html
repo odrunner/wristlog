@@ -3387,6 +3387,17 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input type="hidden" id="msr-tune-phase-recovery-enabled" value="false">
         <input type="hidden" id="msr-tune-outlier-margin" value="0.15">
         <input type="hidden" id="msr-tune-outlier-margin-low-bph" value="0.20">
+        <!-- Calibration & detection tunables (new Swift-side params) -->
+        <input type="hidden" id="msr-tune-calib-percentile" value="0.98">
+        <input type="hidden" id="msr-tune-calib-multiplier" value="1.2">
+        <input type="hidden" id="msr-tune-calib-multiplier-recal" value="0.8">
+        <input type="hidden" id="msr-tune-max-recalibrations" value="2">
+        <input type="hidden" id="msr-tune-recal-trigger-sec" value="3.0">
+        <input type="hidden" id="msr-tune-threshold-decay" value="0.9999">
+        <input type="hidden" id="msr-tune-threshold-decay-no-ticks" value="0.995">
+        <input type="hidden" id="msr-tune-tick-detect-mult" value="0.3">
+        <input type="hidden" id="msr-tune-min-spacing-mult" value="0.9">
+        <input type="hidden" id="msr-tune-max-bph-corrections" value="2">
         <div id="msr-tune-live" style="display:none;"></div>
         <div id="msr-scatter-wrap"></div>
       </div>
@@ -5740,7 +5751,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '16.07.32';
+const APP_VERSION = '16.09.32';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21322,7 +21333,17 @@ function sendMsrTuning() {
     skipPairNoAccum: document.getElementById('msr-tune-skip-pair-no-accum').value === 'true',
     phaseRecoveryEnabled: document.getElementById('msr-tune-phase-recovery-enabled').value === 'true',
     outlierMargin: Number(document.getElementById('msr-tune-outlier-margin').value),
-    outlierMarginLowBph: Number(document.getElementById('msr-tune-outlier-margin-low-bph').value)
+    outlierMarginLowBph: Number(document.getElementById('msr-tune-outlier-margin-low-bph').value),
+    calibPercentile: Number(document.getElementById('msr-tune-calib-percentile').value),
+    calibMultiplier: Number(document.getElementById('msr-tune-calib-multiplier').value),
+    calibMultiplierRecal: Number(document.getElementById('msr-tune-calib-multiplier-recal').value),
+    maxRecalibrations: Number(document.getElementById('msr-tune-max-recalibrations').value),
+    recalTriggerSec: Number(document.getElementById('msr-tune-recal-trigger-sec').value),
+    thresholdDecay: Number(document.getElementById('msr-tune-threshold-decay').value),
+    thresholdDecayNoTicks: Number(document.getElementById('msr-tune-threshold-decay-no-ticks').value),
+    tickDetectMult: Number(document.getElementById('msr-tune-tick-detect-mult').value),
+    minSpacingMult: Number(document.getElementById('msr-tune-min-spacing-mult').value),
+    maxBphCorrections: Number(document.getElementById('msr-tune-max-bph-corrections').value)
   });
 }
 var _remotePeakRatioThreshold = 2.5;
