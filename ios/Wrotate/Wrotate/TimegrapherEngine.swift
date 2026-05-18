@@ -608,12 +608,12 @@ class TimegrapherEngine {
                                     let variance = ratios.map { ($0 - meanRatio) * ($0 - meanRatio) }.reduce(0, +) / Double(ratios.count)
                                     let stddev = sqrt(variance)
                                     if stddev < 0.05 {
-                                        let impliedBph = Int(round(Double(targetBph) * meanRatio))
+                                        let impliedBph = Int(round(Double(targetBph) / meanRatio))
                                         var bestCandidate: Int? = nil
                                         var bestDist = Int.max
                                         for candidate in TimegrapherEngine.bphCandidates {
                                             let dist = abs(candidate - impliedBph)
-                                            if dist < bestDist && !bphCorrectionAttempted.contains(candidate) && candidate != targetBph {
+                                            if dist < bestDist && candidate != targetBph {
                                                 bestDist = dist
                                                 bestCandidate = candidate
                                             }
@@ -739,9 +739,10 @@ class TimegrapherEngine {
                                     debugLog("[TGTICK PAIR_REJECT @ \(String(format: "%.2f", elapsedSec))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms thresh=\(String(format: "%.2f", effectiveThresh))ms")
 
                                     // Adaptive BPH correction: track consistent pair deviations
+                                    // Guard: don't trigger during cold start (first 5s of tick detection)
                                     bphCorrectionRejects.append(pairDevThisPair)
-                                    if bphCorrectionRejects.count >= 4 && bphCorrectionCount < maxBphCorrections {
-                                        let devs = bphCorrectionRejects.suffix(4)
+                                    if bphCorrectionRejects.count >= 8 && bphCorrectionCount < maxBphCorrections && elapsedSec >= 5.0 {
+                                        let devs = bphCorrectionRejects.suffix(8)
                                         let meanDev = devs.reduce(0, +) / Double(devs.count)
                                         let variance = devs.map { ($0 - meanDev) * ($0 - meanDev) }.reduce(0, +) / Double(devs.count)
                                         let stddev = sqrt(variance)
