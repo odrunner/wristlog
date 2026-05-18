@@ -282,6 +282,18 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .msr-badge { display: none; font-size: .65rem; color: var(--gold); font-weight: 600; margin-left: 2px; white-space: nowrap; }
     .msr-badge.on { display: inline-flex; align-items: center; gap: .25rem; }
 
+    /* ── ADVANCED SETTINGS ── */
+    .msr-preset-card { padding:.6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;text-align:left;transition:all .15s; }
+    .msr-preset-card.active { border-color:rgba(74,222,128,.5);background:rgba(74,222,128,.08); }
+    .msr-preset-name { font-size:.8rem;font-weight:600;color:var(--text);margin-bottom:.15rem; }
+    .msr-preset-desc { font-size:.65rem;color:var(--muted);line-height:1.3; }
+    .msr-slider-row { display:flex;flex-direction:column;gap:.15rem; }
+    .msr-slider-label { font-size:.78rem;font-weight:600;color:var(--text);display:flex;justify-content:space-between;align-items:center; }
+    .msr-slider-val { font-weight:400;color:var(--muted);font-size:.72rem; }
+    .msr-slider-desc { font-size:.65rem;color:var(--muted); }
+    .msr-slider-row input[type=range] { width:100%;-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:var(--border);outline:none;margin-top:.2rem; }
+    .msr-slider-row input[type=range]::-webkit-slider-thumb { -webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:#4ade80;cursor:pointer;border:2px solid var(--bg); }
+
     /* ── USERNAME FIELD ── */
     .username-field { display: flex; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: border-color .15s; }
     .username-field:focus-within { border-color: var(--gold); }
@@ -3275,6 +3287,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div id="page-measure" class="page">
     <div class="page-header">
       <h1 class="page-title">Measure Accuracy</h1>
+      <button onclick="openMsrSettings()" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="Advanced settings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
       <button onclick="showMsrHelp()" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="How to measure">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       </button>
@@ -3341,6 +3356,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <!-- Status bar — bottom of instrument -->
         <div style="display:flex;align-items:center;justify-content:center;padding:.45rem .75rem;border-top:1px solid rgba(74,222,128,.08);">
           <span id="msr-status-text" aria-live="polite" style="font-size:.7rem;color:rgba(74,222,128,.5);letter-spacing:.03em;">&nbsp;</span>
+          <div id="msr-advanced-banner" style="display:none;margin-top:.5rem;padding:.5rem .6rem;border-radius:8px;background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.2);font-size:.7rem;color:rgba(234,179,8,.8);line-height:1.4;">
+            Having trouble? Try <a href="#" onclick="openMsrSettings();return false" style="color:#4ade80;text-decoration:underline;">Advanced Settings</a> or use the <a href="#" onclick="tgQuickApplyNoisy();return false" style="color:#4ade80;font-weight:600;text-decoration:underline;">Noisy Environment</a> preset.
+          </div>
         </div>
       </div>
       <!-- Record / Stop button with progress ring -->
@@ -3424,6 +3442,75 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--muted);" onclick="dismissMsrShareCta()">Done</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ════ ADVANCED SETTINGS PAGE ════ -->
+  <div id="page-msr-settings" class="page">
+    <div class="page-header">
+      <button onclick="closeMsrSettings()" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="Back to Measure">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <h1 class="page-title" style="flex:1;">Advanced Settings</h1>
+    </div>
+    <div style="padding:0 .5rem;">
+      <div style="margin-bottom:1.2rem;">
+        <div style="font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:.5rem;letter-spacing:.03em;">ENVIRONMENT PRESET</div>
+        <div id="msr-settings-presets" style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+          <button class="msr-preset-card active" data-preset="default" onclick="tgSelectPreset('default')">
+            <div class="msr-preset-name">Default</div>
+            <div class="msr-preset-desc">Balanced for most situations</div>
+          </button>
+          <button class="msr-preset-card" data-preset="quiet" onclick="tgSelectPreset('quiet')">
+            <div class="msr-preset-name">Quiet Room</div>
+            <div class="msr-preset-desc">Tighter validation, faster lock</div>
+          </button>
+          <button class="msr-preset-card" data-preset="noisy" onclick="tgSelectPreset('noisy')">
+            <div class="msr-preset-name">Noisy Environment</div>
+            <div class="msr-preset-desc">More tolerant, extra retries</div>
+          </button>
+          <button class="msr-preset-card" data-preset="weak" onclick="tgSelectPreset('weak')">
+            <div class="msr-preset-name">Weak Signal</div>
+            <div class="msr-preset-desc">Max sensitivity, longer capture</div>
+          </button>
+        </div>
+      </div>
+      <div style="margin-bottom:1.2rem;">
+        <div style="font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:.5rem;letter-spacing:.03em;">TUNING</div>
+        <div id="msr-settings-sliders" style="display:flex;flex-direction:column;gap:.8rem;">
+          <div class="msr-slider-row">
+            <div class="msr-slider-label">Sensitivity <span class="msr-slider-val" id="msr-adv-sensitivity-val">5</span></div>
+            <div class="msr-slider-desc">How easily ticks are detected</div>
+            <input type="range" id="msr-adv-sensitivity" min="1" max="10" value="5" oninput="tgSliderChanged()">
+          </div>
+          <div class="msr-slider-row">
+            <div class="msr-slider-label">Noise Tolerance <span class="msr-slider-val" id="msr-adv-noiseTolerance-val">5</span></div>
+            <div class="msr-slider-desc">Resistance to background noise</div>
+            <input type="range" id="msr-adv-noiseTolerance" min="1" max="10" value="5" oninput="tgSliderChanged()">
+          </div>
+          <div class="msr-slider-row">
+            <div class="msr-slider-label">Outlier Strictness <span class="msr-slider-val" id="msr-adv-outlierStrictness-val">5</span></div>
+            <div class="msr-slider-desc">How strict tick timing validation is</div>
+            <input type="range" id="msr-adv-outlierStrictness" min="1" max="10" value="5" oninput="tgSliderChanged()">
+          </div>
+          <div class="msr-slider-row">
+            <div class="msr-slider-label">Convergence Speed <span class="msr-slider-val" id="msr-adv-convergenceSpeed-val">5</span></div>
+            <div class="msr-slider-desc">How quickly rate locks in</div>
+            <input type="range" id="msr-adv-convergenceSpeed" min="1" max="10" value="5" oninput="tgSliderChanged()">
+          </div>
+          <div class="msr-slider-row">
+            <div class="msr-slider-label">Max Duration <span class="msr-slider-val" id="msr-adv-maxDuration-val">45s</span></div>
+            <div class="msr-slider-desc">Auto-stop timer</div>
+            <input type="range" id="msr-adv-maxDuration" min="30" max="120" step="5" value="45" oninput="tgSliderChanged()">
+          </div>
+          <div class="msr-slider-row">
+            <div class="msr-slider-label">Recalibration Attempts <span class="msr-slider-val" id="msr-adv-recalibrationAttempts-val">4</span></div>
+            <div class="msr-slider-desc">Retries if calibration misses ticks</div>
+            <input type="range" id="msr-adv-recalibrationAttempts" min="1" max="8" value="4" oninput="tgSliderChanged()">
+          </div>
+        </div>
+      </div>
+      <button onclick="tgResetDefaults()" style="width:100%;padding:.6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:.8rem;cursor:pointer;">Restore Defaults</button>
     </div>
   </div>
 
@@ -5752,7 +5839,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.22.02';
+const APP_VERSION = '18.07.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20797,7 +20884,7 @@ window._tgNativeCallback = function(data) {
     // Auto-stop on convergence or at 45s timeout
     if (isMsr && _msrListening && _msrListenStart) {
       const elapsed = (Date.now() - _msrListenStart) / 1000;
-      if (_msrPhase === 'converged' || elapsed >= 45) {
+      if (_msrPhase === 'converged' || elapsed >= _msrAutoStopSec) {
         const wasConverged = _msrPhase === 'converged';
         // Haptic feedback on finish — success for converged, warning for timeout
         if (window.webkit?.messageHandlers?.haptic) {
@@ -21024,6 +21111,167 @@ let _msrNoiseWarningShown = false; // whether the noisy environment warning has 
 let _msrNoiseSamples = [];    // noise level readings during calibration phase
 let _msrPrelimShown = false; // whether the preliminary rate has been shown
 let _msrLastConf = 0;        // latest native confidence (0-1)
+let _msrAutoStopSec = 45;
+let _msrConsecutiveFailures = 0;
+let _msrAdvancedPromptShown = false;
+
+const TG_ALG_VERSION = 1;
+const TG_PRESETS = {
+  default: { sensitivity: 5, noiseTolerance: 5, outlierStrictness: 5, convergenceSpeed: 5, maxDuration: 45, recalibrationAttempts: 4 },
+  quiet:   { sensitivity: 4, noiseTolerance: 3, outlierStrictness: 7, convergenceSpeed: 7, maxDuration: 30, recalibrationAttempts: 2 },
+  noisy:   { sensitivity: 6, noiseTolerance: 8, outlierStrictness: 4, convergenceSpeed: 4, maxDuration: 60, recalibrationAttempts: 6 },
+  weak:    { sensitivity: 9, noiseTolerance: 7, outlierStrictness: 3, convergenceSpeed: 3, maxDuration: 90, recalibrationAttempts: 8 }
+};
+
+function tgMapSliderToEngine(values) {
+  const lerp = (a, b, t) => a + (t - 1) / 9 * (b - a);
+  const lerpInv = (a, b, t) => a - (t - 1) / 9 * (a - b);
+  return {
+    calibMultiplier: lerpInv(2.0, 0.4, values.sensitivity),
+    noiseFloorMult: lerpInv(4.0, 0.5, values.noiseTolerance),
+    outlierMargin: lerp(0.08, 0.30, values.outlierStrictness),
+    stabilityThreshold: lerp(1.0, 6.0, values.convergenceSpeed),
+    maxDuration: values.maxDuration,
+    maxRecalibrations: values.recalibrationAttempts
+  };
+}
+
+function tgSaveSettings(preset, values) {
+  localStorage.setItem('tg_advanced_settings', JSON.stringify({
+    algVersion: TG_ALG_VERSION, preset: preset, values: values
+  }));
+}
+
+function tgLoadSettings() {
+  try {
+    const raw = localStorage.getItem('tg_advanced_settings');
+    if (!raw) return { preset: 'default', values: { ...TG_PRESETS.default }, wasReset: false };
+    const parsed = JSON.parse(raw);
+    if (!parsed.algVersion || parsed.algVersion < TG_ALG_VERSION) {
+      localStorage.removeItem('tg_advanced_settings');
+      return { preset: 'default', values: { ...TG_PRESETS.default }, wasReset: true };
+    }
+    return { preset: parsed.preset || 'default', values: parsed.values || { ...TG_PRESETS.default }, wasReset: false };
+  } catch (e) {
+    return { preset: 'default', values: { ...TG_PRESETS.default }, wasReset: false };
+  }
+}
+
+function tgApplySettingsToInputs(values) {
+  const eng = tgMapSliderToEngine(values);
+  document.getElementById('msr-tune-calib-multiplier').value = eng.calibMultiplier.toFixed(4);
+  document.getElementById('msr-tune-noise-floor-mult').value = eng.noiseFloorMult.toFixed(4);
+  document.getElementById('msr-tune-outlier-margin').value = eng.outlierMargin.toFixed(4);
+  document.getElementById('msr-tune-stab-thresh').value = eng.stabilityThreshold.toFixed(4);
+  document.getElementById('msr-tune-max-recalibrations').value = eng.maxRecalibrations;
+}
+
+function openMsrSettings() {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-msr-settings').classList.add('active');
+  window.scrollTo(0, 0);
+  tgLoadSettingsToUI();
+}
+
+function closeMsrSettings() {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-measure').classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function tgLoadSettingsToUI() {
+  const s = tgLoadSettings();
+  const v = s.values;
+  document.getElementById('msr-adv-sensitivity').value = v.sensitivity;
+  document.getElementById('msr-adv-noiseTolerance').value = v.noiseTolerance;
+  document.getElementById('msr-adv-outlierStrictness').value = v.outlierStrictness;
+  document.getElementById('msr-adv-convergenceSpeed').value = v.convergenceSpeed;
+  document.getElementById('msr-adv-maxDuration').value = v.maxDuration;
+  document.getElementById('msr-adv-recalibrationAttempts').value = v.recalibrationAttempts;
+  tgUpdateSliderLabels();
+  tgHighlightPreset(s.preset);
+}
+
+function tgUpdateSliderLabels() {
+  document.getElementById('msr-adv-sensitivity-val').textContent = document.getElementById('msr-adv-sensitivity').value;
+  document.getElementById('msr-adv-noiseTolerance-val').textContent = document.getElementById('msr-adv-noiseTolerance').value;
+  document.getElementById('msr-adv-outlierStrictness-val').textContent = document.getElementById('msr-adv-outlierStrictness').value;
+  document.getElementById('msr-adv-convergenceSpeed-val').textContent = document.getElementById('msr-adv-convergenceSpeed').value;
+  document.getElementById('msr-adv-maxDuration-val').textContent = document.getElementById('msr-adv-maxDuration').value + 's';
+  document.getElementById('msr-adv-recalibrationAttempts-val').textContent = document.getElementById('msr-adv-recalibrationAttempts').value;
+}
+
+function tgHighlightPreset(presetKey) {
+  document.querySelectorAll('.msr-preset-card').forEach(c => c.classList.remove('active'));
+  if (presetKey && presetKey !== 'custom') {
+    const card = document.querySelector('.msr-preset-card[data-preset="' + presetKey + '"]');
+    if (card) card.classList.add('active');
+  }
+}
+
+function tgGetCurrentValues() {
+  return {
+    sensitivity: Number(document.getElementById('msr-adv-sensitivity').value),
+    noiseTolerance: Number(document.getElementById('msr-adv-noiseTolerance').value),
+    outlierStrictness: Number(document.getElementById('msr-adv-outlierStrictness').value),
+    convergenceSpeed: Number(document.getElementById('msr-adv-convergenceSpeed').value),
+    maxDuration: Number(document.getElementById('msr-adv-maxDuration').value),
+    recalibrationAttempts: Number(document.getElementById('msr-adv-recalibrationAttempts').value)
+  };
+}
+
+function tgSelectPreset(key) {
+  const preset = TG_PRESETS[key];
+  if (!preset) return;
+  document.getElementById('msr-adv-sensitivity').value = preset.sensitivity;
+  document.getElementById('msr-adv-noiseTolerance').value = preset.noiseTolerance;
+  document.getElementById('msr-adv-outlierStrictness').value = preset.outlierStrictness;
+  document.getElementById('msr-adv-convergenceSpeed').value = preset.convergenceSpeed;
+  document.getElementById('msr-adv-maxDuration').value = preset.maxDuration;
+  document.getElementById('msr-adv-recalibrationAttempts').value = preset.recalibrationAttempts;
+  tgUpdateSliderLabels();
+  tgHighlightPreset(key);
+  tgSaveSettings(key, preset);
+}
+
+function tgSliderChanged() {
+  tgUpdateSliderLabels();
+  const values = tgGetCurrentValues();
+  let matchedPreset = 'custom';
+  for (const [key, preset] of Object.entries(TG_PRESETS)) {
+    if (preset.sensitivity === values.sensitivity && preset.noiseTolerance === values.noiseTolerance &&
+        preset.outlierStrictness === values.outlierStrictness && preset.convergenceSpeed === values.convergenceSpeed &&
+        preset.maxDuration === values.maxDuration && preset.recalibrationAttempts === values.recalibrationAttempts) {
+      matchedPreset = key;
+      break;
+    }
+  }
+  tgHighlightPreset(matchedPreset);
+  tgSaveSettings(matchedPreset, values);
+}
+
+function tgResetDefaults() {
+  tgSelectPreset('default');
+}
+
+function tgShowFailureBanner() {
+  if (_msrConsecutiveFailures >= 2 && !_msrAdvancedPromptShown) {
+    const banner = document.getElementById('msr-advanced-banner');
+    if (banner) banner.style.display = 'block';
+  }
+}
+
+function tgHideFailureBanner() {
+  const banner = document.getElementById('msr-advanced-banner');
+  if (banner) banner.style.display = 'none';
+}
+
+function tgQuickApplyNoisy() {
+  tgSelectPreset('noisy');
+  toast('Noisy Environment preset applied');
+  tgHideFailureBanner();
+  _msrAdvancedPromptShown = true;
+}
 
 let _msrScatterRafPending = false;
 let _msrLastCumDev = 0; // track last cumulative deviation to compute individual pair devs
@@ -21392,6 +21640,9 @@ function onMsrBphChange() {
     _msrMeasureStart = null;
     _msrPhaseStart = null;
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
+    const _tgS = tgLoadSettings();
+    tgApplySettingsToInputs(_tgS.values);
+    _msrAutoStopSec = _tgS.values.maxDuration;
     setTimeout(() => sendMsrTuning(), 200);
   }
 }
@@ -21472,7 +21723,12 @@ function toggleMsrListen() {
     const convBadge = document.getElementById('msr-converged-badge'); if (convBadge) convBadge.style.display = 'none';
     const prelimBadge2 = document.getElementById('msr-preliminary-badge'); if (prelimBadge2) prelimBadge2.style.display = 'none';
     const rBox = document.getElementById('msr-rate-box'); // no-op: overlay style
-    // Send tuning params if user has customized them
+    // Apply advanced settings to hidden tuning inputs
+    const _tgSettings = tgLoadSettings();
+    if (_tgSettings.wasReset) toast('Measurement engine updated — settings reset');
+    tgApplySettingsToInputs(_tgSettings.values);
+    _msrAutoStopSec = _tgSettings.values.maxDuration;
+    tgHideFailureBanner();
     setTimeout(() => sendMsrTuning(), 200);
     startTuningPoll();
     // Hide idle overlay, swap button to stop state
@@ -21559,6 +21815,12 @@ function stopMsrListen(reason) {
     : (_msrScatterData.length === 0) ? 'no_ticks'
     : 'user_stopped'
   );
+  if (stopReason === 'no_ticks' || stopReason === 'no_ticks_after_recal' || stopReason === 'duration_timeout') {
+    _msrConsecutiveFailures++;
+    setTimeout(() => tgShowFailureBanner(), 500);
+  } else if (stopReason === 'converged') {
+    _msrConsecutiveFailures = 0;
+  }
   _msrStoppedSession = _msrSessionId; // mark this session as stopped so we ignore the native 'stopped' echo
   _msrTarget = null; // clear so post-stop native events don't overwrite result text
   stopTuningPoll();
