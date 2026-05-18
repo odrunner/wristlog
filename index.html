@@ -3287,7 +3287,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div id="page-measure" class="page">
     <div class="page-header">
       <h1 class="page-title">Measure Accuracy</h1>
-      <button onclick="openMsrSettings()" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="Advanced settings">
+      <button id="msr-settings-gear" onclick="openMsrSettings()" style="display:none;background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="Advanced settings" data-ff="tg_advanced_settings">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
       <button onclick="showMsrHelp()" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="How to measure">
@@ -4678,6 +4678,7 @@ const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
 const _isDevUser = () => currentUser?.id === ADMIN_USER_ID;
 
 const FEATURE_FLAGS = {
+  tg_advanced_settings: { label: 'Timegrapher Advanced Settings', default: false }
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -5839,7 +5840,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '18.07.58';
+const APP_VERSION = '18.08.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12322,6 +12323,8 @@ function nav(btn) {
       document.getElementById('measure-content').style.display = '';
       openMeasureInline();
       maybeShowMsrHelp();
+      const gear = document.getElementById('msr-settings-gear');
+      if (gear) gear.style.display = featureFlag('tg_advanced_settings') ? '' : 'none';
     }
   }
 }
@@ -21255,6 +21258,7 @@ function tgResetDefaults() {
 }
 
 function tgShowFailureBanner() {
+  if (!featureFlag('tg_advanced_settings')) return;
   if (_msrConsecutiveFailures >= 2 && !_msrAdvancedPromptShown) {
     const banner = document.getElementById('msr-advanced-banner');
     if (banner) banner.style.display = 'block';
@@ -21640,9 +21644,11 @@ function onMsrBphChange() {
     _msrMeasureStart = null;
     _msrPhaseStart = null;
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
-    const _tgS = tgLoadSettings();
-    tgApplySettingsToInputs(_tgS.values);
-    _msrAutoStopSec = _tgS.values.maxDuration;
+    if (featureFlag('tg_advanced_settings')) {
+      const _tgS = tgLoadSettings();
+      tgApplySettingsToInputs(_tgS.values);
+      _msrAutoStopSec = _tgS.values.maxDuration;
+    }
     setTimeout(() => sendMsrTuning(), 200);
   }
 }
@@ -21723,12 +21729,13 @@ function toggleMsrListen() {
     const convBadge = document.getElementById('msr-converged-badge'); if (convBadge) convBadge.style.display = 'none';
     const prelimBadge2 = document.getElementById('msr-preliminary-badge'); if (prelimBadge2) prelimBadge2.style.display = 'none';
     const rBox = document.getElementById('msr-rate-box'); // no-op: overlay style
-    // Apply advanced settings to hidden tuning inputs
-    const _tgSettings = tgLoadSettings();
-    if (_tgSettings.wasReset) toast('Measurement engine updated — settings reset');
-    tgApplySettingsToInputs(_tgSettings.values);
-    _msrAutoStopSec = _tgSettings.values.maxDuration;
-    tgHideFailureBanner();
+    if (featureFlag('tg_advanced_settings')) {
+      const _tgSettings = tgLoadSettings();
+      if (_tgSettings.wasReset) toast('Measurement engine updated — settings reset');
+      tgApplySettingsToInputs(_tgSettings.values);
+      _msrAutoStopSec = _tgSettings.values.maxDuration;
+      tgHideFailureBanner();
+    }
     setTimeout(() => sendMsrTuning(), 200);
     startTuningPoll();
     // Hide idle overlay, swap button to stop state
