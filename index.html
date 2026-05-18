@@ -5752,7 +5752,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.17.30';
+const APP_VERSION = '17.22.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14087,21 +14087,19 @@ async function openUpdatePrices() {
       const chkCell = document.getElementById('upr-chk-' + w.id);
       if (!mid) {
         valCell.innerHTML = '<span style="color:var(--muted);">N/A</span>';
-        return;
-      }
-      if (data.cached) {
+      } else if (data.cached) {
         const cachedDate = data.looked_up_at || w.marketPriceDate;
         const ageMs = cachedDate ? Date.now() - new Date(cachedDate).getTime() : 0;
         const remaining = Math.max(1, 7 - Math.floor(ageMs / 86400000));
         valCell.innerHTML = `<div style="white-space:nowrap;"><span style="color:var(--text);font-weight:600;">${fmtMoney(mid)}</span></div><div style="font-size:.65rem;color:var(--muted);white-space:nowrap;">valid — refresh in ${remaining}d</div>`;
-        return;
+      } else {
+        _priceUpdateResults[w.id] = { mid, low: ev.low, high: ev.high, confidence: data.confidence, notes: data.notes };
+        const delta = w.marketPrice ? ((mid - w.marketPrice) / w.marketPrice * 100) : null;
+        const deltaStr = delta != null ? `<span style="color:${delta >= 0 ? 'var(--gold)' : '#f87171'};font-size:.68rem;margin-left:.2rem;">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}%</span>` : '';
+        valCell.innerHTML = `<div style="white-space:nowrap;"><span style="color:var(--text);font-weight:600;">${fmtMoney(mid)}</span>${deltaStr}</div><div style="font-size:.65rem;color:var(--muted);white-space:nowrap;">${fmtMoney(ev.low)} – ${fmtMoney(ev.high)}</div>`;
+        chkCell.innerHTML = `<input type="checkbox" checked data-wid="${w.id}" class="upr-toggle" style="width:16px;height:16px;accent-color:var(--gold);">`;
+        _updatePriceSubtotals();
       }
-      _priceUpdateResults[w.id] = { mid, low: ev.low, high: ev.high, confidence: data.confidence, notes: data.notes };
-      const delta = w.marketPrice ? ((mid - w.marketPrice) / w.marketPrice * 100) : null;
-      const deltaStr = delta != null ? `<span style="color:${delta >= 0 ? 'var(--gold)' : '#f87171'};font-size:.68rem;margin-left:.2rem;">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}%</span>` : '';
-      valCell.innerHTML = `<div style="white-space:nowrap;"><span style="color:var(--text);font-weight:600;">${fmtMoney(mid)}</span>${deltaStr}</div><div style="font-size:.65rem;color:var(--muted);white-space:nowrap;">${fmtMoney(ev.low)} – ${fmtMoney(ev.high)}</div>`;
-      chkCell.innerHTML = `<input type="checkbox" checked data-wid="${w.id}" class="upr-toggle" style="width:16px;height:16px;accent-color:var(--gold);">`;
-      _updatePriceSubtotals();
       if (done === eligible.length) {
         status.textContent = `Done — ${Object.keys(_priceUpdateResults).length} prices found.`;
         actions.style.display = 'flex';
