@@ -88,8 +88,9 @@ class TimegrapherEngine {
     private var calibrationSamples: Int = 0          // ring samples seen during calibration
     private var calibrationDuration: Int = 24000     // ~2s at 12kHz ring rate
     private var calibrationEnergies: [Float] = []    // per-sample energies during calibration (for percentile)
+    private var calibNoiseFloor: Float = 0           // median energy from calibration — threshold decay floor
     private var recalibrationsDone: Int = 0          // how many times we've auto-recalibrated this session
-    private var maxRecalibrations: Int = 2           // cap to avoid infinite loops
+    private var maxRecalibrations: Int = 4           // cap to avoid infinite loops
     private var ringPosSinceLastTick: Int = 0       // samples since last tick
     private var tickCount: Int = 0
     private var lastTickDeviationCheck: Double = 0  // deviation at last sanity check
@@ -379,6 +380,7 @@ class TimegrapherEngine {
         tickCount = 0
         pendingTicks = []
         tickThreshold = 0
+        calibNoiseFloor = 0
         consecutiveFailures = 0
         lastTickDeviationCheck = 0
         lastTickCountCheck = 0
@@ -506,8 +508,11 @@ class TimegrapherEngine {
                             sorted.sort()
                             let pIdx = max(0, min(sorted.count - 1, Int(Double(sorted.count) * calibPercentile)))
                             let p98 = sorted[pIdx]
-                            // Softer threshold on recalibrations (previous threshold was too aggressive)
-                            let calibMult: Float = recalibrationsDone == 0 ? calibMultiplier : calibMultiplierRecal
+                            // Save noise floor (median energy) as threshold decay floor
+                            let medIdx = sorted.count / 2
+                            calibNoiseFloor = sorted[medIdx]
+                            // Progressively softer threshold on each recalibration
+                            let calibMult: Float = recalibrationsDone == 0 ? calibMultiplier : calibMultiplierRecal / Float(max(1, recalibrationsDone))
                             tickThreshold = p98 * calibMult
                             calibrationEnergies.removeAll(keepingCapacity: false)
                             tickStartSample = sampleCounter // reset elapsed to exclude calibration
@@ -518,9 +523,14 @@ class TimegrapherEngine {
 
                     ringPosSinceLastTick += 1
 
-                    // Track peak energy; decay faster while starved of ticks to recover from bad calibration
+                    // Track peak energy; decay toward noise floor (not zero)
                     if energy > tickThreshold { tickThreshold = energy }
-                    else { tickThreshold *= (tickCount == 0 ? tickThresholdDecayNoTicks : tickThresholdDecay) }
+                    else {
+                        tickThreshold *= (tickCount == 0 ? tickThresholdDecayNoTicks : tickThresholdDecay)
+                        // Don't decay below noise floor — prevents detecting noise as ticks
+                        let floor = calibNoiseFloor * 2.0
+                        if tickThreshold < floor { tickThreshold = floor }
+                    }
                     let threshold = tickThreshold * tickDetectMult
 
                     let minSpacing = Int(expectedTickInterval * minSpacingMult)
@@ -714,10 +724,9 @@ class TimegrapherEngine {
                                     continue
                                 }
 
-                                // Clean pair — reset reject streak
+                                // Not mis-phased — reset phase reject streak
                                 consecutivePairRejects = 0
                                 rejectDevSum = 0
-                                bphCorrectionRejects = []
 
                                 // Pair gate: reject pairs with deviation above adaptive threshold
                                 // Use tighter threshold for first 10 pairs after skip (adaptive not yet reliable)
@@ -793,6 +802,7 @@ class TimegrapherEngine {
 
                                 pairIntervalAccum = 0.0
                                 pairTickPhase = 0
+                                bphCorrectionRejects = []
 
                                 // Update tick count
                                 tickCount += 2
