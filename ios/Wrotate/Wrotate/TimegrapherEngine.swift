@@ -693,10 +693,14 @@ class TimegrapherEngine {
                                 let pairThresh = currentPairThreshold()
 
                                 // Phase recovery: detect mis-phased pairs (tick+tick or tock+tock)
-                                // A mis-phased pair has |pairDev| ≈ knownBeatError (within ±40%)
-                                let isMisPhased = knownBeatError >= 1.0 &&
-                                    abs(pairDevThisPair) >= knownBeatError * 0.6 &&
-                                    abs(pairDevThisPair) <= knownBeatError * 1.4
+                                // Match pairDev ≈ 1× or 2× beatError (±40%):
+                                //   1× occurs when same-phase ticks pair up
+                                //   2× occurs when both tick and tock are detected (alternating intervals)
+                                let absDev = abs(pairDevThisPair)
+                                let isMisPhased = knownBeatError >= 1.0 && (
+                                    (absDev >= knownBeatError * 0.6 && absDev <= knownBeatError * 1.4) ||
+                                    (absDev >= knownBeatError * 1.6 && absDev <= knownBeatError * 2.4)
+                                )
 
                                 if isMisPhased {
                                     consecutivePairRejects += 1
