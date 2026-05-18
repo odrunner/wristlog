@@ -3398,6 +3398,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input type="hidden" id="msr-tune-tick-detect-mult" value="0.3">
         <input type="hidden" id="msr-tune-min-spacing-mult" value="0.9">
         <input type="hidden" id="msr-tune-max-bph-corrections" value="2">
+        <input type="hidden" id="msr-tune-noise-floor-mult" value="2.0">
         <div id="msr-tune-live" style="display:none;"></div>
         <div id="msr-scatter-wrap"></div>
       </div>
@@ -5751,7 +5752,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.17.08';
+const APP_VERSION = '17.17.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21343,7 +21344,8 @@ function sendMsrTuning() {
     thresholdDecayNoTicks: Number(document.getElementById('msr-tune-threshold-decay-no-ticks').value),
     tickDetectMult: Number(document.getElementById('msr-tune-tick-detect-mult').value),
     minSpacingMult: Number(document.getElementById('msr-tune-min-spacing-mult').value),
-    maxBphCorrections: Number(document.getElementById('msr-tune-max-bph-corrections').value)
+    maxBphCorrections: Number(document.getElementById('msr-tune-max-bph-corrections').value),
+    noiseFloorMult: Number(document.getElementById('msr-tune-noise-floor-mult').value)
   });
 }
 var _remotePeakRatioThreshold = 2.5;

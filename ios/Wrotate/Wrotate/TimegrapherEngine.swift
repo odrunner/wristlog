@@ -147,6 +147,7 @@ class TimegrapherEngine {
     private var tickThresholdDecayNoTicks: Float = 0.995 // faster decay when starved of ticks
     private var tickDetectMult: Float = 0.3          // energy > tickThreshold * this = tick detected
     private var minSpacingMult: Double = 0.9         // minSpacing = expectedInterval * this
+    private var noiseFloorMult: Float = 2.0          // threshold decay floor = calibMedian * this (0 = disabled)
 
     // Rate display and stability tracking (all tunable from JS)
     private var smoothedRate: Double? = nil
@@ -294,7 +295,8 @@ class TimegrapherEngine {
                     thresholdDecayNoTicks: Double? = nil,
                     tickDetectMult: Double? = nil,
                     minSpacingMult: Double? = nil,
-                    maxBphCorrections: Int? = nil) {
+                    maxBphCorrections: Int? = nil,
+                    noiseFloorMult: Double? = nil) {
         peakRatioThreshold = max(1.0, thresh)
         bufferDurationSec = max(5, min(120, bufSec))
         if let v = regSkipPairs { regressionSkipPairs = max(0, min(30, v)) }
@@ -322,7 +324,8 @@ class TimegrapherEngine {
         if let v = tickDetectMult { self.tickDetectMult = Float(max(0.1, min(0.9, v))) }
         if let v = minSpacingMult { self.minSpacingMult = max(0.5, min(0.99, v)) }
         if let v = maxBphCorrections { self.maxBphCorrections = max(0, min(5, v)) }
-        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections)")
+        if let v = noiseFloorMult { self.noiseFloorMult = Float(max(0, min(10, v))) }
+        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections) noiseFloor=\(self.noiseFloorMult)")
     }
 
     // MARK: - Biquad HP filter
@@ -527,9 +530,10 @@ class TimegrapherEngine {
                     if energy > tickThreshold { tickThreshold = energy }
                     else {
                         tickThreshold *= (tickCount == 0 ? tickThresholdDecayNoTicks : tickThresholdDecay)
-                        // Don't decay below noise floor — prevents detecting noise as ticks
-                        let floor = calibNoiseFloor * 2.0
-                        if tickThreshold < floor { tickThreshold = floor }
+                        if noiseFloorMult > 0 {
+                            let floor = calibNoiseFloor * noiseFloorMult
+                            if tickThreshold < floor { tickThreshold = floor }
+                        }
                     }
                     let threshold = tickThreshold * tickDetectMult
 

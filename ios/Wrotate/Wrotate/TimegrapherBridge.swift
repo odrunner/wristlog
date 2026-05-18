@@ -68,6 +68,7 @@ class TimegrapherBridge {
             let tickDetectMult = body["tickDetectMult"] as? Double
             let minSpacingMult = body["minSpacingMult"] as? Double
             let maxBphCorrections = body["maxBphCorrections"] as? Int
+            let noiseFloorMult = body["noiseFloorMult"] as? Double
             print("[TG BRIDGE TUNING] peakRatio=\(peakRatioThreshold) bufSec=\(bufferSeconds) regSkip=\(regSkipPairs ?? -1) regMinN=\(regMinN ?? -1) maxPairTh=\(maxPairThresh ?? -1)")
             engine.setTuning(multLo: Float(multLo), multHi: Float(multHi),
                              minThreshold: Float(minThresh),
@@ -97,7 +98,8 @@ class TimegrapherBridge {
                              thresholdDecayNoTicks: thresholdDecayNoTicks,
                              tickDetectMult: tickDetectMult,
                              minSpacingMult: minSpacingMult,
-                             maxBphCorrections: maxBphCorrections)
+                             maxBphCorrections: maxBphCorrections,
+                             noiseFloorMult: noiseFloorMult)
 
         default:
             print("[TG BRIDGE] unknown action: \(action)")
