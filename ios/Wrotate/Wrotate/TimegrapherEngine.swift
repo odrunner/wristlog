@@ -149,6 +149,10 @@ class TimegrapherEngine {
     private var minSpacingMult: Double = 0.9         // minSpacing = expectedInterval * this
     private var noiseFloorMult: Float = 2.0          // threshold decay floor = calibMedian * this (0 = disabled)
 
+    // Peak detection: wait for energy to decline before firing tick
+    private var pendingTickCross: Bool = false        // threshold crossed, waiting for peak
+    private var pendingTickPeakEnergy: Float = 0      // highest energy seen during pending
+
     // Rate display and stability tracking (all tunable from JS)
     private var smoothedRate: Double? = nil
     private var lastUpdateLogRegN: Int = 0
@@ -556,11 +560,27 @@ class TimegrapherEngine {
                             calibrationEnergies.removeAll(keepingCapacity: true)
                             tickThreshold = 0
                             tickStartSample = sampleCounter
+                            pendingTickCross = false
                             debugLog("[TGRECALIBRATE] no ticks after \(String(format: "%.1f", elDbg))s — restarting calibration (attempt \(recalibrationsDone)/\(maxRecalibrations))")
                         }
                     }
 
+                    // Peak detection: wait for energy to decline past peak before firing
+                    var shouldFireTick = false
                     if energy > threshold && ringPosSinceLastTick >= minSpacing {
+                        if !pendingTickCross || energy > pendingTickPeakEnergy {
+                            pendingTickCross = true
+                            pendingTickPeakEnergy = energy
+                        } else {
+                            pendingTickCross = false
+                            shouldFireTick = true
+                        }
+                    } else if pendingTickCross {
+                        pendingTickCross = false
+                        shouldFireTick = true
+                    }
+
+                    if shouldFireTick {
                         let intInterval = ringPosSinceLastTick
                         let elapsedSec = Double(sampleCounter - tickStartSample) / actualSampleRate
 
@@ -855,6 +875,7 @@ class TimegrapherEngine {
                                         tickCount = 0
                                         tickDeviationMs = 0
                                         pairDeviationMs = 0; pairIntervalAccum = 0.0; pairTickPhase = 0; lastTickFracOffset = 0
+                                        pendingTickCross = false; pendingTickPeakEnergy = 0
                                         consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []
                                         regPoints = []; regN = 0; recentPairDevs = []; totalPairsAccepted = 0
                                         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
@@ -1042,6 +1063,7 @@ class TimegrapherEngine {
         pairIntervalAccum = 0.0; pairTickPhase = 0; pairDeviationMs = 0
         lastTickFracOffset = 0
         recentPairDevs = []
+        pendingTickCross = false; pendingTickPeakEnergy = 0
         consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []
         bphCorrectionOutliers = []
         // Note: bphCorrectionRejects intentionally NOT cleared — accumulates across recalibrations
