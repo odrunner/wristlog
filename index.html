@@ -5851,7 +5851,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.20.42';
+const APP_VERSION = '26.20.47';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13584,11 +13584,11 @@ async function loadCampaigns() {
       <div style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem;">Sends ${c.delay_days} days after signup · ${sends} sent total</div>
       <div class="draft-form-row" style="margin-bottom:.4rem;">
         <label>Subject</label>
-        <input type="text" id="camp-subject-${c.id}" value="${escHtml(c.subject)}" style="font-size:.82rem;">
+        <input type="text" id="camp-subject-${c.id}" value="${escHtml(c.subject)}" style="font-size:.82rem;" oninput="updateCampaignPreview('${c.id}')">
       </div>
       <div class="draft-form-row" style="margin-bottom:.4rem;">
         <label>Body (HTML, use {{name}} for user's name)</label>
-        <textarea id="camp-body-${c.id}" rows="10" style="font-size:.82rem;min-height:160px;">${escHtml(c.body_html)}</textarea>
+        <textarea id="camp-body-${c.id}" rows="10" style="font-size:.82rem;min-height:160px;" oninput="updateCampaignPreview('${c.id}')">${escHtml(c.body_html)}</textarea>
       </div>
       <div class="draft-form-row" style="margin-bottom:.4rem;">
         <label>Delay (days after signup)</label>
@@ -13600,8 +13600,58 @@ async function loadCampaigns() {
         <button class="btn btn-ghost" onclick="runCampaignNow()" style="flex:1;">Run Now</button>
       </div>
       <div id="camp-status-${c.id}" style="font-size:.78rem;color:var(--muted);margin-top:.4rem;" aria-live="polite"></div>
+      <div class="draft-form-row" style="margin-top:.6rem;">
+        <label>Email Preview</label>
+        <div id="camp-preview-${c.id}" style="background:#f4f4f4;border-radius:8px;padding:1rem;max-height:500px;overflow-y:auto;"></div>
+      </div>
     </div>`;
   }).join('');
+  _campaignsData.forEach(c => updateCampaignPreview(c.id));
+}
+
+function updateCampaignPreview(id) {
+  const el = document.getElementById('camp-preview-' + id);
+  if (!el) return;
+  const subject = document.getElementById('camp-subject-' + id)?.value?.trim() || '';
+  const body = (document.getElementById('camp-body-' + id)?.value?.trim() || '').replace(/\{\{name\}\}/g, 'Ozgur');
+  if (!subject && !body) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">Start typing to see preview</div>';
+    return;
+  }
+  const html = buildCampaignEmailHtml(subject, body);
+  el.innerHTML = `<iframe srcdoc="${html.replace(/"/g, '&quot;')}" style="width:100%;min-height:400px;border:none;border-radius:6px;background:#fff;" sandbox></iframe>`;
+}
+
+function buildCampaignEmailHtml(subject, body) {
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:480px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+        <tr><td style="padding:28px 28px 20px;text-align:center;border-bottom:1px solid #eee;">
+          <img src="https://wrotate.com/icon.svg" alt="WRotate" width="40" height="40" style="display:inline-block;border-radius:9px;margin-bottom:8px;">
+          <div style="font-size:18px;font-weight:700;color:#b8941f;letter-spacing:.03em;">WRotate</div>
+        </td></tr>
+        <tr><td style="padding:24px 28px;">
+          <div style="font-size:15px;font-weight:600;color:#1a1a1a;margin-bottom:12px;">${subject}</div>
+          <div style="font-size:14px;color:#555;line-height:1.6;">${body}</div>
+        </td></tr>
+        <tr><td style="padding:4px 28px 28px;">
+          <a href="https://wrotate.com" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
+        </td></tr>
+        <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
+          <div style="font-size:11px;color:#999;line-height:1.5;">
+            You're receiving this because you recently joined WRotate.<br>
+            <a href="#" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a>
+          </div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
 }
 
 async function toggleCampaign(id, newState) {
@@ -13639,7 +13689,7 @@ async function testCampaign(id) {
 }
 
 function buildCampaignPreviewHtml(subject, body) {
-  return `<div style="font-size:15px;font-weight:600;color:#1a1a1a;margin-bottom:12px;">${subject}</div><div style="font-size:14px;color:#555;line-height:1.6;">${body}</div>`;
+  return buildCampaignEmailHtml(subject, body);
 }
 
 async function runCampaignNow() {
