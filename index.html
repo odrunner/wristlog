@@ -2654,6 +2654,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button type="button" class="chip" data-tab="reports" role="tab" aria-selected="false" aria-controls="admin-tab-reports" onclick="switchAdminTab('reports')">Reports</button>
       <button type="button" class="chip" data-tab="official" role="tab" aria-selected="false" aria-controls="admin-tab-official" onclick="switchAdminTab('official')">Official</button>
       <button type="button" class="chip" data-tab="broadcast" role="tab" aria-selected="false" aria-controls="admin-tab-broadcast" onclick="switchAdminTab('broadcast')">Broadcast</button>
+      <button type="button" class="chip" data-tab="campaigns" role="tab" aria-selected="false" aria-controls="admin-tab-campaigns" onclick="switchAdminTab('campaigns')">Campaigns</button>
       <button type="button" class="chip" data-tab="dev" role="tab" aria-selected="false" aria-controls="admin-tab-dev" onclick="switchAdminTab('dev')">Dev</button>
     </div>
 
@@ -2845,6 +2846,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <button class="btn btn-primary" id="broadcast-send-btn" onclick="sendBroadcastAll()" style="flex:1;">Send to Segment</button>
         </div>
         <div id="broadcast-status" aria-live="polite" style="font-size:.82rem;margin-top:.5rem;"></div>
+      </div>
+    </div>
+
+    <!-- Tab: Campaigns -->
+    <div id="admin-tab-campaigns" class="admin-tab" role="tabpanel" style="display:none;">
+      <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Email Campaigns</div>
+      </div>
+      <div id="campaigns-list" style="margin-bottom:1rem;">
+        <div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">Loading campaigns...</div>
       </div>
     </div>
 
@@ -5840,7 +5851,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '18.15.47';
+const APP_VERSION = '26.20.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11504,6 +11515,7 @@ function switchAdminTab(tab) {
   });
   const target = document.getElementById('admin-tab-' + tab);
   if (target) target.style.display = '';
+  if (tab === 'campaigns') loadCampaigns();
 }
 
 // ── Admin Content Reports ────────────────────────────────────────────────
@@ -13531,6 +13543,116 @@ function clearTrackPhoto() {
   document.getElementById('track-photo-placeholder').style.display = '';
   document.getElementById('track-photo-clear').style.display = 'none';
   document.getElementById('track-photo-area').classList.remove('has-photo');
+}
+
+// ── Email Campaigns ──────────────────────────────────────────────────────
+
+let _campaignsData = [];
+
+async function loadCampaigns() {
+  const container = document.getElementById('campaigns-list');
+  if (!container) return;
+  const { data, error } = await db.from('email_campaigns').select('*').order('created_at', { ascending: false });
+  if (error) { container.innerHTML = `<div style="color:var(--error);font-size:.82rem;">Error: ${error.message}</div>`; return; }
+  _campaignsData = data || [];
+
+  // Also load send counts
+  const { data: sendCounts } = await db.rpc('campaign_send_counts') || { data: [] };
+  const countMap = {};
+  (sendCounts || []).forEach(r => { countMap[r.campaign_id] = r.count; });
+
+  if (!_campaignsData.length) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">No campaigns yet</div>';
+    return;
+  }
+
+  container.innerHTML = _campaignsData.map(c => {
+    const sends = countMap[c.id] || 0;
+    const statusColor = c.is_active ? '#22c55e' : '#ef4444';
+    const statusLabel = c.is_active ? 'Active' : 'Paused';
+    const toggleLabel = c.is_active ? 'Pause' : 'Start';
+    const toggleIcon = c.is_active ? '⏸' : '▶';
+    return `
+    <div style="background:var(--surface2);border-radius:10px;padding:.85rem;margin-bottom:.75rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
+        <div style="font-size:.88rem;font-weight:600;">${escHtml(c.name)}</div>
+        <div style="display:flex;align-items:center;gap:.5rem;">
+          <span style="font-size:.72rem;font-weight:600;color:${statusColor};">${statusLabel}</span>
+          <button class="btn btn-ghost" onclick="toggleCampaign('${c.id}', ${!c.is_active})" style="font-size:.72rem;padding:2px 8px;">${toggleIcon} ${toggleLabel}</button>
+        </div>
+      </div>
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem;">Sends ${c.delay_days} days after signup · ${sends} sent total</div>
+      <div class="draft-form-row" style="margin-bottom:.4rem;">
+        <label>Subject</label>
+        <input type="text" id="camp-subject-${c.id}" value="${escHtml(c.subject)}" style="font-size:.82rem;">
+      </div>
+      <div class="draft-form-row" style="margin-bottom:.4rem;">
+        <label>Body (HTML, use {{name}} for user's name)</label>
+        <textarea id="camp-body-${c.id}" rows="10" style="font-size:.82rem;min-height:160px;">${escHtml(c.body_html)}</textarea>
+      </div>
+      <div class="draft-form-row" style="margin-bottom:.4rem;">
+        <label>Delay (days after signup)</label>
+        <input type="number" id="camp-delay-${c.id}" value="${c.delay_days}" min="1" max="30" style="font-size:.82rem;width:60px;">
+      </div>
+      <div style="display:flex;gap:.5rem;margin-top:.5rem;">
+        <button class="btn btn-ghost" onclick="saveCampaign('${c.id}')" style="flex:1;">Save Changes</button>
+        <button class="btn btn-ghost" onclick="testCampaign('${c.id}')" style="flex:1;">Send Test to Me</button>
+        <button class="btn btn-ghost" onclick="runCampaignNow()" style="flex:1;">Run Now</button>
+      </div>
+      <div id="camp-status-${c.id}" style="font-size:.78rem;color:var(--muted);margin-top:.4rem;" aria-live="polite"></div>
+    </div>`;
+  }).join('');
+}
+
+async function toggleCampaign(id, newState) {
+  const { error } = await db.from('email_campaigns').update({ is_active: newState, updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) { toast('Failed to update campaign', 'error'); return; }
+  toast(newState ? 'Campaign started' : 'Campaign paused');
+  loadCampaigns();
+}
+
+async function saveCampaign(id) {
+  const subject = document.getElementById('camp-subject-' + id)?.value?.trim();
+  const body_html = document.getElementById('camp-body-' + id)?.value?.trim();
+  const delay_days = parseInt(document.getElementById('camp-delay-' + id)?.value) || 2;
+  if (!subject || !body_html) { toast('Subject and body are required', 'error'); return; }
+  const { error } = await db.from('email_campaigns').update({ subject, body_html, delay_days, updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) { toast('Failed to save: ' + error.message, 'error'); return; }
+  toast('Campaign saved');
+  loadCampaigns();
+}
+
+async function testCampaign(id) {
+  const camp = _campaignsData.find(c => c.id === id);
+  if (!camp) return;
+  const subject = document.getElementById('camp-subject-' + id)?.value?.trim() || camp.subject;
+  const body = (document.getElementById('camp-body-' + id)?.value?.trim() || camp.body_html).replace(/\{\{name\}\}/g, 'Ozgur');
+  const statusEl = document.getElementById('camp-status-' + id);
+  if (statusEl) statusEl.textContent = 'Sending test...';
+  try {
+    const { data, error } = await db.functions.invoke('send-broadcast', { body: { subject, html: buildCampaignPreviewHtml(subject, body), test_email: currentUser?.email } });
+    if (error) throw error;
+    if (statusEl) statusEl.textContent = 'Test sent to ' + (currentUser?.email || 'your email');
+  } catch (e) {
+    if (statusEl) statusEl.textContent = 'Failed: ' + e.message;
+  }
+}
+
+function buildCampaignPreviewHtml(subject, body) {
+  return `<div style="font-size:15px;font-weight:600;color:#1a1a1a;margin-bottom:12px;">${subject}</div><div style="font-size:14px;color:#555;line-height:1.6;">${body}</div>`;
+}
+
+async function runCampaignNow() {
+  if (!confirm('Run all active campaigns now? This will send emails to eligible users.')) return;
+  toast('Running campaigns...');
+  try {
+    const { data, error } = await db.functions.invoke('run-campaign', { body: {} });
+    if (error) { toast('Error: ' + error.message, 'error'); return; }
+    const results = data?.results || {};
+    const summary = Object.entries(results).map(([name, r]) => `${name}: ${r.sent} sent`).join(', ');
+    toast(summary || 'No emails to send');
+    loadCampaigns();
+  } catch (e) { toast('Failed: ' + e.message, 'error'); }
 }
 
 // ── SNAP TO TRACK ─────────────────────────────────────────────────────────
@@ -21118,7 +21240,7 @@ let _msrAutoStopSec = 45;
 let _msrConsecutiveFailures = 0;
 let _msrAdvancedPromptShown = false;
 
-const TG_ALG_VERSION = 1;
+const TG_ALG_VERSION = 2;
 const TG_PRESETS = {
   default: { sensitivity: 5, noiseTolerance: 5, outlierStrictness: 5, convergenceSpeed: 5, maxDuration: 45, recalibrationAttempts: 4 },
   quiet:   { sensitivity: 4, noiseTolerance: 3, outlierStrictness: 7, convergenceSpeed: 7, maxDuration: 30, recalibrationAttempts: 2 },
@@ -21130,10 +21252,10 @@ function tgMapSliderToEngine(values) {
   const lerp = (a, b, t) => a + (t - 1) / 9 * (b - a);
   const lerpInv = (a, b, t) => a - (t - 1) / 9 * (a - b);
   return {
-    calibMultiplier: lerpInv(2.0, 0.4, values.sensitivity),
-    noiseFloorMult: lerpInv(4.0, 0.5, values.noiseTolerance),
-    outlierMargin: lerp(0.08, 0.30, values.outlierStrictness),
-    stabilityThreshold: lerp(1.0, 6.0, values.convergenceSpeed),
+    calibMultiplier: lerpInv(2.0, 0.2, values.sensitivity),
+    noiseFloorMult: lerpInv(3.2, 0.5, values.noiseTolerance),
+    outlierMargin: lerp(0.08, 0.2375, values.outlierStrictness),
+    stabilityThreshold: lerp(1.0, 5.5, values.convergenceSpeed),
     maxDuration: values.maxDuration,
     maxRecalibrations: values.recalibrationAttempts
   };

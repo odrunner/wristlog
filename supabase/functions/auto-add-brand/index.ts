@@ -38,7 +38,9 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ skipped: "not a brand request" }), { status: 200 });
     }
 
-    const requestedName = brandMatch[1].trim();
+    const requestedName = brandMatch[1].trim()
+      .replace(/[‘’‚‛]/g, "'")  // smart single quotes → ASCII
+      .replace(/[“”„‟]/g, '"');  // smart double quotes → ASCII
     const userId = record.user_id;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
