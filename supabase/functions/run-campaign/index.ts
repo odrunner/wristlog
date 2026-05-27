@@ -40,7 +40,6 @@ function buildHtmlEmail(subject: string, body: string, unsubUrl: string): string
           <div style="font-size:18px;font-weight:700;color:#b8941f;letter-spacing:.03em;">WRotate</div>
         </td></tr>
         <tr><td style="padding:24px 28px;">
-          <div style="font-size:15px;font-weight:600;color:#1a1a1a;margin-bottom:12px;">${subject}</div>
           <div style="font-size:14px;color:#555;line-height:1.6;">${body}</div>
         </td></tr>
         <tr><td style="padding:4px 28px 28px;">
