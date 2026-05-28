@@ -5883,7 +5883,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.16.45';
+const APP_VERSION = '28.16.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10187,7 +10187,7 @@ async function saveNewPost() {
   if (demoGuard()) return;
   if (!(await checkEulaAcceptance())) return;
   const body = (document.getElementById('np-body')?.value || '').trim();
-  if (!body && !newPostFile) { toast('Add a photo or write something', 'error'); return; }
+  if (!body && !newPostFiles.length) { toast('Add a photo or write something', 'error'); return; }
   if (body) { const { clean } = checkContent(body); if (!clean) { toast('Your post contains inappropriate content. Please revise.', 'error'); return; } }
   const _npBtn = document.querySelector('#new-post-modal .btn-primary');
   if (_npBtn?.disabled) return;
@@ -10201,10 +10201,19 @@ async function saveNewPost() {
     photoUrl: null,
     visibility: vis,
   };
-  // Upload photo to Storage if present
-  if (newPostFile && currentUser) {
+  // Upload photo(s) to Storage if present
+  if (newPostFiles.length && currentUser) {
     try {
-      entry.photoUrl = await uploadImage(newPostFile, `logs/${currentUser.id}/${entry.id}.jpg`);
+      if (newPostFiles.length === 1) {
+        entry.photoUrl = await uploadImage(newPostFiles[0], `logs/${currentUser.id}/${entry.id}.jpg`);
+      } else {
+        const urls = [];
+        for (let i = 0; i < newPostFiles.length; i++) {
+          const url = await uploadImage(newPostFiles[i], `logs/${currentUser.id}/${entry.id}_${i}.jpg`);
+          urls.push(url);
+        }
+        entry.photoUrl = JSON.stringify(urls);
+      }
     } catch(e) { toast('Photo upload failed — ' + e.message, 'error'); return; }
   }
   logs.push(entry);
@@ -10226,8 +10235,8 @@ async function saveNewPost() {
       _dataGen++;
       rebuildLogsByWatch();
       safeSetJSON(STORE_L, logs);
-      // Cleanup orphaned storage file
-      if (entry.photoUrl) { const _p = storagePathFrom(entry.photoUrl); if (_p) deleteStorageFile(_p); }
+      // Cleanup orphaned storage file(s)
+      if (entry.photoUrl) { deletePostPhotos(entry.photoUrl); }
       toast('Post failed — ' + error.message, 'error');
       return;
     }
@@ -10252,7 +10261,7 @@ async function saveNewPost() {
   const postedWatch = trackWatchId ? watches.find(x => x.id === trackWatchId) : null;
   if (postedWatch) dismissReminder(); // wear was logged, dismiss the reminder
   closeNewPost();
-  if (window.posthog) posthog.capture('post_created', { has_photo: !!entry.photoUrl, has_watch: !!trackWatchId });
+  if (window.posthog) posthog.capture('post_created', { has_photo: !!entry.photoUrl, photo_count: parsePhotoUrl(entry.photoUrl).length, has_watch: !!trackWatchId });
   toast(postedWatch ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : 'Posted!');
   haptic('success');
   maybeShowReviewPrompt('post');
@@ -17154,6 +17163,19 @@ function storagePathFrom(url) {
   // Strip query params (cache-bust ?v=...) to get clean storage path
   const qIdx = path.indexOf('?');
   return qIdx >= 0 ? path.slice(0, qIdx) : path;
+}
+
+function parsePhotoUrl(photoUrl) {
+  if (!photoUrl) return [];
+  if (photoUrl.startsWith('[')) {
+    try { return JSON.parse(photoUrl); } catch (e) { return [photoUrl]; }
+  }
+  return [photoUrl];
+}
+
+function deletePostPhotos(photoUrl) {
+  const urls = parsePhotoUrl(photoUrl);
+  urls.forEach(u => { const p = storagePathFrom(u); if (p) deleteStorageFile(p); });
 }
 
 // ── Add-photo modal (paste / drop / browse — no clipboard permission dialog) ──
