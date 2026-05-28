@@ -1251,6 +1251,14 @@ export function storagePathFrom(url) {
   return idx >= 0 ? url.slice(idx + marker.length) : null;
 }
 
+export function parsePhotoUrl(photoUrl) {
+  if (!photoUrl) return [];
+  if (photoUrl.startsWith('[')) {
+    try { return JSON.parse(photoUrl); } catch (e) { return [photoUrl]; }
+  }
+  return [photoUrl];
+}
+
 // ══════════════════════════════════════════
 //  DEVICE CLASSIFICATION
 // ══════════════════════════════════════════
@@ -1514,7 +1522,7 @@ export function capScatterData(data, limit = 2000) {
 //  TIMEGRAPHER ADVANCED SETTINGS
 // ══════════════════════════════════════════
 
-export const TG_ALG_VERSION = 1;
+export const TG_ALG_VERSION = 2;
 export const TG_PRESETS = {
   default: { sensitivity: 5, noiseTolerance: 5, outlierStrictness: 5, convergenceSpeed: 5, maxDuration: 45, recalibrationAttempts: 4 },
   quiet:   { sensitivity: 4, noiseTolerance: 3, outlierStrictness: 7, convergenceSpeed: 7, maxDuration: 30, recalibrationAttempts: 2 },
@@ -1526,10 +1534,10 @@ export function tgMapSliderToEngine(values) {
   const lerp = (a, b, t) => a + (t - 1) / 9 * (b - a);
   const lerpInv = (a, b, t) => a - (t - 1) / 9 * (a - b);
   return {
-    calibMultiplier: lerpInv(2.0, 0.4, values.sensitivity),
-    noiseFloorMult: lerpInv(4.0, 0.5, values.noiseTolerance),
-    outlierMargin: lerp(0.08, 0.30, values.outlierStrictness),
-    stabilityThreshold: lerp(1.0, 6.0, values.convergenceSpeed),
+    calibMultiplier: lerpInv(2.0, 0.2, values.sensitivity),
+    noiseFloorMult: lerpInv(3.2, 0.5, values.noiseTolerance),
+    outlierMargin: lerp(0.08, 0.2375, values.outlierStrictness),
+    stabilityThreshold: lerp(1.0, 5.5, values.convergenceSpeed),
     maxDuration: values.maxDuration,
     maxRecalibrations: values.recalibrationAttempts
   };
