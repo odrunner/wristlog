@@ -5851,7 +5851,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.08.38';
+const APP_VERSION = '27.17.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20759,11 +20759,8 @@ window._tgNativeCallback = function(data) {
       if (beEl) beEl.textContent = data.beatError != null ? data.beatError.toFixed(2) + ' ms' : '—';
       if (isMsr) {
         _msrLastRate = data.rate;
-        _msrLastBe = data.beatError;
         _msrRateHistory.push(r);
-        _msrAllRates.push(r);
-        if (_msrAllRates.length > 1000) _msrAllRates = _msrAllRates.slice(-1000);
-        if (_msrRateHistory.length > 30) _msrRateHistory.shift();
+        if (_msrRateHistory.length > 1000) _msrRateHistory = _msrRateHistory.slice(-1000);
         // Native Theil-Sen rate is authoritative — bucket rate is too coarse
         // (quantized at 7.2 s/day steps, median stays at 0 for small rates)
         document.getElementById('msr-rate-input').value = r.toFixed(1);
@@ -20785,7 +20782,6 @@ window._tgNativeCallback = function(data) {
     // Signal quality tracking & display
     if (isMsr && _msrListening) {
       const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
-      if (data.rate != null) _msrNativeHasRate = true;
       // Track tick acceptance rate: expected ~8 ticks/sec for 28800 BPH (conservative: use 3/sec as baseline)
       const expectedTicks = Math.max(1, elapsed * 3);
       // Dev user: use JS dot count if native acceptance is 0 but JS has dots
@@ -20794,8 +20790,8 @@ window._tgNativeCallback = function(data) {
       // Update signal bars
       updateMsrSignalBars(_msrAcceptRate, elapsed, effectiveTickCount);
       // Dot starvation: warn if no new dots for 5+ seconds during active measurement
-      if (elapsed > 10 && _msrLastDotTime > 0 && (Date.now() - _msrLastDotTime) > 5000 && !_msrWeakSignalShown) {
-        _msrWeakSignalShown = true;
+      if (elapsed > 10 && _msrLastDotTime > 0 && (Date.now() - _msrLastDotTime) > 5000 && !_msrShown.weak) {
+        _msrShown.weak = true;
         const statusText = document.getElementById('msr-status-text');
         if (statusText && _msrPhase !== 'converged') {
           statusText.textContent = 'WEAK SIGNAL \u00b7 move watch closer to mic';
@@ -20807,8 +20803,8 @@ window._tgNativeCallback = function(data) {
       // Auto mode: BPH detection ~5s + calibration ~2s = ticks expected ~7s, warn at 10s.
       const tickWarnStart = _msrIsAuto ? 10 : 7;
       const tickWarnEnd = _msrIsAuto ? 15 : 12;
-      if (elapsed >= tickWarnStart && elapsed < tickWarnEnd && data.tickCount === 0 && !_msrWeakSignalShown) {
-        _msrWeakSignalShown = true;
+      if (elapsed >= tickWarnStart && elapsed < tickWarnEnd && data.tickCount === 0 && !_msrShown.weak) {
+        _msrShown.weak = true;
         const statusText = document.getElementById('msr-status-text');
         if (statusText && _msrPhase !== 'converged') {
           statusText.textContent = 'No ticks yet \u00b7 try moving watch closer to mic';
@@ -20819,8 +20815,8 @@ window._tgNativeCallback = function(data) {
       if (elapsed < 4 && data.noiseLevel != null) {
         _msrNoiseSamples.push(data.noiseLevel);
       }
-      if (elapsed >= 3 && !_msrNoiseWarningShown && _msrNoiseSamples.length >= 3) {
-        _msrNoiseWarningShown = true;
+      if (elapsed >= 3 && !_msrShown.noise && _msrNoiseSamples.length >= 3) {
+        _msrShown.noise = true;
         const avgNoise = _msrNoiseSamples.reduce((a, b) => a + b, 0) / _msrNoiseSamples.length;
         if (avgNoise > 0.15) {
           const statusText = document.getElementById('msr-status-text');
@@ -20850,8 +20846,8 @@ window._tgNativeCallback = function(data) {
         return;
       }
       // Low acceptance warning: if 15s elapsed and acceptance rate < 15%, show warning
-      if (elapsed >= 15 && data.tickCount > 0 && _msrAcceptRate < 0.15 && !_msrWeakSignalShown) {
-        _msrWeakSignalShown = true;
+      if (elapsed >= 15 && data.tickCount > 0 && _msrAcceptRate < 0.15 && !_msrShown.weak) {
+        _msrShown.weak = true;
         const statusText = document.getElementById('msr-status-text');
         if (statusText && _msrPhase !== 'converged') {
           statusText.textContent = 'WEAK SIGNAL \u00b7 result may be unreliable';
@@ -20885,8 +20881,8 @@ window._tgNativeCallback = function(data) {
           // Preliminary rate: show early estimate after 5s with 10+ dots
           // Display the rate immediately so user gets fast feedback
           const hasPrelim = elapsed >= 5 && _msrScatterData.length >= 10 && bucketNow != null;
-          if (hasPrelim && !_msrPrelimShown) {
-            _msrPrelimShown = true;
+          if (hasPrelim && !_msrShown.prelim) {
+            _msrShown.prelim = true;
             // Show early rate in the HUD — prefer native rate if available, else bucket rate
             const prelimRate = _msrLastRate != null ? _msrLastRate : bucketNow;
             const rateEl = document.getElementById('msr-live-rate');
@@ -20992,7 +20988,6 @@ window._tgNativeCallback = function(data) {
           // Already converged — don't regress
         } else if (_msrHadTicks && (data.tickCount > 4 || (_isDevUser() && _msrScatterData.length > 4))) {
           // Have ticks → measuring (even if rate not yet computed)
-          if (_msrPhase !== 'measuring' && _msrPhase !== 'converged') _msrMeasureStart = Date.now();
           _msrPhase = 'measuring';
         } else if (_msrIsAuto && !_msrBphLocked && elapsed > 2) {
           _msrPhase = 'estimating_bph';
@@ -21014,7 +21009,7 @@ window._tgNativeCallback = function(data) {
         const timeStr = mm > 0 ? mm + ':' + String(ss).padStart(2, '0') : ss + 's';
 
         // Display phase (skip if weak signal warning is active — don't overwrite it)
-        if (!_msrWeakSignalShown || _msrPhase === 'measuring' || _msrPhase === 'converged') {
+        if (!_msrShown.weak || _msrPhase === 'measuring' || _msrPhase === 'converged') {
           const bphStr = data.detectedBph ? data.detectedBph.toLocaleString() : '';
           switch (_msrPhase) {
             case 'acquiring':
@@ -21041,7 +21036,7 @@ window._tgNativeCallback = function(data) {
                 statusText.textContent = 'MEASURING \u00b7 ' + timeStr;
               }
               statusText.style.color = 'rgba(74,222,128,.6)';
-              _msrWeakSignalShown = false;
+              _msrShown.weak = false;
               break;
             case 'converged':
               statusText.textContent = 'CONVERGED \u00b7 ' + timeStr;
@@ -21058,7 +21053,8 @@ window._tgNativeCallback = function(data) {
     // Auto-stop on convergence or at 45s timeout
     if (isMsr && _msrListening && _msrListenStart) {
       const elapsed = (Date.now() - _msrListenStart) / 1000;
-      if (_msrPhase === 'converged' || elapsed >= _msrAutoStopSec) {
+      const maxDur = featureFlag('tg_advanced_settings') ? tgLoadSettings().values.maxDuration : 45;
+      if (_msrPhase === 'converged' || elapsed >= maxDur) {
         const wasConverged = _msrPhase === 'converged';
         // Haptic feedback on finish — success for converged, warning for timeout
         if (window.webkit?.messageHandlers?.haptic) {
@@ -21106,7 +21102,6 @@ window._tgNativeCallback = function(data) {
 
     // Live tuning readout (remote debug)
     if (data.debug) {
-      if (data.debug.sampleRate && !_msrActualSampleRate) _msrActualSampleRate = data.debug.sampleRate;
       const el = document.getElementById('msr-tune-live');
       if (el) el.textContent = 'Ratio: ' + (data.debug.threshold != null ? data.debug.threshold.toFixed(3) : '—')
         + ' | Buffer: ' + (data.debug.bufferSamples || 0);
@@ -21254,40 +21249,26 @@ async function deleteTgResult(id) {
 
 // ── Standalone Measure Modal ──
 let _msrListening = false;
-let _msrSessionId = 0; // increments on each start, used to ignore stale native events
-let _msrStoppedSession = 0; // set to _msrSessionId when JS-side stop is processed
 let _msrLastRate = null;
-let _msrLastBe = null;
 let _msrLastBph = null;
 let _msrListenStart = null;
 let _msrLastDetectTime = 0; // timestamp of last confident detection
 let _msrScatterData = []; // [{t: timeSec, d: deviationMs}] — one per tick
 let _msrPhase = ''; // manual: acquiring → calibrating → measuring → converged
-let _msrMeasureStart = null; // timestamp when measuring phase begins (for display timer)
 let _msrPhaseStart = null; // timestamp when current phase began (for phase-relative timer)
                      // auto: acquiring → estimating_bph → bph_estimated → calibrating → measuring → converged
 let _msrIsAuto = false; // whether current session is auto BPH
-let _msrActualSampleRate = null; // actual audio sample rate from iOS (for drift analysis)
 let _msrHadTicks = false; // whether we've seen tickCount > 0 (calibration done)
 let _msrBphLocked = false; // whether BPH has been detected (auto mode)
 let _msrRateHistory = []; // recent rate values for error bar computation
-let _msrAllRates = [];    // rate samples for IQR/mode computation (capped at 1000)
 let _msrBucketRateHistory = []; // history of bucket rate computations for JS-side convergence
-let _msrLastBucketCalcTime = 0; // timestamp of last bucket rate computation (debounce)
 let _msrCachedBucketRate = null; // cached result from last computeMedianRate call
-let _msrTicksAccepted = 0; // count of accepted tick pairs (signal health)
 let _msrAcceptRate = 0;    // shared signal quality metric (updated once per tick event)
-let _msrTicksSkipped = 0;  // count of skipped tick pairs (signal health)
 let _msrLastDotTime = 0;   // timestamp of last scatter dot added (starvation detection)
-let _msrNativeHasRate = false; // whether native engine has computed a rate (regN >= regMinN)
-let _msrWeakSignalShown = false; // whether the weak signal warning has been shown
-let _msrNoiseWarningShown = false; // whether the noisy environment warning has been shown
+let _msrShown = { weak: false, noise: false, prelim: false, advanced: false };
 let _msrNoiseSamples = [];    // noise level readings during calibration phase
-let _msrPrelimShown = false; // whether the preliminary rate has been shown
 let _msrLastConf = 0;        // latest native confidence (0-1)
-let _msrAutoStopSec = 45;
 let _msrConsecutiveFailures = 0;
-let _msrAdvancedPromptShown = false;
 
 const TG_ALG_VERSION = 2;
 const TG_PRESETS = {
@@ -21430,7 +21411,7 @@ function tgResetDefaults() {
 
 function tgShowFailureBanner() {
   if (!featureFlag('tg_advanced_settings')) return;
-  if (_msrConsecutiveFailures >= 2 && !_msrAdvancedPromptShown) {
+  if (_msrConsecutiveFailures >= 2 && !_msrShown.advanced) {
     const banner = document.getElementById('msr-advanced-banner');
     if (banner) banner.style.display = 'block';
   }
@@ -21445,7 +21426,31 @@ function tgQuickApplyNoisy() {
   tgSelectPreset('noisy');
   toast('Noisy Environment preset applied');
   tgHideFailureBanner();
-  _msrAdvancedPromptShown = true;
+  _msrShown.advanced = true;
+}
+
+function _resetMsrState(bph) {
+  _msrScatterData = []; _msrLastCumDev = 0;
+  _msrLastDetectTime = 0;
+  _msrPhase = 'acquiring';
+  _msrIsAuto = (bph === 0);
+  _msrHadTicks = false;
+  _msrBphLocked = false;
+  _msrLastRate = null; _msrLastBph = null;
+  _msrRateHistory = []; _msrBucketRateHistory = []; _msrCachedBucketRate = null;
+  _msrLastDotTime = 0; _msrShown = { weak: false, noise: false, prelim: false, advanced: false }; _msrNoiseSamples = []; _msrAcceptRate = 0; _msrLastConf = 0;
+  const scCanvas = document.getElementById('msr-scatter-plot');
+  if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
+  document.getElementById('msr-live-rate').textContent = '—';
+  const beEl = document.getElementById('msr-live-be'); if (beEl) beEl.textContent = '—';
+  document.getElementById('msr-detected-bph').style.display = 'none';
+  const convBadge = document.getElementById('msr-converged-badge'); if (convBadge) convBadge.style.display = 'none';
+  const prelimBadge = document.getElementById('msr-preliminary-badge'); if (prelimBadge) prelimBadge.style.display = 'none';
+  const statusText = document.getElementById('msr-status-text');
+  statusText.textContent = 'ACQUIRING · 0s';
+  statusText.style.color = 'rgba(74,222,128,.35)';
+  statusText.style.fontSize = '';
+  statusText.style.fontWeight = '';
 }
 
 let _msrScatterRafPending = false;
@@ -21661,11 +21666,8 @@ function openMeasureInline() {
   _tgLastDebugLogTime = 0;
   _msrListening = false;
   _msrLastRate = null;
-  _msrLastBe = null;
   _msrLastBph = null;
-  _msrActualSampleRate = null;
   _msrScatterData = []; _msrLastCumDev = 0;
-  _msrPosition = 'dial_up';
   const listenBtn = document.getElementById('msr-listen-btn');
   const btnMic = document.getElementById('msr-btn-mic');
   const btnStop = document.getElementById('msr-btn-stop');
@@ -21787,38 +21789,14 @@ function onMsrBphChange() {
     }
     _tgDebugSessionId = crypto.randomUUID();
     _tgTickDebugBuffer = [];
-    _msrSessionId++;
     console.log('[TG JS] Restarting engine with bph:', bph, 'new session:', _tgDebugSessionId);
-    _msrScatterData = []; _msrLastCumDev = 0;
-    _msrLastDetectTime = 0;
-    _msrPhase = 'acquiring';
-    _msrIsAuto = (bph === 0);
-    _msrHadTicks = false;
-    _msrBphLocked = false;
-    _msrLastRate = null; _msrLastBe = null; _msrLastBph = null;
-    _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = []; _msrLastBucketCalcTime = 0; _msrCachedBucketRate = null;
-    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false; _msrNoiseWarningShown = false; _msrNoiseSamples = []; _msrPrelimShown = false; _msrAcceptRate = 0; _msrLastConf = 0;
-    const scCanvas = document.getElementById('msr-scatter-plot');
-    if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
-    document.getElementById('msr-live-rate').textContent = '—';
-    const beEl = document.getElementById('msr-live-be'); if (beEl) beEl.textContent = '—';
-    document.getElementById('msr-detected-bph').style.display = 'none';
-    // Reset convergence indicator
-    const convBadge = document.getElementById('msr-converged-badge'); if (convBadge) convBadge.style.display = 'none';
-    const prelimBadge2 = document.getElementById('msr-preliminary-badge'); if (prelimBadge2) prelimBadge2.style.display = 'none';
-    const rBox = document.getElementById('msr-rate-box'); // no-op: overlay style
-    document.getElementById('msr-status-text').textContent = 'ACQUIRING \u00b7 0s';
-    document.getElementById('msr-status-text').style.color = 'rgba(74,222,128,.35)';
-    document.getElementById('msr-status-text').style.fontSize = '';
-    document.getElementById('msr-status-text').style.fontWeight = '';
+    _resetMsrState(bph);
     _msrListenStart = Date.now();
-    _msrMeasureStart = null;
     _msrPhaseStart = null;
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
     if (featureFlag('tg_advanced_settings')) {
       const _tgS = tgLoadSettings();
       tgApplySettingsToInputs(_tgS.values);
-      _msrAutoStopSec = _tgS.values.maxDuration;
     }
     setTimeout(() => sendMsrTuning(), 200);
   }
@@ -21870,41 +21848,22 @@ function toggleMsrListen() {
     console.log('[TG JS] Start button pressed, bph:', bph, '(0=auto), dropdown:', document.getElementById('msr-bph-select').value);
     _tgDebugSessionId = crypto.randomUUID();
     _tgTickDebugBuffer = [];
-    _msrSessionId++;
-    const thisSession = _msrSessionId;
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
     _msrListening = true;
     _msrTarget = 'measure';
     _msrListenStart = Date.now();
     _startMsrBadge();
-    _msrMeasureStart = null;
     _msrPhaseStart = null;
-    _msrScatterData = []; _msrLastCumDev = 0;
-    _msrLastDetectTime = 0;
-    _msrPhase = 'acquiring';
-    _msrIsAuto = (bph === 0);
-    _msrHadTicks = false;
-    _msrBphLocked = false;
-    _msrRateHistory = []; _msrAllRates = []; _msrBucketRateHistory = []; _msrLastBucketCalcTime = 0; _msrCachedBucketRate = null;
-    _msrTicksAccepted = 0; _msrTicksSkipped = 0; _msrLastDotTime = 0; _msrNativeHasRate = false; _msrWeakSignalShown = false; _msrNoiseWarningShown = false; _msrNoiseSamples = []; _msrPrelimShown = false; _msrAcceptRate = 0; _msrLastConf = 0;
-    document.getElementById('msr-status-text').textContent = 'ACQUIRING \u00b7 0s';
-    document.getElementById('msr-status-text').style.color = 'rgba(74,222,128,.35)';
-    document.getElementById('msr-status-text').style.fontSize = '';
-    document.getElementById('msr-status-text').style.fontWeight = '';
-    document.getElementById('msr-detected-bph').style.display = 'none';
+    _resetMsrState(bph);
     document.getElementById('msr-save-section').style.display = 'none';
     const _shareCta = document.getElementById('msr-share-cta');
     if (_shareCta) _shareCta.style.display = 'none';
     const saveBtn = document.getElementById('msr-save-btn');
     if (saveBtn) saveBtn.disabled = true;
-    const convBadge = document.getElementById('msr-converged-badge'); if (convBadge) convBadge.style.display = 'none';
-    const prelimBadge2 = document.getElementById('msr-preliminary-badge'); if (prelimBadge2) prelimBadge2.style.display = 'none';
-    const rBox = document.getElementById('msr-rate-box'); // no-op: overlay style
     if (featureFlag('tg_advanced_settings')) {
       const _tgSettings = tgLoadSettings();
       if (_tgSettings.wasReset) toast('Measurement engine updated — settings reset');
       tgApplySettingsToInputs(_tgSettings.values);
-      _msrAutoStopSec = _tgSettings.values.maxDuration;
       tgHideFailureBanner();
     }
     setTimeout(() => sendMsrTuning(), 200);
@@ -21999,7 +21958,6 @@ function stopMsrListen(reason) {
   } else if (stopReason === 'converged') {
     _msrConsecutiveFailures = 0;
   }
-  _msrStoppedSession = _msrSessionId; // mark this session as stopped so we ignore the native 'stopped' echo
   _msrTarget = null; // clear so post-stop native events don't overwrite result text
   stopTuningPoll();
   if (_tgHasNative()) {
@@ -22036,7 +21994,7 @@ function stopMsrListen(reason) {
         dot_count: _msrScatterData.length,
         bucket_rate: bucketRate,
         native_rate: _msrLastRate,
-        actual_sample_rate: _msrActualSampleRate,
+        actual_sample_rate: null,
         stop_reason: stopReason,
         converged: _msrPhase === 'converged',
         final_confidence: _msrLastConf,
@@ -22092,7 +22050,7 @@ function stopMsrListen(reason) {
       errorBar = Math.max(0.5, Math.round(2 * Math.sqrt(variance) * 10) / 10);
     } else {
       // Not enough history — fall back to half the IQR of raw dots
-      const rates = _msrAllRates.length >= 5 ? _msrAllRates : _msrRateHistory;
+      const rates = _msrRateHistory;
       if (rates.length >= 5) {
         const sorted = [...rates].sort((a, b) => a - b);
         const q1 = sorted[Math.floor(sorted.length * 0.25)];
@@ -22154,7 +22112,6 @@ function stopMsrListen(reason) {
 
 function discardMsrReading() {
   _msrLastRate = null;
-  _msrLastBe = null;
   _msrLastBph = null;
   _msrScatterData = []; _msrLastCumDev = 0;
   document.getElementById('msr-save-section').style.display = 'none';
