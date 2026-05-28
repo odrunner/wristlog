@@ -5306,13 +5306,17 @@ function officialBadgeHtml(profile) {
     const lastVisit = Number(localStorage.getItem(dedupKey) || 0);
     if (Date.now() - lastVisit < 1800000) return;
     localStorage.setItem(dedupKey, String(Date.now()));
+    const _vid = crypto.randomUUID();
+    const _uid = window.currentUser?.id || (() => { try { const t = localStorage.getItem('sb-xnzweevzrojmouzhpwzv-auth-token'); return t ? JSON.parse(t).user?.id || null : null; } catch(e) { return null; } })();
+    if (!_uid) localStorage.setItem('_wrotate_visit_id', _vid);
     db.from('page_visits').insert({
+      id: _vid,
       utm_source: effectiveSource, utm_medium, utm_campaign, utm_content, utm_term,
       referrer: externalRef,
       path: window.location.pathname,
       user_agent: navigator.userAgent || null,
       ab_variant: localStorage.getItem('ab_landing') || null,
-      user_id: window.currentUser?.id || (() => { try { const t = localStorage.getItem('sb-xnzweevzrojmouzhpwzv-auth-token'); return t ? JSON.parse(t).user?.id || null : null; } catch(e) { return null; } })(),
+      user_id: _uid,
     }).then(() => {}).catch(() => {});
     // Clean UTM params from URL without reload
     if (utm_source) {
@@ -5851,7 +5855,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.20.00';
+const APP_VERSION = '27.21.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22209,12 +22213,14 @@ async function bootApp(user) {
   if (currentUser?.id === user.id) return; // already running for this user
   clearUserState();
   currentUser = user;
-  // Backfill user_id on the page_visit from this page load (tracked before auth resolved)
-  const _visitCutoff = new Date(Date.now() - 120000).toISOString();
-  db.from('page_visits').update({ user_id: user.id })
-    .is('user_id', null).eq('user_agent', navigator.userAgent || '')
-    .gte('created_at', _visitCutoff).order('created_at', { ascending: false }).limit(1)
-    .then(() => {}).catch(() => {});
+  // Backfill user_id on the anonymous page_visit from before auth resolved
+  const _storedVisitId = localStorage.getItem('_wrotate_visit_id');
+  if (_storedVisitId) {
+    db.from('page_visits').update({ user_id: user.id })
+      .eq('id', _storedVisitId).is('user_id', null)
+      .then(() => { localStorage.removeItem('_wrotate_visit_id'); })
+      .catch(() => {});
+  }
   // Check if this is a demo session
   if (user.email === DEMO_USER_EMAIL) _isDemoMode = true;
   const demoBanner = document.getElementById('demo-banner');
