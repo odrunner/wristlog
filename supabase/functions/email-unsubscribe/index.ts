@@ -61,13 +61,13 @@ serve(async (req) => {
   const sig = url.searchParams.get("sig");
 
   if (!uid || !cat || !sig) {
-    return htmlPage("Invalid link", "<h1>Invalid unsubscribe link</h1><p>This link appears to be incomplete. Open WRotate to manage your notification preferences.</p><a href='https://wrotate.com' class='btn'>Open WRotate</a>");
+    return htmlPage("Invalid link", "<h1>Invalid unsubscribe link</h1><p>This link appears to be incomplete. Open WRotate to manage your notification preferences.</p><a href='https://wrotate.com/open' class='btn'>Open WRotate</a>");
   }
 
   const hmacKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const valid = await verifyHmac(uid, cat, sig, hmacKey);
   if (!valid) {
-    return htmlPage("Invalid link", "<h1>Invalid unsubscribe link</h1><p>This link has expired or is invalid. Open WRotate to manage your notification preferences.</p><a href='https://wrotate.com' class='btn'>Open WRotate</a>");
+    return htmlPage("Invalid link", "<h1>Invalid unsubscribe link</h1><p>This link has expired or is invalid. Open WRotate to manage your notification preferences.</p><a href='https://wrotate.com/open' class='btn'>Open WRotate</a>");
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -80,7 +80,7 @@ serve(async (req) => {
     .single();
 
   if (profileErr || !profile) {
-    return htmlPage("Error", "<h1>Something went wrong</h1><p>We couldn't find your account. Open WRotate to manage your preferences.</p><a href='https://wrotate.com' class='btn'>Open WRotate</a>");
+    return htmlPage("Error", "<h1>Something went wrong</h1><p>We couldn't find your account. Open WRotate to manage your preferences.</p><a href='https://wrotate.com/open' class='btn'>Open WRotate</a>");
   }
 
   const prefs = profile.email_prefs || {};
@@ -102,7 +102,7 @@ serve(async (req) => {
 
   if (updateErr) {
     console.error("[email-unsubscribe] Update error:", updateErr);
-    return htmlPage("Error", "<h1>Something went wrong</h1><p>We couldn't update your preferences. Try again or open WRotate to manage them manually.</p><a href='https://wrotate.com' class='btn'>Open WRotate</a>");
+    return htmlPage("Error", "<h1>Something went wrong</h1><p>We couldn't update your preferences. Try again or open WRotate to manage them manually.</p><a href='https://wrotate.com/open' class='btn'>Open WRotate</a>");
   }
 
   const label = CATEGORY_LABELS[cat] || cat;
@@ -111,5 +111,5 @@ serve(async (req) => {
     : "";
 
   console.log(`[email-unsubscribe] ${uid} unsubscribed from ${cat}`);
-  return htmlPage("Unsubscribed", `<h1>You've been unsubscribed</h1><p>You won't receive <strong>${label}</strong> emails from WRotate anymore.</p><p>You can re-enable them anytime in WRotate → Profile → Notifications.</p><a href="https://wrotate.com" class="btn">Open WRotate</a>${allLink}`);
+  return htmlPage("Unsubscribed", `<h1>You've been unsubscribed</h1><p>You won't receive <strong>${label}</strong> emails from WRotate anymore.</p><p>You can re-enable them anytime in WRotate → Profile → Notifications.</p><a href="https://wrotate.com/open" class="btn">Open WRotate</a>${allLink}`);
 });
