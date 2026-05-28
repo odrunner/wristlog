@@ -5883,7 +5883,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.16.46';
+const APP_VERSION = '28.16.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9263,7 +9263,19 @@ function renderFeedCard(item) {
   // Hero area
   let heroHtml = '';
   if (item.photo_url) {
-    heroHtml = `<div class="feed-card-photo"><img src="${escHtml(item.photo_url)}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`;
+    const _urls = parsePhotoUrl(item.photo_url);
+    const heroUrl = _urls[0] || '';
+    heroHtml = `<div class="feed-card-photo" onclick="openImageViewer(${escAttr(JSON.stringify(_urls))},0)">
+    <img id="feed-hero-${item.id}" src="${escHtml(heroUrl)}" loading="lazy" onerror="this.parentElement.style.display='none'">
+    ${_urls.length > 1 ? `<span class="feed-card-photo-count">1/${_urls.length}</span>` : ''}
+  </div>`;
+    if (_urls.length > 1) {
+      heroHtml += `<div class="feed-card-thumbnails">`;
+      _urls.forEach((u, i) => {
+        heroHtml += `<div class="feed-card-thumb${i === 0 ? ' active' : ''}" onclick="feedThumbTap('${item.id}',${i},${escAttr(JSON.stringify(_urls))})"><img src="${escHtml(u)}" loading="lazy" alt=""></div>`;
+      });
+      heroHtml += `</div>`;
+    }
   } else if (w) {
     // Compact wear — watch moves to header; no banner here
     heroHtml = '';
@@ -9290,7 +9302,7 @@ function renderFeedCard(item) {
   }
 
   // Watch chip — only for wear logs that also have a photo (compact wear shows it in the header)
-  const watchChip = (w && item.photo_url)
+  const watchChip = (w && item.photo_url && parsePhotoUrl(item.photo_url).length)
     ? `<div class="feed-watch-chip" style="cursor:pointer;"
            onclick="previewWatchFromEl(this)"
            data-watch-id="${escHtml(w.id||'')}"
@@ -9495,6 +9507,17 @@ function toggleFeedMenu(logId) {
 function closeFeedMenu(logId) {
   const el = document.getElementById('feed-menu-' + logId);
   if (el) el.classList.add('hidden');
+}
+
+function feedThumbTap(logId, idx, urls) {
+  const hero = document.getElementById('feed-hero-' + logId);
+  if (!hero) return;
+  hero.src = urls[idx];
+  const card = hero.closest('.feed-card');
+  if (!card) return;
+  card.querySelectorAll('.feed-card-thumb').forEach((el, i) => el.classList.toggle('active', i === idx));
+  const badge = card.querySelector('.feed-card-photo-count');
+  if (badge) badge.textContent = (idx + 1) + '/' + urls.length;
 }
 
 // ── Report modal ──────────────────────────────────────────────────────────
