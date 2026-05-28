@@ -5851,7 +5851,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.17.36';
+const APP_VERSION = '27.17.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20804,11 +20804,19 @@ window._tgNativeCallback = function(data) {
       const tickWarnStart = _msrIsAuto ? 10 : 7;
       const tickWarnEnd = _msrIsAuto ? 15 : 12;
       if (elapsed >= tickWarnStart && elapsed < tickWarnEnd && data.tickCount === 0 && !_msrShown.weak) {
-        _msrShown.weak = true;
+        const hasSignal = _msrBphLocked || _msrLastConf > 0;
         const statusText = document.getElementById('msr-status-text');
-        if (statusText && _msrPhase !== 'converged') {
-          statusText.textContent = 'No ticks yet \u00b7 try moving watch closer to mic';
-          statusText.style.color = 'rgba(234,179,8,.7)';
+        if (hasSignal) {
+          if (statusText && _msrPhase !== 'converged') {
+            statusText.textContent = 'Adjusting signal \u00b7 hold steady';
+            statusText.style.color = 'rgba(234,179,8,.7)';
+          }
+        } else {
+          _msrShown.weak = true;
+          if (statusText && _msrPhase !== 'converged') {
+            statusText.textContent = 'No ticks yet \u00b7 try moving watch closer to mic';
+            statusText.style.color = 'rgba(234,179,8,.7)';
+          }
         }
       }
       // Ambient noise check during calibration (~first 4s)
@@ -20828,8 +20836,10 @@ window._tgNativeCallback = function(data) {
       }
       // Graceful early stop: no ticks = no watch on mic
       // Auto mode needs longer: 5s BPH detect + 2s calibration before ticks start
+      // But if BPH is locked, the engine IS hearing the watch \u2014 let recalibration work
       const noTickTimeout = _msrIsAuto ? 15 : 12;
-      if (elapsed >= noTickTimeout && data.tickCount === 0) {
+      const hasSignal = _msrBphLocked || _msrLastConf > 0;
+      if (elapsed >= noTickTimeout && data.tickCount === 0 && !hasSignal) {
         stopMsrListen('no_ticks_after_recal');
         const statusText = document.getElementById('msr-status-text');
         if (statusText) {
@@ -20840,7 +20850,6 @@ window._tgNativeCallback = function(data) {
         }
         const idleOv2 = document.getElementById('msr-idle-overlay');
         if (idleOv2) idleOv2.style.display = 'none';
-        // Change button to "Retry"
         const _retryLabel = document.getElementById('msr-btn-label');
         if (_retryLabel) _retryLabel.textContent = 'Retry';
         return;
