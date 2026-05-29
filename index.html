@@ -5882,7 +5882,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.18.13';
+const APP_VERSION = '28.18.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10098,7 +10098,7 @@ function handleNewPostPhotos(input) {
   }
   input.value = '';
   renderNpThumbstrip();
-  if (newPostFiles.length === accepted.length && accepted.length === 1) {
+  if (newPostFiles.length === accepted.length) {
     npIdentifyWatch(accepted[0]);
   }
 }
