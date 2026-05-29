@@ -4302,8 +4302,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:400px;">
     <div class="modal-title" id="new-post-modal-title" style="display:flex;align-items:center;gap:.5rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> New Post</div>
     <div class="form-group">
-      <div id="np-photo-area">
-        <div id="np-photo-placeholder" class="log-photo-placeholder" style="display:inline-flex;align-items:center;gap:.4rem;cursor:pointer;" onclick="document.getElementById('np-photo-input').click()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add photos (optional)</div>
+      <div id="np-photo-area" class="log-photo-area" onclick="document.getElementById('np-photo-input').click()">
+        <div id="np-photo-placeholder" class="log-photo-placeholder" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add photos (optional)</div>
         <div id="np-thumbstrip" class="np-thumbstrip" style="display:none;"></div>
         <div id="np-photo-counter" class="np-photo-counter" style="display:none;"></div>
       </div>
@@ -4331,8 +4331,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:400px;">
     <div class="modal-title" id="edit-post-modal-title">Edit Post</div>
     <div class="form-group">
-      <div id="ep-photo-area">
-        <div id="ep-photo-placeholder" class="log-photo-placeholder" style="display:inline-flex;align-items:center;gap:.4rem;cursor:pointer;" onclick="document.getElementById('ep-photo-input').click()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add photos (optional)</div>
+      <div id="ep-photo-area" class="log-photo-area" onclick="document.getElementById('ep-photo-input').click()">
+        <div id="ep-photo-placeholder" class="log-photo-placeholder" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add photos (optional)</div>
         <div id="ep-thumbstrip" class="np-thumbstrip" style="display:none;"></div>
         <div id="ep-photo-counter" class="np-photo-counter" style="display:none;"></div>
       </div>
@@ -5401,7 +5401,7 @@ function showAuthError(msg) {
 }
 
 async function devLogin(which) {
-  if (!['localhost', '127.0.0.1'].includes(location.hostname)) return;
+  if (!['localhost', '127.0.0.1', '192.168.1.246'].includes(location.hostname)) return;
   const creds = which === 'official' ? window.__OFFICIAL_CREDS__ : which ? window.__DEV_CREDS_2__ : window.__DEV_CREDS__;
   if (!creds) { showAuthError('Dev login not configured — create dev-config.js'); return; }
   const { error } = await db.auth.signInWithPassword(creds);
@@ -5882,7 +5882,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.17.24';
+const APP_VERSION = '28.18.13';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9763,15 +9763,18 @@ function renderEpThumbstrip() {
   const strip = document.getElementById('ep-thumbstrip');
   const counter = document.getElementById('ep-photo-counter');
   const placeholder = document.getElementById('ep-photo-placeholder');
+  const area = document.getElementById('ep-photo-area');
   if (!epFiles.length) {
     strip.style.display = 'none';
     counter.style.display = 'none';
     placeholder.style.display = '';
+    if (area) { area.classList.add('log-photo-area'); area.onclick = () => document.getElementById('ep-photo-input').click(); }
     return;
   }
   placeholder.style.display = 'none';
   strip.style.display = '';
   counter.style.display = '';
+  if (area) { area.classList.remove('log-photo-area'); area.onclick = null; }
   counter.textContent = epFiles.length + '/6 photos';
   let html = '';
   for (let i = 0; i < epPreviews.length; i++) {
@@ -9815,6 +9818,7 @@ function removeEpPhoto(idx) {
   epPreviews.splice(idx, 1);
   renderEpThumbstrip();
 }
+
 
 function clearEditPostPhoto() {
   epPreviews.forEach(u => { if (!epExistingUrls.includes(u)) URL.revokeObjectURL(u); });
@@ -10103,16 +10107,19 @@ function renderNpThumbstrip() {
   const strip = document.getElementById('np-thumbstrip');
   const counter = document.getElementById('np-photo-counter');
   const placeholder = document.getElementById('np-photo-placeholder');
+  const area = document.getElementById('np-photo-area');
   if (!strip) return;
   if (!newPostFiles.length) {
     strip.style.display = 'none';
     counter.style.display = 'none';
     placeholder.style.display = '';
+    if (area) { area.classList.add('log-photo-area'); area.onclick = () => document.getElementById('np-photo-input').click(); }
     return;
   }
   placeholder.style.display = 'none';
   strip.style.display = '';
   counter.style.display = '';
+  if (area) { area.classList.remove('log-photo-area'); area.onclick = null; }
   counter.textContent = newPostFiles.length + '/6 photos';
   let html = '';
   for (let i = 0; i < newPostPreviews.length; i++) {
@@ -11283,7 +11290,7 @@ const UC_COL = {
 // ══════════════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════════════
-const uid  = () => crypto.randomUUID();
+const uid  = () => (crypto.randomUUID ? crypto.randomUUID() : ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)));
 // Safe localStorage writer — survives quota exceeded / private browsing
 function safeSetJSON(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); }
@@ -20468,7 +20475,7 @@ applyTheme();   // apply saved theme immediately; loadMyProfile() will re-apply 
 updateThemeBtn();
 
 // Show dev login button on localhost only
-if (['localhost', '127.0.0.1'].includes(location.hostname)) {
+if (['localhost', '127.0.0.1', '192.168.1.246'].includes(location.hostname)) {
   document.getElementById('dev-login-wrap').style.display = 'flex';
 }
 
