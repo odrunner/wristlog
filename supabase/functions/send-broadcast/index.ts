@@ -81,10 +81,22 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { subject, html, test_email, segment = "all" } = body;
+    const { subject, html, test_email, segment = "all", campaign_id, cohort, dry_run } = body;
 
     if (!subject || !html) {
       return jsonResponse({ error: "subject and html are required" }, 400);
+    }
+
+    const COHORTS: Record<string, { gte?: string; lt?: string }> = {
+      pre_april: { lt: "2026-04-01T00:00:00Z" },
+      april: { gte: "2026-04-01T00:00:00Z", lt: "2026-05-01T00:00:00Z" },
+      may: { gte: "2026-05-01T00:00:00Z", lt: "2026-06-01T00:00:00Z" },
+    };
+    if (cohort && !COHORTS[cohort]) {
+      return jsonResponse({ error: `Unknown cohort: ${cohort}` }, 400);
+    }
+    if (cohort && !campaign_id) {
+      return jsonResponse({ error: "campaign_id is required when cohort is set" }, 400);
     }
 
     // Limit HTML body size to 500KB to prevent abuse
@@ -105,10 +117,19 @@ serve(async (req) => {
 
     // Production mode: send to all users
     // Fetch all users who haven't opted out of marketing emails
-    const { data: profiles, error: profilesError } = await supabase
+    let profilesQuery = supabase
       .from("profiles")
-      .select("id, email_prefs")
+      .select("id, email_prefs, created_at")
       .eq("is_suspended", false);
+
+    // Cohort: filter by signup window
+    if (cohort) {
+      const window = COHORTS[cohort];
+      if (window.gte) profilesQuery = profilesQuery.gte("created_at", window.gte);
+      if (window.lt) profilesQuery = profilesQuery.lt("created_at", window.lt);
+    }
+
+    const { data: profiles, error: profilesError } = await profilesQuery;
 
     if (profilesError) {
       return jsonResponse({ error: "Failed to fetch profiles", details: profilesError }, 500);
@@ -119,6 +140,23 @@ serve(async (req) => {
       const prefs = p.email_prefs || {};
       return prefs.updates !== false; // default is opted-in
     });
+
+    // Cohort blast: exclude internal accounts
+    if (cohort) {
+      const { data: internalRows } = await supabase.from("internal_accounts").select("user_id");
+      const internalSet = new Set((internalRows || []).map(r => r.user_id));
+      eligibleProfiles = eligibleProfiles.filter(p => !internalSet.has(p.id));
+    }
+
+    // Cohort blast: exclude users already sent this campaign
+    if (cohort && campaign_id) {
+      const { data: sentRows } = await supabase
+        .from("email_campaign_sends")
+        .select("user_id")
+        .eq("campaign_id", campaign_id);
+      const sentSet = new Set((sentRows || []).map(r => r.user_id));
+      eligibleProfiles = eligibleProfiles.filter(p => !sentSet.has(p.id));
+    }
 
     // Segment filter: "never_measured" excludes users with any timegrapher_results row
     if (segment === "never_measured") {
@@ -133,6 +171,8 @@ serve(async (req) => {
     }
 
     // Resolve emails + user IDs from auth.users in parallel batches of 50
+    // For cohort blasts, also require dormant (last_sign_in_at < NOW - 21d)
+    const DORMANT_CUTOFF_MS = Date.now() - 21 * 24 * 60 * 60 * 1000;
     const recipients: { uid: string; email: string }[] = [];
     const resolveSize = 50;
     for (let i = 0; i < eligibleProfiles.length; i += resolveSize) {
@@ -140,12 +180,23 @@ serve(async (req) => {
       const results = await Promise.allSettled(
         batch.map(async (profile) => {
           const { data: authUser } = await supabase.auth.admin.getUserById(profile.id);
-          return authUser?.user?.email ? { uid: profile.id, email: authUser.user.email } : null;
+          const user = authUser?.user;
+          if (!user?.email) return null;
+          if (cohort) {
+            const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at).getTime() : 0;
+            if (lastSignIn >= DORMANT_CUTOFF_MS) return null; // active user, skip
+          }
+          return { uid: profile.id, email: user.email };
         })
       );
       for (const r of results) {
         if (r.status === "fulfilled" && r.value) recipients.push(r.value);
       }
+    }
+
+    // Dry run: just return the count without sending
+    if (dry_run) {
+      return jsonResponse({ eligible: recipients.length, cohort, campaign_id });
     }
 
     // Batch segments: split all recipients into 3 roughly equal groups
@@ -195,6 +246,17 @@ serve(async (req) => {
           errors.push(`Batch error: ${JSON.stringify(data)}`);
         } else {
           sent += batch.length;
+          // Cohort blast: record sends so re-clicking won't double-send
+          if (cohort && campaign_id) {
+            const now = new Date().toISOString();
+            const rows = batch.map(r => ({ campaign_id, user_id: r.uid, sent_at: now }));
+            const { error: trackErr } = await supabase
+              .from("email_campaign_sends")
+              .insert(rows);
+            if (trackErr) {
+              errors.push(`Tracking insert error: ${trackErr.message}`);
+            }
+          }
         }
       } catch (err) {
         failed += batch.length;

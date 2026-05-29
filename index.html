@@ -5897,7 +5897,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.18.23';
+const APP_VERSION = '28.20.47';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13811,6 +13811,15 @@ async function loadCampaigns() {
         <button class="btn btn-ghost" onclick="testCampaign('${c.id}')" style="flex:1;">Send Test to Me</button>
         <button class="btn btn-ghost" onclick="runCampaignNow()" style="flex:1;">Run Now</button>
       </div>
+      <div style="display:flex;gap:.5rem;margin-top:.5rem;align-items:center;">
+        <label style="font-size:.78rem;color:var(--muted);">Cohort blast:</label>
+        <select id="camp-cohort-${c.id}" style="font-size:.82rem;padding:4px 8px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;flex:1;">
+          <option value="pre_april">Pre-April dormant</option>
+          <option value="april">April dormant</option>
+          <option value="may">May dormant</option>
+        </select>
+        <button class="btn btn-ghost" onclick="sendToCohort('${c.id}')" style="font-size:.78rem;">Send to cohort</button>
+      </div>
       <div id="camp-status-${c.id}" style="font-size:.78rem;color:var(--muted);margin-top:.4rem;" aria-live="polite"></div>
       <div class="draft-form-row" style="margin-top:.6rem;">
         <label>Email Preview</label>
@@ -13854,8 +13863,7 @@ function buildCampaignEmailHtml(subject, body) {
         </td></tr>
         <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
           <div style="font-size:11px;color:#999;line-height:1.5;">
-            You're receiving this because you recently joined WRotate.<br>
-            <a href="#" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a>
+            <a href="#" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · <a href="#" style="color:#999;text-decoration:underline;">Manage preferences</a>
           </div>
         </td></tr>
       </table>
@@ -13914,6 +13922,46 @@ async function runCampaignNow() {
     toast(summary || 'No emails to send');
     loadCampaigns();
   } catch (e) { toast('Failed: ' + e.message, 'error'); }
+}
+
+async function sendToCohort(id) {
+  const camp = _campaignsData.find(c => c.id === id);
+  if (!camp) return;
+  const cohort = document.getElementById('camp-cohort-' + id)?.value;
+  if (!cohort) { toast('Pick a cohort first', 'error'); return; }
+  const cohortLabels = { pre_april: 'Pre-April dormant', april: 'April dormant', may: 'May dormant' };
+  const label = cohortLabels[cohort] || cohort;
+  const subject = document.getElementById('camp-subject-' + id)?.value?.trim() || camp.subject;
+  const body = document.getElementById('camp-body-' + id)?.value?.trim() || camp.body_html;
+  if (!subject || !body) { toast('Subject and body are required', 'error'); return; }
+  const statusEl = document.getElementById('camp-status-' + id);
+  // Step 1: dry-run to get count
+  if (statusEl) statusEl.textContent = 'Counting recipients…';
+  try {
+    const { data: countData, error: countErr } = await db.functions.invoke('send-broadcast', {
+      body: { subject, html: buildCampaignPreviewHtml(subject, body), campaign_id: id, cohort, dry_run: true }
+    });
+    if (countErr) throw countErr;
+    const eligible = countData?.eligible ?? 0;
+    if (eligible === 0) {
+      if (statusEl) statusEl.textContent = `No eligible recipients in ${label} (all already sent, opted out, or active).`;
+      return;
+    }
+    if (!confirm(`Send "${camp.name}" to ${eligible} ${label} user${eligible === 1 ? '' : 's'}? This cannot be undone.`)) {
+      if (statusEl) statusEl.textContent = 'Cancelled.';
+      return;
+    }
+    // Step 2: actual send
+    if (statusEl) statusEl.textContent = `Sending to ${eligible} recipients…`;
+    const { data, error } = await db.functions.invoke('send-broadcast', {
+      body: { subject, html: buildCampaignPreviewHtml(subject, body), campaign_id: id, cohort }
+    });
+    if (error) throw error;
+    if (statusEl) statusEl.textContent = `Sent ${data?.sent ?? 0} / ${data?.total ?? 0}${data?.failed ? `, ${data.failed} failed` : ''}.`;
+    loadCampaigns();
+  } catch (e) {
+    if (statusEl) statusEl.textContent = 'Failed: ' + (e.message || e);
+  }
 }
 
 // ── SNAP TO TRACK ─────────────────────────────────────────────────────────
