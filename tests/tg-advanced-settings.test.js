@@ -66,19 +66,19 @@ describe('tgMapSliderToEngine', () => {
     expect(result.calibMultiplier).toBeCloseTo(2.0);
   });
 
-  it('maps sensitivity 10 to calibMultiplier 0.4 (most sensitive)', () => {
+  it('maps sensitivity 10 to calibMultiplier 0.2 (most sensitive)', () => {
     const result = tgMapSliderToEngine({ ...TG_PRESETS.default, sensitivity: 10 });
-    expect(result.calibMultiplier).toBeCloseTo(0.4);
+    expect(result.calibMultiplier).toBeCloseTo(0.2);
   });
 
-  it('maps sensitivity 5 to midpoint', () => {
+  it('maps sensitivity 5 to original default (1.2)', () => {
     const result = tgMapSliderToEngine({ ...TG_PRESETS.default, sensitivity: 5 });
-    expect(result.calibMultiplier).toBeCloseTo(2.0 - (4 / 9) * 1.6);
+    expect(result.calibMultiplier).toBeCloseTo(1.2);
   });
 
-  it('maps noiseTolerance 1 to noiseFloorMult 4.0 (strict)', () => {
+  it('maps noiseTolerance 1 to noiseFloorMult 3.2 (strict)', () => {
     const result = tgMapSliderToEngine({ ...TG_PRESETS.default, noiseTolerance: 1 });
-    expect(result.noiseFloorMult).toBeCloseTo(4.0);
+    expect(result.noiseFloorMult).toBeCloseTo(3.2);
   });
 
   it('maps noiseTolerance 10 to noiseFloorMult 0.5 (loose)', () => {
@@ -91,9 +91,9 @@ describe('tgMapSliderToEngine', () => {
     expect(result.outlierMargin).toBeCloseTo(0.08);
   });
 
-  it('maps outlierStrictness 10 to outlierMargin 0.30 (loose)', () => {
+  it('maps outlierStrictness 10 to outlierMargin 0.2375 (loose)', () => {
     const result = tgMapSliderToEngine({ ...TG_PRESETS.default, outlierStrictness: 10 });
-    expect(result.outlierMargin).toBeCloseTo(0.30);
+    expect(result.outlierMargin).toBeCloseTo(0.2375);
   });
 
   it('maps convergenceSpeed 1 to stabilityThreshold 1.0 (strict)', () => {
@@ -101,9 +101,9 @@ describe('tgMapSliderToEngine', () => {
     expect(result.stabilityThreshold).toBeCloseTo(1.0);
   });
 
-  it('maps convergenceSpeed 10 to stabilityThreshold 6.0 (loose)', () => {
+  it('maps convergenceSpeed 10 to stabilityThreshold 5.5 (loose)', () => {
     const result = tgMapSliderToEngine({ ...TG_PRESETS.default, convergenceSpeed: 10 });
-    expect(result.stabilityThreshold).toBeCloseTo(6.0);
+    expect(result.stabilityThreshold).toBeCloseTo(5.5);
   });
 
   it('passes maxDuration and recalibrationAttempts through directly', () => {
