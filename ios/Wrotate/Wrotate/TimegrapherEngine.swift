@@ -399,6 +399,8 @@ class TimegrapherEngine {
         consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []
         bphCorrectionRejects = []; bphCorrectionOutliers = []; bphCorrectionAttempted = []; bphCorrectionCount = 0
         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
+        recalibrationsDone = 0; calibrationSamples = 0; calibrationEnergies.removeAll()
+        pendingTickCross = false; pendingTickPeakEnergy = 0
         lastDebugInfo = nil
         lastBeatWaveform = nil
         lastTickPositions = nil
