@@ -400,7 +400,9 @@ class TimegrapherEngine {
         bphCorrectionRejects = []; bphCorrectionOutliers = []; bphCorrectionAttempted = []; bphCorrectionCount = 0
         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
         recalibrationsDone = 0; calibrationSamples = 0; calibrationEnergies.removeAll()
+        tickCalibrating = false
         pendingTickCross = false; pendingTickPeakEnergy = 0
+        debugMessages = []
         lastDebugInfo = nil
         lastBeatWaveform = nil
         lastTickPositions = nil
