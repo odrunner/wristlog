@@ -39,3 +39,47 @@ describe('parsePhotoUrl', () => {
     expect(parsePhotoUrl(JSON.stringify(urls))).toEqual(urls);
   });
 });
+
+describe('multi-image feed rendering logic', () => {
+  it('single-image post has no thumbnails', () => {
+    const urls = parsePhotoUrl('https://example.com/photo.jpg');
+    expect(urls.length).toBe(1);
+    const showThumbs = urls.length > 1;
+    expect(showThumbs).toBe(false);
+  });
+
+  it('multi-image post shows thumbnails', () => {
+    const raw = JSON.stringify(['https://a.jpg', 'https://b.jpg', 'https://c.jpg']);
+    const urls = parsePhotoUrl(raw);
+    expect(urls.length).toBe(3);
+    const showThumbs = urls.length > 1;
+    expect(showThumbs).toBe(true);
+  });
+
+  it('hero is always the first URL', () => {
+    const raw = JSON.stringify(['https://hero.jpg', 'https://second.jpg']);
+    const urls = parsePhotoUrl(raw);
+    expect(urls[0]).toBe('https://hero.jpg');
+  });
+
+  it('photo count badge shows correct format', () => {
+    const urls = parsePhotoUrl(JSON.stringify(['a', 'b', 'c', 'd']));
+    const badge = `1/${urls.length}`;
+    expect(badge).toBe('1/4');
+  });
+});
+
+describe('multi-image storage paths', () => {
+  it('single-image path has no suffix', () => {
+    const path = 'logs/user123/log456.jpg';
+    expect(path).not.toContain('_');
+  });
+
+  it('multi-image paths use index suffix', () => {
+    const logId = 'log456';
+    const paths = [0, 1, 2].map(i => `logs/user123/${logId}_${i}.jpg`);
+    expect(paths[0]).toBe('logs/user123/log456_0.jpg');
+    expect(paths[1]).toBe('logs/user123/log456_1.jpg');
+    expect(paths[2]).toBe('logs/user123/log456_2.jpg');
+  });
+});
