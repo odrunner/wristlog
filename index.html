@@ -5895,7 +5895,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '29.14.06';
+const APP_VERSION = '29.14.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21719,11 +21719,15 @@ function showTroubleshootTips() {
 
   el.innerHTML = tips.map(t => '• ' + t).join('<br>');
   el.style.display = '';
+  const statusText = document.getElementById('msr-status-text');
+  if (statusText) statusText.style.display = 'none';
 }
 
 function hideTroubleshootTips() {
   const el = document.getElementById('msr-troubleshoot');
   if (el) el.style.display = 'none';
+  const statusText = document.getElementById('msr-status-text');
+  if (statusText) statusText.style.display = '';
 }
 
 function tgQuickApplyPreset(preset) {
