@@ -5895,7 +5895,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '29.13.53';
+const APP_VERSION = '29.14.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21110,11 +21110,14 @@ window._tgNativeCallback = function(data) {
       // But if BPH is locked, the engine IS hearing the watch \u2014 let recalibration work
       const noTickTimeout = _msrIsAuto ? 15 : 12;
       const hasSignal = _msrBphLocked || _msrLastConf > 0;
-      if (elapsed >= noTickTimeout && data.tickCount === 0 && !hasSignal) {
-        stopMsrListen('no_ticks_after_recal');
+      const recalExhausted = hasSignal && elapsed >= 25 && data.tickCount === 0;
+      if (elapsed >= noTickTimeout && data.tickCount === 0 && (!hasSignal || recalExhausted)) {
+        stopMsrListen(recalExhausted ? 'no_ticks_signal_lost' : 'no_ticks_after_recal');
         const statusText = document.getElementById('msr-status-text');
         if (statusText) {
-          statusText.textContent = 'No signal detected \u00b7 try placing watch on mic';
+          statusText.textContent = recalExhausted
+            ? 'Could not lock ticks \u00b7 try repositioning or check BPH'
+            : 'No signal detected \u00b7 try placing watch on mic';
           statusText.style.color = 'rgba(239,68,68,.7)';
           statusText.style.fontSize = '.7rem';
           statusText.style.fontWeight = '600';
