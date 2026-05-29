@@ -6,9 +6,48 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		3AAC55012F54FAD200027F24 /* WRotateShare.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 3AAC55002F54FAD200027F24 /* WRotateShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		3AAC55022F54FAD200027F24 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3AAC54AE2F54FAD200027F24 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3AAC55042F54FAD200027F24;
+			remoteInfo = WRotateShare;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		3AAC55032F54FAD200027F24 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				3AAC55012F54FAD200027F24 /* WRotateShare.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		3AAC54B62F54FAD200027F24 /* Wrotate.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Wrotate.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3AAC55002F54FAD200027F24 /* WRotateShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WRotateShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		3AAC550D2F54FAD200027F24 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Info.plist",
+			);
+			target = 3AAC55042F54FAD200027F24 /* WRotateShare */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3AAC54B82F54FAD200027F24 /* Wrotate */ = {
@@ -16,10 +55,25 @@
 			path = Wrotate;
 			sourceTree = "<group>";
 		};
+		3AAC55052F54FAD200027F24 /* WRotateShare */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				3AAC550D2F54FAD200027F24 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			path = WRotateShare;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		3AAC54B32F54FAD200027F24 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3AAC55062F54FAD200027F24 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +87,7 @@
 			isa = PBXGroup;
 			children = (
 				3AAC54B82F54FAD200027F24 /* Wrotate */,
+				3AAC55052F54FAD200027F24 /* WRotateShare */,
 				3AAC54B72F54FAD200027F24 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +96,7 @@
 			isa = PBXGroup;
 			children = (
 				3AAC54B62F54FAD200027F24 /* Wrotate.app */,
+				3AAC55002F54FAD200027F24 /* WRotateShare.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -55,10 +111,12 @@
 				3AAC54B22F54FAD200027F24 /* Sources */,
 				3AAC54B32F54FAD200027F24 /* Frameworks */,
 				3AAC54B42F54FAD200027F24 /* Resources */,
+				3AAC55032F54FAD200027F24 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				3AAC55072F54FAD200027F24 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				3AAC54B82F54FAD200027F24 /* Wrotate */,
@@ -69,6 +127,26 @@
 			productName = Wrotate;
 			productReference = 3AAC54B62F54FAD200027F24 /* Wrotate.app */;
 			productType = "com.apple.product-type.application";
+		};
+		3AAC55042F54FAD200027F24 /* WRotateShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3AAC55082F54FAD200027F24 /* Build configuration list for PBXNativeTarget "WRotateShare" */;
+			buildPhases = (
+				3AAC55092F54FAD200027F24 /* Sources */,
+				3AAC55062F54FAD200027F24 /* Frameworks */,
+				3AAC550A2F54FAD200027F24 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				3AAC55052F54FAD200027F24 /* WRotateShare */,
+			);
+			name = WRotateShare;
+			productName = WRotateShare;
+			productReference = 3AAC55002F54FAD200027F24 /* WRotateShare.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -81,6 +159,9 @@
 				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					3AAC54B52F54FAD200027F24 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					3AAC55042F54FAD200027F24 = {
 						CreatedOnToolsVersion = 26.3;
 					};
 				};
@@ -100,12 +181,20 @@
 			projectRoot = "";
 			targets = (
 				3AAC54B52F54FAD200027F24 /* Wrotate */,
+				3AAC55042F54FAD200027F24 /* WRotateShare */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		3AAC54B42F54FAD200027F24 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3AAC550A2F54FAD200027F24 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +211,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3AAC55092F54FAD200027F24 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		3AAC55072F54FAD200027F24 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3AAC55042F54FAD200027F24 /* WRotateShare */;
+			targetProxy = 3AAC55022F54FAD200027F24 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		3AAC54BF2F54FAD400027F24 /* Debug */ = {
@@ -270,7 +374,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.wrotate.Wrotate;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -307,7 +411,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.wrotate.Wrotate;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -315,6 +419,62 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		3AAC550B2F54FAD200027F24 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = WRotateShare/WRotateShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = JSNK92LRFD;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WRotateShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = WRotateShare;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.8;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wrotate.Wrotate.WRotateShare;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		3AAC550C2F54FAD200027F24 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = WRotateShare/WRotateShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = JSNK92LRFD;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WRotateShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = WRotateShare;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.8;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wrotate.Wrotate.WRotateShare;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -337,6 +497,15 @@
 			buildConfigurations = (
 				3AAC54C22F54FAD400027F24 /* Debug */,
 				3AAC54C32F54FAD400027F24 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3AAC55082F54FAD200027F24 /* Build configuration list for PBXNativeTarget "WRotateShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3AAC550B2F54FAD200027F24 /* Debug */,
+				3AAC550C2F54FAD200027F24 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
