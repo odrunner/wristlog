@@ -3411,9 +3411,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <!-- Status bar — bottom of instrument -->
         <div style="display:flex;align-items:center;justify-content:center;padding:.45rem .75rem;border-top:1px solid rgba(74,222,128,.08);">
           <span id="msr-status-text" aria-live="polite" style="font-size:.7rem;color:rgba(74,222,128,.5);letter-spacing:.03em;">&nbsp;</span>
-          <div id="msr-advanced-banner" style="display:none;margin-top:.5rem;padding:.5rem .6rem;border-radius:8px;background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.2);font-size:.7rem;color:rgba(234,179,8,.8);line-height:1.4;">
-            Having trouble? Try <a href="#" onclick="openMsrSettings();return false" style="color:#4ade80;text-decoration:underline;">Advanced Settings</a> or use the <a href="#" onclick="tgQuickApplyNoisy();return false" style="color:#4ade80;font-weight:600;text-decoration:underline;">Noisy Environment</a> preset.
-          </div>
+          <div id="msr-troubleshoot" style="display:none;margin-top:.5rem;padding:.5rem .6rem;border-radius:8px;background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.2);font-size:.7rem;color:rgba(234,179,8,.8);line-height:1.5;"></div>
         </div>
       </div>
       <!-- Record / Stop button with progress ring -->
@@ -5897,7 +5895,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.20.47';
+const APP_VERSION = '29.13.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21691,27 +21689,52 @@ function tgResetDefaults() {
   tgSelectPreset('default');
 }
 
-function tgShowFailureBanner() {
-  if (!featureFlag('tg_advanced_settings')) return;
-  if (_msrConsecutiveFailures >= 2 && !_msrShown.advanced) {
-    const banner = document.getElementById('msr-advanced-banner');
-    if (banner) banner.style.display = 'block';
+function showTroubleshootTips() {
+  if (_msrConsecutiveFailures < 2) return;
+  const el = document.getElementById('msr-troubleshoot');
+  if (!el) return;
+  const tips = [];
+  const bphVal = parseInt(document.getElementById('msr-bph-select')?.value) || 0;
+  const avgNoise = _msrNoiseSamples.length >= 3 ? _msrNoiseSamples.reduce((a, b) => a + b, 0) / _msrNoiseSamples.length : 0;
+  const noisy = avgNoise > 0.08;
+  const isManualBph = bphVal > 0;
+
+  if (isManualBph) {
+    tips.push('Try <b>Auto</b> BPH — your watch may use a different frequency than ' + bphVal.toLocaleString());
   }
+  if (noisy) {
+    const level = avgNoise > 0.15 ? 'very high' : 'high';
+    tips.push('Background noise is <b>' + level + '</b> — move somewhere quieter');
+  } else {
+    tips.push('Place the watch <b>directly on the microphone</b>, crown side down. Remove any phone case');
+  }
+
+  if (featureFlag('tg_advanced_settings') && _msrConsecutiveFailures >= 3) {
+    const preset = noisy ? 'noisy' : 'weak';
+    tips.push('Try <a href="#" onclick="tgQuickApplyPreset(\'' + preset + '\');return false" style="color:#4ade80;text-decoration:underline;">Advanced Settings (' + preset.charAt(0).toUpperCase() + preset.slice(1) + ' preset)</a>');
+  }
+
+  el.innerHTML = tips.map(t => '• ' + t).join('<br>');
+  el.style.display = '';
 }
 
-function tgHideFailureBanner() {
-  const banner = document.getElementById('msr-advanced-banner');
-  if (banner) banner.style.display = 'none';
+function hideTroubleshootTips() {
+  const el = document.getElementById('msr-troubleshoot');
+  if (el) el.style.display = 'none';
+}
+
+function tgQuickApplyPreset(preset) {
+  tgSelectPreset(preset);
+  toast(preset.charAt(0).toUpperCase() + preset.slice(1) + ' preset applied');
+  hideTroubleshootTips();
 }
 
 function tgQuickApplyNoisy() {
-  tgSelectPreset('noisy');
-  toast('Noisy Environment preset applied');
-  tgHideFailureBanner();
-  _msrShown.advanced = true;
+  tgQuickApplyPreset('noisy');
 }
 
 function _resetMsrState(bph) {
+  hideTroubleshootTips();
   _msrScatterData = []; _msrLastCumDev = 0;
   _msrLastDetectTime = 0;
   _msrPhase = 'acquiring';
@@ -22146,7 +22169,7 @@ function toggleMsrListen() {
       const _tgSettings = tgLoadSettings();
       if (_tgSettings.wasReset) toast('Measurement engine updated — settings reset');
       tgApplySettingsToInputs(_tgSettings.values);
-      tgHideFailureBanner();
+      hideTroubleshootTips();
     }
     setTimeout(() => sendMsrTuning(), 200);
     startTuningPoll();
@@ -22236,7 +22259,7 @@ function stopMsrListen(reason) {
   );
   if (stopReason === 'no_ticks' || stopReason === 'no_ticks_after_recal' || stopReason === 'duration_timeout') {
     _msrConsecutiveFailures++;
-    setTimeout(() => tgShowFailureBanner(), 500);
+    setTimeout(() => showTroubleshootTips(), 500);
   } else if (stopReason === 'converged') {
     _msrConsecutiveFailures = 0;
   }
