@@ -4331,14 +4331,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:400px;">
     <div class="modal-title" id="edit-post-modal-title">Edit Post</div>
     <div class="form-group">
-      <div id="ep-photo-area" class="log-photo-area" onclick="document.getElementById('ep-photo-input').click()">
-        <div id="ep-photo-placeholder" class="log-photo-placeholder" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add a photo (optional)</div>
-        <img id="ep-photo-preview" class="log-photo-preview" style="display:none;" alt="">
-        <button type="button" id="ep-photo-clear" class="log-photo-clear" style="display:none;"
-          onclick="event.stopPropagation();clearEditPostPhoto()">✕</button>
+      <div id="ep-photo-area">
+        <div id="ep-photo-placeholder" class="log-photo-placeholder" style="display:inline-flex;align-items:center;gap:.4rem;cursor:pointer;" onclick="document.getElementById('ep-photo-input').click()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Add photos (optional)</div>
+        <div id="ep-thumbstrip" class="np-thumbstrip" style="display:none;"></div>
+        <div id="ep-photo-counter" class="np-photo-counter" style="display:none;"></div>
       </div>
-      <input type="file" id="ep-photo-input" accept="image/*"
-        style="display:none" onchange="handleEditPostPhoto(this)">
+      <input type="file" id="ep-photo-input" accept="image/*" multiple
+        style="display:none" onchange="handleEditPostPhotos(this)">
     </div>
     <div class="form-group" id="ep-watch-field">
       <label style="font-size:.78rem;color:var(--muted);">Tagged Watch</label>
@@ -5883,7 +5882,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.16.49';
+const APP_VERSION = '28.17.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9727,15 +9726,15 @@ async function saveFeedCaption(logId) {
 
 // ── Edit post modal ────────────────────────────────────────────────────────
 let editPostLogId   = null;
-let editPostNewPhoto = null; // null=unchanged, 'REMOVE'=clear, objectURL=new photo
-let editPostNewFile  = null; // raw File for deferred upload
-let editPostWatchId  = null; // null=unchanged, 'REMOVE'=clear, watchId=new selection
+let editPostWatchId  = null;
+let epExistingUrls = [];
+let epFiles = [];
+let epPreviews = [];
 
 function openEditPost(logId) {
   const fi = feedItems.find(i => i.id === logId);
   if (!fi) return;
   editPostLogId    = logId;
-  editPostNewPhoto = null;
   editPostWatchId  = null;
   document.getElementById('ep-body').value = fi.notes || '';
   document.getElementById('ep-vis-chips').innerHTML = visChipsHtml('ep-vis-chips', fi.visibility || 'public');
@@ -9745,36 +9744,97 @@ function openEditPost(logId) {
   renderClubChips('ep-club-chips');
   if (fi.club_id) selClubChip('ep-club-chips', fi.club_id);
   // Populate photo
-  if (fi.photo_url) {
-    document.getElementById('ep-photo-preview').src = fi.photo_url;
-    document.getElementById('ep-photo-preview').style.display = 'block';
-    document.getElementById('ep-photo-placeholder').style.display = 'none';
-    document.getElementById('ep-photo-clear').style.display = '';
-    document.getElementById('ep-photo-area').classList.add('has-photo');
-  } else {
-    _resetEpPhoto();
-  }
+  const existingUrls = parsePhotoUrl(fi.photo_url);
+  epExistingUrls = [...existingUrls];
+  epFiles = [...existingUrls];
+  epPreviews = [...existingUrls];
+  renderEpThumbstrip();
   renderEpWatchDisplay();
   document.getElementById('edit-post-modal').classList.remove('hidden');
 }
 
 function closeEditPost() {
   document.getElementById('edit-post-modal').classList.add('hidden');
-  if (editPostNewPhoto && editPostNewPhoto !== 'REMOVE') URL.revokeObjectURL(editPostNewPhoto);
-  editPostLogId = null; editPostNewPhoto = null; editPostNewFile = null; editPostWatchId = null;
+  clearEditPostPhoto();
+  editPostLogId = null; editPostWatchId = null;
 }
 
-function _resetEpPhoto() {
-  document.getElementById('ep-photo-preview').style.display = 'none';
-  document.getElementById('ep-photo-preview').src = '';
-  document.getElementById('ep-photo-placeholder').style.display = '';
-  document.getElementById('ep-photo-clear').style.display = 'none';
-  document.getElementById('ep-photo-area').classList.remove('has-photo');
+function renderEpThumbstrip() {
+  const strip = document.getElementById('ep-thumbstrip');
+  const counter = document.getElementById('ep-photo-counter');
+  const placeholder = document.getElementById('ep-photo-placeholder');
+  if (!epFiles.length) {
+    strip.style.display = 'none';
+    counter.style.display = 'none';
+    placeholder.style.display = '';
+    return;
+  }
+  placeholder.style.display = 'none';
+  strip.style.display = '';
+  counter.style.display = '';
+  counter.textContent = epFiles.length + '/6 photos';
+  let html = '';
+  for (let i = 0; i < epPreviews.length; i++) {
+    html += `<div class="np-thumb${i === 0 ? ' hero' : ''}" draggable="true"
+      ondragstart="epThumbDragStart(event,${i})" ondragover="npThumbDragOver(event)"
+      ondrop="epThumbDrop(event,${i})" ondragend="npThumbDragEnd(event)">
+      <img src="${escHtml(epPreviews[i])}" alt="">
+      <button type="button" class="np-thumb-remove" onclick="removeEpPhoto(${i})">✕</button>
+    </div>`;
+  }
+  if (epFiles.length < 6) {
+    html += `<button type="button" class="np-thumb-add" onclick="document.getElementById('ep-photo-input').click()">+</button>`;
+  }
+  strip.innerHTML = html;
+}
+
+function handleEditPostPhotos(input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  const slots = 6 - epFiles.length;
+  const accepted = [];
+  for (const f of files) {
+    if (accepted.length >= slots) break;
+    if (validateImageFile(f)) accepted.push(f);
+  }
+  if (files.length > slots) toast('Maximum 6 photos per post', 'error');
+  if (!accepted.length) { input.value = ''; return; }
+  for (const f of accepted) {
+    epFiles.push(f);
+    epPreviews.push(URL.createObjectURL(f));
+  }
+  input.value = '';
+  renderEpThumbstrip();
+}
+
+function removeEpPhoto(idx) {
+  if (typeof epPreviews[idx] === 'string' && !epExistingUrls.includes(epPreviews[idx])) {
+    URL.revokeObjectURL(epPreviews[idx]);
+  }
+  epFiles.splice(idx, 1);
+  epPreviews.splice(idx, 1);
+  renderEpThumbstrip();
 }
 
 function clearEditPostPhoto() {
-  editPostNewPhoto = 'REMOVE';
-  _resetEpPhoto();
+  epPreviews.forEach(u => { if (!epExistingUrls.includes(u)) URL.revokeObjectURL(u); });
+  epFiles = [];
+  epPreviews = [];
+  renderEpThumbstrip();
+}
+
+let _epDragIdx = -1;
+function epThumbDragStart(e, idx) { _epDragIdx = idx; e.currentTarget.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; }
+function epThumbDrop(e, targetIdx) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (_epDragIdx < 0 || _epDragIdx === targetIdx) return;
+  const [file] = epFiles.splice(_epDragIdx, 1);
+  const [preview] = epPreviews.splice(_epDragIdx, 1);
+  epFiles.splice(targetIdx, 0, file);
+  epPreviews.splice(targetIdx, 0, preview);
+  _epDragIdx = -1;
+  renderEpThumbstrip();
 }
 
 // ── Edit post watch selector ──────────────────────────────────────────────
@@ -9857,18 +9917,6 @@ function removeEpWatch() {
   renderEpWatchDisplay();
 }
 
-function handleEditPostPhoto(input) {
-  const file = input.files[0]; if (!file) return;
-  if (!validateImageFile(file)) { input.value = ''; return; }
-  input.value = '';
-  editPostNewFile  = file;
-  editPostNewPhoto = URL.createObjectURL(file);
-  document.getElementById('ep-photo-preview').src = editPostNewPhoto;
-  document.getElementById('ep-photo-preview').style.display = 'block';
-  document.getElementById('ep-photo-placeholder').style.display = 'none';
-  document.getElementById('ep-photo-clear').style.display = '';
-  document.getElementById('ep-photo-area').classList.add('has-photo');
-}
 
 async function saveEditPost() {
   if (demoGuard()) return;
@@ -9881,22 +9929,34 @@ async function saveEditPost() {
   const log = logs.find(l => l.id === editPostLogId);
   const newNotes = (document.getElementById('ep-body').value || '').trim();
   const vis = getVisChip('ep-vis-chips');
-  const oldPhoto = fi?.photo_url ?? null;
-  // Resolve final photo
-  let finalPhoto = oldPhoto;
-  if (editPostNewPhoto === 'REMOVE') {
-    finalPhoto = null;
-  } else if (editPostNewFile && currentUser) {
-    try {
-      finalPhoto = await uploadImage(editPostNewFile, `logs/${currentUser.id}/${editPostLogId}.jpg`);
-    } catch(e) {
-      toast('Photo upload failed — ' + e.message, 'error'); return;
+  // Build final photo_url from current editor state
+  let finalPhotoUrl = null;
+  if (epFiles.length) {
+    const urls = [];
+    let nextSuffix = 0;
+    for (const item of epFiles) {
+      if (typeof item === 'string') {
+        urls.push(item);
+      } else {
+        while (epExistingUrls.some(u => storagePathFrom(u)?.endsWith(`_${nextSuffix}.jpg`))) nextSuffix++;
+        try {
+          const url = await uploadImage(item, `logs/${currentUser.id}/${editPostLogId}_${nextSuffix}.jpg`);
+          urls.push(url);
+        } catch(e) {
+          toast('Photo upload failed — ' + e.message, 'error'); return;
+        }
+        nextSuffix++;
+      }
     }
+    finalPhotoUrl = urls.length === 1 ? urls[0] : JSON.stringify(urls);
   }
-  // Cleanup old storage file if replaced or removed
-  if (oldPhoto && oldPhoto !== finalPhoto) {
-    const oldPath = storagePathFrom(oldPhoto);
-    if (oldPath) deleteStorageFile(oldPath);
+  const finalUrls = parsePhotoUrl(finalPhotoUrl);
+  // Delete removed images from storage
+  for (const oldUrl of epExistingUrls) {
+    if (!finalUrls.includes(oldUrl)) {
+      const p = storagePathFrom(oldUrl);
+      if (p) deleteStorageFile(p);
+    }
   }
   const clubId = getSelectedClubId('ep-club-chips') || null;
   // Resolve final watch_id
@@ -9908,20 +9968,20 @@ async function saveEditPost() {
   const oldFi = fi ? { notes: fi.notes, photo_url: fi.photo_url, visibility: fi.visibility, club_id: fi.club_id, watch_id: fi.watch_id, watch: fi.watch } : null;
   const oldLog = log ? { notes: log.notes, photoUrl: log.photoUrl, visibility: log.visibility, clubId: log.clubId, watchId: log.watchId } : null;
   // Update local state
-  if (fi)  { fi.notes = newNotes || null; fi.photo_url = finalPhoto; fi.visibility = vis; fi.club_id = clubId; fi.watch_id = finalWatchId; fi.watch = finalWatchId ? (watches.find(w => w.id === finalWatchId) || null) : null; }
-  if (log) { log.notes = newNotes || null; log.photoUrl = finalPhoto; log.visibility = vis; log.clubId = clubId; log.watchId = finalWatchId; save(); }
+  if (fi)  { fi.notes = newNotes || null; fi.photo_url = finalPhotoUrl; fi.visibility = vis; fi.club_id = clubId; fi.watch_id = finalWatchId; fi.watch = finalWatchId ? (watches.find(w => w.id === finalWatchId) || null) : null; }
+  if (log) { log.notes = newNotes || null; log.photoUrl = finalPhotoUrl; log.visibility = vis; log.clubId = clubId; log.watchId = finalWatchId; save(); }
   // Persist to Supabase
   if (currentUser) {
     const { error } = await db.from('logs')
-      .update({ notes: newNotes || null, photo_url: finalPhoto, visibility: vis, club_id: clubId, watch_id: finalWatchId })
+      .update({ notes: newNotes || null, photo_url: finalPhotoUrl, visibility: vis, club_id: clubId, watch_id: finalWatchId })
       .eq('id', editPostLogId).eq('user_id', currentUser.id);
     if (error) {
       // Rollback local state
       if (fi && oldFi) Object.assign(fi, oldFi);
       if (log && oldLog) { Object.assign(log, oldLog); save(); }
       refreshFeedCard(editPostLogId);
-      // Cleanup orphaned storage file if we uploaded a new one
-      if (finalPhoto && finalPhoto !== oldPhoto) { const _p = storagePathFrom(finalPhoto); if (_p) deleteStorageFile(_p); }
+      // Cleanup orphaned uploaded files if we uploaded any new ones
+      for (const url of finalUrls) { if (!epExistingUrls.includes(url)) { const _p = storagePathFrom(url); if (_p) deleteStorageFile(_p); } }
       toast('Save failed — ' + error.message, 'error'); return;
     }
     // Send mention notifications for NEW @usernames added in the edit
