@@ -5903,7 +5903,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.11.58';
+const APP_VERSION = '30.12.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9877,10 +9877,10 @@ function renderEpThumbstrip() {
     const existingIsVideo = typeof item === 'string' && isVideoUrl(item);
     const newFileIsVideo = item && typeof item !== 'string' && (item.type?.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(item.name || ''));
     const isVideo = existingIsVideo || newFileIsVideo;
-    const hasPoster = !!epPosters[i] || existingIsVideo; // existing videos use stored poster URL
-    const media = (isVideo && !hasPoster)
+    const hasPreview = !!epPreviews[i];
+    const media = (isVideo && !hasPreview)
       ? `<div class="np-thumb-video-placeholder"></div>`
-      : `<img src="${escHtml(epPreviews[i])}" alt="">`;
+      : `<img src="${escHtml(epPreviews[i])}" alt="" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=&quot;np-thumb-video-placeholder&quot;></div>')">`;
     html += `<div class="np-thumb${i === 0 ? ' hero' : ''}" draggable="true"
       ondragstart="epThumbDragStart(event,${i})" ondragover="npThumbDragOver(event)"
       ondrop="epThumbDrop(event,${i})" ondragend="npThumbDragEnd(event)">
@@ -9908,7 +9908,7 @@ async function handleEditPostPhotos(input) {
     const isVideo = f.type?.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(f.name || '');
     if (isVideo) {
       if (!validateVideoFile(f)) continue;
-      const { posterBlob: poster, duration } = await extractPosterBlob(f);
+      const { posterBlob: poster, posterDataUrl, duration } = await extractPosterBlob(f);
       // Only enforce duration cap if we could actually read it. If decode failed,
       // we trust the user and rely on the 30 MB size cap as a backstop.
       if (duration != null && duration > 7.5) {
@@ -9916,9 +9916,9 @@ async function handleEditPostPhotos(input) {
         continue;
       }
       epFiles.push(f);
-      epPosters.push(poster); // may be null if browser couldn't decode
-      // If we got a poster, use it. Otherwise show the video file directly in the strip via <video>.
-      epPreviews.push(poster ? URL.createObjectURL(poster) : URL.createObjectURL(f));
+      epPosters.push(poster); // may be null — controls whether we upload a _poster.jpg
+      // Data URL is more reliable than blob: URL in iOS Safari / WKWebView <img>.
+      epPreviews.push(posterDataUrl || '');
     } else {
       if (!validateImageFile(f)) continue;
       epFiles.push(f);
@@ -10245,14 +10245,16 @@ async function handleNewPostPhotos(input) {
     const isVideo = f.type?.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(f.name || '');
     if (isVideo) {
       if (!validateVideoFile(f)) continue;
-      const { posterBlob: poster, duration } = await extractPosterBlob(f);
+      const { posterBlob: poster, posterDataUrl, duration } = await extractPosterBlob(f);
       if (duration != null && duration > 7.5) {
         toast('Videos must be 7 seconds or less', 'error');
         continue;
       }
       newPostFiles.push(f);
-      newPostPosters.push(poster); // may be null
-      newPostPreviews.push(poster ? URL.createObjectURL(poster) : URL.createObjectURL(f));
+      newPostPosters.push(poster); // may be null — controls whether we upload a _poster.jpg
+      // Always use the data URL for the preview when we have one — it renders
+      // reliably across iOS Safari / WKWebView (blob: URLs sometimes don't).
+      newPostPreviews.push(posterDataUrl || '');
     } else {
       if (!validateImageFile(f)) continue;
       newPostFiles.push(f);
@@ -10293,8 +10295,8 @@ function renderNpThumbstrip() {
   for (let i = 0; i < newPostPreviews.length; i++) {
     const f = newPostFiles[i];
     const fileIsVideo = f && (f.type?.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(f.name || ''));
-    const hasPoster = !!newPostPosters[i];
-    const media = (fileIsVideo && !hasPoster)
+    const hasPreview = !!newPostPreviews[i];
+    const media = (fileIsVideo && !hasPreview)
       ? `<div class="np-thumb-video-placeholder"></div>`
       : `<img src="${escHtml(newPostPreviews[i])}" alt="">`;
     html += `<div class="np-thumb${i === 0 ? ' hero' : ''}" draggable="true"
@@ -17770,18 +17772,18 @@ function extractPosterBlob(file) {
     let settled = false;
     let durationKnown = null;
     const cleanup = () => { try { URL.revokeObjectURL(objUrl); } catch (_) {} video.remove(); };
-    const finish = (posterBlob) => {
+    const finish = (posterBlob, posterDataUrl) => {
       if (settled) return; settled = true;
       clearTimeout(timer);
       cleanup();
-      resolve({ posterBlob, duration: durationKnown });
+      resolve({ posterBlob, posterDataUrl, duration: durationKnown });
     };
-    const timer = setTimeout(() => finish(null), 15000);
+    const timer = setTimeout(() => finish(null, null), 15000);
     video.onloadedmetadata = () => {
       if (isFinite(video.duration) && video.duration > 0) durationKnown = video.duration;
       setTimeout(() => {
         try { video.currentTime = Math.min((durationKnown || 1) * 0.5, Math.max(0, (durationKnown || 1) - 0.1)); }
-        catch (_) { finish(null); }
+        catch (_) { finish(null, null); }
       }, 50);
     };
     video.onseeked = () => {
@@ -17790,10 +17792,15 @@ function extractPosterBlob(file) {
         canvas.width = video.videoWidth || 800;
         canvas.height = video.videoHeight || 600;
         canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob(b => finish(b || null), 'image/jpeg', 0.95);
-      } catch (_) { finish(null); }
+        // dataURL for reliable preview (iOS Safari renders data: URLs in <img> consistently;
+        // blob: URLs in <img> can fail to render in WKWebView contexts);
+        // blob for efficient upload to storage.
+        let dataUrl = null;
+        try { dataUrl = canvas.toDataURL('image/jpeg', 0.85); } catch (_) {}
+        canvas.toBlob(b => finish(b || null, dataUrl), 'image/jpeg', 0.95);
+      } catch (_) { finish(null, null); }
     };
-    video.onerror = () => finish(null);
+    video.onerror = () => finish(null, null);
     video.src = objUrl;
   });
 }
