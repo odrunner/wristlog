@@ -5903,7 +5903,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.09.24';
+const APP_VERSION = '30.09.26';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9749,8 +9749,9 @@ async function saveFeedCaption(logId) {
 let editPostLogId   = null;
 let editPostWatchId  = null;
 let epExistingUrls = [];
-let epFiles = [];
-let epPreviews = [];
+let epFiles = [];      // mix of URL strings (existing) and File objects (new)
+let epPreviews = [];   // URL strings (for both existing photos and existing video posters) or objectURLs
+let epPosters = [];    // null for any entry that is an existing URL or a new photo; Blob for new videos
 
 function openEditPost(logId) {
   const fi = feedItems.find(i => i.id === logId);
@@ -9768,7 +9769,8 @@ function openEditPost(logId) {
   const existingUrls = parsePhotoUrl(fi.photo_url);
   epExistingUrls = [...existingUrls];
   epFiles = [...existingUrls];
-  epPreviews = [...existingUrls];
+  epPreviews = existingUrls.map(u => isVideoUrl(u) ? posterUrlFor(u) : u);
+  epPosters = existingUrls.map(() => null);
   renderEpThumbstrip();
   renderEpWatchDisplay();
   document.getElementById('edit-post-modal').classList.remove('hidden');
@@ -9799,10 +9801,12 @@ function renderEpThumbstrip() {
   counter.textContent = epFiles.length + '/6 photos';
   let html = '';
   for (let i = 0; i < epPreviews.length; i++) {
+    const isVideo = !!epPosters[i] || (typeof epFiles[i] === 'string' && isVideoUrl(epFiles[i]));
     html += `<div class="np-thumb${i === 0 ? ' hero' : ''}" draggable="true"
       ondragstart="epThumbDragStart(event,${i})" ondragover="npThumbDragOver(event)"
       ondrop="epThumbDrop(event,${i})" ondragend="npThumbDragEnd(event)">
       <img src="${escHtml(epPreviews[i])}" alt="">
+      ${isVideo ? '<div class="np-thumb-video-badge">▶</div>' : ''}
       <button type="button" class="np-thumb-remove" onclick="removeEpPhoto(${i})">✕</button>
     </div>`;
   }
@@ -9812,39 +9816,61 @@ function renderEpThumbstrip() {
   strip.innerHTML = html;
 }
 
-function handleEditPostPhotos(input) {
+async function handleEditPostPhotos(input) {
   const files = Array.from(input.files);
   if (!files.length) return;
-  const slots = 6 - epFiles.length;
-  const accepted = [];
-  for (const f of files) {
-    if (accepted.length >= slots) break;
-    if (validateImageFile(f)) accepted.push(f);
-  }
-  if (files.length > slots) toast('Maximum 6 photos per post', 'error');
-  if (!accepted.length) { input.value = ''; return; }
-  for (const f of accepted) {
-    epFiles.push(f);
-    epPreviews.push(URL.createObjectURL(f));
-  }
   input.value = '';
+  const slots = 6 - epFiles.length;
+  if (files.length > slots) toast('Maximum 6 photos and videos per post', 'error');
+  const limited = files.slice(0, slots);
+  for (const f of limited) {
+    const isVideo = f.type?.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(f.name || '');
+    if (isVideo) {
+      if (!validateVideoFile(f)) continue;
+      let poster, duration;
+      try {
+        ({ posterBlob: poster, duration } = await extractPosterBlob(f));
+      } catch (e) {
+        toast('Could not read this video', 'error');
+        continue;
+      }
+      if (duration > 7.5) {
+        toast('Videos must be 7 seconds or less', 'error');
+        continue;
+      }
+      epFiles.push(f);
+      epPosters.push(poster);
+      epPreviews.push(URL.createObjectURL(poster));
+    } else {
+      if (!validateImageFile(f)) continue;
+      epFiles.push(f);
+      epPosters.push(null);
+      epPreviews.push(URL.createObjectURL(f));
+    }
+  }
   renderEpThumbstrip();
 }
 
 function removeEpPhoto(idx) {
-  if (typeof epPreviews[idx] === 'string' && !epExistingUrls.includes(epPreviews[idx])) {
+  if (typeof epPreviews[idx] === 'string' && !epExistingUrls.includes(epPreviews[idx]) && !epExistingUrls.some(u => posterUrlFor(u) === epPreviews[idx])) {
     URL.revokeObjectURL(epPreviews[idx]);
   }
   epFiles.splice(idx, 1);
   epPreviews.splice(idx, 1);
+  epPosters.splice(idx, 1);
   renderEpThumbstrip();
 }
 
 
 function clearEditPostPhoto() {
-  epPreviews.forEach(u => { if (!epExistingUrls.includes(u)) URL.revokeObjectURL(u); });
+  epPreviews.forEach((u, i) => {
+    if (epPosters[i] || (typeof u === 'string' && !epExistingUrls.includes(u) && !epExistingUrls.some(eu => posterUrlFor(eu) === u))) {
+      URL.revokeObjectURL(u);
+    }
+  });
   epFiles = [];
   epPreviews = [];
+  epPosters = [];
   renderEpThumbstrip();
 }
 
@@ -9856,8 +9882,10 @@ function epThumbDrop(e, targetIdx) {
   if (_epDragIdx < 0 || _epDragIdx === targetIdx) return;
   const [file] = epFiles.splice(_epDragIdx, 1);
   const [preview] = epPreviews.splice(_epDragIdx, 1);
+  const [poster] = epPosters.splice(_epDragIdx, 1);
   epFiles.splice(targetIdx, 0, file);
   epPreviews.splice(targetIdx, 0, preview);
+  epPosters.splice(targetIdx, 0, poster);
   _epDragIdx = -1;
   renderEpThumbstrip();
 }
