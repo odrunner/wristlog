@@ -5903,7 +5903,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.09.41';
+const APP_VERSION = '30.09.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9850,11 +9850,18 @@ function renderEpThumbstrip() {
   counter.textContent = epFiles.length + '/6 photos';
   let html = '';
   for (let i = 0; i < epPreviews.length; i++) {
-    const isVideo = !!epPosters[i] || (typeof epFiles[i] === 'string' && isVideoUrl(epFiles[i]));
+    const item = epFiles[i];
+    const existingIsVideo = typeof item === 'string' && isVideoUrl(item);
+    const newFileIsVideo = item && typeof item !== 'string' && (item.type?.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(item.name || ''));
+    const isVideo = existingIsVideo || newFileIsVideo;
+    const hasPoster = !!epPosters[i] || existingIsVideo; // existing videos use stored poster URL
+    const media = (isVideo && !hasPoster)
+      ? `<video src="${escHtml(epPreviews[i])}" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;"></video>`
+      : `<img src="${escHtml(epPreviews[i])}" alt="">`;
     html += `<div class="np-thumb${i === 0 ? ' hero' : ''}" draggable="true"
       ondragstart="epThumbDragStart(event,${i})" ondragover="npThumbDragOver(event)"
       ondrop="epThumbDrop(event,${i})" ondragend="npThumbDragEnd(event)">
-      <img src="${escHtml(epPreviews[i])}" alt="">
+      ${media}
       ${isVideo ? '<div class="np-thumb-video-badge">▶</div>' : ''}
       <button type="button" class="np-thumb-remove" onclick="removeEpPhoto(${i})">✕</button>
     </div>`;
@@ -9876,20 +9883,17 @@ async function handleEditPostPhotos(input) {
     const isVideo = f.type?.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(f.name || '');
     if (isVideo) {
       if (!validateVideoFile(f)) continue;
-      let poster, duration;
-      try {
-        ({ posterBlob: poster, duration } = await extractPosterBlob(f));
-      } catch (e) {
-        toast(e.message || 'Could not read this video', 'error');
-        continue;
-      }
-      if (duration > 7.5) {
+      const { posterBlob: poster, duration } = await extractPosterBlob(f);
+      // Only enforce duration cap if we could actually read it. If decode failed,
+      // we trust the user and rely on the 30 MB size cap as a backstop.
+      if (duration != null && duration > 7.5) {
         toast('Videos must be 7 seconds or less', 'error');
         continue;
       }
       epFiles.push(f);
-      epPosters.push(poster);
-      epPreviews.push(URL.createObjectURL(poster));
+      epPosters.push(poster); // may be null if browser couldn't decode
+      // If we got a poster, use it. Otherwise show the video file directly in the strip via <video>.
+      epPreviews.push(poster ? URL.createObjectURL(poster) : URL.createObjectURL(f));
     } else {
       if (!validateImageFile(f)) continue;
       epFiles.push(f);
@@ -10055,13 +10059,15 @@ async function saveEditPost() {
       if (typeof item === 'string') {
         urls.push(item);
       } else {
-        const isVideo = !!epPosters[idx];
+        const isVideo = item.type?.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(item.name || '');
         const suffix = nextFreeSuffix();
         try {
           if (isVideo) {
             const ext = (item.name?.split('.').pop()?.toLowerCase() === 'webm') ? 'webm' : 'mp4';
             const videoUrl = await uploadVideo(item, `logs/${currentUser.id}/${editPostLogId}_${suffix}.${ext}`);
-            await uploadImage(epPosters[idx], `logs/${currentUser.id}/${editPostLogId}_${suffix}_poster.jpg`);
+            if (epPosters[idx]) {
+              await uploadImage(epPosters[idx], `logs/${currentUser.id}/${editPostLogId}_${suffix}_poster.jpg`);
+            }
             urls.push(videoUrl);
           } else {
             const url = await uploadImage(item, `logs/${currentUser.id}/${editPostLogId}_${suffix}.jpg`);
@@ -10215,20 +10221,14 @@ async function handleNewPostPhotos(input) {
     const isVideo = f.type?.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(f.name || '');
     if (isVideo) {
       if (!validateVideoFile(f)) continue;
-      let poster, duration;
-      try {
-        ({ posterBlob: poster, duration } = await extractPosterBlob(f));
-      } catch (e) {
-        toast(e.message || 'Could not read this video', 'error');
-        continue;
-      }
-      if (duration > 7.5) {
+      const { posterBlob: poster, duration } = await extractPosterBlob(f);
+      if (duration != null && duration > 7.5) {
         toast('Videos must be 7 seconds or less', 'error');
         continue;
       }
       newPostFiles.push(f);
-      newPostPosters.push(poster);
-      newPostPreviews.push(URL.createObjectURL(poster));
+      newPostPosters.push(poster); // may be null
+      newPostPreviews.push(poster ? URL.createObjectURL(poster) : URL.createObjectURL(f));
     } else {
       if (!validateImageFile(f)) continue;
       newPostFiles.push(f);
@@ -10239,8 +10239,11 @@ async function handleNewPostPhotos(input) {
   renderNpThumbstrip();
   if (wasEmpty && newPostFiles.length) {
     const firstFile = newPostFiles[0];
-    const firstIsVideo = !!newPostPosters[0];
-    npIdentifyWatch(firstIsVideo ? newPostPosters[0] : firstFile);
+    // Identify from poster if first item is a video and we got a poster;
+    // otherwise from the file itself (works for photos and for videos when the
+    // backend can read the raw file).
+    const firstIsVideoWithPoster = !!newPostPosters[0];
+    npIdentifyWatch(firstIsVideoWithPoster ? newPostPosters[0] : firstFile);
   }
 }
 
@@ -10264,12 +10267,17 @@ function renderNpThumbstrip() {
   counter.textContent = newPostFiles.length + '/6 photos';
   let html = '';
   for (let i = 0; i < newPostPreviews.length; i++) {
-    const isVideo = !!newPostPosters[i];
+    const f = newPostFiles[i];
+    const fileIsVideo = f && (f.type?.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(f.name || ''));
+    const hasPoster = !!newPostPosters[i];
+    const media = (fileIsVideo && !hasPoster)
+      ? `<video src="${escHtml(newPostPreviews[i])}" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;"></video>`
+      : `<img src="${escHtml(newPostPreviews[i])}" alt="">`;
     html += `<div class="np-thumb${i === 0 ? ' hero' : ''}" draggable="true"
       ondragstart="npThumbDragStart(event,${i})" ondragover="npThumbDragOver(event)"
       ondrop="npThumbDrop(event,${i})" ondragend="npThumbDragEnd(event)">
-      <img src="${escHtml(newPostPreviews[i])}" alt="">
-      ${isVideo ? '<div class="np-thumb-video-badge">▶</div>' : ''}
+      ${media}
+      ${fileIsVideo ? '<div class="np-thumb-video-badge">▶</div>' : ''}
       <button type="button" class="np-thumb-remove" onclick="removeNpPhoto(${i})">✕</button>
     </div>`;
   }
@@ -10438,16 +10446,21 @@ async function saveNewPost() {
     photoUrl: null,
     visibility: vis,
   };
-  // Upload photo(s) to Storage if present
+  // Upload photo(s)/video(s) to Storage if present.
+  // "isVideo" is determined by the File itself (type/extension), not by whether
+  // poster extraction succeeded — older browsers may not be able to generate a
+  // poster but we still want to upload the video.
+  const fileIsVideo = (f) => !!f && (f.type?.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(f.name || ''));
   if (newPostFiles.length && currentUser) {
     try {
       if (newPostFiles.length === 1) {
         const f = newPostFiles[0];
-        const isVideo = !!newPostPosters[0];
-        if (isVideo) {
+        if (fileIsVideo(f)) {
           const ext = (f.name?.split('.').pop()?.toLowerCase() === 'webm') ? 'webm' : 'mp4';
           const videoUrl = await uploadVideo(f, `logs/${currentUser.id}/${entry.id}.${ext}`);
-          await uploadImage(newPostPosters[0], `logs/${currentUser.id}/${entry.id}_poster.jpg`);
+          if (newPostPosters[0]) {
+            await uploadImage(newPostPosters[0], `logs/${currentUser.id}/${entry.id}_poster.jpg`);
+          }
           entry.photoUrl = videoUrl;
         } else {
           entry.photoUrl = await uploadImage(f, `logs/${currentUser.id}/${entry.id}.jpg`);
@@ -10456,11 +10469,12 @@ async function saveNewPost() {
         const urls = [];
         for (let i = 0; i < newPostFiles.length; i++) {
           const f = newPostFiles[i];
-          const isVideo = !!newPostPosters[i];
-          if (isVideo) {
+          if (fileIsVideo(f)) {
             const ext = (f.name?.split('.').pop()?.toLowerCase() === 'webm') ? 'webm' : 'mp4';
             const videoUrl = await uploadVideo(f, `logs/${currentUser.id}/${entry.id}_${i}.${ext}`);
-            await uploadImage(newPostPosters[i], `logs/${currentUser.id}/${entry.id}_${i}_poster.jpg`);
+            if (newPostPosters[i]) {
+              await uploadImage(newPostPosters[i], `logs/${currentUser.id}/${entry.id}_${i}_poster.jpg`);
+            }
             urls.push(videoUrl);
           } else {
             const url = await uploadImage(f, `logs/${currentUser.id}/${entry.id}_${i}.jpg`);
@@ -17525,38 +17539,37 @@ function validateVideoFile(file) {
   return false;
 }
 
+// Probes the video, trying to get duration and (if possible) a poster frame.
+// NEVER rejects — always resolves with { duration: number|null, posterBlob: Blob|null }.
+// If the browser can't decode the video at all, both fields will be null and the
+// caller should still allow the upload (other viewers' browsers may support it).
 function extractPosterBlob(file) {
-  return new Promise((resolve, reject) => {
+  return new Promise(resolve => {
     const video = document.createElement('video');
     video.preload = 'auto';
     video.muted = true;
     video.setAttribute('muted', '');
     video.setAttribute('playsinline', '');
     video.setAttribute('webkit-playsinline', '');
-    // iOS Safari needs the video in the DOM (even if hidden) for metadata/seek to fire reliably.
     video.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
     document.body.appendChild(video);
     const objUrl = URL.createObjectURL(file);
     let settled = false;
+    let durationKnown = null;
     const cleanup = () => { try { URL.revokeObjectURL(objUrl); } catch (_) {} video.remove(); };
-    const timer = setTimeout(() => {
+    const finish = (posterBlob) => {
       if (settled) return; settled = true;
-      cleanup(); reject(new Error('Video processing timed out'));
-    }, 15000);
-    const fail = (msg) => {
-      if (settled) return; settled = true;
-      clearTimeout(timer); cleanup(); reject(new Error(msg));
+      clearTimeout(timer);
+      cleanup();
+      resolve({ posterBlob, duration: durationKnown });
     };
-    const done = (val) => {
-      if (settled) return; settled = true;
-      clearTimeout(timer); cleanup(); resolve(val);
-    };
+    const timer = setTimeout(() => finish(null), 15000);
     video.onloadedmetadata = () => {
-      if (!isFinite(video.duration) || video.duration <= 0) {
-        fail('Invalid video duration'); return;
-      }
-      // Tiny delay before seeking — iOS Safari sometimes drops seeks issued in the same tick as metadata load.
-      setTimeout(() => { try { video.currentTime = Math.min(video.duration * 0.5, Math.max(0, video.duration - 0.1)); } catch (e) { fail('Could not seek video'); } }, 50);
+      if (isFinite(video.duration) && video.duration > 0) durationKnown = video.duration;
+      setTimeout(() => {
+        try { video.currentTime = Math.min((durationKnown || 1) * 0.5, Math.max(0, (durationKnown || 1) - 0.1)); }
+        catch (_) { finish(null); }
+      }, 50);
     };
     video.onseeked = () => {
       try {
@@ -17564,17 +17577,10 @@ function extractPosterBlob(file) {
         canvas.width = video.videoWidth || 800;
         canvas.height = video.videoHeight || 600;
         canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-        const duration = video.duration;
-        canvas.toBlob(b => {
-          if (b) done({ posterBlob: b, duration });
-          else fail('Failed to extract poster');
-        }, 'image/jpeg', 0.95);
-      } catch (err) { fail(err.message || 'Poster extraction failed'); }
+        canvas.toBlob(b => finish(b || null), 'image/jpeg', 0.95);
+      } catch (_) { finish(null); }
     };
-    video.onerror = () => {
-      const code = video.error?.code;
-      fail(code === 4 ? 'This video format is not supported by your browser' : 'Could not read video');
-    };
+    video.onerror = () => finish(null);
     video.src = objUrl;
   });
 }
