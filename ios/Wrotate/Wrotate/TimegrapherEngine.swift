@@ -152,6 +152,7 @@ class TimegrapherEngine {
     // Peak detection: wait for energy to decline before firing tick
     private var pendingTickCross: Bool = false        // threshold crossed, waiting for peak
     private var pendingTickPeakEnergy: Float = 0      // highest energy seen during pending
+    private var peakDetectGate: Float = 3.0           // use peak detection only when energy > threshold * this
 
     // Rate display and stability tracking (all tunable from JS)
     private var smoothedRate: Double? = nil
@@ -300,7 +301,8 @@ class TimegrapherEngine {
                     tickDetectMult: Double? = nil,
                     minSpacingMult: Double? = nil,
                     maxBphCorrections: Int? = nil,
-                    noiseFloorMult: Double? = nil) {
+                    noiseFloorMult: Double? = nil,
+                    peakDetectGate: Double? = nil) {
         peakRatioThreshold = max(1.0, thresh)
         bufferDurationSec = max(5, min(120, bufSec))
         if let v = regSkipPairs { regressionSkipPairs = max(0, min(30, v)) }
@@ -329,7 +331,8 @@ class TimegrapherEngine {
         if let v = minSpacingMult { self.minSpacingMult = max(0.5, min(0.99, v)) }
         if let v = maxBphCorrections { self.maxBphCorrections = max(0, min(5, v)) }
         if let v = noiseFloorMult { self.noiseFloorMult = Float(max(0, min(10, v))) }
-        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections) noiseFloor=\(self.noiseFloorMult)")
+        if let v = peakDetectGate { self.peakDetectGate = Float(max(1, min(10, v))) }
+        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections) noiseFloor=\(self.noiseFloorMult) peakGate=\(self.peakDetectGate)")
     }
 
     // MARK: - Biquad HP filter
@@ -399,10 +402,6 @@ class TimegrapherEngine {
         consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []
         bphCorrectionRejects = []; bphCorrectionOutliers = []; bphCorrectionAttempted = []; bphCorrectionCount = 0
         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
-        recalibrationsDone = 0; calibrationSamples = 0; calibrationEnergies.removeAll()
-        tickCalibrating = false
-        pendingTickCross = false; pendingTickPeakEnergy = 0
-        debugMessages = []
         lastDebugInfo = nil
         lastBeatWaveform = nil
         lastTickPositions = nil
@@ -571,10 +570,16 @@ class TimegrapherEngine {
 
                     // Peak detection: wait for energy to decline past peak before firing
                     var shouldFireTick = false
+                    let usesPeakDetect = energy > threshold * peakDetectGate
                     if energy > threshold && ringPosSinceLastTick >= minSpacing {
-                        if !pendingTickCross || energy > pendingTickPeakEnergy {
-                            pendingTickCross = true
-                            pendingTickPeakEnergy = energy
+                        if usesPeakDetect {
+                            if !pendingTickCross || energy > pendingTickPeakEnergy {
+                                pendingTickCross = true
+                                pendingTickPeakEnergy = energy
+                            } else {
+                                pendingTickCross = false
+                                shouldFireTick = true
+                            }
                         } else {
                             pendingTickCross = false
                             shouldFireTick = true
