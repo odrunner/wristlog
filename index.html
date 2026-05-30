@@ -5903,7 +5903,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.09.57';
+const APP_VERSION = '30.10.05';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10063,8 +10063,7 @@ async function saveEditPost() {
         const suffix = nextFreeSuffix();
         try {
           if (isVideo) {
-            const ext = (item.name?.split('.').pop()?.toLowerCase() === 'webm') ? 'webm' : 'mp4';
-            const videoUrl = await uploadVideo(item, `logs/${currentUser.id}/${editPostLogId}_${suffix}.${ext}`);
+            const videoUrl = await uploadVideo(item, `logs/${currentUser.id}/${editPostLogId}_${suffix}.${videoExtFor(item)}`);
             if (epPosters[idx]) {
               await uploadImage(epPosters[idx], `logs/${currentUser.id}/${editPostLogId}_${suffix}_poster.jpg`);
             }
@@ -10456,8 +10455,7 @@ async function saveNewPost() {
       if (newPostFiles.length === 1) {
         const f = newPostFiles[0];
         if (fileIsVideo(f)) {
-          const ext = (f.name?.split('.').pop()?.toLowerCase() === 'webm') ? 'webm' : 'mp4';
-          const videoUrl = await uploadVideo(f, `logs/${currentUser.id}/${entry.id}.${ext}`);
+          const videoUrl = await uploadVideo(f, `logs/${currentUser.id}/${entry.id}.${videoExtFor(f)}`);
           if (newPostPosters[0]) {
             await uploadImage(newPostPosters[0], `logs/${currentUser.id}/${entry.id}_poster.jpg`);
           }
@@ -10470,8 +10468,7 @@ async function saveNewPost() {
         for (let i = 0; i < newPostFiles.length; i++) {
           const f = newPostFiles[i];
           if (fileIsVideo(f)) {
-            const ext = (f.name?.split('.').pop()?.toLowerCase() === 'webm') ? 'webm' : 'mp4';
-            const videoUrl = await uploadVideo(f, `logs/${currentUser.id}/${entry.id}_${i}.${ext}`);
+            const videoUrl = await uploadVideo(f, `logs/${currentUser.id}/${entry.id}_${i}.${videoExtFor(f)}`);
             if (newPostPosters[i]) {
               await uploadImage(newPostPosters[i], `logs/${currentUser.id}/${entry.id}_${i}_poster.jpg`);
             }
@@ -17517,16 +17514,30 @@ function posterUrlFor(videoUrl) {
 }
 
 async function uploadVideo(file, path) {
-  // iOS Camera videos arrive as video/quicktime but are H.264 in a MOV container —
-  // browsers play them as standard mp4. The storage bucket's allow-list typically
-  // doesn't include video/quicktime, so we normalize to a widely-accepted type.
-  const contentType = file.type === 'video/webm' ? 'video/webm' : 'video/mp4';
+  // Use the actual file type. Safari is strict — if a .mov is served with
+  // Content-Type: video/mp4 it refuses to decode it.
+  let contentType = file.type;
+  if (!contentType || !contentType.startsWith('video/')) {
+    const ext = (file.name?.split('.').pop()?.toLowerCase()) || '';
+    if (ext === 'webm') contentType = 'video/webm';
+    else if (ext === 'mov') contentType = 'video/quicktime';
+    else contentType = 'video/mp4';
+  }
   const { error } = await db.storage.from('media').upload(path, file, {
     cacheControl: '31536000', upsert: true, contentType,
   });
   if (error) throw new Error('Video upload failed: ' + error.message);
   const { data: urlData } = db.storage.from('media').getPublicUrl(path);
   return urlData.publicUrl + '?v=' + Date.now();
+}
+
+// Picks the storage path extension based on the actual file (mp4/webm/mov, default mp4).
+function videoExtFor(file) {
+  const ext = (file?.name?.split('.').pop()?.toLowerCase()) || '';
+  if (['mp4','webm','mov'].includes(ext)) return ext;
+  if (file?.type === 'video/webm') return 'webm';
+  if (file?.type === 'video/quicktime') return 'mov';
+  return 'mp4';
 }
 
 function validateVideoFile(file) {
