@@ -5903,7 +5903,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.08.18';
+const APP_VERSION = '30.09.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10062,8 +10062,9 @@ async function confirmDeletePost() {
 }
 
 // ── Standalone new post ────────────────────────────────────────────────────
-let newPostFiles = [];    // array of File objects
-let newPostPreviews = []; // array of object URLs for thumbnails
+let newPostFiles = [];    // array of File objects (photos or videos)
+let newPostPreviews = []; // array of object URLs for thumbnails (photo objectURL or poster objectURL)
+let newPostPosters = [];  // array of Blob (videos) or null (photos), parallel to newPostFiles
 let npIdentifiedWatchId = null; // watchId from AI identification (or null)
 
 function openNewPost(opts) {
@@ -10102,25 +10103,44 @@ function closeNewPost() {
   clearNewPostPhoto();
 }
 
-function handleNewPostPhotos(input) {
+async function handleNewPostPhotos(input) {
   const files = Array.from(input.files);
   if (!files.length) return;
-  const slots = 6 - newPostFiles.length;
-  const accepted = [];
-  for (const f of files) {
-    if (accepted.length >= slots) break;
-    if (validateImageFile(f)) accepted.push(f);
-  }
-  if (files.length > slots) toast('Maximum 6 photos per post', 'error');
-  if (!accepted.length) { input.value = ''; return; }
-  for (const f of accepted) {
-    newPostFiles.push(f);
-    newPostPreviews.push(URL.createObjectURL(f));
-  }
   input.value = '';
+  const wasEmpty = newPostFiles.length === 0;
+  const slots = 6 - newPostFiles.length;
+  if (files.length > slots) toast('Maximum 6 photos and videos per post', 'error');
+  const limited = files.slice(0, slots);
+  for (const f of limited) {
+    const isVideo = f.type?.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(f.name || '');
+    if (isVideo) {
+      if (!validateVideoFile(f)) continue;
+      let poster, duration;
+      try {
+        ({ posterBlob: poster, duration } = await extractPosterBlob(f));
+      } catch (e) {
+        toast('Could not read this video', 'error');
+        continue;
+      }
+      if (duration > 7.5) {
+        toast('Videos must be 7 seconds or less', 'error');
+        continue;
+      }
+      newPostFiles.push(f);
+      newPostPosters.push(poster);
+      newPostPreviews.push(URL.createObjectURL(poster));
+    } else {
+      if (!validateImageFile(f)) continue;
+      newPostFiles.push(f);
+      newPostPosters.push(null);
+      newPostPreviews.push(URL.createObjectURL(f));
+    }
+  }
   renderNpThumbstrip();
-  if (newPostFiles.length === accepted.length) {
-    npIdentifyWatch(accepted[0]);
+  if (wasEmpty && newPostFiles.length) {
+    const firstFile = newPostFiles[0];
+    const firstIsVideo = !!newPostPosters[0];
+    npIdentifyWatch(firstIsVideo ? newPostPosters[0] : firstFile);
   }
 }
 
