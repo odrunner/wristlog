@@ -5903,7 +5903,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.10.11';
+const APP_VERSION = '30.10.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17520,17 +17520,103 @@ function posterUrlFor(videoUrl) {
   return query ? `${posterBase}?${query}` : posterBase;
 }
 
+// Rewrites an ISO BMFF (.mp4 / .mov) file so the moov atom is at the front,
+// which is what HTTP-served <video> needs to start playing without downloading
+// the entire file. iOS Camera writes moov at the END, which makes Safari fail
+// to render the video in our feed. This is the standard "qt-faststart" rewrite.
+// Returns a new File on success, or the original File if not needed / not possible.
+async function ensureFaststart(file) {
+  try {
+    if (!file || file.size > 60 * 1024 * 1024) return file; // skip very large files
+    const buf = await file.arrayBuffer();
+    const out = _qtFaststart(buf);
+    if (!out || out === buf) return file;
+    return new File([out], file.name, { type: file.type, lastModified: file.lastModified });
+  } catch (e) {
+    console.warn('[WRotate] faststart failed:', e?.message); return file;
+  }
+}
+
+function _qtFaststart(buf) {
+  const view = new DataView(buf);
+  const u8 = new Uint8Array(buf);
+  const atoms = _scanTopLevelAtoms(u8, view);
+  const ftyp = atoms.find(a => a.type === 'ftyp');
+  const moov = atoms.find(a => a.type === 'moov');
+  const mdat = atoms.find(a => a.type === 'mdat');
+  if (!ftyp || !moov || !mdat) return null;
+  if (moov.offset < mdat.offset) return buf; // already faststart
+  const delta = moov.size;
+  const newMoov = new Uint8Array(moov.size);
+  newMoov.set(u8.subarray(moov.offset, moov.offset + moov.size));
+  _walkAdjust(new DataView(newMoov.buffer), newMoov, 8, newMoov.length, delta);
+  let outSize = ftyp.size + moov.size;
+  const others = atoms.filter(a => a !== ftyp && a !== moov);
+  for (const a of others) outSize += a.size;
+  const out = new Uint8Array(outSize);
+  let wp = 0;
+  out.set(u8.subarray(ftyp.offset, ftyp.offset + ftyp.size), wp); wp += ftyp.size;
+  out.set(newMoov, wp); wp += moov.size;
+  for (const a of others) { out.set(u8.subarray(a.offset, a.offset + a.size), wp); wp += a.size; }
+  return out.buffer;
+}
+
+function _scanTopLevelAtoms(u8, view) {
+  const atoms = [];
+  let pos = 0;
+  while (pos + 8 <= u8.length) {
+    let size = view.getUint32(pos);
+    const type = String.fromCharCode(u8[pos+4], u8[pos+5], u8[pos+6], u8[pos+7]);
+    if (size === 1) { size = Number(view.getBigUint64(pos+8)); }
+    if (size === 0) { size = u8.length - pos; }
+    if (size < 8 || pos + size > u8.length) break;
+    atoms.push({ type, offset: pos, size });
+    pos += size;
+  }
+  return atoms;
+}
+
+function _walkAdjust(view, buf, start, end, delta) {
+  let pos = start;
+  while (pos + 8 <= end) {
+    const size = view.getUint32(pos);
+    const type = String.fromCharCode(buf[pos+4], buf[pos+5], buf[pos+6], buf[pos+7]);
+    if (size === 0 || size > end - pos) break;
+    if (type === 'stco') {
+      const count = view.getUint32(pos + 12);
+      for (let i = 0; i < count; i++) {
+        const ep = pos + 16 + i*4;
+        if (ep + 4 > end) break;
+        view.setUint32(ep, view.getUint32(ep) + delta);
+      }
+    } else if (type === 'co64') {
+      const count = view.getUint32(pos + 12);
+      for (let i = 0; i < count; i++) {
+        const ep = pos + 16 + i*8;
+        if (ep + 8 > end) break;
+        view.setBigUint64(ep, view.getBigUint64(ep) + BigInt(delta));
+      }
+    } else if (['moov','trak','mdia','minf','stbl','edts','udta'].includes(type)) {
+      _walkAdjust(view, buf, pos + 8, pos + size, delta);
+    } else if (type === 'meta') {
+      _walkAdjust(view, buf, pos + 12, pos + size, delta);
+    }
+    pos += size;
+  }
+}
+
 async function uploadVideo(file, path) {
-  // Use the actual file type. Safari is strict — if a .mov is served with
-  // Content-Type: video/mp4 it refuses to decode it.
-  let contentType = file.type;
+  // Rewrite the file so the moov atom is at the front. iOS Camera writes it
+  // at the end which makes HTTP-streamed playback fail in Safari.
+  const fastFile = await ensureFaststart(file);
+  let contentType = fastFile.type;
   if (!contentType || !contentType.startsWith('video/')) {
-    const ext = (file.name?.split('.').pop()?.toLowerCase()) || '';
+    const ext = (fastFile.name?.split('.').pop()?.toLowerCase()) || '';
     if (ext === 'webm') contentType = 'video/webm';
     else if (ext === 'mov') contentType = 'video/quicktime';
     else contentType = 'video/mp4';
   }
-  const { error } = await db.storage.from('media').upload(path, file, {
+  const { error } = await db.storage.from('media').upload(path, fastFile, {
     cacheControl: '31536000', upsert: true, contentType,
   });
   if (error) throw new Error('Video upload failed: ' + error.message);
