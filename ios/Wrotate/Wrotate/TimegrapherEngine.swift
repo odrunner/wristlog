@@ -311,9 +311,9 @@ class TimegrapherEngine {
         if let v = stabWindow { stabilityWindow = max(5, min(60, v)) }
         if let v = stabThresh { stabilityThreshold = max(0.5, min(20, v)) }
         if let v = stabLoseThresh { stabilityLoseThreshold = max(1, min(30, v)) }
-        if let v = maxPairThresh { maxAdaptiveThreshold = max(0.1, min(5, v)) }
-        if let v = minPairThresh { minAdaptiveThreshold = max(0.05, min(2, v)) }
-        if let v = coldStartThresh { coldStartThreshold = max(0.1, min(5, v)) }
+        if let v = maxPairThresh { maxAdaptiveThreshold = max(0.1, min(50, v)) }
+        if let v = minPairThresh { minAdaptiveThreshold = max(0.05, min(20, v)) }
+        if let v = coldStartThresh { coldStartThreshold = max(0.1, min(50, v)) }
         if let v = pairMadMult { adaptiveMultiplier = max(1, min(10, v)) }
         if let v = maxTickDevMs { maxTickDev = max(1, min(50, v)) }
         // calibDuration ignored — activateTickDetection() always auto-scales to 2 seconds
