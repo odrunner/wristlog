@@ -5903,7 +5903,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.09.34';
+const APP_VERSION = '30.09.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14287,7 +14287,7 @@ function deleteLog(id, btn) {
     return;
   }
   const log = logs.find(l => l.id === id);
-  // Cleanup Storage photo if present
+  // Cleanup Storage media (photos, videos, and video posters) if present
   if (log?.photoUrl) { deletePostPhotos(log.photoUrl); }
   logs = logs.filter(l => l.id !== id);
   save();
