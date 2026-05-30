@@ -305,33 +305,32 @@ class TimegrapherEngine {
                     peakDetectGate: Double? = nil) {
         peakRatioThreshold = max(1.0, thresh)
         bufferDurationSec = max(5, min(120, bufSec))
-        if let v = regSkipPairs { regressionSkipPairs = max(0, min(30, v)) }
-        if let v = regMinN { regNMinimum = max(3, min(50, v)) }
-        if let v = wallMinSec { wallElapsedMinimum = max(5, min(120, v)) }
-        if let v = stabWindow { stabilityWindow = max(5, min(60, v)) }
-        if let v = stabThresh { stabilityThreshold = max(0.5, min(20, v)) }
-        if let v = stabLoseThresh { stabilityLoseThreshold = max(1, min(30, v)) }
-        if let v = maxPairThresh { maxAdaptiveThreshold = max(0.1, min(50, v)) }
-        if let v = minPairThresh { minAdaptiveThreshold = max(0.05, min(20, v)) }
-        if let v = coldStartThresh { coldStartThreshold = max(0.1, min(50, v)) }
-        if let v = pairMadMult { adaptiveMultiplier = max(1, min(10, v)) }
-        if let v = maxTickDevMs { maxTickDev = max(1, min(50, v)) }
-        // calibDuration ignored — activateTickDetection() always auto-scales to 2 seconds
-        if let v = ringTargetRate { self.ringTargetRate = max(12000, min(48000, v)) }
-        if let v = outlierMargin { self.outlierMargin = max(0.05, min(0.50, v)) }
-        if let v = outlierMarginLowBph { self.outlierMarginLowBph = max(0.05, min(0.50, v)) }
-        if let v = calibPercentile { self.calibPercentile = max(0.80, min(1.0, v)) }
-        if let v = calibMultiplier { self.calibMultiplier = Float(max(0.5, min(3.0, v))) }
-        if let v = calibMultiplierRecal { self.calibMultiplierRecal = Float(max(0.3, min(2.0, v))) }
-        if let v = maxRecalibrations { self.maxRecalibrations = max(1, min(10, v)) }
-        if let v = recalTriggerSec { self.recalTriggerSec = max(1.0, min(10.0, v)) }
-        if let v = thresholdDecay { self.tickThresholdDecay = Float(max(0.99, min(1.0, v))) }
-        if let v = thresholdDecayNoTicks { self.tickThresholdDecayNoTicks = Float(max(0.98, min(1.0, v))) }
-        if let v = tickDetectMult { self.tickDetectMult = Float(max(0.1, min(0.9, v))) }
-        if let v = minSpacingMult { self.minSpacingMult = max(0.5, min(0.99, v)) }
-        if let v = maxBphCorrections { self.maxBphCorrections = max(0, min(5, v)) }
-        if let v = noiseFloorMult { self.noiseFloorMult = Float(max(0, min(10, v))) }
-        if let v = peakDetectGate { self.peakDetectGate = Float(max(1, min(10, v))) }
+        if let v = regSkipPairs { regressionSkipPairs = v }
+        if let v = regMinN { regNMinimum = v }
+        if let v = wallMinSec { wallElapsedMinimum = v }
+        if let v = stabWindow { stabilityWindow = v }
+        if let v = stabThresh { stabilityThreshold = v }
+        if let v = stabLoseThresh { stabilityLoseThreshold = v }
+        if let v = maxPairThresh { maxAdaptiveThreshold = v }
+        if let v = minPairThresh { minAdaptiveThreshold = v }
+        if let v = coldStartThresh { coldStartThreshold = v }
+        if let v = pairMadMult { adaptiveMultiplier = v }
+        if let v = maxTickDevMs { maxTickDev = v }
+        if let v = ringTargetRate { self.ringTargetRate = v }
+        if let v = outlierMargin { self.outlierMargin = v }
+        if let v = outlierMarginLowBph { self.outlierMarginLowBph = v }
+        if let v = calibPercentile { self.calibPercentile = v }
+        if let v = calibMultiplier { self.calibMultiplier = Float(v) }
+        if let v = calibMultiplierRecal { self.calibMultiplierRecal = Float(v) }
+        if let v = maxRecalibrations { self.maxRecalibrations = v }
+        if let v = recalTriggerSec { self.recalTriggerSec = v }
+        if let v = thresholdDecay { self.tickThresholdDecay = Float(v) }
+        if let v = thresholdDecayNoTicks { self.tickThresholdDecayNoTicks = Float(v) }
+        if let v = tickDetectMult { self.tickDetectMult = Float(v) }
+        if let v = minSpacingMult { self.minSpacingMult = v }
+        if let v = maxBphCorrections { self.maxBphCorrections = v }
+        if let v = noiseFloorMult { self.noiseFloorMult = Float(v) }
+        if let v = peakDetectGate { self.peakDetectGate = Float(v) }
         debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections) noiseFloor=\(self.noiseFloorMult) peakGate=\(self.peakDetectGate)")
     }
 
