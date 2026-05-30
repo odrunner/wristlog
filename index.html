@@ -4328,7 +4328,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div id="np-thumbstrip" class="np-thumbstrip" style="display:none;"></div>
         <div id="np-photo-counter" class="np-photo-counter" style="display:none;"></div>
       </div>
-      <input type="file" id="np-photo-input" accept="image/*" multiple
+      <input type="file" id="np-photo-input" accept="image/*,video/*" multiple
         style="display:none" onchange="handleNewPostPhotos(this)">
       <div id="np-watch-suggestion" style="display:none;"></div>
     </div>
@@ -4357,7 +4357,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div id="ep-thumbstrip" class="np-thumbstrip" style="display:none;"></div>
         <div id="ep-photo-counter" class="np-photo-counter" style="display:none;"></div>
       </div>
-      <input type="file" id="ep-photo-input" accept="image/*" multiple
+      <input type="file" id="ep-photo-input" accept="image/*,video/*" multiple
         style="display:none" onchange="handleEditPostPhotos(this)">
     </div>
     <div class="form-group" id="ep-watch-field">
@@ -5903,7 +5903,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.08.17';
+const APP_VERSION = '30.08.18';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
