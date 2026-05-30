@@ -5903,7 +5903,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.08.16';
+const APP_VERSION = '30.08.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17334,7 +17334,86 @@ function parsePhotoUrl(photoUrl) {
 
 function deletePostPhotos(photoUrl) {
   const urls = parsePhotoUrl(photoUrl);
-  urls.forEach(u => { const p = storagePathFrom(u); if (p) deleteStorageFile(p); });
+  urls.forEach(u => {
+    const p = storagePathFrom(u);
+    if (p) deleteStorageFile(p);
+    if (isVideoUrl(u)) {
+      const posterPath = storagePathFrom(posterUrlFor(u));
+      if (posterPath) deleteStorageFile(posterPath);
+    }
+  });
+}
+
+function isVideoUrl(url) {
+  if (!url) return false;
+  const path = (url.split('?')[0] || '').toLowerCase();
+  return path.endsWith('.mp4') || path.endsWith('.webm') || path.endsWith('.mov');
+}
+
+function posterUrlFor(videoUrl) {
+  if (!videoUrl) return '';
+  const [base, query] = videoUrl.split('?');
+  const posterBase = base.replace(/\.(mp4|webm|mov)$/i, '_poster.jpg');
+  return query ? `${posterBase}?${query}` : posterBase;
+}
+
+async function uploadVideo(file, path) {
+  const { error } = await db.storage.from('media').upload(path, file, {
+    cacheControl: '31536000', upsert: true, contentType: file.type || 'video/mp4',
+  });
+  if (error) throw new Error('Video upload failed: ' + error.message);
+  const { data: urlData } = db.storage.from('media').getPublicUrl(path);
+  return urlData.publicUrl + '?v=' + Date.now();
+}
+
+function validateVideoFile(file) {
+  const MAX_SIZE = 30 * 1024 * 1024; // 30 MB
+  if (file.size > MAX_SIZE) {
+    toast(`Video is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Please use a video under 30 MB.`, 'error');
+    return false;
+  }
+  const SUPPORTED = ['video/mp4', 'video/webm', 'video/quicktime'];
+  if (file.type && SUPPORTED.includes(file.type)) return true;
+  const ext = file.name?.split('.').pop()?.toLowerCase() || '';
+  if (['mp4', 'webm', 'mov'].includes(ext)) return true;
+  toast('Videos must be MP4 or WebM.', 'error');
+  return false;
+}
+
+function extractPosterBlob(file) {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.preload = 'auto';
+    video.muted = true;
+    video.playsInline = true;
+    const objUrl = URL.createObjectURL(file);
+    let seeked = false;
+    const cleanup = () => { URL.revokeObjectURL(objUrl); video.remove(); };
+    video.onloadedmetadata = () => {
+      if (!isFinite(video.duration) || video.duration <= 0) {
+        cleanup(); reject(new Error('Invalid video duration')); return;
+      }
+      video.currentTime = video.duration * 0.5;
+    };
+    video.onseeked = () => {
+      if (seeked) return;
+      seeked = true;
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        const duration = video.duration;
+        canvas.toBlob(b => {
+          cleanup();
+          if (b) resolve({ posterBlob: b, duration });
+          else reject(new Error('Failed to extract poster'));
+        }, 'image/jpeg', 0.95);
+      } catch (err) { cleanup(); reject(err); }
+    };
+    video.onerror = () => { cleanup(); reject(new Error('Could not read video')); };
+    video.src = objUrl;
+  });
 }
 
 // ── Add-photo modal (paste / drop / browse — no clipboard permission dialog) ──
