@@ -5903,7 +5903,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.09.26';
+const APP_VERSION = '30.09.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9987,18 +9987,40 @@ async function saveEditPost() {
   if (epFiles.length) {
     const urls = [];
     let nextSuffix = 0;
-    for (const item of epFiles) {
+    const usedSuffixes = new Set();
+    for (const eu of epExistingUrls) {
+      const p = storagePathFrom(eu);
+      if (!p) continue;
+      const m = p.match(/_(\d+)\.(jpg|mp4|webm|mov)$/i);
+      if (m) usedSuffixes.add(parseInt(m[1], 10));
+    }
+    const nextFreeSuffix = () => {
+      while (usedSuffixes.has(nextSuffix)) nextSuffix++;
+      const s = nextSuffix;
+      usedSuffixes.add(s);
+      nextSuffix++;
+      return s;
+    };
+    for (let idx = 0; idx < epFiles.length; idx++) {
+      const item = epFiles[idx];
       if (typeof item === 'string') {
         urls.push(item);
       } else {
-        while (epExistingUrls.some(u => storagePathFrom(u)?.endsWith(`_${nextSuffix}.jpg`))) nextSuffix++;
+        const isVideo = !!epPosters[idx];
+        const suffix = nextFreeSuffix();
         try {
-          const url = await uploadImage(item, `logs/${currentUser.id}/${editPostLogId}_${nextSuffix}.jpg`);
-          urls.push(url);
-        } catch(e) {
-          toast('Photo upload failed — ' + e.message, 'error'); return;
+          if (isVideo) {
+            const ext = (item.name?.split('.').pop()?.toLowerCase() === 'webm') ? 'webm' : 'mp4';
+            const videoUrl = await uploadVideo(item, `logs/${currentUser.id}/${editPostLogId}_${suffix}.${ext}`);
+            await uploadImage(epPosters[idx], `logs/${currentUser.id}/${editPostLogId}_${suffix}_poster.jpg`);
+            urls.push(videoUrl);
+          } else {
+            const url = await uploadImage(item, `logs/${currentUser.id}/${editPostLogId}_${suffix}.jpg`);
+            urls.push(url);
+          }
+        } catch (e) {
+          toast('Upload failed — ' + e.message, 'error'); return;
         }
-        nextSuffix++;
       }
     }
     finalPhotoUrl = urls.length === 1 ? urls[0] : JSON.stringify(urls);
