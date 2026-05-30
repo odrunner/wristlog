@@ -1593,7 +1593,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .np-thumb-video-badge { position: absolute; bottom: 4px; left: 4px; width: 16px; height: 16px; background: rgba(0,0,0,.7); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 9px; pointer-events: none; }
     .feed-card-thumb-video-badge { position: absolute; bottom: 4px; right: 4px; width: 14px; height: 14px; background: rgba(0,0,0,.6); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 8px; pointer-events: none; }
     .feed-card-photo video { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .np-thumb-video-placeholder { width: 100%; height: 100%; background: #2a2a2a; }
+    .np-thumb-video-placeholder { width: 100%; height: 100%; background: #2a2a2a; display: flex; align-items: center; justify-content: center; }
+    .np-thumb-spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.2); border-top-color: rgba(255,255,255,.85); border-radius: 50%; animation: np-thumb-spin .8s linear infinite; }
+    @keyframes np-thumb-spin { to { transform: rotate(360deg); } }
     .feed-video-tap-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 64px; height: 64px; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; border: none; font-size: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; z-index: 2; }
     .img-viewer-overlay video { max-width: 100%; max-height: 85vh; object-fit: contain; }
 
@@ -5903,7 +5905,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.12.04';
+const APP_VERSION = '30.12.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9877,10 +9879,13 @@ function renderEpThumbstrip() {
     const existingIsVideo = typeof item === 'string' && isVideoUrl(item);
     const newFileIsVideo = item && typeof item !== 'string' && (item.type?.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(item.name || ''));
     const isVideo = existingIsVideo || newFileIsVideo;
-    const hasPreview = !!epPreviews[i];
-    const media = (isVideo && !hasPreview)
-      ? `<div class="np-thumb-video-placeholder"></div>`
-      : `<img src="${escHtml(epPreviews[i])}" alt="" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=&quot;np-thumb-video-placeholder&quot;></div>')">`;
+    const preview = epPreviews[i];
+    const isLoading = preview === '__LOADING__';
+    const hasPreview = !!preview && !isLoading;
+    let media;
+    if (isLoading) media = `<div class="np-thumb-video-placeholder"><div class="np-thumb-spinner"></div></div>`;
+    else if (isVideo && !hasPreview) media = `<div class="np-thumb-video-placeholder"></div>`;
+    else media = `<img src="${escHtml(preview)}" alt="" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=&quot;np-thumb-video-placeholder&quot;></div>')">`;
     html += `<div class="np-thumb${i === 0 ? ' hero' : ''}" draggable="true"
       ondragstart="epThumbDragStart(event,${i})" ondragover="npThumbDragOver(event)"
       ondrop="epThumbDrop(event,${i})" ondragend="npThumbDragEnd(event)">
@@ -9904,28 +9909,42 @@ async function handleEditPostPhotos(input) {
   const slots = 6 - epFiles.length;
   if (files.length > slots) toast('Maximum 6 photos and videos per post', 'error');
   const limited = files.slice(0, slots);
+  const sessionFiles = epFiles;
+  const sessionPreviews = epPreviews;
+  const sessionPosters = epPosters;
   for (const f of limited) {
     const isVideo = f.type?.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(f.name || '');
     if (isVideo) {
       if (!validateVideoFile(f)) continue;
+      if (epFiles !== sessionFiles) return;
+      sessionFiles.push(f);
+      sessionPosters.push(null);
+      sessionPreviews.push('__LOADING__');
+      renderEpThumbstrip();
       const { posterBlob: poster, posterDataUrl, duration } = await extractPosterBlob(f);
-      // Only enforce duration cap if we could actually read it. If decode failed,
-      // we trust the user and rely on the 30 MB size cap as a backstop.
+      if (epFiles !== sessionFiles) return;
+      const idx = sessionFiles.indexOf(f);
+      if (idx < 0) continue;
       if (duration != null && duration > 7.5) {
         toast('Videos must be 7 seconds or less', 'error');
+        sessionFiles.splice(idx, 1);
+        sessionPosters.splice(idx, 1);
+        sessionPreviews.splice(idx, 1);
+        renderEpThumbstrip();
         continue;
       }
-      epFiles.push(f);
-      epPosters.push(poster); // may be null — controls whether we upload a _poster.jpg
-      // Data URL is more reliable than blob: URL in iOS Safari / WKWebView <img>.
-      epPreviews.push(posterDataUrl || '');
+      sessionPosters[idx] = poster;
+      sessionPreviews[idx] = posterDataUrl || '';
+      renderEpThumbstrip();
     } else {
       if (!validateImageFile(f)) continue;
-      epFiles.push(f);
-      epPosters.push(null);
-      epPreviews.push(URL.createObjectURL(f));
+      if (epFiles !== sessionFiles) return;
+      sessionFiles.push(f);
+      sessionPosters.push(null);
+      sessionPreviews.push(URL.createObjectURL(f));
     }
   }
+  if (epFiles !== sessionFiles) return;
   renderEpThumbstrip();
 }
 
@@ -10241,27 +10260,47 @@ async function handleNewPostPhotos(input) {
   const slots = 6 - newPostFiles.length;
   if (files.length > slots) toast('Maximum 6 photos and videos per post', 'error');
   const limited = files.slice(0, slots);
+  // Capture array references at start. If the modal is reset (openNewPost
+  // re-assigns these), our async work won't pollute the new session.
+  const sessionFiles = newPostFiles;
+  const sessionPreviews = newPostPreviews;
+  const sessionPosters = newPostPosters;
   for (const f of limited) {
     const isVideo = f.type?.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(f.name || '');
     if (isVideo) {
       if (!validateVideoFile(f)) continue;
+      // Add a loading placeholder immediately so the user sees something.
+      if (newPostFiles !== sessionFiles) return;
+      sessionFiles.push(f);
+      sessionPosters.push(null);
+      sessionPreviews.push('__LOADING__');
+      renderNpThumbstrip();
       const { posterBlob: poster, posterDataUrl, duration } = await extractPosterBlob(f);
+      // Modal closed/reset while extracting — abandon.
+      if (newPostFiles !== sessionFiles) return;
+      // User removed this file while we were extracting — skip it.
+      const idx = sessionFiles.indexOf(f);
+      if (idx < 0) continue;
       if (duration != null && duration > 7.5) {
         toast('Videos must be 7 seconds or less', 'error');
+        sessionFiles.splice(idx, 1);
+        sessionPosters.splice(idx, 1);
+        sessionPreviews.splice(idx, 1);
+        renderNpThumbstrip();
         continue;
       }
-      newPostFiles.push(f);
-      newPostPosters.push(poster); // may be null — controls whether we upload a _poster.jpg
-      // Always use the data URL for the preview when we have one — it renders
-      // reliably across iOS Safari / WKWebView (blob: URLs sometimes don't).
-      newPostPreviews.push(posterDataUrl || '');
+      sessionPosters[idx] = poster;
+      sessionPreviews[idx] = posterDataUrl || '';
+      renderNpThumbstrip();
     } else {
       if (!validateImageFile(f)) continue;
-      newPostFiles.push(f);
-      newPostPosters.push(null);
-      newPostPreviews.push(URL.createObjectURL(f));
+      if (newPostFiles !== sessionFiles) return;
+      sessionFiles.push(f);
+      sessionPosters.push(null);
+      sessionPreviews.push(URL.createObjectURL(f));
     }
   }
+  if (newPostFiles !== sessionFiles) return;
   renderNpThumbstrip();
   if (wasEmpty && newPostFiles.length) {
     const firstFile = newPostFiles[0];
@@ -10295,10 +10334,13 @@ function renderNpThumbstrip() {
   for (let i = 0; i < newPostPreviews.length; i++) {
     const f = newPostFiles[i];
     const fileIsVideo = f && (f.type?.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(f.name || ''));
-    const hasPreview = !!newPostPreviews[i];
-    const media = (fileIsVideo && !hasPreview)
-      ? `<div class="np-thumb-video-placeholder"></div>`
-      : `<img src="${escHtml(newPostPreviews[i])}" alt="">`;
+    const preview = newPostPreviews[i];
+    const isLoading = preview === '__LOADING__';
+    const hasPreview = !!preview && !isLoading;
+    let media;
+    if (isLoading) media = `<div class="np-thumb-video-placeholder"><div class="np-thumb-spinner"></div></div>`;
+    else if (fileIsVideo && !hasPreview) media = `<div class="np-thumb-video-placeholder"></div>`;
+    else media = `<img src="${escHtml(preview)}" alt="">`;
     html += `<div class="np-thumb${i === 0 ? ' hero' : ''}" draggable="true"
       ondragstart="npThumbDragStart(event,${i})" ondragover="npThumbDragOver(event)"
       ondrop="npThumbDrop(event,${i})" ondragend="npThumbDragEnd(event)">
