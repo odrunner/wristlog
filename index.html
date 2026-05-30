@@ -5903,7 +5903,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.09.33';
+const APP_VERSION = '30.09.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23054,7 +23054,7 @@ function _buildViewer() {
   _viewerOverlay.innerHTML = `
     <button class="img-viewer-close" onclick="closeImageViewer()">✕</button>
     <span class="img-viewer-counter"></span>
-    <img src="" alt="">
+    <div class="img-viewer-media-slot" style="display:flex;align-items:center;justify-content:center;width:100%;max-height:85vh;"></div>
     <button class="img-viewer-arrow img-viewer-prev" onclick="viewerNav(-1)">‹</button>
     <button class="img-viewer-arrow img-viewer-next" onclick="viewerNav(1)">›</button>
     <div class="img-viewer-dots"></div>`;
@@ -23071,8 +23071,14 @@ function _buildViewer() {
 }
 
 function _renderViewer() {
-  const img = _viewerOverlay.querySelector('img');
-  img.src = _viewerUrls[_viewerIdx];
+  const slot = _viewerOverlay.querySelector('.img-viewer-media-slot');
+  const url = _viewerUrls[_viewerIdx];
+  const isVid = isVideoUrl(url);
+  if (isVid) {
+    slot.innerHTML = `<video src="${escHtml(url)}" poster="${escHtml(posterUrlFor(url))}" autoplay loop playsinline controls style="max-width:100%;max-height:85vh;object-fit:contain;"></video>`;
+  } else {
+    slot.innerHTML = `<img src="${escHtml(url)}" alt="" style="max-width:100%;max-height:85vh;object-fit:contain;">`;
+  }
   _viewerOverlay.querySelector('.img-viewer-counter').textContent = (_viewerIdx + 1) + ' / ' + _viewerUrls.length;
   _viewerOverlay.querySelector('.img-viewer-prev').style.display = _viewerUrls.length > 1 ? '' : 'none';
   _viewerOverlay.querySelector('.img-viewer-next').style.display = _viewerUrls.length > 1 ? '' : 'none';
