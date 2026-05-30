@@ -5904,7 +5904,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.11.01';
+const APP_VERSION = '30.11.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17568,20 +17568,100 @@ function _qtFaststart(buf) {
   const moov = atoms.find(a => a.type === 'moov');
   const mdat = atoms.find(a => a.type === 'mdat');
   if (!ftyp || !moov || !mdat) return null;
-  if (moov.offset < mdat.offset) return buf; // already faststart
-  const delta = moov.size;
-  const newMoov = new Uint8Array(moov.size);
-  newMoov.set(u8.subarray(moov.offset, moov.offset + moov.size));
-  _walkAdjust(new DataView(newMoov.buffer), newMoov, 8, newMoov.length, delta);
-  let outSize = ftyp.size + moov.size;
+  // Build a NEW moov that contains only video + audio traks. iPhone Camera
+  // recordings include APAC spatial-audio + several mebx metadata tracks
+  // (timecode, motion data). Safari refuses to decode a file containing
+  // tracks whose codecs it doesn't recognize — even if the video/audio
+  // streams themselves are valid. ffmpeg's `-c copy` silently drops these;
+  // we do the same.
+  const newMoov = _stripExtraTraks(u8, moov.offset, moov.size);
+  // Compute where mdat will live in the new layout, so we know how much to
+  // shift all chunk offsets by.
   const others = atoms.filter(a => a !== ftyp && a !== moov);
+  let newMdatOffset = ftyp.size + newMoov.length;
+  for (const a of others) {
+    if (a === mdat) break;
+    newMdatOffset += a.size;
+  }
+  const delta = newMdatOffset - mdat.offset;
+  if (delta !== 0) {
+    _walkAdjust(new DataView(newMoov.buffer), newMoov, 8, newMoov.length, delta);
+  }
+  let outSize = ftyp.size + newMoov.length;
   for (const a of others) outSize += a.size;
   const out = new Uint8Array(outSize);
   let wp = 0;
   out.set(u8.subarray(ftyp.offset, ftyp.offset + ftyp.size), wp); wp += ftyp.size;
-  out.set(newMoov, wp); wp += moov.size;
+  out.set(newMoov, wp); wp += newMoov.length;
   for (const a of others) { out.set(u8.subarray(a.offset, a.offset + a.size), wp); wp += a.size; }
   return out.buffer;
+}
+
+// Returns a Uint8Array containing a new moov atom with only video + audio
+// tracks kept. Other top-level children of moov (mvhd, udta, meta) are
+// preserved verbatim.
+function _stripExtraTraks(u8, moovOffset, moovSize) {
+  const view = new DataView(u8.buffer, u8.byteOffset + moovOffset, moovSize);
+  // Collect children to keep: type + source byte range
+  const kept = []; // { srcOffset, size }
+  let pos = 8;
+  while (pos + 8 <= moovSize) {
+    const size = view.getUint32(pos);
+    const type = String.fromCharCode(u8[moovOffset+pos+4], u8[moovOffset+pos+5], u8[moovOffset+pos+6], u8[moovOffset+pos+7]);
+    if (size === 0 || size > moovSize - pos) break;
+    if (type === 'trak') {
+      const handler = _trakHandlerType(u8, moovOffset + pos, size);
+      if (handler === 'vide' || handler === 'soun') {
+        kept.push({ srcOffset: moovOffset + pos, size });
+      }
+      // else: drop this trak
+    } else {
+      // mvhd, udta, meta, iods, etc.
+      kept.push({ srcOffset: moovOffset + pos, size });
+    }
+    pos += size;
+  }
+  // Build new moov
+  let newSize = 8;
+  for (const k of kept) newSize += k.size;
+  const out = new Uint8Array(newSize);
+  const outView = new DataView(out.buffer);
+  outView.setUint32(0, newSize);
+  out[4] = 0x6d; out[5] = 0x6f; out[6] = 0x6f; out[7] = 0x76; // 'moov'
+  let wp = 8;
+  for (const k of kept) {
+    out.set(u8.subarray(k.srcOffset, k.srcOffset + k.size), wp);
+    wp += k.size;
+  }
+  return out;
+}
+
+// Finds the handler_type ('vide', 'soun', 'meta', 'data', etc.) of a trak
+// by walking trak/mdia/hdlr. Returns null if not found.
+function _trakHandlerType(u8, trakOffset, trakSize) {
+  const view = new DataView(u8.buffer, u8.byteOffset + trakOffset, trakSize);
+  let pos = 8;
+  while (pos + 8 <= trakSize) {
+    const size = view.getUint32(pos);
+    const type = String.fromCharCode(u8[trakOffset+pos+4], u8[trakOffset+pos+5], u8[trakOffset+pos+6], u8[trakOffset+pos+7]);
+    if (size === 0 || size > trakSize - pos) break;
+    if (type === 'mdia') {
+      let p2 = pos + 8;
+      while (p2 + 8 <= pos + size) {
+        const s2 = view.getUint32(p2);
+        const t2 = String.fromCharCode(u8[trakOffset+p2+4], u8[trakOffset+p2+5], u8[trakOffset+p2+6], u8[trakOffset+p2+7]);
+        if (s2 === 0 || s2 > pos + size - p2) break;
+        if (t2 === 'hdlr') {
+          // hdlr layout: 4B size + 4B type + 1B version + 3B flags + 4B pre_defined + 4B handler_type
+          const off = trakOffset + p2 + 16;
+          return String.fromCharCode(u8[off], u8[off+1], u8[off+2], u8[off+3]);
+        }
+        p2 += s2;
+      }
+    }
+    pos += size;
+  }
+  return null;
 }
 
 function _scanTopLevelAtoms(u8, view) {
