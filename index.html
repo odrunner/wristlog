@@ -5903,7 +5903,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.09.27';
+const APP_VERSION = '30.09.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9140,6 +9140,7 @@ async function loadFeed() {
   if (!feedError && !myProfile && currentUser) {
     loadMyProfile().catch(() => {});
   }
+  document.querySelectorAll('.feed-card-photo > video').forEach(v => observeFeedVideo(v));
 }
 
 async function scrollToFeedPost(postId) {
@@ -9285,14 +9286,24 @@ function renderFeedCard(item) {
   if (item.photo_url) {
     const _urls = parsePhotoUrl(item.photo_url);
     const heroUrl = _urls[0] || '';
+    const heroIsVideo = isVideoUrl(heroUrl);
+    const heroInner = heroIsVideo
+      ? `<video id="feed-hero-${item.id}" src="${escHtml(heroUrl)}" poster="${escHtml(posterUrlFor(heroUrl))}" autoplay muted loop playsinline preload="metadata"></video>
+         <button class="feed-video-sound" onclick="event.stopPropagation();toggleFeedVideoSound(event,'${item.id}')">🔇</button>`
+      : `<img id="feed-hero-${item.id}" src="${escHtml(heroUrl)}" loading="lazy" onerror="this.parentElement.style.display='none'">`;
     heroHtml = `<div class="feed-card-photo" onclick="openImageViewer(${escAttr(JSON.stringify(_urls))},0)">
-    <img id="feed-hero-${item.id}" src="${escHtml(heroUrl)}" loading="lazy" onerror="this.parentElement.style.display='none'">
-    ${_urls.length > 1 ? `<span class="feed-card-photo-count">1/${_urls.length}</span>` : ''}
-  </div>`;
+      ${heroInner}
+      ${_urls.length > 1 ? `<span class="feed-card-photo-count">1/${_urls.length}</span>` : ''}
+    </div>`;
     if (_urls.length > 1) {
       heroHtml += `<div class="feed-card-thumbnails">`;
       _urls.forEach((u, i) => {
-        heroHtml += `<div class="feed-card-thumb${i === 0 ? ' active' : ''}" onclick="feedThumbTap('${item.id}',${i},${escAttr(JSON.stringify(_urls))})"><img src="${escHtml(u)}" loading="lazy" alt=""></div>`;
+        const itemIsVideo = isVideoUrl(u);
+        const thumbSrc = itemIsVideo ? posterUrlFor(u) : u;
+        heroHtml += `<div class="feed-card-thumb${i === 0 ? ' active' : ''}" onclick="feedThumbTap('${item.id}',${i},${escAttr(JSON.stringify(_urls))})">
+          <img src="${escHtml(thumbSrc)}" loading="lazy" alt="">
+          ${itemIsVideo ? '<div class="feed-card-thumb-video-badge">▶</div>' : ''}
+        </div>`;
       });
       heroHtml += `</div>`;
     }
@@ -9530,14 +9541,52 @@ function closeFeedMenu(logId) {
 }
 
 function feedThumbTap(logId, idx, urls) {
-  const hero = document.getElementById('feed-hero-' + logId);
-  if (!hero) return;
-  hero.src = urls[idx];
-  const card = hero.closest('.feed-card');
+  const card = document.getElementById('feedcard-' + logId);
   if (!card) return;
+  const heroContainer = card.querySelector('.feed-card-photo');
+  if (!heroContainer) return;
+  const url = urls[idx];
+  const isVid = isVideoUrl(url);
+  let innerHtml = '';
+  if (isVid) {
+    innerHtml = `<video id="feed-hero-${logId}" src="${escHtml(url)}" poster="${escHtml(posterUrlFor(url))}" autoplay muted loop playsinline preload="metadata"></video>
+      <button class="feed-video-sound" onclick="event.stopPropagation();toggleFeedVideoSound(event,'${logId}')">🔇</button>`;
+  } else {
+    innerHtml = `<img id="feed-hero-${logId}" src="${escHtml(url)}" loading="lazy" onerror="this.parentElement.style.display='none'">`;
+  }
+  if (urls.length > 1) {
+    innerHtml += `<span class="feed-card-photo-count">${idx + 1}/${urls.length}</span>`;
+  }
+  heroContainer.innerHTML = innerHtml;
+  if (isVid) observeFeedVideo(document.getElementById('feed-hero-' + logId));
   card.querySelectorAll('.feed-card-thumb').forEach((el, i) => el.classList.toggle('active', i === idx));
-  const badge = card.querySelector('.feed-card-photo-count');
-  if (badge) badge.textContent = (idx + 1) + '/' + urls.length;
+}
+
+let _videoObserver = null;
+function observeFeedVideo(v) {
+  if (!v) return;
+  if (!_videoObserver) {
+    _videoObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        const t = entry.target;
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          t.play().catch(() => {});
+        } else {
+          t.pause();
+        }
+      });
+    }, { threshold: [0, 0.5, 1] });
+  }
+  _videoObserver.observe(v);
+}
+
+function toggleFeedVideoSound(event, logId) {
+  event.stopPropagation();
+  const v = document.getElementById('feed-hero-' + logId);
+  if (!v || v.tagName !== 'VIDEO') return;
+  v.muted = !v.muted;
+  const btn = event.currentTarget;
+  btn.textContent = v.muted ? '🔇' : '🔊';
 }
 
 // ── Report modal ──────────────────────────────────────────────────────────
@@ -10624,6 +10673,7 @@ function refreshFeedCard(logId) {
   if (!item) return;
   const el = document.getElementById(`feedcard-${logId}`);
   if (el) el.outerHTML = renderFeedCard(item);
+  document.querySelectorAll('.feed-card-photo > video').forEach(v => observeFeedVideo(v));
 }
 
 // ── Comments ──────────────────────────────────────────────────────────────
