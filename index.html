@@ -5903,7 +5903,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.09.35';
+const APP_VERSION = '30.09.41';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9880,7 +9880,7 @@ async function handleEditPostPhotos(input) {
       try {
         ({ posterBlob: poster, duration } = await extractPosterBlob(f));
       } catch (e) {
-        toast('Could not read this video', 'error');
+        toast(e.message || 'Could not read this video', 'error');
         continue;
       }
       if (duration > 7.5) {
@@ -10219,7 +10219,7 @@ async function handleNewPostPhotos(input) {
       try {
         ({ posterBlob: poster, duration } = await extractPosterBlob(f));
       } catch (e) {
-        toast('Could not read this video', 'error');
+        toast(e.message || 'Could not read this video', 'error');
         continue;
       }
       if (duration > 7.5) {
@@ -17530,33 +17530,51 @@ function extractPosterBlob(file) {
     const video = document.createElement('video');
     video.preload = 'auto';
     video.muted = true;
-    video.playsInline = true;
+    video.setAttribute('muted', '');
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+    // iOS Safari needs the video in the DOM (even if hidden) for metadata/seek to fire reliably.
+    video.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
+    document.body.appendChild(video);
     const objUrl = URL.createObjectURL(file);
-    let seeked = false;
-    const cleanup = () => { URL.revokeObjectURL(objUrl); video.remove(); };
+    let settled = false;
+    const cleanup = () => { try { URL.revokeObjectURL(objUrl); } catch (_) {} video.remove(); };
+    const timer = setTimeout(() => {
+      if (settled) return; settled = true;
+      cleanup(); reject(new Error('Video processing timed out'));
+    }, 15000);
+    const fail = (msg) => {
+      if (settled) return; settled = true;
+      clearTimeout(timer); cleanup(); reject(new Error(msg));
+    };
+    const done = (val) => {
+      if (settled) return; settled = true;
+      clearTimeout(timer); cleanup(); resolve(val);
+    };
     video.onloadedmetadata = () => {
       if (!isFinite(video.duration) || video.duration <= 0) {
-        cleanup(); reject(new Error('Invalid video duration')); return;
+        fail('Invalid video duration'); return;
       }
-      video.currentTime = video.duration * 0.5;
+      // Tiny delay before seeking — iOS Safari sometimes drops seeks issued in the same tick as metadata load.
+      setTimeout(() => { try { video.currentTime = Math.min(video.duration * 0.5, Math.max(0, video.duration - 0.1)); } catch (e) { fail('Could not seek video'); } }, 50);
     };
     video.onseeked = () => {
-      if (seeked) return;
-      seeked = true;
       try {
         const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        canvas.width = video.videoWidth || 800;
+        canvas.height = video.videoHeight || 600;
         canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
         const duration = video.duration;
         canvas.toBlob(b => {
-          cleanup();
-          if (b) resolve({ posterBlob: b, duration });
-          else reject(new Error('Failed to extract poster'));
+          if (b) done({ posterBlob: b, duration });
+          else fail('Failed to extract poster');
         }, 'image/jpeg', 0.95);
-      } catch (err) { cleanup(); reject(err); }
+      } catch (err) { fail(err.message || 'Poster extraction failed'); }
     };
-    video.onerror = () => { cleanup(); reject(new Error('Could not read video')); };
+    video.onerror = () => {
+      const code = video.error?.code;
+      fail(code === 4 ? 'This video format is not supported by your browser' : 'Could not read video');
+    };
     video.src = objUrl;
   });
 }
