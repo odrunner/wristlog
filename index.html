@@ -1595,6 +1595,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .feed-card-photo video { width: 100%; height: 100%; object-fit: cover; display: block; }
     .feed-video-sound { position: absolute; bottom: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; border: none; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; z-index: 1; }
     .feed-video-sound:hover { background: rgba(0,0,0,.8); }
+    .feed-video-tap-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 64px; height: 64px; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; border: none; font-size: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; z-index: 2; }
     .img-viewer-overlay video { max-width: 100%; max-height: 85vh; object-fit: contain; }
 
     /* Compact "is wearing" header row (no-photo wear logs) */
@@ -5903,7 +5904,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.10.54';
+const APP_VERSION = '30.11.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9573,14 +9574,36 @@ function observeFeedVideo(v) {
       entries.forEach(entry => {
         const t = entry.target;
         if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-          t.play().catch(() => {});
-        } else {
+          t.play().catch(() => { _showVideoTapToPlay(t); });
+        } else if (!t.paused) {
           t.pause();
         }
       });
     }, { threshold: [0, 0.5, 1] });
   }
   _videoObserver.observe(v);
+  // If autoplay didn't kick in after a short delay (iOS Safari sometimes
+  // refuses without a user gesture), show a tap-to-play affordance.
+  setTimeout(() => {
+    if (v.paused && v.readyState >= 2) _showVideoTapToPlay(v);
+  }, 600);
+  v.addEventListener('error', () => _showVideoTapToPlay(v, true));
+}
+
+function _showVideoTapToPlay(v, errored) {
+  const card = v.closest('.feed-card-photo');
+  if (!card || card.querySelector('.feed-video-tap-overlay')) return;
+  const btn = document.createElement('button');
+  btn.className = 'feed-video-tap-overlay';
+  btn.innerHTML = errored ? '↻' : '▶';
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    if (errored) { try { v.load(); } catch (_) {} }
+    v.play().then(() => btn.remove()).catch(() => {});
+  };
+  card.appendChild(btn);
+  const removeOnPlay = () => { btn.remove(); v.removeEventListener('playing', removeOnPlay); };
+  v.addEventListener('playing', removeOnPlay);
 }
 
 function toggleFeedVideoSound(event, logId) {
