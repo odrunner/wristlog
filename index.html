@@ -5903,7 +5903,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.09.21';
+const APP_VERSION = '30.09.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10073,6 +10073,7 @@ function openNewPost(opts) {
   newPostFiles = [];
   newPostPreviews.forEach(u => URL.revokeObjectURL(u));
   newPostPreviews = [];
+  newPostPosters = [];
   clearNewPostPhoto();
   dismissNpWatchSuggestion();
   document.getElementById('np-body').value = o.prefillBody || '';
@@ -10164,10 +10165,12 @@ function renderNpThumbstrip() {
   counter.textContent = newPostFiles.length + '/6 photos';
   let html = '';
   for (let i = 0; i < newPostPreviews.length; i++) {
+    const isVideo = !!newPostPosters[i];
     html += `<div class="np-thumb${i === 0 ? ' hero' : ''}" draggable="true"
       ondragstart="npThumbDragStart(event,${i})" ondragover="npThumbDragOver(event)"
       ondrop="npThumbDrop(event,${i})" ondragend="npThumbDragEnd(event)">
       <img src="${escHtml(newPostPreviews[i])}" alt="">
+      ${isVideo ? '<div class="np-thumb-video-badge">▶</div>' : ''}
       <button type="button" class="np-thumb-remove" onclick="removeNpPhoto(${i})">✕</button>
     </div>`;
   }
@@ -10181,6 +10184,7 @@ function removeNpPhoto(idx) {
   URL.revokeObjectURL(newPostPreviews[idx]);
   newPostFiles.splice(idx, 1);
   newPostPreviews.splice(idx, 1);
+  newPostPosters.splice(idx, 1);
   renderNpThumbstrip();
 }
 
@@ -10194,8 +10198,10 @@ function npThumbDrop(e, targetIdx) {
   if (_npDragIdx < 0 || _npDragIdx === targetIdx) return;
   const [file] = newPostFiles.splice(_npDragIdx, 1);
   const [preview] = newPostPreviews.splice(_npDragIdx, 1);
+  const [poster] = newPostPosters.splice(_npDragIdx, 1);
   newPostFiles.splice(targetIdx, 0, file);
   newPostPreviews.splice(targetIdx, 0, preview);
+  newPostPosters.splice(targetIdx, 0, poster);
   _npDragIdx = -1;
   renderNpThumbstrip();
 }
@@ -10204,6 +10210,7 @@ function clearNewPostPhoto() {
   newPostPreviews.forEach(u => URL.revokeObjectURL(u));
   newPostFiles = [];
   newPostPreviews = [];
+  newPostPosters = [];
   npIdentifiedWatchId = null;
   dismissNpWatchSuggestion();
   renderNpThumbstrip();
