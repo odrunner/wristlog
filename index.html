@@ -5903,7 +5903,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.09.52';
+const APP_VERSION = '30.09.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9856,7 +9856,7 @@ function renderEpThumbstrip() {
     const isVideo = existingIsVideo || newFileIsVideo;
     const hasPoster = !!epPosters[i] || existingIsVideo; // existing videos use stored poster URL
     const media = (isVideo && !hasPoster)
-      ? `<video src="${escHtml(epPreviews[i])}" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;"></video>`
+      ? `<video src="${escHtml(epPreviews[i])}" muted autoplay loop playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;"></video>`
       : `<img src="${escHtml(epPreviews[i])}" alt="">`;
     html += `<div class="np-thumb${i === 0 ? ' hero' : ''}" draggable="true"
       ondragstart="epThumbDragStart(event,${i})" ondragover="npThumbDragOver(event)"
@@ -10271,7 +10271,7 @@ function renderNpThumbstrip() {
     const fileIsVideo = f && (f.type?.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(f.name || ''));
     const hasPoster = !!newPostPosters[i];
     const media = (fileIsVideo && !hasPoster)
-      ? `<video src="${escHtml(newPostPreviews[i])}" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;"></video>`
+      ? `<video src="${escHtml(newPostPreviews[i])}" muted autoplay loop playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;"></video>`
       : `<img src="${escHtml(newPostPreviews[i])}" alt="">`;
     html += `<div class="np-thumb${i === 0 ? ' hero' : ''}" draggable="true"
       ondragstart="npThumbDragStart(event,${i})" ondragover="npThumbDragOver(event)"
@@ -17517,8 +17517,12 @@ function posterUrlFor(videoUrl) {
 }
 
 async function uploadVideo(file, path) {
+  // iOS Camera videos arrive as video/quicktime but are H.264 in a MOV container —
+  // browsers play them as standard mp4. The storage bucket's allow-list typically
+  // doesn't include video/quicktime, so we normalize to a widely-accepted type.
+  const contentType = file.type === 'video/webm' ? 'video/webm' : 'video/mp4';
   const { error } = await db.storage.from('media').upload(path, file, {
-    cacheControl: '31536000', upsert: true, contentType: file.type || 'video/mp4',
+    cacheControl: '31536000', upsert: true, contentType,
   });
   if (error) throw new Error('Video upload failed: ' + error.message);
   const { data: urlData } = db.storage.from('media').getPublicUrl(path);
