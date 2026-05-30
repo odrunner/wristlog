@@ -1259,6 +1259,19 @@ export function parsePhotoUrl(photoUrl) {
   return [photoUrl];
 }
 
+export function isVideoUrl(url) {
+  if (!url) return false;
+  const path = (url.split('?')[0] || '').toLowerCase();
+  return path.endsWith('.mp4') || path.endsWith('.webm') || path.endsWith('.mov');
+}
+
+export function posterUrlFor(videoUrl) {
+  if (!videoUrl) return '';
+  const [base, query] = videoUrl.split('?');
+  const posterBase = base.replace(/\.(mp4|webm|mov)$/i, '_poster.jpg');
+  return query ? `${posterBase}?${query}` : posterBase;
+}
+
 // ══════════════════════════════════════════
 //  DEVICE CLASSIFICATION
 // ══════════════════════════════════════════
