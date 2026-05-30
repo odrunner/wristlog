@@ -5904,7 +5904,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.11.15';
+const APP_VERSION = '30.11.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17709,16 +17709,13 @@ function _walkAdjust(view, buf, start, end, delta) {
 }
 
 async function uploadVideo(file, path) {
-  // Rewrite the file so the moov atom is at the front. iOS Camera writes it
-  // at the end which makes HTTP-streamed playback fail in Safari.
+  // Rewrite the file so the moov atom is at the front and only video+audio
+  // tracks remain (iOS Camera includes extra metadata tracks Safari refuses).
   const fastFile = await ensureFaststart(file);
-  let contentType = fastFile.type;
-  if (!contentType || !contentType.startsWith('video/')) {
-    const ext = (fastFile.name?.split('.').pop()?.toLowerCase()) || '';
-    if (ext === 'webm') contentType = 'video/webm';
-    else if (ext === 'mov') contentType = 'video/quicktime';
-    else contentType = 'video/mp4';
-  }
+  // Always serve as video/mp4 for iso BMFF containers. iOS Safari's <video>
+  // element is more reliable with video/mp4 than video/quicktime even though
+  // the underlying byte format is the same ISO BMFF.
+  const contentType = file?.name?.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
   const { error } = await db.storage.from('media').upload(path, fastFile, {
     cacheControl: '31536000', upsert: true, contentType,
   });
@@ -17727,12 +17724,12 @@ async function uploadVideo(file, path) {
   return urlData.publicUrl + '?v=' + Date.now();
 }
 
-// Picks the storage path extension based on the actual file (mp4/webm/mov, default mp4).
+// All video uploads (including iOS .mov captures) use the .mp4 extension and
+// video/mp4 content-type. The on-disk bytes are still ISO BMFF — which is the
+// same container family — so they decode identically.
 function videoExtFor(file) {
   const ext = (file?.name?.split('.').pop()?.toLowerCase()) || '';
-  if (['mp4','webm','mov'].includes(ext)) return ext;
-  if (file?.type === 'video/webm') return 'webm';
-  if (file?.type === 'video/quicktime') return 'mov';
+  if (ext === 'webm' || file?.type === 'video/webm') return 'webm';
   return 'mp4';
 }
 
