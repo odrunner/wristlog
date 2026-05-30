@@ -5904,7 +5904,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.11.25';
+const APP_VERSION = '30.11.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9289,7 +9289,7 @@ function renderFeedCard(item) {
     const heroUrl = _urls[0] || '';
     const heroIsVideo = isVideoUrl(heroUrl);
     const heroInner = heroIsVideo
-      ? `<video id="feed-hero-${item.id}" src="${escHtml(heroUrl)}" muted autoplay loop playsinline webkit-playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+      ? `<video id="feed-hero-${item.id}" muted autoplay loop playsinline webkit-playsinline preload="auto" controls style="width:100%;height:100%;object-fit:cover;display:block;"><source src="${escHtml(heroUrl)}" type="video/mp4"></video>
          <button class="feed-video-sound" onclick="event.stopPropagation();toggleFeedVideoSound(event,'${item.id}')">🔇</button>`
       : `<img id="feed-hero-${item.id}" src="${escHtml(heroUrl)}" loading="lazy" onerror="this.parentElement.style.display='none'">`;
     heroHtml = `<div class="feed-card-photo" onclick="openImageViewer(${escAttr(JSON.stringify(_urls))},0)">
@@ -9550,7 +9550,7 @@ function feedThumbTap(logId, idx, urls) {
   const isVid = isVideoUrl(url);
   let innerHtml = '';
   if (isVid) {
-    innerHtml = `<video id="feed-hero-${logId}" src="${escHtml(url)}" muted autoplay loop playsinline webkit-playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+    innerHtml = `<video id="feed-hero-${logId}" muted autoplay loop playsinline webkit-playsinline preload="auto" controls style="width:100%;height:100%;object-fit:cover;display:block;"><source src="${escHtml(url)}" type="video/mp4"></video>
       <button class="feed-video-sound" onclick="event.stopPropagation();toggleFeedVideoSound(event,'${logId}')">🔇</button>`;
   } else {
     innerHtml = `<img id="feed-hero-${logId}" src="${escHtml(url)}" loading="lazy" onerror="this.parentElement.style.display='none'">`;
