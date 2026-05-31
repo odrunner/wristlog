@@ -28,3 +28,12 @@ coverage/
 # Playwright artifacts
 test-results/
 .last-run.json
+
+# Large local assets — not needed for the hosted app
+competitors/
+e2e/fixtures/
+app store files/
+
+# Local tooling / editor config
+.superpowers/
+.claude/settings.json
