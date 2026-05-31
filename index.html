@@ -5922,7 +5922,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.15.41';
+const APP_VERSION = '31.16.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12446,6 +12446,8 @@ async function openAdminUserDetail(userId) {
     const joinDate = p.created_at ? fmtDate(p.created_at.slice(0, 10)) : '—';
     const lastActive = d.last_active ? fmtDate(d.last_active.slice(0, 10)) : '—';
     const lastActiveAgo = d.last_active ? _adminTimeAgo(d.last_active) : '';
+    const lastOpen = d.last_open ? fmtDate(d.last_open.slice(0, 10)) : '—';
+    const lastOpenAgo = d.last_open ? _adminTimeAgo(d.last_open) : '';
     const joinedAgo = p.created_at ? _adminTimeAgo(p.created_at) : '';
     const msrRate = d.measurements_total > 0 ? Math.round(d.measurements_success / d.measurements_total * 100) + '%' : '—';
     const isRepeat = d.active_days > 1;
@@ -12478,6 +12480,7 @@ async function openAdminUserDetail(userId) {
         <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.35rem;">Activity</div>
         ${row('Joined', joinDate + (joinedAgo ? ' <span style="font-size:.68rem;color:var(--muted);font-weight:400;">(' + joinedAgo + ')</span>' : ''))}
         ${row('Last active', lastActive + (lastActiveAgo ? ' <span style="font-size:.68rem;color:var(--muted);font-weight:400;">(' + lastActiveAgo + ')</span>' : ''))}
+        ${row('Last open', lastOpen + (lastOpenAgo ? ' <span style="font-size:.68rem;color:var(--muted);font-weight:400;">(' + lastOpenAgo + ')</span>' : ''))}
         ${row('Active days', d.active_days)}
         ${row('Repeat user', isRepeat ? '<span style="color:#4ade80;">Yes</span>' : '<span style="color:var(--muted);">No</span>')}
       </div>
@@ -23112,6 +23115,20 @@ function shareMsrToFeed(watchId, rate) {
   });
 }
 
+// Throttled presence ping — records "last opened the app", which is distinct
+// from the action-based "last active" shown in the admin table. The server
+// (touch_presence) stamps the time so it can't be spoofed; the client only
+// throttles to once per hour so we don't write on every app open/navigation.
+function _pingPresence() {
+  try {
+    const KEY = 'wr_last_presence_ping';
+    const last = Number(localStorage.getItem(KEY) || 0);
+    if (Date.now() - last < 3600000) return; // already pinged within the hour
+    localStorage.setItem(KEY, String(Date.now()));
+  } catch (_) { /* localStorage blocked (private mode) — fall through and ping */ }
+  db.rpc('touch_presence').then(() => {}).catch(() => {});
+}
+
 // ── APP BOOT ──────────────────────────────────────────────────────────────
 // Single entry point for initialising the app once we have a confirmed user.
 // Guard: if we're already booted for this user, do nothing.
@@ -23136,6 +23153,7 @@ async function bootApp(user) {
     if (soBtn) { soBtn.textContent = 'Exit Demo'; soBtn.onclick = exitDemoMode; }
   }
   if (window.posthog && !_isDemoMode) posthog.identify(user.id, { email: user.email });
+  if (!_isDemoMode) _pingPresence();
   // Force scroll to top — iOS PWA restores previous scroll position on launch
   window.scrollTo(0, 0);
   document.getElementById('auth-screen').style.display = 'none';
