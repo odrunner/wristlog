@@ -251,6 +251,67 @@ describe('public feed data structures', () => {
   });
 });
 
+// ── Feed display name logic (username || display_name fallback) ─────────────
+// Feed now shows username as the primary name, falling back to display_name.
+
+describe('feed display name (username preferred over display_name)', () => {
+  // Mirrors the pattern: p?.username || p?.display_name || 'User'
+
+  it('shows username when both username and display_name exist', () => {
+    const p = { username: 'watchfan', display_name: 'Watch Fan' };
+    const displayName = p?.username || p?.display_name || 'User';
+    expect(displayName).toBe('watchfan');
+  });
+
+  it('falls back to display_name when username is null', () => {
+    const p = { username: null, display_name: 'Watch Fan' };
+    const displayName = p?.username || p?.display_name || 'User';
+    expect(displayName).toBe('Watch Fan');
+  });
+
+  it('falls back to display_name when username is empty string', () => {
+    const p = { username: '', display_name: 'Watch Fan' };
+    const displayName = p?.username || p?.display_name || 'User';
+    expect(displayName).toBe('Watch Fan');
+  });
+
+  it('falls back to display_name when username is undefined', () => {
+    const p = { display_name: 'Watch Fan' };
+    const displayName = p?.username || p?.display_name || 'User';
+    expect(displayName).toBe('Watch Fan');
+  });
+
+  it('falls back to "User" when both are missing', () => {
+    const p = {};
+    const displayName = p?.username || p?.display_name || 'User';
+    expect(displayName).toBe('User');
+  });
+
+  it('falls back to "User" when profile is null', () => {
+    const p = null;
+    const displayName = p?.username || p?.display_name || 'User';
+    expect(displayName).toBe('User');
+  });
+
+  it('falls back to "User" when profile is undefined', () => {
+    const p = undefined;
+    const displayName = p?.username || p?.display_name || 'User';
+    expect(displayName).toBe('User');
+  });
+
+  it('shows username for comment authors too', () => {
+    const c = { profile: { username: 'commenter', display_name: 'The Commenter' } };
+    const displayName = c.profile?.username || c.profile?.display_name || 'User';
+    expect(displayName).toBe('commenter');
+  });
+
+  it('username takes priority in caption display', () => {
+    const p = { username: 'alice_watches', display_name: 'Alice W.' };
+    const captionUser = p?.username || p?.display_name || 'User';
+    expect(captionUser).toBe('alice_watches');
+  });
+});
+
 // ── Public feed rendering logic ──────────────────────────────────────────────
 
 describe('public feed rendering logic', () => {

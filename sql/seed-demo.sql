@@ -43,107 +43,182 @@ ON CONFLICT (id) DO UPDATE SET
 
 
 -- ═════════════════════════════════════════════════════════════════════════════
---  WATCHES  (12 pieces)
+--  WATCHES  (12 pieces — fully enhanced with specs, stories, and valuations)
 -- ═════════════════════════════════════════════════════════════════════════════
 INSERT INTO watches (id, user_id, brand, name, ref, price, purchase_date, color,
                      image, url, tags, straps, owner, market_price, market_price_date,
-                     has_box, has_papers, elo_rating, watch_privacy)
+                     has_box, has_papers, elo_rating, watch_privacy,
+                     movement_type, caliber, case_material, case_diameter, case_length,
+                     case_thickness, weight, water_resistance, crystal_type, year_range,
+                     gender, origin, functions, description, background)
 VALUES
 -- 1. Rolex Submariner Date
 (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
  'Rolex', 'Submariner Date', '126610LN', 9500, '2021-03-15', '#006039',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/submariner.webp',
  'https://www.rolex.com/watches/submariner/m126610ln-0001',
- ARRAY['Daily Beater','Dive','Sport'], '[]'::jsonb, NULL, 13200, '2025-12-01',
- TRUE, TRUE, 1180, NULL),
+ ARRAY['Daily Beater','Dive','Sport'], '[]'::jsonb, NULL, 12800, '2026-04-15',
+ TRUE, TRUE, 1180, NULL,
+ 'Automatic', 'Rolex 3235', 'Oystersteel (904L stainless steel)', '41mm', '47.5mm',
+ '12.4mm', '155g', '300m', 'Sapphire', '2020-present',
+ 'men''s', 'Switzerland',
+ ARRAY['Date','Unidirectional rotating bezel','Chronometer','Luminescent display','300m water resistance'],
+ 'The 126610LN features a 41mm Oystersteel case with a black Cerachrom ceramic bezel insert and a black sunray dial. The Oyster bracelet includes Rolex''s Glidelock extension system for fine adjustment.',
+ 'The Submariner was introduced in 1953 as Rolex''s first purpose-built dive watch. The 126610LN, released in 2020, brought the case size to 41mm and introduced the caliber 3235 with a 70-hour power reserve. It remains the most recognized luxury dive watch in the world and a cornerstone of any serious collection.'),
 
 -- 2. Omega Speedmaster Professional
 (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
- 'Omega', 'Speedmaster Professional Moonwatch', '310.30.42.50.01.002', 6300, '2020-06-20', '#1a1a2e',
+ 'Omega', 'Speedmaster Professional Moonwatch', '310.30.42.50.01.002', 5200, '2020-06-20', '#1a1a2e',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/speedmaster.webp',
  'https://www.omegawatches.com/watch-omega-speedmaster-moonwatch-professional-co-axial-master-chronometer-chronograph-42-mm-31030425001002',
- ARRAY['Chronograph'], '[]'::jsonb, NULL, 6800, '2025-11-15',
- TRUE, TRUE, 1120, NULL),
+ ARRAY['Chronograph'], '[]'::jsonb, NULL, 6400, '2026-04-15',
+ TRUE, TRUE, 1120, NULL,
+ 'Manual-wind', 'Omega 3861', 'Stainless steel', '42mm', '47mm',
+ '13.2mm', '142g', '50m', 'Sapphire', '2021-present',
+ 'men''s', 'Switzerland',
+ ARRAY['Chronograph','Tachymeter','Small seconds','30-minute counter','12-hour counter'],
+ 'The modern Moonwatch features a 42mm stainless steel case with a step dial in black and applied logo. The sapphire caseback reveals the decorated Co-Axial Master Chronometer 3861 movement.',
+ 'The Speedmaster Professional earned its ''Moonwatch'' moniker after being worn by Buzz Aldrin during the Apollo 11 moon landing in 1969. This reference updated the legendary chronograph with the Co-Axial Master Chronometer caliber 3861, bringing METAS certification while preserving the iconic design that has remained largely unchanged for over 60 years.'),
 
 -- 3. Tudor Black Bay 58
 (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
- 'Tudor', 'Black Bay Fifty-Eight', 'M79030N', 3800, '2022-01-10', '#8B0000',
+ 'Tudor', 'Black Bay Fifty-Eight', 'M79030N', 3900, '2022-01-10', '#8B0000',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/blackbay58.webp',
  'https://www.tudorwatch.com/en/watches/black-bay-fifty-eight/m79030n-0001',
- ARRAY['Vintage','Dive'], '[]'::jsonb, NULL, 4100, '2025-10-20',
- TRUE, TRUE, 1060, NULL),
+ ARRAY['Vintage','Dive'], '[]'::jsonb, NULL, 3600, '2026-04-15',
+ TRUE, TRUE, 1060, NULL,
+ 'Automatic', 'Tudor MT5402', 'Stainless steel', '39mm', '48mm',
+ '11.9mm', '140g', '200m', 'Sapphire', '2020-present',
+ 'men''s', 'Switzerland',
+ ARRAY['Unidirectional rotating bezel','Luminescent display','200m water resistance','COSC chronometer'],
+ 'The Black Bay Fifty-Eight in black features a 39mm stainless steel case inspired by Tudor''s 1958 reference 7924 ''Big Crown''. The gilt details on the black dial and matching black anodized aluminum bezel insert give it a distinctly vintage aesthetic.',
+ 'Tudor introduced the Black Bay Fifty-Eight in 2018 as a more wearable alternative to the 41mm Black Bay. The 39mm case and slim profile drew from Tudor''s original 1958 dive watch. The black dial M79030N, released in 2020, became an instant hit for its versatility and vintage-inspired proportions at a fraction of Rolex pricing.'),
 
 -- 4. Grand Seiko Spring Drive Snowflake
 (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
- 'Grand Seiko', 'Spring Drive Snowflake', 'SBGA211', 5800, '2021-09-05', '#e8e8e8',
+ 'Grand Seiko', 'Spring Drive Snowflake', 'SBGA211', 5600, '2021-09-05', '#e8e8e8',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/snowflake.webp',
  'https://www.grand-seiko.com/us-en/collections/sbga211',
- ARRAY['Dress'], '[]'::jsonb, NULL, 5400, '2025-11-01',
- TRUE, TRUE, 1040, NULL),
+ ARRAY['Dress'], '[]'::jsonb, NULL, 5200, '2026-04-15',
+ TRUE, TRUE, 1040, NULL,
+ 'Spring Drive', '9R65', 'High-intensity titanium', '41mm', '48mm',
+ '12.5mm', '99g', '100m', 'Sapphire (dual-curved)', '2016-present',
+ 'men''s', 'Japan',
+ ARRAY['Date','Power reserve indicator','Spring Drive glide motion seconds','Anti-magnetic'],
+ 'The Snowflake features a 41mm high-intensity titanium case with the iconic textured white dial inspired by the snow-covered landscape of the Shinshu region. The blue-steel second hand sweeps in the uniquely smooth Spring Drive motion.',
+ 'The SBGA211, successor to the beloved SBGA011, refined the ''Snowflake'' dial texture that has become Grand Seiko''s most recognizable design. The dial is made using a special pressing technique that creates a pattern resembling freshly fallen snow. Its Spring Drive movement, exclusive to Seiko, combines mechanical craftsmanship with electronic precision for accuracy of ±1 second per day.'),
 
 -- 5. IWC Portugieser Chronograph
 (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
- 'IWC', 'Portugieser Chronograph', 'IW371605', 8200, '2023-04-18', '#1e3a5f',
+ 'IWC', 'Portugieser Chronograph', 'IW371605', 7500, '2023-04-18', '#1e3a5f',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/portugieser.webp',
  'https://www.iwc.com/en/watch-collections/portugieser/iw371605-portugieser-chronograph.html',
- ARRAY['Dress','Chronograph'], '[]'::jsonb, NULL, 7900, '2025-12-10',
- TRUE, TRUE, 1020, NULL),
+ ARRAY['Dress','Chronograph'], '[]'::jsonb, NULL, 6400, '2026-04-15',
+ TRUE, TRUE, 1020, NULL,
+ 'Automatic', 'IWC 69355', 'Stainless steel', '41mm', '47.6mm',
+ '13.1mm', '120g', '30m', 'Sapphire', '2020-present',
+ 'men''s', 'Switzerland',
+ ARRAY['Chronograph','Small seconds','30-minute counter','12-hour counter','Date'],
+ 'The Portugieser Chronograph features a 41mm stainless steel case with a sunburst blue dial, applied Arabic numerals, and leaf-shaped hands. The clean layout with recessed subdials is a hallmark of the Portugieser design language.',
+ 'The IWC Portugieser originated in 1939 when two Portuguese importers requested a wristwatch with the precision of a marine chronometer. The Chronograph version has been in the collection since 1998 and remains one of IWC''s best-selling models. The IW371605 brought the case down to 41mm from the previous 42mm, with an updated in-house caliber offering 46 hours of power reserve.'),
 
 -- 6. Cartier Santos Medium
 (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
- 'Cartier', 'Santos de Cartier Medium', 'WSSA0029', 7200, '2022-08-22', '#c9a84c',
+ 'Cartier', 'Santos de Cartier Medium', 'WSSA0029', 6800, '2022-08-22', '#c9a84c',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/santos.webp',
  'https://www.cartier.com/en-us/watches/santos-de-cartier/santos-de-cartier-watch-WSSA0029.html',
- ARRAY['Dress','Daily Beater'], '[]'::jsonb, NULL, 7800, '2025-11-20',
- TRUE, TRUE, 1080, NULL),
+ ARRAY['Dress','Daily Beater'], '[]'::jsonb, NULL, 8100, '2026-04-15',
+ TRUE, TRUE, 1080, NULL,
+ 'Automatic', 'Cartier 1847 MC', 'Stainless steel', '35.1mm', '41.9mm',
+ '8.83mm', '120g', '100m', 'Sapphire', '2018-present',
+ 'unisex', 'Switzerland',
+ ARRAY['Date','QuickSwitch interchangeable strap system','SmartLink bracelet adjustment'],
+ 'The Santos Medium features a 35.1mm stainless steel case with the iconic square bezel, eight exposed screws, and a silvered opaline dial with Roman numerals. Comes with both steel bracelet and leather strap via Cartier''s QuickSwitch system.',
+ 'The Santos was originally designed by Louis Cartier in 1904 for Brazilian aviator Alberto Santos-Dumont, making it one of the first purpose-built wristwatches in history. The 2018 redesign introduced the QuickSwitch strap system and SmartLink bracelet, modernizing the legend while preserving its distinctive DNA. The medium size has become the most popular variant, equally at home in the boardroom and on the weekend.'),
 
 -- 7. Rolex GMT-Master II "Batman"
 (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
- 'Rolex', 'GMT-Master II', '126710BLNR', 10800, '2023-11-03', '#003366',
+ 'Rolex', 'GMT-Master II', '126710BLNR', 14200, '2023-11-03', '#003366',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/gmtmaster.webp',
  'https://www.rolex.com/watches/gmt-master-ii/m126710blnr-0003',
- ARRAY['GMT'], '[]'::jsonb, NULL, 17500, '2025-12-15',
- TRUE, TRUE, 1150, NULL),
+ ARRAY['GMT'], '[]'::jsonb, NULL, 16800, '2026-04-15',
+ TRUE, TRUE, 1150, NULL,
+ 'Automatic', 'Rolex 3285', 'Oystersteel (904L stainless steel)', '40mm', '47.5mm',
+ '12.1mm', '155g', '100m', 'Sapphire', '2019-present',
+ 'men''s', 'Switzerland',
+ ARRAY['GMT/Dual timezone','Date','24-hour bidirectional rotating bezel','Chronometer','Luminescent display'],
+ 'The GMT-Master II ''Batman'' features a 40mm Oystersteel case with a blue and black Cerachrom ceramic bidirectional rotating bezel. The black dial with luminescent hour markers pairs with the Jubilee bracelet for a distinctive look.',
+ 'The GMT-Master was originally developed in 1955 for Pan Am pilots who needed to track multiple time zones. The 126710BLNR, nicknamed ''Batman'' for its blue and black bezel, was introduced on the Jubilee bracelet in 2019 with the caliber 3285 offering a 70-hour power reserve. It consistently trades well above retail on the secondary market, making it one of the most sought-after steel sports watches in production.'),
 
 -- 8. Jaeger-LeCoultre Reverso Classic
 (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
- 'Jaeger-LeCoultre', 'Reverso Classic Large', 'Q3858520', 7500, '2020-11-28', '#8B4513',
+ 'Jaeger-LeCoultre', 'Reverso Classic Large', 'Q3858520', 7000, '2020-11-28', '#8B4513',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/reverso.webp',
  'https://www.jaeger-lecoultre.com/us-en/watches/reverso/reverso-classic-large/q3858520',
- ARRAY['Dress'], '[]'::jsonb, NULL, 8200, '2025-10-15',
- TRUE, TRUE, 1010, NULL),
+ ARRAY['Dress'], '[]'::jsonb, NULL, 8400, '2026-04-15',
+ TRUE, TRUE, 1010, NULL,
+ 'Manual-wind', 'JLC 822/2', 'Stainless steel', '45.6 x 27.4mm', '45.6mm',
+ '8.5mm', '75g', '30m', 'Sapphire', '2019-present',
+ 'men''s', 'Switzerland',
+ ARRAY['Reversible case','Small seconds'],
+ 'The Reverso Classic Large features a rectangular stainless steel case with the signature reversible mechanism, a silvered dial with blue Arabic hour markers, and Dauphine-style hands. The case back can be flipped to protect the crystal or display an engraving.',
+ 'The Reverso was created in 1931 for British polo players in India who needed a watch that could survive the rigors of the sport. Its swiveling case, originally designed for protection, has become one of the most iconic designs in watchmaking. The Classic Large preserves the original Art Deco proportions while offering a manual-wind movement that connects the wearer to traditional horology.'),
 
 -- 9. Seiko Presage Cocktail Time
 (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
- 'Seiko', 'Presage Cocktail Time', 'SRPB43', 350, '2019-03-12', '#4169E1',
+ 'Seiko', 'Presage Cocktail Time', 'SRPB43', 310, '2019-03-12', '#4169E1',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/presage.webp',
  'https://www.seikowatches.com/us-en/products/presage/srpb43',
- ARRAY['Dress'], '[]'::jsonb, NULL, 380, '2025-09-01',
- TRUE, FALSE, 950, NULL),
+ ARRAY['Dress'], '[]'::jsonb, NULL, 280, '2026-04-15',
+ TRUE, FALSE, 950, NULL,
+ 'Automatic', 'Seiko 4R35', 'Stainless steel', '40.5mm', '46mm',
+ '11.8mm', '145g', '50m', 'Hardlex', '2017-2022',
+ 'men''s', 'Japan',
+ ARRAY['Date','Hacking seconds','Hand-winding capable'],
+ 'The Presage Cocktail Time SRPB43 features a 40.5mm stainless steel case with a radiant blue sunburst dial inspired by the ''Starlight'' cocktail. The textured dial catches light beautifully and creates a visual depth unusual at this price point.',
+ 'The Presage Cocktail Time series, inspired by classic cocktails, put Seiko''s dress watch line on the map for enthusiasts. The SRPB43 ''Starlight'' with its mesmerizing blue dial became one of the most recommended entry-level mechanical watches in the hobby. Now discontinued, it introduced countless collectors to the world of automatic watches and remains a benchmark for value in watchmaking.'),
 
 -- 10. Casio G-Shock GA-2100 "CasiOak"
 (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
- 'Casio', 'G-Shock GA-2100', 'GA-2100-1A1', 100, '2022-05-01', '#2d2d2d',
+ 'Casio', 'G-Shock GA-2100', 'GA-2100-1A1', 99, '2022-05-01', '#2d2d2d',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/gshock.webp',
  'https://www.casio.com/us/watches/gshock/product.GA-2100-1A1/',
- ARRAY['Daily Beater','Sport'], '[]'::jsonb, NULL, 99, '2025-08-01',
- FALSE, FALSE, 970, NULL),
+ ARRAY['Daily Beater','Sport'], '[]'::jsonb, NULL, 85, '2026-04-15',
+ FALSE, FALSE, 970, NULL,
+ 'Quartz', 'Casio 5611', 'Carbon Core Guard resin', '45.4mm', '48.5mm',
+ '11.8mm', '51g', '200m', 'Mineral', '2019-present',
+ 'unisex', 'Japan',
+ ARRAY['World time','Stopwatch','Countdown timer','5 daily alarms','LED light','Shock resistance','200m water resistance'],
+ 'The GA-2100-1A1 ''CasiOak'' features an octagonal bezel design in stealth all-black with a Carbon Core Guard structure. At just 11.8mm thick and 51g, it''s one of the thinnest and lightest G-Shock models ever made.',
+ 'Nicknamed ''CasiOak'' by the watch community for its resemblance to the Audemars Piguet Royal Oak, the GA-2100 became a viral sensation when released in 2019. Its slim profile broke from G-Shock''s traditionally bulky designs, and the all-black 1A1 variant was nearly impossible to find at retail for over a year. It demonstrated that hype-driven demand could extend well beyond luxury watches.'),
 
 -- 11. Zenith Chronomaster Sport
 (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
- 'Zenith', 'Chronomaster Sport', '03.3100.3600', 8900, '2024-02-14', '#1a1a2e',
+ 'Zenith', 'Chronomaster Sport', '03.3100.3600', 8500, '2024-02-14', '#1a1a2e',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/chronomaster.webp',
  'https://www.zenith-watches.com/en_us/chronomaster-sport.html',
- ARRAY['Chronograph','Sport'], '[]'::jsonb, NULL, 9200, '2025-12-05',
- TRUE, TRUE, 1030, NULL),
+ ARRAY['Chronograph','Sport'], '[]'::jsonb, NULL, 8200, '2026-04-15',
+ TRUE, TRUE, 1030, NULL,
+ 'Automatic', 'Zenith El Primero 3600', 'Stainless steel', '41mm', '46mm',
+ '13.6mm', '145g', '100m', 'Sapphire', '2021-present',
+ 'men''s', 'Switzerland',
+ ARRAY['Chronograph','Date','Tachymeter','1/10th of a second precision','Column wheel','60-hour power reserve'],
+ 'The Chronomaster Sport features a 41mm stainless steel case with a tricolor dial layout — black and light gray subdials on a white base — and a ceramic tachymeter bezel. The El Primero 3600 movement beats at 36,000 vph for 1/10th of a second chronograph precision.',
+ 'The El Primero, introduced in 1969, was one of the first automatic chronograph movements ever created. The Chronomaster Sport, launched in 2021, reimagined the classic El Primero for a modern audience with a ceramic bezel and contemporary proportions. Often called the best alternative to a Rolex Daytona, it offers superior movement finishing and a unique 1/10th-second chronograph capability that no Daytona can match.'),
 
 -- 12. Panerai Luminor Marina
 (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
- 'Panerai', 'Luminor Marina', 'PAM01312', 7800, '2023-07-09', '#3d3d2e',
+ 'Panerai', 'Luminor Marina', 'PAM01312', 7200, '2023-07-09', '#3d3d2e',
  'https://xnzweevzrojmouzhpwzv.supabase.co/storage/v1/object/public/watch-images/demo/luminor.webp',
  'https://www.panerai.com/us/en/collections/watch-collection/luminor/pam01312.html',
- ARRAY['Dive'], '[]'::jsonb, NULL, 7400, '2025-11-10',
- TRUE, TRUE, 1000, NULL);
+ ARRAY['Dive'], '[]'::jsonb, NULL, 5800, '2026-04-15',
+ TRUE, TRUE, 1000, NULL,
+ 'Automatic', 'Panerai P.9010', 'Stainless steel', '44mm', '52mm',
+ '15.6mm', '175g', '300m', 'Sapphire', '2020-present',
+ 'men''s', 'Switzerland',
+ ARRAY['Date','Small seconds','Luminescent sandwich dial','Crown-protecting bridge device','300m water resistance'],
+ 'The Luminor Marina PAM01312 features a 44mm stainless steel cushion-shaped case with Panerai''s iconic crown-protecting bridge, a blue sunburst dial with sandwich construction for luminescence, and Arabic numeral hour markers at 6 and 12.',
+ 'Panerai''s history dates to 1860 as a supplier of precision instruments to the Italian Navy. The Luminor Marina''s distinctive crown bridge was originally designed to ensure water resistance for military divers. The PAM01312 carries forward this heritage with the in-house P.9010 caliber offering a 3-day power reserve. The 44mm size remains the brand''s signature, appealing to those who prefer a commanding wrist presence.');
 
 
 -- ═════════════════════════════════════════════════════════════════════════════
@@ -451,51 +526,51 @@ INSERT INTO wishlist (id, user_id, brand, name, ref, price, url, image, notes,
 VALUES
 -- 1. A. Lange & Söhne Saxonia
 (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
- 'A. Lange & Söhne', 'Saxonia', '380.032', 23000,
+ 'A. Lange & Söhne', 'Saxonia', '380.032', 23500,
  'https://www.alange-soehne.com/en/timepieces/saxonia/saxonia/380032',
  NULL,
  'The ultimate dress watch. Someday.',
- '#c9a84c', ARRAY['Dress'], 23500, '2025-04-10'),
+ '#c9a84c', ARRAY['Dress'], 19500, '2025-04-10'),
 
 -- 2. Patek Philippe Calatrava
 (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
- 'Patek Philippe', 'Calatrava', '5227G', 35000,
+ 'Patek Philippe', 'Calatrava', '5227G', 37000,
  'https://www.patek.com/en/collection/calatrava/5227G-010',
  NULL,
  'White gold perfection',
- '#1a1a2e', ARRAY['Dress'], 38000, '2025-06-22'),
+ '#1a1a2e', ARRAY['Dress'], 33000, '2025-06-22'),
 
 -- 3. Omega Seamaster 300M
 (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
- 'Omega', 'Seamaster Diver 300M', '210.30.42.20.03.001', 5200,
+ 'Omega', 'Seamaster Diver 300M', '210.30.42.20.03.001', 5400,
  'https://www.omegawatches.com/watch-omega-seamaster-diver-300m-co-axial-master-chronometer-42-mm-21030422003001',
  NULL,
  'Blue dial for summer',
- '#003366', ARRAY['Dive','Daily Beater'], 5000, '2025-08-05'),
+ '#003366', ARRAY['Dive','Daily Beater'], 4600, '2025-08-05'),
 
 -- 4. Nomos Tangente 38
 (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
- 'Nomos', 'Tangente 38', '164', 1900,
+ 'Nomos', 'Tangente 38', '164', 1960,
  'https://nomos-glashuette.com/en/tangente/tangente-164',
  NULL,
  'Clean minimalism',
- '#e8e8e8', ARRAY['Dress'], 1850, '2025-09-18'),
+ '#e8e8e8', ARRAY['Dress'], 1550, '2025-09-18'),
 
 -- 5. Breitling Navitimer B01
 (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
- 'Breitling', 'Navitimer B01 Chronograph 43', 'AB0137211B1A1', 8900,
+ 'Breitling', 'Navitimer B01 Chronograph 43', 'AB0137211B1A1', 9100,
  'https://www.breitling.com/us-en/watches/navitimer/b01-chronograph-43/AB0137211B1A1/',
  NULL,
  'Classic aviation chronograph',
- '#1a1a2e', ARRAY['Pilot','Chronograph'], 8500, '2025-11-02'),
+ '#1a1a2e', ARRAY['Pilot','Chronograph'], 7200, '2025-11-02'),
 
 -- 6. H. Moser & Cie Streamliner Flyback
 (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2',
- 'H. Moser & Cie', 'Streamliner Flyback Chronograph', '6902-1200', 28500,
+ 'H. Moser & Cie', 'Streamliner Flyback Chronograph', '6902-1200', 29900,
  'https://www.h-moser.com/product/streamliner-flyback-chronograph/',
  NULL,
  'Fumé dial is incredible',
- '#4a6741', ARRAY['Chronograph','Sport-Luxury'], 31000, '2026-01-15');
+ '#4a6741', ARRAY['Chronograph','Sport-Luxury'], 32500, '2026-01-15');
 
 
 COMMIT;
@@ -508,6 +583,6 @@ COMMIT;
 --   • 10 general posts (thoughts & observations)
 --   • 6 wishlist items including 3 grail watches
 --
---  Total collection value:  ~$76,250 (purchase)
---  Total market value:      ~$87,080
+--  Total collection value:  ~$75,810 (purchase)
+--  Total market value:      ~$82,065
 -- ══════════════════════════════════════════════════════════════════════════════

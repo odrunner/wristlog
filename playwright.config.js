@@ -24,6 +24,11 @@ export default defineConfig({
     {
       name: 'integration',
       testMatch: /.*\.int\.spec\.js$/,
+      use: {
+        launchOptions: {
+          args: ['--disable-web-security'],
+        },
+      },
     },
   ],
 });

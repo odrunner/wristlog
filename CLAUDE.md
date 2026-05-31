@@ -32,8 +32,8 @@ Node is installed via Homebrew at `/opt/homebrew/bin` (v25.8.1)
 
 | What | Command | Notes |
 |------|---------|-------|
-| **Unit tests** (873 tests) | `npm test` | Pure logic, no network. Run before every commit. |
-| **E2E mocked** (42 tests) | `npm run test:e2e` | Playwright with mocked Supabase routes. No network needed. |
+| **Unit tests** (970 tests) | `npm test` | Pure logic, no network. Run before every commit. |
+| **E2E mocked** (89 tests) | `npm run test:e2e` | Playwright with mocked Supabase routes. No network needed. |
 | **E2E integration** (7 tests) | `npm run test:e2e:int` | Hits real Supabase with test accounts. Requires `dev-config.js`. |
 | **E2E all** | `npm run test:e2e:all` | Both mocked + integration. |
 | **Full suite** | `npm test && npm run test:e2e` | Unit + mocked E2E. Best pre-commit check. |
@@ -69,6 +69,14 @@ One-time setup for E2E: `npx playwright install chromium`
 - **Never post publicly** with test accounts — use private, followers, or close friends visibility only
 - **When debugging, debug thoroughly** — reproduce the issue, find root cause, fix it, then verify with UAT across both test accounts
 - Both test accounts are mutual close friends and follow each other
+
+## Diagnosing Issues — Data Before Code Changes
+When the user asks "why did/didn't X happen for this user?" or any question about unexpected behavior:
+1. **Query the actual data first** — find the specific user, pull their actual records (tick logs, sessions, events, profiles). Do NOT skip this step.
+2. **Confirm the root cause with evidence** — show the user what the data says. "Here's what actually happened" before "here's what I think went wrong."
+3. **Only then propose/make a fix** — never go straight from reading code to writing a fix. A plausible-looking code path is not evidence. The data might show the code worked fine and the real cause is something else entirely.
+
+Violating this order (reading code → assuming cause → shipping fix) has caused wrong fixes before. The rule is: **no fix without data**.
 
 ## User Reports & Observations
 - **Always assume the user is right first** — never dismiss or skip past observations

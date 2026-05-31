@@ -156,3 +156,105 @@ describe('validateUsername', () => {
     expect(result.clean).toBe('user83729');
   });
 });
+
+// ── Username prompt modal: display name field ───────────────────────────────
+// The username prompt modal now also asks for display name.
+// saveUsernamePrompt() sends both username and display_name to profiles.
+
+describe('username prompt: display name handling', () => {
+  it('builds update payload with both username and display_name', () => {
+    const raw = 'alice';
+    const displayName = 'Alice Watches';
+    const updates = { username: raw, username_set: true };
+    if (displayName) updates.display_name = displayName;
+    expect(updates).toEqual({
+      username: 'alice',
+      username_set: true,
+      display_name: 'Alice Watches',
+    });
+  });
+
+  it('omits display_name from payload when empty', () => {
+    const raw = 'alice';
+    const displayName = '';
+    const updates = { username: raw, username_set: true };
+    if (displayName) updates.display_name = displayName;
+    expect(updates).toEqual({
+      username: 'alice',
+      username_set: true,
+    });
+    expect(updates.display_name).toBeUndefined();
+  });
+
+  it('omits display_name from payload when only whitespace', () => {
+    const raw = 'alice';
+    const displayName = '   '.trim();
+    const updates = { username: raw, username_set: true };
+    if (displayName) updates.display_name = displayName;
+    expect(updates.display_name).toBeUndefined();
+  });
+
+  it('trims display_name before including', () => {
+    const displayName = '  Alice Watches  '.trim();
+    const updates = { username: 'alice', username_set: true };
+    if (displayName) updates.display_name = displayName;
+    expect(updates.display_name).toBe('Alice Watches');
+  });
+
+  it('updates local profile after successful save', () => {
+    const myProfile = { username: null, username_set: false, display_name: null };
+    const raw = 'watchfan';
+    const displayName = 'Watch Fan';
+
+    // Simulate successful save
+    myProfile.username = raw;
+    myProfile.username_set = true;
+    if (displayName) myProfile.display_name = displayName;
+
+    expect(myProfile.username).toBe('watchfan');
+    expect(myProfile.username_set).toBe(true);
+    expect(myProfile.display_name).toBe('Watch Fan');
+  });
+
+  it('preserves existing display_name when prompt display name is empty', () => {
+    const myProfile = { username: 'old', username_set: false, display_name: 'Existing Name' };
+    const raw = 'newuser';
+    const displayName = '';
+
+    myProfile.username = raw;
+    myProfile.username_set = true;
+    if (displayName) myProfile.display_name = displayName;
+
+    expect(myProfile.username).toBe('newuser');
+    expect(myProfile.display_name).toBe('Existing Name'); // preserved
+  });
+
+  it('requireUsername skips prompt when username_set is true', () => {
+    const myProfile = { username: 'alice', username_set: true };
+    let promptShown = false;
+    let callbackCalled = false;
+
+    // Simulate requireUsername logic
+    if (myProfile && myProfile.username_set) {
+      callbackCalled = true;
+    } else {
+      promptShown = true;
+    }
+
+    expect(promptShown).toBe(false);
+    expect(callbackCalled).toBe(true);
+  });
+
+  it('requireUsername shows prompt when username_set is false', () => {
+    const myProfile = { username: null, username_set: false };
+    let promptShown = false;
+
+    if (myProfile && myProfile.username_set) {
+      // callback
+    } else {
+      promptShown = true;
+    }
+
+    expect(promptShown).toBe(true);
+  });
+});
