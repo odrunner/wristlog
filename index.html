@@ -5922,7 +5922,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.10.50';
+const APP_VERSION = '31.11.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14086,7 +14086,7 @@ async function loadCampaigns() {
           <button class="btn btn-ghost" onclick="toggleCampaign('${c.id}', ${!c.is_active})" style="font-size:.72rem;padding:2px 8px;">${toggleIcon} ${toggleLabel}</button>
         </div>
       </div>
-      <div style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem;">Sends ${c.delay_days} days after signup · ${sends} sent total</div>
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem;">${c.campaign_type === 'cohort_blast' ? `Cohort blast · ${sends} sent total` : `Sends ${c.delay_days} days after signup · ${sends} sent total`}</div>
       <div class="draft-form-row" style="margin-bottom:.4rem;">
         <label>Subject</label>
         <input type="text" id="camp-subject-${c.id}" value="${escHtml(c.subject)}" style="font-size:.82rem;" oninput="updateCampaignPreview('${c.id}')">
@@ -14095,10 +14095,10 @@ async function loadCampaigns() {
         <label>Body (HTML, use {{name}} for user's name)</label>
         <textarea id="camp-body-${c.id}" rows="10" style="font-size:.82rem;min-height:160px;" oninput="updateCampaignPreview('${c.id}')">${escHtml(c.body_html)}</textarea>
       </div>
-      <div class="draft-form-row" style="margin-bottom:.4rem;">
+      ${c.campaign_type === 'cohort_blast' ? '' : `<div class="draft-form-row" style="margin-bottom:.4rem;">
         <label>Delay (days after signup)</label>
         <input type="number" id="camp-delay-${c.id}" value="${c.delay_days}" min="1" max="30" style="font-size:.82rem;width:60px;">
-      </div>
+      </div>`}
       <div style="display:flex;gap:.5rem;margin-top:.5rem;">
         <button class="btn btn-ghost" onclick="saveCampaign('${c.id}')" style="flex:1;">Save Changes</button>
         <button class="btn btn-ghost" onclick="testCampaign('${c.id}')" style="flex:1;">Send Test to Me</button>
@@ -14175,11 +14175,14 @@ async function toggleCampaign(id, newState) {
 }
 
 async function saveCampaign(id) {
+  const camp = _campaignsData.find(c => c.id === id);
   const subject = document.getElementById('camp-subject-' + id)?.value?.trim();
   const body_html = document.getElementById('camp-body-' + id)?.value?.trim();
-  const delay_days = parseInt(document.getElementById('camp-delay-' + id)?.value) || 2;
+  const delayEl = document.getElementById('camp-delay-' + id);
+  const update = { subject, body_html, updated_at: new Date().toISOString() };
+  if (delayEl) update.delay_days = parseInt(delayEl.value) || camp?.delay_days || 2;
   if (!subject || !body_html) { toast('Subject and body are required', 'error'); return; }
-  const { error } = await db.from('email_campaigns').update({ subject, body_html, delay_days, updated_at: new Date().toISOString() }).eq('id', id);
+  const { error } = await db.from('email_campaigns').update(update).eq('id', id);
   if (error) { toast('Failed to save: ' + error.message, 'error'); return; }
   toast('Campaign saved');
   loadCampaigns();
