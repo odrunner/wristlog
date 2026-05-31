@@ -127,8 +127,8 @@ export async function mockSupabase(page, opts = {}) {
     route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify([{}]) })
   );
 
-  // ── Social: friends, follows, likes, comments, notifications ──
-  for (const table of ['friend_requests', 'follows', 'likes', 'comments', 'notifications', 'clubs', 'club_members', 'page_visits', 'feed_posts']) {
+  // ── Social: friends, follows, likes, comments, notifications, badges ──
+  for (const table of ['friend_requests', 'follows', 'likes', 'comments', 'notifications', 'clubs', 'club_members', 'page_visits', 'feed_posts', 'earned_badges', 'review_prompt_events', 'internal_accounts', 'rate_limits']) {
     await page.route(`**/rest/v1/${table}*`, route =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
     );

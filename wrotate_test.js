@@ -1090,6 +1090,13 @@ export function buildCommentAlsoTargets(likerIds, commenterIds, currentUserId, p
   );
 }
 
+// Instagram/Strava model: you can delete a comment if you wrote it, or if you
+// own the post it's on. Mirrors the RLS DELETE policy on the comments table.
+export function canDeleteComment(comment, post, userId) {
+  if (!userId || !comment || !post) return false;
+  return comment.user_id === userId || post.user_id === userId;
+}
+
 // ══════════════════════════════════════════
 //  RESILIENCE UTILITIES
 // ══════════════════════════════════════════

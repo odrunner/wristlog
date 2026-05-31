@@ -1779,6 +1779,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .comment-heart-btn.liked { color: #ef4444; }
     .comment-heart-btn svg { width: 12px; height: 12px; }
     .comment-heart-count { font-size: .62rem; color: var(--muted); line-height: 1; }
+    .comment-menu-wrap { position: relative; flex-shrink: 0; padding-top: .15rem; }
+    .comment-menu-btn {
+      background: none; border: none; cursor: pointer; padding: .15rem .2rem;
+      color: var(--muted); display: flex; align-items: center; line-height: 0;
+      border-radius: 6px; transition: color .15s, background .15s;
+    }
+    .comment-menu-btn:hover { color: var(--text); background: var(--hover); }
+    .comment-menu-btn svg { width: 12px; height: 12px; }
     .comment-input-row { display: flex; gap: .5rem; margin-top: .65rem; }
     .comment-input {
       flex: 1; background: var(--hover); border: 1px solid var(--border);
@@ -2097,6 +2105,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(74,222,128,.12);color:#4ade80;padding:.15rem .5rem;border-radius:6px;">May 2026</span>
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Delete Comments</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Changed your mind? Tap the &#8942; menu on any comment to delete it. You can remove your own comments anywhere, and as the owner of a post you can remove any comment on it.</div>
+      </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Multi-Image Posts</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Posts now support up to 6 photos. Select multiple images at once or add more with the + button. Drag thumbnails to reorder &#8212; the first image is your hero shot. In the feed, tap any thumbnail to preview it, or tap the hero to open a fullscreen swipe viewer with dots and arrow navigation.</div>
@@ -3090,7 +3102,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">3</div>
             <div class="help-step-body">
               <div class="help-step-title">Like and comment on posts</div>
-              <div class="help-step-desc">Tap the heart to like any post. Tap the comment bubble to read and leave comments. You'll get a bell notification when someone likes or comments on your posts.</div>
+              <div class="help-step-desc">Tap the heart to like any post. Tap the comment bubble to read and leave comments. To remove a comment, tap the &#8942; menu on it &#8212; you can delete your own comments anywhere, and any comment on your own posts. You'll get a bell notification when someone likes or comments on your posts.</div>
             </div>
           </div>
           <div class="help-step">
@@ -5910,7 +5922,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.08.43';
+const APP_VERSION = '31.10.37';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9414,6 +9426,14 @@ function renderFeedCard(item) {
       const heartSvg = cl.liked
         ? `<svg viewBox="0 0 24 24" fill="#ef4444" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>`
         : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+      const menuHtml = canDeleteComment(c, item, currentUser?.id)
+        ? `<div class="comment-menu-wrap">
+            <button class="comment-menu-btn" onclick="event.stopPropagation();toggleFeedMenu('cmt-${c.id}')" title="Comment options" aria-label="Comment options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+            <div class="feed-menu hidden" id="feed-menu-cmt-${c.id}">
+              <div class="feed-menu-item" style="color:var(--danger);" onclick="deleteComment('${c.id}','${item.id}',this)">Delete</div>
+            </div>
+          </div>`
+        : '';
       return `
       <div class="comment-item">
         <div class="comment-avatar">${profileInitials(c.profile)}</div>
@@ -9428,6 +9448,7 @@ function renderFeedCard(item) {
           <button class="comment-heart-btn${cl.liked ? ' liked' : ''}" onclick="toggleCommentLike('${c.id}','${item.id}')">${heartSvg}</button>
           ${cl.count > 0 ? `<span class="comment-heart-count">${cl.count}</span>` : ''}
         </div>
+        ${menuHtml}
       </div>`;
     }).join('');
     const viewMoreHtml = remaining > 0
@@ -10961,6 +10982,13 @@ async function viewUserByUsername(username) {
   if (data?.id) viewUserProfile(data.id);
 }
 
+// Instagram/Strava model: you can delete a comment if you wrote it, or if you
+// own the post it's on. Mirrors the RLS DELETE policy on the comments table.
+function canDeleteComment(comment, post, userId) {
+  if (!userId || !comment || !post) return false;
+  return comment.user_id === userId || post.user_id === userId;
+}
+
 function renderCommentBody(body) {
   if (!body) return '';
   // Escape HTML first, then replace @username tokens with clickable links
@@ -11023,6 +11051,33 @@ async function postComment(logId) {
       }
     }
   } else { toast('Comment failed — ' + error.message, 'error'); }
+}
+
+// Delete a comment. Double-tap confirm (mirrors deleteLog): first tap flips the
+// menu item to "Sure?", second tap within 3s deletes. Silent — no notification.
+async function deleteComment(commentId, logId, el) {
+  if (demoGuard()) return;
+  if (el && !el.dataset.confirm) {
+    el.dataset.confirm = '1'; el.textContent = 'Sure?';
+    setTimeout(() => { if (el) { delete el.dataset.confirm; el.textContent = 'Delete'; } }, 3000);
+    return;
+  }
+  const list = feedComments[logId] || [];
+  const idx = list.findIndex(c => c.id === commentId);
+  if (idx === -1) return;
+  const removed = list[idx];
+  // Optimistic removal
+  list.splice(idx, 1);
+  feedCommentCounts[logId] = list.length;
+  refreshFeedCard(logId);
+  const { error } = await db.from('comments').delete().eq('id', commentId);
+  if (error) {
+    // Roll back on failure
+    list.splice(idx, 0, removed);
+    feedCommentCounts[logId] = list.length;
+    refreshFeedCard(logId);
+    toast("Couldn't delete comment — " + error.message, 'error');
+  }
 }
 
 // ── Welcome Onboarding ────────────────────────────────────────────────────

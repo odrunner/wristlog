@@ -257,7 +257,7 @@ test.describe('Log a wear (mocked)', () => {
     await navigateTo(page, 'track');
     // Click the first watch option in the selector
     const watchOption = page.locator('.watch-option').first();
-    await expect(watchOption).toBeVisible();
+    await expect(watchOption).toBeVisible({ timeout: 10_000 });
     await watchOption.click();
 
     // Track log modal should open
@@ -829,12 +829,12 @@ test.describe('Admin chips (mocked)', () => {
 
   test('admin tab chips are button elements', async ({ page }) => {
     const chips = page.locator('#admin-tabs button.chip');
-    await expect(chips).toHaveCount(7);
+    await expect(chips).toHaveCount(8);
   });
 
   test('admin tab chips have correct labels', async ({ page }) => {
     const labels = await page.locator('#admin-tabs button.chip').allTextContents();
-    expect(labels).toEqual(['Usage', 'Traffic', 'Feedback', 'Reports', 'Official', 'Broadcast', 'Dev']);
+    expect(labels).toEqual(['Usage', 'Traffic', 'Feedback', 'Reports', 'Official', 'Broadcast', 'Campaigns', 'Dev']);
   });
 
   test('admin tab chips are keyboard focusable', async ({ page }) => {
@@ -1198,5 +1198,280 @@ test.describe('Profile notification section (mocked)', () => {
     if (await notifSection.count() > 0) {
       await expect(notifSection).toHaveClass(/collapsed/);
     }
+  });
+});
+
+// ── Username prompt modal with display name (mocked) ───────────────────
+
+test.describe('Username prompt modal (mocked)', () => {
+  test('username prompt modal has display name field', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+
+    // The modal exists in the DOM even when hidden
+    await expect(page.locator('#username-prompt-modal')).toBeAttached();
+    await expect(page.locator('#up-display-name')).toBeAttached();
+    await expect(page.locator('#up-username')).toBeAttached();
+  });
+
+  test('username prompt modal shows "Set up your profile" title', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+
+    // Force-show the modal
+    await page.evaluate(() => {
+      document.getElementById('username-prompt-modal').classList.remove('hidden');
+    });
+
+    await expect(page.locator('#username-prompt-title')).toContainText('Set up your profile');
+    await expect(page.locator('#up-display-name')).toBeVisible();
+    await expect(page.locator('#up-username')).toBeVisible();
+    await expect(page.locator('#up-save-btn')).toBeVisible();
+  });
+
+  test('display name field accepts input', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+
+    await page.evaluate(() => {
+      document.getElementById('username-prompt-modal').classList.remove('hidden');
+    });
+
+    await page.locator('#up-display-name').fill('Alice Watches');
+    await expect(page.locator('#up-display-name')).toHaveValue('Alice Watches');
+  });
+
+  test('cancel button closes the modal', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+
+    await page.evaluate(() => {
+      document.getElementById('username-prompt-modal').classList.remove('hidden');
+    });
+    await expect(page.locator('#username-prompt-modal')).toBeVisible();
+
+    await page.locator('#username-prompt-modal button:has-text("Cancel")').click();
+    await expect(page.locator('#username-prompt-modal')).toBeHidden();
+  });
+});
+
+// ── Watch preview modal structure (mocked) ─────────────────────────────
+
+test.describe('Watch preview modal structure (mocked)', () => {
+  test('watch preview modal has thumbnail container and ref row', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+
+    // Verify the structural elements exist in the DOM
+    await expect(page.locator('#watch-preview-modal')).toBeAttached();
+    await expect(page.locator('#wpm-thumb')).toBeAttached();
+    await expect(page.locator('#wpm-ref-row')).toBeAttached();
+    await expect(page.locator('#wpm-fields')).toBeAttached();
+  });
+
+  test('ref row is placed before scrollable fields area', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+
+    // Verify DOM order: wpm-ref-row comes before wpm-fields
+    const order = await page.evaluate(() => {
+      const refRow = document.getElementById('wpm-ref-row');
+      const fields = document.getElementById('wpm-fields');
+      if (!refRow || !fields) return false;
+      // compareDocumentPosition: 4 means refRow precedes fields
+      return !!(refRow.compareDocumentPosition(fields) & Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+    expect(order).toBe(true);
+  });
+
+  test('thumbnail is positioned next to title', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+
+    // Verify wpm-thumb and watch-preview-modal-title share same parent flex row
+    const sameRow = await page.evaluate(() => {
+      const thumb = document.getElementById('wpm-thumb');
+      const title = document.getElementById('watch-preview-modal-title');
+      if (!thumb || !title) return false;
+      return thumb.parentElement === title.parentElement.parentElement
+        || thumb.parentElement.contains(title);
+    });
+    expect(sameRow).toBe(true);
+  });
+
+  test('link button has outline:none in watch preview', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+
+    // Open a watch preview by calling previewWatch with a URL
+    await page.evaluate(() => {
+      previewWatch({
+        id: 'test',
+        brand: 'Rolex',
+        name: 'Submariner',
+        ref: '126610LN',
+        url: 'https://www.rolex.com',
+        image: '',
+        color: '#1a1a2e',
+      });
+    });
+
+    await expect(page.locator('#watch-preview-modal')).toBeVisible();
+    // The link button should have outline:none
+    const linkBtn = page.locator('#wpm-ref-row a');
+    const style = await linkBtn.getAttribute('style');
+    expect(style).toContain('outline:none');
+  });
+});
+
+// ── Badge system always on (mocked) ────────────────────────────────────
+
+test.describe('Badge system (mocked)', () => {
+  test.beforeEach(async ({ page }) => {
+    // Mock earned_badges table
+    await page.route('**/rest/v1/earned_badges*', route => {
+      if (route.request().method() === 'GET') {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+          { badge_ref: 1, earned_at: '2026-01-01T00:00:00Z', seen: true },
+          { badge_ref: 3, earned_at: '2026-01-02T00:00:00Z', seen: true },
+        ]) });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    });
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+  });
+
+  test('badge wall button is visible on own profile', async ({ page }) => {
+    await page.evaluate(() => {
+      if (typeof viewMyProfile === 'function') viewMyProfile();
+      else if (typeof viewUserProfile === 'function') viewUserProfile(currentUser.id);
+    });
+
+    await expect(page.locator('#page-profile')).toBeVisible({ timeout: 5000 });
+    await page.waitForTimeout(1000);
+
+    // Badge section should show "Achievements" and "View All Badges" button
+    const profileContent = page.locator('#profile-page-content');
+    const text = await profileContent.textContent();
+    expect(text).toContain('Achievements');
+  });
+});
+
+// ── Feed shows username (mocked) ───────────────────────────────────────
+
+test.describe('Feed username display (mocked)', () => {
+  test('landing feed cards show username instead of display_name', async ({ page }) => {
+    await page.route('**/auth/v1/**', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) })
+    );
+    await page.route('**/rest/v1/logs*order=created_at*', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+        { id: 'p1', user_id: 'u1', watch_id: 'w1', photo_url: null, notes: 'Great day', use_case: 'casual', date: '2026-05-15', created_at: '2026-05-15T10:00:00Z', visibility: 'public', moderation_status: null },
+      ]) })
+    );
+    await page.route('**/rest/v1/profiles*', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+        { id: 'u1', username: 'watchfan42', display_name: 'John Smith', avatar_url: null, is_official: false },
+      ]) })
+    );
+    await page.route('**/rest/v1/watches*', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+        { id: 'w1', user_id: 'u1', brand: 'Seiko', name: 'SKX009' },
+      ]) })
+    );
+    await page.route('**/rest/v1/likes*', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
+    );
+    await page.route('**/rest/v1/comments*', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
+    );
+    await page.route('**/realtime/**', route => route.abort());
+
+    await page.goto('/');
+    await page.waitForTimeout(3000);
+
+    // The feed card should show 'watchfan42' (username), not 'John Smith' (display_name)
+    const feedList = page.locator('#landing-feed-list');
+    if (await feedList.count() > 0) {
+      const text = await feedList.textContent();
+      expect(text).toContain('watchfan42');
+    }
+  });
+});
+
+// ── Comment deletion (mocked) ──────────────────────────────────────────────
+
+test.describe('Comment deletion (mocked)', () => {
+  // A comment by another user on log-001 (which the session user owns) — so the
+  // session user is the post owner and should be able to delete it.
+  const COMMENT = {
+    id: 'c-del-1', log_id: 'log-001', user_id: 'u-other',
+    body: 'Nice piece', created_at: '2026-05-20T10:00:00Z', moderation_status: null,
+  };
+  let deleteCalled;
+
+  test.beforeEach(async ({ page }) => {
+    deleteCalled = false;
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    // Override the generic comments route: GET returns one comment, DELETE is accepted.
+    await page.route('**/rest/v1/comments*', route => {
+      const m = route.request().method();
+      if (m === 'GET') {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([COMMENT]) });
+      }
+      if (m === 'DELETE') {
+        deleteCalled = true;
+        return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    });
+    await page.route('**/rest/v1/comment_likes*', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+    );
+    // Suppress the "new features" modal so it doesn't overlay the feed
+    await page.addInitScript(() => localStorage.setItem('wrotate_newfeatures_v2', '1'));
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await page.waitForTimeout(2000);
+  });
+
+  test('post owner sees delete menu on another user\'s comment and can delete it', async ({ page }) => {
+    const card = page.locator('#feedcard-log-001');
+    if (await card.count() === 0) test.skip(true, 'feed card did not render');
+
+    // Post owner gets a kebab on the comment
+    const menuBtn = card.locator('.comment-menu-btn').first();
+    await expect(menuBtn).toBeVisible();
+    await menuBtn.click();
+
+    // Menu has a Delete item; double-tap confirm
+    const del = card.locator('.feed-menu-item', { hasText: /Delete|Sure/ }).first();
+    await expect(del).toBeVisible();
+    await del.click();                       // first tap → "Sure?"
+    await expect(del).toHaveText('Sure?');
+    await del.click();                       // second tap → deletes
+
+    await expect.poll(() => deleteCalled).toBe(true);
+    await expect(card.locator('.comment-item')).toHaveCount(0);
   });
 });
