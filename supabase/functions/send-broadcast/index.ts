@@ -81,7 +81,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { subject, html, test_email, segment = "all", campaign_id, cohort, dry_run } = body;
+    const { subject, html, test_email, segment = "all", campaign_id, cohort, dry_run, limit } = body;
 
     if (!subject || !html) {
       return jsonResponse({ error: "subject and html are required" }, 400);
@@ -194,13 +194,26 @@ serve(async (req) => {
       }
     }
 
+    // Optional limit (e.g. test slice of 20 before sending to whole cohort)
+    let cappedRecipients = recipients;
+    const effectiveLimit = typeof limit === "number" && limit > 0 ? Math.floor(limit) : null;
+    if (effectiveLimit !== null && effectiveLimit < recipients.length) {
+      cappedRecipients = recipients.slice(0, effectiveLimit);
+    }
+
     // Dry run: just return the count without sending
     if (dry_run) {
-      return jsonResponse({ eligible: recipients.length, cohort, campaign_id });
+      return jsonResponse({
+        eligible: recipients.length,
+        will_send: cappedRecipients.length,
+        cohort,
+        campaign_id,
+        limit: effectiveLimit,
+      });
     }
 
     // Batch segments: split all recipients into 3 roughly equal groups
-    let filteredRecipients = recipients;
+    let filteredRecipients = cappedRecipients;
     if (segment === "batch_1" || segment === "batch_2" || segment === "batch_3") {
       const batchSize = Math.ceil(filteredRecipients.length / 3);
       const batchNum = parseInt(segment.split("_")[1]) - 1;

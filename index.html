@@ -5922,7 +5922,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.10.47';
+const APP_VERSION = '31.10.50';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14104,13 +14104,14 @@ async function loadCampaigns() {
         <button class="btn btn-ghost" onclick="testCampaign('${c.id}')" style="flex:1;">Send Test to Me</button>
         <button class="btn btn-ghost" onclick="runCampaignNow()" style="flex:1;">Run Now</button>
       </div>
-      <div style="display:flex;gap:.5rem;margin-top:.5rem;align-items:center;">
+      <div style="display:flex;gap:.5rem;margin-top:.5rem;align-items:center;flex-wrap:wrap;">
         <label style="font-size:.78rem;color:var(--muted);">Cohort blast:</label>
-        <select id="camp-cohort-${c.id}" style="font-size:.82rem;padding:4px 8px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;flex:1;">
+        <select id="camp-cohort-${c.id}" style="font-size:.82rem;padding:4px 8px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;flex:1;min-width:120px;">
           <option value="pre_april">Pre-April dormant</option>
           <option value="april">April dormant</option>
           <option value="may">May dormant</option>
         </select>
+        <input type="number" id="camp-limit-${c.id}" min="1" placeholder="Limit" title="Optional cap (e.g. 20 for a test slice). Leave blank to send to all." style="font-size:.82rem;width:70px;padding:4px 8px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;">
         <button class="btn btn-ghost" onclick="sendToCohort('${c.id}')" style="font-size:.78rem;">Send to cohort</button>
       </div>
       <div id="camp-status-${c.id}" style="font-size:.78rem;color:var(--muted);margin-top:.4rem;" aria-live="polite"></div>
@@ -14227,28 +14228,34 @@ async function sendToCohort(id) {
   const subject = document.getElementById('camp-subject-' + id)?.value?.trim() || camp.subject;
   const body = document.getElementById('camp-body-' + id)?.value?.trim() || camp.body_html;
   if (!subject || !body) { toast('Subject and body are required', 'error'); return; }
+  const limitRaw = document.getElementById('camp-limit-' + id)?.value?.trim();
+  const limit = limitRaw ? Math.max(1, parseInt(limitRaw, 10)) : null;
   const statusEl = document.getElementById('camp-status-' + id);
+  const sharedBody = { subject, html: buildCampaignPreviewHtml(subject, body), campaign_id: id, cohort };
+  if (limit) sharedBody.limit = limit;
   // Step 1: dry-run to get count
   if (statusEl) statusEl.textContent = 'Counting recipients…';
   try {
     const { data: countData, error: countErr } = await db.functions.invoke('send-broadcast', {
-      body: { subject, html: buildCampaignPreviewHtml(subject, body), campaign_id: id, cohort, dry_run: true }
+      body: { ...sharedBody, dry_run: true }
     });
     if (countErr) throw countErr;
     const eligible = countData?.eligible ?? 0;
+    const willSend = countData?.will_send ?? eligible;
     if (eligible === 0) {
       if (statusEl) statusEl.textContent = `No eligible recipients in ${label} (all already sent, opted out, or active).`;
       return;
     }
-    if (!confirm(`Send "${camp.name}" to ${eligible} ${label} user${eligible === 1 ? '' : 's'}? This cannot be undone.`)) {
+    const sliceNote = limit && willSend < eligible
+      ? ` (test slice of ${willSend} from ${eligible} eligible)`
+      : '';
+    if (!confirm(`Send "${camp.name}" to ${willSend} ${label} user${willSend === 1 ? '' : 's'}${sliceNote}? This cannot be undone.`)) {
       if (statusEl) statusEl.textContent = 'Cancelled.';
       return;
     }
     // Step 2: actual send
-    if (statusEl) statusEl.textContent = `Sending to ${eligible} recipients…`;
-    const { data, error } = await db.functions.invoke('send-broadcast', {
-      body: { subject, html: buildCampaignPreviewHtml(subject, body), campaign_id: id, cohort }
-    });
+    if (statusEl) statusEl.textContent = `Sending to ${willSend} recipients…`;
+    const { data, error } = await db.functions.invoke('send-broadcast', { body: sharedBody });
     if (error) throw error;
     if (statusEl) statusEl.textContent = `Sent ${data?.sent ?? 0} / ${data?.total ?? 0}${data?.failed ? `, ${data.failed} failed` : ''}.`;
     loadCampaigns();
