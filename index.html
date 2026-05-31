@@ -5807,7 +5807,12 @@ function markDirty(type, id) {
 
 // ── Pending deletes queue (persisted to localStorage for offline resilience) ──
 const STORE_PD = 'wr_pendingDeletes';
-let _pendingDeletes = JSON.parse(localStorage.getItem(STORE_PD) || '[]');
+let _pendingDeletes = [];
+// Guard against corrupt localStorage — a bad parse here used to hard-crash app boot (blank screen)
+try {
+  const _pd = JSON.parse(localStorage.getItem(STORE_PD) || '[]');
+  if (Array.isArray(_pd)) _pendingDeletes = _pd;
+} catch (_) {}
 function savePendingDeletes() { safeSetJSON(STORE_PD, _pendingDeletes); }
 function queueDelete(table, id) {
   if (!_pendingDeletes.some(d => d.table === table && d.id === id)) {
@@ -5905,7 +5910,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.12.11';
+const APP_VERSION = '31.08.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10681,7 +10686,7 @@ async function toggleLike(logId) {
       const item = feedItems.find(i => i.id === logId);
       if (item && item.user_id !== currentUser.id) {
         db.from('notifications').insert({ user_id: item.user_id, type: 'like', actor_id: currentUser.id, ref_id: logId })
-          .then(({ error }) => { if (error) console.error('[WristLog] like notif:', error.code, error.message, error.details, error.hint); })
+          .then(({ error }) => { if (error && error.code !== '23505') console.error('[WristLog] like notif:', error.code, error.message, error.details, error.hint); })
           .catch(e => console.error('[WristLog] like notif network error:', e));
       }
     }
@@ -10736,7 +10741,7 @@ async function toggleCommentLike(commentId, logId) {
       if (comment && comment.user_id !== currentUser.id) {
         db.from('notifications').insert({
           user_id: comment.user_id, type: 'comment_like', actor_id: currentUser.id, ref_id: logId, is_read: false
-        }).then(({ error }) => { if (error) console.error('[WristLog] comment_like notif:', error.code, error.message, error.details, error.hint); })
+        }).then(({ error }) => { if (error && error.code !== '23505') console.error('[WristLog] comment_like notif:', error.code, error.message, error.details, error.hint); })
           .catch(e => console.error('[WristLog] comment_like notif network error:', e));
       }
     }
