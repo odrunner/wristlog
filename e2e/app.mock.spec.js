@@ -1088,6 +1088,18 @@ test.describe('Boot popovers (mocked)', () => {
     await page.waitForTimeout(1200);
     await expect(page.locator('#new-features-modal')).toBeHidden();
   });
+
+  // The Speedmaster fixture's purchase_date (2024-06-01) makes checkAnniversary()
+  // pop a blocking overlay every June 1. The harness pre-dismisses it; this guards
+  // that suppression so it can't silently regress and start eating clicks again.
+  test('anniversary overlay stays hidden after boot', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await page.waitForTimeout(500);
+    await expect(page.locator('#anniversary-modal')).toBeHidden();
+  });
 });
 
 // ── Essentials Field Order ──────────────────────────────────────────────

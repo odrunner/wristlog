@@ -5938,7 +5938,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.21.40';
+const APP_VERSION = '01.07.07';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12304,7 +12304,11 @@ async function loadAdminStats() {
       enhances: enhByUser[p.id] || 0,
       measurements: msrByUser[p.id] || 0,
       lastActiveAt: lastActiveByUser[p.id] || 0,
-      r7: (activeDaysByUser[p.id] || 0) > 1 ? 1 : 0,
+      // Repeat user: active on 2+ distinct days in the last 30 days across any
+      // feature (logs, watches, measurements, price checks, enhances). Comes from
+      // admin_user_stats.recent_active_days, which shares the admin_active_days()
+      // helper with the detail modal so the two never disagree.
+      repeat: (activeDaysByUser[p.id] || 0) > 1 ? 1 : 0,
       _newWtc: newWtcByUser[p.id] || 0,
       _newWrs: newWrsByUser[p.id] || 0,
       _newVal: newValByUser[p.id] || 0,
@@ -12344,7 +12348,7 @@ async function loadAdminStats() {
         { key: 'priceChecks', label: 'Val', newKey: '_newVal' },
         { key: 'enhances', label: 'Enh', newKey: '_newEnh' },
         { key: 'measurements', label: 'Msr', newKey: '_newMsr' },
-        { key: 'r7', label: 'R?' },
+        { key: 'repeat', label: 'R?' },
         { key: 'lastActiveAt', label: 'Seen', fmt: v => v ? _shortAgo(v) : '—', recentMs: 24 * 3600000 },
       ];
       const thStyle = 'text-align:center;padding:.35rem .2rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:2.1rem;cursor:pointer;user-select:none;';

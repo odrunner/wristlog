@@ -177,6 +177,18 @@ export async function injectSession(page, user = FAKE_USER) {
     // window._iosAppVersion, which is unset in the browser, so it never fires.)
     localStorage.setItem('wrotate_newfeatures_v2', '1');
 
+    // Suppress the anniversary popover. checkAnniversary() shows a blocking
+    // overlay when a sample watch's purchase_date matches today's month/day
+    // (e.g. the Speedmaster fixture's 2024-06-01 hits its anniversary every
+    // June 1). It's pre-dismissed per watch per year via this localStorage key,
+    // so set it for the known sample watch ids and the current year. Year is
+    // read at runtime so this never rots. Without this the overlay intercepts
+    // clicks on any date that lands on a fixture anniversary.
+    const _annivYear = new Date().getFullYear();
+    for (const _wid of ['watch-001', 'watch-002']) {
+      localStorage.setItem(`wristlog_anniv_${_annivYear}_${_wid}`, '1');
+    }
+
     // The Supabase JS client's getSession() rejects fake JWTs even when
     // stored in localStorage. Override createClient to patch getSession()
     // and onAuthStateChange() so the app boots with our fake session.
