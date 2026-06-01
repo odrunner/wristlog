@@ -169,6 +169,13 @@ export async function injectSession(page, user = FAKE_USER) {
     localStorage.setItem(args.key, JSON.stringify(args.session));
     // Prevent A/B test redirect to r.html
     localStorage.setItem('ab_landing', 'a');
+    // Suppress the one-time "new features" popover. It fires on an 800ms timer
+    // at boot (maybeShowNewFeatures); under full-suite load the app takes >800ms
+    // to reach a test's first interaction, so the overlay un-hides mid-test and
+    // intercepts clicks — a load-dependent flake. Pre-setting its seen-key makes
+    // the popover skip deterministically. (whatsNewSeen's auto-show is gated on
+    // window._iosAppVersion, which is unset in the browser, so it never fires.)
+    localStorage.setItem('wrotate_newfeatures_v2', '1');
 
     // The Supabase JS client's getSession() rejects fake JWTs even when
     // stored in localStorage. Override createClient to patch getSession()

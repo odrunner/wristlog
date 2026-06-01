@@ -157,20 +157,21 @@ test.describe('Track page (mocked)', () => {
     const selector = page.locator('#watch-selector');
     await expect(selector).toBeVisible();
 
-    // Should list both watches for tracking
-    const selectorText = await selector.textContent();
-    expect(selectorText).toContain('Submariner');
-    expect(selectorText).toContain('Speedmaster');
+    // Should list both watches for tracking. Use auto-retrying toContainText
+    // (not a one-shot textContent read) so the assertion waits for the mocked
+    // watch data to load — under load the selector first renders empty
+    // ("Nothing to track yet") before the data populates.
+    await expect(selector).toContainText('Submariner');
+    await expect(selector).toContainText('Speedmaster');
   });
 
   test('shows recent wear history', async ({ page }) => {
     await navigateTo(page, 'track');
-    // The track history table should show recent logs
-    const history = page.locator('#track-history-tbody, .track-history');
-    if (await history.isVisible()) {
-      const text = await history.textContent();
-      expect(text).toContain('Submariner');
-    }
+    // The track history should show recent logs. Auto-retrying toContainText
+    // waits for the mocked logs to load rather than reading once before the
+    // async fetch resolves (the data-load race that made this flaky).
+    const history = page.locator('#track-history-tbody, .track-history').first();
+    await expect(history).toContainText('Submariner');
   });
 });
 
@@ -189,9 +190,9 @@ test.describe('Stats page (mocked)', () => {
     const statsPage = page.locator('#page-stats');
     await expect(statsPage).toBeVisible();
 
-    const statsText = await statsPage.textContent();
-    // Should show total wears count
-    expect(statsText).toContain('2');
+    // Auto-retrying matcher waits for the mocked logs to load and stats to
+    // compute, rather than reading textContent once before the fetch resolves.
+    await expect(statsPage).toContainText('2');
   });
 });
 
@@ -728,9 +729,9 @@ test.describe('Stats page detail (mocked)', () => {
     await waitForAppBoot(page);
 
     await navigateTo(page, 'stats');
-    const statsText = await page.locator('#page-stats').textContent();
-    // Stats should reference at least one watch
-    expect(statsText).toMatch(/Submariner|Speedmaster/);
+    // Auto-retrying matcher waits for the mocked collection to load before
+    // asserting (one-shot textContent raced the data fetch under load).
+    await expect(page.locator('#page-stats')).toContainText(/Submariner|Speedmaster/);
   });
 });
 
@@ -1068,6 +1069,24 @@ test.describe('Review prompt (mocked)', () => {
     await expect(page.locator('#review-x-close')).toBeVisible();
     await page.locator('#review-x-close').click();
     await expect(page.locator('#review-prompt-modal')).toBeHidden();
+  });
+});
+
+// ── Boot-time popovers must not intercept test interactions ─────────────────
+// Regression guard: maybeShowNewFeatures() un-hides a full-screen overlay on an
+// 800ms timer at boot. Under full-suite load the app reaches a test's first
+// click after 800ms, so the overlay covered the screen and stole clicks — the
+// "occasion chip" flake. The test harness pre-sets its seen-key; this asserts
+// the overlay never appears, so the suppression can't silently regress.
+test.describe('Boot popovers (mocked)', () => {
+  test('new-features overlay stays hidden after boot', async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    // Wait well past the 800ms auto-show timer.
+    await page.waitForTimeout(1200);
+    await expect(page.locator('#new-features-modal')).toBeHidden();
   });
 });
 
