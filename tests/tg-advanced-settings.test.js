@@ -8,6 +8,7 @@ import {
   tgMapSliderToEngine,
   tgLoadSettings,
   tgSaveSettings,
+  tgAdvancedSummaryFields,
 } from '../wrotate_test.js';
 
 // Node's built-in localStorage is a Proxy without standard methods — replace it
@@ -213,5 +214,41 @@ describe('Advanced Settings — Phase 1 trim', () => {
 
   it('still keeps the feature flag (Phase 1 stays gated for private testing)', () => {
     expect(html).toContain('tg_advanced_settings');
+  });
+});
+
+// ── Advanced-mode usage tracking (for admin analytics) ───────────────────────
+describe('tgAdvancedSummaryFields', () => {
+  it('marks untouched Default as NOT advanced', () => {
+    const f = tgAdvancedSummaryFields({ preset: 'default', values: { ...TG_PRESETS.default }, wasReset: false });
+    expect(f.advanced_used).toBe(false);
+    expect(f.preset).toBe('default');
+    expect(f.settings).toEqual(TG_PRESETS.default);
+  });
+
+  it('marks a named non-default preset as advanced', () => {
+    const f = tgAdvancedSummaryFields({ preset: 'weak', values: { ...TG_PRESETS.weak }, wasReset: false });
+    expect(f.advanced_used).toBe(true);
+    expect(f.preset).toBe('weak');
+  });
+
+  it('marks custom values as advanced even if labeled default', () => {
+    const tweaked = { ...TG_PRESETS.default, sensitivity: 9 };
+    const f = tgAdvancedSummaryFields({ preset: 'default', values: tweaked, wasReset: false });
+    expect(f.advanced_used).toBe(true);
+    expect(f.settings.sensitivity).toBe(9);
+  });
+
+  it('marks custom preset as advanced', () => {
+    const f = tgAdvancedSummaryFields({ preset: 'custom', values: { ...TG_PRESETS.quiet }, wasReset: false });
+    expect(f.advanced_used).toBe(true);
+    expect(f.preset).toBe('custom');
+  });
+
+  it('handles null (advanced mode off / web) as not advanced', () => {
+    const f = tgAdvancedSummaryFields(null);
+    expect(f.advanced_used).toBe(false);
+    expect(f.preset).toBe(null);
+    expect(f.settings).toBe(null);
   });
 });

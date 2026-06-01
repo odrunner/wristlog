@@ -1583,3 +1583,16 @@ export function tgLoadSettings() {
     return { preset: 'default', values: { ...TG_PRESETS.default }, wasReset: false };
   }
 }
+
+// Builds the advanced-mode tracking fields written into a measurement's
+// session_summary. advanced_used is false only when the session ran on the
+// untouched Default preset, so admin can distinguish deliberate tuning from
+// never-opened-the-page. Mirrors the copy in index.html.
+export function tgAdvancedSummaryFields(s) {
+  if (!s) return { advanced_used: false, preset: null, settings: null };
+  const v = s.values || {};
+  const def = TG_PRESETS.default;
+  const isDefault = s.preset === 'default' &&
+    Object.keys(def).every(k => v[k] === def[k]);
+  return { advanced_used: !isDefault, preset: s.preset || null, settings: v };
+}

@@ -5922,7 +5922,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.18.12';
+const APP_VERSION = '31.19.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12230,12 +12230,20 @@ async function loadAdminStats() {
     const newWtcByUser = _countBy(newWatchesR.data);
     const newWrsByUser = _countBy(newWearsR.data);
     const newMsrByUser = {};
+    const advSessionsByUser = {};
     (newMsrR.data || []).forEach(r => {
       try {
         const msg = typeof r.messages === 'string' ? JSON.parse(r.messages) : r.messages;
-        if (msg?.user_id) newMsrByUser[msg.user_id] = (newMsrByUser[msg.user_id] || 0) + 1;
+        if (msg?.user_id) {
+          newMsrByUser[msg.user_id] = (newMsrByUser[msg.user_id] || 0) + 1;
+          if (msg.advanced_used) advSessionsByUser[msg.user_id] = (advSessionsByUser[msg.user_id] || 0) + 1;
+        }
       } catch {}
     });
+    // Advanced-mode rollup (24h, external users only)
+    const advEntries = Object.entries(advSessionsByUser).filter(([uid]) => !INTERNAL_IDS.has(uid));
+    const advUsers24h = advEntries.length;
+    const advSessions24h = advEntries.reduce((s, [, c]) => s + c, 0);
     const newValByUser = _countBy(newValR.data);
     const newEnhByUser = _countBy(newEnhR.data);
 
@@ -12356,6 +12364,7 @@ async function loadAdminStats() {
         ${statRow('Price Checks', extVal, dod.priceChecks)}
         ${statRow('Enhances', extEnh, dod.enhances)}
         ${statRow('Measurements', extMsr, dod.measurements)}
+        ${statRow('Advanced mode (24h)', advSessions24h, advUsers24h > 0 ? advUsers24h + ' user' + (advUsers24h === 1 ? '' : 's') : '')}
         ${statRow('Wishlist Items', wishItems, dod.wish)}
         ${statRow('Clubs', clubs, dod.clubs)}
         ${statRow('Follows', follows, dod.follows)}
@@ -12423,24 +12432,34 @@ async function openAdminUserDetail(userId) {
   try {
     const [{ data, error }, { data: msrLogs }] = await withTimeout(Promise.all([
       db.rpc('admin_user_detail', { target_user_id: userId }),
-      db.from('timegrapher_tick_logs').select('messages').like('messages', '%session_summary%').like('messages', '%' + userId + '%'),
+      db.from('timegrapher_tick_logs').select('messages, created_at').like('messages', '%session_summary%').like('messages', '%' + userId + '%'),
     ]), 10000);
     if (error) throw error;
     const d = data;
     // Use all sessions (tick_logs) as measurement count, not just saved readings
     let msrSessionCount = 0;
     let msrConverged = 0;
+    let advSessionCount = 0;
+    let advLastPreset = null;
+    let advLastAt = 0;
     (msrLogs || []).forEach(r => {
       try {
         const msg = typeof r.messages === 'string' ? JSON.parse(r.messages) : r.messages;
         if (msg?.user_id === userId && msg?.type === 'session_summary') {
           msrSessionCount++;
           if (msg.converged || msg.stop_reason === 'converged') msrConverged++;
+          if (msg.advanced_used) {
+            advSessionCount++;
+            const at = r.created_at ? new Date(r.created_at).getTime() : 0;
+            if (at >= advLastAt) { advLastAt = at; advLastPreset = msg.adv_preset || 'custom'; }
+          }
         }
       } catch {}
     });
     d.measurements_total = msrSessionCount;
     d.measurements_success = msrConverged;
+    d.advanced_sessions = advSessionCount;
+    d.advanced_last_preset = advLastPreset;
     const p = d.profile || {};
     const name = p.display_name || p.username || userId.slice(0, 8);
     const joinDate = p.created_at ? fmtDate(p.created_at.slice(0, 10)) : '—';
@@ -12496,6 +12515,9 @@ async function openAdminUserDetail(userId) {
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem;margin-bottom:.75rem;">
         <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.35rem;">Features Used</div>
         ${row('Measurements', d.measurements_total + (d.measurements_total > 0 ? ' <span style="font-size:.68rem;color:var(--muted);font-weight:400;">(' + msrRate + ' success)</span>' : ''))}
+        ${row('Advanced mode', d.advanced_sessions > 0
+          ? '<span style="color:#4ade80;">' + d.advanced_sessions + ' session' + (d.advanced_sessions === 1 ? '' : 's') + '</span> <span style="font-size:.68rem;color:var(--muted);font-weight:400;">(last: ' + escHtml(d.advanced_last_preset || 'custom') + ')</span>'
+          : '<span style="color:var(--muted);">No</span>')}
         ${row('Enhances', d.enhances)}
         ${row('Value checks', d.price_checks)}
       </div>
@@ -21597,6 +21619,18 @@ let _tgDebugSessionId = null;
 let _tgLastDebugLogTime = 0;
 let _tgTickDebugBuffer = [];
 let _tgTickDebugLastFlush = 0;
+// Advanced-settings tracking: snapshot of the settings the current session ran with.
+// Set at measure-start when advanced mode is active; read into the session_summary.
+let _msrActiveSettings = null;
+// Builds the advanced-mode fields for a session_summary from a tgLoadSettings() result.
+function tgAdvancedSummaryFields(s) {
+  if (!s) return { advanced_used: false, preset: null, settings: null };
+  const v = s.values || {};
+  const def = TG_PRESETS.default;
+  const isDefault = s.preset === 'default' &&
+    Object.keys(def).every(k => v[k] === def[k]);
+  return { advanced_used: !isDefault, preset: s.preset || null, settings: v };
+}
 window._tgNativeCallback = function(data) {
   // Accumulate tick debug messages and flush to Supabase every ~3 seconds
   if (data.event === 'update' && data.debugMessages && data.debugMessages.length > 0) {
@@ -22714,6 +22748,7 @@ function onMsrBphChange() {
     if (featureFlag('tg_advanced_settings')) {
       const _tgS = tgLoadSettings();
       tgApplySettingsToInputs(_tgS.values);
+      _msrActiveSettings = _tgS;
     }
     setTimeout(() => sendMsrTuning(), 200);
   }
@@ -22781,7 +22816,10 @@ function toggleMsrListen() {
       const _tgSettings = tgLoadSettings();
       if (_tgSettings.wasReset) toast('Measurement engine updated — settings reset');
       tgApplySettingsToInputs(_tgSettings.values);
+      _msrActiveSettings = _tgSettings;
       hideTroubleshootTips();
+    } else {
+      _msrActiveSettings = null;
     }
     setTimeout(() => sendMsrTuning(), 200);
     startTuningPoll();
@@ -22900,6 +22938,7 @@ function stopMsrListen(reason) {
       const sDT = sLast.t - sStart.t;
       if (sDT >= 2) bucketRate = Math.round((sLast.cd - sStart.cd) / sDT * 86.4 * 10) / 10;
     }
+    const _advFields = tgAdvancedSummaryFields(_msrActiveSettings);
     db.from('timegrapher_tick_logs').insert({
       session_id: _tgDebugSessionId,
       messages: JSON.stringify({
@@ -22916,9 +22955,13 @@ function stopMsrListen(reason) {
         converged: _msrPhase === 'converged',
         final_confidence: _msrLastConf,
         noise_level: _msrNoiseSamples.length > 0 ? Math.round(_msrNoiseSamples.reduce((a, b) => a + b, 0) / _msrNoiseSamples.length * 1000) / 1000 : null,
-        tick_data: tickSnap.length > 0 ? tickSnap : null
+        tick_data: tickSnap.length > 0 ? tickSnap : null,
+        advanced_used: _advFields.advanced_used,
+        adv_preset: _advFields.preset,
+        adv_settings: _advFields.settings
       })
     }).then(() => {});
+    _msrActiveSettings = null;
   }
   if (_tgScriptNode) { _tgScriptNode.disconnect(); _tgScriptNode = null; }
   if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
