@@ -101,6 +101,18 @@ describe('feed video rendering', () => {
     expect(html).toContain('function swapThumbToVideo(');
   });
 
+  it('thumb fallback uses a #t= media fragment so the frame actually paints (iOS)', () => {
+    expect(html).toMatch(/#t=0\.1/);
+  });
+
+  it('mute toggle uses SVG line icons, not emoji', () => {
+    expect(html).toContain('const MUTE_ICON_OFF');
+    expect(html).toContain('const MUTE_ICON_ON');
+    // The rendered buttons reference the SVG constants, not the 🔇/🔊 emoji.
+    expect(html).toMatch(/feed-vid-mute"[^>]*>\$\{MUTE_ICON_OFF\}/);
+    expect(html).not.toContain('>🔇</button>');
+  });
+
   it('fullscreen viewer keeps native controls (sound + scrubber belong there)', () => {
     const viewer = html.match(/img-viewer-media-slot[\s\S]{0,400}?<video[^>]*>/);
     expect(viewer).toBeTruthy();
