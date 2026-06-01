@@ -105,6 +105,13 @@ describe('feed video rendering', () => {
     expect(html).toMatch(/#t=0\.1/);
   });
 
+  it('edit-post thumbstrip paints a video frame for existing videos (not a black tile)', () => {
+    // renderEpThumbstrip must fall back to a <video> for an existing video whose
+    // poster 404s, via swapThumbToVideo + data-vsrc — not the dark placeholder.
+    expect(html).toContain('const existingVideoSrc = existingIsVideo ? item');
+    expect(html).toMatch(/existingVideoSrc[^]*?swapThumbToVideo\(this\)/);
+  });
+
   it('mute toggle uses SVG line icons, not emoji', () => {
     expect(html).toContain('const MUTE_ICON_OFF');
     expect(html).toContain('const MUTE_ICON_ON');

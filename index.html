@@ -1570,7 +1570,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .np-thumbstrip { display: flex; gap: 6px; padding: 8px 0; overflow-x: auto; align-items: center; }
     .np-thumb { width: 60px; height: 60px; border-radius: 6px; overflow: hidden; position: relative; flex-shrink: 0; border: 2px solid transparent; }
     .np-thumb.hero { border-color: var(--accent); }
-    .np-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .np-thumb img, .np-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
     .np-thumb .np-thumb-remove { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; border-radius: 50%; background: rgba(0,0,0,.7); color: #fff; font-size: 11px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0; }
     .np-thumb-add { width: 60px; height: 60px; border-radius: 6px; border: 2px dashed var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; color: var(--muted); font-size: 1.3rem; background: none; }
     .np-thumb-add:hover { border-color: var(--accent); color: var(--accent); }
@@ -5973,7 +5973,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '01.15.53';
+const APP_VERSION = '01.16.41';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10011,9 +10011,14 @@ function renderEpThumbstrip() {
     const preview = epPreviews[i];
     const isLoading = preview === '__LOADING__';
     const hasPreview = !!preview && !isLoading;
+    // For an existing video, epFiles[i] is the video URL string — used to paint
+    // a real frame if its poster (epPreviews[i]) 404s (poster may not exist).
+    const existingVideoSrc = existingIsVideo ? item : '';
     let media;
     if (isLoading) media = `<div class="np-thumb-video-placeholder"><div class="np-thumb-spinner"></div></div>`;
+    else if (isVideo && !hasPreview && existingVideoSrc) media = `<video muted playsinline webkit-playsinline preload="metadata" src="${escAttr(existingVideoSrc.includes('#') ? existingVideoSrc : existingVideoSrc + '#t=0.1')}"></video>`;
     else if (isVideo && !hasPreview) media = `<div class="np-thumb-video-placeholder"></div>`;
+    else if (existingVideoSrc) media = `<img src="${escHtml(preview)}" alt="" data-vsrc="${escAttr(existingVideoSrc)}" onerror="swapThumbToVideo(this)">`;
     else media = `<img src="${escHtml(preview)}" alt="" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=&quot;np-thumb-video-placeholder&quot;></div>')">`;
     html += `<div class="np-thumb${i === 0 ? ' hero' : ''}" draggable="true"
       ondragstart="epThumbDragStart(event,${i})" ondragover="npThumbDragOver(event)"
