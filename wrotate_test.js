@@ -1596,3 +1596,29 @@ export function tgAdvancedSummaryFields(s) {
     Object.keys(def).every(k => v[k] === def[k]);
   return { advanced_used: !isDefault, preset: s.preset || null, settings: v };
 }
+
+// ══════════════════════════════════════════
+//  MEASUREMENT SHARE CARD (pure helpers)
+//  Mirrors copies in index.html.
+// ══════════════════════════════════════════
+
+// Minimum scatter dots before a measurement is worth rendering as a graph card.
+export const MSR_CARD_MIN_DOTS = 11;
+
+// True when a measurement has enough dot data to render a meaningful graph card.
+export function msrCardHasEnoughData(scatterData) {
+  return Array.isArray(scatterData) && scatterData.length >= MSR_CARD_MIN_DOTS;
+}
+
+// Formats the result values shown on the share card.
+export function msrCardResultText({ rate, beatError, bph }) {
+  const out = {};
+  const r = Number(rate);
+  const rOk = rate != null && rate !== '' && isFinite(r);
+  out.rate = (rOk ? (r > 0 ? '+' : '') + r.toFixed(1) : '—') + ' s/d';
+  const be = Number(beatError);
+  out.beatError = beatError != null && beatError !== '' && isFinite(be) ? be.toFixed(1) + ' ms' : null;
+  const b = Number(bph);
+  out.bph = bph != null && isFinite(b) && b > 0 ? Math.round(b).toLocaleString() + ' bph' : null;
+  return out;
+}
