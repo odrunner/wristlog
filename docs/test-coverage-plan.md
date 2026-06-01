@@ -25,34 +25,25 @@ Close gaps by **risk**, not by a vanity number.
 
 ## The plan (ranked by risk)
 
-### 1. Edge functions — 0%, highest risk → IN PROGRESS
-3,835 lines, 19 functions, real side effects (email, push, AI spend, DB writes), no tests.
-**Decision: do ALL 19** (user-directed 2026-06-01). Order by traffic/side-effect risk:
+### 1. Edge functions — DONE (2026-06-01) ✅
+All 19 functions now have unit tests (was zero). Pattern: pure logic extracted to
+per-function `lib.ts`, `index.ts` refactored to import it (behavior-preserving),
+`lib.test.ts` with `deno test`. **303 deno tests, 0 failures**; all 19 `lib.ts`
+type-check clean. All 19 deployed + smoke-verified (5 via `npm run test:smoke` real
+happy-paths incl. identify-watch; 14 via live probes confirming app-level responses).
+Run with `npm run test:functions` (= `deno test supabase/functions/`).
 
-- [ ] identify-watch (566)
-- [ ] search-watch-image (378)
-- [ ] send-broadcast (314)
-- [ ] share-collection (291)
-- [ ] send-email (270)
-- [ ] send-push (249)
-- [ ] share-post (245)
-- [ ] watch-value (242)
-- [ ] run-campaign (215)
-- [ ] index.ts / auto-add-brand (161)
-- [ ] extract-url-meta (157)
-- [ ] feedback-to-github (146)
-- [ ] new-user-alert (140)
-- [ ] email-unsubscribe (115)
-- [ ] report-notify (98)
-- [ ] demo-login (89)
-- [ ] send-report (57)
-- [ ] delete-user (55)
-- [ ] resend-webhook (47)
+All ✅: identify-watch, search-watch-image, send-broadcast, share-collection, send-email,
+send-push, share-post, watch-value, run-campaign, auto-add-brand, extract-url-meta,
+feedback-to-github, new-user-alert, email-unsubscribe, report-notify, demo-login,
+send-report, delete-user, resend-webhook.
 
-Approach (see "Open decision" below): extract each function's pure logic (request
-parsing, validation, payload shaping) into a testable module + unit-test it; add a
-contract/smoke check for the handler. Side-effectful calls (fetch, createClient, Deno.env)
-stay behind seams that tests stub.
+**Mechanism chosen:** Deno (`deno test`), installed locally (2.8.1). Tests the real code
+with no module-system fork.
+
+**CI:** `.github/workflows/test.yml` now runs both `npm test` (vitest) AND
+`npm run test:functions` (deno test, via `denoland/setup-deno`), so the edge-fn tests are
+gated in CI alongside the unit tests.
 
 ### 2. Kill the mirror-drift risk
 `wrotate_test.js` is a *copy* of `index.html` logic — every feature requires editing both,
