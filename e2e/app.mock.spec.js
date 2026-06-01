@@ -1064,6 +1064,10 @@ test.describe('Review prompt (mocked)', () => {
     await page.locator('#review-step-feedback button:has-text("Send")').click();
     await expect(page.locator('#review-step-thanks')).toBeVisible();
     await expect(page.locator('text=Thank you!')).toBeVisible();
+    // The thanks step has no inline Close button; an X (top-right) closes it.
+    await expect(page.locator('#review-x-close')).toBeVisible();
+    await page.locator('#review-x-close').click();
+    await expect(page.locator('#review-prompt-modal')).toBeHidden();
   });
 });
 
