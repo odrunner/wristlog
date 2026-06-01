@@ -1622,3 +1622,20 @@ export function msrCardResultText({ rate, beatError, bph }) {
   out.bph = bph != null && isFinite(b) && b > 0 ? Math.round(b).toLocaleString() + ' bph' : null;
   return out;
 }
+
+// ══════════════════════════════════════════
+//  POST LOCATION (pure helpers) — mirrors index.html
+// ══════════════════════════════════════════
+
+// Normalize a post location: trim, collapse whitespace, cap 60 chars, empty->null.
+export function normalizeLocation(v) {
+  if (v == null) return null;
+  const s = String(v).replace(/\s+/g, ' ').trim().slice(0, 60);
+  return s || null;
+}
+
+// Render the pinned location label appended to a post's meta line.
+export function renderPostLocationHtml(location) {
+  const loc = normalizeLocation(location);
+  return loc ? ' · 📍 ' + escHtml(loc) : '';
+}

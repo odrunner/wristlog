@@ -1102,6 +1102,42 @@ test.describe('Boot popovers (mocked)', () => {
   });
 });
 
+// ── Post location field (mocked) ─────────────────────────────────────────────
+// Spec: 2026-06-01-post-location-design.md. Covers the composer UI: preset chips,
+// free text, and the one-value-or-none exclusivity rule (pure UI, no network).
+test.describe('Post location (mocked)', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await page.evaluate(() => openNewPost());
+    await expect(page.locator('#new-post-modal')).toBeVisible();
+  });
+
+  test('composer shows Home/Work/Travel chips and a free-text input', async ({ page }) => {
+    await expect(page.locator('#np-location-chips [data-loc="Home"]')).toBeVisible();
+    await expect(page.locator('#np-location-chips [data-loc="Work"]')).toBeVisible();
+    await expect(page.locator('#np-location-chips [data-loc="Travel"]')).toBeVisible();
+    await expect(page.locator('#np-location-input')).toBeVisible();
+  });
+
+  test('tapping a preset chip fills the input and selects the chip', async ({ page }) => {
+    await page.locator('#np-location-chips [data-loc="Travel"]').click();
+    await expect(page.locator('#np-location-chips [data-loc="Travel"]')).toHaveClass(/selected/);
+    await expect(page.locator('#np-location-input')).toHaveValue('Travel');
+  });
+
+  test('typing free text clears any chip selection (one value or none)', async ({ page }) => {
+    await page.locator('#np-location-chips [data-loc="Home"]').click();
+    await expect(page.locator('#np-location-chips [data-loc="Home"]')).toHaveClass(/selected/);
+    await page.fill('#np-location-input', 'Geneva');
+    await expect(page.locator('#np-location-chips [data-loc="Home"]')).not.toHaveClass(/selected/);
+    // No chip selected at all.
+    await expect(page.locator('#np-location-chips .chip.selected')).toHaveCount(0);
+  });
+});
+
 // ── Essentials Field Order ──────────────────────────────────────────────
 
 test.describe('Essentials field order (mocked)', () => {

@@ -4365,6 +4365,17 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         oninput="mentionOnInput(this)" onkeydown="mentionOnKeydown(event)"></textarea>
     </div>
     <div class="form-group">
+      <label style="font-size:.78rem;color:var(--muted);">Location (optional)</label>
+      <div class="chips" id="np-location-chips">
+        <div class="chip" data-loc="Home" onclick="selectPostLocationChip('np','Home')">Home</div>
+        <div class="chip" data-loc="Work" onclick="selectPostLocationChip('np','Work')">Work</div>
+        <div class="chip" data-loc="Travel" onclick="selectPostLocationChip('np','Travel')">Travel</div>
+      </div>
+      <input type="text" id="np-location-input" placeholder="Add a location…" maxlength="60"
+        oninput="onPostLocationInput('np')"
+        style="width:100%;margin-top:.4rem;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem;font-family:inherit;">
+    </div>
+    <div class="form-group">
       <label style="font-size:.78rem;color:var(--muted);">Who can see this?</label>
       <div class="chips" id="np-vis-chips"></div>
     </div>
@@ -4396,6 +4407,17 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="form-group">
       <textarea id="ep-body" rows="3" placeholder="What's on your mind? (@ to mention)" style="resize:none;" maxlength="1000"
         oninput="mentionOnInput(this)" onkeydown="mentionOnKeydown(event)"></textarea>
+    </div>
+    <div class="form-group">
+      <label style="font-size:.78rem;color:var(--muted);">Location (optional)</label>
+      <div class="chips" id="ep-location-chips">
+        <div class="chip" data-loc="Home" onclick="selectPostLocationChip('ep','Home')">Home</div>
+        <div class="chip" data-loc="Work" onclick="selectPostLocationChip('ep','Work')">Work</div>
+        <div class="chip" data-loc="Travel" onclick="selectPostLocationChip('ep','Travel')">Travel</div>
+      </div>
+      <input type="text" id="ep-location-input" placeholder="Add a location…" maxlength="60"
+        oninput="onPostLocationInput('ep')"
+        style="width:100%;margin-top:.4rem;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem;font-family:inherit;">
     </div>
     <div class="form-group">
       <label style="font-size:.78rem;color:var(--muted);">Who can see this?</label>
@@ -5938,7 +5960,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '01.07.36';
+const APP_VERSION = '01.08.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -5961,6 +5983,21 @@ function escHtml(s) {
 }
 function escAttr(s) {
   return escHtml(s).replace(/'/g, '&#39;');
+}
+
+// ── Post location ─────────────────────────────────────────────────────
+// Normalize a post location value: trim, collapse internal whitespace, cap at
+// 60 chars, empty -> null. Used for both preset chips and free text.
+function normalizeLocation(v) {
+  if (v == null) return null;
+  const s = String(v).replace(/\s+/g, ' ').trim().slice(0, 60);
+  return s || null;
+}
+// Render the pinned location label appended to a post's meta line.
+// Returns '' when absent so it can be concatenated unconditionally.
+function renderPostLocationHtml(location) {
+  const loc = normalizeLocation(location);
+  return loc ? ' · 📍 ' + escHtml(loc) : '';
 }
 
 // ── Content filtering ────────────────────────────────────────────────
@@ -8829,7 +8866,7 @@ async function loadPublicFeed() {
   publicFeedLoading = true;
   try {
     const { data: rawLogs, error } = await db.from('logs')
-      .select('id, user_id, watch_id, photo_url, notes, use_case, date, created_at')
+      .select('id, user_id, watch_id, photo_url, notes, use_case, date, created_at, location')
       .eq('visibility', 'public')
       .is('moderation_status', null)
       .order('date', { ascending: false })
@@ -8925,7 +8962,7 @@ function renderPublicFeed() {
         <div class="feed-user-avatar" onclick="requireLogin()" style="cursor:pointer;">${profileInitials(p)}</div>
         <div style="flex:1;min-width:0;">
           <div class="feed-user-name" onclick="requireLogin()" style="cursor:pointer;">${displayName}</div>
-          <div class="feed-meta">${metaStr}${useCaseHtml}</div>
+          <div class="feed-meta">${metaStr}${useCaseHtml}${renderPostLocationHtml(item.location)}</div>
         </div>
       </div>
       ${heroHtml}
@@ -8958,7 +8995,7 @@ function closeLoginPrompt() {
 }
 
 // ── Feed ──────────────────────────────────────────────────────────────────
-const FEED_LOG_COLS = 'id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility, moderation_status';
+const FEED_LOG_COLS = 'id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility, moderation_status, location';
 async function loadFeed() {
   if (!currentUser) return;
   // If feedLoading is stuck true for >8s, treat it as dead and allow re-entry
@@ -9310,7 +9347,12 @@ function renderFeedCard(item) {
 
   const ucMap  = { work:'', leisure:'', dinner:'', travel:'' };
   const ucIcon = ucMap[item.use_case] || '';
-  const metaParts = [formatFeedDate(item.date, item.created_at), item.use_case && item.use_case !== 'unspecified' ? item.use_case : ''].filter(Boolean);
+  const _loc = normalizeLocation(item.location);
+  const metaParts = [
+    formatFeedDate(item.date, item.created_at),
+    item.use_case && item.use_case !== 'unspecified' ? item.use_case : '',
+    _loc ? '📍 ' + escHtml(_loc) : ''
+  ].filter(Boolean);
   const metaStr   = metaParts.join(' · ');
 
   const editingCaption = isMe && feedEditingCaption.has(item.id);
@@ -9876,6 +9918,7 @@ function openEditPost(logId) {
   editPostWatchId  = null;
   document.getElementById('ep-body').value = fi.notes || '';
   document.getElementById('ep-vis-chips').innerHTML = visChipsHtml('ep-vis-chips', fi.visibility || 'public');
+  setPostLocationField('ep', fi.location);
   // Club field — only show when user is a member/owner of at least one club
   const epClubField = document.getElementById('ep-club-field');
   if (epClubField) epClubField.style.display = myClubs.length ? '' : 'none';
@@ -10121,6 +10164,15 @@ async function saveEditPost() {
   const log = logs.find(l => l.id === editPostLogId);
   const newNotes = (document.getElementById('ep-body').value || '').trim();
   const vis = getVisChip('ep-vis-chips');
+  const newLocation = getPostLocationValue('ep');
+  if (newLocation) {
+    const { clean } = checkContent(newLocation);
+    if (!clean) {
+      toast('Your location contains inappropriate content. Please revise.', 'error');
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+      return;
+    }
+  }
   // Build final photo_url from current editor state
   let finalPhotoUrl = null;
   if (epFiles.length) {
@@ -10180,15 +10232,15 @@ async function saveEditPost() {
     : (fi?.watch_id ?? null);
   const oldNotes = fi?.notes || '';   // capture before mutation
   // Capture old values for rollback
-  const oldFi = fi ? { notes: fi.notes, photo_url: fi.photo_url, visibility: fi.visibility, club_id: fi.club_id, watch_id: fi.watch_id, watch: fi.watch } : null;
-  const oldLog = log ? { notes: log.notes, photoUrl: log.photoUrl, visibility: log.visibility, clubId: log.clubId, watchId: log.watchId } : null;
+  const oldFi = fi ? { notes: fi.notes, photo_url: fi.photo_url, visibility: fi.visibility, club_id: fi.club_id, watch_id: fi.watch_id, watch: fi.watch, location: fi.location } : null;
+  const oldLog = log ? { notes: log.notes, photoUrl: log.photoUrl, visibility: log.visibility, clubId: log.clubId, watchId: log.watchId, location: log.location } : null;
   // Update local state
-  if (fi)  { fi.notes = newNotes || null; fi.photo_url = finalPhotoUrl; fi.visibility = vis; fi.club_id = clubId; fi.watch_id = finalWatchId; fi.watch = finalWatchId ? (watches.find(w => w.id === finalWatchId) || null) : null; }
-  if (log) { log.notes = newNotes || null; log.photoUrl = finalPhotoUrl; log.visibility = vis; log.clubId = clubId; log.watchId = finalWatchId; save(); }
+  if (fi)  { fi.notes = newNotes || null; fi.photo_url = finalPhotoUrl; fi.visibility = vis; fi.club_id = clubId; fi.watch_id = finalWatchId; fi.watch = finalWatchId ? (watches.find(w => w.id === finalWatchId) || null) : null; fi.location = newLocation; }
+  if (log) { log.notes = newNotes || null; log.photoUrl = finalPhotoUrl; log.visibility = vis; log.clubId = clubId; log.watchId = finalWatchId; log.location = newLocation; save(); }
   // Persist to Supabase
   if (currentUser) {
     const { error } = await db.from('logs')
-      .update({ notes: newNotes || null, photo_url: finalPhotoUrl, visibility: vis, club_id: clubId, watch_id: finalWatchId })
+      .update({ notes: newNotes || null, photo_url: finalPhotoUrl, visibility: vis, club_id: clubId, watch_id: finalWatchId, location: newLocation })
       .eq('id', editPostLogId).eq('user_id', currentUser.id);
     if (error) {
       // Rollback local state
@@ -10268,6 +10320,7 @@ function openNewPost(opts) {
   dismissNpWatchSuggestion();
   document.getElementById('np-body').value = o.prefillBody || '';
   document.getElementById('np-vis-chips').innerHTML = visChipsHtml('np-vis-chips', getDefaultVis());
+  setPostLocationField('np', null);
   // Pre-select a watch if caller passed context (e.g. after measurement)
   if (o.watchId && watches.some(w => w.id === o.watchId)) {
     npIdentifiedWatchId = o.watchId;
@@ -10288,6 +10341,47 @@ function openNewPost(opts) {
   }
   document.getElementById('new-post-modal').classList.remove('hidden');
   setTimeout(() => document.getElementById('np-body').focus(), 50);
+}
+
+// ── Post location field (shared by new-post 'np' and edit-post 'ep') ─────────
+// One value or none: a preset chip OR free text. Tapping a chip fills the text
+// input and selects the chip; typing clears the chip selection.
+const POST_LOCATION_PRESETS = ['Home', 'Work', 'Travel'];
+
+function selectPostLocationChip(prefix, value) {
+  const input = document.getElementById(`${prefix}-location-input`);
+  if (input) input.value = value;
+  _syncPostLocationChips(prefix, value);
+}
+
+function onPostLocationInput(prefix) {
+  const input = document.getElementById(`${prefix}-location-input`);
+  // Typing matches a preset only on exact (case-insensitive) match; otherwise
+  // it's free text and no chip is selected.
+  const val = (input?.value || '').trim();
+  const match = POST_LOCATION_PRESETS.find(p => p.toLowerCase() === val.toLowerCase());
+  _syncPostLocationChips(prefix, match || null);
+}
+
+function _syncPostLocationChips(prefix, selectedValue) {
+  document.querySelectorAll(`#${prefix}-location-chips .chip`).forEach(c =>
+    c.classList.toggle('selected', c.dataset.loc === selectedValue));
+}
+
+// Set the field to a stored value (used on open / edit prefill). If the value
+// matches a preset, select that chip; otherwise put it in the text input.
+function setPostLocationField(prefix, location) {
+  const loc = normalizeLocation(location);
+  const input = document.getElementById(`${prefix}-location-input`);
+  if (input) input.value = loc || '';
+  const match = loc && POST_LOCATION_PRESETS.find(p => p.toLowerCase() === loc.toLowerCase());
+  _syncPostLocationChips(prefix, match || null);
+}
+
+// Read the current location value from a field, normalized.
+function getPostLocationValue(prefix) {
+  const input = document.getElementById(`${prefix}-location-input`);
+  return normalizeLocation(input?.value);
 }
 
 // Instrumentation for "share-to-feed" CTAs shown after measurement / watch-add / etc.
@@ -10557,6 +10651,8 @@ async function saveNewPost() {
   const body = (document.getElementById('np-body')?.value || '').trim();
   if (!body && !newPostFiles.length) { toast('Add a photo or write something', 'error'); return; }
   if (body) { const { clean } = checkContent(body); if (!clean) { toast('Your post contains inappropriate content. Please revise.', 'error'); return; } }
+  const location = getPostLocationValue('np');
+  if (location) { const { clean } = checkContent(location); if (!clean) { toast('Your location contains inappropriate content. Please revise.', 'error'); return; } }
   const _npBtn = document.querySelector('#new-post-modal .btn-primary');
   if (_npBtn?.disabled) return;
   if (_npBtn) { _npBtn.disabled = true; _npBtn.textContent = 'Posting...'; }
@@ -10568,6 +10664,7 @@ async function saveNewPost() {
     useCase: 'unspecified', notes: body || null,
     photoUrl: null,
     visibility: vis,
+    location: location,
   };
   // Upload photo(s)/video(s) to Storage if present.
   // "isVideo" is determined by the File itself (type/extension), not by whether
@@ -10616,6 +10713,7 @@ async function saveNewPost() {
       date: entry.date, use_case: 'unspecified',
       notes: entry.notes, photo_url: entry.photoUrl,
       visibility: vis,
+      location: entry.location,
       club_id: null,
     }, { onConflict: 'id' });
     if (error) {
