@@ -100,3 +100,27 @@ describe('Measurement share card — index.html wiring', () => {
     expect(coreCalls.length).toBeGreaterThanOrEqual(3); // definition + 2 callers
   });
 });
+
+describe('Share button at completion — wiring', () => {
+  it('completion Share button calls shareMsrFromComplete', () => {
+    expect(html).toContain('id="msr-complete-share-btn"');
+    expect(html).toContain('onclick="shareMsrFromComplete()"');
+  });
+
+  it('Save and Share share one persist path (no duplicated insert logic)', () => {
+    expect(html).toContain('function persistMsrReading(');
+    // Exactly one insert into timegrapher_results from the measure flow lives
+    // in persistMsrReading; saveMsrReading/shareMsrFromComplete both call it.
+    expect(html).toMatch(/async function saveMsrReading\(\)\s*\{[^}]*persistMsrReading\(\)/s);
+    expect(html).toMatch(/async function shareMsrFromComplete\(\)\s*\{[^}]*persistMsrReading\(\)/s);
+  });
+
+  it('share-at-completion persists before opening the composer', () => {
+    // shareMsrFromComplete must persist (and bail on failure) before sharing.
+    expect(html).toMatch(/shareMsrFromComplete\(\)\s*\{\s*const res = await persistMsrReading\(\);\s*if \(!res\.ok\) return;\s*shareMsrToFeed/s);
+  });
+
+  it('enables the completion Share button when a reading lands', () => {
+    expect(html).toContain("getElementById('msr-complete-share-btn')");
+  });
+});
