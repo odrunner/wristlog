@@ -5935,7 +5935,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.19.36';
+const APP_VERSION = '31.19.55';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19103,6 +19103,9 @@ function af2Edit(idx) {
     <div id="af2-brand-ac-${idx}" style="display:none;position:absolute;top:28px;left:0;right:0;max-height:120px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:4px;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.15);"></div>
     <input id="af2-edit-model-${idx}" value="${escHtml(w.model || '')}" placeholder="Model" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
     <input id="af2-edit-ref-${idx}" value="${escHtml(w.reference || '')}" placeholder="Reference" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <input id="af2-edit-diameter-${idx}" value="${escHtml(w.caseDiameter || '')}" placeholder="Size (e.g. 41mm)" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <input id="af2-edit-movement-${idx}" value="${escHtml(w.movementType || '')}" placeholder="Movement (e.g. automatic)" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
+    <input id="af2-edit-years-${idx}" value="${escHtml(w.yearRange || '')}" placeholder="Years (e.g. 2020-2022)" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-family:inherit;">
   </div>`;
   const brandInput = document.getElementById('af2-edit-brand-' + idx);
   const acList = document.getElementById('af2-brand-ac-' + idx);
@@ -19127,9 +19130,15 @@ function af2SaveEdit(idx) {
   const brand = document.getElementById('af2-edit-brand-' + idx)?.value?.trim();
   const model = document.getElementById('af2-edit-model-' + idx)?.value?.trim();
   const ref = document.getElementById('af2-edit-ref-' + idx)?.value?.trim();
+  const diameter = document.getElementById('af2-edit-diameter-' + idx)?.value?.trim();
+  const movement = document.getElementById('af2-edit-movement-' + idx)?.value?.trim();
+  const years = document.getElementById('af2-edit-years-' + idx)?.value?.trim();
   if (brand) w.brand = brand;
   if (model) w.model = model;
   w.reference = ref || '';
+  w.caseDiameter = diameter || '';
+  w.movementType = movement || '';
+  w.yearRange = years || '';
   if (w._af2State === 'failed') w._af2State = 'identified';
   af2RenderSheet();
 }
@@ -22633,11 +22642,14 @@ function drawMsrScatterCore(ctx, o) {
     ctx.fillText((val >= 0 ? '+' : '') + val.toFixed(0) + 's/d', w - pad.r + 4 * dpr, y + 3 * dpr);
   }
 
-  // X-axis labels — dim green
+  // X-axis labels — dim green. Baseline is just below the plot's bottom edge
+  // (pad.b reserves the band), so cards with a large bottom margin don't push
+  // these to the canvas floor. Matches the live plot's prior 18*dpr offset.
   ctx.textAlign = 'center';
+  const xLabelY = h - pad.b + 18 * dpr;
   for (let t = Math.ceil(tMin / tStep) * tStep; t <= tMax; t += tStep) {
     const x = xPos(t);
-    ctx.fillText(Math.round(t) + 's', x, h - 2 * dpr);
+    ctx.fillText(Math.round(t) + 's', x, xLabelY);
   }
 }
 
@@ -22664,61 +22676,50 @@ function msrCardResultText({ rate, beatError, bph }) {
   return out;
 }
 
-// Renders a 1080x1080 share card (graph + watch name + result) to an off-screen
-// canvas and returns it. Caller converts to a blob. Reuses drawMsrScatterCore.
+// Renders a 1080x1350 (4:5) share card (graph + watch name + result) to an
+// off-screen canvas and returns it. The 4:5 ratio matches .feed-card-photo so
+// the feed's object-fit:cover doesn't crop the header/labels/wordmark. Caller
+// converts to a blob. Reuses drawMsrScatterCore.
 function renderMsrShareCard({ data, watchName, rate, beatError, bph }) {
-  const SIZE = 1080;
+  const W = 1080, H = 1350;
+  const M = 56; // safe side margin
   const canvas = document.createElement('canvas');
-  canvas.width = SIZE; canvas.height = SIZE;
+  canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  // Card background — same dark CRT green as the live plot
-  ctx.fillStyle = '#0a1a12';
-  ctx.fillRect(0, 0, SIZE, SIZE);
+  // Draw the graph FIRST across the whole card. The core fills the background
+  // with the same #0a1a12, then plots dots/lines/labels inside its padded area.
+  // Padding reserves the top band for the header and the bottom band for the
+  // result line, so no clipping is needed and nothing overlaps.
+  const graphPad = { l: M - 24, r: 150, t: 150, b: 240 };
+  drawMsrScatterCore(ctx, { w: W, h: H, pad: graphPad, data, scale: 2.4 });
 
-  // Header: watch name
+  // Header: watch name (drawn over the reserved top band)
   ctx.fillStyle = '#e8efd9';
-  ctx.font = '600 44px -apple-system, system-ui, sans-serif';
+  ctx.font = '600 46px -apple-system, system-ui, sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   const name = (watchName || 'My watch').slice(0, 40);
-  ctx.fillText(name, 64, 96);
+  ctx.fillText(name, M, 110);
 
-  // Graph occupies the central band. Padding tuned for the square card; scale
-  // raised so dots/lines/labels read at card resolution.
-  const graphPad = { l: 24, r: 150, t: 150, b: 80 };
-  ctx.save();
-  // Clip the graph region so the inner background fill from the core stays boxed.
-  ctx.beginPath();
-  ctx.rect(0, 130, SIZE, SIZE - 130 - 170);
-  ctx.clip();
-  drawMsrScatterCore(ctx, {
-    w: SIZE,
-    h: SIZE - 170,
-    pad: graphPad,
-    data,
-    scale: 2.4
-  });
-  ctx.restore();
-
-  // Result line at the bottom
+  // Result line at the bottom (drawn over the reserved bottom band)
   const res = msrCardResultText({ rate, beatError, bph });
   ctx.textAlign = 'left';
   ctx.fillStyle = '#4ade80';
-  ctx.font = '700 72px -apple-system, system-ui, sans-serif';
-  ctx.fillText(res.rate, 64, SIZE - 70);
+  ctx.font = '700 80px -apple-system, system-ui, sans-serif';
+  ctx.fillText(res.rate, M, H - 80);
   const sub = [res.beatError, res.bph].filter(Boolean).join('   ·   ');
   if (sub) {
     ctx.fillStyle = 'rgba(232,239,217,0.65)';
-    ctx.font = '500 34px -apple-system, system-ui, sans-serif';
-    ctx.fillText(sub, 66, SIZE - 30);
+    ctx.font = '500 36px -apple-system, system-ui, sans-serif';
+    ctx.fillText(sub, M + 2, H - 36);
   }
 
   // WRotate wordmark — bottom right
   ctx.textAlign = 'right';
   ctx.fillStyle = 'rgba(74,222,128,0.55)';
-  ctx.font = '700 34px -apple-system, system-ui, sans-serif';
-  ctx.fillText('WRotate', SIZE - 64, SIZE - 50);
+  ctx.font = '700 36px -apple-system, system-ui, sans-serif';
+  ctx.fillText('WRotate', W - M, H - 40);
 
   return canvas;
 }
