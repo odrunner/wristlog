@@ -2344,7 +2344,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- Hidden config for review prompt thresholds (adjustable without App Store rebuild) -->
 <input type="hidden" id="review-wear-threshold" value="5">
 <input type="hidden" id="review-measurement-threshold" value="4">
-<input type="hidden" id="review-cooldown-days" value="60">
+<input type="hidden" id="review-cooldown-days" value="30">
 
 <!-- ════ MEASURE HELP MODAL ════ -->
 <div id="msr-help-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="msr-help-title">
@@ -5972,7 +5972,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '01.15.24';
+const APP_VERSION = '01.15.26';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11984,7 +11984,7 @@ function _reviewGetThresholds() {
   return {
     wears: parseInt(document.getElementById('review-wear-threshold')?.value) || 5,
     measurements: parseInt(document.getElementById('review-measurement-threshold')?.value) || 5,
-    cooldownDays: parseInt(document.getElementById('review-cooldown-days')?.value) || 60,
+    cooldownDays: parseInt(document.getElementById('review-cooldown-days')?.value) || 30,
   };
 }
 
