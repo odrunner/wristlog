@@ -115,6 +115,7 @@ export function watchToRow(w, userId, eloRatings = {}) {
   return {
     id: w.id, user_id: userId,
     brand: w.brand || null, name: w.name || null, ref: w.ref || null,
+    movement: w.movement || null,
     price: w.price || null, purchase_date: w.purchaseDate || null,
     color: w.color || null, image: w.image || null, url: w.url || null,
     tags: w.tags || [], straps: w.straps || [], owner: w.owner || null,
@@ -134,13 +135,14 @@ export function watchToRow(w, userId, eloRatings = {}) {
     water_resistance: w.waterResistance||null, crystal_type: w.crystalType||null,
     gender: w.gender||null, origin: w.origin||null,
     description: w.description||null, background: w.background||null,
-    functions: w.functions||null,
+    functions: w.functions||null, bph: w.bph||null,
   };
 }
 
 export function rowToWatch(r) {
   return {
     id: r.id, brand: r.brand || '', name: r.name || '', ref: r.ref || '',
+    movement: r.movement || '',
     price: r.price || null, purchaseDate: r.purchase_date || null,
     color: r.color || '#c9a84c',
     image: r.image ? r.image.replace(/^http:\/\//i, 'https://') : null,
@@ -161,7 +163,7 @@ export function rowToWatch(r) {
     waterResistance: r.water_resistance||null, crystalType: r.crystal_type||null,
     gender: r.gender||null, origin: r.origin||null,
     description: r.description||null, background: r.background||null,
-    functions: r.functions||null,
+    functions: r.functions||null, bph: r.bph||null,
   };
 }
 
@@ -1255,7 +1257,11 @@ export function storagePathFrom(url) {
   if (!url) return null;
   const marker = '/storage/v1/object/public/media/';
   const idx = url.indexOf(marker);
-  return idx >= 0 ? url.slice(idx + marker.length) : null;
+  if (idx < 0) return null;
+  const path = url.slice(idx + marker.length);
+  // Strip query params (cache-bust ?v=...) to get clean storage path
+  const qIdx = path.indexOf('?');
+  return qIdx >= 0 ? path.slice(0, qIdx) : path;
 }
 
 export function parsePhotoUrl(photoUrl) {
@@ -1269,7 +1275,7 @@ export function parsePhotoUrl(photoUrl) {
 export function isVideoUrl(url) {
   if (!url) return false;
   const path = (url.split('?')[0] || '').toLowerCase();
-  return path.endsWith('.mp4') || path.endsWith('.webm') || path.endsWith('.mov');
+  return path.endsWith('.mp4') || path.endsWith('.webm') || path.endsWith('.mov') || path.endsWith('.m3u8');
 }
 
 export function posterUrlFor(videoUrl) {

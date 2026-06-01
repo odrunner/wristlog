@@ -45,11 +45,25 @@ with no module-system fork.
 `npm run test:functions` (deno test, via `denoland/setup-deno`), so the edge-fn tests are
 gated in CI alongside the unit tests.
 
-### 2. Kill the mirror-drift risk
-`wrotate_test.js` is a *copy* of `index.html` logic — every feature requires editing both,
-so they can silently diverge (tests green while app broken). Either (a) a CI check that
-fails on divergence, or (b) extract shared logic into real modules both import (one source
-of truth). This is what makes the coverage % meaningful.
+### 2. Kill the mirror-drift risk — DONE (2026-06-01) ✅
+Chose option (a): a CI guard (`tests/mirror-drift.test.js`), not the big refactor.
+Audited all 56 functions defined in both `index.html` and `wrotate_test.js`:
+- **Found + fixed 4 real drifts** where the mirror had silently fallen behind the app
+  (tests were green while the app differed): `isVideoUrl` (missing `.m3u8`),
+  `storagePathFrom` (didn't strip `?` query/cache-bust), `rowToWatch` and `watchToRow`
+  (missing `movement` + `bph` field mapping).
+- **The guard** classifies every mirrored function into two registries: VERBATIM (37 —
+  byte-identical after whitespace/comment strip; the guard fails CI if they drift) and
+  ADAPTED (19 — intentionally param-ized for testability, e.g. take `now`/`userId` instead
+  of globals, or same-name-different-purpose like `fmtMoney`; existence-checked only,
+  behavior covered by their own unit tests). A third check fails if any NEW mirrored
+  function appears unclassified, forcing a decision.
+- Verified the guard catches drift (injected a change → failed with the function named →
+  reverted → green). Runs in the normal vitest/CI suite.
+
+Note: this is the pragmatic fix, not the ideal one (option (b), a single shared module both
+import, remains the long-term architecture but is a large risky refactor of the 24k-line
+single-file app — deferred).
 
 ### 3. Realistic coverage gate
 Configure vitest coverage thresholds on the files that ARE importable (helpers/modules) —
