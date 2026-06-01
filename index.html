@@ -5935,7 +5935,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.19.17';
+const APP_VERSION = '31.19.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10271,6 +10271,17 @@ function openNewPost(opts) {
     renderNpWatchDisplay();
   } else {
     npIdentifiedWatchId = null;
+  }
+  // Pre-stage caller-provided images (e.g. the accuracy graph card). These act
+  // exactly like user-added photos: index 0 is the hero, removable, reorderable.
+  if (Array.isArray(o.prefillFiles) && o.prefillFiles.length) {
+    for (const f of o.prefillFiles.slice(0, 6)) {
+      if (!f) continue;
+      newPostFiles.push(f);
+      newPostPreviews.push(URL.createObjectURL(f));
+      newPostPosters.push(null);
+    }
+    renderNpThumbstrip();
   }
   document.getElementById('new-post-modal').classList.remove('hidden');
   setTimeout(() => document.getElementById('np-body').focus(), 50);
@@ -22498,12 +22509,19 @@ function renderMsrScatterPlot() {
   const h = canvas.offsetHeight * dpr;
   canvas.width = w; canvas.height = h;
   ctx.clearRect(0, 0, w, h);
-
   const pad = { l: 8 * dpr, r: 55 * dpr, t: 40 * dpr, b: 20 * dpr };
+  drawMsrScatterCore(ctx, { w, h, pad, data: _msrScatterData, scale: dpr });
+}
+
+// Draws the phosphor-green scatter (dots, zero line, rate line, grid, axis labels)
+// into any canvas context. Shared by the on-screen live plot and the share card.
+// `scale` replaces devicePixelRatio for stroke/font/dot sizing (larger for cards).
+function drawMsrScatterCore(ctx, o) {
+  const { w, h, pad, data } = o;
+  const dpr = o.scale;
   const pw = w - pad.l - pad.r;
   const ph = h - pad.t - pad.b;
 
-  const data = _msrScatterData;
   const tMin = 0;
   const tDataMax = data[data.length - 1].t;
   const tMax = Math.max(10, Math.ceil(tDataMax / 10) * 10 + 5);
@@ -22621,6 +22639,88 @@ function renderMsrScatterPlot() {
     const x = xPos(t);
     ctx.fillText(Math.round(t) + 's', x, h - 2 * dpr);
   }
+}
+
+// ── Measurement share card ───────────────────────────────────────────────────
+// Minimum scatter dots required before a measurement is worth rendering as a
+// graph card. Matches the threshold the engine uses to compute a bucket rate.
+const MSR_CARD_MIN_DOTS = 11;
+
+// True when a measurement has enough dot data to render a meaningful graph card.
+function msrCardHasEnoughData(scatterData) {
+  return Array.isArray(scatterData) && scatterData.length >= MSR_CARD_MIN_DOTS;
+}
+
+// Formats the result values shown on the share card. Pure — no DOM.
+function msrCardResultText({ rate, beatError, bph }) {
+  const out = {};
+  const r = Number(rate);
+  const rOk = rate != null && rate !== '' && isFinite(r);
+  out.rate = (rOk ? (r > 0 ? '+' : '') + r.toFixed(1) : '—') + ' s/d';
+  const be = Number(beatError);
+  out.beatError = beatError != null && beatError !== '' && isFinite(be) ? be.toFixed(1) + ' ms' : null;
+  const b = Number(bph);
+  out.bph = bph != null && isFinite(b) && b > 0 ? Math.round(b).toLocaleString() + ' bph' : null;
+  return out;
+}
+
+// Renders a 1080x1080 share card (graph + watch name + result) to an off-screen
+// canvas and returns it. Caller converts to a blob. Reuses drawMsrScatterCore.
+function renderMsrShareCard({ data, watchName, rate, beatError, bph }) {
+  const SIZE = 1080;
+  const canvas = document.createElement('canvas');
+  canvas.width = SIZE; canvas.height = SIZE;
+  const ctx = canvas.getContext('2d');
+
+  // Card background — same dark CRT green as the live plot
+  ctx.fillStyle = '#0a1a12';
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  // Header: watch name
+  ctx.fillStyle = '#e8efd9';
+  ctx.font = '600 44px -apple-system, system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  const name = (watchName || 'My watch').slice(0, 40);
+  ctx.fillText(name, 64, 96);
+
+  // Graph occupies the central band. Padding tuned for the square card; scale
+  // raised so dots/lines/labels read at card resolution.
+  const graphPad = { l: 24, r: 150, t: 150, b: 80 };
+  ctx.save();
+  // Clip the graph region so the inner background fill from the core stays boxed.
+  ctx.beginPath();
+  ctx.rect(0, 130, SIZE, SIZE - 130 - 170);
+  ctx.clip();
+  drawMsrScatterCore(ctx, {
+    w: SIZE,
+    h: SIZE - 170,
+    pad: graphPad,
+    data,
+    scale: 2.4
+  });
+  ctx.restore();
+
+  // Result line at the bottom
+  const res = msrCardResultText({ rate, beatError, bph });
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#4ade80';
+  ctx.font = '700 72px -apple-system, system-ui, sans-serif';
+  ctx.fillText(res.rate, 64, SIZE - 70);
+  const sub = [res.beatError, res.bph].filter(Boolean).join('   ·   ');
+  if (sub) {
+    ctx.fillStyle = 'rgba(232,239,217,0.65)';
+    ctx.font = '500 34px -apple-system, system-ui, sans-serif';
+    ctx.fillText(sub, 66, SIZE - 30);
+  }
+
+  // WRotate wordmark — bottom right
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(74,222,128,0.55)';
+  ctx.font = '700 34px -apple-system, system-ui, sans-serif';
+  ctx.fillText('WRotate', SIZE - 64, SIZE - 50);
+
+  return canvas;
 }
 
 function openMeasureModal() {
@@ -23162,12 +23262,38 @@ function shareMsrToFeed(watchId, rate) {
   const rateStr = (r > 0 ? '+' : '') + r.toFixed(1);
   const cta = document.getElementById('msr-share-cta');
   if (cta) cta.style.display = 'none';
-  closeMeasureModal();
-  openNewPost({
-    prefillBody: `Measured my ${name}: ${rateStr} s/d.`,
-    watchId,
-    source: 'measurement',
-  });
+
+  // Render the accuracy graph card NOW, while _msrScatterData is still live
+  // (closeMeasureModal resets it). Build the canvas synchronously, then convert
+  // to a blob async and open the composer. Any failure → text-only share.
+  let cardCanvas = null;
+  if (msrCardHasEnoughData(_msrScatterData)) {
+    try {
+      const beVal = document.getElementById('msr-be-input')?.value.trim();
+      const beatError = beVal ? parseFloat(beVal) : null;
+      const bph = parseInt(document.getElementById('msr-bph-select')?.value) || null;
+      cardCanvas = renderMsrShareCard({
+        data: _msrScatterData.slice(),
+        watchName: w ? `${w.brand} ${w.name}` : null,
+        rate: r, beatError, bph
+      });
+    } catch (e) { cardCanvas = null; }
+  }
+
+  const prefillBody = `Measured my ${name}: ${rateStr} s/d.`;
+  const open = (files) => {
+    closeMeasureModal();
+    openNewPost({ prefillBody, watchId, source: 'measurement', prefillFiles: files });
+  };
+
+  if (cardCanvas && cardCanvas.toBlob) {
+    cardCanvas.toBlob((blob) => {
+      const files = blob ? [new File([blob], `accuracy-${Date.now()}.jpg`, { type: 'image/jpeg' })] : [];
+      open(files);
+    }, 'image/jpeg', 0.9);
+  } else {
+    open([]);
+  }
 }
 
 // Throttled presence ping — records "last opened the app", which is distinct
