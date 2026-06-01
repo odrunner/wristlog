@@ -9,7 +9,8 @@
     "test:e2e": "playwright test --project=mocked",
     "test:e2e:int": "playwright test --project=integration",
     "test:e2e:all": "playwright test",
-    "test:smoke": "node scripts/smoke-test-functions.js"
+    "test:smoke": "node scripts/smoke-test-functions.js",
+    "test:functions": "deno test supabase/functions/"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

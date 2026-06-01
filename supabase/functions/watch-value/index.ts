@@ -8,6 +8,14 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import {
+  buildWatchDesc,
+  extractJson,
+  isCacheFresh,
+  isInRateWindow,
+  mergePriceHistory,
+  utcDayStartIso,
+} from "./lib.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -18,11 +26,6 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-
-function extractJson(text: string) {
-  const m = text.match(/\{[\s\S]*\}/);
-  return m ? JSON.parse(m[0]) : null;
-}
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -63,10 +66,8 @@ Deno.serve(async (req: Request) => {
         .eq("user_id", user.id)
         .single();
 
-      if (cached?.market_price && cached?.market_price_date) {
-        const ageMs = Date.now() - new Date(cached.market_price_date).getTime();
-        const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
-        if (ageMs < SEVEN_DAYS) {
+      if (cached?.market_price && isCacheFresh(cached.market_price_date, Date.now())) {
+        {
           console.log(`[watch-value] Returning cached price $${cached.market_price} (${cached.market_price_date}) for watch ${watch_id}`);
           return new Response(JSON.stringify({
             estimated_value_usd: { low: null, mid: Number(cached.market_price), high: null },
@@ -85,8 +86,7 @@ Deno.serve(async (req: Request) => {
 
     // Rate limit: 20 lookups per user per day (only counted for actual API calls)
     const DAILY_LIMIT = 20;
-    const todayStart = new Date();
-    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayStartIso = utcDayStartIso(Date.now());
     const rlKey = `watch-value:${user.id}`;
     const { data: rl } = await supabase
       .from("rate_limits")
@@ -95,7 +95,7 @@ Deno.serve(async (req: Request) => {
       .eq("user_id", user.id)
       .single();
 
-    const inWindow = rl && rl.window_start >= todayStart.toISOString();
+    const inWindow = isInRateWindow(rl?.window_start, todayStartIso);
     if (inWindow && rl.request_count >= DAILY_LIMIT) {
       return new Response(JSON.stringify({ error: "daily_limit", message: "Price lookups are limited to once per day. Try again tomorrow." }), {
         status: 429, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
@@ -108,17 +108,11 @@ Deno.serve(async (req: Request) => {
         .eq("function_name", rlKey).eq("user_id", user.id);
     } else {
       await supabase.from("rate_limits")
-        .upsert({ user_id: user.id, function_name: rlKey, window_start: todayStart.toISOString(), request_count: 1 },
+        .upsert({ user_id: user.id, function_name: rlKey, window_start: todayStartIso, request_count: 1 },
           { onConflict: "user_id,function_name" });
     }
 
-    const watchDesc = [
-      brand,
-      model || "",
-      reference ? `ref. ${reference}` : "",
-      year ? `(${year})` : "",
-      condition ? `in ${condition} condition` : "",
-    ].filter(Boolean).join(" ");
+    const watchDesc = buildWatchDesc({ brand, model, reference, year, condition });
 
     console.log(`[watch-value] user=${user.id} Looking up: ${watchDesc}`);
 
@@ -194,23 +188,7 @@ Rules:
         .single();
 
       if (watch) {
-        const history: { src: string; date: string; price: number }[] =
-          Array.isArray(watch.price_history) ? watch.price_history : [];
-
-        if (watch.market_price && watch.market_price_date) {
-          const already = history.some(
-            (h) => h.date === watch.market_price_date && h.price === Number(watch.market_price)
-          );
-          if (!already) {
-            history.push({
-              src: "previous",
-              date: watch.market_price_date,
-              price: Number(watch.market_price),
-            });
-          }
-        }
-
-        history.push({ src: "WRotate", date: today, price: mid });
+        const history = mergePriceHistory(watch, mid, today);
 
         const { error } = await supabase
           .from("watches")
