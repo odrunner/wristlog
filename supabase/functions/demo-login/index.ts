@@ -6,15 +6,13 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isRateLimited, isWithinWindow, rateKey, resolveIp, windowStartIso } from "./lib.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://wrotate.com",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-
-const RATE_LIMIT = 5;
-const RATE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -32,11 +30,9 @@ serve(async (req) => {
   const adminClient = createClient(supabaseUrl, serviceKey);
 
   // Rate limit by IP
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || req.headers.get("cf-connecting-ip")
-    || "unknown";
-  const key = `demo-login:${ip}`;
-  const windowStart = new Date(Date.now() - RATE_WINDOW_MS).toISOString();
+  const ip = resolveIp((name) => req.headers.get(name));
+  const key = rateKey(ip);
+  const windowStart = windowStartIso(Date.now());
 
   const { data: rl } = await adminClient
     .from("rate_limits")
@@ -45,14 +41,14 @@ serve(async (req) => {
     .eq("user_id", "00000000-0000-0000-0000-000000000000")
     .single();
 
-  if (rl && rl.window_start > windowStart && rl.request_count >= RATE_LIMIT) {
+  if (isRateLimited(rl, windowStart)) {
     return new Response(JSON.stringify({ error: "Too many requests — try again later" }), {
       status: 429, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
   }
 
   // Update or insert rate limit counter
-  if (rl && rl.window_start > windowStart) {
+  if (isWithinWindow(rl, windowStart)) {
     await adminClient.from("rate_limits")
       .update({ request_count: rl.request_count + 1 })
       .eq("function_name", key)

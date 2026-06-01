@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { buildEmailEventRow, isValidPayload } from "./lib.ts";
 
 const WEBHOOK_SECRET = Deno.env.get("RESEND_WEBHOOK_SECRET") ?? "";
 
@@ -10,9 +11,8 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { type, data } = body;
 
-    if (!type || !data) {
+    if (!isValidPayload(body)) {
       return new Response(JSON.stringify({ error: "Invalid payload" }), { status: 400 });
     }
 
@@ -21,16 +21,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const eventType = type.replace("email.", "");
-
-    const row = {
-      email_id: data.email_id ?? null,
-      event_type: eventType,
-      email_to: Array.isArray(data.to) ? data.to[0] : (data.to ?? null),
-      subject: data.subject ?? null,
-      created_at: data.created_at ?? new Date().toISOString(),
-      raw: body,
-    };
+    const row = buildEmailEventRow(body, new Date().toISOString());
 
     const { error } = await supabase.from("email_events").insert(row);
     if (error) {

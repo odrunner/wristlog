@@ -10,17 +10,17 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import {
+  extractJson,
+  isValidBrandName,
+  parseBrandRequest,
+  pickFinalBrandName,
+  sanitizeBrandName,
+} from "./lib.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function extractJson(text: string) {
-  const m = text.match(/\{[\s\S]*\}/);
-  return m ? JSON.parse(m[0]) : null;
-}
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
@@ -33,14 +33,12 @@ Deno.serve(async (req: Request) => {
     }
 
     // Only process brand addition requests
-    const brandMatch = record.title?.match(/Please add "(.+)" to the WRotate brand list/i);
+    const brandMatch = parseBrandRequest(record.title);
     if (!brandMatch) {
       return new Response(JSON.stringify({ skipped: "not a brand request" }), { status: 200 });
     }
 
-    const requestedName = brandMatch[1].trim()
-      .replace(/[‘’‚‛]/g, "'")  // smart single quotes → ASCII
-      .replace(/[“”„‟]/g, '"');  // smart double quotes → ASCII
+    const requestedName = sanitizeBrandName(brandMatch);
     const userId = record.user_id;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -56,7 +54,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Brand name validation: reject unsafe characters ─────────────────────
-    if (!/^[a-zA-Z0-9 \-\.&']+$/.test(requestedName)) {
+    if (!isValidBrandName(requestedName)) {
       console.warn(`[auto-add-brand] Invalid brand name characters: "${requestedName}"`);
       return new Response(JSON.stringify({ error: "Invalid brand name characters" }), { status: 400 });
     }
@@ -104,7 +102,7 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ verified: false, reason: parsed.reason }), { status: 200 });
     }
 
-    const finalName = parsed.canonical_name || requestedName;
+    const finalName = pickFinalBrandName(parsed.canonical_name, requestedName);
     console.log(`[auto-add-brand] Verified "${requestedName}" → canonical: "${finalName}"`);
 
     // ── Step 2: Check if brand already exists in DB ─────────────────────────

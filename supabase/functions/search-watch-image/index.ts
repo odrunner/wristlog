@@ -8,6 +8,13 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  buildBrandSiteUrls,
+  buildFallbackBrandUrl,
+  extractImages,
+  isLikelyProductImage,
+  looksLikeProductUrl,
+} from "./lib.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -18,62 +25,17 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const BAD_IMAGE_KEYWORDS = /logo|logotype|icon|favicon|sprite|banner|placeholder|badge|seal|emblem|crest|header-bg|footer|menu|nav-|social-|share-|arrow|close|search-icon|avatar|profile|author|gravatar|ads?-|advertisement|pixel|tracking|spacer|blank|transparent|loading/i;
-
 const BROWSER_HEADERS: Record<string, string> = {
   "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
   "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
   "Accept-Language": "en-US,en;q=0.9",
 };
 
-// ── Brand → website domain ──
-const BRAND_DOMAINS: Record<string, string> = {
-  "rolex": "rolex.com", "omega": "omegawatches.com",
-  "patek philippe": "patek.com", "audemars piguet": "audemarspiguet.com",
-  "iwc": "iwc.com", "jaeger-lecoultre": "jaeger-lecoultre.com",
-  "jaeger lecoultre": "jaeger-lecoultre.com", "breitling": "breitling.com",
-  "tag heuer": "tagheuer.com", "cartier": "cartier.com",
-  "panerai": "panerai.com", "tudor": "tudorwatch.com",
-  "blancpain": "blancpain.com", "vacheron constantin": "vacheron-constantin.com",
-  "zenith": "zenith-watches.com", "hublot": "hublot.com",
-  "longines": "longines.com", "tissot": "tissotwatches.com",
-  "seiko": "seikowatches.com", "grand seiko": "grand-seiko.com",
-  "citizen": "citizenwatch.com", "casio": "casio.com",
-  "g-shock": "gshock.com", "hamilton": "hamiltonwatch.com",
-  "oris": "oris.com", "bell & ross": "bellross.com",
-  "bell ross": "bellross.com", "chopard": "chopard.com",
-  "girard-perregaux": "girard-perregaux.com",
-  "girard perregaux": "girard-perregaux.com",
-  "ulysse nardin": "ulysse-nardin.com",
-  "frederique constant": "frederiqueconstant.com",
-  "montblanc": "montblanc.com", "baume & mercier": "baume-et-mercier.com",
-  "baume mercier": "baume-et-mercier.com",
-  "nomos": "nomos-glashuette.com", "a. lange & sohne": "alange-soehne.com",
-  "a lange sohne": "alange-soehne.com",
-  "glashutte original": "glashuette-original.com",
-  "junghans": "junghans.de", "rado": "rado.com",
-  "swatch": "swatch.com", "orient": "orient-watch.com",
-  "bulova": "bulova.com", "movado": "movado.com",
-  "mido": "mido.com", "certina": "certina.com",
-  "piaget": "piaget.com", "chanel": "chanel.com",
-  "hermes": "hermes.com", "bvlgari": "bulgari.com",
-  "bulgari": "bulgari.com", "sinn": "sinn.de",
-  "ming": "ming.watch", "moser": "h-moser.com",
-  "h. moser": "h-moser.com", "h moser": "h-moser.com",
-  "roger dubuis": "rogerdubuis.com", "richard mille": "richardmille.com",
-  "franck muller": "franckmuller.com", "jacob & co": "jacobandco.com",
-};
-
-function getBrandDomain(brand: string): string | null {
-  return BRAND_DOMAINS[brand.toLowerCase().trim()] || null;
-}
-
 /**
  * Validate that a URL points to a real product image.
  */
 async function validateImageUrl(url: string): Promise<boolean> {
-  if (!url || BAD_IMAGE_KEYWORDS.test(url)) return false;
-  if (/\.(svg|gif)(\?|$)/i.test(url)) return false;
+  if (!isLikelyProductImage(url)) return false;
   try {
     const resp = await fetch(url, {
       method: "HEAD",
@@ -89,58 +51,6 @@ async function validateImageUrl(url: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-/**
- * Extract image URLs from HTML.
- */
-function extractImages(html: string, baseUrl: string): string[] {
-  const images: string[] = [];
-
-  // og:image
-  const ogMatch = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
-    || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-  if (ogMatch?.[1]) images.push(ogMatch[1]);
-
-  // twitter:image
-  const twMatch = html.match(/<meta[^>]+(?:property|name)=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)
-    || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']twitter:image["']/i);
-  if (twMatch?.[1]) images.push(twMatch[1]);
-
-  // JSON-LD Product images
-  const jsonLdMatches = html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
-  for (const m of jsonLdMatches) {
-    try {
-      const ld = JSON.parse(m[1]);
-      const items = Array.isArray(ld) ? ld : [ld];
-      for (const item of items) {
-        if (item["@type"] === "Product" || item["@type"]?.includes?.("Product")) {
-          const img = item.image;
-          if (typeof img === "string") images.push(img);
-          else if (Array.isArray(img)) images.push(...img.filter((x: unknown) => typeof x === "string"));
-          else if (img?.url) images.push(img.url);
-        }
-      }
-    } catch { /* ignore */ }
-  }
-
-  // img tags — prioritize larger images (those with width/height attributes or in main content areas)
-  const imgRegex = /<img[^>]+(?:src|data-src|data-lazy-src)=["']([^"']+)["'][^>]*>/gi;
-  let imgMatch;
-  while ((imgMatch = imgRegex.exec(html)) !== null) {
-    const src = imgMatch[1];
-    if (src && !BAD_IMAGE_KEYWORDS.test(src) && !/\.(svg|gif)(\?|$)/i.test(src)) {
-      images.push(src);
-    }
-  }
-
-  return [...new Set(images.map(u => {
-    if (u.startsWith("//")) return "https:" + u;
-    if (u.startsWith("/")) {
-      try { return new URL(u, baseUrl).href; } catch { return u; }
-    }
-    return u;
-  }).filter(u => u.startsWith("https://") || u.startsWith("http://")))];
 }
 
 /**
@@ -174,12 +84,7 @@ async function scrapePageForImage(pageUrl: string): Promise<{ imageUrl: string; 
  * STRATEGY 1: Product URL from Claude (skip homepages).
  */
 async function searchProductUrl(url: string): Promise<{ imageUrl: string; sourceUrl: string } | null> {
-  if (!url) return null;
-  try {
-    const parsed = new URL(url);
-    const pathParts = parsed.pathname.split("/").filter(Boolean);
-    if (pathParts.length < 2) return null; // homepage-like
-  } catch { return null; }
+  if (!looksLikeProductUrl(url)) return null; // missing/invalid/homepage-like
 
   console.log("[search-watch-image] Trying product URL:", url);
   return await scrapePageForImage(url);
@@ -191,71 +96,12 @@ async function searchProductUrl(url: string): Promise<{ imageUrl: string; source
  * Also tries the brand's search endpoint.
  */
 async function searchBrandSite(brand: string, model: string, reference: string): Promise<{ imageUrl: string; sourceUrl: string } | null> {
-  const domain = getBrandDomain(brand);
-  if (!domain) {
+  const urls = buildBrandSiteUrls(brand, model, reference);
+  if (!urls) {
     // Fallback: try brand.com
-    const fallbackDomain = brand.toLowerCase().replace(/[^a-z0-9]/g, "") + ".com";
-    console.log("[search-watch-image] Trying fallback domain:", fallbackDomain);
-    const url = `https://www.${fallbackDomain}/${model.toLowerCase().replace(/\s+/g, "-")}`;
+    const url = buildFallbackBrandUrl(brand, model);
+    console.log("[search-watch-image] Trying fallback domain:", url);
     return await scrapePageForImage(url);
-  }
-
-  const modelSlug = model.toLowerCase().replace(/\s+/g, "-");
-  const modelEncoded = encodeURIComponent(model);
-  const refEncoded = reference ? encodeURIComponent(reference) : "";
-
-  // Build list of URLs to try, specific to brand patterns
-  const urls: string[] = [];
-
-  // ── Brand-specific URL patterns ──
-  const bl = brand.toLowerCase();
-  if (bl.includes("rolex")) {
-    urls.push(`https://www.rolex.com/watches/${modelSlug}`);
-    if (reference) urls.push(`https://www.rolex.com/watches/${modelSlug}/m${reference.toLowerCase()}`);
-  } else if (bl.includes("omega")) {
-    urls.push(`https://www.omegawatches.com/en-us/watches/${modelSlug}`);
-    if (reference) urls.push(`https://www.omegawatches.com/watch-omega-${modelSlug}-${reference.toLowerCase()}`);
-  } else if (bl.includes("tudor")) {
-    urls.push(`https://www.tudorwatch.com/en/watches/${modelSlug}`);
-  } else if (bl.includes("tag") && bl.includes("heuer")) {
-    urls.push(`https://www.tagheuer.com/us/en/timepieces/collections/${modelSlug}/`);
-  } else if (bl.includes("breitling")) {
-    urls.push(`https://www.breitling.com/us-en/watches/${modelSlug}/`);
-  } else if (bl.includes("iwc")) {
-    urls.push(`https://www.iwc.com/us/en/watch-collections/${modelSlug}.html`);
-  } else if (bl.includes("panerai")) {
-    urls.push(`https://www.panerai.com/us/en/collections/watch-collection/${modelSlug}.html`);
-  } else if (bl.includes("cartier")) {
-    urls.push(`https://www.cartier.com/en-us/watches/${modelSlug}/`);
-  } else if (bl.includes("blancpain")) {
-    urls.push(`https://www.blancpain.com/en/watches/${modelSlug}`);
-  } else if (bl.includes("hublot")) {
-    urls.push(`https://www.hublot.com/en-us/watches/${modelSlug}`);
-  } else if (bl.includes("zenith")) {
-    urls.push(`https://www.zenith-watches.com/en_us/watches/${modelSlug}`);
-  } else if (bl.includes("longines")) {
-    urls.push(`https://www.longines.com/en-us/watches/${modelSlug}`);
-  }
-
-  // ── Generic patterns that work for many brands ──
-  urls.push(`https://www.${domain}/watches/${modelSlug}`);
-  urls.push(`https://www.${domain}/collections/${modelSlug}`);
-  urls.push(`https://www.${domain}/${modelSlug}`);
-
-  // ── Brand search/product endpoints ──
-  if (bl.includes("seiko")) {
-    urls.push(`https://www.seikowatches.com/us-en/products?q=${modelEncoded}`);
-    if (reference) urls.push(`https://www.seikowatches.com/us-en/products/${reference.toLowerCase()}`);
-  } else if (bl.includes("grand seiko")) {
-    urls.push(`https://www.grand-seiko.com/us-en/collections?q=${modelEncoded}`);
-  } else if (bl.includes("citizen")) {
-    urls.push(`https://www.citizenwatch.com/us/en/search?q=${modelEncoded}`);
-  } else if (bl.includes("hamilton")) {
-    urls.push(`https://www.hamiltonwatch.com/en-us/collection/${modelSlug}.html`);
-  } else if (bl.includes("tissot")) {
-    urls.push(`https://www.tissotwatches.com/en-us/collection/${modelSlug}.html`);
-  } else if (bl.includes("oris")) {
-    urls.push(`https://www.oris.com/en/watch/${modelSlug}`);
   }
 
   // Try each URL

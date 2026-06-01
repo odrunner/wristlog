@@ -10,6 +10,14 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import {
+  buildHtmlEmail,
+  filterEligible,
+  personalizeBody,
+  signupWindow,
+  splitAlreadySent,
+  unsubUrl,
+} from "./lib.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -24,35 +32,6 @@ async function hmacSign(uid: string, cat: string, key: string): Promise<string> 
   const sig = await crypto.subtle.sign("HMAC", cryptoKey, enc.encode(`${uid}:${cat}`));
   return btoa(String.fromCharCode(...new Uint8Array(sig)))
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function buildHtmlEmail(subject: string, body: string, unsubUrl: string): string {
-  const unsubLine = `You're receiving this because you recently joined WRotate.<br><a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a>`;
-  return `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:40px 20px;">
-    <tr><td align="center">
-      <table width="100%" style="max-width:480px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
-        <tr><td style="padding:28px 28px 20px;text-align:center;border-bottom:1px solid #eee;">
-          <img src="https://wrotate.com/icon.svg" alt="WRotate" width="40" height="40" style="display:inline-block;border-radius:9px;margin-bottom:8px;">
-          <div style="font-size:18px;font-weight:700;color:#b8941f;letter-spacing:.03em;">WRotate</div>
-        </td></tr>
-        <tr><td style="padding:24px 28px;">
-          <div style="font-size:14px;color:#555;line-height:1.6;">${body}</div>
-        </td></tr>
-        <tr><td style="padding:4px 28px 28px;">
-          <a href="https://wrotate.com/?utm_source=email&utm_medium=campaign&utm_campaign=welcome" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
-        </td></tr>
-        <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
-          <div style="font-size:11px;color:#999;line-height:1.5;">${unsubLine}</div>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
 }
 
 Deno.serve(async (_req: Request) => {
@@ -87,16 +66,14 @@ Deno.serve(async (_req: Request) => {
       console.log(`[run-campaign] Processing "${name}" (delay=${delay_days}d)`);
 
       // Find users who signed up delay_days ago (48h-72h window for daily cron)
-      const now = new Date();
-      const windowEnd = new Date(now.getTime() - delay_days * 24 * 60 * 60 * 1000);
-      const windowStart = new Date(windowEnd.getTime() - 24 * 60 * 60 * 1000);
+      const { windowStart, windowEnd } = signupWindow(Date.now(), delay_days);
 
       const { data: eligible, error: eligErr } = await supabase
         .from("profiles")
         .select("id, display_name, email_prefs")
         .eq("is_suspended", false)
-        .gte("created_at", windowStart.toISOString())
-        .lt("created_at", windowEnd.toISOString());
+        .gte("created_at", windowStart)
+        .lt("created_at", windowEnd);
 
       if (eligErr) {
         console.error(`[run-campaign] Failed to fetch eligible users:`, eligErr);
@@ -105,11 +82,7 @@ Deno.serve(async (_req: Request) => {
       }
 
       // Filter: not internal, not unsubscribed from updates, not already sent
-      let users = (eligible || []).filter(p => {
-        if (internalIds.has(p.id)) return false;
-        const prefs = p.email_prefs || {};
-        return prefs.updates !== false;
-      });
+      let users = filterEligible(eligible || [], internalIds);
 
       if (!users.length) {
         console.log(`[run-campaign] "${name}": no eligible users in window`);
@@ -124,9 +97,9 @@ Deno.serve(async (_req: Request) => {
         .eq("campaign_id", campaignId)
         .in("user_id", users.map(u => u.id));
 
-      const sentSet = new Set((alreadySent || []).map(r => r.user_id));
-      const skipped = users.filter(u => sentSet.has(u.id)).length;
-      users = users.filter(u => !sentSet.has(u.id));
+      const split = splitAlreadySent(users, (alreadySent || []).map(r => r.user_id));
+      const skipped = split.skipped;
+      users = split.pending;
 
       if (!users.length) {
         console.log(`[run-campaign] "${name}": all eligible already sent`);
@@ -152,17 +125,17 @@ Deno.serve(async (_req: Request) => {
         const batch = recipients.slice(i, i + batchSize);
         const batchPayload = await Promise.all(batch.map(async (r) => {
           const sig = await hmacSign(r.uid, "updates", SUPABASE_SERVICE_ROLE_KEY);
-          const unsubUrl = `${SUPABASE_URL}/functions/v1/email-unsubscribe?uid=${r.uid}&cat=updates&sig=${sig}`;
+          const url = unsubUrl(SUPABASE_URL, r.uid, sig, "updates");
           // Replace {{name}} placeholder with display name or "there"
-          const personalizedBody = body_html.replace(/\{\{name\}\}/g, r.displayName || "there");
-          const html = buildHtmlEmail(subject, personalizedBody, unsubUrl);
+          const personalizedBody = personalizeBody(body_html, r.displayName);
+          const html = buildHtmlEmail(subject, personalizedBody, url);
           return {
             from: FROM_EMAIL,
             to: [r.email],
             subject,
             html,
             headers: {
-              "List-Unsubscribe": `<${unsubUrl}>`,
+              "List-Unsubscribe": `<${url}>`,
               "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
             },
           };

@@ -11,6 +11,21 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  batchSegment,
+  capRecipients,
+  COHORTS,
+  dormantCutoffMs,
+  effectiveLimit as computeEffectiveLimit,
+  excludeIds,
+  filterNeverMeasured,
+  filterOptedIn,
+  isDormant,
+  sanitizeHtml,
+  unsubFooter,
+  unsubUrl,
+  validateBroadcastInput,
+} from "./lib.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ADMIN_USER_ID = "d70b1a85-4f31-4431-b3b7-db76543daaf5";
@@ -24,19 +39,6 @@ async function hmacSign(uid: string, cat: string, key: string): Promise<string> 
   const sig = await crypto.subtle.sign("HMAC", cryptoKey, enc.encode(`${uid}:${cat}`));
   return btoa(String.fromCharCode(...new Uint8Array(sig)))
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function sanitizeHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<iframe[\s\S]*?<\/iframe>/gi, "")
-    .replace(/<object[\s\S]*?<\/object>/gi, "")
-    .replace(/<embed[\s\S]*?>/gi, "")
-    .replace(/<form[\s\S]*?<\/form>/gi, "")
-    .replace(/\son\w+\s*=\s*["'][^"']*["']/gi, "")
-    .replace(/\son\w+\s*=\s*[^\s>]+/gi, "")
-    .replace(/javascript\s*:/gi, "blocked:")
-    .replace(/vbscript\s*:/gi, "blocked:");
 }
 
 const CORS_HEADERS = {
@@ -83,25 +85,9 @@ serve(async (req) => {
     const body = await req.json();
     const { subject, html, test_email, segment = "all", campaign_id, cohort, dry_run, limit } = body;
 
-    if (!subject || !html) {
-      return jsonResponse({ error: "subject and html are required" }, 400);
-    }
-
-    const COHORTS: Record<string, { gte?: string; lt?: string }> = {
-      pre_april: { lt: "2026-04-01T00:00:00Z" },
-      april: { gte: "2026-04-01T00:00:00Z", lt: "2026-05-01T00:00:00Z" },
-      may: { gte: "2026-05-01T00:00:00Z", lt: "2026-06-01T00:00:00Z" },
-    };
-    if (cohort && !COHORTS[cohort]) {
-      return jsonResponse({ error: `Unknown cohort: ${cohort}` }, 400);
-    }
-    if (cohort && !campaign_id) {
-      return jsonResponse({ error: "campaign_id is required when cohort is set" }, 400);
-    }
-
-    // Limit HTML body size to 500KB to prevent abuse
-    if (html.length > 512000) {
-      return jsonResponse({ error: "Email body too large (max 500KB)" }, 400);
+    const inputError = validateBroadcastInput({ subject, html, cohort, campaign_id });
+    if (inputError) {
+      return jsonResponse({ error: inputError }, 400);
     }
 
     const safeHtml = sanitizeHtml(html);
@@ -136,16 +122,12 @@ serve(async (req) => {
     }
 
     // Filter out users who have disabled "Updates & new features" emails
-    let eligibleProfiles = (profiles || []).filter(p => {
-      const prefs = p.email_prefs || {};
-      return prefs.updates !== false; // default is opted-in
-    });
+    let eligibleProfiles = filterOptedIn(profiles || []);
 
     // Cohort blast: exclude internal accounts
     if (cohort) {
       const { data: internalRows } = await supabase.from("internal_accounts").select("user_id");
-      const internalSet = new Set((internalRows || []).map(r => r.user_id));
-      eligibleProfiles = eligibleProfiles.filter(p => !internalSet.has(p.id));
+      eligibleProfiles = excludeIds(eligibleProfiles, (internalRows || []).map(r => r.user_id));
     }
 
     // Cohort blast: exclude users already sent this campaign
@@ -154,8 +136,7 @@ serve(async (req) => {
         .from("email_campaign_sends")
         .select("user_id")
         .eq("campaign_id", campaign_id);
-      const sentSet = new Set((sentRows || []).map(r => r.user_id));
-      eligibleProfiles = eligibleProfiles.filter(p => !sentSet.has(p.id));
+      eligibleProfiles = excludeIds(eligibleProfiles, (sentRows || []).map(r => r.user_id));
     }
 
     // Segment filter: "never_measured" excludes users with any timegrapher_results row
@@ -166,13 +147,12 @@ serve(async (req) => {
       if (measuredErr) {
         return jsonResponse({ error: "Failed to fetch measurement users", details: measuredErr }, 500);
       }
-      const measuredSet = new Set((measuredRows || []).map(r => r.user_id).filter(Boolean));
-      eligibleProfiles = eligibleProfiles.filter(p => !measuredSet.has(p.id));
+      eligibleProfiles = filterNeverMeasured(eligibleProfiles, (measuredRows || []).map(r => r.user_id));
     }
 
     // Resolve emails + user IDs from auth.users in parallel batches of 50
     // For cohort blasts, also require dormant (last_sign_in_at < NOW - 21d)
-    const DORMANT_CUTOFF_MS = Date.now() - 21 * 24 * 60 * 60 * 1000;
+    const DORMANT_CUTOFF_MS = dormantCutoffMs(Date.now());
     const recipients: { uid: string; email: string }[] = [];
     const resolveSize = 50;
     for (let i = 0; i < eligibleProfiles.length; i += resolveSize) {
@@ -183,8 +163,7 @@ serve(async (req) => {
           const user = authUser?.user;
           if (!user?.email) return null;
           if (cohort) {
-            const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at).getTime() : 0;
-            if (lastSignIn >= DORMANT_CUTOFF_MS) return null; // active user, skip
+            if (!isDormant(user.last_sign_in_at, DORMANT_CUTOFF_MS)) return null; // active user, skip
           }
           return { uid: profile.id, email: user.email };
         })
@@ -195,11 +174,8 @@ serve(async (req) => {
     }
 
     // Optional limit (e.g. test slice of 20 before sending to whole cohort)
-    let cappedRecipients = recipients;
-    const effectiveLimit = typeof limit === "number" && limit > 0 ? Math.floor(limit) : null;
-    if (effectiveLimit !== null && effectiveLimit < recipients.length) {
-      cappedRecipients = recipients.slice(0, effectiveLimit);
-    }
+    const effectiveLimit = computeEffectiveLimit(limit);
+    const cappedRecipients = capRecipients(recipients, effectiveLimit);
 
     // Dry run: just return the count without sending
     if (dry_run) {
@@ -213,12 +189,7 @@ serve(async (req) => {
     }
 
     // Batch segments: split all recipients into 3 roughly equal groups
-    let filteredRecipients = cappedRecipients;
-    if (segment === "batch_1" || segment === "batch_2" || segment === "batch_3") {
-      const batchSize = Math.ceil(filteredRecipients.length / 3);
-      const batchNum = parseInt(segment.split("_")[1]) - 1;
-      filteredRecipients = filteredRecipients.slice(batchNum * batchSize, (batchNum + 1) * batchSize);
-    }
+    const filteredRecipients = batchSegment(cappedRecipients, segment);
 
     // Send via Resend batch API (up to 100 per request)
     let sent = 0;
@@ -230,15 +201,14 @@ serve(async (req) => {
       const batch = filteredRecipients.slice(i, i + batchSize);
       const batchPayload = await Promise.all(batch.map(async (r) => {
         const sig = await hmacSign(r.uid, "updates", supabaseServiceKey);
-        const unsubUrl = `${supabaseUrl}/functions/v1/email-unsubscribe?uid=${r.uid}&cat=updates&sig=${sig}`;
-        const unsubFooter = `<div style="text-align:center;padding:16px 28px;font-size:11px;color:#999;line-height:1.5;border-top:1px solid #eee;"><a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">Manage preferences</a></div>`;
+        const url = unsubUrl(supabaseUrl, r.uid, sig, "updates");
         return {
           from: FROM_EMAIL,
           to: [r.email],
           subject,
-          html: safeHtml + unsubFooter,
+          html: safeHtml + unsubFooter(url),
           headers: {
-            "List-Unsubscribe": `<${unsubUrl}>`,
+            "List-Unsubscribe": `<${url}>`,
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
           },
         };

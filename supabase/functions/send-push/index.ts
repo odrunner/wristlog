@@ -11,6 +11,17 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  apnsDeviceUrl,
+  apnsHost,
+  base64UrlEncode,
+  base64UrlEncodeBytes,
+  buildAlertPayload,
+  buildMessage,
+  isValidRecord,
+  resolveActorName,
+  stripPemArmor,
+} from "./lib.ts";
 
 // APNs configuration
 const APNS_KEY_P8 = Deno.env.get("APNS_KEY_P8") ?? "";
@@ -20,45 +31,7 @@ const BUNDLE_ID = "com.wrotate.Wrotate";
 
 // Use production APNs by default; set APNS_SANDBOX=true for development
 const USE_SANDBOX = Deno.env.get("APNS_SANDBOX") === "true";
-const APNS_HOST = USE_SANDBOX
-  ? "https://api.sandbox.push.apple.com"
-  : "https://api.push.apple.com";
-
-// Notification type → human-readable message
-function buildMessage(
-  type: string,
-  actorName: string
-): { title: string; body: string } | null {
-  const title = "WRotate";
-  switch (type) {
-    case "like":
-      return { title, body: `${actorName} liked your post` };
-    case "comment":
-      return { title, body: `${actorName} commented on your post` };
-    case "follow":
-      return { title, body: `${actorName} started following you` };
-    case "follow_request":
-      return { title, body: `${actorName} requested to follow you` };
-    case "follow_accepted":
-      return { title, body: `${actorName} accepted your follow request` };
-    case "friend_request":
-      return { title, body: `${actorName} sent you a close friend request` };
-    case "friend_accepted":
-      return { title, body: `${actorName} accepted your close friend request` };
-    case "club_invite":
-      return { title, body: `${actorName} invited you to join a club` };
-    case "club_join_request":
-      return { title, body: `${actorName} wants to join your club` };
-    case "club_join_accepted":
-      return { title, body: `${actorName} approved your club request` };
-    case "mention":
-      return { title, body: `${actorName} mentioned you` };
-    case "comment_like":
-      return { title, body: `${actorName} liked your comment` };
-    default:
-      return { title, body: `${actorName} sent you a notification` };
-  }
-}
+const APNS_HOST = apnsHost(USE_SANDBOX);
 
 // Create a JWT for APNs authentication
 async function createAPNsJWT(): Promise<string> {
@@ -67,21 +40,13 @@ async function createAPNsJWT(): Promise<string> {
   const payload = { iss: APNS_TEAM_ID, iat: now };
 
   const encoder = new TextEncoder();
-  const headerB64 = btoa(JSON.stringify(header))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-  const payloadB64 = btoa(JSON.stringify(payload))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
+  const headerB64 = base64UrlEncode(JSON.stringify(header));
+  const payloadB64 = base64UrlEncode(JSON.stringify(payload));
 
   const signingInput = `${headerB64}.${payloadB64}`;
 
   // Import the P8 key
-  const pemContents = APNS_KEY_P8.replace(/-----BEGIN PRIVATE KEY-----/, "")
-    .replace(/-----END PRIVATE KEY-----/, "")
-    .replace(/\s/g, "");
+  const pemContents = stripPemArmor(APNS_KEY_P8);
   const keyData = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
 
   const key = await crypto.subtle.importKey(
@@ -99,10 +64,7 @@ async function createAPNsJWT(): Promise<string> {
   );
 
   // Convert DER signature to raw r||s format expected by JWT
-  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
+  const sigB64 = base64UrlEncodeBytes(new Uint8Array(signature));
 
   return `${signingInput}.${sigB64}`;
 }
@@ -113,14 +75,8 @@ async function sendPush(
   message: { title: string; body: string },
   jwt: string
 ): Promise<{ token: string; success: boolean; status: number }> {
-  const url = `${APNS_HOST}/3/device/${token}`;
-  const payload = {
-    aps: {
-      alert: { title: message.title, body: message.body },
-      sound: "default",
-      badge: 1,
-    },
-  };
+  const url = apnsDeviceUrl(APNS_HOST, token);
+  const payload = buildAlertPayload(message);
 
   try {
     const response = await fetch(url, {
@@ -148,7 +104,7 @@ serve(async (req) => {
 
     // Webhook payload from Supabase: { type: "INSERT", record: {...}, ... }
     const record = body.record;
-    if (!record || !record.user_id || !record.type) {
+    if (!isValidRecord(record)) {
       return new Response(JSON.stringify({ error: "Invalid payload" }), {
         status: 400,
       });
@@ -201,7 +157,7 @@ serve(async (req) => {
         .eq("id", actor_id)
         .single();
       if (actor) {
-        actorName = actor.display_name || actor.username || "Someone";
+        actorName = resolveActorName(actor);
       }
     }
 

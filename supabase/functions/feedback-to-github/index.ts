@@ -10,6 +10,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { buildIssuePayload, isBugReport, resolveUsername } from "./lib.ts";
 
 const GITHUB_PAT = Deno.env.get("GITHUB_PAT") ?? "";
 const GITHUB_REPO = Deno.env.get("GITHUB_REPO") ?? "odrunner/wristlog";
@@ -42,7 +43,7 @@ serve(async (req) => {
     }
 
     // Only process bug reports — skip feature requests
-    if (record.type !== "bug") {
+    if (!isBugReport(record)) {
       return new Response(
         JSON.stringify({ skipped: "not a bug report", type: record.type }),
         { status: 200 }
@@ -59,35 +60,14 @@ serve(async (req) => {
           .eq("id", record.user_id)
           .single();
 
-        if (profile) {
-          username =
-            profile.display_name || profile.username || "anonymous";
-        }
+        username = resolveUsername(profile);
       } catch {
         // Non-critical — proceed with "anonymous"
       }
     }
 
     // Build GitHub Issue
-    const issueTitle = `[Bug Feedback] ${record.title || "Untitled bug"}`;
-    const issueBody = [
-      `## Bug Report from User Feedback`,
-      ``,
-      `**Reporter:** ${username}`,
-      `**App Version:** ${record.app_version || "unknown"}`,
-      `**Browser:** ${record.browser || "unknown"}`,
-      `**Submitted:** ${record.created_at || new Date().toISOString()}`,
-      ``,
-      `---`,
-      ``,
-      `### Description`,
-      ``,
-      record.details || "_No details provided_",
-      ``,
-      `---`,
-      ``,
-      `_Auto-created from in-app feedback. The \`auto-bug\` label will trigger Claude Code to analyze and attempt a fix._`,
-    ].join("\n");
+    const issuePayload = buildIssuePayload(record, username, new Date().toISOString());
 
     // Create GitHub Issue via REST API
     const response = await fetch(
@@ -100,11 +80,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
           "X-GitHub-Api-Version": "2022-11-28",
         },
-        body: JSON.stringify({
-          title: issueTitle,
-          body: issueBody,
-          labels: ["auto-bug"],
-        }),
+        body: JSON.stringify(issuePayload),
       }
     );
 

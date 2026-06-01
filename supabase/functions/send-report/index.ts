@@ -1,10 +1,14 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  buildResendBody,
+  extractBearerToken,
+  hasRequiredFields,
+} from "./lib.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const FROM_EMAIL = "WRotate <notifications@wrotate.com>";
 
 serve(async (req) => {
   if (req.method !== "POST") {
@@ -12,7 +16,7 @@ serve(async (req) => {
   }
 
   const authHeader = req.headers.get("Authorization") ?? "";
-  const token = authHeader.replace("Bearer ", "");
+  const token = extractBearerToken(authHeader);
   if (!token) {
     return new Response("Unauthorized", { status: 401 });
   }
@@ -32,10 +36,11 @@ serve(async (req) => {
     return new Response("Forbidden", { status: 403 });
   }
 
-  const { to, subject, html } = await req.json();
-  if (!to || !subject || !html) {
+  const payload = await req.json();
+  if (!hasRequiredFields(payload)) {
     return new Response("Missing to, subject, or html", { status: 400 });
   }
+  const { to, subject, html } = payload;
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -43,7 +48,7 @@ serve(async (req) => {
       Authorization: `Bearer ${RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from: FROM_EMAIL, to, subject, html }),
+    body: JSON.stringify(buildResendBody(to, subject, html)),
   });
 
   const body = await res.text();

@@ -6,6 +6,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { hasAuthHeader } from "./lib.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://wrotate.com",
@@ -20,7 +21,7 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
+    if (!hasAuthHeader(authHeader)) {
       return new Response(JSON.stringify({ error: 'No authorization header' }), { status: 401, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
     }
 

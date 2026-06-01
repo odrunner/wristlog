@@ -5,6 +5,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { absolutizeImageUrl, extractMeta, validateUrl } from "./lib.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -20,58 +21,6 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
     status,
     headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
   });
-}
-
-/** Decode HTML entities (named + numeric) */
-function decodeEntities(str: string): string {
-  const named: Record<string, string> = {
-    "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": "\"",
-    "&apos;": "'", "&nbsp;": " ", "&ndash;": "–", "&mdash;": "—",
-    "&lsquo;": "\u2018", "&rsquo;": "\u2019", "&ldquo;": "\u201C", "&rdquo;": "\u201D",
-    "&hellip;": "…", "&copy;": "©", "&reg;": "®", "&trade;": "™",
-  };
-  return str
-    .replace(/&(?:#x([0-9a-fA-F]+)|#(\d+)|(\w+));/g, (m, hex, dec, name) => {
-      if (hex) return String.fromCodePoint(parseInt(hex, 16));
-      if (dec) return String.fromCodePoint(parseInt(dec, 10));
-      if (name) return named[`&${name};`] ?? m;
-      return m;
-    });
-}
-
-/** Extract OG/meta tags from HTML string */
-function extractMeta(html: string) {
-  const get = (property: string): string => {
-    // Try og: tags first, then twitter: tags, then standard meta
-    for (const prefix of [`og:${property}`, `twitter:${property}`, property]) {
-      const match = html.match(
-        new RegExp(
-          `<meta[^>]*(?:property|name)=["']${prefix}["'][^>]*content=["']([^"']*)["']` +
-          `|<meta[^>]*content=["']([^"']*)["'][^>]*(?:property|name)=["']${prefix}["']`,
-          "i"
-        )
-      );
-      if (match) return match[1] || match[2] || "";
-    }
-    return "";
-  };
-
-  // Fallback title from <title> tag
-  const titleTag = html.match(/<title[^>]*>([^<]*)<\/title>/i);
-
-  // Fallback image: first large img src
-  let fallbackImage = "";
-  if (!get("image")) {
-    const imgMatch = html.match(/<img[^>]+src=["']([^"']+\.(?:jpg|jpeg|png|webp)[^"']*)["']/i);
-    if (imgMatch) fallbackImage = imgMatch[1];
-  }
-
-  return {
-    image_url: get("image") || fallbackImage,
-    title: decodeEntities(get("title") || (titleTag ? titleTag[1].trim() : "")),
-    description: decodeEntities(get("description")),
-    site_name: decodeEntities(get("site_name")),
-  };
 }
 
 Deno.serve(async (req: Request) => {
@@ -106,22 +55,11 @@ Deno.serve(async (req: Request) => {
 
   try {
     const { url } = await req.json();
-    if (!url || typeof url !== "string") {
-      return jsonResponse({ error: "No url provided" }, 400);
-    }
 
     // Validate URL scheme and block private IPs
-    let parsed: URL;
-    try { parsed = new URL(url); } catch { return jsonResponse({ error: "Invalid URL" }, 400); }
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-      return jsonResponse({ error: "Only http/https URLs allowed" }, 400);
-    }
-    const host = parsed.hostname;
-    if (host === "localhost" || host.startsWith("127.") || host.startsWith("10.") ||
-        host.startsWith("192.168.") || host.startsWith("169.254.") || host === "0.0.0.0" ||
-        host.startsWith("172.") && (() => { const b = parseInt(host.split('.')[1]); return b >= 16 && b <= 31; })() ||
-        host.endsWith(".internal") || host.endsWith(".local")) {
-      return jsonResponse({ error: "Private/internal URLs not allowed" }, 400);
+    const validation = validateUrl(url);
+    if (!validation.ok) {
+      return jsonResponse({ error: validation.error }, 400);
     }
 
     // Fetch the page
@@ -144,10 +82,7 @@ Deno.serve(async (req: Request) => {
     const meta = extractMeta(html);
 
     // Make relative image URLs absolute
-    if (meta.image_url && !meta.image_url.startsWith("http")) {
-      const base = new URL(url);
-      meta.image_url = new URL(meta.image_url, base.origin).href;
-    }
+    meta.image_url = absolutizeImageUrl(meta.image_url, url);
 
     return jsonResponse(meta);
   } catch (err) {
