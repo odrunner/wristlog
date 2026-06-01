@@ -95,10 +95,24 @@ Deliberately NOT done as E2E (better covered elsewhere, noted to avoid false "ga
 Remaining E2E worth adding later: club join/leave interactions, follow-request
 accept/decline actions (the notification action buttons), feed like/comment round-trips.
 
-### 5. Residual E2E flake
-A parallel-load timing flake still surfaces occasionally in mocked E2E (e.g. "Log a wear ›
-selects visibility chip"); passes in isolation. Earlier we fixed two overlay-interception
-flakes; this is a different parallel-load race worth root-causing.
+### 5. Residual E2E flake — DONE (2026-06-01) ✅
+Root-caused and fixed — and it was a **real app bug**, not just a test issue. Reproduced
+under full-suite load (2 of 4 runs failed). The Playwright error-context snapshot showed the
+contradiction: the Track page's anniversary recommendation card rendered WITH data while the
+watch selector showed "Nothing to track yet" (empty) at the same moment.
+
+Cause: `loadUserData()` replaces the `watches`/`logs` arrays from the network but never
+bumped `_dataGen` or re-rendered the active page. If the user navigated to Track before the
+load resolved, `renderTrack()`'s `_dataGen` dirty-check no-op'd against the now-fresh data,
+leaving the selector stuck empty — until a later direct `renderWatchRecommendation()` (from
+the async weather fetch) repainted only the rec card, producing the split snapshot. A real
+user landing on Track during a slow load would see the same stale empty state.
+
+Fix (app, not test): at the end of `loadUserData()`, bump `_dataGen` and re-render whichever
+main page (collection/track/wishlist/stats) is active. Added a deterministic regression test
+(`Track page › selector populates when navigating to Track before data loads`) that delays
+the watches response so navigation precedes the load — verified it FAILS without the fix and
+passes with it. Confirmed stable: 6/6 clean full-suite runs (was 2/4 failing). Bumped SW.
 
 ## Open decision (edge-function test mechanism)
 

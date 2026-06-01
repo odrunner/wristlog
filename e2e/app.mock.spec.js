@@ -165,6 +165,30 @@ test.describe('Track page (mocked)', () => {
     await expect(selector).toContainText('Speedmaster');
   });
 
+  // Regression: the selector must re-render after loadUserData resolves, even if
+  // the user navigated to Track BEFORE the data arrived. Previously loadUserData
+  // replaced the data arrays without bumping _dataGen, so renderTrack()'s dirty-
+  // check no-op'd against fresh data and the selector stayed stuck on "Nothing to
+  // track yet" — the root cause of the parallel-load flake. This drives the race
+  // deterministically by delaying the watches response.
+  test('selector populates when navigating to Track before data loads', async ({ page }) => {
+    await page.route('**/rest/v1/watches*', async (route) => {
+      if (route.request().method() === 'GET') {
+        await new Promise((r) => setTimeout(r, 1500)); // resolve AFTER navigation
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(SAMPLE_WATCHES) });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await navigateTo(page, 'track'); // happens while watches GET is still pending
+    const selector = page.locator('#watch-selector');
+    // Before the fix this stayed "Nothing to track yet" forever; now loadUserData
+    // re-renders the active page when the delayed data arrives.
+    await expect(selector).toContainText('Submariner', { timeout: 5000 });
+  });
+
   test('shows recent wear history', async ({ page }) => {
     await navigateTo(page, 'track');
     // The track history should show recent logs. Auto-retrying toContainText

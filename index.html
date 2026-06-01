@@ -5830,6 +5830,18 @@ async function loadUserData() {
   (wRes.data || []).forEach(r => { if (r.elo_rating) eloRatings[r.id] = r.elo_rating; });
   rebuildLogsByWatch();
   safeSetJSON(STORE_ELO, eloRatings);
+  // We just replaced the data arrays. Invalidate the per-page render cache so a
+  // page rendered against pre-load (empty) data isn't left stale by its _dataGen
+  // dirty-check, and re-render whichever main page is currently active. Without
+  // this, navigating to a page before the load resolves leaves it showing empty
+  // content until the next navigation (e.g. Track stuck on "Nothing to track yet"
+  // even though watches loaded).
+  _dataGen++;
+  const _activePage = document.querySelector('.page.active')?.id;
+  if (_activePage === 'page-collection') renderCollection(true);
+  else if (_activePage === 'page-track') renderTrack(true);
+  else if (_activePage === 'page-wishlist') renderWishlist(true);
+  else if (_activePage === 'page-stats') renderStats(true);
 }
 
 // ══════════════════════════════════════════
@@ -5960,7 +5972,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '01.13.56';
+const APP_VERSION = '01.15.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
