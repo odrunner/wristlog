@@ -2106,6 +2106,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Advanced Measure Settings</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Tap the &#9881; gear on the Measure screen to fine-tune how readings are taken. Pick an environment preset &#8212; Quiet Room, Noisy Environment, or Weak Signal &#8212; or adjust Sensitivity and Convergence Speed yourself to get a reliable reading from trickier watches.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Delete Comments</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Changed your mind? Tap the &#8942; menu on any comment to delete it. You can remove your own comments anywhere, and as the owner of a post you can remove any comment on it.</div>
       </div>
@@ -3319,6 +3323,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
               <div class="help-step-desc">Once converged, tap Save to record the reading. You can also enter a rate manually in the Accuracy section of the watch edit form if you measured with an external tool.</div>
             </div>
           </div>
+          <div class="help-step">
+            <div class="help-step-num">5</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Trouble getting a reading? Use Advanced Settings</div>
+              <div class="help-step-desc">Tap the &#9881; gear (top-right of the Measure screen) to pick an environment preset &#8212; Quiet Room, Noisy Environment, or Weak Signal &#8212; or adjust Sensitivity and Convergence Speed yourself. Higher Sensitivity helps faint or quiet watches register ticks; these settings can rescue a watch that won&#8217;t converge on the defaults.</div>
+            </div>
+          </div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Measure in a quiet environment for best results. Watches with display casebacks (transparent backs) produce a stronger signal than solid steel cases.</span></div>
         </div>
       </div>
@@ -3362,8 +3373,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <!-- ════ MEASURE PAGE ════ -->
   <div id="page-measure" class="page">
     <div class="page-header">
-      <h1 class="page-title">Measure Accuracy</h1>
-      <button id="msr-settings-gear" onclick="openMsrSettings()" style="display:none;background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="Advanced settings" data-ff="tg_advanced_settings">
+      <h1 class="page-title" style="flex:1;">Measure Accuracy</h1>
+      <button id="msr-settings-gear" onclick="openMsrSettings()" style="display:none;background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="Advanced settings">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
       <button onclick="showMsrHelp()" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="How to measure">
@@ -4751,7 +4762,9 @@ const ADMIN_USER_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
 const _isDevUser = () => currentUser?.id === ADMIN_USER_ID;
 
 const FEATURE_FLAGS = {
-  tg_advanced_settings: { label: 'Timegrapher Advanced Settings', default: false }
+  // Advanced timegrapher settings shipped to all native users (gated on _tgHasNative),
+  // no longer flag-gated. localStorage key 'tg_advanced_settings' is unrelated (stores
+  // the user's chosen tuning) and is still in use.
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -5922,7 +5935,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.19.06';
+const APP_VERSION = '31.19.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11982,6 +11995,10 @@ function showAdminPage() {
 function renderDevFlags() {
   const el = document.getElementById('admin-dev-flags');
   if (!el) return;
+  if (Object.keys(FEATURE_FLAGS).length === 0) {
+    el.innerHTML = '<div style="font-size:.78rem;color:var(--muted);padding:.5rem 0;">No active feature flags.</div>';
+    return;
+  }
   el.innerHTML = Object.entries(FEATURE_FLAGS).map(([key, cfg]) => {
     const on = featureFlag(key);
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.7rem 0;border-bottom:1px solid var(--border);">
@@ -12884,7 +12901,7 @@ function nav(btn) {
       openMeasureInline();
       maybeShowMsrHelp();
       const gear = document.getElementById('msr-settings-gear');
-      if (gear) gear.style.display = featureFlag('tg_advanced_settings') ? '' : 'none';
+      if (gear) gear.style.display = _tgHasNative() ? '' : 'none';
     }
   }
 }
@@ -21979,7 +21996,7 @@ window._tgNativeCallback = function(data) {
     // Auto-stop on convergence or at 45s timeout
     if (isMsr && _msrListening && _msrListenStart) {
       const elapsed = (Date.now() - _msrListenStart) / 1000;
-      const maxDur = featureFlag('tg_advanced_settings') ? tgLoadSettings().values.maxDuration : 45;
+      const maxDur = _tgHasNative() ? tgLoadSettings().values.maxDuration : 45;
       if (_msrPhase === 'converged' || elapsed >= maxDur) {
         const wasConverged = _msrPhase === 'converged';
         // Haptic feedback on finish — success for converged, warning for timeout
@@ -22745,7 +22762,7 @@ function onMsrBphChange() {
     _msrListenStart = Date.now();
     _msrPhaseStart = null;
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
-    if (featureFlag('tg_advanced_settings')) {
+    if (_tgHasNative()) {
       const _tgS = tgLoadSettings();
       tgApplySettingsToInputs(_tgS.values);
       _msrActiveSettings = _tgS;
@@ -22812,7 +22829,7 @@ function toggleMsrListen() {
     if (_shareCta) _shareCta.style.display = 'none';
     const saveBtn = document.getElementById('msr-save-btn');
     if (saveBtn) saveBtn.disabled = true;
-    if (featureFlag('tg_advanced_settings')) {
+    if (_tgHasNative()) {
       const _tgSettings = tgLoadSettings();
       if (_tgSettings.wasReset) toast('Measurement engine updated — settings reset');
       tgApplySettingsToInputs(_tgSettings.values);

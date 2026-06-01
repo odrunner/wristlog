@@ -212,8 +212,28 @@ describe('Advanced Settings — Phase 1 trim', () => {
     expect(html).not.toMatch(/tips\.push\([^;]*tgQuickApplyPreset/);
   });
 
-  it('still keeps the feature flag (Phase 1 stays gated for private testing)', () => {
-    expect(html).toContain('tg_advanced_settings');
+  it('Phase 2: no longer gates advanced settings behind the feature flag', () => {
+    // featureFlag('tg_advanced_settings') must be gone; gating is on native capability.
+    expect(html).not.toContain("featureFlag('tg_advanced_settings')");
+    // The FEATURE_FLAGS object should no longer declare the flag.
+    expect(html).not.toMatch(/tg_advanced_settings:\s*\{/);
+  });
+
+  it('Phase 2: gates the gear icon on native capability', () => {
+    expect(html).toMatch(/gear\.style\.display = _tgHasNative\(\)/);
+  });
+
+  it('keeps the tg_advanced_settings localStorage key (stores chosen tuning)', () => {
+    // The localStorage key is unrelated to the removed feature flag and must remain.
+    expect(html).toContain("localStorage.setItem('tg_advanced_settings'");
+    expect(html).toContain("localStorage.getItem('tg_advanced_settings')");
+  });
+
+  it('places the gear icon next to Help (title takes flex:1 to push both right)', () => {
+    const headerStart = html.indexOf('id="page-measure"');
+    const titleIdx = html.indexOf('Measure Accuracy', headerStart);
+    const titleTag = html.slice(html.lastIndexOf('<h1', titleIdx), titleIdx);
+    expect(titleTag).toContain('flex:1');
   });
 });
 
