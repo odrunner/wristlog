@@ -75,9 +75,25 @@ actual 100/100/100/96) so CI fails on any coverage regression. Run via
 Verified the gate fails on a real drop (added uncovered fns → funcs 95.41% → exit 1 with a
 clear threshold error) and passes at current coverage.
 
-### 4. Broaden E2E to untested high-value flows
-cloud-sync conflict resolution, notification fan-out, club management, campaign/broadcast
-admin.
+### 4. Broaden E2E to untested high-value flows — PARTIAL (2026-06-01)
+Added **populated-flow** E2E for the two areas that were only covered in their empty/
+structural state (the harness returns empty arrays for social tables by default; these tests
+override specific routes with seeded data so the real render/fetch logic runs):
+- **Notifications populated** (3 tests): unread badge count, seeded notifications rendering
+  with the actor profile resolved into the message copy (like/follow/comment), and the
+  "Mark all read" control appearing when unread exist.
+- **Clubs populated** (1 test): a club the user owns renders in "My Clubs" with name, role,
+  and member count — exercises the club_members→clubs two-query path + renderClubsPage.
+
+Deliberately NOT done as E2E (better covered elsewhere, noted to avoid false "gap"):
+- **campaign/broadcast admin** — these are admin-only edge-function flows, already covered by
+  the 303 deno tests (cohort filtering, windows, dedup) + `npm run test:smoke`.
+- **cloud-sync conflict resolution** — localStorage/network reconciliation, covered by the
+  existing `tests/cloud-sync.test.js` unit suite; full offline→online E2E is high-effort/
+  low-marginal-value vs the unit coverage.
+
+Remaining E2E worth adding later: club join/leave interactions, follow-request
+accept/decline actions (the notification action buttons), feed like/comment round-trips.
 
 ### 5. Residual E2E flake
 A parallel-load timing flake still surfaces occasionally in mocked E2E (e.g. "Log a wear ›

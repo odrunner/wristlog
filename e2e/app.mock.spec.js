@@ -677,6 +677,56 @@ test.describe('Clubs page (mocked)', () => {
   });
 });
 
+// ── Clubs — populated flow (mocked) ──────────────────────────────────────────
+// Existing clubs tests cover the empty page structure. This covers the loaded
+// flow: a club the user is a member of renders in "My Clubs" with its name,
+// role, and member count (which requires the club_members + clubs two-query path).
+test.describe('Clubs populated (mocked)', () => {
+  const CLUB_ID = 'club-001';
+
+  test.beforeEach(async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    // Membership: the user owns club-001 (loadMyClubs reads club_members for the
+    // user, then renderClubsPage reads club_members again for the member count).
+    await page.route('**/rest/v1/club_members*', (route) => {
+      if (route.request().method() === 'GET') {
+        const url = route.request().url();
+        // member-count query filters by club_id=in.(...)
+        if (url.includes('club_id=in') || url.includes('club_id=eq')) {
+          return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+            { club_id: CLUB_ID, role: 'owner', user_id: FAKE_USER.id },
+            { club_id: CLUB_ID, role: 'member', user_id: 'other-1' },
+          ]) });
+        }
+        // user's memberships
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+          { club_id: CLUB_ID, role: 'owner' },
+        ]) });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    });
+    await page.route('**/rest/v1/clubs*', (route) => {
+      if (route.request().method() === 'GET') {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+          { id: CLUB_ID, name: 'Dive Watch Club', privacy: 'public', image_url: null, description: 'For divers', created_by: FAKE_USER.id },
+        ]) });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    });
+    await page.goto('/');
+    await waitForAppBoot(page);
+  });
+
+  test('My Clubs lists a club the user belongs to, with member count', async ({ page }) => {
+    await page.locator('#page-feed button', { hasText: /clubs/i }).click();
+    const content = page.locator('#clubs-page-content');
+    await expect(content).toContainText('Dive Watch Club', { timeout: 5000 });
+    await expect(content).toContainText('2 members');
+    await expect(content).toContainText('owner');
+  });
+});
+
 // ── Track History ───────────────────────────────────────────────────────
 
 test.describe('Track history (mocked)', () => {
@@ -808,6 +858,63 @@ test.describe('Notification bell (mocked)', () => {
     const bell = page.locator('#bell-btn');
     await expect(bell).toHaveAttribute('aria-label', 'Notifications');
     await expect(bell).toHaveAttribute('aria-controls', 'notif-panel');
+  });
+});
+
+// ── Notifications — populated flow (mocked) ──────────────────────────────────
+// The existing bell tests cover the empty/toggle state. These cover the loaded
+// flow: seeded notifications render with the right copy, the unread badge counts,
+// and the actor profile is resolved into the message.
+test.describe('Notifications populated (mocked)', () => {
+  const ACTOR = 'actor-user-001';
+  const NOTIFS = [
+    { id: 'n1', user_id: FAKE_USER.id, type: 'like', actor_id: ACTOR, ref_id: 'log-001', is_read: false, created_at: '2026-06-01T10:00:00Z' },
+    { id: 'n2', user_id: FAKE_USER.id, type: 'follow', actor_id: ACTOR, ref_id: null, is_read: false, created_at: '2026-06-01T09:00:00Z' },
+    { id: 'n3', user_id: FAKE_USER.id, type: 'comment', actor_id: ACTOR, ref_id: 'log-001', is_read: true, created_at: '2026-05-31T09:00:00Z' },
+  ];
+
+  test.beforeEach(async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    // Override the harness's empty-array default for notifications + actor profile.
+    // Registered after mockSupabase, so Playwright matches these first.
+    await page.route('**/rest/v1/notifications*', (route) => {
+      if (route.request().method() === 'GET') {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(NOTIFS) });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    });
+    await page.route('**/rest/v1/profiles*', (route) => {
+      // actor lookup (in=...) returns the actor; everything else returns the user profile
+      const url = route.request().url();
+      if (url.includes(ACTOR)) {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+          { id: ACTOR, username: 'collector_jane', display_name: 'Jane Collector', avatar_url: null, is_official: false },
+        ]) });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(FAKE_PROFILE) });
+    });
+    await page.goto('/');
+    await waitForAppBoot(page);
+  });
+
+  test('unread badge shows the unread count', async ({ page }) => {
+    // 2 of 3 seeded notifs are unread.
+    const badge = page.locator('#bell-badge');
+    await expect(badge).toHaveText('2', { timeout: 5000 });
+  });
+
+  test('opening the panel renders seeded notifications with actor name + correct copy', async ({ page }) => {
+    await page.locator('#bell-btn').click();
+    const list = page.locator('#notif-list');
+    await expect(list).toContainText('Jane Collector liked your post');
+    await expect(list).toContainText('Jane Collector started following you');
+    await expect(list).toContainText('Jane Collector commented on your post');
+  });
+
+  test('panel shows a Mark all read control when there are unread notifs', async ({ page }) => {
+    await page.locator('#bell-btn').click();
+    await expect(page.locator('#notif-panel button:has-text("Mark all read")')).toBeVisible();
   });
 });
 
