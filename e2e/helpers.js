@@ -350,6 +350,7 @@ export const SAMPLE_LOGS = [
     photo_url: null,
     visibility: 'public',
     club_id: null,
+    location: 'Travel',
   },
   {
     id: 'log-002',

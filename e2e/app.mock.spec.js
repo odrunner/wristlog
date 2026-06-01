@@ -938,6 +938,27 @@ test.describe('Measure page (mocked)', () => {
     const options = await select.locator('option').count();
     expect(options).toBeGreaterThanOrEqual(2);
   });
+
+  test('completion save section offers Save and Share side by side', async ({ page }) => {
+    await navigateTo(page, 'measure');
+    await page.locator('#msr-help-modal button:has-text("Got it")').click();
+    // Force the post-measurement complete state (the native engine can't run in
+    // a mocked browser). The save section holds both Save and the new Share btn.
+    await page.evaluate(() => {
+      const sec = document.getElementById('msr-save-section');
+      if (sec) sec.style.display = '';
+    });
+    const saveBtn = page.locator('#msr-save-btn');
+    const shareBtn = page.locator('#msr-complete-share-btn');
+    await expect(saveBtn).toBeVisible();
+    await expect(shareBtn).toBeVisible();
+    await expect(shareBtn).toHaveText('Share');
+    // Share is wired to the completion-share handler.
+    await expect(shareBtn).toHaveAttribute('onclick', /shareMsrFromComplete/);
+    // Both start disabled until a reading lands.
+    await expect(saveBtn).toBeDisabled();
+    await expect(shareBtn).toBeDisabled();
+  });
 });
 
 // ── Anniversary modal (mocked) ──────────────────────────────────────────
@@ -1135,6 +1156,30 @@ test.describe('Post location (mocked)', () => {
     await expect(page.locator('#np-location-chips [data-loc="Home"]')).not.toHaveClass(/selected/);
     // No chip selected at all.
     await expect(page.locator('#np-location-chips .chip.selected')).toHaveCount(0);
+  });
+
+  test('renders the pinned location label on a post meta line', async ({ page }) => {
+    // Exercise the shipped render helper in-browser (deterministic; independent
+    // of feed visibility/following filtering). SAMPLE_LOGS log-001 has 'Travel'.
+    const html = await page.evaluate(() => renderPostLocationHtml('Travel'));
+    expect(html).toBe(' · 📍 Travel');
+    // Absent location renders nothing.
+    const empty = await page.evaluate(() => renderPostLocationHtml(null));
+    expect(empty).toBe('');
+    // Free text is HTML-escaped (no injection through the feed).
+    const escaped = await page.evaluate(() => renderPostLocationHtml('<b>x</b>'));
+    expect(escaped).not.toContain('<b>');
+    expect(escaped).toContain('&lt;b&gt;');
+  });
+
+  test('edit-post prefills the location from the stored value', async ({ page }) => {
+    // Close the new-post modal opened in beforeEach, then open edit for log-001.
+    await page.evaluate(() => closeNewPost());
+    await page.evaluate(() => openEditPost('log-001'));
+    await expect(page.locator('#edit-post-modal')).toBeVisible();
+    // log-001's location is 'Travel' (a preset) → input filled + chip selected.
+    await expect(page.locator('#ep-location-input')).toHaveValue('Travel');
+    await expect(page.locator('#ep-location-chips [data-loc="Travel"]')).toHaveClass(/selected/);
   });
 });
 
