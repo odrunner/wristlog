@@ -72,3 +72,38 @@ describe('posterUrlFor', () => {
     expect(posterUrlFor('https://example.com/logs/u1/log1_2.mp4')).toBe('https://example.com/logs/u1/log1_2_poster.jpg');
   });
 });
+
+// ── Feed video rendering: no native controls + custom mute + thumb fallback ──
+// Guards the decisions: feed (inline) videos autoplay muted with NO native
+// controls and a custom mute toggle; broken poster thumbnails fall back to a
+// <video> frame; the fullscreen viewer KEEPS native controls (sound/scrubber).
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const html = readFileSync(join(__dirname, '..', 'index.html'), 'utf8');
+
+describe('feed video rendering', () => {
+  it('inline feed hero videos have no native controls attribute', () => {
+    // Both the initial render and the thumb-swap render of #feed-hero-...
+    const heroTags = html.match(/<video id="feed-hero-[^>]*>/g) || [];
+    expect(heroTags.length).toBeGreaterThanOrEqual(2);
+    for (const tag of heroTags) expect(tag).not.toMatch(/\bcontrols\b/);
+  });
+
+  it('inline feed videos render a custom mute toggle wired to toggleFeedVideoSound', () => {
+    expect(html).toContain('class="feed-vid-mute"');
+    expect(html).toMatch(/toggleFeedVideoSound\(event,/);
+  });
+
+  it('video thumbnails fall back to a <video> frame when the poster 404s', () => {
+    expect(html).toContain('onerror="swapThumbToVideo(this)"');
+    expect(html).toContain('function swapThumbToVideo(');
+  });
+
+  it('fullscreen viewer keeps native controls (sound + scrubber belong there)', () => {
+    const viewer = html.match(/img-viewer-media-slot[\s\S]{0,400}?<video[^>]*>/);
+    expect(viewer).toBeTruthy();
+    expect(viewer[0]).toMatch(/\bcontrols\b/);
+  });
+});
