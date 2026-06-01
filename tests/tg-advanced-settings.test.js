@@ -1,3 +1,6 @@
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   TG_PRESETS,
@@ -162,5 +165,53 @@ describe('tgLoadSettings / tgSaveSettings', () => {
     const s = tgLoadSettings();
     expect(s.wasReset).toBe(false);
     expect(s.preset).toBe('quiet');
+  });
+});
+
+// ── Phase 1 public-rollout trim ──────────────────────────────────────────────
+// Spec: 2026-05-31-advanced-settings-public-rollout-design.md
+// Only Sensitivity + Convergence Speed are user-visible; the other 4 sliders are
+// hidden (still present so the engine mapping reads their values via presets),
+// and the after-failures preset-suggestion tip is removed for v1.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const html = readFileSync(join(__dirname, '..', 'index.html'), 'utf8');
+
+// Returns the opening tag of the `.msr-slider-row` div wrapping a given label.
+function sliderRowTag(labelText) {
+  const labelIdx = html.indexOf(labelText);
+  if (labelIdx === -1) return null;
+  const rowStart = html.lastIndexOf('<div class="msr-slider-row', labelIdx);
+  if (rowStart === -1) return null;
+  return html.slice(rowStart, html.indexOf('>', rowStart) + 1);
+}
+
+describe('Advanced Settings — Phase 1 trim', () => {
+  it('keeps Sensitivity visible', () => {
+    const tag = sliderRowTag('>Sensitivity ');
+    expect(tag).toBeTruthy();
+    expect(tag).not.toContain('display:none');
+  });
+
+  it('keeps Convergence Speed visible', () => {
+    const tag = sliderRowTag('>Convergence Speed ');
+    expect(tag).toBeTruthy();
+    expect(tag).not.toContain('display:none');
+  });
+
+  it('hides Noise Tolerance, Outlier Strictness, Max Duration, Recalibration Attempts', () => {
+    for (const label of ['>Noise Tolerance ', '>Outlier Strictness ', '>Max Duration ', '>Recalibration Attempts ']) {
+      const tag = sliderRowTag(label);
+      expect(tag, `${label} row should exist`).toBeTruthy();
+      expect(tag, `${label} row should be hidden`).toContain('display:none');
+    }
+  });
+
+  it('does not surface the after-failures preset suggestion tip', () => {
+    // The failure-recovery tip was the only place tgQuickApplyPreset was pushed into tips.
+    expect(html).not.toMatch(/tips\.push\([^;]*tgQuickApplyPreset/);
+  });
+
+  it('still keeps the feature flag (Phase 1 stays gated for private testing)', () => {
+    expect(html).toContain('tg_advanced_settings');
   });
 });
