@@ -3509,13 +3509,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <!-- Save section -->
       <div id="msr-save-section" style="display:none;">
         <div id="msr-complete-msg" style="font-size:.8rem;font-weight:600;color:var(--text);margin-bottom:.5rem;text-align:center;">Measurement complete</div>
-        <div style="display:grid;grid-template-columns:auto 1fr auto;gap:.4rem;align-items:center;">
+        <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:.4rem;align-items:center;">
           <div style="display:flex;align-items:center;gap:.3rem;">
             <input type="text" id="msr-rate-input" style="width:70px;padding:.35rem .4rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;font-weight:600;text-align:center;" value="">
             <span style="font-size:.75rem;color:var(--muted);">s/day</span>
           </div>
           <button id="msr-save-btn" class="btn btn-primary btn-sm" onclick="saveMsrReading()" disabled>Save</button>
-          <button class="btn btn-ghost btn-sm" onclick="discardMsrReading()" style="color:var(--muted);">Discard</button>
+          <button id="msr-complete-share-btn" class="btn btn-ghost btn-sm" onclick="shareMsrFromComplete()" style="border-color:var(--gold);color:var(--gold);" disabled>Share</button>
+        </div>
+        <div style="text-align:center;margin-top:.45rem;">
+          <button onclick="discardMsrReading()" style="background:none;border:none;color:var(--muted);font-size:.74rem;cursor:pointer;font-family:inherit;text-decoration:underline;padding:.2rem;">Discard</button>
         </div>
         <input type="hidden" id="msr-be-input">
         <input type="hidden" id="msr-notes-input" value="">
@@ -5935,7 +5938,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.20.11';
+const APP_VERSION = '31.20.41';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22962,6 +22965,8 @@ function toggleMsrListen() {
     if (_shareCta) _shareCta.style.display = 'none';
     const saveBtn = document.getElementById('msr-save-btn');
     if (saveBtn) saveBtn.disabled = true;
+    const _completeShareBtn = document.getElementById('msr-complete-share-btn');
+    if (_completeShareBtn) _completeShareBtn.disabled = true;
     if (_tgHasNative()) {
       const _tgSettings = tgLoadSettings();
       if (_tgSettings.wasReset) toast('Measurement engine updated — settings reset');
@@ -23201,6 +23206,8 @@ function stopMsrListen(reason) {
     if (_msrLastBph) document.getElementById('msr-bph-select').value = String(_msrLastBph);
     const saveBtn = document.getElementById('msr-save-btn');
     if (saveBtn) saveBtn.disabled = false;
+    const completeShareBtn = document.getElementById('msr-complete-share-btn');
+    if (completeShareBtn) completeShareBtn.disabled = false;
     // Show completion message
     const completeMsg = document.getElementById('msr-complete-msg');
     if (completeMsg) {
@@ -23241,13 +23248,17 @@ function discardMsrReading() {
   const statusText2 = document.getElementById('msr-status-text'); if (statusText2) { statusText2.textContent = ''; statusText2.style.color = ''; statusText2.style.fontSize = ''; statusText2.style.fontWeight = ''; }
 }
 
-async function saveMsrReading() {
-  if (demoGuard()) return;
-  if (!currentUser) return;
+// Validates and persists the current measurement to timegrapher_results.
+// Shared by Save and Share-at-completion so the insert logic lives in one place.
+// Returns { ok: true, watchId, rate } on success, or { ok: false } after showing
+// the appropriate toast/guard. Does NOT change any UI beyond the save toast.
+async function persistMsrReading() {
+  if (demoGuard()) return { ok: false };
+  if (!currentUser) return { ok: false };
   const watchId = document.getElementById('msr-watch-select').value;
-  if (!watchId) { toast('Select a watch', 'error'); return; }
+  if (!watchId) { toast('Select a watch', 'error'); return { ok: false }; }
   const rate = parseFloat(document.getElementById('msr-rate-input').value);
-  if (isNaN(rate)) { toast('No measurement data', 'error'); return; }
+  if (isNaN(rate)) { toast('No measurement data', 'error'); return { ok: false }; }
   const beVal = document.getElementById('msr-be-input').value.trim();
   const beatError = beVal !== '' ? parseFloat(beVal) : null;
   const bph = parseInt(document.getElementById('msr-bph-select').value);
@@ -23261,10 +23272,26 @@ async function saveMsrReading() {
     rate, beat_error: beatError, bph, source: 'auto', notes,
     tick_data: tickData
   });
-  if (error) { toast('Could not save — ' + error.message, 'error'); return; }
+  if (error) { toast('Could not save — ' + error.message, 'error'); return { ok: false }; }
   toast('Reading saved!');
   if (window.posthog) posthog.capture('accuracy_reading_saved', { source: 'auto', from: 'measure_modal' });
-  showMsrShareCta(watchId, rate);
+  return { ok: true, watchId, rate };
+}
+
+async function saveMsrReading() {
+  const res = await persistMsrReading();
+  if (!res.ok) return;
+  showMsrShareCta(res.watchId, res.rate);
+}
+
+// Share button shown next to Save at completion. Saves the reading first (a
+// shared result with no entry in the user's own history would be confusing),
+// then runs the normal share flow (card + composer). On save failure, the
+// toast is shown by persistMsrReading and the composer does not open.
+async function shareMsrFromComplete() {
+  const res = await persistMsrReading();
+  if (!res.ok) return;
+  shareMsrToFeed(res.watchId, res.rate);
 }
 
 // Show a "Share to feed?" CTA after a successful measurement save.
