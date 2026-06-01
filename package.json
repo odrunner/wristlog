@@ -10,7 +10,8 @@
     "test:e2e:int": "playwright test --project=integration",
     "test:e2e:all": "playwright test",
     "test:smoke": "node scripts/smoke-test-functions.js",
-    "test:functions": "deno test supabase/functions/"
+    "test:functions": "deno test supabase/functions/",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

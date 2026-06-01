@@ -16,7 +16,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm test
+      # Unit tests + coverage gate (thresholds on wrotate_test.js — see vitest.config.js)
+      - run: npm run test:coverage
       # Deno edge-function tests (jsr: imports, Deno.test) — separate runtime.
       - uses: denoland/setup-deno@v2
         with:

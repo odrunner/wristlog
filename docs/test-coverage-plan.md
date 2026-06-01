@@ -65,9 +65,15 @@ Note: this is the pragmatic fix, not the ideal one (option (b), a single shared 
 import, remains the long-term architecture but is a large risky refactor of the 24k-line
 single-file app — deferred).
 
-### 3. Realistic coverage gate
-Configure vitest coverage thresholds on the files that ARE importable (helpers/modules) —
-e.g. fail CI under 90% on those — not a whole-repo number.
+### 3. Realistic coverage gate — DONE (2026-06-01) ✅
+Configured vitest coverage in `vitest.config.js`, scoped via `include: ['wrotate_test.js']`
+to the only source vitest actually imports — NOT a whole-repo number (which would be ~19%,
+meaningless: it would count index.html, covered by E2E, and the Deno functions, covered by
+deno test). Thresholds locked just under current actuals (stmts/lines/funcs 99, branches 94;
+actual 100/100/100/96) so CI fails on any coverage regression. Run via
+`npm run test:coverage`; CI's Tests workflow now runs that instead of plain `npm test`.
+Verified the gate fails on a real drop (added uncovered fns → funcs 95.41% → exit 1 with a
+clear threshold error) and passes at current coverage.
 
 ### 4. Broaden E2E to untested high-value flows
 cloud-sync conflict resolution, notification fan-out, club management, campaign/broadcast
