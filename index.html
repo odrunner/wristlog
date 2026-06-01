@@ -3558,12 +3558,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="msr-slider-desc">How easily ticks are detected</div>
             <input type="range" id="msr-adv-sensitivity" min="1" max="10" value="5" oninput="tgSliderChanged()">
           </div>
-          <div class="msr-slider-row">
+          <div class="msr-slider-row" style="display:none;">
             <div class="msr-slider-label">Noise Tolerance <span class="msr-slider-val" id="msr-adv-noiseTolerance-val">5</span></div>
             <div class="msr-slider-desc">Resistance to background noise</div>
             <input type="range" id="msr-adv-noiseTolerance" min="1" max="10" value="5" oninput="tgSliderChanged()">
           </div>
-          <div class="msr-slider-row">
+          <div class="msr-slider-row" style="display:none;">
             <div class="msr-slider-label">Outlier Strictness <span class="msr-slider-val" id="msr-adv-outlierStrictness-val">5</span></div>
             <div class="msr-slider-desc">How strict tick timing validation is</div>
             <input type="range" id="msr-adv-outlierStrictness" min="1" max="10" value="5" oninput="tgSliderChanged()">
@@ -3573,12 +3573,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="msr-slider-desc">How quickly rate locks in</div>
             <input type="range" id="msr-adv-convergenceSpeed" min="1" max="10" value="5" oninput="tgSliderChanged()">
           </div>
-          <div class="msr-slider-row">
+          <div class="msr-slider-row" style="display:none;">
             <div class="msr-slider-label">Max Duration <span class="msr-slider-val" id="msr-adv-maxDuration-val">45s</span></div>
             <div class="msr-slider-desc">Auto-stop timer</div>
             <input type="range" id="msr-adv-maxDuration" min="30" max="120" step="5" value="45" oninput="tgSliderChanged()">
           </div>
-          <div class="msr-slider-row">
+          <div class="msr-slider-row" style="display:none;">
             <div class="msr-slider-label">Recalibration Attempts <span class="msr-slider-val" id="msr-adv-recalibrationAttempts-val">4</span></div>
             <div class="msr-slider-desc">Retries if calibration misses ticks</div>
             <input type="range" id="msr-adv-recalibrationAttempts" min="1" max="8" value="4" oninput="tgSliderChanged()">
@@ -5922,7 +5922,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.17.55';
+const APP_VERSION = '31.18.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22319,11 +22319,6 @@ function showTroubleshootTips() {
     tips.push('Background noise is <b>' + level + '</b> — move somewhere quieter');
   } else {
     tips.push('Place the watch <b>directly on the microphone</b>, crown side down. Remove any phone case');
-  }
-
-  if (featureFlag('tg_advanced_settings') && _msrConsecutiveFailures >= 3) {
-    const preset = noisy ? 'noisy' : 'weak';
-    tips.push('Try <a href="#" onclick="tgQuickApplyPreset(\'' + preset + '\');return false" style="color:#4ade80;text-decoration:underline;">Advanced Settings (' + preset.charAt(0).toUpperCase() + preset.slice(1) + ' preset)</a>');
   }
 
   el.innerHTML = tips.map(t => '• ' + t).join('<br>');
