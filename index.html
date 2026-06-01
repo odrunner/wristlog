@@ -5935,7 +5935,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.20.03';
+const APP_VERSION = '31.20.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22676,22 +22676,46 @@ function msrCardResultText({ rate, beatError, bph }) {
   return out;
 }
 
+// Traces a rounded-rectangle path. Standalone so we don't depend on
+// ctx.roundRect (Safari 16+ only).
+function _roundRectPath(ctx, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
 // Renders a 1080x1350 (4:5) share card (graph + watch name + result) to an
 // off-screen canvas and returns it. The 4:5 ratio matches .feed-card-photo so
-// the feed's object-fit:cover doesn't crop the header/labels/wordmark. Caller
-// converts to a blob. Reuses drawMsrScatterCore.
+// the feed's object-fit:cover doesn't crop the content. A dark margin frames a
+// rounded green panel with a phosphor border, so the card reads as a deliberate
+// graphic rather than a cropped screenshot. Caller converts to a blob.
 function renderMsrShareCard({ data, watchName, rate, beatError, bph }) {
   const W = 1080, H = 1350;
-  const M = 56; // safe side margin
+  const M = 80;   // content side margin (inside the frame)
+  const F = 36;   // bezel: gap between canvas edge and the panel border
+  const R = 40;   // panel corner radius
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  // Draw the graph FIRST across the whole card. The core fills the background
-  // with the same #0a1a12, then plots dots/lines/labels inside its padded area.
-  // Padding reserves the top band for the header and the bottom band for the
-  // result line, so no clipping is needed and nothing overlaps.
-  const graphPad = { l: M - 24, r: 150, t: 150, b: 240 };
+  // Outer bezel — a dark matte margin so the panel sits framed, not edge-to-edge
+  ctx.fillStyle = '#060f0a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Clip to the rounded panel; everything inside (graph + text) stays framed.
+  ctx.save();
+  _roundRectPath(ctx, F, F, W - 2 * F, H - 2 * F, R);
+  ctx.clip();
+
+  // Draw the graph FIRST across the whole panel. The core fills the background
+  // with #0a1a12, then plots dots/lines/labels inside its padded area. Padding
+  // reserves the top band for the header and the bottom band for the result.
+  const graphPad = { l: M, r: 170, t: 170, b: 250 };
   drawMsrScatterCore(ctx, { w: W, h: H, pad: graphPad, data, scale: 2.4 });
 
   // Header: watch name (drawn over the reserved top band)
@@ -22699,27 +22723,35 @@ function renderMsrShareCard({ data, watchName, rate, beatError, bph }) {
   ctx.font = '600 46px -apple-system, system-ui, sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  const name = (watchName || 'My watch').slice(0, 40);
-  ctx.fillText(name, M, 110);
+  const name = (watchName || 'My watch').slice(0, 38);
+  ctx.fillText(name, M, 128);
 
   // Result line at the bottom (drawn over the reserved bottom band)
   const res = msrCardResultText({ rate, beatError, bph });
   ctx.textAlign = 'left';
   ctx.fillStyle = '#4ade80';
   ctx.font = '700 80px -apple-system, system-ui, sans-serif';
-  ctx.fillText(res.rate, M, H - 80);
+  ctx.fillText(res.rate, M, H - 96);
   const sub = [res.beatError, res.bph].filter(Boolean).join('   ·   ');
   if (sub) {
     ctx.fillStyle = 'rgba(232,239,217,0.65)';
     ctx.font = '500 36px -apple-system, system-ui, sans-serif';
-    ctx.fillText(sub, M + 2, H - 36);
+    ctx.fillText(sub, M + 2, H - 54);
   }
 
   // WRotate wordmark — bottom right
   ctx.textAlign = 'right';
   ctx.fillStyle = 'rgba(74,222,128,0.55)';
   ctx.font = '700 36px -apple-system, system-ui, sans-serif';
-  ctx.fillText('WRotate', W - M, H - 40);
+  ctx.fillText('WRotate', W - M, H - 58);
+
+  ctx.restore();
+
+  // Panel border — phosphor stroke just inside the bezel
+  _roundRectPath(ctx, F, F, W - 2 * F, H - 2 * F, R);
+  ctx.strokeStyle = 'rgba(74,222,128,0.45)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
 
   return canvas;
 }
