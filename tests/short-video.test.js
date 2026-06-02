@@ -112,6 +112,13 @@ describe('feed video rendering', () => {
     expect(html).toMatch(/existingVideoSrc[^]*?swapThumbToVideo\(this\)/);
   });
 
+  it('new-post thumbstrip paints a video frame when poster extraction fails', () => {
+    // On extraction failure the preview becomes an objectURL of the video; the
+    // render emits a <video> #t= frame rather than a black placeholder.
+    expect(html).toContain('posterDataUrl || URL.createObjectURL(f)');
+    expect(html).toContain('const videoBlobPreview =');
+  });
+
   it('mute toggle uses SVG line icons, not emoji', () => {
     expect(html).toContain('const MUTE_ICON_OFF');
     expect(html).toContain('const MUTE_ICON_ON');
