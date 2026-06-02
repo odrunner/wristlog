@@ -33,8 +33,13 @@ describe('normalizeLocation', () => {
 });
 
 describe('renderPostLocationHtml', () => {
-  it('renders a pinned label when present', () => {
-    expect(renderPostLocationHtml('Home')).toBe(' · 📍 Home');
+  it('renders a pinned label with a grayscale SVG pin (not the red emoji) when present', () => {
+    const out = renderPostLocationHtml('Home');
+    expect(out).toContain(' · ');
+    expect(out).toContain('Home');
+    expect(out).toContain('<svg'); // grayscale pin icon
+    expect(out).toContain('currentColor'); // inherits muted text color, not red
+    expect(out).not.toContain('📍'); // no red emoji pin
   });
 
   it('returns empty string when absent', () => {
@@ -43,14 +48,15 @@ describe('renderPostLocationHtml', () => {
     expect(renderPostLocationHtml('   ')).toBe('');
   });
 
-  it('escapes HTML in free text (no injection)', () => {
-    const out = renderPostLocationHtml('<img src=x onerror=alert(1)>');
-    expect(out).not.toContain('<img');
-    expect(out).toContain('&lt;img');
+  it('escapes HTML in the free-text location (no injection)', () => {
+    const out = renderPostLocationHtml('<script>alert(1)</script>');
+    expect(out).not.toContain('<script>alert');
+    expect(out).toContain('&lt;script&gt;');
   });
 
-  it('normalizes before rendering (trim + cap)', () => {
-    expect(renderPostLocationHtml('  Geneva  ')).toBe(' · 📍 Geneva');
+  it('normalizes the location text before rendering (trim + cap)', () => {
+    expect(renderPostLocationHtml('  Geneva  ')).toContain('Geneva');
+    expect(renderPostLocationHtml('  Geneva  ')).not.toContain('  Geneva');
   });
 });
 

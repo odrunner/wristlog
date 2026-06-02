@@ -1293,7 +1293,9 @@ test.describe('Post location (mocked)', () => {
     // Exercise the shipped render helper in-browser (deterministic; independent
     // of feed visibility/following filtering). SAMPLE_LOGS log-001 has 'Travel'.
     const html = await page.evaluate(() => renderPostLocationHtml('Travel'));
-    expect(html).toBe(' · 📍 Travel');
+    expect(html).toContain('Travel');
+    expect(html).toContain('<svg'); // grayscale pin, not the red 📍 emoji
+    expect(html).not.toContain('📍');
     // Absent location renders nothing.
     const empty = await page.evaluate(() => renderPostLocationHtml(null));
     expect(empty).toBe('');

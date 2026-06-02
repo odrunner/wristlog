@@ -5973,7 +5973,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '01.17.06';
+const APP_VERSION = '01.18.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6006,11 +6006,15 @@ function normalizeLocation(v) {
   const s = String(v).replace(/\s+/g, ' ').trim().slice(0, 60);
   return s || null;
 }
+// Grayscale location-pin icon (inherits currentColor — i.e. the muted meta text
+// color — so it blends in instead of the attention-grabbing red 📍 emoji).
+const LOCATION_PIN_SVG = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>';
+
 // Render the pinned location label appended to a post's meta line.
 // Returns '' when absent so it can be concatenated unconditionally.
 function renderPostLocationHtml(location) {
   const loc = normalizeLocation(location);
-  return loc ? ' · 📍 ' + escHtml(loc) : '';
+  return loc ? ' · ' + LOCATION_PIN_SVG + ' ' + escHtml(loc) : '';
 }
 
 // ── Content filtering ────────────────────────────────────────────────
@@ -9364,7 +9368,7 @@ function renderFeedCard(item) {
   const metaParts = [
     formatFeedDate(item.date, item.created_at),
     item.use_case && item.use_case !== 'unspecified' ? item.use_case : '',
-    _loc ? '📍 ' + escHtml(_loc) : ''
+    _loc ? LOCATION_PIN_SVG + ' ' + escHtml(_loc) : ''
   ].filter(Boolean);
   const metaStr   = metaParts.join(' · ');
 
