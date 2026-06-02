@@ -5973,7 +5973,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '01.18.34';
+const APP_VERSION = '01.21.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22859,69 +22859,70 @@ function _roundRectPath(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-// Renders a 1080x1350 (4:5) share card (graph + watch name + result) to an
-// off-screen canvas and returns it. The 4:5 ratio matches .feed-card-photo so
-// the feed's object-fit:cover doesn't crop the content. A dark margin frames a
-// rounded green panel with a phosphor border, so the card reads as a deliberate
-// graphic rather than a cropped screenshot. Caller converts to a blob.
+// Renders a 1080x1350 (4:5) share card to an off-screen canvas. The 4:5 outer
+// size fills the feed's photo slot (object-fit:cover) without cropping, but the
+// instrument is drawn as a compact LANDSCAPE panel (~1.8:1, like the live
+// Measure display) centered vertically, with the watch name above and the
+// result below — so it reads as the actual measurement, not a stretched-tall
+// graphic. Dark matte fills the space above/below the instrument. Blob via caller.
 function renderMsrShareCard({ data, watchName, rate, beatError, bph }) {
   const W = 1080, H = 1350;
-  const M = 80;   // content side margin (inside the frame)
-  const F = 36;   // bezel: gap between canvas edge and the panel border
-  const R = 40;   // panel corner radius
+  const M = 56;   // side margin to the instrument panel
+  const R = 28;   // panel corner radius
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  // Outer bezel — a dark matte margin so the panel sits framed, not edge-to-edge
+  // Dark matte background for the whole card
   ctx.fillStyle = '#060f0a';
   ctx.fillRect(0, 0, W, H);
 
-  // Clip to the rounded panel; everything inside (graph + text) stays framed.
-  ctx.save();
-  _roundRectPath(ctx, F, F, W - 2 * F, H - 2 * F, R);
-  ctx.clip();
+  // Compact landscape instrument panel, centered. Width spans the margins; height
+  // gives the plot a ~1.8:1 landscape feel like the live display.
+  const panelX = M, panelW = W - 2 * M;          // 968
+  const panelH = Math.round(panelW / 1.8);        // ~538 → landscape
+  const panelY = Math.round((H - panelH) / 2);    // vertically centered
 
-  // Draw the graph FIRST across the whole panel. The core fills the background
-  // with #0a1a12, then plots dots/lines/labels inside its padded area. Padding
-  // reserves the top band for the header and the bottom band for the result.
-  const graphPad = { l: M, r: 170, t: 170, b: 250 };
-  drawMsrScatterCore(ctx, { w: W, h: H, pad: graphPad, data, scale: 2.4 });
-
-  // Header: watch name (drawn over the reserved top band)
+  // Watch name — above the panel
   ctx.fillStyle = '#e8efd9';
-  ctx.font = '600 46px -apple-system, system-ui, sans-serif';
+  ctx.font = '600 44px -apple-system, system-ui, sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  const name = (watchName || 'My watch').slice(0, 38);
-  ctx.fillText(name, M, 128);
+  ctx.fillText((watchName || 'My watch').slice(0, 38), panelX + 4, panelY - 32);
 
-  // Result line at the bottom (drawn over the reserved bottom band)
+  // Instrument panel (rounded, clipped) — the graph fills it edge-to-edge like
+  // the live Measure box. Translate so the core can draw in panel-local coords.
+  ctx.save();
+  _roundRectPath(ctx, panelX, panelY, panelW, panelH, R);
+  ctx.clip();
+  ctx.translate(panelX, panelY);
+  const graphPad = { l: 18, r: 132, t: 40, b: 58 };
+  drawMsrScatterCore(ctx, { w: panelW, h: panelH, pad: graphPad, data, scale: 1.7 });
+  ctx.restore();
+  // Panel border
+  _roundRectPath(ctx, panelX, panelY, panelW, panelH, R);
+  ctx.strokeStyle = 'rgba(74,222,128,0.45)';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // Result — below the panel
   const res = msrCardResultText({ rate, beatError, bph });
   ctx.textAlign = 'left';
   ctx.fillStyle = '#4ade80';
-  ctx.font = '700 80px -apple-system, system-ui, sans-serif';
-  ctx.fillText(res.rate, M, H - 96);
+  ctx.font = '700 72px -apple-system, system-ui, sans-serif';
+  ctx.fillText(res.rate, panelX + 4, panelY + panelH + 84);
   const sub = [res.beatError, res.bph].filter(Boolean).join('   ·   ');
   if (sub) {
     ctx.fillStyle = 'rgba(232,239,217,0.65)';
-    ctx.font = '500 36px -apple-system, system-ui, sans-serif';
-    ctx.fillText(sub, M + 2, H - 54);
+    ctx.font = '500 34px -apple-system, system-ui, sans-serif';
+    ctx.fillText(sub, panelX + 6, panelY + panelH + 128);
   }
 
-  // WRotate wordmark — bottom right
+  // WRotate wordmark — bottom-right of the panel row
   ctx.textAlign = 'right';
   ctx.fillStyle = 'rgba(74,222,128,0.55)';
-  ctx.font = '700 36px -apple-system, system-ui, sans-serif';
-  ctx.fillText('WRotate', W - M, H - 58);
-
-  ctx.restore();
-
-  // Panel border — phosphor stroke just inside the bezel
-  _roundRectPath(ctx, F, F, W - 2 * F, H - 2 * F, R);
-  ctx.strokeStyle = 'rgba(74,222,128,0.45)';
-  ctx.lineWidth = 3;
-  ctx.stroke();
+  ctx.font = '700 34px -apple-system, system-ui, sans-serif';
+  ctx.fillText('WRotate', panelX + panelW, panelY + panelH + 100);
 
   return canvas;
 }
