@@ -124,3 +124,30 @@ describe('Share button at completion — wiring', () => {
     expect(html).toContain("getElementById('msr-complete-share-btn')");
   });
 });
+
+describe('Measurement share — compact card + not-a-wear', () => {
+  it('card height is derived from content (compact), not a fixed 1350 canvas', () => {
+    // The renderer computes H from the layout instead of hard-coding 1350.
+    expect(html).toMatch(/const H = \(sub \? subY : rateY\) \+ padBottom/);
+    expect(html).not.toMatch(/const W = 1080, H = 1350/);
+  });
+
+  it('accuracy card uploads to an _accuracy path so the feed can detect it', () => {
+    expect(html).toContain("const isAccuracyCard = /^accuracy-/.test(f.name");
+    expect(html).toMatch(/const suffix = isAccuracyCard \? '_accuracy' : ''/);
+  });
+
+  it('feed renders _accuracy hero at natural height (not the fixed 4:5 slot)', () => {
+    expect(html).toContain('feed-card-photo--accuracy');
+    expect(html).toMatch(/_accuracy\\.jpg/);
+  });
+
+  it('measurement share is tagged use_case=measurement (so it is not a wear)', () => {
+    expect(html).toMatch(/_npSource === 'measurement' \? 'measurement' : 'unspecified'/);
+    expect(html).toContain('use_case: entry.useCase');
+  });
+
+  it('rebuildLogsByWatch excludes measurement logs from wear counts', () => {
+    expect(html).toMatch(/if \(l\.useCase === 'measurement'\)[^\n]*continue/);
+  });
+});

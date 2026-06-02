@@ -1560,6 +1560,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* Hero photo */
     .feed-card-photo { width: 100%; aspect-ratio: 4/5; max-height: 520px; overflow: hidden; background: var(--surface2); }
     .feed-card-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    /* Accuracy share cards are compact graphics, not photos — render at natural
+       height (no fixed 4:5 slot, no crop) so there's no blank padding. */
+    .feed-card-photo--accuracy { aspect-ratio: auto; max-height: none; background: #060f0a; }
+    .feed-card-photo--accuracy img { height: auto; object-fit: contain; }
     .feed-card-thumbnails { display: flex; gap: 2px; padding: 2px; background: var(--surface2); }
     .feed-card-thumb { flex: 1; aspect-ratio: 1; overflow: hidden; cursor: pointer; position: relative; max-width: 80px; }
     .feed-card-thumb img, .feed-card-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .7; transition: opacity .2s; }
@@ -5973,7 +5977,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '01.21.04';
+const APP_VERSION = '01.21.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8941,7 +8945,8 @@ function renderPublicFeed() {
     // Hero
     let heroHtml = '';
     if (item.photo_url) {
-      heroHtml = `<div class="feed-card-photo"><img src="${escHtml(item.photo_url)}" alt="" loading="lazy"></div>`;
+      const _isAcc = /_accuracy\.jpg(\?|$)/.test(item.photo_url);
+      heroHtml = `<div class="feed-card-photo${_isAcc ? ' feed-card-photo--accuracy' : ''}"><img src="${escHtml(item.photo_url)}" alt="" loading="lazy"></div>`;
     } else if (item.notes && !w) {
       heroHtml = `<div class="feed-text-hero"><p class="feed-text-hero-body">${escHtml(item.notes)}</p></div>`;
     }
@@ -9381,10 +9386,13 @@ function renderFeedCard(item) {
     const _urls = parsePhotoUrl(item.photo_url);
     const heroUrl = _urls[0] || '';
     const heroIsVideo = isVideoUrl(heroUrl);
+    // Accuracy share cards (single _accuracy.jpg) are compact graphics — render at
+    // natural height, not the fixed 4:5 photo slot, so there's no blank padding.
+    const isAccuracyCard = _urls.length === 1 && /_accuracy\.jpg(\?|$)/.test(heroUrl);
     const heroInner = heroIsVideo
       ? `<video id="feed-hero-${item.id}" muted autoplay loop playsinline webkit-playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;display:block;"><source src="${escHtml(heroUrl)}" type="${videoSourceType(heroUrl)}"></video>`
       : `<img id="feed-hero-${item.id}" src="${escHtml(heroUrl)}" loading="lazy" onerror="this.parentElement.style.display='none'">`;
-    heroHtml = `<div class="feed-card-photo" onclick="openImageViewer(${escAttr(JSON.stringify(_urls))},0)">
+    heroHtml = `<div class="feed-card-photo${isAccuracyCard ? ' feed-card-photo--accuracy' : ''}" onclick="openImageViewer(${escAttr(JSON.stringify(_urls))},0)">
       ${heroInner}
       ${heroIsVideo ? `<button class="feed-vid-mute" onclick="toggleFeedVideoSound(event,'${item.id}')" aria-label="Toggle sound">${MUTE_ICON_OFF}</button>` : ''}
       ${_urls.length > 1 ? `<span class="feed-card-photo-count">1/${_urls.length}</span>` : ''}
@@ -10345,7 +10353,7 @@ async function confirmDeletePost() {
   if (!editPostLogId) return;
   const logId = editPostLogId;
   const fi = feedItems.find(i => i.id === logId);
-  const isWearLog = !!(fi?.watch_id);
+  const isWearLog = !!(fi?.watch_id) && fi?.use_case !== 'measurement';
   closeEditPost();
   // Remove from feed immediately
   feedItems = feedItems.filter(i => i.id !== logId);
@@ -10361,10 +10369,12 @@ let newPostFiles = [];    // array of File objects (photos or videos)
 let newPostPreviews = []; // array of object URLs for thumbnails (photo objectURL or poster objectURL)
 let newPostPosters = [];  // array of Blob (videos) or null (photos), parallel to newPostFiles
 let npIdentifiedWatchId = null; // watchId from AI identification (or null)
+let _npSource = null;           // e.g. 'measurement' — marks the post's use_case
 
 function openNewPost(opts) {
   if (demoGuard()) return;
   const o = opts || {};
+  _npSource = o.source || null;
   newPostFiles = [];
   newPostPreviews.forEach(u => URL.revokeObjectURL(u));
   newPostPreviews = [];
@@ -10720,9 +10730,13 @@ async function saveNewPost() {
   try {
   const vis = getVisChip('np-vis-chips');
   const trackWatchId = npIdentifiedWatchId || null;
+  // A measurement share tags the watch (for attribution) but is NOT a wear —
+  // use_case 'measurement' excludes it from wear counts (see rebuildLogsByWatch
+  // + admin RPCs).
+  const useCase = _npSource === 'measurement' ? 'measurement' : 'unspecified';
   const entry = {
     id: uid(), watchId: trackWatchId, date: todayStr(),
-    useCase: 'unspecified', notes: body || null,
+    useCase, notes: body || null,
     photoUrl: null,
     visibility: vis,
     location: location,
@@ -10743,7 +10757,12 @@ async function saveNewPost() {
           }
           entry.photoUrl = videoUrl;
         } else {
-          entry.photoUrl = await uploadImage(f, `logs/${currentUser.id}/${entry.id}.jpg`);
+          // Accuracy share cards (named accuracy-*.jpg) get an "_accuracy" path
+          // marker so the feed can render them at their natural compact height
+          // instead of the fixed 4:5 photo slot.
+          const isAccuracyCard = /^accuracy-/.test(f.name || '');
+          const suffix = isAccuracyCard ? '_accuracy' : '';
+          entry.photoUrl = await uploadImage(f, `logs/${currentUser.id}/${entry.id}${suffix}.jpg`);
         }
       } else {
         const urls = [];
@@ -10771,7 +10790,7 @@ async function saveNewPost() {
   if (currentUser) {
     const { error } = await db.from('logs').upsert({
       id: entry.id, user_id: currentUser.id, watch_id: trackWatchId,
-      date: entry.date, use_case: 'unspecified',
+      date: entry.date, use_case: entry.useCase,
       notes: entry.notes, photo_url: entry.photoUrl,
       visibility: vis,
       location: entry.location,
@@ -11833,6 +11852,10 @@ function rebuildLogsByWatch() {
   _logsByWatch = new Map();
   _anyLogHasPhoto = false;
   for (const l of logs) {
+    // Measurement-share posts tag a watch but are NOT wears — exclude them from
+    // the per-watch index that drives all wear counts, stats, streaks, and
+    // recommendations. (They still render in the feed via feedItems.)
+    if (l.useCase === 'measurement') { if (l.photoUrl) _anyLogHasPhoto = true; continue; }
     const arr = _logsByWatch.get(l.watchId);
     if (arr) arr.push(l); else _logsByWatch.set(l.watchId, [l]);
     if (l.photoUrl) _anyLogHasPhoto = true;
@@ -12400,7 +12423,7 @@ async function loadAdminStats() {
       db.rpc('admin_measurement_counts'),
       db.rpc('admin_user_stats'),
       db.from('watches').select('user_id').gte('created_at', d1ago),
-      db.from('logs').select('user_id').gte('created_at', d1ago),
+      db.from('logs').select('user_id').neq('use_case', 'measurement').gte('created_at', d1ago),
       db.from('timegrapher_tick_logs').select('messages').like('messages', '%session_summary%').gte('created_at', d1ago),
       db.from('valuation_events').select('user_id').gte('created_at', d1ago),
       db.from('identify_attempts').select('user_id').eq('mode', 'enhance').gte('created_at', d1ago),
@@ -22859,36 +22882,43 @@ function _roundRectPath(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-// Renders a 1080x1350 (4:5) share card to an off-screen canvas. The 4:5 outer
-// size fills the feed's photo slot (object-fit:cover) without cropping, but the
-// instrument is drawn as a compact LANDSCAPE panel (~1.8:1, like the live
-// Measure display) centered vertically, with the watch name above and the
-// result below — so it reads as the actual measurement, not a stretched-tall
-// graphic. Dark matte fills the space above/below the instrument. Blob via caller.
+// Renders a COMPACT share card sized to its content (no big blank matte): a
+// watch-name header, a landscape instrument panel (~1.8:1, like the live Measure
+// display), and a result line below. Height is derived from the layout so the
+// card is only as tall as it needs to be — the feed renders accuracy cards at
+// their natural height (see the _accuracy hero branch) rather than the fixed 4:5
+// photo slot. Blob via caller.
 function renderMsrShareCard({ data, watchName, rate, beatError, bph }) {
-  const W = 1080, H = 1350;
+  const W = 1080;
   const M = 56;   // side margin to the instrument panel
   const R = 28;   // panel corner radius
+  const padTop = 48, nameGap = 34, afterPanel = 80, lineGap = 44, padBottom = 48;
+  const panelX = M, panelW = W - 2 * M;          // 968
+  const panelH = Math.round(panelW / 1.8);        // ~538 → landscape
+  const nameY = padTop + 44;                      // name baseline (font 44)
+  const panelY = nameY + nameGap;
+  const rateY = panelY + panelH + afterPanel;     // rate baseline (font 72)
+  const sub = [
+    msrCardResultText({ rate, beatError, bph }).beatError,
+    msrCardResultText({ rate, beatError, bph }).bph,
+  ].filter(Boolean).join('   ·   ');
+  const subY = rateY + lineGap;                    // sub baseline (font 34)
+  const H = (sub ? subY : rateY) + padBottom;
+
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  // Dark matte background for the whole card
+  // Dark matte background
   ctx.fillStyle = '#060f0a';
   ctx.fillRect(0, 0, W, H);
-
-  // Compact landscape instrument panel, centered. Width spans the margins; height
-  // gives the plot a ~1.8:1 landscape feel like the live display.
-  const panelX = M, panelW = W - 2 * M;          // 968
-  const panelH = Math.round(panelW / 1.8);        // ~538 → landscape
-  const panelY = Math.round((H - panelH) / 2);    // vertically centered
 
   // Watch name — above the panel
   ctx.fillStyle = '#e8efd9';
   ctx.font = '600 44px -apple-system, system-ui, sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText((watchName || 'My watch').slice(0, 38), panelX + 4, panelY - 32);
+  ctx.fillText((watchName || 'My watch').slice(0, 38), panelX + 4, nameY);
 
   // Instrument panel (rounded, clipped) — the graph fills it edge-to-edge like
   // the live Measure box. Translate so the core can draw in panel-local coords.
@@ -22910,19 +22940,18 @@ function renderMsrShareCard({ data, watchName, rate, beatError, bph }) {
   ctx.textAlign = 'left';
   ctx.fillStyle = '#4ade80';
   ctx.font = '700 72px -apple-system, system-ui, sans-serif';
-  ctx.fillText(res.rate, panelX + 4, panelY + panelH + 84);
-  const sub = [res.beatError, res.bph].filter(Boolean).join('   ·   ');
+  ctx.fillText(res.rate, panelX + 4, rateY);
   if (sub) {
     ctx.fillStyle = 'rgba(232,239,217,0.65)';
     ctx.font = '500 34px -apple-system, system-ui, sans-serif';
-    ctx.fillText(sub, panelX + 6, panelY + panelH + 128);
+    ctx.fillText(sub, panelX + 6, subY);
   }
 
-  // WRotate wordmark — bottom-right of the panel row
+  // WRotate wordmark — aligned with the rate line, bottom-right
   ctx.textAlign = 'right';
   ctx.fillStyle = 'rgba(74,222,128,0.55)';
   ctx.font = '700 34px -apple-system, system-ui, sans-serif';
-  ctx.fillText('WRotate', panelX + panelW, panelY + panelH + 100);
+  ctx.fillText('WRotate', panelX + panelW, rateY);
 
   return canvas;
 }
