@@ -295,11 +295,120 @@ class PiezoEngine {
             }
             env2 = env1; env1 = e
         }
+
+        // Consume detected beats accumulated this buffer
+        let beats = pendingBeats; pendingBeats.removeAll(keepingCapacity: true)
+        for t in beats { consumeBeat(timeSec: t) }
     }
 
-    // Placeholders satisfied in Task 3 (declared here so the file compiles):
+    // --- Model state ---
+    private var prevBeatTime: Double = -1
+    private var regPoints: [(x: Double, y: Double)] = []   // (sec, cumulative pair deviation ms)
+    private var cumPairDevMs: Double = 0
+    private var pairPhase = 0
+    private var pairAccum: Double = 0
+    private var pendingFirstBeatTime: Double = 0
+    private var recentBeatDevs: [Double] = []
+    private var knownBeatError: Double = 0
+    private var smoothedRate: Double? = nil
+    private var rateHistory: [(t: Double, r: Double)] = []
+    private var wasStable = false
+    private var startSample: Int64 = 0
+    private var pendingDots: [TickDot] = []
+    private let regMinN = 10
+    private var outlierMargin = 0.2
+    private let stabilityWindow = 15.0
+    private let stabilityGain = 3.0, stabilityLose = 5.0
+    private let wallMin = 20.0
+    private var lastEmitMs: Double = 0
+
     private var currentRate: Double? = nil
     private var currentBeatError: Double? = nil
     private var tickCount: Int = 0
-    private func emitUpdate() {}
+
+    private func consumeBeat(timeSec t: Double) {
+        defer { prevBeatTime = t }
+        guard prevBeatTime >= 0 else {
+            debugLog("[PZBEAT FIRST @ \(String(format: "%.2f", t))s]"); return
+        }
+        let intervalRing = (t - prevBeatTime) * ringRate
+        let ratio = intervalRing / expectedInterval
+        if ratio < 1 - outlierMargin || ratio > 1 + outlierMargin {
+            debugLog("[PZBEAT SKIP @ \(String(format: "%.2f", t))s] ratio=\(String(format: "%.3f", ratio)) OUTLIER")
+            return
+        }
+        let devMs = (expectedInterval - intervalRing) / ringRate * 1000.0
+        recentBeatDevs.append(devMs); if recentBeatDevs.count > 20 { recentBeatDevs.removeFirst() }
+        if recentBeatDevs.count >= 10 {
+            let a = recentBeatDevs.map { abs($0) }.sorted(); knownBeatError = a[a.count / 2]
+        }
+
+        // Pair two beats to cancel alternating beat error
+        pairAccum += intervalRing; pairPhase += 1
+        if pairPhase == 1 { pendingFirstBeatTime = t; return }
+        let pairExpected = expectedInterval * 2.0
+        let pairDevMs = (pairExpected - pairAccum) / ringRate * 1000.0
+        pairAccum = 0; pairPhase = 0
+        cumPairDevMs += pairDevMs
+        regPoints.append((x: t, y: cumPairDevMs))
+        tickCount += 2
+        let mid = (pendingFirstBeatTime + t) / 2.0
+        pendingDots.append(TickDot(timeSec: mid, deviationMs: cumPairDevMs))
+        currentBeatError = knownBeatError
+        if regPoints.count % 20 == 0 {
+            debugLog("[PZBEAT #\(tickCount) @ \(String(format: "%.2f", mid))s] pairDev=\(String(format: "%.2f", pairDevMs)) cum=\(String(format: "%.2f", cumPairDevMs)) be=\(String(format: "%.1f", knownBeatError))")
+        }
+    }
+
+    private func theilSen() -> Double? {
+        let n = regPoints.count
+        guard n >= regMinN else { return nil }
+        let pts: [(x: Double, y: Double)] = n > 120 ? (0..<120).map { regPoints[Int(Double($0) * Double(n - 1) / 119.0)] } : regPoints
+        var slopes: [Double] = []
+        for i in 0..<pts.count { for j in (i+1)..<pts.count {
+            let dx = pts[j].x - pts[i].x; if dx > 0.01 { slopes.append((pts[j].y - pts[i].y) / dx) }
+        }}
+        guard !slopes.isEmpty else { return nil }
+        slopes.sort(); return slopes[slopes.count / 2]
+    }
+
+    private func emitUpdate() {
+        let now = CACurrentMediaTime() * 1000
+        guard now - lastEmitMs > 200 else { return }   // ~5 Hz UI updates
+        lastEmitMs = now
+        let wallElapsed = Double(sampleCounter) / actualSampleRate
+
+        var rateForUpdate: Double? = nil
+        if let slope = theilSen() {
+            let r = slope * 86.4   // ms/s → s/day
+            if abs(r) <= 200 {
+                smoothedRate = r; rateForUpdate = (r * 10).rounded() / 10
+                rateHistory.append((t: wallElapsed, r: r))
+                rateHistory.removeAll { wallElapsed - $0.t > stabilityWindow + 5 }
+            }
+        }
+        var isStable = wasStable
+        if smoothedRate != nil {
+            let recent = rateHistory.filter { wallElapsed - $0.t <= stabilityWindow }
+            if recent.count >= 5 && wallElapsed >= wallMin {
+                let spread = recent.map(\.r).max()! - recent.map(\.r).min()!
+                isStable = wasStable ? (spread <= stabilityLose) : (spread <= stabilityGain)
+            }
+        }
+        wasStable = isStable
+        currentRate = rateForUpdate
+        let conf = regPoints.count >= 5 ? min(0.99, Double(regPoints.count) / 250.0 + 0.3) : 0.0
+
+        let dots = pendingDots; pendingDots.removeAll(keepingCapacity: true)
+        let msgs = debugMessages; debugMessages.removeAll(keepingCapacity: true)
+        let update = Update(
+            rate: rateForUpdate, beatError: currentBeatError, tickCount: tickCount,
+            confidence: conf, noiseLevel: currentNoiseLevel,
+            detectedIntervalMs: expectedInterval > 0 ? (expectedInterval / ringRate * 1000.0) : 0,
+            detectedBph: autoBph ? (smoothedRate != nil ? targetBph : nil) : targetBph,
+            cumulativeOffset: cumPairDevMs, elapsedSec: wallElapsed,
+            method: regPoints.count >= regMinN ? "Piezo" : "",
+            rateStable: isStable, newTicks: dots, debugMessages: msgs)
+        DispatchQueue.main.async { [weak self] in self?.onUpdate?(update) }
+    }
 }
