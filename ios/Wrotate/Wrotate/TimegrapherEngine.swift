@@ -64,7 +64,11 @@ class TimegrapherEngine {
     private var routeChangeObserver: NSObjectProtocol?
     // Feature-flag gated (default off = current behavior). Set from the `start` message.
     private var externalInputMode = false   // prefer a USB/line-in interface over the built-in mic
-    private var autoPickChannel = false      // read the loudest channel instead of channel 0
+    private var autoPickChannel = false      // read the most impulsive channel instead of channel 0
+    // Diagnostic (external mode only): aggregate per-channel raw rms/peak, log ~1/s.
+    private var diagBufCount: Int = 0
+    private var diagChMaxPeak: [Float] = []
+    private var diagChSumRms: [Float] = []
 
     private var actualSampleRate: Double = 48000
     private var sampleCounter: Int64 = 0
@@ -538,23 +542,51 @@ class TimegrapherEngine {
     private func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
         guard isRunning, let channels = buffer.floatChannelData else { return }
         let frameCount = Int(buffer.frameLength)
+        let channelCount = max(1, Int(buffer.format.channelCount))
 
-        // Default: channel 0. With autoPickChannel, read the loudest channel — the M-Track's
-        // instrument/Hi-Z jack can map to the 2nd USB channel, leaving channel 0 silent.
-        var channelData = channels[0]
-        var rms: Float = 0
-        vDSP_rmsqv(channelData, 1, &rms, vDSP_Length(frameCount))
-        if autoPickChannel {
-            let channelCount = Int(buffer.format.channelCount)
-            if channelCount > 1 {
-                for c in 1..<channelCount {
-                    var r: Float = 0
-                    vDSP_rmsqv(channels[c], 1, &r, vDSP_Length(frameCount))
-                    if r > rms { rms = r; channelData = channels[c] }
-                }
+        // Per-channel raw RMS + peak (peak = max |sample|). Peak captures impulsive ticks
+        // that RMS misses when another channel carries steady hiss.
+        var chRms = [Float](repeating: 0, count: channelCount)
+        var chPeak = [Float](repeating: 0, count: channelCount)
+        for c in 0..<channelCount {
+            vDSP_rmsqv(channels[c], 1, &chRms[c], vDSP_Length(frameCount))
+            vDSP_maxmgv(channels[c], 1, &chPeak[c], vDSP_Length(frameCount))
+        }
+
+        // Choose channel. Default: 0. autoPickChannel: the most impulsive channel (highest
+        // peak), not loudest-RMS — a tick is a brief spike a hiss channel beats on RMS.
+        var chosen = 0
+        if autoPickChannel && channelCount > 1 {
+            var best = chPeak[0]
+            for c in 1..<channelCount where chPeak[c] > best { best = chPeak[c]; chosen = c }
+        }
+        let channelData = channels[chosen]
+        let rms = chRms[chosen]
+        currentNoiseLevel = min(1.0, Double(rms) * 10)
+
+        // Diagnostic: aggregate per-channel raw levels and log once per ~second. Comparing
+        // rawPeak (pre-filter) against [TGDEBUG] energy (post-HP) reveals whether the signal
+        // exists, on which channel, and whether the HP filters are stripping it.
+        if externalInputMode {
+            if diagChMaxPeak.count != channelCount {
+                diagChMaxPeak = [Float](repeating: 0, count: channelCount)
+                diagChSumRms = [Float](repeating: 0, count: channelCount)
+                diagBufCount = 0
+            }
+            for c in 0..<channelCount {
+                if chPeak[c] > diagChMaxPeak[c] { diagChMaxPeak[c] = chPeak[c] }
+                diagChSumRms[c] += chRms[c]
+            }
+            diagBufCount += 1
+            if diagBufCount >= 12 {  // ~1s at ~85ms/buffer
+                let peaks = diagChMaxPeak.map { String(format: "%.5f", $0) }.joined(separator: ",")
+                let rmss = (0..<channelCount).map { String(format: "%.5f", diagChSumRms[$0] / Float(diagBufCount)) }.joined(separator: ",")
+                debugLog("[TGDIAG] chosen=ch\(chosen) rawPeak=[\(peaks)] rawRms=[\(rmss)]")
+                diagChMaxPeak = [Float](repeating: 0, count: channelCount)
+                diagChSumRms = [Float](repeating: 0, count: channelCount)
+                diagBufCount = 0
             }
         }
-        currentNoiseLevel = min(1.0, Double(rms) * 10)
 
         for i in 0..<frameCount {
             let x = channelData[i]
