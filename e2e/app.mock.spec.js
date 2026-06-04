@@ -505,12 +505,15 @@ test.describe('Share post (mocked)', () => {
     }
   });
 
-  test('private post does not have share button', async ({ page }) => {
-    // log-002 is private — should NOT have share button
+  test('own non-public post HAS share button (routes to in-app authenticated viewer)', async ({ page }) => {
+    // log-002 is the current user's own private post. A private post only ever
+    // reaches the feed via the own-posts query, so any private post here is the
+    // viewer's own — the owner can share it (the link goes to the in-app viewer,
+    // where RLS decides who can see it). URL routing is covered by sharePostUrl unit tests.
     const card = page.locator('#feedcard-log-002');
     if (await card.count() > 0) {
       const shareBtn = card.locator('.feed-action-btn[title="Share post"]');
-      await expect(shareBtn).toHaveCount(0);
+      await expect(shareBtn).toBeVisible();
     }
   });
 
@@ -523,12 +526,13 @@ test.describe('Share post (mocked)', () => {
     }
   });
 
-  test('private post does not have share option in menu', async ({ page }) => {
+  test('own non-public post HAS share option in menu', async ({ page }) => {
+    // log-002 is the viewer's own private post — the owner can share it.
     const card = page.locator('#feedcard-log-002');
     if (await card.count() > 0) {
       const menu = card.locator('.feed-menu');
       const shareItem = menu.locator('.feed-menu-item', { hasText: 'Share post' });
-      await expect(shareItem).toHaveCount(0);
+      await expect(shareItem).toHaveCount(1);
     }
   });
 });

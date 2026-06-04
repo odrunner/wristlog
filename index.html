@@ -2107,9 +2107,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New
     </div>
     <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;">
-      <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(74,222,128,.12);color:#4ade80;padding:.15rem .5rem;border-radius:6px;">May 2026</span>
+      <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(74,222,128,.12);color:#4ade80;padding:.15rem .5rem;border-radius:6px;">June 2026</span>
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Share Any of Your Posts</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">You can now share your own posts no matter who they&#8217;re for &#8212; not just public ones. Public posts open a rich preview link anyone can see. For Followers and Close Friends posts, the link opens privately in WRotate and only shows the post to people you actually shared it with, so nothing leaks to anyone else.</div>
+      </div>
+      <div style="margin:.75rem 0;border-top:1px solid var(--border);padding-top:.75rem;">
+        <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">May 2026</span>
+      </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Advanced Measure Settings</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Tap the &#9881; gear on the Measure screen to fine-tune how readings are taken. Pick an environment preset &#8212; Quiet Room, Noisy Environment, or Weak Signal &#8212; or adjust Sensitivity and Convergence Speed yourself to get a reliable reading from trickier watches.</div>
@@ -5977,7 +5984,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.17.47';
+const APP_VERSION = '03.18.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9609,13 +9616,13 @@ function renderFeedCard(item) {
           ${isMe
             ? `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="Edit post"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
               <div class="feed-menu hidden" id="feed-menu-${item.id}">
-                ${vis === 'public' ? `<div class="feed-menu-item" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
+                ${(vis === 'public' || isMe) ? `<div class="feed-menu-item" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
                 <div class="feed-menu-item" onclick="openEditPost('${item.id}');closeFeedMenu('${item.id}')">Edit post</div>
                 <div class="feed-menu-item" onclick="openReport('log','${item.id}','${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Report a comment</div>
               </div>`
             : `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="More options"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
               <div class="feed-menu hidden" id="feed-menu-${item.id}">
-                ${vis === 'public' ? `<div class="feed-menu-item" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
+                ${(vis === 'public' || isMe) ? `<div class="feed-menu-item" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
                 <div class="feed-menu-item" onclick="openReport('log','${item.id}','${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Report</div>
                 <div class="feed-menu-item" style="color:var(--danger);" onclick="blockUser('${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Block user</div>
               </div>`}
@@ -9631,7 +9638,7 @@ function renderFeedCard(item) {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> <span>${cCount || ''}</span>
         </button>
         ${addPhotoAction}
-        ${vis === 'public' ? `<button class="feed-action-btn" onclick="sharePost('${item.id}')" title="Share post"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>` : ''}
+        ${(vis === 'public' || isMe) ? `<button class="feed-action-btn" onclick="sharePost('${item.id}')" title="Share post"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>` : ''}
       </div>
       ${captionHtml}
       ${watchChip}
@@ -21312,8 +21319,14 @@ function scrollToPost(postId) {
 
 async function sharePost(logId) {
   if (demoGuard()) return;
-  const url = `https://api.wrotate.com/functions/v1/share-post?id=${logId}`;
   const item = feedItems.find(i => i.id === logId);
+  const vis = item?.visibility || 'public';
+  // Public → anonymous edge function (rich chat preview). Non-public → same-origin
+  // in-app viewer, where the recipient's session lets RLS gate access (and the
+  // anonymous link preview can't leak the photo/caption).
+  const url = (vis !== 'public')
+    ? `${location.origin}/p/?id=${logId}`
+    : `https://api.wrotate.com/functions/v1/share-post?id=${logId}`;
   const watchName = item?.watch ? `${item.watch.brand || ''} ${item.watch.name || ''}`.trim() : '';
   const title = watchName ? `Check out this ${watchName} on WRotate` : 'Check out this post on WRotate';
   if (navigator.share) {
@@ -23572,6 +23585,17 @@ function _pingPresence() {
 // Guard: if we're already booted for this user, do nothing.
 async function bootApp(user) {
   if (currentUser?.id === user.id) return; // already running for this user
+  // If the user came here to sign in for a shared non-public post (stashed by the
+  // /p/ viewer when they were signed out), forward them back to it now that a
+  // session exists — the in-app viewer lets RLS decide if they're allowed to see it.
+  if (user.email !== DEMO_USER_EMAIL) {
+    const _pendingSharedPost = localStorage.getItem('wrotate_pending_post');
+    if (_pendingSharedPost) {
+      localStorage.removeItem('wrotate_pending_post');
+      window.location.replace('/p/?id=' + encodeURIComponent(_pendingSharedPost));
+      return;
+    }
+  }
   clearUserState();
   currentUser = user;
   // Backfill user_id on the anonymous page_visit from before auth resolved

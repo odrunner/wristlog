@@ -344,13 +344,14 @@ test.describe('10. Help & Feedback', () => {
 // ── 11. NEW FEATURES ────────────────────────────────────────────────────
 
 test.describe('11. New features', () => {
-  test('share post page loads for a valid public post', async ({ page }) => {
-    // Navigate to the share post page directly
+  test('share post page prompts anonymous viewer to sign in', async ({ page }) => {
+    // The in-app viewer (/p/) is linked for non-public posts. An anonymous viewer
+    // can't be evaluated by RLS, so any non-readable id (including a nonexistent
+    // one — indistinguishable without auth) shows the sign-in prompt.
     await page.goto('/p/?id=nonexistent-id');
     await page.waitForTimeout(3_000);
-    // Should show "Post not found" state
     const content = await page.locator('#main-content').textContent();
-    expect(content).toContain('not found');
+    expect(content).toContain('Sign in to view');
   });
 });
 

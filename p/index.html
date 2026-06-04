@@ -62,6 +62,8 @@
     .state-icon { font-size: 2.5rem; margin-bottom: .5rem; }
     .state-title { font-size: 1.1rem; font-weight: 700; margin-bottom: .3rem; }
     .state-sub { font-size: .88rem; color: var(--muted); line-height: 1.5; max-width: 320px; margin: 0 auto; }
+    .btn-cta { display: inline-block; background: var(--gold); color: #fff; font-weight: 600; font-size: .9rem; border: none; border-radius: 8px; padding: .6rem 1.4rem; cursor: pointer; font-family: inherit; text-decoration: none; }
+    .btn-cta:hover { background: var(--gold-lt); }
     .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 1rem; }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
@@ -83,7 +85,10 @@
   <script>
     const SUPABASE_URL = 'https://api.wrotate.com';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs';
-    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
+    // Inherit the logged-in session from the main app (same origin + same SUPABASE_URL
+    // → same default storage key). This lets RLS evaluate auth.uid() so a signed-in
+    // close friend can see a non-public post they're allowed to view.
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { flowType: 'implicit', detectSessionInUrl: true } });
 
     // Track visit on shared post page
     (function() {
@@ -194,29 +199,58 @@
         </div>`;
     }
 
+    function renderSignIn(logId) {
+      document.getElementById('main-content').innerHTML = `
+        <div class="state-wrap">
+          <div class="state-icon">🔒</div>
+          <div class="state-title">Sign in to view this post</div>
+          <div class="state-sub">This post was shared with specific people. Sign in to WRotate to see if it was shared with you.</div>
+          <div class="cta-wrap" style="margin-top:1.25rem;">
+            <button id="signin-btn" class="btn-cta">Sign in to view</button>
+          </div>
+        </div>`;
+      document.getElementById('signin-btn').addEventListener('click', () => {
+        // Stash the post so the main app forwards back here once a session exists.
+        // (The /p/ path isn't an allowed OAuth redirect target, so we sign in at the
+        // root and bounce back — see bootApp in index.html.)
+        try { localStorage.setItem('wrotate_pending_post', logId); } catch (e) {}
+        window.location.href = window.location.origin + '/';
+      });
+    }
+
     (async function() {
       const params = new URLSearchParams(location.search);
       const logId = params.get('id');
       if (!logId) { renderError('No post specified.'); return; }
 
-      const { data: log, error } = await db
+      // No visibility filter — RLS returns the row only if the viewer is allowed to
+      // see it (own / public / follower / close friend / club member). Anonymous
+      // viewers get nothing for non-public posts, so link previews can't leak content.
+      const { data: log } = await db
         .from('logs')
         .select('id, user_id, watch_id, photo_url, notes, use_case, date, created_at, visibility')
         .eq('id', logId)
-        .eq('visibility', 'public')
         .is('moderation_status', null)
         .maybeSingle();
 
-      if (error || !log) { renderError('This post may be private, deleted, or no longer available.'); return; }
+      if (log) {
+        const [profileRes, watchRes] = await Promise.all([
+          db.from('profiles').select('id, username, display_name, avatar_url, is_official').eq('id', log.user_id).maybeSingle(),
+          log.watch_id
+            ? db.from('watches').select('id, brand, name, image').eq('id', log.watch_id).maybeSingle()
+            : Promise.resolve({ data: null }),
+        ]);
+        renderPost(log, profileRes.data, watchRes.data);
+        return;
+      }
 
-      const [profileRes, watchRes] = await Promise.all([
-        db.from('profiles').select('id, username, display_name, avatar_url, is_official').eq('id', log.user_id).maybeSingle(),
-        log.watch_id
-          ? db.from('watches').select('id, brand, name, image').eq('id', log.watch_id).maybeSingle()
-          : Promise.resolve({ data: null }),
-      ]);
-
-      renderPost(log, profileRes.data, watchRes.data);
+      // No row: either signed-out (RLS needs auth.uid()) or signed-in but not allowed.
+      const { data: { session } } = await db.auth.getSession();
+      if (session) {
+        renderError('This post is private, or no longer available.');
+      } else {
+        renderSignIn(logId);
+      }
     })();
   </script>
 </body>

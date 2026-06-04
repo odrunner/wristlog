@@ -1437,9 +1437,16 @@ export function inlineImages(bodyHtml, images) {
   return bodyHtml;
 }
 
-// Build share post URL
-export function sharePostUrl(logId) {
-  return `https://api.wrotate.com/functions/v1/share-post?id=${logId}`;
+// Build share post URL.
+// Public posts use the anonymous, server-rendered edge function (rich chat-link
+// preview). Non-public posts (followers/friends/private) use the same-origin
+// in-app viewer, where the recipient's logged-in session lets RLS decide whether
+// they're allowed to see it — and the anonymous link preview can't leak content.
+// Legacy null/undefined visibility is treated as public.
+export function sharePostUrl(logId, visibility) {
+  return (visibility && visibility !== 'public')
+    ? `https://wrotate.com/p/?id=${logId}`
+    : `https://api.wrotate.com/functions/v1/share-post?id=${logId}`;
 }
 
 // ══════════════════════════════════════════

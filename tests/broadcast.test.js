@@ -94,6 +94,36 @@ describe('sharePostUrl', () => {
     const url = sharePostUrl('d70b1a85-4f31-4431-b3b7-db76543daaf5');
     expect(url).toContain('d70b1a85-4f31-4431-b3b7-db76543daaf5');
   });
+
+  it('uses the rich edge-function URL for public posts', () => {
+    expect(sharePostUrl('abc-123', 'public'))
+      .toBe('https://api.wrotate.com/functions/v1/share-post?id=abc-123');
+  });
+
+  it('defaults to the edge-function URL when visibility is omitted', () => {
+    expect(sharePostUrl('abc-123'))
+      .toBe('https://api.wrotate.com/functions/v1/share-post?id=abc-123');
+  });
+
+  it('treats legacy null/undefined visibility as public', () => {
+    expect(sharePostUrl('abc-123', null))
+      .toBe('https://api.wrotate.com/functions/v1/share-post?id=abc-123');
+  });
+
+  it('uses the in-app authenticated viewer for followers posts', () => {
+    expect(sharePostUrl('abc-123', 'followers'))
+      .toBe('https://wrotate.com/p/?id=abc-123');
+  });
+
+  it('uses the in-app authenticated viewer for close-friends posts', () => {
+    expect(sharePostUrl('abc-123', 'friends'))
+      .toBe('https://wrotate.com/p/?id=abc-123');
+  });
+
+  it('uses the in-app authenticated viewer for private posts', () => {
+    expect(sharePostUrl('abc-123', 'private'))
+      .toBe('https://wrotate.com/p/?id=abc-123');
+  });
 });
 
 // ── sanitizeHtml ────────────────────────────────────────────────────────
