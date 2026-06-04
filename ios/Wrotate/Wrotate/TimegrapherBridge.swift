@@ -6,6 +6,8 @@ import WebKit
 class TimegrapherBridge {
 
     private let engine = TimegrapherEngine()
+    private let piezo = PiezoEngine()
+    private var usingPiezo = false
     private weak var webView: WKWebView?
     private var updateTimer: Timer?
 
@@ -25,12 +27,14 @@ class TimegrapherBridge {
         case "start":
             let bph = body["bph"] as? Int ?? 28800
             let sensitivity = body["sensitivity"] as? Int ?? 50
-            print("[TG BRIDGE START] bph=\(bph) (0=auto) sensitivity=\(sensitivity)")
-            startMeasurement(bph: bph, sensitivity: sensitivity)
+            let source = body["source"] as? String ?? "mic"
+            usingPiezo = (source == "piezo")
+            print("[TG BRIDGE START] source=\(source) bph=\(bph) sensitivity=\(sensitivity)")
+            if usingPiezo { startPiezo(bph: bph) } else { startMeasurement(bph: bph, sensitivity: sensitivity) }
 
         case "stop":
             print("[TG BRIDGE STOP]")
-            stopMeasurement()
+            if usingPiezo { stopPiezo() } else { stopMeasurement() }
 
         case "sensitivity":
             let value = body["value"] as? Int ?? 50
@@ -102,6 +106,13 @@ class TimegrapherBridge {
                              maxBphCorrections: maxBphCorrections,
                              noiseFloorMult: noiseFloorMult,
                              peakDetectGate: peakDetectGate)
+
+        case "tuningPiezo":
+            piezo.setTuning(
+                bpLow: body["bpLow"] as? Double, bpHigh: body["bpHigh"] as? Double,
+                envSmoothing: body["envSmoothing"] as? Double, threshMult: body["threshMult"] as? Double,
+                threshDecay: body["threshDecay"] as? Double, refractoryFrac: body["refractoryFrac"] as? Double,
+                outlierMargin: body["outlierMargin"] as? Double)
 
         default:
             print("[TG BRIDGE] unknown action: \(action)")
@@ -183,6 +194,37 @@ class TimegrapherBridge {
             "beatError": result.beatError as Any,
             "tickCount": result.tickCount
         ])
+    }
+
+    private func startPiezo(bph: Int) {
+        AVAudioApplication.requestRecordPermission { [weak self] granted in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                if !granted {
+                    self.sendToJS(["event": "error", "message": "Microphone permission denied. Go to Settings → WRotate → Microphone to allow."]); return
+                }
+                self.piezo.onUpdate = { [weak self] u in
+                    var p: [String: Any] = [
+                        "event": "update", "rate": u.rate as Any, "beatError": u.beatError as Any,
+                        "tickCount": u.tickCount, "confidence": u.confidence, "noiseLevel": u.noiseLevel,
+                        "detectedIntervalMs": u.detectedIntervalMs, "detectedBph": u.detectedBph as Any,
+                        "cumulativeOffset": u.cumulativeOffset, "elapsedSec": u.elapsedSec,
+                        "method": u.method, "rateStable": u.rateStable]
+                    if !u.newTicks.isEmpty { p["newTicks"] = u.newTicks.map { ["t": $0.timeSec, "d": $0.deviationMs] as [String: Any] } }
+                    if !u.debugMessages.isEmpty { p["debugMessages"] = u.debugMessages }
+                    self?.sendToJS(p)
+                }
+                self.piezo.start(bph: bph)
+                UIApplication.shared.isIdleTimerDisabled = true
+                self.sendToJS(["event": "started"])
+            }
+        }
+    }
+
+    private func stopPiezo() {
+        UIApplication.shared.isIdleTimerDisabled = false
+        let r = piezo.stop()
+        sendToJS(["event": "stopped", "rate": r.rate as Any, "beatError": r.beatError as Any, "tickCount": r.tickCount])
     }
 
     private func sendToJS(_ data: [String: Any]) {

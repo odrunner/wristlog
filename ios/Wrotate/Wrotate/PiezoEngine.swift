@@ -47,6 +47,18 @@ class PiezoEngine {
 
     private func debugLog(_ m: String) { print(m); debugMessages.append(m) }
 
+    func setTuning(bpLow: Double?, bpHigh: Double?, envSmoothing: Double?, threshMult: Double?,
+                   threshDecay: Double?, refractoryFrac: Double?, outlierMargin: Double?) {
+        if let v = bpLow { bpLowHz = Float(v) }
+        if let v = bpHigh { bpHighHz = Float(v) }
+        if let v = envSmoothing { self.envSmoothing = Float(v) }
+        if let v = threshMult { self.threshMult = Float(v) }
+        if let v = threshDecay { self.threshDecay = Float(v) }
+        if let v = refractoryFrac { self.refractoryFrac = v }
+        if let v = outlierMargin { self.outlierMargin = v }
+        debugLog("[PZTUNE] bp=[\(bpLowHz),\(bpHighHz)] env=\(self.envSmoothing) thr=\(threshMult ?? -1) refrac=\(refractoryFrac ?? -1)")
+    }
+
     func start(bph: Int, autoPickChannel: Bool = true) {
         guard !isRunning else { return }
         if bph == 0 { autoBph = true; targetBph = 28800 } else { autoBph = false; targetBph = bph }
