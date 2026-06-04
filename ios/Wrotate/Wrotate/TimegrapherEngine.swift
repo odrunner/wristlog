@@ -61,14 +61,6 @@ class TimegrapherEngine {
 
     private var audioEngine: AVAudioEngine?
     private var isRunning = false
-    private var routeChangeObserver: NSObjectProtocol?
-    // Feature-flag gated (default off = current behavior). Set from the `start` message.
-    private var externalInputMode = false   // prefer a USB/line-in interface over the built-in mic
-    private var autoPickChannel = false      // read the most impulsive channel instead of channel 0
-    // Diagnostic (external mode only): aggregate per-channel raw rms/peak, log ~1/s.
-    private var diagBufCount: Int = 0
-    private var diagChMaxPeak: [Float] = []
-    private var diagChSumRms: [Float] = []
 
     private var actualSampleRate: Double = 48000
     private var sampleCounter: Int64 = 0
@@ -368,11 +360,8 @@ class TimegrapherEngine {
         return y
     }
 
-    func start(bph: Int, sensitivity: Int, externalInput: Bool = false, autoPickChannel: Bool = false) {
+    func start(bph: Int, sensitivity: Int) {
         guard !isRunning else { return }
-
-        self.externalInputMode = externalInput
-        self.autoPickChannel = autoPickChannel
 
         currentRate = nil
         currentBeatError = nil
@@ -431,55 +420,9 @@ class TimegrapherEngine {
         do {
             let session = AVAudioSession.sharedInstance()
             try? session.setActive(false, options: .notifyOthersOnDeactivation)
-            if externalInputMode {
-                // Mode .default (NOT .measurement): measurement mode applies a fixed low
-                // input gain calibrated for the built-in mic, which crushes a USB interface
-                // to near-silence (Voice Memos, which uses a normal record session, gets full
-                // level from the same M-Track). Also drop .mixWithOthers/.defaultToSpeaker to
-                // match a plain capture session as closely as possible.
-                try session.setCategory(.playAndRecord, mode: .default, options: [.allowBluetoothA2DP])
-            } else {
-                try session.setCategory(.playAndRecord, mode: .measurement, options: [.mixWithOthers, .allowBluetoothA2DP, .defaultToSpeaker])
-            }
+            try session.setCategory(.playAndRecord, mode: .measurement, options: [.mixWithOthers, .allowBluetoothA2DP, .defaultToSpeaker])
             try session.setPreferredSampleRate(48000)
-
-            // Explicitly prefer an external interface (USB/line-in) over the built-in mic.
-            // Without this, iOS default routing keeps the built-in mic and the engine hears
-            // nothing from a contact-mic/piezo plugged into a USB audio interface.
-            if externalInputMode, let inputs = session.availableInputs {
-                // iOS enumerates the M-Track as .headsetMic ("MicrophoneWired"), not .usbAudio,
-                // so include it. Match anything that isn't the built-in mic.
-                let preferred = inputs.first { $0.portType == .usbAudio }
-                    ?? inputs.first { $0.portType == .lineIn }
-                    ?? inputs.first { $0.portType == .headsetMic }
-                    ?? inputs.first { $0.portType != .builtInMic }
-                if let p = preferred {
-                    try? session.setPreferredInput(p)
-                    debugLog("[TGINPUT] preferred input → \(p.portName) [\(p.portType.rawValue)]")
-                } else {
-                    debugLog("[TGINPUT] no external input found; available=\(inputs.map { $0.portType.rawValue })")
-                }
-            }
-
             try session.setActive(true)
-
-            // Boost input gain to max if iOS allows it for this device (last gain lever).
-            if externalInputMode {
-                debugLog("[TGINPUT] inputGain=\(String(format: "%.2f", session.inputGain)) settable=\(session.isInputGainSettable)")
-                if session.isInputGainSettable {
-                    try? session.setInputGain(1.0)
-                    debugLog("[TGINPUT] setInputGain(1.0) → now \(String(format: "%.2f", session.inputGain))")
-                }
-            }
-
-            // Observe route changes so a USB interface connected/removed mid-session is picked
-            // up instead of silently keeping a stale route. Only in external mode.
-            if externalInputMode {
-                if let existing = routeChangeObserver { NotificationCenter.default.removeObserver(existing) }
-                routeChangeObserver = NotificationCenter.default.addObserver(
-                    forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main
-                ) { [weak self] note in self?.handleRouteChange(note) }
-            }
 
             audioEngine = AVAudioEngine()
             guard let engine = audioEngine else { return }
@@ -487,10 +430,6 @@ class TimegrapherEngine {
             let inputNode = engine.inputNode
             let format = inputNode.outputFormat(forBus: 0)
             actualSampleRate = format.sampleRate
-            if externalInputMode {
-                let route = session.currentRoute.inputs.map { "\($0.portName)[\($0.portType.rawValue)]" }.joined(separator: ",")
-                debugLog("[TGINPUT] active route inputs=\(route) rate=\(String(format: "%.0f", actualSampleRate)) ch=\(format.channelCount)")
-            }
 
             // Initialize 3 biquad HP filters
             hpFilters = hpCutoffs.map { makeBiquadHP(cutoff: $0, sampleRate: actualSampleRate) }
@@ -520,7 +459,6 @@ class TimegrapherEngine {
 
     func stop() -> Result {
         isRunning = false
-        if let obs = routeChangeObserver { NotificationCenter.default.removeObserver(obs); routeChangeObserver = nil }
         audioEngine?.inputNode.removeTap(onBus: 0)
         audioEngine?.stop()
         audioEngine = nil
@@ -529,80 +467,15 @@ class TimegrapherEngine {
                       tickCount: peakCount, ticks: [])
     }
 
-    deinit {
-        if let obs = routeChangeObserver { NotificationCenter.default.removeObserver(obs) }
-    }
-
-    /// React only to real hardware plug/unplug. We deliberately ignore .override /
-    /// .routeConfigurationChange — our own setPreferredInput/setActive emit those, and
-    /// restarting on them would loop. Restart resets the measurement (expected on a route change).
-    private func handleRouteChange(_ notification: Notification) {
-        guard isRunning, externalInputMode else { return }
-        guard let info = notification.userInfo,
-              let raw = info[AVAudioSessionRouteChangeReasonKey] as? UInt,
-              let reason = AVAudioSession.RouteChangeReason(rawValue: raw) else { return }
-        switch reason {
-        case .newDeviceAvailable, .oldDeviceUnavailable:
-            let bphToRestart = autoBph ? 0 : targetBph
-            let ext = externalInputMode, autoCh = autoPickChannel
-            debugLog("[TGINPUT] route changed (reason=\(raw)) — restarting capture, bph=\(bphToRestart)")
-            _ = stop()
-            start(bph: bphToRestart, sensitivity: 50, externalInput: ext, autoPickChannel: autoCh)
-        default:
-            break
-        }
-    }
-
     // MARK: - Per-sample processing
 
     private func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
-        guard isRunning, let channels = buffer.floatChannelData else { return }
+        guard isRunning, let channelData = buffer.floatChannelData?[0] else { return }
         let frameCount = Int(buffer.frameLength)
-        let channelCount = max(1, Int(buffer.format.channelCount))
 
-        // Per-channel raw RMS + peak (peak = max |sample|). Peak captures impulsive ticks
-        // that RMS misses when another channel carries steady hiss.
-        var chRms = [Float](repeating: 0, count: channelCount)
-        var chPeak = [Float](repeating: 0, count: channelCount)
-        for c in 0..<channelCount {
-            vDSP_rmsqv(channels[c], 1, &chRms[c], vDSP_Length(frameCount))
-            vDSP_maxmgv(channels[c], 1, &chPeak[c], vDSP_Length(frameCount))
-        }
-
-        // Choose channel. Default: 0. autoPickChannel: the most impulsive channel (highest
-        // peak), not loudest-RMS — a tick is a brief spike a hiss channel beats on RMS.
-        var chosen = 0
-        if autoPickChannel && channelCount > 1 {
-            var best = chPeak[0]
-            for c in 1..<channelCount where chPeak[c] > best { best = chPeak[c]; chosen = c }
-        }
-        let channelData = channels[chosen]
-        let rms = chRms[chosen]
+        var rms: Float = 0
+        vDSP_rmsqv(channelData, 1, &rms, vDSP_Length(frameCount))
         currentNoiseLevel = min(1.0, Double(rms) * 10)
-
-        // Diagnostic: aggregate per-channel raw levels and log once per ~second. Comparing
-        // rawPeak (pre-filter) against [TGDEBUG] energy (post-HP) reveals whether the signal
-        // exists, on which channel, and whether the HP filters are stripping it.
-        if externalInputMode {
-            if diagChMaxPeak.count != channelCount {
-                diagChMaxPeak = [Float](repeating: 0, count: channelCount)
-                diagChSumRms = [Float](repeating: 0, count: channelCount)
-                diagBufCount = 0
-            }
-            for c in 0..<channelCount {
-                if chPeak[c] > diagChMaxPeak[c] { diagChMaxPeak[c] = chPeak[c] }
-                diagChSumRms[c] += chRms[c]
-            }
-            diagBufCount += 1
-            if diagBufCount >= 12 {  // ~1s at ~85ms/buffer
-                let peaks = diagChMaxPeak.map { String(format: "%.5f", $0) }.joined(separator: ",")
-                let rmss = (0..<channelCount).map { String(format: "%.5f", diagChSumRms[$0] / Float(diagBufCount)) }.joined(separator: ",")
-                debugLog("[TGDIAG] chosen=ch\(chosen) rawPeak=[\(peaks)] rawRms=[\(rmss)]")
-                diagChMaxPeak = [Float](repeating: 0, count: channelCount)
-                diagChSumRms = [Float](repeating: 0, count: channelCount)
-                diagBufCount = 0
-            }
-        }
 
         for i in 0..<frameCount {
             let x = channelData[i]

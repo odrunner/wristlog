@@ -25,11 +25,8 @@ class TimegrapherBridge {
         case "start":
             let bph = body["bph"] as? Int ?? 28800
             let sensitivity = body["sensitivity"] as? Int ?? 50
-            // Feature-flag gated (default = current behavior when keys absent).
-            let externalInput = (body["inputMode"] as? String) == "external"
-            let autoPickChannel = body["autoPickChannel"] as? Bool ?? false
-            print("[TG BRIDGE START] bph=\(bph) (0=auto) sensitivity=\(sensitivity) externalInput=\(externalInput) autoPickChannel=\(autoPickChannel)")
-            startMeasurement(bph: bph, sensitivity: sensitivity, externalInput: externalInput, autoPickChannel: autoPickChannel)
+            print("[TG BRIDGE START] bph=\(bph) (0=auto) sensitivity=\(sensitivity)")
+            startMeasurement(bph: bph, sensitivity: sensitivity)
 
         case "stop":
             print("[TG BRIDGE STOP]")
@@ -112,7 +109,7 @@ class TimegrapherBridge {
         }
     }
 
-    private func startMeasurement(bph: Int, sensitivity: Int, externalInput: Bool = false, autoPickChannel: Bool = false) {
+    private func startMeasurement(bph: Int, sensitivity: Int) {
         // Request mic permission if needed
         AVAudioApplication.requestRecordPermission { [weak self] granted in
             DispatchQueue.main.async {
@@ -170,7 +167,7 @@ class TimegrapherBridge {
                     self?.sendToJS(payload)
                 }
 
-                self.engine.start(bph: bph, sensitivity: sensitivity, externalInput: externalInput, autoPickChannel: autoPickChannel)
+                self.engine.start(bph: bph, sensitivity: sensitivity)
                 UIApplication.shared.isIdleTimerDisabled = true
                 self.sendToJS(["event": "started"])
             }
