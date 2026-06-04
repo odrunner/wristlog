@@ -61,6 +61,10 @@ class TimegrapherEngine {
 
     private var audioEngine: AVAudioEngine?
     private var isRunning = false
+    private var routeChangeObserver: NSObjectProtocol?
+    // Feature-flag gated (default off = current behavior). Set from the `start` message.
+    private var externalInputMode = false   // prefer a USB/line-in interface over the built-in mic
+    private var autoPickChannel = false      // read the loudest channel instead of channel 0
 
     private var actualSampleRate: Double = 48000
     private var sampleCounter: Int64 = 0
@@ -360,8 +364,11 @@ class TimegrapherEngine {
         return y
     }
 
-    func start(bph: Int, sensitivity: Int) {
+    func start(bph: Int, sensitivity: Int, externalInput: Bool = false, autoPickChannel: Bool = false) {
         guard !isRunning else { return }
+
+        self.externalInputMode = externalInput
+        self.autoPickChannel = autoPickChannel
 
         currentRate = nil
         currentBeatError = nil
@@ -420,9 +427,39 @@ class TimegrapherEngine {
         do {
             let session = AVAudioSession.sharedInstance()
             try? session.setActive(false, options: .notifyOthersOnDeactivation)
-            try session.setCategory(.playAndRecord, mode: .measurement, options: [.mixWithOthers, .allowBluetoothA2DP, .defaultToSpeaker])
+            if externalInputMode {
+                // No .defaultToSpeaker — a timegrapher needs no output, and that option
+                // biases the route back to the built-in path, away from a USB interface.
+                try session.setCategory(.playAndRecord, mode: .measurement, options: [.mixWithOthers, .allowBluetoothA2DP])
+            } else {
+                try session.setCategory(.playAndRecord, mode: .measurement, options: [.mixWithOthers, .allowBluetoothA2DP, .defaultToSpeaker])
+            }
             try session.setPreferredSampleRate(48000)
+
+            // Explicitly prefer an external interface (USB/line-in) over the built-in mic.
+            // Without this, iOS default routing keeps the built-in mic and the engine hears
+            // nothing from a contact-mic/piezo plugged into a USB audio interface.
+            if externalInputMode, let inputs = session.availableInputs {
+                let preferred = inputs.first { $0.portType == .usbAudio }
+                    ?? inputs.first { $0.portType == .lineIn }
+                if let p = preferred {
+                    try? session.setPreferredInput(p)
+                    debugLog("[TGINPUT] preferred input → \(p.portName) [\(p.portType.rawValue)]")
+                } else {
+                    debugLog("[TGINPUT] no USB/line-in found; available=\(inputs.map { $0.portType.rawValue })")
+                }
+            }
+
             try session.setActive(true)
+
+            // Observe route changes so a USB interface connected/removed mid-session is picked
+            // up instead of silently keeping a stale route. Only in external mode.
+            if externalInputMode {
+                if let existing = routeChangeObserver { NotificationCenter.default.removeObserver(existing) }
+                routeChangeObserver = NotificationCenter.default.addObserver(
+                    forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main
+                ) { [weak self] note in self?.handleRouteChange(note) }
+            }
 
             audioEngine = AVAudioEngine()
             guard let engine = audioEngine else { return }
@@ -430,6 +467,10 @@ class TimegrapherEngine {
             let inputNode = engine.inputNode
             let format = inputNode.outputFormat(forBus: 0)
             actualSampleRate = format.sampleRate
+            if externalInputMode {
+                let route = session.currentRoute.inputs.map { "\($0.portName)[\($0.portType.rawValue)]" }.joined(separator: ",")
+                debugLog("[TGINPUT] active route inputs=\(route) rate=\(String(format: "%.0f", actualSampleRate)) ch=\(format.channelCount)")
+            }
 
             // Initialize 3 biquad HP filters
             hpFilters = hpCutoffs.map { makeBiquadHP(cutoff: $0, sampleRate: actualSampleRate) }
@@ -459,6 +500,7 @@ class TimegrapherEngine {
 
     func stop() -> Result {
         isRunning = false
+        if let obs = routeChangeObserver { NotificationCenter.default.removeObserver(obs); routeChangeObserver = nil }
         audioEngine?.inputNode.removeTap(onBus: 0)
         audioEngine?.stop()
         audioEngine = nil
@@ -467,14 +509,51 @@ class TimegrapherEngine {
                       tickCount: peakCount, ticks: [])
     }
 
+    deinit {
+        if let obs = routeChangeObserver { NotificationCenter.default.removeObserver(obs) }
+    }
+
+    /// React only to real hardware plug/unplug. We deliberately ignore .override /
+    /// .routeConfigurationChange — our own setPreferredInput/setActive emit those, and
+    /// restarting on them would loop. Restart resets the measurement (expected on a route change).
+    private func handleRouteChange(_ notification: Notification) {
+        guard isRunning, externalInputMode else { return }
+        guard let info = notification.userInfo,
+              let raw = info[AVAudioSessionRouteChangeReasonKey] as? UInt,
+              let reason = AVAudioSession.RouteChangeReason(rawValue: raw) else { return }
+        switch reason {
+        case .newDeviceAvailable, .oldDeviceUnavailable:
+            let bphToRestart = autoBph ? 0 : targetBph
+            let ext = externalInputMode, autoCh = autoPickChannel
+            debugLog("[TGINPUT] route changed (reason=\(raw)) — restarting capture, bph=\(bphToRestart)")
+            _ = stop()
+            start(bph: bphToRestart, sensitivity: 50, externalInput: ext, autoPickChannel: autoCh)
+        default:
+            break
+        }
+    }
+
     // MARK: - Per-sample processing
 
     private func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
-        guard isRunning, let channelData = buffer.floatChannelData?[0] else { return }
+        guard isRunning, let channels = buffer.floatChannelData else { return }
         let frameCount = Int(buffer.frameLength)
 
+        // Default: channel 0. With autoPickChannel, read the loudest channel — the M-Track's
+        // instrument/Hi-Z jack can map to the 2nd USB channel, leaving channel 0 silent.
+        var channelData = channels[0]
         var rms: Float = 0
         vDSP_rmsqv(channelData, 1, &rms, vDSP_Length(frameCount))
+        if autoPickChannel {
+            let channelCount = Int(buffer.format.channelCount)
+            if channelCount > 1 {
+                for c in 1..<channelCount {
+                    var r: Float = 0
+                    vDSP_rmsqv(channels[c], 1, &r, vDSP_Length(frameCount))
+                    if r > rms { rms = r; channelData = channels[c] }
+                }
+            }
+        }
         currentNoiseLevel = min(1.0, Double(rms) * 10)
 
         for i in 0..<frameCount {
