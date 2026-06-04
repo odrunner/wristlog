@@ -4802,7 +4802,6 @@ const FEATURE_FLAGS = {
   // Advanced timegrapher settings shipped to all native users (gated on _tgHasNative),
   // no longer flag-gated. localStorage key 'tg_advanced_settings' is unrelated (stores
   // the user's chosen tuning) and is still in use.
-  tg_external_input: { label: 'Timegrapher: external USB audio input (native, TestFlight)', default: false },
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -5985,7 +5984,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '04.06.38';
+const APP_VERSION = '04.07.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21651,12 +21650,6 @@ function clearUserState() {
 
 // ── Timegrapher / Accuracy (inside watch edit modal) ─────────────────────
 function _tgHasNative() { return !!(window._wrotateNativeTimegrapher || window.webkit?.messageHandlers?.timegrapher); }
-// Feature-flag gated extra fields for the native `start` message. Default off = current
-// behavior ('default' input, channel 0). Toggle 'tg_external_input' (admin dev flags) flips it.
-function _tgInputFlags() {
-  const ext = featureFlag('tg_external_input');
-  return { inputMode: ext ? 'external' : 'default', autoPickChannel: ext };
-}
 function haptic(type) { try { window.webkit.messageHandlers.haptic.postMessage({ type: type || 'light' }); } catch(e) {} }
 function handleSharedImage(base64) {
   if (!currentUser) return;
@@ -21702,7 +21695,7 @@ async function toggleTgListen() {
   if (_tgHasNative()) {
     const bph = parseInt(document.getElementById('tg-bph-select').value) || 28800;
     const sens = parseInt(document.getElementById('msr-sensitivity')?.value) || 50;
-    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: sens, ..._tgInputFlags() });
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: sens });
     _tgListening = true;
     _msrTarget = null;
     const _tlb = document.getElementById('tg-listen-btn'); if (_tlb) _tlb.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
@@ -23114,7 +23107,7 @@ function onMsrBphChange() {
     _resetMsrState(bph);
     _msrListenStart = Date.now();
     _msrPhaseStart = null;
-    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50, ..._tgInputFlags() });
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
     if (_tgHasNative()) {
       const _tgS = tgLoadSettings();
       tgApplySettingsToInputs(_tgS.values);
@@ -23170,7 +23163,7 @@ function toggleMsrListen() {
     console.log('[TG JS] Start button pressed, bph:', bph, '(0=auto), dropdown:', document.getElementById('msr-bph-select').value);
     _tgDebugSessionId = crypto.randomUUID();
     _tgTickDebugBuffer = [];
-    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50, ..._tgInputFlags() });
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
     _msrListening = true;
     _msrTarget = 'measure';
     _msrListenStart = Date.now();
