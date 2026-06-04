@@ -161,11 +161,145 @@ class PiezoEngine {
         emitUpdate()
     }
 
-    // Placeholders satisfied in later tasks (declared here so the file compiles):
+    // --- DSP tunables (piezo-specific) ---
+    private var bpLowHz: Float = 150
+    private var bpHighHz: Float = 5000
+    private var envSmoothing: Float = 0.002     // one-pole time constant (s)
+    private var threshMult: Float = 0.4         // detect at threshold * this
+    private var threshDecay: Float = 0.999
+    private var refractoryFrac: Double = 0.6    // min spacing = expectedInterval * this
+    private var ringTargetRate: Double = 12000
+
+    // --- DSP state ---
+    private var bp = BandpassState()
+    private var ringSubsample = 4
+    private var ringRate: Double = 12000
+    private var env: Float = 0
+    private var envCoeff: Float = 0
+    private var adaptiveThreshold: Float = 0
+    private var calibNoiseFloor: Float = 0
+    private var sampleCounter: Int64 = 0
+    private var ringCounter: Int = 0
+    private var lastBeatRing: Int = -1
+    private var ringSinceBeat: Int = 0
+    private var env1: Float = 0   // previous envelope (for parabolic peak)
+    private var env2: Float = 0   // env two samples ago
+    private var pendingCross = false
+    private var pendingPeak: Float = 0
+    private var calibrating = true
+    private var calibSamples = 0
+    private var calibDuration = 24000
+    private var calibEnergies: [Float] = []
+    private var expectedInterval: Double = 0   // ring samples between beats
+    private var pendingBeats: [Double] = []    // beat times (s) since start, for Task 3
+    private var lastPeakTimeSec: Double = 0
+
+    private struct BandpassState {
+        var b0: Float = 1; var b1: Float = 0; var b2: Float = 0
+        var a1: Float = 0; var a2: Float = 0
+        var x1: Float = 0; var x2: Float = 0; var y1: Float = 0; var y2: Float = 0
+    }
+    private func makeBandpass(low: Float, high: Float, sampleRate: Double) -> BandpassState {
+        // Constant-skirt-gain band-pass biquad (RBJ cookbook), center f0 = sqrt(low*high).
+        let f0 = sqrt(low * high)
+        let bw = max(0.1, log2(Double(high) / Double(low)))   // bandwidth in octaves
+        let w0 = 2 * Float.pi * f0 / Float(sampleRate)
+        let sinW0 = sin(w0), cosW0 = cos(w0)
+        let alpha = sinW0 * Float(sinh(0.5 * log(2.0) * bw * Double(w0) / Double(sinW0)))
+        let a0 = 1 + alpha
+        var s = BandpassState()
+        s.b0 = alpha / a0; s.b1 = 0; s.b2 = -alpha / a0
+        s.a1 = -2 * cosW0 / a0; s.a2 = (1 - alpha) / a0
+        return s
+    }
+    private func applyBandpass(_ s: inout BandpassState, _ x: Float) -> Float {
+        let y = s.b0 * x + s.b1 * s.x1 + s.b2 * s.x2 - s.a1 * s.y1 - s.a2 * s.y2
+        s.x2 = s.x1; s.x1 = x; s.y2 = s.y1; s.y1 = y
+        return y
+    }
+
+    private func configureDSP(sampleRate: Double) {
+        bp = makeBandpass(low: bpLowHz, high: bpHighHz, sampleRate: sampleRate)
+        ringSubsample = max(1, Int(sampleRate / ringTargetRate))
+        ringRate = sampleRate / Double(ringSubsample)
+        envCoeff = exp(-1.0 / (envSmoothing * Float(ringRate)))
+        expectedInterval = ringRate / (Double(targetBph) / 3600.0)
+        calibDuration = Int(ringRate * 2.0)   // 2s calibration
+        env = 0; adaptiveThreshold = 0; calibrating = true; calibSamples = 0
+        calibEnergies.removeAll(keepingCapacity: true)
+        sampleCounter = 0; ringCounter = 0; lastBeatRing = -1; ringSinceBeat = 0
+        pendingCross = false; pendingPeak = 0; env1 = 0; env2 = 0
+        pendingBeats.removeAll(keepingCapacity: true)
+        debugLog("[PZDSP] bp=[\(bpLowHz),\(bpHighHz)] ringRate=\(String(format: "%.0f", ringRate)) expInt=\(String(format: "%.1f", expectedInterval))")
+    }
+
+    private func processDSP(_ data: UnsafeMutablePointer<Float>, frameCount: Int) {
+        var subCounter = 0
+        var subPeak: Float = 0
+        for i in 0..<frameCount {
+            let filtered = abs(applyBandpass(&bp, data[i]))
+            if filtered > subPeak { subPeak = filtered }
+            sampleCounter += 1
+            subCounter += 1
+            if subCounter < ringSubsample { continue }
+            subCounter = 0
+
+            // One-pole envelope on the per-subsample peak
+            env = envCoeff * env + (1 - envCoeff) * subPeak
+            let e = env
+            subPeak = 0
+            ringCounter += 1
+
+            // Calibration: learn noise floor for 2s, accept no beats
+            if calibrating {
+                calibEnergies.append(e); calibSamples += 1
+                if calibSamples >= calibDuration {
+                    calibrating = false
+                    let sorted = calibEnergies.sorted()
+                    calibNoiseFloor = sorted[sorted.count / 2]                  // median
+                    let p98 = sorted[min(sorted.count - 1, Int(Double(sorted.count) * 0.98))]
+                    adaptiveThreshold = max(p98, calibNoiseFloor * 4)
+                    calibEnergies.removeAll(keepingCapacity: false)
+                    debugLog("[PZCALIB] thr=\(String(format: "%.6f", adaptiveThreshold)) floor=\(String(format: "%.6f", calibNoiseFloor))")
+                }
+                env2 = env1; env1 = e
+                continue
+            }
+
+            ringSinceBeat += 1
+            // Track/decay adaptive threshold toward the noise floor
+            if e > adaptiveThreshold { adaptiveThreshold = e }
+            else { adaptiveThreshold = max(calibNoiseFloor * 4, adaptiveThreshold * threshDecay) }
+            let detect = adaptiveThreshold * threshMult
+            let minSpacing = Int(expectedInterval * refractoryFrac)
+
+            // Peak detection: fire on the decline after a threshold crossing
+            var fire = false
+            if e > detect && ringSinceBeat >= minSpacing {
+                if !pendingCross || e > pendingPeak { pendingCross = true; pendingPeak = e }
+                else { pendingCross = false; fire = true }
+            } else if pendingCross && e < pendingPeak {
+                pendingCross = false; fire = true
+            }
+
+            if fire {
+                // Parabolic sub-sample peak using env2(-1), env1(0=peak), e(+1)
+                var frac = 0.0
+                let d = Double(env2) - 2 * Double(env1) + Double(e)
+                if abs(d) > 1e-12 { frac = max(-0.5, min(0.5, 0.5 * (Double(env2) - Double(e)) / d)) }
+                let peakRing = Double(ringCounter) - 1 + frac
+                let beatTimeSec = peakRing / ringRate
+                pendingBeats.append(beatTimeSec)
+                lastPeakTimeSec = beatTimeSec
+                ringSinceBeat = 0
+            }
+            env2 = env1; env1 = e
+        }
+    }
+
+    // Placeholders satisfied in Task 3 (declared here so the file compiles):
     private var currentRate: Double? = nil
     private var currentBeatError: Double? = nil
     private var tickCount: Int = 0
-    private func configureDSP(sampleRate: Double) {}
-    private func processDSP(_ data: UnsafeMutablePointer<Float>, frameCount: Int) {}
     private func emitUpdate() {}
 }
