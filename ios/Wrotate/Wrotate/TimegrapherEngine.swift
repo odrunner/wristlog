@@ -432,9 +432,12 @@ class TimegrapherEngine {
             let session = AVAudioSession.sharedInstance()
             try? session.setActive(false, options: .notifyOthersOnDeactivation)
             if externalInputMode {
-                // No .defaultToSpeaker — a timegrapher needs no output, and that option
-                // biases the route back to the built-in path, away from a USB interface.
-                try session.setCategory(.playAndRecord, mode: .measurement, options: [.mixWithOthers, .allowBluetoothA2DP])
+                // Mode .default (NOT .measurement): measurement mode applies a fixed low
+                // input gain calibrated for the built-in mic, which crushes a USB interface
+                // to near-silence (Voice Memos, which uses a normal record session, gets full
+                // level from the same M-Track). Also drop .mixWithOthers/.defaultToSpeaker to
+                // match a plain capture session as closely as possible.
+                try session.setCategory(.playAndRecord, mode: .default, options: [.allowBluetoothA2DP])
             } else {
                 try session.setCategory(.playAndRecord, mode: .measurement, options: [.mixWithOthers, .allowBluetoothA2DP, .defaultToSpeaker])
             }
@@ -444,17 +447,30 @@ class TimegrapherEngine {
             // Without this, iOS default routing keeps the built-in mic and the engine hears
             // nothing from a contact-mic/piezo plugged into a USB audio interface.
             if externalInputMode, let inputs = session.availableInputs {
+                // iOS enumerates the M-Track as .headsetMic ("MicrophoneWired"), not .usbAudio,
+                // so include it. Match anything that isn't the built-in mic.
                 let preferred = inputs.first { $0.portType == .usbAudio }
                     ?? inputs.first { $0.portType == .lineIn }
+                    ?? inputs.first { $0.portType == .headsetMic }
+                    ?? inputs.first { $0.portType != .builtInMic }
                 if let p = preferred {
                     try? session.setPreferredInput(p)
                     debugLog("[TGINPUT] preferred input → \(p.portName) [\(p.portType.rawValue)]")
                 } else {
-                    debugLog("[TGINPUT] no USB/line-in found; available=\(inputs.map { $0.portType.rawValue })")
+                    debugLog("[TGINPUT] no external input found; available=\(inputs.map { $0.portType.rawValue })")
                 }
             }
 
             try session.setActive(true)
+
+            // Boost input gain to max if iOS allows it for this device (last gain lever).
+            if externalInputMode {
+                debugLog("[TGINPUT] inputGain=\(String(format: "%.2f", session.inputGain)) settable=\(session.isInputGainSettable)")
+                if session.isInputGainSettable {
+                    try? session.setInputGain(1.0)
+                    debugLog("[TGINPUT] setInputGain(1.0) → now \(String(format: "%.2f", session.inputGain))")
+                }
+            }
 
             // Observe route changes so a USB interface connected/removed mid-session is picked
             // up instead of silently keeping a stale route. Only in external mode.
