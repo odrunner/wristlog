@@ -326,12 +326,38 @@ class PiezoEngine {
     private var currentBeatError: Double? = nil
     private var tickCount: Int = 0
 
+    // --- Auto-BPH lock ---
+    private var autoBphLocked = false
+    private var rawIntervals: [Double] = []   // ring-sample intervals, pre-lock
+
+    private func tryLockBph(intervalRing: Double) {
+        rawIntervals.append(intervalRing)
+        guard rawIntervals.count >= 40 else { return }
+        // For each candidate, expected ring interval; score = fraction of intervals within 8%.
+        var bestBph = targetBph, bestScore = -1.0
+        for cand in PiezoEngine.bphCandidates {
+            let exp = ringRate / (Double(cand) / 3600.0)
+            let hits = rawIntervals.filter { abs($0 / exp - 1.0) < 0.08 }.count
+            let score = Double(hits) / Double(rawIntervals.count)
+            if score > bestScore { bestScore = score; bestBph = cand }
+        }
+        if bestScore > 0.5 {
+            targetBph = bestBph; expectedInterval = ringRate / (Double(bestBph) / 3600.0)
+            autoBphLocked = true
+            debugLog("[PZAUTOBPH] locked \(bestBph) score=\(String(format: "%.2f", bestScore))")
+        }
+    }
+
     private func consumeBeat(timeSec t: Double) {
         defer { prevBeatTime = t }
         guard prevBeatTime >= 0 else {
             debugLog("[PZBEAT FIRST @ \(String(format: "%.2f", t))s]"); return
         }
         let intervalRing = (t - prevBeatTime) * ringRate
+        if autoBph && !autoBphLocked {
+            tryLockBph(intervalRing: intervalRing)
+            if !autoBphLocked { return }   // don't regress until BPH is known
+        }
         let ratio = intervalRing / expectedInterval
         if ratio < 1 - outlierMargin || ratio > 1 + outlierMargin {
             debugLog("[PZBEAT SKIP @ \(String(format: "%.2f", t))s] ratio=\(String(format: "%.3f", ratio)) OUTLIER")
