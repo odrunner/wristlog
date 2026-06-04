@@ -125,6 +125,36 @@
       outdoor: 'Outdoor', dinner: 'Dinner', unspecified: '',
     };
 
+    // photo_url may be a single URL or a JSON array (multi-image / video posts).
+    // Mirrors the main app's parsePhotoUrl / isVideoUrl / posterUrlFor helpers.
+    function parsePhotoUrl(photoUrl) {
+      if (!photoUrl) return [];
+      if (photoUrl.startsWith('[')) {
+        try { return JSON.parse(photoUrl); } catch (e) { return [photoUrl]; }
+      }
+      return [photoUrl];
+    }
+    function isVideoUrl(url) {
+      if (!url) return false;
+      const path = (url.split('?')[0] || '').toLowerCase();
+      return path.endsWith('.mp4') || path.endsWith('.webm') || path.endsWith('.mov') || path.endsWith('.m3u8');
+    }
+    function posterUrlFor(videoUrl) {
+      if (!videoUrl) return '';
+      const [base, query] = videoUrl.split('?');
+      const posterBase = base.replace(/\.(mp4|webm|mov)$/i, '_poster.jpg');
+      return query ? `${posterBase}?${query}` : posterBase;
+    }
+    // Pick a displayable still image: first non-video URL (an extracted frame is
+    // stored alongside videos), else the first video's poster, else nothing.
+    function displayImageFor(photoUrl) {
+      const urls = parsePhotoUrl(photoUrl).filter(Boolean);
+      if (!urls.length) return '';
+      const firstImage = urls.find(u => !isVideoUrl(u));
+      if (firstImage) return firstImage;
+      return posterUrlFor(urls[0]);
+    }
+
     function renderError(msg) {
       document.getElementById('main-content').innerHTML = `
         <div class="state-wrap">
@@ -140,10 +170,13 @@
       const watchName = watch ? (watch.brand || '') + ' ' + (watch.name || '') : '';
       const trimmedWatch = watchName.trim();
       const caption = log.notes || '';
-      const photoUrl = log.photo_url || '';
-      const useCaseLabel = log.use_case ? (useCaseLabels[log.use_case] || log.use_case) : '';
-      // Hide "unspecified" label
-      const visibleUseCase = useCaseLabel === '' ? '' : useCaseLabel;
+      const photoUrl = displayImageFor(log.photo_url);
+      // Known use cases map to a label; 'unspecified' maps to '' (hidden). Use
+      // hasOwnProperty so the empty-string label for 'unspecified' isn't lost to
+      // a `|| log.use_case` fallback (which would print the raw "unspecified").
+      const visibleUseCase = (log.use_case && useCaseLabels.hasOwnProperty(log.use_case))
+        ? useCaseLabels[log.use_case]
+        : (log.use_case || '');
 
       let dateLabel = '';
       if (log.date) {

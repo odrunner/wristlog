@@ -1285,6 +1285,18 @@ export function posterUrlFor(videoUrl) {
   return query ? `${posterBase}?${query}` : posterBase;
 }
 
+// Pick a displayable still image from a post's photo_url (single URL or JSON
+// array of mixed images/videos): first non-video URL (an extracted frame is
+// stored alongside videos), else the first video's poster, else nothing.
+// Used by the shared-post viewer (/p/) to render a still preview.
+export function displayImageFor(photoUrl) {
+  const urls = parsePhotoUrl(photoUrl).filter(Boolean);
+  if (!urls.length) return '';
+  const firstImage = urls.find(u => !isVideoUrl(u));
+  if (firstImage) return firstImage;
+  return posterUrlFor(urls[0]);
+}
+
 // ══════════════════════════════════════════
 //  DEVICE CLASSIFICATION
 // ══════════════════════════════════════════
