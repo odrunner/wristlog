@@ -114,7 +114,9 @@ class TimegrapherBridge {
                 envSmoothing: body["envSmoothing"] as? Double, threshMult: body["threshMult"] as? Double,
                 threshDecay: body["threshDecay"] as? Double, refractoryFrac: body["refractoryFrac"] as? Double,
                 outlierMargin: body["outlierMargin"] as? Double,
-                searchWin: body["searchWin"] as? Double, smoothMs: body["smoothMs"] as? Double)
+                searchWin: body["searchWin"] as? Double, smoothMs: body["smoothMs"] as? Double,
+                regSkip: body["regSkip"] as? Int, stabThresh: body["stabThresh"] as? Double,
+                stabWindow: body["stabWindow"] as? Double, wallMin: body["wallMin"] as? Double)
 
         default:
             print("[TG BRIDGE] unknown action: \(action)")

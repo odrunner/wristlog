@@ -49,7 +49,8 @@ class PiezoEngine {
 
     func setTuning(bpLow: Double?, bpHigh: Double?, envSmoothing: Double?, threshMult: Double?,
                    threshDecay: Double?, refractoryFrac: Double?, outlierMargin: Double?,
-                   searchWin: Double? = nil, smoothMs: Double? = nil) {
+                   searchWin: Double? = nil, smoothMs: Double? = nil,
+                   regSkip: Int? = nil, stabThresh: Double? = nil, stabWindow: Double? = nil, wallMin: Double? = nil) {
         if let v = bpLow { bpLowHz = Float(v) }
         if let v = bpHigh { bpHighHz = Float(v) }
         if let v = envSmoothing { self.envSmoothing = Float(v) }
@@ -58,9 +59,13 @@ class PiezoEngine {
         if let v = refractoryFrac { self.refractoryFrac = v }
         if let v = outlierMargin { self.outlierMargin = v }
         if let v = searchWin { searchWinFrac = v }
+        if let v = regSkip { regSkipPairs = v }
+        if let v = stabThresh { stabilityGain = v; stabilityLose = v * 1.7 }
+        if let v = stabWindow { stabilityWindow = v }
+        if let v = wallMin { self.wallMin = v }
         // Smoothing (ms) takes effect live (envCoeff recomputed against the live ring rate).
         if let v = smoothMs, ringRate > 0 { self.envSmoothing = Float(v / 1000.0); envCoeff = exp(-1.0 / (self.envSmoothing * Float(ringRate))) }
-        debugLog("[PZTUNE] bp=[\(bpLowHz),\(bpHighHz)] smoothMs=\(smoothMs ?? Double(self.envSmoothing*1000)) searchWin=\(searchWinFrac)")
+        debugLog("[PZTUNE] bp=[\(bpLowHz),\(bpHighHz)] smoothMs=\(smoothMs ?? Double(self.envSmoothing*1000)) searchWin=\(searchWinFrac) regSkip=\(regSkipPairs) stabThresh=\(stabilityGain) stabWin=\(stabilityWindow) wallMin=\(self.wallMin)")
     }
 
     func start(bph: Int, autoPickChannel: Bool = true) {
@@ -308,6 +313,7 @@ class PiezoEngine {
         // Reset ALL model/regression state so measurements don't accumulate across runs
         // (the engine instance persists in the bridge).
         prevBeatTime = -1; regPoints.removeAll(keepingCapacity: true); cumPairDevMs = 0
+        totalPairsAccepted = 0; lastRateLogMs = 0
         pairPhase = 0; pairAccum = 0; pendingFirstBeatTime = 0
         recentBeatDevs.removeAll(keepingCapacity: true); knownBeatError = 0
         smoothedRate = nil; rateHistory.removeAll(keepingCapacity: true); wasStable = false
@@ -480,9 +486,13 @@ class PiezoEngine {
     private var pendingDots: [TickDot] = []
     private let regMinN = 10
     private var outlierMargin = 0.2
-    private let stabilityWindow = 15.0
-    private let stabilityGain = 3.0, stabilityLose = 5.0
-    private let wallMin = 20.0
+    private var stabilityWindow = 15.0
+    private var stabilityGain = 3.0
+    private var stabilityLose = 5.0
+    private var wallMin = 20.0
+    private var regSkipPairs = 10        // skip the settling transient from the rate fit
+    private var totalPairsAccepted = 0
+    private var lastRateLogMs: Double = 0
     private var lastEmitMs: Double = 0
 
     private var currentRate: Double? = nil
@@ -538,6 +548,9 @@ class PiezoEngine {
         let pairExpected = expectedInterval * 2.0
         let pairDevMs = (pairExpected - pairAccum) / ringRate * 1000.0
         pairAccum = 0; pairPhase = 0
+        totalPairsAccepted += 1
+        // Skip the settling transient (first N pairs) so it doesn't contaminate the rate fit.
+        if totalPairsAccepted <= regSkipPairs { return }
         cumPairDevMs += pairDevMs
         regPoints.append((x: t, y: cumPairDevMs))
         tickCount += 2
@@ -587,6 +600,13 @@ class PiezoEngine {
         wasStable = isStable
         currentRate = rateForUpdate
         let conf = regPoints.count >= 5 ? min(0.99, Double(regPoints.count) / 250.0 + 0.3) : 0.0
+
+        if now - lastRateLogMs > 3000 {
+            lastRateLogMs = now
+            let spread = rateHistory.filter { wallElapsed - $0.t <= stabilityWindow }.map(\.r)
+            let sp = spread.count >= 2 ? (spread.max()! - spread.min()!) : 0
+            debugLog("[PZRATE @ \(String(format: "%.0f", wallElapsed))s] rate=\(rateForUpdate != nil ? String(format: "%+.1f", rateForUpdate!) : "nil") stable=\(isStable) regN=\(regPoints.count) spread=\(String(format: "%.1f", sp)) sig=\(String(format: "%.2f", tickSignalLevel))")
+        }
 
         let dots = pendingDots; pendingDots.removeAll(keepingCapacity: true)
         let msgs = debugMessages; debugMessages.removeAll(keepingCapacity: true)
