@@ -8,6 +8,7 @@ class TimegrapherBridge {
     private let engine = TimegrapherEngine()
     private let piezo = PiezoEngine()
     private var usingPiezo = false
+    private var piezoBph = 0
     private weak var webView: WKWebView?
     private var updateTimer: Timer?
 
@@ -197,6 +198,7 @@ class TimegrapherBridge {
     }
 
     private func startPiezo(bph: Int) {
+        piezoBph = bph
         AVAudioApplication.requestRecordPermission { [weak self] granted in
             DispatchQueue.main.async {
                 guard let self = self else { return }
@@ -224,6 +226,9 @@ class TimegrapherBridge {
     private func stopPiezo() {
         UIApplication.shared.isIdleTimerDisabled = false
         let r = piezo.stop()
+        if let cap = piezo.exportRawCapture() {
+            sendToJS(["event": "rawCapture", "b64": cap.b64, "rate": cap.rate, "n": cap.n, "bph": piezoBph])
+        }
         sendToJS(["event": "stopped", "rate": r.rate as Any, "beatError": r.beatError as Any, "tickCount": r.tickCount])
     }
 

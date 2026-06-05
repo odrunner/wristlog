@@ -169,8 +169,31 @@ class PiezoEngine {
             diagChSumRms = [Float](repeating: 0, count: channelCount); diagBufCount = 0
         }
 
+        // Accumulate decimated raw samples for offline analysis
+        if rawCapture.count < rawCaptureCap {
+            for i in 0..<frameCount {
+                rawDecimCounter += 1
+                if rawDecimCounter >= rawDecim {
+                    rawDecimCounter = 0
+                    if rawCapture.count < rawCaptureCap { rawCapture.append(channelData[i]) }
+                }
+            }
+        }
+
         processDSP(channelData, frameCount: frameCount)
         emitUpdate()
+    }
+
+    /// Base64-encoded little-endian Int16 PCM of the decimated raw capture, for offline sweeps.
+    func exportRawCapture() -> (b64: String, rate: Double, n: Int)? {
+        guard !rawCapture.isEmpty else { return nil }
+        var pcm = [Int16](repeating: 0, count: rawCapture.count)
+        for i in 0..<rawCapture.count {
+            let v = max(-1.0, min(1.0, rawCapture[i]))
+            pcm[i] = Int16(v * 32767.0)
+        }
+        let data = pcm.withUnsafeBytes { Data($0) }
+        return (data.base64EncodedString(), rawCaptureRate, rawCapture.count)
     }
 
     // --- DSP tunables (piezo-specific) ---
@@ -208,6 +231,12 @@ class PiezoEngine {
     private var pzDbgCounter = 0
     private var pzDbgMaxE: Float = 0
     private var pzDbgBeats = 0
+    // Raw capture for offline parameter sweeps (decimated to ~24kHz, capped ~12s).
+    private var rawCapture: [Float] = []
+    private var rawCaptureRate: Double = 24000
+    private var rawCaptureCap = 0
+    private var rawDecim = 2
+    private var rawDecimCounter = 0
 
     private struct BandpassState {
         var b0: Float = 1; var b1: Float = 0; var b2: Float = 0
@@ -246,6 +275,10 @@ class PiezoEngine {
         pendingCross = false; pendingPeak = 0; env1 = 0; env2 = 0
         pendingBeats.removeAll(keepingCapacity: true)
         pzDbgCounter = 0; pzDbgMaxE = 0; pzDbgBeats = 0
+        rawDecim = max(1, Int((sampleRate / 24000).rounded()))
+        rawCaptureRate = sampleRate / Double(rawDecim)
+        rawCaptureCap = Int(rawCaptureRate * 12)   // ~12s
+        rawCapture.removeAll(keepingCapacity: true); rawDecimCounter = 0
         // Reset ALL model/regression state so measurements don't accumulate across runs
         // (the engine instance persists in the bridge).
         prevBeatTime = -1; regPoints.removeAll(keepingCapacity: true); cumPairDevMs = 0

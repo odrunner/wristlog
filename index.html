@@ -5997,7 +5997,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.06.56';
+const APP_VERSION = '05.07.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21936,6 +21936,17 @@ function tgAdvancedSummaryFields(s) {
   return { advanced_used: !isDefault, preset: s.preset || null, settings: v };
 }
 window._tgNativeCallback = function(data) {
+  // Raw piezo audio capture → upload for offline parameter sweeps (admin testing).
+  if (data.event === 'rawCapture' && data.b64) {
+    if (localStorage.getItem('pz_capture') === '0') return; // opt-out, no UI
+    if (!_tgDebugSessionId) _tgDebugSessionId = crypto.randomUUID();
+    db.from('piezo_raw_captures').insert({
+      session_id: _tgDebugSessionId, bph: data.bph || null,
+      sample_rate: data.rate, n_samples: data.n, samples_b64: data.b64
+    }).then(() => { console.log('[PZ] raw capture uploaded', data.n, 'samples @', data.rate); })
+      .catch(e => console.log('[PZ] raw capture upload failed', e));
+    return;
+  }
   // Accumulate tick debug messages and flush to Supabase every ~3 seconds
   if (data.event === 'update' && data.debugMessages && data.debugMessages.length > 0) {
     if (!_tgDebugSessionId) _tgDebugSessionId = crypto.randomUUID();
