@@ -5990,7 +5990,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '04.17.42';
+const APP_VERSION = '04.19.08';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21678,6 +21678,19 @@ function initTgSourceSelector() {
   }
 }
 window.initTgSourceSelector = initTgSourceSelector;
+// Send piezo DSP tuning after a piezo start (no-op for mic). Knobs are localStorage-backed
+// so the algorithm can be iterated live: e.g. localStorage.setItem('pz_bp_low','100').
+function sendPiezoTuning() {
+  if (!_tgHasNative() || _tgSource() !== 'piezo') return;
+  const n = (k, d) => { const v = Number(localStorage.getItem(k)); return Number.isFinite(v) && v > 0 ? v : d; };
+  window.webkit.messageHandlers.timegrapher.postMessage({
+    action: 'tuningPiezo',
+    bpLow: n('pz_bp_low', 150), bpHigh: n('pz_bp_high', 5000),
+    envSmoothing: n('pz_env', 0.002), threshMult: n('pz_thresh_mult', 0.4),
+    threshDecay: n('pz_thresh_decay', 0.999), refractoryFrac: n('pz_refrac', 0.6),
+    outlierMargin: n('pz_outlier', 0.2)
+  });
+}
 function haptic(type) { try { window.webkit.messageHandlers.haptic.postMessage({ type: type || 'light' }); } catch(e) {} }
 function handleSharedImage(base64) {
   if (!currentUser) return;
@@ -23142,6 +23155,7 @@ function onMsrBphChange() {
       _msrActiveSettings = _tgS;
     }
     setTimeout(() => sendMsrTuning(), 200);
+    setTimeout(() => sendPiezoTuning(), 200);
   }
 }
 
@@ -23215,6 +23229,7 @@ function toggleMsrListen() {
       _msrActiveSettings = null;
     }
     setTimeout(() => sendMsrTuning(), 200);
+    setTimeout(() => sendPiezoTuning(), 200);
     startTuningPoll();
     // Hide idle overlay, swap button to stop state
     const idleOv = document.getElementById('msr-idle-overlay');
