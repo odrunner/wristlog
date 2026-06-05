@@ -205,6 +205,9 @@ class PiezoEngine {
     private var expectedInterval: Double = 0   // ring samples between beats
     private var pendingBeats: [Double] = []    // beat times (s) since start, for Task 3
     private var lastPeakTimeSec: Double = 0
+    private var pzDbgCounter = 0
+    private var pzDbgMaxE: Float = 0
+    private var pzDbgBeats = 0
 
     private struct BandpassState {
         var b0: Float = 1; var b1: Float = 0; var b2: Float = 0
@@ -242,6 +245,7 @@ class PiezoEngine {
         sampleCounter = 0; ringCounter = 0; lastBeatRing = -1; ringSinceBeat = 0
         pendingCross = false; pendingPeak = 0; env1 = 0; env2 = 0
         pendingBeats.removeAll(keepingCapacity: true)
+        pzDbgCounter = 0; pzDbgMaxE = 0; pzDbgBeats = 0
         debugLog("[PZDSP] bp=[\(bpLowHz),\(bpHighHz)] ringRate=\(String(format: "%.0f", ringRate)) expInt=\(String(format: "%.1f", expectedInterval))")
     }
 
@@ -256,9 +260,9 @@ class PiezoEngine {
             if subCounter < ringSubsample { continue }
             subCounter = 0
 
-            // One-pole envelope on the per-subsample peak
-            env = envCoeff * env + (1 - envCoeff) * subPeak
-            let e = env
+            // Threshold the per-subsample band-passed peak directly. (One-pole smoothing
+            // smears sub-millisecond tick impulses down to the noise floor — do NOT do that.)
+            let e = subPeak
             subPeak = 0
             ringCounter += 1
 
@@ -285,6 +289,13 @@ class PiezoEngine {
             let detect = adaptiveThreshold * threshMult
             let minSpacing = Int(expectedInterval * refractoryFrac)
 
+            if e > pzDbgMaxE { pzDbgMaxE = e }
+            pzDbgCounter += 1
+            if pzDbgCounter >= Int(ringRate) {
+                debugLog("[PZDBG] maxE=\(String(format: "%.6f", pzDbgMaxE)) thr=\(String(format: "%.6f", adaptiveThreshold)) detect=\(String(format: "%.6f", detect)) floor=\(String(format: "%.6f", calibNoiseFloor)) beats=\(pzDbgBeats)")
+                pzDbgMaxE = 0; pzDbgBeats = 0; pzDbgCounter = 0
+            }
+
             // Peak detection: fire on the decline after a threshold crossing
             var fire = false
             if e > detect && ringSinceBeat >= minSpacing {
@@ -304,6 +315,7 @@ class PiezoEngine {
                 pendingBeats.append(beatTimeSec)
                 lastPeakTimeSec = beatTimeSec
                 ringSinceBeat = 0
+                pzDbgBeats += 1
             }
             env2 = env1; env1 = e
         }
