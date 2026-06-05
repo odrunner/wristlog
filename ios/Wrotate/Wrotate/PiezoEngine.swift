@@ -50,7 +50,8 @@ class PiezoEngine {
     func setTuning(bpLow: Double?, bpHigh: Double?, envSmoothing: Double?, threshMult: Double?,
                    threshDecay: Double?, refractoryFrac: Double?, outlierMargin: Double?,
                    searchWin: Double? = nil, smoothMs: Double? = nil,
-                   regSkip: Int? = nil, stabThresh: Double? = nil, stabWindow: Double? = nil, wallMin: Double? = nil) {
+                   regSkip: Int? = nil, stabThresh: Double? = nil, stabWindow: Double? = nil, wallMin: Double? = nil,
+                   rateWindow: Double? = nil) {
         if let v = bpLow { bpLowHz = Float(v) }
         if let v = bpHigh { bpHighHz = Float(v) }
         if let v = envSmoothing { self.envSmoothing = Float(v) }
@@ -63,6 +64,7 @@ class PiezoEngine {
         if let v = stabThresh { stabilityGain = v; stabilityLose = v * 1.7 }
         if let v = stabWindow { stabilityWindow = v }
         if let v = wallMin { self.wallMin = v }
+        if let v = rateWindow { rateWindowSec = v }
         // Smoothing (ms) takes effect live (envCoeff recomputed against the live ring rate).
         if let v = smoothMs, ringRate > 0 { self.envSmoothing = Float(v / 1000.0); envCoeff = exp(-1.0 / (self.envSmoothing * Float(ringRate))) }
         debugLog("[PZTUNE] bp=[\(bpLowHz),\(bpHighHz)] smoothMs=\(smoothMs ?? Double(self.envSmoothing*1000)) searchWin=\(searchWinFrac) regSkip=\(regSkipPairs) stabThresh=\(stabilityGain) stabWin=\(stabilityWindow) wallMin=\(self.wallMin)")
@@ -491,6 +493,7 @@ class PiezoEngine {
     private var stabilityLose = 5.0
     private var wallMin = 20.0
     private var regSkipPairs = 10        // skip the settling transient from the rate fit
+    private var rateWindowSec = 20.0     // trailing window for the rate fit (ignores early offset)
     private var totalPairsAccepted = 0
     private var lastRateLogMs: Double = 0
     private var lastEmitMs: Double = 0
@@ -563,9 +566,13 @@ class PiezoEngine {
     }
 
     private func theilSen() -> Double? {
-        let n = regPoints.count
+        guard regPoints.count >= regMinN, let lastX = regPoints.last?.x else { return nil }
+        // Trailing window: the rate fit ignores the one-time start-up offset transient.
+        let cutoff = lastX - rateWindowSec
+        let recent = regPoints.filter { $0.x >= cutoff }
+        let n = recent.count
         guard n >= regMinN else { return nil }
-        let pts: [(x: Double, y: Double)] = n > 120 ? (0..<120).map { regPoints[Int(Double($0) * Double(n - 1) / 119.0)] } : regPoints
+        let pts: [(x: Double, y: Double)] = n > 120 ? (0..<120).map { recent[Int(Double($0) * Double(n - 1) / 119.0)] } : recent
         var slopes: [Double] = []
         for i in 0..<pts.count { for j in (i+1)..<pts.count {
             let dx = pts[j].x - pts[i].x; if dx > 0.01 { slopes.append((pts[j].y - pts[i].y) / dx) }

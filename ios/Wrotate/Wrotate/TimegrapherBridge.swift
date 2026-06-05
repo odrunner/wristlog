@@ -116,7 +116,8 @@ class TimegrapherBridge {
                 outlierMargin: body["outlierMargin"] as? Double,
                 searchWin: body["searchWin"] as? Double, smoothMs: body["smoothMs"] as? Double,
                 regSkip: body["regSkip"] as? Int, stabThresh: body["stabThresh"] as? Double,
-                stabWindow: body["stabWindow"] as? Double, wallMin: body["wallMin"] as? Double)
+                stabWindow: body["stabWindow"] as? Double, wallMin: body["wallMin"] as? Double,
+                rateWindow: body["rateWindow"] as? Double)
 
         default:
             print("[TG BRIDGE] unknown action: \(action)")
