@@ -243,6 +243,13 @@ class PiezoEngine {
     private var nextPredicted: Double = 0
     private var lastBeatRingF: Double = -1
     private var autoCollectUntil = 0
+    // Signal meter = autocorrelation at the beat rate (shows real tick/tock periodicity, not raw
+    // loudness). A 1kHz-decimated envelope over ~4s.
+    private var meterBuf = [Float](repeating: 0, count: 4096)
+    private let meterBufN = 4096
+    private var meterIdx = 0
+    private var meterSub = 0
+    private var tickSignalLevel: Double = 0
     private var pzDbgCounter = 0
     private var pzDbgMaxE: Float = 0
     private var pzDbgBeats = 0
@@ -292,6 +299,8 @@ class PiezoEngine {
         pzDbgCounter = 0; pzDbgMaxE = 0; pzDbgBeats = 0
         phaseBootstrapped = false; phaseStart = -1; nextPredicted = 0; lastBeatRingF = -1; autoCollectUntil = 0
         for i in 0..<envBufN { envBuf[i] = 0 }
+        meterIdx = 0; meterSub = 0; tickSignalLevel = 0
+        for i in 0..<meterBufN { meterBuf[i] = 0 }
         rawDecim = max(1, Int((sampleRate / 24000).rounded()))
         rawCaptureRate = sampleRate / Double(rawDecim)
         rawCaptureCap = Int(rawCaptureRate * 12)   // ~12s
@@ -341,10 +350,15 @@ class PiezoEngine {
                 continue
             }
 
+            // Decimate envelope to ~1kHz for the periodicity meter
+            meterSub += 1
+            if meterSub >= 12 { meterSub = 0; meterBuf[meterIdx % meterBufN] = e; meterIdx += 1 }
+
             if e > pzDbgMaxE { pzDbgMaxE = e }
             pzDbgCounter += 1
             if pzDbgCounter >= Int(ringRate) {
-                debugLog("[PZDBG] maxE=\(String(format: "%.6f", pzDbgMaxE)) floor=\(String(format: "%.6f", calibNoiseFloor)) beats=\(pzDbgBeats) bph=\(targetBph)")
+                tickSignalLevel = beatSignalStrength()
+                debugLog("[PZDBG] maxE=\(String(format: "%.6f", pzDbgMaxE)) floor=\(String(format: "%.6f", calibNoiseFloor)) beats=\(pzDbgBeats) sig=\(String(format: "%.2f", tickSignalLevel)) bph=\(targetBph)")
                 pzDbgMaxE = 0; pzDbgBeats = 0; pzDbgCounter = 0
             }
 
@@ -398,6 +412,27 @@ class PiezoEngine {
         var i = lo
         while i <= hi { let v = envAt(i); if v > best { best = v; bi = i }; i += 1 }
         return bi
+    }
+    /// Normalized autocorrelation of the decimated envelope at the beat-rate lag → 0..1 meter.
+    /// High only when there's a real periodic tick/tock, not for arbitrary loud noise.
+    private func beatSignalStrength() -> Double {
+        let lag = Int((1000.0 / (Double(targetBph) / 3600.0)).rounded())  // beat period in ms (≈ms @1kHz)
+        let avail = min(meterIdx, meterBufN)
+        guard lag > 10, avail > lag + 200 else { return 0 }
+        let win = avail - lag
+        let end = meterIdx
+        func mAt(_ i: Int) -> Float { return meterBuf[((i % meterBufN) + meterBufN) % meterBufN] }
+        var mean = 0.0
+        for k in 0..<avail { mean += Double(mAt(end - avail + k)) }
+        mean /= Double(avail)
+        var num = 0.0, den = 0.0
+        for k in 0..<win {
+            let a = Double(mAt(end - avail + k)) - mean
+            let b = Double(mAt(end - avail + k + lag)) - mean
+            num += a * b; den += a * a
+        }
+        let ac = den > 0 ? num / den : 0
+        return max(0, min(1, ac / 0.2))
     }
     /// Auto-BPH: pick the standard BPH whose period best autocorrelates the recent envelope.
     private func lockBphAutocorr(endRing: Int) {
@@ -554,7 +589,7 @@ class PiezoEngine {
         let msgs = debugMessages; debugMessages.removeAll(keepingCapacity: true)
         let update = Update(
             rate: rateForUpdate, beatError: currentBeatError, tickCount: tickCount,
-            confidence: conf, noiseLevel: currentNoiseLevel,
+            confidence: conf, noiseLevel: tickSignalLevel,
             detectedIntervalMs: expectedInterval > 0 ? (expectedInterval / ringRate * 1000.0) : 0,
             detectedBph: autoBph ? (smoothedRate != nil ? targetBph : nil) : targetBph,
             cumulativeOffset: cumPairDevMs, elapsedSec: wallElapsed,
