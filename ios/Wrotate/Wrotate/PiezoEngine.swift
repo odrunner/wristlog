@@ -432,7 +432,10 @@ class PiezoEngine {
             num += a * b; den += a * a
         }
         let ac = den > 0 ? num / den : 0
-        return max(0, min(1, ac / 0.2))
+        let periodicity = max(0, min(1, ac / 0.2))
+        // Strength: how far the beat peaks rise above the noise floor (responds to gain/coupling).
+        let snr = calibNoiseFloor > 0 ? max(0, min(1, (Double(pzDbgMaxE / calibNoiseFloor) - 1.0) / 4.0)) : 0
+        return periodicity * snr   // strong only when periodic AND well above noise
     }
     /// Auto-BPH: pick the standard BPH whose period best autocorrelates the recent envelope.
     private func lockBphAutocorr(endRing: Int) {
