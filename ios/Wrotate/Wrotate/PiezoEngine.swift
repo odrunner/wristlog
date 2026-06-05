@@ -246,6 +246,15 @@ class PiezoEngine {
         pendingCross = false; pendingPeak = 0; env1 = 0; env2 = 0
         pendingBeats.removeAll(keepingCapacity: true)
         pzDbgCounter = 0; pzDbgMaxE = 0; pzDbgBeats = 0
+        // Reset ALL model/regression state so measurements don't accumulate across runs
+        // (the engine instance persists in the bridge).
+        prevBeatTime = -1; regPoints.removeAll(keepingCapacity: true); cumPairDevMs = 0
+        pairPhase = 0; pairAccum = 0; pendingFirstBeatTime = 0
+        recentBeatDevs.removeAll(keepingCapacity: true); knownBeatError = 0
+        smoothedRate = nil; rateHistory.removeAll(keepingCapacity: true); wasStable = false
+        pendingDots.removeAll(keepingCapacity: true); lastEmitMs = 0
+        currentRate = nil; currentBeatError = nil; tickCount = 0
+        autoBphLocked = false; rawIntervals.removeAll(keepingCapacity: true)
         debugLog("[PZDSP] bp=[\(bpLowHz),\(bpHighHz)] ringRate=\(String(format: "%.0f", ringRate)) expInt=\(String(format: "%.1f", expectedInterval))")
     }
 
