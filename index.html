@@ -4802,6 +4802,7 @@ const FEATURE_FLAGS = {
   // Advanced timegrapher settings shipped to all native users (gated on _tgHasNative),
   // no longer flag-gated. localStorage key 'tg_advanced_settings' is unrelated (stores
   // the user's chosen tuning) and is still in use.
+  tg_piezo: { label: 'Timegrapher: piezo input source (admin)', default: false },
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -5984,7 +5985,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '04.16.39';
+const APP_VERSION = '04.17.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21650,6 +21651,12 @@ function clearUserState() {
 
 // ── Timegrapher / Accuracy (inside watch edit modal) ─────────────────────
 function _tgHasNative() { return !!(window._wrotateNativeTimegrapher || window.webkit?.messageHandlers?.timegrapher); }
+// Returns the start-message source. 'piezo' only when the tg_piezo flag is on AND
+// the user picked Piezo; else 'mic' (unchanged behavior for everyone else).
+function _tgSource() {
+  if (!featureFlag('tg_piezo')) return 'mic';
+  return (localStorage.getItem('tg_input_source') === 'piezo') ? 'piezo' : 'mic';
+}
 function haptic(type) { try { window.webkit.messageHandlers.haptic.postMessage({ type: type || 'light' }); } catch(e) {} }
 function handleSharedImage(base64) {
   if (!currentUser) return;
@@ -21695,7 +21702,7 @@ async function toggleTgListen() {
   if (_tgHasNative()) {
     const bph = parseInt(document.getElementById('tg-bph-select').value) || 28800;
     const sens = parseInt(document.getElementById('msr-sensitivity')?.value) || 50;
-    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: sens });
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: sens, source: _tgSource() });
     _tgListening = true;
     _msrTarget = null;
     const _tlb = document.getElementById('tg-listen-btn'); if (_tlb) _tlb.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
@@ -23107,7 +23114,7 @@ function onMsrBphChange() {
     _resetMsrState(bph);
     _msrListenStart = Date.now();
     _msrPhaseStart = null;
-    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50, source: _tgSource() });
     if (_tgHasNative()) {
       const _tgS = tgLoadSettings();
       tgApplySettingsToInputs(_tgS.values);
@@ -23163,7 +23170,7 @@ function toggleMsrListen() {
     console.log('[TG JS] Start button pressed, bph:', bph, '(0=auto), dropdown:', document.getElementById('msr-bph-select').value);
     _tgDebugSessionId = crypto.randomUUID();
     _tgTickDebugBuffer = [];
-    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50 });
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50, source: _tgSource() });
     _msrListening = true;
     _msrTarget = 'measure';
     _msrListenStart = Date.now();
