@@ -3414,6 +3414,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <option value="36000">36,000</option>
         </select>
       </div>
+      <!-- Input source (admin-gated by tg_piezo; hidden by default) -->
+      <select id="tg-input-source" onchange="onTgSourceChange()" style="display:none;width:100%;margin-bottom:.75rem;padding:.45rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+        <option value="mic">iPhone mic</option>
+        <option value="piezo">Piezo (contact)</option>
+      </select>
       <!-- Instrument panel -->
       <div id="msr-instrument" style="background:#0a1a12;border-radius:10px;overflow:hidden;margin-bottom:.75rem;">
         <!-- Chart with HUD overlay -->
@@ -5985,7 +5990,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '04.17.31';
+const APP_VERSION = '04.17.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13114,6 +13119,7 @@ function nav(btn) {
       maybeShowMsrHelp();
       const gear = document.getElementById('msr-settings-gear');
       if (gear) gear.style.display = _tgHasNative() ? '' : 'none';
+      initTgSourceSelector();
     }
   }
 }
@@ -21657,6 +21663,21 @@ function _tgSource() {
   if (!featureFlag('tg_piezo')) return 'mic';
   return (localStorage.getItem('tg_input_source') === 'piezo') ? 'piezo' : 'mic';
 }
+function onTgSourceChange() {
+  const v = document.getElementById('tg-input-source').value;
+  localStorage.setItem('tg_input_source', v);
+}
+function initTgSourceSelector() {
+  const el = document.getElementById('tg-input-source');
+  if (!el) return;
+  if (featureFlag('tg_piezo')) {
+    el.style.display = '';
+    el.value = localStorage.getItem('tg_input_source') || 'mic';
+  } else {
+    el.style.display = 'none';
+  }
+}
+window.initTgSourceSelector = initTgSourceSelector;
 function haptic(type) { try { window.webkit.messageHandlers.haptic.postMessage({ type: type || 'light' }); } catch(e) {} }
 function handleSharedImage(base64) {
   if (!currentUser) return;

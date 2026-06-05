@@ -1074,6 +1074,16 @@ test.describe('Measure page (mocked)', () => {
     expect(options).toBeGreaterThanOrEqual(2);
   });
 
+  test('input source selector hidden by default, shown when tg_piezo flag on', async ({ page }) => {
+    await navigateTo(page, 'measure');
+    await page.locator('#msr-help-modal button:has-text("Got it")').click();
+    // default: tg_piezo flag off → selector hidden
+    await expect(page.locator('#tg-input-source')).toBeHidden();
+    // enable the admin flag and re-init → selector visible
+    await page.evaluate(() => { localStorage.setItem('ff_tg_piezo', 'true'); window.initTgSourceSelector(); });
+    await expect(page.locator('#tg-input-source')).toBeVisible();
+  });
+
   test('completion save section offers Save and Share side by side', async ({ page }) => {
     await navigateTo(page, 'measure');
     await page.locator('#msr-help-modal button:has-text("Got it")').click();
