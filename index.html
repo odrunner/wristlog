@@ -3419,6 +3419,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <option value="mic">iPhone mic</option>
         <option value="piezo">Piezo (contact)</option>
       </select>
+      <!-- Piezo live tuning (admin, gated by tg_piezo; re-sent on stop/start) -->
+      <div id="pz-tune-panel" style="display:none;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.75rem;font-size:.7rem;color:var(--muted);">
+        <label>Refractory ×<input type="number" step="0.05" id="pz-tune-refrac" oninput="onPzTune('pz_refrac',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Threshold ×<input type="number" step="0.05" id="pz-tune-thresh" oninput="onPzTune('pz_thresh_mult',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>BP low Hz<input type="number" step="10" id="pz-tune-bplow" oninput="onPzTune('pz_bp_low',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>BP high Hz<input type="number" step="100" id="pz-tune-bphigh" oninput="onPzTune('pz_bp_high',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+      </div>
       <!-- Instrument panel -->
       <div id="msr-instrument" style="background:#0a1a12;border-radius:10px;overflow:hidden;margin-bottom:.75rem;">
         <!-- Chart with HUD overlay -->
@@ -5990,7 +5997,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.06.21';
+const APP_VERSION = '05.06.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21676,6 +21683,19 @@ function initTgSourceSelector() {
   } else {
     el.style.display = 'none';
   }
+  initPzTunePanel();
+}
+function onPzTune(key, val) { if (val !== '' && Number(val) > 0) localStorage.setItem(key, val); }
+function initPzTunePanel() {
+  const panel = document.getElementById('pz-tune-panel');
+  if (!panel) return;
+  if (!featureFlag('tg_piezo')) { panel.style.display = 'none'; return; }
+  panel.style.display = 'grid';
+  const set = (id, k, d) => { const e = document.getElementById(id); if (e) e.value = localStorage.getItem(k) || d; };
+  set('pz-tune-refrac', 'pz_refrac', '0.6');
+  set('pz-tune-thresh', 'pz_thresh_mult', '0.4');
+  set('pz-tune-bplow', 'pz_bp_low', '150');
+  set('pz-tune-bphigh', 'pz_bp_high', '5000');
 }
 window.initTgSourceSelector = initTgSourceSelector;
 // Send piezo DSP tuning after a piezo start (no-op for mic). Knobs are localStorage-backed
