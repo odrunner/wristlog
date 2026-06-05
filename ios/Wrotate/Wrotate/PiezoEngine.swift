@@ -48,7 +48,8 @@ class PiezoEngine {
     private func debugLog(_ m: String) { print(m); debugMessages.append(m) }
 
     func setTuning(bpLow: Double?, bpHigh: Double?, envSmoothing: Double?, threshMult: Double?,
-                   threshDecay: Double?, refractoryFrac: Double?, outlierMargin: Double?) {
+                   threshDecay: Double?, refractoryFrac: Double?, outlierMargin: Double?,
+                   searchWin: Double? = nil, smoothMs: Double? = nil) {
         if let v = bpLow { bpLowHz = Float(v) }
         if let v = bpHigh { bpHighHz = Float(v) }
         if let v = envSmoothing { self.envSmoothing = Float(v) }
@@ -56,7 +57,10 @@ class PiezoEngine {
         if let v = threshDecay { self.threshDecay = Float(v) }
         if let v = refractoryFrac { self.refractoryFrac = v }
         if let v = outlierMargin { self.outlierMargin = v }
-        debugLog("[PZTUNE] bp=[\(bpLowHz),\(bpHighHz)] env=\(self.envSmoothing) thr=\(threshMult ?? -1) refrac=\(refractoryFrac ?? -1)")
+        if let v = searchWin { searchWinFrac = v }
+        // Smoothing (ms) takes effect live (envCoeff recomputed against the live ring rate).
+        if let v = smoothMs, ringRate > 0 { self.envSmoothing = Float(v / 1000.0); envCoeff = exp(-1.0 / (self.envSmoothing * Float(ringRate))) }
+        debugLog("[PZTUNE] bp=[\(bpLowHz),\(bpHighHz)] smoothMs=\(smoothMs ?? Double(self.envSmoothing*1000)) searchWin=\(searchWinFrac)")
     }
 
     func start(bph: Int, autoPickChannel: Bool = true) {
@@ -199,7 +203,7 @@ class PiezoEngine {
     // --- DSP tunables (piezo-specific) ---
     private var bpLowHz: Float = 150
     private var bpHighHz: Float = 5000
-    private var envSmoothing: Float = 0.002     // one-pole time constant (s)
+    private var envSmoothing: Float = 0.008     // one-pole time constant (s) — fuses intra-beat ringing
     private var threshMult: Float = 0.4         // detect at threshold * this
     private var threshDecay: Float = 0.999
     private var refractoryFrac: Double = 0.6    // min spacing = expectedInterval * this
@@ -228,6 +232,17 @@ class PiezoEngine {
     private var expectedInterval: Double = 0   // ring samples between beats
     private var pendingBeats: [Double] = []    // beat times (s) since start, for Task 3
     private var lastPeakTimeSec: Double = 0
+    // Phase-locked detection (validated offline): predict each beat at last+expectedInterval,
+    // search a ±searchWinFrac window, take the peak. Robust to the multi-sub-peak beat clusters
+    // a contact piezo produces (free-running threshold detection locks onto spurious sub-rhythms).
+    private var envBuf = [Float](repeating: 0, count: 4096)
+    private let envBufN = 4096
+    private var searchWinFrac: Double = 0.13
+    private var phaseBootstrapped = false
+    private var phaseStart: Double = -1
+    private var nextPredicted: Double = 0
+    private var lastBeatRingF: Double = -1
+    private var autoCollectUntil = 0
     private var pzDbgCounter = 0
     private var pzDbgMaxE: Float = 0
     private var pzDbgBeats = 0
@@ -275,6 +290,8 @@ class PiezoEngine {
         pendingCross = false; pendingPeak = 0; env1 = 0; env2 = 0
         pendingBeats.removeAll(keepingCapacity: true)
         pzDbgCounter = 0; pzDbgMaxE = 0; pzDbgBeats = 0
+        phaseBootstrapped = false; phaseStart = -1; nextPredicted = 0; lastBeatRingF = -1; autoCollectUntil = 0
+        for i in 0..<envBufN { envBuf[i] = 0 }
         rawDecim = max(1, Int((sampleRate / 24000).rounded()))
         rawCaptureRate = sampleRate / Double(rawDecim)
         rawCaptureCap = Int(rawCaptureRate * 12)   // ~12s
@@ -302,69 +319,111 @@ class PiezoEngine {
             if subCounter < ringSubsample { continue }
             subCounter = 0
 
-            // Threshold the per-subsample band-passed peak directly. (One-pole smoothing
-            // smears sub-millisecond tick impulses down to the noise floor — do NOT do that.)
-            let e = subPeak
+            // Light envelope smoothing (~8ms) fuses the intra-beat ringing into one bump/beat.
+            env = envCoeff * env + (1 - envCoeff) * subPeak
+            let e = env
             subPeak = 0
             ringCounter += 1
+            let r = ringCounter
+            envBuf[((r % envBufN) + envBufN) % envBufN] = e
 
-            // Calibration: learn noise floor for 2s, accept no beats
+            // Calibration: learn the noise floor for 2s (presence/floor reference only).
             if calibrating {
                 calibEnergies.append(e); calibSamples += 1
                 if calibSamples >= calibDuration {
                     calibrating = false
                     let sorted = calibEnergies.sorted()
-                    calibNoiseFloor = sorted[sorted.count / 2]                  // median
-                    let p98 = sorted[min(sorted.count - 1, Int(Double(sorted.count) * 0.98))]
-                    adaptiveThreshold = max(p98, calibNoiseFloor * 4)
+                    calibNoiseFloor = sorted[sorted.count / 2]
                     calibEnergies.removeAll(keepingCapacity: false)
-                    debugLog("[PZCALIB] thr=\(String(format: "%.6f", adaptiveThreshold)) floor=\(String(format: "%.6f", calibNoiseFloor))")
+                    autoCollectUntil = r + Int(ringRate * 2.5)
+                    debugLog("[PZCALIB] floor=\(String(format: "%.6f", calibNoiseFloor))")
                 }
-                env2 = env1; env1 = e
                 continue
             }
-
-            ringSinceBeat += 1
-            // Track/decay adaptive threshold toward the noise floor
-            if e > adaptiveThreshold { adaptiveThreshold = e }
-            else { adaptiveThreshold = max(calibNoiseFloor * 4, adaptiveThreshold * threshDecay) }
-            let detect = adaptiveThreshold * threshMult
-            let minSpacing = Int(expectedInterval * refractoryFrac)
 
             if e > pzDbgMaxE { pzDbgMaxE = e }
             pzDbgCounter += 1
             if pzDbgCounter >= Int(ringRate) {
-                debugLog("[PZDBG] maxE=\(String(format: "%.6f", pzDbgMaxE)) thr=\(String(format: "%.6f", adaptiveThreshold)) detect=\(String(format: "%.6f", detect)) floor=\(String(format: "%.6f", calibNoiseFloor)) beats=\(pzDbgBeats)")
+                debugLog("[PZDBG] maxE=\(String(format: "%.6f", pzDbgMaxE)) floor=\(String(format: "%.6f", calibNoiseFloor)) beats=\(pzDbgBeats) bph=\(targetBph)")
                 pzDbgMaxE = 0; pzDbgBeats = 0; pzDbgCounter = 0
             }
 
-            // Peak detection: fire on the decline after a threshold crossing
-            var fire = false
-            if e > detect && ringSinceBeat >= minSpacing {
-                if !pendingCross || e > pendingPeak { pendingCross = true; pendingPeak = e }
-                else { pendingCross = false; fire = true }
-            } else if pendingCross && e < pendingPeak {
-                pendingCross = false; fire = true
+            // Auto-BPH: collect ~2.5s of envelope, then autocorrelation-lock the period.
+            if autoBph && !autoBphLocked {
+                if r < autoCollectUntil { continue }
+                lockBphAutocorr(endRing: r)
+                if !autoBphLocked { autoCollectUntil = r + Int(ringRate * 1.0); continue }
             }
 
-            if fire {
-                // Parabolic sub-sample peak using env2(-1), env1(0=peak), e(+1)
-                var frac = 0.0
-                let d = Double(env2) - 2 * Double(env1) + Double(e)
-                if abs(d) > 1e-12 { frac = max(-0.5, min(0.5, 0.5 * (Double(env2) - Double(e)) / d)) }
-                let peakRing = Double(ringCounter) - 1 + frac
-                let beatTimeSec = peakRing / ringRate
-                pendingBeats.append(beatTimeSec)
-                lastPeakTimeSec = beatTimeSec
-                ringSinceBeat = 0
-                pzDbgBeats += 1
+            // Phase-locked beat detection: predict next at last+expectedInterval, take the
+            // peak in a ±searchWinFrac window (robust to the piezo's multi-sub-peak clusters).
+            let win = expectedInterval * searchWinFrac
+            if !phaseBootstrapped {
+                if phaseStart < 0 { phaseStart = Double(r) }
+                if Double(r) >= phaseStart + expectedInterval * 1.5 {
+                    let p = argmaxRing(from: Int(phaseStart), to: r)
+                    lastBeatRingF = Double(p)
+                    nextPredicted = Double(p) + expectedInterval
+                    phaseBootstrapped = true
+                }
+                continue
             }
-            env2 = env1; env1 = e
+            if Double(r) >= nextPredicted + win {
+                let lo = Int((nextPredicted - win).rounded())
+                let hi = Int((nextPredicted + win).rounded())
+                let p = argmaxRing(from: lo, to: hi)
+                let em1 = Double(envAt(p - 1)), e0 = Double(envAt(p)), ep1 = Double(envAt(p + 1))
+                let dd = em1 - 2 * e0 + ep1
+                var frac = 0.0
+                if abs(dd) > 1e-12 { frac = max(-0.5, min(0.5, 0.5 * (em1 - ep1) / dd)) }
+                let beatRing = Double(p) + frac
+                pendingBeats.append(beatRing / ringRate)
+                pzDbgBeats += 1
+                lastBeatRingF = beatRing
+                nextPredicted = beatRing + expectedInterval
+            }
         }
 
         // Consume detected beats accumulated this buffer
         let beats = pendingBeats; pendingBeats.removeAll(keepingCapacity: true)
         for t in beats { consumeBeat(timeSec: t) }
+    }
+
+    private func envAt(_ idx: Int) -> Float {
+        let m = ((idx % envBufN) + envBufN) % envBufN
+        return envBuf[m]
+    }
+    private func argmaxRing(from lo: Int, to hi: Int) -> Int {
+        var best = -Float.greatestFiniteMagnitude; var bi = lo
+        var i = lo
+        while i <= hi { let v = envAt(i); if v > best { best = v; bi = i }; i += 1 }
+        return bi
+    }
+    /// Auto-BPH: pick the standard BPH whose period best autocorrelates the recent envelope.
+    private func lockBphAutocorr(endRing: Int) {
+        let span = min(Int(ringRate * 2.5), envBufN - 4)
+        guard span > 10 else { return }
+        var w = [Float](repeating: 0, count: span)
+        for k in 0..<span { w[k] = envAt(endRing - span + 1 + k) }
+        let mean = w.reduce(0, +) / Float(span)
+        for k in 0..<span { w[k] -= mean }
+        var den = 0.0
+        for k in 0..<span { den += Double(w[k]) * Double(w[k]) }
+        var best = -1.0; var bestBph = targetBph
+        for cand in PiezoEngine.bphCandidates {
+            let lag = Int((ringRate / (Double(cand) / 3600.0)).rounded())
+            if lag <= 0 || lag >= span { continue }
+            var num = 0.0
+            for k in 0..<(span - lag) { num += Double(w[k]) * Double(w[k + lag]) }
+            let ac = den > 0 ? num / den : 0
+            if ac > best { best = ac; bestBph = cand }
+        }
+        if best > 0.2 {
+            targetBph = bestBph
+            expectedInterval = ringRate / (Double(bestBph) / 3600.0)
+            autoBphLocked = true
+            debugLog("[PZAUTOBPH] locked \(bestBph) ac=\(String(format: "%.2f", best))")
+        }
     }
 
     // --- Model state ---

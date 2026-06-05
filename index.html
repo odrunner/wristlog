@@ -5997,7 +5997,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.07.03';
+const APP_VERSION = '05.11.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21706,9 +21706,9 @@ function sendPiezoTuning() {
   window.webkit.messageHandlers.timegrapher.postMessage({
     action: 'tuningPiezo',
     bpLow: n('pz_bp_low', 150), bpHigh: n('pz_bp_high', 5000),
-    envSmoothing: n('pz_env', 0.002), threshMult: n('pz_thresh_mult', 0.4),
-    threshDecay: n('pz_thresh_decay', 0.999), refractoryFrac: n('pz_refrac', 0.6),
-    outlierMargin: n('pz_outlier', 0.2)
+    threshMult: n('pz_thresh_mult', 0.4), refractoryFrac: n('pz_refrac', 0.6),
+    outlierMargin: n('pz_outlier', 0.25),
+    searchWin: n('pz_searchwin', 0.13), smoothMs: n('pz_smooth', 8)
   });
 }
 function haptic(type) { try { window.webkit.messageHandlers.haptic.postMessage({ type: type || 'light' }); } catch(e) {} }
