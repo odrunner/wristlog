@@ -6002,7 +6002,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.08.17';
+const APP_VERSION = '06.09.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21721,7 +21721,7 @@ function sendPiezoTuning() {
     threshMult: n('pz_thresh_mult', 0.4), refractoryFrac: n('pz_refrac', 0.6),
     outlierMargin: n('pz_outlier', 0.25),
     searchWin: n('pz_searchwin', 0.08), smoothMs: n('pz_smooth', 6),
-    regSkip: n('pz_regskip', 10), stabThresh: n('pz_stabthresh', 8), stabWindow: n('pz_stabwindow', 15), wallMin: n('pz_wallmin', 20),
+    regSkip: n('pz_regskip', 10), stabThresh: n('pz_stabthresh', 8), stabWindow: n('pz_stabwindow', 10), wallMin: n('pz_wallmin', 18),
     rateWindow: n('pz_ratewindow', 25), rateSmooth: n('pz_ratesmooth', 0.15)
   });
 }
@@ -22122,7 +22122,7 @@ window._tgNativeCallback = function(data) {
         const bucketNow = _msrCachedBucketRate;
         const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
         let jsConverged = false;
-        if (bucketNow != null) {
+        if (_tgSource() !== 'piezo' && bucketNow != null) {
           // Only push to history when bucket rate was freshly computed (1/sec)
           const lastH = _msrBucketRateHistory.length ? _msrBucketRateHistory[_msrBucketRateHistory.length - 1] : null;
           if (!lastH || lastH.v !== bucketNow || Date.now() - lastH.t >= 1000) {
