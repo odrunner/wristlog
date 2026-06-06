@@ -51,7 +51,7 @@ class PiezoEngine {
                    threshDecay: Double?, refractoryFrac: Double?, outlierMargin: Double?,
                    searchWin: Double? = nil, smoothMs: Double? = nil,
                    regSkip: Int? = nil, stabThresh: Double? = nil, stabWindow: Double? = nil, wallMin: Double? = nil,
-                   rateWindow: Double? = nil) {
+                   rateWindow: Double? = nil, rateSmooth: Double? = nil) {
         if let v = bpLow { bpLowHz = Float(v) }
         if let v = bpHigh { bpHighHz = Float(v) }
         if let v = envSmoothing { self.envSmoothing = Float(v) }
@@ -65,6 +65,7 @@ class PiezoEngine {
         if let v = stabWindow { stabilityWindow = v }
         if let v = wallMin { self.wallMin = v }
         if let v = rateWindow { rateWindowSec = v }
+        if let v = rateSmooth { rateEmaAlpha = max(0.02, min(1.0, v)) }
         // Smoothing (ms) takes effect live (envCoeff recomputed against the live ring rate).
         if let v = smoothMs, ringRate > 0 { self.envSmoothing = Float(v / 1000.0); envCoeff = exp(-1.0 / (self.envSmoothing * Float(ringRate))) }
         debugLog("[PZTUNE] bp=[\(bpLowHz),\(bpHighHz)] smoothMs=\(smoothMs ?? Double(self.envSmoothing*1000)) searchWin=\(searchWinFrac) regSkip=\(regSkipPairs) stabThresh=\(stabilityGain) stabWin=\(stabilityWindow) wallMin=\(self.wallMin)")
@@ -499,6 +500,7 @@ class PiezoEngine {
     private var wallMin = 20.0
     private var regSkipPairs = 10        // skip the settling transient from the rate fit
     private var rateWindowSec = 20.0     // trailing window for the rate fit (ignores early offset)
+    private var rateEmaAlpha = 0.15      // EMA smoothing of the output rate (lower = steadier)
     private var totalPairsAccepted = 0
     private var lastRateLogMs: Double = 0
     private var lastEmitMs: Double = 0
@@ -596,8 +598,12 @@ class PiezoEngine {
         if let slope = theilSen() {
             let r = slope * 86.4   // ms/s → s/day
             if abs(r) <= 200 {
-                smoothedRate = r; rateForUpdate = (r * 10).rounded() / 10
-                rateHistory.append((t: wallElapsed, r: r))
+                // EMA-smooth the rate: the Theil-Sen slope jitters from the cum's ms-level noise;
+                // smoothing the output gives a steady reading and lets it converge.
+                smoothedRate = smoothedRate == nil ? r : (rateEmaAlpha * r + (1 - rateEmaAlpha) * smoothedRate!)
+                let sr = smoothedRate!
+                rateForUpdate = (sr * 10).rounded() / 10
+                rateHistory.append((t: wallElapsed, r: sr))
                 rateHistory.removeAll { wallElapsed - $0.t > stabilityWindow + 5 }
             }
         }
