@@ -6000,7 +6000,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.17.06';
+const APP_VERSION = '05.17.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21697,8 +21697,8 @@ function initPzTunePanel() {
   const set = (id, k, d) => { const e = document.getElementById(id); if (e) e.value = localStorage.getItem(k) || d; };
   set('pz-tune-bplow', 'pz_bp_low', '150');
   set('pz-tune-bphigh', 'pz_bp_high', '5000');
-  set('pz-tune-smooth', 'pz_smooth', '8');
-  set('pz-tune-searchwin', 'pz_searchwin', '0.13');
+  set('pz-tune-smooth', 'pz_smooth', '6');
+  set('pz-tune-searchwin', 'pz_searchwin', '0.08');
   set('pz-tune-ratewindow', 'pz_ratewindow', '25');
   set('pz-tune-stabthresh', 'pz_stabthresh', '8');
   set('pz-tune-regskip', 'pz_regskip', '10');
@@ -21714,7 +21714,7 @@ function sendPiezoTuning() {
     bpLow: n('pz_bp_low', 150), bpHigh: n('pz_bp_high', 5000),
     threshMult: n('pz_thresh_mult', 0.4), refractoryFrac: n('pz_refrac', 0.6),
     outlierMargin: n('pz_outlier', 0.25),
-    searchWin: n('pz_searchwin', 0.13), smoothMs: n('pz_smooth', 8),
+    searchWin: n('pz_searchwin', 0.08), smoothMs: n('pz_smooth', 6),
     regSkip: n('pz_regskip', 10), stabThresh: n('pz_stabthresh', 8), stabWindow: n('pz_stabwindow', 15), wallMin: n('pz_wallmin', 20),
     rateWindow: n('pz_ratewindow', 25)
   });
