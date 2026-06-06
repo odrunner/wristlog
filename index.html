@@ -3431,7 +3431,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <label>Audio mode<select id="pz-tune-mode" onchange="onPzTuneMode(this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"><option value="default">default</option><option value="measurement">measure</option></select></label>
         <label>Rate smooth<input type="number" step="0.02" id="pz-tune-ratesmooth" oninput="onPzTune('pz_ratesmooth',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
       </div>
-      <button id="pz-batch-btn" onclick="runPiezoBatch()" style="display:none;width:100%;margin-bottom:.75rem;padding:.45rem;border-radius:8px;border:1px solid rgba(74,222,128,.4);background:#0a1a12;color:#4ade80;font-size:.72rem;cursor:pointer;">Batch ×12 (6 manual + 6 auto, 21600)</button>
+      <button id="pz-batch-btn" onclick="runPiezoBatch(21600)" style="display:none;width:100%;margin-bottom:.4rem;padding:.45rem;border-radius:8px;border:1px solid rgba(74,222,128,.4);background:#0a1a12;color:#4ade80;font-size:.72rem;cursor:pointer;">Batch ×12 Hamilton (6 manual 21600 + 6 auto)</button>
+      <button id="pz-batch-btn-jlc" onclick="runPiezoBatch(28800)" style="display:none;width:100%;margin-bottom:.75rem;padding:.45rem;border-radius:8px;border:1px solid rgba(74,222,128,.4);background:#0a1a12;color:#4ade80;font-size:.72rem;cursor:pointer;">Batch ×12 JLC (6 manual 28800 + 6 auto)</button>
       <!-- Instrument panel -->
       <div id="msr-instrument" style="background:#0a1a12;border-radius:10px;overflow:hidden;margin-bottom:.75rem;">
         <!-- Chart with HUD overlay -->
@@ -6003,7 +6004,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.13.20';
+const APP_VERSION = '06.13.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21699,14 +21700,19 @@ function onPzTuneMode(v) { localStorage.setItem('pz_mode', v); }  // session mod
 // manual/auto) unattended so we get a real dataset. Drives the normal measure flow so
 // logs + raw captures upload per run. Click again to cancel.
 let _pzBatchActive = false;
-async function runPiezoBatch() {
-  const btn = document.getElementById('pz-batch-btn');
-  if (_pzBatchActive) { _pzBatchActive = false; if (btn) btn.textContent = 'Cancelling…'; return; }
+function _pzBatchResetLabels() {
+  const h = document.getElementById('pz-batch-btn'); if (h) h.textContent = 'Batch ×12 Hamilton (6 manual 21600 + 6 auto)';
+  const j = document.getElementById('pz-batch-btn-jlc'); if (j) j.textContent = 'Batch ×12 JLC (6 manual 28800 + 6 auto)';
+}
+async function runPiezoBatch(manualBph) {
+  manualBph = manualBph || 21600;
+  const activeBtn = document.getElementById(manualBph === 28800 ? 'pz-batch-btn-jlc' : 'pz-batch-btn');
+  if (_pzBatchActive) { _pzBatchActive = false; if (activeBtn) activeBtn.textContent = 'Cancelling…'; return; }
   if (!_tgHasNative()) { toast('Batch needs the native app'); return; }
   localStorage.setItem('tg_input_source', 'piezo');   // ensure piezo source
   const RUN_MS = 28000, GAP_MS = 4000, RESET_MS = 1200;
   const plan = [];
-  for (let i = 0; i < 6; i++) { plan.push(21600); plan.push(0); }  // alternate manual / auto, 12 total
+  for (let i = 0; i < 6; i++) { plan.push(manualBph); plan.push(0); }  // alternate manual / auto, 12 total
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const sel = document.getElementById('msr-bph-select');
   _pzBatchActive = true;
@@ -21716,8 +21722,8 @@ async function runPiezoBatch() {
     if (_msrListening) { stopMsrListen('batch_reset'); await sleep(RESET_MS); }
     if (!_pzBatchActive) break;
     if (sel) sel.value = String(bph);
-    if (btn) btn.textContent = `Batch ${i + 1}/${plan.length}: ${label} …`;
-    console.log(`[PZBATCH] run ${i + 1}/${plan.length} ${label}`);
+    if (activeBtn) activeBtn.textContent = `Batch ${i + 1}/${plan.length}: ${label} …`;
+    console.log(`[PZBATCH] run ${i + 1}/${plan.length} ${label} (manualBph=${manualBph})`);
     toggleMsrListen();
     await sleep(RUN_MS);
     if (_msrListening) stopMsrListen('batch');
@@ -21725,7 +21731,7 @@ async function runPiezoBatch() {
   }
   const done = _pzBatchActive;
   _pzBatchActive = false;
-  if (btn) btn.textContent = 'Batch ×12 (6 manual + 6 auto, 21600)';
+  _pzBatchResetLabels();
   toast(done ? 'Batch done — check the logs' : 'Batch cancelled');
 }
 function initPzTunePanel() {
@@ -21744,6 +21750,7 @@ function initPzTunePanel() {
   set('pz-tune-ratesmooth', 'pz_ratesmooth', '0.15');
   const md = document.getElementById('pz-tune-mode'); if (md) md.value = localStorage.getItem('pz_mode') || 'default';
   const bb = document.getElementById('pz-batch-btn'); if (bb) bb.style.display = '';
+  const bj = document.getElementById('pz-batch-btn-jlc'); if (bj) bj.style.display = '';
 }
 window.initTgSourceSelector = initTgSourceSelector;
 // Send piezo DSP tuning after a piezo start (no-op for mic). Knobs are localStorage-backed
