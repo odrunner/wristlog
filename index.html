@@ -6004,7 +6004,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.13.36';
+const APP_VERSION = '06.14.18';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22032,12 +22032,20 @@ window._tgNativeCallback = function(data) {
     const stickyDetected = isMsr && _msrLastDetectTime > 0 && (Date.now() - _msrLastDetectTime) < 8000;
     const isConfident = data.rate != null && data.confidence > 0.1;
 
+    // Piezo: real signal strength (engine periodicity×SNR), smoothed, + weak-signal gate.
+    // A near-silent capture still gets "beats" from the phase-lock but the rate is garbage,
+    // so below the gate we refuse to show a number and tell the user to reseat the pickup.
+    const isPz = isMsr && _tgSource() === 'piezo';
+    const _pzElapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
+    if (isPz && data.noiseLevel != null) _msrPzSig = (_msrPzSig == null) ? data.noiseLevel : (0.2 * data.noiseLevel + 0.8 * _msrPzSig);
+    const pzWeak = isPz && _pzElapsed > 6 && _msrPzSig != null && _msrPzSig < 0.15;
+
     // Timegrapher chart: add per-tick dots
     if (isMsr && data.newTicks) addMsrTickDots(data.newTicks);
 
     if (isMsr && data.confidence != null) _msrLastConf = data.confidence;
 
-    if (isConfident) {
+    if (isConfident && !pzWeak) {
       if (isMsr) _msrLastDetectTime = Date.now();
       const r = data.rate;
       rateEl.textContent = (r >= 0 ? '+' : '') + r.toFixed(1);
@@ -22052,6 +22060,13 @@ window._tgNativeCallback = function(data) {
         document.getElementById('msr-rate-input').value = r.toFixed(1);
         if (data.beatError != null) document.getElementById('msr-be-input').value = data.beatError.toFixed(2);
       }
+    } else if (pzWeak) {
+      // Weak piezo signal: don't show a (garbage) number; tell the user to reseat.
+      rateEl.textContent = '—';
+      rateEl.style.color = 'rgba(239,68,68,.75)';
+      if (beEl) beEl.textContent = '—';
+      const _stW = document.getElementById('msr-status-text');
+      if (_stW && _msrPhase !== 'converged') { _stW.textContent = 'Signal too weak · reseat the pickup'; _stW.style.color = 'rgba(239,68,68,.7)'; }
     }
 
     // BPH detection display (auto mode)
@@ -22068,13 +22083,20 @@ window._tgNativeCallback = function(data) {
     // Signal quality tracking & display
     if (isMsr && _msrListening) {
       const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
-      // Track tick acceptance rate: expected ~8 ticks/sec for 28800 BPH (conservative: use 3/sec as baseline)
-      const expectedTicks = Math.max(1, elapsed * 3);
-      // Dev user: use JS dot count if native acceptance is 0 but JS has dots
-      const effectiveTickCount = _isDevUser() && data.tickCount === 0 && _msrScatterData.length > 0 ? _msrScatterData.length : data.tickCount;
-      _msrAcceptRate = effectiveTickCount > 0 ? effectiveTickCount / expectedTicks : 0;
-      // Update signal bars
-      updateMsrSignalBars(_msrAcceptRate, elapsed, effectiveTickCount);
+      if (isPz) {
+        // Real signal: engine periodicity×SNR (0..1). weak JLC ≈0.09, good Hamilton ≈0.31, strong ≈1.0
+        const sig = _msrPzSig || 0;
+        const pzBars = data.tickCount === 0 ? 0 : (sig < 0.12 ? 1 : sig < 0.30 ? 2 : sig < 0.55 ? 3 : 4);
+        updateMsrSignalBars(0, elapsed, data.tickCount, pzBars);
+      } else {
+        // Track tick acceptance rate: expected ~8 ticks/sec for 28800 BPH (conservative: use 3/sec as baseline)
+        const expectedTicks = Math.max(1, elapsed * 3);
+        // Dev user: use JS dot count if native acceptance is 0 but JS has dots
+        const effectiveTickCount = _isDevUser() && data.tickCount === 0 && _msrScatterData.length > 0 ? _msrScatterData.length : data.tickCount;
+        _msrAcceptRate = effectiveTickCount > 0 ? effectiveTickCount / expectedTicks : 0;
+        // Update signal bars
+        updateMsrSignalBars(_msrAcceptRate, elapsed, effectiveTickCount);
+      }
       // Dot starvation: warn if no new dots for 5+ seconds during active measurement
       if (elapsed > 10 && _msrLastDotTime > 0 && (Date.now() - _msrLastDotTime) > 5000 && !_msrShown.weak) {
         _msrShown.weak = true;
@@ -22105,8 +22127,9 @@ window._tgNativeCallback = function(data) {
           }
         }
       }
-      // Ambient noise check during calibration (~first 4s)
-      if (elapsed < 4 && data.noiseLevel != null) {
+      // Ambient noise check during calibration (~first 4s). Mic only — for piezo,
+      // noiseLevel is the *signal* strength (high = good), not ambient noise.
+      if (!isPz && elapsed < 4 && data.noiseLevel != null) {
         _msrNoiseSamples.push(data.noiseLevel);
       }
       if (elapsed >= 3 && !_msrShown.noise && _msrNoiseSamples.length >= 3) {
@@ -22251,7 +22274,7 @@ window._tgNativeCallback = function(data) {
           }
         }
         // Piezo engine does its own Theil-Sen + skip + trailing-window stability — trust its rateStable.
-        if (_tgSource() === 'piezo' && data.rateStable && elapsed >= 15) jsConverged = true;
+        if (isPz && data.rateStable && elapsed >= 15 && !pzWeak) jsConverged = true;
         if (jsConverged) {
           badge.style.display = '';
           if (prelimBadge) prelimBadge.style.display = 'none';
@@ -22564,6 +22587,7 @@ let _msrRateHistory = []; // recent rate values for error bar computation
 let _msrBucketRateHistory = []; // history of bucket rate computations for JS-side convergence
 let _msrCachedBucketRate = null; // cached result from last computeMedianRate call
 let _msrAcceptRate = 0;    // shared signal quality metric (updated once per tick event)
+let _msrPzSig = null;      // piezo: smoothed real signal strength (engine periodicity×SNR, 0..1)
 let _msrLastDotTime = 0;   // timestamp of last scatter dot added (starvation detection)
 let _msrShown = { weak: false, noise: false, prelim: false, advanced: false };
 let _msrNoiseSamples = [];    // noise level readings during calibration phase
@@ -22762,7 +22786,7 @@ function _resetMsrState(bph) {
   _msrBphLocked = false;
   _msrLastRate = null; _msrLastBph = null;
   _msrRateHistory = []; _msrBucketRateHistory = []; _msrCachedBucketRate = null;
-  _msrLastDotTime = 0; _msrShown = { weak: false, noise: false, prelim: false, advanced: false }; _msrNoiseSamples = []; _msrAcceptRate = 0; _msrLastConf = 0;
+  _msrLastDotTime = 0; _msrShown = { weak: false, noise: false, prelim: false, advanced: false }; _msrNoiseSamples = []; _msrAcceptRate = 0; _msrPzSig = null; _msrLastConf = 0;
   const scCanvas = document.getElementById('msr-scatter-plot');
   if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
   document.getElementById('msr-live-rate').textContent = '—';
@@ -22799,7 +22823,7 @@ function addMsrTickDots(newTicks) {
   }
 }
 
-function updateMsrSignalBars(acceptRate, elapsed, tickCount) {
+function updateMsrSignalBars(acceptRate, elapsed, tickCount, barsOverride) {
   const container = document.getElementById('msr-signal-bars');
   if (!container) return;
   if (elapsed < 3 || tickCount === 0) { container.style.display = 'none'; return; }
@@ -22807,7 +22831,9 @@ function updateMsrSignalBars(acceptRate, elapsed, tickCount) {
   // Determine signal strength: 1-4 bars (hidden when no ticks yet)
   let bars = 0;
   const label = document.getElementById('msr-signal-label');
-  if (acceptRate === 0) {
+  if (barsOverride != null) {
+    bars = barsOverride;            // piezo: real signal (periodicity×SNR) maps to bars upstream
+  } else if (acceptRate === 0) {
     bars = 0;
   } else if (acceptRate < 0.1) {
     bars = 1;
