@@ -923,6 +923,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .fb-type-badge { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.18rem .55rem; border-radius:20px; flex-shrink:0; }
     .fb-type-badge.bug     { background:rgba(224,85,85,.15); color:var(--danger); }
     .fb-type-badge.feature { background:rgba(129,140,248,.15); color:#818cf8; }
+    .fb-type-badge.rating  { background:rgba(245,158,11,.15); color:#f59e0b; }
     .fb-title { font-size:.88rem; font-weight:600; flex:1; min-width:0; }
     .fb-details { font-size:.82rem; color:var(--muted); line-height:1.55; margin-bottom:.6rem; white-space:pre-wrap; }
     .fb-footer { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.5rem; }
@@ -6004,7 +6005,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.14.18';
+const APP_VERSION = '06.14.38';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13033,11 +13034,26 @@ async function loadAdminFeedback() {
   const el = document.getElementById('admin-feedback-list');
   if (!el) return;
   el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">Loading…</div>';
-  const { data, error } = await withTimeout(db.from('feedback')
-    .select('*')
-    .order('created_at', { ascending: false }), 10000);
+  const [fbRes, appFbRes] = await Promise.all([
+    withTimeout(db.from('feedback').select('*').order('created_at', { ascending: false }), 10000),
+    withTimeout(db.from('app_feedback').select('*').order('created_at', { ascending: false }), 10000),
+  ]);
+  const { data, error } = fbRes;
   if (error) { el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;"><div style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;">Error: ${escHtml(error.message)}</div><button class="btn btn-ghost" onclick="loadAdminFeedback()" style="font-size:.78rem;">↻ Retry</button></div>`; return; }
-  _adminFeedbackData = (data || []).map(f => ({ ...f, status: (!f.status || f.status === 'new') ? 'pending' : f.status }));
+  // Normalize review-prompt feedback (app_feedback) into the same card shape
+  const appFeedback = (appFbRes?.data || []).map(a => ({
+    id: a.id,
+    _source: 'app_feedback',
+    type: 'rating',
+    title: 'Review prompt feedback',
+    details: a.feedback || '',
+    trigger_source: a.trigger_source || null,
+    app_version: null,
+    browser: null,
+    status: (!a.status || a.status === 'new') ? 'pending' : a.status,
+    created_at: a.created_at,
+  }));
+  _adminFeedbackData = (data || []).map(f => ({ ...f, _source: 'feedback', status: (!f.status || f.status === 'new') ? 'pending' : f.status })).concat(appFeedback);
   // Sort: pending first (oldest first), then rest by newest first
   const order = { pending: 0, resolved: 1, reviewed: 2, ignored: 3 };
   _adminFeedbackData.sort((a, b) => {
@@ -13057,16 +13073,19 @@ function renderFeedbackCard(f) {
     const statusOptions = ['pending','reviewed','resolved','ignored']
       .map(s => `<option value="${s}" ${status === s ? 'selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`)
       .join('');
+    const isRating = f._source === 'app_feedback';
+    const badgeClass = f.type === 'bug' ? 'bug' : (isRating ? 'rating' : 'feature');
     return `
     <div class="fb-card status-${status}" id="fb-card-${f.id}">
       <div class="fb-card-header">
-        <span class="fb-type-badge ${f.type === 'bug' ? 'bug' : 'feature'}">${escHtml(f.type || 'general')}</span>
+        <span class="fb-type-badge ${badgeClass}">${escHtml(f.type || 'general')}</span>
         <span class="fb-title">${escHtml(f.title || '—')}</span>
       </div>
       <div class="fb-details">${escHtml(f.details || '')}</div>
       <div class="fb-footer">
         <div class="fb-meta">
           <span>${date}</span>
+          ${isRating && f.trigger_source ? `<span>via ${escHtml(f.trigger_source)}</span>` : ''}
           ${f.app_version ? `<span>v${escHtml(f.app_version)}</span>` : ''}
           ${f.browser ? `<span>${escHtml(f.browser)}</span>` : ''}
         </div>
@@ -13079,10 +13098,11 @@ async function updateFeedbackStatus(id, selectEl) {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const status = selectEl.value;
   const card = document.getElementById('fb-card-' + id);
-  const { error } = await db.from('feedback').update({ status }).eq('id', id);
+  const item = _adminFeedbackData.find(f => f.id === id);
+  const table = item?._source === 'app_feedback' ? 'app_feedback' : 'feedback';
+  const { error } = await db.from(table).update({ status }).eq('id', id);
   if (error) { toast('Failed to update status', 'error'); selectEl.value = selectEl.dataset.prev || 'pending'; return; }
   // Update local data so filters stay consistent
-  const item = _adminFeedbackData.find(f => f.id === id);
   if (item) item.status = status;
   selectEl.className = `fb-status-select ${status}`;
   if (card) {

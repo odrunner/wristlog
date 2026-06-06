@@ -355,6 +355,22 @@ CREATE POLICY "Admin can read all feedback" ON feedback
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true)
   );
 
+-- ─── 17b. APP_FEEDBACK (review-prompt feedback, admin read/update) ───
+-- Triage column so review-prompt feedback shares the admin Feedback tab UI
+ALTER TABLE app_feedback ADD COLUMN IF NOT EXISTS status text DEFAULT 'pending';
+
+DROP POLICY IF EXISTS "Admin can read all app_feedback" ON app_feedback;
+CREATE POLICY "Admin can read all app_feedback" ON app_feedback
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true)
+  );
+
+DROP POLICY IF EXISTS "Admin can update app_feedback" ON app_feedback;
+CREATE POLICY "Admin can update app_feedback" ON app_feedback
+  FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true)
+  );
+
 -- ═══════════════════════════════════════════════════════════
 --  DONE! All tables now have RLS policies enforced.
 --  Test by logging in as a regular user and confirming:
