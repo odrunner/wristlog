@@ -29,9 +29,10 @@ class TimegrapherBridge {
             let bph = body["bph"] as? Int ?? 28800
             let sensitivity = body["sensitivity"] as? Int ?? 50
             let source = body["source"] as? String ?? "mic"
+            let pzMode = body["pzMode"] as? String ?? "default"
             usingPiezo = (source == "piezo")
-            print("[TG BRIDGE START] source=\(source) bph=\(bph) sensitivity=\(sensitivity)")
-            if usingPiezo { startPiezo(bph: bph) } else { startMeasurement(bph: bph, sensitivity: sensitivity) }
+            print("[TG BRIDGE START] source=\(source) bph=\(bph) sensitivity=\(sensitivity) pzMode=\(pzMode)")
+            if usingPiezo { startPiezo(bph: bph, mode: pzMode) } else { startMeasurement(bph: bph, sensitivity: sensitivity) }
 
         case "stop":
             print("[TG BRIDGE STOP]")
@@ -201,7 +202,7 @@ class TimegrapherBridge {
         ])
     }
 
-    private func startPiezo(bph: Int) {
+    private func startPiezo(bph: Int, mode: String = "default") {
         piezoBph = bph
         AVAudioApplication.requestRecordPermission { [weak self] granted in
             DispatchQueue.main.async {
@@ -220,7 +221,7 @@ class TimegrapherBridge {
                     if !u.debugMessages.isEmpty { p["debugMessages"] = u.debugMessages }
                     self?.sendToJS(p)
                 }
-                self.piezo.start(bph: bph)
+                self.piezo.start(bph: bph, sessionMode: mode)
                 UIApplication.shared.isIdleTimerDisabled = true
                 self.sendToJS(["event": "started"])
             }

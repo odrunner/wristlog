@@ -70,17 +70,21 @@ class PiezoEngine {
         debugLog("[PZTUNE] bp=[\(bpLowHz),\(bpHighHz)] smoothMs=\(smoothMs ?? Double(self.envSmoothing*1000)) searchWin=\(searchWinFrac) regSkip=\(regSkipPairs) stabThresh=\(stabilityGain) stabWin=\(stabilityWindow) wallMin=\(self.wallMin)")
     }
 
-    func start(bph: Int, autoPickChannel: Bool = true) {
+    private var sessionModeStr = "default"
+    func start(bph: Int, autoPickChannel: Bool = true, sessionMode: String = "default") {
         guard !isRunning else { return }
+        sessionModeStr = sessionMode
         if bph == 0 { autoBph = true; targetBph = 28800 } else { autoBph = false; targetBph = bph }
         diagBufCount = 0; diagChMaxPeak = []; diagChSumRms = []
-        debugLog("[PZSTART] bph=\(bph) autoBph=\(autoBph)")
+        debugLog("[PZSTART] bph=\(bph) autoBph=\(autoBph) mode=\(sessionMode)")
 
         do {
             let session = AVAudioSession.sharedInstance()
             try? session.setActive(false, options: .notifyOthersOnDeactivation)
-            // .default (not .measurement): measurement crushes USB input to near-silence.
-            try session.setCategory(.playAndRecord, mode: .default, options: [.allowBluetoothA2DP])
+            // .default vs .measurement (.measurement = no AGC/processing, but historically crushed
+            // USB level). Toggleable so we can A/B which gives a steadier signal.
+            let mode: AVAudioSession.Mode = (sessionMode == "measurement") ? .measurement : .default
+            try session.setCategory(.playAndRecord, mode: mode, options: [.allowBluetoothA2DP])
             try session.setPreferredSampleRate(48000)
 
             if let inputs = session.availableInputs {
@@ -143,7 +147,8 @@ class PiezoEngine {
         case .newDeviceAvailable, .oldDeviceUnavailable:
             let bphToRestart = autoBph ? 0 : targetBph
             debugLog("[PZINPUT] route changed (\(raw)) — restarting, bph=\(bphToRestart)")
-            _ = stop(); start(bph: bphToRestart)
+            let mode = sessionModeStr
+            _ = stop(); start(bph: bphToRestart, sessionMode: mode)
         default: break
         }
     }

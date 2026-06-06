@@ -3428,6 +3428,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <label>Rate win s<input type="number" step="1" id="pz-tune-ratewindow" oninput="onPzTune('pz_ratewindow',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
         <label>Stab s/d<input type="number" step="1" id="pz-tune-stabthresh" oninput="onPzTune('pz_stabthresh',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
         <label>Skip pairs<input type="number" step="1" id="pz-tune-regskip" oninput="onPzTune('pz_regskip',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Audio mode<select id="pz-tune-mode" onchange="onPzTuneMode(this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"><option value="default">default</option><option value="measurement">measure</option></select></label>
       </div>
       <!-- Instrument panel -->
       <div id="msr-instrument" style="background:#0a1a12;border-radius:10px;overflow:hidden;margin-bottom:.75rem;">
@@ -6000,7 +6001,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.17.15';
+const APP_VERSION = '05.17.50';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21689,6 +21690,8 @@ function initTgSourceSelector() {
   initPzTunePanel();
 }
 function onPzTune(key, val) { if (val !== '' && Number(val) > 0) { localStorage.setItem(key, val); sendPiezoTuning(); } }
+function _pzMode() { return localStorage.getItem('pz_mode') === 'measurement' ? 'measurement' : 'default'; }
+function onPzTuneMode(v) { localStorage.setItem('pz_mode', v); }  // session mode — applies on next stop/start
 function initPzTunePanel() {
   const panel = document.getElementById('pz-tune-panel');
   if (!panel) return;
@@ -21702,6 +21705,7 @@ function initPzTunePanel() {
   set('pz-tune-ratewindow', 'pz_ratewindow', '25');
   set('pz-tune-stabthresh', 'pz_stabthresh', '8');
   set('pz-tune-regskip', 'pz_regskip', '10');
+  const md = document.getElementById('pz-tune-mode'); if (md) md.value = localStorage.getItem('pz_mode') || 'default';
 }
 window.initTgSourceSelector = initTgSourceSelector;
 // Send piezo DSP tuning after a piezo start (no-op for mic). Knobs are localStorage-backed
@@ -21764,7 +21768,7 @@ async function toggleTgListen() {
   if (_tgHasNative()) {
     const bph = parseInt(document.getElementById('tg-bph-select').value) || 28800;
     const sens = parseInt(document.getElementById('msr-sensitivity')?.value) || 50;
-    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: sens, source: _tgSource() });
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: sens, source: _tgSource(), pzMode: _pzMode() });
     _tgListening = true;
     _msrTarget = null;
     const _tlb = document.getElementById('tg-listen-btn'); if (_tlb) _tlb.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
@@ -23189,7 +23193,7 @@ function onMsrBphChange() {
     _resetMsrState(bph);
     _msrListenStart = Date.now();
     _msrPhaseStart = null;
-    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50, source: _tgSource() });
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50, source: _tgSource(), pzMode: _pzMode() });
     if (_tgHasNative()) {
       const _tgS = tgLoadSettings();
       tgApplySettingsToInputs(_tgS.values);
@@ -23246,7 +23250,7 @@ function toggleMsrListen() {
     console.log('[TG JS] Start button pressed, bph:', bph, '(0=auto), dropdown:', document.getElementById('msr-bph-select').value);
     _tgDebugSessionId = crypto.randomUUID();
     _tgTickDebugBuffer = [];
-    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50, source: _tgSource() });
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50, source: _tgSource(), pzMode: _pzMode() });
     _msrListening = true;
     _msrTarget = 'measure';
     _msrListenStart = Date.now();
