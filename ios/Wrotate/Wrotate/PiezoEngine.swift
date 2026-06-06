@@ -231,6 +231,7 @@ class PiezoEngine {
     private var adaptiveThreshold: Float = 0
     private var calibNoiseFloor: Float = 0
     private var sampleCounter: Int64 = 0
+    private var wallBaseSamples: Int64 = 0   // wall-clock origin; rebased to the auto-BPH lock moment
     private var ringCounter: Int = 0
     private var lastBeatRing: Int = -1
     private var ringSinceBeat: Int = 0
@@ -306,7 +307,7 @@ class PiezoEngine {
         calibDuration = Int(ringRate * 2.0)   // 2s calibration
         env = 0; adaptiveThreshold = 0; calibrating = true; calibSamples = 0
         calibEnergies.removeAll(keepingCapacity: true)
-        sampleCounter = 0; ringCounter = 0; lastBeatRing = -1; ringSinceBeat = 0
+        sampleCounter = 0; wallBaseSamples = 0; ringCounter = 0; lastBeatRing = -1; ringSinceBeat = 0
         pendingCross = false; pendingPeak = 0; env1 = 0; env2 = 0
         pendingBeats.removeAll(keepingCapacity: true)
         pzDbgCounter = 0; pzDbgMaxE = 0; pzDbgBeats = 0
@@ -474,7 +475,17 @@ class PiezoEngine {
             targetBph = bestBph
             expectedInterval = ringRate / (Double(bestBph) / 3600.0)
             autoBphLocked = true
-            debugLog("[PZAUTOBPH] locked \(bestBph) ac=\(String(format: "%.2f", best))")
+            // Restart cleanly from the lock moment: behave exactly like a manual start at this
+            // BPH so the rate/convergence don't have to "recover" from the pre-lock collection
+            // window. Rebase the wall clock and clear any partial phase/regression state.
+            wallBaseSamples = sampleCounter
+            phaseBootstrapped = false; phaseStart = -1; nextPredicted = 0; lastBeatRingF = -1
+            prevBeatTime = -1; regPoints.removeAll(keepingCapacity: true); cumPairDevMs = 0
+            totalPairsAccepted = 0; pairPhase = 0; pairAccum = 0; pendingFirstBeatTime = 0
+            recentBeatDevs.removeAll(keepingCapacity: true); knownBeatError = 0
+            smoothedRate = nil; rateHistory.removeAll(keepingCapacity: true); wasStable = false
+            pendingBeats.removeAll(keepingCapacity: true)
+            debugLog("[PZAUTOBPH] locked \(bestBph) ac=\(String(format: "%.2f", best)) — reset to manual-equivalent")
         }
     }
 
@@ -592,7 +603,7 @@ class PiezoEngine {
         let now = CACurrentMediaTime() * 1000
         guard now - lastEmitMs > 200 else { return }   // ~5 Hz UI updates
         lastEmitMs = now
-        let wallElapsed = Double(sampleCounter) / actualSampleRate
+        let wallElapsed = Double(sampleCounter - wallBaseSamples) / actualSampleRate
 
         var rateForUpdate: Double? = nil
         if let slope = theilSen() {
