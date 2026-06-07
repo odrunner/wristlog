@@ -6029,7 +6029,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.16.45';
+const APP_VERSION = '07.16.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21821,7 +21821,7 @@ function onTdmChange() {
   if (raw === '') localStorage.removeItem('q2_tick_detect_mult');
   else localStorage.setItem('q2_tick_detect_mult', raw);
   const el = document.getElementById('msr-tune-tick-detect-mult');
-  if (el) el.value = resolveTdm(localStorage.getItem('q2_tick_detect_mult'), null, 0.3);
+  if (el) el.value = resolveTdm(localStorage.getItem('q2_tick_detect_mult'), _remoteTdm, 0.3);
   if (typeof sendMsrTuning === 'function') sendMsrTuning();
 }
 function onMsrModeChange() {
@@ -22085,6 +22085,7 @@ function stopTgListen() {
 // Remote tuning: poll Supabase for parameter changes
 let _tuningPollTimer = null;
 let _lastTuningTs = null;
+let _remoteTdm = null;   // last tick_detect_mult seen from the tuning table (so clearing a local override falls back to it)
 function startTuningPoll() {
   if (_tuningPollTimer) return;
   _tuningPollTimer = setInterval(async () => {
@@ -22099,8 +22100,9 @@ function startTuningPoll() {
       if (data.peak_ratio_threshold != null) _remotePeakRatioThreshold = data.peak_ratio_threshold;
       if (data.buffer_seconds != null) _remoteBufferSeconds = data.buffer_seconds;
       if (featureFlag('tg_quality_v2')) {
+        _remoteTdm = (data.tick_detect_mult != null) ? data.tick_detect_mult : null;
         const _tdmEl = document.getElementById('msr-tune-tick-detect-mult');
-        if (_tdmEl) _tdmEl.value = resolveTdm(localStorage.getItem('q2_tick_detect_mult'), data.tick_detect_mult, 0.3);
+        if (_tdmEl) _tdmEl.value = resolveTdm(localStorage.getItem('q2_tick_detect_mult'), _remoteTdm, 0.3);
       }
       // Send to native
       sendMsrTuning();
