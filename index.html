@@ -6028,7 +6028,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.15.30';
+const APP_VERSION = '07.15.37';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22310,6 +22310,7 @@ window._tgNativeCallback = function(data) {
       const prelimBadge = document.getElementById('msr-preliminary-badge');
       const rateBox = document.getElementById('msr-rate-box');
       if (badge && rateBox) {
+        const _v2OwnsConverge = featureFlag('tg_quality_v2') && isMsr;  // v2 plateau controller owns lock/badge for mic
         const bucketNow = _msrCachedBucketRate;
         const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
         let jsConverged = false;
@@ -22341,7 +22342,7 @@ window._tgNativeCallback = function(data) {
           }
           // Show/hide preliminary badge (visible until converged)
           if (prelimBadge) {
-            prelimBadge.style.display = hasPrelim && !jsConverged ? '' : 'none';
+            prelimBadge.style.display = (hasPrelim && (_v2OwnsConverge || !jsConverged)) ? '' : 'none';
           }
 
           // Convergence floor: 15s minimum, relaxed further with strong signal
@@ -22400,7 +22401,10 @@ window._tgNativeCallback = function(data) {
         }
         // Piezo engine does its own Theil-Sen + skip + trailing-window stability — trust its rateStable.
         if (isPz && data.rateStable && elapsed >= 15 && !pzWeak) jsConverged = true;
-        if (jsConverged) {
+        if (_v2OwnsConverge) {
+          // v2: _q2Tick (incremental-stability) owns the lock; never show CONVERGED prematurely.
+          badge.style.display = 'none';
+        } else if (jsConverged) {
           badge.style.display = '';
           if (prelimBadge) prelimBadge.style.display = 'none';
           // Flash progress bar to 100% before stopping
