@@ -36,7 +36,7 @@ const VERBATIM = [
   'posterUrlFor', 'renderPostLocationHtml', 'rowToLog', 'rowToWatch', 'rowToWish',
   'sanitizeImageUrl', 'sanitizeSearch', 'storagePathFrom', 'tgAdvancedSummaryFields',
   'tgLoadSettings', 'tgMapSliderToEngine', 'tgSaveSettings', 'uniqueWears',
-  'validateUsername', 'withTimeout',
+  'validateUsername', 'withTimeout', 'resolveTdm',
 ];
 
 const ADAPTED = [

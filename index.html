@@ -6028,7 +6028,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.16.35';
+const APP_VERSION = '07.16.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22087,6 +22087,10 @@ function startTuningPoll() {
       // Update UI controls
       if (data.peak_ratio_threshold != null) _remotePeakRatioThreshold = data.peak_ratio_threshold;
       if (data.buffer_seconds != null) _remoteBufferSeconds = data.buffer_seconds;
+      if (featureFlag('tg_quality_v2')) {
+        const _tdmEl = document.getElementById('msr-tune-tick-detect-mult');
+        if (_tdmEl) _tdmEl.value = resolveTdm(localStorage.getItem('q2_tick_detect_mult'), data.tick_detect_mult, 0.3);
+      }
       // Send to native
       sendMsrTuning();
     } catch (e) {}
@@ -22971,6 +22975,14 @@ function computeRobustRate(samples, bph, opts={}){ // bph: reserved for future B
   return { rate:Math.round(rate*10)/10, quality:Math.round(quality*100)/100, label, nTicks, durationSec:Math.round(durationSec*10)/10, residualSd:Math.round(residualSd*1000)/1000, subWindowDelta:Math.round(subWindowDelta*10)/10, bphSuspect, converged };
 }
 
+// Effective tickDetectMult: local override (>0) wins, else table value (>0), else default.
+function resolveTdm(override, table, def) {
+  const o = parseFloat(override);
+  if (isFinite(o) && o > 0) return o;
+  const t = parseFloat(table);
+  if (isFinite(t) && t > 0) return t;
+  return def;
+}
 // quality v2 — incremental-stability settle test (mirror of wrotate_test.js incrSettle).
 // Settled when the from-start LS rate stops moving: |rate[start,t] - rate[start,t-look]| <= eps held
 // for `hold` consecutive 1s steps (`look` is a lag on the SAME from-start window). Assumes samples
@@ -23452,6 +23464,16 @@ function toggleWatchPresent() {
   }
 }
 
+// Apply a local tickDetectMult override (if set) to the hidden tuning input before tuning is sent.
+function _q2ApplyTdm() {
+  if (!featureFlag('tg_quality_v2')) return;
+  const ov = localStorage.getItem('q2_tick_detect_mult');
+  if (ov == null || ov === '') return;            // no override; let poll/default stand
+  const v = resolveTdm(ov, null, null);
+  const el = document.getElementById('msr-tune-tick-detect-mult');
+  if (el && v != null) el.value = v;
+}
+
 function sendMsrTuning() {
   if (!_msrListening || !_tgHasNative()) return;
   window.webkit.messageHandlers.timegrapher.postMessage({
@@ -23599,6 +23621,7 @@ function toggleMsrListen() {
     } else {
       _msrActiveSettings = null;
     }
+    _q2ApplyTdm();
     setTimeout(() => sendMsrTuning(), 200);
     setTimeout(() => sendPiezoTuning(), 200);
     startTuningPoll();
