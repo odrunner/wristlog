@@ -6024,7 +6024,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.14.42';
+const APP_VERSION = '07.14.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22155,7 +22155,7 @@ window._tgNativeCallback = function(data) {
 
     // Timegrapher chart: add per-tick dots
     if (isMsr && data.newTicks) addMsrTickDots(data.newTicks);
-    if (isMsr && featureFlag('tg_quality_v2')) _q2DevReadout(data.rate);
+    if (isMsr && featureFlag('tg_quality_v2')) _q2Tick(data.rate);
 
     if (isMsr && data.confidence != null) _msrLastConf = data.confidence;
 
@@ -22492,7 +22492,7 @@ window._tgNativeCallback = function(data) {
     if (isMsr && _msrListening && _msrListenStart) {
       const elapsed = (Date.now() - _msrListenStart) / 1000;
       const maxDur = _tgHasNative() ? tgLoadSettings().values.maxDuration : 45;
-      if (!_micBatchActive && (_msrPhase === 'converged' || elapsed >= maxDur)) {  // batch controls run length; don't auto-stop mid-batch
+      if (!_micBatchActive && !featureFlag('tg_quality_v2') && (_msrPhase === 'converged' || elapsed >= maxDur)) {  // flag-on: the _q2Tick plateau controller owns the finish
         const wasConverged = _msrPhase === 'converged';
         // Haptic feedback on finish — success for converged, warning for timeout
         if (window.webkit?.messageHandlers?.haptic) {
@@ -23000,10 +23000,23 @@ function _q2Params() {
     mode,
   };
 }
-function _q2DevReadout(nativeRateNow) {
+function _q2Tick(nativeRateNow) {
   const now = Date.now();
   if (now - _q2LastReadout < 1000) return;   // throttle to 1 Hz
   _q2LastReadout = now;
+  const params = _q2Params();
+  const s = incrSettle(_msrScatterData, params);
+  _q2LastBand = s.band;
+  _q2RenderReadout(nativeRateNow, s, params);
+  // Adaptive stop: when flag-on and actively measuring (not during a batch).
+  if (_msrListening && !_micBatchActive && _msrListenStart) {
+    const elapsed = (now - _msrListenStart) / 1000;
+    const cap = _q2Num('q2_cap', 90);
+    if (s.settled) { _msrPhase = 'converged'; stopMsrListen('plateau'); }
+    else if (elapsed >= cap) { stopMsrListen('duration_cap'); }
+  }
+}
+function _q2RenderReadout(nativeRateNow, s, params) {
   const host = document.getElementById('msr-scatter-plot')?.parentElement;
   if (!host) return;
   let el = document.getElementById('msr-q2-readout');
@@ -23013,12 +23026,11 @@ function _q2DevReadout(nativeRateNow) {
     el.style.cssText = 'font-family:monospace;font-size:.66rem;color:#9aa;padding:.25rem .4rem;line-height:1.35;';
     host.insertAdjacentElement('afterend', el);
   }
-  const bph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;
-  const q = computeRobustRate(_msrScatterData, bph);
-  const natRate = (nativeRateNow != null) ? nativeRateNow : _msrLastRate;
-  const nat = natRate != null ? natRate.toFixed(1) : '—';
-  const js = q.rate != null ? q.rate.toFixed(1) : '—';
-  el.textContent = `native ${nat} | js ${js} s/d · ${q.label} q=${q.quality} · res ${q.residualSd}ms · Δhalf ${q.subWindowDelta} · n${q.nTicks}${q.bphSuspect ? ' · BPH?' : ''}${q.converged ? ' · LOCK' : ''}`;
+  const nat = (nativeRateNow != null) ? nativeRateNow : _msrLastRate;
+  const natStr = nat != null ? nat.toFixed(1) : '—';
+  const js = s.rate != null ? s.rate.toFixed(1) : '—';
+  const band = s.band != null ? s.band.toFixed(2) : '—';
+  el.textContent = `[${params.mode}] native ${natStr} | js ${js} s/d · band ±${band} · n${s.nTicks}${s.settled ? ' · SETTLED' : ''}`;
 }
 
 function addMsrTickDots(newTicks) {
