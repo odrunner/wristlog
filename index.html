@@ -6021,7 +6021,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.20.37';
+const APP_VERSION = '06.20.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12947,7 +12947,11 @@ function renderEmailEngagement(events) {
       </div>`;
     }).join('');
 
-  const recentOpens = events.filter(e => e.event_type === 'opened' || e.event_type === 'clicked').slice(0, 15);
+  const myEmail = (currentUser && currentUser.email || '').toLowerCase();
+  const recentOpens = events
+    .filter(e => e.event_type === 'opened' || e.event_type === 'clicked')
+    .filter(e => (e.email_to || '').toLowerCase() !== myEmail)
+    .slice(0, 15);
   const recentRows = recentOpens.map(e => {
     const email = e.email_to || '—';
     const masked = email.length > 5 ? email.slice(0, 3) + '***' + email.slice(email.indexOf('@')) : email;
