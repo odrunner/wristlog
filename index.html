@@ -6021,7 +6021,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.06.03';
+const APP_VERSION = '07.08.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6145,7 +6145,7 @@ async function loadMyProfile() {
     if (!/^[a-z]/.test(username)) username = 'u' + username;
     const abVariant = localStorage.getItem('ab_landing') || null;
     const { data: created, error: createErr } = await db.from('profiles').upsert(
-      { id: currentUser.id, username, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'public', ab_variant: abVariant },
+      { id: currentUser.id, username, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'public', collection_visibility: 'public', wishlist_visibility: 'public', ab_variant: abVariant },
       { onConflict: 'id' }
     ).select().single();
     if (createErr) {
@@ -6153,7 +6153,7 @@ async function loadMyProfile() {
       // Retry with a guaranteed-unique username (e.g. username conflict)
       const fallback = 'user' + Math.random().toString(36).slice(2, 8);
       const { data: retry, error: retryErr } = await db.from('profiles').upsert(
-        { id: currentUser.id, username: fallback, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'public', ab_variant: abVariant },
+        { id: currentUser.id, username: fallback, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'public', collection_visibility: 'public', wishlist_visibility: 'public', ab_variant: abVariant },
         { onConflict: 'id' }
       ).select().single();
       if (retryErr) console.error('[WristLog] Profile create retry error:', retryErr.message, retryErr);
