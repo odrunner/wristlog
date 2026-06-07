@@ -6022,7 +6022,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.09.18';
+const APP_VERSION = '07.09.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22104,6 +22104,7 @@ window._tgNativeCallback = function(data) {
 
     // Timegrapher chart: add per-tick dots
     if (isMsr && data.newTicks) addMsrTickDots(data.newTicks);
+    if (isMsr && featureFlag('tg_quality_v2')) _q2DevReadout();
 
     if (isMsr && data.confidence != null) _msrLastConf = data.confidence;
 
@@ -22865,6 +22866,61 @@ function _resetMsrState(bph) {
 
 let _msrScatterRafPending = false;
 let _msrLastCumDev = 0; // track last cumulative deviation to compute individual pair devs
+// quality v2 — robust rate (mirror of wrotate_test.js computeRobustRate; knobs via localStorage q2_*).
+// `converged` is a hard gate; `quality`/`label` is an independent soft score (can disagree near thresholds).
+function _q2Median(arr){ if(!arr.length) return 0; const s=[...arr].sort((a,b)=>a-b); const m=s.length>>1; return s.length%2?s[m]:(s[m-1]+s[m])/2; }
+function _q2TheilSen(xs,ys){ const n=xs.length; if(n<2) return {slope:0,intercept:ys[0]||0}; const slopes=[]; const maxPairs=200000; const total=(n*(n-1))/2; const stride=total>maxPairs?Math.ceil(total/maxPairs):1; let k=0; for(let i=0;i<n;i++){ for(let j=i+1;j<n;j++){ if(stride===1||(k++%stride===0)){ const dx=xs[j]-xs[i]; if(dx!==0) slopes.push((ys[j]-ys[i])/dx); } } } const slope=_q2Median(slopes); const intercept=_q2Median(xs.map((x,i)=>ys[i]-slope*x)); return {slope,intercept}; }
+function _q2Num(key, def){ const v=parseFloat(localStorage.getItem(key)); return isFinite(v)?v:def; }
+function computeRobustRate(samples, bph, opts={}){ // bph: reserved for future BPH/harmonic checks (not yet used)
+  const o={ minTicks:_q2Num('q2_min_ticks',60), convergeSday:_q2Num('q2_converge_sday',3), maxResidualMs:_q2Num('q2_max_residual_ms',2.0), madMult:_q2Num('q2_mad_mult',4), suspectSday:_q2Num('q2_suspect_sday',60), suspectResidualMs:_q2Num('q2_suspect_residual_ms',3), residualRefMs:_q2Num('q2_residual_ref_ms',3), outlierFloorMs:_q2Num('q2_outlier_floor_ms',5), ...opts };
+  const pts=(samples||[]).filter(p=>p&&isFinite(p.t)&&isFinite(p.cd));
+  const nTicks=pts.length; const durationSec=nTicks?pts[nTicks-1].t-pts[0].t:0;
+  const weak={ rate:null, quality:0, label:'weak', nTicks, durationSec, residualSd:0, subWindowDelta:0, bphSuspect:false, converged:false };
+  if(nTicks<o.minTicks) return weak;
+  const xs=pts.map(p=>p.t), ys=pts.map(p=>p.cd);
+  let {slope,intercept}=_q2TheilSen(xs,ys);
+  let res=ys.map((y,i)=>y-(slope*xs[i]+intercept));
+  const medRes=_q2Median(res); const mad=_q2Median(res.map(r=>Math.abs(r-medRes)));
+  const cutoff=Math.max(o.madMult*1.4826*(mad||0), o.outlierFloorMs);
+  const keep=res.map(r=>Math.abs(r)<=cutoff);
+  let ix=xs.filter((_,i)=>keep[i]); let iy=ys.filter((_,i)=>keep[i]);
+  if(ix.length>=2)({slope,intercept}=_q2TheilSen(ix,iy));
+  const rate=slope*86.4;
+  const inRes=iy.map((y,i)=>y-(slope*ix[i]+intercept));
+  const meanRes=inRes.reduce((a,b)=>a+b,0)/(inRes.length||1);
+  const residualSd=Math.sqrt(inRes.reduce((a,b)=>a+(b-meanRes)**2,0)/(inRes.length||1));
+  const halfT=pts[0].t+durationSec/2; const lhx=[],lhy=[];
+  for(let i=0;i<nTicks;i++) if(xs[i]>=halfT){ lhx.push(xs[i]); lhy.push(ys[i]); }
+  const rateLastHalf=lhx.length>=2?_q2TheilSen(lhx,lhy).slope*86.4:rate;
+  const subWindowDelta=Math.abs(rate-rateLastHalf);
+  const bphSuspect=Math.abs(rate)>o.suspectSday&&residualSd>o.suspectResidualMs;
+  const quality=Math.max(0,Math.min(1, 0.6*(1-subWindowDelta/o.convergeSday)+0.4*(1-residualSd/o.residualRefMs)));
+  const label=quality>=0.7?'solid':quality>=0.4?'fair':'weak';
+  const converged=nTicks>=o.minTicks&&subWindowDelta<=o.convergeSday&&residualSd<=o.maxResidualMs;
+  return { rate:Math.round(rate*10)/10, quality:Math.round(quality*100)/100, label, nTicks, durationSec:Math.round(durationSec*10)/10, residualSd:Math.round(residualSd*1000)/1000, subWindowDelta:Math.round(subWindowDelta*10)/10, bphSuspect, converged };
+}
+
+let _q2LastReadout = 0;
+function _q2DevReadout() {
+  const now = Date.now();
+  if (now - _q2LastReadout < 1000) return;   // throttle to 1 Hz
+  _q2LastReadout = now;
+  const host = document.getElementById('msr-scatter-plot')?.parentElement;
+  if (!host) return;
+  let el = document.getElementById('msr-q2-readout');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'msr-q2-readout';
+    el.style.cssText = 'font-family:monospace;font-size:.66rem;color:#9aa;padding:.25rem .4rem;line-height:1.35;';
+    host.appendChild(el);
+  }
+  const bph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;
+  const q = computeRobustRate(_msrScatterData, bph);
+  const nat = _msrLastRate != null ? _msrLastRate.toFixed(1) : '—';
+  const js = q.rate != null ? q.rate.toFixed(1) : '—';
+  el.textContent = `native ${nat} | js ${js} s/d · ${q.label} q=${q.quality} · res ${q.residualSd}ms · Δhalf ${q.subWindowDelta} · n${q.nTicks}${q.bphSuspect ? ' · BPH?' : ''}${q.converged ? ' · LOCK' : ''}`;
+}
+
 function addMsrTickDots(newTicks) {
   if (!newTicks || !newTicks.length) return;
   const activeBph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;

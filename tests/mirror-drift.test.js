@@ -40,7 +40,7 @@ const VERBATIM = [
 ];
 
 const ADAPTED = [
-  'MSR_CARD_MIN_DOTS', 'checkContent', 'computeFriendships', 'computeWatchRec',
+  'MSR_CARD_MIN_DOTS', 'checkContent', 'computeFriendships', 'computeRobustRate', 'computeWatchRec',
   'fmtMoney', 'formatCommentTime', 'formatFeedDate', 'getMentionQuery', 'initials',
   'isBase64', 'logToRow', 'markDirty', 'monthRevNav', 'profileInitials',
   'renderCommentBody', 'todayStr', 'warrantyStatus', 'watchToRow', 'wishToRow',
