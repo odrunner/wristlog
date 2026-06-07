@@ -6019,7 +6019,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.18.29';
+const APP_VERSION = '06.19.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10872,10 +10872,13 @@ async function saveNewPost() {
     }
   }
   const postedWatch = trackWatchId ? watches.find(x => x.id === trackWatchId) : null;
-  if (postedWatch) dismissReminder(); // wear was logged, dismiss the reminder
+  // A measurement share tags a watch for attribution but is NOT a wear — don't
+  // dismiss the wear reminder or claim a wear was logged for it.
+  const isWear = !!postedWatch && useCase !== 'measurement';
+  if (isWear) dismissReminder(); // wear was logged, dismiss the reminder
   closeNewPost();
   if (window.posthog) posthog.capture('post_created', { has_photo: !!entry.photoUrl, photo_count: parsePhotoUrl(entry.photoUrl).length, has_watch: !!trackWatchId });
-  toast(postedWatch ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : 'Posted!');
+  toast(isWear ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : (useCase === 'measurement' ? 'Shared to feed!' : 'Posted!'));
   haptic('success');
   maybeShowReviewPrompt('post');
   checkAndAwardBadges('post');
@@ -23526,6 +23529,9 @@ function stopMsrListen(reason) {
   if (_tgStream) { _tgStream.getTracks().forEach(t => t.stop()); _tgStream = null; }
   if (_tgAudioCtx) { _tgAudioCtx.close().catch(() => {}); _tgAudioCtx = null; }
   const wasConverged = _msrPhase === 'converged';
+  // Result uncertainty (± s/day), computed below; hoisted so the share-popup
+  // trigger can gate on it. Defaults high so an uncomputed value never qualifies.
+  let errorBar = 5;
   // Reset button to record state
   const btnMic = document.getElementById('msr-btn-mic');
   const btnStop = document.getElementById('msr-btn-stop');
@@ -23560,7 +23566,7 @@ function stopMsrListen(reason) {
     const r = _msrLastRate;
     // Error bar: based on bucket rate stability (how much the estimate varied recently)
     // This reflects actual measurement uncertainty, not quantization spread of raw dots.
-    let errorBar = 0;
+    errorBar = 0;
     if (_msrBucketRateHistory.length >= 3) {
       const vals = _msrBucketRateHistory.slice(-10).map(x => x.v);
       const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
@@ -23628,10 +23634,11 @@ function stopMsrListen(reason) {
       }
       completeMsg.style.color = 'var(--text)';
     }
-    // Auto-prompt to share a good-quality (converged) result, at most once per
-    // watch. Skip in demo mode / when not signed in (no feed to post to).
+    // Auto-prompt to share a high-confidence result, at most once per watch.
+    // "High confidence" = converged AND a tight error bar (± ≤ 2.0 s/day).
+    // Skip in demo mode / when not signed in (no feed to post to).
     // Admin-gated for now (msr_share_popup) — personal testing in production.
-    if (featureFlag('msr_share_popup') && wasConverged && currentUser && !_isDemoMode) {
+    if (featureFlag('msr_share_popup') && wasConverged && errorBar <= 2.0 && currentUser && !_isDemoMode) {
       const popupWatchId = document.getElementById('msr-watch-select')?.value;
       if (popupWatchId && !msrSharePromptSeen(popupWatchId)) {
         markMsrSharePromptSeen(popupWatchId);
