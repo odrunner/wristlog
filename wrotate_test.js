@@ -1320,6 +1320,46 @@ export function computeRobustRate(samples, bph, opts = {}) { // bph: reserved fo
 }
 
 // ══════════════════════════════════════════
+//  INCREMENTAL-STABILITY SETTLE TEST (quality v2 adaptive stop)
+// ══════════════════════════════════════════
+
+// Least-squares slope of cd vs t over [t0,t1], in s/day (slope_ms_per_s * 86.4). null if <8 pts.
+function _q2Ls(pts, t0, t1) {
+  let sx = 0, sy = 0, n = 0;
+  for (const p of pts) if (p.t >= t0 && p.t <= t1) { sx += p.t; sy += p.cd; n++; }
+  if (n < 8) return null;
+  const mx = sx / n, my = sy / n;
+  let sxx = 0, sxy = 0;
+  for (const p of pts) if (p.t >= t0 && p.t <= t1) { const dx = p.t - mx; sxx += dx * dx; sxy += dx * (p.cd - my); }
+  if (sxx === 0) return null;
+  return sxy / sxx * 86.4;
+}
+
+export function incrSettle(samples, params = {}) {
+  const o = { eps: 0.4, look: 20, hold: 8, minTicks: 40, ...params };
+  const pts = (samples || []).filter(p => p && isFinite(p.t) && isFinite(p.cd));
+  const n = pts.length;
+  const lastT = n ? pts[n - 1].t : 0;
+  if (n < o.minTicks) return { settled: false, rate: null, band: null, t: lastT, nTicks: n };
+  const start = pts[0].t;
+  let consec = 0, bandMax = 0;
+  for (let t = start + o.look + 1; t <= lastT + 1e-6; t += 1) {
+    const a = _q2Ls(pts, start, t);
+    const b = _q2Ls(pts, start, t - o.look);
+    if (a == null || b == null) { consec = 0; bandMax = 0; continue; }
+    const diff = Math.abs(a - b);
+    if (diff <= o.eps) {
+      consec += 1; bandMax = Math.max(bandMax, diff);
+      if (consec >= o.hold) {
+        return { settled: true, rate: Math.round(a * 10) / 10, band: Math.round(bandMax * 1000) / 1000, t: Math.round(t * 10) / 10, nTicks: n };
+      }
+    } else { consec = 0; bandMax = 0; }
+  }
+  const last = _q2Ls(pts, start, lastT);
+  return { settled: false, rate: last == null ? null : Math.round(last * 10) / 10, band: null, t: lastT, nTicks: n };
+}
+
+// ══════════════════════════════════════════
 //  SEARCH & INPUT SANITIZATION
 // ══════════════════════════════════════════
 

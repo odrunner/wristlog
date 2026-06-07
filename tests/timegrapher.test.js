@@ -227,3 +227,42 @@ describe('computeRobustRate', () => {
     expect(r.bphSuspect).toBe(true);
   });
 });
+
+import { incrSettle } from '../wrotate_test.js';
+
+// cd grows at (sday/86.4) ms per second; ticks every `dt` s.
+function streamRate(sday, dur, dt = 0.125, startT = 0) {
+  const slope = sday / 86.4; const out = [];
+  for (let t = startT; t <= startT + dur + 1e-9; t += dt) out.push({ t: +t.toFixed(3), cd: slope * t });
+  return out;
+}
+
+describe('incrSettle', () => {
+  it('returns null/unsettled below the tick floor', () => {
+    const r = incrSettle(streamRate(5, 2), { eps: 0.4, look: 20, hold: 8, minTicks: 40 });
+    expect(r.settled).toBe(false);
+    expect(r.rate).toBeNull();
+  });
+
+  it('settles on a clean constant-rate stream with a tight band', () => {
+    const r = incrSettle(streamRate(5, 90), { eps: 0.4, look: 20, hold: 8, minTicks: 40 });
+    expect(r.settled).toBe(true);
+    expect(r.rate).toBeCloseTo(5, 0);
+    expect(r.band).toBeLessThanOrEqual(0.4);
+    expect(r.t).toBeGreaterThanOrEqual(25);
+    expect(r.t).toBeLessThanOrEqual(40);
+  });
+
+  it('settles on a clean BUT short stream (duration must not penalize)', () => {
+    const r = incrSettle(streamRate(-3, 33), { eps: 0.4, look: 20, hold: 8, minTicks: 40 });
+    expect(r.settled).toBe(true);
+    expect(r.rate).toBeCloseTo(-3, 0);
+  });
+
+  it('does NOT settle while the estimate is still moving (accelerating cd)', () => {
+    const out = []; for (let t = 0; t <= 90; t += 0.125) out.push({ t: +t.toFixed(3), cd: 0.01 * t * t });
+    const r = incrSettle(out, { eps: 0.4, look: 20, hold: 8, minTicks: 40 });
+    expect(r.settled).toBe(false);
+    expect(r.rate).not.toBeNull();
+  });
+});
