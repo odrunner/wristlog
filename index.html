@@ -6022,7 +6022,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.09.23';
+const APP_VERSION = '07.09.41';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22104,7 +22104,7 @@ window._tgNativeCallback = function(data) {
 
     // Timegrapher chart: add per-tick dots
     if (isMsr && data.newTicks) addMsrTickDots(data.newTicks);
-    if (isMsr && featureFlag('tg_quality_v2')) _q2DevReadout();
+    if (isMsr && featureFlag('tg_quality_v2')) _q2DevReadout(data.rate);
 
     if (isMsr && data.confidence != null) _msrLastConf = data.confidence;
 
@@ -22842,6 +22842,7 @@ function tgQuickApplyNoisy() {
 function _resetMsrState(bph) {
   hideTroubleshootTips();
   _msrScatterData = []; _msrLastCumDev = 0;
+  { const _q2ro = document.getElementById('msr-q2-readout'); if (_q2ro) _q2ro.textContent = ''; }
   _msrLastDetectTime = 0;
   _msrPhase = 'acquiring';
   _msrIsAuto = (bph === 0);
@@ -22901,7 +22902,7 @@ function computeRobustRate(samples, bph, opts={}){ // bph: reserved for future B
 }
 
 let _q2LastReadout = 0;
-function _q2DevReadout() {
+function _q2DevReadout(nativeRateNow) {
   const now = Date.now();
   if (now - _q2LastReadout < 1000) return;   // throttle to 1 Hz
   _q2LastReadout = now;
@@ -22912,11 +22913,12 @@ function _q2DevReadout() {
     el = document.createElement('div');
     el.id = 'msr-q2-readout';
     el.style.cssText = 'font-family:monospace;font-size:.66rem;color:#9aa;padding:.25rem .4rem;line-height:1.35;';
-    host.appendChild(el);
+    host.insertAdjacentElement('afterend', el);
   }
   const bph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;
   const q = computeRobustRate(_msrScatterData, bph);
-  const nat = _msrLastRate != null ? _msrLastRate.toFixed(1) : '—';
+  const natRate = (nativeRateNow != null) ? nativeRateNow : _msrLastRate;
+  const nat = natRate != null ? natRate.toFixed(1) : '—';
   const js = q.rate != null ? q.rate.toFixed(1) : '—';
   el.textContent = `native ${nat} | js ${js} s/d · ${q.label} q=${q.quality} · res ${q.residualSd}ms · Δhalf ${q.subWindowDelta} · n${q.nTicks}${q.bphSuspect ? ' · BPH?' : ''}${q.converged ? ' · LOCK' : ''}`;
 }
@@ -23256,6 +23258,7 @@ function openMeasureInline() {
   _msrLastRate = null;
   _msrLastBph = null;
   _msrScatterData = []; _msrLastCumDev = 0;
+  { const _q2ro = document.getElementById('msr-q2-readout'); if (_q2ro) _q2ro.textContent = ''; }
   const listenBtn = document.getElementById('msr-listen-btn');
   const btnMic = document.getElementById('msr-btn-mic');
   const btnStop = document.getElementById('msr-btn-stop');
@@ -23731,6 +23734,7 @@ function discardMsrReading() {
   _msrLastRate = null;
   _msrLastBph = null;
   _msrScatterData = []; _msrLastCumDev = 0;
+  { const _q2ro = document.getElementById('msr-q2-readout'); if (_q2ro) _q2ro.textContent = ''; }
   document.getElementById('msr-save-section').style.display = 'none';
   const shareCta = document.getElementById('msr-share-cta');
   if (shareCta) shareCta.style.display = 'none';
