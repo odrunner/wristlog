@@ -95,6 +95,35 @@ use and the historical 21,600 swings.
 4. Auto-BPH hardening for 21,600 (longer/more decisive lock, or confirm BPH from measured interval
    after a few seconds) — only if the log tally shows real-world mis-locks.
 
+## Update — reject-reason tally (real data, the "data before code" step)
+
+Tallied logged accept/reject events from the two batch sessions (`timegrapher_tick_logs`, via
+`regexp_count`):
+
+| Batch | accepted | pair_reject | phase_reject | phase_skip | paired-acceptance |
+|---|---|---|---|---|---|
+| Hamilton (21,600, clean) | 3254 | 433 | 39 | 14 | **87%** (92% pair / 8% phase) |
+| JLC (28,800, ~4ms BE) | 2986 | 1252 | 914 | 292 | **58%** (58% pair / 42% phase) |
+
+**Key correction to Finding 1:** the logged pairing gates are NOT the dominant cause of the ~40%
+overall acceptance. Hamilton accepts **87%** of ticks that *reach* pairing, yet only ~217 ticks/run
+were logged vs ~540 physical beats — so **most missing beats are lost upstream, silently, at the
+energy-detection threshold** (those rejections emit no log line). The adaptive-pair-threshold ceiling
+is a real but secondary rejecter, not the prime mover. JLC is hit on both fronts: 58% paired-
+acceptance with **42% of rejects being phase rejects (914)** — direct fallout from its ~4ms beat error
+mis-pairing tick/tock — plus the same silent detection loss. Sampled threshold was 0.5–0.67ms against
+4–5ms pair deviations (brutally tight for a high-beat-error watch).
+
+**What this results in (prioritized native actions, all TestFlight-gated, data-first):**
+1. **Quantify the silent detection loss** — the biggest lever and currently unmeasured. Either analyze
+   the `TGDEBUG energy/thresh/tickThresh` lines, or add native logging for the silent gates
+   (energy-threshold, min-spacing, outlier-interval, maxTickDev). Do this BEFORE changing detection.
+2. **Loosen energy detection** (`tickDetectMult` / threshold floor) once (1) shows it's the cause —
+   more accepted ticks → lower variance AND faster convergence (more data/sec = plateau sooner).
+3. **Beat-error-aware pairing/threshold** for JLC-class watches: raise the adaptive threshold floor
+   when beat error is high, and harden phase recovery so a ~4ms BE doesn't reject 42% of pairs.
+4. Acceptance work and the JS convergence work compound: more clean ticks/sec lets v2 lock earlier.
+
 ## Scope note
 
 This is investigation only. Any Swift change is a separate cycle, built by the user and tested via
