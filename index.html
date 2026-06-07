@@ -6024,7 +6024,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.14.38';
+const APP_VERSION = '07.14.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22896,6 +22896,7 @@ function _resetMsrState(bph) {
   hideTroubleshootTips();
   _msrScatterData = []; _msrLastCumDev = 0;
   { const _q2ro = document.getElementById('msr-q2-readout'); if (_q2ro) _q2ro.textContent = ''; }
+  _q2LastBand = null;
   _msrLastDetectTime = 0;
   _msrPhase = 'acquiring';
   _msrIsAuto = (bph === 0);
@@ -22986,6 +22987,19 @@ function incrSettle(samples, params = {}) {
   return { settled: false, rate: last == null ? null : Math.round(last * 10) / 10, band: null, t: lastT, nTicks: n };
 }
 let _q2LastReadout = 0;
+let _q2LastBand = null;   // residual band (s/day) from the last incrSettle — drives the error bar
+// Quick/Accurate -> incrSettle params; every field overridable by a q2_* localStorage knob (live tuning).
+function _q2Params() {
+  const mode = (localStorage.getItem('msr_mode') === 'quick') ? 'quick' : 'accurate';
+  const base = mode === 'quick' ? { eps: 0.7, look: 15, hold: 5 } : { eps: 0.4, look: 20, hold: 8 };
+  return {
+    eps: _q2Num('q2_eps', base.eps),
+    look: _q2Num('q2_look', base.look),
+    hold: _q2Num('q2_hold', base.hold),
+    minTicks: _q2Num('q2_settle_min_ticks', 40),
+    mode,
+  };
+}
 function _q2DevReadout(nativeRateNow) {
   const now = Date.now();
   if (now - _q2LastReadout < 1000) return;   // throttle to 1 Hz
@@ -23344,6 +23358,7 @@ function openMeasureInline() {
   _msrLastBph = null;
   _msrScatterData = []; _msrLastCumDev = 0;
   { const _q2ro = document.getElementById('msr-q2-readout'); if (_q2ro) _q2ro.textContent = ''; }
+  _q2LastBand = null;
   const listenBtn = document.getElementById('msr-listen-btn');
   const btnMic = document.getElementById('msr-btn-mic');
   const btnStop = document.getElementById('msr-btn-stop');
@@ -23821,6 +23836,7 @@ function discardMsrReading() {
   _msrLastBph = null;
   _msrScatterData = []; _msrLastCumDev = 0;
   { const _q2ro = document.getElementById('msr-q2-readout'); if (_q2ro) _q2ro.textContent = ''; }
+  _q2LastBand = null;
   document.getElementById('msr-save-section').style.display = 'none';
   const shareCta = document.getElementById('msr-share-cta');
   if (shareCta) shareCta.style.display = 'none';
