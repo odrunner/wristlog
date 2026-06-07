@@ -3438,6 +3438,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <option value="accurate">Accurate (lower error bar, waits longer)</option>
         <option value="quick">Quick (faster, wider error bar)</option>
       </select>
+          <input id="msr-tdm-input" type="number" step="0.01" min="0" placeholder="tickDetectMult (blank = default 0.3)" oninput="onTdmChange()" style="display:none;width:100%;margin-bottom:.4rem;padding:.4rem;border-radius:8px;border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:.72rem;">
       <input id="mic-batch-position" placeholder="position label (optional)" style="display:none;width:100%;margin-bottom:.4rem;padding:.4rem;border-radius:8px;border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:.72rem;">
       <button id="mic-batch-btn" onclick="runMicBatch()" style="display:none;width:100%;margin-bottom:.75rem;padding:.45rem;border-radius:8px;border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:.72rem;cursor:pointer;">Mic Batch ×15 (90s each, same watch &amp; position)</button>
       <!-- Instrument panel -->
@@ -6028,7 +6029,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.16.39';
+const APP_VERSION = '07.16.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21766,6 +21767,8 @@ function initTgSourceSelector() {
   const mp = document.getElementById('mic-batch-position'); if (mp) mp.style.display = mbOn ? '' : 'none';
   const ms = document.getElementById('msr-mode-select');
   if (ms) { ms.style.display = mbOn ? '' : 'none'; ms.value = (localStorage.getItem('msr_mode') === 'quick') ? 'quick' : 'accurate'; }
+  const td = document.getElementById('msr-tdm-input');
+  if (td) { td.style.display = mbOn ? '' : 'none'; const _ov = localStorage.getItem('q2_tick_detect_mult'); if (_ov != null) td.value = _ov; }
 }
 function onPzTune(key, val) { if (val !== '' && Number(val) > 0) { localStorage.setItem(key, val); sendPiezoTuning(); } }
 function _pzMode() { return localStorage.getItem('pz_mode') === 'measurement' ? 'measurement' : 'default'; }
@@ -21813,6 +21816,14 @@ async function runPiezoBatch() {
 // offline iteration. Mic source only (never touches piezo). Click again to cancel.
 let _micBatchActive = false;
 const _MIC_BATCH_LABEL = 'Mic Batch ×15 (90s each, same watch & position)';
+function onTdmChange() {
+  const raw = (document.getElementById('msr-tdm-input')?.value || '').trim();
+  if (raw === '') localStorage.removeItem('q2_tick_detect_mult');
+  else localStorage.setItem('q2_tick_detect_mult', raw);
+  const el = document.getElementById('msr-tune-tick-detect-mult');
+  if (el) el.value = resolveTdm(localStorage.getItem('q2_tick_detect_mult'), null, 0.3);
+  if (typeof sendMsrTuning === 'function') sendMsrTuning();
+}
 function onMsrModeChange() {
   const v = document.getElementById('msr-mode-select')?.value === 'quick' ? 'quick' : 'accurate';
   localStorage.setItem('msr_mode', v);
@@ -23063,7 +23074,8 @@ function _q2RenderReadout(nativeRateNow, s, params) {
   const natStr = nat != null ? nat.toFixed(1) : '—';
   const js = s.rate != null ? s.rate.toFixed(1) : '—';
   const band = s.band != null ? s.band.toFixed(2) : '—';
-  el.textContent = `[${params.mode}] native ${natStr} | js ${js} s/d · band ±${band} · n${s.nTicks}${s.settled ? ' · SETTLED' : ''}`;
+  const tdm = document.getElementById('msr-tune-tick-detect-mult')?.value;
+  el.textContent = `[${params.mode}] native ${natStr} | js ${js} s/d · band ±${band} · n${s.nTicks} · tdm=${tdm}${s.settled ? ' · SETTLED' : ''}`;
 }
 
 function addMsrTickDots(newTicks) {
