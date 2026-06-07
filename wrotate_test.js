@@ -1230,6 +1230,95 @@ export function computeMedianRate(rates) {
 }
 
 // ══════════════════════════════════════════
+//  ROBUST RATE (quality v2) — stability-gated rate from cumulative-dev stream
+// ══════════════════════════════════════════
+
+function _median(arr) {
+  if (!arr.length) return 0;
+  const s = [...arr].sort((a, b) => a - b);
+  const m = s.length >> 1;
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+// Theil-Sen slope+intercept of y vs x. Caps pair count for large N (deterministic stride).
+function _theilSen(xs, ys) {
+  const n = xs.length;
+  if (n < 2) return { slope: 0, intercept: ys[0] || 0 };
+  const slopes = [];
+  const maxPairs = 200000;
+  const total = (n * (n - 1)) / 2;
+  const stride = total > maxPairs ? Math.ceil(total / maxPairs) : 1;
+  let k = 0;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (stride === 1 || (k++ % stride === 0)) {
+        const dx = xs[j] - xs[i];
+        if (dx !== 0) slopes.push((ys[j] - ys[i]) / dx);
+      }
+    }
+  }
+  const slope = _median(slopes);
+  const intercept = _median(xs.map((x, i) => ys[i] - slope * x));
+  return { slope, intercept };
+}
+
+export function computeRobustRate(samples, bph, opts = {}) {
+  const o = {
+    minTicks: 60, convergeSday: 3, maxResidualMs: 2.0, madMult: 4,
+    suspectSday: 60, suspectResidualMs: 3, residualRefMs: 3, ...opts,
+  };
+  const pts = (samples || []).filter(p => p && isFinite(p.t) && isFinite(p.cd));
+  const nTicks = pts.length;
+  const durationSec = nTicks ? pts[nTicks - 1].t - pts[0].t : 0;
+  const weak = {
+    rate: null, quality: 0, label: 'weak', nTicks, durationSec,
+    residualSd: 0, subWindowDelta: 0, bphSuspect: false, converged: false,
+  };
+  if (nTicks < o.minTicks) return weak;
+
+  const xs = pts.map(p => p.t), ys = pts.map(p => p.cd);
+  let { slope, intercept } = _theilSen(xs, ys);
+
+  // MAD outlier rejection on residuals, then refit.
+  let res = ys.map((y, i) => y - (slope * xs[i] + intercept));
+  const medRes = _median(res);
+  const mad = _median(res.map(r => Math.abs(r - medRes)));
+  const cutoff = o.madMult * 1.4826 * (mad || 0);
+  let ix = xs, iy = ys;
+  if (cutoff > 0) {
+    const keep = res.map(r => Math.abs(r) <= cutoff);
+    ix = xs.filter((_, i) => keep[i]);
+    iy = ys.filter((_, i) => keep[i]);
+    if (ix.length >= 2) ({ slope, intercept } = _theilSen(ix, iy));
+  }
+
+  const rate = slope * 86.4;
+  const inRes = iy.map((y, i) => y - (slope * ix[i] + intercept));
+  const meanRes = inRes.reduce((a, b) => a + b, 0) / (inRes.length || 1);
+  const residualSd = Math.sqrt(inRes.reduce((a, b) => a + (b - meanRes) ** 2, 0) / (inRes.length || 1));
+
+  // Sub-window agreement: rate over the last half of the (time) window.
+  const halfT = pts[0].t + durationSec / 2;
+  const lhx = [], lhy = [];
+  for (let i = 0; i < nTicks; i++) if (xs[i] >= halfT) { lhx.push(xs[i]); lhy.push(ys[i]); }
+  const rateLastHalf = lhx.length >= 2 ? _theilSen(lhx, lhy).slope * 86.4 : rate;
+  const subWindowDelta = Math.abs(rate - rateLastHalf);
+
+  const bphSuspect = Math.abs(rate) > o.suspectSday && residualSd > o.suspectResidualMs;
+  const quality = Math.max(0, Math.min(1,
+    0.6 * (1 - subWindowDelta / o.convergeSday) + 0.4 * (1 - residualSd / o.residualRefMs)));
+  const label = quality >= 0.7 ? 'solid' : quality >= 0.4 ? 'fair' : 'weak';
+  const converged = nTicks >= o.minTicks && subWindowDelta <= o.convergeSday && residualSd <= o.maxResidualMs;
+
+  return {
+    rate: Math.round(rate * 10) / 10, quality: Math.round(quality * 100) / 100, label,
+    nTicks, durationSec: Math.round(durationSec * 10) / 10,
+    residualSd: Math.round(residualSd * 1000) / 1000,
+    subWindowDelta: Math.round(subWindowDelta * 10) / 10, bphSuspect, converged,
+  };
+}
+
+// ══════════════════════════════════════════
 //  SEARCH & INPUT SANITIZATION
 // ══════════════════════════════════════════
 

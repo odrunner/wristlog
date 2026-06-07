@@ -163,3 +163,67 @@ describe('capScatterData', () => {
     expect(data.length).toBe(2500);
   });
 });
+
+import { computeRobustRate } from '../wrotate_test.js';
+
+// Helper: build a cumulative-deviation stream for a watch running at `sday` s/day.
+// At rate s/day, cumulative deviation grows sday/86.4 ms per second.
+function streamFor(sday, durationSec, bph = 28800, noiseMs = 0, seed = 1) {
+  const perTick = 3600 / bph;            // seconds between ticks
+  const slopeMsPerSec = sday / 86.4;     // ms cumulative dev per second
+  let s = seed;
+  const rnd = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return (s / 0x7fffffff) * 2 - 1; };
+  const out = [];
+  for (let t = 0; t <= durationSec; t += perTick) {
+    out.push({ t, cd: slopeMsPerSec * t + (noiseMs ? rnd() * noiseMs : 0) });
+  }
+  return out;
+}
+
+describe('computeRobustRate', () => {
+  it('returns weak/not-converged below the tick floor', () => {
+    const r = computeRobustRate(streamFor(0, 2), 28800); // ~16 ticks
+    expect(r.converged).toBe(false);
+    expect(r.label).toBe('weak');
+    expect(r.rate).toBeNull();
+  });
+
+  it('recovers a clean +10 s/day rate and converges solid', () => {
+    const r = computeRobustRate(streamFor(10, 60), 28800);
+    expect(r.rate).toBeCloseTo(10, 0);
+    expect(r.converged).toBe(true);
+    expect(r.label).toBe('solid');
+    expect(r.residualSd).toBeLessThan(1);
+  });
+
+  it('converges solid on a clean but short stream (duration must not penalize)', () => {
+    const r = computeRobustRate(streamFor(-5, 12), 28800); // ~96 ticks, above floor
+    expect(r.rate).toBeCloseTo(-5, 0);
+    expect(r.converged).toBe(true);
+    expect(r.label).toBe('solid');
+  });
+
+  it('rejects outliers and still recovers the rate', () => {
+    const s = streamFor(8, 60);
+    s[20].cd += 40; s[55].cd -= 35; s[90].cd += 50; // inject spikes
+    const r = computeRobustRate(s, 28800);
+    expect(r.rate).toBeCloseTo(8, 0);
+  });
+
+  it('does not converge while the rate is still drifting', () => {
+    // First half ~ +30 s/day, second half ~ 0 → large subWindowDelta
+    const a = streamFor(30, 30);
+    const lastA = a[a.length - 1];
+    const b = [];
+    const perTick = 3600 / 28800;
+    for (let t = perTick; t <= 30; t += perTick) b.push({ t: lastA.t + t, cd: lastA.cd + 0 });
+    const r = computeRobustRate(a.concat(b), 28800);
+    expect(r.subWindowDelta).toBeGreaterThan(3);
+    expect(r.converged).toBe(false);
+  });
+
+  it('flags bphSuspect on a large-rate, high-residual stream', () => {
+    const r = computeRobustRate(streamFor(120, 60, 28800, 6), 28800);
+    expect(r.bphSuspect).toBe(true);
+  });
+});
