@@ -6,7 +6,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { isRateLimited, isWithinWindow, rateKey, resolveIp, windowStartIso } from "./lib.ts";
+import { hashIp, isRateLimited, isWithinWindow, rateKey, resolveIp, windowStartIso } from "./lib.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "https://wrotate.com",
@@ -75,6 +75,12 @@ serve(async (req) => {
       status: 401, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });
   }
+
+  // Log the demo view (distinct hashed IP) for admin traffic stats. Best-effort:
+  // a logging failure must never break the demo login.
+  try {
+    await adminClient.from("demo_views").insert({ ip_hash: await hashIp(ip) });
+  } catch (_e) { /* ignore */ }
 
   return new Response(JSON.stringify({
     access_token: data.session.access_token,

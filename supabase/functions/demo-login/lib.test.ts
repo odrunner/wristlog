@@ -1,5 +1,6 @@
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals, assertNotEquals } from "jsr:@std/assert";
 import {
+  hashIp,
   isRateLimited,
   isWithinWindow,
   RATE_LIMIT,
@@ -75,4 +76,25 @@ Deno.test("resolveIp — 'unknown' when no headers present", () => {
 // ---- rateKey ----
 Deno.test("rateKey — namespaces the IP", () => {
   assertEquals(rateKey("1.2.3.4"), "demo-login:1.2.3.4");
+});
+
+// ---- hashIp ----
+Deno.test("hashIp — same IP is deterministic (distinct-IP counting works)", async () => {
+  assertEquals(await hashIp("1.2.3.4"), await hashIp("1.2.3.4"));
+});
+
+Deno.test("hashIp — different IPs produce different hashes", async () => {
+  assertNotEquals(await hashIp("1.2.3.4"), await hashIp("5.6.7.8"));
+});
+
+Deno.test("hashIp — never returns the raw IP, is 64-char hex", async () => {
+  const h = await hashIp("203.0.113.7");
+  assertNotEquals(h, "203.0.113.7");
+  assertEquals(h!.length, 64);
+  assertEquals(/^[0-9a-f]{64}$/.test(h!), true);
+});
+
+Deno.test("hashIp — unknown/empty IP hashes to null (no bogus unique bucket)", async () => {
+  assertEquals(await hashIp("unknown"), null);
+  assertEquals(await hashIp(""), null);
 });

@@ -6021,7 +6021,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.05.43';
+const APP_VERSION = '07.06.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12835,12 +12835,14 @@ async function renderAdminTraffic() {
   if (!el) return;
   el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Loading traffic…</div>';
   try {
-    const [trafficR, emailEventsR] = await withTimeout(Promise.all([
+    const [trafficR, emailEventsR, demoR] = await withTimeout(Promise.all([
       db.rpc('admin_traffic_stats'),
       db.from('email_events').select('event_type, email_to, subject, created_at').order('created_at', { ascending: false }).limit(500),
+      db.rpc('admin_demo_views'),
     ]), 15000);
     if (trafficR.error) throw trafficR.error;
     const t = trafficR.data;
+    const dv = (demoR && !demoR.error) ? demoR.data : null;
 
     const sourceRows = (t.by_source || [])
       .map(s => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span style="flex:1;">${escHtml(s.source)}</span><span style="font-variant-numeric:tabular-nums;"><span style="color:var(--muted);font-size:.75rem;margin-right:.5rem;">1d: ${s.day}</span><span style="color:var(--muted);font-size:.75rem;margin-right:.5rem;">7d: ${s.week}</span><span style="color:var(--gold);font-weight:600;">${s.total}</span></span></div>`)
@@ -12866,6 +12868,16 @@ async function renderAdminTraffic() {
       .map(s => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span style="flex:1;">${escHtml(s.source)}</span><span style="font-variant-numeric:tabular-nums;"><span style="color:var(--muted);font-size:.75rem;margin-right:.5rem;">1d: ${s.day}</span><span style="color:var(--muted);font-size:.75rem;margin-right:.5rem;">7d: ${s.week}</span><span style="color:var(--gold);font-weight:600;">${s.count}</span></span></div>`)
       .join('');
 
+    // Demo views = clicks of "Try the demo" (the alexrivera demo account), counted
+    // by distinct hashed IP. Captured server-side in the demo-login edge function.
+    const demoViewsHtml = dv ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Demo Views (Alex Rivera)</div>
+        ${statRow('Total opens', dv.total, (dv.unique_ips || 0) + ' unique IPs')}
+        <div style="height:.5rem;"></div>
+        ${statRow('Last 24 hours', dv.views_1d, (dv.unique_1d || 0) + ' unique IPs')}
+        ${statRow('Last 7 days', dv.views_7d, (dv.unique_7d || 0) + ' unique IPs')}
+      </div>` : '';
+
     el.innerHTML = `
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Overview (All Time)</div>
@@ -12878,6 +12890,7 @@ async function renderAdminTraffic() {
         ${statRow('Last 30 days', t.visits_30d, t.unique_30d + ' unique')}
         ${statRow('Repeat (7d)', t.repeat_7d)}
       </div>
+      ${demoViewsHtml}
       ${sourceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">By Source</div>
         ${sourceRows}

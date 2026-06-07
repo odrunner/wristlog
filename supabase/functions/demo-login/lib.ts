@@ -35,4 +35,21 @@ export function rateKey(ip: string): string {
   return `demo-login:${ip}`;
 }
 
+// Stable salt so the same IP always hashes to the same value (distinct-IP
+// counting), while no raw IP is ever stored. Not a secret — just prevents
+// trivial reversal of the small IPv4 space.
+const IP_HASH_SALT = "wrotate-demo-views-v1";
+
+// SHA-256 hash of a salted IP, hex-encoded. Returns null for an unknown IP so
+// it doesn't collapse into a bogus "unique" bucket. crypto.subtle is a web
+// standard available in Deno, so this stays unit-testable.
+export async function hashIp(ip: string): Promise<string | null> {
+  if (!ip || ip === "unknown") return null;
+  const data = new TextEncoder().encode(`${IP_HASH_SALT}:${ip}`);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 export type { RateRow };
