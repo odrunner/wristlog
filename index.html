@@ -6024,7 +6024,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.14.45';
+const APP_VERSION = '07.14.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22897,6 +22897,7 @@ function _resetMsrState(bph) {
   _msrScatterData = []; _msrLastCumDev = 0;
   { const _q2ro = document.getElementById('msr-q2-readout'); if (_q2ro) _q2ro.textContent = ''; }
   _q2LastBand = null;
+  _q2LastReadout = 0;
   _msrLastDetectTime = 0;
   _msrPhase = 'acquiring';
   _msrIsAuto = (bph === 0);
@@ -23012,8 +23013,14 @@ function _q2Tick(nativeRateNow) {
   if (_msrListening && !_micBatchActive && _msrListenStart) {
     const elapsed = (now - _msrListenStart) / 1000;
     const cap = _q2Num('q2_cap', 90);
-    if (s.settled) { _msrPhase = 'converged'; stopMsrListen('plateau'); }
-    else if (elapsed >= cap) { stopMsrListen('duration_cap'); }
+    if (s.settled) {
+      _msrPhase = 'converged';
+      if (window.webkit?.messageHandlers?.haptic) haptic('success');
+      stopMsrListen('plateau');
+    } else if (elapsed >= cap) {
+      if (window.webkit?.messageHandlers?.haptic) haptic('warning');
+      stopMsrListen('duration_cap');
+    }
   }
 }
 function _q2RenderReadout(nativeRateNow, s, params) {
@@ -23371,6 +23378,7 @@ function openMeasureInline() {
   _msrScatterData = []; _msrLastCumDev = 0;
   { const _q2ro = document.getElementById('msr-q2-readout'); if (_q2ro) _q2ro.textContent = ''; }
   _q2LastBand = null;
+  _q2LastReadout = 0;
   const listenBtn = document.getElementById('msr-listen-btn');
   const btnMic = document.getElementById('msr-btn-mic');
   const btnStop = document.getElementById('msr-btn-stop');
@@ -23816,7 +23824,6 @@ function stopMsrListen(reason) {
     // Show completion message
     const completeMsg = document.getElementById('msr-complete-msg');
     if (completeMsg) {
-      const wasConverged = document.getElementById('msr-converged-badge')?.style.display !== 'none';
       if (wasConverged) {
         completeMsg.textContent = 'Measurement complete';
         completeMsg.style.color = 'var(--text)';
@@ -23849,6 +23856,7 @@ function discardMsrReading() {
   _msrScatterData = []; _msrLastCumDev = 0;
   { const _q2ro = document.getElementById('msr-q2-readout'); if (_q2ro) _q2ro.textContent = ''; }
   _q2LastBand = null;
+  _q2LastReadout = 0;
   document.getElementById('msr-save-section').style.display = 'none';
   const shareCta = document.getElementById('msr-share-cta');
   if (shareCta) shareCta.style.display = 'none';
