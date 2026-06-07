@@ -6024,7 +6024,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.14.53';
+const APP_VERSION = '07.14.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23787,6 +23787,9 @@ function stopMsrListen(reason) {
       } else {
         errorBar = 5;
       }
+    }
+    if (featureFlag('tg_quality_v2') && _q2LastBand != null) {
+      errorBar = Math.max(0.5, Math.round(_q2LastBand * 10) / 10);  // adaptive plateau band
     }
     const sign = r >= 0 ? '+' : '';
     // Keep the rate shown in HUD
