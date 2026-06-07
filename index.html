@@ -4417,6 +4417,20 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
+<!-- ════ MEASUREMENT SHARE-TO-FEED POPUP ════ -->
+<!-- Auto-prompt after a good-quality (converged) measurement. "Share to feed"
+     posts the result directly (public), bypassing the composer. -->
+<div id="msr-share-popup" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="msr-share-popup-title">
+  <div class="modal" style="max-width:340px;text-align:center;">
+    <div class="modal-title" id="msr-share-popup-title" style="justify-content:center;">Share to feed?</div>
+    <div id="msr-share-popup-msg" style="font-size:.88rem;color:var(--text);margin:.4rem 0 1rem;line-height:1.5;"></div>
+    <div class="modal-actions" style="flex-direction:column;gap:.5rem;">
+      <button id="msr-share-popup-confirm" class="btn btn-primary" style="width:100%;">Share to feed</button>
+      <button class="btn btn-ghost" style="width:100%;color:var(--muted);" onclick="dismissMsrSharePopup()">Not now</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ EDIT POST MODAL ════ -->
 <div id="edit-post-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="edit-post-modal-title">
   <div class="modal" style="max-width:400px;">
@@ -4822,6 +4836,7 @@ const FEATURE_FLAGS = {
   // no longer flag-gated. localStorage key 'tg_advanced_settings' is unrelated (stores
   // the user's chosen tuning) and is still in use.
   tg_piezo: { label: 'Timegrapher: piezo input source (admin)', default: false },
+  msr_share_popup: { label: 'Measurement: auto "Share to feed?" popup (admin)', default: false },
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -6004,7 +6019,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.16.03';
+const APP_VERSION = '06.18.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10429,6 +10444,9 @@ function openNewPost(opts) {
     }
     renderNpThumbstrip();
   }
+  // Headless mode (e.g. direct measurement share): caller will force visibility
+  // and submit immediately, so never show or focus the modal.
+  if (o.headless) return;
   document.getElementById('new-post-modal').classList.remove('hidden');
   setTimeout(() => document.getElementById('np-body').focus(), 50);
 }
@@ -23610,6 +23628,16 @@ function stopMsrListen(reason) {
       }
       completeMsg.style.color = 'var(--text)';
     }
+    // Auto-prompt to share a good-quality (converged) result, at most once per
+    // watch. Skip in demo mode / when not signed in (no feed to post to).
+    // Admin-gated for now (msr_share_popup) — personal testing in production.
+    if (featureFlag('msr_share_popup') && wasConverged && currentUser && !_isDemoMode) {
+      const popupWatchId = document.getElementById('msr-watch-select')?.value;
+      if (popupWatchId && !msrSharePromptSeen(popupWatchId)) {
+        markMsrSharePromptSeen(popupWatchId);
+        showMsrSharePopup(popupWatchId, _msrLastRate);
+      }
+    }
   }
 }
 
@@ -23700,8 +23728,68 @@ function dismissMsrShareCta() {
   closeMeasureModal();
 }
 
-function shareMsrToFeed(watchId, rate) {
-  _logPostCtaEvent('clicked', 'measurement');
+// ── Measurement share-to-feed auto-popup ────────────────────────────────────
+// Shown once per watch after a good-quality (converged) measurement. "Share to
+// feed" persists the reading then posts it directly (public), bypassing the
+// composer. Per-watch "already prompted" state is tracked in localStorage so we
+// never nag for the same watch twice.
+const STORE_MSR_SHARE_PROMPTED = 'wr_msr_share_prompted'; // JSON array of watch IDs
+
+function msrSharePromptSeen(watchId) {
+  try {
+    const arr = JSON.parse(localStorage.getItem(STORE_MSR_SHARE_PROMPTED) || '[]');
+    return Array.isArray(arr) && arr.includes(watchId);
+  } catch (_) { return false; }
+}
+
+function markMsrSharePromptSeen(watchId) {
+  try {
+    const arr = JSON.parse(localStorage.getItem(STORE_MSR_SHARE_PROMPTED) || '[]');
+    const set = new Set(Array.isArray(arr) ? arr : []);
+    set.add(watchId);
+    localStorage.setItem(STORE_MSR_SHARE_PROMPTED, JSON.stringify([...set]));
+  } catch (_) { /* storage unavailable — popup may reappear next session, acceptable */ }
+}
+
+let _msrSharePopupCtx = null; // { watchId, rate } for the currently shown popup
+
+function showMsrSharePopup(watchId, rate) {
+  const popup = document.getElementById('msr-share-popup');
+  if (!popup) return;
+  const w = watches.find(x => x.id === watchId);
+  const name = w ? `${w.brand} ${w.name}` : 'your watch';
+  const r = Number(rate);
+  const rateStr = (r > 0 ? '+' : '') + r.toFixed(1);
+  const msg = document.getElementById('msr-share-popup-msg');
+  if (msg) msg.innerHTML = `Your <strong>${escHtml(name)}</strong> measured <strong>${rateStr} s/d</strong>. Share it to the feed?`;
+  _msrSharePopupCtx = { watchId, rate: r };
+  const confirmBtn = document.getElementById('msr-share-popup-confirm');
+  if (confirmBtn) confirmBtn.onclick = () => confirmMsrSharePopup();
+  popup.classList.remove('hidden');
+  _logPostCtaEvent('shown', 'measurement_auto');
+}
+
+function dismissMsrSharePopup() {
+  const popup = document.getElementById('msr-share-popup');
+  if (popup) popup.classList.add('hidden');
+  _msrSharePopupCtx = null;
+  // Leave the measure modal + save section as-is so the manual Save still works.
+}
+
+async function confirmMsrSharePopup() {
+  const ctx = _msrSharePopupCtx;
+  const popup = document.getElementById('msr-share-popup');
+  if (popup) popup.classList.add('hidden');
+  _msrSharePopupCtx = null;
+  if (!ctx) return;
+  // Save the reading to history first (matches shareMsrFromComplete), then post.
+  const res = await persistMsrReading();
+  if (!res.ok) return; // persistMsrReading shows its own error toast
+  shareMsrToFeed(res.watchId, res.rate, { direct: true });
+}
+
+function shareMsrToFeed(watchId, rate, opts) {
+  _logPostCtaEvent('clicked', (opts && opts.direct) ? 'measurement_auto' : 'measurement');
   const w = watches.find(x => x.id === watchId);
   const name = w ? `${w.brand} ${w.name}` : 'my watch';
   const r = Number(rate);
@@ -23729,7 +23817,16 @@ function shareMsrToFeed(watchId, rate) {
   const prefillBody = `Measured my ${name}: ${rateStr} s/d.`;
   const open = (files) => {
     closeMeasureModal();
-    openNewPost({ prefillBody, watchId, source: 'measurement', prefillFiles: files });
+    if (opts && opts.direct) {
+      // Direct post: drive the composer headlessly (no modal shown), force the
+      // visibility to public, then submit via the existing tested post path.
+      openNewPost({ prefillBody, watchId, source: 'measurement', prefillFiles: files, headless: true });
+      const visChips = document.getElementById('np-vis-chips');
+      if (visChips) visChips.innerHTML = visChipsHtml('np-vis-chips', 'public');
+      saveNewPost();
+    } else {
+      openNewPost({ prefillBody, watchId, source: 'measurement', prefillFiles: files });
+    }
   };
 
   if (cardCanvas && cardCanvas.toBlob) {
