@@ -3434,8 +3434,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <label>Rate smooth<input type="number" step="0.02" id="pz-tune-ratesmooth" oninput="onPzTune('pz_ratesmooth',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
       </div>
       <button id="pz-batch-btn" onclick="runPiezoBatch()" style="display:none;width:100%;margin-bottom:.75rem;padding:.45rem;border-radius:8px;border:1px solid rgba(74,222,128,.4);background:#0a1a12;color:#4ade80;font-size:.72rem;cursor:pointer;">Batch ×12 (6 manual @ selected BPH + 6 auto)</button>
-          <input id="mic-batch-position" placeholder="position label (optional)" style="display:none;width:100%;margin-bottom:.4rem;padding:.4rem;border-radius:8px;border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:.72rem;">
-          <button id="mic-batch-btn" onclick="runMicBatch()" style="display:none;width:100%;margin-bottom:.75rem;padding:.45rem;border-radius:8px;border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:.72rem;cursor:pointer;">Mic Batch ×15 (90s each, same watch &amp; position)</button>
+      <input id="mic-batch-position" placeholder="position label (optional)" style="display:none;width:100%;margin-bottom:.4rem;padding:.4rem;border-radius:8px;border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:.72rem;">
+      <button id="mic-batch-btn" onclick="runMicBatch()" style="display:none;width:100%;margin-bottom:.75rem;padding:.45rem;border-radius:8px;border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:.72rem;cursor:pointer;">Mic Batch ×15 (90s each, same watch &amp; position)</button>
       <!-- Instrument panel -->
       <div id="msr-instrument" style="background:#0a1a12;border-radius:10px;overflow:hidden;margin-bottom:.75rem;">
         <!-- Chart with HUD overlay -->
@@ -6024,7 +6024,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.09.45';
+const APP_VERSION = '07.09.55';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22167,6 +22167,7 @@ window._tgNativeCallback = function(data) {
       if (beEl) beEl.textContent = data.beatError != null ? data.beatError.toFixed(2) + ' ms' : '—';
       if (isMsr) {
         _msrLastRate = data.rate;
+        if (data.beatError != null) _msrLastBe = data.beatError;
         _msrRateHistory.push(r);
         if (_msrRateHistory.length > 1000) _msrRateHistory = _msrRateHistory.slice(-1000);
         // Native Theil-Sen rate is authoritative — bucket rate is too coarse
@@ -22687,6 +22688,7 @@ async function deleteTgResult(id) {
 // ── Standalone Measure Modal ──
 let _msrListening = false;
 let _msrLastRate = null;
+let _msrLastBe = null;        // latest native beat error (ms) — mirrors _msrLastRate, used by mic batch logging
 let _msrLastBph = null;
 let _msrListenStart = null;
 let _msrLastDetectTime = 0; // timestamp of last confident detection
@@ -22900,6 +22902,7 @@ function _resetMsrState(bph) {
   _msrHadTicks = false;
   _msrBphLocked = false;
   _msrLastRate = null; _msrLastBph = null;
+  _msrLastBe = null;
   _msrRateHistory = []; _msrBucketRateHistory = []; _msrCachedBucketRate = null;
   _msrLastDotTime = 0; _msrShown = { weak: false, noise: false, prelim: false, advanced: false }; _msrNoiseSamples = []; _msrAcceptRate = 0; _msrPzSig = null; _msrLastConf = 0;
   const scCanvas = document.getElementById('msr-scatter-plot');
@@ -23307,6 +23310,7 @@ function openMeasureInline() {
   _tgLastDebugLogTime = 0;
   _msrListening = false;
   _msrLastRate = null;
+  _msrLastBe = null;
   _msrLastBph = null;
   _msrScatterData = []; _msrLastCumDev = 0;
   { const _q2ro = document.getElementById('msr-q2-readout'); if (_q2ro) _q2ro.textContent = ''; }
@@ -23783,6 +23787,7 @@ function stopMsrListen(reason) {
 
 function discardMsrReading() {
   _msrLastRate = null;
+  _msrLastBe = null;
   _msrLastBph = null;
   _msrScatterData = []; _msrLastCumDev = 0;
   { const _q2ro = document.getElementById('msr-q2-readout'); if (_q2ro) _q2ro.textContent = ''; }
