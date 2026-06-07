@@ -29,7 +29,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
 
-    console.log(`[resend-webhook] Stored ${eventType} for ${row.email_to}`);
+    console.log(`[resend-webhook] Stored ${row.event_type} for ${row.email_to}`);
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (err) {
     console.error("[resend-webhook] Error:", err);
