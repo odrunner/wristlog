@@ -1324,7 +1324,7 @@ export function computeRobustRate(samples, bph, opts = {}) { // bph: reserved fo
 // ══════════════════════════════════════════
 
 // Least-squares slope of cd vs t over [t0,t1], in s/day (slope_ms_per_s * 86.4). null if <8 pts.
-function _q2Ls(pts, t0, t1) {
+export function _q2Ls(pts, t0, t1) {
   let sx = 0, sy = 0, n = 0;
   for (const p of pts) if (p.t >= t0 && p.t <= t1) { sx += p.t; sy += p.cd; n++; }
   if (n < 8) return null;

@@ -32,7 +32,7 @@ const VERBATIM = [
   'canDeleteComment', 'classifyDevice', 'computeMedianRate', 'eloExpected',
   'escAttr', 'escHtml', 'fmtDate', 'fmtMonYear', 'guessOEMStrap', 'imgSnippet',
   'inlineImages', 'isVideoUrl', 'marketPriceRowHTML', 'matchIdentifiedToCollection',
-  'msrCardHasEnoughData', 'msrCardResultText', 'normalizeLocation', 'parsePhotoUrl',
+  'msrCardHasEnoughData', 'msrCardResultText', 'normalizeLocation', 'parsePhotoUrl', '_q2Ls',
   'posterUrlFor', 'renderPostLocationHtml', 'rowToLog', 'rowToWatch', 'rowToWish',
   'sanitizeImageUrl', 'sanitizeSearch', 'storagePathFrom', 'tgAdvancedSummaryFields',
   'tgLoadSettings', 'tgMapSliderToEngine', 'tgSaveSettings', 'uniqueWears',
