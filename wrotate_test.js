@@ -1335,6 +1335,9 @@ function _q2Ls(pts, t0, t1) {
   return sxy / sxx * 86.4;
 }
 
+// Settled when the from-start LS rate stops moving: |rate[start,t] - rate[start,t-look]| <= eps
+// held for `hold` consecutive 1s steps (`look` is a lag on the SAME from-start window, not a rolling
+// window). Assumes `samples` are time-ordered. `band` = worst drift across the hold window (error bar).
 export function incrSettle(samples, params = {}) {
   const o = { eps: 0.4, look: 20, hold: 8, minTicks: 40, ...params };
   const pts = (samples || []).filter(p => p && isFinite(p.t) && isFinite(p.cd));
