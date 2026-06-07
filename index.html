@@ -6021,7 +6021,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.20.07';
+const APP_VERSION = '06.20.37';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12905,6 +12905,10 @@ async function renderAdminTraffic() {
 }
 
 function renderEmailEngagement(events) {
+  // Exclude admin signup-alert emails ("New WRotate user: …") — these are sent
+  // to ADMIN_EMAIL (the founder), not to users, so they'd inflate engagement
+  // stats (e.g. >100% open rate from re-opening your own alerts).
+  events = events.filter(e => !(e.subject || '').startsWith('New WRotate user:'));
   if (!events.length) return '';
 
   const byType = {};
