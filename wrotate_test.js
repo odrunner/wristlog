@@ -1262,10 +1262,11 @@ function _theilSen(xs, ys) {
   return { slope, intercept };
 }
 
-export function computeRobustRate(samples, bph, opts = {}) {
+// Note: `converged` is a hard gate (residualSd<=maxResidualMs etc.); `quality`/`label` is an independent soft score — near thresholds they can disagree, by design.
+export function computeRobustRate(samples, bph, opts = {}) { // bph: reserved for future BPH/harmonic checks (not yet used)
   const o = {
     minTicks: 60, convergeSday: 3, maxResidualMs: 2.0, madMult: 4,
-    suspectSday: 60, suspectResidualMs: 3, residualRefMs: 3, ...opts,
+    suspectSday: 60, suspectResidualMs: 3, residualRefMs: 3, outlierFloorMs: 5, ...opts,
   };
   const pts = (samples || []).filter(p => p && isFinite(p.t) && isFinite(p.cd));
   const nTicks = pts.length;
@@ -1283,14 +1284,14 @@ export function computeRobustRate(samples, bph, opts = {}) {
   let res = ys.map((y, i) => y - (slope * xs[i] + intercept));
   const medRes = _median(res);
   const mad = _median(res.map(r => Math.abs(r - medRes)));
-  const cutoff = o.madMult * 1.4826 * (mad || 0);
-  let ix = xs, iy = ys;
-  if (cutoff > 0) {
-    const keep = res.map(r => Math.abs(r) <= cutoff);
-    ix = xs.filter((_, i) => keep[i]);
-    iy = ys.filter((_, i) => keep[i]);
-    if (ix.length >= 2) ({ slope, intercept } = _theilSen(ix, iy));
-  }
+  // Robust scale: MAD-based, but floored (outlierFloorMs) so sparse spikes in an
+  // otherwise-clean stream are still rejected — MAD collapses to 0 when fewer than
+  // ~half the points are outliers, which is the common real-world case.
+  const cutoff = Math.max(o.madMult * 1.4826 * (mad || 0), o.outlierFloorMs);
+  const keep = res.map(r => Math.abs(r) <= cutoff);
+  let ix = xs.filter((_, i) => keep[i]);
+  let iy = ys.filter((_, i) => keep[i]);
+  if (ix.length >= 2) ({ slope, intercept } = _theilSen(ix, iy));
 
   const rate = slope * 86.4;
   const inRes = iy.map((y, i) => y - (slope * ix[i] + intercept));

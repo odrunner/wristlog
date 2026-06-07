@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeTgResults, capScatterData } from '../wrotate_test.js';
+import { computeTgResults, capScatterData, computeRobustRate } from '../wrotate_test.js';
 
 describe('computeTgResults', () => {
   it('returns nulls for fewer than 2 ticks', () => {
@@ -164,8 +164,6 @@ describe('capScatterData', () => {
   });
 });
 
-import { computeRobustRate } from '../wrotate_test.js';
-
 // Helper: build a cumulative-deviation stream for a watch running at `sday` s/day.
 // At rate s/day, cumulative deviation grows sday/86.4 ms per second.
 function streamFor(sday, durationSec, bph = 28800, noiseMs = 0, seed = 1) {
@@ -208,6 +206,8 @@ describe('computeRobustRate', () => {
     s[20].cd += 40; s[55].cd -= 35; s[90].cd += 50; // inject spikes
     const r = computeRobustRate(s, 28800);
     expect(r.rate).toBeCloseTo(8, 0);
+    expect(r.converged).toBe(true);
+    expect(r.residualSd).toBeLessThan(1);
   });
 
   it('does not converge while the rate is still drifting', () => {
