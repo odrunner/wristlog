@@ -6024,7 +6024,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.09.58';
+const APP_VERSION = '07.10.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22264,7 +22264,7 @@ window._tgNativeCallback = function(data) {
       const noTickTimeout = _msrIsAuto ? 15 : 12;
       const hasSignal = _msrBphLocked || _msrLastConf > 0;
       const recalExhausted = hasSignal && elapsed >= 25 && data.tickCount === 0;
-      if (elapsed >= noTickTimeout && data.tickCount === 0 && (!hasSignal || recalExhausted)) {
+      if (!_micBatchActive && elapsed >= noTickTimeout && data.tickCount === 0 && (!hasSignal || recalExhausted)) {  // batch logs the empty run itself; don't auto-fail mid-batch
         stopMsrListen(recalExhausted ? 'no_ticks_signal_lost' : 'no_ticks_after_recal');
         const statusText = document.getElementById('msr-status-text');
         if (statusText) {
@@ -22492,7 +22492,7 @@ window._tgNativeCallback = function(data) {
     if (isMsr && _msrListening && _msrListenStart) {
       const elapsed = (Date.now() - _msrListenStart) / 1000;
       const maxDur = _tgHasNative() ? tgLoadSettings().values.maxDuration : 45;
-      if (_msrPhase === 'converged' || elapsed >= maxDur) {
+      if (!_micBatchActive && (_msrPhase === 'converged' || elapsed >= maxDur)) {  // batch controls run length; don't auto-stop mid-batch
         const wasConverged = _msrPhase === 'converged';
         // Haptic feedback on finish — success for converged, warning for timeout
         if (window.webkit?.messageHandlers?.haptic) {
@@ -23775,7 +23775,7 @@ function stopMsrListen(reason) {
     // Auto-prompt to share a high-confidence result, at most once per watch.
     // "High confidence" = converged AND a tight error bar (± ≤ 2.0 s/day).
     // Skip in demo mode / when not signed in (no feed to post to).
-    if (wasConverged && errorBar <= 2.0 && currentUser && !_isDemoMode) {
+    if (wasConverged && errorBar <= 2.0 && currentUser && !_isDemoMode && !_micBatchActive) {  // never pop the share modal during a batch
       const popupWatchId = document.getElementById('msr-watch-select')?.value;
       if (popupWatchId && !msrSharePromptSeen(popupWatchId)) {
         markMsrSharePromptSeen(popupWatchId);
