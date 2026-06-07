@@ -1106,6 +1106,123 @@ test.describe('Measure page (mocked)', () => {
   });
 });
 
+// ── Measurement share-to-feed popup (mocked) ────────────────────────────
+// The auto popup fires from stopMsrListen on a high-confidence converged
+// result (can't be driven in a mocked browser — no audio), so these tests
+// invoke the popup machinery directly and assert the bypass-composer,
+// direct-public-post behavior end to end.
+
+test.describe('Measurement share popup (mocked)', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.addInitScript(() => {
+      // Native bridge so the Measure tab is available.
+      window.webkit = { messageHandlers: { timegrapher: { postMessage: () => {} }, appAction: { postMessage: () => {} } } };
+      // Skip the first-time help modal so it can't overlay the popup.
+      localStorage.setItem('wristlog_msr_help_seen', '1');
+    });
+    // post_cta_events and storage aren't covered by mockSupabase — stub them so
+    // the funnel log and accuracy-card upload don't hit the real network.
+    await page.route('**/rest/v1/post_cta_events*', route =>
+      route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify([{}]) })
+    );
+    await page.route('**/storage/v1/object/**', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ Key: 'media/x.jpg' }) })
+    );
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await navigateTo(page, 'measure');
+  });
+
+  // Set up the measure DOM so persistMsrReading() has a watch + rate, then
+  // open the popup. `setScatter` controls whether the accuracy card renders.
+  async function openPopup(page, { rate = 2.3, setScatter = false } = {}) {
+    await page.evaluate((args) => {
+      const sel = document.getElementById('msr-watch-select');
+      sel.value = 'watch-001';
+      if (sel.value !== 'watch-001') {
+        const o = document.createElement('option');
+        o.value = 'watch-001'; o.textContent = 'Rolex Submariner';
+        sel.appendChild(o); sel.value = 'watch-001';
+      }
+      const sign = args.rate > 0 ? '+' : '';
+      document.getElementById('msr-rate-input').value = sign + args.rate.toFixed(1);
+      // _msrScatterData is a module-scoped `let` — reachable by bare name in the
+      // page's global scope (not via window).
+      _msrScatterData = args.setScatter
+        ? Array.from({ length: 30 }, (_, i) => ({ t: i * 0.4, d: (i % 2 ? 0.3 : -0.3), cd: i * 0.01 }))
+        : [];
+      showMsrSharePopup('watch-001', args.rate);
+    }, { rate, setScatter });
+  }
+
+  test('popup shows the result and Share posts a public measurement, bypassing the composer', async ({ page }) => {
+    await openPopup(page, { rate: 2.3, setScatter: false });
+    const popup = page.locator('#msr-share-popup');
+    await expect(popup).toBeVisible();
+    await expect(popup).toContainText('Submariner');
+    await expect(popup).toContainText('+2.3 s/d');
+
+    const logPost = page.waitForRequest(req =>
+      req.url().includes('/rest/v1/logs') && req.method() === 'POST');
+    await popup.locator('button:has-text("Share to feed")').click();
+
+    const body = JSON.parse((await logPost).postData());
+    const row = Array.isArray(body) ? body[0] : body;
+    expect(row.visibility).toBe('public');
+    expect(row.use_case).toBe('measurement');
+    expect(row.watch_id).toBe('watch-001');
+
+    // The New Post composer must never become visible (direct post).
+    await expect(page.locator('#new-post-modal')).toBeHidden();
+    // Popup closes after sharing.
+    await expect(popup).toBeHidden();
+  });
+
+  test('Share includes the accuracy card image when enough data is present', async ({ page }) => {
+    await openPopup(page, { rate: -1.2, setScatter: true });
+    const logPost = page.waitForRequest(req =>
+      req.url().includes('/rest/v1/logs') && req.method() === 'POST');
+    await page.locator('#msr-share-popup button:has-text("Share to feed")').click();
+    const body = JSON.parse((await logPost).postData());
+    const row = Array.isArray(body) ? body[0] : body;
+    expect(row.visibility).toBe('public');
+    expect(row.use_case).toBe('measurement');
+    // Accuracy-card uploads land at a path containing "_accuracy".
+    expect(row.photo_url).toContain('accuracy');
+  });
+
+  test('Not now dismisses the popup and posts nothing', async ({ page }) => {
+    await openPopup(page, { rate: 2.3, setScatter: false });
+    const popup = page.locator('#msr-share-popup');
+    await expect(popup).toBeVisible();
+
+    let posted = false;
+    page.on('request', r => {
+      if (r.url().includes('/rest/v1/logs') && r.method() === 'POST') posted = true;
+    });
+    await popup.locator('button:has-text("Not now")').click();
+    await expect(popup).toBeHidden();
+    await page.waitForTimeout(300);
+    expect(posted).toBe(false);
+    await expect(page.locator('#new-post-modal')).toBeHidden();
+  });
+
+  test('prompt is tracked at most once per watch', async ({ page }) => {
+    const before = await page.evaluate(() => msrSharePromptSeen('watch-zzz'));
+    expect(before).toBe(false);
+    const after = await page.evaluate(() => {
+      markMsrSharePromptSeen('watch-zzz');
+      return msrSharePromptSeen('watch-zzz');
+    });
+    expect(after).toBe(true);
+    // A different watch is unaffected.
+    const other = await page.evaluate(() => msrSharePromptSeen('watch-other'));
+    expect(other).toBe(false);
+  });
+});
+
 // ── Anniversary modal (mocked) ──────────────────────────────────────────
 
 test.describe('Anniversary modal (mocked)', () => {
