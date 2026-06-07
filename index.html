@@ -6019,7 +6019,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.19.34';
+const APP_VERSION = '06.19.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22260,7 +22260,7 @@ window._tgNativeCallback = function(data) {
           // Convergence floor: 15s minimum, relaxed further with strong signal
           const minElapsed = 15;
           const activeBph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 28800;
-          const minDots = Math.max(20, Math.round(activeBph / 1200));
+          const minDots = Math.max(30, Math.round(activeBph / 1200));
           const canConverge = _msrScatterData.length >= minDots;
           if (elapsed >= minElapsed && _msrBucketRateHistory.length >= 8 && canConverge) {
             const vals = _msrBucketRateHistory.map(x => x.v);
