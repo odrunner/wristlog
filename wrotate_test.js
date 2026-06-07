@@ -1362,6 +1362,15 @@ export function incrSettle(samples, params = {}) {
   return { settled: false, rate: last == null ? null : Math.round(last * 10) / 10, band: null, t: lastT, nTicks: n };
 }
 
+// Effective tickDetectMult: local override (>0) wins, else table value (>0), else default.
+export function resolveTdm(override, table, def) {
+  const o = parseFloat(override);
+  if (isFinite(o) && o > 0) return o;
+  const t = parseFloat(table);
+  if (isFinite(t) && t > 0) return t;
+  return def;
+}
+
 // ══════════════════════════════════════════
 //  SEARCH & INPUT SANITIZATION
 // ══════════════════════════════════════════

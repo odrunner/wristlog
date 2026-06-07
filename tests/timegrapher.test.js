@@ -266,3 +266,25 @@ describe('incrSettle', () => {
     expect(r.rate).not.toBeNull();
   });
 });
+
+import { resolveTdm } from '../wrotate_test.js';
+
+describe('resolveTdm', () => {
+  it('uses the local override when it is a positive number', () => {
+    expect(resolveTdm('0.22', 0.3, 0.3)).toBe(0.22);
+    expect(resolveTdm('0.22', null, 0.3)).toBe(0.22);
+  });
+  it('falls back to the table value when no valid override', () => {
+    expect(resolveTdm('', 0.25, 0.3)).toBe(0.25);
+    expect(resolveTdm(null, 0.25, 0.3)).toBe(0.25);
+  });
+  it('falls back to the default when neither is valid', () => {
+    expect(resolveTdm(null, null, 0.3)).toBe(0.3);
+    expect(resolveTdm('', null, 0.3)).toBe(0.3);
+  });
+  it('ignores non-positive / non-numeric values', () => {
+    expect(resolveTdm('0', 0.25, 0.3)).toBe(0.25);
+    expect(resolveTdm('-1', null, 0.3)).toBe(0.3);
+    expect(resolveTdm('abc', null, 0.3)).toBe(0.3);
+  });
+});
