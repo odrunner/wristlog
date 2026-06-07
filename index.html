@@ -3434,6 +3434,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <label>Rate smooth<input type="number" step="0.02" id="pz-tune-ratesmooth" oninput="onPzTune('pz_ratesmooth',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
       </div>
       <button id="pz-batch-btn" onclick="runPiezoBatch()" style="display:none;width:100%;margin-bottom:.75rem;padding:.45rem;border-radius:8px;border:1px solid rgba(74,222,128,.4);background:#0a1a12;color:#4ade80;font-size:.72rem;cursor:pointer;">Batch ×12 (6 manual @ selected BPH + 6 auto)</button>
+          <input id="mic-batch-position" placeholder="position label (optional)" style="display:none;width:100%;margin-bottom:.4rem;padding:.4rem;border-radius:8px;border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:.72rem;">
+          <button id="mic-batch-btn" onclick="runMicBatch()" style="display:none;width:100%;margin-bottom:.75rem;padding:.45rem;border-radius:8px;border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:.72rem;cursor:pointer;">Mic Batch ×15 (90s each, same watch &amp; position)</button>
       <!-- Instrument panel -->
       <div id="msr-instrument" style="background:#0a1a12;border-radius:10px;overflow:hidden;margin-bottom:.75rem;">
         <!-- Chart with HUD overlay -->
@@ -6022,7 +6024,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.09.41';
+const APP_VERSION = '07.09.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21755,6 +21757,9 @@ function initTgSourceSelector() {
     el.style.display = 'none';
   }
   initPzTunePanel();
+  const mbOn = featureFlag('tg_quality_v2');
+  const mb = document.getElementById('mic-batch-btn'); if (mb) mb.style.display = mbOn ? '' : 'none';
+  const mp = document.getElementById('mic-batch-position'); if (mp) mp.style.display = mbOn ? '' : 'none';
 }
 function onPzTune(key, val) { if (val !== '' && Number(val) > 0) { localStorage.setItem(key, val); sendPiezoTuning(); } }
 function _pzMode() { return localStorage.getItem('pz_mode') === 'measurement' ? 'measurement' : 'default'; }
@@ -21796,6 +21801,52 @@ async function runPiezoBatch() {
   if (sel) sel.value = String(manualBph);   // restore the user's BPH selection
   if (btn) btn.textContent = _PZ_BATCH_LABEL;
   toast(done ? 'Batch done — check the logs' : 'Batch cancelled');
+}
+// Admin batch (quality v2): run N mic measurements on the SAME watch/position, back to back,
+// and log native + JS-robust results + the full tick stream to measurement_batch_runs for
+// offline iteration. Mic source only (never touches piezo). Click again to cancel.
+let _micBatchActive = false;
+const _MIC_BATCH_LABEL = 'Mic Batch ×15 (90s each, same watch & position)';
+async function runMicBatch() {
+  const btn = document.getElementById('mic-batch-btn');
+  if (_micBatchActive) { _micBatchActive = false; if (btn) btn.textContent = 'Cancelling…'; return; }
+  if (!_tgHasNative()) { toast('Batch needs the native app'); return; }
+  const sel = document.getElementById('msr-bph-select');
+  const bph = sel ? (parseInt(sel.value) || 0) : 0;
+  if (bph === 0) { toast('Pick the watch’s BPH first'); return; }
+  if (localStorage.getItem('tg_input_source') === 'piezo') localStorage.setItem('tg_input_source', 'mic'); // force mic
+  const position = (document.getElementById('mic-batch-position')?.value || '').trim() || null;
+  const watchId = document.getElementById('msr-watch-select')?.value || null;
+  const batchId = crypto.randomUUID();
+  const RUNS = 15, RUN_MS = 90000, GAP_MS = 4000, RESET_MS = 1200;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  _micBatchActive = true;
+  for (let i = 0; i < RUNS && _micBatchActive; i++) {
+    if (_msrListening) { stopMsrListen('batch_reset'); await sleep(RESET_MS); }
+    if (!_micBatchActive) break;
+    if (btn) btn.textContent = `Mic Batch ${i + 1}/${RUNS} …`;
+    console.log(`[MICBATCH] run ${i + 1}/${RUNS} bph=${bph} pos=${position || '-'}`);
+    toggleMsrListen();
+    await sleep(RUN_MS);
+    if (_msrListening) stopMsrListen('batch');
+    // Snapshot AFTER stop (stopMsrListen leaves _msrScatterData / _msrLastRate intact until next start).
+    const stream = _msrScatterData.map(d => ({ t: Math.round(d.t * 100) / 100, cd: Math.round(d.cd * 1000) / 1000 }));
+    const q = computeRobustRate(_msrScatterData, bph);
+    if (currentUser) {
+      db.from('measurement_batch_runs').insert({
+        batch_id: batchId, run_idx: i, user_id: currentUser.id, watch_id: watchId, position, bph,
+        native_rate: _msrLastRate, native_beat_error: (typeof _msrLastBe !== 'undefined' ? _msrLastBe : null),
+        js_rate: q.rate, js_quality: q.quality, js_label: q.label, n_ticks: q.nTicks,
+        duration_sec: q.durationSec, residual_sd: q.residualSd, sub_window_delta: q.subWindowDelta,
+        bph_suspect: q.bphSuspect, tick_stream: stream.length ? stream : null,
+      }).then(({ error }) => { if (error) console.warn('[MICBATCH] insert failed', error.message); });
+    }
+    await sleep(GAP_MS);
+  }
+  const done = _micBatchActive;
+  _micBatchActive = false;
+  if (btn) btn.textContent = _MIC_BATCH_LABEL;
+  toast(done ? `Mic batch done — batch ${batchId.slice(0, 8)}` : 'Mic batch cancelled');
 }
 function initPzTunePanel() {
   const panel = document.getElementById('pz-tune-panel');
