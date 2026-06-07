@@ -4839,6 +4839,7 @@ const FEATURE_FLAGS = {
   // no longer flag-gated. localStorage key 'tg_advanced_settings' is unrelated (stores
   // the user's chosen tuning) and is still in use.
   tg_piezo: { label: 'Timegrapher: piezo input source (admin)', default: false },
+  tg_quality_v2: { label: 'Timegrapher: measurement quality v2 (admin)', default: false },
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -6021,7 +6022,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.08.56';
+const APP_VERSION = '07.09.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
