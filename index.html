@@ -4839,7 +4839,6 @@ const FEATURE_FLAGS = {
   // no longer flag-gated. localStorage key 'tg_advanced_settings' is unrelated (stores
   // the user's chosen tuning) and is still in use.
   tg_piezo: { label: 'Timegrapher: piezo input source (admin)', default: false },
-  msr_share_popup: { label: 'Measurement: auto "Share to feed?" popup (admin)', default: false },
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -6022,7 +6021,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.19.54';
+const APP_VERSION = '06.19.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23640,8 +23639,7 @@ function stopMsrListen(reason) {
     // Auto-prompt to share a high-confidence result, at most once per watch.
     // "High confidence" = converged AND a tight error bar (± ≤ 2.0 s/day).
     // Skip in demo mode / when not signed in (no feed to post to).
-    // Admin-gated for now (msr_share_popup) — personal testing in production.
-    if (featureFlag('msr_share_popup') && wasConverged && errorBar <= 2.0 && currentUser && !_isDemoMode) {
+    if (wasConverged && errorBar <= 2.0 && currentUser && !_isDemoMode) {
       const popupWatchId = document.getElementById('msr-watch-select')?.value;
       if (popupWatchId && !msrSharePromptSeen(popupWatchId)) {
         markMsrSharePromptSeen(popupWatchId);
