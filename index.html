@@ -6030,7 +6030,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.21.28';
+const APP_VERSION = '08.06.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21836,7 +21836,7 @@ const _micSleep = ms => new Promise(r => setTimeout(r, ms));
 
 // Run `runs` measurements at current settings, logging each row to measurement_batch_runs.
 // Records `tdm` (active tickDetectMult) per row. Returns true if the loop completed (not cancelled).
-async function _micRunBatchLoop({ batchId, bph, watchId, position, runs, runMs, tdm, btn, label }) {
+async function _micRunBatchLoop({ batchId, bph, watchId, position, runs, runMs, tdm, sweepParam, sweepValue, btn, label }) {
   for (let i = 0; i < runs && _micBatchActive; i++) {
     if (_msrListening) { stopMsrListen('batch_reset'); await _micSleep(_MIC_RESET_MS); }
     if (!_micBatchActive) break;
@@ -21855,6 +21855,7 @@ async function _micRunBatchLoop({ batchId, bph, watchId, position, runs, runMs, 
         js_rate: q.rate, js_quality: q.quality, js_label: q.label, n_ticks: q.nTicks,
         duration_sec: q.durationSec, residual_sd: q.residualSd, sub_window_delta: q.subWindowDelta,
         bph_suspect: q.bphSuspect, tick_stream: stream.length ? stream : null, tick_detect_mult: tdm,
+        sweep_param: sweepParam ?? null, sweep_value: sweepValue ?? null,
       }).then(({ error }) => { if (error) console.warn('[MICBATCH] insert failed', error.message); });
     }
     await _micSleep(_MIC_GAP_MS);
@@ -23045,6 +23046,25 @@ function computeRobustRate(samples, bph, opts={}){ // bph: reserved for future B
   return { rate:Math.round(rate*10)/10, quality:Math.round(quality*100)/100, label, nTicks, durationSec:Math.round(durationSec*10)/10, residualSd:Math.round(residualSd*1000)/1000, subWindowDelta:Math.round(subWindowDelta*10)/10, bphSuspect, converged };
 }
 
+// Maps a friendly sweep-knob name to its hidden tuning input id (or null if unknown).
+function resolveSweepKnob(name) {
+  const map = {
+    tickDetectMult: 'msr-tune-tick-detect-mult',
+    maxPairThresh: 'msr-tune-max-pair-thresh',
+    pairMadMult: 'msr-tune-pair-mad-mult',
+    maxTickDevMs: 'msr-tune-max-tick-dev',
+    coldStartThresh: 'msr-tune-cold-start',
+    calibMultiplier: 'msr-tune-calib-multiplier',
+    noiseFloorMult: 'msr-tune-noise-floor-mult',
+  };
+  return map[name] || null;
+}
+
+// Parses a comma-separated list into positive finite numbers (drops junk/zero/negatives).
+function parseSweepValues(str) {
+  return String(str || '').split(',').map(s => parseFloat(s.trim())).filter(v => isFinite(v) && v > 0);
+}
+
 // Effective tickDetectMult: local override (>0) wins, else table value (>0), else default.
 function resolveTdm(override, table, def) {
   const o = parseFloat(override);
@@ -23535,14 +23555,24 @@ function toggleWatchPresent() {
   }
 }
 
-// Apply a local tickDetectMult override (if set) to the hidden tuning input before tuning is sent.
-function _q2ApplyTdm() {
+// Re-apply flag-on overrides AFTER tgApplySettingsToInputs so they survive measurement start:
+// (a) a manual tickDetectMult override, (b) the active sweep knob (any knob).
+function _q2ApplyOverrides() {
   if (!featureFlag('tg_quality_v2')) return;
   const ov = localStorage.getItem('q2_tick_detect_mult');
-  if (ov == null || ov === '') return;            // no override; let poll/default stand
-  const v = resolveTdm(ov, null, null);
-  const el = document.getElementById('msr-tune-tick-detect-mult');
-  if (el && v != null) el.value = v;
+  if (ov != null && ov !== '') {
+    const v = resolveTdm(ov, null, null);
+    const el = document.getElementById('msr-tune-tick-detect-mult');
+    if (el && v != null) el.value = v;
+  }
+  const sw = localStorage.getItem('q2_sweep_active');
+  if (sw) {
+    try {
+      const a = JSON.parse(sw);
+      const el = document.getElementById(a.inputId);
+      if (el && a.value != null) el.value = a.value;
+    } catch (e) {}
+  }
 }
 
 function sendMsrTuning() {
@@ -23692,7 +23722,7 @@ function toggleMsrListen() {
     } else {
       _msrActiveSettings = null;
     }
-    _q2ApplyTdm();
+    _q2ApplyOverrides();
     setTimeout(() => sendMsrTuning(), 200);
     setTimeout(() => sendPiezoTuning(), 200);
     startTuningPoll();
