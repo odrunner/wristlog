@@ -6030,7 +6030,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '08.06.29';
+const APP_VERSION = '08.06.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21898,6 +21898,17 @@ async function runMicSweep() {
   if (localStorage.getItem('tg_input_source') === 'piezo') localStorage.setItem('tg_input_source', 'mic');
   const position = (document.getElementById('mic-batch-position')?.value || '').trim() || null;
   const watchId = document.getElementById('msr-watch-select')?.value || null;
+  // Pull sweep config from the tuning table so it can be driven remotely via SQL (no on-phone UI).
+  // Values land in the q2_sweep_* localStorage keys read just below; localStorage is the fallback.
+  try {
+    const { data: _swCfg } = await db.from('timegrapher_tuning').select('sweep_knob,sweep_values,sweep_runs,sweep_secs').eq('id', 1).single();
+    if (_swCfg) {
+      if (_swCfg.sweep_knob) localStorage.setItem('q2_sweep_knob', _swCfg.sweep_knob);
+      if (_swCfg.sweep_values) localStorage.setItem('q2_sweep_values', _swCfg.sweep_values);
+      if (_swCfg.sweep_runs != null) localStorage.setItem('q2_sweep_runs', String(_swCfg.sweep_runs));
+      if (_swCfg.sweep_secs != null) localStorage.setItem('q2_sweep_secs', String(_swCfg.sweep_secs));
+    }
+  } catch (e) { /* offline / no row — fall back to localStorage + defaults */ }
   const knob = localStorage.getItem('q2_sweep_knob') || 'tickDetectMult';
   const inputId = resolveSweepKnob(knob);
   if (!inputId) { toast('Unknown sweep knob: ' + knob); return; }
