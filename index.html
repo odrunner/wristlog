@@ -6030,7 +6030,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '08.06.14';
+const APP_VERSION = '08.06.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21895,37 +21895,42 @@ async function runMicSweep() {
   if (localStorage.getItem('tg_input_source') === 'piezo') localStorage.setItem('tg_input_source', 'mic');
   const position = (document.getElementById('mic-batch-position')?.value || '').trim() || null;
   const watchId = document.getElementById('msr-watch-select')?.value || null;
-  const values = (localStorage.getItem('q2_sweep_values') || '0.3,0.25,0.2,0.15')
-    .split(',').map(s => parseFloat(s.trim())).filter(v => isFinite(v) && v > 0);
+  const knob = localStorage.getItem('q2_sweep_knob') || 'tickDetectMult';
+  const inputId = resolveSweepKnob(knob);
+  if (!inputId) { toast('Unknown sweep knob: ' + knob); return; }
+  const inputEl = document.getElementById(inputId);
+  if (!inputEl) { toast('Sweep input missing: ' + inputId); return; }
+  const values = parseSweepValues(localStorage.getItem('q2_sweep_values') || '0.3,0.25,0.2,0.15');
+  if (!values.length) { toast('No sweep values'); return; }
   const runs = parseInt(localStorage.getItem('q2_sweep_runs')) || 12;
   const runMs = (parseInt(localStorage.getItem('q2_sweep_secs')) || 90) * 1000;
-  if (!values.length) { toast('No sweep values'); return; }
-  const prevOverride = localStorage.getItem('q2_tick_detect_mult');  // restore afterwards
+  const prevInputValue = inputEl.value;   // restore the knob afterwards
   _micBatchActive = true;
   let completed = true;
   try {
     for (let vi = 0; vi < values.length && _micBatchActive; vi++) {
-      const tdm = values[vi];
-      localStorage.setItem('q2_tick_detect_mult', String(tdm));        // local override wins; applied each run start
-      const el = document.getElementById('msr-tune-tick-detect-mult'); if (el) el.value = tdm;
+      const value = values[vi];
+      localStorage.setItem('q2_sweep_active', JSON.stringify({ knob, inputId, value }));  // re-applied each run start
+      inputEl.value = value;
       if (typeof sendMsrTuning === 'function') sendMsrTuning();
       const batchId = crypto.randomUUID();
-      console.log(`[MICSWEEP] value ${vi + 1}/${values.length} tdm=${tdm} runs=${runs} batch=${batchId}`);
-      completed = await _micRunBatchLoop({ batchId, bph, watchId, position, runs, runMs, tdm, btn, label: `Sweep ${vi + 1}/${values.length} tdm=${tdm}` });
+      console.log(`[MICSWEEP] ${knob} value ${vi + 1}/${values.length} = ${value} runs=${runs} batch=${batchId}`);
+      completed = await _micRunBatchLoop({
+        batchId, bph, watchId, position, runs, runMs,
+        tdm: knob === 'tickDetectMult' ? value : null,
+        sweepParam: knob, sweepValue: value, btn,
+        label: `Sweep ${vi + 1}/${values.length} ${knob}=${value}`,
+      });
       if (!completed) break;
     }
   } finally {
-    // Always restore the prior override (or clear it) and re-resolve — even if a run threw,
-    // so an unattended sweep can never leave a stale override biasing future measurements.
     _micBatchActive = false;
-    if (prevOverride == null) localStorage.removeItem('q2_tick_detect_mult');
-    else localStorage.setItem('q2_tick_detect_mult', prevOverride);
-    const el2 = document.getElementById('msr-tune-tick-detect-mult');
-    if (el2) el2.value = resolveTdm(localStorage.getItem('q2_tick_detect_mult'), _remoteTdm, 0.3);
+    localStorage.removeItem('q2_sweep_active');
+    if (inputEl) inputEl.value = prevInputValue;     // restore the knob to its pre-sweep value
     if (typeof sendMsrTuning === 'function') sendMsrTuning();
   }
   if (btn) btn.textContent = _MIC_SWEEP_LABEL;
-  toast(completed ? 'Mic sweep done — check data' : 'Mic sweep cancelled');
+  toast(completed ? `Mic sweep done (${knob}) — check data` : 'Mic sweep cancelled');
 }
 function initPzTunePanel() {
   const panel = document.getElementById('pz-tune-panel');
