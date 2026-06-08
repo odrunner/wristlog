@@ -1371,6 +1371,25 @@ export function resolveTdm(override, table, def) {
   return def;
 }
 
+// Maps a friendly sweep-knob name to its hidden tuning input id (or null if unknown).
+export function resolveSweepKnob(name) {
+  const map = {
+    tickDetectMult: 'msr-tune-tick-detect-mult',
+    maxPairThresh: 'msr-tune-max-pair-thresh',
+    pairMadMult: 'msr-tune-pair-mad-mult',
+    maxTickDevMs: 'msr-tune-max-tick-dev',
+    coldStartThresh: 'msr-tune-cold-start',
+    calibMultiplier: 'msr-tune-calib-multiplier',
+    noiseFloorMult: 'msr-tune-noise-floor-mult',
+  };
+  return map[name] || null;
+}
+
+// Parses a comma-separated list into positive finite numbers (drops junk/zero/negatives).
+export function parseSweepValues(str) {
+  return String(str || '').split(',').map(s => parseFloat(s.trim())).filter(v => isFinite(v) && v > 0);
+}
+
 // ══════════════════════════════════════════
 //  SEARCH & INPUT SANITIZATION
 // ══════════════════════════════════════════

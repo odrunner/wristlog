@@ -288,3 +288,26 @@ describe('resolveTdm', () => {
     expect(resolveTdm('abc', null, 0.3)).toBe(0.3);
   });
 });
+
+import { resolveSweepKnob, parseSweepValues } from '../wrotate_test.js';
+
+describe('sweep knob helpers', () => {
+  it('resolveSweepKnob maps known knobs to their input id', () => {
+    expect(resolveSweepKnob('tickDetectMult')).toBe('msr-tune-tick-detect-mult');
+    expect(resolveSweepKnob('maxPairThresh')).toBe('msr-tune-max-pair-thresh');
+    expect(resolveSweepKnob('pairMadMult')).toBe('msr-tune-pair-mad-mult');
+  });
+  it('resolveSweepKnob returns null for unknown knobs', () => {
+    expect(resolveSweepKnob('bogus')).toBeNull();
+    expect(resolveSweepKnob('')).toBeNull();
+    expect(resolveSweepKnob(undefined)).toBeNull();
+  });
+  it('parseSweepValues parses a comma list of positive numbers', () => {
+    expect(parseSweepValues('1.5, 2.5,3.5')).toEqual([1.5, 2.5, 3.5]);
+  });
+  it('parseSweepValues drops junk, negatives, zero, and blanks', () => {
+    expect(parseSweepValues('0.3,abc,-1,0,0.2')).toEqual([0.3, 0.2]);
+    expect(parseSweepValues('')).toEqual([]);
+    expect(parseSweepValues(null)).toEqual([]);
+  });
+});
