@@ -6030,7 +6030,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.17.55';
+const APP_VERSION = '07.18.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21902,23 +21902,27 @@ async function runMicSweep() {
   const prevOverride = localStorage.getItem('q2_tick_detect_mult');  // restore afterwards
   _micBatchActive = true;
   let completed = true;
-  for (let vi = 0; vi < values.length && _micBatchActive; vi++) {
-    const tdm = values[vi];
-    localStorage.setItem('q2_tick_detect_mult', String(tdm));        // local override wins; applied each run start
-    const el = document.getElementById('msr-tune-tick-detect-mult'); if (el) el.value = tdm;
+  try {
+    for (let vi = 0; vi < values.length && _micBatchActive; vi++) {
+      const tdm = values[vi];
+      localStorage.setItem('q2_tick_detect_mult', String(tdm));        // local override wins; applied each run start
+      const el = document.getElementById('msr-tune-tick-detect-mult'); if (el) el.value = tdm;
+      if (typeof sendMsrTuning === 'function') sendMsrTuning();
+      const batchId = crypto.randomUUID();
+      console.log(`[MICSWEEP] value ${vi + 1}/${values.length} tdm=${tdm} runs=${runs} batch=${batchId}`);
+      completed = await _micRunBatchLoop({ batchId, bph, watchId, position, runs, runMs, tdm, btn, label: `Sweep ${vi + 1}/${values.length} tdm=${tdm}` });
+      if (!completed) break;
+    }
+  } finally {
+    // Always restore the prior override (or clear it) and re-resolve — even if a run threw,
+    // so an unattended sweep can never leave a stale override biasing future measurements.
+    _micBatchActive = false;
+    if (prevOverride == null) localStorage.removeItem('q2_tick_detect_mult');
+    else localStorage.setItem('q2_tick_detect_mult', prevOverride);
+    const el2 = document.getElementById('msr-tune-tick-detect-mult');
+    if (el2) el2.value = resolveTdm(localStorage.getItem('q2_tick_detect_mult'), _remoteTdm, 0.3);
     if (typeof sendMsrTuning === 'function') sendMsrTuning();
-    const batchId = crypto.randomUUID();
-    console.log(`[MICSWEEP] value ${vi + 1}/${values.length} tdm=${tdm} runs=${runs} batch=${batchId}`);
-    completed = await _micRunBatchLoop({ batchId, bph, watchId, position, runs, runMs, tdm, btn, label: `Sweep ${vi + 1}/${values.length} tdm=${tdm}` });
-    if (!completed) break;
   }
-  _micBatchActive = false;
-  // Restore the prior override (or clear it) and re-resolve the hidden input.
-  if (prevOverride == null) localStorage.removeItem('q2_tick_detect_mult');
-  else localStorage.setItem('q2_tick_detect_mult', prevOverride);
-  const el2 = document.getElementById('msr-tune-tick-detect-mult');
-  if (el2) el2.value = resolveTdm(localStorage.getItem('q2_tick_detect_mult'), _remoteTdm, 0.3);
-  if (typeof sendMsrTuning === 'function') sendMsrTuning();
   if (btn) btn.textContent = _MIC_SWEEP_LABEL;
   toast(completed ? 'Mic sweep done — check data' : 'Mic sweep cancelled');
 }
