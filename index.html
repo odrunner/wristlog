@@ -3442,6 +3442,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <input id="mic-batch-position" placeholder="position label (optional)" style="display:none;width:100%;margin-bottom:.4rem;padding:.4rem;border-radius:8px;border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:.72rem;">
       <button id="mic-batch-btn" onclick="runMicBatch()" style="display:none;width:100%;margin-bottom:.75rem;padding:.45rem;border-radius:8px;border:1px solid rgba(96,165,250,.4);background:#0a1220;color:#93c5fd;font-size:.72rem;cursor:pointer;">Mic Batch ×15 (90s each, same watch &amp; position)</button>
           <button id="mic-sweep-btn" onclick="runMicSweep()" style="display:none;width:100%;margin-bottom:.75rem;padding:.45rem;border-radius:8px;border:1px solid rgba(167,139,250,.5);background:#150a20;color:#c4b5fd;font-size:.72rem;cursor:pointer;">Mic Sweep (native knob · unattended)</button>
+          <button id="deep-test-btn" onclick="runDeepTest()" style="display:none;width:100%;margin-bottom:.75rem;padding:.5rem;border-radius:8px;border:1px solid rgba(52,211,153,.6);background:#06231a;color:#6ee7b7;font-size:.78rem;font-weight:600;cursor:pointer;">Deep Test (3–6 runs · median ± STD)</button>
       <!-- Instrument panel -->
       <div id="msr-instrument" style="background:#0a1a12;border-radius:10px;overflow:hidden;margin-bottom:.75rem;">
         <!-- Chart with HUD overlay -->
@@ -6031,7 +6032,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '08.11.15';
+const APP_VERSION = '08.11.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21770,6 +21771,7 @@ function initTgSourceSelector() {
   const mbOn = featureFlag('tg_quality_v2');
   const mb = document.getElementById('mic-batch-btn'); if (mb) mb.style.display = mbOn ? '' : 'none';
   const msw = document.getElementById('mic-sweep-btn'); if (msw) msw.style.display = mbOn ? '' : 'none';
+  const dtb = document.getElementById('deep-test-btn'); if (dtb) dtb.style.display = featureFlag('deep_test') ? '' : 'none';
   const mp = document.getElementById('mic-batch-position'); if (mp) mp.style.display = mbOn ? '' : 'none';
   const ms = document.getElementById('msr-mode-select');
   if (ms) { ms.style.display = mbOn ? '' : 'none'; ms.value = (localStorage.getItem('msr_mode') === 'quick') ? 'quick' : 'accurate'; }
@@ -21887,6 +21889,75 @@ async function runMicBatch() {
   toast(done ? `Mic batch done — batch ${batchId.slice(0, 8)}` : 'Mic batch cancelled');
 }
 
+let _deepTestActive = false;
+const _DEEP_TEST_LABEL = 'Deep Test (3–6 runs · median ± STD)';
+function _deepRender(text, color) {
+  const host = document.getElementById('msr-scatter-plot')?.parentElement;
+  if (!host) return;
+  let el = document.getElementById('deep-test-readout');
+  if (!el) { el = document.createElement('div'); el.id = 'deep-test-readout'; el.style.cssText = 'font-family:monospace;font-size:.72rem;padding:.3rem .4rem;line-height:1.4;'; host.insertAdjacentElement('afterend', el); }
+  el.textContent = text; el.style.color = color || '#6ee7b7';
+}
+async function runDeepTest() {
+  const btn = document.getElementById('deep-test-btn');
+  if (_deepTestActive) { _deepTestActive = false; if (btn) btn.textContent = 'Cancelling…'; return; }
+  if (!_tgHasNative()) { toast('Deep Test needs the native app'); return; }
+  const sel = document.getElementById('msr-bph-select');
+  const bph = sel ? (parseInt(sel.value) || 0) : 0;
+  if (bph === 0) { toast('Pick the watch’s BPH first'); return; }
+  if (localStorage.getItem('tg_input_source') === 'piezo') localStorage.setItem('tg_input_source', 'mic');
+  const watchId = document.getElementById('msr-watch-select')?.value || null;
+  const minRuns = _q2Num('dt_min_runs', 3), maxRuns = _q2Num('dt_max_runs', 6);
+  const runMs = _q2Num('dt_run_secs', 90) * 1000, GAP = 4000, RESET = 1200;
+  const opts = {};
+  for (const k of ['warmupLook', 'warmupEps', 'warmupFloor', 'win', 'bandSday', 'segMinSec', 'rateStdMax']) {
+    const v = parseFloat(localStorage.getItem('dt_' + k)); if (isFinite(v)) opts[k] = v;
+  }
+  const deepTestId = crypto.randomUUID();
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const pooledRates = []; const runBeats = [];
+  _deepTestActive = true;
+  if (btn) btn.textContent = 'Deep Test starting…';
+  try {
+    for (let run = 0; run < maxRuns && _deepTestActive; run++) {
+      if (_msrListening) { stopMsrListen('deep_reset'); await sleep(RESET); }
+      if (!_deepTestActive) break;
+      _deepRender(`Run ${run + 1}/${maxRuns} measuring… (${pooledRates.length} clean chunks so far)`, '#9aa');
+      toggleMsrListen();
+      await sleep(runMs);
+      if (_msrListening) stopMsrListen('deep');
+      const chunks = extractCleanChunks(_msrScatterData, opts);
+      chunks.forEach((c, ci) => {
+        if (currentUser) db.from('deep_test_chunks').insert({
+          deep_test_id: deepTestId, user_id: currentUser.id, watch_id: watchId, bph,
+          run_idx: run, chunk_idx: ci, t0: c.t0, t1: c.t1, rate: c.rate, residual_sd: c.residualSd, n_ticks: c.nTicks,
+        }).then(({ error }) => { if (error) console.warn('[DEEP] chunk insert failed', error.message); });
+        pooledRates.push(c.rate);
+      });
+      if (typeof _msrLastBe !== 'undefined' && _msrLastBe != null) runBeats.push(_msrLastBe);
+      const agg = medianStd(pooledRates);
+      const so = agg.median != null ? `${agg.median >= 0 ? '+' : ''}${agg.median} ±${agg.std}` : '—';
+      _deepRender(`Run ${run + 1}/${maxRuns} · ${pooledRates.length} chunks · ${so} s/day`, '#9aa');
+      const earlyStd = _q2Num('dt_early_std', 0);
+      if (earlyStd > 0 && run + 1 >= minRuns && agg.n >= 6 && agg.std != null && agg.std <= earlyStd) break;
+      await sleep(GAP);
+    }
+  } finally {
+    _deepTestActive = false;
+    if (btn) btn.textContent = _DEEP_TEST_LABEL;
+  }
+  const agg = medianStd(pooledRates);
+  const beMed = medianStd(runBeats).median;
+  if (agg.median == null) { _deepRender('Deep Test: no clean chunks — try repositioning', '#fbbf24'); toast('Deep Test: no clean data'); return; }
+  const good = agg.std != null && agg.std <= 2 && agg.n >= 4;
+  _deepRender(`Deep Test: ${agg.median >= 0 ? '+' : ''}${agg.median} ±${agg.std} s/day · ${agg.n} chunks` + (beMed != null ? ` · BE ${beMed}ms` : ''), good ? '#34d399' : '#fbbf24');
+  if (currentUser) {
+    db.from('timegrapher_results').insert({
+      user_id: currentUser.id, watch_id: watchId, rate: agg.median, rate_std: agg.std,
+      beat_error: beMed, bph, source: 'deep_test', notes: `Deep Test: ${agg.n} chunks / pooled`,
+    }).then(({ error }) => { if (error) console.warn('[DEEP] result insert failed', error.message); else toast('Deep Test saved'); });
+  }
+}
 // Automated detection-threshold sweep: one press runs a full batch at each tickDetectMult value,
 // back to back, each run tagged with its value. Local override drives the value (wins over the table).
 async function runMicSweep() {
