@@ -1390,6 +1390,70 @@ export function parseSweepValues(str) {
   return String(str || '').split(',').map(s => parseFloat(s.trim())).filter(v => isFinite(v) && v > 0);
 }
 
+// Median + population std of a numeric array (rounded). { median, std, n }.
+export function medianStd(arr) {
+  const a = (arr || []).filter(x => isFinite(x));
+  const n = a.length;
+  if (!n) return { median: null, std: null, n: 0 };
+  const s = [...a].sort((x, y) => x - y);
+  const m = s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
+  const mean = a.reduce((x, y) => x + y, 0) / n;
+  const std = Math.sqrt(a.reduce((x, y) => x + (y - mean) ** 2, 0) / n);
+  return { median: Math.round(m * 10) / 10, std: Math.round(std * 100) / 100, n };
+}
+
+// Harvest calm sub-run segments ("chunks") from a tick stream [{t,cd}], skipping the warm-up
+// transient and disturbances. Returns [{t0,t1,rate,residualSd,nTicks}] (rate = robust slope ×86.4;
+// residualSd = spread of the local rate across the segment in s/day — small means a calm, steady run).
+export function extractCleanChunks(samples, opts = {}) {
+  const o = { warmupLook: 20, warmupEps: 0.5, warmupFloor: 15, win: 10,
+              bandSday: 1, segMinSec: 15, rateStdMax: 0.3, ...opts };
+  const pts = (samples || []).filter(p => p && isFinite(p.t) && isFinite(p.cd));
+  if (pts.length < 8) return [];
+  const start = pts[0].t, lastT = pts[pts.length - 1].t;
+  let settleT = null;
+  for (let t = start + o.warmupLook + 1; t <= lastT + 1e-6; t += 1) {
+    const a = _q2Ls(pts, start, t), b = _q2Ls(pts, start, t - o.warmupLook);
+    if (a != null && b != null && Math.abs(a - b) <= o.warmupEps) { settleT = t; break; }
+  }
+  const warmupEnd = settleT != null ? Math.max(settleT, start + o.warmupFloor) : start + o.warmupFloor;
+  const series = [];
+  for (let t = warmupEnd + o.win; t <= lastT + 1e-6; t += 1) {
+    const r = _q2Ls(pts, t - o.win, t);
+    if (r != null) series.push({ t, r });
+  }
+  const med = a => { const s = [...a].sort((x, y) => x - y); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+  const chunks = [];
+  let seg = [];
+  const flush = () => {
+    if (seg.length >= 2) {
+      const t0 = seg[0].t - o.win, t1 = seg[seg.length - 1].t;
+      if (t1 - t0 >= o.segMinSec) {
+        const rate = _q2Ls(pts, t0, t1);
+        if (rate != null) {
+          // residualSd = stability of the local (rolling-window) rate across the segment, in s/day.
+          // A constant-rate run yields ~0; a boundary-contaminated or noisy run yields a large spread.
+          const rs = seg.map(s => s.r);
+          const rmean = rs.reduce((a, b) => a + b, 0) / rs.length;
+          const resStd = Math.sqrt(rs.reduce((a, b) => a + (b - rmean) ** 2, 0) / rs.length);
+          const w = pts.filter(p => p.t >= t0 && p.t <= t1);
+          if (resStd <= o.rateStdMax) {
+            chunks.push({ t0: Math.round(t0 * 10) / 10, t1: Math.round(t1 * 10) / 10, rate: Math.round(rate * 10) / 10, residualSd: Math.round(resStd * 1000) / 1000, nTicks: w.length });
+          }
+        }
+      }
+    }
+    seg = [];
+  };
+  for (const pt of series) {
+    if (!seg.length) { seg.push(pt); continue; }
+    if (Math.abs(pt.r - med(seg.map(s => s.r))) <= o.bandSday) seg.push(pt);
+    else flush();
+  }
+  flush();
+  return chunks;
+}
+
 // ══════════════════════════════════════════
 //  SEARCH & INPUT SANITIZATION
 // ══════════════════════════════════════════

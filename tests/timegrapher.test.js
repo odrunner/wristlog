@@ -311,3 +311,50 @@ describe('sweep knob helpers', () => {
     expect(parseSweepValues(null)).toEqual([]);
   });
 });
+
+import { extractCleanChunks, medianStd } from '../wrotate_test.js';
+
+// cd for constant rate sday over [fromT,toT], appended; returns ending cd.
+function ramp(out, fromT, toT, sday, dt, cd0) {
+  const slope = sday / 86.4;
+  for (let t = fromT; t <= toT + 1e-9; t += dt) { out.push({ t: +t.toFixed(3), cd: +(cd0 + slope * (t - fromT)).toFixed(4) }); }
+  return cd0 + slope * (toT - fromT);
+}
+
+describe('medianStd', () => {
+  it('returns null for empty', () => { expect(medianStd([])).toEqual({ median: null, std: null, n: 0 }); });
+  it('median and std for a set', () => {
+    const r = medianStd([4, 5, 6]); expect(r.median).toBe(5); expect(r.n).toBe(3); expect(r.std).toBeCloseTo(0.82, 1);
+  });
+  it('median of even count averages middle two', () => { expect(medianStd([1, 3]).median).toBe(2); });
+});
+
+describe('extractCleanChunks', () => {
+  it('returns [] for too-short input', () => {
+    const out = []; ramp(out, 0, 1, 5, 0.125, 0);
+    expect(extractCleanChunks(out)).toEqual([]);
+  });
+  it('clean constant stream yields one chunk near the true rate', () => {
+    const out = []; ramp(out, 0, 90, 5, 0.125, 0);
+    const c = extractCleanChunks(out);
+    expect(c.length).toBe(1);
+    expect(c[0].rate).toBeCloseTo(5, 0);
+    expect(c[0].residualSd).toBeLessThan(1);
+  });
+  it('a mid-stream rate change splits into two chunks', () => {
+    const out = []; const cd1 = ramp(out, 0, 45, 6, 0.125, 0); ramp(out, 45.125, 90, 0, 0.125, cd1);
+    const c = extractCleanChunks(out);
+    expect(c.length).toBe(2);
+    const rates = c.map(x => x.rate).sort((a, b) => a - b);
+    expect(rates[0]).toBeCloseTo(0, 0);
+    expect(rates[1]).toBeCloseTo(6, 0);
+  });
+  it('a noisy stream (rate jumping every step) yields no stable chunk', () => {
+    const out = []; let s = 7, cd = 0;
+    for (let t = 0; t <= 90; t += 0.125) {
+      s = (s * 1103515245 + 12345) & 0x7fffffff; const r = (s / 0x7fffffff) * 40 - 20;
+      cd += (r / 86.4) * 0.125; out.push({ t: +t.toFixed(3), cd: +cd.toFixed(4) });
+    }
+    expect(extractCleanChunks(out).length).toBe(0);
+  });
+});
