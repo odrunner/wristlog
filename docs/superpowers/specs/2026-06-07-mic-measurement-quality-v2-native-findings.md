@@ -124,6 +124,36 @@ mis-pairing tick/tock — plus the same silent detection loss. Sampled threshold
    when beat error is high, and harden phase recovery so a ~4ms BE doesn't reject 42% of pairs.
 4. Acceptance work and the JS convergence work compound: more clean ticks/sec lets v2 lock earlier.
 
+## Update 2 — tickDetectMult sweep result (OVERTURNS the "lower the threshold" idea)
+
+Ran a full automated sweep on a clean watch (28,800 BPH, beat error ~0.1ms, 12×90s per value):
+
+| tickDetectMult | accepted | pair_rej | phase_rej | paired-accept | rate SD |
+|---|---|---|---|---|---|
+| **0.30 (default)** | 3708 | 171 | 41 | **95%** | **0.31** |
+| 0.25 | 3176 | 261 | 437 | 82% | 0.53 |
+| 0.20 | 3015 | 414 | 1041 | 67% | 1.44 |
+| 0.15 | 2524 | 907 | 732 | 61% | 1.44 |
+
+**Lowering the detection threshold admits NOISE, not signal** — spurious peaks between real beats
+explode phase rejects (41→1041) and pair rejects, monotonically worsening accepted-tick count AND
+repeatability. **The detection threshold is NOT the accuracy lever; 0.30 is already well-chosen**
+(95% paired-acceptance, SD 0.31 on a clean watch). The earlier "lower tickDetectMult to recover the
+~30% silent loss" recommendation (Update 1 / prioritized action #2) is **WRONG** — those missing
+beats are not sitting below the energy threshold; lowering just pulls in garbage. Detection-method
+changes (filtering/Goertzel), not the threshold multiplier, would be needed if the silent loss
+matters — but on clean watches it doesn't (SD already 0.31).
+
+**PARKED (revisit — do not forget): "Direction A" — sweep tickDetectMult UPWARD (0.30 → 0.40 → 0.50)**
+on a clean watch to check whether a higher threshold is even cleaner (fewer noise admits). Cheap
+(~45 min). The sweep harness (`runMicSweep`, set `localStorage.q2_sweep_values='0.3,0.4,0.5'`)
+already supports it.
+
+**ACTIVE: "Direction B" — native beat-error / phase pairing for noisy watches.** The real signal is
+phase rejects scaling with beat error (clean watch be~0.1ms → 41 phase rejects; JLC be~4ms → 900+).
+High beat error makes tick/tock pairing mis-phase. This is the next native change, designed from this
+data. See the v3 native spec (to be written).
+
 ## Scope note
 
 This is investigation only. Any Swift change is a separate cycle, built by the user and tested via
