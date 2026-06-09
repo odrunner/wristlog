@@ -573,6 +573,7 @@ class TimegrapherEngine {
                         if tickCount == 0 && elDbg > recalTriggerSec && recalibrationsDone < maxRecalibrations {
                             recalibrationsDone += 1
                             tickCalibrating = true
+                            plHaveCand = false; plBestDist = Int.max; plMissCount = 0; plApplyCarry = false; plPendingCarry = 0
                             calibrationSamples = 0
                             calibrationEnergies.removeAll(keepingCapacity: true)
                             tickThreshold = 0
@@ -864,6 +865,7 @@ class TimegrapherEngine {
                                                 if recalibrationsDone < maxRecalibrations {
                                                     recalibrationsDone += 1
                                                     tickCalibrating = true
+                                                    plHaveCand = false; plBestDist = Int.max; plMissCount = 0; plApplyCarry = false; plPendingCarry = 0
                                                     calibrationSamples = 0
                                                     calibrationEnergies.removeAll(keepingCapacity: true)
                                                     tickThreshold = 0
