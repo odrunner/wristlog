@@ -154,6 +154,35 @@ phase rejects scaling with beat error (clean watch be~0.1ms → 41 phase rejects
 High beat error makes tick/tock pairing mis-phase. This is the next native change, designed from this
 data. See the v3 native spec (to be written).
 
+## Update 3 — Kurono "high-BE" case is actually a TWIN-PEAK DETECTION bug (root cause found, fix validated offline)
+
+The "high beat error" watches were a red herring. Captured a Kurono Tokyo Inseki (28,800, dial-down)
+batch: app reported beat error **3.2ms** (max 3.8) and rate **+4.6 (SD 2.68)**. But **Weishi ground
+truth = +9/+10 s/day, beat error 0.2ms** (the watch is IN beat). So the app FABRICATED the beat error
+and got the rate wrong.
+
+Recorded ~16s of the Kurono on Voice Memos (`~/Downloads/kurono1.m4a`) and analyzed the waveform
+(ffmpeg→WAV, scipy). Findings:
+- The Kurono tick is a **double click**: every tick has two acoustic peaks ~3.5ms apart, **near-equal
+  amplitude** (median 2nd/main = 0.79; 82% have 2nd>0.6×main, 45% >0.8×).
+- The native detector picks the **loudest** peak each beat; because the twins are near-equal, beat-to-
+  beat amplitude jitter flips which wins → the tick jumps ~±3.5–5ms → **fabricated beat error +
+  corrupted/noisy rate**. Not high beat error, not a phase-recovery-tuning problem — a
+  **peak-selection** problem.
+
+**Fix validated OFFLINE on the recording** (prototype): amplitude-pick (current) → interval std
+**20.75ms**, beat error **2.86ms** (reproduces the bug); **phase-locked** pick (choose the candidate
+nearest the *predicted* tick time, ignore the louder twin) → interval std **0.74ms**, beat error
+**0.01ms** (matches Weishi's 0.2). Decisive. (The prototype's absolute rate was off — that's the
+voice-memo clock, not the watch; beat error / interval-cleanup are clock-immune, and on-device the
+app's own clock already gives accurate rate on clean watches, so phase-locking fixes the live rate
+too since the error was the flipping.)
+
+**→ B2 redefined: native phase-locked peak selection** in `TimegrapherEngine` (after lock, pick the
+candidate peak closest to the predicted phase, not the loudest). This supersedes the
+"expose phase-recovery params" idea for this failure class. Validate by re-recording/re-batching the
+Kurono (expect BE→~0.2, rate→~+9.5, SD collapse).
+
 ## Scope note
 
 This is investigation only. Any Swift change is a separate cycle, built by the user and tested via
