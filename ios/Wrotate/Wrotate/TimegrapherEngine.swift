@@ -152,6 +152,16 @@ class TimegrapherEngine {
     // Peak detection: wait for energy to decline before firing tick
     private var pendingTickCross: Bool = false        // threshold crossed, waiting for peak
     private var pendingTickPeakEnergy: Float = 0      // highest energy seen during pending
+    // Phase-locked selection: once locked, pick the candidate crest closest to the predicted tick.
+    private var phaseLockEnabled: Bool = false       // A/B tunable (default off => behaves as today)
+    private var phaseLockWindow: Double = 0.4         // acceptance half-window as fraction of interval
+    private var phaseLockMaxMiss: Int = 3             // consecutive misses before dropping lock
+    private var plHaveCand: Bool = false
+    private var plBestInterval: Int = 0
+    private var plBestDist: Int = Int.max
+    private var plMissCount: Int = 0
+    private var plApplyCarry: Bool = false
+    private var plPendingCarry: Int = 0
     private var peakDetectGate: Float = 3.0           // use peak detection only when energy > threshold * this
 
     // Rate display and stability tracking (all tunable from JS)
@@ -302,7 +312,8 @@ class TimegrapherEngine {
                     minSpacingMult: Double? = nil,
                     maxBphCorrections: Int? = nil,
                     noiseFloorMult: Double? = nil,
-                    peakDetectGate: Double? = nil) {
+                    peakDetectGate: Double? = nil,
+                    phaseLock: Bool? = nil, phaseLockWindow: Double? = nil, phaseLockMaxMiss: Int? = nil) {
         peakRatioThreshold = max(1.0, thresh)
         bufferDurationSec = max(5, min(120, bufSec))
         if let v = regSkipPairs { regressionSkipPairs = v }
@@ -331,7 +342,10 @@ class TimegrapherEngine {
         if let v = maxBphCorrections { self.maxBphCorrections = v }
         if let v = noiseFloorMult { self.noiseFloorMult = Float(v) }
         if let v = peakDetectGate { self.peakDetectGate = Float(v) }
-        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections) noiseFloor=\(self.noiseFloorMult) peakGate=\(self.peakDetectGate)")
+        if let v = phaseLock { self.phaseLockEnabled = v }
+        if let v = phaseLockWindow { self.phaseLockWindow = v }
+        if let v = phaseLockMaxMiss { self.phaseLockMaxMiss = v }
+        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections) noiseFloor=\(self.noiseFloorMult) peakGate=\(self.peakDetectGate) phaseLock=\(self.phaseLockEnabled)/\(self.phaseLockWindow)")
     }
 
     // MARK: - Biquad HP filter
@@ -531,6 +545,7 @@ class TimegrapherEngine {
                     }
 
                     ringPosSinceLastTick += 1
+                    if plApplyCarry { ringPosSinceLastTick += plPendingCarry; plApplyCarry = false }
 
                     // Track peak energy; decay toward noise floor (not zero)
                     if energy > tickThreshold { tickThreshold = energy }
@@ -586,6 +601,38 @@ class TimegrapherEngine {
                     } else if pendingTickCross {
                         pendingTickCross = false
                         shouldFireTick = true
+                    }
+
+                    // Phase-locked selection: when locked, defer firing and pick the crest closest to
+                    // the predicted tick time (ignores a louder twin ~3.5ms away). No-op pre-lock and
+                    // on single-peak watches (one candidate in window => same tick as before).
+                    let plActive = phaseLockEnabled && lastTickRingPos >= 0 && expectedTickInterval > 0
+                    if plActive {
+                        let expI = Int(expectedTickInterval)
+                        let lo = Int(expectedTickInterval * (1.0 - phaseLockWindow))
+                        let hi = Int(expectedTickInterval * (1.0 + phaseLockWindow))
+                        if shouldFireTick {
+                            let intv = ringPosSinceLastTick
+                            if intv >= lo && intv <= hi {
+                                let d = abs(intv - expI)
+                                if !plHaveCand || d < plBestDist { plHaveCand = true; plBestInterval = intv; plBestDist = d }
+                            }
+                            shouldFireTick = false   // defer; decide at window close
+                        }
+                        if ringPosSinceLastTick > hi {
+                            if plHaveCand {
+                                plPendingCarry = ringPosSinceLastTick - plBestInterval
+                                plApplyCarry = true
+                                ringPosSinceLastTick = plBestInterval   // fire path reads this as the interval
+                                shouldFireTick = true
+                                plMissCount = 0
+                            } else {
+                                plMissCount += 1
+                                ringPosSinceLastTick -= expI            // re-predict next beat
+                                if plMissCount >= phaseLockMaxMiss { lastTickRingPos = -1; plMissCount = 0 }
+                            }
+                            plHaveCand = false; plBestDist = Int.max
+                        }
                     }
 
                     if shouldFireTick {
@@ -883,7 +930,7 @@ class TimegrapherEngine {
                                         tickCount = 0
                                         tickDeviationMs = 0
                                         pairDeviationMs = 0; pairIntervalAccum = 0.0; pairTickPhase = 0; lastTickFracOffset = 0
-                                        pendingTickCross = false; pendingTickPeakEnergy = 0
+                                        pendingTickCross = false; pendingTickPeakEnergy = 0; plHaveCand = false; plBestDist = Int.max; plMissCount = 0; plApplyCarry = false; plPendingCarry = 0
                                         consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []
                                         regPoints = []; regN = 0; recentPairDevs = []; totalPairsAccepted = 0
                                         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
@@ -1071,7 +1118,7 @@ class TimegrapherEngine {
         pairIntervalAccum = 0.0; pairTickPhase = 0; pairDeviationMs = 0
         lastTickFracOffset = 0
         recentPairDevs = []
-        pendingTickCross = false; pendingTickPeakEnergy = 0
+        pendingTickCross = false; pendingTickPeakEnergy = 0; plHaveCand = false; plBestDist = Int.max; plMissCount = 0; plApplyCarry = false; plPendingCarry = 0
         consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []
         bphCorrectionOutliers = []
         // Note: bphCorrectionRejects intentionally NOT cleared — accumulates across recalibrations
