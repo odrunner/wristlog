@@ -76,6 +76,9 @@ class TimegrapherBridge {
             let maxBphCorrections = body["maxBphCorrections"] as? Int
             let noiseFloorMult = body["noiseFloorMult"] as? Double
             let peakDetectGate = body["peakDetectGate"] as? Double
+            let phaseLock = body["phaseLock"] as? Bool
+            let phaseLockWindow = body["phaseLockWindow"] as? Double
+            let phaseLockMaxMiss = body["phaseLockMaxMiss"] as? Int
             print("[TG BRIDGE TUNING] peakRatio=\(peakRatioThreshold) bufSec=\(bufferSeconds) regSkip=\(regSkipPairs ?? -1) regMinN=\(regMinN ?? -1) maxPairTh=\(maxPairThresh ?? -1)")
             engine.setTuning(multLo: Float(multLo), multHi: Float(multHi),
                              minThreshold: Float(minThresh),
@@ -107,7 +110,8 @@ class TimegrapherBridge {
                              minSpacingMult: minSpacingMult,
                              maxBphCorrections: maxBphCorrections,
                              noiseFloorMult: noiseFloorMult,
-                             peakDetectGate: peakDetectGate)
+                             peakDetectGate: peakDetectGate,
+                             phaseLock: phaseLock, phaseLockWindow: phaseLockWindow, phaseLockMaxMiss: phaseLockMaxMiss)
 
         case "tuningPiezo":
             piezo.setTuning(

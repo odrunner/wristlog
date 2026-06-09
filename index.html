@@ -3544,6 +3544,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input type="hidden" id="msr-tune-max-bph-corrections" value="2">
         <input type="hidden" id="msr-tune-noise-floor-mult" value="0">
         <input type="hidden" id="msr-tune-peak-detect-gate" value="3.0">
+        <input type="hidden" id="msr-tune-phase-lock" value="0">
+        <input type="hidden" id="msr-tune-phase-lock-window" value="0.4">
+        <input type="hidden" id="msr-tune-phase-lock-max-miss" value="3">
         <div id="msr-tune-live" style="display:none;"></div>
         <div id="msr-scatter-wrap"></div>
       </div>
@@ -6032,7 +6035,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '08.20.26';
+const APP_VERSION = '08.20.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22253,6 +22256,10 @@ function startTuningPoll() {
         const _tdmEl = document.getElementById('msr-tune-tick-detect-mult');
         if (_tdmEl) _tdmEl.value = resolveTdm(localStorage.getItem('q2_tick_detect_mult'), _remoteTdm, 0.3);
       }
+      if (featureFlag('tg_quality_v2')) {
+        if (data.phase_lock != null) { const e = document.getElementById('msr-tune-phase-lock'); if (e) e.value = data.phase_lock ? '1' : '0'; }
+        if (data.phase_lock_window != null) { const e = document.getElementById('msr-tune-phase-lock-window'); if (e) e.value = data.phase_lock_window; }
+      }
       // Send to native
       sendMsrTuning();
     } catch (e) {}
@@ -23766,7 +23773,10 @@ function sendMsrTuning() {
     minSpacingMult: Number(document.getElementById('msr-tune-min-spacing-mult').value),
     maxBphCorrections: Number(document.getElementById('msr-tune-max-bph-corrections').value),
     noiseFloorMult: Number(document.getElementById('msr-tune-noise-floor-mult').value),
-    peakDetectGate: Number(document.getElementById('msr-tune-peak-detect-gate').value)
+    peakDetectGate: Number(document.getElementById('msr-tune-peak-detect-gate').value),
+    phaseLock: document.getElementById('msr-tune-phase-lock').value === '1',
+    phaseLockWindow: Number(document.getElementById('msr-tune-phase-lock-window').value),
+    phaseLockMaxMiss: Number(document.getElementById('msr-tune-phase-lock-max-miss').value)
   });
 }
 var _remotePeakRatioThreshold = 2.5;
