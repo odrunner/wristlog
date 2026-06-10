@@ -153,7 +153,7 @@ class TimegrapherEngine {
     private var pendingTickCross: Bool = false        // threshold crossed, waiting for peak
     private var pendingTickPeakEnergy: Float = 0      // highest energy seen during pending
     // Phase-locked selection: once locked, pick the candidate crest closest to the predicted tick.
-    private var phaseLockEnabled: Bool = true        // default ON — validated on Kurono (twin-peak): rate SD 2.15→0.62, thrash gone, 14/14 solid. A/B-overridable via setTuning.
+    private var phaseLockEnabled: Bool = false       // default OFF — fixes Kurono (twin-peak) but mis-locks JLC (foldedBE 0.7→3.3, rate +8 vs Weishi +4; old build read +2-3). A/B via setTuning until the JLC failure mode is fixed.
     private var phaseLockWindow: Double = 0.4         // acceptance half-window as fraction of interval
     private var phaseLockMaxMiss: Int = 3             // consecutive misses before dropping lock
     private var plHaveCand: Bool = false
