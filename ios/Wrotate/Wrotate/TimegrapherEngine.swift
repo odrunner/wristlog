@@ -108,6 +108,13 @@ class TimegrapherEngine {
     private var knownBeatError: Double = 0          // estimated beat error from individual tick deviations (ms)
     private var recentTickDevs: [Double] = []       // last N individual tick deviations (signed)
     private var beatErrorWindowSize: Int = 20       // how many tick devs to track for beat error estimation
+    // Phase-separated beat error: BE = |mean(dev|phase0) - mean(dev|phase1)|; averaging cancels jitter
+    // (spec docs/superpowers/specs/2026-06-10-phase-separated-beat-error.md). Replaces the folded estimator.
+    private var tickPhaseIndex: Int = 0             // cumulative expected-impulse count — skip-robust parity source
+    private var beDevsByParity: [[Double]] = [[], []] // rolling signed-dev buckets, phase 0 / phase 1
+    private let beBucketWindow: Int = 30            // per-bucket rolling size
+    private let beMinPerBucket: Int = 8             // min samples per bucket before BE is valid
+    private var phaseSepBeatError: Double? = nil    // estimator output (ms), nil until both buckets fill
 
     // Adaptive BPH correction: detect consistent pair deviation or outlier ratio → switch BPH
     private var bphCorrectionRejects: [Double] = [] // signed pairDev values during reject streak
@@ -412,7 +419,7 @@ class TimegrapherEngine {
         lastTickFracOffset = 0; tickStartSample = 0
         pendingFirstTickDev = 0; pendingFirstTickTime = 0; pendingFirstTickInterval = 0; pendingFirstTickEnergy = 0
         recentPairDevs = []
-        consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []
+        consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []; tickPhaseIndex = 0; beDevsByParity = [[], []]; phaseSepBeatError = nil
         bphCorrectionRejects = []; bphCorrectionOutliers = []; bphCorrectionAttempted = []; bphCorrectionCount = 0
         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
         lastDebugInfo = nil
@@ -477,7 +484,7 @@ class TimegrapherEngine {
         audioEngine?.stop()
         audioEngine = nil
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        return Result(rate: currentRate, beatError: currentBeatError,
+        return Result(rate: currentRate, beatError: phaseSepBeatError ?? currentBeatError,
                       tickCount: peakCount, ticks: [])
     }
 
@@ -742,6 +749,22 @@ class TimegrapherEngine {
                                     knownBeatError = absDevs[absDevs.count / 2]
                                 }
 
+                                // Phase-separated beat error: split signed devs by skip-robust parity,
+                                // BE = |mean(phase0) - mean(phase1)|. Only clean 1-step intervals contribute;
+                                // skips advance the parity counter (>=2 steps) so phase never desyncs.
+                                let beSteps = max(1, Int((actualInterval / expectedTickInterval).rounded()))
+                                tickPhaseIndex += beSteps
+                                if beSteps == 1 {
+                                    let beP = tickPhaseIndex & 1
+                                    beDevsByParity[beP].append(deviationThisTick)
+                                    if beDevsByParity[beP].count > beBucketWindow { beDevsByParity[beP].removeFirst() }
+                                    if beDevsByParity[0].count >= beMinPerBucket && beDevsByParity[1].count >= beMinPerBucket {
+                                        let beM0 = beDevsByParity[0].reduce(0, +) / Double(beDevsByParity[0].count)
+                                        let beM1 = beDevsByParity[1].reduce(0, +) / Double(beDevsByParity[1].count)
+                                        phaseSepBeatError = (abs(beM0 - beM1) * 100).rounded() / 100
+                                    }
+                                }
+
                                 // Pair-based: accumulate 2 ticks, validate pair before plotting
                                 pairIntervalAccum += actualInterval
                                 pairTickPhase += 1
@@ -911,7 +934,7 @@ class TimegrapherEngine {
                                 // Plot single dot at pair midpoint using cumulative pairDev
                                 let pairMidTime = (pendingFirstTickTime + elapsedSec) / 2.0
                                 pendingTicks.append(TickDot(timeSec: pairMidTime, deviationMs: pairDeviationMs))
-                                debugLog("[TGTICK #\(tickCount) @ \(String(format: "%.2f", pairMidTime))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms cumPairDev=\(String(format: "%.3f", pairDeviationMs))ms thresh=\(String(format: "%.2f", pairThresh))ms beatErr=\(String(format: "%.1f", knownBeatError))ms ticks=\(String(format: "%.1f", pendingFirstTickDev)),\(String(format: "%.1f", deviationThisTick))ms energy=\(String(format: "%.6f", energy))")
+                                debugLog("[TGTICK #\(tickCount) @ \(String(format: "%.2f", pairMidTime))s] pairDev=\(String(format: "%.3f", pairDevThisPair))ms cumPairDev=\(String(format: "%.3f", pairDeviationMs))ms thresh=\(String(format: "%.2f", pairThresh))ms beatErr=\(String(format: "%.1f", knownBeatError))ms ticks=\(String(format: "%.1f", pendingFirstTickDev)),\(String(format: "%.1f", deviationThisTick))ms psBE=\(phaseSepBeatError.map { String(format: "%.2f", $0) } ?? "-")ms foldedBE=\(currentBeatError.map { String(format: "%.2f", $0) } ?? "-")ms energy=\(String(format: "%.6f", energy))")
 
                                 // Debug: log regression rate every 25 pairs (~50 ticks)
                                 if regN % 25 == 0 && regN >= 20 {
@@ -933,7 +956,7 @@ class TimegrapherEngine {
                                         tickDeviationMs = 0
                                         pairDeviationMs = 0; pairIntervalAccum = 0.0; pairTickPhase = 0; lastTickFracOffset = 0
                                         pendingTickCross = false; pendingTickPeakEnergy = 0; plHaveCand = false; plBestDist = Int.max; plMissCount = 0; plApplyCarry = false; plPendingCarry = 0
-                                        consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []
+                                        consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []; tickPhaseIndex = 0; beDevsByParity = [[], []]; phaseSepBeatError = nil
                                         regPoints = []; regN = 0; recentPairDevs = []; totalPairsAccepted = 0
                                         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
                                         if autoBph { detectedBph = nil; consecutiveFailures = 0 }
@@ -1024,7 +1047,7 @@ class TimegrapherEngine {
         debugMessages = []
 
         let update = Update(
-            rate: rateForUpdate, beatError: currentBeatError,
+            rate: rateForUpdate, beatError: phaseSepBeatError ?? currentBeatError,
             tickCount: tickCount,
             confidence: tickConfidence, noiseLevel: currentNoiseLevel,
             detectedIntervalMs: expectedTickInterval > 0 ? 1000.0 / (actualSampleRate / Double(ringSubsampleTarget) / expectedTickInterval) : 0,
@@ -1121,7 +1144,7 @@ class TimegrapherEngine {
         lastTickFracOffset = 0
         recentPairDevs = []
         pendingTickCross = false; pendingTickPeakEnergy = 0; plHaveCand = false; plBestDist = Int.max; plMissCount = 0; plApplyCarry = false; plPendingCarry = 0
-        consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []
+        consecutivePairRejects = 0; rejectDevSum = 0; knownBeatError = 0; recentTickDevs = []; tickPhaseIndex = 0; beDevsByParity = [[], []]; phaseSepBeatError = nil
         bphCorrectionOutliers = []
         // Note: bphCorrectionRejects intentionally NOT cleared — accumulates across recalibrations
         smoothedRate = nil; lastUpdateLogRegN = 0; rateHistory = []; wasStable = false
