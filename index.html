@@ -6035,7 +6035,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '10.19.47';
+const APP_VERSION = '11.06.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22338,7 +22338,7 @@ window._tgNativeCallback = function(data) {
 
     // Timegrapher chart: add per-tick dots
     if (isMsr && data.newTicks) addMsrTickDots(data.newTicks);
-    if (isMsr && featureFlag('tg_quality_v2')) _q2Tick(data.rate);
+    if (isMsr && _tgV2Convergence()) _q2Tick(data.rate);
 
     if (isMsr && data.confidence != null) _msrLastConf = data.confidence;
 
@@ -22483,7 +22483,7 @@ window._tgNativeCallback = function(data) {
       const prelimBadge = document.getElementById('msr-preliminary-badge');
       const rateBox = document.getElementById('msr-rate-box');
       if (badge && rateBox) {
-        const _v2OwnsConverge = featureFlag('tg_quality_v2') && isMsr;  // v2 plateau controller owns lock/badge for mic
+        const _v2OwnsConverge = _tgV2Convergence() && isMsr;  // v2 plateau controller owns lock/badge for mic
         const bucketNow = _msrCachedBucketRate;
         const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
         let jsConverged = false;
@@ -22679,7 +22679,7 @@ window._tgNativeCallback = function(data) {
     if (isMsr && _msrListening && _msrListenStart) {
       const elapsed = (Date.now() - _msrListenStart) / 1000;
       const maxDur = _tgHasNative() ? tgLoadSettings().values.maxDuration : 45;
-      if (!_micBatchActive && !featureFlag('tg_quality_v2') && (_msrPhase === 'converged' || elapsed >= maxDur)) {  // flag-on: the _q2Tick plateau controller owns the finish
+      if (!_micBatchActive && !_tgV2Convergence() && (_msrPhase === 'converged' || elapsed >= maxDur)) {  // v2-on: the _q2Tick plateau controller owns the finish
         const wasConverged = _msrPhase === 'converged';
         // Haptic feedback on finish — success for converged, warning for timeout
         if (window.webkit?.messageHandlers?.haptic) {
@@ -23261,6 +23261,15 @@ function incrSettle(samples, params = {}) {
 }
 let _q2LastReadout = 0;
 let _q2LastBand = null;   // residual band (s/day) from the last incrSettle — drives the error bar
+// The adaptive "v2" convergence (incrSettle Quick/Longer stop) ships to users only inside
+// the native app build that also carries phase-lock detection + phase-separated beat error
+// (_iosAppVersion >= 2.0). Older app builds and web keep the legacy bucket-stability finish.
+// The admin tg_quality_v2 flag forces it on for testing on any build.
+const _TG_V2_MIN_BUILD = 2.0;
+function _tgV2Convergence() {
+  return featureFlag('tg_quality_v2') || parseFloat(window._iosAppVersion || '0') >= _TG_V2_MIN_BUILD;
+}
+
 // Quick/Accurate -> incrSettle params; every field overridable by a q2_* localStorage knob (live tuning).
 function _q2Params() {
   const mode = (localStorage.getItem('msr_mode') === 'accurate') ? 'accurate' : 'quick';
@@ -23280,7 +23289,7 @@ function _q2Tick(nativeRateNow) {
   const params = _q2Params();
   const s = incrSettle(_msrScatterData, params);
   _q2LastBand = s.band;
-  _q2RenderReadout(nativeRateNow, s, params);
+  if (featureFlag('tg_quality_v2')) _q2RenderReadout(nativeRateNow, s, params);  // dev diagnostic — admin only, never shown to regular users
   // Adaptive stop: when flag-on and actively measuring (not during a batch).
   if (_msrListening && !_micBatchActive && _msrListenStart) {
     const elapsed = (now - _msrListenStart) / 1000;
@@ -24085,7 +24094,7 @@ function stopMsrListen(reason) {
         errorBar = 5;
       }
     }
-    if (featureFlag('tg_quality_v2') && _q2LastBand != null) {
+    if (_tgV2Convergence() && _q2LastBand != null) {
       errorBar = Math.max(0.5, Math.round(_q2LastBand * 10) / 10);  // adaptive plateau band
     }
     const sign = r >= 0 ? '+' : '';
