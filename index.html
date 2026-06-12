@@ -6034,7 +6034,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '12.08.17';
+const APP_VERSION = '12.08.26';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13815,7 +13815,12 @@ function inlineImages(bodyHtml, images) {
   return bodyHtml;
 }
 
-function buildBroadcastEmailHtml(heading, bodyHtml, images) {
+// Representative footer shown in the broadcast PREVIEW only. The real footer — with
+// the per-recipient signed Unsubscribe link + List-Unsubscribe header — is appended
+// server-side by send-broadcast (unsubFooter). Keep in sync with that footer.
+const BROADCAST_PREVIEW_FOOTER = '<a href="https://wrotate.com/open" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> &middot; <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">Manage preferences</a>';
+
+function buildBroadcastEmailHtml(heading, bodyHtml, images, footerHtml = '') {
   bodyHtml = inlineImages(bodyHtml, images);
 
   // Any images NOT referenced by markers go at the bottom
@@ -13859,12 +13864,9 @@ function buildBroadcastEmailHtml(heading, bodyHtml, images) {
             <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" width="120" style="display:inline-block;">
           </a>
         </td></tr>
-        <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
-          <div style="font-size:11px;color:#999;line-height:1.5;">
-            You're receiving this because you have a WRotate account.
-            To stop receiving these emails, open WRotate &rarr; Profile &rarr; Notifications &rarr; disable "Updates &amp; new features".
-          </div>
-        </td></tr>
+        ${footerHtml ? `<tr><td style="padding:16px 28px;border-top:1px solid #eee;">
+          <div style="font-size:11px;color:#999;line-height:1.5;">${footerHtml}</div>
+        </td></tr>` : ''}
       </table>
     </td></tr>
   </table>
@@ -13882,7 +13884,8 @@ function buildBroadcastHtml() {
     bodyHtml = body.replace(/\n\n+/g, '</div><div style="font-size:14px;color:#555;line-height:1.6;margin-top:12px;">').replace(/\n/g, '<br>');
   }
 
-  return buildBroadcastEmailHtml(heading, bodyHtml, images);
+  // Preview shows a representative footer; the real one is appended server-side.
+  return buildBroadcastEmailHtml(heading, bodyHtml, images, BROADCAST_PREVIEW_FOOTER);
 }
 
 function updateBroadcastPreview() {
