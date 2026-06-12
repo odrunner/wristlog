@@ -105,6 +105,13 @@ Deno.test("buildHtmlEmail — embeds body and unsubscribe URL", () => {
   assertEquals(out.startsWith("<!DOCTYPE html>"), true);
 });
 
+Deno.test("buildHtmlEmail — standard 'Unsubscribe · Manage preferences' footer", () => {
+  const out = buildHtmlEmail("Subj", "<p>b</p>", "https://u/x");
+  assertEquals(out.includes("Manage preferences"), true);
+  assertEquals(out.includes('href="https://wrotate.com/open"'), true);
+  assertEquals(out.includes("recently joined WRotate"), false); // old reason line removed
+});
+
 // ---- unsubUrl ----
 Deno.test("unsubUrl — builds the expected URL", () => {
   assertEquals(

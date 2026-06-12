@@ -41,7 +41,7 @@ export function personalizeBody(bodyHtml: string, displayName: string | null | u
 
 // Wrap a campaign body in the branded HTML email shell.
 export function buildHtmlEmail(subject: string, body: string, unsubUrl: string): string {
-  const unsubLine = `You're receiving this because you recently joined WRotate.<br><a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a>`;
+  const unsubLine = `<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">Manage preferences</a>`;
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
