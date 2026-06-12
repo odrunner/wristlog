@@ -8,6 +8,20 @@ export const COHORTS: Record<string, { gte?: string; lt?: string }> = {
   may: { gte: "2026-05-01T00:00:00Z", lt: "2026-06-01T00:00:00Z" },
 };
 
+// Date-windowed broadcast segments: created_at >= gte with no upper bound ("to now").
+// Unlike COHORTS (re-engagement blasts → dormant-only, campaign-tracked), these are
+// plain UI segments that go to every opted-in user in the window. The batch suffix
+// ("_<n>of<m>") is stripped before lookup.
+export const SEGMENT_DATE_GTE: Record<string, string> = {
+  may_onward: "2026-05-01T00:00:00Z",
+};
+
+// Return the created_at >= filter for a (possibly batched) date-windowed segment, or null.
+export function segmentDateGte(segment: string): string | null {
+  const base = segment.replace(/_\d+of\d+$/, "");
+  return SEGMENT_DATE_GTE[base] ?? null;
+}
+
 // Strip script/embed/handler attributes + dangerous URI schemes from admin HTML.
 export function sanitizeHtml(html: string): string {
   return html
@@ -94,9 +108,21 @@ export function capRecipients<T>(recipients: T[], limit: number | null): T[] {
   return recipients;
 }
 
-// Slice recipients into one of 3 roughly-equal batches for "batch_1/2/3" segments.
-// Returns the input unchanged for any other segment.
+// Slice recipients into one roughly-equal batch. Two segment forms:
+//   "<base>_<n>of<m>"   e.g. "may_onward_2of2" — n-th of m batches (1-indexed)
+//   "batch_1/2/3"       — legacy 3-way split of the full list
+// Returns the input unchanged for any non-batched segment.
 export function batchSegment<T>(recipients: T[], segment: string): T[] {
+  const nOfM = /_(\d+)of(\d+)$/.exec(segment);
+  if (nOfM) {
+    const num = parseInt(nOfM[1]);
+    const count = parseInt(nOfM[2]);
+    if (num >= 1 && count >= 1 && num <= count) {
+      const size = Math.ceil(recipients.length / count);
+      return recipients.slice((num - 1) * size, num * size);
+    }
+    return recipients;
+  }
   if (segment === "batch_1" || segment === "batch_2" || segment === "batch_3") {
     const size = Math.ceil(recipients.length / 3);
     const batchNum = parseInt(segment.split("_")[1]) - 1;

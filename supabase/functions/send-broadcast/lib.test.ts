@@ -10,6 +10,8 @@ import {
   filterOptedIn,
   isDormant,
   sanitizeHtml,
+  SEGMENT_DATE_GTE,
+  segmentDateGte,
   unsubFooter,
   unsubUrl,
   validateBroadcastInput,
@@ -210,6 +212,44 @@ Deno.test("batchSegment — batches partition the list with no overlap", () => {
     ...batchSegment(list, "batch_3"),
   ];
   assertEquals(combined, list);
+});
+
+// ---- batchSegment: generalized "_NofM" form ----
+Deno.test("batchSegment — may_onward 2-way split (108 → 54 + 54)", () => {
+  const list = Array.from({ length: 108 }, (_, i) => i);
+  const b1 = batchSegment(list, "may_onward_1of2");
+  const b2 = batchSegment(list, "may_onward_2of2");
+  assertEquals(b1.length, 54);
+  assertEquals(b2.length, 54);
+  assertEquals([...b1, ...b2], list); // partition, no overlap, no gap
+});
+
+Deno.test("batchSegment — _NofM with odd length (7 → 4 + 3)", () => {
+  const list = [1, 2, 3, 4, 5, 6, 7];
+  assertEquals(batchSegment(list, "may_onward_1of2"), [1, 2, 3, 4]);
+  assertEquals(batchSegment(list, "may_onward_2of2"), [5, 6, 7]);
+});
+
+Deno.test("batchSegment — invalid _NofM (num > count) returns input unchanged", () => {
+  const list = [1, 2, 3];
+  assertEquals(batchSegment(list, "may_onward_3of2"), [1, 2, 3]);
+});
+
+// ---- segmentDateGte ----
+Deno.test("segmentDateGte — may_onward (and its batches) map to May 1 gte", () => {
+  assertEquals(segmentDateGte("may_onward"), "2026-05-01T00:00:00Z");
+  assertEquals(segmentDateGte("may_onward_1of2"), "2026-05-01T00:00:00Z");
+  assertEquals(segmentDateGte("may_onward_2of2"), "2026-05-01T00:00:00Z");
+});
+
+Deno.test("segmentDateGte — non-date segments return null", () => {
+  assertEquals(segmentDateGte("all"), null);
+  assertEquals(segmentDateGte("batch_1"), null);
+  assertEquals(segmentDateGte("never_measured"), null);
+});
+
+Deno.test("SEGMENT_DATE_GTE — may_onward window has no upper bound", () => {
+  assertEquals(SEGMENT_DATE_GTE.may_onward, "2026-05-01T00:00:00Z");
 });
 
 // ---- unsub helpers ----

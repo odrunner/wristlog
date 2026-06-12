@@ -22,6 +22,7 @@ import {
   filterOptedIn,
   isDormant,
   sanitizeHtml,
+  segmentDateGte,
   unsubFooter,
   unsubUrl,
   validateBroadcastInput,
@@ -114,6 +115,10 @@ serve(async (req) => {
       if (window.gte) profilesQuery = profilesQuery.gte("created_at", window.gte);
       if (window.lt) profilesQuery = profilesQuery.lt("created_at", window.lt);
     }
+
+    // Date-windowed segment (e.g. "may_onward_1of2"): created_at >= gte, no upper bound ("to now")
+    const segGte = segmentDateGte(segment);
+    if (segGte) profilesQuery = profilesQuery.gte("created_at", segGte);
 
     const { data: profiles, error: profilesError } = await profilesQuery;
 
