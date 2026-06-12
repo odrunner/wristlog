@@ -132,8 +132,11 @@ export function batchSegment<T>(recipients: T[], segment: string): T[] {
 }
 
 // Build the per-recipient unsubscribe footer HTML.
+// Matches the run-campaign (reactivation) broadcast footer: a "why you're getting
+// this" line + a single Unsubscribe link, same styling — for a consistent footer
+// across our outbound emails.
 export function unsubFooter(unsubUrl: string): string {
-  return `<div style="text-align:center;padding:16px 28px;font-size:11px;color:#999;line-height:1.5;border-top:1px solid #eee;"><a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">Manage preferences</a></div>`;
+  return `<div style="padding:16px 28px;border-top:1px solid #eee;font-size:11px;color:#999;line-height:1.5;">You're receiving this because you recently joined WRotate.<br><a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a></div>`;
 }
 
 // Build the unsubscribe URL for a recipient.

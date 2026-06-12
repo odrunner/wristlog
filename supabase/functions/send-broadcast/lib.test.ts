@@ -265,3 +265,10 @@ Deno.test("unsubFooter — embeds the URL in the anchor", () => {
   assertEquals(out.includes('href="https://u/x"'), true);
   assertEquals(out.includes("Unsubscribe"), true);
 });
+
+Deno.test("unsubFooter — matches run-campaign footer (reason line, no Manage preferences)", () => {
+  const out = unsubFooter("https://u/x");
+  assertEquals(out.includes("You're receiving this because you recently joined WRotate."), true);
+  assertEquals(out.includes("Manage preferences"), false);
+  assertEquals(out.includes("text-align:center"), false);
+});
