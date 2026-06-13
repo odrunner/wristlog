@@ -2917,8 +2917,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <label for="broadcast-segment">Segment</label>
           <select id="broadcast-segment">
             <option value="all">All users (updates opt-in)</option>
-            <option value="may_onward_1of2">May 1→now · Batch 1 of 2 (~54)</option>
-            <option value="may_onward_2of2">May 1→now · Batch 2 of 2 (~54)</option>
           </select>
         </div>
 
@@ -2928,6 +2926,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <button class="btn btn-primary" id="broadcast-send-btn" onclick="sendBroadcastAll()" style="flex:1;">Send to Segment</button>
         </div>
         <div id="broadcast-status" aria-live="polite" style="font-size:.82rem;margin-top:.5rem;"></div>
+      </div>
+
+      <!-- Win-back cohort blasts (one-off sends, deduped against already-sent) -->
+      <div id="broadcast-cohorts" style="margin-top:1rem;">
+        <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:.5rem;">Win-back</div>
+        <div id="broadcast-cohorts-list"></div>
       </div>
     </div>
 
@@ -6090,7 +6094,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.08.55';
+const APP_VERSION = '13.12.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12352,7 +12356,7 @@ function switchAdminTab(tab) {
   });
   const target = document.getElementById('admin-tab-' + tab);
   if (target) target.style.display = '';
-  if (tab === 'campaigns') loadCampaigns();
+  if (tab === 'campaigns' || tab === 'broadcast') loadCampaigns();
 }
 
 // ── Admin Content Reports ────────────────────────────────────────────────
@@ -14504,17 +14508,18 @@ async function loadCampaigns() {
   const countMap = {};
   (sendCounts || []).forEach(r => { countMap[r.campaign_id] = r.count; });
 
-  if (!_campaignsData.length) {
-    container.innerHTML = '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">No campaigns yet</div>';
-    return;
-  }
+  const cohortsContainer = document.getElementById('broadcast-cohorts-list');
 
-  container.innerHTML = _campaignsData.map(c => {
+  const cardHtml = (c) => {
     const sends = countMap[c.id] || 0;
     const statusColor = c.is_active ? '#22c55e' : '#ef4444';
     const statusLabel = c.is_active ? 'Active' : 'Paused';
     const toggleLabel = c.is_active ? 'Pause' : 'Start';
     const toggleIcon = c.is_active ? '⏸' : '▶';
+    // Win-back blasts target the April dormant cohort only; drips keep all cohort options.
+    const cohortOptions = c.campaign_type === 'cohort_blast'
+      ? '<option value="april">April dormant</option>'
+      : '<option value="pre_april">Pre-April dormant</option><option value="april">April dormant</option><option value="may">May dormant</option>';
     return `
     <div style="background:var(--surface2);border-radius:10px;padding:.85rem;margin-bottom:.75rem;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
@@ -14545,9 +14550,7 @@ async function loadCampaigns() {
       <div style="display:flex;gap:.5rem;margin-top:.5rem;align-items:center;flex-wrap:wrap;">
         <label style="font-size:.78rem;color:var(--muted);">Cohort blast:</label>
         <select id="camp-cohort-${c.id}" style="font-size:.82rem;padding:4px 8px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;flex:1;min-width:120px;">
-          <option value="pre_april">Pre-April dormant</option>
-          <option value="april">April dormant</option>
-          <option value="may">May dormant</option>
+          ${cohortOptions}
         </select>
         <input type="number" id="camp-limit-${c.id}" min="1" placeholder="Limit" title="Optional cap (e.g. 20 for a test slice). Leave blank to send to all." style="font-size:.82rem;width:70px;padding:4px 8px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;">
         <button class="btn btn-ghost" onclick="sendToCohort('${c.id}')" style="font-size:.78rem;">Send to cohort</button>
@@ -14558,7 +14561,22 @@ async function loadCampaigns() {
         <div id="camp-preview-${c.id}" style="background:#f4f4f4;border-radius:8px;padding:1rem;max-height:500px;overflow-y:auto;"></div>
       </div>
     </div>`;
-  }).join('');
+  };
+
+  // Drips → Campaigns tab; cohort blasts (win-back) → Broadcast tab.
+  const drips = _campaignsData.filter(c => c.campaign_type !== 'cohort_blast');
+  const cohorts = _campaignsData.filter(c => c.campaign_type === 'cohort_blast');
+
+  container.innerHTML = drips.length
+    ? drips.map(cardHtml).join('')
+    : '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">No campaigns yet</div>';
+
+  if (cohortsContainer) {
+    cohortsContainer.innerHTML = cohorts.length
+      ? cohorts.map(cardHtml).join('')
+      : '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">No win-back emails</div>';
+  }
+
   _campaignsData.forEach(c => updateCampaignPreview(c.id));
 }
 
