@@ -2917,6 +2917,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <label for="broadcast-segment">Segment</label>
           <select id="broadcast-segment">
             <option value="all">All users (updates opt-in)</option>
+            <option value="uid:bbbc3d2b-4fbf-4a79-92e9-bf99dd2e934d">Tyler Tuszynski (win-back)</option>
           </select>
         </div>
 
@@ -6089,7 +6090,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.14.46';
+const APP_VERSION = '13.14.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14172,11 +14173,11 @@ async function sendBroadcastAll() {
   if (!body) { toast('Body is required', 'error'); return; }
 
   // Confirmation with focus management
-  const segment = document.getElementById('broadcast-segment')?.value || 'all';
-  const _bm = /_(\d+)of(\d+)$/.exec(segment);
-  const segmentLabel = _bm ? `May 1→now · Batch ${_bm[1]} of ${_bm[2]}`
-    : segment.startsWith('batch_') ? 'Batch ' + segment.split('_')[1] + ' of 3'
-    : 'ALL users';
+  const segEl = document.getElementById('broadcast-segment');
+  const segment = segEl?.value || 'all';
+  const segmentLabel = segment === 'all'
+    ? 'ALL users'
+    : (segEl?.selectedOptions?.[0]?.textContent?.trim() || segment);
   const statusEl = document.getElementById('broadcast-status');
   statusEl.innerHTML = `<div style="display:flex;gap:.5rem;align-items:center;padding:.5rem;background:var(--surface2);border-radius:8px;" role="alertdialog" aria-label="Confirm broadcast">
     <span style="color:var(--danger);font-weight:600;">Send to ${segmentLabel}?</span>

@@ -26,6 +26,7 @@ import {
   parseBatchSuffix,
   sanitizeHtml,
   segmentDateGte,
+  segmentUserId,
   unsubFooter,
   unsubUrl,
   validateBroadcastInput,
@@ -123,6 +124,10 @@ serve(async (req) => {
     // Date-windowed segment (e.g. "may_onward_1of2"): created_at >= gte, no upper bound ("to now")
     const segGte = segmentDateGte(segment);
     if (segGte) profilesQuery = profilesQuery.gte("created_at", segGte);
+
+    // Single-user segment ("uid:<uuid>"): narrow to exactly one profile.
+    const segUid = segmentUserId(segment);
+    if (segUid) profilesQuery = profilesQuery.eq("id", segUid);
 
     const { data: profiles, error: profilesError } = await profilesQuery;
 

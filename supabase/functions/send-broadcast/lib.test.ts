@@ -15,6 +15,7 @@ import {
   sanitizeHtml,
   SEGMENT_DATE_GTE,
   segmentDateGte,
+  segmentUserId,
   unsubFooter,
   unsubUrl,
   validateBroadcastInput,
@@ -314,6 +315,21 @@ Deno.test("segmentDateGte — non-date segments return null", () => {
 
 Deno.test("SEGMENT_DATE_GTE — may_onward window has no upper bound", () => {
   assertEquals(SEGMENT_DATE_GTE.may_onward, "2026-05-01T00:00:00Z");
+});
+
+// ---- segmentUserId ----
+Deno.test("segmentUserId — extracts the uuid from a uid: segment", () => {
+  assertEquals(
+    segmentUserId("uid:bbbc3d2b-4fbf-4a79-92e9-bf99dd2e934d"),
+    "bbbc3d2b-4fbf-4a79-92e9-bf99dd2e934d",
+  );
+});
+
+Deno.test("segmentUserId — non-uid segments return null", () => {
+  assertEquals(segmentUserId("all"), null);
+  assertEquals(segmentUserId("may_onward"), null);
+  assertEquals(segmentUserId("uid:not-a-uuid"), null);
+  assertEquals(segmentUserId("uid:"), null);
 });
 
 // ---- unsub helpers ----

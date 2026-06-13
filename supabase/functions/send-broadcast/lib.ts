@@ -22,6 +22,14 @@ export function segmentDateGte(segment: string): string | null {
   return SEGMENT_DATE_GTE[base] ?? null;
 }
 
+// Single-user segment: "uid:<uuid>" targets exactly one profile by id (e.g. a
+// personal win-back to one lapsed user). Returns the uuid, or null when the
+// segment isn't a uid segment. Opt-in/suspended filters still apply downstream.
+export function segmentUserId(segment: string): string | null {
+  const m = /^uid:([0-9a-fA-F-]{36})$/.exec(segment);
+  return m ? m[1] : null;
+}
+
 // Strip script/embed/handler attributes + dangerous URI schemes from admin HTML.
 export function sanitizeHtml(html: string): string {
   return html
