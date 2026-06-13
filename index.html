@@ -6034,7 +6034,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '12.18.43';
+const APP_VERSION = '12.19.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22351,16 +22351,17 @@ window._tgNativeCallback = function(data) {
       const r = data.rate;
       rateEl.textContent = (r >= 0 ? '+' : '') + r.toFixed(1);
       rateEl.style.color = Math.abs(r) <= 5 ? '#22c55e' : Math.abs(r) <= 15 ? '#eab308' : '#ef4444';
-      if (beEl) beEl.textContent = data.beatError != null ? data.beatError.toFixed(2) + ' ms' : '—';
+      const _beShown = _msrStableBeatError(data);
+      if (beEl) beEl.textContent = _beShown != null ? _beShown.toFixed(2) + ' ms' : '—';
       if (isMsr) {
         _msrLastRate = data.rate;
-        if (data.beatError != null) _msrLastBe = data.beatError;
+        if (_beShown != null) _msrLastBe = _beShown;
         _msrRateHistory.push(r);
         if (_msrRateHistory.length > 1000) _msrRateHistory = _msrRateHistory.slice(-1000);
         // Native Theil-Sen rate is authoritative — bucket rate is too coarse
         // (quantized at 7.2 s/day steps, median stays at 0 for small rates)
         document.getElementById('msr-rate-input').value = r.toFixed(1);
-        if (data.beatError != null) document.getElementById('msr-be-input').value = data.beatError.toFixed(2);
+        if (_beShown != null) document.getElementById('msr-be-input').value = _beShown.toFixed(2);
       }
     } else if (pzWeak) {
       // Weak piezo signal: don't show a (garbage) number; tell the user to reseat.
@@ -22880,7 +22881,24 @@ async function deleteTgResult(id) {
 let _msrListening = false;
 let _msrLastRate = null;
 let _msrLastBe = null;        // latest native beat error (ms) — mirrors _msrLastRate, used by mic batch logging
+let _msrFoldedBE = null;      // latest stable folded beat error parsed from native debug (interim — see _msrStableBeatError)
 let _msrLastBph = null;
+
+// The native phase-separated beat error drifts upward over a measurement (a detection
+// artifact: the tick/tock split widens with time) and recomputes every tick, so it
+// climbs and jitters. The folded estimate is stable, so prefer it — the native logs it
+// as `foldedBE=` in the debug stream. Cache the latest and fall back to the native
+// value for builds that don't emit it. (Native default also reverts to folded next build.)
+function _msrStableBeatError(data) {
+  const msgs = data.debugMessages;
+  if (Array.isArray(msgs)) {
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const m = /foldedBE=([\d.]+)ms/.exec(msgs[i]);
+      if (m) { _msrFoldedBE = parseFloat(m[1]); break; }
+    }
+  }
+  return _msrFoldedBE != null ? _msrFoldedBE : (data.beatError != null ? data.beatError : null);
+}
 let _msrListenStart = null;
 let _msrLastDetectTime = 0; // timestamp of last confident detection
 let _msrScatterData = []; // [{t: timeSec, d: deviationMs}] — one per tick
@@ -23095,7 +23113,7 @@ function _resetMsrState(bph) {
   _msrHadTicks = false;
   _msrBphLocked = false;
   _msrLastRate = null; _msrLastBph = null;
-  _msrLastBe = null;
+  _msrLastBe = null; _msrFoldedBE = null;
   _msrRateHistory = []; _msrBucketRateHistory = []; _msrCachedBucketRate = null;
   _msrLastDotTime = 0; _msrShown = { weak: false, noise: false, prelim: false, advanced: false }; _msrNoiseSamples = []; _msrAcceptRate = 0; _msrPzSig = null; _msrLastConf = 0;
   const scCanvas = document.getElementById('msr-scatter-plot');
@@ -23659,7 +23677,7 @@ function openMeasureInline() {
   _tgLastDebugLogTime = 0;
   _msrListening = false;
   _msrLastRate = null;
-  _msrLastBe = null;
+  _msrLastBe = null; _msrFoldedBE = null;
   _msrLastBph = null;
   _msrScatterData = []; _msrLastCumDev = 0;
   { const _q2ro = document.getElementById('msr-q2-readout'); if (_q2ro) _q2ro.textContent = ''; }
@@ -24164,7 +24182,7 @@ function stopMsrListen(reason) {
 
 function discardMsrReading() {
   _msrLastRate = null;
-  _msrLastBe = null;
+  _msrLastBe = null; _msrFoldedBE = null;
   _msrLastBph = null;
   _msrScatterData = []; _msrLastCumDev = 0;
   { const _q2ro = document.getElementById('msr-q2-readout'); if (_q2ro) _q2ro.textContent = ''; }

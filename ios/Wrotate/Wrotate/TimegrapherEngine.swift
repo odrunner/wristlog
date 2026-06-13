@@ -484,7 +484,7 @@ class TimegrapherEngine {
         audioEngine?.stop()
         audioEngine = nil
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        return Result(rate: currentRate, beatError: phaseSepBeatError ?? currentBeatError,
+        return Result(rate: currentRate, beatError: currentBeatError,   // folded estimate: stable in the field. phaseSepBeatError rides per-tick devs that phase-walk (climb+flip) when watch rate != nominal BPH — kept for logging only (psBE= in TGTICK).
                       tickCount: peakCount, ticks: [])
     }
 
@@ -1047,7 +1047,7 @@ class TimegrapherEngine {
         debugMessages = []
 
         let update = Update(
-            rate: rateForUpdate, beatError: phaseSepBeatError ?? currentBeatError,
+            rate: rateForUpdate, beatError: currentBeatError,   // folded estimate: stable in the field. phaseSepBeatError rides per-tick devs that phase-walk (climb+flip) when watch rate != nominal BPH — kept for logging only (psBE= in TGTICK).
             tickCount: tickCount,
             confidence: tickConfidence, noiseLevel: currentNoiseLevel,
             detectedIntervalMs: expectedTickInterval > 0 ? 1000.0 / (actualSampleRate / Double(ringSubsampleTarget) / expectedTickInterval) : 0,
