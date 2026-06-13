@@ -5,10 +5,13 @@ import {
   COHORTS,
   dormantCutoffMs,
   effectiveLimit,
+  excludeAlreadyEmailed,
   excludeIds,
   filterNeverMeasured,
   filterOptedIn,
   isDormant,
+  nextBatchSlice,
+  parseBatchSuffix,
   sanitizeHtml,
   SEGMENT_DATE_GTE,
   segmentDateGte,
@@ -214,25 +217,86 @@ Deno.test("batchSegment — batches partition the list with no overlap", () => {
   assertEquals(combined, list);
 });
 
-// ---- batchSegment: generalized "_NofM" form ----
-Deno.test("batchSegment — may_onward 2-way split (108 → 54 + 54)", () => {
-  const list = Array.from({ length: 108 }, (_, i) => i);
-  const b1 = batchSegment(list, "may_onward_1of2");
-  const b2 = batchSegment(list, "may_onward_2of2");
+// ---- batchSegment: "_NofM" no longer handled here (index.ts wires the
+// history-based parseBatchSuffix + excludeAlreadyEmailed + nextBatchSlice) ----
+Deno.test("batchSegment — _NofM segment passes through unchanged", () => {
+  const list = [1, 2, 3];
+  assertEquals(batchSegment(list, "may_onward_1of2"), [1, 2, 3]);
+});
+
+// ---- parseBatchSuffix ----
+Deno.test("parseBatchSuffix — parses valid _NofM suffixes", () => {
+  assertEquals(parseBatchSuffix("may_onward_1of2"), { num: 1, count: 2 });
+  assertEquals(parseBatchSuffix("may_onward_2of2"), { num: 2, count: 2 });
+  assertEquals(parseBatchSuffix("x_3of5"), { num: 3, count: 5 });
+});
+
+Deno.test("parseBatchSuffix — non-batched segments return null", () => {
+  assertEquals(parseBatchSuffix("all"), null);
+  assertEquals(parseBatchSuffix("may_onward"), null);
+  assertEquals(parseBatchSuffix("batch_1"), null);
+  assertEquals(parseBatchSuffix("never_measured"), null);
+});
+
+Deno.test("parseBatchSuffix — invalid suffix (num > count, zero) returns null", () => {
+  assertEquals(parseBatchSuffix("may_onward_3of2"), null);
+  assertEquals(parseBatchSuffix("may_onward_0of2"), null);
+});
+
+// ---- excludeAlreadyEmailed ----
+Deno.test("excludeAlreadyEmailed — drops recipients already sent, case-insensitive", () => {
+  const recipients = [
+    { uid: "a", email: "A@x.com" },
+    { uid: "b", email: "b@x.com" },
+    { uid: "c", email: "c@x.com" },
+  ];
+  const out = excludeAlreadyEmailed(recipients, ["a@X.com", "C@x.com"]);
+  assertEquals(out.map((r) => r.uid), ["b"]);
+});
+
+Deno.test("excludeAlreadyEmailed — ignores null/undefined in sent list, empty keeps all", () => {
+  const recipients = [{ uid: "a", email: "a@x.com" }];
+  assertEquals(excludeAlreadyEmailed(recipients, [null, undefined]).length, 1);
+  assertEquals(excludeAlreadyEmailed(recipients, []).length, 1);
+});
+
+// ---- nextBatchSlice ----
+Deno.test("nextBatchSlice — 1of2 takes half, 2of2 takes everything remaining", () => {
+  const list = [1, 2, 3, 4, 5, 6, 7];
+  assertEquals(nextBatchSlice(list, 1, 2), [1, 2, 3, 4]); // ceil(7/2)
+  assertEquals(nextBatchSlice(list, 2, 2), [1, 2, 3, 4, 5, 6, 7]); // last batch: all remaining
+});
+
+Deno.test("nextBatchSlice — two rounds with exclusion partition the list (no overlap, no skip)", () => {
+  // Simulates the real flow: batch 1 sends, its members land in email_events,
+  // batch 2 excludes them and takes everything left.
+  const all = Array.from({ length: 108 }, (_, i) => ({ uid: `u${i}`, email: `u${i}@x.com` }));
+  const b1 = nextBatchSlice(all, 1, 2);
+  const remaining = excludeAlreadyEmailed(all, b1.map((r) => r.email));
+  const b2 = nextBatchSlice(remaining, 2, 2);
   assertEquals(b1.length, 54);
   assertEquals(b2.length, 54);
-  assertEquals([...b1, ...b2], list); // partition, no overlap, no gap
+  assertEquals([...b1, ...b2].map((r) => r.uid), all.map((r) => r.uid));
 });
 
-Deno.test("batchSegment — _NofM with odd length (7 → 4 + 3)", () => {
-  const list = [1, 2, 3, 4, 5, 6, 7];
-  assertEquals(batchSegment(list, "may_onward_1of2"), [1, 2, 3, 4]);
-  assertEquals(batchSegment(list, "may_onward_2of2"), [5, 6, 7]);
+Deno.test("nextBatchSlice — re-clicking batch 1 after it sent cannot double-send", () => {
+  const all = Array.from({ length: 10 }, (_, i) => ({ uid: `u${i}`, email: `u${i}@x.com` }));
+  const b1 = nextBatchSlice(all, 1, 2); // 5 sent
+  const remaining = excludeAlreadyEmailed(all, b1.map((r) => r.email));
+  const b1again = nextBatchSlice(remaining, 1, 2); // re-click: only not-yet-sent users
+  assertEquals(b1again.every((r) => !b1.includes(r)), true);
 });
 
-Deno.test("batchSegment — invalid _NofM (num > count) returns input unchanged", () => {
-  const list = [1, 2, 3];
-  assertEquals(batchSegment(list, "may_onward_3of2"), [1, 2, 3]);
+Deno.test("nextBatchSlice — 3-way batches converge to full coverage", () => {
+  const all = Array.from({ length: 10 }, (_, i) => ({ uid: `u${i}`, email: `u${i}@x.com` }));
+  const sent: string[] = [];
+  for (let n = 1; n <= 3; n++) {
+    const remaining = excludeAlreadyEmailed(all, sent);
+    const batch = nextBatchSlice(remaining, n, 3);
+    sent.push(...batch.map((r) => r.email));
+  }
+  assertEquals(sent.length, 10); // everyone exactly once
+  assertEquals(new Set(sent).size, 10);
 });
 
 // ---- segmentDateGte ----

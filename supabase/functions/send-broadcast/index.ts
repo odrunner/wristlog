@@ -17,10 +17,13 @@ import {
   COHORTS,
   dormantCutoffMs,
   effectiveLimit as computeEffectiveLimit,
+  excludeAlreadyEmailed,
   excludeIds,
   filterNeverMeasured,
   filterOptedIn,
   isDormant,
+  nextBatchSlice,
+  parseBatchSuffix,
   sanitizeHtml,
   segmentDateGte,
   unsubFooter,
@@ -107,7 +110,8 @@ serve(async (req) => {
     let profilesQuery = supabase
       .from("profiles")
       .select("id, email_prefs, created_at")
-      .eq("is_suspended", false);
+      .eq("is_suspended", false)
+      .order("created_at", { ascending: true });
 
     // Cohort: filter by signup window
     if (cohort) {
@@ -193,8 +197,31 @@ serve(async (req) => {
       });
     }
 
-    // Batch segments: split all recipients into 3 roughly equal groups
-    const filteredRecipients = batchSegment(cappedRecipients, segment);
+    // Batched "_NofM" segments: exclude everyone who already received this
+    // campaign (matched by subject in email_events, last 14 days), then send the
+    // next chunk of what remains. History-based exclusion can't double-send even
+    // if a batch is re-clicked or the recipient list changed between batch runs.
+    // Caveats: keep the subject identical across the campaign's batches, and
+    // leave a few minutes between batches (Resend webhook ingestion lag).
+    let filteredRecipients: typeof cappedRecipients;
+    const batchInfo = parseBatchSuffix(segment);
+    if (batchInfo) {
+      const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: sentRows, error: sentErr } = await supabase
+        .from("email_events")
+        .select("email_to")
+        .eq("event_type", "sent")
+        .eq("subject", subject)
+        .gte("created_at", since);
+      if (sentErr) {
+        return jsonResponse({ error: "Failed to fetch send history for batch segment", details: sentErr }, 500);
+      }
+      const remaining = excludeAlreadyEmailed(cappedRecipients, (sentRows || []).map(r => r.email_to));
+      filteredRecipients = nextBatchSlice(remaining, batchInfo.num, batchInfo.count);
+    } else {
+      // Legacy batch_1/2/3 positional split, or pass-through for plain segments
+      filteredRecipients = batchSegment(cappedRecipients, segment);
+    }
 
     // Send via Resend batch API (up to 100 per request)
     let sent = 0;

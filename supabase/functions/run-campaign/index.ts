@@ -152,6 +152,19 @@ Deno.serve(async (_req: Request) => {
           });
           if (res.ok) {
             sent += batch.length;
+            // Record this batch's sends immediately: recording all batches at the
+            // end (recipients.slice(0, sent)) misattributed sends when an earlier
+            // batch failed — the failed users were marked sent (never retried) and
+            // the sent users weren't (re-emailed next run).
+            const { error: trackErr } = await supabase
+              .from("email_campaign_sends")
+              .upsert(
+                batch.map(r => ({ campaign_id: campaignId, user_id: r.uid })),
+                { onConflict: "campaign_id,user_id", ignoreDuplicates: true },
+              );
+            if (trackErr) {
+              console.error(`[run-campaign] Send-tracking upsert error:`, trackErr);
+            }
           } else {
             const errData = await res.json();
             console.error(`[run-campaign] Resend batch error:`, errData);
@@ -165,15 +178,6 @@ Deno.serve(async (_req: Request) => {
         if (i + batchSize < recipients.length) {
           await new Promise(resolve => setTimeout(resolve, 200));
         }
-      }
-
-      // Record sends
-      if (sent > 0) {
-        const sendRecords = recipients.slice(0, sent).map(r => ({
-          campaign_id: campaignId,
-          user_id: r.uid,
-        }));
-        await supabase.from("email_campaign_sends").insert(sendRecords);
       }
 
       console.log(`[run-campaign] "${name}": sent=${sent} skipped=${skipped} failed=${failed}`);

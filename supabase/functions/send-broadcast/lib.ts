@@ -108,21 +108,40 @@ export function capRecipients<T>(recipients: T[], limit: number | null): T[] {
   return recipients;
 }
 
-// Slice recipients into one roughly-equal batch. Two segment forms:
-//   "<base>_<n>of<m>"   e.g. "may_onward_2of2" — n-th of m batches (1-indexed)
-//   "batch_1/2/3"       — legacy 3-way split of the full list
+// Parse a "_<n>of<m>" batch suffix (e.g. "may_onward_2of2") → { num, count },
+// or null when the segment isn't batched or the suffix is invalid.
+export function parseBatchSuffix(segment: string): { num: number; count: number } | null {
+  const m = /_(\d+)of(\d+)$/.exec(segment);
+  if (!m) return null;
+  const num = parseInt(m[1]);
+  const count = parseInt(m[2]);
+  return num >= 1 && count >= 1 && num <= count ? { num, count } : null;
+}
+
+// Drop recipients whose email already received this campaign (case-insensitive).
+// Batched sends exclude by actual send history (email_events) rather than by
+// list position: the old positional slice of an unordered, still-growing list
+// could re-send to batch-1 users or skip users entirely between batch runs.
+export function excludeAlreadyEmailed<T extends { email: string }>(
+  recipients: T[],
+  sentEmails: Iterable<string | null | undefined>,
+): T[] {
+  const set = new Set([...sentEmails].filter(Boolean).map((e) => (e as string).toLowerCase()));
+  return recipients.filter((r) => !set.has(r.email.toLowerCase()));
+}
+
+// Batch n of m takes the next 1/(m-n+1) chunk of the not-yet-sent list — the
+// remaining list shrinks as earlier batches are excluded, so the last batch
+// always takes everything left (no user can be skipped, none sent twice).
+export function nextBatchSlice<T>(recipients: T[], num: number, count: number): T[] {
+  return recipients.slice(0, Math.ceil(recipients.length / (count - num + 1)));
+}
+
+// Slice recipients into one roughly-equal batch (legacy "batch_1/2/3" 3-way
+// positional split). "_NofM" segments are handled by parseBatchSuffix +
+// excludeAlreadyEmailed + nextBatchSlice in index.ts instead.
 // Returns the input unchanged for any non-batched segment.
 export function batchSegment<T>(recipients: T[], segment: string): T[] {
-  const nOfM = /_(\d+)of(\d+)$/.exec(segment);
-  if (nOfM) {
-    const num = parseInt(nOfM[1]);
-    const count = parseInt(nOfM[2]);
-    if (num >= 1 && count >= 1 && num <= count) {
-      const size = Math.ceil(recipients.length / count);
-      return recipients.slice((num - 1) * size, num * size);
-    }
-    return recipients;
-  }
   if (segment === "batch_1" || segment === "batch_2" || segment === "batch_3") {
     const size = Math.ceil(recipients.length / 3);
     const batchNum = parseInt(segment.split("_")[1]) - 1;
