@@ -9,12 +9,14 @@ messages contain `psBE=` is a 2.0 session. Sessions map to users via the
 session_summary line's user_id; internal/test accounts (internal_accounts table)
 are excluded so the number reflects real adoption.
 
-Appends one dated line per run to a persistent history file so the trend is
-visible across days. Read the latest with: tail of /tmp/wrotate-rollout.log
-(stdout) or the history file below.
+Writes one dated line per day to a persistent history file so the trend is
+visible across days (re-runs on the same day replace that day's line, so the
+launchd RunAtLoad trigger after a reboot can't duplicate it). Read the latest
+with: tail of ~/.local/share/wrotate-logs/rollout.log (stdout) or the history
+file below.
 """
 
-import json, re, subprocess, sys, os
+import json, re, subprocess, sys, os, traceback
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 
@@ -22,6 +24,7 @@ BASE_URL = "https://api.wrotate.com"
 ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs"
 AUTH_EMAIL = "test@wrotate.com"
 AUTH_PASS = "wrotate-test-2026"
+REPORT_TO = "ozgurdogan@gmail.com"     # failure alerts go here (see notify_failure)
 APPROVAL_DATE = "2026-06-11"          # 2.0 App Store approval — cumulative window start
 HISTORY_FILE = os.path.expanduser("~/.local/share/wrotate-rollout-history.log")
 TMP = "/tmp/wrotate-rollout"
@@ -73,8 +76,7 @@ def main():
     )
     token = auth.get("access_token")
     if not token:
-        print(f"Auth failed: {auth}")
-        sys.exit(1)
+        raise RuntimeError(f"Auth failed: {auth}")
     hdrs = [f"apikey: {ANON_KEY}", f"Authorization: Bearer {token}"]
 
     # Internal/test accounts to exclude (single source of truth — never hardcode)
@@ -147,11 +149,61 @@ def main():
         roster = ", ".join(sorted(names.get(u, u[:8]) for u in v2_users_all))
         print(f"\nUsers seen on 2.0: {roster}")
 
-    # Append to persistent history (one line/day) for trend tracking
-    with open(HISTORY_FILE, "a") as f:
-        f.write(line + "\n")
+    # Persist history (one line/day). RunAtLoad=true means a reboot/login can
+    # trigger an extra run, so replace today's line if it already exists rather
+    # than appending a duplicate — the freshest run of the day wins.
+    write_history_line(line, date_str)
     print(f"\n(history: {HISTORY_FILE})")
 
 
+def write_history_line(line, date_str):
+    lines = []
+    try:
+        with open(HISTORY_FILE) as f:
+            lines = f.read().splitlines()
+    except FileNotFoundError:
+        pass
+    if lines and lines[-1].startswith(f"{date_str} |"):
+        lines[-1] = line          # same day already recorded → overwrite with fresher run
+    else:
+        lines.append(line)
+    with open(HISTORY_FILE, "w") as f:
+        f.write("\n".join(lines) + "\n")
+
+
+def notify_failure(tb):
+    """Email the traceback on failure. Best-effort: re-auths independently so a
+    crash anywhere in main() (or even an auth failure there) still alerts. If
+    auth itself is what's broken, we can only log to stdout."""
+    try:
+        auth = curl_json(
+            f"{BASE_URL}/auth/v1/token?grant_type=password",
+            headers=[f"apikey: {ANON_KEY}", "Content-Type: application/json"],
+            method="POST",
+            body=json.dumps({"email": AUTH_EMAIL, "password": AUTH_PASS}),
+        )
+        token = auth.get("access_token")
+        if not token:
+            print(f"[notify_failure] cannot alert — auth failed: {auth}")
+            return
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        html = f"<p>The WRotate 2.0 rollout-check job failed on {date_str}.</p><pre style='font-size:12px;background:#f5f5f5;padding:12px;overflow:auto;'>{tb}</pre>"
+        curl_json(
+            f"{BASE_URL}/functions/v1/send-report",
+            headers=[f"Authorization: Bearer {token}", "Content-Type: application/json"],
+            method="POST",
+            body=json.dumps({"to": REPORT_TO, "subject": f"⚠️ WRotate rollout-check FAILED — {date_str}", "html": html}),
+        )
+        print(f"[notify_failure] alert emailed to {REPORT_TO}")
+    except Exception as e:
+        print(f"[notify_failure] alert itself failed: {e}")
+
+
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        tb = traceback.format_exc()
+        print(tb, file=sys.stderr)
+        notify_failure(tb)
+        sys.exit(1)

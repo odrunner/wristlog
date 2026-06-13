@@ -14,7 +14,7 @@ The script also surfaces patterns pointing at specific tunables, prints
 recommendations, and emails the report.
 """
 
-import json, re, subprocess, sys, os
+import json, re, subprocess, sys, os, traceback
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 
@@ -521,8 +521,7 @@ def main():
     )
     token = auth.get("access_token")
     if not token:
-        print(f"Auth failed: {auth}")
-        sys.exit(1)
+        raise RuntimeError(f"Auth failed: {auth}")
 
     ts = (datetime.now(timezone.utc) - timedelta(days=LOOKBACK_DAYS)).strftime("%Y-%m-%dT%H:%M:%S")
 
@@ -689,5 +688,32 @@ def main():
     send_email(token, subject, html)
 
 
+def notify_failure(tb):
+    """Email the traceback on failure. Re-auths independently so a crash anywhere
+    in main() still alerts; if auth itself is broken we can only log to stdout."""
+    try:
+        auth = curl_json(
+            f"{BASE_URL}/auth/v1/token?grant_type=password",
+            headers=[f"apikey: {ANON_KEY}", "Content-Type: application/json"],
+            method="POST",
+            body=json.dumps({"email": AUTH_EMAIL, "password": AUTH_PASS}),
+        )
+        token = auth.get("access_token")
+        if not token:
+            print(f"[notify_failure] cannot alert — auth failed: {auth}")
+            return
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        html = f"<p>The WRotate weekly measurement-analysis job failed on {date_str}.</p><pre style='font-size:12px;background:#f5f5f5;padding:12px;overflow:auto;'>{tb}</pre>"
+        send_email(token, f"⚠️ WRotate weekly analysis FAILED — {date_str}", html)
+    except Exception as e:
+        print(f"[notify_failure] alert itself failed: {e}")
+
+
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        tb = traceback.format_exc()
+        print(tb, file=sys.stderr)
+        notify_failure(tb)
+        sys.exit(1)

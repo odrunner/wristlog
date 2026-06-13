@@ -23,8 +23,8 @@ Surfaces read this audit: `sw.js` (full), `index.html` (cloud sync 5848–6032, 
 | ID | Severity | Finding | Where |
 |----|----------|---------|-------|
 | RES-H1 | High | Measurement telemetry & Deep Test/batch results: single-shot fire-and-forget inserts, no retry/queue → silent permanent data loss — 🟢 **FIXED 2026-06-12** (localStorage retry queue + `measureInsert`/`flushMeasureWrites`) | index.html |
-| RES-H2 | High | Scheduled analytics: single Mac Mini, missed runs silently skipped, no failure alerting, history file not backed up, /tmp logs lost on reboot | LaunchAgent plists, rollout-check.py:26 |
-| RES-M1 | Medium | "Nightly" analysis is actually weekly (Mondays) — CLAUDE.md/plist drift; daily-briefing workflow reads up-to-7-days-stale (or missing) log | nightly plist, nightly-analysis.py:1-2 |
+| RES-H2 | High | Scheduled analytics: single Mac Mini, missed runs silently skipped, no failure alerting, history file not backed up, /tmp logs lost on reboot — 🟢 **FIXED 2026-06-12** (persistent logs + RunAtLoad/same-day guard + failure email; history-backup skipped as recomputable) | LaunchAgent plists, scripts/*.py |
+| RES-M1 | Medium | "Nightly" analysis is actually weekly (Mondays) — CLAUDE.md/plist drift — 🟢 **FIXED 2026-06-12** (kept weekly, CLAUDE.md corrected) | nightly plist, nightly-analysis.py:1-2 |
 | RES-M2 | Medium | Remote tuning row applied to all native users with no range validation and no kill switch | index.html:22247-22270, 23747-23793 |
 | RES-M3 | Medium | Tick-log flush clears buffer before insert is confirmed; no `.catch()` | index.html:22312-22319, 23997-24001 |
 | RES-M4 | Medium | run-campaign: double-send window on crash/timeout; send-record bookkeeping wrong on mid-batch failure — 🟡 MOSTLY FIXED 2026-06-12 (per-batch upsert recording; sequential getUserById wall-clock risk remains) | run-campaign/index.ts |
@@ -62,6 +62,10 @@ Contrast with the user-data path, which has a persisted dirty-set + pending-dele
 
 ### RES-H2 — Scheduled-analytics layer: one Mac Mini, no missed-run recovery, no failure alerting, unbacked-up history, logs vanish on reboot
 
+**Severity:** High · **Category:** Infra resiliency · **NEW** · 🟢 **FIXED 2026-06-12** (3 of 4 sub-fixes; history-backup intentionally skipped — see below)
+
+> **Fix shipped 2026-06-12.** (1) **Persistent logs** — both plists now write StandardOut/Err to `~/.local/share/wrotate-logs/{rollout,nightly-analysis}.log` instead of `/tmp` (survives reboots); CLAUDE.md's "show the analysis" workflow paths updated to match. (2) **Missed-run recovery** — `com.wrotate.rollout-check.plist` set `RunAtLoad=true`, and `rollout-check.py` now writes its daily history line via `write_history_line()` which *replaces* today's line if present rather than appending — so a reboot/login spanning 9am still produces the day's line and re-runs can't duplicate it (verified live: ran twice, history stayed one-line-per-day). (3) **Failure alerting** — both scripts wrap `main()` in try/except and `notify_failure()` emails the traceback to ozgurdogan@gmail.com via the existing `send-report` function (re-auths independently so even an auth failure alerts); the silent `print + sys.exit(1)` auth paths were changed to `raise` so they're covered. (4) **History backup** — *deliberately skipped per the owner's call*: the cumulative psBE trend is recomputable from `timegrapher_tick_logs` (the system of record), so a new Supabase table wasn't worth the schema/RLS surface. Both deployed copies in `~/.local/bin` re-synced and both LaunchAgents reloaded. Still single-Mac-Mini by design (production hosting is separate and unaffected).
+
 **Severity:** High · **Category:** Infra resiliency · **NEW**
 
 **Evidence:**
@@ -78,6 +82,10 @@ Contrast with the user-data path, which has a persisted dirty-set + pending-dele
 ## MEDIUM
 
 ### RES-M1 — "Nightly/daily" analysis actually runs weekly (Mondays) — config and docs have drifted
+
+**Severity:** Medium · **Category:** Infra / observability drift · **NEW** · 🟢 **FIXED 2026-06-12** (kept weekly, docs corrected)
+
+> **Resolved 2026-06-12** per the owner's call: the weekly Monday cadence is intended, so the docs were corrected to match rather than changing the schedule. CLAUDE.md's section is now "Weekly Measurement Analysis", states the Monday/7-day reality (noting the label stays "nightly" for historical reasons), and the "show the analysis" trigger wording is updated. The plist schedule (`Weekday=1`) is unchanged.
 
 **Severity:** Medium · **Category:** Infra / observability drift · **NEW**
 
@@ -186,8 +194,8 @@ Contrast with the user-data path, which has a persisted dirty-set + pending-dele
 
 | # | Item | Effort | Impact |
 |---|------|--------|--------|
-| 1 | RES-M1 — fix nightly plist/docs drift (decide daily vs weekly) | 5 min | Daily-briefing workflow stops lying |
-| 2 | RES-H2 — persistent log paths + RunAtLoad guard + history backup to Supabase + failure email | 1–2 h | Analytics layer survives reboots; failures become visible |
+| 1 | ~~RES-M1 — fix nightly plist/docs drift~~ ✅ DONE 2026-06-12 (kept weekly, docs corrected) | 5 min | Daily-briefing workflow stops lying |
+| 2 | ~~RES-H2 — persistent log paths + RunAtLoad guard + failure email~~ ✅ DONE 2026-06-12 (history backup skipped — recomputable) | 1–2 h | Analytics layer survives reboots; failures become visible |
 | 3 | ~~RES-H1 — localStorage retry queue for measurement-table inserts~~ ✅ DONE 2026-06-12 (all 5 background writes + boot/online/modal flush) | 1–2 h | Stops silent loss of the data the whole quality initiative depends on |
 | 4 | RES-M3 — requeue tick-log batch on failed flush + `.catch()` | 20 min | Telemetry holes + BG-fail toast storm gone |
 | 5 | RES-M6 — failure counter + honest completion toast in batch loop | 20 min | Multi-hour sweeps can no longer succeed with zero rows |
