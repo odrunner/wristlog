@@ -6089,7 +6089,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '12.20.09';
+const APP_VERSION = '12.20.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6486,7 +6486,7 @@ async function loadAndRenderProfile(userId) {
   let showcaseGated = false;
   if (isOwn || visibility !== 'none') {
     let q = db.from('watches')
-      .select('id, brand, name, color, image, ref, url, watch_privacy')
+      .select('id, brand, name, color, image, ref, url, watch_privacy, description, background, functions')
       .eq('user_id', userId);
     if (!isOwn) {
       const vis = profile.collection_visibility || 'followers';
