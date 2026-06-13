@@ -68,13 +68,19 @@ describe('review prompt: measurement counter logic', () => {
 describe('review prompt: shouldShowReviewPrompt logic', () => {
   // Mirrors shouldShowReviewPrompt(source) from index.html
 
-  function shouldShowReviewPrompt(source, { currentUser, lastAction, cooldownDays, rated, wearCount, msrCount, thresholds }) {
+  function shouldShowReviewPrompt(source, { currentUser, lastAction, cooldownDays, rated, ratedCooldownDays, wearCount, msrCount, thresholds }) {
     if (!currentUser) return false;
     if (lastAction) {
       const daysSince = (Date.now() - lastAction) / (1000 * 60 * 60 * 24);
       if (daysSince < cooldownDays) return false;
     }
-    if (rated) return false;
+    // `rated` is a timestamp (ms) of the last native rating request. Suppress
+    // only within ratedCooldownDays, then re-surface. Legacy flag value '1'
+    // parses to ~epoch → long-expired → eligible.
+    if (rated) {
+      const daysSinceRated = (Date.now() - parseInt(rated)) / (1000 * 60 * 60 * 24);
+      if (daysSinceRated < ratedCooldownDays) return false;
+    }
     if (source === 'wear_log' || source === 'post') {
       return wearCount >= thresholds.wears;
     }
@@ -88,8 +94,9 @@ describe('review prompt: shouldShowReviewPrompt logic', () => {
   const defaults = {
     currentUser: { id: 'test' },
     lastAction: null,
-    cooldownDays: 60,
-    rated: false,
+    cooldownDays: 14,
+    rated: null,
+    ratedCooldownDays: 90,
     wearCount: 10,
     msrCount: 10,
     thresholds: { wears: 5, measurements: 5 },
@@ -100,17 +107,28 @@ describe('review prompt: shouldShowReviewPrompt logic', () => {
   });
 
   it('returns false during cooldown period', () => {
-    const recentAction = Date.now() - (30 * 24 * 60 * 60 * 1000); // 30 days ago
+    const recentAction = Date.now() - (7 * 24 * 60 * 60 * 1000); // 7 days ago (< 14d cooldown)
     expect(shouldShowReviewPrompt('wear_log', { ...defaults, lastAction: recentAction })).toBe(false);
   });
 
   it('returns true after cooldown expires', () => {
-    const oldAction = Date.now() - (90 * 24 * 60 * 60 * 1000); // 90 days ago
+    const oldAction = Date.now() - (15 * 24 * 60 * 60 * 1000); // 15 days ago (> 14d cooldown)
     expect(shouldShowReviewPrompt('wear_log', { ...defaults, lastAction: oldAction })).toBe(true);
   });
 
-  it('returns false when already rated', () => {
-    expect(shouldShowReviewPrompt('wear_log', { ...defaults, rated: true })).toBe(false);
+  it('returns false within the rated cooldown window', () => {
+    const recentlyRated = Date.now() - (30 * 24 * 60 * 60 * 1000); // 30 days ago (< 90d)
+    expect(shouldShowReviewPrompt('wear_log', { ...defaults, rated: recentlyRated })).toBe(false);
+  });
+
+  it('re-surfaces after the rated cooldown window expires', () => {
+    const longAgoRated = Date.now() - (120 * 24 * 60 * 60 * 1000); // 120 days ago (> 90d)
+    expect(shouldShowReviewPrompt('wear_log', { ...defaults, rated: longAgoRated })).toBe(true);
+  });
+
+  it('treats legacy rated flag "1" as long-expired (eligible)', () => {
+    // Pre-change users stored '1'; parseInt('1') ≈ epoch → far past the window.
+    expect(shouldShowReviewPrompt('wear_log', { ...defaults, rated: '1' })).toBe(true);
   });
 
   it('triggers on wear_log when wear count meets threshold', () => {

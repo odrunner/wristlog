@@ -2357,7 +2357,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <!-- Hidden config for review prompt thresholds (adjustable without App Store rebuild) -->
 <input type="hidden" id="review-wear-threshold" value="5">
 <input type="hidden" id="review-measurement-threshold" value="4">
-<input type="hidden" id="review-cooldown-days" value="30">
+<input type="hidden" id="review-cooldown-days" value="14">
+<input type="hidden" id="review-rated-cooldown-days" value="90">
 
 <!-- ════ MEASURE HELP MODAL ════ -->
 <div id="msr-help-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="msr-help-title">
@@ -6089,7 +6090,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '12.20.54';
+const APP_VERSION = '13.08.55';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12174,7 +12175,8 @@ function _reviewGetThresholds() {
   return {
     wears: parseInt(document.getElementById('review-wear-threshold')?.value) || 5,
     measurements: parseInt(document.getElementById('review-measurement-threshold')?.value) || 5,
-    cooldownDays: parseInt(document.getElementById('review-cooldown-days')?.value) || 30,
+    cooldownDays: parseInt(document.getElementById('review-cooldown-days')?.value) || 14,
+    ratedCooldownDays: parseInt(document.getElementById('review-rated-cooldown-days')?.value) || 90,
   };
 }
 
@@ -12187,8 +12189,16 @@ function shouldShowReviewPrompt(source) {
     const daysSince = (Date.now() - parseInt(lastAction)) / (1000 * 60 * 60 * 24);
     if (daysSince < cooldownDays) return false;
   }
-  // Check if already rated via native prompt (permanent suppress)
-  if (localStorage.getItem('wristlog_review_rated')) return false;
+  // Suppress for a window after a native rating request, then re-surface.
+  // (Apple silently caps its own dialog at ~3/yr; a "Yes" tap isn't proof they
+  // rated, so we re-ask after ratedCooldownDays instead of suppressing forever.
+  // Legacy flag value '1' parses to epoch ~0 → treated as long-expired = eligible.)
+  const rated = localStorage.getItem('wristlog_review_rated');
+  if (rated) {
+    const { ratedCooldownDays } = _reviewGetThresholds();
+    const daysSinceRated = (Date.now() - parseInt(rated)) / (1000 * 60 * 60 * 24);
+    if (daysSinceRated < ratedCooldownDays) return false;
+  }
   const th = _reviewGetThresholds();
   if (source === 'wear_log' || source === 'post') {
     const wearCount = logs.length;
@@ -12233,7 +12243,7 @@ function reviewPromptYes() {
   const isNative = !!window.webkit?.messageHandlers?.appAction;
   if (isNative) {
     window.webkit.messageHandlers.appAction.postMessage({ action: 'requestReview' });
-    localStorage.setItem('wristlog_review_rated', '1');
+    localStorage.setItem('wristlog_review_rated', String(Date.now()));
     _logReviewEvent('yes_native');
     document.getElementById('review-thanks-msg').textContent = 'If the rating dialog didn’t appear, you can rate here:';
     document.getElementById('review-appstore-link').style.display = '';
