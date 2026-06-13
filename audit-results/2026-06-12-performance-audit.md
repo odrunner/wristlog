@@ -54,6 +54,8 @@ The ~13.6k-line June wave (phase-lock, phase-separated beat error, Deep Test, kn
 
 ### N1 — HIGH: No `created_at` index on `timegrapher_tick_logs` (45 MB, 36,926 rows) — every time-windowed query seq-scans
 
+> 🟢 **FIXED 2026-06-12** — `CREATE INDEX idx_tick_logs_created_at ON public.timegrapher_tick_logs (created_at)` deployed (`supabase/migrations/20260612_tick_logs_created_at_index.sql`). Post-fix EXPLAIN of the 24h-window pattern (nightly + admin) is `Index Scan using idx_tick_logs_created_at` at cost 134 (was Seq Scan + Sort at cost 5957), and the explicit Sort node is gone because the btree supplies the `ORDER BY created_at ASC` order. The rollout script's cumulative-window query (N2) still scans most of the table by row count, but no longer pays a separate sort — fully resolving it depends on the N2 cursor fix.
+
 **Evidence (live DB, read-only):**
 - `pg_stat_user_tables`: `timegrapher_tick_logs` = **36,926 rows / 45 MB** — the largest table in the project by 30×.
 - `pg_indexes`: only `timegrapher_tick_logs_pkey (id)` and `idx_tick_logs_session (session_id)`. **No index on `created_at`.**
@@ -163,7 +165,7 @@ Dedicated review of the new phase-lock + psBE native code (TimegrapherEngine.swi
 
 | ID | Severity | Finding | File | Status |
 |----|----------|---------|------|--------|
-| N1 | High | No `created_at` index on 45 MB `timegrapher_tick_logs` — daily seq-scans | live DB / scripts | 🔴 New |
+| N1 | High | No `created_at` index on 45 MB `timegrapher_tick_logs` — daily seq-scans | live DB / scripts | 🟢 FIXED 2026-06-12 (`20260612_tick_logs_created_at_index.sql`; 24h-window EXPLAIN now Index Scan cost 134 vs prior 5957, Sort node gone) |
 | N2 | High | Rollout script re-downloads ever-growing `messages` corpus daily (~2 MB/day growth) | scripts/rollout-check.py:25,89 | 🔴 New |
 | N3 | Medium | Tick-log table unbounded; always-on 3 s-interval debug inserts for all users | index.html:22307 | 🔴 New |
 | N4 | Medium | Admin modal: unbounded double-wildcard LIKE over 45 MB + full blob download | index.html:12719 | 🔴 New |
@@ -188,7 +190,7 @@ Dedicated review of the new phase-lock + psBE native code (TimegrapherEngine.swi
 
 | # | Fix | Effort | Impact |
 |---|-----|--------|--------|
-| N1 | `CREATE INDEX idx_tick_logs_created_at ON timegrapher_tick_logs (created_at)` | 2 min | Kills daily 45 MB seq-scans (rollout, nightly, admin traffic) |
+| N1 | ~~`CREATE INDEX idx_tick_logs_created_at ON timegrapher_tick_logs (created_at)`~~ ✅ DONE 2026-06-12 | 2 min | Kills daily 45 MB seq-scans (rollout, nightly, admin traffic) |
 | N2 | Cursor-based incremental rollout script (or server-side RPC) | 30-60 min | Stops unbounded daily download growth |
 | N3 | Tick-log retention (pg_cron 30-60 d) + restrict detail logging to internal accounts | 30 min | Caps the biggest table; N1/N2/N4 all shrink |
 | N4 | Admin user-detail sessions via RPC (or bounded query) | 30 min | Removes worst single client query |
