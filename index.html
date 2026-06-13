@@ -5945,6 +5945,61 @@ function queueDelete(table, id) {
   }
 }
 
+// ── Pending measurement writes (append-only inserts; persisted for offline resilience) ──
+// Measurement telemetry — session summaries, batch/sweep rows, Deep Test chunks +
+// results — are background inserts fired from a phone doing unattended runs on flaky
+// Wi-Fi. They used to be single-shot and fire-and-forget: a failed insert vanished with
+// only a console.warn, so the nightly analysis and 2.0 rollout tracker silently lost the
+// session. measureInsert persists the row on failure; flushMeasureWrites retries it on
+// online / next boot / next measure-modal open. (User-edited collection data has its own
+// dirty-set + cloudSync path above; this queue is only for these append-only writes.)
+const STORE_PMW = 'wr_pendingMeasureWrites';
+const _PMW_MAX = 300; // cap so a long offline stretch can't bloat localStorage; keep newest
+let _pendingMeasureWrites = [];
+try {
+  const _pmw = JSON.parse(localStorage.getItem(STORE_PMW) || '[]');
+  if (Array.isArray(_pmw)) _pendingMeasureWrites = _pmw;
+} catch (_) {}
+function _savePendingMeasureWrites() { safeSetJSON(STORE_PMW, _pendingMeasureWrites); }
+function queueMeasureWrite(table, row) {
+  _pendingMeasureWrites.push({ table, row });
+  if (_pendingMeasureWrites.length > _PMW_MAX) _pendingMeasureWrites = _pendingMeasureWrites.slice(-_PMW_MAX);
+  _savePendingMeasureWrites();
+}
+// Insert a measurement row; on a failed/thrown write, queue it for later retry.
+// `onOk` fires only on a confirmed successful insert (e.g. the "Deep Test saved" toast).
+// Callers keep their own `if (currentUser)` gate, matching prior behavior.
+async function measureInsert(table, row, onOk) {
+  try {
+    const { error } = await db.from(table).insert(row);
+    if (error) { console.warn(`[measure] ${table} insert failed — queued for retry`, error.message); queueMeasureWrite(table, row); return; }
+    if (onOk) onOk();
+  } catch (e) {
+    console.warn(`[measure] ${table} insert threw — queued for retry`, e?.message || e);
+    queueMeasureWrite(table, row);
+  }
+}
+let _flushMeasureInFlight = false;
+async function flushMeasureWrites() {
+  if (_flushMeasureInFlight || !navigator.onLine || !_pendingMeasureWrites.length) return;
+  _flushMeasureInFlight = true;
+  try {
+    const queue = _pendingMeasureWrites;
+    _pendingMeasureWrites = []; // rows enqueued during the flush land in a fresh array
+    const remaining = [];
+    for (const item of queue) {
+      try {
+        const { error } = await db.from(item.table).insert(item.row);
+        if (error) remaining.push(item);
+      } catch (_) { remaining.push(item); }
+    }
+    // Preserve order: failed retries first, then anything queued mid-flush
+    _pendingMeasureWrites = remaining.concat(_pendingMeasureWrites);
+    if (_pendingMeasureWrites.length > _PMW_MAX) _pendingMeasureWrites = _pendingMeasureWrites.slice(-_PMW_MAX);
+    _savePendingMeasureWrites();
+  } finally { _flushMeasureInFlight = false; }
+}
+
 // ══════════════════════════════════════════
 //  CLOUD SYNC (called from save())
 // ══════════════════════════════════════════
@@ -6034,7 +6089,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '12.19.23';
+const APP_VERSION = '12.20.09';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21862,14 +21917,14 @@ async function _micRunBatchLoop({ batchId, bph, watchId, position, runs, runMs, 
     const stream = _msrScatterData.map(d => ({ t: Math.round(d.t * 100) / 100, cd: Math.round(d.cd * 1000) / 1000 }));
     const q = computeRobustRate(_msrScatterData, bph);
     if (currentUser) {
-      db.from('measurement_batch_runs').insert({
+      measureInsert('measurement_batch_runs', {
         batch_id: batchId, run_idx: i, user_id: currentUser.id, watch_id: watchId, position, bph,
         native_rate: _msrLastRate, native_beat_error: (typeof _msrLastBe !== 'undefined' ? _msrLastBe : null),
         js_rate: q.rate, js_quality: q.quality, js_label: q.label, n_ticks: q.nTicks,
         duration_sec: q.durationSec, residual_sd: q.residualSd, sub_window_delta: q.subWindowDelta,
         bph_suspect: q.bphSuspect, tick_stream: stream.length ? stream : null, tick_detect_mult: tdm,
         sweep_param: sweepParam ?? null, sweep_value: sweepValue ?? null,
-      }).then(({ error }) => { if (error) console.warn('[MICBATCH] insert failed', error.message); });
+      });
     }
     await _micSleep(_MIC_GAP_MS);
   }
@@ -21935,10 +21990,10 @@ async function runDeepTest() {
       if (_msrListening) stopMsrListen('deep');
       const chunks = extractCleanChunks(_msrScatterData, opts);
       chunks.forEach((c, ci) => {
-        if (currentUser) db.from('deep_test_chunks').insert({
+        if (currentUser) measureInsert('deep_test_chunks', {
           deep_test_id: deepTestId, user_id: currentUser.id, watch_id: watchId, bph,
           run_idx: run, chunk_idx: ci, t0: c.t0, t1: c.t1, rate: c.rate, residual_sd: c.residualSd, n_ticks: c.nTicks,
-        }).then(({ error }) => { if (error) console.warn('[DEEP] chunk insert failed', error.message); });
+        });
         pooledRates.push(c.rate);
       });
       if (typeof _msrLastBe !== 'undefined' && _msrLastBe != null) runBeats.push(_msrLastBe);
@@ -21959,10 +22014,10 @@ async function runDeepTest() {
   const good = agg.std != null && agg.std <= 2 && agg.n >= 4;
   _deepRender(`Deep Test: ${agg.median >= 0 ? '+' : ''}${agg.median} ±${agg.std} s/day · ${agg.n} chunks` + (beMed != null ? ` · BE ${beMed}ms` : ''), good ? '#34d399' : '#fbbf24');
   if (currentUser) {
-    db.from('timegrapher_results').insert({
+    measureInsert('timegrapher_results', {
       user_id: currentUser.id, watch_id: watchId, rate: agg.median, rate_std: agg.std,
       beat_error: beMed, bph, source: 'deep_test', notes: `Deep Test: ${agg.n} chunks / pooled`,
-    }).then(({ error }) => { if (error) console.warn('[DEEP] result insert failed', error.message); else toast('Deep Test saved'); });
+    }, () => toast('Deep Test saved'));
   }
 }
 // Automated detection-threshold sweep: one press runs a full batch at each tickDetectMult value,
@@ -23673,6 +23728,7 @@ function openMeasureModal() {
 }
 
 function openMeasureInline() {
+  flushMeasureWrites(); // drain any measurement writes that failed to upload earlier
   _tgDebugSessionId = null;
   _tgLastDebugLogTime = 0;
   _msrListening = false;
@@ -24015,7 +24071,7 @@ function stopMsrListen(reason) {
   if (_tgTickDebugBuffer.length > 0 && _tgDebugSessionId) {
     const batch = _tgTickDebugBuffer.join('\n');
     _tgTickDebugBuffer = [];
-    db.from('timegrapher_tick_logs').insert({ session_id: _tgDebugSessionId, messages: batch }).then(() => {});
+    measureInsert('timegrapher_tick_logs', { session_id: _tgDebugSessionId, messages: batch });
   }
   // Capture session data for every attempt (including zero-tick failures) for debugging
   if (_tgDebugSessionId && currentUser) {
@@ -24032,7 +24088,7 @@ function stopMsrListen(reason) {
       if (sDT >= 2) bucketRate = Math.round((sLast.cd - sStart.cd) / sDT * 86.4 * 10) / 10;
     }
     const _advFields = tgAdvancedSummaryFields(_msrActiveSettings);
-    db.from('timegrapher_tick_logs').insert({
+    measureInsert('timegrapher_tick_logs', {
       session_id: _tgDebugSessionId,
       messages: JSON.stringify({
         type: 'session_summary',
@@ -24053,7 +24109,7 @@ function stopMsrListen(reason) {
         adv_preset: _advFields.preset,
         adv_settings: _advFields.settings
       })
-    }).then(() => {});
+    });
     _msrActiveSettings = null;
   }
   if (_tgScriptNode) { _tgScriptNode.disconnect(); _tgScriptNode = null; }
@@ -24463,6 +24519,8 @@ async function bootApp(user) {
   // Retry any dirty state persisted from a previous session
   const _hasPersisted = _dirty.watches.size || _dirty.logs.size || _dirty.wishlist.size || _dirty.elo.size || _pendingDeletes.length;
   if (_hasPersisted) { console.log('[WRotate] Retrying persisted dirty state'); cloudSync(); }
+  // Retry any measurement writes that failed to upload in a previous session
+  if (_pendingMeasureWrites.length) { console.log('[WRotate] Retrying persisted measurement writes:', _pendingMeasureWrites.length); flushMeasureWrites(); }
   // Re-check reminder now that logs are loaded (initApp ran before data was ready)
   checkReminderNow();
   // Show anniversary modal if any watch has an anniversary today
@@ -24655,6 +24713,7 @@ window.addEventListener('online', () => {
   hideOfflineBanner();
   toast('Back online — syncing…');
   cloudSync();
+  flushMeasureWrites();
 });
 // Show banner on boot if already offline
 if (!navigator.onLine) showOfflineBanner();

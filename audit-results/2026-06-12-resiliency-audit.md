@@ -22,7 +22,7 @@ Surfaces read this audit: `sw.js` (full), `index.html` (cloud sync 5848–6032, 
 
 | ID | Severity | Finding | Where |
 |----|----------|---------|-------|
-| RES-H1 | High | Measurement telemetry & Deep Test/batch results: single-shot fire-and-forget inserts, no retry/queue → silent permanent data loss | index.html:21865, 21938, 21962, 24017 |
+| RES-H1 | High | Measurement telemetry & Deep Test/batch results: single-shot fire-and-forget inserts, no retry/queue → silent permanent data loss — 🟢 **FIXED 2026-06-12** (localStorage retry queue + `measureInsert`/`flushMeasureWrites`) | index.html |
 | RES-H2 | High | Scheduled analytics: single Mac Mini, missed runs silently skipped, no failure alerting, history file not backed up, /tmp logs lost on reboot | LaunchAgent plists, rollout-check.py:26 |
 | RES-M1 | Medium | "Nightly" analysis is actually weekly (Mondays) — CLAUDE.md/plist drift; daily-briefing workflow reads up-to-7-days-stale (or missing) log | nightly plist, nightly-analysis.py:1-2 |
 | RES-M2 | Medium | Remote tuning row applied to all native users with no range validation and no kill switch | index.html:22247-22270, 23747-23793 |
@@ -44,7 +44,9 @@ Surfaces read this audit: `sw.js` (full), `index.html` (cloud sync 5848–6032, 
 
 ### RES-H1 — Measurement telemetry and Deep Test/batch results are single-shot, fire-and-forget writes: a network blip = silent, permanent data loss
 
-**Severity:** High · **Category:** Data-loss protection · **NEW**
+**Severity:** High · **Category:** Data-loss protection · **NEW** · 🟢 **FIXED 2026-06-12**
+
+> **Fix shipped 2026-06-12** (index.html, SW v773): added a localStorage-persisted retry queue (`wr_pendingMeasureWrites`, cap 300, mirroring the existing `_pendingDeletes` machinery). New helper `measureInsert(table, row, onOk)` now backs all five background writes — `measurement_batch_runs`, `deep_test_chunks`, the Deep Test `timegrapher_results` row, the `session_summary` tick-log, and the raw debug-batch tick-log — and on any insert error or thrown network exception it `queueMeasureWrite`s the row instead of dropping it with a console.warn. `flushMeasureWrites()` drains the queue on `online`, on app boot (alongside the persisted-dirty retry in bootApp), and on measure-modal open (`openMeasureInline`); it's no-op when offline/empty and re-queues anything that still fails. `onOk` (the "Deep Test saved" toast) now fires only on a *confirmed* insert. Verified: 1144 unit + 108 mocked-E2E green (page loads clean), plus a 12-assertion isolated harness for the queue (failure→queue→persist, flush-clears-on-success, keeps-on-failure, offline no-op, cap). **Deliberately deferred** (smaller follow-up): persisting Deep Test `pooledRates`/chunks to localStorage *during* a run so a tab killed mid-test can still report partial data — the retry queue covers the network-failure case (the dominant one); the killed-mid-test case is rarer and out of scope here.
 
 **Evidence (all verified this audit):**
 - Deep Test chunk inserts — `db.from('deep_test_chunks').insert({...}).then(({ error }) => { if (error) console.warn(...) })` (index.html:21938-21941). No retry, no local buffer, error only in console.
@@ -186,7 +188,7 @@ Contrast with the user-data path, which has a persisted dirty-set + pending-dele
 |---|------|--------|--------|
 | 1 | RES-M1 — fix nightly plist/docs drift (decide daily vs weekly) | 5 min | Daily-briefing workflow stops lying |
 | 2 | RES-H2 — persistent log paths + RunAtLoad guard + history backup to Supabase + failure email | 1–2 h | Analytics layer survives reboots; failures become visible |
-| 3 | RES-H1 — localStorage retry queue for measurement-table inserts (start with `session_summary` + Deep Test result) | 1–2 h | Stops silent loss of the data the whole quality initiative depends on |
+| 3 | ~~RES-H1 — localStorage retry queue for measurement-table inserts~~ ✅ DONE 2026-06-12 (all 5 background writes + boot/online/modal flush) | 1–2 h | Stops silent loss of the data the whole quality initiative depends on |
 | 4 | RES-M3 — requeue tick-log batch on failed flush + `.catch()` | 20 min | Telemetry holes + BG-fail toast storm gone |
 | 5 | RES-M6 — failure counter + honest completion toast in batch loop | 20 min | Multi-hour sweeps can no longer succeed with zero rows |
 | 6 | ~~RES-M4 — per-batch send recording in run-campaign + checked insert~~ ✅ DONE 2026-06-12 (getUserById loop still sequential) | 30 min | Closes the email double-send window |
