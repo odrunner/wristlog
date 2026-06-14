@@ -111,6 +111,8 @@ def main():
     v2_users_all, v2_users_today = set(), set()
     v2_sessions_all = v2_sessions_today = 0
     ext_users_today = set()             # all external users measuring today (any build)
+    conv = defaultdict(int)             # convergence outcome of real-user 2.0 sessions
+    v2_meas = []                        # (uid, watch_id, final_rate) per real-user 2.0 session
     for sid, s in sessions.items():
         blob = "\n".join(s["msgs"])
         is_v2 = V2_MARKER in blob
@@ -124,6 +126,17 @@ def main():
             v2_sessions_all += 1
             if uid and not is_internal:
                 v2_users_all.add(uid)
+                # convergence outcome (real users only) — how the measurement ended
+                if "plateau" in blob: conv["plateau"] += 1
+                elif "duration_cap" in blob: conv["cap"] += 1
+                elif "user_stopped" in blob or "user_quit" in blob: conv["stopped"] += 1
+                else: conv["other"] += 1
+                # final rate + watch for quality (from the logs — timegrapher_results is RLS-blocked)
+                rates = re.findall(r'rate=([-\d.]+)', blob)
+                wm = re.search(r'"watch_id"\s*:\s*"([^"]+)"', blob)
+                if rates:
+                    try: v2_meas.append((uid, wm.group(1) if wm else None, float(rates[-1])))
+                    except ValueError: pass
             if today:
                 v2_sessions_today += 1
                 if uid and not is_internal:
@@ -137,17 +150,45 @@ def main():
         if isinstance(profs, list):
             names = {p["id"]: p.get("username") or p["id"][:8] for p in profs}
 
+    # Measurement QUALITY from the logs (timegrapher_results is RLS-blocked to the
+    # test user, but tick_logs are readable and carry the final rate + watch_id).
+    n_saved = len(v2_meas)
+    n_sane = sum(1 for (_, _, rate) in v2_meas if abs(rate) <= 15)
+    sane_pct = round(100 * n_sane / n_saved) if n_saved else 0
+    # Repeatability: per (user, watch) measured 2+ times, spread = max-min rate.
+    # NOTE: positions are unlabeled, so a wide spread may be legit position changes.
+    groups = defaultdict(list)
+    for uid, wid, rate in v2_meas:
+        groups[(uid, wid)].append(rate)
+    spreads = sorted(max(v) - min(v) for v in groups.values() if len(v) >= 2)
+    med_spread = spreads[len(spreads) // 2] if spreads else None
+    conv_total = sum(conv.values())
+
     date_str = now.strftime("%Y-%m-%d")
+    qual = (
+        f" | measured {n_saved} ({sane_pct}% sane |rate|<=15)"
+        f" | converge {conv.get('plateau',0)}plateau/{conv.get('stopped',0)}stopped/"
+        f"{conv.get('cap',0)}cap of {conv_total}"
+        + (f" | repeat-spread med {med_spread:.1f}s/d (n={len(spreads)})" if spreads else "")
+    )
     line = (
         f"{date_str} | 2.0 today: {len(v2_users_today)} users / {v2_sessions_today} sessions "
         f"(of {len(ext_users_today)} external users measuring today) "
         f"| cumulative since {APPROVAL_DATE}: {len(v2_users_all)} users / {v2_sessions_all} sessions"
+        + qual
     )
     print(f"### WRotate 2.0 Rollout — {date_str}\n")
     print(line)
     if v2_users_all:
         roster = ", ".join(sorted(names.get(u, u[:8]) for u in v2_users_all))
         print(f"\nUsers seen on 2.0: {roster}")
+    print(
+        f"\nQuality: {n_sane}/{n_saved} measurements sane ({sane_pct}%)"
+        f"\nConvergence: {conv.get('plateau',0)} converged (plateau), "
+        f"{conv.get('stopped',0)} user-stopped, {conv.get('cap',0)} hit 90s cap"
+        + (f"\nRepeatability (same watch 2+x, positions unlabeled): median spread "
+           f"{med_spread:.1f} s/day across {len(spreads)} watch(es)" if spreads else "")
+    )
 
     # Persist history (one line/day). RunAtLoad=true means a reboot/login can
     # trigger an extra run, so replace today's line if it already exists rather
