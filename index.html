@@ -2931,12 +2931,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
         <div id="broadcast-status" aria-live="polite" style="font-size:.82rem;margin-top:.5rem;"></div>
       </div>
-
-      <!-- Win-back cohort blasts (one-off sends, deduped against already-sent) -->
-      <div id="broadcast-cohorts" style="margin-top:1rem;">
-        <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:.5rem;">Win-back</div>
-        <div id="broadcast-cohorts-list"></div>
-      </div>
     </div>
 
     <!-- Tab: Campaigns -->
@@ -6099,7 +6093,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '14.09.39';
+const APP_VERSION = '14.09.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12361,7 +12355,7 @@ function switchAdminTab(tab) {
   });
   const target = document.getElementById('admin-tab-' + tab);
   if (target) target.style.display = '';
-  if (tab === 'campaigns' || tab === 'broadcast') loadCampaigns();
+  if (tab === 'campaigns') loadCampaigns();
 }
 
 // ── Admin Content Reports ────────────────────────────────────────────────
@@ -14514,18 +14508,13 @@ async function loadCampaigns() {
   const countMap = {};
   (sendCounts || []).forEach(r => { countMap[r.campaign_id] = r.count; });
 
-  const cohortsContainer = document.getElementById('broadcast-cohorts-list');
-
   const cardHtml = (c) => {
     const sends = countMap[c.id] || 0;
     const statusColor = c.is_active ? '#22c55e' : '#ef4444';
     const statusLabel = c.is_active ? 'Active' : 'Paused';
     const toggleLabel = c.is_active ? 'Pause' : 'Start';
     const toggleIcon = c.is_active ? '⏸' : '▶';
-    // Win-back blasts target the April dormant cohort only; drips keep all cohort options.
-    const cohortOptions = c.campaign_type === 'cohort_blast'
-      ? '<option value="april">April dormant</option>'
-      : '<option value="pre_april">Pre-April dormant</option><option value="april">April dormant</option><option value="may">May dormant</option>';
+    const cohortOptions = '<option value="pre_april">Pre-April dormant</option><option value="april">April dormant</option><option value="may">May dormant</option>';
     return `
     <div style="background:var(--surface2);border-radius:10px;padding:.85rem;margin-bottom:.75rem;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
@@ -14569,21 +14558,14 @@ async function loadCampaigns() {
     </div>`;
   };
 
-  // Drips → Campaigns tab; cohort blasts (win-back) → Broadcast tab.
+  // Campaigns tab = automated drips only.
   const drips = _campaignsData.filter(c => c.campaign_type !== 'cohort_blast');
-  const cohorts = _campaignsData.filter(c => c.campaign_type === 'cohort_blast');
 
   container.innerHTML = drips.length
     ? drips.map(cardHtml).join('')
     : '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">No campaigns yet</div>';
 
-  if (cohortsContainer) {
-    cohortsContainer.innerHTML = cohorts.length
-      ? cohorts.map(cardHtml).join('')
-      : '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">No win-back emails</div>';
-  }
-
-  _campaignsData.forEach(c => updateCampaignPreview(c.id));
+  drips.forEach(c => updateCampaignPreview(c.id));
 }
 
 function updateCampaignPreview(id) {
