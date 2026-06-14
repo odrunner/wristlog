@@ -2937,6 +2937,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="admin-tab-campaigns" class="admin-tab" role="tabpanel" style="display:none;">
       <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
         <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Email Campaigns</div>
+        <button class="btn btn-ghost" onclick="createCampaign()" style="font-size:.78rem;padding:2px 10px;">+ New campaign</button>
       </div>
       <div id="campaigns-list" style="margin-bottom:1rem;">
         <div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">Loading campaigns...</div>
@@ -6093,7 +6094,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '14.09.54';
+const APP_VERSION = '14.10.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14514,7 +14515,6 @@ async function loadCampaigns() {
     const statusLabel = c.is_active ? 'Active' : 'Paused';
     const toggleLabel = c.is_active ? 'Pause' : 'Start';
     const toggleIcon = c.is_active ? '⏸' : '▶';
-    const cohortOptions = '<option value="pre_april">Pre-April dormant</option><option value="april">April dormant</option><option value="may">May dormant</option>';
     return `
     <div style="background:var(--surface2);border-radius:10px;padding:.85rem;margin-bottom:.75rem;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;">
@@ -14524,7 +14524,11 @@ async function loadCampaigns() {
           <button class="btn btn-ghost" onclick="toggleCampaign('${c.id}', ${!c.is_active})" style="font-size:.72rem;padding:2px 8px;">${toggleIcon} ${toggleLabel}</button>
         </div>
       </div>
-      <div style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem;">${c.campaign_type === 'cohort_blast' ? `Cohort blast · ${sends} sent total` : `Sends ${c.delay_days} days after signup · ${sends} sent total`}</div>
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem;">Sends ${c.delay_days} day${c.delay_days === 1 ? '' : 's'} after signup · ${sends} sent total</div>
+      <div class="draft-form-row" style="margin-bottom:.4rem;">
+        <label>Name (internal)</label>
+        <input type="text" id="camp-name-${c.id}" value="${escHtml(c.name)}" style="font-size:.82rem;">
+      </div>
       <div class="draft-form-row" style="margin-bottom:.4rem;">
         <label>Subject</label>
         <input type="text" id="camp-subject-${c.id}" value="${escHtml(c.subject)}" style="font-size:.82rem;" oninput="updateCampaignPreview('${c.id}')">
@@ -14533,22 +14537,14 @@ async function loadCampaigns() {
         <label>Body (HTML, use {{name}} for user's name)</label>
         <textarea id="camp-body-${c.id}" rows="10" style="font-size:.82rem;min-height:160px;" oninput="updateCampaignPreview('${c.id}')">${escHtml(c.body_html)}</textarea>
       </div>
-      ${c.campaign_type === 'cohort_blast' ? '' : `<div class="draft-form-row" style="margin-bottom:.4rem;">
+      <div class="draft-form-row" style="margin-bottom:.4rem;">
         <label>Delay (days after signup)</label>
-        <input type="number" id="camp-delay-${c.id}" value="${c.delay_days}" min="1" max="30" style="font-size:.82rem;width:60px;">
-      </div>`}
+        <input type="number" id="camp-delay-${c.id}" value="${c.delay_days}" min="1" max="90" style="font-size:.82rem;width:60px;">
+      </div>
       <div style="display:flex;gap:.5rem;margin-top:.5rem;">
         <button class="btn btn-ghost" onclick="saveCampaign('${c.id}')" style="flex:1;">Save Changes</button>
         <button class="btn btn-ghost" onclick="testCampaign('${c.id}')" style="flex:1;">Send Test to Me</button>
         <button class="btn btn-ghost" onclick="runCampaignNow()" style="flex:1;">Run Now</button>
-      </div>
-      <div style="display:flex;gap:.5rem;margin-top:.5rem;align-items:center;flex-wrap:wrap;">
-        <label style="font-size:.78rem;color:var(--muted);">Cohort blast:</label>
-        <select id="camp-cohort-${c.id}" style="font-size:.82rem;padding:4px 8px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;flex:1;min-width:120px;">
-          ${cohortOptions}
-        </select>
-        <input type="number" id="camp-limit-${c.id}" min="1" placeholder="Limit" title="Optional cap (e.g. 20 for a test slice). Leave blank to send to all." style="font-size:.82rem;width:70px;padding:4px 8px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;">
-        <button class="btn btn-ghost" onclick="sendToCohort('${c.id}')" style="font-size:.78rem;">Send to cohort</button>
       </div>
       <div id="camp-status-${c.id}" style="font-size:.78rem;color:var(--muted);margin-top:.4rem;" aria-live="polite"></div>
       <div class="draft-form-row" style="margin-top:.6rem;">
@@ -14611,6 +14607,22 @@ function buildCampaignEmailHtml(subject, body) {
 </html>`;
 }
 
+async function createCampaign() {
+  // New keep-warm drips start inactive with a 30-day delay so they never fire
+  // until you've written the copy and hit Start — the live 2-day welcome is untouched.
+  const { error } = await db.from('email_campaigns').insert({
+    name: 'New keep-warm campaign',
+    subject: '',
+    body_html: '',
+    delay_days: 30,
+    is_active: false,
+    campaign_type: 'drip',
+  });
+  if (error) { toast('Failed to create campaign: ' + error.message, 'error'); return; }
+  toast('Campaign created — fill in the copy below, Save, then Start');
+  loadCampaigns();
+}
+
 async function toggleCampaign(id, newState) {
   const { error } = await db.from('email_campaigns').update({ is_active: newState, updated_at: new Date().toISOString() }).eq('id', id);
   if (error) { toast('Failed to update campaign', 'error'); return; }
@@ -14620,10 +14632,12 @@ async function toggleCampaign(id, newState) {
 
 async function saveCampaign(id) {
   const camp = _campaignsData.find(c => c.id === id);
+  const name = document.getElementById('camp-name-' + id)?.value?.trim();
   const subject = document.getElementById('camp-subject-' + id)?.value?.trim();
   const body_html = document.getElementById('camp-body-' + id)?.value?.trim();
   const delayEl = document.getElementById('camp-delay-' + id);
   const update = { subject, body_html, updated_at: new Date().toISOString() };
+  if (name) update.name = name;
   if (delayEl) update.delay_days = parseInt(delayEl.value) || camp?.delay_days || 2;
   if (!subject || !body_html) { toast('Subject and body are required', 'error'); return; }
   const { error } = await db.from('email_campaigns').update(update).eq('id', id);
