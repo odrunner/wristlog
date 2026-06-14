@@ -2112,6 +2112,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Dramatically More Accurate Measurements</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">We rebuilt the microphone timegrapher from the ground up &#8212; new tick detection, a steadier beat-error reading, and a smarter sense of when a measurement has truly settled. Validated across hundreds of calibrations against a professional reference, readings now track much more closely to a pro machine and stay consistent run to run, so the same watch reads the same. For the most reliable result, measure in a quiet spot with your watch in a consistent position.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Share Any of Your Posts</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">You can now share your own posts no matter who they&#8217;re for &#8212; not just public ones. Public posts open a rich preview link anyone can see. For Followers and Close Friends posts, the link opens privately in WRotate and only shows the post to people you actually shared it with, so nothing leaks to anyone else.</div>
       </div>
@@ -3004,6 +3008,49 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
       </div>
 
+      <!-- ── MEASURE ACCURACY ── -->
+      <div class="help-section">
+        <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Measure Accuracy <span style="font-size:.6rem;font-weight:600;color:var(--gold);margin-left:.35rem;letter-spacing:.04em;">iOS APP</span></div>
+        <div class="help-card">
+          <div class="help-step">
+            <div class="help-step-num">1</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Go to the Measure tab</div>
+              <div class="help-step-desc">Select the watch you want to measure and its beat rate (BPH). Leave BPH on Auto if you&#8217;re not sure &#8212; the app detects it automatically.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">2</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Place the watch on the microphone</div>
+              <div class="help-step-desc">Place the watch touching the iPhone microphone (bottom edge, next to the charging port). The caseback should face the mic. Keep still during measurement.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">3</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Tap Measure and wait for convergence</div>
+              <div class="help-step-desc">Dots appear on the scatter chart as ticks are detected. A preliminary rate shows within seconds, then refines until it converges (usually 30&#8211;60 seconds). The signal bars in the bottom-left show how strong the signal is.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">4</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Save or enter manually</div>
+              <div class="help-step-desc">Once converged, tap Save to record the reading. You can also enter a rate manually in the Accuracy section of the watch edit form if you measured with an external tool.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">5</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Trouble getting a reading? Use Advanced Settings</div>
+              <div class="help-step-desc">Tap the &#9881; gear (top-right of the Measure screen) to pick an environment preset &#8212; Quiet Room, Noisy Environment, or Weak Signal &#8212; or adjust Sensitivity and Convergence Speed yourself. Higher Sensitivity helps faint or quiet watches register ticks; these settings can rescue a watch that won&#8217;t converge on the defaults.</div>
+            </div>
+          </div>
+          <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Measure in a quiet environment for best results. Watches with display casebacks (transparent backs) produce a stronger signal than solid steel cases.</span></div>
+        </div>
+      </div>
+
       <!-- ── LOGGING WEAR ── -->
       <div class="help-section">
         <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg> Logging a Wear</div>
@@ -3299,49 +3346,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
               <div class="help-step-desc">Below your collection, a 3&#215;3 photo grid shows your latest posts and wears. Photo posts display the photo, wear logs show the watch image, and entries without images show watch initials. Tap any cell to jump to that post in the feed.</div>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- ── MEASURE ACCURACY ── -->
-      <div class="help-section">
-        <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Measure Accuracy <span style="font-size:.6rem;font-weight:600;color:var(--gold);margin-left:.35rem;letter-spacing:.04em;">iOS APP</span></div>
-        <div class="help-card">
-          <div class="help-step">
-            <div class="help-step-num">1</div>
-            <div class="help-step-body">
-              <div class="help-step-title">Go to the Measure tab</div>
-              <div class="help-step-desc">Select the watch you want to measure and its beat rate (BPH). Leave BPH on Auto if you&#8217;re not sure &#8212; the app detects it automatically.</div>
-            </div>
-          </div>
-          <div class="help-step">
-            <div class="help-step-num">2</div>
-            <div class="help-step-body">
-              <div class="help-step-title">Place the watch on the microphone</div>
-              <div class="help-step-desc">Place the watch touching the iPhone microphone (bottom edge, next to the charging port). The caseback should face the mic. Keep still during measurement.</div>
-            </div>
-          </div>
-          <div class="help-step">
-            <div class="help-step-num">3</div>
-            <div class="help-step-body">
-              <div class="help-step-title">Tap Measure and wait for convergence</div>
-              <div class="help-step-desc">Dots appear on the scatter chart as ticks are detected. A preliminary rate shows within seconds, then refines until it converges (usually 30&#8211;60 seconds). The signal bars in the bottom-left show how strong the signal is.</div>
-            </div>
-          </div>
-          <div class="help-step">
-            <div class="help-step-num">4</div>
-            <div class="help-step-body">
-              <div class="help-step-title">Save or enter manually</div>
-              <div class="help-step-desc">Once converged, tap Save to record the reading. You can also enter a rate manually in the Accuracy section of the watch edit form if you measured with an external tool.</div>
-            </div>
-          </div>
-          <div class="help-step">
-            <div class="help-step-num">5</div>
-            <div class="help-step-body">
-              <div class="help-step-title">Trouble getting a reading? Use Advanced Settings</div>
-              <div class="help-step-desc">Tap the &#9881; gear (top-right of the Measure screen) to pick an environment preset &#8212; Quiet Room, Noisy Environment, or Weak Signal &#8212; or adjust Sensitivity and Convergence Speed yourself. Higher Sensitivity helps faint or quiet watches register ticks; these settings can rescue a watch that won&#8217;t converge on the defaults.</div>
-            </div>
-          </div>
-          <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Measure in a quiet environment for best results. Watches with display casebacks (transparent backs) produce a stronger signal than solid steel cases.</span></div>
         </div>
       </div>
 
@@ -6089,7 +6093,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.18.32';
+const APP_VERSION = '13.18.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -24562,7 +24566,7 @@ async function bootApp(user) {
   maybeShowNewFeatures();
   // Auto-show What's New once per version (iOS 1.4+ only)
   const _wnKey = 'whatsNewSeen';
-  const _wnVer = '2026-04';
+  const _wnVer = '2026-06';
   if (window._iosAppVersion && localStorage.getItem(_wnKey) !== _wnVer) {
     localStorage.setItem(_wnKey, _wnVer);
     setTimeout(() => openWhatsNew(), 600);
