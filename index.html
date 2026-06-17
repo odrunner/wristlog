@@ -6094,7 +6094,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.00.30';
+const APP_VERSION = '17.15.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6432,7 +6432,16 @@ async function loadAndRenderProfile(userId) {
   }
 
   const privacy    = profile.profile_privacy || 'public';
-  const isFriend   = following.has(userId); // "isFriend" here means viewer follows this user
+  let isFriend     = following.has(userId); // "isFriend" here means viewer follows this user
+  // The `following` Set can be stale — e.g. the target accepted our follow request
+  // on THEIR device, creating the follow server-side without updating our cache.
+  // Before gating a private/followers profile, confirm against the DB so we don't
+  // lock out an approved follower.
+  if (!isOwn && !isFriend && (privacy === 'private' || privacy === 'followers' || privacy === 'friends_only')) {
+    const { data: _fr } = await db.from('follows').select('follower_id')
+      .eq('follower_id', currentUser.id).eq('following_id', userId).maybeSingle();
+    if (_fr) { following.add(userId); isFriend = true; }
+  }
   const isActualFriend = friendships.has(userId); // true mutual-follow + both codes verified
 
   // Gate access for private / followers-only profiles
@@ -6441,7 +6450,7 @@ async function loadAndRenderProfile(userId) {
     return;
   }
 
-  const isFollowing = following.has(userId);
+  const isFollowing = isFriend;
   // Normalise collection_visibility: treat null / undefined / legacy values as 'followers'.
   // Valid chip values are 'public','followers','friends','private'. Anything else (e.g. the
   // old 'friends_only' or an empty string) also resolves to the default.
