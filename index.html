@@ -6094,7 +6094,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '14.10.04';
+const APP_VERSION = '17.00.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8553,6 +8553,19 @@ async function sendFollowRequest(userId, btn) {
   _followInFlight.add(userId);
   if (btn) btn.disabled = true;
   try {
+    // Guard: if an approved follow already exists, do NOT create a pending request —
+    // that leaves a contradictory follows + follow_requests state that gates the
+    // target's profile. Reconcile the button to "Following" instead.
+    const { data: existingFollow } = await db.from('follows').select('follower_id')
+      .eq('follower_id', currentUser.id).eq('following_id', userId).limit(1);
+    if (existingFollow?.length) {
+      following.add(userId);
+      pendingRequests.delete(userId);
+      await db.from('follow_requests').delete().eq('requester_id', currentUser.id).eq('target_id', userId);
+      if (btn) { btn.className = 'follow-btn following'; btn.textContent = 'Following'; btn.onclick = function() { confirmUnfollow(userId, this); }; }
+      renderDiscoverUsers();
+      return;
+    }
     const { error } = await db.from('follow_requests').insert({ requester_id: currentUser.id, target_id: userId });
     if (!error) {
       pendingRequests.add(userId);
