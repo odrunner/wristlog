@@ -6094,7 +6094,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.22.01';
+const APP_VERSION = '20.22.13';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13022,10 +13022,18 @@ async function renderAdminTraffic() {
 }
 
 function renderEmailEngagement(events) {
-  // Exclude admin signup-alert emails ("New WRotate user: …") — these are sent
-  // to ADMIN_EMAIL (the founder), not to users, so they'd inflate engagement
-  // stats (e.g. >100% open rate from re-opening your own alerts).
-  events = events.filter(e => !(e.subject || '').startsWith('New WRotate user:'));
+  // Exclude founder-only internal emails — these go to ADMIN_EMAIL (the founder),
+  // not to users, so they'd inflate engagement stats (e.g. >100% open rate from
+  // re-opening your own alerts). Covers:
+  //  - signup alerts ("New WRotate user: …")
+  //  - the weekly measurement analysis report ("WRotate Weekly Measurements — …"
+  //    and its failure variant "⚠️ WRotate weekly analysis FAILED — …")
+  events = events.filter(e => {
+    const subj = e.subject || '';
+    if (subj.startsWith('New WRotate user:')) return false;
+    if (/weekly measurements|weekly analysis/i.test(subj)) return false;
+    return true;
+  });
   if (!events.length) return '';
 
   const byType = {};
