@@ -6094,7 +6094,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.22.13';
+const APP_VERSION = '20.22.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12941,7 +12941,10 @@ async function renderAdminTraffic() {
   try {
     const [trafficR, emailEventsR, demoR] = await withTimeout(Promise.all([
       db.rpc('admin_traffic_stats'),
-      db.from('email_events').select('event_type, email_to, subject, created_at').order('created_at', { ascending: false }).limit(500),
+      // All-time per-subject aggregates + recent opens, computed server-side.
+      // (Was a raw 500-row fetch, which only covered the last ~week and
+      //  undercounted cumulative campaign delivery/open/click totals.)
+      db.rpc('admin_email_engagement'),
       db.rpc('admin_demo_views'),
     ]), 15000);
     if (trafficR.error) throw trafficR.error;
@@ -13012,7 +13015,7 @@ async function renderAdminTraffic() {
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Signups by Source</div>
         ${signupSourceRows}
       </div>` : ''}
-      ${renderEmailEngagement(emailEventsR.data || [])}`;
+      ${renderEmailEngagement(emailEventsR.data || {})}`;
   } catch(e) {
     el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;">
       <div style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;">Failed to load traffic: ${escHtml(e.message)}</div>
@@ -13021,28 +13024,37 @@ async function renderAdminTraffic() {
   }
 }
 
-function renderEmailEngagement(events) {
+function renderEmailEngagement(data) {
+  // `data` is the admin_email_engagement RPC result: all-time per-subject
+  // aggregates plus a recent opens/clicks list (computed server-side so the
+  // numbers are cumulative, not just the last ~week's worth of raw events).
+  data = data || {};
+  let bySubjectRows = data.by_subject || [];
+  const recent = data.recent || [];
+
   // Exclude founder-only internal emails — these go to ADMIN_EMAIL (the founder),
   // not to users, so they'd inflate engagement stats (e.g. >100% open rate from
   // re-opening your own alerts). Covers:
   //  - signup alerts ("New WRotate user: …")
   //  - the weekly measurement analysis report ("WRotate Weekly Measurements — …"
   //    and its failure variant "⚠️ WRotate weekly analysis FAILED — …")
-  events = events.filter(e => {
-    const subj = e.subject || '';
+  bySubjectRows = bySubjectRows.filter(r => {
+    const subj = r.subject || '';
     if (subj.startsWith('New WRotate user:')) return false;
     if (/weekly measurements|weekly analysis/i.test(subj)) return false;
     return true;
   });
-  if (!events.length) return '';
+  if (!bySubjectRows.length && !recent.length) return '';
 
-  const byType = {};
-  events.forEach(e => { byType[e.event_type] = (byType[e.event_type] || 0) + 1; });
-  const sent = byType['sent'] || byType['delivered'] || 0;
-  const delivered = byType['delivered'] || 0;
-  const opened = byType['opened'] || 0;
-  const clicked = byType['clicked'] || 0;
-  const bounced = (byType['bounced'] || 0) + (byType['complained'] || 0);
+  // Overall totals = sum across all (non-founder) subjects, all time.
+  let sent = 0, delivered = 0, opened = 0, clicked = 0, bounced = 0;
+  bySubjectRows.forEach(r => {
+    sent += +r.sent || 0;
+    delivered += +r.delivered || 0;
+    opened += +r.opened || 0;
+    clicked += +r.clicked || 0;
+    bounced += +r.bounced || 0;
+  });
   const pct = (n, d) => d > 0 ? (n / d * 100).toFixed(1) + '%' : '—';
 
   const statRow = (label, value, sub) => `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>${label}</span><span style="font-weight:600;"><span style="color:var(--gold);">${value}</span>${sub ? `<span style="color:var(--muted);font-size:.72rem;margin-left:.3rem;">${sub}</span>` : ''}</span></div>`;
@@ -13055,15 +13067,15 @@ function renderEmailEngagement(events) {
     return subj;
   };
   const bySubject = {};
-  events.forEach(e => {
-    if (!e.subject) return;
-    const key = campaignSubject(e.subject);
+  bySubjectRows.forEach(r => {
+    if (!r.subject) return;
+    const key = campaignSubject(r.subject);
     if (!bySubject[key]) bySubject[key] = { sent: 0, delivered: 0, opened: 0, clicked: 0 };
     const s = bySubject[key];
-    if (e.event_type === 'sent') s.sent++;
-    if (e.event_type === 'delivered') s.delivered++;
-    if (e.event_type === 'opened') s.opened++;
-    if (e.event_type === 'clicked') s.clicked++;
+    s.sent += +r.sent || 0;
+    s.delivered += +r.delivered || 0;
+    s.opened += +r.opened || 0;
+    s.clicked += +r.clicked || 0;
   });
   const subjectRows = Object.entries(bySubject)
     .sort((a, b) => (b[1].sent + b[1].delivered) - (a[1].sent + a[1].delivered))
@@ -13081,8 +13093,7 @@ function renderEmailEngagement(events) {
     }).join('');
 
   const myEmail = (currentUser && currentUser.email || '').toLowerCase();
-  const recentOpens = events
-    .filter(e => e.event_type === 'opened' || e.event_type === 'clicked')
+  const recentOpens = recent
     .filter(e => (e.email_to || '').toLowerCase() !== myEmail)
     .slice(0, 15);
   const recentRows = recentOpens.map(e => {
