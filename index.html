@@ -6094,7 +6094,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.15.54';
+const APP_VERSION = '20.22.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13039,11 +13039,19 @@ function renderEmailEngagement(events) {
 
   const statRow = (label, value, sub) => `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>${label}</span><span style="font-weight:600;"><span style="color:var(--gold);">${value}</span>${sub ? `<span style="color:var(--muted);font-size:.72rem;margin-left:.3rem;">${sub}</span>` : ''}</span></div>`;
 
+  // Collapse per-actor notification subjects into one campaign bucket each.
+  const campaignSubject = (subj) => {
+    const t = (subj || '').toLowerCase();
+    if (t.includes('commented')) return 'Commented on your post';
+    if (t.includes('follow')) return 'Follows';
+    return subj;
+  };
   const bySubject = {};
   events.forEach(e => {
     if (!e.subject) return;
-    if (!bySubject[e.subject]) bySubject[e.subject] = { sent: 0, delivered: 0, opened: 0, clicked: 0 };
-    const s = bySubject[e.subject];
+    const key = campaignSubject(e.subject);
+    if (!bySubject[key]) bySubject[key] = { sent: 0, delivered: 0, opened: 0, clicked: 0 };
+    const s = bySubject[key];
     if (e.event_type === 'sent') s.sent++;
     if (e.event_type === 'delivered') s.delivered++;
     if (e.event_type === 'opened') s.opened++;
