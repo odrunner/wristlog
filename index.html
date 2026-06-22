@@ -6094,7 +6094,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.16.39';
+const APP_VERSION = '22.16.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22417,6 +22417,20 @@ let _tgDebugSessionId = null;
 let _tgLastDebugLogTime = 0;
 let _tgTickDebugBuffer = [];
 let _tgTickDebugLastFlush = 0;
+// Persist a tick-debug batch with bounded retry. The periodic / BPH-change flushes
+// snapshot-and-clear the buffer, so a bare fire-and-forget insert silently dropped
+// the batch on any network hiccup (offline, 5xx, timeout) — punching holes in the
+// session log that feeds the weekly + rollout analysis. Capture (sessionId, batch)
+// in the closure and retry with backoff. Closure-scoped, never re-queued into the
+// shared buffer, so an old session's messages can't get relabeled under a new
+// session id after a BPH change. Bounded to 3 attempts to avoid unbounded memory.
+function _flushTickLog(sessionId, batchArr, attempt = 0) {
+  if (!sessionId || !batchArr || !batchArr.length) return;
+  const retry = () => { if (attempt < 3) setTimeout(() => _flushTickLog(sessionId, batchArr, attempt + 1), 1500 * (attempt + 1)); };
+  db.from('timegrapher_tick_logs').insert({ session_id: sessionId, messages: batchArr.join('\n') })
+    .then(({ error }) => { if (error) retry(); })
+    .catch(() => retry());
+}
 // Advanced-settings tracking: snapshot of the settings the current session ran with.
 // Set at measure-start when advanced mode is active; read into the session_summary.
 let _msrActiveSettings = null;
@@ -22448,12 +22462,9 @@ window._tgNativeCallback = function(data) {
     const now = Date.now();
     if (now - _tgTickDebugLastFlush > 3000 && _tgTickDebugBuffer.length > 0) {
       _tgTickDebugLastFlush = now;
-      const batch = _tgTickDebugBuffer.join('\n');
+      const batch = _tgTickDebugBuffer;
       _tgTickDebugBuffer = [];
-      db.from('timegrapher_tick_logs').insert({
-        session_id: _tgDebugSessionId,
-        messages: batch
-      }).then(() => {});
+      _flushTickLog(_tgDebugSessionId, batch); // retries on failure instead of dropping
     }
   }
   // Determine which UI to update
@@ -23981,9 +23992,11 @@ function onMsrBphChange() {
     window.webkit.messageHandlers.timegrapher.postMessage({ action: 'stop' });
     const bphVal = parseInt(bphDropdown);
     const bph = isNaN(bphVal) ? 0 : bphVal;
-    // Flush old session debug, start new session
+    // Flush old session debug, start new session. Pass the buffer + old session id
+    // to the retrying helper before reassigning, so a failed flush retries under the
+    // OLD session id rather than dropping or leaking into the new session.
     if (_tgTickDebugBuffer.length > 0 && _tgDebugSessionId) {
-      db.from('timegrapher_tick_logs').insert({ session_id: _tgDebugSessionId, messages: _tgTickDebugBuffer.join('\n') }).then(() => {});
+      _flushTickLog(_tgDebugSessionId, _tgTickDebugBuffer);
     }
     _tgDebugSessionId = crypto.randomUUID();
     _tgTickDebugBuffer = [];
