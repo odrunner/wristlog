@@ -5,9 +5,45 @@ import {
   extractImages,
   getBrandDomain,
   isLikelyProductImage,
+  isPrivateIPv4,
+  isSafeFetchUrl,
   looksLikeProductUrl,
   normalizeImageUrl,
 } from "./lib.ts";
+
+// ── isSafeFetchUrl (SSRF guard) ──
+Deno.test("isSafeFetchUrl — allows normal public https/http", () => {
+  assertEquals(isSafeFetchUrl("https://www.rolex.com/watches/submariner"), true);
+  assertEquals(isSafeFetchUrl("http://omegawatches.com/x.jpg"), true);
+  assertEquals(isSafeFetchUrl("https://example.com:443/a"), true);
+});
+
+Deno.test("isSafeFetchUrl — blocks metadata, localhost, private + loopback IPs", () => {
+  assertEquals(isSafeFetchUrl("http://169.254.169.254/latest/meta-data/"), false);
+  assertEquals(isSafeFetchUrl("http://metadata.google.internal/x"), false);
+  assertEquals(isSafeFetchUrl("http://localhost/x"), false);
+  assertEquals(isSafeFetchUrl("http://127.0.0.1/x"), false);
+  assertEquals(isSafeFetchUrl("http://10.0.0.5/x"), false);
+  assertEquals(isSafeFetchUrl("http://172.16.4.4/x"), false);
+  assertEquals(isSafeFetchUrl("http://192.168.1.1/x"), false);
+  assertEquals(isSafeFetchUrl("http://[::1]/x"), false);
+  assertEquals(isSafeFetchUrl("http://service.internal/x"), false);
+});
+
+Deno.test("isSafeFetchUrl — blocks bad schemes, creds, odd ports", () => {
+  assertEquals(isSafeFetchUrl("file:///etc/passwd"), false);
+  assertEquals(isSafeFetchUrl("gopher://evil/x"), false);
+  assertEquals(isSafeFetchUrl("http://user:pass@example.com/x"), false);
+  assertEquals(isSafeFetchUrl("http://example.com:22/x"), false);
+  assertEquals(isSafeFetchUrl("not a url"), false);
+});
+
+Deno.test("isPrivateIPv4 — classifies ranges", () => {
+  assertEquals(isPrivateIPv4("8.8.8.8"), false);
+  assertEquals(isPrivateIPv4("10.1.2.3"), true);
+  assertEquals(isPrivateIPv4("169.254.169.254"), true);
+  assertEquals(isPrivateIPv4("100.64.0.1"), true);
+});
 
 // ── getBrandDomain ──
 Deno.test("getBrandDomain — known brand, case/space insensitive", () => {

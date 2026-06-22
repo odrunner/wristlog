@@ -13,6 +13,7 @@ import {
   buildFallbackBrandUrl,
   extractImages,
   isLikelyProductImage,
+  isSafeFetchUrl,
   looksLikeProductUrl,
 } from "./lib.ts";
 
@@ -36,6 +37,7 @@ const BROWSER_HEADERS: Record<string, string> = {
  */
 async function validateImageUrl(url: string): Promise<boolean> {
   if (!isLikelyProductImage(url)) return false;
+  if (!isSafeFetchUrl(url)) return false; // SSRF guard
   try {
     const resp = await fetch(url, {
       method: "HEAD",
@@ -57,6 +59,7 @@ async function validateImageUrl(url: string): Promise<boolean> {
  * Scrape a page URL for product images.
  */
 async function scrapePageForImage(pageUrl: string): Promise<{ imageUrl: string; sourceUrl: string } | null> {
+  if (!isSafeFetchUrl(pageUrl)) return null; // SSRF guard
   try {
     const resp = await fetch(pageUrl, {
       signal: AbortSignal.timeout(10000),

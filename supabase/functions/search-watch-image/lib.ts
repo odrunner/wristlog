@@ -45,6 +45,72 @@ export function getBrandDomain(brand: string): string | null {
   return BRAND_DOMAINS[brand.toLowerCase().trim()] || null;
 }
 
+// ── SSRF guard ──
+// This function fetches arbitrary URLs (a client-supplied productUrl + brand
+// pages). Without a guard, a caller could point it at internal/cloud-metadata
+// hosts. isSafeFetchUrl() blocks non-http(s) schemes, embedded credentials,
+// odd ports, and private/reserved/loopback/link-local IP literals + internal
+// hostnames. (Residual: DNS-rebinding to a private IP isn't caught here.)
+
+function ipv4ToOctets(host: string): number[] | null {
+  const m = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (!m) return null;
+  const octets = m.slice(1).map(Number);
+  if (octets.some((o) => o < 0 || o > 255)) return null;
+  return octets;
+}
+
+export function isPrivateIPv4(host: string): boolean {
+  const o = ipv4ToOctets(host);
+  if (!o) return false;
+  const [a, b] = o;
+  if (a === 0 || a === 127) return true;                         // this-host / loopback
+  if (a === 10) return true;                                     // private
+  if (a === 172 && b >= 16 && b <= 31) return true;              // private
+  if (a === 192 && b === 168) return true;                       // private
+  if (a === 169 && b === 254) return true;                       // link-local (incl. metadata)
+  if (a === 100 && b >= 64 && b <= 127) return true;             // CGNAT
+  if (a === 192 && b === 0 && o[2] === 0) return true;           // IETF protocol assignments
+  if (a === 198 && (b === 18 || b === 19)) return true;          // benchmarking
+  if (a >= 224) return true;                                     // multicast + reserved
+  return false;
+}
+
+function isPrivateIPv6(host: string): boolean {
+  let h = host.toLowerCase();
+  if (h.startsWith("[") && h.endsWith("]")) h = h.slice(1, -1);
+  if (h === "::1" || h === "::") return true;                    // loopback / unspecified
+  if (h.startsWith("fe80") || h.startsWith("fe9") || h.startsWith("fea") || h.startsWith("feb")) return true; // link-local
+  if (/^f[cd][0-9a-f]{2}:/.test(h)) return true;                 // unique local fc00::/7
+  const mapped = h.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/); // IPv4-mapped
+  if (mapped) return isPrivateIPv4(mapped[1]);
+  return false;
+}
+
+export function isSafeFetchUrl(urlStr: string): boolean {
+  let u: URL;
+  try {
+    u = new URL(urlStr);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+  if (u.username || u.password) return false;                    // no creds in URL
+  if (u.port && u.port !== "80" && u.port !== "443") return false;
+
+  const host = u.hostname.toLowerCase().replace(/\.$/, "");      // strip trailing dot
+  if (!host) return false;
+  if (host === "localhost" || host.endsWith(".localhost")) return false;
+  if (host.endsWith(".local") || host.endsWith(".internal") ||
+      host.endsWith(".lan") || host.endsWith(".home") || host.endsWith(".corp")) return false;
+  if (host === "metadata.google.internal") return false;
+
+  if (ipv4ToOctets(host) && isPrivateIPv4(host)) return false;
+  if (host.includes(":") && isPrivateIPv6(host)) return false;
+
+  return true;
+}
+
 // True if a candidate image URL looks like a real product image (not an
 // SVG/GIF and not matching the bad-keyword blocklist).
 export function isLikelyProductImage(url: string): boolean {

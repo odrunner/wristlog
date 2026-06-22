@@ -23,6 +23,15 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const FROM_EMAIL = "WRotate <hello@wrotate.com>";
+const ADMIN_USER_ID = "d70b1a85-4f31-4431-b3b7-db76543daaf5";
+
+// Constant-time compare for the shared trigger secret.
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
 
 async function hmacSign(uid: string, cat: string, key: string): Promise<string> {
   const enc = new TextEncoder();
@@ -34,9 +43,33 @@ async function hmacSign(uid: string, cat: string, key: string): Promise<string> 
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-Deno.serve(async (_req: Request) => {
+Deno.serve(async (req: Request) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Auth: the daily cron sends a shared secret header (x-campaign-secret); a
+    // manual admin trigger (db.functions.invoke) sends the admin's JWT. An open
+    // trigger can burn Resend quota and email the whole signup cohort on demand.
+    // Enforce only once CAMPAIGN_TRIGGER_SECRET is configured; until then warn and
+    // run, so deploying this can't break the daily cron before the secret is set +
+    // the cron is updated to send the header (then enforcement is automatic).
+    const triggerSecret = Deno.env.get("CAMPAIGN_TRIGGER_SECRET") ?? "";
+    if (triggerSecret) {
+      const providedSecret = req.headers.get("x-campaign-secret") ?? "";
+      let authorized = !!providedSecret && timingSafeEqual(providedSecret, triggerSecret);
+      if (!authorized) {
+        const token = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
+        if (token) {
+          const { data: { user } } = await supabase.auth.getUser(token);
+          if (user?.id === ADMIN_USER_ID) authorized = true;
+        }
+      }
+      if (!authorized) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+      }
+    } else {
+      console.warn("[run-campaign] CAMPAIGN_TRIGGER_SECRET not set — running WITHOUT caller auth (INSECURE). Set the secret + add the x-campaign-secret header to the cron to enable enforcement.");
+    }
 
     // Fetch active campaigns
     const { data: campaigns, error: campErr } = await supabase
@@ -60,6 +93,9 @@ Deno.serve(async (_req: Request) => {
     const internalIds = new Set((internalRows || []).map(r => r.user_id));
 
     const results: Record<string, { sent: number; skipped: number; failed: number }> = {};
+    // Track everyone emailed across all campaigns this run so a user can't receive
+    // two campaigns in one invocation (e.g. two active campaigns sharing delay_days).
+    const emailedThisRun = new Set<string>();
 
     for (const campaign of campaigns) {
       const { id: campaignId, subject, body_html, delay_days, name } = campaign;
@@ -116,13 +152,19 @@ Deno.serve(async (_req: Request) => {
         }
       }
 
+      // Cross-campaign dedup: drop anyone already emailed by an earlier campaign
+      // this run. First active campaign (by fetch order) wins.
+      const toSend = recipients.filter(r => !emailedThisRun.has(r.uid));
+      const crossSkipped = recipients.length - toSend.length;
+      for (const r of toSend) emailedThisRun.add(r.uid);
+
       // Send emails via Resend batch API
       let sent = 0;
       let failed = 0;
       const batchSize = 100;
 
-      for (let i = 0; i < recipients.length; i += batchSize) {
-        const batch = recipients.slice(i, i + batchSize);
+      for (let i = 0; i < toSend.length; i += batchSize) {
+        const batch = toSend.slice(i, i + batchSize);
         const batchPayload = await Promise.all(batch.map(async (r) => {
           const sig = await hmacSign(r.uid, "updates", SUPABASE_SERVICE_ROLE_KEY);
           const url = unsubUrl(SUPABASE_URL, r.uid, sig, "updates");
@@ -175,13 +217,13 @@ Deno.serve(async (_req: Request) => {
           failed += batch.length;
         }
 
-        if (i + batchSize < recipients.length) {
+        if (i + batchSize < toSend.length) {
           await new Promise(resolve => setTimeout(resolve, 200));
         }
       }
 
-      console.log(`[run-campaign] "${name}": sent=${sent} skipped=${skipped} failed=${failed}`);
-      results[name] = { sent, skipped, failed };
+      console.log(`[run-campaign] "${name}": sent=${sent} skipped=${skipped + crossSkipped} failed=${failed}`);
+      results[name] = { sent, skipped: skipped + crossSkipped, failed };
     }
 
     return new Response(JSON.stringify({ results }), { status: 200 });

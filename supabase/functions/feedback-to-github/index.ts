@@ -27,37 +27,40 @@ serve(async (req) => {
       });
     }
 
-    // Webhook verification: confirm record exists in database
+    // Webhook verification: re-read the record from the database and use ITS fields,
+    // not the request body. A POST can forge any body, so trusting body fields let
+    // anyone with a known feedback id inject arbitrary text into an auto-bug issue
+    // (which triggers automated codegen). Pulling the stored row closes that.
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: verifyRecord, error: verifyError } = await supabase
+    const { data: dbRecord, error: verifyError } = await supabase
       .from("feedback")
-      .select("id")
+      .select("id, type, title, details, app_version, browser, created_at, user_id")
       .eq("id", record.id)
       .maybeSingle();
-    if (verifyError || !verifyRecord) {
+    if (verifyError || !dbRecord) {
       console.warn(`[feedback-to-github] Record ${record.id} not found in feedback table — rejecting`);
       return new Response(JSON.stringify({ error: "Record not found" }), { status: 400 });
     }
 
     // Only process bug reports — skip feature requests
-    if (!isBugReport(record)) {
+    if (!isBugReport(dbRecord)) {
       return new Response(
-        JSON.stringify({ skipped: "not a bug report", type: record.type }),
+        JSON.stringify({ skipped: "not a bug report", type: dbRecord.type }),
         { status: 200 }
       );
     }
 
     // Look up username for context (optional, non-blocking)
     let username = "anonymous";
-    if (record.user_id) {
+    if (dbRecord.user_id) {
       try {
         const { data: profile } = await supabase
           .from("profiles")
           .select("username, display_name")
-          .eq("id", record.user_id)
+          .eq("id", dbRecord.user_id)
           .single();
 
         username = resolveUsername(profile);
@@ -66,8 +69,8 @@ serve(async (req) => {
       }
     }
 
-    // Build GitHub Issue
-    const issuePayload = buildIssuePayload(record, username, new Date().toISOString());
+    // Build GitHub Issue (from the trusted DB row, with details sanitized in lib)
+    const issuePayload = buildIssuePayload(dbRecord, username, new Date().toISOString());
 
     // Create GitHub Issue via REST API
     const response = await fetch(

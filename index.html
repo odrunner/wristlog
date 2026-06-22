@@ -6094,7 +6094,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.22.21';
+const APP_VERSION = '22.16.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8611,7 +8611,10 @@ async function acceptFollowRequest(requesterId, notifId) {
   if (demoGuard()) return;
   if (!currentUser) return;
   const { error: followErr } = await db.from('follows').insert({ follower_id: requesterId, following_id: currentUser.id });
-  if (followErr) { toast('Could not accept request', 'error'); return; }
+  // 23505 = follow row already exists (e.g. the sendFollowRequest self-heal created
+  // it while this request was pending). Treat as success so we still clear the
+  // pending request below — otherwise the Accept/Decline buttons stick forever.
+  if (followErr && followErr.code !== '23505') { toast('Could not accept request', 'error'); return; }
   myFollowers.add(requesterId);
   await db.from('follow_requests').delete()
     .eq('requester_id', requesterId).eq('target_id', currentUser.id);

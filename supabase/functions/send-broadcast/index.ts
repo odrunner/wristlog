@@ -270,11 +270,14 @@ serve(async (req) => {
           if (cohort && campaign_id) {
             const now = new Date().toISOString();
             const rows = batch.map(r => ({ campaign_id, user_id: r.uid, sent_at: now }));
+            // upsert (not insert): a single duplicate (campaign_id,user_id) must not
+            // fail the whole 100-row write, which would leave that cohort un-tracked
+            // and re-emailed next run. Mirrors run-campaign's send-tracking.
             const { error: trackErr } = await supabase
               .from("email_campaign_sends")
-              .insert(rows);
+              .upsert(rows, { onConflict: "campaign_id,user_id", ignoreDuplicates: true });
             if (trackErr) {
-              errors.push(`Tracking insert error: ${trackErr.message}`);
+              errors.push(`Tracking upsert error: ${trackErr.message}`);
             }
           }
         }
