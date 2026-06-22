@@ -90,7 +90,7 @@ serve(async (req) => {
     const body = await req.json();
     const { subject, html, test_email, segment = "all", campaign_id, cohort, dry_run, limit } = body;
 
-    const inputError = validateBroadcastInput({ subject, html, cohort, campaign_id });
+    const inputError = validateBroadcastInput({ subject, html, cohort, campaign_id, segment });
     if (inputError) {
       return jsonResponse({ error: inputError }, 400);
     }

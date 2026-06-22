@@ -10,6 +10,7 @@ import {
   filterNeverMeasured,
   filterOptedIn,
   isDormant,
+  isKnownSegment,
   nextBatchSlice,
   parseBatchSuffix,
   sanitizeHtml,
@@ -22,6 +23,28 @@ import {
 } from "./lib.ts";
 
 const DAY = 24 * 60 * 60 * 1000;
+
+// ---- isKnownSegment ----
+Deno.test("isKnownSegment — accepts every recognized form", () => {
+  for (const s of ["all", "", undefined, null, "never_measured", "batch_1", "batch_2", "batch_3", "may_onward", "may_onward_1of2", "may_onward_2of2", "uid:" + "a".repeat(8) + "-aaaa-aaaa-aaaa-" + "a".repeat(12)]) {
+    assertEquals(isKnownSegment(s as string), true, `expected known: ${s}`);
+  }
+});
+
+Deno.test("isKnownSegment — rejects typos / unknown segments", () => {
+  for (const s of ["all_users", "never_measure", "everyone", "may", "june_onward", "batch_4", "uid:not-a-uuid", "may_onward_3of2"]) {
+    assertEquals(isKnownSegment(s), false, `expected unknown: ${s}`);
+  }
+});
+
+Deno.test("validateBroadcastInput — rejects an unknown segment", () => {
+  assertEquals(
+    validateBroadcastInput({ subject: "s", html: "h", segment: "everyone" }),
+    "Unknown segment: everyone",
+  );
+  assertEquals(validateBroadcastInput({ subject: "s", html: "h", segment: "all" }), null);
+  assertEquals(validateBroadcastInput({ subject: "s", html: "h" }), null);
+});
 
 // ---- sanitizeHtml ----
 Deno.test("sanitizeHtml — strips <script> blocks", () => {

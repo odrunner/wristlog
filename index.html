@@ -2388,7 +2388,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div style="min-width:28px;height:28px;border-radius:50%;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;">3</div>
         <div>
           <div style="font-size:.85rem;font-weight:600;color:var(--text);margin-bottom:.15rem;">Tap Measure and hold still</div>
-          <div style="font-size:.78rem;color:var(--muted);line-height:1.5;">Keep the watch steady for 20-45 seconds. The measurement will auto-stop when it has a confident reading.</div>
+          <div style="font-size:.78rem;color:var(--muted);line-height:1.5;">Keep the watch steady — measuring usually takes 30&#8211;60 seconds (up to 90). It auto-stops once it has a confident reading.</div>
         </div>
       </div>
     </div>
@@ -3031,7 +3031,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">3</div>
             <div class="help-step-body">
               <div class="help-step-title">Tap Measure and wait for convergence</div>
-              <div class="help-step-desc">Dots appear on the scatter chart as ticks are detected. A preliminary rate shows within seconds, then refines until it converges (usually 30&#8211;60 seconds). The signal bars in the bottom-left show how strong the signal is.</div>
+              <div class="help-step-desc">Dots appear on the scatter chart as ticks are detected. A preliminary rate shows within seconds, then refines until it converges (usually 30&#8211;60 seconds, up to 90). The signal bars in the bottom-left show how strong the signal is.</div>
             </div>
           </div>
           <div class="help-step">
@@ -6094,7 +6094,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.16.26';
+const APP_VERSION = '22.16.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14719,7 +14719,7 @@ function buildCampaignPreviewHtml(subject, body) {
 }
 
 async function runCampaignNow() {
-  if (!confirm('Run all active campaigns now? This will send emails to eligible users.')) return;
+  if (!await showConfirm('This sends drip-campaign emails to all eligible users now.', { title: 'Run all active campaigns?', confirmLabel: 'Run now' })) return;
   toast('Running campaigns...');
   try {
     const { data, error } = await db.functions.invoke('run-campaign', { body: {} });
@@ -14762,7 +14762,7 @@ async function sendToCohort(id) {
     const sliceNote = limit && willSend < eligible
       ? ` (test slice of ${willSend} from ${eligible} eligible)`
       : '';
-    if (!confirm(`Send "${camp.name}" to ${willSend} ${label} user${willSend === 1 ? '' : 's'}${sliceNote}? This cannot be undone.`)) {
+    if (!await showConfirm(`Send "${camp.name}" to ${willSend} ${label} user${willSend === 1 ? '' : 's'}${sliceNote}? This cannot be undone.`, { title: 'Send broadcast?', confirmLabel: 'Send' })) {
       if (statusEl) statusEl.textContent = 'Cancelled.';
       return;
     }
@@ -24159,7 +24159,7 @@ function stopMsrListen(reason) {
     : (_msrScatterData.length === 0) ? 'no_ticks'
     : 'user_stopped'
   );
-  if (stopReason === 'no_ticks' || stopReason === 'no_ticks_after_recal' || stopReason === 'duration_timeout') {
+  if (stopReason === 'no_ticks' || stopReason === 'no_ticks_after_recal' || stopReason === 'duration_timeout' || stopReason === 'duration_cap') {
     _msrConsecutiveFailures++;
     setTimeout(() => showTroubleshootTips(), 500);
   } else if (stopReason === 'converged') {
@@ -24324,7 +24324,6 @@ function stopMsrListen(reason) {
         completeMsg.textContent = 'Low confidence — retry recommended';
         completeMsg.style.color = 'rgba(234,179,8,.7)';
       }
-      completeMsg.style.color = 'var(--text)';
     }
     // Auto-prompt to share a high-confidence result, at most once per watch.
     // "High confidence" = converged AND a tight error bar (± ≤ 2.0 s/day).

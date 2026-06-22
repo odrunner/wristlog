@@ -6,12 +6,30 @@ import {
   buildUnsubUrl,
   commentQuote,
   DEFAULT_PREFS,
+  effectivePrefs,
   esc,
   isValidRecord,
   resolveActorName,
   shouldFetchCommentBody,
   TYPE_TO_CATEGORY,
 } from "./lib.ts";
+
+Deno.test("effectivePrefs — null/undefined prefs fall back to all defaults", () => {
+  assertEquals(effectivePrefs(null), DEFAULT_PREFS);
+  assertEquals(effectivePrefs(undefined), DEFAULT_PREFS);
+});
+
+Deno.test("effectivePrefs — a prefs object missing a newer key uses that key's default", () => {
+  // user predating the "mentions" key: it must default to true, not be skipped
+  const stored = { comments: false, clubs: true, friends: true };
+  assertEquals(effectivePrefs(stored).mentions, true);
+  assertEquals(effectivePrefs(stored).comments, false); // explicit opt-out preserved
+  assertEquals(effectivePrefs(stored).clubs, true);
+});
+
+Deno.test("effectivePrefs — explicit false on a known key is preserved", () => {
+  assertEquals(effectivePrefs({ friends: false }).friends, false);
+});
 
 Deno.test("TYPE_TO_CATEGORY — maps known types and omits hearts", () => {
   assertEquals(TYPE_TO_CATEGORY["comment"], "comments");

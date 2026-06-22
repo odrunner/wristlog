@@ -74,6 +74,15 @@ serve(async (req) => {
     });
 
     const emailData = await emailRes.json();
+    if (!emailRes.ok) {
+      // Don't report success on a Resend failure — a silently-dropped moderation
+      // alert means a report goes unseen.
+      console.error("[report-notify] Resend error:", emailRes.status, emailData);
+      return new Response(
+        JSON.stringify({ error: "Email send failed", status: emailRes.status, details: emailData }),
+        { status: 502 },
+      );
+    }
     console.log("[report-notify] Email sent:", emailData);
 
     return new Response(JSON.stringify({ sent: true }), { status: 200 });

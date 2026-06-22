@@ -86,10 +86,15 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ message: "No active campaigns" }), { status: 200 });
     }
 
-    // Get internal accounts to exclude
-    const { data: internalRows } = await supabase
+    // Get internal accounts to exclude. Fail safe: if this read errors we can't
+    // exclude internal accounts, so abort rather than risk emailing them.
+    const { data: internalRows, error: internalErr } = await supabase
       .from("internal_accounts")
       .select("user_id");
+    if (internalErr) {
+      console.error("[run-campaign] Failed to fetch internal_accounts — aborting:", internalErr);
+      return new Response(JSON.stringify({ error: internalErr.message }), { status: 500 });
+    }
     const internalIds = new Set((internalRows || []).map(r => r.user_id));
 
     const results: Record<string, { sent: number; skipped: number; failed: number }> = {};
@@ -126,12 +131,18 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      // Check which users already received this campaign
-      const { data: alreadySent } = await supabase
+      // Check which users already received this campaign. Fail safe: an empty list
+      // from a transient error would re-send to everyone, so skip this campaign.
+      const { data: alreadySent, error: sentErr } = await supabase
         .from("email_campaign_sends")
         .select("user_id")
         .eq("campaign_id", campaignId)
         .in("user_id", users.map(u => u.id));
+      if (sentErr) {
+        console.error(`[run-campaign] "${name}": failed to fetch send history — skipping:`, sentErr);
+        results[name] = { sent: 0, skipped: users.length, failed: 0 };
+        continue;
+      }
 
       const split = splitAlreadySent(users, (alreadySent || []).map(r => r.user_id));
       const skipped = split.skipped;

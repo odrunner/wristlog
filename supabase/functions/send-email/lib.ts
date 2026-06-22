@@ -26,6 +26,16 @@ export const DEFAULT_PREFS: Record<string, boolean> = {
   friends: true,
 };
 
+// Merge a user's stored prefs over the defaults. `email_prefs || DEFAULT_PREFS`
+// only fell back when prefs was entirely null — a prefs object predating a newer
+// key (e.g. "mentions") left that key undefined, so the notification was silently
+// skipped instead of using the category default. Per-key merge fixes that.
+export function effectivePrefs(
+  emailPrefs: Record<string, boolean> | null | undefined,
+): Record<string, boolean> {
+  return { ...DEFAULT_PREFS, ...(emailPrefs || {}) };
+}
+
 // True if a webhook record carries the fields required to process it.
 export function isValidRecord(
   record: { user_id?: unknown; type?: unknown } | null | undefined,

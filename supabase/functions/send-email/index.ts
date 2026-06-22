@@ -14,7 +14,7 @@ import {
   buildEmailContent,
   buildHtmlEmail,
   buildUnsubUrl,
-  DEFAULT_PREFS,
+  effectivePrefs,
   isValidRecord,
   resolveActorName,
   shouldFetchCommentBody,
@@ -82,8 +82,9 @@ serve(async (req) => {
       return new Response(JSON.stringify({ skipped: "no profile", error: profileError }), { status: 200 });
     }
 
-    // Check if this category is enabled
-    const prefs = profile.email_prefs || DEFAULT_PREFS;
+    // Check if this category is enabled (per-key merge so a prefs object missing
+    // a newer key falls back to that category's default instead of opting out)
+    const prefs = effectivePrefs(profile.email_prefs);
     if (!prefs[category]) {
       return new Response(JSON.stringify({ skipped: "category disabled", category }), { status: 200 });
     }

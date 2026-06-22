@@ -30,6 +30,22 @@ export function segmentUserId(segment: string): string | null {
   return m ? m[1] : null;
 }
 
+// Whitelist of recognized segments. An unknown/typo'd segment used to fall through
+// batchSegment's pass-through and silently blast EVERY opted-in user, so anything
+// not matched here is rejected by validateBroadcastInput.
+export function isKnownSegment(segment: string | undefined | null): boolean {
+  if (!segment || segment === "all") return true;
+  if (segment === "never_measured") return true;
+  if (segment === "batch_1" || segment === "batch_2" || segment === "batch_3") return true;
+  if (segmentUserId(segment)) return true;                 // uid:<uuid>
+  const hasSuffix = /_\d+of\d+$/.test(segment);
+  const base = segment.replace(/_\d+of\d+$/, "");          // strip optional _NofM
+  if (SEGMENT_DATE_GTE[base]) {                            // date-windowed (± batched)
+    return hasSuffix ? parseBatchSuffix(segment) !== null : true; // reject malformed NofM
+  }
+  return false;
+}
+
 // Strip script/embed/handler attributes + dangerous URI schemes from admin HTML.
 export function sanitizeHtml(html: string): string {
   return html
@@ -47,13 +63,16 @@ export function sanitizeHtml(html: string): string {
 // Validate the broadcast request body. Returns an error string (matching the
 // caller's messages) or null when valid. Mirrors the order of checks in index.ts.
 export function validateBroadcastInput(
-  input: { subject?: unknown; html?: unknown; cohort?: string; campaign_id?: unknown },
+  input: { subject?: unknown; html?: unknown; cohort?: string; campaign_id?: unknown; segment?: string },
 ): string | null {
   if (!input.subject || !input.html) {
     return "subject and html are required";
   }
   if (input.cohort && !COHORTS[input.cohort]) {
     return `Unknown cohort: ${input.cohort}`;
+  }
+  if (input.segment && !isKnownSegment(input.segment)) {
+    return `Unknown segment: ${input.segment}`;
   }
   if (input.cohort && !input.campaign_id) {
     return "campaign_id is required when cohort is set";
