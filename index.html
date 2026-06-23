@@ -5193,6 +5193,28 @@ async function awardBadge(ref) {
   return true;
 }
 
+// Build self-addressed, actor-less bell rows for newly-earned badges (mirror of wrotate_test.js).
+function buildBadgeNotificationRows(badges, userId) {
+  return (badges || []).map(b => ({
+    user_id: userId,
+    type: 'badge_earned',
+    actor_id: null,
+    ref_id: String(b.ref),
+    is_read: false,
+  }));
+}
+
+// Fire-and-forget: insert one bell row per badge, then ONE batched push. Never blocks the UI.
+async function notifyBadgesEarned(badges) {
+  if (!currentUser || !badges || !badges.length) return;
+  try {
+    await db.from('notifications').insert(buildBadgeNotificationRows(badges, currentUser.id));
+  } catch (e) { console.warn('[Badges] notif insert failed:', e?.message); }
+  try {
+    await db.functions.invoke('send-badge-push', { body: { badgeNames: badges.map(b => b.name) } });
+  } catch (e) { console.warn('[Badges] push invoke failed:', e?.message); }
+}
+
 async function checkAndAwardBadges(context, extraData) {
   if (!currentUser) return;
   const newlyEarned = [];
@@ -5384,7 +5406,10 @@ async function checkAndAwardBadges(context, extraData) {
     }
   }
 
-  if (newlyEarned.length > 0) showBadgeToast(newlyEarned);
+  if (newlyEarned.length > 0) {
+    showBadgeToast(newlyEarned);
+    notifyBadgesEarned(newlyEarned);
+  }
 }
 
 function _isFullMoon(date) {
@@ -6094,7 +6119,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.17.57';
+const APP_VERSION = '22.18.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8841,7 +8866,8 @@ function renderNotificationPanel() {
                : n.type === 'club_promoted'        ? `${nm} made you an owner of ${n.club?.name ? escHtml(n.club.name) : 'a club'}`
                : n.type === 'friend_request'       ? (n._accepted || friendships.has(n.actor_id) || friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'accepted') ? `You and ${nm} are now close friends` : n._declined || !friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'pending') ? `Close friend request from ${nm} declined` : `${nm} wants to be close friends`)
                : n.type === 'friend_accepted'      ? `You and ${nm} are now close friends`
-               : n.type === 'system'               ? (n.ref_id ? `Your requested brand "${escHtml(n.ref_id)}" has been added to WRotate!` : 'System notification') : '';
+               : n.type === 'system'               ? (n.ref_id ? `Your requested brand "${escHtml(n.ref_id)}" has been added to WRotate!` : 'System notification')
+               : n.type === 'badge_earned'         ? (BADGE_BY_REF[Number(n.ref_id)]?.name ? `You earned the ${BADGE_BY_REF[Number(n.ref_id)].name} badge 🏅` : 'You earned a new badge 🏅') : '';
     const actionsHtml = (n.type === 'follow_request' && !n._declined && !frAccepted) ? `
       <div class="notif-follow-actions">
         <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
@@ -8879,10 +8905,14 @@ function renderNotificationPanel() {
       ? `toggleNotifPanel();scrollToFeedPost('${n.ref_id}')`
       : (n.type === 'follow_request' || n.type === 'club_join_request' || n.type === 'club_invite' || n.type === 'friend_request' || n.type === 'system') ? ''
       : (n.type === 'club_join_accepted' || n.type === 'club_promoted') ? `toggleNotifPanel();openClubDetail('${n.ref_id}')`
+      : n.type === 'badge_earned' ? `toggleNotifPanel();openBadgeWall()`
       : `viewUserProfile('${n.actor_id}')`;
+    const avatarHtml = n.type === 'badge_earned'
+      ? `<div class="feed-user-avatar" style="width:36px;height:36px;font-size:1.1rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;">🏅</div>`
+      : `<div class="feed-user-avatar" style="width:36px;height:36px;font-size:.76rem;flex-shrink:0;cursor:pointer;" onclick="event.stopPropagation();toggleNotifPanel();viewUserProfile('${n.actor_id}')">${profileInitials(n.actor)}</div>`;
     return `
       <div class="notif-item ${n.is_read ? '' : 'notif-unread'}" id="notif-${n.id}" onclick="${notifClick}">
-        <div class="feed-user-avatar" style="width:36px;height:36px;font-size:.76rem;flex-shrink:0;cursor:pointer;" onclick="event.stopPropagation();toggleNotifPanel();viewUserProfile('${n.actor_id}')">${profileInitials(n.actor)}</div>
+        ${avatarHtml}
         <div style="flex:1;min-width:0;">
           <div class="notif-body">${body}</div>
           ${actionsHtml}

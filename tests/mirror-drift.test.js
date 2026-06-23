@@ -37,7 +37,7 @@ const VERBATIM = [
   'sanitizeImageUrl', 'sanitizeSearch', 'storagePathFrom', 'tgAdvancedSummaryFields',
   'tgLoadSettings', 'tgMapSliderToEngine', 'tgSaveSettings', 'uniqueWears',
   'validateUsername', 'withTimeout', 'resolveTdm', 'resolveSweepKnob', 'parseSweepValues',
-  'extractCleanChunks', 'medianStd',
+  'extractCleanChunks', 'medianStd', 'buildBadgeNotificationRows',
 ];
 
 const ADAPTED = [
