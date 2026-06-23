@@ -97,3 +97,7 @@ Deno.test("stripPemArmor — removes header/footer and whitespace", () => {
 Deno.test("stripPemArmor — bare base64 passes through unchanged", () => {
   assertEquals(stripPemArmor("ABCDEFGH"), "ABCDEFGH");
 });
+
+Deno.test("buildMessage returns null for badge_earned (webhook must not push badges)", () => {
+  assertEquals(buildMessage("badge_earned", "Anyone"), null);
+});

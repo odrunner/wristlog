@@ -48,6 +48,9 @@ export function buildMessage(
       return { title, body: `${actorName} mentioned you` };
     case "comment_like":
       return { title, body: `${actorName} liked your comment` };
+    case "badge_earned":
+      // Badges are pushed by the send-badge-push function (batched), not the insert webhook.
+      return null;
     default:
       return { title, body: `${actorName} sent you a notification` };
   }
