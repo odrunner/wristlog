@@ -93,6 +93,8 @@ ALTER TABLE notifications ADD CONSTRAINT notifications_type_check CHECK (
     'club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted',
     'friend_code_entered', 'friends_now',
     -- legacy values that may exist in existing rows:
-    'friend_invite', 'friend_request', 'friend_accepted'
+    'friend_invite', 'friend_request', 'friend_accepted',
+    'system',  -- for brand additions and other auto-generated notifications
+    'badge_earned'  -- earned achievement badges (self-generated, actor_id null)
   )
 );
