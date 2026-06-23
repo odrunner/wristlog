@@ -56,7 +56,7 @@ describe('BADGE_REGISTRY shape', () => {
   const BADGE_BY_REF = {};
   BADGE_REGISTRY.forEach(b => BADGE_BY_REF[b.ref] = b);
 
-  it('has 24 total badges across all categories', () => {
+  it('has 30 total badges across all categories', () => {
     expect(BADGE_REGISTRY.length).toBe(30);
   });
 
