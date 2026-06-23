@@ -53,7 +53,7 @@ checkAndAwardBadges()  [client, index.html]
        ├─ INSERT N notifications rows  type='badge_earned'   (NEW)
        └─ db.functions.invoke('send-badge-push', {badgeNames}) ── one push  (NEW)
 
-notifications INSERT  → send-push webhook  → EARLY-SKIP type='badge_earned'  (NEW guard)
+notifications INSERT  → send-push webhook  → buildMessage('badge_earned') === null → skipped (NEW one-liner)
                       → send-email webhook  → returns null (not in TYPE_TO_CATEGORY) → no email (no change)
 ```
 
@@ -89,32 +89,37 @@ Inserted as a batch (single `.insert([...])`). `awardBadge()` is unchanged (writ
   unknown, e.g. a registry change).
 - Tap handler for `badge_earned` rows → `openBadgeWall()`.
 
-**4. New edge function `send-badge-push`**
-- Deployed `--no-verify-jwt`; authenticates the caller itself via `supabase.auth.getUser(jwt)` and
-  derives `user_id` from the verified token. A user can therefore only trigger a push **to
-  themselves** — `badgeNames` from the request body is used only for display text, never to choose a
-  recipient.
-- Looks up the caller's `device_tokens` (`platform = 'ios'`) with the service-role client, builds
+**4. New edge function `send-badge-push` (self-contained, own `lib.ts`)**
+- Deployed `--no-verify-jwt`; authenticates the caller via a user-scoped client
+  (`createClient(url, ANON_KEY, { global: { headers: { Authorization: authHeader } } }).auth.getUser()`,
+  the established pattern in `delete-user/index.ts:23-36`) and derives `user_id` from the verified
+  token. A user can therefore only trigger a push **to themselves** — `badgeNames` from the request
+  body is used only for display text, never to choose a recipient.
+- Looks up the caller's `device_tokens` (`platform = 'ios'`) with a service-role client, builds
   **one** message via `buildBadgePushMessage(badgeNames)`, sends via APNs to all the user's devices,
   and cleans up 410-expired tokens (same as `send-push`).
 - Request body: `{ badgeNames: string[] }`. Response mirrors `send-push`
   (`{ sent, failed, cleaned }` / `{ skipped }`).
+- **Self-contained:** the repo has no `_shared` folder and no cross-function imports — every function
+  carries its own `lib.ts`. `send-badge-push` follows suit: its own `lib.ts` holds
+  `buildBadgePushMessage` plus its own copies of the small, stable APNs helpers
+  (`createAPNsJWT`, `sendPush`, `buildAlertPayload`, `apnsHost`, `apnsDeviceUrl`, base64url + PEM
+  utils). This duplicates ~70 lines of APNs code shared with `send-push`. **Accepted tradeoff:** it
+  keeps the proven `send-push` function untouched (no risky refactor/redeploy), matches the codebase
+  convention, and APNs signing is stable. A future cleanup could introduce `_shared/apns.ts`; out of
+  scope here.
 
-**5. Shared APNs internals**
-- Extract `createAPNsJWT` and `sendPush` (currently private in `send-push/index.ts`) into
-  `send-push/lib.ts`, and import them in both `send-push` and `send-badge-push`. Avoids duplicating
-  the APNs signing/delivery code.
-
-**6. `buildBadgePushMessage(badgeNames: string[])` — pure function in `send-push/lib.ts`**
+**5. `buildBadgePushMessage(badgeNames: string[])` — pure function in `send-badge-push/lib.ts`**
 - `[]` → `null` (caller skips — defensive; should not happen).
 - 1 name → `{ title: 'WRotate', body: 'You earned the "First Watch" badge 🏅' }`
 - ≥2 names → `{ title: 'WRotate', body: 'You earned 3 badges! 🏅' }`
-- Unit-testable in isolation.
+- Unit-testable in isolation (deno test).
 
-**7. Webhook guard (`send-push/index.ts`)**
-- Immediately after extracting `type`, add: `if (type === 'badge_earned') return 200 {skipped:'badge_earned'}`.
-  Ensures the N per-badge bell inserts never each fire a push; push is exclusively the explicit
-  client call.
+**6. Webhook stays out via `buildMessage` (`send-push/lib.ts`)**
+- Add `case 'badge_earned': return null;` to `buildMessage`. `send-push/index.ts` already does
+  `if (!message) return { skipped }` (index.ts:166-170), so badge rows produce **no** push from the
+  insert webhook — with no change to `send-push/index.ts` and a unit-testable one-liner. Push is
+  exclusively the explicit `send-badge-push` client call.
 
 **8. `send-email`** — no code change required (`badge_earned` is absent from `TYPE_TO_CATEGORY`, so
   `buildEmailContent` returns null and no email is sent). Add a one-line comment noting badges are
@@ -144,8 +149,10 @@ Inserted as a batch (single `.insert([...])`). `awardBadge()` is unchanged (writ
 
 ## Testing
 
-- **Unit:** `buildBadgePushMessage()` — empty/singular/plural, and quoting/escaping of badge names;
-  webhook early-skip of `badge_earned`; bell-row object construction (shape + ref serialization).
+- **Unit (deno):** `buildBadgePushMessage()` — empty/singular/plural, quoting of badge names;
+  `buildMessage('badge_earned')` returns `null`.
+- **Unit (vitest):** `notificationBody('badge_earned', …)` text; `buildBadgeNotificationRows()` shape
+  (`user_id`/`type`/`actor_id: null`/`ref_id` string/`is_read`); `notificationOpensBadgeWall()`.
 - **E2E (mocked):** earning a badge inserts a `badge_earned` bell row and renders
   "You earned the … badge 🏅"; tapping it opens the badge wall.
 - **Smoke (after deploy):** invoke `send-badge-push` for the test user → expect 200 with
@@ -159,14 +166,15 @@ Inserted as a batch (single `.insert([...])`). `awardBadge()` is unchanged (writ
 
 | File | Change |
 |---|---|
-| `index.html` | Bell inserts + push invoke in `checkAndAwardBadges`; `badge_earned` render + tap in `renderNotificationPanel`; SW cache bump in `sw.js` |
+| `index.html` | Bell inserts + push invoke in `checkAndAwardBadges`; `badge_earned` render + tap in `renderNotificationPanel` |
 | `sw.js` | Cache version bump |
-| `supabase/functions/send-push/lib.ts` | Add `buildBadgePushMessage`; receive extracted `createAPNsJWT`/`sendPush` |
-| `supabase/functions/send-push/index.ts` | Early-skip `badge_earned`; move JWT/sendPush to lib |
-| `supabase/functions/send-badge-push/index.ts` | New function |
+| `wrotate_test.js` | Mirror helpers: `badge_earned` in `notificationBody`, `buildBadgeNotificationRows`, `notificationOpensBadgeWall` |
+| `supabase/functions/send-push/lib.ts` | Add `case 'badge_earned': return null;` to `buildMessage` (one line) |
+| `supabase/functions/send-badge-push/index.ts` | New function (caller-auth, token lookup, send, 410 cleanup) |
+| `supabase/functions/send-badge-push/lib.ts` | New: `buildBadgePushMessage` + own copies of APNs helpers |
 | `supabase/functions/send-email/lib.ts` | Comment noting badges intentionally excluded |
 | `sql/friends_migration.sql` (defines `notifications_type_check`) | Add `badge_earned`; apply to remote via `db query --linked` |
-| Tests | Unit + mocked E2E + smoke additions |
+| Tests | `send-push/lib.test.ts`, `send-badge-push/lib.test.ts` (deno); `tests/notifications.test.js` (vitest); mocked E2E; smoke |
 
 ## Follow-ups (out of scope, track separately)
 
