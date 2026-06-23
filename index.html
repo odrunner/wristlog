@@ -6193,7 +6193,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.21.31';
+const APP_VERSION = '23.12.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18148,20 +18148,20 @@ function blobToResizedBase64ForIdentify(blob) {
   });
 }
 
-// Resize a blob to ≤800 px wide/tall and return a JPEG Blob (not base64)
+// Resize a blob to ≤1280 px wide/tall and return a JPEG Blob (not base64)
 function blobToResizedBlob(blob) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const objUrl = URL.createObjectURL(blob);
     img.onload = () => {
       URL.revokeObjectURL(objUrl);
-      const MAX = 800;
+      const MAX = 1280;
       const scale = Math.min(1, MAX / Math.max(img.width || MAX, img.height || MAX));
       const canvas = document.createElement('canvas');
       canvas.width  = Math.round((img.width  || MAX) * scale);
       canvas.height = Math.round((img.height || MAX) * scale);
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/jpeg', 0.82);
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/jpeg', 0.85);
     };
     img.onerror = () => reject(new Error('image decode failed'));
     img.src = objUrl;
