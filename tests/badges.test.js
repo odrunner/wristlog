@@ -40,6 +40,12 @@ describe('BADGE_REGISTRY shape', () => {
     { ref: 63, slug: 'caught_a_drifter', name: 'Caught a Drifter', category: 'timegrapher', isHidden: false },
     { ref: 80, slug: 'seven_day_streak', name: 'Seven-Day Streak', category: 'habit', isHidden: false },
     { ref: 81, slug: 'thirty_day_streak', name: 'Thirty-Day Streak', category: 'habit', isHidden: false },
+    { ref: 83, slug: 'five_day_streak', name: 'Five-Day Streak', category: 'habit', isHidden: false },
+    { ref: 84, slug: 'ten_day_streak', name: 'Ten-Day Streak', category: 'habit', isHidden: false },
+    { ref: 85, slug: 'twenty_day_streak', name: 'Twenty-Day Streak', category: 'habit', isHidden: false },
+    { ref: 86, slug: 'fifty_day_streak', name: 'Fifty-Day Streak', category: 'habit', isHidden: false },
+    { ref: 87, slug: 'hundred_day_streak', name: 'Hundred-Day Streak', category: 'habit', isHidden: false },
+    { ref: 88, slug: 'year_streak', name: 'Year-Long Streak', category: 'habit', isHidden: false },
     { ref: 82, slug: 'balanced_quarter', name: 'Balanced Quarter', category: 'habit', isHidden: false },
     { ref: 100, slug: 'high_noon', name: 'High Noon', category: 'hidden', isHidden: true },
     { ref: 101, slug: 'full_moon', name: 'Full Moon', category: 'hidden', isHidden: true },
@@ -51,7 +57,7 @@ describe('BADGE_REGISTRY shape', () => {
   BADGE_REGISTRY.forEach(b => BADGE_BY_REF[b.ref] = b);
 
   it('has 24 total badges across all categories', () => {
-    expect(BADGE_REGISTRY.length).toBe(24);
+    expect(BADGE_REGISTRY.length).toBe(30);
   });
 
   it('every badge has required fields', () => {

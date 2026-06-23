@@ -4978,6 +4978,36 @@ const BADGE_REGISTRY = [
     unlock: 'Log a wear entry on 30 consecutive days.',
     glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="36" font-family="Georgia,serif" font-style="italic">30</text>',
     isHidden: false },
+  { ref: 83, slug: 'five_day_streak', name: 'Five-Day Streak', category: 'habit',
+    flavor: 'Five days running. The habit takes hold.',
+    unlock: 'Activity on 5 consecutive days.',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="40" font-family="Georgia,serif" font-style="italic">5</text>',
+    isHidden: false },
+  { ref: 84, slug: 'ten_day_streak', name: 'Ten-Day Streak', category: 'habit',
+    flavor: 'Ten in a row. Momentum.',
+    unlock: 'Activity on 10 consecutive days.',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="36" font-family="Georgia,serif" font-style="italic">10</text>',
+    isHidden: false },
+  { ref: 85, slug: 'twenty_day_streak', name: 'Twenty-Day Streak', category: 'habit',
+    flavor: 'Twenty straight. Dedication shows.',
+    unlock: 'Activity on 20 consecutive days.',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="36" font-family="Georgia,serif" font-style="italic">20</text>',
+    isHidden: false },
+  { ref: 86, slug: 'fifty_day_streak', name: 'Fifty-Day Streak', category: 'habit',
+    flavor: 'Fifty days. Unbroken.',
+    unlock: 'Activity on 50 consecutive days.',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="36" font-family="Georgia,serif" font-style="italic">50</text>',
+    isHidden: false },
+  { ref: 87, slug: 'hundred_day_streak', name: 'Hundred-Day Streak', category: 'habit',
+    flavor: 'One hundred days. Remarkable.',
+    unlock: 'Activity on 100 consecutive days.',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="30" font-family="Georgia,serif" font-style="italic">100</text>',
+    isHidden: false },
+  { ref: 88, slug: 'year_streak', name: 'Year-Long Streak', category: 'habit',
+    flavor: 'A full year, every day. Legendary.',
+    unlock: 'Activity on 365 consecutive days.',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="28" font-family="Georgia,serif" font-style="italic">365</text>',
+    isHidden: false },
   { ref: 82, slug: 'balanced_quarter', name: 'Balanced Quarter', category: 'habit',
     flavor: 'No single watch dominates. True rotation.',
     unlock: 'Over 90 days, no watch exceeds 40% of wear days, with 4+ watches worn.',
@@ -5373,7 +5403,8 @@ async function checkAndAwardBadges(context, extraData) {
   // Habit badges
   if (context === 'wear' || context === 'retroactive') {
     const sortedDates = [...new Set(logs.map(l => l.date))].sort();
-    if (!alreadyEarned(80) || !alreadyEarned(81)) {
+    const STREAK_BADGES = [[83,5],[80,7],[84,10],[85,20],[81,30],[86,50],[87,100],[88,365]];
+    if (STREAK_BADGES.some(([ref]) => !alreadyEarned(ref))) {
       let maxStreak = 1, curStreak = 1;
       for (let i = 1; i < sortedDates.length; i++) {
         const prev = new Date(sortedDates[i - 1]);
@@ -5382,8 +5413,9 @@ async function checkAndAwardBadges(context, extraData) {
         if (diff === 1) { curStreak++; maxStreak = Math.max(maxStreak, curStreak); }
         else if (diff > 1) curStreak = 1;
       }
-      if (!alreadyEarned(80) && maxStreak >= 7) { if (await awardBadge(80)) newlyEarned.push(BADGE_BY_REF[80]); }
-      if (!alreadyEarned(81) && maxStreak >= 30) { if (await awardBadge(81)) newlyEarned.push(BADGE_BY_REF[81]); }
+      for (const [ref, days] of STREAK_BADGES) {
+        if (!alreadyEarned(ref) && maxStreak >= days) { if (await awardBadge(ref)) newlyEarned.push(BADGE_BY_REF[ref]); }
+      }
     }
 
     if (!alreadyEarned(82)) {
@@ -6142,7 +6174,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.21.20';
+const APP_VERSION = '22.21.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
