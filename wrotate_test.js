@@ -20,24 +20,6 @@ export function fmtMonYear(d) {
   return dt.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
-export function addDaysStr(dateStr, delta) {
-  const d = new Date(dateStr + 'T12:00:00'); // noon-anchored to avoid DST/midnight drift
-  d.setDate(d.getDate() + delta);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-export function computeCurrentStreak(logs, today) {
-  const dates = [...new Set((logs || []).map(l => l.date).filter(Boolean))].sort();
-  if (dates.length === 0) return { count: 0, status: 'none' };
-  const latest = dates[dates.length - 1];
-  const yesterday = addDaysStr(today, -1);
-  if (latest !== today && latest !== yesterday) return { count: 0, status: 'none' };
-  const present = new Set(dates);
-  let count = 1, cursor = latest;
-  while (present.has(addDaysStr(cursor, -1))) { count++; cursor = addDaysStr(cursor, -1); }
-  return { count, status: latest === today ? 'active' : 'at_risk' };
-}
-
 export function fmtMoney(n) {
   return n ? '$' + Number(n).toLocaleString() : '—';
 }

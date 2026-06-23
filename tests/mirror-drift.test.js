@@ -28,8 +28,8 @@ const idx = readFileSync(join(root, 'index.html'), 'utf8');
 const tst = readFileSync(join(root, 'wrotate_test.js'), 'utf8');
 
 const VERBATIM = [
-  'TG_ALG_VERSION', 'TG_PRESETS', 'addDaysStr', 'autoSuggestTags', 'buildGameQueue',
-  'canDeleteComment', 'classifyDevice', 'computeCurrentStreak', 'computeMedianRate', 'eloExpected',
+  'TG_ALG_VERSION', 'TG_PRESETS', 'autoSuggestTags', 'buildGameQueue',
+  'canDeleteComment', 'classifyDevice', 'computeMedianRate', 'eloExpected',
   'escAttr', 'escHtml', 'fmtDate', 'fmtMonYear', 'guessOEMStrap', 'imgSnippet',
   'inlineImages', 'isVideoUrl', 'marketPriceRowHTML', 'matchIdentifiedToCollection',
   'msrCardHasEnoughData', 'msrCardResultText', 'normalizeLocation', 'parsePhotoUrl', '_q2Ls',
