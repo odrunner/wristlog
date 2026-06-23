@@ -8,6 +8,8 @@ import {
   notificationRequiresRefId,
   formatBadgeCount,
   buildCommentAlsoTargets,
+  buildBadgeNotificationRows,
+  notificationOpensBadgeWall,
 } from '../wrotate_test.js';
 
 // ── notificationBody ──────────────────────────────────────────────────────────
@@ -553,5 +555,33 @@ describe('comment draft save/restore pattern', () => {
     });
     // Whitespace is truthy, so it gets saved (user may be typing)
     expect(drafts['comment-input-1']).toBe('   ');
+  });
+});
+
+describe('badge_earned notifications', () => {
+  it('renders the badge name in the body', () => {
+    expect(notificationBody('badge_earned', null, { badgeName: 'First Watch' }))
+      .toBe('You earned the First Watch badge 🏅');
+  });
+
+  it('falls back when the badge name is unknown', () => {
+    expect(notificationBody('badge_earned', null, {}))
+      .toBe('You earned a new badge 🏅');
+  });
+
+  it('builds one self-addressed, actor-less row per badge', () => {
+    const rows = buildBadgeNotificationRows(
+      [{ ref: 1, name: 'First Watch' }, { ref: 20, name: 'Five in the Box' }],
+      'user-123',
+    );
+    expect(rows).toEqual([
+      { user_id: 'user-123', type: 'badge_earned', actor_id: null, ref_id: '1', is_read: false },
+      { user_id: 'user-123', type: 'badge_earned', actor_id: null, ref_id: '20', is_read: false },
+    ]);
+  });
+
+  it('routes badge taps to the badge wall, not posts/clubs/profiles', () => {
+    expect(notificationOpensBadgeWall('badge_earned')).toBe(true);
+    expect(notificationOpensBadgeWall('follow')).toBe(false);
   });
 });

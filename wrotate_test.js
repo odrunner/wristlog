@@ -1011,7 +1011,7 @@ export function renderCommentBody(body, onClickFn = 'viewUserByUsername') {
  * Returns the human-readable body text for a notification.
  * actorName is the display_name or username of the actor.
  */
-export function notificationBody(type, actorName) {
+export function notificationBody(type, actorName, opts = {}) {
   const nm = actorName || 'Someone';
   switch (type) {
     case 'follow_request':     return `${nm} wants to follow you`;
@@ -1028,6 +1028,10 @@ export function notificationBody(type, actorName) {
     case 'club_promoted':        return `${nm} made you an owner of a club`;
     case 'friend_request':       return `${nm} wants to be close friends`;
     case 'friend_accepted':      return `You and ${nm} are now close friends`;
+    case 'badge_earned':
+      return opts.badgeName
+        ? `You earned the ${opts.badgeName} badge 🏅`
+        : 'You earned a new badge 🏅';
     default:                     return '';
   }
 }
@@ -1062,6 +1066,28 @@ export function notificationOpensClub(type) {
 export function notificationOpensProfile(type) {
   return type === 'follow' || type === 'follow_accepted'
       || type === 'friend_accepted';
+}
+
+/**
+ * Returns true for types that tap-navigate to the badge wall.
+ */
+export function notificationOpensBadgeWall(type) {
+  return type === 'badge_earned';
+}
+
+/**
+ * Build the bell-inbox rows for a set of newly-earned badges.
+ * Self-addressed (recipient = earner) and actor-less, like 'system'.
+ * badges: [{ ref, name }]. ref_id is the badge ref as a string.
+ */
+export function buildBadgeNotificationRows(badges, userId) {
+  return (badges || []).map(b => ({
+    user_id: userId,
+    type: 'badge_earned',
+    actor_id: null,
+    ref_id: String(b.ref),
+    is_read: false,
+  }));
 }
 
 /**
