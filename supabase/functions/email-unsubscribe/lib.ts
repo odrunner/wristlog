@@ -28,10 +28,19 @@ export async function hmacSign(uid: string, cat: string, key: string): Promise<s
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-/** Constant-input comparison of a provided signature against the expected one. */
+/** Constant-time string compare — avoids leaking the expected signature via the
+ *  early-exit timing of `===` (which a forger could exploit byte-by-byte). */
+export function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/** Verify a provided signature against the expected one in constant time. */
 export async function verifyHmac(uid: string, cat: string, sig: string, key: string): Promise<boolean> {
   const expected = await hmacSign(uid, cat, key);
-  return sig === expected;
+  return timingSafeEqual(sig, expected);
 }
 
 export type EmailPrefs = Record<string, boolean>;

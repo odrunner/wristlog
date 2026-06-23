@@ -63,56 +63,30 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // ── Rate limiting: 100 requests per rolling 1-hour window ──
+  // ── Rate limiting: 100 requests per rolling 1-hour window (atomic via RPC) ──
+  // The prior read-then-update let concurrent requests slip past the cap.
   const RATE_LIMIT = 100;
   const WINDOW_MS = 60 * 60 * 1000;
   const now = new Date();
-  const windowStart = new Date(now.getTime() - WINDOW_MS);
+  const windowFloor = new Date(now.getTime() - WINDOW_MS);
 
   try {
-    const { data: rl } = await supabase
-      .from("rate_limits")
-      .select("window_start, request_count")
-      .eq("user_id", user.id)
-      .eq("function_name", "identify-watch")
-      .single();
-
-    if (rl) {
-      const rlWindowStart = new Date(rl.window_start);
-      if (rlWindowStart > windowStart) {
-        if (rl.request_count >= RATE_LIMIT) {
-          const resetTime = new Date(rlWindowStart.getTime() + WINDOW_MS);
-          return new Response(
-            JSON.stringify({ error: "Rate limit exceeded. Try again later." }),
-            {
-              status: 429,
-              headers: {
-                ...CORS_HEADERS,
-                "Content-Type": "application/json",
-                "Retry-After": String(Math.ceil((resetTime.getTime() - now.getTime()) / 1000)),
-              },
-            }
-          );
+    const { data: rlCount } = await supabase.rpc("bump_rate_limit", {
+      p_user: user.id, p_fn: "identify-watch",
+      p_window_floor: windowFloor.toISOString(), p_now: now.toISOString(),
+    });
+    if (typeof rlCount === "number" && rlCount > RATE_LIMIT) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Try again later." }),
+        {
+          status: 429,
+          headers: {
+            ...CORS_HEADERS,
+            "Content-Type": "application/json",
+            "Retry-After": String(Math.ceil(WINDOW_MS / 1000)),
+          },
         }
-        await supabase
-          .from("rate_limits")
-          .update({ request_count: rl.request_count + 1 })
-          .eq("user_id", user.id)
-          .eq("function_name", "identify-watch");
-      } else {
-        await supabase
-          .from("rate_limits")
-          .update({ window_start: now.toISOString(), request_count: 1 })
-          .eq("user_id", user.id)
-          .eq("function_name", "identify-watch");
-      }
-    } else {
-      await supabase.from("rate_limits").insert({
-        user_id: user.id,
-        function_name: "identify-watch",
-        window_start: now.toISOString(),
-        request_count: 1,
-      });
+      );
     }
   } catch (rlErr) {
     console.error("[identify-watch] Rate limit check error:", rlErr);

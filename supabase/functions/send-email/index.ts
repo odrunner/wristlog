@@ -43,22 +43,23 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Invalid payload" }), { status: 400 });
     }
 
-    const { user_id, type, actor_id } = record;
-
-    // Webhook verification: confirm record exists in database
+    // Webhook verification: re-read the row and use ITS fields, not the request
+    // body. A forged POST with a known notification id could otherwise email an
+    // arbitrary user about an arbitrary actor/type.
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: verifyRecord, error: verifyError } = await supabase
+    const { data: dbRecord, error: verifyError } = await supabase
       .from("notifications")
-      .select("id")
+      .select("id, user_id, type, actor_id, ref_id")
       .eq("id", record.id)
       .maybeSingle();
-    if (verifyError || !verifyRecord) {
+    if (verifyError || !dbRecord) {
       console.warn(`[send-email] Record ${record.id} not found in notifications table — rejecting`);
       return new Response(JSON.stringify({ error: "Record not found" }), { status: 400 });
     }
+    const { user_id, type, actor_id } = dbRecord;
 
     // Don't send email for self-notifications
     if (user_id === actor_id) {
@@ -112,11 +113,11 @@ serve(async (req) => {
 
     // For comment/mention types, look up the actual comment text
     let commentBody: string | undefined;
-    if (shouldFetchCommentBody(type, record.ref_id, actor_id)) {
+    if (shouldFetchCommentBody(type, dbRecord.ref_id, actor_id)) {
       const { data: commentRow } = await supabase
         .from("comments")
         .select("body")
-        .eq("log_id", record.ref_id)
+        .eq("log_id", dbRecord.ref_id)
         .eq("user_id", actor_id)
         .order("created_at", { ascending: false })
         .limit(1)

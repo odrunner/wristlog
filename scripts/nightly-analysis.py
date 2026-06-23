@@ -536,10 +536,10 @@ def main():
             headers=hdrs
         )
         if isinstance(page, dict):
-            if not rows:
-                print(f"Query error: {page}")
-                sys.exit(1)
-            break
+            # Fail loud on ANY error page — a mid-pagination error on page 2+ must not
+            # silently truncate to a partial set reported as complete (undercounting).
+            print(f"Query error at offset {offset}: {page}", file=sys.stderr)
+            sys.exit(1)
         rows.extend(page)
         if len(page) < PAGE_SIZE:
             break

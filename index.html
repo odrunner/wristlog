@@ -6193,7 +6193,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.12.30';
+const APP_VERSION = '23.16.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22782,8 +22782,9 @@ window._tgNativeCallback = function(data) {
           const canConverge = _msrScatterData.length >= minDots;
           if (elapsed >= minElapsed && _msrBucketRateHistory.length >= 8 && canConverge) {
             const vals = _msrBucketRateHistory.map(x => x.v);
-            const ppsConv = activeBph / 7200;
-            const convSpread = (86400 / activeBph) * ppsConv; // one quantization step (BPH-scaled)
+            // One quantization step in s/day. Despite the old "BPH-scaled" framing this
+            // is a constant: (86400/bph)*(bph/7200) = 86400/7200 = 12 for all BPH.
+            const convSpread = 12;
             // Trimmed range: drop single highest and lowest to resist one outlier sample
             const sorted = [...vals].sort((a, b) => a - b);
             const trimmed = sorted.length >= 4 ? sorted.slice(1, -1) : sorted;

@@ -56,10 +56,11 @@ def fetch_paginated(path, hdrs):
     rows, offset = [], 0
     while True:
         page = curl_json(f"{BASE_URL}{path}", headers=hdrs + [f"Range: {offset}-{offset+PAGE-1}"])
-        if isinstance(page, dict):           # error object
-            if not rows:
-                print(f"Query error on {path}: {page}")
-            break
+        if isinstance(page, dict):           # error object — fail loud, never return a
+            # silently-truncated partial set. A mid-pagination error on page 2+ used to
+            # just break and report partial data as complete (undercounting). Raising
+            # surfaces it (the script emails its traceback on uncaught failure).
+            raise RuntimeError(f"Query error on {path} at offset {offset}: {page}")
         rows.extend(page)
         if len(page) < PAGE:
             break
