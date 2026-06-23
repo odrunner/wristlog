@@ -3,6 +3,7 @@
 
 // Notification type → email category for preference lookup
 // like / comment_like are intentionally excluded — no email for hearts
+// NOTE: badge_earned is intentionally excluded — badges go to the bell + push only, never email.
 export const TYPE_TO_CATEGORY: Record<string, string> = {
   follow: "friends",
   follow_accepted: "friends",

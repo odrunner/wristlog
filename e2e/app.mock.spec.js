@@ -1855,3 +1855,61 @@ test.describe('Comment deletion (mocked)', () => {
     await expect(card.locator('.comment-item')).toHaveCount(0);
   });
 });
+
+// ── Badge_earned bell notification (mocked) ─────────────────────────────────
+// Covers: bell panel shows the badge name for a badge_earned notification,
+// and tapping the row opens the badge wall modal.
+// actor_id is null for badge notifications (self-issued); no actor profile needed.
+test.describe('Badge earned notification (mocked)', () => {
+  const BADGE_NOTIF = {
+    id: 'bn-1',
+    user_id: FAKE_USER.id,
+    type: 'badge_earned',
+    actor_id: null,
+    ref_id: '1',          // ref 1 = "First Watch" in BADGE_REGISTRY
+    is_read: false,
+    created_at: '2026-06-22T08:00:00Z',
+  };
+
+  test.beforeEach(async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    // Seed the badge_earned notification (registered after mockSupabase so
+    // Playwright matches this more-specific handler first, per existing pattern).
+    await page.route('**/rest/v1/notifications*', (route) => {
+      if (route.request().method() === 'GET') {
+        return route.fulfill({
+          status: 200, contentType: 'application/json',
+          body: JSON.stringify([BADGE_NOTIF]),
+        });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    });
+    // Stub earned_badges so openBadgeWall() has data to render.
+    await page.route('**/rest/v1/earned_badges*', (route) => {
+      if (route.request().method() === 'GET') {
+        return route.fulfill({
+          status: 200, contentType: 'application/json',
+          body: JSON.stringify([{ badge_ref: 1, earned_at: '2026-06-22T08:00:00Z', seen: false }]),
+        });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    });
+    await page.goto('/');
+    await waitForAppBoot(page);
+  });
+
+  test('bell panel shows "You earned the First Watch badge" for a badge_earned notification', async ({ page }) => {
+    await page.locator('#bell-btn').click();
+    const list = page.locator('#notif-list');
+    await expect(list).toContainText('You earned the First Watch badge', { timeout: 5000 });
+  });
+
+  test('tapping the badge_earned row opens the badge wall', async ({ page }) => {
+    await page.locator('#bell-btn').click();
+    await expect(page.locator('#notif-list')).toContainText('First Watch', { timeout: 5000 });
+    // Click the notification row — onclick calls toggleNotifPanel();openBadgeWall()
+    await page.locator('#notif-bn-1').click();
+    await expect(page.locator('#badge-wall-modal')).toBeVisible({ timeout: 5000 });
+  });
+});
