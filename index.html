@@ -5519,7 +5519,7 @@ function badgeWallProfileSection() {
   const sk = computeStreaks(logs, todayStr());
   const streakHeader = sk.status === 'none'
     ? `<div class="streak-line">Start a streak${sk.best >= 2 ? ` <span class="streak-best">· best ${sk.best}</span>` : ''}</div>`
-    : `<div class="streak-line${sk.status === 'at_risk' ? ' streak-at-risk' : ''}">`
+    : `<div class="streak-line">`
       + `<span class="streak-flame${sk.status === 'at_risk' ? ' streak-flame-dim' : ''}">🔥</span> `
       + `<span class="streak-count">${sk.current}-day streak</span>`
       + (sk.status === 'at_risk' ? ` <span class="streak-cue">· keep it going</span>` : '')
@@ -6191,7 +6191,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.21.27';
+const APP_VERSION = '22.21.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
