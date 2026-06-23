@@ -5252,13 +5252,13 @@ function renderStreakChip(streak, variant) {
                        : `<span class="streak-flame">🔥</span>`;
   if (variant === 'profile') {
     const sub = atRisk ? `<span class="streak-cue">keep it going</span>` : 'Day streak';
-    return `<div class="profile-stat streak-stat${atRisk ? ' streak-at-risk' : ''}">`
+    return `<div class="profile-stat streak-stat">`
          + `<div class="profile-stat-value">${flame} ${streak.count}</div>`
          + `<div class="profile-stat-label">${sub}</div></div>`;
   }
   // feed variant
   const cue = atRisk ? ` <span class="streak-cue">· keep it going</span>` : '';
-  return `<div class="streak-chip${atRisk ? ' streak-at-risk' : ''}">${flame} `
+  return `<div class="streak-chip">${flame} `
        + `<span class="streak-count">${streak.count}</span>${cue}</div>`;
 }
 
@@ -6174,7 +6174,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.19.56';
+const APP_VERSION = '22.20.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
