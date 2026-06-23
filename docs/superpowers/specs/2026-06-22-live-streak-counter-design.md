@@ -20,7 +20,7 @@ Show the user their **current activity streak** as a live "🔥 N" counter on tw
 | What counts as a day | **Any** log entry that day (all `use_case`s — wear **and** measurement; it's app activity, not strictly wearing). Matches the existing badge streak — **no badge change**. |
 | Dates | The browser's **local** date (matches how `logs[].date` is stored — `'YYYY-MM-DD'` local, via `todayStr()`). |
 | Surfaces | (1) Own profile stats row; (2) top of the feed page (the landing). Own-only/private. |
-| States | Hidden at 0; solid 🔥 when logged today (`active`); dimmed flame + "· log today" when alive-but-not-logged-today (`at_risk`). |
+| States | Hidden at 0; solid 🔥 when logged today (`active`); dimmed flame + "· keep it going" when alive-but-no-activity-today (`at_risk`). |
 
 ## Non-Goals
 
@@ -70,7 +70,7 @@ function computeCurrentStreak(logs, today) {
 Returns an HTML string for a given `{count, status}`:
 - `status === 'none'` → `''` (renders nothing).
 - `status === 'active'` → solid flame + `count`.
-- `status === 'at_risk'` → dimmed/outline flame + `count` + a subtle "· log today" cue.
+- `status === 'at_risk'` → dimmed/outline flame + `count` + a subtle "· keep it going" cue.
 - `variant` selects markup/CSS class for the surface: `'profile'` (a `profile-stat` cell with a "Day streak" label) vs `'feed'` (a compact centered chip).
 
 Production-only (DOM/markup), in `index.html`. A pure sub-part (e.g. the label/aria text) may be unit-tested if it carries logic; otherwise this is exercised via the surfaces.
