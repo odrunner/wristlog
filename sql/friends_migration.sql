@@ -89,7 +89,7 @@ ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
 ALTER TABLE notifications ADD CONSTRAINT notifications_type_check CHECK (
   type IN (
     'follow', 'follow_request', 'follow_accepted',
-    'like', 'comment', 'comment_also', 'mention',
+    'like', 'comment', 'comment_also', 'comment_like', 'mention',
     'club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted',
     'friend_code_entered', 'friends_now',
     -- legacy values that may exist in existing rows:
