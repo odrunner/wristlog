@@ -69,7 +69,7 @@ function computeStreaks(logs, today) {
 In `badgeWallProfileSection()` (`index.html:5439`, own-profile only), prepend a streak header built from `computeStreaks(logs, todayStr())`:
 - `status === 'active'` → `🔥 {current}-day streak` + `· best {best}` (when `best > current`).
 - `status === 'at_risk'` → dimmed flame + `🔥 {current}-day streak · keep it going` (+ best).
-- `status === 'none'` (current 0): `Start a streak — log today` (show `best {best}` if `best ≥ 2`). Keeps the section honest without a punishing "0".
+- `status === 'none'` (current 0): `Start a streak` (action-agnostic — any activity counts, not just logging; show `best {best}` if `best ≥ 2`). Keeps the section honest without a punishing "0".
 
 Production-only markup in `index.html`; correctness of which branch shows is driven by the unit-tested `computeStreaks`.
 
