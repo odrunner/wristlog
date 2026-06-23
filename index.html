@@ -1990,6 +1990,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .profile-stat-btn    { cursor: pointer; border-radius: 8px; padding: .25rem .4rem; margin: -.25rem -.4rem; transition: background .15s; }
     .profile-stat-btn:hover { background: var(--surface2); }
     .profile-stat-btn:hover .profile-stat-value { color: var(--gold); }
+    .streak-chip-wrap { display: flex; justify-content: center; margin: 0 auto .6rem; max-width: 470px; }
+    .streak-chip { display: inline-flex; align-items: center; gap: .3rem; font-size: .85rem; font-weight: 600;
+      color: var(--text); background: var(--surface); border: 1px solid var(--border);
+      border-radius: 999px; padding: .25rem .7rem; }
+    .streak-chip .streak-count { font-variant-numeric: tabular-nums; }
+    .streak-flame { line-height: 1; }
+    .streak-flame-dim { opacity: .45; filter: grayscale(.6); }
+    .streak-cue { color: var(--muted); font-weight: 500; font-size: .8em; }
+    .streak-stat .streak-flame { font-size: .9em; }
     .profile-bio-edit {
       width: 100%; background: var(--hover); border: 1px solid var(--border);
       border-radius: 8px; padding: .5rem .75rem; font-size: .85rem;
@@ -2695,6 +2704,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="btn btn-ghost btn-sm" onclick="showClubsPage()" style="display:inline-flex;align-items:center;gap:.4rem;" title="Clubs"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clubs</button>
       </div>
     </div>
+    <div id="feed-streak-chip" class="streak-chip-wrap"></div>
     <div id="ptr-indicator" class="ptr-indicator"><div class="ptr-spinner"></div><span class="ptr-text">Pull to refresh</span></div>
     <div id="feed-list"><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:40%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:90%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:70%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:35%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:80%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:60%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:45%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:85%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:65%;height:.7rem;"></div></div></div>
   </div>
@@ -5233,6 +5243,33 @@ function computeCurrentStreak(logs, today) {
   return { count, status: latest === today ? 'active' : 'at_risk' };
 }
 
+// Build the streak chip markup for a surface. Returns '' when there is no active streak.
+// variant: 'feed' (compact centered chip) | 'profile' (a profile-stat cell).
+function renderStreakChip(streak, variant) {
+  if (!streak || streak.count < 1) return '';
+  const atRisk = streak.status === 'at_risk';
+  const flame = atRisk ? `<span class="streak-flame streak-flame-dim">🔥</span>`
+                       : `<span class="streak-flame">🔥</span>`;
+  if (variant === 'profile') {
+    const sub = atRisk ? `<span class="streak-cue">keep it going</span>` : 'Day streak';
+    return `<div class="profile-stat streak-stat${atRisk ? ' streak-at-risk' : ''}">`
+         + `<div class="profile-stat-value">${flame} ${streak.count}</div>`
+         + `<div class="profile-stat-label">${sub}</div></div>`;
+  }
+  // feed variant
+  const cue = atRisk ? ` <span class="streak-cue">· keep it going</span>` : '';
+  return `<div class="streak-chip${atRisk ? ' streak-at-risk' : ''}">${flame} `
+       + `<span class="streak-count">${streak.count}</span>${cue}</div>`;
+}
+
+// Update the feed's streak chip from the current logs. Cheap + idempotent.
+function renderStreakChips() {
+  const el = document.getElementById('feed-streak-chip');
+  if (!el) return;
+  if (!currentUser) { el.innerHTML = ''; return; }
+  el.innerHTML = renderStreakChip(computeCurrentStreak(logs, todayStr()), 'feed');
+}
+
 async function checkAndAwardBadges(context, extraData) {
   if (!currentUser) return;
   const newlyEarned = [];
@@ -6137,7 +6174,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.19.48';
+const APP_VERSION = '22.19.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6763,8 +6800,10 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
   // Stats
   const watchCount = isOwn ? watches.length : (showcase.length || '—');
   const watchLabel = isOwn ? 'Watches' : 'Shared';
+  const streakStat = isOwn ? renderStreakChip(computeCurrentStreak(logs, todayStr()), 'profile') : '';
   const statsHtml = `
     <div class="profile-stats-row">
+      ${streakStat}
       <div class="profile-stat"><div class="profile-stat-value">${watchCount}</div><div class="profile-stat-label">${watchLabel}</div></div>
       <div class="profile-stat profile-stat-btn" onclick="openFollowersModal('${profile.id}')"><div class="profile-stat-value">${followerCount}</div><div class="profile-stat-label">Followers</div></div>
       <div class="profile-stat profile-stat-btn" onclick="openFollowingModalFor('${profile.id}')"><div class="profile-stat-value">${followingCount}</div><div class="profile-stat-label">Following</div></div>
@@ -9490,6 +9529,7 @@ async function scrollToFeedPost(postId) {
 }
 
 function renderFeed() {
+  renderStreakChips();
   const el = document.getElementById('feed-list');
   if (!el) return;
 
@@ -13355,7 +13395,7 @@ function nav(btn) {
     // If feed is still showing skeleton (stuck load), force a fresh attempt
     const fl = document.getElementById('feed-list');
     if (fl && fl.querySelector('.feed-skeleton-item')) { feedLoading = false; feedLoadedAt = 0; }
-    loadFeed(); loadNotifications();
+    loadFeed(); loadNotifications(); renderStreakChips();
   }
   if (page === 'clubs') {
     if (!_clubsLoaded) {
