@@ -5409,6 +5409,8 @@ async function checkAndAwardBadges(context, extraData) {
   // Habit badges
   if (context === 'wear' || context === 'retroactive') {
     const sortedDates = [...new Set(logs.map(l => l.date))].sort();
+    // maxStreak below is the longest consecutive-day run — same notion as computeStreaks(...).best,
+    // kept inline here intentionally (don't unify) to avoid touching shipped badge-award logic.
     const STREAK_BADGES = [[83,5],[80,7],[84,10],[85,20],[81,30],[86,50],[87,100],[88,365]];
     if (STREAK_BADGES.some(([ref]) => !alreadyEarned(ref))) {
       let maxStreak = 1, curStreak = 1;
@@ -6191,7 +6193,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.21.28';
+const APP_VERSION = '22.21.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
