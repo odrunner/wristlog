@@ -20,6 +20,29 @@ export function fmtMonYear(d) {
   return dt.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
+export function addDaysStr(dateStr, delta) {
+  const d = new Date(dateStr + 'T12:00:00'); // noon-anchored to avoid DST/midnight drift
+  d.setDate(d.getDate() + delta);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export function computeStreaks(logs, today) {
+  const dates = [...new Set((logs || []).map(l => l.date).filter(Boolean))].sort();
+  if (dates.length === 0) return { current: 0, best: 0, status: 'none' };
+  const present = new Set(dates);
+  let best = 1, run = 1;
+  for (let i = 1; i < dates.length; i++) {
+    if (addDaysStr(dates[i - 1], 1) === dates[i]) { run++; best = Math.max(best, run); }
+    else run = 1;
+  }
+  const latest = dates[dates.length - 1];
+  const yesterday = addDaysStr(today, -1);
+  if (latest !== today && latest !== yesterday) return { current: 0, best, status: 'none' };
+  let current = 1, cursor = latest;
+  while (present.has(addDaysStr(cursor, -1))) { current++; cursor = addDaysStr(cursor, -1); }
+  return { current, best, status: latest === today ? 'active' : 'at_risk' };
+}
+
 export function fmtMoney(n) {
   return n ? '$' + Number(n).toLocaleString() : '—';
 }
