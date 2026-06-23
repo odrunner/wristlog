@@ -387,6 +387,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .profile-stats-row { display:flex; gap:1.2rem; justify-content:center; flex-wrap:wrap; margin:1.1rem 0 1.25rem; }
     .profile-page-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.1rem 1.25rem; margin-bottom:1.1rem; }
     .profile-page-section-title { font-size:.72rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--gold); margin-bottom:.9rem; }
+    .streak-line { display: flex; align-items: center; gap: .25rem; font-size: .92rem; font-weight: 600;
+      color: var(--text); padding: .35rem 0 .15rem; }
+    .streak-line .streak-count { font-variant-numeric: tabular-nums; }
+    .streak-flame { line-height: 1; }
+    .streak-flame-dim { opacity: .45; filter: grayscale(.6); }
+    .streak-cue, .streak-best { color: var(--muted); font-weight: 500; font-size: .82em; }
 
     /* ── PROFILE COLLAPSIBLE SECTIONS (matches modal-section pattern) ── */
     .prof-section { margin-top:0; }
@@ -5510,12 +5516,23 @@ function badgeWallProfileSection() {
       ).join('')
     : '';
 
+  const sk = computeStreaks(logs, todayStr());
+  const streakHeader = sk.status === 'none'
+    ? `<div class="streak-line">Start a streak${sk.best >= 2 ? ` <span class="streak-best">· best ${sk.best}</span>` : ''}</div>`
+    : `<div class="streak-line${sk.status === 'at_risk' ? ' streak-at-risk' : ''}">`
+      + `<span class="streak-flame${sk.status === 'at_risk' ? ' streak-flame-dim' : ''}">🔥</span> `
+      + `<span class="streak-count">${sk.current}-day streak</span>`
+      + (sk.status === 'at_risk' ? ` <span class="streak-cue">· keep it going</span>` : '')
+      + (sk.best > sk.current ? ` <span class="streak-best">· best ${sk.best}</span>` : '')
+      + `</div>`;
+
   return `
     <div class="profile-page-card">
       <div class="profile-page-section-title" style="display:flex;justify-content:space-between;align-items:center;">
         <span>Achievements</span>
         <span style="font-size:.72rem;color:var(--muted);font-weight:400;">${earned.length} / ${visible.length}</span>
       </div>
+      ${streakHeader}
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;padding:.5rem 0;">
         ${previewCards}${lockedPreview}
       </div>
@@ -6174,7 +6191,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.21.25';
+const APP_VERSION = '22.21.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
