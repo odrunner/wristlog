@@ -1,9 +1,11 @@
 import { assertEquals } from "jsr:@std/assert";
 import {
   buildHtmlEmail,
+  dropDone,
   filterEligible,
   personalizeBody,
   signupWindow,
+  skipTable,
   splitAlreadySent,
   unsubUrl,
 } from "./lib.ts";
@@ -118,4 +120,27 @@ Deno.test("unsubUrl — builds the expected URL", () => {
     unsubUrl("https://x.supabase.co", "uid-1", "sig-1"),
     "https://x.supabase.co/functions/v1/email-unsubscribe?uid=uid-1&cat=updates&sig=sig-1",
   );
+});
+
+// ---- skipTable ----
+Deno.test("skipTable maps known keys to tables", () => {
+  assertEquals(skipTable("has_watch"), "watches");
+  assertEquals(skipTable("has_log"), "logs");
+  assertEquals(skipTable("has_measurement"), "timegrapher_results");
+});
+
+Deno.test("skipTable returns null for null/empty/unknown (never drops everyone)", () => {
+  assertEquals(skipTable(null), null);
+  assertEquals(skipTable(undefined), null);
+  assertEquals(skipTable(""), null);
+  assertEquals(skipTable("has_bogus"), null);
+});
+
+// ---- dropDone ----
+Deno.test("dropDone removes users whose id is in doneIds, keeps the rest", () => {
+  const users = [{ id: "a" }, { id: "b" }, { id: "c" }];
+  assertEquals(dropDone(users, ["b"]), [{ id: "a" }, { id: "c" }]);
+  assertEquals(dropDone(users, new Set(["a", "c"])), [{ id: "b" }]);
+  assertEquals(dropDone(users, []), users);
+  assertEquals(dropDone(users, ["a", "b", "c"]), []);
 });

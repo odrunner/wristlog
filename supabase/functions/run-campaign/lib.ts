@@ -74,4 +74,25 @@ export function unsubUrl(supabaseUrl: string, uid: string, sig: string, cat = "u
   return `${supabaseUrl}/functions/v1/email-unsubscribe?uid=${uid}&cat=${cat}&sig=${sig}`;
 }
 
+// Behavior-aware skip: which table proves a user already did the action.
+// Unknown/empty → null (no skip), so a typo can never drop the whole cohort.
+export const KNOWN_SKIPS: Record<string, string> = {
+  has_watch: "watches",
+  has_log: "logs",
+  has_measurement: "timegrapher_results",
+};
+
+export function skipTable(skipKey: string | null | undefined): string | null {
+  if (!skipKey) return null;
+  return KNOWN_SKIPS[skipKey] ?? null;
+}
+
+export function dropDone<T extends { id: string }>(
+  users: T[],
+  doneIds: Iterable<string>,
+): T[] {
+  const done = doneIds instanceof Set ? doneIds : new Set(doneIds);
+  return users.filter((u) => !done.has(u.id));
+}
+
 export type { Profile };
