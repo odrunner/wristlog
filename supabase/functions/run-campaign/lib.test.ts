@@ -3,7 +3,9 @@ import {
   buildHtmlEmail,
   dropDone,
   filterEligible,
+  looksLikeName,
   personalizeBody,
+  personalizeName,
   signupWindow,
   skipTable,
   splitAlreadySent,
@@ -92,6 +94,38 @@ Deno.test("personalizeBody — falls back to 'there' on empty/null", () => {
   assertEquals(personalizeBody("Hi {{name}}", ""), "Hi there");
   assertEquals(personalizeBody("Hi {{name}}", null), "Hi there");
   assertEquals(personalizeBody("Hi {{name}}", undefined), "Hi there");
+});
+
+// ---- name heuristic ----
+Deno.test("personalizeName — keeps names that read like real names", () => {
+  assertEquals(personalizeName("Robert"), "Robert");
+  assertEquals(personalizeName("Dan"), "Dan");
+  assertEquals(personalizeName("Javier"), "Javier");
+  assertEquals(personalizeName("  Anne-Marie  "), "Anne-Marie"); // trims; hyphen ok
+  assertEquals(personalizeName("José"), "José"); // accented letters ok
+  assertEquals(personalizeName("O'Brien"), "O'Brien"); // apostrophe ok
+});
+
+Deno.test("personalizeName — falls back to 'there' for handles/initials/junk", () => {
+  assertEquals(personalizeName("X"), "there"); // too short
+  assertEquals(personalizeName("CN"), "there"); // initials, no vowel
+  assertEquals(personalizeName("jvph4nmd8c"), "there"); // contains digits
+  assertEquals(personalizeName("a".repeat(25)), "there"); // too long
+  assertEquals(personalizeName(""), "there");
+  assertEquals(personalizeName("   "), "there");
+  assertEquals(personalizeName(null), "there");
+  assertEquals(personalizeName(undefined), "there");
+});
+
+Deno.test("looksLikeName — boolean predicate", () => {
+  assertEquals(looksLikeName("Robert"), true);
+  assertEquals(looksLikeName("CN"), false);
+  assertEquals(looksLikeName("jvph4nmd8c"), false);
+});
+
+Deno.test("personalizeBody — applies the name heuristic", () => {
+  assertEquals(personalizeBody("Hi {{name}}!", "Robert"), "Hi Robert!");
+  assertEquals(personalizeBody("Hi {{name}}!", "jvph4nmd8c"), "Hi there!");
 });
 
 Deno.test("personalizeBody — no placeholder leaves body unchanged", () => {

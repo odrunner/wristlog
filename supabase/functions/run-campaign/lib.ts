@@ -35,8 +35,25 @@ export function splitAlreadySent<T extends { id: string }>(
 }
 
 // Replace the {{name}} placeholder with a display name, falling back to "there".
+// True when a display name reads like a real name (not a handle, initials, or a
+// random id) — so we only greet "Hi {name}," when it won't look broken.
+// Rules: 2–20 chars, letters/space/apostrophe/hyphen only (no digits/symbols),
+// and contains at least one vowel (rejects consonant-only initials like "CN").
+export function looksLikeName(name: string | null | undefined): boolean {
+  const t = (name ?? "").trim();
+  if (t.length < 2 || t.length > 20) return false;
+  if (!/^[\p{L} '’-]+$/u.test(t)) return false;
+  if (!/[aeiouyàáâäãåèéêëìíîïòóôöõùúûüæø]/iu.test(t)) return false;
+  return true;
+}
+
+// Resolve the greeting name: the trimmed display name when it looks real, else "there".
+export function personalizeName(displayName: string | null | undefined): string {
+  return looksLikeName(displayName) ? (displayName as string).trim() : "there";
+}
+
 export function personalizeBody(bodyHtml: string, displayName: string | null | undefined): string {
-  return bodyHtml.replace(/\{\{name\}\}/g, displayName || "there");
+  return bodyHtml.replace(/\{\{name\}\}/g, personalizeName(displayName));
 }
 
 // Wrap a campaign body in the branded HTML email shell.
