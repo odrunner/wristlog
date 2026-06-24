@@ -12,9 +12,11 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
   buildHtmlEmail,
+  dropDone,
   filterEligible,
   personalizeBody,
   signupWindow,
+  skipTable,
   splitAlreadySent,
   unsubUrl,
 } from "./lib.ts";
@@ -129,6 +131,27 @@ Deno.serve(async (req: Request) => {
         console.log(`[run-campaign] "${name}": no eligible users in window`);
         results[name] = { sent: 0, skipped: 0, failed: 0 };
         continue;
+      }
+
+      // Behavior-aware skip: drop users who already did the campaign's target action.
+      const skipTbl = skipTable(campaign.skip_if_done);
+      if (skipTbl) {
+        const { data: doneRows, error: doneErr } = await supabase
+          .from(skipTbl)
+          .select("user_id")
+          .in("user_id", users.map((u) => u.id));
+        if (doneErr) {
+          // Fail safe: never send unfiltered. Skip this campaign this run; retry next day.
+          console.error(`[run-campaign] "${name}": skip query (${skipTbl}) failed — skipping:`, doneErr);
+          results[name] = { sent: 0, skipped: users.length, failed: 0 };
+          continue;
+        }
+        users = dropDone(users, (doneRows || []).map((r) => r.user_id));
+        if (!users.length) {
+          console.log(`[run-campaign] "${name}": all eligible already did the action`);
+          results[name] = { sent: 0, skipped: 0, failed: 0 };
+          continue;
+        }
       }
 
       // Check which users already received this campaign. Fail safe: an empty list
