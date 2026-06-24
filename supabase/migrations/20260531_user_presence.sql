@@ -91,7 +91,7 @@ BEGIN
     'active_days', (SELECT count(DISTINCT date_trunc('day', created_at)) FROM logs WHERE user_id = target_user_id),
     'first_activity', (SELECT least((SELECT min(created_at) FROM logs WHERE user_id = target_user_id),(SELECT min(created_at) FROM watches WHERE user_id = target_user_id))),
     'last_activity', (SELECT greatest((SELECT max(created_at) FROM logs WHERE user_id = target_user_id),(SELECT max(created_at) FROM watches WHERE user_id = target_user_id))),
-    'watch_list', (SELECT coalesce(json_agg(json_build_object('brand', brand, 'name', name) ORDER BY created_at DESC), '[]'::json) FROM watches WHERE user_id = target_user_id)
+    'watch_list', (SELECT coalesce(json_agg(json_build_object('brand', brand, 'name', name, 'created_at', created_at) ORDER BY created_at DESC), '[]'::json) FROM watches WHERE user_id = target_user_id)
   ) INTO result;
 
   RETURN result;

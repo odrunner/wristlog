@@ -6199,7 +6199,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.16.12';
+const APP_VERSION = '24.16.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12979,8 +12979,10 @@ async function openAdminUserDetail(userId) {
     const row = (label, value) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);">${label}</span><span style="color:var(--text);font-weight:600;">${value}</span></div>`;
 
     const watches = (d.watch_list || []);
+    const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    const isNewWatch = w => w.created_at && new Date(w.created_at).getTime() >= dayAgo;
     const watchListHtml = watches.length > 0
-      ? `<div style="margin-top:.5rem;">${watches.map(w => `<div style="font-size:.75rem;color:var(--muted);padding:.15rem 0;border-bottom:1px solid var(--border);">${escHtml(w.brand)} — ${escHtml(w.name)}</div>`).join('')}</div>`
+      ? `<div style="margin-top:.5rem;">${watches.map(w => `<div style="font-size:.75rem;color:${isNewWatch(w) ? '#16a34a' : 'var(--muted)'};${isNewWatch(w) ? 'font-weight:600;' : ''}padding:.15rem 0;border-bottom:1px solid var(--border);">${escHtml(w.brand)} — ${escHtml(w.name)}</div>`).join('')}</div>`
       : '<div style="font-size:.75rem;color:var(--muted);padding:.25rem 0;">No watches</div>';
 
     document.getElementById('admin-user-modal-title').textContent = name;
