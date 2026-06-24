@@ -6199,7 +6199,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.08.23';
+const APP_VERSION = '24.08.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14716,6 +14716,15 @@ async function loadCampaigns() {
         <label>Delay (days after signup)</label>
         <input type="number" id="camp-delay-${c.id}" value="${c.delay_days}" min="1" max="90" style="font-size:.82rem;width:60px;">
       </div>
+      <div class="draft-form-row" style="margin-bottom:.4rem;">
+        <label>Skip if user already…</label>
+        <select id="camp-skip-${c.id}" style="font-size:.82rem;">
+          <option value="" ${!c.skip_if_done ? 'selected' : ''}>Don't skip — send to everyone</option>
+          <option value="has_watch" ${c.skip_if_done === 'has_watch' ? 'selected' : ''}>Has added a watch</option>
+          <option value="has_log" ${c.skip_if_done === 'has_log' ? 'selected' : ''}>Has logged activity</option>
+          <option value="has_measurement" ${c.skip_if_done === 'has_measurement' ? 'selected' : ''}>Has measured a watch</option>
+        </select>
+      </div>
       <div style="display:flex;gap:.5rem;margin-top:.5rem;">
         <button class="btn btn-ghost" onclick="saveCampaign('${c.id}')" style="flex:1;">Save Changes</button>
         <button class="btn btn-ghost" onclick="testCampaign('${c.id}')" style="flex:1;">Send Test to Me</button>
@@ -14792,6 +14801,7 @@ async function createCampaign() {
     delay_days: 30,
     is_active: false,
     campaign_type: 'drip',
+    skip_if_done: null,
   });
   if (error) { toast('Failed to create campaign: ' + error.message, 'error'); return; }
   toast('Campaign created — fill in the copy below, Save, then Start');
@@ -14814,6 +14824,8 @@ async function saveCampaign(id) {
   const update = { subject, body_html, updated_at: new Date().toISOString() };
   if (name) update.name = name;
   if (delayEl) update.delay_days = parseInt(delayEl.value) || camp?.delay_days || 2;
+  const skipEl = document.getElementById('camp-skip-' + id);
+  if (skipEl) update.skip_if_done = skipEl.value || null;
   if (!subject || !body_html) { toast('Subject and body are required', 'error'); return; }
   const { error } = await db.from('email_campaigns').update(update).eq('id', id);
   if (error) { toast('Failed to save: ' + error.message, 'error'); return; }
