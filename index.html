@@ -6193,7 +6193,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.16.58';
+const APP_VERSION = '23.17.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22038,6 +22038,7 @@ const _PZ_BATCH_LABEL = 'Batch ×12 (6 manual @ selected BPH + 6 auto)';
 async function runPiezoBatch() {
   const btn = document.getElementById('pz-batch-btn');
   if (_pzBatchActive) { _pzBatchActive = false; if (btn) btn.textContent = 'Cancelling…'; return; }
+  if (_tgRunnerActive()) { toast('Another measurement run is in progress'); return; }
   if (!_tgHasNative()) { toast('Batch needs the native app'); return; }
   const sel = document.getElementById('msr-bph-select');
   const manualBph = sel ? (parseInt(sel.value) || 0) : 0;   // current watch's BPH for the manual half
@@ -22120,6 +22121,7 @@ async function _micRunBatchLoop({ batchId, bph, watchId, position, runs, runMs, 
 async function runMicBatch() {
   const btn = document.getElementById('mic-batch-btn');
   if (_micBatchActive) { _micBatchActive = false; if (btn) btn.textContent = 'Cancelling…'; return; }
+  if (_tgRunnerActive()) { toast('Another measurement run is in progress'); return; }
   if (!_tgHasNative()) { toast('Batch needs the native app'); return; }
   const sel = document.getElementById('msr-bph-select');
   const bph = sel ? (parseInt(sel.value) || 0) : 0;
@@ -22138,6 +22140,12 @@ async function runMicBatch() {
 }
 
 let _deepTestActive = false;
+// True while ANY measurement runner is active (mic batch, mic sweep — both use
+// _micBatchActive — plus piezo batch and deep test). The auto-stop / auto-fail /
+// share-popup gates and the cross-runner mutex below all key off this so non-mic
+// runners are covered too (previously the gates only checked _micBatchActive, so a
+// deep test or piezo batch would auto-stop mid-run and pop the share modal).
+function _tgRunnerActive() { return _micBatchActive || _pzBatchActive || _deepTestActive; }
 const _DEEP_TEST_LABEL = 'Deep Test (3–6 runs · median ± STD)';
 function _deepRender(text, color) {
   const host = document.getElementById('msr-scatter-plot')?.parentElement;
@@ -22149,6 +22157,7 @@ function _deepRender(text, color) {
 async function runDeepTest() {
   const btn = document.getElementById('deep-test-btn');
   if (_deepTestActive) { _deepTestActive = false; if (btn) btn.textContent = 'Cancelling…'; return; }
+  if (_tgRunnerActive()) { toast('Another measurement run is in progress'); return; }
   if (!_tgHasNative()) { toast('Deep Test needs the native app'); return; }
   const sel = document.getElementById('msr-bph-select');
   const bph = sel ? (parseInt(sel.value) || 0) : 0;
@@ -22211,6 +22220,7 @@ async function runDeepTest() {
 async function runMicSweep() {
   const btn = document.getElementById('mic-sweep-btn');
   if (_micBatchActive) { _micBatchActive = false; if (btn) btn.textContent = 'Cancelling…'; return; }
+  if (_tgRunnerActive()) { toast('Another measurement run is in progress'); return; }
   if (!_tgHasNative()) { toast('Sweep needs the native app'); return; }
   const sel = document.getElementById('msr-bph-select');
   const bph = sel ? (parseInt(sel.value) || 0) : 0;
@@ -22218,30 +22228,33 @@ async function runMicSweep() {
   if (localStorage.getItem('tg_input_source') === 'piezo') localStorage.setItem('tg_input_source', 'mic');
   const position = (document.getElementById('mic-batch-position')?.value || '').trim() || null;
   const watchId = document.getElementById('msr-watch-select')?.value || null;
-  // Pull sweep config from the tuning table so it can be driven remotely via SQL (no on-phone UI).
-  // Values land in the q2_sweep_* localStorage keys read just below; localStorage is the fallback.
-  try {
-    const { data: _swCfg } = await db.from('timegrapher_tuning').select('sweep_knob,sweep_values,sweep_runs,sweep_secs').eq('id', 1).single();
-    if (_swCfg) {
-      if (_swCfg.sweep_knob) localStorage.setItem('q2_sweep_knob', _swCfg.sweep_knob);
-      if (_swCfg.sweep_values) localStorage.setItem('q2_sweep_values', _swCfg.sweep_values);
-      if (_swCfg.sweep_runs != null) localStorage.setItem('q2_sweep_runs', String(_swCfg.sweep_runs));
-      if (_swCfg.sweep_secs != null) localStorage.setItem('q2_sweep_secs', String(_swCfg.sweep_secs));
-    }
-  } catch (e) { /* offline / no row — fall back to localStorage + defaults */ }
-  const knob = localStorage.getItem('q2_sweep_knob') || 'tickDetectMult';
-  const inputId = resolveSweepKnob(knob);
-  if (!inputId) { toast('Unknown sweep knob: ' + knob); return; }
-  const inputEl = document.getElementById(inputId);
-  if (!inputEl) { toast('Sweep input missing: ' + inputId); return; }
-  const values = parseSweepValues(localStorage.getItem('q2_sweep_values') || '0.3,0.25,0.2,0.15');
-  if (!values.length) { toast('No sweep values'); return; }
-  const runs = parseInt(localStorage.getItem('q2_sweep_runs')) || 12;
-  const runMs = (parseInt(localStorage.getItem('q2_sweep_secs')) || 90) * 1000;
-  const prevInputValue = inputEl.value;   // restore the knob afterwards
+  // Claim the runner BEFORE the first await — otherwise the gates/mutex see no active
+  // runner during the config fetch and could auto-stop a live measurement or let a
+  // second runner start. The try/finally guarantees the flag is cleared on every exit.
   _micBatchActive = true;
-  let completed = true;
+  let inputEl = null, prevInputValue = null, knob = '', completed = true;
   try {
+    // Pull sweep config from the tuning table so it can be driven remotely via SQL (no on-phone UI).
+    // Values land in the q2_sweep_* localStorage keys read just below; localStorage is the fallback.
+    try {
+      const { data: _swCfg } = await db.from('timegrapher_tuning').select('sweep_knob,sweep_values,sweep_runs,sweep_secs').eq('id', 1).single();
+      if (_swCfg) {
+        if (_swCfg.sweep_knob) localStorage.setItem('q2_sweep_knob', _swCfg.sweep_knob);
+        if (_swCfg.sweep_values) localStorage.setItem('q2_sweep_values', _swCfg.sweep_values);
+        if (_swCfg.sweep_runs != null) localStorage.setItem('q2_sweep_runs', String(_swCfg.sweep_runs));
+        if (_swCfg.sweep_secs != null) localStorage.setItem('q2_sweep_secs', String(_swCfg.sweep_secs));
+      }
+    } catch (e) { /* offline / no row — fall back to localStorage + defaults */ }
+    knob = localStorage.getItem('q2_sweep_knob') || 'tickDetectMult';
+    const inputId = resolveSweepKnob(knob);
+    if (!inputId) { toast('Unknown sweep knob: ' + knob); return; }
+    inputEl = document.getElementById(inputId);
+    if (!inputEl) { toast('Sweep input missing: ' + inputId); return; }
+    const values = parseSweepValues(localStorage.getItem('q2_sweep_values') || '0.3,0.25,0.2,0.15');
+    if (!values.length) { toast('No sweep values'); return; }
+    const runs = parseInt(localStorage.getItem('q2_sweep_runs')) || 12;
+    const runMs = (parseInt(localStorage.getItem('q2_sweep_secs')) || 90) * 1000;
+    prevInputValue = inputEl.value;   // restore the knob afterwards
     for (let vi = 0; vi < values.length && _micBatchActive; vi++) {
       const value = values[vi];
       localStorage.setItem('q2_sweep_active', JSON.stringify({ knob, inputId, value }));  // re-applied each run start
@@ -22262,8 +22275,8 @@ async function runMicSweep() {
     localStorage.removeItem('q2_sweep_active');
     if (inputEl) inputEl.value = prevInputValue;     // restore the knob to its pre-sweep value
     if (typeof sendMsrTuning === 'function') sendMsrTuning();
+    if (btn) btn.textContent = _MIC_SWEEP_LABEL;
   }
-  if (btn) btn.textContent = _MIC_SWEEP_LABEL;
   toast(completed ? `Mic sweep done (${knob}) — check data` : 'Mic sweep cancelled');
 }
 function initPzTunePanel() {
@@ -22704,7 +22717,7 @@ window._tgNativeCallback = function(data) {
       const noTickTimeout = _msrIsAuto ? 15 : 12;
       const hasSignal = _msrBphLocked || _msrLastConf > 0;
       const recalExhausted = hasSignal && elapsed >= 25 && data.tickCount === 0;
-      if (!_micBatchActive && elapsed >= noTickTimeout && data.tickCount === 0 && (!hasSignal || recalExhausted)) {  // batch logs the empty run itself; don't auto-fail mid-batch
+      if (!_tgRunnerActive() && elapsed >= noTickTimeout && data.tickCount === 0 && (!hasSignal || recalExhausted)) {  // a runner logs the empty run itself; don't auto-fail mid-run
         stopMsrListen(recalExhausted ? 'no_ticks_signal_lost' : 'no_ticks_after_recal');
         const statusText = document.getElementById('msr-status-text');
         if (statusText) {
@@ -22937,7 +22950,7 @@ window._tgNativeCallback = function(data) {
     if (isMsr && _msrListening && _msrListenStart) {
       const elapsed = (Date.now() - _msrListenStart) / 1000;
       const maxDur = _tgHasNative() ? tgLoadSettings().values.maxDuration : 45;
-      if (!_micBatchActive && !_tgV2Convergence() && (_msrPhase === 'converged' || elapsed >= maxDur)) {  // v2-on: the _q2Tick plateau controller owns the finish
+      if (!_tgRunnerActive() && !_tgV2Convergence() && (_msrPhase === 'converged' || elapsed >= maxDur)) {  // v2-on: the _q2Tick plateau controller owns the finish
         const wasConverged = _msrPhase === 'converged';
         // Haptic feedback on finish — success for converged, warning for timeout
         if (window.webkit?.messageHandlers?.haptic) {
@@ -23587,7 +23600,7 @@ function _q2Tick(nativeRateNow) {
   _q2LastBand = s.band;
   if (featureFlag('tg_quality_v2')) _q2RenderReadout(nativeRateNow, s, params);  // dev diagnostic — admin only, never shown to regular users
   // Adaptive stop: when flag-on and actively measuring (not during a batch).
-  if (_msrListening && !_micBatchActive && _msrListenStart) {
+  if (_msrListening && !_tgRunnerActive() && _msrListenStart) {
     const elapsed = (now - _msrListenStart) / 1000;
     const cap = _q2Num('q2_cap', 90);
     if (s.settled) {
@@ -24446,7 +24459,7 @@ function stopMsrListen(reason) {
     // Auto-prompt to share a high-confidence result, at most once per watch.
     // "High confidence" = converged AND a tight error bar (± ≤ 2.0 s/day).
     // Skip in demo mode / when not signed in (no feed to post to).
-    if (wasConverged && errorBar <= 2.0 && currentUser && !_isDemoMode && !_micBatchActive) {  // never pop the share modal during a batch
+    if (wasConverged && errorBar <= 2.0 && currentUser && !_isDemoMode && !_tgRunnerActive()) {  // never pop the share modal during any runner
       const popupWatchId = document.getElementById('msr-watch-select')?.value;
       if (popupWatchId && !msrSharePromptSeen(popupWatchId)) {
         markMsrSharePromptSeen(popupWatchId);
