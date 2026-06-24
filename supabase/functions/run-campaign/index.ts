@@ -146,10 +146,11 @@ Deno.serve(async (req: Request) => {
           results[name] = { sent: 0, skipped: users.length, failed: 0 };
           continue;
         }
+        const beforeSkip = users.length;
         users = dropDone(users, (doneRows || []).map((r) => r.user_id));
         if (!users.length) {
           console.log(`[run-campaign] "${name}": all eligible already did the action`);
-          results[name] = { sent: 0, skipped: 0, failed: 0 };
+          results[name] = { sent: 0, skipped: beforeSkip, failed: 0 };
           continue;
         }
       }
