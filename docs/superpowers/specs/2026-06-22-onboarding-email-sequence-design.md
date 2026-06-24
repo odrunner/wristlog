@@ -20,7 +20,8 @@ Drive new-user activation through three single-CTA emails (day 2 / 5 / 9) that e
 | Funnel (priority order) | **Watch → Streak → Measure**: (2) add first watch, (5) log a wear / start your streak, (9) measure accuracy. |
 | Behavior-aware | Each step is **skipped per-user if already done** (new `skip_if_done` gate). "Activated → stop" is automatic (all steps skip). |
 | CTA | **One** action + one button per email (fixes the 1-click problem). |
-| Existing "3 things" email | **Deactivated** (`is_active = false`); step 1 takes its day-2 slot. |
+| Copy ownership | Drafts are **seeded as paused `email_campaigns` rows**, edited/activated by the user in the **admin Campaigns tab** (now and over time) — not hardcoded. |
+| Existing "3 things" email | **Paused** by the user in the admin tab when they activate step 1 (both occupy day 2). |
 | Opt-out / dedup / internal accounts | Unchanged — existing `email_prefs.updates`, `email_campaign_sends`, `filterEligible` paths. |
 
 ## Non-Goals
@@ -55,18 +56,22 @@ For a campaign whose `skip_if_done` is non-null, after selecting the signup-wind
 - A `skip_if_done` value that isn't one of the three known keys → treated as "no skip" (defensive; log a warning) so a typo can't silently drop everyone.
 - Ordering: the skip filter runs **after** the signup-window + internal/opt-out filter and **before** the `email_campaign_sends` dedup send — it only reduces the recipient set; it never re-sends.
 
-### Component 3 — the three campaign rows (content)
+### Component 3 — the three campaign rows (seeded paused, admin-editable)
 
-Three `email_campaigns` rows, `campaign_type = 'drip'`, `is_active = true`, with `{{name}}` personalization and a single CTA button linking into the app. The existing "3 things" row is set `is_active = false`.
+Three `email_campaigns` rows, `campaign_type = 'drip'`, **`is_active = false` (paused)**, `{{name}}` personalization, a single CTA button, and the right `skip_if_done`/`delay_days`. Seeded with the **draft** copy below; the user edits subject/body, previews, sends a test, and activates them in the **admin Campaigns tab** (existing UI) — now and over time. Nothing sends until the user toggles each to Active.
 
-| `delay_days` | `skip_if_done` | `subject` | Body (one action + one button) |
-|---|---|---|---|
-| 2 | `has_watch` | Add your first watch | "Hi {{name}}, WRotate starts with your collection. Snap a photo and we'll identify it — brand, model, reference. **[Add your first watch →]**" |
-| 5 | `has_log` | Start your streak 🔥 | "Wearing something today, {{name}}? Log it in two taps. Log on consecutive days to build a streak. **[Log today's watch →]**" |
-| 9 | `has_measurement` | How accurate is your watch? | "{{name}}, WRotate has a built-in timegrapher. Place your watch by the mic and get a rate reading in ~30 seconds — no equipment. **[Measure your watch →]**" |
+| `name` | `delay_days` | `skip_if_done` | `subject` (draft) | Body draft (one action + one button) |
+|---|---|---|---|---|
+| Onboarding 1 — Add a watch | 2 | `has_watch` | Add your first watch | "Hi {{name}}, WRotate starts with your collection. Snap a photo and we'll identify it — brand, model, reference. **[Add your first watch →]**" |
+| Onboarding 2 — Start your streak | 5 | `has_log` | Start your streak 🔥 | "Wearing something today, {{name}}? Log it in two taps. Log on consecutive days to build a streak. **[Log today's watch →]**" |
+| Onboarding 3 — Measure | 9 | `has_measurement` | How accurate is your watch? | "{{name}}, WRotate has a built-in timegrapher. Place your watch by the mic and get a rate reading in ~30 seconds — no equipment. **[Measure your watch →]**" |
 
-- The CTA button links to the app (`https://wrotate.com`). If the app supports a screen deep-link via URL param, point each button at the relevant screen; otherwise link to the app root and let the copy direct. (Resolved in the plan; not a blocker — a working button to the app is the requirement.)
-- Copy is final-draft; tweakable at spec review.
+- CTA button links to the app (`https://wrotate.com`); per-screen deep-link if the app supports a URL param, else app root + directive copy (resolved in the plan — a working button is the requirement).
+- The draft copy is just a starting point — the user owns it via the admin editor.
+
+### Component 4 — admin Campaigns editor: `skip_if_done` control
+
+The admin Campaigns tab (`index.html`, `loadCampaigns()` card ~line 14693, `saveCampaign()`, `createCampaign()`) currently edits name / subject / body / delay / active. Add a **`skip_if_done` dropdown** to each campaign card — options: **None · Has a watch · Has logged activity · Has measured** (mapping to `null` / `has_watch` / `has_log` / `has_measurement`) — so the behavior-aware skip is visible and editable per campaign. `saveCampaign()` persists it; `createCampaign()` defaults it to `null` (a plain campaign). This keeps everything about a campaign — including its skip rule — editable in one place, no SQL needed after seeding.
 
 ## Edge cases / failure modes
 
@@ -90,15 +95,18 @@ Three `email_campaigns` rows, `campaign_type = 'drip'`, `is_active = true`, with
 | `supabase/functions/run-campaign/lib.ts` | Add pure `dropDone(candidates, doneIds)` + a `KNOWN_SKIPS` set |
 | `supabase/functions/run-campaign/lib.test.ts` | Tests for `dropDone` |
 | `supabase/functions/run-campaign/index.ts` | Read `skip_if_done`; build `doneIds` via per-table query on candidate IDs; apply `dropDone`; fail-safe on query error |
-| DB data | Deactivate "3 things" row; insert 3 new `email_campaigns` rows (gated) |
+| `index.html` (admin Campaigns tab) | Add `skip_if_done` dropdown to the campaign card; persist in `saveCampaign()`; default `null` in `createCampaign()`; SW cache bump |
+| `sw.js` | Cache version bump (for the index.html change) |
+| DB data | Seed 3 **paused** `email_campaigns` rows with draft copy + `skip_if_done` (gated). The user edits/activates them and pauses "3 things" via the admin tab. |
 
 ## Production-touch steps (gated to human)
 
 1. `ALTER TABLE email_campaigns ADD COLUMN skip_if_done TEXT;` (additive, safe).
-2. `UPDATE email_campaigns SET is_active=false` for the "3 things" row; `INSERT` the 3 new rows.
+2. Seed the 3 onboarding rows **paused** (`is_active = false`) with draft copy + `skip_if_done` + `delay_days`.
 3. Deploy `run-campaign --no-verify-jwt`; `npm run test:smoke`.
+4. (Web app deploy carries the admin-editor change on merge.)
 
-All code + deno tests land and pass locally first; the controller pauses for explicit go-ahead before the three steps above.
+All code + deno tests land and pass locally first; the controller pauses for explicit go-ahead before the steps above. **Activation is self-serve:** after seeding, the user opens the admin Campaigns tab, edits the copy, sends a test, pauses "3 things", and toggles the 3 onboarding rows Active when ready — no SQL.
 
 ## Follow-ups (out of scope)
 
