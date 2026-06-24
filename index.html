@@ -130,7 +130,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       min-height: 100vh;
       font-size: 15px;
+      /* Suppress iOS native rubber-band overscroll at the top — it can leave the
+         composited position:fixed bottom nav stuck at a scroll offset (it "scrolls
+         up" into the content). We run our own pull-to-refresh, so we don't need the
+         native bounce. */
+      overscroll-behavior-y: contain;
     }
+    html { overscroll-behavior-y: contain; }
 
     /* ── HEADER ── */
     header {
@@ -6193,7 +6199,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.17.13';
+const APP_VERSION = '24.07.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9012,6 +9018,17 @@ document.addEventListener('click', e => {
   const PTR_MAX = 80, PTR_THRESHOLD = 55;
   let _ptrY0 = 0, _ptrActive = false, _ptrRefreshing = false;
 
+  // iOS can leave the composited (translateZ) position:fixed bottom nav stuck at a
+  // scroll offset after an overscroll/pull gesture, so it "scrolls up" into content.
+  // Toggling its transform forces the compositor to re-pin it to the viewport.
+  function _repinBottomNav() {
+    const nav = document.querySelector('header nav');
+    if (!nav) return;
+    nav.style.transform = 'none';
+    void nav.offsetHeight;     // force reflow
+    nav.style.transform = '';  // restore CSS translateZ(0)
+  }
+
   function feedPageActive() {
     const fp = document.getElementById('page-feed');
     return fp && fp.classList.contains('active');
@@ -9061,9 +9078,11 @@ document.addEventListener('click', e => {
         _ptrRefreshing = false;
         el.classList.remove('refreshing');
         el.style.height = '0';
+        _repinBottomNav();
       });
     } else {
       el.style.height = '0';
+      _repinBottomNav();
     }
   }, { passive: true });
 })();
