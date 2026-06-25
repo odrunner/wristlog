@@ -2008,6 +2008,21 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       color: var(--text); font-family: inherit; resize: none; box-sizing: border-box;
     }
     .profile-bio-edit:focus { outline: none; border-color: var(--gold); }
+    .ob-wrap { max-width: 470px; margin: 0 auto .7rem; }
+    .ob-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: .7rem .85rem; }
+    .ob-head { display: flex; align-items: center; gap: .5rem; cursor: pointer; }
+    .ob-title { font-weight: 700; font-size: .9rem; color: var(--text); }
+    .ob-count { margin-left: auto; font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .ob-chevron { color: var(--muted); font-size: .8rem; }
+    .ob-bar { height: 5px; background: var(--border); border-radius: 3px; margin: .55rem 0; overflow: hidden; }
+    .ob-bar-fill { height: 100%; background: var(--gold); border-radius: 3px; transition: width .3s ease; }
+    .ob-rows { display: flex; flex-direction: column; gap: .15rem; }
+    .ob-row { display: flex; align-items: center; gap: .5rem; font-size: .85rem; padding: .35rem .15rem; }
+    .ob-todo { cursor: pointer; color: var(--text); }
+    .ob-done { color: var(--muted); text-decoration: line-through; }
+    .ob-check { color: var(--gold); font-weight: 700; }
+    .ob-dot { width: 14px; height: 14px; border: 1.5px solid var(--muted); border-radius: 50%; flex-shrink: 0; }
+    .ob-go { margin-left: auto; color: var(--muted); }
   </style>
 </head>
 <body>
@@ -2707,6 +2722,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="btn btn-ghost btn-sm" onclick="showClubsPage()" style="display:inline-flex;align-items:center;gap:.4rem;" title="Clubs"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clubs</button>
       </div>
     </div>
+    <div id="onboarding-checklist" class="ob-wrap"></div>
     <div id="ptr-indicator" class="ptr-indicator"><div class="ptr-spinner"></div><span class="ptr-text">Pull to refresh</span></div>
     <div id="feed-list"><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:40%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:90%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:70%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:35%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:80%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:60%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:45%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:85%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:65%;height:.7rem;"></div></div></div>
   </div>
@@ -6222,7 +6238,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.17.27';
+const APP_VERSION = '24.17.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9587,9 +9603,45 @@ async function scrollToFeedPost(postId) {
   attempt(10);
 }
 
+function renderOnboardingChecklist() {
+  const el = document.getElementById('onboarding-checklist');
+  if (!el) return;
+  if (!currentUser) { el.innerHTML = ''; return; }
+  const st = onboardingChecklistState(new Set(_earnedBadges.map(e => e.badge_ref)));
+  if (st.complete) { el.innerHTML = ''; return; }
+  const collapsed = localStorage.getItem('wrotate_onboarding_collapsed') === '1';
+  const cta = {
+    watch: 'openPhotoIdentify()',
+    wear: 'openTrackModal()',
+    measure: "nav(document.getElementById('nav-measure-btn'))",
+    profile: 'openProfileModal()',
+  };
+  const rows = st.steps.map(s => s.done
+    ? `<div class="ob-row ob-done"><span class="ob-check">✓</span><span>${s.label}</span></div>`
+    : `<div class="ob-row ob-todo" onclick="${cta[s.key]}"><span class="ob-dot"></span><span>${s.label}</span><span class="ob-go">›</span></div>`
+  ).join('');
+  el.innerHTML = `
+    <div class="ob-card">
+      <div class="ob-head" onclick="toggleOnboardingCollapse()">
+        <span class="ob-title">Getting started</span>
+        <span class="ob-count">${st.doneCount}/${st.total}</span>
+        <span class="ob-chevron">${collapsed ? '▸' : '▾'}</span>
+      </div>
+      <div class="ob-bar"><div class="ob-bar-fill" style="width:${(st.doneCount / st.total) * 100}%"></div></div>
+      ${collapsed ? '' : `<div class="ob-rows">${rows}</div>`}
+    </div>`;
+}
+
+function toggleOnboardingCollapse() {
+  const cur = localStorage.getItem('wrotate_onboarding_collapsed') === '1';
+  localStorage.setItem('wrotate_onboarding_collapsed', cur ? '0' : '1');
+  renderOnboardingChecklist();
+}
+
 function renderFeed() {
   const el = document.getElementById('feed-list');
   if (!el) return;
+  renderOnboardingChecklist();
 
   // Preserve any in-progress comment text so it survives re-renders
   const _savedCommentDrafts = {};
@@ -13456,6 +13508,7 @@ function nav(btn) {
     const fl = document.getElementById('feed-list');
     if (fl && fl.querySelector('.feed-skeleton-item')) { feedLoading = false; feedLoadedAt = 0; }
     loadFeed(); loadNotifications();
+    renderOnboardingChecklist();
   }
   if (page === 'clubs') {
     if (!_clubsLoaded) {
