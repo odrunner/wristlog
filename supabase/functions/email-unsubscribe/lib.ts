@@ -9,6 +9,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   friends: "Follows & friend requests",
   clubs: "Clubs",
   updates: "Updates & new features",
+  reminders: "Daily reminders",
   all: "All emails",
 };
 
@@ -57,6 +58,7 @@ export function applyUnsubscribe(prefs: EmailPrefs, cat: string): EmailPrefs {
     prefs.friends = false;
     prefs.clubs = false;
     prefs.updates = false;
+    prefs.reminders = false;
   } else {
     prefs[cat] = false;
   }

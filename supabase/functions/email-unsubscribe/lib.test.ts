@@ -72,14 +72,26 @@ Deno.test("applyUnsubscribe — single category adds key if absent", () => {
 });
 
 Deno.test("applyUnsubscribe — 'all' disables every category", () => {
-  const out = applyUnsubscribe({ comments: true, mentions: true, friends: true, clubs: true, updates: true }, "all");
-  assertEquals(out, { comments: false, mentions: false, friends: false, clubs: false, updates: false });
+  const out = applyUnsubscribe({ comments: true, mentions: true, friends: true, clubs: true, updates: true, reminders: true }, "all");
+  assertEquals(out, { comments: false, mentions: false, friends: false, clubs: false, updates: false, reminders: false });
 });
 
 Deno.test("applyUnsubscribe — mutates and returns the same object", () => {
   const prefs = { comments: true };
   const out = applyUnsubscribe(prefs, "comments");
   assertEquals(out === prefs, true);
+});
+
+Deno.test("applyUnsubscribe — reminders sets email_prefs.reminders=false", () => {
+  assertEquals(applyUnsubscribe({}, "reminders").reminders, false);
+});
+
+Deno.test("applyUnsubscribe — all also clears reminders", () => {
+  assertEquals(applyUnsubscribe({}, "all").reminders, false);
+});
+
+Deno.test("CATEGORY_LABELS has a reminders label", () => {
+  assertEquals(typeof CATEGORY_LABELS.reminders, "string");
 });
 
 // ---- renderPage ----
