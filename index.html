@@ -5518,6 +5518,8 @@ async function checkAndAwardBadges(context, extraData) {
   if (newlyEarned.some(b => b && b.ref === 3)) {
     toast('🔥 Your streak starts now — day 1');
   }
+  // Refresh the onboarding checklist so a step ticks off immediately (no page refresh needed).
+  renderOnboardingChecklist();
 }
 
 function _isFullMoon(date) {
@@ -6238,7 +6240,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.17.37';
+const APP_VERSION = '24.18.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
