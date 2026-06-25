@@ -6238,7 +6238,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.17.30';
+const APP_VERSION = '24.17.37';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9610,15 +9610,9 @@ function renderOnboardingChecklist() {
   const st = onboardingChecklistState(new Set(_earnedBadges.map(e => e.badge_ref)));
   if (st.complete) { el.innerHTML = ''; return; }
   const collapsed = localStorage.getItem('wrotate_onboarding_collapsed') === '1';
-  const cta = {
-    watch: 'openPhotoIdentify()',
-    wear: 'openTrackModal()',
-    measure: "nav(document.getElementById('nav-measure-btn'))",
-    profile: 'openProfileModal()',
-  };
   const rows = st.steps.map(s => s.done
     ? `<div class="ob-row ob-done"><span class="ob-check">✓</span><span>${s.label}</span></div>`
-    : `<div class="ob-row ob-todo" onclick="${cta[s.key]}"><span class="ob-dot"></span><span>${s.label}</span><span class="ob-go">›</span></div>`
+    : `<div class="ob-row ob-todo" onclick="onboardingGo('${s.key}')"><span class="ob-dot"></span><span>${s.label}</span><span class="ob-go">›</span></div>`
   ).join('');
   el.innerHTML = `
     <div class="ob-card">
@@ -9636,6 +9630,14 @@ function toggleOnboardingCollapse() {
   const cur = localStorage.getItem('wrotate_onboarding_collapsed') === '1';
   localStorage.setItem('wrotate_onboarding_collapsed', cur ? '0' : '1');
   renderOnboardingChecklist();
+}
+
+// Route an onboarding-checklist step CTA to its action.
+function onboardingGo(key) {
+  if (key === 'watch')   return openPhotoIdentify();
+  if (key === 'wear')    { const b = document.querySelector('[data-page="track"]'); if (b) nav(b); return; }
+  if (key === 'measure') return openMeasureModal();
+  if (key === 'profile') return openProfileModal();
 }
 
 function renderFeed() {
