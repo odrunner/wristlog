@@ -4916,6 +4916,11 @@ const BADGE_REGISTRY = [
     unlock: 'Set name, profile photo, and bio.',
     glyph: '<circle cx="50" cy="40" r="10" stroke="#3D2A14" stroke-width="2" fill="none"/><path d="M30 72c0-11 9-20 20-20s20 9 20 20" stroke="#3D2A14" stroke-width="2" fill="none" stroke-linecap="round"/>',
     isHidden: false },
+  { ref: 6, slug: 'getting_started', name: 'Getting Started', category: 'onboarding',
+    flavor: "Collection, a wear, a measurement, a profile — you're all set.",
+    unlock: 'Add a watch, log a wear, measure, and complete your profile.',
+    glyph: '<path d="M34 51l11 11 21-25" stroke="#3D2A14" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    isHidden: false },
   // Collection milestones (020-023)
   { ref: 20, slug: 'five_in_box', name: 'Five in the Box', category: 'collection', tier: 1,
     flavor: 'Five watches. A proper rotation.',
@@ -5316,6 +5321,9 @@ async function checkAndAwardBadges(context, extraData) {
       if (await awardBadge(5)) newlyEarned.push(BADGE_BY_REF[5]);
     }
   }
+  if (!alreadyEarned(6) && [1, 2, 3, 5].every(alreadyEarned)) {
+    if (await awardBadge(6)) newlyEarned.push(BADGE_BY_REF[6]);
+  }
 
   // Collection milestones
   const wCount = watches.length;
@@ -5490,6 +5498,9 @@ async function checkAndAwardBadges(context, extraData) {
   if (newlyEarned.length > 0) {
     showBadgeToast(newlyEarned);
     notifyBadgesEarned(newlyEarned);
+  }
+  if (newlyEarned.some(b => b && b.ref === 3)) {
+    toast('🔥 Your streak starts now — day 1');
   }
 }
 
@@ -6211,7 +6222,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.17.24';
+const APP_VERSION = '24.17.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments

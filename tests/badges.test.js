@@ -26,6 +26,7 @@ describe('BADGE_REGISTRY shape', () => {
     { ref: 3, slug: 'first_wear', name: 'First Wear', category: 'onboarding', isHidden: false },
     { ref: 4, slug: 'first_post', name: 'First Post', category: 'onboarding', isHidden: false },
     { ref: 5, slug: 'profile_complete', name: 'Profile Complete', category: 'onboarding', isHidden: false },
+    { ref: 6, slug: 'getting_started', name: 'Getting Started', category: 'onboarding', isHidden: false },
     { ref: 20, slug: 'five_in_box', name: 'Five in the Box', category: 'collection', isHidden: false },
     { ref: 21, slug: 'ten_in_box', name: 'Ten in the Box', category: 'collection', isHidden: false },
     { ref: 22, slug: 'fifteen_deep', name: 'Fifteen Deep', category: 'collection', isHidden: false },
@@ -56,8 +57,8 @@ describe('BADGE_REGISTRY shape', () => {
   const BADGE_BY_REF = {};
   BADGE_REGISTRY.forEach(b => BADGE_BY_REF[b.ref] = b);
 
-  it('has 30 total badges across all categories', () => {
-    expect(BADGE_REGISTRY.length).toBe(30);
+  it('has 31 total badges across all categories', () => {
+    expect(BADGE_REGISTRY.length).toBe(31);
   });
 
   it('every badge has required fields', () => {
@@ -94,10 +95,10 @@ describe('BADGE_REGISTRY shape', () => {
     }
   });
 
-  it('onboarding badges have refs 1-5', () => {
+  it('onboarding badges have refs 1-6', () => {
     const onb = BADGE_REGISTRY.filter(b => b.category === 'onboarding');
-    expect(onb.length).toBe(5);
-    expect(onb.map(b => b.ref).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5]);
+    expect(onb.length).toBe(6);
+    expect(onb.map(b => b.ref).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
   it('collection badges have refs 20-23', () => {
