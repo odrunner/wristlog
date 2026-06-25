@@ -1157,7 +1157,7 @@ export function onboardingChecklistState(earnedRefs) {
   const steps = [
     { key: 'watch',   label: 'Add your first watch',  ref: 1, done: has(1) },
     { key: 'wear',    label: 'Log a wear',            ref: 3, done: has(3) },
-    { key: 'measure', label: 'Measure your accuracy', ref: 2, done: has(2) },
+    { key: 'measure', label: 'Measure accuracy', ref: 2, done: has(2) },
   ];
   const doneCount = steps.filter((s) => s.done).length;
   return { steps, doneCount, total: steps.length, complete: doneCount === steps.length };
