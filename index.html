@@ -6239,7 +6239,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.19.13';
+const APP_VERSION = '24.19.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6382,6 +6382,14 @@ async function loadMyProfile() {
     isNewUser = true;
   }
   myProfile = data;
+  // Capture IANA timezone for server-side daily reminders (writes only when it changes).
+  try {
+    const _tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (_tz && currentUser && myProfile && myProfile.timezone !== _tz) {
+      db.from('profiles').update({ timezone: _tz }).eq('id', currentUser.id)
+        .then(() => { if (window.myProfile) window.myProfile.timezone = _tz; });
+    }
+  } catch (e) { /* ignore */ }
   // Backfill ab_variant if missing (e.g. profile created by auth trigger before JS ran)
   if (data && !data.ab_variant) {
     const ab = localStorage.getItem('ab_landing');
@@ -6985,6 +6993,13 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           ${tog('clubs','Club activity')}
           <div style="font-size:.75rem;color:var(--muted);margin:.8rem 0 .6rem;border-top:1px solid var(--border);padding-top:.8rem;">General</div>
           ${tog('updates','WRotate updates & new features')}
+          <div class="toggle-row">
+            <span class="toggle-label">Daily reminders</span>
+            <label class="toggle-switch">
+              <input type="checkbox" ${ep.reminders !== false ? 'checked' : ''} onchange="saveEmailPref('reminders',this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
         </div>
       </div>
     </div>`;
@@ -11937,7 +11952,7 @@ function toggleProfSection(sectionId, storageKey) {
 async function saveEmailPref(category, enabled) {
   if (demoGuard()) return;
   if (!currentUser) return;
-  const prefs = (myProfile && myProfile.email_prefs) ? { ...myProfile.email_prefs } : { comments: true, mentions: true, clubs: false, friends: true, updates: true };
+  const prefs = (myProfile && myProfile.email_prefs) ? { ...myProfile.email_prefs } : { comments: true, mentions: true, clubs: false, friends: true, updates: true, reminders: true };
   prefs[category] = enabled;
   const { error } = await db.from('profiles').update({ email_prefs: prefs }).eq('id', currentUser.id);
   if (!error && window.myProfile) window.myProfile.email_prefs = prefs;
