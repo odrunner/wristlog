@@ -5263,6 +5263,18 @@ function addDaysStr(dateStr, delta) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function onboardingChecklistState(earnedRefs) {
+  const has = (r) => (earnedRefs instanceof Set ? earnedRefs.has(r) : (earnedRefs || []).includes(r));
+  const steps = [
+    { key: 'watch',   label: 'Add your first watch',  ref: 1, done: has(1) },
+    { key: 'wear',    label: 'Log a wear',            ref: 3, done: has(3) },
+    { key: 'measure', label: 'Measure your accuracy', ref: 2, done: has(2) },
+    { key: 'profile', label: 'Complete your profile', ref: 5, done: has(5) },
+  ];
+  const doneCount = steps.filter((s) => s.done).length;
+  return { steps, doneCount, total: 4, complete: doneCount === 4 };
+}
+
 function computeStreaks(logs, today) {
   const dates = [...new Set((logs || []).map(l => l.date).filter(Boolean))].sort();
   if (dates.length === 0) return { current: 0, best: 0, status: 'none' };
@@ -6199,7 +6211,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.17.23';
+const APP_VERSION = '24.17.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
