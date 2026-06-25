@@ -4933,8 +4933,8 @@ const BADGE_REGISTRY = [
     glyph: '<circle cx="50" cy="40" r="10" stroke="#3D2A14" stroke-width="2" fill="none"/><path d="M30 72c0-11 9-20 20-20s20 9 20 20" stroke="#3D2A14" stroke-width="2" fill="none" stroke-linecap="round"/>',
     isHidden: false },
   { ref: 6, slug: 'getting_started', name: 'Getting Started', category: 'onboarding',
-    flavor: "Collection, a wear, a measurement, a profile — you're all set.",
-    unlock: 'Add a watch, log a wear, measure, and complete your profile.',
+    flavor: "Collection, a wear, a measurement — you're all set.",
+    unlock: 'Add a watch, log a wear, and measure your accuracy.',
     glyph: '<path d="M34 51l11 11 21-25" stroke="#3D2A14" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
     isHidden: false },
   // Collection milestones (020-023)
@@ -5290,10 +5290,9 @@ function onboardingChecklistState(earnedRefs) {
     { key: 'watch',   label: 'Add your first watch',  ref: 1, done: has(1) },
     { key: 'wear',    label: 'Log a wear',            ref: 3, done: has(3) },
     { key: 'measure', label: 'Measure your accuracy', ref: 2, done: has(2) },
-    { key: 'profile', label: 'Complete your profile', ref: 5, done: has(5) },
   ];
   const doneCount = steps.filter((s) => s.done).length;
-  return { steps, doneCount, total: 4, complete: doneCount === 4 };
+  return { steps, doneCount, total: steps.length, complete: doneCount === steps.length };
 }
 
 function computeStreaks(logs, today) {
@@ -5337,7 +5336,7 @@ async function checkAndAwardBadges(context, extraData) {
       if (await awardBadge(5)) newlyEarned.push(BADGE_BY_REF[5]);
     }
   }
-  if (!alreadyEarned(6) && [1, 2, 3, 5].every(alreadyEarned)) {
+  if (!alreadyEarned(6) && [1, 2, 3].every(alreadyEarned)) {
     if (await awardBadge(6)) newlyEarned.push(BADGE_BY_REF[6]);
   }
 
@@ -6240,7 +6239,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.18.06';
+const APP_VERSION = '24.18.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
