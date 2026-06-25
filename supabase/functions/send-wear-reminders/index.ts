@@ -55,7 +55,7 @@ serve(async (req) => {
           );
           const expired = results.filter((r) => r.status === 410).map((r) => r.token);
           if (expired.length) await supabase.from("device_tokens").delete().in("token", expired);
-          if (!results.some((r) => r.success)) continue;
+          if (!results.some((r) => r.success)) { failed++; continue; }
           pushed++;
         } else {
           if (!t.email) continue;
