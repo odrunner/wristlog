@@ -38,7 +38,7 @@ const VERBATIM = [
   'tgLoadSettings', 'tgMapSliderToEngine', 'tgSaveSettings', 'uniqueWears',
   'validateUsername', 'withTimeout', 'resolveTdm', 'resolveSweepKnob', 'parseSweepValues',
   'extractCleanChunks', 'medianStd', 'buildBadgeNotificationRows',
-  'addDaysStr', 'computeStreaks', 'streakChipState', 'streakCalendarGrid',
+  'addDaysStr', 'computeStreaks', 'streakChipState', 'streakCalendarGrid', 'computeStreaksFrozen',
 ];
 
 const ADAPTED = [

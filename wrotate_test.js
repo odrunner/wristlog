@@ -43,6 +43,39 @@ export function computeStreaks(logs, today) {
   return { current, best, status: latest === today ? 'active' : 'at_risk' };
 }
 
+export function computeStreaksFrozen(logs, today) {
+  const dates = [...new Set((logs || []).map(l => l.date).filter(Boolean))].sort();
+  if (dates.length === 0) return { current: 0, best: 0, status: 'none', frozen: [], freezes: 2 };
+  const frozen = [];
+  let best = 0, runLen = 0, loggedInRun = 0, freezesAvail = 2, lastPresent = null;
+  for (const d of dates) {
+    if (lastPresent === null) {
+      runLen = 1; loggedInRun = 1; freezesAvail = 2;
+    } else if (addDaysStr(lastPresent, 1) === d) {
+      runLen += 1; loggedInRun += 1;
+      if (loggedInRun % 7 === 0 && freezesAvail < 2) freezesAvail += 1;
+    } else if (addDaysStr(lastPresent, 2) === d && freezesAvail > 0) {
+      frozen.push(addDaysStr(lastPresent, 1));
+      freezesAvail -= 1; runLen += 2; loggedInRun += 1;
+      if (loggedInRun % 7 === 0 && freezesAvail < 2) freezesAvail += 1;
+    } else {
+      best = Math.max(best, runLen);
+      runLen = 1; loggedInRun = 1; freezesAvail = 2;
+    }
+    lastPresent = d;
+    best = Math.max(best, runLen);
+  }
+  let current, status;
+  if (lastPresent === today) { current = runLen; status = 'active'; }
+  else if (lastPresent === addDaysStr(today, -1)) { current = runLen; status = 'at_risk'; }
+  else if (lastPresent === addDaysStr(today, -2) && freezesAvail > 0) {
+    frozen.push(addDaysStr(today, -1));
+    freezesAvail -= 1; runLen += 1; current = runLen; status = 'at_risk';
+  } else { current = 0; status = 'none'; }
+  best = Math.max(best, runLen);
+  return { current, best, status, frozen, freezes: status === 'none' ? 2 : freezesAvail };
+}
+
 export function streakChipState(sk, flagOn) {
   if (!flagOn || !sk) return { visible: false, count: null, dim: false, atRisk: false, invite: false };
   if (sk.status === 'active') return { visible: true, count: sk.current, dim: false, atRisk: false, invite: false };
