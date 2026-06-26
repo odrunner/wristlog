@@ -43,6 +43,14 @@ export function computeStreaks(logs, today) {
   return { current, best, status: latest === today ? 'active' : 'at_risk' };
 }
 
+export function streakChipState(sk, flagOn) {
+  if (!flagOn || !sk) return { visible: false, count: null, dim: false, atRisk: false, invite: false };
+  if (sk.status === 'active') return { visible: true, count: sk.current, dim: false, atRisk: false, invite: false };
+  if (sk.status === 'at_risk') return { visible: true, count: sk.current, dim: true, atRisk: true, invite: false };
+  if (sk.status === 'none' && sk.best >= 1) return { visible: true, count: null, dim: true, atRisk: false, invite: true };
+  return { visible: false, count: null, dim: false, atRisk: false, invite: false };
+}
+
 export function fmtMoney(n) {
   return n ? '$' + Number(n).toLocaleString() : '—';
 }
