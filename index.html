@@ -1944,6 +1944,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .bell-btn { position:relative; background:none; border:none; font-size:1.1rem; cursor:pointer; color:var(--muted);
       padding:.25rem .4rem; border-radius:8px; display:flex; align-items:center; transition:background .15s, color .15s; }
     .bell-btn:hover { background:var(--surface2); color:var(--text); }
+    .streak-chip { display:inline-flex; align-items:center; gap:.18rem; font-size:.82rem; font-weight:700; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:.12rem .5rem; cursor:pointer; line-height:1; }
+    .streak-chip .streak-count { font-variant-numeric:tabular-nums; }
+    .streak-chip.streak-chip-atrisk { border-color:#d9a441; color:#d9a441; }
     #theme-btn { background:none; border:none; cursor:pointer; color:var(--muted);
       padding:.25rem .4rem; border-radius:8px; display:flex; align-items:center; transition:background .15s, color .15s; }
     #theme-btn:hover { background:var(--surface2); color:var(--text); }
@@ -2614,6 +2617,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <span id="app-ver" class="app-ver"></span>
       <button id="theme-btn" onclick="cycleTheme()" title="Toggle theme"></button>
       <button class="help-btn" id="help-btn" onclick="showHelpPage()" style="display:none;" title="Help &amp; Guide">?</button>
+      <button class="streak-chip hidden" id="streak-chip" onclick="streakChipTap()" title="Consecutive days you've logged — any activity counts." aria-label="Wear streak"></button>
       <button class="bell-btn" id="bell-btn" onclick="toggleNotifPanel();event.stopPropagation();" style="display:none;" title="Notifications" aria-label="Notifications" aria-expanded="false" aria-controls="notif-panel">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="bell-badge hidden" id="bell-badge">0</span>
       </button>
@@ -4885,6 +4889,7 @@ const FEATURE_FLAGS = {
   tg_piezo: { label: 'Timegrapher: piezo input source (admin)', default: false },
   tg_quality_v2: { label: 'Timegrapher: measurement quality v2 (admin)', default: false },
   deep_test: { label: 'Timegrapher: Deep Test (admin)', default: false },
+  streak_chip: { label: 'Streak: top-bar chip (admin)', default: false },
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -5318,6 +5323,22 @@ function streakChipState(sk, flagOn) {
   if (sk.status === 'at_risk') return { visible: true, count: sk.current, dim: true, atRisk: true, invite: false };
   if (sk.status === 'none' && sk.best >= 1) return { visible: true, count: null, dim: true, atRisk: false, invite: true };
   return { visible: false, count: null, dim: false, atRisk: false, invite: false };
+}
+
+function updateStreakChip() {
+  const el = document.getElementById('streak-chip');
+  if (!el) return;
+  const st = streakChipState(computeStreaks(logs, todayStr()), featureFlag('streak_chip'));
+  if (!st.visible) { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  el.classList.toggle('streak-chip-atrisk', st.atRisk);
+  const flame = `<span class="streak-flame${st.dim ? ' streak-flame-dim' : ''}">🔥</span>`;
+  el.innerHTML = flame + (st.invite ? '' : ` <span class="streak-count">${st.count}</span>`);
+}
+
+function streakChipTap() {
+  const b = document.querySelector('[data-page="track"]');
+  if (b) nav(b);
 }
 
 async function checkAndAwardBadges(context, extraData) {
@@ -6062,6 +6083,7 @@ async function loadUserData() {
   else if (_activePage === 'page-track') renderTrack(true);
   else if (_activePage === 'page-wishlist') renderWishlist(true);
   else if (_activePage === 'page-stats') renderStats(true);
+  updateStreakChip();
 }
 
 // ══════════════════════════════════════════
@@ -6247,7 +6269,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.18.36';
+const APP_VERSION = '25.18.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11207,6 +11229,7 @@ async function saveNewPost() {
   maybeShowReviewPrompt('post');
   checkAndAwardBadges('post');
   feedLoadedAt = 0; // force feed to re-fetch after posting
+  updateStreakChip();
   if (document.getElementById('page-feed').classList.contains('active')) loadFeed();
   } finally { if (_npBtn) { _npBtn.disabled = false; _npBtn.textContent = 'Post'; } }
 }
@@ -13561,6 +13584,7 @@ function nav(btn) {
       initTgSourceSelector();
     }
   }
+  updateStreakChip();
 }
 
 function showClubsPage() {
@@ -14737,6 +14761,7 @@ async function saveLog() {
   if (date === todayStr()) dismissReminder();
   feedLoadedAt = 0; // force feed to re-fetch after new log
   renderTrack();
+  updateStreakChip();
   toast(isUpdate ? 'Wear log updated!' : 'Wear logged!');
   haptic('success');
   if (!isUpdate) maybeShowReviewPrompt('wear_log');
