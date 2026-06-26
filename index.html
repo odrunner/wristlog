@@ -1335,6 +1335,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .streak-cal-cell.logged { background:var(--gold); color:#1a1205; font-weight:700; }
     .streak-cal-cell.today { outline:2px solid var(--gold); outline-offset:-2px; }
     .streak-cal-cell.future { opacity:.35; }
+    .streak-cal-cell.frozen { background:#cfe8f5; color:#0c4a6e; font-weight:700; }
+    .streak-cal-freezes { text-align:center; font-size:.78rem; color:var(--muted); margin:-.5rem 0 .7rem; }
     /* Top-anchor the calendar modal so the month nav arrows keep a fixed y position across 5- vs 6-week months (id beats .overlay's align-items:center, incl. the mobile override). */
     #streak-calendar-modal { align-items: flex-start; }
     #streak-calendar-modal .modal { margin-top: 8vh; }
@@ -4913,6 +4915,7 @@ const FEATURE_FLAGS = {
   tg_piezo: { label: 'Timegrapher: piezo input source (admin)', default: false },
   tg_quality_v2: { label: 'Timegrapher: measurement quality v2 (admin)', default: false },
   deep_test: { label: 'Timegrapher: Deep Test (admin)', default: false },
+  streak_freeze: { label: 'Streak: freeze (admin)', default: false },
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -5373,6 +5376,12 @@ function computeStreaksFrozen(logs, today) {
   return { current, best, status, frozen, freezes: status === 'none' ? 2 : freezesAvail };
 }
 
+function displayStreak(logs, today) {
+  if (featureFlag('streak_freeze')) return computeStreaksFrozen(logs, today);
+  const s = computeStreaks(logs, today);
+  return { current: s.current, best: s.best, status: s.status, frozen: [], freezes: 0 };
+}
+
 function streakChipState(sk, flagOn) {
   if (!flagOn || !sk) return { visible: false, count: null, dim: false, atRisk: false, invite: false };
   if (sk.status === 'active') return { visible: true, count: sk.current, dim: false, atRisk: false, invite: false };
@@ -5421,7 +5430,9 @@ function renderStreakCalendar() {
   const body = document.getElementById('streak-calendar-body');
   if (!body || !_streakCalYM) return;
   const t = todayStr();
-  const sk = computeStreaks(logs, t);
+  const sk = displayStreak(logs, t);
+  const frozenSet = new Set(sk.frozen);
+  const freezeOn = featureFlag('streak_freeze');
   const logged = new Set(logs.map(l => l.date));
   const { year, month } = _streakCalYM;
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -5434,6 +5445,7 @@ function renderStreakCalendar() {
   const dow = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   body.innerHTML =
     `<div class="streak-cal-head">${head}</div>` +
+    (freezeOn ? `<div class="streak-cal-freezes">❄️ ${sk.freezes} freeze${sk.freezes === 1 ? '' : 's'}</div>` : '') +
     `<div class="streak-cal-nav">` +
       `<button class="btn btn-ghost btn-sm" onclick="streakCalShift(-1)" aria-label="Previous month">‹</button>` +
       `<span class="streak-cal-month">${MONTHS[month]} ${year}</span>` +
@@ -5443,8 +5455,9 @@ function renderStreakCalendar() {
       dow.map(d => `<div class="streak-cal-dow">${d}</div>`).join('') +
       cells.map(c => {
         if (!c) return `<div class="streak-cal-cell streak-cal-blank"></div>`;
-        const cls = 'streak-cal-cell' + (c.logged ? ' logged' : '') + (c.isToday ? ' today' : '') + (c.isFuture ? ' future' : '');
-        return `<div class="${cls}">${c.day}</div>`;
+        const isFrozen = !c.logged && frozenSet.has(c.date);
+        const cls = 'streak-cal-cell' + (c.logged ? ' logged' : (isFrozen ? ' frozen' : '')) + (c.isToday ? ' today' : '') + (c.isFuture ? ' future' : '');
+        return `<div class="${cls}"${isFrozen ? ' title="A streak freeze covered this day"' : ''}>${c.day}</div>`;
       }).join('') +
     `</div>`;
 }
@@ -5452,7 +5465,7 @@ function renderStreakCalendar() {
 function updateStreakChip() {
   const el = document.getElementById('streak-chip');
   if (!el) return;
-  const st = streakChipState(computeStreaks(logs, todayStr()), true);
+  const st = streakChipState(displayStreak(logs, todayStr()), true);
   if (!st.visible) { el.classList.add('hidden'); return; }
   el.classList.remove('hidden');
   el.classList.toggle('streak-chip-atrisk', st.atRisk);
@@ -5462,6 +5475,19 @@ function updateStreakChip() {
 
 function streakChipTap() {
   openStreakCalendar();
+}
+
+function maybeFreezeToast() {
+  if (!featureFlag('streak_freeze')) return;
+  const t = todayStr();
+  const sk = computeStreaksFrozen(logs, t);
+  const recent = [addDaysStr(t, -1), addDaysStr(t, -2)];
+  const hit = sk.frozen.find(d => recent.includes(d));
+  if (!hit) return;
+  const key = 'wrotate_freeze_toast_' + hit;
+  if (localStorage.getItem(key)) return;
+  localStorage.setItem(key, '1');
+  toast(`❄️ A freeze saved your ${sk.current}-day streak — log today to keep it going`);
 }
 
 async function checkAndAwardBadges(context, extraData) {
@@ -5716,7 +5742,7 @@ function badgeWallProfileSection() {
       ).join('')
     : '';
 
-  const sk = computeStreaks(logs, todayStr());
+  const sk = displayStreak(logs, todayStr());
   const streakHeader = sk.status === 'none'
     ? `<div class="streak-line">Start a streak${sk.best >= 2 ? ` <span class="streak-best">· best ${sk.best}</span>` : ''}</div>`
     : `<div class="streak-line">`
@@ -6207,6 +6233,7 @@ async function loadUserData() {
   else if (_activePage === 'page-wishlist') renderWishlist(true);
   else if (_activePage === 'page-stats') renderStats(true);
   updateStreakChip();
+  maybeFreezeToast();
 }
 
 // ══════════════════════════════════════════
@@ -6392,7 +6419,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.10.28';
+const APP_VERSION = '26.10.32';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
