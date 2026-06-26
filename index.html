@@ -5469,6 +5469,10 @@ function updateStreakChip() {
 }
 
 function streakChipTap() {
+  if (window.posthog) {
+    const sk = displayStreak(logs, todayStr());
+    posthog.capture('streak_chip_clicked', { streak: sk.current, status: sk.status });
+  }
   openStreakCalendar();
 }
 
@@ -6413,7 +6417,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.12.50';
+const APP_VERSION = '26.12.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
