@@ -222,8 +222,11 @@ VALUES
 
 
 -- ═════════════════════════════════════════════════════════════════════════════
---  WEAR LOGS  (~330 days of entries across Mar 2025 – Feb 2026)
---  Plus ~10 posts (watch_id IS NULL)
+--  WEAR LOGS  (~400 days of entries across Mar 2025 – Jun 2026)
+--  Plus ~16 posts (watch_id IS NULL)
+--  NOTE: wear logs and posts are 'private' so the demo persona's content
+--  does not leak into the real public feed; the demo viewer sees it via the
+--  SECURITY DEFINER demo-login regardless of visibility.
 -- ═════════════════════════════════════════════════════════════════════════════
 DO $$
 DECLARE
@@ -348,10 +351,10 @@ BEGIN
     'Back-to-back meetings all day'
   ];
 
-  -- ── Generate wear logs day by day: Mar 1 2025 → Feb 28 2026 ──
+  -- ── Generate wear logs day by day: Mar 1 2025 → Jun 24 2026 ──
   v_day := '2025-03-01'::date;
 
-  WHILE v_day <= '2026-02-28'::date LOOP
+  WHILE v_day <= '2026-06-24'::date LOOP
     v_day_text := to_char(v_day, 'YYYY-MM-DD');
 
     -- ~90% chance of wearing a watch on any given day
@@ -465,7 +468,7 @@ BEGIN
       v_use_case,
       v_note,
       NULL,
-      'public',
+      'private',
       NULL
     );
 
@@ -477,43 +480,67 @@ BEGIN
   VALUES
     (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2025-03-20', 'unspecified',
      'Just reorganized my watch box. The collection is really coming together.',
-     NULL, 'public', NULL),
+     NULL, 'private', NULL),
 
     (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2025-04-15', 'unspecified',
      'Visited the Omega boutique today. The new Moonshine Gold Speedmaster in person is something else.',
-     NULL, 'public', NULL),
+     NULL, 'private', NULL),
 
     (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2025-05-28', 'unspecified',
      'Hot take: the best watch in any collection is the one you actually wear.',
-     NULL, 'public', NULL),
+     NULL, 'private', NULL),
 
     (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2025-07-04', 'unspecified',
      'Happy Fourth! Rocking the red, white and blue — Pepsi GMT would have been perfect but Batman will do.',
-     NULL, 'public', NULL),
+     NULL, 'private', NULL),
 
     (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2025-08-12', 'unspecified',
      'Thinking about adding a proper field watch to the rotation. Maybe a Hamilton Khaki?',
-     NULL, 'public', NULL),
+     NULL, 'private', NULL),
 
     (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2025-09-30', 'unspecified',
      'Three months of tracking wear data and the Submariner is the clear daily champion. No surprise there.',
-     NULL, 'public', NULL),
+     NULL, 'private', NULL),
 
     (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2025-11-15', 'unspecified',
      'The Snowflake dial in autumn light is unreal. Spring Drive sweep never gets old.',
-     NULL, 'public', NULL),
+     NULL, 'private', NULL),
 
     (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2025-12-25', 'unspecified',
      'Christmas gift to myself: a custom leather strap for the Reverso. Burgundy alligator.',
-     NULL, 'public', NULL),
+     NULL, 'private', NULL),
 
     (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2026-01-10', 'unspecified',
      'New year resolution: wear the JLC and Seiko more. They deserve more wrist time.',
-     NULL, 'public', NULL),
+     NULL, 'private', NULL),
 
     (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2026-02-14', 'unspecified',
      'Valentine dinner with the Santos. Cartier just has that effortless elegance for date night.',
-     NULL, 'public', NULL);
+     NULL, 'private', NULL),
+
+    (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2026-03-09', 'unspecified',
+     'Spring rotation is shaping up. The Black Bay 58 has been getting way more wrist time as the weather warms up.',
+     NULL, 'private', NULL),
+
+    (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2026-03-28', 'unspecified',
+     'One year of logging every wear today. Wild to see the data — the Submariner and GMT carry the rotation, and the Reverso barely cracks the top ten. Numbers don''t lie.',
+     NULL, 'private', NULL),
+
+    (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2026-04-22', 'unspecified',
+     'Spent the afternoon comparing the Speedmaster against the Chronomaster Sport side by side. Two completely different takes on the chronograph and I love them both for different reasons.',
+     NULL, 'private', NULL),
+
+    (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2026-05-11', 'unspecified',
+     'Dive watch season is officially here. The Submariner has barely left my wrist all week and I''m not mad about it.',
+     NULL, 'private', NULL),
+
+    (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2026-05-30', 'unspecified',
+     'Still thinking about a blue Seamaster 300M for summer. The wishlist keeps growing faster than the collection.',
+     NULL, 'private', NULL),
+
+    (gen_random_uuid()::text, '73e4e48e-dbca-4b2e-82d2-35d5b39716d2', NULL, '2026-06-18', 'unspecified',
+     'Half the year logged and the takeaway is the same: the watches I reach for aren''t always the expensive ones. The G-Shock punches way above its weight in the data.',
+     NULL, 'private', NULL);
 
 END $$;
 
@@ -579,8 +606,8 @@ COMMIT;
 --  Done! Your demo account now has:
 --   • 1 profile (James Collins / @watchdemo)
 --   • 12 watches across 9 brands
---   • ~330 wear log entries spanning Mar 2025 – Feb 2026
---   • 10 general posts (thoughts & observations)
+--   • ~400 wear log entries spanning Mar 2025 – Jun 2026
+--   • 16 general posts (thoughts & observations)
 --   • 6 wishlist items including 3 grail watches
 --
 --  Total collection value:  ~$75,810 (purchase)
