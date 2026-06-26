@@ -1335,6 +1335,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .streak-cal-cell.logged { background:var(--gold); color:#1a1205; font-weight:700; }
     .streak-cal-cell.today { outline:2px solid var(--gold); outline-offset:-2px; }
     .streak-cal-cell.future { opacity:.35; }
+    /* Top-anchor the calendar modal so the month nav arrows keep a fixed y position across 5- vs 6-week months (id beats .overlay's align-items:center, incl. the mobile override). */
+    #streak-calendar-modal { align-items: flex-start; }
+    #streak-calendar-modal .modal { margin-top: 8vh; }
     .dow-cell { background:var(--surface2); border-radius:8px; padding:.65rem .4rem; text-align:center; border:1px solid transparent; min-width:0; overflow:hidden; }
     .dow-cell.today-col { border-color:var(--gold); }
     .dow-day-name { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
@@ -6356,7 +6359,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.20.49';
+const APP_VERSION = '26.08.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
