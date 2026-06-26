@@ -2640,7 +2640,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div id="server-dot" class="server-dot" title="Saving to local file"></div>
 
       <span id="msr-badge" class="msr-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/></svg><span id="msr-badge-time"></span></span>
-      <span id="app-ver" class="app-ver"></span>
       <button id="theme-btn" onclick="cycleTheme()" title="Toggle theme"></button>
       <button class="help-btn" id="help-btn" onclick="showHelpPage()" style="display:none;" title="Help &amp; Guide">?</button>
       <button class="streak-chip hidden" id="streak-chip" onclick="streakChipTap()" title="Consecutive days you've logged — any activity counts." aria-label="Wear streak"></button>
@@ -2788,7 +2787,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <!-- ════ ADMIN PAGE ════ -->
   <div id="page-admin" class="page">
     <div class="page-header" style="margin-bottom:.75rem;">
-      <h1 class="page-title">Admin</h1>
+      <h1 class="page-title">Admin <span id="app-ver" class="app-ver"></span></h1>
     </div>
 
     <!-- Admin Tabs -->
@@ -4915,7 +4914,6 @@ const FEATURE_FLAGS = {
   tg_piezo: { label: 'Timegrapher: piezo input source (admin)', default: false },
   tg_quality_v2: { label: 'Timegrapher: measurement quality v2 (admin)', default: false },
   deep_test: { label: 'Timegrapher: Deep Test (admin)', default: false },
-  streak_freeze: { label: 'Streak: freeze (admin)', default: false },
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -5377,9 +5375,7 @@ function computeStreaksFrozen(logs, today) {
 }
 
 function displayStreak(logs, today) {
-  if (featureFlag('streak_freeze')) return computeStreaksFrozen(logs, today);
-  const s = computeStreaks(logs, today);
-  return { current: s.current, best: s.best, status: s.status, frozen: [], freezes: 0 };
+  return computeStreaksFrozen(logs, today);
 }
 
 function streakChipState(sk, flagOn) {
@@ -5432,7 +5428,6 @@ function renderStreakCalendar() {
   const t = todayStr();
   const sk = displayStreak(logs, t);
   const frozenSet = new Set(sk.frozen);
-  const freezeOn = featureFlag('streak_freeze');
   const logged = new Set(logs.map(l => l.date));
   const { year, month } = _streakCalYM;
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -5445,7 +5440,7 @@ function renderStreakCalendar() {
   const dow = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   body.innerHTML =
     `<div class="streak-cal-head">${head}</div>` +
-    (freezeOn ? `<div class="streak-cal-freezes">❄️ ${sk.freezes} freeze${sk.freezes === 1 ? '' : 's'}</div>` : '') +
+    `<div class="streak-cal-freezes">❄️ ${sk.freezes} freeze${sk.freezes === 1 ? '' : 's'}</div>` +
     `<div class="streak-cal-nav">` +
       `<button class="btn btn-ghost btn-sm" onclick="streakCalShift(-1)" aria-label="Previous month">‹</button>` +
       `<span class="streak-cal-month">${MONTHS[month]} ${year}</span>` +
@@ -5478,7 +5473,6 @@ function streakChipTap() {
 }
 
 function maybeFreezeToast() {
-  if (!featureFlag('streak_freeze')) return;
   const t = todayStr();
   const sk = computeStreaksFrozen(logs, t);
   const recent = [addDaysStr(t, -1), addDaysStr(t, -2)];
@@ -6419,7 +6413,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.10.32';
+const APP_VERSION = '26.11.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
