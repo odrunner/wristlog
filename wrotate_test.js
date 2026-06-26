@@ -51,6 +51,20 @@ export function streakChipState(sk, flagOn) {
   return { visible: false, count: null, dim: false, atRisk: false, invite: false };
 }
 
+export function streakCalendarGrid(loggedDates, year, monthIndex, today) {
+  const has = (d) => (loggedDates instanceof Set ? loggedDates.has(d) : (loggedDates || []).includes(d));
+  const pad = (n) => String(n).padStart(2, '0');
+  const startDow = new Date(year, monthIndex, 1).getDay();
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < startDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = `${year}-${pad(monthIndex + 1)}-${pad(d)}`;
+    cells.push({ day: d, date, logged: has(date), isToday: date === today, isFuture: date > today });
+  }
+  return cells;
+}
+
 export function fmtMoney(n) {
   return n ? '$' + Number(n).toLocaleString() : '—';
 }

@@ -1325,6 +1325,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* ── DAY-OF-WEEK REPORT ── */
     .dow-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:.5rem; margin-top:.25rem; }
+    .streak-cal-head { text-align:center; font-weight:700; font-size:1rem; margin-bottom:.9rem; display:flex; align-items:center; justify-content:center; gap:.3rem; }
+    .streak-cal-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:.6rem; }
+    .streak-cal-month { font-weight:600; font-size:.92rem; }
+    .streak-cal-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:.25rem; }
+    .streak-cal-dow { text-align:center; font-size:.62rem; font-weight:700; text-transform:uppercase; color:var(--muted); padding-bottom:.2rem; }
+    .streak-cal-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:.8rem; border-radius:8px; background:var(--surface2); color:var(--text); }
+    .streak-cal-blank { background:transparent; }
+    .streak-cal-cell.logged { background:var(--gold); color:#1a1205; font-weight:700; }
+    .streak-cal-cell.today { outline:2px solid var(--gold); outline-offset:-2px; }
+    .streak-cal-cell.future { opacity:.35; }
     .dow-cell { background:var(--surface2); border-radius:8px; padding:.65rem .4rem; text-align:center; border:1px solid transparent; min-width:0; overflow:hidden; }
     .dow-cell.today-col { border-color:var(--gold); }
     .dow-day-name { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
@@ -2314,6 +2324,17 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div class="modal-actions" style="margin-top:1rem;">
       <button class="btn btn-ghost" onclick="closeWhatsNew()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ STREAK CALENDAR MODAL ════ -->
+<div id="streak-calendar-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="streak-calendar-title">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-title" id="streak-calendar-title">Streak Calendar</div>
+    <div id="streak-calendar-body"></div>
+    <div class="modal-actions" style="margin-top:1rem;">
+      <button class="btn btn-ghost" onclick="closeStreakCalendar()">Close</button>
     </div>
   </div>
 </div>
@@ -5325,6 +5346,74 @@ function streakChipState(sk, flagOn) {
   return { visible: false, count: null, dim: false, atRisk: false, invite: false };
 }
 
+function streakCalendarGrid(loggedDates, year, monthIndex, today) {
+  const has = (d) => (loggedDates instanceof Set ? loggedDates.has(d) : (loggedDates || []).includes(d));
+  const pad = (n) => String(n).padStart(2, '0');
+  const startDow = new Date(year, monthIndex, 1).getDay();
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < startDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = `${year}-${pad(monthIndex + 1)}-${pad(d)}`;
+    cells.push({ day: d, date, logged: has(date), isToday: date === today, isFuture: date > today });
+  }
+  return cells;
+}
+
+let _streakCalYM = null; // displayed month {year, month}
+
+function openStreakCalendar() {
+  const t = todayStr();
+  _streakCalYM = { year: +t.slice(0, 4), month: +t.slice(5, 7) - 1 };
+  renderStreakCalendar();
+  document.getElementById('streak-calendar-modal').classList.remove('hidden');
+}
+
+function closeStreakCalendar() {
+  document.getElementById('streak-calendar-modal').classList.add('hidden');
+}
+
+function streakCalShift(delta) {
+  if (!_streakCalYM) return;
+  let { year, month } = _streakCalYM;
+  month += delta;
+  if (month < 0) { month = 11; year--; } else if (month > 11) { month = 0; year++; }
+  _streakCalYM = { year, month };
+  renderStreakCalendar();
+}
+
+function renderStreakCalendar() {
+  const body = document.getElementById('streak-calendar-body');
+  if (!body || !_streakCalYM) return;
+  const t = todayStr();
+  const sk = computeStreaks(logs, t);
+  const logged = new Set(logs.map(l => l.date));
+  const { year, month } = _streakCalYM;
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const cells = streakCalendarGrid(logged, year, month, t);
+  const head = sk.status === 'none'
+    ? `Start a streak${sk.best >= 1 ? ` · best ${sk.best}` : ''}`
+    : `<span class="streak-flame${sk.status === 'at_risk' ? ' streak-flame-dim' : ''}">🔥</span> ${sk.current}-day streak${sk.best > sk.current ? ` · best ${sk.best}` : ''}`;
+  const curY = +t.slice(0, 4), curM = +t.slice(5, 7) - 1;
+  const atCurrent = (year > curY) || (year === curY && month >= curM);
+  const dow = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  body.innerHTML =
+    `<div class="streak-cal-head">${head}</div>` +
+    `<div class="streak-cal-nav">` +
+      `<button class="btn btn-ghost btn-sm" onclick="streakCalShift(-1)" aria-label="Previous month">‹</button>` +
+      `<span class="streak-cal-month">${MONTHS[month]} ${year}</span>` +
+      `<button class="btn btn-ghost btn-sm" onclick="streakCalShift(1)" ${atCurrent ? 'disabled' : ''} aria-label="Next month">›</button>` +
+    `</div>` +
+    `<div class="streak-cal-grid">` +
+      dow.map(d => `<div class="streak-cal-dow">${d}</div>`).join('') +
+      cells.map(c => {
+        if (!c) return `<div class="streak-cal-cell streak-cal-blank"></div>`;
+        const cls = 'streak-cal-cell' + (c.logged ? ' logged' : '') + (c.isToday ? ' today' : '') + (c.isFuture ? ' future' : '');
+        return `<div class="${cls}">${c.day}</div>`;
+      }).join('') +
+    `</div>`;
+}
+
 function updateStreakChip() {
   const el = document.getElementById('streak-chip');
   if (!el) return;
@@ -5337,8 +5426,7 @@ function updateStreakChip() {
 }
 
 function streakChipTap() {
-  const b = document.querySelector('[data-page="track"]');
-  if (b) nav(b);
+  openStreakCalendar();
 }
 
 async function checkAndAwardBadges(context, extraData) {
@@ -6269,7 +6357,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.18.46';
+const APP_VERSION = '25.20.31';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21977,6 +22065,7 @@ const _overlayCloseMap = {
   'edit-log-modal':      closeEditLog,
   'create-club-modal':   closeCreateClub,
   'whats-new-modal':     closeWhatsNew,
+  'streak-calendar-modal': closeStreakCalendar,
   'anniversary-modal':   dismissAnniversary,
   'review-prompt-modal': closeReviewPrompt,
   'msr-help-modal':      closeMsrHelp,
