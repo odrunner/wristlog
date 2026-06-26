@@ -4910,7 +4910,6 @@ const FEATURE_FLAGS = {
   tg_piezo: { label: 'Timegrapher: piezo input source (admin)', default: false },
   tg_quality_v2: { label: 'Timegrapher: measurement quality v2 (admin)', default: false },
   deep_test: { label: 'Timegrapher: Deep Test (admin)', default: false },
-  streak_chip: { label: 'Streak: top-bar chip (admin)', default: false },
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -5417,7 +5416,7 @@ function renderStreakCalendar() {
 function updateStreakChip() {
   const el = document.getElementById('streak-chip');
   if (!el) return;
-  const st = streakChipState(computeStreaks(logs, todayStr()), featureFlag('streak_chip'));
+  const st = streakChipState(computeStreaks(logs, todayStr()), true);
   if (!st.visible) { el.classList.add('hidden'); return; }
   el.classList.remove('hidden');
   el.classList.toggle('streak-chip-atrisk', st.atRisk);
@@ -6357,7 +6356,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.20.31';
+const APP_VERSION = '25.20.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
