@@ -5740,23 +5740,12 @@ function badgeWallProfileSection() {
       ).join('')
     : '';
 
-  const sk = displayStreak(logs, todayStr());
-  const streakHeader = sk.status === 'none'
-    ? `<div class="streak-line">Start a streak${sk.best >= 2 ? ` <span class="streak-best">· best ${sk.best}</span>` : ''}</div>`
-    : `<div class="streak-line">`
-      + `<span class="streak-flame${sk.status === 'at_risk' ? ' streak-flame-dim' : ''}">🔥</span> `
-      + `<span class="streak-count">${sk.current}-day streak</span>`
-      + (sk.status === 'at_risk' ? ` <span class="streak-cue">· keep it going</span>` : '')
-      + (sk.best > sk.current ? ` <span class="streak-best">· best ${sk.best}</span>` : '')
-      + `</div>`;
-
   return `
     <div class="profile-page-card">
       <div class="profile-page-section-title" style="display:flex;justify-content:space-between;align-items:center;">
         <span>Achievements</span>
         <span style="font-size:.72rem;color:var(--muted);font-weight:400;">${earned.length} / ${visible.length}</span>
       </div>
-      ${streakHeader}
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;padding:.5rem 0;">
         ${previewCards}${lockedPreview}
       </div>
@@ -6417,7 +6406,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.12.56';
+const APP_VERSION = '26.15.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
