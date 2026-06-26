@@ -5312,6 +5312,14 @@ function computeStreaks(logs, today) {
   return { current, best, status: latest === today ? 'active' : 'at_risk' };
 }
 
+function streakChipState(sk, flagOn) {
+  if (!flagOn || !sk) return { visible: false, count: null, dim: false, atRisk: false, invite: false };
+  if (sk.status === 'active') return { visible: true, count: sk.current, dim: false, atRisk: false, invite: false };
+  if (sk.status === 'at_risk') return { visible: true, count: sk.current, dim: true, atRisk: true, invite: false };
+  if (sk.status === 'none' && sk.best >= 1) return { visible: true, count: null, dim: true, atRisk: false, invite: true };
+  return { visible: false, count: null, dim: false, atRisk: false, invite: false };
+}
+
 async function checkAndAwardBadges(context, extraData) {
   if (!currentUser) return;
   const newlyEarned = [];
@@ -6239,7 +6247,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.18.28';
+const APP_VERSION = '25.18.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
