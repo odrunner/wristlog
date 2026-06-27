@@ -2163,6 +2163,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Achievements in Your Feed</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">The badges you earn now show up in your feed, so friends can see your milestones and react. Earn one while logging a wear or posting and it appears right on that post; earn one another way and it gets its own card. You&#8217;re in control &#8212; switch it off anytime under Profile &#8594; Notifications &#8594; &#8220;Share achievements to feed.&#8221;</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">New Badge: Daily Double</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Wear two different watches in the same day to earn the new Daily Double badge &#8212; for the days when one just isn&#8217;t enough.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Wear Streaks</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">A &#128293; streak counter now lives in the top bar &#8212; the number of days in a row you&#8217;ve logged a wear. Tap it to open a calendar of every day you logged, with your current and best streak. And streak freezes have your back: miss a single day and a freeze automatically covers it so one slip doesn&#8217;t reset you. You start with two and earn one back for every seven days you log.</div>
       </div>
@@ -3468,6 +3476,34 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-body">
               <div class="help-step-title">Streak freezes</div>
               <div class="help-step-desc">Miss a single day and a freeze automatically covers it so your streak survives &#8212; it shows as a &#10052;&#65039; on the calendar. You start with two and earn one back for every seven days you log. Two missed days in a row still ends the streak.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ACHIEVEMENTS ── -->
+      <div class="help-section">
+        <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg> Achievements</div>
+        <div class="help-card">
+          <div class="help-step">
+            <div class="help-step-num">&#8212;</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Earn badges</div>
+              <div class="help-step-desc">Build your collection, log wears, measure accuracy, and keep streaks going to unlock badges. See all of them on your profile under Achievements.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">&#8212;</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Achievements in the feed</div>
+              <div class="help-step-desc">When you earn a notable badge it&#8217;s shared to your feed &#8212; on the post that earned it, or as its own card &#8212; so friends can react. Trivial onboarding badges and hidden easter eggs stay private.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">&#8212;</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Control sharing</div>
+              <div class="help-step-desc">Don&#8217;t want badges in your feed? Turn off &#8220;Share achievements to feed&#8221; under Profile &#8594; Notifications. Badge posts also follow your default post visibility, so a private default never broadcasts.</div>
             </div>
           </div>
         </div>
@@ -6499,7 +6535,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.13.40';
+const APP_VERSION = '27.13.44';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -25185,7 +25221,7 @@ async function bootApp(user) {
   maybeShowNewFeatures();
   // Auto-show What's New once per version (iOS 1.4+ only)
   const _wnKey = 'whatsNewSeen';
-  const _wnVer = '2026-06.2';
+  const _wnVer = '2026-06.3';
   if (window._iosAppVersion && localStorage.getItem(_wnKey) !== _wnVer) {
     localStorage.setItem(_wnKey, _wnVer);
     setTimeout(() => openWhatsNew(), 600);
