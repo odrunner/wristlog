@@ -5166,6 +5166,12 @@ function badgeMedallionSvg(badge, size, earned) {
     <g opacity="0.4"><rect x="44" y="42" width="12" height="16" rx="2.5" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="50" cy="40" r="4" stroke="#3D2A14" stroke-width="2" fill="none"/></g>
   </svg>`;
 }
+function badgePostPlan(newlyEarned, context, postId) {
+  const notable = (newlyEarned || []).filter(b => b && b.category !== 'onboarding' && !b.isHidden).map(b => b.ref);
+  if (!notable.length || context === 'retroactive') return { inline: [], standalone: [] };
+  if (postId) return { inline: notable, standalone: [] };
+  return { inline: [], standalone: notable };
+}
 
 function badgeRefLabel(ref) {
   return 'REF · ' + String(ref).padStart(3, '0');
@@ -6438,7 +6444,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.09.44';
+const APP_VERSION = '27.09.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments

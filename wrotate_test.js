@@ -2013,3 +2013,10 @@ export function renderPostLocationHtml(location) {
   const loc = normalizeLocation(location);
   return loc ? ' · ' + LOCATION_PIN_SVG + ' ' + escHtml(loc) : '';
 }
+
+export function badgePostPlan(newlyEarned, context, postId) {
+  const notable = (newlyEarned || []).filter(b => b && b.category !== 'onboarding' && !b.isHidden).map(b => b.ref);
+  if (!notable.length || context === 'retroactive') return { inline: [], standalone: [] };
+  if (postId) return { inline: notable, standalone: [] };
+  return { inline: [], standalone: notable };
+}
