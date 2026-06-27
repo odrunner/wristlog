@@ -5188,16 +5188,15 @@ function badgePostPlan(newlyEarned, context, postId) {
 async function attachBadgesToPost(postId, refs) {
   if (!postId || !refs || !refs.length) return;
   const local = logs.find(l => l.id === postId);
-  if (local) {
-    // Ride the existing cloudSync path (logToRow now carries badge_refs) so we
-    // never race the debounced INSERT of a just-created wear log.
-    local.badgeRefs = refs;
-    markDirty('logs', postId);
-    save();
-  } else {
-    try { await db.from('logs').update({ badge_refs: refs }).eq('id', postId); }
-    catch (e) { console.warn('[badge-post] attach failed:', e); }
-  }
+  if (local) local.badgeRefs = refs;
+  try {
+    // Upsert the FULL row (logToRow carries badge_refs) and AWAIT it before the
+    // feed refresh — avoids racing both the debounced INSERT of a just-created
+    // wear log AND the immediate re-fetch (which previously showed no ribbon
+    // until a later refresh).
+    if (local) { markDirty('logs', postId); await db.from('logs').upsert(logToRow(local), { onConflict: 'id' }); }
+    else await db.from('logs').update({ badge_refs: refs }).eq('id', postId);
+  } catch (e) { console.warn('[badge-post] attach failed:', e); }
   feedLoadedAt = 0;
   if (document.getElementById('page-feed')?.classList.contains('active')) loadFeed();
 }
@@ -5742,7 +5741,7 @@ async function checkAndAwardBadges(context, postId) {
   }
 
   // Daily Double (7) — two different watches logged on the same day
-  if (!alreadyEarned(7) && (context === 'wear' || context === 'post' || context === 'retroactive')) {
+  if (!alreadyEarned(7) && (context === 'wear' || context === 'post')) {
     const _today = todayStr();
     const _ddCount = new Set(logs.filter(l => l.date === _today && l.watchId).map(l => l.watchId)).size;
     if (_ddCount >= 2) { if (await awardBadge(7)) newlyEarned.push(BADGE_BY_REF[7]); }
@@ -6501,7 +6500,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.11.10';
+const APP_VERSION = '27.11.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
