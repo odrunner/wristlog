@@ -1754,6 +1754,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       margin: 0; word-break: break-word; white-space: pre-wrap;
     }
 
+    .feed-badge-hero { display:flex; flex-direction:column; align-items:center; gap:.3rem; padding:1.1rem 1rem; cursor:pointer; }
+    .feed-badge-name { font-weight:700; font-size:1rem; color:var(--text); }
+    .feed-badge-flavor { font-size:.82rem; color:var(--muted); text-align:center; line-height:1.4; max-width:34ch; }
+    .feed-badge-tag { font-size:.68rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-top:.15rem; }
+    .feed-badge-ribbon { display:inline-flex; align-items:center; gap:.4rem; margin:.1rem 1rem .5rem; padding:.3rem .6rem; background:var(--surface2); border-radius:999px; font-size:.8rem; font-weight:600; color:var(--text); cursor:pointer; }
+
     /* Add-photo button inside watch banner (own cards, no photo) */
     .feed-add-photo-btn {
       background: none; border: 1px solid var(--border); color: var(--muted);
@@ -4946,6 +4952,7 @@ const FEATURE_FLAGS = {
   tg_piezo: { label: 'Timegrapher: piezo input source (admin)', default: false },
   tg_quality_v2: { label: 'Timegrapher: measurement quality v2 (admin)', default: false },
   deep_test: { label: 'Timegrapher: Deep Test (admin)', default: false },
+  badge_posts: { label: 'Badge achievement posts (admin)', default: false },
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -5165,6 +5172,43 @@ function badgeMedallionSvg(badge, size, earned) {
     <circle cx="50" cy="50" r="44" fill="#FEFCF6" stroke="#A8A28C" stroke-width="0.4"/>
     <g opacity="0.4"><rect x="44" y="42" width="12" height="16" rx="2.5" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="50" cy="40" r="4" stroke="#3D2A14" stroke-width="2" fill="none"/></g>
   </svg>`;
+}
+function badgePostPlan(newlyEarned, context, postId) {
+  const notable = (newlyEarned || []).filter(b => b && b.category !== 'onboarding' && !b.isHidden).map(b => b.ref);
+  if (!notable.length || context === 'retroactive') return { inline: [], standalone: [] };
+  if (postId) return { inline: notable, standalone: [] };
+  return { inline: [], standalone: notable };
+}
+
+async function attachBadgesToPost(postId, refs) {
+  if (!postId || !refs || !refs.length) return;
+  const local = logs.find(l => l.id === postId);
+  if (local) {
+    // Ride the existing cloudSync path (logToRow now carries badge_refs) so we
+    // never race the debounced INSERT of a just-created wear log.
+    local.badgeRefs = refs;
+    markDirty('logs', postId);
+    save();
+  } else {
+    try { await db.from('logs').update({ badge_refs: refs }).eq('id', postId); }
+    catch (e) { console.warn('[badge-post] attach failed:', e); }
+  }
+  feedLoadedAt = 0;
+  if (document.getElementById('page-feed')?.classList.contains('active')) loadFeed();
+}
+
+async function createStandaloneBadgePost(ref) {
+  const b = BADGE_BY_REF[ref];
+  if (!b || !currentUser) return;
+  try {
+    await db.from('logs').insert({
+      id: uid(), user_id: currentUser.id, watch_id: null, date: todayStr(),
+      use_case: 'badge', notes: `Earned the ${b.name} badge 🏅`, photo_url: null,
+      visibility: getDefaultVis(), location: null, club_id: null, badge_refs: [ref],
+    });
+  } catch (e) { console.warn('[badge-post] standalone failed:', e); return; }
+  feedLoadedAt = 0;
+  if (document.getElementById('page-feed')?.classList.contains('active')) loadFeed();
 }
 
 function badgeRefLabel(ref) {
@@ -5520,7 +5564,7 @@ function maybeFreezeToast() {
   toast(`❄️ A freeze saved your ${sk.current}-day streak — log today to keep it going`);
 }
 
-async function checkAndAwardBadges(context, extraData) {
+async function checkAndAwardBadges(context, postId) {
   if (!currentUser) return;
   const newlyEarned = [];
 
@@ -5721,6 +5765,11 @@ async function checkAndAwardBadges(context, extraData) {
   if (newlyEarned.length > 0) {
     showBadgeToast(newlyEarned);
     notifyBadgesEarned(newlyEarned);
+  }
+  if (newlyEarned.length > 0 && featureFlag('badge_posts') && myProfile && myProfile.share_achievements !== false) {
+    const _bp = badgePostPlan(newlyEarned, context, postId);
+    if (_bp.inline.length) attachBadgesToPost(postId, _bp.inline);
+    for (const _ref of _bp.standalone) createStandaloneBadgePost(_ref);
   }
   if (newlyEarned.some(b => b && b.ref === 3)) {
     toast('🔥 Your streak starts now — day 1');
@@ -6155,6 +6204,7 @@ function logToRow(l) {
     photo_url: l.photoUrl||null,
     visibility: vis,
     club_id: l.clubId || null,
+    badge_refs: l.badgeRefs || null,
   };
 }
 function rowToLog(r) {
@@ -6164,6 +6214,7 @@ function rowToLog(r) {
     strapId: r.strap_id||null, photoUrl: r.photo_url||null,
     visibility: r.visibility || 'public',
     clubId: r.club_id || null,
+    badgeRefs: r.badge_refs || null,
   };
 }
 function wishToRow(w, idx) {
@@ -6438,7 +6489,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.09.11';
+const APP_VERSION = '27.10.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7199,6 +7250,15 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
               <span class="toggle-slider"></span>
             </label>
           </div>
+          ${featureFlag('badge_posts') ? `
+          <div style="font-size:.75rem;color:var(--muted);margin:.8rem 0 .6rem;border-top:1px solid var(--border);padding-top:.8rem;">Sharing</div>
+          <div class="toggle-row">
+            <span class="toggle-label">Share achievements to feed</span>
+            <label class="toggle-switch">
+              <input type="checkbox" ${profile.share_achievements !== false ? 'checked' : ''} onchange="saveShareAchievements(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>` : ''}
         </div>
       </div>
     </div>`;
@@ -9536,7 +9596,7 @@ function closeLoginPrompt() {
 }
 
 // ── Feed ──────────────────────────────────────────────────────────────────
-const FEED_LOG_COLS = 'id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility, moderation_status, location';
+const FEED_LOG_COLS = 'id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility, moderation_status, location, badge_refs';
 async function loadFeed() {
   if (!currentUser) return;
   // If feedLoading is stuck true for >8s, treat it as dead and allow re-entry
@@ -9929,7 +9989,7 @@ function renderFeedCard(item) {
   const _loc = normalizeLocation(item.location);
   const metaParts = [
     formatFeedDate(item.date, item.created_at),
-    item.use_case && item.use_case !== 'unspecified' ? item.use_case : '',
+    item.use_case && item.use_case !== 'unspecified' && item.use_case !== 'badge' ? item.use_case : '',
     _loc ? LOCATION_PIN_SVG + ' ' + escHtml(_loc) : ''
   ].filter(Boolean);
   const metaStr   = metaParts.join(' · ');
@@ -9939,7 +9999,14 @@ function renderFeedCard(item) {
 
   // Hero area
   let heroHtml = '';
-  if (item.photo_url) {
+  if (item.use_case === 'badge' && Array.isArray(item.badge_refs) && item.badge_refs.length) {
+    const _b = BADGE_BY_REF[Number(item.badge_refs[0])];
+    if (_b) heroHtml = `<div class="feed-badge-hero" onclick="openBadgeDetail(${_b.ref})">`
+      + badgeMedallionSvg(_b, 72, true)
+      + `<div class="feed-badge-name">${escHtml(_b.name)}</div>`
+      + `<div class="feed-badge-flavor">${escHtml(_b.flavor || '')}</div>`
+      + `<div class="feed-badge-tag">🏅 Badge</div></div>`;
+  } else if (item.photo_url) {
     const _urls = parsePhotoUrl(item.photo_url);
     const heroUrl = _urls[0] || '';
     const heroIsVideo = isVideoUrl(heroUrl);
@@ -10157,6 +10224,15 @@ function renderFeedCard(item) {
     ? `<button class="feed-action-btn" onclick="addFeedPhoto('${item.id}')" title="Add photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>`
     : '';
 
+  let badgeRibbon = '';
+  if (item.use_case !== 'badge' && Array.isArray(item.badge_refs) && item.badge_refs.length) {
+    badgeRibbon = item.badge_refs.map(r => {
+      const _rb = BADGE_BY_REF[Number(r)];
+      return _rb ? `<div class="feed-badge-ribbon" onclick="openBadgeDetail(${_rb.ref})">`
+        + badgeMedallionSvg(_rb, 22, true) + `<span>Earned: ${escHtml(_rb.name)}</span></div>` : '';
+    }).join('');
+  }
+
   return `
     <div class="feed-card" id="feedcard-${item.id}">
       <div class="feed-card-header">
@@ -10179,6 +10255,7 @@ function renderFeedCard(item) {
         </div>
       </div>
       ${heroHtml}
+      ${badgeRibbon}
       <div class="feed-actions">
         <button class="feed-action-btn${likes.liked ? ' liked' : ''}" onclick="toggleLike('${item.id}')">
           ${likes.liked ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>' : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'} ${likes.count ? `<span onclick="event.stopPropagation();event.preventDefault();showLikers('${item.id}')">${likes.count}</span>` : ''}
@@ -11396,7 +11473,7 @@ async function saveNewPost() {
   toast(isWear ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : (useCase === 'measurement' ? 'Shared to feed!' : 'Posted!'));
   haptic('success');
   maybeShowReviewPrompt('post');
-  checkAndAwardBadges('post');
+  checkAndAwardBadges('post', entry.id);
   feedLoadedAt = 0; // force feed to re-fetch after posting
   updateStreakChip();
   if (document.getElementById('page-feed').classList.contains('active')) loadFeed();
@@ -12156,6 +12233,13 @@ async function saveEmailPref(category, enabled) {
   prefs[category] = enabled;
   const { error } = await db.from('profiles').update({ email_prefs: prefs }).eq('id', currentUser.id);
   if (!error && window.myProfile) window.myProfile.email_prefs = prefs;
+  if (error) toast('Could not save — ' + error.message, 'error');
+}
+async function saveShareAchievements(enabled) {
+  if (demoGuard()) return;
+  if (!currentUser) return;
+  const { error } = await db.from('profiles').update({ share_achievements: enabled }).eq('id', currentUser.id);
+  if (!error && window.myProfile) window.myProfile.share_achievements = enabled;
   if (error) toast('Could not save — ' + error.message, 'error');
 }
 
@@ -14934,7 +15018,7 @@ async function saveLog() {
   toast(isUpdate ? 'Wear log updated!' : 'Wear logged!');
   haptic('success');
   if (!isUpdate) maybeShowReviewPrompt('wear_log');
-  checkAndAwardBadges('wear');
+  checkAndAwardBadges('wear', logEntry.id);
   } finally { if (_slBtn) { _slBtn.disabled = false; _slBtn.textContent = 'Log This Wear'; } }
 }
 

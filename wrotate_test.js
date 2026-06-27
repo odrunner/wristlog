@@ -264,6 +264,7 @@ export function rowToLog(r) {
     strapId: r.strap_id || null, photoUrl: r.photo_url || null,
     visibility: r.visibility || 'public',
     clubId: r.club_id || null,
+    badgeRefs: r.badge_refs || null,
   };
 }
 
@@ -2012,4 +2013,11 @@ const LOCATION_PIN_SVG = '<svg viewBox="0 0 24 24" width="11" height="11" fill="
 export function renderPostLocationHtml(location) {
   const loc = normalizeLocation(location);
   return loc ? ' · ' + LOCATION_PIN_SVG + ' ' + escHtml(loc) : '';
+}
+
+export function badgePostPlan(newlyEarned, context, postId) {
+  const notable = (newlyEarned || []).filter(b => b && b.category !== 'onboarding' && !b.isHidden).map(b => b.ref);
+  if (!notable.length || context === 'retroactive') return { inline: [], standalone: [] };
+  if (postId) return { inline: notable, standalone: [] };
+  return { inline: [], standalone: notable };
 }
