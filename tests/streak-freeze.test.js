@@ -5,7 +5,7 @@ const L = (...ds) => ds.map(date => ({ date }));
 
 describe('computeStreaksFrozen', () => {
   it('no logs → 0, freezes 2', () => {
-    expect(computeStreaksFrozen([], '2026-06-25')).toEqual({ current: 0, best: 0, status: 'none', frozen: [], freezes: 2 });
+    expect(computeStreaksFrozen([], '2026-06-25')).toEqual({ current: 0, best: 0, status: 'none', frozen: [], freezes: 2, restDays: [] });
   });
   it('consecutive run logged today → active, no frozen', () => {
     const r = computeStreaksFrozen(L('2026-06-23', '2026-06-24', '2026-06-25'), '2026-06-25');
