@@ -48,6 +48,7 @@ describe('BADGE_REGISTRY shape', () => {
     { ref: 87, slug: 'hundred_day_streak', name: 'Hundred-Day Streak', category: 'habit', isHidden: false },
     { ref: 88, slug: 'year_streak', name: 'Year-Long Streak', category: 'habit', isHidden: false },
     { ref: 82, slug: 'balanced_quarter', name: 'Balanced Quarter', category: 'habit', isHidden: false },
+    { ref: 7, slug: 'daily_double', name: 'Daily Double', category: 'habit', isHidden: false },
     { ref: 100, slug: 'high_noon', name: 'High Noon', category: 'hidden', isHidden: true },
     { ref: 101, slug: 'full_moon', name: 'Full Moon', category: 'hidden', isHidden: true },
     { ref: 102, slug: 'birthday_boy', name: 'Birthday Boy', category: 'hidden', isHidden: true },
@@ -57,8 +58,8 @@ describe('BADGE_REGISTRY shape', () => {
   const BADGE_BY_REF = {};
   BADGE_REGISTRY.forEach(b => BADGE_BY_REF[b.ref] = b);
 
-  it('has 31 total badges across all categories', () => {
-    expect(BADGE_REGISTRY.length).toBe(31);
+  it('has 32 total badges across all categories', () => {
+    expect(BADGE_REGISTRY.length).toBe(32);
   });
 
   it('every badge has required fields', () => {
