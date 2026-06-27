@@ -301,13 +301,14 @@ test.describe('Log a wear (mocked)', () => {
     await page.locator('.watch-option').first().click();
     await expect(page.locator('#track-log-modal')).toBeVisible();
 
-    // Date field — Today/Yesterday/Pick chips (native input hidden until "Pick date")
+    // Date field — Today/Yesterday/Pick chips. The native input is overlaid
+    // transparently on the Pick chip (opacity:0), so the chip reads "Pick date".
     await expect(page.locator('#track-date-chips')).toBeVisible();
     await expect(page.locator('#track-date-chips [data-dval="today"]')).toBeVisible();
     await expect(page.locator('#track-date-chips [data-dval="today"]')).toHaveClass(/selected/);
     await expect(page.locator('#track-date-chips [data-dval="yesterday"]')).toBeVisible();
-    // The native date control is present but hidden behind the chips
-    await expect(page.locator('#track-date')).toBeHidden();
+    await expect(page.locator('#track-date-pick-label')).toHaveText('Pick date');
+    await expect(page.locator('#track-date')).toHaveCSS('opacity', '0');
     // Occasion chips
     await expect(page.locator('#usecase-chips')).toBeVisible();
     await expect(page.locator('#usecase-chips [data-uc="work"]')).toBeVisible();
@@ -320,7 +321,7 @@ test.describe('Log a wear (mocked)', () => {
     await expect(page.locator('#tl-vis-chips [data-vis="private"]')).toBeVisible();
   });
 
-  test('date chips: Yesterday sets the value, Pick date reveals the picker', async ({ page }) => {
+  test('date chips: Yesterday sets the value; picking a custom date relabels Pick', async ({ page }) => {
     await navigateTo(page, 'track');
     await page.locator('.watch-option').first().click();
     await expect(page.locator('#track-log-modal')).toBeVisible();
@@ -330,9 +331,10 @@ test.describe('Log a wear (mocked)', () => {
     await expect(page.locator('#track-date-chips [data-dval="yesterday"]')).toHaveClass(/selected/);
     await expect(page.locator('#track-date')).toHaveValue(expectedYesterday);
 
-    // Pick date reveals the native input
-    await page.locator('#track-date-chips [data-dval="pick"]').click();
-    await expect(page.locator('#track-date')).toBeVisible();
+    // Picking an older date via the overlaid native input selects + relabels Pick.
+    await page.locator('#track-date').fill('2020-01-15');
+    await expect(page.locator('#track-date-chips [data-dval="pick"]')).toHaveClass(/selected/);
+    await expect(page.locator('#track-date-pick-label')).toHaveText('Jan 15');
   });
 
   test('selects occasion chip', async ({ page }) => {

@@ -640,6 +640,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* ── CHIPS ── */
     .chips { display: flex; flex-wrap: wrap; gap: .45rem; }
+    #track-date-pick-chip { position: relative; }
+    .track-date-overlay { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; background: transparent; opacity: 0; cursor: pointer; -webkit-appearance: none; appearance: none; }
     .np-details-toggle { margin-top: .5rem; background: none; border: none; padding: 0; color: var(--gold); font-size: .8rem; font-weight: 600; cursor: pointer; font-family: inherit; }
     .np-details-toggle:hover { text-decoration: underline; }
     .chip {
@@ -4822,9 +4824,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="chips" id="track-date-chips">
         <div class="chip selected" data-dval="today"     onclick="selectTrackDateChip('today')">Today</div>
         <div class="chip"          data-dval="yesterday" onclick="selectTrackDateChip('yesterday')">Yesterday</div>
-        <div class="chip"          data-dval="pick"      id="track-date-pick-chip" onclick="selectTrackDateChip('pick')">Pick date</div>
+        <!-- The native date input is overlaid transparently on this chip: one tap
+             opens the OS picker directly — no inline box, no extra click. -->
+        <div class="chip" data-dval="pick" id="track-date-pick-chip">
+          <span id="track-date-pick-label">Pick date</span>
+          <input type="date" id="track-date" class="track-date-overlay"
+            onclick="if(this.showPicker){try{this.showPicker()}catch(_){}}"
+            onchange="onTrackDatePicked()" aria-label="Pick a date">
+        </div>
       </div>
-      <input type="date" id="track-date" oninput="onTrackDatePicked()" style="display:none;margin-top:.5rem;">
       <div id="date-log-indicator" class="tl-worn-notice"></div>
     </div>
 
@@ -6556,7 +6564,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.14.40';
+const APP_VERSION = '27.14.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14932,19 +14940,14 @@ function onDateChange() {
   renderWatchSelector();
 }
 
-// Track date chips: Today / Yesterday set the value directly; Pick date reveals
-// the native picker. The hidden <input type=date> stays the single source of
-// truth that saveLog / renderWornNotice read.
+// Track date chips: Today / Yesterday set the value directly. The Pick date chip
+// has the native <input type=date> overlaid transparently on it, so tapping it
+// opens the OS picker right away. The input is the single source of truth that
+// saveLog / renderWornNotice read.
 function selectTrackDateChip(which) {
   const input = document.getElementById('track-date');
   if (!input) return;
-  if (which === 'pick') {
-    input.style.display = '';
-    if (typeof input.showPicker === 'function') { try { input.showPicker(); } catch (_) {} }
-    return;
-  }
   input.value = which === 'today' ? todayStr() : addDaysStr(todayStr(), -1);
-  input.style.display = 'none';
   syncTrackDateChips();
   onDateChange();
 }
@@ -14955,8 +14958,8 @@ function onTrackDatePicked() {
   onDateChange();
 }
 
-// Reflect the current track-date value in the chip row. An "other" date keeps the
-// native input visible and relabels the Pick chip (e.g. "Jun 12").
+// Reflect the current track-date value in the chip row. An "other" date marks the
+// Pick chip selected and relabels it (e.g. "Jun 12").
 function syncTrackDateChips() {
   const input = document.getElementById('track-date');
   if (!input) return;
@@ -14967,13 +14970,12 @@ function syncTrackDateChips() {
               : 'pick';
   document.querySelectorAll('#track-date-chips [data-dval]').forEach(c =>
     c.classList.toggle('selected', c.dataset.dval === which));
-  const pickChip = document.getElementById('track-date-pick-chip');
-  if (pickChip) {
-    pickChip.textContent = (which === 'pick' && val)
+  const label = document.getElementById('track-date-pick-label');
+  if (label) {
+    label.textContent = (which === 'pick' && val)
       ? new Date(val + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
       : 'Pick date';
   }
-  input.style.display = (which === 'pick') ? '' : 'none';
 }
 
 function renderTrack(force) {
