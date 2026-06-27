@@ -173,8 +173,8 @@ export async function injectSession(page, user = FAKE_USER) {
     // at boot (maybeShowNewFeatures); under full-suite load the app takes >800ms
     // to reach a test's first interaction, so the overlay un-hides mid-test and
     // intercepts clicks — a load-dependent flake. Pre-setting its seen-key makes
-    // the popover skip deterministically. (whatsNewSeen's auto-show is gated on
-    // window._iosAppVersion, which is unset in the browser, so it never fires.)
+    // the popover skip deterministically. (What's New no longer auto-shows; it
+    // only opens from the in-app button.)
     localStorage.setItem('wrotate_newfeatures_v2', '1');
 
     // Suppress the anniversary popover. checkAnniversary() shows a blocking

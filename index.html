@@ -6556,7 +6556,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.14.30';
+const APP_VERSION = '27.14.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -25356,13 +25356,6 @@ async function bootApp(user) {
   checkAnniversary();
   // Show new features popover for repeat users (once)
   maybeShowNewFeatures();
-  // Auto-show What's New once per version (iOS 1.4+ only)
-  const _wnKey = 'whatsNewSeen';
-  const _wnVer = '2026-06.3';
-  if (window._iosAppVersion && localStorage.getItem(_wnKey) !== _wnVer) {
-    localStorage.setItem(_wnKey, _wnVer);
-    setTimeout(() => openWhatsNew(), 600);
-  }
   // Retroactive badge scan (runs once per session, after data is loaded)
   retroactiveBadgeScan();
   // Seed measurement count from DB so review prompt works across devices
