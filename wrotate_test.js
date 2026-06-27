@@ -264,6 +264,7 @@ export function rowToLog(r) {
     strapId: r.strap_id || null, photoUrl: r.photo_url || null,
     visibility: r.visibility || 'public',
     clubId: r.club_id || null,
+    badgeRefs: r.badge_refs || null,
   };
 }
 

@@ -5183,9 +5183,16 @@ function badgePostPlan(newlyEarned, context, postId) {
 async function attachBadgesToPost(postId, refs) {
   if (!postId || !refs || !refs.length) return;
   const local = logs.find(l => l.id === postId);
-  if (local) local.badgeRefs = refs;
-  try { await db.from('logs').update({ badge_refs: refs }).eq('id', postId); }
-  catch (e) { console.warn('[badge-post] attach failed:', e); }
+  if (local) {
+    // Ride the existing cloudSync path (logToRow now carries badge_refs) so we
+    // never race the debounced INSERT of a just-created wear log.
+    local.badgeRefs = refs;
+    markDirty('logs', postId);
+    save();
+  } else {
+    try { await db.from('logs').update({ badge_refs: refs }).eq('id', postId); }
+    catch (e) { console.warn('[badge-post] attach failed:', e); }
+  }
   feedLoadedAt = 0;
   if (document.getElementById('page-feed')?.classList.contains('active')) loadFeed();
 }
@@ -6197,6 +6204,7 @@ function logToRow(l) {
     photo_url: l.photoUrl||null,
     visibility: vis,
     club_id: l.clubId || null,
+    badge_refs: l.badgeRefs || null,
   };
 }
 function rowToLog(r) {
@@ -6206,6 +6214,7 @@ function rowToLog(r) {
     strapId: r.strap_id||null, photoUrl: r.photo_url||null,
     visibility: r.visibility || 'public',
     clubId: r.club_id || null,
+    badgeRefs: r.badge_refs || null,
   };
 }
 function wishToRow(w, idx) {
@@ -6480,7 +6489,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.09.56';
+const APP_VERSION = '27.10.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9980,7 +9989,7 @@ function renderFeedCard(item) {
   const _loc = normalizeLocation(item.location);
   const metaParts = [
     formatFeedDate(item.date, item.created_at),
-    item.use_case && item.use_case !== 'unspecified' ? item.use_case : '',
+    item.use_case && item.use_case !== 'unspecified' && item.use_case !== 'badge' ? item.use_case : '',
     _loc ? LOCATION_PIN_SVG + ' ' + escHtml(_loc) : ''
   ].filter(Boolean);
   const metaStr   = metaParts.join(' · ');
