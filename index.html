@@ -4946,6 +4946,7 @@ const FEATURE_FLAGS = {
   tg_piezo: { label: 'Timegrapher: piezo input source (admin)', default: false },
   tg_quality_v2: { label: 'Timegrapher: measurement quality v2 (admin)', default: false },
   deep_test: { label: 'Timegrapher: Deep Test (admin)', default: false },
+  badge_posts: { label: 'Badge achievement posts (admin)', default: false },
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -5171,6 +5172,30 @@ function badgePostPlan(newlyEarned, context, postId) {
   if (!notable.length || context === 'retroactive') return { inline: [], standalone: [] };
   if (postId) return { inline: notable, standalone: [] };
   return { inline: [], standalone: notable };
+}
+
+async function attachBadgesToPost(postId, refs) {
+  if (!postId || !refs || !refs.length) return;
+  const local = logs.find(l => l.id === postId);
+  if (local) local.badgeRefs = refs;
+  try { await db.from('logs').update({ badge_refs: refs }).eq('id', postId); }
+  catch (e) { console.warn('[badge-post] attach failed:', e); }
+  feedLoadedAt = 0;
+  if (document.getElementById('page-feed')?.classList.contains('active')) loadFeed();
+}
+
+async function createStandaloneBadgePost(ref) {
+  const b = BADGE_BY_REF[ref];
+  if (!b || !currentUser) return;
+  try {
+    await db.from('logs').insert({
+      id: uid(), user_id: currentUser.id, watch_id: null, date: todayStr(),
+      use_case: 'badge', notes: `Earned the ${b.name} badge 🏅`, photo_url: null,
+      visibility: getDefaultVis(), location: null, club_id: null, badge_refs: [ref],
+    });
+  } catch (e) { console.warn('[badge-post] standalone failed:', e); return; }
+  feedLoadedAt = 0;
+  if (document.getElementById('page-feed')?.classList.contains('active')) loadFeed();
 }
 
 function badgeRefLabel(ref) {
@@ -5526,7 +5551,7 @@ function maybeFreezeToast() {
   toast(`❄️ A freeze saved your ${sk.current}-day streak — log today to keep it going`);
 }
 
-async function checkAndAwardBadges(context, extraData) {
+async function checkAndAwardBadges(context, postId) {
   if (!currentUser) return;
   const newlyEarned = [];
 
@@ -5727,6 +5752,11 @@ async function checkAndAwardBadges(context, extraData) {
   if (newlyEarned.length > 0) {
     showBadgeToast(newlyEarned);
     notifyBadgesEarned(newlyEarned);
+  }
+  if (newlyEarned.length > 0 && featureFlag('badge_posts') && myProfile && myProfile.share_achievements !== false) {
+    const _bp = badgePostPlan(newlyEarned, context, postId);
+    if (_bp.inline.length) attachBadgesToPost(postId, _bp.inline);
+    for (const _ref of _bp.standalone) createStandaloneBadgePost(_ref);
   }
   if (newlyEarned.some(b => b && b.ref === 3)) {
     toast('🔥 Your streak starts now — day 1');
@@ -6444,7 +6474,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.09.46';
+const APP_VERSION = '27.09.50';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9542,7 +9572,7 @@ function closeLoginPrompt() {
 }
 
 // ── Feed ──────────────────────────────────────────────────────────────────
-const FEED_LOG_COLS = 'id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility, moderation_status, location';
+const FEED_LOG_COLS = 'id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility, moderation_status, location, badge_refs';
 async function loadFeed() {
   if (!currentUser) return;
   // If feedLoading is stuck true for >8s, treat it as dead and allow re-entry
@@ -11402,7 +11432,7 @@ async function saveNewPost() {
   toast(isWear ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : (useCase === 'measurement' ? 'Shared to feed!' : 'Posted!'));
   haptic('success');
   maybeShowReviewPrompt('post');
-  checkAndAwardBadges('post');
+  checkAndAwardBadges('post', entry.id);
   feedLoadedAt = 0; // force feed to re-fetch after posting
   updateStreakChip();
   if (document.getElementById('page-feed').classList.contains('active')) loadFeed();
@@ -14940,7 +14970,7 @@ async function saveLog() {
   toast(isUpdate ? 'Wear log updated!' : 'Wear logged!');
   haptic('success');
   if (!isUpdate) maybeShowReviewPrompt('wear_log');
-  checkAndAwardBadges('wear');
+  checkAndAwardBadges('wear', logEntry.id);
   } finally { if (_slBtn) { _slBtn.disabled = false; _slBtn.textContent = 'Log This Wear'; } }
 }
 
