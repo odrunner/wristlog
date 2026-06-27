@@ -5114,6 +5114,11 @@ const BADGE_REGISTRY = [
     unlock: 'Over 90 days, no watch exceeds 40% of wear days, with 4+ watches worn.',
     glyph: '<circle cx="38" cy="42" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="62" cy="42" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="38" cy="60" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="62" cy="60" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/>',
     isHidden: false },
+  { ref: 7, slug: 'daily_double', name: 'Daily Double', category: 'habit',
+    flavor: 'Two watches, one day. Hard to pick just one.',
+    unlock: 'Wear two different watches on the same day.',
+    glyph: '<circle cx="37" cy="50" r="14" stroke="#3D2A14" stroke-width="2.2" fill="none"/><path d="M37 50V42" stroke="#3D2A14" stroke-width="2" stroke-linecap="round"/><circle cx="63" cy="50" r="14" stroke="#3D2A14" stroke-width="2.2" fill="none"/><path d="M63 50V42" stroke="#3D2A14" stroke-width="2" stroke-linecap="round"/>',
+    isHidden: false },
   // Hidden easter eggs (100+)
   { ref: 100, slug: 'high_noon', name: 'High Noon', category: 'hidden',
     flavor: 'Measured at the stroke of noon.',
@@ -5734,6 +5739,13 @@ async function checkAndAwardBadges(context, postId) {
         if (maxPct <= 0.4) { if (await awardBadge(82)) newlyEarned.push(BADGE_BY_REF[82]); }
       }
     }
+  }
+
+  // Daily Double (7) — two different watches logged on the same day
+  if (!alreadyEarned(7) && (context === 'wear' || context === 'post' || context === 'retroactive')) {
+    const _today = todayStr();
+    const _ddCount = new Set(logs.filter(l => l.date === _today && l.watchId).map(l => l.watchId)).size;
+    if (_ddCount >= 2) { if (await awardBadge(7)) newlyEarned.push(BADGE_BY_REF[7]); }
   }
 
   // Hidden: Full Moon (101) — check on wear log
@@ -6489,7 +6501,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.10.11';
+const APP_VERSION = '27.11.10';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
