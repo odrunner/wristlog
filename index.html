@@ -4952,7 +4952,6 @@ const FEATURE_FLAGS = {
   tg_piezo: { label: 'Timegrapher: piezo input source (admin)', default: false },
   tg_quality_v2: { label: 'Timegrapher: measurement quality v2 (admin)', default: false },
   deep_test: { label: 'Timegrapher: Deep Test (admin)', default: false },
-  badge_posts: { label: 'Badge achievement posts (admin)', default: false },
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -5777,7 +5776,7 @@ async function checkAndAwardBadges(context, postId) {
     showBadgeToast(newlyEarned);
     notifyBadgesEarned(newlyEarned);
   }
-  if (newlyEarned.length > 0 && featureFlag('badge_posts') && myProfile && myProfile.share_achievements !== false) {
+  if (newlyEarned.length > 0 && myProfile && myProfile.share_achievements !== false) {
     const _bp = badgePostPlan(newlyEarned, context, postId);
     if (_bp.inline.length) attachBadgesToPost(postId, _bp.inline);
     for (const _ref of _bp.standalone) createStandaloneBadgePost(_ref);
@@ -6500,7 +6499,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.13.30';
+const APP_VERSION = '27.13.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7261,7 +7260,6 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
               <span class="toggle-slider"></span>
             </label>
           </div>
-          ${featureFlag('badge_posts') ? `
           <div style="font-size:.75rem;color:var(--muted);margin:.8rem 0 .6rem;border-top:1px solid var(--border);padding-top:.8rem;">Sharing</div>
           <div class="toggle-row">
             <span class="toggle-label">Share achievements to feed</span>
@@ -7269,7 +7267,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
               <input type="checkbox" ${profile.share_achievements !== false ? 'checked' : ''} onchange="saveShareAchievements(this.checked)">
               <span class="toggle-slider"></span>
             </label>
-          </div>` : ''}
+          </div>
         </div>
       </div>
     </div>`;
