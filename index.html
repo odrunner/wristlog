@@ -1758,7 +1758,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .feed-badge-name { font-weight:700; font-size:1rem; color:var(--text); }
     .feed-badge-flavor { font-size:.82rem; color:var(--muted); text-align:center; line-height:1.4; max-width:34ch; }
     .feed-badge-tag { font-size:.68rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-top:.15rem; }
-    .feed-badge-ribbon { display:inline-flex; align-items:center; gap:.4rem; margin:.1rem 1rem .5rem; padding:.3rem .6rem; background:var(--surface2); border-radius:999px; font-size:.8rem; font-weight:600; color:var(--text); cursor:pointer; }
+    .feed-badge-ribbon { display:inline-flex; align-items:center; gap:.35rem; margin:0 1rem .75rem; padding:.22rem .65rem; background:var(--surface2); border-radius:20px; font-size:.72rem; color:var(--muted); cursor:pointer; }
 
     /* Add-photo button inside watch banner (own cards, no photo) */
     .feed-add-photo-btn {
@@ -6500,7 +6500,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.11.35';
+const APP_VERSION = '27.13.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10240,7 +10240,7 @@ function renderFeedCard(item) {
     badgeRibbon = item.badge_refs.map(r => {
       const _rb = BADGE_BY_REF[Number(r)];
       return _rb ? `<div class="feed-badge-ribbon" onclick="openBadgeDetail(${_rb.ref})">`
-        + badgeMedallionSvg(_rb, 22, true) + `<span>Earned: ${escHtml(_rb.name)}</span></div>` : '';
+        + badgeMedallionSvg(_rb, 16, true) + `<span>Earned: ${escHtml(_rb.name)}</span></div>` : '';
     }).join('');
   }
 
@@ -10266,7 +10266,6 @@ function renderFeedCard(item) {
         </div>
       </div>
       ${heroHtml}
-      ${badgeRibbon}
       <div class="feed-actions">
         <button class="feed-action-btn${likes.liked ? ' liked' : ''}" onclick="toggleLike('${item.id}')">
           ${likes.liked ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>' : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'} ${likes.count ? `<span onclick="event.stopPropagation();event.preventDefault();showLikers('${item.id}')">${likes.count}</span>` : ''}
@@ -10279,6 +10278,7 @@ function renderFeedCard(item) {
         ${(vis === 'public' || isMe) ? `<button class="feed-action-btn" onclick="sharePost('${item.id}')" title="Share post"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>` : ''}
       </div>
       ${captionHtml}
+      ${badgeRibbon}
       ${watchChip}
       ${visBadge}
       ${clubBadge}
