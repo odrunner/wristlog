@@ -301,8 +301,13 @@ test.describe('Log a wear (mocked)', () => {
     await page.locator('.watch-option').first().click();
     await expect(page.locator('#track-log-modal')).toBeVisible();
 
-    // Date field
-    await expect(page.locator('#track-date')).toBeVisible();
+    // Date field — Today/Yesterday/Pick chips (native input hidden until "Pick date")
+    await expect(page.locator('#track-date-chips')).toBeVisible();
+    await expect(page.locator('#track-date-chips [data-dval="today"]')).toBeVisible();
+    await expect(page.locator('#track-date-chips [data-dval="today"]')).toHaveClass(/selected/);
+    await expect(page.locator('#track-date-chips [data-dval="yesterday"]')).toBeVisible();
+    // The native date control is present but hidden behind the chips
+    await expect(page.locator('#track-date')).toBeHidden();
     // Occasion chips
     await expect(page.locator('#usecase-chips')).toBeVisible();
     await expect(page.locator('#usecase-chips [data-uc="work"]')).toBeVisible();
@@ -313,6 +318,21 @@ test.describe('Log a wear (mocked)', () => {
     await expect(page.locator('#tl-vis-chips')).toBeVisible();
     await expect(page.locator('#tl-vis-chips [data-vis="public"]')).toBeVisible();
     await expect(page.locator('#tl-vis-chips [data-vis="private"]')).toBeVisible();
+  });
+
+  test('date chips: Yesterday sets the value, Pick date reveals the picker', async ({ page }) => {
+    await navigateTo(page, 'track');
+    await page.locator('.watch-option').first().click();
+    await expect(page.locator('#track-log-modal')).toBeVisible();
+
+    const expectedYesterday = await page.evaluate(() => addDaysStr(todayStr(), -1));
+    await page.locator('#track-date-chips [data-dval="yesterday"]').click();
+    await expect(page.locator('#track-date-chips [data-dval="yesterday"]')).toHaveClass(/selected/);
+    await expect(page.locator('#track-date')).toHaveValue(expectedYesterday);
+
+    // Pick date reveals the native input
+    await page.locator('#track-date-chips [data-dval="pick"]').click();
+    await expect(page.locator('#track-date')).toBeVisible();
   });
 
   test('selects occasion chip', async ({ page }) => {

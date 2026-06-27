@@ -594,6 +594,29 @@ export function buildLogEntry({ id, watchId, date, useCase, notes, strapId, phot
   return entry;
 }
 
+// Track date picker: which of the Today / Yesterday / Pick chips is active for a
+// given date value. Empty value defaults to Today (date is required, seeds today).
+export function trackDateChipState(value, today) {
+  if (!value || value === today) return 'today';
+  if (value === addDaysStr(today, -1)) return 'yesterday';
+  return 'pick';
+}
+
+// Post composer: the occasion + strap "Details" block appears only when a watch
+// is tagged, and never for measurement shares (those are not wears).
+export function npShouldShowDetails({ watchId, source }) {
+  return !!watchId && source !== 'measurement';
+}
+
+// Post composer: resolve the use_case saved for a new post. Measurement shares
+// stay 'measurement'; a tagged watch carries the chosen occasion; otherwise the
+// post stays 'unspecified' (unchanged from before the harmonize).
+export function newPostUseCase({ source, watchId, occasion }) {
+  if (source === 'measurement') return 'measurement';
+  if (!watchId) return 'unspecified';
+  return occasion || 'unspecified';
+}
+
 export function applyStrapSelection(watches, watchId, strapId) {
   if (!strapId) return watches;
   return watches.map(w => {

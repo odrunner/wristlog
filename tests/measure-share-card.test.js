@@ -143,7 +143,9 @@ describe('Measurement share — compact card + not-a-wear', () => {
   });
 
   it('measurement share is tagged use_case=measurement (so it is not a wear)', () => {
-    expect(html).toMatch(/_npSource === 'measurement' \? 'measurement' : 'unspecified'/);
+    // Measurement shares stay use_case='measurement'; normal posts now carry the
+    // chosen occasion when a watch is tagged (see harmonize spec 2026-06-27).
+    expect(html).toMatch(/_npSource === 'measurement' \? 'measurement' :/);
     expect(html).toContain('use_case: entry.useCase');
   });
 
