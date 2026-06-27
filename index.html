@@ -640,6 +640,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* ── CHIPS ── */
     .chips { display: flex; flex-wrap: wrap; gap: .45rem; }
+    .np-details-toggle { margin-top: .5rem; background: none; border: none; padding: 0; color: var(--gold); font-size: .8rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .np-details-toggle:hover { text-decoration: underline; }
     .chip {
       background: var(--surface2);
       border: 1px solid var(--border);
@@ -682,7 +684,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .tl-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: .4rem; }
     .tl-opt   { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--muted); opacity: .7; }
     .tl-worn-notice { margin-top: .35rem; font-size: .75rem; color: var(--success); min-height: 1em; }
-    .tl-modal input[type=date] { font-size: .78rem; padding: .45rem .5rem; }
     .tl-photo { aspect-ratio: unset; height: 80px; }
     .tl-photo .log-photo-placeholder { font-size: .8rem; }
 
@@ -2163,6 +2164,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Occasion &amp; Strap on Posts</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">When you tag a watch in a post, you can now add the occasion and which strap you&#8217;re wearing &#8212; tucked behind a small &#8220;Add occasion &amp; strap&#8221; link so the composer stays light. We also tidied up the date picker on the Track screen: quick Today and Yesterday chips, with a Pick date option for anything further back.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Achievements in Your Feed</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">The badges you earn now show up in your feed, so friends can see your milestones and react. Earn one while logging a wear or posting and it appears right on that post; earn one another way and it gets its own card. You&#8217;re in control &#8212; switch it off anytime under Profile &#8594; Notifications &#8594; &#8220;Share achievements to feed.&#8221;</div>
       </div>
@@ -3135,7 +3140,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">1</div>
             <div class="help-step-body">
               <div class="help-step-title">Go to the Track tab</div>
-              <div class="help-step-desc">The date defaults to today. Use the date field to log retroactively. The <strong>Today's Pick</strong> card suggests a watch based on your rotation — tap <strong>Log This Wear</strong> to log it directly.</div>
+              <div class="help-step-desc">The date defaults to today. Tap <strong>Yesterday</strong> or <strong>Pick date</strong> to log retroactively. The <strong>Today's Pick</strong> card suggests a watch based on your rotation — tap <strong>Log This Wear</strong> to log it directly.</div>
             </div>
           </div>
           <div class="help-step">
@@ -3233,7 +3238,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">2</div>
             <div class="help-step-body">
               <div class="help-step-title">Post a photo — wear is logged automatically</div>
-              <div class="help-step-desc">Tap <strong>Post</strong> in the Feed header and add a wrist shot. AI identifies the watch from the photo and matches it to your collection. The wear log is added automatically — just tap "Not this watch" if it gets it wrong. You can also post text-only updates. Edit any post later to change the tagged watch, caption, or photo.</div>
+              <div class="help-step-desc">Tap <strong>Post</strong> in the Feed header and add a wrist shot. AI identifies the watch from the photo and matches it to your collection. The wear log is added automatically — just tap "Not this watch" if it gets it wrong. Once a watch is tagged, tap <strong>Add occasion &amp; strap</strong> to record the occasion and which strap you wore. You can also post text-only updates. Edit any post later to change the tagged watch, caption, or photo.</div>
             </div>
           </div>
           <div class="help-step">
@@ -4540,6 +4545,24 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <input type="file" id="np-photo-input" accept="image/*,video/*" multiple
         style="display:none" onchange="handleNewPostPhotos(this)">
       <div id="np-watch-suggestion" style="display:none;"></div>
+      <!-- Occasion + strap, revealed only once a watch is tagged (not for measurement shares) -->
+      <div id="np-details" style="display:none;">
+        <button type="button" id="np-details-toggle" class="np-details-toggle" onclick="toggleNpDetails()">+ Add occasion &amp; strap</button>
+        <div id="np-details-body" style="display:none;margin-top:.5rem;">
+          <div class="tl-label">Occasion</div>
+          <div class="chips" id="np-usecase-chips">
+            <div class="chip selected" data-uc="unspecified" onclick="selectNpUseCase('unspecified')">—</div>
+            <div class="chip"          data-uc="work"        onclick="selectNpUseCase('work')">Work</div>
+            <div class="chip"          data-uc="leisure"     onclick="selectNpUseCase('leisure')">Leisure</div>
+            <div class="chip"          data-uc="dinner"      onclick="selectNpUseCase('dinner')">Dinner</div>
+            <div class="chip"          data-uc="travel"      onclick="selectNpUseCase('travel')">Travel</div>
+          </div>
+          <div id="np-strap-card" style="display:none;margin-top:.6rem;">
+            <div class="tl-label">Strap / Bracelet</div>
+            <div class="chips" id="np-strap-chips"></div>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="form-group">
       <textarea id="np-body" rows="3" placeholder="What's on your mind? (@ to mention)" style="resize:none;" maxlength="1000"
@@ -4794,12 +4817,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
 
     <!-- Date + worn notice -->
-    <div class="tl-row">
-      <div class="tl-field" style="flex:1;">
-        <div class="tl-label">Date</div>
-        <input type="date" id="track-date" oninput="onDateChange()">
-        <div id="date-log-indicator" class="tl-worn-notice"></div>
+    <div class="tl-field">
+      <div class="tl-label">Date</div>
+      <div class="chips" id="track-date-chips">
+        <div class="chip selected" data-dval="today"     onclick="selectTrackDateChip('today')">Today</div>
+        <div class="chip"          data-dval="yesterday" onclick="selectTrackDateChip('yesterday')">Yesterday</div>
+        <div class="chip"          data-dval="pick"      id="track-date-pick-chip" onclick="selectTrackDateChip('pick')">Pick date</div>
       </div>
+      <input type="date" id="track-date" oninput="onTrackDatePicked()" style="display:none;margin-top:.5rem;">
+      <div id="date-log-indicator" class="tl-worn-notice"></div>
     </div>
 
     <!-- Strap (only when watch has 2+ straps) -->
@@ -4833,16 +4859,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         style="display:none" onchange="handleTrackPhoto(this)">
     </div>
 
-    <!-- Caption + Private notes side by side label, stacked fields -->
+    <!-- Caption -->
     <div class="tl-field">
       <div class="tl-label">Caption <span class="tl-opt">shown in feed</span></div>
       <textarea id="track-notes" placeholder="What are you up to today… (@ to mention)" rows="2" maxlength="500"
         oninput="mentionOnInput(this)" onkeydown="mentionOnKeydown(event)"></textarea>
-    </div>
-
-    <div class="tl-field">
-      <div class="tl-label">Private notes <span class="tl-opt">only you see this</span></div>
-      <textarea id="track-private-notes" placeholder="Condition, thoughts, how it felt…" rows="2" maxlength="500"></textarea>
     </div>
 
     <!-- Visibility -->
@@ -6535,7 +6556,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.13.44';
+const APP_VERSION = '27.14.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11048,6 +11069,9 @@ let newPostFiles = [];    // array of File objects (photos or videos)
 let newPostPreviews = []; // array of object URLs for thumbnails (photo objectURL or poster objectURL)
 let newPostPosters = [];  // array of Blob (videos) or null (photos), parallel to newPostFiles
 let npIdentifiedWatchId = null; // watchId from AI identification (or null)
+let npUseCase = 'unspecified';  // occasion chosen in the New Post "Details" block
+let npStrapId = null;           // strap chosen in the New Post "Details" block
+let npDetailsExpanded = false;  // whether the occasion/strap block is open
 let _npSource = null;           // e.g. 'measurement' — marks the post's use_case
 
 function openNewPost(opts) {
@@ -11347,6 +11371,58 @@ function renderNpWatchDisplay() {
     </div><div id="np-watch-picker" style="display:none;"></div>`;
   }
   el.style.display = '';
+  renderNpDetails();
+}
+
+// New Post: occasion + strap "Details" block. Shown only when a watch is tagged
+// and never for measurement shares (those are not wears). Default the strap to
+// the tagged watch's "on wrist" strap, mirroring the Track flow.
+function renderNpDetails() {
+  const wrap = document.getElementById('np-details');
+  if (!wrap) return;
+  // Show only when a watch is tagged and this isn't a measurement share (not a wear).
+  if (!npIdentifiedWatchId || _npSource === 'measurement') {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = '';
+  const toggle = document.getElementById('np-details-toggle');
+  const body   = document.getElementById('np-details-body');
+  if (toggle) toggle.textContent = (npDetailsExpanded ? '− ' : '+ ') + 'Add occasion & strap';
+  if (body)   body.style.display = npDetailsExpanded ? '' : 'none';
+  // Occasion chips
+  document.querySelectorAll('#np-usecase-chips [data-uc]').forEach(c =>
+    c.classList.toggle('selected', c.dataset.uc === npUseCase));
+  // Strap chips — only when the tagged watch has 2+ straps
+  const w = watches.find(x => x.id === npIdentifiedWatchId);
+  const straps = w?.straps || [];
+  const card = document.getElementById('np-strap-card');
+  if (!w || straps.length < 2) {
+    npStrapId = (straps.find(s => s.isOn) || straps[0] || {}).id || null;
+    if (card) card.style.display = 'none';
+  } else {
+    if (!straps.some(s => s.id === npStrapId)) npStrapId = (straps.find(s => s.isOn) || straps[0]).id;
+    if (card) card.style.display = '';
+    document.getElementById('np-strap-chips').innerHTML = straps.map(s => `
+      <div class="chip${npStrapId === s.id ? ' selected' : ''}" onclick="selectNpStrap('${s.id}')">
+        ${escHtml(s.name)}${s.material ? ' · ' + escHtml(s.material) : ''}
+      </div>`).join('');
+  }
+}
+
+function toggleNpDetails() {
+  npDetailsExpanded = !npDetailsExpanded;
+  renderNpDetails();
+}
+
+function selectNpUseCase(uc) {
+  npUseCase = uc;
+  renderNpDetails();
+}
+
+function selectNpStrap(id) {
+  npStrapId = id;
+  renderNpDetails();
 }
 
 function toggleNpWatchPicker() {
@@ -11394,8 +11470,13 @@ function clearNpWatch() {
 
 function dismissNpWatchSuggestion() {
   npIdentifiedWatchId = null;
+  npUseCase = 'unspecified';
+  npStrapId = null;
+  npDetailsExpanded = false;
   const el = document.getElementById('np-watch-suggestion');
   if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+  const det = document.getElementById('np-details');
+  if (det) det.style.display = 'none';
 }
 
 async function saveNewPost() {
@@ -11415,10 +11496,14 @@ async function saveNewPost() {
   // A measurement share tags the watch (for attribution) but is NOT a wear —
   // use_case 'measurement' excludes it from wear counts (see rebuildLogsByWatch
   // + admin RPCs).
-  const useCase = _npSource === 'measurement' ? 'measurement' : 'unspecified';
+  // Occasion (use_case) + strap come from the "Details" block, which only renders
+  // when a watch is tagged on a normal post. Measurement shares stay 'measurement'.
+  const useCase = _npSource === 'measurement' ? 'measurement' : (trackWatchId ? npUseCase : 'unspecified');
+  const strapId = trackWatchId ? npStrapId : null;
   const entry = {
     id: uid(), watchId: trackWatchId, date: todayStr(),
     useCase, notes: body || null,
+    strapId,
     photoUrl: null,
     visibility: vis,
     location: location,
@@ -11473,7 +11558,7 @@ async function saveNewPost() {
     const { error } = await db.from('logs').upsert({
       id: entry.id, user_id: currentUser.id, watch_id: trackWatchId,
       date: entry.date, use_case: entry.useCase,
-      notes: entry.notes, photo_url: entry.photoUrl,
+      notes: entry.notes, strap_id: entry.strapId, photo_url: entry.photoUrl,
       visibility: vis,
       location: entry.location,
       club_id: null,
@@ -11506,6 +11591,15 @@ async function saveNewPost() {
           }).catch(e => console.error('[WristLog] post mention notif network error:', e));
         }
       }
+    }
+  }
+  // Mirror Track: if a strap was chosen, mark it as the watch's "on wrist" strap.
+  if (trackWatchId && strapId) {
+    const wIdx = watches.findIndex(x => x.id === trackWatchId);
+    if (wIdx !== -1 && (watches[wIdx].straps || []).length) {
+      watches[wIdx].straps = watches[wIdx].straps.map(s => ({ ...s, isOn: s.id === strapId }));
+      markDirty('watches', trackWatchId);
+      save();
     }
   }
   const postedWatch = trackWatchId ? watches.find(x => x.id === trackWatchId) : null;
@@ -14838,6 +14932,50 @@ function onDateChange() {
   renderWatchSelector();
 }
 
+// Track date chips: Today / Yesterday set the value directly; Pick date reveals
+// the native picker. The hidden <input type=date> stays the single source of
+// truth that saveLog / renderWornNotice read.
+function selectTrackDateChip(which) {
+  const input = document.getElementById('track-date');
+  if (!input) return;
+  if (which === 'pick') {
+    input.style.display = '';
+    if (typeof input.showPicker === 'function') { try { input.showPicker(); } catch (_) {} }
+    return;
+  }
+  input.value = which === 'today' ? todayStr() : addDaysStr(todayStr(), -1);
+  input.style.display = 'none';
+  syncTrackDateChips();
+  onDateChange();
+}
+
+// Called when the user picks a date from the native control.
+function onTrackDatePicked() {
+  syncTrackDateChips();
+  onDateChange();
+}
+
+// Reflect the current track-date value in the chip row. An "other" date keeps the
+// native input visible and relabels the Pick chip (e.g. "Jun 12").
+function syncTrackDateChips() {
+  const input = document.getElementById('track-date');
+  if (!input) return;
+  const val   = input.value;
+  const today = todayStr();
+  const which = (!val || val === today) ? 'today'
+              : (val === addDaysStr(today, -1)) ? 'yesterday'
+              : 'pick';
+  document.querySelectorAll('#track-date-chips [data-dval]').forEach(c =>
+    c.classList.toggle('selected', c.dataset.dval === which));
+  const pickChip = document.getElementById('track-date-pick-chip');
+  if (pickChip) {
+    pickChip.textContent = (which === 'pick' && val)
+      ? new Date(val + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      : 'Pick date';
+  }
+  input.style.display = (which === 'pick') ? '' : 'none';
+}
+
 function renderTrack(force) {
   if (!force && _lastRenderedGen.track === _dataGen) return;
   _lastRenderedGen.track = _dataGen;
@@ -14929,9 +15067,9 @@ function openTrackModal(id) {
   document.getElementById('tl-watch-name').textContent  = w.name  || '';
 
   // Reset fields
-  document.getElementById('track-date').value          = todayStr();
-  document.getElementById('track-notes').value         = '';
-  document.getElementById('track-private-notes').value = '';
+  document.getElementById('track-date').value  = todayStr();
+  syncTrackDateChips();
+  document.getElementById('track-notes').value = '';
   clearTrackPhoto();
 
   // Reset occasion chips
@@ -15006,15 +15144,14 @@ async function saveLog() {
   if (_slBtn?.disabled) return;
   if (_slBtn) { _slBtn.disabled = true; _slBtn.textContent = 'Saving...'; }
   try {
-  const notes        = document.getElementById('track-notes').value.trim();
-  const privateNotes = document.getElementById('track-private-notes').value.trim();
+  const notes = document.getElementById('track-notes').value.trim();
   const vis = selTrackVis || getDefaultVis();
   // Check if a log already exists for this watch+date (e.g. from a New Post with auto-recognition)
   const existingIdx = logs.findIndex(l => l.watchId === selWatchId && l.date === date);
   const isUpdate = existingIdx !== -1;
   const logEntry = isUpdate
-    ? { ...logs[existingIdx], useCase: selUseCase, notes: notes || logs[existingIdx].notes, privateNotes, visibility: vis, clubId: null }
-    : { id: uid(), watchId: selWatchId, date, useCase: selUseCase, notes, privateNotes, photoUrl: null, visibility: vis, clubId: null };
+    ? { ...logs[existingIdx], useCase: selUseCase, notes: notes || logs[existingIdx].notes, visibility: vis, clubId: null }
+    : { id: uid(), watchId: selWatchId, date, useCase: selUseCase, notes, photoUrl: null, visibility: vis, clubId: null };
   // Upload photo to Storage if present
   if (trackPhotoFile && currentUser) {
     try {
