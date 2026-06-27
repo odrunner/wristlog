@@ -1339,6 +1339,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .streak-cal-cell.today { outline:2px solid var(--gold); outline-offset:-2px; }
     .streak-cal-cell.future { opacity:.35; }
     .streak-cal-cell.frozen { background:#cfe8f5; color:#0c4a6e; font-weight:700; }
+    .streak-cal-cell.rest { background:var(--surface2); color:var(--muted); position:relative; }
+    .streak-cal-cell.rest::after { content:''; position:absolute; bottom:5px; left:50%; transform:translateX(-50%); width:4px; height:4px; border-radius:50%; background:var(--muted); opacity:.6; }
     .streak-cal-freezes { text-align:center; font-size:.78rem; color:var(--muted); margin:-.5rem 0 .7rem; }
     /* Top-anchor the calendar modal so the month nav arrows keep a fixed y position across 5- vs 6-week months (id beats .overlay's align-items:center, incl. the mobile override). */
     #streak-calendar-modal { align-items: flex-start; }
@@ -5017,6 +5019,7 @@ const FEATURE_FLAGS = {
   tg_piezo: { label: 'Timegrapher: piezo input source (admin)', default: false },
   tg_quality_v2: { label: 'Timegrapher: measurement quality v2 (admin)', default: false },
   deep_test: { label: 'Timegrapher: Deep Test (admin)', default: false },
+  streak_weekend: { label: 'Streak: earn-your-weekend (admin)', default: false },
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -5549,7 +5552,7 @@ function computeStreaksFrozen(logs, today, weekendEarn) {
 }
 
 function displayStreak(logs, today) {
-  return computeStreaksFrozen(logs, today);
+  return computeStreaksFrozen(logs, today, featureFlag('streak_weekend'));
 }
 
 function streakChipState(sk, flagOn) {
@@ -5602,6 +5605,7 @@ function renderStreakCalendar() {
   const t = todayStr();
   const sk = displayStreak(logs, t);
   const frozenSet = new Set(sk.frozen);
+  const restSet = new Set(sk.restDays || []);
   const logged = new Set(logs.map(l => l.date));
   const { year, month } = _streakCalYM;
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -5625,8 +5629,9 @@ function renderStreakCalendar() {
       cells.map(c => {
         if (!c) return `<div class="streak-cal-cell streak-cal-blank"></div>`;
         const isFrozen = !c.logged && frozenSet.has(c.date);
-        const cls = 'streak-cal-cell' + (c.logged ? ' logged' : (isFrozen ? ' frozen' : '')) + (c.isToday ? ' today' : '') + (c.isFuture ? ' future' : '');
-        return `<div class="${cls}"${isFrozen ? ' title="A streak freeze covered this day"' : ''}>${c.day}</div>`;
+        const isRest = !c.logged && !isFrozen && restSet.has(c.date);
+        const cls = 'streak-cal-cell' + (c.logged ? ' logged' : (isFrozen ? ' frozen' : (isRest ? ' rest' : ''))) + (c.isToday ? ' today' : '') + (c.isFuture ? ' future' : '');
+        return `<div class="${cls}"${isFrozen ? ' title="A streak freeze covered this day"' : (isRest ? ' title="Rest day — earned by logging the full week"' : '')}>${c.day}</div>`;
       }).join('') +
     `</div>`;
 }
@@ -6594,7 +6599,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.15.35';
+const APP_VERSION = '27.15.38';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
