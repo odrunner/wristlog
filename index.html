@@ -1754,6 +1754,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       margin: 0; word-break: break-word; white-space: pre-wrap;
     }
 
+    .feed-badge-hero { display:flex; flex-direction:column; align-items:center; gap:.3rem; padding:1.1rem 1rem; cursor:pointer; }
+    .feed-badge-name { font-weight:700; font-size:1rem; color:var(--text); }
+    .feed-badge-flavor { font-size:.82rem; color:var(--muted); text-align:center; line-height:1.4; max-width:34ch; }
+    .feed-badge-tag { font-size:.68rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-top:.15rem; }
+    .feed-badge-ribbon { display:inline-flex; align-items:center; gap:.4rem; margin:.1rem 1rem .5rem; padding:.3rem .6rem; background:var(--surface2); border-radius:999px; font-size:.8rem; font-weight:600; color:var(--text); cursor:pointer; }
+
     /* Add-photo button inside watch banner (own cards, no photo) */
     .feed-add-photo-btn {
       background: none; border: 1px solid var(--border); color: var(--muted);
@@ -6474,7 +6480,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.09.50';
+const APP_VERSION = '27.09.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7235,6 +7241,15 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
               <span class="toggle-slider"></span>
             </label>
           </div>
+          ${featureFlag('badge_posts') ? `
+          <div style="font-size:.75rem;color:var(--muted);margin:.8rem 0 .6rem;border-top:1px solid var(--border);padding-top:.8rem;">Sharing</div>
+          <div class="toggle-row">
+            <span class="toggle-label">Share achievements to feed</span>
+            <label class="toggle-switch">
+              <input type="checkbox" ${profile.share_achievements !== false ? 'checked' : ''} onchange="saveShareAchievements(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>` : ''}
         </div>
       </div>
     </div>`;
@@ -9975,7 +9990,14 @@ function renderFeedCard(item) {
 
   // Hero area
   let heroHtml = '';
-  if (item.photo_url) {
+  if (item.use_case === 'badge' && Array.isArray(item.badge_refs) && item.badge_refs.length) {
+    const _b = BADGE_BY_REF[Number(item.badge_refs[0])];
+    if (_b) heroHtml = `<div class="feed-badge-hero" onclick="openBadgeDetail(${_b.ref})">`
+      + badgeMedallionSvg(_b, 72, true)
+      + `<div class="feed-badge-name">${escHtml(_b.name)}</div>`
+      + `<div class="feed-badge-flavor">${escHtml(_b.flavor || '')}</div>`
+      + `<div class="feed-badge-tag">🏅 Badge</div></div>`;
+  } else if (item.photo_url) {
     const _urls = parsePhotoUrl(item.photo_url);
     const heroUrl = _urls[0] || '';
     const heroIsVideo = isVideoUrl(heroUrl);
@@ -10193,6 +10215,15 @@ function renderFeedCard(item) {
     ? `<button class="feed-action-btn" onclick="addFeedPhoto('${item.id}')" title="Add photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>`
     : '';
 
+  let badgeRibbon = '';
+  if (item.use_case !== 'badge' && Array.isArray(item.badge_refs) && item.badge_refs.length) {
+    badgeRibbon = item.badge_refs.map(r => {
+      const _rb = BADGE_BY_REF[Number(r)];
+      return _rb ? `<div class="feed-badge-ribbon" onclick="openBadgeDetail(${_rb.ref})">`
+        + badgeMedallionSvg(_rb, 22, true) + `<span>Earned: ${escHtml(_rb.name)}</span></div>` : '';
+    }).join('');
+  }
+
   return `
     <div class="feed-card" id="feedcard-${item.id}">
       <div class="feed-card-header">
@@ -10215,6 +10246,7 @@ function renderFeedCard(item) {
         </div>
       </div>
       ${heroHtml}
+      ${badgeRibbon}
       <div class="feed-actions">
         <button class="feed-action-btn${likes.liked ? ' liked' : ''}" onclick="toggleLike('${item.id}')">
           ${likes.liked ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>' : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'} ${likes.count ? `<span onclick="event.stopPropagation();event.preventDefault();showLikers('${item.id}')">${likes.count}</span>` : ''}
@@ -12192,6 +12224,13 @@ async function saveEmailPref(category, enabled) {
   prefs[category] = enabled;
   const { error } = await db.from('profiles').update({ email_prefs: prefs }).eq('id', currentUser.id);
   if (!error && window.myProfile) window.myProfile.email_prefs = prefs;
+  if (error) toast('Could not save — ' + error.message, 'error');
+}
+async function saveShareAchievements(enabled) {
+  if (demoGuard()) return;
+  if (!currentUser) return;
+  const { error } = await db.from('profiles').update({ share_achievements: enabled }).eq('id', currentUser.id);
+  if (!error && window.myProfile) window.myProfile.share_achievements = enabled;
   if (error) toast('Could not save — ' + error.message, 'error');
 }
 
