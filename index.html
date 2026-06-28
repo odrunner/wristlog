@@ -99,6 +99,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* Canonical section/eyebrow label — one type treatment for uppercase labels. */
     .eyebrow { font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
     .eyebrow-muted { color: var(--muted); }
+    /* Canonical admin/info card surface (replaces repeated inline blocks). */
+    .admin-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .75rem; margin-bottom: 1rem; }
     :root {
       --bg:         #f5f5f8;
       --surface:    #ffffff;
@@ -397,10 +399,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* ── TOGGLE SWITCH ── */
     .toggle-switch { position:relative; display:inline-block; width:42px; height:24px; flex-shrink:0; }
     .toggle-switch input { opacity:0; width:0; height:0; }
-    .toggle-slider { position:absolute; inset:0; background:var(--border); border-radius:24px; cursor:pointer; transition:.2s; }
-    .toggle-slider::before { content:''; position:absolute; width:18px; height:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; }
-    .toggle-switch input:checked + .toggle-slider { background:var(--gold); }
-    .toggle-switch input:checked + .toggle-slider::before { transform:translateX(18px); }
 
     /* ── PROFILE PAGE ── */
     .profile-hero { display:flex; flex-direction:column; align-items:center; text-align:center; padding:1.75rem 0 1.25rem; gap:.55rem; }
@@ -1677,7 +1675,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wpm-modal { max-width: 360px; }
     .wpm-hero { width: 100%; height: 160px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius); background: var(--surface2); overflow: hidden; margin-bottom: .9rem; }
     .wpm-hero img { width: 100%; height: 100%; object-fit: contain; }
-    .wpm-hero-avatar { font-size: 2.5rem; font-weight: 800; color: #000; }
     .wpm-field { display: flex; flex-direction: column; gap: .18rem; padding: .55rem 0; border-bottom: 1px solid var(--border); }
     .wpm-field:last-child { border-bottom: none; }
     .wpm-field-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
@@ -6643,7 +6640,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.22.04';
+const APP_VERSION = '27.22.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13517,7 +13514,7 @@ async function loadAdminStats() {
           <tbody>${rows}</tbody>
         </table>`;
       }
-      return `<div id="${tableId}" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+      return `<div id="${tableId}" class="admin-card">
         <div class="eyebrow" style="margin-bottom:.5rem;">${title}</div>
         <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
           <thead><tr style="border-bottom:2px solid var(--border);">
@@ -13531,7 +13528,7 @@ async function loadAdminStats() {
     window._renderAdminUserTable = renderAdminUserTable;
 
     el.innerHTML = `
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+      <div class="admin-card">
         <div class="eyebrow" style="margin-bottom:.5rem;">Totals (external users only)</div>
         ${statRow('Users', extUsers, dod.users)}
         ${statRow('Watches', extWatches, dod.watches)}
@@ -13547,7 +13544,7 @@ async function loadAdminStats() {
         ${statRow('Likes', likes, dod.likes)}
         ${statRow('Comments', comments, dod.comments)}
       </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+      <div class="admin-card">
         <div class="eyebrow" style="margin-bottom:.5rem;">Per-User Averages (external)</div>
         ${statRow('Watches / User', avg(extWatches, extUsers))}
         ${statRow('Wears / User', avg(extWears, extUsers))}
@@ -13779,7 +13776,7 @@ async function renderAdminTraffic() {
 
     // Demo views = clicks of "Try the demo" (the alexrivera demo account), counted
     // by distinct hashed IP. Captured server-side in the demo-login edge function.
-    const demoViewsHtml = dv ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+    const demoViewsHtml = dv ? `<div class="admin-card">
         <div class="eyebrow" style="margin-bottom:.5rem;">Demo Views (Alex Rivera)</div>
         ${statRow('Total opens', dv.total, (dv.unique_ips || 0) + ' unique IPs')}
         <div style="height:.5rem;"></div>
@@ -13788,7 +13785,7 @@ async function renderAdminTraffic() {
       </div>` : '';
 
     el.innerHTML = `
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+      <div class="admin-card">
         <div class="eyebrow" style="margin-bottom:.5rem;">Overview (All Time)</div>
         ${statRow('Total visits', t.total_visits)}
         ${statRow('Unique visitors', t.unique_visitors)}
@@ -13800,20 +13797,20 @@ async function renderAdminTraffic() {
         ${statRow('Repeat (7d)', t.repeat_7d)}
       </div>
       ${demoViewsHtml}
-      ${sourceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+      ${sourceRows ? `<div class="admin-card">
         <div class="eyebrow" style="margin-bottom:.5rem;">By Source</div>
         ${sourceRows}
       </div>` : ''}
-      ${dailyRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+      ${dailyRows ? `<div class="admin-card">
         <div class="eyebrow" style="margin-bottom:.5rem;">Daily (last 14 days)</div>
         ${dailyRows}
       </div>` : ''}
-      ${deviceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+      ${deviceRows ? `<div class="admin-card">
         <div class="eyebrow" style="margin-bottom:.5rem;">Device (7 days)</div>
         ${deviceRows}
       </div>` : ''}
       ${funnelHtml}
-      ${signupSourceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+      ${signupSourceRows ? `<div class="admin-card">
         <div class="eyebrow" style="margin-bottom:.5rem;">Signups by Source</div>
         ${signupSourceRows}
       </div>` : ''}
@@ -13907,18 +13904,18 @@ function renderEmailEngagement(data) {
     return `<div style="display:flex;justify-content:space-between;font-size:.78rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${icon} ${escHtml(masked)}</span><span style="color:var(--muted);font-size:.7rem;">${ago}</span></div>`;
   }).join('');
 
-  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+  return `<div class="admin-card">
     <div class="eyebrow" style="margin-bottom:.5rem;">Email Engagement</div>
     ${statRow('Delivered', delivered)}
     ${statRow('Opened', opened, pct(opened, delivered))}
     ${statRow('Clicked', clicked, pct(clicked, delivered))}
     ${bounced ? statRow('Bounced / Complained', bounced) : ''}
   </div>
-  ${subjectRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+  ${subjectRows ? `<div class="admin-card">
     <div class="eyebrow" style="margin-bottom:.5rem;">By Campaign</div>
     ${subjectRows}
   </div>` : ''}
-  ${recentRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+  ${recentRows ? `<div class="admin-card">
     <div class="eyebrow" style="margin-bottom:.5rem;">Recent Opens & Clicks</div>
     ${recentRows}
   </div>` : ''}`;
@@ -13946,7 +13943,7 @@ function renderFunnelFromRpc(f, su) {
   const conv7 = totalSignins7 > 0 ? (newUsers7d / totalSignins7 * 100).toFixed(1) + '%' : '—';
   const conv1 = totalSignins1 > 0 ? (newUsers1d / totalSignins1 * 100).toFixed(1) + '%' : '—';
 
-  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
+  return `<div class="admin-card">
     <div class="eyebrow" style="margin-bottom:.5rem;">Signup Funnel</div>
     ${row('Google sign-in click', signinG1, signinG7, signinGAll)}
     ${row('Apple sign-in click', signinA1, signinA7, signinAAll)}
