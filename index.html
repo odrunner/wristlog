@@ -6647,7 +6647,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.22.42';
+const APP_VERSION = '27.22.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10271,7 +10271,7 @@ function renderFeedCard(item) {
     ? `<div class="vis-badge ${vis}">${vis === 'followers' ? 'Followers only' : vis === 'friends' ? 'Close Friends only' : 'Only you'}</div>`
     : '';
   const featuredPill = item.__featured
-    ? `<span class="feat-pill" style="display:inline-flex;align-items:center;gap:.2rem;font-size:var(--fs-xs);font-weight:var(--fw-semibold);color:var(--gold);background:var(--gold-dim);border-radius:var(--radius-pill);padding:.08rem .45rem;margin-left:.4rem;vertical-align:middle;">★ Featured</span>`
+    ? `<span class="pill" style="color:var(--gold);background:var(--gold-dim);margin-left:.4rem;vertical-align:middle;">★ Featured</span>`
     : '';
 
   const clubForBadge = item.club_id ? myClubs.find(c => c.id === item.club_id) : null;
