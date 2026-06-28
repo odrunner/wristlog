@@ -325,6 +325,28 @@ export function rowToWish(r) {
   };
 }
 
+// Extract a single watch's identity from an identify-watch `mode:'identify'`
+// response, for prefilling the wishlist modal. Returns { brand, model,
+// reference, color } (strings, empty when absent) or null when there's no
+// usable brand/model. A literal "Unknown" brand/model is treated as empty so
+// we never prefill junk or create an "Unknown" brand.
+export function pickIdentifiedWatch(data) {
+  if (!data) return null;
+  const w = Array.isArray(data.watches) ? data.watches[0]
+          : (data.watch || (data.brand || data.model || data.name ? data : null));
+  if (!w) return null;
+  const clean = v => {
+    const s = (v == null ? '' : String(v)).trim();
+    return s.toLowerCase() === 'unknown' ? '' : s;
+  };
+  const brand     = clean(w.brand);
+  const model     = clean(w.model != null ? w.model : w.name);
+  const reference = clean(w.reference != null ? w.reference : w.ref);
+  const color     = clean(w.estimatedColor);
+  if (!brand && !model) return null;
+  return { brand, model, reference, color };
+}
+
 // ══════════════════════════════════════════
 //  ELO RANKING
 // ══════════════════════════════════════════

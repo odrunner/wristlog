@@ -1950,3 +1950,58 @@ test.describe('Badge earned notification (mocked)', () => {
     await expect(page.locator('#badge-wall-modal')).toBeVisible({ timeout: 5000 });
   });
 });
+
+// ── Wishlist: Add from Photo (mocked) ────────────────────────────────────
+test.describe('Wishlist add-from-photo (mocked)', () => {
+  // 1x1 PNG — decodable by the canvas resize helpers.
+  const PNG_1x1 = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/AP+AAAAAElFTkSuQmCC',
+    'base64'
+  );
+  const tinyFile = { name: 'watch.png', mimeType: 'image/png', buffer: PNG_1x1 };
+
+  test.beforeEach(async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+  });
+
+  test('identified photo opens the wishlist modal prefilled', async ({ page }) => {
+    await page.route('**/functions/v1/identify-watch', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        watches: [{ brand: 'Omega', model: 'Speedmaster Professional', reference: '310.30.42.50.01.001', estimatedColor: '#111111' }],
+      }) })
+    );
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await navigateTo(page, 'wishlist');
+
+    const fileChooserPromise = page.waitForEvent('filechooser');
+    await page.locator('#page-wishlist .page-header').getByRole('button', { name: 'Add from Photo' }).click();
+    (await fileChooserPromise).setFiles(tinyFile);
+
+    await expect(page.locator('#wishlist-modal')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#wl-name')).toHaveValue('Speedmaster Professional');
+    await expect(page.locator('#wl-ref')).toHaveValue('310.30.42.50.01.001');
+    await expect(page.locator('#wl-brand')).toHaveValue('Omega');
+    // Photo attached → the change-photo button reflects an image is present.
+    await expect(page.locator('#wl-change-photo-btn')).toHaveText('Change photo');
+  });
+
+  test('failed identification still opens the modal with the photo attached', async ({ page }) => {
+    await page.route('**/functions/v1/identify-watch', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ watches: [] }) })
+    );
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await navigateTo(page, 'wishlist');
+
+    const fileChooserPromise = page.waitForEvent('filechooser');
+    await page.locator('#page-wishlist .page-header').getByRole('button', { name: 'Add from Photo' }).click();
+    (await fileChooserPromise).setFiles(tinyFile);
+
+    await expect(page.locator('#wishlist-modal')).toBeVisible({ timeout: 10_000 });
+    // No identity prefilled, but the photo is still attached for manual entry.
+    await expect(page.locator('#wl-name')).toHaveValue('');
+    await expect(page.locator('#wl-change-photo-btn')).toHaveText('Change photo');
+  });
+});

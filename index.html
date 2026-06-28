@@ -2204,6 +2204,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Add to Wishlist from a Photo</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Spotted a grail in the wild? On your Wishlist, tap <strong>Add from Photo</strong>, snap or pick a picture, and we&#8217;ll identify the watch and pre-fill the brand, model, and reference for you. Just review, add a price or link if you like, and save.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Featured Posts</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">From time to time we&#8217;ll spotlight a standout post at the top of the feed, marked with a small &#9733; Featured tag. It&#8217;s our way of surfacing great watches and stories from the community.</div>
       </div>
@@ -3265,12 +3269,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div class="help-step">
             <div class="help-step-num">2</div>
             <div class="help-step-body">
+              <div class="help-step-title">Add from a photo</div>
+              <div class="help-step-desc">Tap <strong>Add from Photo</strong> and snap or pick a picture of a watch you&#8217;re after. We&#8217;ll identify it and pre-fill the brand, model, and reference — just review and save.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">3</div>
+            <div class="help-step-body">
               <div class="help-step-title">Drag to reorder your priority ranking</div>
               <div class="help-step-desc">Grab the drag handle and drag items up or down. The #1 spot is highlighted in gold.</div>
             </div>
           </div>
           <div class="help-step">
-            <div class="help-step-num">3</div>
+            <div class="help-step-num">4</div>
             <div class="help-step-body">
               <div class="help-step-title">Share your wishlist with friends</div>
               <div class="help-step-desc">Go to your profile → Privacy section → set <strong>Wishlist</strong> to Followers, Close Friends, or Public. Your followers can then see your wishlist on your profile — great for gift inspiration or comparing GAS lists.</div>
@@ -3854,7 +3865,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div id="page-wishlist" class="page">
     <div class="page-header">
       <h1 class="page-title">Wishlist</h1>
-      <button class="btn btn-primary" onclick="openAddWishlist()">+ Add to Wishlist</button>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;">
+        <button class="btn" onclick="openWishlistPhoto()">Add from Photo</button>
+        <button class="btn btn-primary" onclick="openAddWishlist()">+ Add to Wishlist</button>
+      </div>
     </div>
     <div id="wishlist-grid"></div>
   </div>
@@ -4393,6 +4407,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-actions" style="margin-top:1rem;">
       <button class="btn btn-ghost" onclick="closeSnapMatch()">Cancel</button>
     </div>
+  </div>
+</div>
+
+<!-- ════ WISHLIST "ADD FROM PHOTO" LOADING OVERLAY ════ -->
+<div id="wl-photo-loading" class="overlay hidden" role="status" aria-live="polite" style="z-index:400;">
+  <div class="modal" style="max-width:280px;text-align:center;padding:1.6rem 1.4rem;">
+    <span class="spinner" style="width:30px;height:30px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;"></span>
+    <div style="margin-top:.9rem;font-size:.9rem;font-weight:600;">Identifying watch…</div>
+    <div style="margin-top:.3rem;font-size:.75rem;color:var(--muted);">Reading the dial and finding a match</div>
   </div>
 </div>
 
@@ -6671,7 +6694,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.13.41';
+const APP_VERSION = '28.16.09';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21407,7 +21430,10 @@ function renderWishlist(force) {
       <div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
       <div class="empty-text">Your wishlist is empty</div>
       <div class="empty-sub">Save watches you're dreaming about — track prices and links.</div>
-      <button class="btn btn-primary" style="margin-top:1rem;" onclick="openAddWishlist()">Add to Wishlist</button>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;margin-top:1rem;">
+        <button class="btn" onclick="openWishlistPhoto()">Add from Photo</button>
+        <button class="btn btn-primary" onclick="openAddWishlist()">Add to Wishlist</button>
+      </div>
     </div>`;
     return;
   }
@@ -21793,6 +21819,84 @@ function addPreviewedWatchToWishlist() {
 }
 
 // ── Wishlist CRUD ───────────────────────────────────────────────────────────
+// ── Wishlist: Add from Photo (streamlined, single watch, identify-only) ──────
+// Mirror of wrotate_test.js pickIdentifiedWatch — keep the two in sync.
+function pickIdentifiedWatch(data) {
+  if (!data) return null;
+  const w = Array.isArray(data.watches) ? data.watches[0]
+          : (data.watch || (data.brand || data.model || data.name ? data : null));
+  if (!w) return null;
+  const clean = v => {
+    const s = (v == null ? '' : String(v)).trim();
+    return s.toLowerCase() === 'unknown' ? '' : s;
+  };
+  const brand     = clean(w.brand);
+  const model     = clean(w.model != null ? w.model : w.name);
+  const reference = clean(w.reference != null ? w.reference : w.ref);
+  const color     = clean(w.estimatedColor);
+  if (!brand && !model) return null;
+  return { brand, model, reference, color };
+}
+
+function openWishlistPhoto() {
+  if (demoGuard()) return;
+  if (!currentUser) { toast('Sign in to add from a photo', 'error'); return; }
+  if (myProfile && !myProfile.username_set) { requireUsername(() => openWishlistPhoto()); return; }
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.style.cssText = 'position:absolute;opacity:0;pointer-events:none;';
+  document.body.appendChild(input);
+  input.addEventListener('cancel', () => input.remove());
+  input.onchange = async () => {
+    input.remove();
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    if (!validateImageFile(file)) return;
+    await wlPhotoIdentify(file);
+  };
+  input.click();
+}
+
+async function wlPhotoIdentify(file) {
+  const overlay = document.getElementById('wl-photo-loading');
+  overlay.classList.remove('hidden');
+  // Resized blob becomes the wishlist photo regardless of identify success.
+  let blob = file;
+  try { blob = await blobToResizedBlob(file); } catch (_) { blob = file; }
+
+  let identified = null;
+  try {
+    const base64 = await blobToResizedBase64ForIdentify(file);
+    const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+      method: 'POST',
+      body: JSON.stringify({ image: base64, mode: 'identify' }),
+    }, 120000);
+    if (resp.ok) identified = pickIdentifiedWatch(await resp.json());
+    else if (resp.status === 429) toast('Too many photo lookups right now — add the details manually.', 'error');
+  } catch (e) {
+    console.error('[WRotate] wishlist photo identify error:', e);
+  }
+  overlay.classList.add('hidden');
+
+  // Always open the modal with the photo attached; prefill fields when identified.
+  openAddWishlist();
+  if (wlPendingImage) URL.revokeObjectURL(wlPendingImage);
+  wlPendingFile  = blob;
+  wlPendingImage = URL.createObjectURL(blob);
+  wlRemoveImage  = false;
+  if (identified) {
+    if (identified.brand) buildWlBrandSelect(identified.brand);
+    if (identified.model) document.getElementById('wl-name').value = identified.model;
+    if (identified.reference) document.getElementById('wl-ref').value = identified.reference;
+    const got = [identified.brand && 'brand', identified.model && 'model', identified.reference && 'ref'].filter(Boolean);
+    toast(got.length ? `Identified: ${got.join(', ')} — review and save` : 'Photo added — fill in the details');
+  } else {
+    toast("Couldn't identify it — add the details manually.", 'error');
+  }
+  renderWlModalImg();
+}
+
 function openAddWishlist() {
   editingWlId    = null;
   wlPendingImage = null;
