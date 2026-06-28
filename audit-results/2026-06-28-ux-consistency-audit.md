@@ -10,6 +10,7 @@ typography, components, repeated-action UX. Read-only — no code changed yet.
 **Shipped (SW v832–v834, all green on 1217 unit + 115 E2E):**
 - ✅ **Phase 0** — scale tokens added to `:root` (`--space-*`, `--fs-*`, `--fw-*`, `--lh-*`, `--radius-sm/btn/pill`, `--icon-*`, `--ls-eyebrow`).
 - ✅ **H1 (badge dark-mode)** — warm badge/tag palette promoted to `--badge-*` tokens; **light look unchanged**, dark variants added so it's readable (was cream-on-cream). Surgical approach per decision.
+  - ⚠️ **Regression caught + fixed (v835):** the retheme missed a stray `#412402` warm-brown used for watch description/background/functions **body text** (preview + edit cards) — dark-on-dark in dark mode. Mapped to `var(--badge-text)`. Re-scanned: no other hardcoded foreground colors remain on `--badge-bg` cards.
 - ✅ **H2 (danger reds)** — `#ef4444`/`#f87171` → `var(--danger)` (kept intentional `#b91c1c` nuclear-delete + email red).
 - ✅ **H3 (success greens)** — admin/What's-New chrome greens → `var(--success)`; **timegrapher/measurement instrument neon `#4ade80` intentionally kept**.
 - ✅ **M1 (radius, partial)** — 27 app `border-radius:10px` → `var(--radius)`; `99px` pill typo fixed; shipped `.feat-pill` fixed to `var(--gold)`. (Button-radius 6px/8px/10px unification still open.)
