@@ -234,7 +234,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* ── HEADER DATA BUTTONS ── */
     .header-data {
-      display: flex; align-items: center; gap: .45rem;
+      display: flex; align-items: center; gap: .25rem;
       margin-left: auto; padding: 0 .25rem;
       flex-shrink: 0;  /* sign-out is never pushed off */
     }
@@ -2004,8 +2004,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .bell-btn { position:relative; width:34px; height:34px; border-radius:50%; background:none; border:none; cursor:pointer; color:var(--muted);
       display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:box-shadow .15s, color .15s; }
     .bell-btn:hover { box-shadow:0 0 0 1px var(--gold); color:var(--text); }
-    .streak-chip { display:inline-flex; align-items:center; gap:.25rem; height:34px; padding:0 .7rem; font-size:.85rem; font-weight:700; color:var(--text); background:none; border:none; border-radius:var(--radius-pill); cursor:pointer; line-height:1; transition:box-shadow .15s, color .15s; }
-    .streak-chip:hover { box-shadow:0 0 0 1px var(--gold); }
+    .streak-chip { display:inline-flex; align-items:center; gap:.22rem; height:34px; padding:0 .4rem; font-size:.85rem; font-weight:600; color:var(--muted); background:none; border:none; border-radius:var(--radius-pill); cursor:pointer; line-height:1; transition:box-shadow .15s, color .15s; }
+    .streak-chip:hover { box-shadow:0 0 0 1px var(--gold); color:var(--text); }
     .streak-chip .streak-count { font-variant-numeric:tabular-nums; }
     .streak-chip.streak-chip-atrisk { color:var(--warn); }
     #theme-btn { width:34px; height:34px; border-radius:50%; background:none; border:none; cursor:pointer; color:var(--muted);
@@ -6653,7 +6653,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.11.37';
+const APP_VERSION = '28.12.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
