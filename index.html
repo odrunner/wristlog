@@ -1535,6 +1535,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       /* Touch-friendly tap targets */
       .btn { min-height: 40px; }
       .btn-sm { min-height: 34px; padding: .38rem .7rem; }
+      .feed-action-btn, .feed-edit-btn, .btn-icon { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; }
 
       /* Stats: 2 cols */
       .stats-row { grid-template-columns: repeat(2, 1fr); }
@@ -6642,7 +6643,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.21.47';
+const APP_VERSION = '27.22.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10402,7 +10403,7 @@ function renderFeedCard(item) {
   }
 
   const addPhotoAction = (isMe && compactWear)
-    ? `<button class="feed-action-btn" onclick="addFeedPhoto('${item.id}')" title="Add photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>`
+    ? `<button class="feed-action-btn" onclick="addFeedPhoto('${item.id}')" title="Add photo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>`
     : '';
 
   let badgeRibbon = '';
@@ -10448,10 +10449,10 @@ function renderFeedCard(item) {
         </button>
 
         <button class="feed-action-btn" onclick="toggleComments('${item.id}')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> <span>${cCount || ''}</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> <span>${cCount || ''}</span>
         </button>
         ${addPhotoAction}
-        ${(vis === 'public' || isMe) ? `<button class="feed-action-btn" onclick="sharePost('${item.id}')" title="Share post"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>` : ''}
+        ${(vis === 'public' || isMe) ? `<button class="feed-action-btn" onclick="sharePost('${item.id}')" title="Share post"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>` : ''}
       </div>
       ${captionHtml}
       ${badgeRibbon}
