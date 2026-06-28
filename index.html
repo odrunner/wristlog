@@ -936,7 +936,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .rank-drag-handle     { position: absolute; top: .5rem; left: .55rem; color: var(--border); cursor: grab; font-size: 1.1rem; user-select: none; z-index: 2; touch-action: none; line-height: 1; }
     .rank-drag-handle:hover { color: var(--muted); }
     .watch-card.dragging  { opacity: .4; }
-    .watch-card.drag-over { border-color: var(--gold) !important; box-shadow: 0 0 0 2px var(--gold); }
+    .watch-card.drag-over { border-color: var(--gold) !important; box-shadow: 0 0 0 1px var(--gold); }
 
     /* ── COLLECTION RANKING GAME ── */
     .game-card {
@@ -1062,7 +1062,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       cursor: pointer; transition: transform .15s, box-shadow .15s;
       border: 2px solid transparent;
     }
-    .color-swatch.chosen { border-color: #fff; box-shadow: 0 0 0 2px var(--gold); transform: scale(1.15); }
+    .color-swatch.chosen { border-color: #fff; box-shadow: 0 0 0 1px var(--gold); transform: scale(1.15); }
     .color-swatches { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .35rem; }
 
     /* ── MODAL ── */
@@ -1590,7 +1590,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; transition: box-shadow .15s; overflow: hidden; padding: 0;
     }
-    .profile-btn:hover { box-shadow: 0 0 0 2px var(--gold); }
+    .profile-btn:hover { box-shadow: 0 0 0 1px var(--gold); }
     .help-btn {
       width: 34px; height: 34px; border-radius: 50%;
       background: none; border: none;
@@ -1599,7 +1599,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       flex-shrink: 0; transition: box-shadow .15s, color .15s; padding: 0;
       font-family: inherit;
     }
-    .help-btn:hover { box-shadow: 0 0 0 2px var(--gold); color: var(--text); }
+    .help-btn:hover { box-shadow: 0 0 0 1px var(--gold); color: var(--text); }
 
     /* ── FEED ──────────────────────────────────── */
     .feed-card {
@@ -2003,14 +2003,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* ── BELL ICON ──────────────────────────────── */
     .bell-btn { position:relative; width:34px; height:34px; border-radius:50%; background:none; border:none; cursor:pointer; color:var(--muted);
       display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:box-shadow .15s, color .15s; }
-    .bell-btn:hover { box-shadow:0 0 0 2px var(--gold); color:var(--text); }
+    .bell-btn:hover { box-shadow:0 0 0 1px var(--gold); color:var(--text); }
     .streak-chip { display:inline-flex; align-items:center; gap:.25rem; height:34px; padding:0 .7rem; font-size:.85rem; font-weight:700; color:var(--text); background:none; border:none; border-radius:var(--radius-pill); cursor:pointer; line-height:1; transition:box-shadow .15s, color .15s; }
-    .streak-chip:hover { box-shadow:0 0 0 2px var(--gold); }
+    .streak-chip:hover { box-shadow:0 0 0 1px var(--gold); }
     .streak-chip .streak-count { font-variant-numeric:tabular-nums; }
     .streak-chip.streak-chip-atrisk { color:var(--warn); }
     #theme-btn { width:34px; height:34px; border-radius:50%; background:none; border:none; cursor:pointer; color:var(--muted);
       display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:box-shadow .15s, color .15s; }
-    #theme-btn:hover { box-shadow:0 0 0 2px var(--gold); color:var(--text); }
+    #theme-btn:hover { box-shadow:0 0 0 1px var(--gold); color:var(--text); }
     .bell-badge { position:absolute; top:2px; right:2px; min-width:16px; height:16px; border-radius:8px;
       background:var(--danger); color:#fff; font-size:.6rem; font-weight:700;
       display:flex; align-items:center; justify-content:center; padding:0 3px; pointer-events:none; }
@@ -6652,7 +6652,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.11.31';
+const APP_VERSION = '28.11.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
