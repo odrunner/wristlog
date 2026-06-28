@@ -5826,19 +5826,13 @@ async function checkAndAwardBadges(context, postId) {
 
   // Habit badges
   if (context === 'wear' || context === 'retroactive') {
-    const sortedDates = [...new Set(logs.map(l => l.date))].sort();
-    // maxStreak below is the longest consecutive-day run — same notion as computeStreaks(...).best,
-    // kept inline here intentionally (don't unify) to avoid touching shipped badge-award logic.
+    // maxStreak uses the SAME frozen/weekend-aware computation as the displayed
+    // streak chip (displayStreak → computeStreaksFrozen(...,true)), so earned
+    // badges match the streak the user actually sees: freeze-covered days and
+    // earned weekend rest days count toward the threshold.
     const STREAK_BADGES = [[83,5],[80,7],[84,10],[85,20],[81,30],[86,50],[87,100],[88,365]];
     if (STREAK_BADGES.some(([ref]) => !alreadyEarned(ref))) {
-      let maxStreak = 1, curStreak = 1;
-      for (let i = 1; i < sortedDates.length; i++) {
-        const prev = new Date(sortedDates[i - 1]);
-        const curr = new Date(sortedDates[i]);
-        const diff = (curr - prev) / (1000 * 60 * 60 * 24);
-        if (diff === 1) { curStreak++; maxStreak = Math.max(maxStreak, curStreak); }
-        else if (diff > 1) curStreak = 1;
-      }
+      const maxStreak = computeStreaksFrozen(logs, todayStr(), true).best;
       for (const [ref, days] of STREAK_BADGES) {
         if (!alreadyEarned(ref) && maxStreak >= days) { if (await awardBadge(ref)) newlyEarned.push(BADGE_BY_REF[ref]); }
       }
@@ -6621,7 +6615,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.19.45';
+const APP_VERSION = '27.19.55';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
