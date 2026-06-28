@@ -6636,7 +6636,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.21.03';
+const APP_VERSION = '27.21.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7859,21 +7859,11 @@ async function loadBlockedUsers() {
   blockedUsers = new Set((data || []).map(b => b.blocked_id));
 }
 
-function blockUser(userId, displayName) {
+async function blockUser(userId, displayName) {
   if (demoGuard()) return;
   if (!userId || userId === currentUser?.id) return;
-  _pendingBlockAction = { userId, displayName: displayName || 'this user' };
-  const t = document.getElementById('toast');
-  t.className = 'toast info';
-  t.innerHTML = `Block ${escHtml(displayName || 'this user')}? Their content will be hidden from your feed. <button onclick="_execBlock()" style="margin-left:.5rem;padding:.25rem .6rem;border-radius:6px;background:var(--danger);color:#fff;border:none;cursor:pointer;font-size:.8rem;">Block</button> <button onclick="document.getElementById('toast').className='toast';" style="margin-left:.25rem;padding:.25rem .6rem;border-radius:6px;background:var(--border);color:var(--text);border:none;cursor:pointer;font-size:.8rem;">Cancel</button>`;
-  t.style.opacity = '1';
-}
-let _pendingBlockAction = null;
-async function _execBlock() {
-  document.getElementById('toast').className = 'toast';
-  const { userId, displayName } = _pendingBlockAction || {};
-  if (!userId) return;
-  _pendingBlockAction = null;
+  const who = displayName || 'this user';
+  if (!await showConfirm(`${who}'s content will be hidden from your feed and they won't be able to interact with you.`, { title: `Block ${who}?`, confirmLabel: 'Block' })) return;
 
   const { error } = await db.from('user_blocks').insert({
     blocker_id: currentUser.id,
@@ -7995,6 +7985,7 @@ async function initiateFriendRequest(userId) {
 async function removeFriend(userId) {
   if (demoGuard()) return;
   if (!currentUser) return;
+  if (!await showConfirm("You'll no longer be close friends.", { title: 'Remove friend?', confirmLabel: 'Remove' })) return;
   // RLS scopes delete to rows where auth.uid() is a party; filtering by userId
   // picks the specific pair without needing nested and() inside or().
   const { error } = await db.from('friend_requests').delete()
@@ -10736,23 +10727,14 @@ async function submitReport() {
   closeReport();
 
   // Offer to block the user via a persistent toast with action
+  toast('Report submitted. Content removed from feeds while under review.');
+  // Offer to block the reported user via the standard confirm, after the report
+  // toast has had a moment to show.
   if (actualReportedUserId !== currentUser.id && !blockedUsers.has(actualReportedUserId)) {
     const reportedName = document.getElementById('report-display-name')?.value || 'this user';
-    _pendingBlockUserId = actualReportedUserId;
-    _pendingBlockName = reportedName;
-    toast('Report submitted. Content removed from feeds while under review.');
-    // Show block offer after a short delay so the report toast is visible first
-    setTimeout(() => {
-      const t = document.getElementById('toast');
-      t.className = 'toast info';
-      t.innerHTML = `Block ${escHtml(_pendingBlockName)}? <button onclick="blockUser(_pendingBlockUserId,_pendingBlockName);document.getElementById('toast').className='toast';" style="margin-left:.5rem;padding:.25rem .6rem;border-radius:6px;background:var(--danger);color:#fff;border:none;cursor:pointer;font-size:.8rem;">Block</button> <button onclick="document.getElementById('toast').className='toast';" style="margin-left:.25rem;padding:.25rem .6rem;border-radius:6px;background:var(--border);color:var(--text);border:none;cursor:pointer;font-size:.8rem;">Cancel</button>`;
-      t.style.opacity = '1';
-    }, 2000);
-  } else {
-    toast('Report submitted. Content removed from feeds while under review.');
+    setTimeout(() => blockUser(actualReportedUserId, reportedName), 1500);
   }
 }
-let _pendingBlockUserId = null, _pendingBlockName = '';
 
 // ── Feed caption editing ───────────────────────────────────────────────────
 const feedEditingCaption = new Set();
@@ -13321,20 +13303,9 @@ async function adminRestoreContent(reportId, contentType, contentId) {
   toast('Content restored');
 }
 
-function adminSuspendUser(userId, name) {
+async function adminSuspendUser(userId, name) {
   if (currentUser?.id !== ADMIN_USER_ID) return;
-  _pendingSuspend = { userId, name };
-  const t = document.getElementById('toast');
-  t.className = 'toast info';
-  t.innerHTML = `Suspend ${escHtml(name)}? They will not be able to use the app. <button onclick="_execSuspend()" style="margin-left:.5rem;padding:.25rem .6rem;border-radius:6px;background:var(--danger);color:#fff;border:none;cursor:pointer;font-size:.8rem;">Suspend</button> <button onclick="document.getElementById('toast').className='toast';" style="margin-left:.25rem;padding:.25rem .6rem;border-radius:6px;background:var(--border);color:var(--text);border:none;cursor:pointer;font-size:.8rem;">Cancel</button>`;
-  t.style.opacity = '1';
-}
-let _pendingSuspend = null;
-async function _execSuspend() {
-  document.getElementById('toast').className = 'toast';
-  const { userId, name } = _pendingSuspend || {};
-  if (!userId) return;
-  _pendingSuspend = null;
+  if (!await showConfirm(`${name} will not be able to use the app.`, { title: `Suspend ${name}?`, confirmLabel: 'Suspend' })) return;
   const { error } = await db.from('profiles').update({
     is_suspended: true,
     suspended_at: new Date().toISOString()
