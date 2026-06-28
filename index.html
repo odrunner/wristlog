@@ -6633,7 +6633,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.20.23';
+const APP_VERSION = '27.20.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16770,15 +16770,15 @@ function renderStorySection() {
   let html = '<div style="background:var(--badge-bg);border-radius:8px;padding:10px 12px;">';
   if (desc) {
     html += `<div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--badge-deep);margin-bottom:3px;">Description</div>`;
-    html += `<div style="font-size:12px;line-height:1.55;color:#412402;">${escHtml(desc)}</div>`;
+    html += `<div style="font-size:12px;line-height:1.55;color:var(--badge-text);">${escHtml(desc)}</div>`;
   }
   if (bg) {
     html += `<div style="margin-top:10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--badge-deep);margin-bottom:3px;">Background &amp; History</div>`;
-    html += `<div style="font-size:12px;line-height:1.55;color:#412402;">${escHtml(bg)}</div>`;
+    html += `<div style="font-size:12px;line-height:1.55;color:var(--badge-text);">${escHtml(bg)}</div>`;
   }
   if (fns) {
     html += `<div style="margin-top:10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--badge-deep);margin-bottom:3px;">Functions</div>`;
-    html += `<div style="font-size:12px;line-height:1.55;color:#412402;">${escHtml(fns)}</div>`;
+    html += `<div style="font-size:12px;line-height:1.55;color:var(--badge-text);">${escHtml(fns)}</div>`;
   }
   html += `<div style="margin-top:10px;"><button type="button" onclick="enhanceSingleWatch()" style="background:#fff;color:var(--badge-accent);border:0.5px solid var(--badge-border);font-size:11px;font-family:inherit;padding:5px 12px;border-radius:6px;cursor:pointer;">⭐ Re-enhance</button></div>`;
   html += '</div>';
@@ -17454,7 +17454,7 @@ function renderValueSection() {
           <div style="font-size:10px;color:var(--badge-accent);">${freshLabel}</div>
         </div>
         <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px;">
-          <span style="font-size:20px;font-weight:500;color:#412402;">${fmtMoney(pending)}</span>
+          <span style="font-size:20px;font-weight:500;color:var(--badge-text);">${fmtMoney(pending)}</span>
           ${savedPrice ? `<span style="font-size:12px;color:${deltaColor};">${deltaSign}${fmtMoney(Math.abs(delta))} vs saved</span>` : ''}
         </div>
         <div style="display:flex;gap:8px;margin-top:10px;">
@@ -21644,15 +21644,15 @@ function previewWatch(w) {
     cardHtml = '<div style="background:var(--badge-bg);border-radius:8px;padding:10px 12px;border:0.5px solid var(--badge-border);">';
     if (desc) {
       cardHtml += `<div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--badge-deep);margin-bottom:3px;">Description</div>`;
-      cardHtml += `<div style="font-size:12px;line-height:1.55;color:#412402;">${escHtml(desc)}</div>`;
+      cardHtml += `<div style="font-size:12px;line-height:1.55;color:var(--badge-text);">${escHtml(desc)}</div>`;
     }
     if (bg) {
       cardHtml += `<div style="margin-top:10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--badge-deep);margin-bottom:3px;">Background &amp; History</div>`;
-      cardHtml += `<div style="font-size:12px;line-height:1.55;color:#412402;">${escHtml(bg)}</div>`;
+      cardHtml += `<div style="font-size:12px;line-height:1.55;color:var(--badge-text);">${escHtml(bg)}</div>`;
     }
     if (fns) {
       cardHtml += `<div style="margin-top:10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--badge-deep);margin-bottom:3px;">Functions</div>`;
-      cardHtml += `<div style="font-size:12px;line-height:1.55;color:#412402;">${escHtml(fns)}</div>`;
+      cardHtml += `<div style="font-size:12px;line-height:1.55;color:var(--badge-text);">${escHtml(fns)}</div>`;
     }
     cardHtml += '</div>';
   }
