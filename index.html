@@ -6647,7 +6647,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.07.13';
+const APP_VERSION = '28.07.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22607,6 +22607,43 @@ document.addEventListener('keydown', e => {
   e.preventDefault();
   btn.click();
 });
+
+// ── A11y: make leaf "fake button" divs/spans keyboard-accessible ──
+// Many controls are built as <div>/<span onclick> rather than <button>. Give the
+// LEAF ones (no nested interactive children) role=button + tabindex so the
+// handler above can activate them. CONTAINER rows (notif items, club search
+// cards, video heroes, photo-drop zones) are excluded to avoid nested-interactive
+// anti-patterns; the landing/auth screen is excluded per project rules. Runs on
+// load and via a MutationObserver so re-rendered content is covered too.
+const A11Y_LEAF_SELECTOR = [
+  '.chip','.badge-wall-card','.profile-stat-btn','.watch-suggestion','.watch-option',
+  '.feed-watch-chip','.feed-wearing-row','.feed-user-name','.feed-user-avatar',
+  '.watch-card-name','.watch-card-brand','.meta-val.clickable','.watch-card-add',
+  '.market-price-row','.wl-info','.snap-match-card','.mention-link','.strap-name.clickable',
+  '.color-swatch','.feed-badge-hero','.feed-badge-ribbon','.profile-post-cell',
+  '.feed-card-thumb','.ob-row','.ob-head','.reminder-banner-body','.profile-avatar-cam'
+].join(',');
+function _a11yButtonEl(el) {
+  if (el.tagName === 'BUTTON' || el.tagName === 'A') return;     // real controls
+  if (el.hasAttribute('role')) return;                           // already set
+  if (!el.getAttribute || !el.getAttribute('onclick')) return;   // only clickable ones
+  if (el.closest('#auth-screen, #landing-feed-list')) return;    // leave landing alone
+  el.setAttribute('role', 'button');
+  el.setAttribute('tabindex', '0');
+}
+function _enhanceA11yButtons(root) {
+  if (!root || !root.querySelectorAll) return;
+  if (root.matches && root.matches(A11Y_LEAF_SELECTOR)) _a11yButtonEl(root);
+  root.querySelectorAll(A11Y_LEAF_SELECTOR).forEach(_a11yButtonEl);
+}
+try {
+  _enhanceA11yButtons(document);
+  new MutationObserver(muts => {
+    for (const m of muts) for (const n of m.addedNodes) {
+      if (n.nodeType === 1) _enhanceA11yButtons(n);
+    }
+  }).observe(document.body, { childList: true, subtree: true });
+} catch (_) { /* a11y enhancement is non-critical */ }
 
 // Back button closes the topmost open modal instead of navigating away
 let _modalHistoryCount = 0;
