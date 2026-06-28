@@ -101,6 +101,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .eyebrow-muted { color: var(--muted); }
     /* Canonical admin/info card surface (replaces repeated inline blocks). */
     .admin-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .75rem; margin-bottom: 1rem; }
+    /* Canonical modal close (top-right X). */
+    .modal-close { position: absolute; top: .5rem; right: .75rem; background: none; border: none; color: var(--muted); font-size: 1.4rem; line-height: 1; cursor: pointer; opacity: .6; transition: opacity .15s, color .15s; }
+    .modal-close:hover { opacity: 1; color: var(--text); }
     /* Canonical round pill (badges/status labels). Tag-style rects use --radius-sm. */
     .pill { display: inline-flex; align-items: center; gap: .25rem; font-size: .68rem; font-weight: 600; padding: .15rem .5rem; border-radius: var(--radius-pill); }
     .pill-muted { color: var(--muted); background: var(--surface2); }
@@ -5009,8 +5012,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <div id="toast" class="toast" aria-live="polite" role="status"></div>
 <div id="badge-toast" class="badge-toast" aria-live="polite"></div>
-<div id="badge-wall-modal" class="overlay hidden"><div class="modal" style="max-width:520px;background:var(--badge-bg2);border-color:var(--badge-border);position:relative;"><button onclick="closeBadgeWall()" style="position:absolute;top:.5rem;right:.75rem;background:none;border:none;color:var(--badge-close);font-size:1.4rem;cursor:pointer;line-height:1;opacity:.5;">&times;</button><div id="badge-wall-content"></div></div></div>
-<div id="badge-detail-modal" class="overlay hidden" style="z-index:210;"><div class="modal" style="max-width:360px;background:var(--badge-bg2);border-color:var(--badge-border);position:relative;"><button onclick="closeBadgeDetail()" style="position:absolute;top:.5rem;right:.75rem;background:none;border:none;color:var(--badge-close);font-size:1.4rem;cursor:pointer;line-height:1;opacity:.5;">&times;</button><div id="badge-detail-content"></div></div></div>
+<div id="badge-wall-modal" class="overlay hidden"><div class="modal" style="max-width:520px;background:var(--badge-bg2);border-color:var(--badge-border);position:relative;"><button onclick="closeBadgeWall()" class="modal-close" aria-label="Close">&times;</button><div id="badge-wall-content"></div></div></div>
+<div id="badge-detail-modal" class="overlay hidden" style="z-index:210;"><div class="modal" style="max-width:360px;background:var(--badge-bg2);border-color:var(--badge-border);position:relative;"><button onclick="closeBadgeDetail()" class="modal-close" aria-label="Close">&times;</button><div id="badge-detail-content"></div></div></div>
 
 <script>
 // Prevent iOS PWA from restoring previous scroll position on launch
@@ -6644,7 +6647,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.22.38';
+const APP_VERSION = '27.22.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
