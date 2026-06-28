@@ -15,7 +15,11 @@ typography, components, repeated-action UX. Read-only — no code changed yet.
 - ✅ **H3 (success greens)** — admin/What's-New chrome greens → `var(--success)`; **timegrapher/measurement instrument neon `#4ade80` intentionally kept**.
 - ✅ **M1 (radius, partial)** — 27 app `border-radius:10px` → `var(--radius)`; `99px` pill typo fixed; shipped `.feat-pill` fixed to `var(--gold)`. (Button-radius 6px/8px/10px unification still open.)
 
-**Still open:** H4 (`#c9a84c` accent + `rgba(201,168,76,α)` tints → gold tokens), H5 (spacing-scale migration), H6 (type scale + `.eyebrow` class), H7 (`.pill` primitive + unify 3 visibility badges), all M2–M7 and L/Phase-3 wording-behavior items. Visual verification: live-site eyeball.
+- ✅ **H4 (gold accent, partial, v836)** — `.rec-tag-weekend` → `var(--gold)`. Most `#c9a84c` are legitimately literal (token defs, `w.color` user-data fallbacks, chart/category palettes, logo, demo banner). **`rgba(201,168,76,α)` tints deferred** — converting needs `color-mix` (iOS <16.2 would drop the tint) for a subtle light-mode hue fix; low value vs compat risk.
+- ✅ **Phase 3 wording (partial, v836)** — `Block user`→`Block User`; block-confirm `No thanks`→`Cancel`; `Save Changes`→`Save` (edit-log/club/campaign). Casing + one dismiss + one affirmative label.
+
+**Still open (larger / visual — best done incrementally with live-site review):**
+H5 (spacing-scale migration — shifts pixels), H6 (type scale + `.eyebrow` class, ~100 labels), H7 (`.pill` primitive + unify 3 visibility-badge systems), M2/M3 (one destructive verb + one confirm pattern via `showConfirm()`), M6 (icon-size/hit-area), L1–L8. None are blocking; all are appearance/structure changes that benefit from an eyeball per step.
 
 ## Verdict
 
