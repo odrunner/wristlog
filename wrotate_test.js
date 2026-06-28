@@ -2084,3 +2084,14 @@ export function pinFeatured(rawLogs, featuredId, featuredLog) {
   if (!pin) return rest;
   return [{ ...pin, __featured: true }, ...rest];
 }
+
+// Pick readable initials text color (#000/#fff) for a given avatar background
+// via YIQ perceived brightness. Used for watch-color avatars (dark dials vs light).
+export function initialsTextColor(bg) {
+  if (!bg || typeof bg !== 'string') return '#000';
+  let h = bg.trim().replace(/^#/, '');
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  if (h.length !== 6 || /[^0-9a-fA-F]/.test(h)) return '#000';
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 >= 140 ? '#000' : '#fff';
+}

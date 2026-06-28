@@ -39,7 +39,7 @@ const VERBATIM = [
   'validateUsername', 'withTimeout', 'resolveTdm', 'resolveSweepKnob', 'parseSweepValues',
   'extractCleanChunks', 'medianStd', 'buildBadgeNotificationRows',
   'addDaysStr', 'computeStreaks', 'streakChipState', 'streakCalendarGrid', 'computeStreaksFrozen',
-  'badgePostPlan', 'pinFeatured',
+  'badgePostPlan', 'pinFeatured', 'initialsTextColor',
 ];
 
 const ADAPTED = [

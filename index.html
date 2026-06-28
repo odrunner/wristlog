@@ -6636,7 +6636,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.21.13';
+const APP_VERSION = '27.21.26';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7155,7 +7155,7 @@ function profilePostCellHTML(l, isOwn) {
     inner = `<img src="${escHtml(w.image)}" alt="" loading="lazy" onerror="this.style.display='none'">`;
   } else {
     const bg = w?.color || '#c9a84c';
-    inner = `<div class="pp-fallback" style="background:${escHtml(bg)}">${initials(w?.brand || '', w?.name || '')}</div>`;
+    inner = `<div class="pp-fallback" style="background:${escHtml(bg)};color:${initialsTextColor(bg)}">${initials(w?.brand || '', w?.name || '')}</div>`;
   }
   const vis = l.visibility || 'public';
   const visLabels = { public: 'Public', followers: 'Followers', friends: 'Close Friends', private: 'Private' };
@@ -7417,7 +7417,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       const priv  = w.watch_privacy ?? null; // null = Default
       const thumb = w.image
         ? `<img src="${escHtml(w.image)}" class="showcase-card-img" alt="" onerror="this.style.display='none'">`
-        : `<div class="showcase-card-avatar" style="background:${escHtml(w.color || '#c9a84c')}">${initials(w.brand||'', w.name||'')}</div>`;
+        : `<div class="showcase-card-avatar" style="background:${escHtml(w.color || '#c9a84c')};color:${initialsTextColor(w.color || '#c9a84c')}">${initials(w.brand||'', w.name||'')}</div>`;
       const privLabel = (() => {
         if (isOwn) {
           const cls = priv === null ? 'inh' : priv === 'public' ? 'pub' : (priv === 'followers' || priv === 'friends_only') ? 'fri' : priv === 'friends' ? 'frd' : 'priv';
@@ -7489,7 +7489,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
       const wlCards = (isOwn ? wishlistItems : wishlistItems.slice(0, 6)).map(w => {
         const thumb = w.image
           ? `<img src="${escHtml(w.image)}" class="showcase-card-img" alt="" onerror="this.style.display='none'">`
-          : `<div class="showcase-card-avatar" style="background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand||'', w.name||'')}</div>`;
+          : `<div class="showcase-card-avatar" style="background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand||'', w.name||'')}</div>`;
         const wp = w.wish_privacy || null;
         const privLabel = (() => {
           if (isOwn) {
@@ -9734,6 +9734,16 @@ function closeLoginPrompt() {
 
 // ── Feed ──────────────────────────────────────────────────────────────────
 const FEED_LOG_COLS = 'id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility, moderation_status, location, badge_refs';
+// Pick readable initials text color (#000/#fff) for a given avatar background
+// via YIQ perceived brightness. Used for watch-color avatars (dark dials vs light).
+function initialsTextColor(bg) {
+  if (!bg || typeof bg !== 'string') return '#000';
+  let h = bg.trim().replace(/^#/, '');
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  if (h.length !== 6 || /[^0-9a-fA-F]/.test(h)) return '#000';
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 >= 140 ? '#000' : '#fff';
+}
 // Pin the active featured post to the top of the feed (admin spotlight).
 // Pure: removes any existing copy of featuredId, then prepends the pin marked __featured.
 function pinFeatured(rawLogs, featuredId, featuredLog) {
@@ -10357,7 +10367,7 @@ function renderFeedCard(item) {
   if (compactWear) {
     const wThumb = w.image
       ? `<img class="feed-wearing-watch-thumb" src="${escHtml(w.image)}" onerror="this.style.display='none'">`
-      : `<div class="feed-wearing-watch-avatar" style="background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand||'',w.name||'')}</div>`;
+      : `<div class="feed-wearing-watch-avatar" style="background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand||'',w.name||'')}</div>`;
     const wLabel = [w.brand, w.name].filter(Boolean).join(' ');
     headerBody = `
       <div class="feed-user-name" onclick="viewUserProfile('${item.user_id}')" style="cursor:pointer;">
@@ -10977,7 +10987,7 @@ function renderEpWatchDisplay() {
     const w = effectiveWatch;
     const thumb = w.image
       ? `<img src="${escHtml(w.image)}" alt="" style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<div style="width:32px;height:32px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:#fff;background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+      : `<div style="width:32px;height:32px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
     display.innerHTML = `<div class="watch-suggestion" style="margin-top:.3rem;">
       ${thumb}
       <div style="flex:1;min-width:0;"><strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong></div>
@@ -11009,7 +11019,7 @@ function toggleEpWatchPicker() {
       const isSel = w.id === currentWatchId;
       const thumb = w.image
         ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-        : `<div class="avatar" style="width:32px;height:32px;font-size:.55rem;background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+        : `<div class="avatar" style="width:32px;height:32px;font-size:.55rem;background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
       return `<div class="watch-option${isSel ? ' worn-today' : ''}" onclick="selectEpWatch('${w.id}')" style="padding:.45rem .5rem;">
         ${thumb}
         <div style="flex:1;min-width:0;">
@@ -11477,7 +11487,7 @@ function renderNpWatchDisplay() {
   if (w) {
     const thumb = w.image
       ? `<img src="${escHtml(w.image)}" alt="" style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<div style="width:32px;height:32px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:#fff;background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+      : `<div style="width:32px;height:32px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
     el.innerHTML = `<div class="watch-suggestion" style="background:rgba(76,175,80,.08);border-color:rgba(76,175,80,.25);">
       ${thumb}
       <div style="flex:1;min-width:0;font-size:.82rem;"><strong>${escHtml(w.brand)} ${escHtml(w.name)}</strong> recognized</div>
@@ -11564,7 +11574,7 @@ function toggleNpWatchPicker() {
       const isSel = w.id === npIdentifiedWatchId;
       const thumb = w.image
         ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-        : `<div class="avatar" style="width:32px;height:32px;font-size:.55rem;background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+        : `<div class="avatar" style="width:32px;height:32px;font-size:.55rem;background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
       return `<div class="watch-option${isSel ? ' selected' : ''}" onclick="selectNpWatch('${w.id}')" style="padding:.45rem .5rem;">
         ${thumb}
         <div style="flex:1;min-width:0;">
@@ -12563,7 +12573,7 @@ function renderRecSettingsBody() {
     const included = !excluded.has(w.id);
     const thumb = w.image
       ? `<img src="${escHtml(w.image)}" alt="" style="width:32px;height:32px;border-radius:6px;object-fit:cover;" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:32px;height:32px;font-size:.6rem;border-radius:6px;background:${escHtml(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
+      : `<div class="avatar" style="width:32px;height:32px;font-size:.6rem;border-radius:6px;background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
     return `<div class="toggle-row" style="gap:.6rem;">
       ${thumb}
       <div style="flex:1;min-width:0;">
@@ -15171,7 +15181,7 @@ function renderWatchSelector() {
       const isWorn = wornToday.has(w.id);
       const thumb  = w.image
         ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-        : `<div class="avatar" style="width:36px;height:36px;background:${escHtml(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
+        : `<div class="avatar" style="width:36px;height:36px;background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
       return `<div class="watch-option ${isWorn ? 'worn-today' : ''}"
                    onclick="openTrackModal('${w.id}')">
         ${thumb}
@@ -15197,7 +15207,7 @@ function openTrackModal(id) {
   const thumbEl = document.getElementById('tl-watch-thumb');
   thumbEl.innerHTML = w.image
     ? `<img src="${escHtml(w.image)}" alt="" style="width:48px;height:48px;object-fit:cover;">`
-    : `<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:${escHtml(w.color||'#c9a84c')};font-weight:800;font-size:.9rem;color:#000;border-radius:10px;">${initials(w.brand,w.name)}</div>`;
+    : `<div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')};font-weight:800;font-size:.9rem;border-radius:10px;">${initials(w.brand,w.name)}</div>`;
   document.getElementById('tl-watch-brand').textContent = w.brand || '';
   document.getElementById('tl-watch-name').textContent  = w.name  || '';
 
@@ -15246,7 +15256,7 @@ function renderTrackHistory() {
     if (!w) return '';
     const thumb = w.image
       ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:22px;height:22px;font-size:.55rem;background:${escHtml(w.color||"#c9a84c")};flex-shrink:0">${initials(w.brand,w.name)}</div>`;
+      : `<div class="avatar" style="width:22px;height:22px;font-size:.55rem;background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")};flex-shrink:0">${initials(w.brand,w.name)}</div>`;
     const strap = log.strapId ? (w.straps||[]).find(s => s.id === log.strapId) : null;
     const strapLabel = strap ? `<div style="font-size:.68rem;color:var(--muted);margin-top:.2rem;line-height:1.3">${escHtml(strap.name)}</div>` : '';
     return `<tr>
@@ -15749,7 +15759,7 @@ function showSnapMatchPicker(matches, file) {
     const w = m.watch;
     const thumb = w.image
       ? `<img src="${escHtml(w.image)}" alt="" style="width:40px;height:40px;border-radius:8px;flex-shrink:0;object-fit:cover;" onerror="this.style.display='none'">`
-      : `<div style="width:40px;height:40px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;background:${escHtml(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+      : `<div style="width:40px;height:40px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
     const matchLabel = m.matchType === 'reference' ? 'Ref match' : m.matchType === 'brand+model' ? 'Model match' : 'Brand match';
     return `<div class="snap-match-card" onclick="pickSnapMatch('${w.id}')">
       ${thumb}
@@ -15951,7 +15961,7 @@ function renderGamePair() {
     const alt = i === 0 ? gamePair.bId : gamePair.aId;
     const img = w.image
       ? `<img src="${escHtml(w.image)}" alt="" class="game-card-img" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:64px;height:64px;font-size:1rem;background:${escHtml(w.color||"#c9a84c")}">${initials(w.brand, w.name)}</div>`;
+      : `<div class="avatar" style="width:64px;height:64px;font-size:1rem;background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand, w.name)}</div>`;
     el.innerHTML = `${img}<div class="game-card-brand">${escHtml(w.brand)}</div><div class="game-card-name">${escHtml(w.name)}</div>`;
     el.className = 'game-card';
     el.onclick   = () => pickWatch(wId, alt);
@@ -16027,7 +16037,7 @@ function showGameResults() {
     const rank = medals[i] || `#${i + 1}`;
     const img  = w.image
       ? `<img src="${escHtml(w.image)}" alt="" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:34px;height:34px;font-size:.65rem;background:${escHtml(w.color||"#c9a84c")};flex-shrink:0">${initials(w.brand, w.name)}</div>`;
+      : `<div class="avatar" style="width:34px;height:34px;font-size:.65rem;background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")};flex-shrink:0">${initials(w.brand, w.name)}</div>`;
     return `<div class="game-result-item">
       <span class="game-rank-num">${rank}</span>
       ${img}
@@ -16445,7 +16455,7 @@ function renderCollection(force) {
           <button class="card-edit-btn" onclick="openEditWatch('${w.id}')" title="Edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button class="card-photo-btn" onclick="openPhotoMenu(event,'${w.id}')" title="Edit photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
         </div>` : '';
-          const noImgAvatar = !hasImg ? `<div class="avatar" style="width:52px;height:52px;font-size:.95rem;background:${escHtml(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>` : '';
+          const noImgAvatar = !hasImg ? `<div class="avatar" style="width:52px;height:52px;font-size:.95rem;background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>` : '';
           const noImgBtns = !hasImg ? `<div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
             <button class="card-edit-btn-noimg" onclick="openEditWatch('${w.id}')" title="Edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
             <button class="card-edit-btn-noimg" onclick="openPhotoMenu(event,'${w.id}')" title="Add photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
@@ -16545,7 +16555,7 @@ function renderCollectionList(visible, today) {
   const rows = enriched.map(({ w, wears, cpwNum, lastDays, paid, market, wornToday }) => {
     const thumb = w.image
       ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:28px;height:28px;font-size:.62rem;background:${escHtml(w.color||"#c9a84c")};flex-shrink:0">${initials(w.brand,w.name)}</div>`;
+      : `<div class="avatar" style="width:28px;height:28px;font-size:.62rem;background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")};flex-shrink:0">${initials(w.brand,w.name)}</div>`;
     let lastWornCell = na;
     if (lastDays !== null) {
       const col = lastDays <= 14 ? 'var(--success)' : lastDays <= 45 ? '#ef7942' : 'var(--danger)';
@@ -17957,7 +17967,7 @@ function renderDowReport() {
       const thumb = w
         ? (w.image
             ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">`
-            : `<div class="avatar" style="width:32px;height:32px;font-size:.58rem;background:${escHtml(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`)
+            : `<div class="avatar" style="width:32px;height:32px;font-size:.58rem;background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`)
         : `<div style="font-size:1rem;opacity:.2;">○</div>`;
       return `<div class="dow-cell ${dow===todayDow?'today-col':''}">
         <div class="dow-day-name">${dayName}</div>
@@ -18195,7 +18205,7 @@ function recCardHTML(rec) {
           anniversaryScore, anniversaryReason, anniversaryYears } = rec;
   const thumb = w.image
     ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:56px;height:56px;border-radius:8px;object-fit:cover;" onerror="this.style.display='none'">`
-    : `<div class="avatar" style="width:56px;height:56px;font-size:.95rem;border-radius:8px;background:${escHtml(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
+    : `<div class="avatar" style="width:56px;height:56px;font-size:.95rem;border-radius:8px;background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
   const tags = [];
   if (daysSince === 999) tags.push({ text: 'Never worn', cls: '' });
   else if (daysSince >= 30) tags.push({ text: `${daysSince}d idle`, cls: '' });
@@ -21290,7 +21300,7 @@ function renderWishlist(force) {
   el.innerHTML = visible.map((w, i) => {
     const thumb = w.image
       ? `<img loading="lazy" src="${escHtml(w.image)}" class="wl-card-img" alt="" onerror="this.style.display='none'">`
-      : `<div class="wl-card-avatar" style="background:${escHtml(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
+      : `<div class="wl-card-avatar" style="background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
     const meta = [
       w.price != null ? fmtMoney(w.price) : '',
       w.ref   ? w.ref : '',
