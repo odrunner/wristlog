@@ -133,6 +133,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       --ls-eyebrow: .08em;
       /* visibility-state semantic colors (one hue per state, all surfaces) */
       --vis-friends: #a78bfa;
+      --warn: #d9a441;
       /* badge/achievement warm theme — light values = current look */
       --badge-text: #3D2A14; --badge-accent: #854F0B; --badge-bg: #FAEEDA;
       --badge-bg2: #FBF6E8; --badge-border: #BA7517; --badge-close: #6B5618;
@@ -1581,22 +1582,22 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* ── PROFILE BUTTON (header) ───────────────── */
     .profile-btn {
-      width: 32px; height: 32px; border-radius: 50%;
+      width: 34px; height: 34px; border-radius: 50%;
       background: var(--gold); color: #000; border: none;
       font-weight: 700; font-size: .72rem; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; transition: opacity .15s; overflow: hidden; padding: 0;
+      flex-shrink: 0; transition: box-shadow .15s; overflow: hidden; padding: 0;
     }
-    .profile-btn:hover { opacity: .85; }
+    .profile-btn:hover { box-shadow: 0 0 0 2px var(--gold-dim); }
     .help-btn {
-      width: 26px; height: 26px; border-radius: 50%;
-      background: none; border: 1.5px solid var(--muted);
-      color: var(--muted); font-size: .72rem; font-weight: 700;
+      width: 34px; height: 34px; border-radius: 50%;
+      background: none; border: none;
+      color: var(--muted); font-size: .95rem; font-weight: 700;
       cursor: pointer; display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; transition: border-color .15s, color .15s; padding: 0;
+      flex-shrink: 0; transition: background .15s, color .15s; padding: 0;
       font-family: inherit;
     }
-    .help-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .help-btn:hover { background: var(--surface2); color: var(--text); }
 
     /* ── FEED ──────────────────────────────────── */
     .feed-card {
@@ -1998,15 +1999,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
 
     /* ── BELL ICON ──────────────────────────────── */
-    .bell-btn { position:relative; background:none; border:none; font-size:1.1rem; cursor:pointer; color:var(--muted);
-      padding:.25rem .4rem; border-radius:8px; display:flex; align-items:center; transition:background .15s, color .15s; }
+    .bell-btn { position:relative; width:34px; height:34px; border-radius:50%; background:none; border:none; cursor:pointer; color:var(--muted);
+      display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .15s, color .15s; }
     .bell-btn:hover { background:var(--surface2); color:var(--text); }
-    .streak-chip { display:inline-flex; align-items:center; gap:.25rem; height:32px; padding:0 .7rem; font-size:.85rem; font-weight:700; color:var(--text); background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-pill); cursor:pointer; line-height:1; transition:border-color .15s, background .15s; }
+    .streak-chip { display:inline-flex; align-items:center; gap:.25rem; height:34px; padding:0 .7rem; font-size:.85rem; font-weight:700; color:var(--text); background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-pill); cursor:pointer; line-height:1; transition:border-color .15s, background .15s; }
     .streak-chip:hover { border-color:var(--gold); }
     .streak-chip .streak-count { font-variant-numeric:tabular-nums; }
-    .streak-chip.streak-chip-atrisk { border-color:#d9a441; color:#d9a441; }
-    #theme-btn { background:none; border:none; cursor:pointer; color:var(--muted);
-      padding:.25rem .4rem; border-radius:8px; display:flex; align-items:center; transition:background .15s, color .15s; }
+    .streak-chip.streak-chip-atrisk { border-color:var(--warn); color:var(--warn); }
+    #theme-btn { width:34px; height:34px; border-radius:50%; background:none; border:none; cursor:pointer; color:var(--muted);
+      display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .15s, color .15s; }
     #theme-btn:hover { background:var(--surface2); color:var(--text); }
     .bell-badge { position:absolute; top:2px; right:2px; min-width:16px; height:16px; border-radius:8px;
       background:var(--danger); color:#fff; font-size:.6rem; font-weight:700;
@@ -2711,7 +2712,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button class="help-btn" id="help-btn" onclick="showHelpPage()" style="display:none;" title="Help &amp; Guide">?</button>
       <button class="streak-chip hidden" id="streak-chip" onclick="streakChipTap()" title="Consecutive days you've logged — any activity counts." aria-label="Wear streak"></button>
       <button class="bell-btn" id="bell-btn" onclick="toggleNotifPanel();event.stopPropagation();" style="display:none;" title="Notifications" aria-label="Notifications" aria-expanded="false" aria-controls="notif-panel">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="bell-badge hidden" id="bell-badge">0</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="bell-badge hidden" id="bell-badge">0</span>
       </button>
       <button class="profile-btn" id="profile-btn" onclick="openProfileModal()" style="display:none;" title="My Profile">?</button>
       <button class="btn-signout" id="signout-btn" onclick="signOut()" style="display:none;">Sign out</button>
@@ -6647,7 +6648,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.07.47';
+const APP_VERSION = '28.08.47';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12460,7 +12461,7 @@ function updateThemeBtn(t) {
   const btn = document.getElementById('theme-btn');
   if (!btn) return;
   t = t || getTheme();
-  const svgAttrs = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="17" height="17"';
+  const svgAttrs = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"';
   const icons = {
     dark:  `<svg ${svgAttrs}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
     light: `<svg ${svgAttrs}><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`,
