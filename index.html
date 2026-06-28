@@ -6609,7 +6609,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.19.13';
+const APP_VERSION = '27.19.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9716,6 +9716,15 @@ function closeLoginPrompt() {
 
 // ── Feed ──────────────────────────────────────────────────────────────────
 const FEED_LOG_COLS = 'id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility, moderation_status, location, badge_refs';
+// Pin the active featured post to the top of the feed (admin spotlight).
+// Pure: removes any existing copy of featuredId, then prepends the pin marked __featured.
+function pinFeatured(rawLogs, featuredId, featuredLog) {
+  if (!featuredId) return rawLogs.slice();
+  const rest = rawLogs.filter(l => l.id !== featuredId);
+  const pin = rawLogs.find(l => l.id === featuredId) || featuredLog;
+  if (!pin) return rest;
+  return [{ ...pin, __featured: true }, ...rest];
+}
 async function loadFeed() {
   if (!currentUser) return;
   // If feedLoading is stuck true for >8s, treat it as dead and allow re-entry

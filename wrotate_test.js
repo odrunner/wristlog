@@ -2074,3 +2074,13 @@ export function badgePostPlan(newlyEarned, context, postId) {
   if (postId) return { inline: notable, standalone: [] };
   return { inline: [], standalone: notable };
 }
+
+// Pin the active featured post to the top of the feed (admin spotlight).
+// Pure: removes any existing copy of featuredId, then prepends the pin marked __featured.
+export function pinFeatured(rawLogs, featuredId, featuredLog) {
+  if (!featuredId) return rawLogs.slice();
+  const rest = rawLogs.filter(l => l.id !== featuredId);
+  const pin = rawLogs.find(l => l.id === featuredId) || featuredLog;
+  if (!pin) return rest;
+  return [{ ...pin, __featured: true }, ...rest];
+}
