@@ -20,6 +20,7 @@ export async function mockSupabase(page, opts = {}) {
     wishlist = [],
     user = FAKE_USER,
     profile = FAKE_PROFILE,
+    featuredId = null,
   } = opts;
 
   const fakeSession = {
@@ -133,6 +134,11 @@ export async function mockSupabase(page, opts = {}) {
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
     );
   }
+
+  // ── Featured post RPC: return the configured active featured log id (or null) ──
+  await page.route('**/rest/v1/rpc/featured_current*', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(featuredId) })
+  );
 
   // ── Supabase Realtime (websocket) — block to prevent connection errors ──
   await page.route('**/realtime/**', route => route.abort());
