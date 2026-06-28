@@ -1797,7 +1797,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .feed-badge-name { font-weight:700; font-size:1rem; color:var(--text); }
     .feed-badge-flavor { font-size:.82rem; color:var(--muted); text-align:center; line-height:1.4; max-width:34ch; }
     .feed-badge-tag { font-size:.68rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-top:.15rem; }
-    .feed-badge-ribbon { display:inline-flex; align-items:center; gap:.35rem; margin:0 1rem .75rem; padding:.22rem .65rem; background:var(--surface2); border-radius:var(--radius-pill); font-size:.72rem; color:var(--muted); cursor:pointer; }
+    .feed-badge-ribbon { display:flex; width:fit-content; align-items:center; gap:.35rem; margin:0 1rem .75rem; padding:.22rem .65rem; background:var(--surface2); border-radius:var(--radius-pill); font-size:.72rem; color:var(--muted); cursor:pointer; }
 
     /* Add-photo button inside watch banner (own cards, no photo) */
     .feed-add-photo-btn {
@@ -6720,7 +6720,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.16.24';
+const APP_VERSION = '28.16.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
