@@ -10,7 +10,7 @@ test.describe('Featured post (mocked)', () => {
     await page.goto('/');
     await waitForAppBoot(page);
     await navigateTo(page, 'feed');
-    await expect(page.locator('.feat-pill').first()).toBeVisible({ timeout: 8000 });
+    await expect(page.locator('.pill', { hasText: 'Featured' }).first()).toBeVisible({ timeout: 8000 });
   });
 
   test('admin sees the Feature kebab item', async ({ page }) => {
