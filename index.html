@@ -101,6 +101,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .eyebrow-muted { color: var(--muted); }
     /* Canonical admin/info card surface (replaces repeated inline blocks). */
     .admin-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .75rem; margin-bottom: 1rem; }
+    /* Canonical round pill (badges/status labels). Tag-style rects use --radius-sm. */
+    .pill { display: inline-flex; align-items: center; gap: .25rem; font-size: .68rem; font-weight: 600; padding: .15rem .5rem; border-radius: var(--radius-pill); }
+    .pill-muted { color: var(--muted); background: var(--surface2); }
     :root {
       --bg:         #f5f5f8;
       --surface:    #ffffff;
@@ -959,7 +962,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .fb-card.status-resolved { opacity:.55; }
     .fb-card.status-ignored  { opacity:.4; }
     .fb-card-header { display:flex; align-items:center; gap:.6rem; margin-bottom:.4rem; flex-wrap:wrap; }
-    .fb-type-badge { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.18rem .55rem; border-radius:20px; flex-shrink:0; }
+    .fb-type-badge { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.18rem .55rem; border-radius:var(--radius-pill); flex-shrink:0; }
     .fb-type-badge.bug     { background:rgba(224,85,85,.15); color:var(--danger); }
     .fb-type-badge.feature { background:rgba(129,140,248,.15); color:#818cf8; }
     .fb-type-badge.rating  { background:rgba(245,158,11,.15); color:#f59e0b; }
@@ -1245,7 +1248,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .badge-wall-date { font-size: .58rem; color:var(--badge-close);opacity:.6; margin-top: .1rem; }
     .badge-cat-chip {
       display: inline-block; font-size: .65rem; font-weight: 600; padding: .15rem .5rem;
-      border-radius: 6px; letter-spacing: .5px; text-transform: uppercase;
+      border-radius: var(--radius-sm); letter-spacing: .5px; text-transform: uppercase;
     }
 
     /* Scrollbar */
@@ -1386,7 +1389,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .rec-watch-name { font-size:.96rem; font-weight:700; }
     .rec-watch-brand { font-size:.78rem; color:var(--muted); margin-top:.08rem; }
     .rec-tags { display:flex; flex-wrap:wrap; gap:.3rem; margin-top:.55rem; }
-    .rec-tag { font-size:.68rem; background:var(--surface2); border-radius:4px; padding:.18rem .45rem; color:var(--muted); }
+    .rec-tag { font-size:.68rem; background:var(--surface2); border-radius:var(--radius-sm); padding:.18rem .45rem; color:var(--muted); }
     .rec-tag-weather { color:#38bdf8; background:rgba(56,189,248,.07); }
     .rec-tag-weekend { color:var(--gold); background:rgba(201,168,76,.08); }
     .rec-explanation { font-size:.77rem; color:var(--muted); margin-top:.55rem; line-height:1.55; }
@@ -1397,7 +1400,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .pi-card-info { flex:1; min-width:0; }
     .pi-card-name { font-size:.88rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .pi-card-brand { font-size:.76rem; color:var(--muted); }
-    .pi-card-conf { font-size:.68rem; font-weight:600; padding:.15rem .5rem; border-radius:4px; text-transform:capitalize; }
+    .pi-card-conf { font-size:.68rem; font-weight:600; padding:.15rem .5rem; border-radius:var(--radius-sm); text-transform:capitalize; }
     .pi-card-conf.high { background:rgba(52,211,153,.12); color:#34d399; }
     .pi-card-conf.medium { background:rgba(251,191,36,.12); color:#fbbf24; }
     .pi-card-conf.low { background:rgba(239,68,68,.12); color:var(--danger); }
@@ -1756,7 +1759,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* Post visibility badge */
     .vis-badge { display:inline-flex; align-items:center; gap:.25rem; font-size:.68rem;
-      padding:.15rem .5rem; border-radius:20px; font-weight:600; margin: 0 1rem .6rem; }
+      padding:.15rem .5rem; border-radius:var(--radius-pill); font-weight:600; margin: 0 1rem .6rem; }
     .vis-badge.followers { background:rgba(201,168,76,.15); color:var(--gold); }
     .vis-badge.friends { background:rgba(167,123,250,.15); color:var(--vis-friends); }
     .vis-badge.private { background:rgba(224,85,85,.12); color:var(--danger); }
@@ -1788,7 +1791,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .feed-badge-name { font-weight:700; font-size:1rem; color:var(--text); }
     .feed-badge-flavor { font-size:.82rem; color:var(--muted); text-align:center; line-height:1.4; max-width:34ch; }
     .feed-badge-tag { font-size:.68rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-top:.15rem; }
-    .feed-badge-ribbon { display:inline-flex; align-items:center; gap:.35rem; margin:0 1rem .75rem; padding:.22rem .65rem; background:var(--surface2); border-radius:20px; font-size:.72rem; color:var(--muted); cursor:pointer; }
+    .feed-badge-ribbon { display:inline-flex; align-items:center; gap:.35rem; margin:0 1rem .75rem; padding:.22rem .65rem; background:var(--surface2); border-radius:var(--radius-pill); font-size:.72rem; color:var(--muted); cursor:pointer; }
 
     /* Add-photo button inside watch banner (own cards, no photo) */
     .feed-add-photo-btn {
@@ -6640,7 +6643,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.22.06';
+const APP_VERSION = '27.22.09';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
