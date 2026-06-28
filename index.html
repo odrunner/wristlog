@@ -899,7 +899,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .tag-pill              { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-size: .72rem; font-weight: 500; padding: .22rem .6rem; border-radius: 12px; cursor: pointer; transition: all .15s; font-family: inherit; }
     .tag-pill:hover        { border-color: var(--badge-border); color: var(--badge-accent); }
     .tag-pill.active       { background: var(--badge-bg); border-color: var(--badge-border); color: var(--badge-accent); font-weight: 600; }
-    .tag-pill.suggested    { border-color: rgba(186,117,23,.4); color: rgba(133,79,11,.7); border-style: dashed; }
+    .tag-pill.suggested    { border-color: rgba(186,117,23,.4); color: var(--badge-accent); border-style: dashed; }
 
     /* ── Collection tag filter bar ── */
     .coll-tag-filter-bar  { display: flex; flex-wrap: wrap; gap: .4rem; padding-bottom: .65rem; }
@@ -1433,7 +1433,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .af2-specs { font-size:11px; color:var(--tertiary, var(--muted)); margin-top:2px; }
     .af2-status { font-size:11px; margin-top:3px; }
     .af2-status-gold { color:var(--badge-accent); }
-    .af2-status-green { color:#3B6D11; }
+    .af2-status-green { color:var(--success); }
     .af2-status-muted { color:var(--muted); }
     .af2-actions { display:flex; flex-direction:column; gap:4px; flex-shrink:0; align-items:flex-end; }
     .af2-btn-confirm { background:var(--badge-accent); color:#fff; border:none; font-size:12px; font-weight:500; padding:6px 12px; border-radius:6px; cursor:pointer; font-family:inherit; }
@@ -1441,9 +1441,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .af2-btn-skip { background:none; border:none; color:var(--muted); font-size:14px; cursor:pointer; padding:2px 4px; line-height:1; }
     .af2-btn-undo { background:none; border:none; color:var(--badge-accent); font-size:11px; cursor:pointer; font-family:inherit; padding:2px 4px; }
     .af2-check-gold { color:var(--gold); font-size:14px; }
-    .af2-check-green { color:#3B6D11; font-size:13px; }
+    .af2-check-green { color:var(--success); font-size:13px; }
     .af2-theater-text { transition:opacity .2s; }
-    .af2-warn-chip { display:inline-block; background:rgba(251,191,36,.15); color:#92400E; font-size:10px; font-weight:500; padding:2px 6px; border-radius:4px; margin-top:3px; }
+    .af2-warn-chip { display:inline-block; background:#fde68a; color:#7c2d12; font-size:10px; font-weight:500; padding:2px 6px; border-radius:4px; margin-top:3px; }
     .af2-strikethrough { text-decoration:line-through; }
     .af2-view-link { background:none; border:none; color:var(--badge-accent); font-size:11px; cursor:pointer; font-family:inherit; padding:0; }
     .af2-dot-gray { width:6px; height:6px; border-radius:50%; background:var(--muted); opacity:.5; }
@@ -1460,7 +1460,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .snap-match-card:hover { border-color:var(--gold); }
     .watch-suggestion { margin-top:.6rem; padding:.6rem .75rem; background:rgba(184,148,31,.08); border:1px solid rgba(184,148,31,.25); border-radius:var(--radius); display:flex; align-items:center; gap:.6rem; font-size:.82rem; animation:fadeIn .3s; }
     .watch-suggestion button { font-size:.75rem; font-weight:600; padding:.25rem .6rem; border-radius:6px; border:none; cursor:pointer; }
-    .watch-suggestion .sug-yes { background:var(--gold); color:#fff; }
+    .watch-suggestion .sug-yes { background:var(--gold); color:#000; }
     .watch-suggestion .sug-no { background:transparent; color:var(--muted); }
     @keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
 
@@ -6633,7 +6633,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.20.44';
+const APP_VERSION = '27.20.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12578,7 +12578,7 @@ function renderRecSettingsBody() {
     const included = !excluded.has(w.id);
     const thumb = w.image
       ? `<img src="${escHtml(w.image)}" alt="" style="width:32px;height:32px;border-radius:6px;object-fit:cover;" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:32px;height:32px;font-size:.6rem;border-radius:6px;background:${escHtml(w.color)}">${initials(w.brand,w.name)}</div>`;
+      : `<div class="avatar" style="width:32px;height:32px;font-size:.6rem;border-radius:6px;background:${escHtml(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
     return `<div class="toggle-row" style="gap:.6rem;">
       ${thumb}
       <div style="flex:1;min-width:0;">
@@ -15197,7 +15197,7 @@ function renderWatchSelector() {
       const isWorn = wornToday.has(w.id);
       const thumb  = w.image
         ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-        : `<div class="avatar" style="width:36px;height:36px;background:${escHtml(w.color)}">${initials(w.brand,w.name)}</div>`;
+        : `<div class="avatar" style="width:36px;height:36px;background:${escHtml(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
       return `<div class="watch-option ${isWorn ? 'worn-today' : ''}"
                    onclick="openTrackModal('${w.id}')">
         ${thumb}
@@ -15272,7 +15272,7 @@ function renderTrackHistory() {
     if (!w) return '';
     const thumb = w.image
       ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:22px;height:22px;font-size:.55rem;background:${escHtml(w.color)};flex-shrink:0">${initials(w.brand,w.name)}</div>`;
+      : `<div class="avatar" style="width:22px;height:22px;font-size:.55rem;background:${escHtml(w.color||"#c9a84c")};flex-shrink:0">${initials(w.brand,w.name)}</div>`;
     const strap = log.strapId ? (w.straps||[]).find(s => s.id === log.strapId) : null;
     const strapLabel = strap ? `<div style="font-size:.68rem;color:var(--muted);margin-top:.2rem;line-height:1.3">${escHtml(strap.name)}</div>` : '';
     return `<tr>
@@ -15977,7 +15977,7 @@ function renderGamePair() {
     const alt = i === 0 ? gamePair.bId : gamePair.aId;
     const img = w.image
       ? `<img src="${escHtml(w.image)}" alt="" class="game-card-img" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:64px;height:64px;font-size:1rem;background:${escHtml(w.color)}">${initials(w.brand, w.name)}</div>`;
+      : `<div class="avatar" style="width:64px;height:64px;font-size:1rem;background:${escHtml(w.color||"#c9a84c")}">${initials(w.brand, w.name)}</div>`;
     el.innerHTML = `${img}<div class="game-card-brand">${escHtml(w.brand)}</div><div class="game-card-name">${escHtml(w.name)}</div>`;
     el.className = 'game-card';
     el.onclick   = () => pickWatch(wId, alt);
@@ -16053,7 +16053,7 @@ function showGameResults() {
     const rank = medals[i] || `#${i + 1}`;
     const img  = w.image
       ? `<img src="${escHtml(w.image)}" alt="" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:34px;height:34px;font-size:.65rem;background:${escHtml(w.color)};flex-shrink:0">${initials(w.brand, w.name)}</div>`;
+      : `<div class="avatar" style="width:34px;height:34px;font-size:.65rem;background:${escHtml(w.color||"#c9a84c")};flex-shrink:0">${initials(w.brand, w.name)}</div>`;
     return `<div class="game-result-item">
       <span class="game-rank-num">${rank}</span>
       ${img}
@@ -16471,7 +16471,7 @@ function renderCollection(force) {
           <button class="card-edit-btn" onclick="openEditWatch('${w.id}')" title="Edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
           <button class="card-photo-btn" onclick="openPhotoMenu(event,'${w.id}')" title="Edit photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
         </div>` : '';
-          const noImgAvatar = !hasImg ? `<div class="avatar" style="width:52px;height:52px;font-size:.95rem;background:${escHtml(w.color)}">${initials(w.brand,w.name)}</div>` : '';
+          const noImgAvatar = !hasImg ? `<div class="avatar" style="width:52px;height:52px;font-size:.95rem;background:${escHtml(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>` : '';
           const noImgBtns = !hasImg ? `<div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
             <button class="card-edit-btn-noimg" onclick="openEditWatch('${w.id}')" title="Edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
             <button class="card-edit-btn-noimg" onclick="openPhotoMenu(event,'${w.id}')" title="Add photo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
@@ -16571,7 +16571,7 @@ function renderCollectionList(visible, today) {
   const rows = enriched.map(({ w, wears, cpwNum, lastDays, paid, market, wornToday }) => {
     const thumb = w.image
       ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
-      : `<div class="avatar" style="width:28px;height:28px;font-size:.62rem;background:${escHtml(w.color)};flex-shrink:0">${initials(w.brand,w.name)}</div>`;
+      : `<div class="avatar" style="width:28px;height:28px;font-size:.62rem;background:${escHtml(w.color||"#c9a84c")};flex-shrink:0">${initials(w.brand,w.name)}</div>`;
     let lastWornCell = na;
     if (lastDays !== null) {
       const col = lastDays <= 14 ? 'var(--success)' : lastDays <= 45 ? '#ef7942' : 'var(--danger)';
@@ -17381,7 +17381,7 @@ function valueGainHTML(paid, market) {
   const diff = market - paid;
   const pct = Math.round((diff / paid) * 100);
   const sign = diff >= 0 ? '+' : '−';
-  const color = diff >= 0 ? '#3B6D11' : '#A32D2D';
+  const color = diff >= 0 ? 'var(--success)' : '#A32D2D';
   return `<div style="margin-top:6px;"><div style="font-size:11px;color:var(--muted);">Gain vs paid</div><div style="font-size:13px;font-weight:500;color:${color};">${sign}${fmtMoney(Math.abs(diff))} · ${sign}${Math.abs(pct)}%</div></div>`;
 }
 function renderValueSection() {
@@ -17402,7 +17402,7 @@ function renderValueSection() {
       sum.innerHTML = savedPrice ? `${fmtMoney(savedPrice)} <span style="color:var(--badge-accent);font-weight:500;">· new price ${fmtMoney(pending)}</span>` : `<span style="color:var(--badge-accent);font-weight:500;">new price ${fmtMoney(pending)}</span>`;
     } else if (savedPrice && paid) {
       const diff = savedPrice - paid;
-      const color = diff >= 0 ? '#3B6D11' : '#A32D2D';
+      const color = diff >= 0 ? 'var(--success)' : '#A32D2D';
       const sign = diff >= 0 ? '+' : '−';
       sum.innerHTML = `${fmtMoney(savedPrice)} · <span style="color:${color};">${sign}${fmtMoney(Math.abs(diff))} (${sign}${Math.abs(Math.round((diff/paid)*100))}%)</span>`;
     } else if (savedPrice) {
@@ -17447,7 +17447,7 @@ function renderValueSection() {
       </div>`;
     } else {
       // State B — different price
-      const deltaColor = delta >= 0 ? '#3B6D11' : '#A32D2D';
+      const deltaColor = delta >= 0 ? 'var(--success)' : '#A32D2D';
       html += `<div style="background:var(--badge-bg);border:0.5px solid var(--badge-border);border-radius:8px;padding:10px 12px;margin-top:10px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--badge-deep);">New Market Price</div>
@@ -17983,7 +17983,7 @@ function renderDowReport() {
       const thumb = w
         ? (w.image
             ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">`
-            : `<div class="avatar" style="width:32px;height:32px;font-size:.58rem;background:${escHtml(w.color)}">${initials(w.brand,w.name)}</div>`)
+            : `<div class="avatar" style="width:32px;height:32px;font-size:.58rem;background:${escHtml(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`)
         : `<div style="font-size:1rem;opacity:.2;">○</div>`;
       return `<div class="dow-cell ${dow===todayDow?'today-col':''}">
         <div class="dow-day-name">${dayName}</div>
@@ -18221,7 +18221,7 @@ function recCardHTML(rec) {
           anniversaryScore, anniversaryReason, anniversaryYears } = rec;
   const thumb = w.image
     ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:56px;height:56px;border-radius:8px;object-fit:cover;" onerror="this.style.display='none'">`
-    : `<div class="avatar" style="width:56px;height:56px;font-size:.95rem;border-radius:8px;background:${escHtml(w.color)}">${initials(w.brand,w.name)}</div>`;
+    : `<div class="avatar" style="width:56px;height:56px;font-size:.95rem;border-radius:8px;background:${escHtml(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
   const tags = [];
   if (daysSince === 999) tags.push({ text: 'Never worn', cls: '' });
   else if (daysSince >= 30) tags.push({ text: `${daysSince}d idle`, cls: '' });
@@ -20478,7 +20478,7 @@ function af2UpdatePill() {
   const total = _af2Watches.filter(w => w._af2State !== 'skipped' && w._af2State !== 'failed').length;
   const done = _af2Watches.filter(w => w._af2State === 'done').length;
   if (done >= total) {
-    pill.innerHTML = `<span style="color:#3B6D11;">✓ ${total} watch${total !== 1 ? 'es' : ''} enriched</span>`;
+    pill.innerHTML = `<span style="color:var(--success);">✓ ${total} watch${total !== 1 ? 'es' : ''} enriched</span>`;
     setTimeout(() => pill.remove(), 3000);
   } else {
     pill.innerHTML = `<span class="af2-spinner-gold"></span> Enriching ${total} watch${total !== 1 ? 'es' : ''} · ${done} of ${total} done`;
@@ -21316,7 +21316,7 @@ function renderWishlist(force) {
   el.innerHTML = visible.map((w, i) => {
     const thumb = w.image
       ? `<img loading="lazy" src="${escHtml(w.image)}" class="wl-card-img" alt="" onerror="this.style.display='none'">`
-      : `<div class="wl-card-avatar" style="background:${escHtml(w.color)}">${initials(w.brand,w.name)}</div>`;
+      : `<div class="wl-card-avatar" style="background:${escHtml(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
     const meta = [
       w.price != null ? fmtMoney(w.price) : '',
       w.ref   ? w.ref : '',
