@@ -904,7 +904,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .tag-pill              { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-size: .72rem; font-weight: 500; padding: .22rem .6rem; border-radius: 12px; cursor: pointer; transition: all .15s; font-family: inherit; }
     .tag-pill:hover        { border-color: var(--badge-border); color: var(--badge-accent); }
     .tag-pill.active       { background: var(--badge-bg); border-color: var(--badge-border); color: var(--badge-accent); font-weight: 600; }
-    .tag-pill.suggested    { border-color: rgba(186,117,23,.4); color: var(--badge-accent); border-style: dashed; }
+    .tag-pill.suggested    { border-color:var(--badge-border); color: var(--badge-accent); border-style: dashed; }
 
     /* ── Collection tag filter bar ── */
     .coll-tag-filter-bar  { display: flex; flex-wrap: wrap; gap: .4rem; padding-bottom: .65rem; }
@@ -1219,7 +1219,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* Badge toast */
     .badge-toast {
       position: fixed; bottom: 1.75rem; left: 50%; transform: translate(-50%, 80px);
-      background: var(--badge-bg2); border: 1px solid rgba(107,86,24,0.25);
+      background: var(--badge-bg2); border:1px solid var(--badge-border);
       border-radius: 14px; padding: .8rem 1.2rem;
       font-size: .85rem; z-index: 410;
       box-shadow: 0 8px 32px rgba(0,0,0,.15), 0 0 12px rgba(184,149,42,0.06);
@@ -1237,11 +1237,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       padding: .6rem .3rem; border-radius: var(--radius); cursor: pointer;
       transition: background .15s;
     }
-    .badge-wall-card:active { background: rgba(107,86,24,0.06); }
+    .badge-wall-card:active { background:var(--gold-dim); }
     .badge-wall-card.locked { opacity: .6; }
     .badge-wall-name { font-size: .72rem; color: var(--badge-text); margin-top: .35rem; line-height: 1.2; }
-    .badge-wall-ref { font-size: .6rem; color: rgba(107,86,24,0.5); font-family: monospace; margin-top: .15rem; }
-    .badge-wall-date { font-size: .58rem; color: rgba(107,86,24,0.4); margin-top: .1rem; }
+    .badge-wall-ref { font-size: .6rem; color:var(--badge-close);opacity:.75; font-family: monospace; margin-top: .15rem; }
+    .badge-wall-date { font-size: .58rem; color:var(--badge-close);opacity:.6; margin-top: .1rem; }
     .badge-cat-chip {
       display: inline-block; font-size: .65rem; font-weight: 600; padding: .15rem .5rem;
       border-radius: 6px; letter-spacing: .5px; text-transform: uppercase;
@@ -5004,8 +5004,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <div id="toast" class="toast" aria-live="polite" role="status"></div>
 <div id="badge-toast" class="badge-toast" aria-live="polite"></div>
-<div id="badge-wall-modal" class="overlay hidden"><div class="modal" style="max-width:520px;background:var(--badge-bg2);border-color:rgba(107,86,24,0.2);position:relative;"><button onclick="closeBadgeWall()" style="position:absolute;top:.5rem;right:.75rem;background:none;border:none;color:var(--badge-close);font-size:1.4rem;cursor:pointer;line-height:1;opacity:.5;">&times;</button><div id="badge-wall-content"></div></div></div>
-<div id="badge-detail-modal" class="overlay hidden" style="z-index:210;"><div class="modal" style="max-width:360px;background:var(--badge-bg2);border-color:rgba(107,86,24,0.2);position:relative;"><button onclick="closeBadgeDetail()" style="position:absolute;top:.5rem;right:.75rem;background:none;border:none;color:var(--badge-close);font-size:1.4rem;cursor:pointer;line-height:1;opacity:.5;">&times;</button><div id="badge-detail-content"></div></div></div>
+<div id="badge-wall-modal" class="overlay hidden"><div class="modal" style="max-width:520px;background:var(--badge-bg2);border-color:var(--badge-border);position:relative;"><button onclick="closeBadgeWall()" style="position:absolute;top:.5rem;right:.75rem;background:none;border:none;color:var(--badge-close);font-size:1.4rem;cursor:pointer;line-height:1;opacity:.5;">&times;</button><div id="badge-wall-content"></div></div></div>
+<div id="badge-detail-modal" class="overlay hidden" style="z-index:210;"><div class="modal" style="max-width:360px;background:var(--badge-bg2);border-color:var(--badge-border);position:relative;"><button onclick="closeBadgeDetail()" style="position:absolute;top:.5rem;right:.75rem;background:none;border:none;color:var(--badge-close);font-size:1.4rem;cursor:pointer;line-height:1;opacity:.5;">&times;</button><div id="badge-detail-content"></div></div></div>
 
 <script>
 // Prevent iOS PWA from restoring previous scroll position on launch
@@ -5419,9 +5419,9 @@ function openBadgeWall() {
   const content = `
     <div style="text-align:center;margin-bottom:1.2rem;">
       <div style="font-size:1rem;font-weight:600;color:var(--badge-text);">Achievements</div>
-      <div style="font-size:.78rem;color:rgba(61,42,20,0.5);margin-top:.25rem;">${earnedCount} of ${totalVisible} earned</div>
+      <div style="font-size:.78rem;color:var(--badge-text);opacity:.6;margin-top:.25rem;">${earnedCount} of ${totalVisible} earned</div>
     </div>
-    ${earnedCards ? '<div style="margin-bottom:.6rem;font-size:.72rem;color:rgba(61,42,20,0.45);text-transform:uppercase;letter-spacing:1px;">Earned</div><div class="badge-wall-grid">' + earnedCards + '</div>' : ''}
+    ${earnedCards ? '<div style="margin-bottom:.6rem;font-size:.72rem;color:var(--badge-text);opacity:.55;text-transform:uppercase;letter-spacing:1px;">Earned</div><div class="badge-wall-grid">' + earnedCards + '</div>' : ''}
     ${lockedHtml}`;
 
   document.getElementById('badge-wall-content').innerHTML = content;
@@ -5452,11 +5452,11 @@ function openBadgeDetail(ref) {
     <div style="text-align:center;">
       ${badgeMedallionSvg(b, 240, earned)}
       <div style="font-size:1.05rem;font-weight:600;color:var(--badge-text);margin-top:.75rem;">${escHtml(b.name)}</div>
-      <div style="font-size:.75rem;color:rgba(61,42,20,0.45);font-family:monospace;margin-top:.25rem;">${badgeRefLabel(b.ref)}</div>
+      <div style="font-size:.75rem;color:var(--badge-text);opacity:.55;font-family:monospace;margin-top:.25rem;">${badgeRefLabel(b.ref)}</div>
       <div style="margin-top:.4rem;">${catChip}</div>
-      ${earned ? `<div style="font-size:.82rem;color:rgba(61,42,20,0.7);margin-top:.6rem;font-style:italic;">${escHtml(b.flavor)}</div>` : ''}
-      <div style="font-size:.78rem;color:rgba(61,42,20,0.5);margin-top:.5rem;">${b.isHidden && !earned ? 'This badge is hidden. Keep exploring.' : escHtml(b.unlock)}</div>
-      ${earned ? `<div style="font-size:.72rem;color:rgba(61,42,20,0.4);margin-top:.3rem;">Earned ${dateStr}</div>` : ''}
+      ${earned ? `<div style="font-size:.82rem;color:var(--badge-text);opacity:.8;margin-top:.6rem;font-style:italic;">${escHtml(b.flavor)}</div>` : ''}
+      <div style="font-size:.78rem;color:var(--badge-text);opacity:.6;margin-top:.5rem;">${b.isHidden && !earned ? 'This badge is hidden. Keep exploring.' : escHtml(b.unlock)}</div>
+      ${earned ? `<div style="font-size:.72rem;color:var(--badge-text);opacity:.5;margin-top:.3rem;">Earned ${dateStr}</div>` : ''}
     </div>`;
   document.getElementById('badge-detail-modal').classList.remove('hidden');
 }
@@ -6639,7 +6639,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.21.36';
+const APP_VERSION = '27.21.41';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
