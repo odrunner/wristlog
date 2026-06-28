@@ -1998,7 +1998,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .bell-btn { position:relative; background:none; border:none; font-size:1.1rem; cursor:pointer; color:var(--muted);
       padding:.25rem .4rem; border-radius:8px; display:flex; align-items:center; transition:background .15s, color .15s; }
     .bell-btn:hover { background:var(--surface2); color:var(--text); }
-    .streak-chip { display:inline-flex; align-items:center; gap:.25rem; height:32px; padding:0 .7rem; font-size:.85rem; font-weight:700; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:999px; cursor:pointer; line-height:1; }
+    .streak-chip { display:inline-flex; align-items:center; gap:.25rem; height:32px; padding:0 .7rem; font-size:.85rem; font-weight:700; color:var(--text); background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-pill); cursor:pointer; line-height:1; transition:border-color .15s, background .15s; }
+    .streak-chip:hover { border-color:var(--gold); }
     .streak-chip .streak-count { font-variant-numeric:tabular-nums; }
     .streak-chip.streak-chip-atrisk { border-color:#d9a441; color:#d9a441; }
     #theme-btn { background:none; border:none; cursor:pointer; color:var(--muted);
@@ -6643,7 +6644,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.22.23';
+const APP_VERSION = '27.22.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
