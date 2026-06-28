@@ -137,7 +137,9 @@ LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public
 AS $f$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true) THEN
+  -- profiles.id qualified: 'id' is also a RETURNS TABLE out-param here, so an
+  -- unqualified reference is ambiguous (PL/pgSQL variable vs. table column).
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND is_admin = true) THEN
     RAISE EXCEPTION 'Not authorized';
   END IF;
   PERFORM featured_rotate();
