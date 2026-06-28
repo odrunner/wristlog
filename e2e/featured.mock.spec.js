@@ -24,6 +24,17 @@ test.describe('Featured post (mocked)', () => {
     await expect(page.getByText('Feature this post')).toBeVisible({ timeout: 5000 });
   });
 
+  test('admin sees Un-feature on the currently-featured post', async ({ page }) => {
+    await mockSupabase(page, { logs: SAMPLE_LOGS, user: ADMIN_USER, featuredId: 'log-001' });
+    await injectSession(page, ADMIN_USER);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await navigateTo(page, 'feed');
+    await page.locator('#feedcard-log-001 .feed-dots-wrap button').click();
+    await expect(page.getByText('Un-feature this post')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('★ Feature this post')).toHaveCount(0);
+  });
+
   test('non-admin does not see the Feature kebab item', async ({ page }) => {
     await mockSupabase(page, { logs: SAMPLE_LOGS });
     await injectSession(page);

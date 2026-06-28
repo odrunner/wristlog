@@ -126,6 +126,21 @@ BEGIN
 END;
 $f$;
 
+-- ── Admin: un-feature by post id (for the in-feed kebab toggle) ──
+CREATE OR REPLACE FUNCTION public.admin_unfeature_log(p_log_id text)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $f$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+  DELETE FROM featured_posts WHERE log_id = p_log_id AND status IN ('queued','active');
+  PERFORM featured_rotate();
+END;
+$f$;
+
 -- ── Admin: current active + queued, with post fields for display ──
 CREATE OR REPLACE FUNCTION public.admin_featured_queue()
 RETURNS TABLE(
@@ -158,9 +173,11 @@ $f$;
 REVOKE EXECUTE ON FUNCTION public.featured_rotate()          FROM public, anon;
 REVOKE EXECUTE ON FUNCTION public.admin_feature_post(text)   FROM public, anon;
 REVOKE EXECUTE ON FUNCTION public.admin_unfeature(uuid)      FROM public, anon;
+REVOKE EXECUTE ON FUNCTION public.admin_unfeature_log(text)  FROM public, anon;
 REVOKE EXECUTE ON FUNCTION public.admin_featured_queue()     FROM public, anon;
 REVOKE EXECUTE ON FUNCTION public.featured_current()         FROM public, anon;
 GRANT  EXECUTE ON FUNCTION public.featured_current()         TO authenticated;
 GRANT  EXECUTE ON FUNCTION public.admin_feature_post(text)   TO authenticated;
 GRANT  EXECUTE ON FUNCTION public.admin_unfeature(uuid)      TO authenticated;
+GRANT  EXECUTE ON FUNCTION public.admin_unfeature_log(text)  TO authenticated;
 GRANT  EXECUTE ON FUNCTION public.admin_featured_queue()     TO authenticated;
