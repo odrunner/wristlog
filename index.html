@@ -96,6 +96,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
     }
     .hidden { display: none !important; }
+    /* Canonical section/eyebrow label — one type treatment for uppercase labels. */
+    .eyebrow { font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
+    .eyebrow-muted { color: var(--muted); }
     :root {
       --bg:         #f5f5f8;
       --surface:    #ffffff;
@@ -2225,7 +2228,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">You can now share your own posts no matter who they&#8217;re for &#8212; not just public ones. Public posts open a rich preview link anyone can see. For Followers and Close Friends posts, the link opens privately in WRotate and only shows the post to people you actually shared it with, so nothing leaks to anyone else.</div>
       </div>
       <div style="margin:.75rem 0;border-top:1px solid var(--border);padding-top:.75rem;">
-        <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">May 2026</span>
+        <span class="eyebrow eyebrow-muted">May 2026</span>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Delete Comments</div>
@@ -2244,7 +2247,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Better tick detection, improved BPH correction, and smarter phase recovery reduce false readings and help measurements converge faster &#8212; especially in noisy environments.</div>
       </div>
       <div style="margin:.75rem 0;border-top:1px solid var(--border);padding-top:.75rem;">
-        <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">April 2026</span>
+        <span class="eyebrow eyebrow-muted">April 2026</span>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Enhance Your Collection</div>
@@ -2271,7 +2274,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">The audio timegrapher has been tuned for more reliable measurements. Place your watch on the iPhone microphone and measure its accuracy in seconds per day &#8212; just like a professional timegrapher.</div>
       </div>
       <div style="margin:.75rem 0;border-top:1px solid var(--border);padding-top:.75rem;">
-        <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">March 2026</span>
+        <span class="eyebrow eyebrow-muted">March 2026</span>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Reliability &amp; Error Handling</div>
@@ -6636,7 +6639,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.21.30';
+const APP_VERSION = '27.21.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13498,7 +13501,7 @@ async function loadAdminStats() {
       const container = document.getElementById(tableId);
       if (container) {
         container.innerHTML = `
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">${title}</div>
+        <div class="eyebrow" style="margin-bottom:.5rem;">${title}</div>
         <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
           <thead><tr style="border-bottom:2px solid var(--border);">
             <th style="${userThStyle}" onclick="_adminSortCol('${tableId}','joinedAt')">User${userArrow}</th>
@@ -13511,7 +13514,7 @@ async function loadAdminStats() {
         </table>`;
       }
       return `<div id="${tableId}" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">${title}</div>
+        <div class="eyebrow" style="margin-bottom:.5rem;">${title}</div>
         <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
           <thead><tr style="border-bottom:2px solid var(--border);">
             <th style="${userThStyle}" onclick="_adminSortCol('${tableId}','joinedAt')">User${userArrow}</th>
@@ -13525,7 +13528,7 @@ async function loadAdminStats() {
 
     el.innerHTML = `
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Totals (external users only)</div>
+        <div class="eyebrow" style="margin-bottom:.5rem;">Totals (external users only)</div>
         ${statRow('Users', extUsers, dod.users)}
         ${statRow('Watches', extWatches, dod.watches)}
         ${statRow('Wears', extWears, dod.wears)}
@@ -13541,7 +13544,7 @@ async function loadAdminStats() {
         ${statRow('Comments', comments, dod.comments)}
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Per-User Averages (external)</div>
+        <div class="eyebrow" style="margin-bottom:.5rem;">Per-User Averages (external)</div>
         ${statRow('Watches / User', avg(extWatches, extUsers))}
         ${statRow('Wears / User', avg(extWears, extUsers))}
         ${statRow('Price Checks / User', avg(extVal, extUsers))}
@@ -13773,7 +13776,7 @@ async function renderAdminTraffic() {
     // Demo views = clicks of "Try the demo" (the alexrivera demo account), counted
     // by distinct hashed IP. Captured server-side in the demo-login edge function.
     const demoViewsHtml = dv ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Demo Views (Alex Rivera)</div>
+        <div class="eyebrow" style="margin-bottom:.5rem;">Demo Views (Alex Rivera)</div>
         ${statRow('Total opens', dv.total, (dv.unique_ips || 0) + ' unique IPs')}
         <div style="height:.5rem;"></div>
         ${statRow('Last 24 hours', dv.views_1d, (dv.unique_1d || 0) + ' unique IPs')}
@@ -13782,7 +13785,7 @@ async function renderAdminTraffic() {
 
     el.innerHTML = `
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Overview (All Time)</div>
+        <div class="eyebrow" style="margin-bottom:.5rem;">Overview (All Time)</div>
         ${statRow('Total visits', t.total_visits)}
         ${statRow('Unique visitors', t.unique_visitors)}
         ${statRow('Repeat visitors', t.repeat_visitors, t.repeat_visitors > 0 ? (t.repeat_visitors / t.unique_visitors * 100).toFixed(0) + '% of unique' : '')}
@@ -13794,20 +13797,20 @@ async function renderAdminTraffic() {
       </div>
       ${demoViewsHtml}
       ${sourceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">By Source</div>
+        <div class="eyebrow" style="margin-bottom:.5rem;">By Source</div>
         ${sourceRows}
       </div>` : ''}
       ${dailyRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Daily (last 14 days)</div>
+        <div class="eyebrow" style="margin-bottom:.5rem;">Daily (last 14 days)</div>
         ${dailyRows}
       </div>` : ''}
       ${deviceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Device (7 days)</div>
+        <div class="eyebrow" style="margin-bottom:.5rem;">Device (7 days)</div>
         ${deviceRows}
       </div>` : ''}
       ${funnelHtml}
       ${signupSourceRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Signups by Source</div>
+        <div class="eyebrow" style="margin-bottom:.5rem;">Signups by Source</div>
         ${signupSourceRows}
       </div>` : ''}
       ${renderEmailEngagement(emailEventsR.data || {})}`;
@@ -13901,18 +13904,18 @@ function renderEmailEngagement(data) {
   }).join('');
 
   return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Email Engagement</div>
+    <div class="eyebrow" style="margin-bottom:.5rem;">Email Engagement</div>
     ${statRow('Delivered', delivered)}
     ${statRow('Opened', opened, pct(opened, delivered))}
     ${statRow('Clicked', clicked, pct(clicked, delivered))}
     ${bounced ? statRow('Bounced / Complained', bounced) : ''}
   </div>
   ${subjectRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">By Campaign</div>
+    <div class="eyebrow" style="margin-bottom:.5rem;">By Campaign</div>
     ${subjectRows}
   </div>` : ''}
   ${recentRows ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Recent Opens & Clicks</div>
+    <div class="eyebrow" style="margin-bottom:.5rem;">Recent Opens & Clicks</div>
     ${recentRows}
   </div>` : ''}`;
 }
@@ -13940,7 +13943,7 @@ function renderFunnelFromRpc(f, su) {
   const conv1 = totalSignins1 > 0 ? (newUsers1d / totalSignins1 * 100).toFixed(1) + '%' : '—';
 
   return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;margin-bottom:1rem;">
-    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;">Signup Funnel</div>
+    <div class="eyebrow" style="margin-bottom:.5rem;">Signup Funnel</div>
     ${row('Google sign-in click', signinG1, signinG7, signinGAll)}
     ${row('Apple sign-in click', signinA1, signinA7, signinAAll)}
     ${row('New users created', newUsers1d, newUsers7d, newUsersAll)}
