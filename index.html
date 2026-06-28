@@ -4684,6 +4684,24 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <label style="font-size:.78rem;color:var(--muted);">Tagged Watch</label>
       <div id="ep-watch-display"></div>
       <div id="ep-watch-picker" style="display:none;"></div>
+      <!-- Occasion + strap, shown only while a watch is tagged (not measurement shares) -->
+      <div id="ep-details" style="display:none;">
+        <button type="button" id="ep-details-toggle" class="np-details-toggle" onclick="toggleEpDetails()">+ Add occasion &amp; strap</button>
+        <div id="ep-details-body" style="display:none;margin-top:.5rem;">
+          <div class="tl-label">Occasion</div>
+          <div class="chips" id="ep-usecase-chips">
+            <div class="chip selected" data-uc="unspecified" onclick="selectEpUseCase('unspecified')">—</div>
+            <div class="chip"          data-uc="work"        onclick="selectEpUseCase('work')">Work</div>
+            <div class="chip"          data-uc="leisure"     onclick="selectEpUseCase('leisure')">Leisure</div>
+            <div class="chip"          data-uc="dinner"      onclick="selectEpUseCase('dinner')">Dinner</div>
+            <div class="chip"          data-uc="travel"      onclick="selectEpUseCase('travel')">Travel</div>
+          </div>
+          <div id="ep-strap-card" style="display:none;margin-top:.6rem;">
+            <div class="tl-label">Strap / Bracelet</div>
+            <div class="chips" id="ep-strap-chips"></div>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="form-group">
       <textarea id="ep-body" rows="3" placeholder="What's on your mind? (@ to mention)" style="resize:none;" maxlength="1000"
@@ -6653,7 +6671,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.12.40';
+const APP_VERSION = '28.12.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10808,6 +10826,10 @@ async function saveFeedCaption(logId) {
 // ── Edit post modal ────────────────────────────────────────────────────────
 let editPostLogId   = null;
 let editPostWatchId  = null;
+let epUseCase = 'unspecified'; // occasion chosen in the Edit Post "Details" block
+let epStrapId = null;          // strap chosen in the Edit Post "Details" block
+let epDetailsExpanded = false; // whether the occasion/strap block is open
+let epWasMeasurement = false;  // log was a measurement share — keep it out of wears
 let epExistingUrls = [];
 let epFiles = [];      // mix of URL strings (existing) and File objects (new)
 let epPreviews = [];   // URL strings (for both existing photos and existing video posters) or objectURLs
@@ -10818,6 +10840,12 @@ function openEditPost(logId) {
   if (!fi) return;
   editPostLogId    = logId;
   editPostWatchId  = null;
+  // Seed occasion + strap from the local log (own posts only, so it's present).
+  const epLog = logs.find(l => l.id === logId);
+  epWasMeasurement = (epLog?.useCase === 'measurement') || (fi.use_case === 'measurement');
+  epUseCase = epWasMeasurement ? 'measurement' : (epLog?.useCase || fi.use_case || 'unspecified');
+  epStrapId = epLog?.strapId || null;
+  epDetailsExpanded = !epWasMeasurement && !!epUseCase && epUseCase !== 'unspecified';
   document.getElementById('ep-body').value = fi.notes || '';
   document.getElementById('ep-vis-chips').innerHTML = visChipsHtml('ep-vis-chips', fi.visibility || 'public');
   setPostLocationField('ep', fi.location);
@@ -11018,6 +11046,61 @@ function renderEpWatchDisplay() {
     </div>`;
   }
   if (picker) picker.style.display = 'none';
+  renderEpDetails(effectiveWatch);
+}
+
+// Resolve the watch currently tagged in the editor (mirrors renderEpWatchDisplay).
+function epEffectiveWatch() {
+  if (editPostWatchId === 'REMOVE') return null;
+  if (editPostWatchId) return watches.find(w => w.id === editPostWatchId) || null;
+  const fi = feedItems.find(i => i.id === editPostLogId);
+  if (fi?.watch) return fi.watch;
+  if (fi?.watch_id) return watches.find(w => w.id === fi.watch_id) || null;
+  return null;
+}
+
+// Edit Post: occasion + strap "Details" block. Shown only while a watch is tagged
+// and never for measurement shares (those are not wears).
+function renderEpDetails(effectiveWatch) {
+  const wrap = document.getElementById('ep-details');
+  if (!wrap) return;
+  const w = effectiveWatch !== undefined ? effectiveWatch : epEffectiveWatch();
+  if (!w || epWasMeasurement) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  const toggle = document.getElementById('ep-details-toggle');
+  const body   = document.getElementById('ep-details-body');
+  if (toggle) toggle.textContent = (epDetailsExpanded ? '− ' : '+ ') + 'Add occasion & strap';
+  if (body)   body.style.display = epDetailsExpanded ? '' : 'none';
+  document.querySelectorAll('#ep-usecase-chips [data-uc]').forEach(c =>
+    c.classList.toggle('selected', c.dataset.uc === epUseCase));
+  const straps = w.straps || [];
+  const card = document.getElementById('ep-strap-card');
+  if (straps.length < 2) {
+    epStrapId = (straps.find(s => s.isOn) || straps[0] || {}).id || null;
+    if (card) card.style.display = 'none';
+  } else {
+    if (!straps.some(s => s.id === epStrapId)) epStrapId = (straps.find(s => s.isOn) || straps[0]).id;
+    if (card) card.style.display = '';
+    document.getElementById('ep-strap-chips').innerHTML = straps.map(s => `
+      <div class="chip${epStrapId === s.id ? ' selected' : ''}" onclick="selectEpStrap('${s.id}')">
+        ${escHtml(s.name)}${s.material ? ' · ' + escHtml(s.material) : ''}
+      </div>`).join('');
+  }
+}
+
+function toggleEpDetails() {
+  epDetailsExpanded = !epDetailsExpanded;
+  renderEpDetails();
+}
+
+function selectEpUseCase(uc) {
+  epUseCase = uc;
+  renderEpDetails();
+}
+
+function selectEpStrap(id) {
+  epStrapId = id;
+  renderEpDetails();
 }
 
 function toggleEpWatchPicker() {
@@ -11137,22 +11220,37 @@ async function saveEditPost() {
   const finalWatchId = editPostWatchId === 'REMOVE' ? null
     : editPostWatchId ? editPostWatchId
     : (fi?.watch_id ?? null);
+  // Occasion + strap follow the tagged watch. Measurement shares stay measurement;
+  // with no watch, occasion is meaningless so the post reverts to 'unspecified'.
+  const finalUseCase = epWasMeasurement ? 'measurement' : (finalWatchId ? epUseCase : 'unspecified');
+  const finalStrapId = finalWatchId ? epStrapId : null;
   const oldNotes = fi?.notes || '';   // capture before mutation
   // Capture old values for rollback
-  const oldFi = fi ? { notes: fi.notes, photo_url: fi.photo_url, visibility: fi.visibility, club_id: fi.club_id, watch_id: fi.watch_id, watch: fi.watch, location: fi.location } : null;
-  const oldLog = log ? { notes: log.notes, photoUrl: log.photoUrl, visibility: log.visibility, clubId: log.clubId, watchId: log.watchId, location: log.location } : null;
+  const oldFi = fi ? { notes: fi.notes, photo_url: fi.photo_url, visibility: fi.visibility, club_id: fi.club_id, watch_id: fi.watch_id, watch: fi.watch, location: fi.location, use_case: fi.use_case } : null;
+  const oldLog = log ? { notes: log.notes, photoUrl: log.photoUrl, visibility: log.visibility, clubId: log.clubId, watchId: log.watchId, location: log.location, useCase: log.useCase, strapId: log.strapId } : null;
   // Update local state
-  if (fi)  { fi.notes = newNotes || null; fi.photo_url = finalPhotoUrl; fi.visibility = vis; fi.club_id = clubId; fi.watch_id = finalWatchId; fi.watch = finalWatchId ? (watches.find(w => w.id === finalWatchId) || null) : null; fi.location = newLocation; }
-  if (log) { log.notes = newNotes || null; log.photoUrl = finalPhotoUrl; log.visibility = vis; log.clubId = clubId; log.watchId = finalWatchId; log.location = newLocation; save(); }
+  if (fi)  { fi.notes = newNotes || null; fi.photo_url = finalPhotoUrl; fi.visibility = vis; fi.club_id = clubId; fi.watch_id = finalWatchId; fi.watch = finalWatchId ? (watches.find(w => w.id === finalWatchId) || null) : null; fi.location = newLocation; fi.use_case = finalUseCase; }
+  if (log) { log.notes = newNotes || null; log.photoUrl = finalPhotoUrl; log.visibility = vis; log.clubId = clubId; log.watchId = finalWatchId; log.location = newLocation; log.useCase = finalUseCase; log.strapId = finalStrapId; save(); }
+  // Occasion/strap/watch can change wear attribution — rebuild the wear index.
+  _dataGen++; rebuildLogsByWatch();
+  // Mirror Track: if a strap was chosen, mark it as the watch's "on wrist" strap.
+  if (finalWatchId && finalStrapId) {
+    const wIdx = watches.findIndex(x => x.id === finalWatchId);
+    if (wIdx !== -1 && (watches[wIdx].straps || []).length) {
+      watches[wIdx].straps = watches[wIdx].straps.map(s => ({ ...s, isOn: s.id === finalStrapId }));
+      markDirty('watches', finalWatchId); save();
+    }
+  }
   // Persist to Supabase
   if (currentUser) {
     const { error } = await db.from('logs')
-      .update({ notes: newNotes || null, photo_url: finalPhotoUrl, visibility: vis, club_id: clubId, watch_id: finalWatchId, location: newLocation })
+      .update({ notes: newNotes || null, photo_url: finalPhotoUrl, visibility: vis, club_id: clubId, watch_id: finalWatchId, location: newLocation, use_case: finalUseCase, strap_id: finalStrapId })
       .eq('id', editPostLogId).eq('user_id', currentUser.id);
     if (error) {
       // Rollback local state
       if (fi && oldFi) Object.assign(fi, oldFi);
       if (log && oldLog) { Object.assign(log, oldLog); save(); }
+      _dataGen++; rebuildLogsByWatch();
       refreshFeedCard(editPostLogId);
       // Cleanup orphaned uploaded files if we uploaded any new ones
       for (const url of finalUrls) { if (!epExistingUrls.includes(url)) { const _p = storagePathFrom(url); if (_p) deleteStorageFile(_p); } }
