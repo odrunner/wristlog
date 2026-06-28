@@ -6647,7 +6647,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.22.43';
+const APP_VERSION = '27.22.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10332,7 +10332,7 @@ function renderFeedCard(item) {
         ? `<div class="comment-menu-wrap">
             <button class="comment-menu-btn" onclick="event.stopPropagation();toggleFeedMenu('cmt-${c.id}')" title="Comment options" aria-label="Comment options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
             <div class="feed-menu hidden" id="feed-menu-cmt-${c.id}">
-              <div class="feed-menu-item" style="color:var(--danger);" onclick="deleteComment('${c.id}','${item.id}',this)">Delete</div>
+              <div class="feed-menu-item" role="button" tabindex="0" style="color:var(--danger);" onclick="deleteComment('${c.id}','${item.id}',this)">Delete</div>
             </div>
           </div>`
         : '';
@@ -10428,21 +10428,21 @@ function renderFeedCard(item) {
           ${isMe
             ? `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="Edit post"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
               <div class="feed-menu hidden" id="feed-menu-${item.id}">
-                ${(vis === 'public' || isMe) ? `<div class="feed-menu-item" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
-                <div class="feed-menu-item" onclick="openEditPost('${item.id}');closeFeedMenu('${item.id}')">Edit post</div>
-                <div class="feed-menu-item" onclick="openReport('log','${item.id}','${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Report a comment</div>
+                ${(vis === 'public' || isMe) ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
+                <div class="feed-menu-item" role="button" tabindex="0" onclick="openEditPost('${item.id}');closeFeedMenu('${item.id}')">Edit post</div>
+                <div class="feed-menu-item" role="button" tabindex="0" onclick="openReport('log','${item.id}','${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Report a comment</div>
                 ${_isDevUser() && vis === 'public' ? (item.__featured
-                  ? `<div class="feed-menu-item" onclick="unfeaturePost('${item.id}');closeFeedMenu('${item.id}')">Un-feature this post</div>`
-                  : `<div class="feed-menu-item" onclick="featurePost('${item.id}');closeFeedMenu('${item.id}')">★ Feature this post</div>`) : ''}
+                  ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="unfeaturePost('${item.id}');closeFeedMenu('${item.id}')">Un-feature this post</div>`
+                  : `<div class="feed-menu-item" role="button" tabindex="0" onclick="featurePost('${item.id}');closeFeedMenu('${item.id}')">★ Feature this post</div>`) : ''}
               </div>`
             : `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="More options"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
               <div class="feed-menu hidden" id="feed-menu-${item.id}">
-                ${(vis === 'public' || isMe) ? `<div class="feed-menu-item" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
-                <div class="feed-menu-item" onclick="openReport('log','${item.id}','${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Report</div>
-                <div class="feed-menu-item" style="color:var(--danger);" onclick="blockUser('${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Block User</div>
+                ${(vis === 'public' || isMe) ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
+                <div class="feed-menu-item" role="button" tabindex="0" onclick="openReport('log','${item.id}','${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Report</div>
+                <div class="feed-menu-item" role="button" tabindex="0" style="color:var(--danger);" onclick="blockUser('${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Block User</div>
                 ${_isDevUser() && vis === 'public' ? (item.__featured
-                  ? `<div class="feed-menu-item" onclick="unfeaturePost('${item.id}');closeFeedMenu('${item.id}')">Un-feature this post</div>`
-                  : `<div class="feed-menu-item" onclick="featurePost('${item.id}');closeFeedMenu('${item.id}')">★ Feature this post</div>`) : ''}
+                  ? `<div class="feed-menu-item" role="button" tabindex="0" onclick="unfeaturePost('${item.id}');closeFeedMenu('${item.id}')">Un-feature this post</div>`
+                  : `<div class="feed-menu-item" role="button" tabindex="0" onclick="featurePost('${item.id}');closeFeedMenu('${item.id}')">★ Feature this post</div>`) : ''}
               </div>`}
         </div>
       </div>
@@ -22597,6 +22597,15 @@ document.addEventListener('keydown', e => {
   const top = open[open.length - 1];
   const fn = _overlayCloseMap[top.id];
   if (fn) { e.preventDefault(); fn(); }
+});
+
+// Keyboard activation for role="button" elements (Enter/Space -> click).
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const btn = e.target.closest && e.target.closest('[role="button"]');
+  if (!btn) return;
+  e.preventDefault();
+  btn.click();
 });
 
 // Back button closes the topmost open modal instead of navigating away
