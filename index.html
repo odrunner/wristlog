@@ -6648,7 +6648,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.09.48';
+const APP_VERSION = '28.09.55';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23531,6 +23531,27 @@ window._tgNativeCallback = function(data) {
         if (idleOv2) idleOv2.style.display = 'none';
         const _retryLabel = document.getElementById('msr-btn-label');
         if (_retryLabel) _retryLabel.textContent = 'Retry';
+        return;
+      }
+      // Weak-signal graceful stop: SOME ticks but far too few to be reliable after
+      // ample time (faint movement / poor mic coupling) — the #1 weekly failure mode.
+      // Stop and guide the user instead of grinding on to a garbage reading. Low-BPH
+      // harmonic locks keep plenty of ticks, so they don't trip this (different mode).
+      const weakStopAt = _msrIsAuto ? 30 : 28;
+      if (!_tgRunnerActive() && !_micBatchActive && _msrPhase !== 'converged'
+          && elapsed >= weakStopAt && data.tickCount > 0 && data.tickCount < 25) {
+        stopMsrListen('weak_signal');
+        const statusText = document.getElementById('msr-status-text');
+        if (statusText) {
+          statusText.textContent = 'Signal too weak · rest the watch on the bottom-edge mic in a quiet spot, then Retry';
+          statusText.style.color = 'rgba(239,68,68,.7)';
+          statusText.style.fontSize = '.7rem';
+          statusText.style.fontWeight = '600';
+        }
+        const idleOvW = document.getElementById('msr-idle-overlay');
+        if (idleOvW) idleOvW.style.display = 'none';
+        const _retryLabelW = document.getElementById('msr-btn-label');
+        if (_retryLabelW) _retryLabelW.textContent = 'Retry';
         return;
       }
       // Low acceptance warning: if 15s elapsed and acceptance rate < 15%, show warning
