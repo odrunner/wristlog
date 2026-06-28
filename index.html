@@ -2168,6 +2168,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Earn Your Weekend</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Log every weekday (Mon&#8211;Fri) and you&#8217;ve earned the weekend &#8212; Saturday and Sunday won&#8217;t break your streak, and you don&#8217;t need to log them. Show up all week, then take the weekend off. Logging a weekend still counts as a bonus, and your streak calendar marks earned rest days with a small dot.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Occasion &amp; Strap on Posts</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">When you tag a watch in a post, you can now add the occasion and which strap you&#8217;re wearing &#8212; tucked behind a small &#8220;Add occasion &amp; strap&#8221; link so the composer stays light. We also tidied up the date picker on the Track screen: quick Today and Yesterday chips, with a Pick date option for anything further back.</div>
       </div>
@@ -3485,6 +3489,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-body">
               <div class="help-step-title">Streak freezes</div>
               <div class="help-step-desc">Miss a single day and a freeze automatically covers it so your streak survives &#8212; it shows as a &#10052;&#65039; on the calendar. You start with two and earn one back for every seven days you log. Two missed days in a row still ends the streak.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">&#8212;</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Earn your weekend</div>
+              <div class="help-step-desc">Log all five weekdays (Mon&#8211;Fri) and you&#8217;ve earned the weekend &#8212; that Saturday and Sunday won&#8217;t break your streak and don&#8217;t need logging. They show as a small dot on the calendar, and logging one still counts as a bonus. Miss a weekday that week and the weekend isn&#8217;t free.</div>
             </div>
           </div>
         </div>
@@ -5019,7 +5030,6 @@ const FEATURE_FLAGS = {
   tg_piezo: { label: 'Timegrapher: piezo input source (admin)', default: false },
   tg_quality_v2: { label: 'Timegrapher: measurement quality v2 (admin)', default: false },
   deep_test: { label: 'Timegrapher: Deep Test (admin)', default: false },
-  streak_weekend: { label: 'Streak: earn-your-weekend (admin)', default: false },
 };
 function featureFlag(name) {
   const stored = localStorage.getItem('ff_' + name);
@@ -5552,7 +5562,7 @@ function computeStreaksFrozen(logs, today, weekendEarn) {
 }
 
 function displayStreak(logs, today) {
-  return computeStreaksFrozen(logs, today, featureFlag('streak_weekend'));
+  return computeStreaksFrozen(logs, today, true);
 }
 
 function streakChipState(sk, flagOn) {
@@ -6599,7 +6609,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.15.38';
+const APP_VERSION = '27.17.08';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
