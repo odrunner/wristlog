@@ -6609,7 +6609,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.19.15';
+const APP_VERSION = '27.19.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9846,6 +9846,22 @@ async function loadFeed() {
       return following.has(log.user_id);
     });
 
+    // ── Featured post: pin the active featured log to the top (admin spotlight) ──
+    try {
+      const fc = await withTimeout(db.rpc('featured_current'), 4000);
+      const featuredId = fc?.data || null;
+      if (featuredId) {
+        let featuredLog = rawLogs.find(l => l.id === featuredId) || null;
+        if (!featuredLog) {
+          const fr = await withTimeout(
+            db.from('logs').select(FEED_LOG_COLS)
+              .eq('id', featuredId).eq('visibility', 'public').maybeSingle(), 4000);
+          featuredLog = fr?.data || null;
+        }
+        rawLogs = pinFeatured(rawLogs, featuredId, featuredLog);
+      }
+    } catch (e) { /* featured is non-critical; feed renders normally */ }
+
     // ── PHASE 1 RENDER: show posts immediately with placeholders ──────────
     // Kills skeletons ASAP. Avatars, likes, comments fill in during Phase 2.
     const logIds = rawLogs.map(l => l.id);
@@ -10215,6 +10231,9 @@ function renderFeedCard(item) {
   const visBadge = (isMe && vis !== 'public')
     ? `<div class="vis-badge ${vis}">${vis === 'followers' ? 'Followers only' : vis === 'friends' ? 'Close Friends only' : 'Only you'}</div>`
     : '';
+  const featuredPill = item.__featured
+    ? `<span class="feat-pill" style="display:inline-flex;align-items:center;gap:.2rem;font-size:.68rem;font-weight:600;color:#b8860b;background:rgba(184,134,11,.12);border-radius:999px;padding:.08rem .45rem;margin-left:.4rem;vertical-align:middle;">★ Featured</span>`
+    : '';
 
   const clubForBadge = item.club_id ? myClubs.find(c => c.id === item.club_id) : null;
   const clubBadge = clubForBadge
@@ -10324,7 +10343,7 @@ function renderFeedCard(item) {
     const wLabel = [w.brand, w.name].filter(Boolean).join(' ');
     headerBody = `
       <div class="feed-user-name" onclick="viewUserProfile('${item.user_id}')" style="cursor:pointer;">
-        ${displayName} <span style="font-weight:400;color:var(--muted)">is wearing</span>
+        ${displayName} <span style="font-weight:400;color:var(--muted)">is wearing</span>${featuredPill}
       </div>
       <div class="feed-wearing-row"
            onclick="previewWatchFromEl(this)"
@@ -10344,7 +10363,7 @@ function renderFeedCard(item) {
       <div class="feed-meta">${metaStr}</div>`;
   } else {
     headerBody = `
-      <div class="feed-user-name" onclick="viewUserProfile('${item.user_id}')" style="cursor:pointer;">${displayName}</div>
+      <div class="feed-user-name" onclick="viewUserProfile('${item.user_id}')" style="cursor:pointer;">${displayName}${featuredPill}</div>
       <div class="feed-meta">${metaStr}</div>`;
   }
 
