@@ -21,6 +21,29 @@ typography, components, repeated-action UX. Read-only — no code changed yet.
 **Still open (larger / visual — best done incrementally with live-site review):**
 H5 (spacing-scale migration — shifts pixels), H6 (type scale + `.eyebrow` class, ~100 labels), H7 (`.pill` primitive + unify 3 visibility-badge systems), M2/M3 (one destructive verb + one confirm pattern via `showConfirm()`), M6 (icon-size/hit-area), L1–L8. None are blocking; all are appearance/structure changes that benefit from an eyeball per step.
 
+## Dark-mode contrast sweep — 2026-06-28 (v837–v838)
+
+Rather than fix reported cases one-by-one, ran a **systematic audit of every hardcoded
+color**, tracing each foreground's *effective background* including inherited parent
+surfaces (the trap that hid `#412402`). Findings + fixes:
+
+- ✅ `#412402` watch desc/edit body text → `var(--badge-text)` (v835).
+- ✅ Re-enhance button `background:#fff` (light-gold text) → transparent ghost (v837).
+- ✅ af2 status/check green `#3B6D11` (6 sites) → `var(--success)` (was dark green on `--surface`, invisible in dark).
+- ✅ `.tag-pill.suggested` text `rgba(133,79,11,.7)` → `var(--badge-accent)`.
+- ✅ `.af2-warn-chip` → self-contained solid amber (`#fde68a`/`#7c2d12`); faint translucent chip was unreadable in dark.
+- ✅ `.watch-suggestion .sug-yes` white-on-gold → `#000` (matches every other gold button).
+- ✅ 10 avatar render sites → added `w.color||'#c9a84c'` fallback (null color → transparent bg → invisible initials edge case).
+
+**Verified safe, intentionally left:** `#000`/dark text on `var(--gold)` (avatars, cells,
+banners, buttons — gold is light in both themes); white toggle knobs; Google branded
+button; email templates + email/broadcast previews; landing block + demo banner;
+timegrapher instrument neon + dark instrument panels; data-viz/chart palettes; brand SVGs;
+self-contained pairs (frozen streak cell). **Known limitation:** avatar initial text is
+`#fff` in some sites / `#000` in others — both are wrong for *some* user-chosen watch
+colors (dark dials vs light); correct fix is luminance-based text color (deferred, not a
+blind flip). Dead code `.wpm-hero-avatar` and dev-login greys noted, not user-facing.
+
 ## Verdict
 
 **The foundations exist but are bypassed.** There is a real token layer (`:root`
