@@ -5,6 +5,17 @@ same colors, spacing, type, components, wording. Scope: `index.html` (25,811 lin
 styles from L92). Six parallel audits: color, buttons/actions, spacing/radius,
 typography, components, repeated-action UX. Read-only — no code changed yet.
 
+## Remediation status — updated 2026-06-28
+
+**Shipped (SW v832–v834, all green on 1217 unit + 115 E2E):**
+- ✅ **Phase 0** — scale tokens added to `:root` (`--space-*`, `--fs-*`, `--fw-*`, `--lh-*`, `--radius-sm/btn/pill`, `--icon-*`, `--ls-eyebrow`).
+- ✅ **H1 (badge dark-mode)** — warm badge/tag palette promoted to `--badge-*` tokens; **light look unchanged**, dark variants added so it's readable (was cream-on-cream). Surgical approach per decision.
+- ✅ **H2 (danger reds)** — `#ef4444`/`#f87171` → `var(--danger)` (kept intentional `#b91c1c` nuclear-delete + email red).
+- ✅ **H3 (success greens)** — admin/What's-New chrome greens → `var(--success)`; **timegrapher/measurement instrument neon `#4ade80` intentionally kept**.
+- ✅ **M1 (radius, partial)** — 27 app `border-radius:10px` → `var(--radius)`; `99px` pill typo fixed; shipped `.feat-pill` fixed to `var(--gold)`. (Button-radius 6px/8px/10px unification still open.)
+
+**Still open:** H4 (`#c9a84c` accent + `rgba(201,168,76,α)` tints → gold tokens), H5 (spacing-scale migration), H6 (type scale + `.eyebrow` class), H7 (`.pill` primitive + unify 3 visibility badges), all M2–M7 and L/Phase-3 wording-behavior items. Visual verification: live-site eyeball.
+
 ## Verdict
 
 **The foundations exist but are bypassed.** There is a real token layer (`:root`
