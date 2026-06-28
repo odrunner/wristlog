@@ -1596,10 +1596,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       background: none; border: none;
       color: var(--muted); font-size: .95rem; font-weight: 700;
       cursor: pointer; display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; transition: background .15s, color .15s; padding: 0;
+      flex-shrink: 0; transition: box-shadow .15s, color .15s; padding: 0;
       font-family: inherit;
     }
-    .help-btn:hover { background: var(--surface2); color: var(--text); }
+    .help-btn:hover { box-shadow: 0 0 0 2px var(--gold-dim); color: var(--text); }
 
     /* ── FEED ──────────────────────────────────── */
     .feed-card {
@@ -2002,15 +2002,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* ── BELL ICON ──────────────────────────────── */
     .bell-btn { position:relative; width:34px; height:34px; border-radius:50%; background:none; border:none; cursor:pointer; color:var(--muted);
-      display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .15s, color .15s; }
-    .bell-btn:hover { background:var(--surface2); color:var(--text); }
-    .streak-chip { display:inline-flex; align-items:center; gap:.25rem; height:34px; padding:0 .7rem; font-size:.85rem; font-weight:700; color:var(--text); background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-pill); cursor:pointer; line-height:1; transition:border-color .15s, background .15s; }
-    .streak-chip:hover { border-color:var(--gold); }
+      display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:box-shadow .15s, color .15s; }
+    .bell-btn:hover { box-shadow:0 0 0 2px var(--gold-dim); color:var(--text); }
+    .streak-chip { display:inline-flex; align-items:center; gap:.25rem; height:34px; padding:0 .7rem; font-size:.85rem; font-weight:700; color:var(--text); background:none; border:none; border-radius:var(--radius-pill); cursor:pointer; line-height:1; transition:box-shadow .15s, color .15s; }
+    .streak-chip:hover { box-shadow:0 0 0 2px var(--gold-dim); }
     .streak-chip .streak-count { font-variant-numeric:tabular-nums; }
-    .streak-chip.streak-chip-atrisk { border-color:var(--warn); color:var(--warn); }
+    .streak-chip.streak-chip-atrisk { color:var(--warn); }
     #theme-btn { width:34px; height:34px; border-radius:50%; background:none; border:none; cursor:pointer; color:var(--muted);
-      display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .15s, color .15s; }
-    #theme-btn:hover { background:var(--surface2); color:var(--text); }
+      display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:box-shadow .15s, color .15s; }
+    #theme-btn:hover { box-shadow:0 0 0 2px var(--gold-dim); color:var(--text); }
     .bell-badge { position:absolute; top:2px; right:2px; min-width:16px; height:16px; border-radius:8px;
       background:var(--danger); color:#fff; font-size:.6rem; font-weight:700;
       display:flex; align-items:center; justify-content:center; padding:0 3px; pointer-events:none; }
@@ -6652,7 +6652,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.11.14';
+const APP_VERSION = '28.11.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
