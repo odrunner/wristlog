@@ -5367,16 +5367,42 @@ async function attachBadgesToPost(postId, refs) {
   if (document.getElementById('page-feed')?.classList.contains('active')) loadFeed();
 }
 
+// Standalone badge cards created this session — so a post made shortly after can
+// fold them inline (see foldBadgeCardsIntoPost) instead of leaving a duplicate card.
+let _pendingBadgeCards = [];
 async function createStandaloneBadgePost(ref) {
   const b = BADGE_BY_REF[ref];
   if (!b || !currentUser) return;
+  const cardId = uid();
   try {
     await db.from('logs').insert({
-      id: uid(), user_id: currentUser.id, watch_id: null, date: todayStr(),
+      id: cardId, user_id: currentUser.id, watch_id: null, date: todayStr(),
       use_case: 'badge', notes: `Earned the ${b.name} badge 🏅`, photo_url: null,
       visibility: getDefaultVis(), location: null, club_id: null, badge_refs: [ref],
     });
   } catch (e) { console.warn('[badge-post] standalone failed:', e); return; }
+  _pendingBadgeCards.push({ id: cardId, ref, at: Date.now() });
+  feedLoadedAt = 0;
+  if (document.getElementById('page-feed')?.classList.contains('active')) loadFeed();
+}
+
+// When a post/wear is published, move any just-earned standalone badge cards onto
+// it (inline ribbon) and delete the separate cards — so "added a watch, then
+// posted it" shows the badge within the post, not as a duplicate card.
+async function foldBadgeCardsIntoPost(postId) {
+  if (!postId || !_pendingBadgeCards.length) return;
+  const cutoff = Date.now() - 10 * 60 * 1000;
+  const fold = _pendingBadgeCards.filter(c => c.at >= cutoff);
+  _pendingBadgeCards = [];
+  if (!fold.length) return;
+  const post = logs.find(l => l.id === postId);
+  const existing = (post && Array.isArray(post.badgeRefs)) ? post.badgeRefs : [];
+  const merged = [...new Set([...existing, ...fold.map(c => c.ref)])];
+  try {
+    if (post) { post.badgeRefs = merged; markDirty('logs', postId); await db.from('logs').upsert(logToRow(post), { onConflict: 'id' }); }
+    else await db.from('logs').update({ badge_refs: merged }).eq('id', postId);
+    await db.from('logs').delete().in('id', fold.map(c => c.id));
+  } catch (e) { console.warn('[badge-post] fold failed:', e); }
   feedLoadedAt = 0;
   if (document.getElementById('page-feed')?.classList.contains('active')) loadFeed();
 }
@@ -6694,7 +6720,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.16.09';
+const APP_VERSION = '28.16.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11879,7 +11905,7 @@ async function saveNewPost() {
   toast(isWear ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : (useCase === 'measurement' ? 'Shared to feed!' : 'Posted!'));
   haptic('success');
   maybeShowReviewPrompt('post');
-  checkAndAwardBadges('post', entry.id);
+  checkAndAwardBadges('post', entry.id).then(() => foldBadgeCardsIntoPost(entry.id));
   feedLoadedAt = 0; // force feed to re-fetch after posting
   updateStreakChip();
   if (document.getElementById('page-feed').classList.contains('active')) loadFeed();
@@ -15483,7 +15509,7 @@ async function saveLog() {
   toast(isUpdate ? 'Wear log updated!' : 'Wear logged!');
   haptic('success');
   if (!isUpdate) maybeShowReviewPrompt('wear_log');
-  checkAndAwardBadges('wear', logEntry.id);
+  checkAndAwardBadges('wear', logEntry.id).then(() => foldBadgeCardsIntoPost(logEntry.id));
   } finally { if (_slBtn) { _slBtn.disabled = false; _slBtn.textContent = 'Log This Wear'; } }
 }
 
