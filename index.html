@@ -120,6 +120,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       --lh-tight: 1.2; --lh-snug: 1.4; --lh-body: 1.55;
       --icon-sm: 14px; --icon-md: 16px; --icon-lg: 20px; --icon-xl: 24px;
       --ls-eyebrow: .08em;
+      /* visibility-state semantic colors (one hue per state, all surfaces) */
+      --vis-friends: #a78bfa;
       /* badge/achievement warm theme — light values = current look */
       --badge-text: #3D2A14; --badge-accent: #854F0B; --badge-bg: #FAEEDA;
       --badge-bg2: #FBF6E8; --badge-border: #BA7517; --badge-close: #6B5618;
@@ -462,13 +464,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .profile-post-vis { position:absolute; top:4px; right:4px; font-size:.58rem; font-weight:700; padding:2px 5px; border-radius:6px; letter-spacing:.03em; line-height:1.4; backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); text-shadow:0 1px 2px rgba(0,0,0,.5); }
     .profile-post-vis.public { background:rgba(74,222,128,.35); color:#fff; }
     .profile-post-vis.followers { background:rgba(201,168,76,.4); color:#fff; }
-    .profile-post-vis.friends { background:rgba(168,130,255,.4); color:#fff; }
+    .profile-post-vis.friends { background:rgba(167,123,250,.4); color:#fff; }
     .profile-post-vis.private { background:rgba(224,85,85,.4); color:#fff; }
     .showcase-priv-label.pub  { color:var(--success); }
     .showcase-priv-label.fri  { color:var(--gold); }
     .showcase-priv-label.priv { color:var(--danger); }
     .showcase-priv-label.inh  { color:var(--muted); }
-    .showcase-priv-label.frd  { color:#a78bfa; } /* friends — purple */
+    .showcase-priv-label.frd  { color:var(--vis-friends); } /* friends — purple */
 
     /* ── FRIEND ICON BUTTON + POPOVER ── */
     .friend-icon-btn {
@@ -1751,7 +1753,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* Post visibility badge */
     .vis-badge { display:inline-flex; align-items:center; gap:.25rem; font-size:.68rem;
       padding:.15rem .5rem; border-radius:20px; font-weight:600; margin: 0 1rem .6rem; }
-    .vis-badge.friends, .vis-badge.followers { background:rgba(201,168,76,.15); color:var(--gold); }
+    .vis-badge.followers { background:rgba(201,168,76,.15); color:var(--gold); }
+    .vis-badge.friends { background:rgba(167,123,250,.15); color:var(--vis-friends); }
     .vis-badge.private { background:rgba(224,85,85,.12); color:var(--danger); }
 
     /* Inline caption editing area */
@@ -6633,7 +6636,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.20.59';
+const APP_VERSION = '27.21.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
