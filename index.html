@@ -427,8 +427,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .streak-line { display: flex; align-items: center; gap: .25rem; font-size: .92rem; font-weight: 600;
       color: var(--text); padding: .35rem 0 .15rem; }
     .streak-line .streak-count { font-variant-numeric: tabular-nums; }
-    .streak-flame { line-height: 1; }
-    .streak-flame-dim { opacity: .45; filter: grayscale(.6); }
+    .streak-flame { line-height: 1; display: inline-flex; align-items: center; }
+    .streak-flame-dim { opacity: .5; }
+    .streak-flame-svg { width: 1em; height: 1em; }
+    .freeze-svg { width: 1em; height: 1em; vertical-align: -.12em; }
     .streak-cue, .streak-best { color: var(--muted); font-weight: 500; font-size: .82em; }
 
     /* ── PROFILE COLLAPSIBLE SECTIONS (matches modal-section pattern) ── */
@@ -2222,7 +2224,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Wear Streaks</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">A &#128293; streak counter now lives in the top bar &#8212; the number of days in a row you&#8217;ve logged a wear. Tap it to open a calendar of every day you logged, with your current and best streak. And streak freezes have your back: miss a single day and a freeze automatically covers it so one slip doesn&#8217;t reset you. You start with two and earn one back for every seven days you log.</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">A streak counter now lives in the top bar &#8212; the number of days in a row you&#8217;ve logged a wear. Tap it to open a calendar of every day you logged, with your current and best streak. And streak freezes have your back: miss a single day and a freeze automatically covers it so one slip doesn&#8217;t reset you. You start with two and earn one back for every seven days you log.</div>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Dramatically More Accurate Measurements</div>
@@ -3519,7 +3521,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">&#8212;</div>
             <div class="help-step-body">
               <div class="help-step-title">Your streak counter</div>
-              <div class="help-step-desc">The &#128293; in the top bar shows how many days in a row you&#8217;ve logged a wear &#8212; any log counts. It dims when today isn&#8217;t logged yet, so log something to keep it lit.</div>
+              <div class="help-step-desc">The flame counter in the top bar shows how many days in a row you&#8217;ve logged a wear &#8212; any log counts. It dims when today isn&#8217;t logged yet, so log something to keep it lit.</div>
             </div>
           </div>
           <div class="help-step">
@@ -3533,7 +3535,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">&#8212;</div>
             <div class="help-step-body">
               <div class="help-step-title">Streak freezes</div>
-              <div class="help-step-desc">Miss a single day and a freeze automatically covers it so your streak survives &#8212; it shows as a &#10052;&#65039; on the calendar. You start with two and earn one back for every seven days you log. Two missed days in a row still ends the streak.</div>
+              <div class="help-step-desc">Miss a single day and a freeze automatically covers it so your streak survives &#8212; frozen days show with an icy tint on the calendar. You start with two and earn one back for every seven days you log. Two missed days in a row still ends the streak.</div>
             </div>
           </div>
           <div class="help-step">
@@ -5654,6 +5656,8 @@ function streakCalShift(delta) {
   renderStreakCalendar();
 }
 
+const STREAK_FLAME_SVG = '<svg class="streak-flame-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>';
+const FREEZE_SVG = '<svg class="freeze-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"></line><line x1="4.2" y1="7.5" x2="19.8" y2="16.5"></line><line x1="4.2" y1="16.5" x2="19.8" y2="7.5"></line></svg>';
 function renderStreakCalendar() {
   const body = document.getElementById('streak-calendar-body');
   if (!body || !_streakCalYM) return;
@@ -5667,13 +5671,13 @@ function renderStreakCalendar() {
   const cells = streakCalendarGrid(logged, year, month, t);
   const head = sk.status === 'none'
     ? `Start a streak${sk.best >= 1 ? ` · best ${sk.best}` : ''}`
-    : `<span class="streak-flame${sk.status === 'at_risk' ? ' streak-flame-dim' : ''}">🔥</span> ${sk.current}-day streak${sk.best > sk.current ? ` · best ${sk.best}` : ''}`;
+    : `<span class="streak-flame${sk.status === 'at_risk' ? ' streak-flame-dim' : ''}">${STREAK_FLAME_SVG}</span> ${sk.current}-day streak${sk.best > sk.current ? ` · best ${sk.best}` : ''}`;
   const curY = +t.slice(0, 4), curM = +t.slice(5, 7) - 1;
   const atCurrent = (year > curY) || (year === curY && month >= curM);
   const dow = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   body.innerHTML =
     `<div class="streak-cal-head">${head}</div>` +
-    `<div class="streak-cal-freezes">❄️ ${sk.freezes} freeze${sk.freezes === 1 ? '' : 's'}</div>` +
+    `<div class="streak-cal-freezes">${FREEZE_SVG} ${sk.freezes} freeze${sk.freezes === 1 ? '' : 's'}</div>` +
     `<div class="streak-cal-nav">` +
       `<button class="btn btn-ghost btn-sm" onclick="streakCalShift(-1)" aria-label="Previous month">‹</button>` +
       `<span class="streak-cal-month">${MONTHS[month]} ${year}</span>` +
@@ -5698,7 +5702,7 @@ function updateStreakChip() {
   if (!st.visible) { el.classList.add('hidden'); return; }
   el.classList.remove('hidden');
   el.classList.toggle('streak-chip-atrisk', st.atRisk);
-  const flame = `<span class="streak-flame${st.dim ? ' streak-flame-dim' : ''}">🔥</span>`;
+  const flame = `<span class="streak-flame${st.dim ? ' streak-flame-dim' : ''}">${STREAK_FLAME_SVG}</span>`;
   el.innerHTML = flame + (st.invite ? '' : ` <span class="streak-count">${st.count}</span>`);
 }
 
@@ -5719,7 +5723,7 @@ function maybeFreezeToast() {
   const key = 'wrotate_freeze_toast_' + hit;
   if (localStorage.getItem(key)) return;
   localStorage.setItem(key, '1');
-  toast(`❄️ A freeze saved your ${sk.current}-day streak — log today to keep it going`);
+  toast(`A freeze saved your ${sk.current}-day streak — log today to keep it going`);
 }
 
 async function checkAndAwardBadges(context, postId) {
@@ -5931,7 +5935,7 @@ async function checkAndAwardBadges(context, postId) {
     for (const _ref of _bp.standalone) createStandaloneBadgePost(_ref);
   }
   if (newlyEarned.some(b => b && b.ref === 3)) {
-    toast('🔥 Your streak starts now — day 1');
+    toast('Your streak starts now — day 1');
   }
   // Refresh the onboarding checklist so a step ticks off immediately (no page refresh needed).
   renderOnboardingChecklist();
@@ -6648,7 +6652,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.09.55';
+const APP_VERSION = '28.11.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
