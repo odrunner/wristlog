@@ -39,6 +39,7 @@ surfaces (the trap that hid `#412402`). Findings + fixes:
 - ✅ `.af2-warn-chip` → self-contained solid amber (`#fde68a`/`#7c2d12`); faint translucent chip was unreadable in dark.
 - ✅ `.watch-suggestion .sug-yes` white-on-gold → `#000` (matches every other gold button).
 - ✅ 10 avatar render sites → added `w.color||'#c9a84c'` fallback (null color → transparent bg → invisible initials edge case).
+- ✅ **rgb-form blind spot (v843):** the badge-detail REF/flavor/unlock/earned text used `rgba(61,42,20,α)` / `rgba(107,86,24,α)` — the badge browns in **RGB form**, which the `#hex`-only sweep missed → dark-brown on the dark modal. Fixed to `var(--badge-text)`/`var(--badge-close)` + `opacity`. Also swept remaining rgb-form badge browns (modal/tag-pill/suggested borders → `var(--badge-border)`, wall hover → `var(--gold-dim)`). **Lesson:** color sweeps must cover `rgb()/rgba()` forms, not just `#hex`. Remaining `color:rgba(...)` are mid-luminance greens/ambers/gold/red (status/instrument) — lower risk, not dark-on-dark.
 
 **Verified safe, intentionally left:** `#000`/dark text on `var(--gold)` (avatars, cells,
 banners, buttons — gold is light in both themes); white toggle knobs; Google branded
