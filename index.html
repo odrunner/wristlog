@@ -1382,7 +1382,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .rec-tags { display:flex; flex-wrap:wrap; gap:.3rem; margin-top:.55rem; }
     .rec-tag { font-size:.68rem; background:var(--surface2); border-radius:4px; padding:.18rem .45rem; color:var(--muted); }
     .rec-tag-weather { color:#38bdf8; background:rgba(56,189,248,.07); }
-    .rec-tag-weekend { color:#c9a84c; background:rgba(201,168,76,.08); }
+    .rec-tag-weekend { color:var(--gold); background:rgba(201,168,76,.08); }
     .rec-explanation { font-size:.77rem; color:var(--muted); margin-top:.55rem; line-height:1.55; }
 
     /* ── SHARED CARD STYLES (value check, enhance-all) ── */
@@ -3384,7 +3384,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">3</div>
             <div class="help-step-body">
               <div class="help-step-title">Block a user</div>
-              <div class="help-step-desc">Tap the three-dot menu on a post and select <strong>Block user</strong>, or go to their profile and tap <strong>Block</strong>. Blocked users won&#8217;t appear in your feed and cannot interact with your content. You can manage your block list from your profile page.</div>
+              <div class="help-step-desc">Tap the three-dot menu on a post and select <strong>Block User</strong>, or go to their profile and tap <strong>Block</strong>. Blocked users won&#8217;t appear in your feed and cannot interact with your content. You can manage your block list from your profile page.</div>
             </div>
           </div>
           <div class="help-step">
@@ -4965,7 +4965,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="chips" id="edit-log-club-chips"></div>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-primary" onclick="saveEditLog()">Save Changes</button>
+      <button class="btn btn-primary" onclick="saveEditLog()">Save</button>
       <button class="btn btn-ghost"   onclick="closeEditLog()">Cancel</button>
     </div>
   </div>
@@ -6633,7 +6633,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.20.30';
+const APP_VERSION = '27.20.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8546,7 +8546,7 @@ async function renderClubDetail(clubId) {
       </div>
 
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:.85rem;">
-        <button class="btn btn-primary" style="font-size:.82rem;" onclick="saveClubEdit('${clubId}')">Save Changes</button>
+        <button class="btn btn-primary" style="font-size:.82rem;" onclick="saveClubEdit('${clubId}')">Save</button>
         <button class="btn btn-ghost"   style="font-size:.82rem;" onclick="document.getElementById('club-edit-section').style.display='none'">Cancel</button>
         <button class="btn btn-danger"  style="font-size:.82rem;margin-left:auto;" onclick="openDeleteClubModal('${clubId}','${escAttr(club.name)}')">Delete Club</button>
       </div>
@@ -10424,7 +10424,7 @@ function renderFeedCard(item) {
               <div class="feed-menu hidden" id="feed-menu-${item.id}">
                 ${(vis === 'public' || isMe) ? `<div class="feed-menu-item" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
                 <div class="feed-menu-item" onclick="openReport('log','${item.id}','${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Report</div>
-                <div class="feed-menu-item" style="color:var(--danger);" onclick="blockUser('${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Block user</div>
+                <div class="feed-menu-item" style="color:var(--danger);" onclick="blockUser('${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Block User</div>
                 ${_isDevUser() && vis === 'public' ? (item.__featured
                   ? `<div class="feed-menu-item" onclick="unfeaturePost('${item.id}');closeFeedMenu('${item.id}')">Un-feature this post</div>`
                   : `<div class="feed-menu-item" onclick="featurePost('${item.id}');closeFeedMenu('${item.id}')">★ Feature this post</div>`) : ''}
@@ -10742,7 +10742,7 @@ async function submitReport() {
     setTimeout(() => {
       const t = document.getElementById('toast');
       t.className = 'toast info';
-      t.innerHTML = `Block ${escHtml(_pendingBlockName)}? <button onclick="blockUser(_pendingBlockUserId,_pendingBlockName);document.getElementById('toast').className='toast';" style="margin-left:.5rem;padding:.25rem .6rem;border-radius:6px;background:var(--danger);color:#fff;border:none;cursor:pointer;font-size:.8rem;">Block</button> <button onclick="document.getElementById('toast').className='toast';" style="margin-left:.25rem;padding:.25rem .6rem;border-radius:6px;background:var(--border);color:var(--text);border:none;cursor:pointer;font-size:.8rem;">No thanks</button>`;
+      t.innerHTML = `Block ${escHtml(_pendingBlockName)}? <button onclick="blockUser(_pendingBlockUserId,_pendingBlockName);document.getElementById('toast').className='toast';" style="margin-left:.5rem;padding:.25rem .6rem;border-radius:6px;background:var(--danger);color:#fff;border:none;cursor:pointer;font-size:.8rem;">Block</button> <button onclick="document.getElementById('toast').className='toast';" style="margin-left:.25rem;padding:.25rem .6rem;border-radius:6px;background:var(--border);color:var(--text);border:none;cursor:pointer;font-size:.8rem;">Cancel</button>`;
       t.style.opacity = '1';
     }, 2000);
   } else {
@@ -15451,7 +15451,7 @@ async function loadCampaigns() {
         </select>
       </div>
       <div style="display:flex;gap:.5rem;margin-top:.5rem;">
-        <button class="btn btn-ghost" onclick="saveCampaign('${c.id}')" style="flex:1;">Save Changes</button>
+        <button class="btn btn-ghost" onclick="saveCampaign('${c.id}')" style="flex:1;">Save</button>
         <button class="btn btn-ghost" onclick="testCampaign('${c.id}')" style="flex:1;">Send Test to Me</button>
         <button class="btn btn-ghost" onclick="runCampaignNow()" style="flex:1;">Run Now</button>
       </div>
