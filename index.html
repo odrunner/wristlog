@@ -6633,7 +6633,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.20.41';
+const APP_VERSION = '27.20.44';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16780,7 +16780,7 @@ function renderStorySection() {
     html += `<div style="margin-top:10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--badge-deep);margin-bottom:3px;">Functions</div>`;
     html += `<div style="font-size:12px;line-height:1.55;color:var(--badge-text);">${escHtml(fns)}</div>`;
   }
-  html += `<div style="margin-top:10px;"><button type="button" onclick="enhanceSingleWatch()" style="background:#fff;color:var(--badge-accent);border:0.5px solid var(--badge-border);font-size:11px;font-family:inherit;padding:5px 12px;border-radius:6px;cursor:pointer;">⭐ Re-enhance</button></div>`;
+  html += `<div style="margin-top:10px;"><button type="button" onclick="enhanceSingleWatch()" style="background:transparent;color:var(--badge-accent);border:0.5px solid var(--badge-border);font-size:11px;font-weight:500;font-family:inherit;padding:5px 12px;border-radius:6px;cursor:pointer;">⭐ Re-enhance</button></div>`;
   html += '</div>';
   el.innerHTML = html;
 }
