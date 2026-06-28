@@ -2827,10 +2827,18 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button type="button" class="chip" data-tab="traffic" role="tab" aria-selected="false" aria-controls="admin-tab-traffic" onclick="switchAdminTab('traffic')">Traffic</button>
       <button type="button" class="chip" data-tab="feedback" role="tab" aria-selected="false" aria-controls="admin-tab-feedback" onclick="switchAdminTab('feedback')">Feedback</button>
       <button type="button" class="chip" data-tab="reports" role="tab" aria-selected="false" aria-controls="admin-tab-reports" onclick="switchAdminTab('reports')">Reports</button>
+      <button type="button" class="chip" data-tab="featured" role="tab" aria-selected="false" aria-controls="admin-tab-featured" onclick="switchAdminTab('featured')">Featured</button>
       <button type="button" class="chip" data-tab="official" role="tab" aria-selected="false" aria-controls="admin-tab-official" onclick="switchAdminTab('official')">Official</button>
       <button type="button" class="chip" data-tab="broadcast" role="tab" aria-selected="false" aria-controls="admin-tab-broadcast" onclick="switchAdminTab('broadcast')">Broadcast</button>
       <button type="button" class="chip" data-tab="campaigns" role="tab" aria-selected="false" aria-controls="admin-tab-campaigns" onclick="switchAdminTab('campaigns')">Campaigns</button>
       <button type="button" class="chip" data-tab="dev" role="tab" aria-selected="false" aria-controls="admin-tab-dev" onclick="switchAdminTab('dev')">Dev</button>
+    </div>
+
+    <!-- Tab: Featured -->
+    <div id="admin-tab-featured" class="admin-tab" role="tabpanel" style="display:none;">
+      <div style="margin-bottom:.75rem;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);">Featured posts</div>
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:.75rem;">One post is featured at a time (24h), the rest queue up. Feature a post from its ★ menu in the feed.</div>
+      <div id="admin-featured-list">Loading…</div>
     </div>
 
     <!-- Tab: Traffic -->
@@ -6609,7 +6617,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.19.19';
+const APP_VERSION = '27.19.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13116,6 +13124,39 @@ function switchAdminTab(tab) {
   const target = document.getElementById('admin-tab-' + tab);
   if (target) target.style.display = '';
   if (tab === 'campaigns') loadCampaigns();
+  if (tab === 'featured') loadAdminFeatured();
+}
+
+async function loadAdminFeatured() {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
+  const el = document.getElementById('admin-featured-list');
+  if (!el) return;
+  el.innerHTML = 'Loading…';
+  const { data, error } = await db.rpc('admin_featured_queue');
+  if (error) { el.innerHTML = `<div style="color:var(--danger);">${escHtml(error.message)}</div>`; return; }
+  const rows = data || [];
+  if (!rows.length) { el.innerHTML = '<div style="font-size:.82rem;color:var(--muted);padding:.5rem 0;">No featured posts. Use a post’s ★ menu to feature one.</div>'; return; }
+  el.innerHTML = rows.map(r => {
+    const who = r.display_name || r.username || 'Unknown';
+    const txt = (r.notes || '').slice(0, 80);
+    const badge = r.status === 'active'
+      ? `<span style="color:var(--gold);font-weight:600;">★ Active</span>${r.expires_at ? ` <span style="color:var(--muted);">· expires ${escHtml(new Date(r.expires_at).toLocaleString())}</span>` : ''}`
+      : `<span style="color:var(--muted);">Queued</span>`;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.6rem 0;border-bottom:1px solid var(--border);">
+      <div style="min-width:0;">
+        <div style="font-size:.82rem;">${badge}</div>
+        <div style="font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(who)}: ${escHtml(txt)}</div>
+      </div>
+      <button type="button" class="btn btn-sm" onclick="unfeatureAdmin('${r.id}')">Remove</button>
+    </div>`;
+  }).join('');
+}
+
+async function unfeatureAdmin(id) {
+  const { error } = await db.rpc('admin_unfeature', { p_id: id });
+  if (error) { toast(error.message, 'error'); return; }
+  toast('Removed from featured');
+  loadAdminFeatured();
 }
 
 // ── Admin Content Reports ────────────────────────────────────────────────
