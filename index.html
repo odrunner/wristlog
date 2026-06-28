@@ -6609,7 +6609,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.19.14';
+const APP_VERSION = '27.19.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10373,12 +10373,14 @@ function renderFeedCard(item) {
                 ${(vis === 'public' || isMe) ? `<div class="feed-menu-item" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
                 <div class="feed-menu-item" onclick="openEditPost('${item.id}');closeFeedMenu('${item.id}')">Edit post</div>
                 <div class="feed-menu-item" onclick="openReport('log','${item.id}','${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Report a comment</div>
+                ${_isDevUser() && vis === 'public' ? `<div class="feed-menu-item" onclick="featurePost('${item.id}');closeFeedMenu('${item.id}')">★ Feature this post</div>` : ''}
               </div>`
             : `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="More options"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
               <div class="feed-menu hidden" id="feed-menu-${item.id}">
                 ${(vis === 'public' || isMe) ? `<div class="feed-menu-item" onclick="sharePost('${item.id}');closeFeedMenu('${item.id}')">Share post</div>` : ''}
                 <div class="feed-menu-item" onclick="openReport('log','${item.id}','${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Report</div>
                 <div class="feed-menu-item" style="color:var(--danger);" onclick="blockUser('${item.user_id}','${escAttr(displayName)}');closeFeedMenu('${item.id}')">Block user</div>
+                ${_isDevUser() && vis === 'public' ? `<div class="feed-menu-item" onclick="featurePost('${item.id}');closeFeedMenu('${item.id}')">★ Feature this post</div>` : ''}
               </div>`}
         </div>
       </div>
@@ -10401,6 +10403,18 @@ function renderFeedCard(item) {
       ${clubBadge}
       ${commentsHtml}
     </div>`;
+}
+
+// ── Feature a post (admin only) ──────────────────────────────────────────
+async function featurePost(logId) {
+  try {
+    const { error } = await db.rpc('admin_feature_post', { p_log_id: logId });
+    if (error) throw error;
+    toast('★ Featured — pinned to the top for 24h (or queued behind the current one)');
+    feedLoadedAt = 0; loadFeed();
+  } catch (e) {
+    toast(e?.message || 'Could not feature this post', 'error');
+  }
 }
 
 // ── Feed three-dot menu ──────────────────────────────────────────────────
