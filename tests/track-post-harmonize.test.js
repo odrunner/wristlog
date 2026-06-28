@@ -97,6 +97,29 @@ describe('Post occasion + strap — index.html wiring', () => {
   });
 });
 
+describe('Edit Post occasion + strap — index.html wiring', () => {
+  it('has a Details block with occasion + strap chips', () => {
+    expect(html).toContain('id="ep-details"');
+    expect(html).toContain('id="ep-usecase-chips"');
+    expect(html).toContain('id="ep-strap-chips"');
+    expect(html).toContain('function renderEpDetails');
+    expect(html).toContain('function toggleEpDetails');
+  });
+
+  it('seeds occasion/strap from the local log on open', () => {
+    expect(html).toMatch(/epUseCase = epWasMeasurement \? 'measurement'/);
+    expect(html).toMatch(/epStrapId = epLog\?\.strapId/);
+  });
+
+  it('persists use_case and strap_id on the edit update', () => {
+    expect(html).toMatch(/use_case: finalUseCase, strap_id: finalStrapId/);
+  });
+
+  it('keeps measurement shares out of wears when editing', () => {
+    expect(html).toMatch(/epWasMeasurement \? 'measurement' : \(finalWatchId \? epUseCase : 'unspecified'\)/);
+  });
+});
+
 describe('Private notes — removed from Track', () => {
   it('has no private-notes field or references', () => {
     expect(html).not.toContain('track-private-notes');

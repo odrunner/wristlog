@@ -1467,6 +1467,21 @@ test.describe('Post location (mocked)', () => {
     await expect(page.locator('#ep-location-input')).toHaveValue('Travel');
     await expect(page.locator('#ep-location-chips [data-loc="Travel"]')).toHaveClass(/selected/);
   });
+
+  test('edit-post shows occasion details for a watch-tagged post', async ({ page }) => {
+    await page.evaluate(() => closeNewPost());
+    await page.evaluate(() => openEditPost('log-001'));
+    await expect(page.locator('#edit-post-modal')).toBeVisible();
+    // log-001 is tagged (watch-001, use_case 'work') → Details shown and expanded.
+    await expect(page.locator('#ep-details')).toBeVisible();
+    await expect(page.locator('#ep-usecase-chips [data-uc="work"]')).toHaveClass(/selected/);
+    // watch-001 has a single strap → strap card stays hidden.
+    await expect(page.locator('#ep-strap-card')).toBeHidden();
+    // Changing the occasion updates the selection.
+    await page.locator('#ep-usecase-chips [data-uc="dinner"]').click();
+    await expect(page.locator('#ep-usecase-chips [data-uc="dinner"]')).toHaveClass(/selected/);
+    await expect(page.locator('#ep-usecase-chips [data-uc="work"]')).not.toHaveClass(/selected/);
+  });
 });
 
 // ── Essentials Field Order ──────────────────────────────────────────────
