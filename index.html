@@ -1717,7 +1717,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .draft-card-header { display:flex; gap:.65rem; align-items:flex-start; }
     .draft-thumb { width:72px; height:72px; border-radius:6px; object-fit:cover; background:var(--surface1); flex-shrink:0; }
     .draft-meta { flex:1; min-width:0; }
-    .draft-meta .draft-caption { font-size:.84rem; line-height:1.45; margin-bottom:.3rem; word-break:break-word; }
+    .draft-meta .draft-caption { font-size:.84rem; line-height:1.55; margin-bottom:.3rem; word-break:break-word; }
     .draft-meta .draft-info { font-size:.72rem; color:var(--muted); }
     .draft-actions { display:flex; gap:.4rem; margin-top:.5rem; }
     .draft-form-row { margin-bottom:.6rem; }
@@ -2442,7 +2442,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="eyebrow" style="margin-bottom:1.25rem;">Anniversary</div>
     <div id="anniversary-watch-img" style="margin-bottom:1.25rem;"></div>
     <div id="anniversary-modal-title" style="font-size:1.05rem;font-weight:700;color:var(--text);line-height:1.5;margin-bottom:.4rem;"></div>
-    <div id="anniversary-text" style="font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:1.5rem;"></div>
+    <div id="anniversary-text" style="font-size:.82rem;color:var(--muted);line-height:1.55;margin-bottom:1.5rem;"></div>
     <button class="btn btn-ghost" onclick="dismissAnniversary()" style="width:100%;border-color:var(--gold);color:var(--gold);">Dismiss</button>
   </div>
 </div>
@@ -2456,7 +2456,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="review-step-ask">
       <div class="eyebrow" style="margin-bottom:1rem;">Quick question</div>
       <div id="review-prompt-title" style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.5rem;">Enjoying WRotate?</div>
-      <div style="font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:1.5rem;">Your feedback helps us make WRotate better for watch enthusiasts everywhere.</div>
+      <div style="font-size:.82rem;color:var(--muted);line-height:1.55;margin-bottom:1.5rem;">Your feedback helps us make WRotate better for watch enthusiasts everywhere.</div>
       <div style="display:flex;gap:.5rem;">
         <button class="btn btn-ghost" onclick="reviewPromptNo()" style="flex:1;border-color:var(--border);color:var(--muted);">Not really</button>
         <button class="btn btn-ghost" onclick="reviewPromptYes()" style="flex:1;border-color:var(--gold);color:var(--gold);">Yes!</button>
@@ -2466,7 +2466,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="review-step-feedback" style="display:none;">
       <div class="eyebrow" style="margin-bottom:1rem;">Feedback</div>
       <div style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.5rem;">What could be better?</div>
-      <div style="font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:1rem;">We read every response. Tell us what's on your mind.</div>
+      <div style="font-size:.82rem;color:var(--muted);line-height:1.55;margin-bottom:1rem;">We read every response. Tell us what's on your mind.</div>
       <textarea id="review-feedback-text" rows="4" placeholder="What would make WRotate better for you?" style="width:100%;padding:.6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem;resize:vertical;margin-bottom:1rem;font-family:inherit;"></textarea>
       <div style="display:flex;gap:.5rem;">
         <button class="btn btn-ghost" onclick="closeReviewPrompt()" style="flex:1;border-color:var(--border);color:var(--muted);">Skip</button>
@@ -2476,7 +2476,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <!-- Step 2b: Thank you (after happy or after feedback sent) -->
     <div id="review-step-thanks" style="display:none;">
       <div style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.5rem;">Thank you!</div>
-      <div id="review-thanks-msg" style="font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:1.25rem;">Your feedback means a lot to us.</div>
+      <div id="review-thanks-msg" style="font-size:.82rem;color:var(--muted);line-height:1.55;margin-bottom:1.25rem;">Your feedback means a lot to us.</div>
       <a id="review-appstore-link" href="https://apps.apple.com/app/id6760091102?action=write-review" target="_blank" rel="noopener noreferrer" class="btn btn-ghost" onclick="closeReviewPrompt()" style="width:100%;border-color:var(--gold);color:var(--gold);text-decoration:none;text-align:center;display:none;">Rate on the App Store</a>
     </div>
   </div>
@@ -2596,21 +2596,21 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div style="flex-shrink:0;line-height:1.4;display:flex;align-items:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></div>
           <div>
             <div style="font-size:.88rem;font-weight:600;color:var(--text);">Theme</div>
-            <div style="font-size:.8rem;color:var(--muted);line-height:1.45;">Tap the icon to cycle Dark, Light, or System.</div>
+            <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Tap the icon to cycle Dark, Light, or System.</div>
           </div>
         </div>
         <div style="display:flex;align-items:flex-start;gap:.75rem;">
           <div style="flex-shrink:0;line-height:1.4;display:flex;align-items:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
           <div>
             <div style="font-size:.88rem;font-weight:600;color:var(--text);">Notifications</div>
-            <div style="font-size:.8rem;color:var(--muted);line-height:1.45;">Likes and comments on your posts.</div>
+            <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Likes and comments on your posts.</div>
           </div>
         </div>
         <div style="display:flex;align-items:flex-start;gap:.75rem;">
           <div style="flex-shrink:0;line-height:1.4;display:flex;align-items:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
           <div>
             <div style="font-size:.88rem;font-weight:600;color:var(--text);">Your profile</div>
-            <div style="font-size:.8rem;color:var(--muted);line-height:1.45;">Collection, privacy settings, and sign out.</div>
+            <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Collection, privacy settings, and sign out.</div>
           </div>
         </div>
       </div>
@@ -4316,7 +4316,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
          ondragleave="this.style.borderColor='var(--border)'"
          ondrop="handlePhotoDrop(event)">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:.6rem"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-      <div style="color:var(--muted);font-size:.83rem;line-height:1.6;margin-bottom:.85rem;">
+      <div style="color:var(--muted);font-size:.83rem;line-height:1.55;margin-bottom:.85rem;">
         Press <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.05rem .35rem;font-size:.78rem;">⌘V</kbd> / <kbd style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.05rem .35rem;font-size:.78rem;">Ctrl+V</kbd> to paste<br>
         or drag &amp; drop an image here
       </div>
@@ -6647,7 +6647,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.22.40';
+const APP_VERSION = '27.22.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8175,7 +8175,7 @@ function renderFriendPopoverContent(userId, req) {
 
   if (!req) {
     return `
-      <div style="font-size:.82rem;color:var(--muted);margin-bottom:.75rem;line-height:1.45;">
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:.75rem;line-height:1.55;">
         Ask to be close friends. Both users must follow each other first.
       </div>
       <button class="btn btn-primary" style="width:100%;font-size:.84rem;"
@@ -8187,7 +8187,7 @@ function renderFriendPopoverContent(userId, req) {
   const isSender = req.initiator_id === currentUser.id;
   if (req.status === 'pending' && isSender) {
     return `
-      <div style="font-size:.82rem;color:var(--muted);margin-bottom:.75rem;line-height:1.45;">
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:.75rem;line-height:1.55;">
         Close friend request sent — waiting for them to accept.
       </div>
       <button class="btn btn-ghost" style="width:100%;font-size:.84rem;"
@@ -8196,7 +8196,7 @@ function renderFriendPopoverContent(userId, req) {
 
   if (req.status === 'pending' && !isSender) {
     return `
-      <div style="font-size:.82rem;color:var(--muted);margin-bottom:.75rem;line-height:1.45;">
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:.75rem;line-height:1.55;">
         They sent you a close friend request.
       </div>
       <div style="display:flex;gap:.5rem;">
@@ -13955,7 +13955,7 @@ function renderFunnelFromRpc(f, su) {
     ${row('Google sign-in click', signinG1, signinG7, signinGAll)}
     ${row('Apple sign-in click', signinA1, signinA7, signinAAll)}
     ${row('New users created', newUsers1d, newUsers7d, newUsersAll)}
-    <div style="font-size:.78rem;color:var(--muted);margin-top:.5rem;line-height:1.6;">
+    <div style="font-size:.78rem;color:var(--muted);margin-top:.5rem;line-height:1.55;">
       Last 24h: <b>${newUsers1d}</b>/${totalSignins1} signups (${conv1})<br>
       Last 7 days: <b>${newUsers7d}</b>/${totalSignins7} signups (${conv7})
     </div>
