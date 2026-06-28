@@ -120,6 +120,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       --lh-tight: 1.2; --lh-snug: 1.4; --lh-body: 1.55;
       --icon-sm: 14px; --icon-md: 16px; --icon-lg: 20px; --icon-xl: 24px;
       --ls-eyebrow: .08em;
+      /* badge/achievement warm theme — light values = current look */
+      --badge-text: #3D2A14; --badge-accent: #854F0B; --badge-bg: #FAEEDA;
+      --badge-bg2: #FBF6E8; --badge-border: #BA7517; --badge-close: #6B5618;
+      --badge-tier: #B8952A; --badge-deep: #633806;
     }
     [data-theme="dark"] {
       --bg:           #0b0b10;
@@ -132,6 +136,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       --text:         #e6e6f0;
       --muted:        #7a7a95;
       --overlay-bg:   rgba(11,11,16,.94);
+      /* badge/achievement warm theme — dark variants (readable on dark) */
+      --badge-text: #e7d9bd; --badge-accent: #dbbe72; --badge-bg: #221a0e;
+      --badge-bg2: #1c160d; --badge-border: rgba(219,190,114,.35); --badge-close: #c9a84c;
+      --badge-tier: #dbbe72; --badge-deep: #d8b96a;
     }
 
     body {
@@ -889,8 +897,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* ── WATCH TYPE TAG PICKER (Edit Watch modal) ── */
     .watch-tag-picker      { display: flex; flex-wrap: wrap; gap: .4rem; }
     .tag-pill              { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-size: .72rem; font-weight: 500; padding: .22rem .6rem; border-radius: 12px; cursor: pointer; transition: all .15s; font-family: inherit; }
-    .tag-pill:hover        { border-color: #BA7517; color: #854F0B; }
-    .tag-pill.active       { background: #FAEEDA; border-color: #BA7517; color: #854F0B; font-weight: 600; }
+    .tag-pill:hover        { border-color: var(--badge-border); color: var(--badge-accent); }
+    .tag-pill.active       { background: var(--badge-bg); border-color: var(--badge-border); color: var(--badge-accent); font-weight: 600; }
     .tag-pill.suggested    { border-color: rgba(186,117,23,.4); color: rgba(133,79,11,.7); border-style: dashed; }
 
     /* ── Collection tag filter bar ── */
@@ -1206,7 +1214,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* Badge toast */
     .badge-toast {
       position: fixed; bottom: 1.75rem; left: 50%; transform: translate(-50%, 80px);
-      background: #FBF6E8; border: 1px solid rgba(107,86,24,0.25);
+      background: var(--badge-bg2); border: 1px solid rgba(107,86,24,0.25);
       border-radius: 14px; padding: .8rem 1.2rem;
       font-size: .85rem; z-index: 410;
       box-shadow: 0 8px 32px rgba(0,0,0,.15), 0 0 12px rgba(184,149,42,0.06);
@@ -1226,7 +1234,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .badge-wall-card:active { background: rgba(107,86,24,0.06); }
     .badge-wall-card.locked { opacity: .6; }
-    .badge-wall-name { font-size: .72rem; color: #3D2A14; margin-top: .35rem; line-height: 1.2; }
+    .badge-wall-name { font-size: .72rem; color: var(--badge-text); margin-top: .35rem; line-height: 1.2; }
     .badge-wall-ref { font-size: .6rem; color: rgba(107,86,24,0.5); font-family: monospace; margin-top: .15rem; }
     .badge-wall-date { font-size: .58rem; color: rgba(107,86,24,0.4); margin-top: .1rem; }
     .badge-cat-chip {
@@ -1415,7 +1423,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .af2-row.af2-skipped { opacity:.5; }
     .af2-avatar { width:40px; height:40px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:500; color:#fff; position:relative; }
     .af2-avatar-gray { background:var(--bg-secondary, #2a2a3e); color:var(--muted); }
-    .af2-avatar-gold { background:#854F0B; }
+    .af2-avatar-gold { background:var(--badge-accent); }
     .af2-spinner-sm { display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
     .af2-spinner-gold { display:inline-block; width:16px; height:16px; border:2px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:spin .7s linear infinite; }
     .af2-info { flex:1; min-width:0; }
@@ -1424,20 +1432,20 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .af2-ref { font-size:12px; color:var(--muted); margin-top:1px; }
     .af2-specs { font-size:11px; color:var(--tertiary, var(--muted)); margin-top:2px; }
     .af2-status { font-size:11px; margin-top:3px; }
-    .af2-status-gold { color:#854F0B; }
+    .af2-status-gold { color:var(--badge-accent); }
     .af2-status-green { color:#3B6D11; }
     .af2-status-muted { color:var(--muted); }
     .af2-actions { display:flex; flex-direction:column; gap:4px; flex-shrink:0; align-items:flex-end; }
-    .af2-btn-confirm { background:#854F0B; color:#fff; border:none; font-size:12px; font-weight:500; padding:6px 12px; border-radius:6px; cursor:pointer; font-family:inherit; }
-    .af2-btn-edit { background:transparent; color:#854F0B; border:1px solid #854F0B; font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer; font-family:inherit; }
+    .af2-btn-confirm { background:var(--badge-accent); color:#fff; border:none; font-size:12px; font-weight:500; padding:6px 12px; border-radius:6px; cursor:pointer; font-family:inherit; }
+    .af2-btn-edit { background:transparent; color:var(--badge-accent); border:1px solid var(--badge-accent); font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer; font-family:inherit; }
     .af2-btn-skip { background:none; border:none; color:var(--muted); font-size:14px; cursor:pointer; padding:2px 4px; line-height:1; }
-    .af2-btn-undo { background:none; border:none; color:#854F0B; font-size:11px; cursor:pointer; font-family:inherit; padding:2px 4px; }
+    .af2-btn-undo { background:none; border:none; color:var(--badge-accent); font-size:11px; cursor:pointer; font-family:inherit; padding:2px 4px; }
     .af2-check-gold { color:var(--gold); font-size:14px; }
     .af2-check-green { color:#3B6D11; font-size:13px; }
     .af2-theater-text { transition:opacity .2s; }
     .af2-warn-chip { display:inline-block; background:rgba(251,191,36,.15); color:#92400E; font-size:10px; font-weight:500; padding:2px 6px; border-radius:4px; margin-top:3px; }
     .af2-strikethrough { text-decoration:line-through; }
-    .af2-view-link { background:none; border:none; color:#854F0B; font-size:11px; cursor:pointer; font-family:inherit; padding:0; }
+    .af2-view-link { background:none; border:none; color:var(--badge-accent); font-size:11px; cursor:pointer; font-family:inherit; padding:0; }
     .af2-dot-gray { width:6px; height:6px; border-radius:50%; background:var(--muted); opacity:.5; }
 
     /* ── AI PRE-FILL BANNER ── */
@@ -2174,7 +2182,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New
     </div>
     <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;">
-      <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(74,222,128,.12);color:#4ade80;padding:.15rem .5rem;border-radius:6px;">June 2026</span>
+      <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(74,222,128,.12);color:var(--success);padding:.15rem .5rem;border-radius:6px;">June 2026</span>
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
       <div style="margin-bottom:.75rem;">
@@ -4233,8 +4241,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <div class="modal-actions" style="flex-wrap:nowrap;gap:.4rem;">
       <button id="save-watch-btn" class="btn btn-primary" onclick="saveWatch()" style="flex:1;">Save</button>
-      <button type="button" id="footer-enhance-btn" onclick="enhanceSingleWatch()" style="display:none;background:#FAEEDA;border:0.5px solid #BA7517;color:#854F0B;font-size:.78rem;font-weight:500;font-family:inherit;padding:9px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;">⭐ Enhance</button>
-      <button type="button" id="footer-value-btn" onclick="checkSingleWatchValue()" style="display:none;background:#FAEEDA;border:0.5px solid #BA7517;color:#854F0B;font-size:.78rem;font-weight:500;font-family:inherit;padding:9px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;">$ Value</button>
+      <button type="button" id="footer-enhance-btn" onclick="enhanceSingleWatch()" style="display:none;background:var(--badge-bg);border:0.5px solid var(--badge-border);color:var(--badge-accent);font-size:.78rem;font-weight:500;font-family:inherit;padding:9px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;">⭐ Enhance</button>
+      <button type="button" id="footer-value-btn" onclick="checkSingleWatchValue()" style="display:none;background:var(--badge-bg);border:0.5px solid var(--badge-border);color:var(--badge-accent);font-size:.78rem;font-weight:500;font-family:inherit;padding:9px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;">$ Value</button>
       <button class="btn btn-danger" id="modal-delete-btn" style="display:none;" onclick="openDelModal(editingId);closeWatchModal();" aria-label="Delete watch">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
       </button>
@@ -4309,7 +4317,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="af2-sheet" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="af2-sheet-title">
   <div class="modal" style="max-width:480px;">
     <div class="modal-title" id="af2-sheet-title" style="display:flex;align-items:center;gap:.5rem;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#854F0B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--badge-accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
       <span id="af2-title-text" style="flex:1;">Identifying Watches</span>
       <span id="af2-progress-chip" style="font-size:11px;color:var(--muted);display:none;"></span>
     </div>
@@ -4990,8 +4998,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
 <div id="toast" class="toast" aria-live="polite" role="status"></div>
 <div id="badge-toast" class="badge-toast" aria-live="polite"></div>
-<div id="badge-wall-modal" class="overlay hidden"><div class="modal" style="max-width:520px;background:#FBF6E8;border-color:rgba(107,86,24,0.2);position:relative;"><button onclick="closeBadgeWall()" style="position:absolute;top:.5rem;right:.75rem;background:none;border:none;color:#6B5618;font-size:1.4rem;cursor:pointer;line-height:1;opacity:.5;">&times;</button><div id="badge-wall-content"></div></div></div>
-<div id="badge-detail-modal" class="overlay hidden" style="z-index:210;"><div class="modal" style="max-width:360px;background:#FBF6E8;border-color:rgba(107,86,24,0.2);position:relative;"><button onclick="closeBadgeDetail()" style="position:absolute;top:.5rem;right:.75rem;background:none;border:none;color:#6B5618;font-size:1.4rem;cursor:pointer;line-height:1;opacity:.5;">&times;</button><div id="badge-detail-content"></div></div></div>
+<div id="badge-wall-modal" class="overlay hidden"><div class="modal" style="max-width:520px;background:var(--badge-bg2);border-color:rgba(107,86,24,0.2);position:relative;"><button onclick="closeBadgeWall()" style="position:absolute;top:.5rem;right:.75rem;background:none;border:none;color:var(--badge-close);font-size:1.4rem;cursor:pointer;line-height:1;opacity:.5;">&times;</button><div id="badge-wall-content"></div></div></div>
+<div id="badge-detail-modal" class="overlay hidden" style="z-index:210;"><div class="modal" style="max-width:360px;background:var(--badge-bg2);border-color:rgba(107,86,24,0.2);position:relative;"><button onclick="closeBadgeDetail()" style="position:absolute;top:.5rem;right:.75rem;background:none;border:none;color:var(--badge-close);font-size:1.4rem;cursor:pointer;line-height:1;opacity:.5;">&times;</button><div id="badge-detail-content"></div></div></div>
 
 <script>
 // Prevent iOS PWA from restoring previous scroll position on launch
@@ -5066,7 +5074,7 @@ let OFFICIAL_USER_ID = null; // resolved at init from profiles.is_official
 // ── BADGE / ACHIEVEMENT SYSTEM ────────────────────────────────────────────
 const BADGE_COLORS = {
   onboarding:  { bezel: '#7A8B5C', stroke: '#4F5C3A', chipBg: '#E8EFD9', chipText: '#4F5C3A' },
-  collection:  { bezel: '#B8952A', stroke: '#6B5618', chipBg: '#F0E4BD', chipText: '#6B5618' },
+  collection:  { bezel: 'var(--badge-tier)', stroke: 'var(--badge-close)', chipBg: '#F0E4BD', chipText: 'var(--badge-close)' },
   connoisseur: { bezel: '#6B3D52', stroke: '#3F2230', chipBg: '#ECDAE3', chipText: '#3F2230' },
   timegrapher: { bezel: '#4A6B7D', stroke: '#2C434F', chipBg: '#DCE6EC', chipText: '#2C434F' },
   habit:       { bezel: '#B5663F', stroke: '#6B3A1F', chipBg: '#F0DCCE', chipText: '#6B3A1F' },
@@ -5077,167 +5085,167 @@ const BADGE_REGISTRY = [
   { ref: 1, slug: 'first_watch', name: 'First Watch', category: 'onboarding',
     flavor: 'First watch in the box. The catalog begins.',
     unlock: 'Add your first watch to the collection.',
-    glyph: '<path d="M50 25v50M36 30l14-5 14 5M36 70l14 5 14-5M32 50h36" stroke="#3D2A14" stroke-width="2.2" fill="none" stroke-linecap="round"/>',
+    glyph: '<path d="M50 25v50M36 30l14-5 14 5M36 70l14 5 14-5M32 50h36" stroke="var(--badge-text)" stroke-width="2.2" fill="none" stroke-linecap="round"/>',
     isHidden: false },
   { ref: 2, slug: 'first_measurement', name: 'First Measurement', category: 'onboarding',
     flavor: 'Your first rate reading is on the books.',
     unlock: 'Complete your first timegrapher measurement.',
-    glyph: '<circle cx="50" cy="50" r="18" stroke="#3D2A14" stroke-width="2" fill="none"/><path d="M50 36v14l9 9" stroke="#3D2A14" stroke-width="2.2" fill="none" stroke-linecap="round"/>',
+    glyph: '<circle cx="50" cy="50" r="18" stroke="var(--badge-text)" stroke-width="2" fill="none"/><path d="M50 36v14l9 9" stroke="var(--badge-text)" stroke-width="2.2" fill="none" stroke-linecap="round"/>',
     isHidden: false },
   { ref: 3, slug: 'first_wear', name: 'First Wear', category: 'onboarding',
     flavor: 'First wear logged. The rotation has started.',
     unlock: 'Log your first wear entry.',
-    glyph: '<path d="M50 28c-12 0-20 8-20 20v4c0 12 8 20 20 20s20-8 20-20v-4c0-12-8-20-20-20z" stroke="#3D2A14" stroke-width="2" fill="none"/><path d="M40 50h20M50 40v20" stroke="#3D2A14" stroke-width="2" stroke-linecap="round"/>',
+    glyph: '<path d="M50 28c-12 0-20 8-20 20v4c0 12 8 20 20 20s20-8 20-20v-4c0-12-8-20-20-20z" stroke="var(--badge-text)" stroke-width="2" fill="none"/><path d="M40 50h20M50 40v20" stroke="var(--badge-text)" stroke-width="2" stroke-linecap="round"/>',
     isHidden: false },
   { ref: 4, slug: 'first_post', name: 'First Post', category: 'onboarding',
     flavor: 'Your first post is live. Welcome to the feed.',
     unlock: 'Publish your first post to the social feed.',
-    glyph: '<rect x="30" y="30" width="40" height="40" rx="4" stroke="#3D2A14" stroke-width="2" fill="none"/><path d="M38 45h24M38 55h16" stroke="#3D2A14" stroke-width="2.2" stroke-linecap="round"/>',
+    glyph: '<rect x="30" y="30" width="40" height="40" rx="4" stroke="var(--badge-text)" stroke-width="2" fill="none"/><path d="M38 45h24M38 55h16" stroke="var(--badge-text)" stroke-width="2.2" stroke-linecap="round"/>',
     isHidden: false },
   { ref: 5, slug: 'profile_complete', name: 'Profile Complete', category: 'onboarding',
     flavor: 'Profile complete. The community can find you.',
     unlock: 'Set name, profile photo, and bio.',
-    glyph: '<circle cx="50" cy="40" r="10" stroke="#3D2A14" stroke-width="2" fill="none"/><path d="M30 72c0-11 9-20 20-20s20 9 20 20" stroke="#3D2A14" stroke-width="2" fill="none" stroke-linecap="round"/>',
+    glyph: '<circle cx="50" cy="40" r="10" stroke="var(--badge-text)" stroke-width="2" fill="none"/><path d="M30 72c0-11 9-20 20-20s20 9 20 20" stroke="var(--badge-text)" stroke-width="2" fill="none" stroke-linecap="round"/>',
     isHidden: false },
   { ref: 6, slug: 'getting_started', name: 'Getting Started', category: 'onboarding',
     flavor: "Collection, a wear, a measurement — you're all set.",
     unlock: 'Add a watch, log a wear, and measure your accuracy.',
-    glyph: '<path d="M34 51l11 11 21-25" stroke="#3D2A14" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    glyph: '<path d="M34 51l11 11 21-25" stroke="var(--badge-text)" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
     isHidden: false },
   // Collection milestones (020-023)
   { ref: 20, slug: 'five_in_box', name: 'Five in the Box', category: 'collection', tier: 1,
     flavor: 'Five watches. A proper rotation.',
     unlock: 'Have 5 watches in your collection.',
-    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="42" font-family="Georgia,serif" font-style="italic">V</text>',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="var(--badge-text)" font-size="42" font-family="Georgia,serif" font-style="italic">V</text>',
     isHidden: false },
   { ref: 21, slug: 'ten_in_box', name: 'Ten in the Box', category: 'collection', tier: 2,
     flavor: 'Ten watches. Serious collector territory.',
     unlock: 'Have 10 watches in your collection.',
-    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="42" font-family="Georgia,serif" font-style="italic">X</text>',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="var(--badge-text)" font-size="42" font-family="Georgia,serif" font-style="italic">X</text>',
     isHidden: false },
   { ref: 22, slug: 'fifteen_deep', name: 'Fifteen Deep', category: 'collection', tier: 3,
     flavor: 'Fifteen deep. The vault grows.',
     unlock: 'Have 15 watches in your collection.',
-    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="38" font-family="Georgia,serif" font-style="italic">XV</text>',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="var(--badge-text)" font-size="38" font-family="Georgia,serif" font-style="italic">XV</text>',
     isHidden: false },
   { ref: 23, slug: 'twenty_strong', name: 'Twenty Strong', category: 'collection', tier: 4,
     flavor: 'Twenty strong. Museum-grade.',
     unlock: 'Have 20 watches in your collection.',
-    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="36" font-family="Georgia,serif" font-style="italic">XX</text>',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="var(--badge-text)" font-size="36" font-family="Georgia,serif" font-style="italic">XX</text>',
     isHidden: false },
   // Connoisseur (040-044)
   { ref: 40, slug: 'holy_trinity', name: 'Holy Trinity', category: 'connoisseur',
     flavor: 'Patek. AP. Vacheron. The trinity is complete.',
     unlock: 'Own at least one watch each from Patek Philippe, Audemars Piguet, and Vacheron Constantin.',
-    glyph: '<polygon points="50,26 68,68 32,68" stroke="#3D2A14" stroke-width="2.2" fill="none" stroke-linejoin="round"/><circle cx="50" cy="56" r="4" fill="#3D2A14"/>',
+    glyph: '<polygon points="50,26 68,68 32,68" stroke="var(--badge-text)" stroke-width="2.2" fill="none" stroke-linejoin="round"/><circle cx="50" cy="56" r="4" fill="var(--badge-text)"/>',
     isHidden: false },
   { ref: 42, slug: 'vintage_piece', name: 'Vintage Piece', category: 'connoisseur',
     flavor: 'Vintage on the wrist. History on the dial.',
     unlock: 'Own a watch with year <= 1990.',
-    glyph: '<circle cx="50" cy="50" r="18" stroke="#3D2A14" stroke-width="2" fill="none"/><path d="M50 36v14" stroke="#3D2A14" stroke-width="2" stroke-linecap="round"/><path d="M50 60v4M42 50h-4M58 50h4" stroke="#3D2A14" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>',
+    glyph: '<circle cx="50" cy="50" r="18" stroke="var(--badge-text)" stroke-width="2" fill="none"/><path d="M50 36v14" stroke="var(--badge-text)" stroke-width="2" stroke-linecap="round"/><path d="M50 60v4M42 50h-4M58 50h4" stroke="var(--badge-text)" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>',
     isHidden: false },
   { ref: 43, slug: 'brand_devotee', name: 'Brand Devotee', category: 'connoisseur',
     flavor: 'Three from one house. Devotion runs deep.',
     unlock: 'Own 3+ watches from the same brand.',
-    glyph: '<circle cx="38" cy="50" r="8" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="50" cy="50" r="8" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="62" cy="50" r="8" stroke="#3D2A14" stroke-width="2" fill="none"/>',
+    glyph: '<circle cx="38" cy="50" r="8" stroke="var(--badge-text)" stroke-width="2" fill="none"/><circle cx="50" cy="50" r="8" stroke="var(--badge-text)" stroke-width="2" fill="none"/><circle cx="62" cy="50" r="8" stroke="var(--badge-text)" stroke-width="2" fill="none"/>',
     isHidden: false },
   { ref: 44, slug: 'complication_collector', name: 'Complication Collector', category: 'connoisseur',
     flavor: 'Four complications. A connoisseur\'s breadth.',
     unlock: 'Own watches representing 4+ distinct complication types.',
-    glyph: '<circle cx="40" cy="40" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="60" cy="40" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="40" cy="60" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="60" cy="60" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/>',
+    glyph: '<circle cx="40" cy="40" r="7" stroke="var(--badge-text)" stroke-width="2" fill="none"/><circle cx="60" cy="40" r="7" stroke="var(--badge-text)" stroke-width="2" fill="none"/><circle cx="40" cy="60" r="7" stroke="var(--badge-text)" stroke-width="2" fill="none"/><circle cx="60" cy="60" r="7" stroke="var(--badge-text)" stroke-width="2" fill="none"/>',
     isHidden: false },
   // Timegrapher (060-063)
   { ref: 60, slug: 'chronometer_grade', name: 'Chronometer Grade', category: 'timegrapher',
     flavor: 'Within COSC spec. Precision confirmed.',
     unlock: 'Submit a measurement with rate between -4 and +6 s/day (>=60s duration).',
-    glyph: '<path d="M50 28l-5 14h-14l11 8-4 14 12-9 12 9-4-14 11-8h-14z" fill="#B8952A" stroke="#6B5618" stroke-width="0.6" stroke-linejoin="round"/>',
+    glyph: '<path d="M50 28l-5 14h-14l11 8-4 14 12-9 12 9-4-14 11-8h-14z" fill="var(--badge-tier)" stroke="var(--badge-close)" stroke-width="0.6" stroke-linejoin="round"/>',
     isHidden: false },
   { ref: 61, slug: 'ten_measurements', name: 'Ten Measurements', category: 'timegrapher',
     flavor: 'Ten readings in the book. The data grows.',
     unlock: 'Log 10 total timegrapher measurements.',
-    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="38" font-family="Georgia,serif" font-style="italic">10</text>',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="var(--badge-text)" font-size="38" font-family="Georgia,serif" font-style="italic">10</text>',
     isHidden: false },
   { ref: 62, slug: 'full_audit', name: 'Full Audit', category: 'timegrapher',
     flavor: 'Every watch measured. Full audit complete.',
     unlock: 'Have at least one measurement for every watch in your collection (min 3 watches).',
-    glyph: '<path d="M34 50l10 10 22-22" stroke="#3D2A14" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="50" r="20" stroke="#3D2A14" stroke-width="2" fill="none"/>',
+    glyph: '<path d="M34 50l10 10 22-22" stroke="var(--badge-text)" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="50" r="20" stroke="var(--badge-text)" stroke-width="2" fill="none"/>',
     isHidden: false },
   { ref: 63, slug: 'caught_a_drifter', name: 'Caught a Drifter', category: 'timegrapher',
     flavor: 'Spotted the drift, tracked the fix.',
     unlock: 'Log a reading worse than +/-30 s/day, then a follow-up within 90 days under +/-15 s/day on the same watch.',
-    glyph: '<path d="M28 55c6-20 14-20 18 0s12 20 18 0" stroke="#3D2A14" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M28 50h44" stroke="#3D2A14" stroke-width="0.8" opacity="0.35" stroke-dasharray="3,3"/>',
+    glyph: '<path d="M28 55c6-20 14-20 18 0s12 20 18 0" stroke="var(--badge-text)" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M28 50h44" stroke="var(--badge-text)" stroke-width="0.8" opacity="0.35" stroke-dasharray="3,3"/>',
     isHidden: false },
   // Habit (080-082)
   { ref: 80, slug: 'seven_day_streak', name: 'Seven-Day Streak', category: 'habit',
     flavor: 'Seven days straight. The habit is forming.',
     unlock: 'Log a wear entry on 7 consecutive days.',
-    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="40" font-family="Georgia,serif" font-style="italic">7</text>',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="var(--badge-text)" font-size="40" font-family="Georgia,serif" font-style="italic">7</text>',
     isHidden: false },
   { ref: 81, slug: 'thirty_day_streak', name: 'Thirty-Day Streak', category: 'habit',
     flavor: 'Thirty days. The rotation is a ritual.',
     unlock: 'Log a wear entry on 30 consecutive days.',
-    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="36" font-family="Georgia,serif" font-style="italic">30</text>',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="var(--badge-text)" font-size="36" font-family="Georgia,serif" font-style="italic">30</text>',
     isHidden: false },
   { ref: 83, slug: 'five_day_streak', name: 'Five-Day Streak', category: 'habit',
     flavor: 'Five days running. The habit takes hold.',
     unlock: 'Activity on 5 consecutive days.',
-    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="40" font-family="Georgia,serif" font-style="italic">5</text>',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="var(--badge-text)" font-size="40" font-family="Georgia,serif" font-style="italic">5</text>',
     isHidden: false },
   { ref: 84, slug: 'ten_day_streak', name: 'Ten-Day Streak', category: 'habit',
     flavor: 'Ten in a row. Momentum.',
     unlock: 'Activity on 10 consecutive days.',
-    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="36" font-family="Georgia,serif" font-style="italic">10</text>',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="var(--badge-text)" font-size="36" font-family="Georgia,serif" font-style="italic">10</text>',
     isHidden: false },
   { ref: 85, slug: 'twenty_day_streak', name: 'Twenty-Day Streak', category: 'habit',
     flavor: 'Twenty straight. Dedication shows.',
     unlock: 'Activity on 20 consecutive days.',
-    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="36" font-family="Georgia,serif" font-style="italic">20</text>',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="var(--badge-text)" font-size="36" font-family="Georgia,serif" font-style="italic">20</text>',
     isHidden: false },
   { ref: 86, slug: 'fifty_day_streak', name: 'Fifty-Day Streak', category: 'habit',
     flavor: 'Fifty days. Unbroken.',
     unlock: 'Activity on 50 consecutive days.',
-    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="36" font-family="Georgia,serif" font-style="italic">50</text>',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="var(--badge-text)" font-size="36" font-family="Georgia,serif" font-style="italic">50</text>',
     isHidden: false },
   { ref: 87, slug: 'hundred_day_streak', name: 'Hundred-Day Streak', category: 'habit',
     flavor: 'One hundred days. Remarkable.',
     unlock: 'Activity on 100 consecutive days.',
-    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="30" font-family="Georgia,serif" font-style="italic">100</text>',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="var(--badge-text)" font-size="30" font-family="Georgia,serif" font-style="italic">100</text>',
     isHidden: false },
   { ref: 88, slug: 'year_streak', name: 'Year-Long Streak', category: 'habit',
     flavor: 'A full year, every day. Legendary.',
     unlock: 'Activity on 365 consecutive days.',
-    glyph: '<text x="50" y="62" text-anchor="middle" fill="#3D2A14" font-size="28" font-family="Georgia,serif" font-style="italic">365</text>',
+    glyph: '<text x="50" y="62" text-anchor="middle" fill="var(--badge-text)" font-size="28" font-family="Georgia,serif" font-style="italic">365</text>',
     isHidden: false },
   { ref: 82, slug: 'balanced_quarter', name: 'Balanced Quarter', category: 'habit',
     flavor: 'No single watch dominates. True rotation.',
     unlock: 'Over 90 days, no watch exceeds 40% of wear days, with 4+ watches worn.',
-    glyph: '<circle cx="38" cy="42" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="62" cy="42" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="38" cy="60" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="62" cy="60" r="7" stroke="#3D2A14" stroke-width="2" fill="none"/>',
+    glyph: '<circle cx="38" cy="42" r="7" stroke="var(--badge-text)" stroke-width="2" fill="none"/><circle cx="62" cy="42" r="7" stroke="var(--badge-text)" stroke-width="2" fill="none"/><circle cx="38" cy="60" r="7" stroke="var(--badge-text)" stroke-width="2" fill="none"/><circle cx="62" cy="60" r="7" stroke="var(--badge-text)" stroke-width="2" fill="none"/>',
     isHidden: false },
   { ref: 7, slug: 'daily_double', name: 'Daily Double', category: 'habit',
     flavor: 'Two watches, one day. Hard to pick just one.',
     unlock: 'Wear two different watches on the same day.',
-    glyph: '<circle cx="37" cy="50" r="14" stroke="#3D2A14" stroke-width="2.2" fill="none"/><path d="M37 50V42" stroke="#3D2A14" stroke-width="2" stroke-linecap="round"/><circle cx="63" cy="50" r="14" stroke="#3D2A14" stroke-width="2.2" fill="none"/><path d="M63 50V42" stroke="#3D2A14" stroke-width="2" stroke-linecap="round"/>',
+    glyph: '<circle cx="37" cy="50" r="14" stroke="var(--badge-text)" stroke-width="2.2" fill="none"/><path d="M37 50V42" stroke="var(--badge-text)" stroke-width="2" stroke-linecap="round"/><circle cx="63" cy="50" r="14" stroke="var(--badge-text)" stroke-width="2.2" fill="none"/><path d="M63 50V42" stroke="var(--badge-text)" stroke-width="2" stroke-linecap="round"/>',
     isHidden: false },
   // Hidden easter eggs (100+)
   { ref: 100, slug: 'high_noon', name: 'High Noon', category: 'hidden',
     flavor: 'Measured at the stroke of noon.',
     unlock: 'Submit a measurement between 11:58 and 12:02 local time.',
-    glyph: '<circle cx="50" cy="50" r="18" stroke="#3D2A14" stroke-width="2" fill="none"/><path d="M50 36v14M50 33v-2" stroke="#3D2A14" stroke-width="2.2" fill="none" stroke-linecap="round"/>',
+    glyph: '<circle cx="50" cy="50" r="18" stroke="var(--badge-text)" stroke-width="2" fill="none"/><path d="M50 36v14M50 33v-2" stroke="var(--badge-text)" stroke-width="2.2" fill="none" stroke-linecap="round"/>',
     isHidden: true },
   { ref: 101, slug: 'full_moon', name: 'Full Moon', category: 'hidden',
     flavor: 'Moonphase aligned with the real thing.',
     unlock: 'Log wear on a moonphase watch during a full moon.',
-    glyph: '<circle cx="52" cy="50" r="16" fill="#3D2A14"/><circle cx="44" cy="50" r="16" fill="#FEFCF6"/>',
+    glyph: '<circle cx="52" cy="50" r="16" fill="var(--badge-text)"/><circle cx="44" cy="50" r="16" fill="#FEFCF6"/>',
     isHidden: true },
   { ref: 102, slug: 'birthday_boy', name: 'Birthday Boy', category: 'hidden',
     flavor: 'A wear on your birthday. Cheers.',
     unlock: 'Log a wear entry on your birthday.',
-    glyph: '<rect x="36" y="42" width="28" height="24" rx="3" stroke="#3D2A14" stroke-width="2" fill="none"/><path d="M44 42v-8M56 42v-8M44 34c0-5 12-5 12 0" stroke="#3D2A14" stroke-width="2" fill="none" stroke-linecap="round"/>',
+    glyph: '<rect x="36" y="42" width="28" height="24" rx="3" stroke="var(--badge-text)" stroke-width="2" fill="none"/><path d="M44 42v-8M56 42v-8M44 34c0-5 12-5 12 0" stroke="var(--badge-text)" stroke-width="2" fill="none" stroke-linecap="round"/>',
     isHidden: true },
   { ref: 103, slug: 'leap_second', name: 'Leap Second', category: 'hidden',
     flavor: 'One extra second. You caught it.',
     unlock: 'Submit a measurement on June 30 or December 31 near midnight UTC.',
-    glyph: '<text x="50" y="60" text-anchor="middle" fill="#3D2A14" font-size="30" font-family="monospace" font-weight="bold">:61</text>',
+    glyph: '<text x="50" y="60" text-anchor="middle" fill="var(--badge-text)" font-size="30" font-family="monospace" font-weight="bold">:61</text>',
     isHidden: true },
 ];
 const BADGE_BY_REF = {};
@@ -5274,7 +5282,7 @@ function badgeMedallionSvg(badge, size, earned) {
   return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
     <circle cx="50" cy="50" r="48" fill="#C9C2A8"/>
     <circle cx="50" cy="50" r="44" fill="#FEFCF6" stroke="#A8A28C" stroke-width="0.4"/>
-    <g opacity="0.4"><rect x="44" y="42" width="12" height="16" rx="2.5" stroke="#3D2A14" stroke-width="2" fill="none"/><circle cx="50" cy="40" r="4" stroke="#3D2A14" stroke-width="2" fill="none"/></g>
+    <g opacity="0.4"><rect x="44" y="42" width="12" height="16" rx="2.5" stroke="var(--badge-text)" stroke-width="2" fill="none"/><circle cx="50" cy="40" r="4" stroke="var(--badge-text)" stroke-width="2" fill="none"/></g>
   </svg>`;
 }
 function badgePostPlan(newlyEarned, context, postId) {
@@ -5339,14 +5347,14 @@ function _drainBadgeToast() {
     const cc = BADGE_COLORS[b.category] || BADGE_COLORS.hidden;
     el.innerHTML = `<div style="display:flex;align-items:center;gap:.75rem;cursor:pointer;" onclick="openBadgeWall()">
       ${badgeMedallionSvg(b, 56, true)}
-      <div><div style="font-size:.82rem;font-weight:600;color:#3D2A14;">${escHtml(b.name)}</div>
+      <div><div style="font-size:.82rem;font-weight:600;color:var(--badge-text);">${escHtml(b.name)}</div>
       <div style="font-size:.72rem;color:${cc.stroke};margin-top:.15rem;">${escHtml(b.flavor)}</div></div>
     </div>`;
   } else {
     const medallions = batch.map(b => badgeMedallionSvg(b, 44, true)).join('');
     el.innerHTML = `<div style="display:flex;align-items:center;gap:.75rem;cursor:pointer;" onclick="openBadgeWall()">
       <div style="display:flex;gap:.25rem;">${medallions}</div>
-      <div style="font-size:.82rem;font-weight:600;color:#3D2A14;">${batch.length} badges unlocked</div>
+      <div style="font-size:.82rem;font-weight:600;color:var(--badge-text);">${batch.length} badges unlocked</div>
     </div>`;
   }
   el.classList.add('show');
@@ -5404,7 +5412,7 @@ function openBadgeWall() {
 
   const content = `
     <div style="text-align:center;margin-bottom:1.2rem;">
-      <div style="font-size:1rem;font-weight:600;color:#3D2A14;">Achievements</div>
+      <div style="font-size:1rem;font-weight:600;color:var(--badge-text);">Achievements</div>
       <div style="font-size:.78rem;color:rgba(61,42,20,0.5);margin-top:.25rem;">${earnedCount} of ${totalVisible} earned</div>
     </div>
     ${earnedCards ? '<div style="margin-bottom:.6rem;font-size:.72rem;color:rgba(61,42,20,0.45);text-transform:uppercase;letter-spacing:1px;">Earned</div><div class="badge-wall-grid">' + earnedCards + '</div>' : ''}
@@ -5437,7 +5445,7 @@ function openBadgeDetail(ref) {
   el.innerHTML = `
     <div style="text-align:center;">
       ${badgeMedallionSvg(b, 240, earned)}
-      <div style="font-size:1.05rem;font-weight:600;color:#3D2A14;margin-top:.75rem;">${escHtml(b.name)}</div>
+      <div style="font-size:1.05rem;font-weight:600;color:var(--badge-text);margin-top:.75rem;">${escHtml(b.name)}</div>
       <div style="font-size:.75rem;color:rgba(61,42,20,0.45);font-family:monospace;margin-top:.25rem;">${badgeRefLabel(b.ref)}</div>
       <div style="margin-top:.4rem;">${catChip}</div>
       ${earned ? `<div style="font-size:.82rem;color:rgba(61,42,20,0.7);margin-top:.6rem;font-style:italic;">${escHtml(b.flavor)}</div>` : ''}
@@ -6625,7 +6633,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.20.09';
+const APP_VERSION = '27.20.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13248,7 +13256,7 @@ function renderReportCard(r) {
   const date = new Date(r.created_at).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
   const reporterName = r._reporter?.display_name || r._reporter?.username || 'Unknown';
   const reportedName = r._reported?.display_name || r._reported?.username || 'Unknown';
-  const statusCls = r.status === 'pending' ? 'color:var(--gold)' : r.status === 'actioned' ? 'color:#22c55e' : 'color:var(--muted)';
+  const statusCls = r.status === 'pending' ? 'color:var(--gold)' : r.status === 'actioned' ? 'color:var(--success)' : 'color:var(--muted)';
 
   let contentPreview = '';
   if (r._content) {
@@ -13265,7 +13273,7 @@ function renderReportCard(r) {
   }
 
   return `
-    <div class="fb-card" style="margin-bottom:.75rem;padding:.75rem;border-left:3px solid ${r.status === 'pending' ? 'var(--gold)' : r.status === 'actioned' ? '#22c55e' : 'var(--muted)'};">
+    <div class="fb-card" style="margin-bottom:.75rem;padding:.75rem;border-left:3px solid ${r.status === 'pending' ? 'var(--gold)' : r.status === 'actioned' ? 'var(--success)' : 'var(--muted)'};">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem;">
         <span class="fb-type-badge" style="text-transform:capitalize;">${escHtml(r.reason)}</span>
         <span style="font-size:.72rem;${statusCls};font-weight:600;text-transform:uppercase;">${r.status}</span>
@@ -13456,7 +13464,7 @@ async function loadAdminStats() {
     const internalList = allProfiles.filter(p => INTERNAL_IDS.has(p.id)).map(toProfileItem);
 
     const statRow = (label, value, delta) => {
-      const deltaHtml = delta != null ? `<span style="color:${delta > 0 ? '#4ade80' : 'var(--muted)'};font-size:.68rem;font-weight:500;margin-left:.4rem;">${delta > 0 ? '+' : ''}${delta}</span>` : '';
+      const deltaHtml = delta != null ? `<span style="color:${delta > 0 ? 'var(--success)' : 'var(--muted)'};font-size:.68rem;font-weight:500;margin-left:.4rem;">${delta > 0 ? '+' : ''}${delta}</span>` : '';
       return `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span style="color:var(--text);">${label}</span><span style="color:var(--gold);font-weight:600;">${value}${deltaHtml}</span></div>`;
     };
 
@@ -13500,7 +13508,7 @@ async function loadAdminStats() {
             <div style="cursor:pointer;flex-shrink:0;" onclick="openAdminUserDetail('${u.id}')">${initHTML}</div>
             <div style="min-width:0;overflow:hidden;cursor:pointer;" onclick="openAdminUserDetail('${u.id}')"><div style="font-weight:600;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(u.name)}</div><div style="font-size:.62rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@${escHtml(u.username)} · ${u.joined}</div></div>
           </div></td>
-          ${cols.map(c => { const isNew = c.recentMs ? (u[c.key] && (Date.now() - u[c.key] < c.recentMs)) : (c.newKey && u[c.newKey] > 0); const cell = c.fmt ? c.fmt(u[c.key], u) : u[c.key]; return `<td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;${isNew ? 'color:#4ade80;font-weight:700;' : ''}">${cell}</td>`; }).join('')}
+          ${cols.map(c => { const isNew = c.recentMs ? (u[c.key] && (Date.now() - u[c.key] < c.recentMs)) : (c.newKey && u[c.newKey] > 0); const cell = c.fmt ? c.fmt(u[c.key], u) : u[c.key]; return `<td style="padding:.4rem .2rem;text-align:center;font-size:.78rem;border-bottom:1px solid var(--border);width:2.1rem;${isNew ? 'color:var(--success);font-weight:700;' : ''}">${cell}</td>`; }).join('')}
         </tr>`;
       }).join('');
       const container = document.getElementById(tableId);
@@ -13679,7 +13687,7 @@ async function openAdminUserDetail(userId) {
         ${row('Last active', lastActive + (lastActiveAgo ? ' <span style="font-size:.68rem;color:var(--muted);font-weight:400;">(' + lastActiveAgo + ')</span>' : ''))}
         ${row('Last open', lastOpen + (lastOpenAgo ? ' <span style="font-size:.68rem;color:var(--muted);font-weight:400;">(' + lastOpenAgo + ')</span>' : ''))}
         ${row('Active days', d.active_days)}
-        ${row('Repeat user', isRepeat ? '<span style="color:#4ade80;">Yes</span>' : '<span style="color:var(--muted);">No</span>')}
+        ${row('Repeat user', isRepeat ? '<span style="color:var(--success);">Yes</span>' : '<span style="color:var(--muted);">No</span>')}
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.6rem;margin-bottom:.75rem;">
@@ -13694,7 +13702,7 @@ async function openAdminUserDetail(userId) {
         <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);margin-bottom:.35rem;">Features Used</div>
         ${row('Measurements', d.measurements_total + (d.measurements_total > 0 ? ' <span style="font-size:.68rem;color:var(--muted);font-weight:400;">(' + msrRate + ' success)</span>' : ''))}
         ${row('Advanced mode', d.advanced_sessions > 0
-          ? '<span style="color:#4ade80;">' + d.advanced_sessions + ' session' + (d.advanced_sessions === 1 ? '' : 's') + '</span> <span style="font-size:.68rem;color:var(--muted);font-weight:400;">(last: ' + escHtml(d.advanced_last_preset || 'custom') + ')</span>'
+          ? '<span style="color:var(--success);">' + d.advanced_sessions + ' session' + (d.advanced_sessions === 1 ? '' : 's') + '</span> <span style="font-size:.68rem;color:var(--muted);font-weight:400;">(last: ' + escHtml(d.advanced_last_preset || 'custom') + ')</span>'
           : '<span style="color:var(--muted);">No</span>')}
         ${row('Enhances', d.enhances)}
         ${row('Value checks', d.price_checks)}
@@ -16682,7 +16690,7 @@ function updateStrapsSummary() {
   const onWrist = straps.find(s => s.onWrist);
   const count = straps.length;
   if (onWrist) {
-    sum.innerHTML = `${count} · ${escHtml(onWrist.name)} · <span style="color:#854F0B;">on wrist</span>`;
+    sum.innerHTML = `${count} · ${escHtml(onWrist.name)} · <span style="color:var(--badge-accent);">on wrist</span>`;
   } else {
     sum.textContent = String(count);
   }
@@ -16710,7 +16718,7 @@ function updateTypeSummary() {
   if (!sum) return;
   const tags = getSelectedTags();
   if (!tags.length) { sum.innerHTML = '<span style="color:var(--muted)">Add type tags</span>'; return; }
-  const pill = t => `<span style="font-size:10px;background:#FAEEDA;color:#854F0B;border:0.5px solid #BA7517;padding:1px 6px;border-radius:var(--radius);white-space:nowrap;">${escHtml(t)}</span>`;
+  const pill = t => `<span style="font-size:10px;background:var(--badge-bg);color:var(--badge-accent);border:0.5px solid var(--badge-border);padding:1px 6px;border-radius:var(--radius);white-space:nowrap;">${escHtml(t)}</span>`;
   if (tags.length <= 2) { sum.innerHTML = tags.map(pill).join(' '); return; }
   sum.innerHTML = tags.slice(0, 2).map(pill).join(' ') + ` <span style="font-size:10px;color:var(--muted);">+${tags.length - 2}</span>`;
 }
@@ -16754,25 +16762,25 @@ function renderStorySection() {
   const hasContent = desc || bg || fns;
   if (sum) sum.textContent = hasContent ? (desc ? (desc.length > 40 ? desc.slice(0, 40) + '…' : desc) : '—') : '—';
   if (!hasContent) {
-    el.innerHTML = `<div style="background:#FAEEDA;border-radius:8px;padding:10px 12px;">
-      <button type="button" class="btn btn-primary" onclick="enhanceSingleWatch()" style="width:100%;background:#854F0B;color:#fff;font-size:12px;font-weight:500;padding:9px;border-radius:8px;">⭐ Enhance with AI</button>
+    el.innerHTML = `<div style="background:var(--badge-bg);border-radius:8px;padding:10px 12px;">
+      <button type="button" class="btn btn-primary" onclick="enhanceSingleWatch()" style="width:100%;background:var(--badge-accent);color:#fff;font-size:12px;font-weight:500;padding:9px;border-radius:8px;">⭐ Enhance with AI</button>
     </div>`;
     return;
   }
-  let html = '<div style="background:#FAEEDA;border-radius:8px;padding:10px 12px;">';
+  let html = '<div style="background:var(--badge-bg);border-radius:8px;padding:10px 12px;">';
   if (desc) {
-    html += `<div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#633806;margin-bottom:3px;">Description</div>`;
+    html += `<div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--badge-deep);margin-bottom:3px;">Description</div>`;
     html += `<div style="font-size:12px;line-height:1.55;color:#412402;">${escHtml(desc)}</div>`;
   }
   if (bg) {
-    html += `<div style="margin-top:10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#633806;margin-bottom:3px;">Background &amp; History</div>`;
+    html += `<div style="margin-top:10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--badge-deep);margin-bottom:3px;">Background &amp; History</div>`;
     html += `<div style="font-size:12px;line-height:1.55;color:#412402;">${escHtml(bg)}</div>`;
   }
   if (fns) {
-    html += `<div style="margin-top:10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#633806;margin-bottom:3px;">Functions</div>`;
+    html += `<div style="margin-top:10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--badge-deep);margin-bottom:3px;">Functions</div>`;
     html += `<div style="font-size:12px;line-height:1.55;color:#412402;">${escHtml(fns)}</div>`;
   }
-  html += `<div style="margin-top:10px;"><button type="button" onclick="enhanceSingleWatch()" style="background:#fff;color:#854F0B;border:0.5px solid #BA7517;font-size:11px;font-family:inherit;padding:5px 12px;border-radius:6px;cursor:pointer;">⭐ Re-enhance</button></div>`;
+  html += `<div style="margin-top:10px;"><button type="button" onclick="enhanceSingleWatch()" style="background:#fff;color:var(--badge-accent);border:0.5px solid var(--badge-border);font-size:11px;font-family:inherit;padding:5px 12px;border-radius:6px;cursor:pointer;">⭐ Re-enhance</button></div>`;
   html += '</div>';
   el.innerHTML = html;
 }
@@ -17391,7 +17399,7 @@ function renderValueSection() {
   // Summary
   if (sum) {
     if (hasPending && !isSamePrice) {
-      sum.innerHTML = savedPrice ? `${fmtMoney(savedPrice)} <span style="color:#854F0B;font-weight:500;">· new price ${fmtMoney(pending)}</span>` : `<span style="color:#854F0B;font-weight:500;">new price ${fmtMoney(pending)}</span>`;
+      sum.innerHTML = savedPrice ? `${fmtMoney(savedPrice)} <span style="color:var(--badge-accent);font-weight:500;">· new price ${fmtMoney(pending)}</span>` : `<span style="color:var(--badge-accent);font-weight:500;">new price ${fmtMoney(pending)}</span>`;
     } else if (savedPrice && paid) {
       const diff = savedPrice - paid;
       const color = diff >= 0 ? '#3B6D11' : '#A32D2D';
@@ -17400,7 +17408,7 @@ function renderValueSection() {
     } else if (savedPrice) {
       sum.textContent = fmtMoney(savedPrice);
     } else {
-      sum.innerHTML = '<span style="color:#854F0B;">Check price</span>';
+      sum.innerHTML = '<span style="color:var(--badge-accent);">Check price</span>';
     }
   }
 
@@ -17413,7 +17421,7 @@ function renderValueSection() {
       <label>${mpLabel}</label>
       <input type="text" inputmode="decimal" id="w-mp-display" value="${savedPrice ? fmtMoney(savedPrice) : ''}" placeholder="$" autocomplete="off" oninput="fmtPriceInput(this);onManualMarketPriceEdit()">
     </div>
-    <button type="button" id="check-value-btn" onclick="checkSingleWatchValue()" style="background:#FAEEDA;border:none;color:var(--fg);font-size:11px;font-family:inherit;padding:5px 10px;border-radius:5px;cursor:pointer;white-space:nowrap;margin-bottom:1px;">${hasPending ? 'Re-check' : 'Check price'}</button>
+    <button type="button" id="check-value-btn" onclick="checkSingleWatchValue()" style="background:var(--badge-bg);border:none;color:var(--fg);font-size:11px;font-family:inherit;padding:5px 10px;border-radius:5px;cursor:pointer;white-space:nowrap;margin-bottom:1px;">${hasPending ? 'Re-check' : 'Check price'}</button>
   </div>`;
 
   // Pending price card (State B or B2)
@@ -17440,18 +17448,18 @@ function renderValueSection() {
     } else {
       // State B — different price
       const deltaColor = delta >= 0 ? '#3B6D11' : '#A32D2D';
-      html += `<div style="background:#FAEEDA;border:0.5px solid #BA7517;border-radius:8px;padding:10px 12px;margin-top:10px;">
+      html += `<div style="background:var(--badge-bg);border:0.5px solid var(--badge-border);border-radius:8px;padding:10px 12px;margin-top:10px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#633806;">New Market Price</div>
-          <div style="font-size:10px;color:#854F0B;">${freshLabel}</div>
+          <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--badge-deep);">New Market Price</div>
+          <div style="font-size:10px;color:var(--badge-accent);">${freshLabel}</div>
         </div>
         <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px;">
           <span style="font-size:20px;font-weight:500;color:#412402;">${fmtMoney(pending)}</span>
           ${savedPrice ? `<span style="font-size:12px;color:${deltaColor};">${deltaSign}${fmtMoney(Math.abs(delta))} vs saved</span>` : ''}
         </div>
         <div style="display:flex;gap:8px;margin-top:10px;">
-          <button type="button" onclick="applyPendingPrice()" style="flex:1;background:#854F0B;color:#fff;border:none;font-size:12px;font-weight:500;font-family:inherit;padding:8px;border-radius:6px;cursor:pointer;">Apply ${fmtMoney(pending)}</button>
-          <button type="button" onclick="dismissPendingPrice()" style="background:transparent;color:#854F0B;border:0.5px solid #BA7517;font-size:12px;font-family:inherit;padding:8px 14px;border-radius:6px;cursor:pointer;">Dismiss</button>
+          <button type="button" onclick="applyPendingPrice()" style="flex:1;background:var(--badge-accent);color:#fff;border:none;font-size:12px;font-weight:500;font-family:inherit;padding:8px;border-radius:6px;cursor:pointer;">Apply ${fmtMoney(pending)}</button>
+          <button type="button" onclick="dismissPendingPrice()" style="background:transparent;color:var(--badge-accent);border:0.5px solid var(--badge-border);font-size:12px;font-family:inherit;padding:8px 14px;border-radius:6px;cursor:pointer;">Dismiss</button>
         </div>
       </div>`;
     }
@@ -19800,7 +19808,7 @@ function af2RenderRow(watch, idx) {
       break;
     case 'failed':
       contentHtml = `<div class="af2-model">Couldn't identify</div>`
-        + `<div class="af2-brand" style="color:#854F0B;cursor:pointer;">Tap to add manually</div>`;
+        + `<div class="af2-brand" style="color:var(--badge-accent);cursor:pointer;">Tap to add manually</div>`;
       break;
   }
 
@@ -21633,17 +21641,17 @@ function previewWatch(w) {
 
   let cardHtml = '';
   if (hasContent) {
-    cardHtml = '<div style="background:#FAEEDA;border-radius:8px;padding:10px 12px;border:0.5px solid #BA7517;">';
+    cardHtml = '<div style="background:var(--badge-bg);border-radius:8px;padding:10px 12px;border:0.5px solid var(--badge-border);">';
     if (desc) {
-      cardHtml += `<div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#633806;margin-bottom:3px;">Description</div>`;
+      cardHtml += `<div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--badge-deep);margin-bottom:3px;">Description</div>`;
       cardHtml += `<div style="font-size:12px;line-height:1.55;color:#412402;">${escHtml(desc)}</div>`;
     }
     if (bg) {
-      cardHtml += `<div style="margin-top:10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#633806;margin-bottom:3px;">Background &amp; History</div>`;
+      cardHtml += `<div style="margin-top:10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--badge-deep);margin-bottom:3px;">Background &amp; History</div>`;
       cardHtml += `<div style="font-size:12px;line-height:1.55;color:#412402;">${escHtml(bg)}</div>`;
     }
     if (fns) {
-      cardHtml += `<div style="margin-top:10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:#633806;margin-bottom:3px;">Functions</div>`;
+      cardHtml += `<div style="margin-top:10px;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--badge-deep);margin-bottom:3px;">Functions</div>`;
       cardHtml += `<div style="font-size:12px;line-height:1.55;color:#412402;">${escHtml(fns)}</div>`;
     }
     cardHtml += '</div>';
