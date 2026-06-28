@@ -30,7 +30,22 @@ typography, components, repeated-action UX. Read-only — no code changed yet.
 **Still open (larger / visual — best done incrementally with live-site review):**
 - ✅ **H7 (visibility colors, v839)** — "friends" was gold in the feed badge but purple in profile/showcase, purple defined two ways. Added `--vis-friends` (#a78bfa), applied across `.vis-badge.friends` / `.profile-post-vis.friends` / `.showcase-priv-label.frd`. Each visibility state now has one hue everywhere (public=green, followers=gold, friends=purple, private=red). *The single `.pill` primitive (merging the 17 small-rounded-label variants) is the remaining H7 piece — bigger, deferred.*
 - ✅ **M2/M3 (confirm consistency, v840)** — `blockUser` now uses one `showConfirm` dialog (was a hand-built toast); the report-flow block offer calls `blockUser` directly, removing the **duplicate** Block dialog **and a double-confirm bug**. `adminSuspendUser` migrated to `showConfirm`. `removeFriend` now confirms (was an instant DB delete) — consistent with `removeMember`. `removeStrap` left (in-memory form edit, not a persisted delete). **Verb decision:** kept the *Delete = destroy content* (post/comment/watch/wishlist/log) vs *Remove = detach relationship/list* (friend/member/featured) distinction — it's a sound convention, not drift, so no mass word-flip. The lightweight inline "Sure?" double-tap (comment, wear log) is kept as the deliberate pattern for small/frequent deletes; modal `showConfirm` for heavier/rarer ones.
-- H7 remainder (`.pill` primitive — 17 variants), H5 (spacing-scale migration — shifts pixels), H6 (type scale + `.eyebrow` class, ~100 labels), M6 (icon-size/hit-area), L1–L8, luminance avatar initials. None are blocking; all are appearance/structure changes that benefit from an eyeball per step.
+**Final grind (v847–v848):**
+- ✅ **Streak chip (v847)** — was `var(--surface)` on a `var(--surface)` header (invisible); → `var(--surface2)` + gold-border hover matching sibling nav buttons + `--radius-pill`.
+- ✅ **L8** — unified the share glyph (feed upload-arrow + invite refresh-arc → the connected-nodes share icon used everywhere). Logo arc untouched.
+- ✅ **L4** — added `.modal-close`; deduped the two identical badge-modal close buttons (+ proper hover).
+- ✅ **L5/L6** — `font-weight:800` confirmed intentional (display weight: avatar initials, big stat numbers, ranks) → no change; app body line-heights `1.6/1.45` → `1.55` (excl. email).
+- ✅ **`.pill` migration** — `feat-pill` now uses the shared `.pill`. (June date-badge + msr-mode-chip left as one-offs.)
+- ✅ **L1 (a11y, partial)** — global Enter/Space → click for `[role=button]`; kebab `.feed-menu-item`s given `role`/`tabindex`. ~85 other `div[onclick]` need per-element leaf-vs-container review before blanket-converting.
+- ✅ **Gold tints** — 24 `rgba(201,168,76,α)` → theme-adaptive `color-mix(in srgb, var(--gold) N%, transparent)` (exact in dark, corrected hue in light; transparent fallback on iOS<16.2). Token defs + email excluded.
+- ✅ **H7 `.pill` primitive** — `.pill`/`.pill-muted` exist; pill/tag radii rationalized onto `--radius-pill` / `--radius-sm` (v845). The full 17-variant merge was intentionally NOT forced — round-pill vs rect-tag are two deliberate shape languages, not drift.
+
+**Deliberately NOT done:**
+- ⏸️ **H5 (spacing-scale migration)** — both forms are poor engineering for this codebase: the safe version is a ~600-line literal→token swap with zero visual benefit and real diff-risk; the "real" version (snapping off-grid values) shifts padding app-wide. Conflicts with the project rule "don't over-engineer — minimal changes." The `--space-*` scale stays defined for new code; revisit only with a deliberate redesign.
+- ⏸️ **Avatar initial luminance** — DONE (v841, see contrast-sweep section). [no longer open]
+- ⏸️ **L1 remainder** (~85 `div[onclick]`), **inline pill migration** (June/msr chips), and any **type-scale `--fs-*` mass adoption** — low-value/needs-review tail; left for incremental work.
+
+**Tooling:** `e2e/_screenshots.mjs` harness + `ux-screenshots/before|after` (light+dark, 5 nav pages) for visual review.
 
 ## Dark-mode contrast sweep — 2026-06-28 (v837–v838)
 
