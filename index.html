@@ -281,7 +281,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       transition: box-shadow .15s, background .15s;
     }
     .btn-apple:hover { box-shadow: 0 1px 6px rgba(0,0,0,.3); background: #1a1a1a; }
-    .auth-error { background: rgba(224,85,85,.12); border: 1px solid rgba(224,85,85,.3); color: #f87171; font-size: .82rem; padding: .65rem .9rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+    .auth-error { background: rgba(224,85,85,.12); border: 1px solid rgba(224,85,85,.3); color: var(--danger); font-size: .82rem; padding: .65rem .9rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
     .auth-divider { text-align: center; color: var(--muted); font-size: .75rem; margin: 1.25rem 0; line-height: 1.5; }
 
     .btn-signout { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: .72rem; font-weight: 500; padding: .28rem .6rem; border-radius: 6px; cursor: pointer; transition: all .15s; white-space: nowrap; font-family: inherit; }
@@ -1386,7 +1386,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .pi-card-conf { font-size:.68rem; font-weight:600; padding:.15rem .5rem; border-radius:4px; text-transform:capitalize; }
     .pi-card-conf.high { background:rgba(52,211,153,.12); color:#34d399; }
     .pi-card-conf.medium { background:rgba(251,191,36,.12); color:#fbbf24; }
-    .pi-card-conf.low { background:rgba(239,68,68,.12); color:#ef4444; }
+    .pi-card-conf.low { background:rgba(239,68,68,.12); color:var(--danger); }
     .pi-card-actions { display:flex; gap:.4rem; flex-shrink:0; }
 
     /* Crop adjuster overlay */
@@ -1680,7 +1680,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       transition: all .15s;
     }
     .feed-action-btn:hover { background: var(--hover); color: var(--text); }
-    .feed-action-btn.liked  { color: #f87171; }
+    .feed-action-btn.liked  { color: var(--danger); }
 
     /* Caption (Instagram style — bold username inline) */
     .feed-caption { padding: .1rem 1rem .45rem; font-size: .85rem; line-height: 1.5; word-break: break-word; }
@@ -1830,7 +1830,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       font-family: inherit; transition: color .15s;
     }
     .comment-heart-btn:hover { color: var(--text); }
-    .comment-heart-btn.liked { color: #ef4444; }
+    .comment-heart-btn.liked { color: var(--danger); }
     .comment-heart-btn svg { width: 12px; height: 12px; }
     .comment-heart-count { font-size: .62rem; color: var(--muted); line-height: 1; }
     .comment-menu-wrap { position: relative; flex-shrink: 0; padding-top: .15rem; }
@@ -3676,7 +3676,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div id="msr-progress-fill" style="height:100%;width:0%;border-radius:0 0 8px 8px;transition:width .5s ease-out, background .3s;background:rgba(74,222,128,.5);"></div>
         </div>
       </div>
-      <div id="msr-mic-warning" role="alert" style="display:none;font-size:.75rem;color:#ef4444;margin-bottom:.5rem;line-height:1.4;"></div>
+      <div id="msr-mic-warning" role="alert" style="display:none;font-size:.75rem;color:var(--danger);margin-bottom:.5rem;line-height:1.4;"></div>
       <!-- Live status container (hidden, used by JS to toggle visibility) -->
       <div id="msr-live-status" style="display:none;"></div>
       <!-- Hidden tuning inputs (used by remote tuning) -->
@@ -4700,16 +4700,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:380px;text-align:center;">
     <div id="da-step-1" class="del-acct-step">
       <div style="margin-bottom:.5rem;display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-      <div class="modal-title" id="delete-account-modal-title" style="color:#ef4444;">Delete Account?</div>
+      <div class="modal-title" id="delete-account-modal-title" style="color:var(--danger);">Delete Account?</div>
       <p style="color:var(--muted);font-size:.88rem;line-height:1.55;margin:.5rem 0 1.25rem;">
         This will permanently erase <strong style="color:var(--text);">all</strong> your watches, wear logs, wishlists, posts, and social data. <strong style="color:var(--text);">This cannot be undone.</strong>
       </p>
-      <button class="btn" style="width:100%;margin-bottom:.6rem;background:#ef4444;color:#fff;border:none;padding:.65rem;" onclick="deleteAccountStep2()">Yes, Delete My Account</button>
+      <button class="btn" style="width:100%;margin-bottom:.6rem;background:var(--danger);color:#fff;border:none;padding:.65rem;" onclick="deleteAccountStep2()">Yes, Delete My Account</button>
       <button class="btn btn-ghost" style="width:100%;" onclick="closeDeleteAccount()">Cancel</button>
     </div>
     <div id="da-step-2" class="del-acct-step hidden">
       <div style="margin-bottom:.5rem;display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></div>
-      <div class="modal-title" style="color:#ef4444;">Absolutely sure?</div>
+      <div class="modal-title" style="color:var(--danger);">Absolutely sure?</div>
       <p style="color:var(--muted);font-size:.88rem;line-height:1.55;margin:.5rem 0 1.25rem;">
         Every watch, every wear log, every wishlist item — <strong style="color:var(--text);">gone forever.</strong> There is no way to recover this data.
       </p>
@@ -4735,10 +4735,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div class="modal" style="max-width:380px;text-align:center;">
     <div id="dc-step-1">
       <div style="margin-bottom:.5rem;display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-      <div class="modal-title" id="delete-club-modal-title" style="color:#ef4444;">Delete this club?</div>
+      <div class="modal-title" id="delete-club-modal-title" style="color:var(--danger);">Delete this club?</div>
       <p id="dc-club-name" style="font-weight:700;margin:.25rem 0 .75rem;"></p>
       <p style="color:var(--muted);font-size:.88rem;line-height:1.55;margin-bottom:1.25rem;">All members will lose access. Posts tagged to this club will remain but lose their club association. <strong style="color:var(--text);">This cannot be undone.</strong></p>
-      <button class="btn" style="width:100%;margin-bottom:.6rem;background:#ef4444;color:#fff;border:none;padding:.65rem;" onclick="deleteClub()">Yes, Delete This Club</button>
+      <button class="btn" style="width:100%;margin-bottom:.6rem;background:var(--danger);color:#fff;border:none;padding:.65rem;" onclick="deleteClub()">Yes, Delete This Club</button>
       <button class="btn btn-ghost" style="width:100%;" onclick="closeDeleteClubModal()">Cancel</button>
     </div>
   </div>
@@ -6625,7 +6625,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.20.08';
+const APP_VERSION = '27.20.09';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8575,7 +8575,7 @@ function showMemberMenu(userId, clubId, displayName, triggerBtn) {
   menu.innerHTML = `
     <div style="font-size:.82rem;color:var(--muted);margin-bottom:.6rem;padding-bottom:.5rem;border-bottom:1px solid var(--border);">${escHtml(displayName)}</div>
     <button onclick="promoteToOwner('${escAttr(userId)}','${escAttr(clubId)}');document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:var(--text);">\u{1F451} Promote to owner</button>
-    <button onclick="removeMember('${escAttr(userId)}','${escAttr(clubId)}');document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:#f87171;">Remove member</button>
+    <button onclick="removeMember('${escAttr(userId)}','${escAttr(clubId)}');document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:var(--danger);">Remove member</button>
     <button onclick="document.getElementById('member-menu-popup').remove()" style="display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;padding:.4rem .2rem;font-size:.85rem;color:var(--muted);">Cancel</button>`;
   document.body.appendChild(menu);
   // Position anchored to the ··· button
@@ -10303,7 +10303,7 @@ function renderFeedCard(item) {
       if (!cIsMe && blockedUsers.has(c.user_id)) return '';
       const cl = commentLikes[c.id] || { count: 0, liked: false };
       const heartSvg = cl.liked
-        ? `<svg viewBox="0 0 24 24" fill="#ef4444" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>`
+        ? `<svg viewBox="0 0 24 24" fill="var(--danger)" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>`
         : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
       const menuHtml = canDeleteComment(c, item, currentUser?.id)
         ? `<div class="comment-menu-wrap">
@@ -16174,7 +16174,7 @@ function _updatePriceSubtotals() {
     if (r) totalNew += r.mid;
   });
   const delta = totalCurrent ? ((totalNew - totalCurrent) / totalCurrent * 100) : null;
-  const deltaStr = delta != null ? ` <span style="color:${delta >= 0 ? 'var(--gold)' : '#f87171'};font-size:.68rem;">${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%</span>` : '';
+  const deltaStr = delta != null ? ` <span style="color:${delta >= 0 ? 'var(--gold)' : 'var(--danger)'};font-size:.68rem;">${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%</span>` : '';
   document.getElementById('upr-total-current').textContent = fmtMoney(totalCurrent);
   document.getElementById('upr-total-new').innerHTML = fmtMoney(totalNew) + deltaStr;
 }
@@ -16281,7 +16281,7 @@ async function openUpdatePrices() {
       } else {
         _priceUpdateResults[w.id] = { mid, low: ev.low, high: ev.high, confidence: data.confidence, notes: data.notes };
         const delta = w.marketPrice ? ((mid - w.marketPrice) / w.marketPrice * 100) : null;
-        const deltaStr = delta != null ? `<span style="color:${delta >= 0 ? 'var(--gold)' : '#f87171'};font-size:.68rem;margin-left:.2rem;">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}%</span>` : '';
+        const deltaStr = delta != null ? `<span style="color:${delta >= 0 ? 'var(--gold)' : 'var(--danger)'};font-size:.68rem;margin-left:.2rem;">${delta >= 0 ? '+' : ''}${delta.toFixed(0)}%</span>` : '';
         valCell.innerHTML = `<div style="white-space:nowrap;"><span style="color:var(--text);font-weight:600;">${fmtMoney(mid)}</span>${deltaStr}</div><div style="font-size:.65rem;color:var(--muted);white-space:nowrap;">${fmtMoney(ev.low)} – ${fmtMoney(ev.high)}</div>`;
         chkCell.innerHTML = `<input type="checkbox" checked data-wid="${w.id}" class="upr-toggle" style="width:16px;height:16px;accent-color:var(--gold);">`;
         _updatePriceSubtotals();
@@ -16298,7 +16298,7 @@ async function openUpdatePrices() {
         ? `<span style="display:inline-flex;align-items:center;gap:.4rem;"><span class="spinner" style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Found ${done} of ${eligible.length}...</span>`
         : `Done — checking results...`;
       const valCell = document.getElementById('upr-val-' + w.id);
-      if (valCell) valCell.innerHTML = '<span style="color:#f87171;">Error</span>';
+      if (valCell) valCell.innerHTML = '<span style="color:var(--danger);">Error</span>';
       if (done === eligible.length) {
         status.textContent = `Done — ${Object.keys(_priceUpdateResults).length} prices found.`;
         actions.style.display = 'flex';
@@ -23202,7 +23202,7 @@ async function toggleTgListen() {
       if (acRate !== null && acConf > 0.1) {
         const rateEl = document.getElementById('tg-live-rate');
         rateEl.textContent = (acRate >= 0 ? '+' : '') + acRate;
-        rateEl.style.color = Math.abs(acRate) <= 5 ? '#22c55e' : Math.abs(acRate) <= 15 ? '#eab308' : '#ef4444';
+        rateEl.style.color = Math.abs(acRate) <= 5 ? '#22c55e' : Math.abs(acRate) <= 15 ? '#eab308' : 'var(--danger)';
         bar.style.background = acConf > 0.3 ? '#22c55e' : '#eab308';
         lbl.textContent = 'Confidence: ' + (acConf * 100).toFixed(0) + '%';
       } else {
@@ -23364,7 +23364,7 @@ window._tgNativeCallback = function(data) {
       if (isMsr) _msrLastDetectTime = Date.now();
       const r = data.rate;
       rateEl.textContent = (r >= 0 ? '+' : '') + r.toFixed(1);
-      rateEl.style.color = Math.abs(r) <= 5 ? '#22c55e' : Math.abs(r) <= 15 ? '#eab308' : '#ef4444';
+      rateEl.style.color = Math.abs(r) <= 5 ? '#22c55e' : Math.abs(r) <= 15 ? '#eab308' : 'var(--danger)';
       const _beShown = _msrStableBeatError(data);
       if (beEl) beEl.textContent = _beShown != null ? _beShown.toFixed(2) + ' ms' : '—';
       if (isMsr) {
@@ -23527,7 +23527,7 @@ window._tgNativeCallback = function(data) {
             const rateEl = document.getElementById('msr-live-rate');
             if (rateEl) {
               rateEl.textContent = (prelimRate >= 0 ? '+' : '') + prelimRate.toFixed(1);
-              rateEl.style.color = Math.abs(prelimRate) <= 5 ? '#22c55e' : Math.abs(prelimRate) <= 15 ? '#eab308' : '#ef4444';
+              rateEl.style.color = Math.abs(prelimRate) <= 5 ? '#22c55e' : Math.abs(prelimRate) <= 15 ? '#eab308' : 'var(--danger)';
             }
             document.getElementById('msr-rate-input').value = prelimRate.toFixed(1);
             if (_msrLastRate == null) _msrLastRate = bucketNow;
@@ -23849,7 +23849,7 @@ async function loadTgHistory() {
     const beStr = r.beat_error !== null ? 'BE: ' + Number(r.beat_error).toFixed(2) + 'ms' : '';
     const ampStr = r.amplitude ? 'Amp: ' + r.amplitude + '°' : '';
     const noteStr = r.notes ? `<div style="font-size:.7rem;color:var(--muted);margin-top:.15rem;font-style:italic;">${escHtml(r.notes)}</div>` : '';
-    const rateColor = r.rate !== null ? (Math.abs(r.rate) <= 5 ? '#22c55e' : Math.abs(r.rate) <= 15 ? '#eab308' : '#ef4444') : 'var(--muted)';
+    const rateColor = r.rate !== null ? (Math.abs(r.rate) <= 5 ? '#22c55e' : Math.abs(r.rate) <= 15 ? '#eab308' : 'var(--danger)') : 'var(--muted)';
     const details = [beStr, ampStr].filter(Boolean).join(' · ');
     const isoDate = d.toISOString().slice(0, 10);
     return `<div data-tg-entry data-tg-date="${isoDate}" style="padding:.45rem 0;border-bottom:1px solid var(--border);font-size:.8rem;">
@@ -23861,7 +23861,7 @@ async function loadTgHistory() {
         <div style="display:flex;align-items:center;gap:.5rem;">
           <span style="color:var(--muted);font-size:.72rem;">${dateStr}</span>
           <button onclick="editTgResult('${r.id}')" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;font-size:.75rem;" title="Edit">✎</button>
-          <button onclick="deleteTgResult('${r.id}')" style="background:none;border:none;color:#ef4444;cursor:pointer;padding:0;font-size:.75rem;" title="Delete">✕</button>
+          <button onclick="deleteTgResult('${r.id}')" style="background:none;border:none;color:var(--danger);cursor:pointer;padding:0;font-size:.75rem;" title="Delete">✕</button>
         </div>
       </div>${noteStr}
     </div>`;
@@ -24775,7 +24775,7 @@ function toggleWatchPresent() {
     btn.style.background = '#22c55e';
   } else {
     btn.textContent = 'NO — away';
-    btn.style.background = '#ef4444';
+    btn.style.background = 'var(--danger)';
   }
 }
 
@@ -24965,7 +24965,7 @@ function toggleMsrListen() {
     if (btnMic) btnMic.style.display = 'none';
     if (btnStop) btnStop.style.display = '';
     if (btnLabel) btnLabel.textContent = 'Stop';
-    if (listenBtnEl) { listenBtnEl.style.borderColor = 'rgba(239,68,68,.4)'; listenBtnEl.style.color = '#ef4444'; listenBtnEl.style.background = 'rgba(127,29,29,.3)'; }
+    if (listenBtnEl) { listenBtnEl.style.borderColor = 'rgba(239,68,68,.4)'; listenBtnEl.style.color = 'var(--danger)'; listenBtnEl.style.background = 'rgba(127,29,29,.3)'; }
     document.getElementById('msr-live-status').style.display = '';
     document.getElementById('msr-live-rate').textContent = '—';
     const beEl = document.getElementById('msr-live-be'); if (beEl) beEl.textContent = '—';
@@ -25005,7 +25005,7 @@ function toggleMsrListen() {
       const _wMic = document.getElementById('msr-btn-mic'); if (_wMic) _wMic.style.display = 'none';
       const _wStop = document.getElementById('msr-btn-stop'); if (_wStop) _wStop.style.display = '';
       const _wLabel = document.getElementById('msr-btn-label'); if (_wLabel) _wLabel.textContent = 'Stop';
-      lb.style.background = 'rgba(127,29,29,.3)'; lb.style.color = '#ef4444'; lb.style.borderColor = 'rgba(239,68,68,.4)';
+      lb.style.background = 'rgba(127,29,29,.3)'; lb.style.color = 'var(--danger)'; lb.style.borderColor = 'rgba(239,68,68,.4)';
       document.getElementById('msr-live-status').style.display = '';
       warn.innerHTML = 'Web audio mode — accuracy may be limited. For best results, use the <b>WRotate iOS app</b>.';
       warn.style.color = '#eab308';
