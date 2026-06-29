@@ -5367,44 +5367,22 @@ async function attachBadgesToPost(postId, refs) {
   if (document.getElementById('page-feed')?.classList.contains('active')) loadFeed();
 }
 
-// Standalone badge cards created this session — so a post made shortly after can
-// fold them inline (see foldBadgeCardsIntoPost) instead of leaving a duplicate card.
-let _pendingBadgeCards = [];
-async function createStandaloneBadgePost(ref) {
-  const b = BADGE_BY_REF[ref];
-  if (!b || !currentUser) return;
-  const cardId = uid();
-  try {
-    await db.from('logs').insert({
-      id: cardId, user_id: currentUser.id, watch_id: null, date: todayStr(),
-      use_case: 'badge', notes: `Earned the ${b.name} badge 🏅`, photo_url: null,
-      visibility: getDefaultVis(), location: null, club_id: null, badge_refs: [ref],
-    });
-  } catch (e) { console.warn('[badge-post] standalone failed:', e); return; }
-  _pendingBadgeCards.push({ id: cardId, ref, at: Date.now() });
-  feedLoadedAt = 0;
-  if (document.getElementById('page-feed')?.classList.contains('active')) loadFeed();
-}
+// Notable badges earned WITHOUT a post (e.g. a collection/connoisseur badge from
+// adding a watch) are HELD here — never posted as their own card. If the user
+// publishes a post/wear shortly after, foldBadgeCardsIntoPost attaches them inline;
+// otherwise they simply live in notifications + the profile (no feed card).
+let _pendingBadgeRefs = [];
 
-// When a post/wear is published, move any just-earned standalone badge cards onto
-// it (inline ribbon) and delete the separate cards — so "added a watch, then
-// posted it" shows the badge within the post, not as a duplicate card.
 async function foldBadgeCardsIntoPost(postId) {
-  if (!postId || !_pendingBadgeCards.length) return;
+  if (!postId || !_pendingBadgeRefs.length) return;
   const cutoff = Date.now() - 10 * 60 * 1000;
-  const fold = _pendingBadgeCards.filter(c => c.at >= cutoff);
-  _pendingBadgeCards = [];
+  const fold = _pendingBadgeRefs.filter(c => c.at >= cutoff).map(c => c.ref);
+  _pendingBadgeRefs = [];
   if (!fold.length) return;
   const post = logs.find(l => l.id === postId);
   const existing = (post && Array.isArray(post.badgeRefs)) ? post.badgeRefs : [];
-  const merged = [...new Set([...existing, ...fold.map(c => c.ref)])];
-  try {
-    if (post) { post.badgeRefs = merged; markDirty('logs', postId); await db.from('logs').upsert(logToRow(post), { onConflict: 'id' }); }
-    else await db.from('logs').update({ badge_refs: merged }).eq('id', postId);
-    await db.from('logs').delete().in('id', fold.map(c => c.id));
-  } catch (e) { console.warn('[badge-post] fold failed:', e); }
-  feedLoadedAt = 0;
-  if (document.getElementById('page-feed')?.classList.contains('active')) loadFeed();
+  const merged = [...new Set([...existing, ...fold])];
+  await attachBadgesToPost(postId, merged);
 }
 
 function badgeRefLabel(ref) {
@@ -6000,7 +5978,7 @@ async function checkAndAwardBadges(context, postId) {
   if (newlyEarned.length > 0 && myProfile && myProfile.share_achievements !== false) {
     const _bp = badgePostPlan(newlyEarned, context, postId);
     if (_bp.inline.length) attachBadgesToPost(postId, _bp.inline);
-    for (const _ref of _bp.standalone) createStandaloneBadgePost(_ref);
+    for (const _ref of _bp.standalone) _pendingBadgeRefs.push({ ref: _ref, at: Date.now() });
   }
   if (newlyEarned.some(b => b && b.ref === 3)) {
     toast('Your streak starts now — day 1');
@@ -6720,7 +6698,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.16.29';
+const APP_VERSION = '28.17.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
