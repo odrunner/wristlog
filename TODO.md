@@ -1,9 +1,11 @@
 # WRotate — Feature Backlog
 
 ## In Progress
+advance batch mode
+measurement v2
 
 ## Up Next
-if someone used advanced settings show that it's not default anymore
+tick-log archival Stage 2 (PAUSED 2026-06-22) — sustainable rolling retention for timegrapher_tick_logs. Stage 1 done (archived 37,564 pre-approval rows offline + pruned, 60MB→14MB). Stage 2 = make rollout-check.py track its cumulative count incrementally (persisted state file) instead of re-scanning the full table, then a weekly LaunchAgent archives+prunes a rolling 30-day tail. Needs sign-off: it changes how the rollout cumulative number is computed. Design: docs/superpowers/specs/2026-06-22-tick-log-archival-design.md
 ability to edit comment
 show microphone on measurement (pulsating) 
 7-second cap + in-composer trim slider — if the user picks an 8-30 sec video, show a trim UI to pick the 7-sec segment they want. Much more user-friendly but adds significant scope (trim UI + actual video clipping, which is hard in-browser).
@@ -24,6 +26,7 @@ Bucket-rate convergence (mic + all sources): the JS `bucketMedian = (last.cd - s
 show me a watch i might like based on my collection, and what i've been purchasing, also look at what style i am missing
 
 ## Done
+Change default visibility to public
 delete comment (per-comment kebab menu, double-tap confirm; commenter deletes own, post owner moderates any on their post)
 Make notifications shown as closed by default, not expanded
 When user hits get prices, and if they are within 7 days instead of immediately showing the same prices and not mention anything. mention that price is still valid and can be updated in x days.
@@ -35,4 +38,6 @@ Have an option of unsubscribe directly from email
 show facts about watches on the feed when user clicks on anyone watches they post
 in the admin dashboard, i want to see if a user is an active and details. so when i click on the name instead of the profile, i want a modal that has info about the user, basics like watches, wears, wishlist, measurements (success rate including), enhancements, vlaue check. and also last login, repeat or not, feedbcak asked, given. by them? go build
 multiple pictures in a post
+if someone used advanced settings show that it's not default anymore
+
 
