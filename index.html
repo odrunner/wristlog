@@ -5566,12 +5566,15 @@ function addDaysStr(dateStr, delta) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function onboardingChecklistState(earnedRefs) {
+function onboardingChecklistState(earnedRefs, opts = {}) {
   const has = (r) => (earnedRefs instanceof Set ? earnedRefs.has(r) : (earnedRefs || []).includes(r));
   const steps = [
     { key: 'watch',   label: 'Add your first watch',  ref: 1, done: has(1) },
     { key: 'wear',    label: 'Log a wear',            ref: 3, done: has(3) },
-    { key: 'measure', label: 'Measure accuracy', ref: 2, done: has(2) },
+    // Measure step completes as soon as the user *tries* a measurement (taps
+    // Start Listening) — not only on save. The First Measurement badge (ref 2)
+    // still requires a saved reading and also satisfies this step.
+    { key: 'measure', label: 'Measure accuracy', ref: 2, done: has(2) || !!opts.triedMeasure },
   ];
   const doneCount = steps.filter((s) => s.done).length;
   return { steps, doneCount, total: steps.length, complete: doneCount === steps.length };
@@ -6701,7 +6704,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.20.35';
+const APP_VERSION = '28.21.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10119,7 +10122,8 @@ function renderOnboardingChecklist() {
   const el = document.getElementById('onboarding-checklist');
   if (!el) return;
   if (!currentUser) { el.innerHTML = ''; return; }
-  const st = onboardingChecklistState(new Set(_earnedBadges.map(e => e.badge_ref)));
+  const st = onboardingChecklistState(new Set(_earnedBadges.map(e => e.badge_ref)),
+    { triedMeasure: localStorage.getItem('wrotate_tried_measure') === '1' });
   if (st.complete) { el.innerHTML = ''; return; }
   const collapsed = localStorage.getItem('wrotate_onboarding_collapsed') === '1';
   const rows = st.steps.map(s => s.done
@@ -10136,6 +10140,14 @@ function renderOnboardingChecklist() {
       <div class="ob-bar"><div class="ob-bar-fill" style="width:${(st.doneCount / st.total) * 100}%"></div></div>
       ${collapsed ? '' : `<div class="ob-rows">${rows}</div>`}
     </div>`;
+}
+
+// Flip the onboarding "Measure accuracy" step the moment a user tries a
+// measurement (taps Start Listening), independent of whether they save.
+function markMeasurementTried() {
+  if (localStorage.getItem('wrotate_tried_measure') === '1') return;
+  localStorage.setItem('wrotate_tried_measure', '1');
+  renderOnboardingChecklist();
 }
 
 function toggleOnboardingCollapse() {
@@ -25205,6 +25217,7 @@ function toggleMsrListen() {
   if (demoGuard()) return;
   console.log('[TG JS] toggleMsrListen called, _msrListening:', _msrListening, 'hasNative:', _tgHasNative());
   if (_msrListening) { console.log('[TG JS] Stop button pressed'); stopMsrListen('user_stopped'); return; }
+  markMeasurementTried(); // onboarding: completing "Measure accuracy" on try, not save
   try {
   // Use native bridge if available
   if (_tgHasNative()) {

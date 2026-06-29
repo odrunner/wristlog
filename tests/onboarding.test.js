@@ -31,4 +31,19 @@ describe('onboardingChecklistState', () => {
     expect(onboardingChecklistState(new Set([1, 3, 4, 5])).complete).toBe(false); // missing measure(2)
     expect(onboardingChecklistState(new Set([1, 2, 3, 5])).complete).toBe(true);  // 5 ignored
   });
+
+  it('triedMeasure completes the measure step without the saved-measurement badge (2)', () => {
+    // No badge 2 (no saved reading) but the user tried a measurement.
+    const s = onboardingChecklistState(new Set([1, 3]), { triedMeasure: true });
+    expect(s.steps.find(x => x.key === 'measure').done).toBe(true);
+    expect(s.complete).toBe(true);
+  });
+
+  it('without triedMeasure and no badge 2, the measure step stays open', () => {
+    const s = onboardingChecklistState(new Set([1, 3]), { triedMeasure: false });
+    expect(s.steps.find(x => x.key === 'measure').done).toBe(false);
+    expect(s.complete).toBe(false);
+    // Default opts (no second arg) behaves the same.
+    expect(onboardingChecklistState(new Set([1, 3])).steps.find(x => x.key === 'measure').done).toBe(false);
+  });
 });

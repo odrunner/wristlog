@@ -1283,12 +1283,15 @@ export function canDeleteComment(comment, post, userId) {
 //  ONBOARDING CHECKLIST STATE
 // ══════════════════════════════════════════
 
-export function onboardingChecklistState(earnedRefs) {
+export function onboardingChecklistState(earnedRefs, opts = {}) {
   const has = (r) => (earnedRefs instanceof Set ? earnedRefs.has(r) : (earnedRefs || []).includes(r));
   const steps = [
     { key: 'watch',   label: 'Add your first watch',  ref: 1, done: has(1) },
     { key: 'wear',    label: 'Log a wear',            ref: 3, done: has(3) },
-    { key: 'measure', label: 'Measure accuracy', ref: 2, done: has(2) },
+    // Measure step completes when the user *tries* a measurement (taps Start
+    // Listening), not only on save. The First Measurement badge (ref 2) still
+    // requires a saved reading and also satisfies this step.
+    { key: 'measure', label: 'Measure accuracy', ref: 2, done: has(2) || !!opts.triedMeasure },
   ];
   const doneCount = steps.filter((s) => s.done).length;
   return { steps, doneCount, total: steps.length, complete: doneCount === steps.length };
