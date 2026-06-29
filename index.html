@@ -429,7 +429,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .streak-line .streak-count { font-variant-numeric: tabular-nums; }
     .streak-flame { line-height: 1; display: inline-flex; align-items: center; }
     .streak-flame-dim { opacity: .5; }
-    .streak-flame-svg { width: 1em; height: 1em; }
+    .streak-flame-svg { width: 1em; height: 1em; fill: color-mix(in srgb, var(--gold) 30%, transparent); stroke: var(--gold); transition: fill .15s, stroke .15s; }
+    .streak-chip:hover .streak-flame-svg { fill: color-mix(in srgb, var(--gold) 62%, transparent); stroke: var(--gold-lt); }
+    .streak-chip.streak-chip-atrisk .streak-flame-svg { fill: color-mix(in srgb, var(--warn) 30%, transparent); stroke: var(--warn); }
+    .streak-chip.streak-chip-atrisk:hover .streak-flame-svg { fill: color-mix(in srgb, var(--warn) 60%, transparent); stroke: var(--warn); }
     .freeze-svg { width: 1em; height: 1em; vertical-align: -.12em; }
     .streak-cue, .streak-best { color: var(--muted); font-weight: 500; font-size: .82em; }
 
@@ -6698,7 +6701,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.17.58';
+const APP_VERSION = '28.20.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
