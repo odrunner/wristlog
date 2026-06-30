@@ -59,6 +59,25 @@ function jsonResponse(body: object, status = 200) {
   });
 }
 
+// PostgREST caps an unbounded select at 1000 rows. Page through with explicit
+// ranges so a cohort or exclusion list larger than 1000 isn't silently
+// truncated — truncation would either skip recipients (cohort) or fail to
+// exclude already-sent / internal / measured users, re-emailing them.
+async function fetchAllRows<T>(
+  makeQuery: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+): Promise<{ data: T[]; error: unknown }> {
+  const PAGE = 1000;
+  const all: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await makeQuery(from, from + PAGE - 1);
+    if (error) return { data: all, error };
+    const rows = data ?? [];
+    all.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return { data: all, error: null };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
@@ -107,29 +126,28 @@ serve(async (req) => {
     }
 
     // Production mode: send to all users
-    // Fetch all users who haven't opted out of marketing emails
-    let profilesQuery = supabase
-      .from("profiles")
-      .select("id, email_prefs, created_at")
-      .eq("is_suspended", false)
-      .order("created_at", { ascending: true });
-
-    // Cohort: filter by signup window
-    if (cohort) {
-      const window = COHORTS[cohort];
-      if (window.gte) profilesQuery = profilesQuery.gte("created_at", window.gte);
-      if (window.lt) profilesQuery = profilesQuery.lt("created_at", window.lt);
-    }
-
-    // Date-windowed segment (e.g. "may_onward_1of2"): created_at >= gte, no upper bound ("to now")
+    // Fetch all users who haven't opted out of marketing emails.
+    // Date-windowed segment (e.g. "may_onward_1of2"): created_at >= gte, no upper bound.
     const segGte = segmentDateGte(segment);
-    if (segGte) profilesQuery = profilesQuery.gte("created_at", segGte);
-
     // Single-user segment ("uid:<uuid>"): narrow to exactly one profile.
     const segUid = segmentUserId(segment);
-    if (segUid) profilesQuery = profilesQuery.eq("id", segUid);
+    const mkProfilesQuery = (from: number, to: number) => {
+      let q = supabase
+        .from("profiles")
+        .select("id, email_prefs, created_at")
+        .eq("is_suspended", false)
+        .order("created_at", { ascending: true });
+      if (cohort) {
+        const window = COHORTS[cohort];
+        if (window.gte) q = q.gte("created_at", window.gte);
+        if (window.lt) q = q.lt("created_at", window.lt);
+      }
+      if (segGte) q = q.gte("created_at", segGte);
+      if (segUid) q = q.eq("id", segUid);
+      return q.range(from, to);
+    };
 
-    const { data: profiles, error: profilesError } = await profilesQuery;
+    const { data: profiles, error: profilesError } = await fetchAllRows(mkProfilesQuery);
 
     if (profilesError) {
       return jsonResponse({ error: "Failed to fetch profiles", details: profilesError }, 500);
@@ -146,18 +164,20 @@ serve(async (req) => {
 
     // Cohort blast: exclude users already sent this campaign
     if (cohort && campaign_id) {
-      const { data: sentRows } = await supabase
+      const { data: sentRows } = await fetchAllRows<{ user_id: string }>((from, to) => supabase
         .from("email_campaign_sends")
         .select("user_id")
-        .eq("campaign_id", campaign_id);
+        .eq("campaign_id", campaign_id)
+        .range(from, to));
       eligibleProfiles = excludeIds(eligibleProfiles, (sentRows || []).map(r => r.user_id));
     }
 
     // Segment filter: "never_measured" excludes users with any timegrapher_results row
     if (segment === "never_measured") {
-      const { data: measuredRows, error: measuredErr } = await supabase
+      const { data: measuredRows, error: measuredErr } = await fetchAllRows<{ user_id: string }>((from, to) => supabase
         .from("timegrapher_results")
-        .select("user_id");
+        .select("user_id")
+        .range(from, to));
       if (measuredErr) {
         return jsonResponse({ error: "Failed to fetch measurement users", details: measuredErr }, 500);
       }
@@ -212,12 +232,13 @@ serve(async (req) => {
     const batchInfo = parseBatchSuffix(segment);
     if (batchInfo) {
       const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-      const { data: sentRows, error: sentErr } = await supabase
+      const { data: sentRows, error: sentErr } = await fetchAllRows<{ email_to: string }>((from, to) => supabase
         .from("email_events")
         .select("email_to")
         .eq("event_type", "sent")
         .eq("subject", subject)
-        .gte("created_at", since);
+        .gte("created_at", since)
+        .range(from, to));
       if (sentErr) {
         return jsonResponse({ error: "Failed to fetch send history for batch segment", details: sentErr }, 500);
       }

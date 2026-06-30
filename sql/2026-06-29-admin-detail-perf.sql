@@ -1,7 +1,19 @@
--- 2026-06-29: admin_user_detail — include created_at in watch_list so the
--- admin user-detail modal can highlight recently-added watches in green
--- (matching the green WTC indicator in the admin users table). The client
--- already has the isNewWatch(w) logic; it just needs w.created_at to exist.
+-- 2026-06-29: kill the ~1.1s tick_logs scan on every admin user-detail open.
+--
+-- Before: the modal fired admin_user_detail AND a separate client-side
+-- double-LIKE over all 16.5k tick_logs rows (`%session_summary%` + `%userId%`,
+-- ~960ms, unindexable) to compute measurement counts, then overrode the RPC's
+-- timegrapher_results-based counts with the tick-log ones.
+--
+-- After: a partial index on the extracted user_id of session_summary rows only
+-- (~1170 rows, written once per session — NOT the 3s debug rows), and the
+-- measurement aggregation folded into admin_user_detail so the client drops its
+-- second query entirely. The RPC's existing last_active scan also uses the index.
+
+CREATE INDEX IF NOT EXISTS idx_ttl_summary_user
+  ON public.timegrapher_tick_logs (((messages::jsonb->>'user_id')::uuid))
+  WHERE messages LIKE '{"type":"session_summary"%';
+
 CREATE OR REPLACE FUNCTION public.admin_user_detail(target_user_id uuid)
  RETURNS json
  LANGUAGE plpgsql
@@ -53,8 +65,34 @@ BEGIN
     'wears', (SELECT count(*) FROM logs WHERE user_id = target_user_id AND watch_id IS NOT NULL),
     'posts', (SELECT count(*) FROM logs WHERE user_id = target_user_id AND watch_id IS NULL),
     'wishlist', (SELECT count(*) FROM wishlist WHERE user_id = target_user_id),
-    'measurements_total', (SELECT count(*) FROM timegrapher_results WHERE user_id = target_user_id),
-    'measurements_success', (SELECT count(*) FROM timegrapher_results WHERE user_id = target_user_id AND rate IS NOT NULL),
+    -- Measurement counts from tick_logs session_summary rows (timegrapher_results
+    -- is RLS-blocked to the test user; the client used to compute these itself).
+    'measurements_total', (
+      SELECT count(*) FROM timegrapher_tick_logs
+      WHERE messages LIKE '{"type":"session_summary"%'
+        AND (messages::jsonb->>'user_id')::uuid = target_user_id
+    ),
+    'measurements_success', (
+      SELECT count(*) FROM timegrapher_tick_logs
+      WHERE messages LIKE '{"type":"session_summary"%'
+        AND (messages::jsonb->>'user_id')::uuid = target_user_id
+        AND ((messages::jsonb->>'converged')::boolean
+             OR messages::jsonb->>'stop_reason' = 'converged')
+    ),
+    'advanced_sessions', (
+      SELECT count(*) FROM timegrapher_tick_logs
+      WHERE messages LIKE '{"type":"session_summary"%'
+        AND (messages::jsonb->>'user_id')::uuid = target_user_id
+        AND (messages::jsonb->>'advanced_used')::boolean
+    ),
+    'advanced_last_preset', (
+      SELECT coalesce(messages::jsonb->>'adv_preset', 'custom')
+      FROM timegrapher_tick_logs
+      WHERE messages LIKE '{"type":"session_summary"%'
+        AND (messages::jsonb->>'user_id')::uuid = target_user_id
+        AND (messages::jsonb->>'advanced_used')::boolean
+      ORDER BY created_at DESC LIMIT 1
+    ),
     'enhances', (SELECT count(*) FROM identify_attempts WHERE user_id = target_user_id AND mode = 'enhance'),
     'price_checks', (SELECT count(*) FROM valuation_events WHERE user_id = target_user_id),
     'followers', (SELECT count(*) FROM follows WHERE following_id = target_user_id),

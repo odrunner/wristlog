@@ -6706,7 +6706,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '29.19.51';
+const APP_VERSION = '29.20.41';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13757,36 +13757,12 @@ async function openAdminUserDetail(userId) {
   modal.classList.remove('hidden');
 
   try {
-    const [{ data, error }, { data: msrLogs }] = await withTimeout(Promise.all([
-      db.rpc('admin_user_detail', { target_user_id: userId }),
-      db.from('timegrapher_tick_logs').select('messages, created_at').like('messages', '%session_summary%').like('messages', '%' + userId + '%'),
-    ]), 10000);
+    const { data, error } = await withTimeout(db.rpc('admin_user_detail', { target_user_id: userId }), 10000);
     if (error) throw error;
     const d = data;
-    // Use all sessions (tick_logs) as measurement count, not just saved readings
-    let msrSessionCount = 0;
-    let msrConverged = 0;
-    let advSessionCount = 0;
-    let advLastPreset = null;
-    let advLastAt = 0;
-    (msrLogs || []).forEach(r => {
-      try {
-        const msg = typeof r.messages === 'string' ? JSON.parse(r.messages) : r.messages;
-        if (msg?.user_id === userId && msg?.type === 'session_summary') {
-          msrSessionCount++;
-          if (msg.converged || msg.stop_reason === 'converged') msrConverged++;
-          if (msg.advanced_used) {
-            advSessionCount++;
-            const at = r.created_at ? new Date(r.created_at).getTime() : 0;
-            if (at >= advLastAt) { advLastAt = at; advLastPreset = msg.adv_preset || 'custom'; }
-          }
-        }
-      } catch {}
-    });
-    d.measurements_total = msrSessionCount;
-    d.measurements_success = msrConverged;
-    d.advanced_sessions = advSessionCount;
-    d.advanced_last_preset = advLastPreset;
+    // measurements_total/success, advanced_sessions and advanced_last_preset are
+    // now computed server-side in admin_user_detail (from tick_logs session_summary
+    // rows, via the idx_ttl_summary_user partial index) — no client-side scan.
     const p = d.profile || {};
     const name = p.display_name || p.username || userId.slice(0, 8);
     const joinDate = p.created_at ? fmtDate(p.created_at.slice(0, 10)) : '—';
@@ -21452,8 +21428,8 @@ function renderWishlist(force) {
       <div class="empty-text">Your wishlist is empty</div>
       <div class="empty-sub">Save watches you're dreaming about — track prices and links.</div>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;margin-top:1rem;">
-        <button class="btn btn-ghost" onclick="openWishlistPhoto()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
-        <button class="btn btn-primary" onclick="openAddWishlist()">Add to Wishlist</button>
+        <button class="btn btn-primary" onclick="openWishlistPhoto()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
+        <button class="btn btn-ghost" onclick="openAddWishlist()">Add to Wishlist</button>
       </div>
     </div>`;
     return;

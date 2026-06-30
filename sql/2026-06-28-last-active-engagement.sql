@@ -22,6 +22,7 @@ CREATE OR REPLACE FUNCTION public.admin_last_active()
  RETURNS TABLE(user_id uuid, last_active timestamptz)
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
+ SET search_path = pg_catalog, public
 AS $function$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true) THEN
@@ -57,6 +58,7 @@ CREATE OR REPLACE FUNCTION public.admin_user_detail(target_user_id uuid)
  RETURNS json
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path = pg_catalog, public
 AS $function$
 DECLARE
   result json;

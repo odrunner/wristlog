@@ -59,7 +59,12 @@ def fetch_paginated(path, hdrs):
     PAGE, rows, off = 1000, [], 0
     while True:
         page = curl(f"{BASE_URL}{path}", hdrs + [f"Range: {off}-{off+PAGE-1}"])
-        if isinstance(page, dict): break
+        # A dict here is a PostgREST error object, not a page of rows. Returning
+        # the rows collected so far would silently undercount — and the weekly
+        # change is ranked by distinct-users-per-failure-mode, so a truncated
+        # set skews which fix ships. Fail loud; the __main__ guard emails it.
+        if isinstance(page, dict):
+            raise RuntimeError(f"Query error on {path} at offset {off}: {page}")
         rows += page
         if len(page) < PAGE: break
         off += PAGE
@@ -251,9 +256,37 @@ def main():
         print(f"\n(email failed: {e})")
 
 
+def notify_failure(tb):
+    """Email the traceback on failure. Best-effort: re-auths independently so a
+    crash anywhere in main() (or an auth failure there) still alerts. Mirrors
+    rollout-check.py / nightly-analysis.py so a Sunday-review crash can't
+    silently stall the one-change-per-week loop. If auth itself is broken we
+    can only log to stdout."""
+    try:
+        auth = curl(f"{BASE_URL}/auth/v1/token?grant_type=password",
+                    [f"apikey: {ANON_KEY}", "Content-Type: application/json"],
+                    "POST", json.dumps({"email": AUTH_EMAIL, "password": AUTH_PASS}))
+        token = auth.get("access_token")
+        if not token:
+            print(f"[notify_failure] cannot alert — auth failed: {auth}")
+            return
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        html = (f"<p>The WRotate weekly measurement-review job failed on {date_str}.</p>"
+                f"<pre style='font-size:12px;background:#f5f5f5;padding:12px;overflow:auto;'>"
+                + tb.replace("&", "&amp;").replace("<", "&lt;") + "</pre>")
+        curl(f"{BASE_URL}/functions/v1/send-report",
+             [f"Authorization: Bearer {token}", "Content-Type: application/json"],
+             "POST", json.dumps({"to": REPORT_TO, "subject": f"⚠️ WRotate weekly-review FAILED — {date_str}", "html": html}))
+        print(f"[notify_failure] alert emailed to {REPORT_TO}")
+    except Exception as e:
+        print(f"[notify_failure] alert itself failed: {e}")
+
+
 if __name__ == "__main__":
     try:
         main()
     except Exception:
-        print(traceback.format_exc(), file=sys.stderr)
+        tb = traceback.format_exc()
+        print(tb, file=sys.stderr)
+        notify_failure(tb)
         sys.exit(1)
