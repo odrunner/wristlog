@@ -1,6 +1,7 @@
 # Reliability / Resiliency Audit — WRotate
 
-> **UPDATE 2026-06-29:** R29-1 (no failure alert) and R29-2 (silent truncation) **FIXED** same day in `scripts/weekly-measurement-review.py` — added `notify_failure(tb)` to the `__main__` guard and made `fetch_paginated` raise on a mid-pagination error. Deployed copy refreshed in `~/.local/bin/`. Still open: RM3 (Save double-tap), NEW-9 (raw error-toast dedup), R29-4 (nightly `sys.exit` not emailed), R29-3 (weak-signal Save reveal).
+> **UPDATE 2026-06-29:** R29-1 (no failure alert) and R29-2 (silent truncation) **FIXED** same day in `scripts/weekly-measurement-review.py` — added `notify_failure(tb)` to the `__main__` guard and made `fetch_paginated` raise on a mid-pagination error. Deployed copy refreshed in `~/.local/bin/`.
+> **UPDATE 2026-06-30:** **RM3 (Save double-tap → duplicate `timegrapher_results`) FIXED** — `_msrSaveInFlight` re-entrancy guard + button-disable in `persistMsrReading()` (all Save/Share paths funnel through it). Still open: NEW-9 (raw error-toast dedup), R29-4 (nightly `sys.exit` not emailed), R29-3 (weak-signal Save reveal).
 
 **Date:** June 29, 2026
 **Auditor:** Claude (automated deep-dive)

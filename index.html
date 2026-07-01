@@ -6706,7 +6706,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '29.20.41';
+const APP_VERSION = '30.18.50';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -25523,6 +25523,7 @@ function discardMsrReading() {
 // Shared by Save and Share-at-completion so the insert logic lives in one place.
 // Returns { ok: true, watchId, rate } on success, or { ok: false } after showing
 // the appropriate toast/guard. Does NOT change any UI beyond the save toast.
+let _msrSaveInFlight = false;
 async function persistMsrReading() {
   if (demoGuard()) return { ok: false };
   if (!currentUser) return { ok: false };
@@ -25530,23 +25531,38 @@ async function persistMsrReading() {
   if (!watchId) { toast('Select a watch', 'error'); return { ok: false }; }
   const rate = parseFloat(document.getElementById('msr-rate-input').value);
   if (isNaN(rate)) { toast('No measurement data', 'error'); return { ok: false }; }
-  const beVal = document.getElementById('msr-be-input').value.trim();
-  const beatError = beVal !== '' ? parseFloat(beVal) : null;
-  const bph = parseInt(document.getElementById('msr-bph-select').value);
-  const notes = document.getElementById('msr-notes-input').value.trim() || null;
-  // Save raw tick data for algorithm tuning (round to reduce payload)
-  const tickData = _msrScatterData.length > 0
-    ? _msrScatterData.map(d => ({ t: Math.round(d.t * 100) / 100, d: Math.round(d.d * 1000) / 1000 }))
-    : null;
-  const { error } = await db.from('timegrapher_results').insert({
-    user_id: currentUser.id, watch_id: watchId,
-    rate, beat_error: beatError, bph, source: 'auto', notes,
-    tick_data: tickData
-  });
-  if (error) { toast('Could not save — ' + error.message, 'error'); return { ok: false }; }
-  toast('Reading saved!');
-  if (window.posthog) posthog.capture('accuracy_reading_saved', { source: 'auto', from: 'measure_modal' });
-  return { ok: true, watchId, rate };
+  // Guard against a fast double-tap on Save/Share (or Save then auto-share
+  // popup) firing two inserts before the first resolves — that wrote duplicate
+  // timegrapher_results rows. All Save/Share paths funnel through here.
+  if (_msrSaveInFlight) return { ok: false };
+  _msrSaveInFlight = true;
+  const saveBtn = document.getElementById('msr-save-btn');
+  const shareBtn = document.getElementById('msr-complete-share-btn');
+  if (saveBtn) saveBtn.disabled = true;
+  if (shareBtn) shareBtn.disabled = true;
+  try {
+    const beVal = document.getElementById('msr-be-input').value.trim();
+    const beatError = beVal !== '' ? parseFloat(beVal) : null;
+    const bph = parseInt(document.getElementById('msr-bph-select').value);
+    const notes = document.getElementById('msr-notes-input').value.trim() || null;
+    // Save raw tick data for algorithm tuning (round to reduce payload)
+    const tickData = _msrScatterData.length > 0
+      ? _msrScatterData.map(d => ({ t: Math.round(d.t * 100) / 100, d: Math.round(d.d * 1000) / 1000 }))
+      : null;
+    const { error } = await db.from('timegrapher_results').insert({
+      user_id: currentUser.id, watch_id: watchId,
+      rate, beat_error: beatError, bph, source: 'auto', notes,
+      tick_data: tickData
+    });
+    if (error) { toast('Could not save — ' + error.message, 'error'); return { ok: false }; }
+    toast('Reading saved!');
+    if (window.posthog) posthog.capture('accuracy_reading_saved', { source: 'auto', from: 'measure_modal' });
+    return { ok: true, watchId, rate };
+  } finally {
+    _msrSaveInFlight = false;
+    if (saveBtn) saveBtn.disabled = false;
+    if (shareBtn) shareBtn.disabled = false;
+  }
 }
 
 async function saveMsrReading() {
