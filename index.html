@@ -69,6 +69,7 @@
     })();
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js" integrity="sha384-cVMg8E3QFwTvGCDuK+ET4PD341jF3W8nO1auiXfuZNQkzbUUiBGLsIQUE+b1mxws" crossorigin="anonymous"></script>
   <!-- Supabase JS SDK v2.98.0 (inlined to avoid CDN dependency on cold start) -->
   <script>/**
  * Minified by jsDelivr using Terser v5.39.0.
@@ -1214,6 +1215,17 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       display: flex; align-items: center; justify-content: center;
       color: var(--muted); font-size: .82rem;
     }
+
+    /* Chart time-horizon selector (Collection Value Over Time) */
+    .chart-range { display: flex; gap: .3rem; justify-content: center; flex-wrap: wrap; margin-top: .7rem; }
+    .chart-range-btn {
+      font-family: inherit; font-size: .72rem; font-weight: 600; color: var(--muted);
+      background: none; border: 1px solid var(--border); border-radius: var(--radius-pill);
+      padding: .2rem .62rem; cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+    .chart-range-btn:hover { color: var(--text); border-color: var(--gold); }
+    .chart-range-btn.active { background: var(--gold); color: #1c1c28; border-color: var(--gold); }
 
     /* Toast */
     .toast {
@@ -3922,6 +3934,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="chart-wrap" style="height:260px;">
         <canvas id="ch-collvalue"></canvas>
         <div id="ch-collvalue-empty" class="chart-empty" style="display:none;">Add purchase dates &amp; prices to watches to see value over time</div>
+      </div>
+      <div id="ch-collvalue-range" class="chart-range" style="display:none;">
+        <button type="button" class="chart-range-btn active" data-range="max" onclick="setCollValueRange('max')">Max</button>
+        <button type="button" class="chart-range-btn" data-range="5y" onclick="setCollValueRange('5y')">5Y</button>
+        <button type="button" class="chart-range-btn" data-range="3y" onclick="setCollValueRange('3y')">3Y</button>
+        <button type="button" class="chart-range-btn" data-range="1y" onclick="setCollValueRange('1y')">1Y</button>
+        <button type="button" class="chart-range-btn" data-range="6m" onclick="setCollValueRange('6m')">6M</button>
+        <button type="button" class="chart-range-btn" data-range="3m" onclick="setCollValueRange('3m')">3M</button>
+        <button type="button" class="chart-range-btn" data-range="1m" onclick="setCollValueRange('1m')">1M</button>
       </div>
     </div>
 
@@ -6718,7 +6739,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.22.00';
+const APP_VERSION = '01.08.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12846,6 +12867,7 @@ let movingFromWishlistId   = null;  // set when "Move to Collection" transfers a
 let movingFromWishlistData = null;  // extra fields (watchChartsUrl, market data) to merge into new watch
 
 let chUsecase = null, chCollValue = null;
+let _collValueRange = 'max';   // time horizon for the Collection Value chart
 let collSort     = 'wears-desc';  // unified collection report sort: field-dir
 let collView     = 'grid';        // 'grid' | 'list'
 let collGridSort = 'purchase';    // 'purchase' | 'ranking' | 'wears'
@@ -18537,30 +18559,51 @@ function renderChUsecase(fl) {
   }</div>`;
 }
 
+// Days per time-horizon button; 'max' fits to the first data point.
+const COLLVALUE_RANGE_DAYS = { '5y': 1825, '3y': 1095, '1y': 365, '6m': 182, '3m': 91, '1m': 30 };
+function collValueRangeMin(range, firstMs) {
+  const days = COLLVALUE_RANGE_DAYS[range];
+  if (!days) return firstMs;                              // 'max' → start at first data point
+  return Math.max(Date.now() - days * 86400000, firstMs); // never show empty space left of the data
+}
+
+function setCollValueRange(range) {
+  _collValueRange = range;
+  document.querySelectorAll('#ch-collvalue-range .chart-range-btn')
+    .forEach(b => b.classList.toggle('active', b.dataset.range === range));
+  if (!chCollValue) return;
+  const firstMs = chCollValue.data.datasets[0].data[0].x;
+  chCollValue.options.scales.x.min = collValueRangeMin(range, firstMs);
+  chCollValue.update();
+}
+
 function renderChCollectionValue() {
   if (chCollValue) { chCollValue.destroy(); chCollValue = null; }
-  const pts = [];
-  let cum = 0;
-  const wWithDate = watches
-    .filter(w => w.purchaseDate && w.price)
-    .sort((a,b) => a.purchaseDate.localeCompare(b.purchaseDate));
-  wWithDate.forEach(w => {
-    cum += w.price;
-    pts.push({ x: w.purchaseDate, y: cum, label: w.brand + ' ' + w.name, price: w.price });
-  });
-  const hasData = pts.length > 0;
-  toggleChart('ch-collvalue','ch-collvalue-empty', hasData);
-  if (!hasData) return;
-  const today = todayStr();
-  const displayPts = [...pts, { x: today, y: cum, label: '', price: 0 }];
+  const dms = d => new Date(d + 'T12:00:00').getTime();
+  const rangeEl = document.getElementById('ch-collvalue-range');
 
-  // Build market value timeline from price_history + current marketPrice
+  // Cost timeline: cumulative purchase cost, one point per purchase date.
+  let cum = 0;
+  const costPts = [];
+  watches
+    .filter(w => w.purchaseDate && w.price)
+    .sort((a, b) => a.purchaseDate.localeCompare(b.purchaseDate))
+    .forEach(w => { cum += w.price; costPts.push({ x: dms(w.purchaseDate), y: cum }); });
+
+  const hasData = costPts.length > 0;
+  toggleChart('ch-collvalue', 'ch-collvalue-empty', hasData);
+  if (rangeEl) rangeEl.style.display = hasData ? '' : 'none';
+  if (!hasData) return;
+
+  const nowMs = Date.now();
+  const nPurchases = costPts.length;          // real purchase events (get a dot)
+  costPts.push({ x: nowMs, y: cum });         // hold flat to today (no dot)
+
+  // Market value timeline from price_history + current marketPrice.
   const mvEvents = [];
   watches.forEach(w => {
     if (Array.isArray(w.priceHistory)) {
-      w.priceHistory.forEach(h => {
-        if (h.date && h.price) mvEvents.push({ date: h.date, watchId: w.id, price: Number(h.price) });
-      });
+      w.priceHistory.forEach(h => { if (h.date && h.price) mvEvents.push({ date: h.date, watchId: w.id, price: Number(h.price) }); });
     }
     if (w.marketPrice && w.marketPriceDate) {
       const already = mvEvents.some(e => e.watchId === w.id && e.date === w.marketPriceDate && e.price === Number(w.marketPrice));
@@ -18568,105 +18611,78 @@ function renderChCollectionValue() {
     }
   });
   mvEvents.sort((a, b) => a.date.localeCompare(b.date));
-
-  // Compute cumulative market value at each event date (latest price per watch)
   const latestByWatch = {};
   const mvPts = [];
   mvEvents.forEach(e => {
     latestByWatch[e.watchId] = e.price;
-    const total = Object.values(latestByWatch).reduce((s, v) => s + v, 0);
-    mvPts.push({ x: e.date, y: total });
+    mvPts.push({ x: dms(e.date), y: Object.values(latestByWatch).reduce((s, v) => s + v, 0) });
   });
-  // Extend to today
-  if (mvPts.length > 0) {
-    const lastVal = mvPts[mvPts.length - 1].y;
-    if (mvPts[mvPts.length - 1].x !== today) mvPts.push({ x: today, y: lastVal });
-  }
-
   const hasMV = mvPts.length > 0;
-  // Merge all dates for shared x-axis
-  const allDatesSet = new Set();
-  displayPts.forEach(p => allDatesSet.add(p.x));
-  mvPts.forEach(p => allDatesSet.add(p.x));
-  const allDates = [...allDatesSet].sort();
+  if (hasMV && mvPts[mvPts.length - 1].x !== nowMs) mvPts.push({ x: nowMs, y: mvPts[mvPts.length - 1].y });
 
-  // Interpolate purchase cost (stepped) at each date
-  const costAtDate = allDates.map(d => {
-    let val = null;
-    for (let i = displayPts.length - 1; i >= 0; i--) {
-      if (displayPts[i].x <= d) { val = displayPts[i].y; break; }
-    }
-    return val;
-  });
-  // Interpolate market value (stepped) at each date
-  const mvAtDate = allDates.map(d => {
-    let val = null;
-    for (let i = mvPts.length - 1; i >= 0; i--) {
-      if (mvPts[i].x <= d) { val = mvPts[i].y; break; }
-    }
-    return val;
-  });
-
-  const labels = allDates.map(d => {
-    const dt = new Date(d + 'T12:00:00');
-    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
-  });
+  // Theme-aware gold (matches light/dark) + subtle fill; grid/ticks readable on both themes.
+  const cs = getComputedStyle(document.documentElement);
+  const gold = cs.getPropertyValue('--gold').trim() || '#c9a84c';
+  const goldFill = /^#[0-9a-f]{6}$/i.test(gold) ? gold + '26' : 'rgba(201,168,76,.15)';
+  const gridC = 'rgba(128,128,128,.15)';
+  const tickC = '#7a8095';
 
   const datasets = [{
     label: 'Cost',
-    data: costAtDate,
-    borderColor: '#c9a84c',
-    backgroundColor: 'color-mix(in srgb, var(--gold) 7%, transparent)',
+    data: costPts,
+    borderColor: gold,
+    backgroundColor: goldFill,
     borderWidth: 2,
-    pointBackgroundColor: costAtDate.map((v, i) => v != null && i < allDates.length - 1 ? '#c9a84c' : 'transparent'),
-    pointBorderColor: costAtDate.map((v, i) => v != null && i < allDates.length - 1 ? '#c9a84c' : 'transparent'),
-    pointRadius: costAtDate.map((v, i) => v != null && i < allDates.length - 1 ? 3 : 0),
-    pointHoverRadius: 5,
+    pointBackgroundColor: gold,
+    pointBorderColor: gold,
+    pointRadius: costPts.map((_, i) => i < nPurchases ? 2.5 : 0),   // dot only at real purchases
+    pointHoverRadius: costPts.map((_, i) => i < nPurchases ? 5 : 0),
     fill: true,
     stepped: 'before',
-    spanGaps: true,
   }];
   if (hasMV) {
     datasets.push({
       label: 'Market Value',
-      data: mvAtDate,
+      data: mvPts,
       borderColor: '#818cf8',
-      backgroundColor: 'rgba(129,140,248,.07)',
       borderWidth: 2,
-      borderDash: [4, 3],
-      pointBackgroundColor: mvAtDate.map(v => v != null ? '#818cf8' : 'transparent'),
-      pointBorderColor: mvAtDate.map(v => v != null ? '#818cf8' : 'transparent'),
-      pointRadius: mvAtDate.map(v => v != null ? 3 : 0),
-      pointHoverRadius: 5,
+      borderDash: [5, 4],
+      pointRadius: 0,               // no dots on the market-value line
+      pointHoverRadius: 4,
       fill: false,
       stepped: 'before',
-      spanGaps: true,
     });
   }
 
+  const firstMs = costPts[0].x;
   chCollValue = new Chart(document.getElementById('ch-collvalue'), {
     type: 'line',
-    data: { labels, datasets },
+    data: { datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: hasMV, labels: { color: '#7a7a95', boxWidth: 12, padding: 10, font: { size: 11 } } },
+        legend: { display: hasMV, labels: { color: tickC, boxWidth: 12, padding: 10, font: { size: 11 } } },
         tooltip: {
           callbacks: {
-            label: ctx => {
-              const val = ctx.parsed.y;
-              if (val == null) return '';
-              return ctx.dataset.label + ': ' + fmtMoney(val);
-            }
+            title: items => items.length ? new Date(items[0].parsed.x).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+            label: ctx => ctx.parsed.y == null ? '' : ctx.dataset.label + ': ' + fmtMoney(ctx.parsed.y),
           }
         }
       },
       scales: {
-        x: { ticks: { color: '#7a7a95', maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.08)' } },
+        x: {
+          type: 'time',
+          min: collValueRangeMin(_collValueRange, firstMs),
+          max: nowMs,
+          time: { tooltipFormat: 'MMM d, yyyy' },
+          ticks: { color: tickC, maxRotation: 0, autoSkip: true, maxTicksLimit: 7 },
+          grid: { color: gridC },
+        },
         y: {
-          ticks: { color: '#7a7a95', callback: v => '$' + v.toLocaleString() },
-          grid: { color: 'rgba(255,255,255,0.08)' },
-          beginAtZero: true
+          ticks: { color: tickC, callback: v => '$' + v.toLocaleString() },
+          grid: { color: gridC },
+          beginAtZero: true,
         }
       }
     }
