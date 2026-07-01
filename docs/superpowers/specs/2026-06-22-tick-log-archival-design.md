@@ -47,3 +47,52 @@ whenever pre-approval-style bulk accumulates.
 The archive is written and verified before any delete; deleted rows are recoverable
 from `~/.local/share/wrotate-logs/tick-archive/`. Only rows read by no consumer are
 ever removed.
+
+## Stage 2 — DEFERRED 2026-06-30 (re-scoped after fresh investigation)
+
+Reviewed Stage 2 for build; decided **not worth building now**. Findings:
+
+1. **The perf pain is already gone.** The admin-modal `timegrapher_tick_logs`
+   LIKE-scan (the urgent part of audit #14) was fixed 2026-06-29 by the partial
+   index `idx_ttl_summary_user` + folding the aggregation into `admin_user_detail`.
+   What remains is pure storage growth, not latency.
+
+2. **Growth is slow.** ~875 debug rows/day ≈ ~8 MB/week ≈ ~0.4 GB/year — trivial
+   for the DB tier for years.
+
+3. **Size is 93% debug rows** (measured 2026-06-30): `[TGTICK]` debug rows =
+   16 MB / 16,274 rows; `session_summary` rows = 1.1 MB / 1,245 rows (grow slowly).
+
+4. **The original design under-counted consumers.** Since 2026-06-22, two more
+   readers of `timegrapher_tick_logs` appeared:
+   - `admin_user_detail` RPC — per-user **all-time** measurement counts. Reads
+     **only `session_summary` rows**, so keeping summaries forever preserves it.
+   - `weekly-measurement-review.py` — scans **debug** rows cumulatively since
+     release (`TGTICK #` / `PAIR_REJECT` / `TGPHASE REJECT`, all debug-only).
+   Plus `rollout-check.py` needs the debug-only `psBE=` marker to classify 2.0
+   (verified: `psBE` is in 0 of 1,245 summaries). So **blanket 30-day pruning as
+   originally proposed would have silently corrupted the admin measurement counts
+   AND weekly-review's cumulative analysis** — not just rollout-check.
+
+### Options considered (for when this is revisited)
+- **A — Full incremental Stage 2:** refactor rollout-check AND weekly-review to
+  persisted incremental cumulative state (fold each session once, with a
+  session-finalization lag so a session is never folded twice), keep all
+  `session_summary` rows forever, weekly LaunchAgent archives+prunes only the
+  debug tail. Correct + bounds growth permanently. Most work/risk; touches two
+  metrics the user reads — must verify byte-identical numbers before enabling any
+  prune.
+- **B — Shorten cumulative window:** change rollout + weekly "cumulative since
+  release" → rolling 90 days; keep summaries forever; prune debug > 90d. Simpler,
+  but changes those two scripts' cumulative meaning.
+- **C — Root-cause (preferred if revisited):** stop DB-persisting the 3s
+  `[TGTICK]` debug rows for the general population in a future native build (they
+  existed to tune the 2.0 rollout, now stable). Kills 93% of growth at the source,
+  no fragile metric refactor. Native change → next App Store build.
+
+### Decision
+**DEFERRED.** Revisit if (a) the DB approaches its tier's storage limit, or (b) a
+native build is already touching the timegrapher — then fold in option C. Until
+then, Stage 1 (`scripts/archive-tick-logs.py`) can be re-run manually to
+archive+prune pre-approval-style bulk if needed. `session_summary` rows should be
+kept indefinitely regardless (cheap; several consumers depend on them).
