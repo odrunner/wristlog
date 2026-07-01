@@ -5166,6 +5166,11 @@ const BADGE_REGISTRY = [
     unlock: 'Publish your first post to the social feed.',
     glyph: '<rect x="30" y="30" width="40" height="40" rx="4" stroke="var(--badge-ink)" stroke-width="2" fill="none"/><path d="M38 45h24M38 55h16" stroke="var(--badge-ink)" stroke-width="2.2" stroke-linecap="round"/>',
     isHidden: false },
+  { ref: 8, slug: 'first_video_post', name: 'First Video Post', category: 'onboarding',
+    flavor: 'Lights, camera — your first video hits the feed.',
+    unlock: 'Publish your first post that includes a video.',
+    glyph: '<rect x="26" y="34" width="48" height="32" rx="4" stroke="var(--badge-ink)" stroke-width="2" fill="none"/><path d="M44 43l14 7-14 7z" fill="var(--badge-ink)"/>',
+    isHidden: false },
   { ref: 5, slug: 'profile_complete', name: 'Profile Complete', category: 'onboarding',
     flavor: 'Profile complete. The community can find you.',
     unlock: 'Set name, profile photo, and bio.',
@@ -5795,6 +5800,9 @@ async function checkAndAwardBadges(context, postId) {
   }
   if (!alreadyEarned(4) && logs.some(l => l.visibility && l.visibility !== 'private')) {
     if (await awardBadge(4)) newlyEarned.push(BADGE_BY_REF[4]);
+  }
+  if (!alreadyEarned(8) && logs.some(isVideoPostLog)) {
+    if (await awardBadge(8)) newlyEarned.push(BADGE_BY_REF[8]);
   }
   if (!alreadyEarned(5) && myProfile) {
     const hasName = !!(myProfile.display_name || '').trim();
@@ -6706,7 +6714,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.18.50';
+const APP_VERSION = '30.21.44';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19134,6 +19142,13 @@ function isVideoUrl(url) {
   if (!url) return false;
   const path = (url.split('?')[0] || '').toLowerCase();
   return path.endsWith('.mp4') || path.endsWith('.webm') || path.endsWith('.mov') || path.endsWith('.m3u8');
+}
+
+// A "video post" for the First Video Post badge (ref 8): a non-private post
+// (public/followers/friends — matches First Post) whose media includes a video.
+function isVideoPostLog(l) {
+  return !!(l && l.visibility && l.visibility !== 'private'
+    && parsePhotoUrl(l.photoUrl).some(isVideoUrl));
 }
 
 function videoSourceType(url) {

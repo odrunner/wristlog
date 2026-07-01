@@ -1701,6 +1701,13 @@ export function isVideoUrl(url) {
   return path.endsWith('.mp4') || path.endsWith('.webm') || path.endsWith('.mov') || path.endsWith('.m3u8');
 }
 
+// A "video post" for the First Video Post badge (ref 8): a non-private post
+// (public/followers/friends — matches First Post) whose media includes a video.
+export function isVideoPostLog(l) {
+  return !!(l && l.visibility && l.visibility !== 'private'
+    && parsePhotoUrl(l.photoUrl).some(isVideoUrl));
+}
+
 export function posterUrlFor(videoUrl) {
   if (!videoUrl) return '';
   const [base, query] = videoUrl.split('?');

@@ -31,7 +31,7 @@ const VERBATIM = [
   'TG_ALG_VERSION', 'TG_PRESETS', 'autoSuggestTags', 'buildGameQueue',
   'canDeleteComment', 'classifyDevice', 'computeMedianRate', 'eloExpected',
   'escAttr', 'escHtml', 'fmtDate', 'fmtMonYear', 'guessOEMStrap', 'imgSnippet',
-  'inlineImages', 'isVideoUrl', 'marketPriceRowHTML', 'matchIdentifiedToCollection',
+  'inlineImages', 'isVideoUrl', 'isVideoPostLog', 'marketPriceRowHTML', 'matchIdentifiedToCollection',
   'msrCardHasEnoughData', 'msrCardResultText', 'normalizeLocation', 'onboardingChecklistState', 'parsePhotoUrl', '_q2Ls',
   'posterUrlFor', 'renderPostLocationHtml', 'rowToLog', 'rowToWatch', 'rowToWish',
   'sanitizeImageUrl', 'sanitizeSearch', 'storagePathFrom', 'tgAdvancedSummaryFields',
