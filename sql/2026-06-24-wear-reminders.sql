@@ -38,9 +38,15 @@ LANGUAGE sql SECURITY DEFINER SET search_path = public, auth AS $$
     WHERE EXTRACT(hour FROM now() AT TIME ZONE v.timezone) = 17
       AND EXISTS (SELECT 1 FROM logs l
                   WHERE l.user_id = v.id AND l.created_at >= now() - interval '14 days')
+      -- Skip anyone who has ALREADY engaged for today: a log dated today, OR
+      -- any log/post CREATED today in their local timezone. The app lets you
+      -- pick a log's date, so posts/wears are often backdated — keying only off
+      -- l.date nagged people who'd already posted today (created_at was today
+      -- but the assigned date wasn't).
       AND NOT EXISTS (SELECT 1 FROM logs l
                   WHERE l.user_id = v.id
-                    AND l.date = ((now() AT TIME ZONE v.timezone)::date)::text)
+                    AND ( l.date = ((now() AT TIME ZONE v.timezone)::date)::text
+                          OR (l.created_at AT TIME ZONE v.timezone)::date = (now() AT TIME ZONE v.timezone)::date ))
       AND NOT EXISTS (SELECT 1 FROM wear_reminder_sends w
                   WHERE w.user_id = v.id
                     AND w.sent_on = (now() AT TIME ZONE v.timezone)::date)
