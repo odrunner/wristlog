@@ -6739,7 +6739,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.17.35';
+const APP_VERSION = '02.17.50';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13613,6 +13613,14 @@ async function loadAdminStats() {
     const extEnh = Object.entries(enhByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0);
     const extMsr = Object.entries(msrByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0);
     const extUsers = allProfiles.filter(p => !INTERNAL_IDS.has(p.id)).length;
+    // Active-user snapshot (DAU/WAU/MAU) — external users whose last activity
+    // (same lastActiveByUser that powers the SEEN column) falls within the window.
+    const _nowMs = Date.now();
+    const _activeWithin = (ms) => Object.entries(lastActiveByUser)
+      .filter(([uid, t]) => !INTERNAL_IDS.has(uid) && t >= _nowMs - ms).length;
+    const activeDau = _activeWithin(24 * 3600000);
+    const activeWau = _activeWithin(7 * 24 * 3600000);
+    const activeMau = _activeWithin(30 * 24 * 3600000);
     const toProfileItem = (p) => ({
       id: p.id,
       name: p.display_name || p.username || p.id.slice(0, 8),
@@ -13720,6 +13728,9 @@ async function loadAdminStats() {
       <div class="admin-card">
         <div class="eyebrow" style="margin-bottom:.5rem;">Totals (external users only)</div>
         ${statRow('Users', extUsers, dod.users)}
+        ${statRow('Active (24h)', activeDau)}
+        ${statRow('Active (7d)', activeWau)}
+        ${statRow('Active (30d)', activeMau)}
         ${statRow('Watches', extWatches, dod.watches)}
         ${statRow('Wears', extWears, dod.wears)}
         ${statRow('Price Checks', extVal, dod.priceChecks)}
