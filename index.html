@@ -6739,7 +6739,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.18.08';
+const APP_VERSION = '02.18.18';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13555,6 +13555,9 @@ async function loadAdminStats() {
     // Day-over-day: single RPC (SECURITY DEFINER, excludes internal accounts)
     const dodRes = await withTimeout(db.rpc('admin_dod_counts'), 10000);
     const dod = dodRes.data || {};
+    // Active-user D/D: distinct DAU last 24h vs the prior 24h (24–48h ago)
+    const dauRes = await withTimeout(db.rpc('admin_active_dau'), 10000);
+    const dauDod = dauRes.data || {};
 
     // Per-user breakdowns via SECURITY DEFINER RPCs (bypass RLS)
     const d1ago = new Date(Date.now() - 24 * 3600000).toISOString();
@@ -13621,6 +13624,11 @@ async function loadAdminStats() {
     const activeDau = _activeWithin(24 * 3600000);
     const activeWau = _activeWithin(7 * 24 * 3600000);
     const activeMau = _activeWithin(30 * 24 * 3600000);
+    // D/D change for DAU: today's 24h window vs the prior 24h (24–48h ago).
+    // Both counts come from admin_active_dau (per-window distinct users) so the
+    // delta is exact; active_24h there matches activeDau above.
+    const dauDelta = (dauDod.active_24h != null && dauDod.active_prev_24h != null)
+      ? dauDod.active_24h - dauDod.active_prev_24h : null;
     const toProfileItem = (p) => ({
       id: p.id,
       name: p.display_name || p.username || p.id.slice(0, 8),
@@ -13728,7 +13736,7 @@ async function loadAdminStats() {
       <div class="admin-card">
         <div class="eyebrow" style="margin-bottom:.5rem;">Totals (external users only)</div>
         ${statRow('Users', extUsers, dod.users)}
-        ${statRow('Active (24h)', activeDau)}
+        ${statRow('Active (24h)', activeDau, dauDelta)}
         ${statRow('Active (7d)', activeWau)}
         ${statRow('Active (30d)', activeMau)}
         ${statRow('Watches', extWatches, dod.watches)}
