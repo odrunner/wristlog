@@ -1330,16 +1330,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wl-meta  { font-size: .75rem; color: var(--muted); margin-top: .25rem; }
 
     /* Wishlist view toggle */
-    .wl-view-toggle { display: flex; gap: .35rem; margin-bottom: .9rem; }
+    /* Wishlist header actions: view toggle + add buttons all on one row */
+    .wl-actions { display: flex; align-items: center; gap: .4rem; flex-wrap: nowrap; }
+    .wl-view-toggle { display: flex; gap: .3rem; flex-shrink: 0; }
     .wl-view-btn {
-      display: inline-flex; align-items: center; gap: .35rem;
-      font-family: inherit; font-size: .78rem; font-weight: 600; color: var(--muted);
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--muted);
       background: none; border: 1px solid var(--border); border-radius: var(--radius-pill);
-      padding: .3rem .7rem; cursor: pointer;
+      padding: .35rem .5rem; cursor: pointer;
       transition: background .15s, color .15s, border-color .15s;
     }
     .wl-view-btn:hover { color: var(--text); border-color: var(--gold); }
     .wl-view-btn.active { background: var(--gold); color: #1c1c28; border-color: var(--gold); }
+    .wl-actions .btn { white-space: nowrap; }
 
     /* Wishlist gallery (photo-first) */
     .wl-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .7rem; }
@@ -3913,20 +3916,18 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <div id="page-wishlist" class="page">
     <div class="page-header">
       <h1 class="page-title">Wishlist</h1>
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;">
-        <button class="btn btn-ghost" onclick="openWishlistPhoto()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
-        <button class="btn btn-primary" onclick="openAddWishlist()">+ Add to Wishlist</button>
+      <div class="wl-actions">
+        <div id="wishlist-view-toggle" class="wl-view-toggle" style="display:none;">
+          <button type="button" class="wl-view-btn active" data-view="list" onclick="setWishlistView('list')" title="List view" aria-label="List view">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          </button>
+          <button type="button" class="wl-view-btn" data-view="gallery" onclick="setWishlistView('gallery')" title="Gallery view" aria-label="Gallery view">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </button>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="openWishlistPhoto()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
+        <button class="btn btn-primary btn-sm" onclick="openAddWishlist()">+ Add to Wishlist</button>
       </div>
-    </div>
-    <div id="wishlist-view-toggle" class="wl-view-toggle" style="display:none;">
-      <button type="button" class="wl-view-btn active" data-view="list" onclick="setWishlistView('list')" aria-label="List view">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-        List
-      </button>
-      <button type="button" class="wl-view-btn" data-view="gallery" onclick="setWishlistView('gallery')" aria-label="Gallery view">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        Gallery
-      </button>
     </div>
     <div id="wishlist-grid"></div>
   </div>
@@ -6776,7 +6777,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.11.17';
+const APP_VERSION = '03.13.09';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
