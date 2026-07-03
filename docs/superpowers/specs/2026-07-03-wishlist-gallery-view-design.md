@@ -34,13 +34,16 @@ collection's showcase grid but larger and lighter on text.
   repeat(auto-fill, minmax(150px, 1fr)); gap:.7rem;` → ~2 tiles per row on a ~360px
   phone, more on wider screens.
 - Each tile `.wl-tile`:
+  (Revised 2026-07-03: image + name both open Edit; **only** the bottom URL link opens the retailer.)
   - **Image** `.wl-tile-img`: `w.image`, `object-fit:cover`, rounded, **square
-    (`aspect-ratio: 1/1`)** for a uniform grid, full tile width. **Tap → open `w.url`** in a new tab (`target=_blank
-    rel="noopener noreferrer"`). No image → scaled-up color/initials avatar
-    (`.wl-tile-avatar`, reuse `initials(w.brand,w.name)` + `initialsTextColor`).
+    (`aspect-ratio: 1/1`)** for a uniform grid, full tile width. **Tap →
+    `openEditWishlist(w.id)`** (image is not a link). No image → scaled-up
+    color/initials avatar (`.wl-tile-avatar`, reuse `initials(w.brand,w.name)` +
+    `initialsTextColor`).
   - **Name** `.wl-tile-name`: `escHtml(w.name)` only. **Tap → `openEditWishlist(w.id)`**.
   - **URL** `.wl-tile-url`: shown as a clean domain via `urlDomain(w.url)` (e.g.
-    `rolex.com ↗`), muted/small. **Tap → open `w.url`**. Omitted when `w.url` is empty.
+    `rolex.com ↗`), muted/small. **The only element that opens `w.url`**
+    (`target=_blank rel="noopener noreferrer"`). Omitted when `w.url` is empty.
   - **Privacy**: subtle border tint by `w.wishPrivacy` matching `.showcase-card`
     (public→success, followers/friends→gold, private→danger), via a `data-priv`
     attribute + CSS (reuse the existing showcase-card privacy color rules or a

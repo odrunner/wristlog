@@ -6777,7 +6777,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.13.14';
+const APP_VERSION = '03.14.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21557,9 +21557,7 @@ function renderWishlist(force) {
       const imgInner = w.image
         ? `<img loading="lazy" src="${escHtml(w.image)}" class="wl-tile-img" alt="" onerror="this.style.display='none'">`
         : `<div class="wl-tile-avatar" style="background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
-      const imgLink = w.url
-        ? `<a href="${escHtml(w.url)}" target="_blank" rel="noopener noreferrer" class="wl-tile-imglink">${imgInner}</a>`
-        : `<div class="wl-tile-imglink" onclick="openEditWishlist('${w.id}')">${imgInner}</div>`;
+      const imgLink = `<div class="wl-tile-imglink" onclick="openEditWishlist('${w.id}')">${imgInner}</div>`;
       const urlLine = w.url
         ? `<a href="${escHtml(w.url)}" target="_blank" rel="noopener noreferrer" class="wl-tile-url">${escHtml(urlDomain(w.url))} ↗</a>`
         : '';

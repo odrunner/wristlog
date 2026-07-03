@@ -286,15 +286,16 @@ test.describe('Wishlist page (mocked)', () => {
     // Two photo tiles with names + domain URLs
     await expect(page.locator('.wl-gallery .wl-tile')).toHaveCount(2);
     await expect(page.locator('.wl-tile-name').first()).toHaveText('Submariner');
-    await expect(page.locator('.wl-tile-url').first()).toContainText('rolex.com');
-    // Image is an anchor to the retailer URL
-    await expect(page.locator('.wl-tile-imglink[href="https://www.rolex.com/sub"]').first()).toBeVisible();
+    // Only the bottom link opens the retailer URL
+    await expect(page.locator('.wl-tile-url[href="https://www.rolex.com/sub"]').first()).toContainText('rolex.com');
+    // The image is NOT a link (opens edit, not the URL)
+    await expect(page.locator('a.wl-tile-imglink')).toHaveCount(0);
 
     // Persisted in localStorage
     expect(await page.evaluate(() => localStorage.getItem('wr_wishlist_view'))).toBe('gallery');
 
-    // Tapping the name opens the edit modal
-    await page.click('.wl-tile-name >> text=Submariner');
+    // Tapping the image opens the edit modal
+    await page.locator('.wl-tile-imglink').first().click();
     await expect(page.locator('#wishlist-modal')).toBeVisible();
   });
 });
