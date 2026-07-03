@@ -1329,6 +1329,33 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wl-brand { font-size: .78rem; color: var(--muted); margin-top: .1rem; }
     .wl-meta  { font-size: .75rem; color: var(--muted); margin-top: .25rem; }
 
+    /* Wishlist view toggle */
+    .wl-view-toggle { display: flex; gap: .35rem; margin-bottom: .9rem; }
+    .wl-view-btn {
+      display: inline-flex; align-items: center; gap: .35rem;
+      font-family: inherit; font-size: .78rem; font-weight: 600; color: var(--muted);
+      background: none; border: 1px solid var(--border); border-radius: var(--radius-pill);
+      padding: .3rem .7rem; cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+    .wl-view-btn:hover { color: var(--text); border-color: var(--gold); }
+    .wl-view-btn.active { background: var(--gold); color: #1c1c28; border-color: var(--gold); }
+
+    /* Wishlist gallery (photo-first) */
+    .wl-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .7rem; }
+    .wl-tile { display: flex; flex-direction: column; gap: .35rem; min-width: 0; border: 2px solid var(--border); border-radius: var(--radius); padding: .4rem; background: var(--surface2); transition: border-color .15s; }
+    .wl-tile[data-priv="public"]       { border-color: var(--success); }
+    .wl-tile[data-priv="followers"]    { border-color: var(--gold); }
+    .wl-tile[data-priv="friends"],
+    .wl-tile[data-priv="friends_only"] { border-color: #a78bfa; }
+    .wl-tile[data-priv="private"]      { border-color: var(--danger); }
+    .wl-tile-imglink { display: block; cursor: pointer; }
+    .wl-tile-img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 8px; display: block; }
+    .wl-tile-avatar { width: 100%; aspect-ratio: 1 / 1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.6rem; color: #000; }
+    .wl-tile-name { font-weight: 700; font-size: .85rem; line-height: 1.25; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .wl-tile-url { font-size: .72rem; color: var(--muted); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+    .wl-tile-url:hover { color: var(--gold); }
+
     /* ── QUICK-LOG BUTTON (collection card) ── */
     .btn-quicklog {
       background: color-mix(in srgb, var(--gold) 10%, transparent); border: 1px solid color-mix(in srgb, var(--gold) 30%, transparent);
@@ -3890,6 +3917,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="btn btn-ghost" onclick="openWishlistPhoto()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
         <button class="btn btn-primary" onclick="openAddWishlist()">+ Add to Wishlist</button>
       </div>
+    </div>
+    <div id="wishlist-view-toggle" class="wl-view-toggle" style="display:none;">
+      <button type="button" class="wl-view-btn active" data-view="list" onclick="setWishlistView('list')" aria-label="List view">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        List
+      </button>
+      <button type="button" class="wl-view-btn" data-view="gallery" onclick="setWishlistView('gallery')" aria-label="Gallery view">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Gallery
+      </button>
     </div>
     <div id="wishlist-grid"></div>
   </div>
@@ -6739,7 +6776,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.11.10';
+const APP_VERSION = '03.11.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21482,11 +21519,24 @@ function urlDomain(url) {
   catch (e) { return ''; }
 }
 
+let _wishlistView = wishlistViewFromStore((() => { try { return localStorage.getItem('wr_wishlist_view'); } catch (e) { return null; } })());
+
+function setWishlistView(v) {
+  _wishlistView = wishlistViewFromStore(v);
+  try { localStorage.setItem('wr_wishlist_view', _wishlistView); } catch (e) {}
+  renderWishlist(true);
+}
+
 function renderWishlist(force) {
   if (!force && _lastRenderedGen.wishlist === _dataGen) return;
   _lastRenderedGen.wishlist = _dataGen;
   const el = document.getElementById('wishlist-grid');
+  const toggle = document.getElementById('wishlist-view-toggle');
   const visible = wishlist;
+  if (toggle) {
+    toggle.style.display = visible.length ? 'flex' : 'none';
+    toggle.querySelectorAll('.wl-view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === _wishlistView));
+  }
   if (visible.length === 0) {
     el.className = '';
     el.innerHTML = `<div class="empty">
@@ -21498,6 +21548,26 @@ function renderWishlist(force) {
         <button class="btn btn-ghost" onclick="openAddWishlist()">Add to Wishlist</button>
       </div>
     </div>`;
+    return;
+  }
+  if (_wishlistView === 'gallery') {
+    el.className = 'wl-gallery';
+    el.innerHTML = visible.map(w => {
+      const imgInner = w.image
+        ? `<img loading="lazy" src="${escHtml(w.image)}" class="wl-tile-img" alt="" onerror="this.style.display='none'">`
+        : `<div class="wl-tile-avatar" style="background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+      const imgLink = w.url
+        ? `<a href="${escHtml(w.url)}" target="_blank" rel="noopener noreferrer" class="wl-tile-imglink">${imgInner}</a>`
+        : `<div class="wl-tile-imglink" onclick="openEditWishlist('${w.id}')">${imgInner}</div>`;
+      const urlLine = w.url
+        ? `<a href="${escHtml(w.url)}" target="_blank" rel="noopener noreferrer" class="wl-tile-url">${escHtml(urlDomain(w.url))} ↗</a>`
+        : '';
+      return `<div class="wl-tile" data-priv="${escHtml(w.wishPrivacy||'')}">
+        ${imgLink}
+        <div class="wl-tile-name" onclick="openEditWishlist('${w.id}')">${escHtml(w.name)}</div>
+        ${urlLine}
+      </div>`;
+    }).join('');
     return;
   }
   el.className = 'wishlist-list';
