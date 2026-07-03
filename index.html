@@ -6739,7 +6739,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.18.18';
+const APP_VERSION = '02.18.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13624,11 +13624,14 @@ async function loadAdminStats() {
     const activeDau = _activeWithin(24 * 3600000);
     const activeWau = _activeWithin(7 * 24 * 3600000);
     const activeMau = _activeWithin(30 * 24 * 3600000);
-    // D/D change for DAU: today's 24h window vs the prior 24h (24–48h ago).
-    // Both counts come from admin_active_dau (per-window distinct users) so the
-    // delta is exact; active_24h there matches activeDau above.
-    const dauDelta = (dauDod.active_24h != null && dauDod.active_prev_24h != null)
-      ? dauDod.active_24h - dauDod.active_prev_24h : null;
+    // Period-over-period change for active users: each window vs the one before
+    // it (24h vs 24–48h, 7d vs prior 7d, 30d vs prior 30d). Both counts per pair
+    // come from admin_active_dau (per-window distinct users) so the delta is
+    // exact; active_24h/7d/30d there match activeDau/Wau/Mau above.
+    const _periodDelta = (cur, prev) => (cur != null && prev != null) ? cur - prev : null;
+    const dauDelta = _periodDelta(dauDod.active_24h, dauDod.active_prev_24h);
+    const wauDelta = _periodDelta(dauDod.active_7d, dauDod.active_prev_7d);
+    const mauDelta = _periodDelta(dauDod.active_30d, dauDod.active_prev_30d);
     const toProfileItem = (p) => ({
       id: p.id,
       name: p.display_name || p.username || p.id.slice(0, 8),
@@ -13737,8 +13740,8 @@ async function loadAdminStats() {
         <div class="eyebrow" style="margin-bottom:.5rem;">Totals (external users only)</div>
         ${statRow('Users', extUsers, dod.users)}
         ${statRow('Active (24h)', activeDau, dauDelta)}
-        ${statRow('Active (7d)', activeWau)}
-        ${statRow('Active (30d)', activeMau)}
+        ${statRow('Active (7d)', activeWau, wauDelta)}
+        ${statRow('Active (30d)', activeMau, mauDelta)}
         ${statRow('Watches', extWatches, dod.watches)}
         ${statRow('Wears', extWears, dod.wears)}
         ${statRow('Price Checks', extVal, dod.priceChecks)}
