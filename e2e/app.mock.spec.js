@@ -266,6 +266,37 @@ test.describe('Wishlist page (mocked)', () => {
     await navigateTo(page, 'wishlist');
     await expect(page.locator('#page-wishlist')).toBeVisible();
   });
+
+  test('gallery view: toggle shows photo tiles; name opens edit; choice persists', async ({ page }) => {
+    const WL = [
+      { id: 'wl1', brand: 'Rolex', name: 'Submariner', url: 'https://www.rolex.com/sub', image: 'https://example.com/sub.jpg', wish_privacy: 'public', sort_order: 0 },
+      { id: 'wl2', brand: 'Omega', name: 'Speedmaster', url: 'https://omegawatches.com/speedy', image: 'https://example.com/speedy.jpg', wish_privacy: 'private', sort_order: 1 },
+    ];
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS, wishlist: WL });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await navigateTo(page, 'wishlist');
+    await expect(page.locator('#page-wishlist')).toBeVisible();
+
+    // Toggle bar visible; switch to Gallery
+    await expect(page.locator('#wishlist-view-toggle')).toBeVisible();
+    await page.click('.wl-view-btn[data-view="gallery"]');
+
+    // Two photo tiles with names + domain URLs
+    await expect(page.locator('.wl-gallery .wl-tile')).toHaveCount(2);
+    await expect(page.locator('.wl-tile-name').first()).toHaveText('Submariner');
+    await expect(page.locator('.wl-tile-url').first()).toContainText('rolex.com');
+    // Image is an anchor to the retailer URL
+    await expect(page.locator('.wl-tile-imglink[href="https://www.rolex.com/sub"]').first()).toBeVisible();
+
+    // Persisted in localStorage
+    expect(await page.evaluate(() => localStorage.getItem('wr_wishlist_view'))).toBe('gallery');
+
+    // Tapping the name opens the edit modal
+    await page.click('.wl-tile-name >> text=Submariner');
+    await expect(page.locator('#wishlist-modal')).toBeVisible();
+  });
 });
 
 // ── Log a Wear (Track Flow) ─────────────────────────────────────────────
