@@ -6739,7 +6739,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.09.24';
+const APP_VERSION = '03.11.10';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21472,6 +21472,15 @@ function cropWatchFromPhoto(blob, bbox, padding = 0.15) {
 // ══════════════════════════════════════════
 //  WISHLIST PAGE
 // ══════════════════════════════════════════
+
+function wishlistViewFromStore(raw) {
+  return raw === 'gallery' ? 'gallery' : 'list';
+}
+function urlDomain(url) {
+  if (!url) return '';
+  try { return new URL(url).hostname.replace(/^www\./, ''); }
+  catch (e) { return ''; }
+}
 
 function renderWishlist(force) {
   if (!force && _lastRenderedGen.wishlist === _dataGen) return;

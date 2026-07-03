@@ -142,6 +142,14 @@ export function escHtml(s) {
 export function escAttr(s) {
   return escHtml(s).replace(/'/g, '&#39;');
 }
+export function wishlistViewFromStore(raw) {
+  return raw === 'gallery' ? 'gallery' : 'list';
+}
+export function urlDomain(url) {
+  if (!url) return '';
+  try { return new URL(url).hostname.replace(/^www\./, ''); }
+  catch (e) { return ''; }
+}
 
 export function profileInitials(p) {
   if (!p) return '?';
