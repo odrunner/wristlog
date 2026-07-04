@@ -113,7 +113,9 @@ class TimegrapherBridge {
                              noiseFloorMult: noiseFloorMult,
                              peakDetectGate: peakDetectGate,
                              phaseLock: phaseLock, phaseLockWindow: phaseLockWindow, phaseLockMaxMiss: phaseLockMaxMiss,
-                             liftAngle: body["liftAngle"] as? Double)
+                             liftAngle: body["liftAngle"] as? Double,
+                             tgSigma: body["tgSigma"] as? Double, tgStabWin: body["tgStabWin"] as? Double,
+                             tgWallMin: body["tgWallMin"] as? Double, tgStabTh: body["tgStabTh"] as? Double)
 
         case "tuningPiezo":
             piezo.setTuning(

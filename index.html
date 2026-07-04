@@ -3691,6 +3691,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <option value="original">Detection: Original (regression)</option>
         <option value="tg">Detection: tg (autocorrelation)</option>
       </select>
+      <!-- tg convergence knobs (admin, gated by tg_algo). Applied live via the tuning message. -->
+      <div id="tg-knob-panel" style="display:none;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:.4rem;margin-bottom:.75rem;font-size:.62rem;color:var(--muted);">
+        <label>σ-gate ×1e-4<input type="number" step="0.5" id="tg-knob-sigma4" oninput="onTgKnob('tg_sigma', this.value/10000)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Stab s/d<input type="number" step="0.5" id="tg-knob-stabth" oninput="onTgKnob('tg_stabth',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Stab win s<input type="number" step="1" id="tg-knob-stabwin" oninput="onTgKnob('tg_stabwin',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Wall min s<input type="number" step="1" id="tg-knob-wallmin" oninput="onTgKnob('tg_wallmin',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Lift °<input type="number" step="1" id="tg-knob-lift" oninput="onTgKnob('tg_lift',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+      </div>
       <!-- Piezo live tuning (admin, gated by tg_piezo). Most apply live on change; BP low/high need stop/start. -->
       <div id="pz-tune-panel" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.75rem;font-size:.66rem;color:var(--muted);">
         <label>BP low Hz<input type="number" step="10" id="pz-tune-bplow" oninput="onPzTune('pz_bp_low',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
@@ -6792,7 +6800,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '04.09.16';
+const APP_VERSION = '04.12.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23173,6 +23181,18 @@ function initTgSourceSelector() {
     if (featureFlag('tg_algo')) { algoSel.style.display = ''; algoSel.value = localStorage.getItem('tg_algo_sel') || 'original'; }
     else algoSel.style.display = 'none';
   }
+  const knobPanel = document.getElementById('tg-knob-panel');
+  if (knobPanel) {
+    if (featureFlag('tg_algo')) {
+      knobPanel.style.display = 'grid';
+      const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v; };
+      set('tg-knob-sigma4', _tgKnob('tg_sigma', 0.0003) * 10000);
+      set('tg-knob-stabth', _tgKnob('tg_stabth', 3));
+      set('tg-knob-stabwin', _tgKnob('tg_stabwin', 6));
+      set('tg-knob-wallmin', _tgKnob('tg_wallmin', 8));
+      set('tg-knob-lift', _tgKnob('tg_lift', 52));
+    } else knobPanel.style.display = 'none';
+  }
   initPzTunePanel();
   const mbOn = featureFlag('tg_quality_v2');
   const mb = document.getElementById('mic-batch-btn'); if (mb) mb.style.display = mbOn ? '' : 'none';
@@ -24052,7 +24072,7 @@ window._tgNativeCallback = function(data) {
         // Piezo engine does its own Theil-Sen + skip + trailing-window stability — trust its rateStable.
         if (isPz && data.rateStable && elapsed >= 15 && !pzWeak) jsConverged = true;
         // tg core (mic): converge on the engine's fast rateStable, bypassing the slow bucket logic.
-        if (isTgAlgo && data.rateStable && elapsed >= 8) jsConverged = true;
+        if (isTgAlgo && data.rateStable && elapsed >= _tgKnob('tg_wallmin', 8)) jsConverged = true;
         if (_v2OwnsConverge) {
           // v2: _q2Tick (incremental-stability) owns the lock; never show CONVERGED prematurely.
           badge.style.display = 'none';
@@ -25373,9 +25393,17 @@ function sendMsrTuning() {
     peakDetectGate: Number(document.getElementById('msr-tune-peak-detect-gate').value),
     phaseLock: document.getElementById('msr-tune-phase-lock').value === '1',
     phaseLockWindow: Number(document.getElementById('msr-tune-phase-lock-window').value),
-    phaseLockMaxMiss: Number(document.getElementById('msr-tune-phase-lock-max-miss').value)
+    phaseLockMaxMiss: Number(document.getElementById('msr-tune-phase-lock-max-miss').value),
+    // tg detection-core knobs (localStorage, admin panel next to the algo selector)
+    liftAngle: _tgKnob('tg_lift', 52),
+    tgSigma: _tgKnob('tg_sigma', 0.0003),
+    tgStabWin: _tgKnob('tg_stabwin', 6),
+    tgWallMin: _tgKnob('tg_wallmin', 8),
+    tgStabTh: _tgKnob('tg_stabth', 3)
   });
 }
+function _tgKnob(k, d) { const v = Number(localStorage.getItem(k)); return Number.isFinite(v) && v > 0 ? v : d; }
+function onTgKnob(k, v) { if (v !== '' && Number(v) > 0) { localStorage.setItem(k, v); sendMsrTuning(); } }
 var _remotePeakRatioThreshold = 2.5;
 var _remoteBufferSeconds = 30.0;
 

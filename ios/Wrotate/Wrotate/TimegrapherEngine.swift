@@ -329,8 +329,13 @@ class TimegrapherEngine {
                     noiseFloorMult: Double? = nil,
                     peakDetectGate: Double? = nil,
                     phaseLock: Bool? = nil, phaseLockWindow: Double? = nil, phaseLockMaxMiss: Int? = nil,
-                    liftAngle: Double? = nil) {
+                    liftAngle: Double? = nil,
+                    tgSigma: Double? = nil, tgStabWin: Double? = nil, tgWallMin: Double? = nil, tgStabTh: Double? = nil) {
         if let v = liftAngle, v >= 20, v <= 80 { liftAngleDeg = v }
+        if let v = tgSigma, v > 0 { tgSigmaGate = v }
+        if let v = tgStabWin, v >= 2 { tgStabWindowSec = v }
+        if let v = tgWallMin, v >= 3 { tgWallMinSec = v }
+        if let v = tgStabTh, v > 0 { tgStabThresh = v }
         peakRatioThreshold = max(1.0, thresh)
         bufferDurationSec = max(5, min(120, bufSec))
         if let v = regSkipPairs { regressionSkipPairs = v }
@@ -362,7 +367,7 @@ class TimegrapherEngine {
         if let v = phaseLock { self.phaseLockEnabled = v }
         if let v = phaseLockWindow { self.phaseLockWindow = v }
         if let v = phaseLockMaxMiss { self.phaseLockMaxMiss = v }
-        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections) noiseFloor=\(self.noiseFloorMult) peakGate=\(self.peakDetectGate) phaseLock=\(self.phaseLockEnabled)/\(self.phaseLockWindow)")
+        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections) noiseFloor=\(self.noiseFloorMult) peakGate=\(self.peakDetectGate) phaseLock=\(self.phaseLockEnabled)/\(self.phaseLockWindow) tgKnobs=\(tgSigmaGate)/\(tgStabWindowSec)/\(tgWallMinSec)/\(tgStabThresh) lift=\(liftAngleDeg)")
     }
 
     // MARK: - Biquad HP filter
@@ -1056,17 +1061,18 @@ class TimegrapherEngine {
         if smoothedRate != nil {
             // tg's rate is a precise per-window period measurement that settles fast, so it can
             // converge on a much shorter window/wall-min than the regression's slow slope.
-            let effWindow = useTgAlgo ? min(stabilityWindow, 6.0) : stabilityWindow
-            let effWallMin = useTgAlgo ? min(wallElapsedMinimum, 8.0) : wallElapsedMinimum
+            let effWindow = useTgAlgo ? tgStabWindowSec : stabilityWindow
+            let effWallMin = useTgAlgo ? tgWallMinSec : wallElapsedMinimum
+            let effThresh = useTgAlgo ? tgStabThresh : stabilityThreshold
             let recentRates = rateHistory.filter { wallElapsed - $0.time <= effWindow }
             if recentRates.count >= 5 && wallElapsed >= effWallMin {
                 let rateMin = recentRates.map(\.rate).min()!
                 let rateMax = recentRates.map(\.rate).max()!
                 let spread = rateMax - rateMin
                 if wasStable {
-                    isStable = spread <= stabilityLoseThreshold
+                    isStable = spread <= (useTgAlgo ? tgStabThresh * 1.7 : stabilityLoseThreshold)
                 } else {
-                    isStable = spread <= stabilityThreshold
+                    isStable = spread <= effThresh
                 }
             }
         }
@@ -1398,7 +1404,11 @@ class TimegrapherEngine {
     // MARK: - tg-style detection core (rate via autocorrelation period, not beat regression)
     // Reference: docs/research/2026-07-03-tg-algorithm-learnings.md. Toggled by useTgAlgo.
 
-    private let tgSigmaGate = 3e-4   // reject a window if per-cycle period estimates disagree
+    // tg-path convergence knobs — all JS-tunable via the tuning message (no rebuild needed)
+    private var tgSigmaGate = 3e-4        // reject a window if per-cycle period estimates disagree
+    private var tgStabWindowSec = 6.0     // rate must hold steady this long
+    private var tgWallMinSec = 8.0        // earliest possible convergence
+    private var tgStabThresh = 3.0        // steady = within this band (s/day)
 
     /// Most-recent `n` samples of the active envelope ring, linearized oldest→newest.
     private func recentEnvelope(_ n: Int) -> [Float] {
