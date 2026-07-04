@@ -6783,7 +6783,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.21.18';
+const APP_VERSION = '03.21.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23931,8 +23931,9 @@ window._tgNativeCallback = function(data) {
         const _v2OwnsConverge = _tgV2Convergence() && isMsr;  // v2 plateau controller owns lock/badge for mic
         const bucketNow = _msrCachedBucketRate;
         const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
+        const isTgAlgo = _tgAlgo() === 'tg';   // mic path running the tg detection core
         let jsConverged = false;
-        if (_tgSource() !== 'piezo' && bucketNow != null) {
+        if (_tgSource() !== 'piezo' && !isTgAlgo && bucketNow != null) {
           // Only push to history when bucket rate was freshly computed (1/sec)
           const lastH = _msrBucketRateHistory.length ? _msrBucketRateHistory[_msrBucketRateHistory.length - 1] : null;
           if (!lastH || lastH.v !== bucketNow || Date.now() - lastH.t >= 1000) {
@@ -24020,6 +24021,8 @@ window._tgNativeCallback = function(data) {
         }
         // Piezo engine does its own Theil-Sen + skip + trailing-window stability — trust its rateStable.
         if (isPz && data.rateStable && elapsed >= 15 && !pzWeak) jsConverged = true;
+        // tg core (mic): converge on the engine's fast rateStable, bypassing the slow bucket logic.
+        if (isTgAlgo && data.rateStable && elapsed >= 8) jsConverged = true;
         if (_v2OwnsConverge) {
           // v2: _q2Tick (incremental-stability) owns the lock; never show CONVERGED prematurely.
           badge.style.display = 'none';
