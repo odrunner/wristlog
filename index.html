@@ -3734,8 +3734,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <span id="msr-detected-bph" aria-live="polite" style="font-size:.6rem;color:rgba(74,222,128,.4);display:none;"></span>
             <div id="msr-live-amp-wrap" style="display:none;font-size:.62rem;color:rgba(74,222,128,.5);margin-top:2px;letter-spacing:.03em;">AMP <span id="msr-live-amp" style="font-weight:700;color:#4ade80;">—</span></div>
           </div>
-          <!-- Folded-beat mini-scope (tg core) — bottom right -->
-          <canvas id="msr-beat-scope" width="120" height="34" style="display:none;position:absolute;bottom:8px;right:12px;width:120px;height:34px;opacity:.85;pointer-events:none;"></canvas>
           <!-- Signal quality indicator — bottom left -->
           <div id="msr-signal-bars" style="position:absolute;bottom:8px;left:12px;display:none;pointer-events:none;">
             <div style="display:flex;align-items:flex-end;gap:2px;height:16px;">
@@ -3759,6 +3757,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <span id="msr-status-text" aria-live="polite" style="font-size:.7rem;color:rgba(74,222,128,.5);letter-spacing:.03em;">&nbsp;</span>
           <div id="msr-troubleshoot" style="display:none;margin-top:.5rem;padding:.5rem .6rem;border-radius:8px;background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.2);font-size:.7rem;color:rgba(234,179,8,.8);line-height:1.5;"></div>
         </div>
+      </div>
+      <!-- Averaged-beat scope (tg core) — the folded tick/tock waveform behind amplitude & beat error -->
+      <div id="msr-beat-scope-panel" style="display:none;background:#0a1a12;border-radius:var(--radius);padding:.5rem .75rem .4rem;margin-bottom:.75rem;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <span style="font-size:.55rem;color:rgba(74,222,128,.45);letter-spacing:.05em;">AVERAGED BEAT</span>
+          <span style="font-size:.5rem;color:rgba(74,222,128,.3);">tick ↓ &nbsp; tock ↓</span>
+        </div>
+        <canvas id="msr-beat-scope" style="width:100%;height:56px;display:block;"></canvas>
       </div>
       <!-- Record / Stop button with progress ring -->
       <div style="position:relative;margin-bottom:.5rem;">
@@ -6786,7 +6792,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '04.08.55';
+const APP_VERSION = '04.09.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23775,11 +23781,11 @@ window._tgNativeCallback = function(data) {
           ampEl.style.color = data.amplitude >= 250 ? '#4ade80' : (data.amplitude >= 200 ? '#eab308' : '#ef4444');
         } else { ampWrap.style.display = 'none'; }
       }
-      const scope = document.getElementById('msr-beat-scope');
-      if (scope) {
+      const scopePanel = document.getElementById('msr-beat-scope-panel');
+      if (scopePanel) {
         if (isTgAlgo && Array.isArray(data.beatWaveform) && data.beatWaveform.length > 8) {
-          scope.style.display = ''; renderBeatScope(data.beatWaveform);
-        } else { scope.style.display = 'none'; }
+          scopePanel.style.display = ''; renderBeatScope(data.beatWaveform);
+        } else { scopePanel.style.display = 'none'; }
       }
     }
 
@@ -24908,7 +24914,7 @@ function renderBeatScope(wave) {
   const canvas = document.getElementById('msr-beat-scope');
   if (!canvas || !wave || wave.length < 8) return;
   const dpr = window.devicePixelRatio || 1;
-  const w = canvas.width = 120 * dpr, h = canvas.height = 34 * dpr;
+  const w = canvas.width = (canvas.offsetWidth || 300) * dpr, h = canvas.height = (canvas.offsetHeight || 56) * dpr;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, w, h);
   let mx = 0; for (const v of wave) { const a = Math.abs(v); if (a > mx) mx = a; }
