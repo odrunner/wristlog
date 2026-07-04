@@ -6783,7 +6783,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.21.20';
+const APP_VERSION = '03.21.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23928,7 +23928,7 @@ window._tgNativeCallback = function(data) {
       const prelimBadge = document.getElementById('msr-preliminary-badge');
       const rateBox = document.getElementById('msr-rate-box');
       if (badge && rateBox) {
-        const _v2OwnsConverge = _tgV2Convergence() && isMsr;  // v2 plateau controller owns lock/badge for mic
+        const _v2OwnsConverge = _tgV2Convergence() && isMsr && _tgAlgo() !== 'tg';  // v2 plateau owns lock/badge for mic — but tg core owns its own fast convergence
         const bucketNow = _msrCachedBucketRate;
         const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
         const isTgAlgo = _tgAlgo() === 'tg';   // mic path running the tg detection core
