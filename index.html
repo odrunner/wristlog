@@ -3732,7 +3732,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div style="position:absolute;top:10px;left:12px;pointer-events:none;">
             <div id="msr-live-be" style="font-size:.75rem;font-weight:600;color:rgba(74,222,128,.6);">—</div>
             <span id="msr-detected-bph" aria-live="polite" style="font-size:.6rem;color:rgba(74,222,128,.4);display:none;"></span>
+            <div id="msr-live-amp-wrap" style="display:none;font-size:.62rem;color:rgba(74,222,128,.5);margin-top:2px;letter-spacing:.03em;">AMP <span id="msr-live-amp" style="font-weight:700;color:#4ade80;">—</span></div>
           </div>
+          <!-- Folded-beat mini-scope (tg core) — bottom right -->
+          <canvas id="msr-beat-scope" width="120" height="34" style="display:none;position:absolute;bottom:8px;right:12px;width:120px;height:34px;opacity:.85;pointer-events:none;"></canvas>
           <!-- Signal quality indicator — bottom left -->
           <div id="msr-signal-bars" style="position:absolute;bottom:8px;left:12px;display:none;pointer-events:none;">
             <div style="display:flex;align-items:flex-end;gap:2px;height:16px;">
@@ -6783,7 +6786,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '04.08.23';
+const APP_VERSION = '04.08.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23759,6 +23762,27 @@ window._tgNativeCallback = function(data) {
     if (isPz && data.noiseLevel != null) _msrPzSig = (_msrPzSig == null) ? data.noiseLevel : (0.2 * data.noiseLevel + 0.8 * _msrPzSig);
     const pzWeak = isPz && _pzElapsed > 6 && _msrPzSig != null && _msrPzSig < 0.15;
 
+    // tg core: amplitude readout + folded-beat mini-scope (both gated on the tg algorithm)
+    if (isMsr) {
+      const isTgAlgo = _tgAlgo() === 'tg';
+      if (data.amplitude != null) _msrLastAmp = data.amplitude;
+      const ampWrap = document.getElementById('msr-live-amp-wrap');
+      const ampEl = document.getElementById('msr-live-amp');
+      if (ampWrap && ampEl) {
+        if (isTgAlgo && data.amplitude != null) {
+          ampWrap.style.display = '';
+          ampEl.textContent = Math.round(data.amplitude) + '°';
+          ampEl.style.color = data.amplitude >= 250 ? '#4ade80' : (data.amplitude >= 200 ? '#eab308' : '#ef4444');
+        } else { ampWrap.style.display = 'none'; }
+      }
+      const scope = document.getElementById('msr-beat-scope');
+      if (scope) {
+        if (isTgAlgo && Array.isArray(data.beatWaveform) && data.beatWaveform.length > 8) {
+          scope.style.display = ''; renderBeatScope(data.beatWaveform);
+        } else { scope.style.display = 'none'; }
+      }
+    }
+
     // Timegrapher chart: add per-tick dots
     if (isMsr && data.newTicks) addMsrTickDots(data.newTicks);
     if (isMsr && _tgV2Convergence()) _q2Tick(data.rate);
@@ -24357,6 +24381,7 @@ let _msrBucketRateHistory = []; // history of bucket rate computations for JS-si
 let _msrCachedBucketRate = null; // cached result from last computeMedianRate call
 let _msrAcceptRate = 0;    // shared signal quality metric (updated once per tick event)
 let _msrPzSig = null;      // piezo: smoothed real signal strength (engine periodicity×SNR, 0..1)
+let _msrLastAmp = null;    // tg: last computed amplitude (degrees)
 let _msrLastDotTime = 0;   // timestamp of last scatter dot added (starvation detection)
 let _msrShown = { weak: false, noise: false, prelim: false, advanced: false };
 let _msrNoiseSamples = [];    // noise level readings during calibration phase
@@ -24580,7 +24605,7 @@ function _resetMsrState(bph) {
   _msrLastRate = null; _msrLastBph = null;
   _msrLastBe = null; _msrFoldedBE = null;
   _msrRateHistory = []; _msrBucketRateHistory = []; _msrCachedBucketRate = null;
-  _msrLastDotTime = 0; _msrShown = { weak: false, noise: false, prelim: false, advanced: false }; _msrNoiseSamples = []; _msrAcceptRate = 0; _msrPzSig = null; _msrLastConf = 0;
+  _msrLastDotTime = 0; _msrShown = { weak: false, noise: false, prelim: false, advanced: false }; _msrNoiseSamples = []; _msrAcceptRate = 0; _msrPzSig = null; _msrLastAmp = null; _msrLastConf = 0;
   const scCanvas = document.getElementById('msr-scatter-plot');
   if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
   document.getElementById('msr-live-rate').textContent = '—';
@@ -24878,6 +24903,30 @@ function computeMedianRate(rates) {
   return Math.round(median * 10) / 10;
 }
 
+// tg core: draw the folded-beat averaged pulse as a small phosphor scope (tick/tock markers).
+function renderBeatScope(wave) {
+  const canvas = document.getElementById('msr-beat-scope');
+  if (!canvas || !wave || wave.length < 8) return;
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.width = 120 * dpr, h = canvas.height = 34 * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, w, h);
+  let mx = 0; for (const v of wave) { const a = Math.abs(v); if (a > mx) mx = a; }
+  if (mx <= 0) return;
+  const n = wave.length;
+  let tic = 0, tv = -Infinity; for (let i = 0; i < n; i++) if (wave[i] > tv) { tv = wave[i]; tic = i; }
+  const toc = (tic + Math.round(n / 2)) % n;
+  ctx.strokeStyle = 'rgba(74,222,128,.25)'; ctx.lineWidth = 1 * dpr;
+  for (const mk of [tic, toc]) { const x = mk / n * w; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+  ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 1.2 * dpr; ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const x = i / (n - 1) * w;
+    const y = h / 2 - (wave[i] / mx) * (h / 2 - 2 * dpr);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
 function renderMsrScatterPlot() {
   const canvas = document.getElementById('msr-scatter-plot');
   if (!canvas || _msrScatterData.length < 1) return;
@@ -24905,9 +24954,10 @@ function drawMsrScatterCore(ctx, o) {
   const tMax = Math.max(10, Math.ceil(tDataMax / 10) * 10 + 5);
   const tRange = tMax - tMin;
 
-  // Running rate: cumDev slope over 5s trailing window for each dot
+  // Running rate: cumDev slope over a trailing window for each dot. The tg core measures a
+  // steady per-window period, so widen the window (5s→12s) to tighten the cloud to match.
   const rateData = [];
-  const windowSec = 5;
+  const windowSec = (typeof _tgAlgo === 'function' && _tgAlgo() === 'tg') ? 12 : 5;
   for (let i = 0; i < data.length; i++) {
     const pt = data[i];
     if (pt.t < 3) continue;
@@ -25464,6 +25514,11 @@ function toggleMsrListen() {
 function stopMsrListen(reason) {
   _msrListening = false;
   _stopMsrBadge();
+  // tg core: prefill the amplitude save field with the computed value
+  if (_tgAlgo() === 'tg' && _msrLastAmp != null) {
+    const ampInput = document.getElementById('tg-amplitude-input');
+    if (ampInput && !ampInput.value) ampInput.value = Math.round(_msrLastAmp);
+  }
   const stopReason = reason || (
     (_msrScatterData.length === 0 && (!_msrListenStart || (Date.now() - _msrListenStart) / 1000 < 3)) ? 'user_quit_early'
     : (_msrScatterData.length === 0) ? 'no_ticks'
