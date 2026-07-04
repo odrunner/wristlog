@@ -3686,6 +3686,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <option value="mic">iPhone mic</option>
         <option value="piezo">Piezo (contact)</option>
       </select>
+      <!-- Detection core toggle (admin, gated by tg_algo). Applies on next stop/start. -->
+      <select id="tg-algo-sel" onchange="onTgAlgo(this.value)" style="display:none;width:100%;margin-bottom:.75rem;padding:.45rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+        <option value="original">Detection: Original (regression)</option>
+        <option value="tg">Detection: tg (autocorrelation)</option>
+      </select>
       <!-- Piezo live tuning (admin, gated by tg_piezo). Most apply live on change; BP low/high need stop/start. -->
       <div id="pz-tune-panel" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.75rem;font-size:.66rem;color:var(--muted);">
         <label>BP low Hz<input type="number" step="10" id="pz-tune-bplow" oninput="onPzTune('pz_bp_low',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
@@ -5185,6 +5190,7 @@ const FEATURE_FLAGS = {
   // no longer flag-gated. localStorage key 'tg_advanced_settings' is unrelated (stores
   // the user's chosen tuning) and is still in use.
   tg_piezo: { label: 'Timegrapher: piezo input source (admin)', default: false },
+  tg_algo: { label: 'Timegrapher: tg detection core toggle (admin)', default: false },
   tg_quality_v2: { label: 'Timegrapher: measurement quality v2 (admin)', default: false },
   deep_test: { label: 'Timegrapher: Deep Test (admin)', default: false },
 };
@@ -6777,7 +6783,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.20.56';
+const APP_VERSION = '03.21.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23153,6 +23159,11 @@ function initTgSourceSelector() {
   } else {
     el.style.display = 'none';
   }
+  const algoSel = document.getElementById('tg-algo-sel');
+  if (algoSel) {
+    if (featureFlag('tg_algo')) { algoSel.style.display = ''; algoSel.value = localStorage.getItem('tg_algo_sel') || 'original'; }
+    else algoSel.style.display = 'none';
+  }
   initPzTunePanel();
   const mbOn = featureFlag('tg_quality_v2');
   const mb = document.getElementById('mic-batch-btn'); if (mb) mb.style.display = mbOn ? '' : 'none';
@@ -23166,6 +23177,11 @@ function initTgSourceSelector() {
 }
 function onPzTune(key, val) { if (val !== '' && Number(val) > 0) { localStorage.setItem(key, val); sendPiezoTuning(); } }
 function _pzMode() { return localStorage.getItem('pz_mode') === 'measurement' ? 'measurement' : 'default'; }
+function _tgAlgo() {
+  if (!featureFlag('tg_algo')) return 'original';
+  return localStorage.getItem('tg_algo_sel') === 'tg' ? 'tg' : 'original';
+}
+function onTgAlgo(v) { localStorage.setItem('tg_algo_sel', v); }
 function onPzTuneMode(v) { localStorage.setItem('pz_mode', v); }  // session mode — applies on next stop/start
 
 // Admin batch runner: leave the pickup coupled, auto-run many measurements (alternating
@@ -25281,7 +25297,7 @@ function onMsrBphChange() {
     _resetMsrState(bph);
     _msrListenStart = Date.now();
     _msrPhaseStart = null;
-    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50, source: _tgSource(), pzMode: _pzMode() });
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50, source: _tgSource(), pzMode: _pzMode(), algo: _tgAlgo() });
     if (_tgHasNative()) {
       const _tgS = tgLoadSettings();
       tgApplySettingsToInputs(_tgS.values);
@@ -25339,7 +25355,7 @@ function toggleMsrListen() {
     console.log('[TG JS] Start button pressed, bph:', bph, '(0=auto), dropdown:', document.getElementById('msr-bph-select').value);
     _tgDebugSessionId = crypto.randomUUID();
     _tgTickDebugBuffer = [];
-    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50, source: _tgSource(), pzMode: _pzMode() });
+    window.webkit.messageHandlers.timegrapher.postMessage({ action: 'start', bph: bph, sensitivity: 50, source: _tgSource(), pzMode: _pzMode(), algo: _tgAlgo() });
     _msrListening = true;
     _msrTarget = 'measure';
     _msrListenStart = Date.now();
