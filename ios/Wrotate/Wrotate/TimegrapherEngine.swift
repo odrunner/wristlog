@@ -1038,8 +1038,12 @@ class TimegrapherEngine {
         // Uses hysteresis: easier to gain stability (3 s/day), harder to lose it (5 s/day)
         var isStable = wasStable
         if smoothedRate != nil {
-            let recentRates = rateHistory.filter { wallElapsed - $0.time <= stabilityWindow }
-            if recentRates.count >= 5 && wallElapsed >= wallElapsedMinimum {
+            // tg's rate is a precise per-window period measurement that settles fast, so it can
+            // converge on a much shorter window/wall-min than the regression's slow slope.
+            let effWindow = useTgAlgo ? min(stabilityWindow, 6.0) : stabilityWindow
+            let effWallMin = useTgAlgo ? min(wallElapsedMinimum, 8.0) : wallElapsedMinimum
+            let recentRates = rateHistory.filter { wallElapsed - $0.time <= effWindow }
+            if recentRates.count >= 5 && wallElapsed >= effWallMin {
                 let rateMin = recentRates.map(\.rate).min()!
                 let rateMax = recentRates.map(\.rate).max()!
                 let spread = rateMax - rateMin
