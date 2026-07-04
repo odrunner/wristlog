@@ -256,6 +256,10 @@ class TimegrapherEngine {
     private var energySubsampleCounter: Int = 0
     private var ringSubsampleTarget: Int = 4  // 48kHz / 4 = 12kHz
     private var ringTargetRate: Double = 12000 // target ring sample rate (web-tunable)
+    private var useTgAlgo = false              // rate via autocorrelation period (tg) vs regression
+    private var tgRateCached: Double? = nil    // cached tg rate (recomputed ~2x/sec)
+    private var lastTgComputeSec: Double = -1
+    private var lastTgLogSec: Double = -1
 
     // Per-filter subsample peaks
     private var subsamplePeaks: [Float] = [0, 0, 0]
@@ -381,8 +385,9 @@ class TimegrapherEngine {
         return y
     }
 
-    func start(bph: Int, sensitivity: Int) {
+    func start(bph: Int, sensitivity: Int, useTgAlgo: Bool = false) {
         guard !isRunning else { return }
+        self.useTgAlgo = useTgAlgo
 
         currentRate = nil
         currentBeatError = nil
@@ -436,7 +441,8 @@ class TimegrapherEngine {
             targetBph = bph
             detectedBph = bph // user-selected = immediately locked
         }
-        debugLog("[TGSTART] bph=\(bph) autoBph=\(autoBph) targetBph=\(targetBph) detectedBph=\(String(describing: detectedBph))")
+        tgRateCached = nil; lastTgComputeSec = -1; lastTgLogSec = -1
+        debugLog("[TGSTART] bph=\(bph) autoBph=\(autoBph) targetBph=\(targetBph) detectedBph=\(String(describing: detectedBph)) useTg=\(useTgAlgo)")
 
         do {
             let session = AVAudioSession.sharedInstance()
@@ -1001,18 +1007,31 @@ class TimegrapherEngine {
         // Compute rate from Theil-Sen median regression on ALL accepted pairs
         var rateForUpdate: Double? = nil
         let wallElapsed = Double(sampleCounter - tickStartSample) / actualSampleRate
-        if regN >= regNMinimum {  // tunable minimum pairs before showing rate
-            if let slope = theilSenSlope() {
-                let regRate = slope * 86.4 // → s/day
-                if abs(regRate) <= 200.0 {
-                    smoothedRate = regRate
-                    rateForUpdate = (regRate * 10).rounded() / 10
-                    // Track rate history for stability detection
-                    rateHistory.append((time: wallElapsed, rate: regRate))
-                    // Prune old entries beyond stability window
-                    rateHistory.removeAll { wallElapsed - $0.time > stabilityWindow + 5 }
-                }
-            }
+        // tg rate is expensive (FFT over up to 16s of ring) — refresh at most ~2x/sec and cache.
+        if wallElapsed - lastTgComputeSec > 0.5 {
+            lastTgComputeSec = wallElapsed
+            tgRateCached = computeTgRate()
+        }
+        // Pick the rate source: tg autocorrelation-period (when toggled) or Theil-Sen regression.
+        let regRateLog: Double? = (regN >= regNMinimum) ? theilSenSlope().map { $0 * 86.4 } : nil
+        var candidate: Double? = nil
+        if useTgAlgo {
+            candidate = tgRateCached
+        } else if let rr = regRateLog, abs(rr) <= 200.0 {
+            candidate = rr
+        }
+        if let r = candidate {
+            smoothedRate = r
+            rateForUpdate = (r * 10).rounded() / 10
+            // Track rate history for stability detection
+            rateHistory.append((time: wallElapsed, rate: r))
+            // Prune old entries beyond stability window
+            rateHistory.removeAll { wallElapsed - $0.time > stabilityWindow + 5 }
+        }
+        // Log BOTH rates every ~2s so we get a free offline A/B even when the toggle is off.
+        if wallElapsed - lastTgLogSec > 2.0 {
+            lastTgLogSec = wallElapsed
+            debugLog("[TGALGO @ \(String(format: "%.0f", wallElapsed))s] useTg=\(useTgAlgo) reg=\(regRateLog.map { String(format: "%+.1f", $0) } ?? "nil") tg=\(tgRateCached.map { String(format: "%+.1f", $0) } ?? "nil")")
         }
 
         // Stability: rate has stayed within ±threshold for the full stability window
