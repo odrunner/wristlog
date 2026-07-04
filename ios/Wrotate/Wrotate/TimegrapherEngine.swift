@@ -27,6 +27,7 @@ class TimegrapherEngine {
         let detectedBph: Int?
         let debug: DebugInfo?
         let beatWaveform: [Float]?
+        let amplitude: Double?    // degrees (tg path); nil if unavailable
         let tickPositions: [Int]?
         let cumulativeOffset: Double
         let elapsedSec: Double
@@ -258,6 +259,9 @@ class TimegrapherEngine {
     private var ringTargetRate: Double = 12000 // target ring sample rate (web-tunable)
     private var useTgAlgo = false              // rate via autocorrelation period (tg) vs regression
     private var tgRateCached: Double? = nil    // cached tg rate (recomputed ~2x/sec)
+    private var tgAmpCached: Double? = nil     // cached tg amplitude (degrees)
+    private var tgFoldCached: [Float]? = nil   // cached folded beat waveform
+    private var liftAngleDeg: Double = 52.0    // escapement lift angle for amplitude (tunable)
     private var lastTgComputeSec: Double = -1
     private var lastTgLogSec: Double = -1
 
@@ -324,7 +328,9 @@ class TimegrapherEngine {
                     maxBphCorrections: Int? = nil,
                     noiseFloorMult: Double? = nil,
                     peakDetectGate: Double? = nil,
-                    phaseLock: Bool? = nil, phaseLockWindow: Double? = nil, phaseLockMaxMiss: Int? = nil) {
+                    phaseLock: Bool? = nil, phaseLockWindow: Double? = nil, phaseLockMaxMiss: Int? = nil,
+                    liftAngle: Double? = nil) {
+        if let v = liftAngle, v >= 20, v <= 80 { liftAngleDeg = v }
         peakRatioThreshold = max(1.0, thresh)
         bufferDurationSec = max(5, min(120, bufSec))
         if let v = regSkipPairs { regressionSkipPairs = v }
@@ -441,7 +447,7 @@ class TimegrapherEngine {
             targetBph = bph
             detectedBph = bph // user-selected = immediately locked
         }
-        tgRateCached = nil; lastTgComputeSec = -1; lastTgLogSec = -1
+        tgRateCached = nil; tgAmpCached = nil; tgFoldCached = nil; lastTgComputeSec = -1; lastTgLogSec = -1
         debugLog("[TGSTART] bph=\(bph) autoBph=\(autoBph) targetBph=\(targetBph) detectedBph=\(String(describing: detectedBph)) useTg=\(useTgAlgo)")
 
         do {
@@ -1011,6 +1017,16 @@ class TimegrapherEngine {
         if wallElapsed - lastTgComputeSec > 0.5 {
             lastTgComputeSec = wallElapsed
             tgRateCached = computeTgRate()
+            if useTgAlgo {
+                let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
+                let nominal = 7200.0 / Double(targetBph) * ringSampleRate
+                let env8 = recentEnvelope(Int(ringSampleRate * 8))
+                if let period = tgPeriod(env8, nominal: nominal, ringSampleRate: ringSampleRate),
+                   let fold = tgFoldedBeat(period: period) {
+                    tgFoldCached = fold
+                    tgAmpCached = tgAmplitude(fold: fold, period: period)
+                }
+            }
         }
         // Pick the rate source: tg autocorrelation-period (when toggled) or Theil-Sen regression.
         let regRateLog: Double? = (regN >= regNMinimum) ? theilSenSlope().map { $0 * 86.4 } : nil
@@ -1031,7 +1047,7 @@ class TimegrapherEngine {
         // Log BOTH rates every ~2s so we get a free offline A/B even when the toggle is off.
         if wallElapsed - lastTgLogSec > 2.0 {
             lastTgLogSec = wallElapsed
-            debugLog("[TGALGO @ \(String(format: "%.0f", wallElapsed))s] useTg=\(useTgAlgo) reg=\(regRateLog.map { String(format: "%+.1f", $0) } ?? "nil") tg=\(tgRateCached.map { String(format: "%+.1f", $0) } ?? "nil")")
+            debugLog("[TGALGO @ \(String(format: "%.0f", wallElapsed))s] useTg=\(useTgAlgo) reg=\(regRateLog.map { String(format: "%+.1f", $0) } ?? "nil") tg=\(tgRateCached.map { String(format: "%+.1f", $0) } ?? "nil") amp=\(tgAmpCached.map { String(format: "%.0f", $0) } ?? "nil")")
         }
 
         // Stability: rate has stayed within ±threshold for the full stability window
@@ -1076,7 +1092,8 @@ class TimegrapherEngine {
             detectedIntervalMs: expectedTickInterval > 0 ? 1000.0 / (actualSampleRate / Double(ringSubsampleTarget) / expectedTickInterval) : 0,
             detectedBph: detectedBph,
             debug: lastDebugInfo,
-            beatWaveform: lastBeatWaveform,
+            beatWaveform: useTgAlgo ? (tgFoldCached ?? lastBeatWaveform) : lastBeatWaveform,
+            amplitude: useTgAlgo ? tgAmpCached : nil,
             tickPositions: lastTickPositions,
             cumulativeOffset: pairDeviationMs,
             elapsedSec: wallElapsed,
@@ -1446,6 +1463,52 @@ class TimegrapherEngine {
             if abs(rate) <= 200 { best = rate }   // longer valid window overwrites → longest wins
         }
         return best
+    }
+
+    /// tg-style averaged beat: fold the recent envelope at the measured period (trimmed mean per bin).
+    private func tgFoldedBeat(period: Double) -> [Float]? {
+        let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
+        let P = Int(period.rounded()); guard P > 8 else { return nil }
+        let env = recentEnvelope(Int(ringSampleRate * 8))     // up to 8s of beats
+        let nBeats = env.count / P; guard nBeats >= 4 else { return nil }
+        var fold = [Float](repeating: 0, count: P)
+        var col = [Float](repeating: 0, count: nBeats)
+        let keep = max(1, Int(Double(nBeats) * 0.8))          // trimmed mean: drop loudest 20%
+        for p in 0..<P {
+            for b in 0..<nBeats { col[b] = env[b*P + p] }
+            col.sort()
+            var s: Float = 0; for b in 0..<keep { s += col[b] }
+            fold[p] = s / Float(keep)
+        }
+        var mean: Float = 0; vDSP_meanv(fold, 1, &mean, vDSP_Length(P))
+        var neg = -mean; vDSP_vsadd(fold, 1, &neg, &fold, 1, vDSP_Length(P))
+        return fold
+    }
+
+    /// Amplitude (degrees) from the escapement pulse-pair + lift angle. nil if not plausible.
+    private func tgAmplitude(fold: [Float], period: Double) -> Double? {
+        let P = fold.count; guard P > 8 else { return nil }
+        let glob = fold.max() ?? 0
+        var absmean: Float = 0; for v in fold { absmean += abs(v) }; absmean /= Float(P)
+        let thr = max(0.01 * glob, 1.4 * absmean)
+        func pulseBefore(_ marker: Int) -> Int? {
+            var d = P/8
+            while d > 2 { if fold[((marker - d) % P + P) % P] > thr { return d }; d -= 1 }
+            return nil
+        }
+        var tic = 0; var tv = fold[0]
+        for i in 1..<P where fold[i] > tv { tv = fold[i]; tic = i }
+        let lo = (tic + Int(Double(P)*0.4)) % P, hi = (tic + Int(Double(P)*0.6)) % P
+        var toc = lo; var bv = fold[lo]; var j = lo
+        while j != hi { if fold[j] > bv { bv = fold[j]; toc = j }; j = (j + 1) % P }
+        var amps: [Double] = []
+        for mk in [tic, toc] {
+            guard let dt = pulseBefore(mk) else { return nil }
+            let s = sin(Double.pi * Double(dt) / period); if s <= 0 { return nil }
+            amps.append(liftAngleDeg / (2 * s))
+        }
+        guard amps.allSatisfy({ 135 <= $0 && $0 <= 360 }), abs(amps[0] - amps[1]) <= 60 else { return nil }
+        return (amps[0] + amps[1]) / 2
     }
 
     /// FFT-based autocorrelation using Accelerate's vDSP.
