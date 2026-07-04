@@ -3762,9 +3762,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div id="msr-beat-scope-panel" style="display:none;background:#0a1a12;border-radius:var(--radius);padding:.5rem .75rem .4rem;margin-bottom:.75rem;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;">
           <span style="font-size:.55rem;color:rgba(74,222,128,.45);letter-spacing:.05em;">AVERAGED BEAT</span>
-          <span style="font-size:.5rem;color:rgba(74,222,128,.3);">tick ↓ &nbsp; tock ↓</span>
+          <span style="font-size:.5rem;color:rgba(74,222,128,.3);">all beats overlaid — sharp spikes = clean signal</span>
         </div>
-        <canvas id="msr-beat-scope" style="width:100%;height:56px;display:block;"></canvas>
+        <canvas id="msr-beat-scope" style="width:100%;height:64px;display:block;"></canvas>
       </div>
       <!-- Record / Stop button with progress ring -->
       <div style="position:relative;margin-bottom:.5rem;">
@@ -6792,7 +6792,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '04.09.03';
+const APP_VERSION = '04.09.16';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -24909,28 +24909,55 @@ function computeMedianRate(rates) {
   return Math.round(median * 10) / 10;
 }
 
-// tg core: draw the folded-beat averaged pulse as a small phosphor scope (tick/tock markers).
+// tg core: the folded (averaged) beat as a readable scope — tick anchored at 1/4,
+// tock ~3/4, pulses labeled in place, millisecond x-axis. One full beat cycle.
 function renderBeatScope(wave) {
   const canvas = document.getElementById('msr-beat-scope');
   if (!canvas || !wave || wave.length < 8) return;
   const dpr = window.devicePixelRatio || 1;
-  const w = canvas.width = (canvas.offsetWidth || 300) * dpr, h = canvas.height = (canvas.offsetHeight || 56) * dpr;
+  const w = canvas.width = (canvas.offsetWidth || 300) * dpr, h = canvas.height = (canvas.offsetHeight || 64) * dpr;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, w, h);
-  let mx = 0; for (const v of wave) { const a = Math.abs(v); if (a > mx) mx = a; }
-  if (mx <= 0) return;
   const n = wave.length;
+  // Rotate so the tick (global max) sits at 1/4 — a stable frame across updates.
   let tic = 0, tv = -Infinity; for (let i = 0; i < n; i++) if (wave[i] > tv) { tv = wave[i]; tic = i; }
-  const toc = (tic + Math.round(n / 2)) % n;
-  ctx.strokeStyle = 'rgba(74,222,128,.25)'; ctx.lineWidth = 1 * dpr;
-  for (const mk of [tic, toc]) { const x = mk / n * w; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+  const shift = ((tic - Math.round(n / 4)) % n + n) % n;
+  const rot = new Array(n); for (let i = 0; i < n; i++) rot[i] = wave[(i + shift) % n];
+  // Actual tock = strongest point near 3/4 (its offset from exactly +half is the beat error)
+  let tock = Math.round(n * 0.75), bv = -Infinity;
+  for (let i = Math.round(n * 0.62); i < Math.min(n, Math.round(n * 0.88)); i++) if (rot[i] > bv) { bv = rot[i]; tock = i; }
+  // Layout: waveform area above a small axis strip
+  const axisH = 11 * dpr, top = 8 * dpr, wh = h - axisH - top;
+  let lo = Infinity, hi = -Infinity; for (const v of rot) { if (v < lo) lo = v; if (v > hi) hi = v; }
+  const span = hi - lo || 1;
+  // Pulse markers + labels at the actual pulse positions
+  ctx.font = (8.5 * dpr) + 'px -apple-system, sans-serif'; ctx.textAlign = 'center';
+  for (const [mk, label] of [[Math.round(n / 4), 'TICK'], [tock, 'TOCK']]) {
+    const x = mk / (n - 1) * w;
+    ctx.strokeStyle = 'rgba(74,222,128,.2)'; ctx.lineWidth = 1 * dpr;
+    ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, top + wh); ctx.stroke();
+    ctx.fillStyle = 'rgba(74,222,128,.55)';
+    ctx.fillText(label, Math.max(14 * dpr, Math.min(w - 14 * dpr, x)), 7 * dpr);
+  }
+  // Waveform (envelope drawn up from the baseline)
   ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 1.2 * dpr; ctx.beginPath();
   for (let i = 0; i < n; i++) {
     const x = i / (n - 1) * w;
-    const y = h / 2 - (wave[i] / mx) * (h / 2 - 2 * dpr);
+    const y = top + wh - ((rot[i] - lo) / span) * (wh - 2 * dpr);
     i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   }
   ctx.stroke();
+  // Millisecond x-axis: one full beat cycle = 7200/bph seconds
+  const bph = _msrLastBph || parseInt(document.getElementById('msr-bph-select')?.value) || 21600;
+  const totalMs = 7200000 / bph;
+  ctx.strokeStyle = 'rgba(74,222,128,.15)'; ctx.beginPath();
+  ctx.moveTo(0, top + wh + 1 * dpr); ctx.lineTo(w, top + wh + 1 * dpr); ctx.stroke();
+  ctx.fillStyle = 'rgba(74,222,128,.35)';
+  for (const frac of [0, 0.25, 0.5, 0.75, 1]) {
+    const x = Math.max(10 * dpr, Math.min(w - 12 * dpr, frac * w));
+    ctx.fillText(Math.round(frac * totalMs) + '', x, h - 2 * dpr);
+  }
+  ctx.textAlign = 'left'; ctx.fillText('ms', 2 * dpr, h - 2 * dpr);
 }
 
 function renderMsrScatterPlot() {
