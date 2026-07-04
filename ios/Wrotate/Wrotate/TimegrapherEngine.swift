@@ -1355,6 +1355,76 @@ class TimegrapherEngine {
         return (conf, abs(rate) <= 120.0 ? rate : nil, detFreq)
     }
 
+    // MARK: - tg-style detection core (rate via autocorrelation period, not beat regression)
+    // Reference: docs/research/2026-07-03-tg-algorithm-learnings.md. Toggled by useTgAlgo.
+
+    private let tgSigmaGate = 3e-4   // reject a window if per-cycle period estimates disagree
+
+    /// Most-recent `n` samples of the active envelope ring, linearized oldest→newest.
+    private func recentEnvelope(_ n: Int) -> [Float] {
+        let count = min(n, energyRingCount)
+        guard count > 0 else { return [] }
+        let ring = energyRings[activeHpIndex]
+        var out = [Float](repeating: 0, count: count)
+        var idx = (energyRingWritePos - count + energyRingCapacity) % energyRingCapacity
+        for i in 0..<count { out[i] = ring[idx]; idx = (idx + 1) % energyRingCapacity }
+        return out
+    }
+
+    /// Full (tic-to-tic) period in ring samples via FFT-autocorrelation, refined across
+    /// lag-cycles (tg algo.c:427-450). Returns (period, relSigma); period nil if σ-gate fails.
+    private func tgPeriod(_ env: [Float], nominal: Double, ringSampleRate: Double) -> Double? {
+        let n = env.count
+        guard n > Int(nominal * 2.5) else { return nil }
+        var e = env
+        var mean: Float = 0; vDSP_meanv(e, 1, &mean, vDSP_Length(n))
+        var negMean = -mean; vDSP_vsadd(e, 1, &negMean, &e, 1, vDSP_Length(n))
+        let tap = min(n/2, Int(ringSampleRate * 0.1))
+        if tap > 1 {
+            for i in 0..<tap {
+                let w = Float(0.5 * (1 - cos(Double(i) / Double(tap) * .pi)))
+                e[i] *= w; e[n - 1 - i] *= w
+            }
+        }
+        let ac = fftAutocorrelation(e, count: n)
+        let tol = ringSampleRate * 0.02
+        var ests: [Double] = []; var cyc = 1.0
+        while nominal * cyc < Double(n) * 0.66 {
+            let lo = Int(nominal * cyc - tol), hi = Int(nominal * cyc + tol)
+            if hi >= ac.count - 1 || lo < 1 { break }
+            var best = lo; var bv = ac[lo]
+            for k in lo...hi where ac[k] > bv { bv = ac[k]; best = k }
+            let a0 = Double(ac[best-1]), b0 = Double(ac[best]), c0 = Double(ac[best+1])
+            let d = a0 - 2*b0 + c0
+            let frac = abs(d) > 1e-9 ? 0.5*(a0 - c0)/d : 0
+            ests.append((Double(best) + frac) / cyc); cyc += 1
+        }
+        guard !ests.isEmpty else { return nil }
+        let period = ests.reduce(0, +) / Double(ests.count)
+        if ests.count > 1 {
+            let varr = ests.map { ($0 - period)*($0 - period) }.reduce(0, +) / Double(ests.count)
+            if period > 0, sqrt(varr) / period > tgSigmaGate { return nil }
+        }
+        return period > 1 ? period : nil
+    }
+
+    /// tg-style rate: measure period over 2/4/8/16s windows of the envelope ring;
+    /// use the longest window that passes the σ-gate and yields an in-range rate.
+    private func computeTgRate() -> Double? {
+        let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
+        let nominal = 7200.0 / Double(targetBph) * ringSampleRate
+        var best: Double? = nil
+        for secs in [2.0, 4.0, 8.0, 16.0] {
+            let want = Int(secs * ringSampleRate)
+            let env = recentEnvelope(want)
+            if env.count < Int(Double(want) * 0.9) { continue }
+            guard let period = tgPeriod(env, nominal: nominal, ringSampleRate: ringSampleRate) else { continue }
+            let rate = (nominal / period - 1) * 86400
+            if abs(rate) <= 200 { best = rate }   // longer valid window overwrites → longest wins
+        }
+        return best
+    }
+
     /// FFT-based autocorrelation using Accelerate's vDSP.
     private func fftAutocorrelation(_ signal: [Float], count: Int) -> [Float] {
         // Next power of 2 for FFT (>= 2*count for linear autocorrelation)
