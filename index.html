@@ -6786,7 +6786,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '04.08.28';
+const APP_VERSION = '04.08.55';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -24954,19 +24954,36 @@ function drawMsrScatterCore(ctx, o) {
   const tMax = Math.max(10, Math.ceil(tDataMax / 10) * 10 + 5);
   const tRange = tMax - tMin;
 
-  // Running rate: cumDev slope over a trailing window for each dot. The tg core measures a
-  // steady per-window period, so widen the window (5s→12s) to tighten the cloud to match.
+  // Dots.
+  // tg core: paperstrip-style — remove the tg-rate trend from each beat's cumulative
+  // deviation and plot the residual jitter centered on the tg rate line. The dot spread
+  // then shows per-beat timing noise around the measured rate (like tg's strip), instead
+  // of the detector's own running rate drifting away from the line during its transient.
+  // Original core: running rate (cumDev slope over a 5s trailing window), unchanged.
   const rateData = [];
-  const windowSec = (typeof _tgAlgo === 'function' && _tgAlgo() === 'tg') ? 12 : 5;
-  for (let i = 0; i < data.length; i++) {
-    const pt = data[i];
-    if (pt.t < 3) continue;
-    let j = i;
-    while (j > 0 && pt.t - data[j - 1].t < windowSec) j--;
-    if (j < i && pt.t - data[j].t >= 1) {
-      rateData.push({ t: pt.t, r: ((pt.cd - data[j].cd) / (pt.t - data[j].t)) * 86.4 });
-    } else {
-      rateData.push({ t: pt.t, r: (pt.cd / pt.t) * 86.4 });
+  const tgDots = (typeof _tgAlgo === 'function' && _tgAlgo() === 'tg' && typeof _msrLastRate === 'number');
+  if (tgDots) {
+    const slope = _msrLastRate / 86.4;           // s/day → ms of cumDev drift per second
+    const res = [];
+    for (const pt of data) { if (pt.t >= 1) res.push({ t: pt.t, v: pt.cd - slope * pt.t }); }
+    if (res.length) {
+      const sorted = res.map(r => r.v).sort((a, b) => a - b);
+      const med = sorted[Math.floor(sorted.length / 2)];
+      // 1ms residual ≙ 7.2 s/day on the y axis (rate-equivalent over a 12s window)
+      for (const r of res) rateData.push({ t: r.t, r: _msrLastRate + (r.v - med) * 7.2 });
+    }
+  } else {
+    const windowSec = 5;
+    for (let i = 0; i < data.length; i++) {
+      const pt = data[i];
+      if (pt.t < 3) continue;
+      let j = i;
+      while (j > 0 && pt.t - data[j - 1].t < windowSec) j--;
+      if (j < i && pt.t - data[j].t >= 1) {
+        rateData.push({ t: pt.t, r: ((pt.cd - data[j].cd) / (pt.t - data[j].t)) * 86.4 });
+      } else {
+        rateData.push({ t: pt.t, r: (pt.cd / pt.t) * 86.4 });
+      }
     }
   }
   if (rateData.length < 1) { ctx.fillStyle = '#0a1a12'; ctx.fillRect(0, 0, w, h); return; }
