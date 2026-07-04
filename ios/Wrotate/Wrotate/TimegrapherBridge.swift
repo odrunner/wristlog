@@ -30,9 +30,10 @@ class TimegrapherBridge {
             let sensitivity = body["sensitivity"] as? Int ?? 50
             let source = body["source"] as? String ?? "mic"
             let pzMode = body["pzMode"] as? String ?? "default"
+            let algo = body["algo"] as? String ?? "original"
             usingPiezo = (source == "piezo")
-            print("[TG BRIDGE START] source=\(source) bph=\(bph) sensitivity=\(sensitivity) pzMode=\(pzMode)")
-            if usingPiezo { startPiezo(bph: bph, mode: pzMode) } else { startMeasurement(bph: bph, sensitivity: sensitivity) }
+            print("[TG BRIDGE START] source=\(source) bph=\(bph) sensitivity=\(sensitivity) pzMode=\(pzMode) algo=\(algo)")
+            if usingPiezo { startPiezo(bph: bph, mode: pzMode) } else { startMeasurement(bph: bph, sensitivity: sensitivity, useTgAlgo: algo == "tg") }
 
         case "stop":
             print("[TG BRIDGE STOP]")
@@ -130,7 +131,7 @@ class TimegrapherBridge {
         }
     }
 
-    private func startMeasurement(bph: Int, sensitivity: Int) {
+    private func startMeasurement(bph: Int, sensitivity: Int, useTgAlgo: Bool = false) {
         // Request mic permission if needed
         AVAudioApplication.requestRecordPermission { [weak self] granted in
             DispatchQueue.main.async {
@@ -188,7 +189,7 @@ class TimegrapherBridge {
                     self?.sendToJS(payload)
                 }
 
-                self.engine.start(bph: bph, sensitivity: sensitivity)
+                self.engine.start(bph: bph, sensitivity: sensitivity, useTgAlgo: useTgAlgo)
                 UIApplication.shared.isIdleTimerDisabled = true
                 self.sendToJS(["event": "started"])
             }
