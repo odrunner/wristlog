@@ -6783,7 +6783,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.21.27';
+const APP_VERSION = '03.21.38';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -24128,7 +24128,7 @@ window._tgNativeCallback = function(data) {
     if (isMsr && _msrListening && _msrListenStart) {
       const elapsed = (Date.now() - _msrListenStart) / 1000;
       const maxDur = _tgHasNative() ? tgLoadSettings().values.maxDuration : 45;
-      if (!_tgRunnerActive() && !_tgV2Convergence() && (_msrPhase === 'converged' || elapsed >= maxDur)) {  // v2-on: the _q2Tick plateau controller owns the finish
+      if (!_tgRunnerActive() && (_tgAlgo() === 'tg' || !_tgV2Convergence()) && (_msrPhase === 'converged' || elapsed >= maxDur)) {  // v2-on: _q2Tick owns the finish — EXCEPT the tg core, which owns its own converge+stop
         const wasConverged = _msrPhase === 'converged';
         // Haptic feedback on finish — success for converged, warning for timeout
         if (window.webkit?.messageHandlers?.haptic) {
