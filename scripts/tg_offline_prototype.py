@@ -56,11 +56,42 @@ def tg_rate(env, sr, bph, gate=True):
         a0,b0,c0=ac[k-1],ac[k],ac[k+1]; d=a0-2*b0+c0
         fr=0.5*(a0-c0)/d if abs(d)>1e-9 else 0
         ests.append((k+fr)/cyc); cyc+=1
-    if not ests: return None, None
+    if not ests: return None, None, None
     period = float(np.mean(ests))
     rel_sigma = float(np.std(ests)/period) if len(ests)>1 else 0.0
-    if gate and rel_sigma > SIGMA_GATE: return None, rel_sigma
-    return (nominal/period - 1)*86400, rel_sigma
+    if gate and rel_sigma > SIGMA_GATE: return None, rel_sigma, period
+    return (nominal/period - 1)*86400, rel_sigma, period
+
+def tg_fold(env, period):
+    """Averaged beat: fold the envelope at the period, trimmed mean per bin (drop loudest 20%)."""
+    P = int(round(period)); n = len(env)//P
+    if n < 4: return None
+    M = np.array([env[i*P:(i+1)*P] for i in range(n)])   # n beats × P
+    keep = max(1, int(n*0.8))
+    fold = np.sort(M, axis=0)[:keep].mean(axis=0)
+    return fold - np.median(fold)
+
+def tg_amplitude(fold, period, la=52.0):
+    """Amplitude (deg) from the escapement pulse-pair + lift angle. None if not plausible."""
+    P = len(fold); glob = fold.max()
+    thr = max(0.01*glob, 1.4*np.median(np.abs(fold)))
+    def pulse_before(marker):
+        for d in range(int(P/8), 2, -1):
+            if fold[(marker - d) % P] > thr: return d      # Δt (samples) pulse→marker
+        return None
+    tic = int(np.argmax(fold))
+    lo=(tic+int(P*0.4))%P; hi=(tic+int(P*0.6))%P
+    idx=list(range(lo,hi)) if lo<hi else list(range(lo,P))+list(range(0,hi))
+    toc = max(idx, key=lambda i: fold[i])
+    amps=[]
+    for mk in (tic, toc):
+        dt = pulse_before(mk)
+        if dt is None: return None
+        s = math.sin(math.pi*dt/period)
+        if s <= 0: return None
+        amps.append(la/(2*s))
+    if not (135<=amps[0]<=360 and 135<=amps[1]<=360 and abs(amps[0]-amps[1])<=60): return None
+    return sum(amps)/2
 
 def phaselock_rate(x, sr, bph):
     """Our approach (compact): band-pass envelope -> phase-locked peaks -> Theil-Sen slope."""
@@ -93,10 +124,10 @@ def phaselock_rate(x, sr, bph):
 def main():
     ids=[int(a) for a in sys.argv[1:]] or None
     caps=fetch(ids)
-    print("id    bph    amp     | phaseLock | tg per window (2s/4s/8s/full)      | CHOSEN | spread")
+    print("id    bph    rawAmp  | phaseLock | tg per window (2s/4s/8s/full)      | CHOSEN | AMP°")
     print("-"*96)
     for cid,bph,sr,a in caps:
-        amp=np.abs(a).max()
+        rawamp=np.abs(a).max()
         pl=phaselock_rate(a,sr,bph)
         env=envelope(a,sr); dur=len(a)/sr
         wr=[]
@@ -106,11 +137,16 @@ def main():
             wr.append(r)
         # tg display value = longest window that passed the σ-gate
         best=next((r for r in reversed(wr) if r is not None and abs(r)<200), None)
-        valid=[r for r in wr if r is not None and abs(r)<200]
-        spread=(max(valid)-min(valid)) if len(valid)>1 else 0
-        wr=wr+[best]  # append the "chosen" value as a 5th column
+        wr=wr+[best]
+        # amplitude on the full window
+        _,_,period = tg_rate(env,sr,bph,gate=False)
+        ampdeg=None
+        if period:
+            fold=tg_fold(env,period)
+            if fold is not None: ampdeg=tg_amplitude(fold,period)
         fmt=lambda r: ('%+6.1f'%r if r is not None and abs(r)<400 else '  --  ')
-        print("%-5d %-6d %.4f | %s   | %s %s %s %s | %s | %5.1f"%(
-            cid,bph,amp, fmt(pl), fmt(wr[0]),fmt(wr[1]),fmt(wr[2]),fmt(wr[3]), fmt(wr[4]), spread))
+        print("%-5d %-6d %.4f | %s   | %s %s %s %s | %s | %s"%(
+            cid,bph,rawamp, fmt(pl), fmt(wr[0]),fmt(wr[1]),fmt(wr[2]),fmt(wr[3]), fmt(wr[4]),
+            ('%.0f'%ampdeg if ampdeg is not None else ' -- ')))
 
 if __name__=='__main__': main()
