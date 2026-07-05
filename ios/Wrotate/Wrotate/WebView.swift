@@ -127,7 +127,7 @@ struct WebView: UIViewRepresentable {
                 if (window._wrotateNativeBridgeInstalled) return;
                 window._wrotateNativeBridgeInstalled = true;
                 window._wrotateNativeTimegrapher = true;
-                window._iosAppVersion = '2.0';   // 2.0 = phase-lock detection + phase-separated beat error + adaptive (v2) convergence bundle
+                window._iosAppVersion = '2.1';   // 2.1 = tg detection core (autocorrelation rate + amplitude + folded beat) + JS-tunable knobs; gates the Pro V2 beta toggle
 
                 // Wait for Supabase client to be ready
                 var checkInterval = setInterval(function() {
