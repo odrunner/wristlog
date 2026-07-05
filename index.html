@@ -3875,7 +3875,31 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <h1 class="page-title" style="flex:1;">Advanced Settings</h1>
     </div>
     <div style="padding:0 .5rem;">
-      <div style="margin-bottom:1.2rem;">
+      <!-- Pro V2 engine settings — shown instead of the Standard sections when Pro V2 is selected -->
+      <div id="msr-prov2-settings" style="display:none;margin-bottom:1.2rem;">
+        <div style="font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:.5rem;letter-spacing:.03em;">PRO V2 · PRECISION</div>
+        <div id="msr-prov2-precision" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:1.2rem;">
+          <button class="msr-preset-card" data-prec="quick" onclick="onProV2Precision('quick')">
+            <div class="msr-preset-name">Quick</div>
+            <div class="msr-preset-desc">~5s result</div>
+          </button>
+          <button class="msr-preset-card" data-prec="balanced" onclick="onProV2Precision('balanced')">
+            <div class="msr-preset-name">Balanced</div>
+            <div class="msr-preset-desc">~10s, recommended</div>
+          </button>
+          <button class="msr-preset-card" data-prec="strict" onclick="onProV2Precision('strict')">
+            <div class="msr-preset-name">Strict</div>
+            <div class="msr-preset-desc">~15s, tightest</div>
+          </button>
+        </div>
+        <div style="font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:.5rem;letter-spacing:.03em;">LIFT ANGLE</div>
+        <div class="msr-slider-row">
+          <div class="msr-slider-label">Lift angle <span class="msr-slider-val" id="msr-prov2-lift-val">52°</span></div>
+          <div class="msr-slider-desc">Escapement lift angle — affects the amplitude reading only. 52° fits most modern movements; check your movement's spec if amplitude looks off.</div>
+          <input type="range" id="msr-prov2-lift" min="40" max="60" step="1" value="52" oninput="onProV2Lift(this.value)">
+        </div>
+      </div>
+      <div id="msr-std-preset-section" style="margin-bottom:1.2rem;">
         <div style="font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:.5rem;letter-spacing:.03em;">ENVIRONMENT PRESET</div>
         <div id="msr-settings-presets" style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
           <button class="msr-preset-card active" data-preset="default" onclick="tgSelectPreset('default')">
@@ -3896,7 +3920,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </button>
         </div>
       </div>
-      <div style="margin-bottom:1.2rem;">
+      <div id="msr-std-tuning-section" style="margin-bottom:1.2rem;">
         <div style="font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:.5rem;letter-spacing:.03em;">TUNING</div>
         <div id="msr-settings-sliders" style="display:flex;flex-direction:column;gap:.8rem;">
           <div class="msr-slider-row">
@@ -6801,7 +6825,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.14.10';
+const APP_VERSION = '05.14.16';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -24484,6 +24508,44 @@ function openMsrSettings() {
   document.getElementById('page-msr-settings').classList.add('active');
   window.scrollTo(0, 0);
   tgLoadSettingsToUI();
+  // Pro V2: show its own settings (precision + lift angle); Standard-only sections hide.
+  const isV2 = _tgAlgo() === 'tg';
+  const v2 = document.getElementById('msr-prov2-settings');
+  const stdA = document.getElementById('msr-std-preset-section');
+  const stdB = document.getElementById('msr-std-tuning-section');
+  if (v2) v2.style.display = isV2 ? '' : 'none';
+  if (stdA) stdA.style.display = isV2 ? 'none' : '';
+  if (stdB) stdB.style.display = isV2 ? 'none' : '';
+  if (isV2) {
+    const lift = _tgKnob('tg_lift', 52);
+    const liftEl = document.getElementById('msr-prov2-lift');
+    if (liftEl) liftEl.value = lift;
+    const liftVal = document.getElementById('msr-prov2-lift-val');
+    if (liftVal) liftVal.textContent = lift + '°';
+    const prec = localStorage.getItem('tg_precision') || 'balanced';
+    document.querySelectorAll('#msr-prov2-precision .msr-preset-card').forEach(c =>
+      c.classList.toggle('active', c.dataset.prec === prec));
+  }
+}
+
+// Pro V2 precision presets → convergence knobs (wall-min / stability window / band s/d)
+const PROV2_PRECISION = {
+  quick:    { tg_wallmin: 5,  tg_stabwin: 4, tg_stabth: 4 },
+  balanced: { tg_wallmin: 8,  tg_stabwin: 6, tg_stabth: 3 },
+  strict:   { tg_wallmin: 12, tg_stabwin: 8, tg_stabth: 2 }
+};
+function onProV2Precision(p) {
+  const m = PROV2_PRECISION[p]; if (!m) return;
+  localStorage.setItem('tg_precision', p);
+  for (const [k, v] of Object.entries(m)) localStorage.setItem(k, String(v));
+  sendMsrTuning();
+  document.querySelectorAll('#msr-prov2-precision .msr-preset-card').forEach(c =>
+    c.classList.toggle('active', c.dataset.prec === p));
+}
+function onProV2Lift(v) {
+  const val = document.getElementById('msr-prov2-lift-val');
+  if (val) val.textContent = v + '°';
+  onTgKnob('tg_lift', v);
 }
 
 function closeMsrSettings() {
