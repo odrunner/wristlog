@@ -3687,10 +3687,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <option value="piezo">Piezo (contact)</option>
       </select>
       <!-- Detection core toggle (admin, gated by tg_algo). Applies on next stop/start. -->
-      <select id="tg-algo-sel" onchange="onTgAlgo(this.value)" style="display:none;width:100%;margin-bottom:.75rem;padding:.45rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
-        <option value="original">Detection: Original (regression)</option>
-        <option value="tg">Detection: tg (autocorrelation)</option>
+      <select id="tg-algo-sel" onchange="onTgAlgo(this.value)" style="display:none;width:100%;margin-bottom:.35rem;padding:.45rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+        <option value="original">Engine: Standard</option>
+        <option value="tg">Engine: Pro V2 ⚡ (beta)</option>
       </select>
+      <div id="tg-algo-hint" style="display:none;font-size:.68rem;color:var(--muted);margin:-.1rem 0 .65rem .1rem;line-height:1.4;">Pro V2 beta — converges in ~10s and measures amplitude (°). Switch back anytime.</div>
       <!-- tg convergence knobs (admin, gated by tg_algo). Applied live via the tuning message. -->
       <div id="tg-knob-panel" style="display:none;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:.4rem;margin-bottom:.75rem;font-size:.62rem;color:var(--muted);">
         <label>σ-gate ×1e-4<input type="number" step="0.5" id="tg-knob-sigma4" oninput="onTgKnob('tg_sigma', this.value/10000)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
@@ -6800,7 +6801,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '05.14.07';
+const APP_VERSION = '05.14.10';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23178,8 +23179,13 @@ function initTgSourceSelector() {
   }
   const algoSel = document.getElementById('tg-algo-sel');
   if (algoSel) {
-    if (featureFlag('tg_algo')) { algoSel.style.display = ''; algoSel.value = localStorage.getItem('tg_algo_sel') || 'original'; }
-    else algoSel.style.display = 'none';
+    // Public when the 2.1 native build is present; admins also see it via the tg_algo flag.
+    if (featureFlag('tg_algo') || _proV2Available()) {
+      algoSel.style.display = '';
+      algoSel.value = localStorage.getItem('tg_algo_sel') || 'original';
+      const hint = document.getElementById('tg-algo-hint');
+      if (hint) hint.style.display = algoSel.value === 'tg' ? '' : 'none';
+    } else algoSel.style.display = 'none';
   }
   const knobPanel = document.getElementById('tg-knob-panel');
   if (knobPanel) {
@@ -23206,11 +23212,19 @@ function initTgSourceSelector() {
 }
 function onPzTune(key, val) { if (val !== '' && Number(val) > 0) { localStorage.setItem(key, val); sendPiezoTuning(); } }
 function _pzMode() { return localStorage.getItem('pz_mode') === 'measurement' ? 'measurement' : 'default'; }
+// Pro V2 (tg core) requires the 2.1 native build — the WebView injects _iosAppVersion.
+function _proV2Available() {
+  return _tgHasNative() && parseFloat(window._iosAppVersion || '0') >= 2.1;
+}
 function _tgAlgo() {
-  if (!featureFlag('tg_algo')) return 'original';
+  if (!featureFlag('tg_algo') && !_proV2Available()) return 'original';
   return localStorage.getItem('tg_algo_sel') === 'tg' ? 'tg' : 'original';
 }
-function onTgAlgo(v) { localStorage.setItem('tg_algo_sel', v); }
+function onTgAlgo(v) {
+  localStorage.setItem('tg_algo_sel', v);
+  const hint = document.getElementById('tg-algo-hint');
+  if (hint) hint.style.display = v === 'tg' ? '' : 'none';
+}
 function onPzTuneMode(v) { localStorage.setItem('pz_mode', v); }  // session mode — applies on next stop/start
 
 // Admin batch runner: leave the pickup coupled, auto-run many measurements (alternating
@@ -25648,6 +25662,8 @@ function stopMsrListen(reason) {
         actual_sample_rate: null,
         stop_reason: stopReason,
         converged: _msrPhase === 'converged',
+        algo: _tgAlgo(),
+        amplitude: _msrLastAmp != null ? Math.round(_msrLastAmp) : null,
         final_confidence: _msrLastConf,
         noise_level: _msrNoiseSamples.length > 0 ? Math.round(_msrNoiseSamples.reduce((a, b) => a + b, 0) / _msrNoiseSamples.length * 1000) / 1000 : null,
         tick_data: tickSnap.length > 0 ? tickSnap : null,
