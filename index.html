@@ -6825,7 +6825,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.07.24';
+const APP_VERSION = '06.07.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20198,9 +20198,41 @@ function openAddFlowV2() {
   input.click();
 }
 
+// Shared image (iOS share extension): ask what to do — post / collection / wishlist —
+// then hand off to that flow's normal entry point.
+let _sharedImgB64 = null;
 function handleSharedImageV2(base64) {
-  nav(document.querySelector('nav button[data-page="collection"]'));
-  setTimeout(() => af2StartWithBase64(base64), 300);
+  _sharedImgB64 = base64;
+  const img = document.getElementById('shared-img-preview');
+  if (img) img.src = base64;
+  const modal = document.getElementById('shared-img-modal');
+  if (modal) modal.classList.remove('hidden');
+  else { // markup missing (shouldn't happen) — fall back to the old collection flow
+    nav(document.querySelector('nav button[data-page="collection"]'));
+    setTimeout(() => af2StartWithBase64(base64), 300);
+  }
+}
+function _sharedB64ToFile(b64) {
+  const data = b64.split(',')[1] || b64;
+  const bin = atob(data);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new File([arr], 'shared-photo.jpg', { type: 'image/jpeg' });
+}
+function sharedImgChoose(action) {
+  const modal = document.getElementById('shared-img-modal');
+  if (modal) modal.classList.add('hidden');
+  const b64 = _sharedImgB64; _sharedImgB64 = null;
+  if (!action || !b64) return;
+  if (action === 'post') {
+    openNewPost({ prefillFiles: [_sharedB64ToFile(b64)], source: 'share' });
+  } else if (action === 'collection') {
+    nav(document.querySelector('nav button[data-page="collection"]'));
+    setTimeout(() => af2StartWithBase64(b64), 300);
+  } else if (action === 'wishlist') {
+    nav(document.querySelector('nav button[data-page="wishlist"]'));
+    setTimeout(() => wlPhotoIdentify(_sharedB64ToFile(b64)), 300);
+  }
 }
 
 async function af2StartWithFile(file) {
@@ -26474,5 +26506,17 @@ function _viewerKeydown(e) {
   else if (e.key === 'ArrowRight') viewerNav(1);
 }
 </script>
+<!-- Shared-image chooser (iOS share extension) -->
+<div id="shared-img-modal" class="hidden" style="position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:1.5rem;" onclick="if(event.target===this)sharedImgChoose(null)">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:340px;width:100%;padding:1.1rem;box-shadow:0 12px 40px rgba(0,0,0,.4);">
+    <div style="font-weight:700;font-size:1rem;margin-bottom:.2rem;color:var(--text);">Shared photo</div>
+    <div style="font-size:.8rem;color:var(--muted);margin-bottom:.75rem;">What would you like to do with it?</div>
+    <img id="shared-img-preview" alt="Shared photo" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px;margin-bottom:.9rem;border:1px solid var(--border);">
+    <button onclick="sharedImgChoose('post')" style="width:100%;padding:.65rem;margin-bottom:.5rem;border-radius:10px;border:1px solid var(--border);background:var(--gold,#b08d3e);color:#fff;font-size:.88rem;font-weight:600;cursor:pointer;">Post this watch</button>
+    <button onclick="sharedImgChoose('collection')" style="width:100%;padding:.65rem;margin-bottom:.5rem;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.88rem;font-weight:600;cursor:pointer;">Add to collection</button>
+    <button onclick="sharedImgChoose('wishlist')" style="width:100%;padding:.65rem;margin-bottom:.5rem;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:.88rem;font-weight:600;cursor:pointer;">Add to wishlist</button>
+    <button onclick="sharedImgChoose(null)" style="width:100%;padding:.55rem;border-radius:10px;border:none;background:none;color:var(--muted);font-size:.82rem;cursor:pointer;">Cancel</button>
+  </div>
+</div>
 </body>
 </html>
