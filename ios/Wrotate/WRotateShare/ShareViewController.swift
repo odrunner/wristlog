@@ -71,17 +71,49 @@ class ShareViewController: UIViewController {
             return
         }
 
-        // Open the main app via the custom URL scheme. A share extension has no
-        // UIApplication in its responder chain (own process), so `r as? UIApplication`
-        // never matches — that was why sharing did nothing. Use the supported
-        // NSExtensionContext.open first, then the responder-chain `openURL:` selector.
+        // Try to open the main app via the custom URL scheme. On modern iOS a share
+        // extension usually CANNOT launch its app (Apple closed the workarounds), so
+        // regardless of the outcome we show a "Saved" confirmation — the image is
+        // waiting in the app group and imports on the next WRotate open.
         let url = URL(string: "wrotate://share-image")!
         DispatchQueue.main.async {
             self.extensionContext?.open(url) { [weak self] success in
                 if !success { self?.openViaResponderChain(url) }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    self?.close()
-                }
+                self?.showSavedConfirmation()
+            }
+        }
+    }
+
+    private func showSavedConfirmation() {
+        DispatchQueue.main.async {
+            let card = UIView()
+            card.backgroundColor = UIColor(red: 0.07, green: 0.09, blue: 0.08, alpha: 0.96)
+            card.layer.cornerRadius = 14
+            card.translatesAutoresizingMaskIntoConstraints = false
+
+            let label = UILabel()
+            label.text = "✓ Saved to WRotate\nOpen WRotate to choose what to do with it"
+            label.numberOfLines = 0
+            label.textAlignment = .center
+            label.textColor = .white
+            label.font = .systemFont(ofSize: 14, weight: .medium)
+            label.translatesAutoresizingMaskIntoConstraints = false
+
+            card.addSubview(label)
+            self.view.addSubview(card)
+            NSLayoutConstraint.activate([
+                card.centerXAnchor.constraint(equalTo: self.view.centerXAnchor),
+                card.centerYAnchor.constraint(equalTo: self.view.centerYAnchor),
+                card.widthAnchor.constraint(lessThanOrEqualToConstant: 300),
+                label.topAnchor.constraint(equalTo: card.topAnchor, constant: 16),
+                label.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -16),
+                label.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 18),
+                label.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -18),
+            ])
+            card.alpha = 0
+            UIView.animate(withDuration: 0.18) { card.alpha = 1 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+                self.close()
             }
         }
     }
