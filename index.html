@@ -6825,7 +6825,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.07.59';
+const APP_VERSION = '06.12.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11511,6 +11511,9 @@ function openNewPost(opts) {
       newPostPosters.push(null);
     }
     renderNpThumbstrip();
+    // A shared photo IS a watch photo — run the same identification a user-added
+    // photo gets (graph-card prefills stay exempt: a chart isn't identifiable).
+    if (o.source === 'share' && newPostFiles[0]) npIdentifyWatch(newPostFiles[0]);
   }
   // Headless mode (e.g. direct measurement share): caller will force visibility
   // and submit immediately, so never show or focus the modal.
