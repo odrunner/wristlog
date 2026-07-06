@@ -111,6 +111,28 @@ def analyze(blob):
                 pair_rej=pair_rej, phase_rej=phase_rej, auto=auto, stop=stop)
 
 
+def prov2_stats(blob):
+    """Pro V2 shadow A/B from [TGALGO] lines (2.1 builds log reg vs tg + amp on EVERY
+    run, toggle on or off) + the session_summary algo/converged fields."""
+    pairs = re.findall(r'\[TGALGO @ \d+s\] useTg=\w+ reg=([+\-\d.]+|nil) tg=([+\-\d.]+|nil)(?: amp=([\d.]+|nil))?', blob)
+    if not pairs:
+        return None
+    both = [(float(r), float(t)) for r, t, _ in pairs if r != "nil" and t != "nil"]
+    amps = [float(a) for _, _, a in pairs if a and a != "nil"]
+    algo = (re.search(r'"algo"\s*:\s*"(\w+)"', blob) or [None, None])[1]
+    conv = '"converged":true' in blob.replace(" ", "")
+    dur = (re.search(r'"duration_sec"\s*:\s*(\d+)', blob) or [None, None])[1]
+    return dict(
+        delta=abs(both[-1][1] - both[-1][0]) if both else None,   # final |tg − reg|
+        amp=amps[-1] if amps else None,
+        amp_ok=(135 <= amps[-1] <= 360) if amps else None,
+        algo=algo or "original", conv=conv,
+        dur=int(dur) if dur else None)
+
+
+FLIP_GATE = dict(users=20, sessions=100, conv_pct=80, ttc_median=15, delta_median=3.0)
+
+
 def is_good(a):
     return a["final"] is not None and abs(a["final"]) <= GOOD_MAX_RATE and a["n_acc"] >= GOOD_MIN_TICKS
 
@@ -184,6 +206,7 @@ def main():
         if "psBE=" not in blob: continue
         a = analyze(blob)
         if not a["uid"] or a["uid"] in internal: continue
+        a["v2"] = prov2_stats(blob)
         cum.append(a)
         if s["t"] and s["t"] >= wk_cut: week.append(a)
 
@@ -207,6 +230,38 @@ def main():
     L.append("\n## Good% by BPH (cumulative)")
     for bph, (tot, g) in sorted(C["by_bph"].items(), key=lambda x: -x[1][0]):
         L.append(f"- {bph} bph: {g}/{tot} ({pct(g,tot)})")
+
+    # Pro V2 (tg core): shadow A/B from every 2.1 session + beta segment vs the flip gate
+    v2 = [a for a in cum if a.get("v2")]
+    L.append("\n## Pro V2 (tg core) — shadow A/B & beta")
+    if not v2:
+        L.append("- No 2.1-build sessions yet (shadow logging starts with the 2.1 release).")
+    else:
+        users21 = {a["uid"] for a in v2}
+        deltas = sorted(a["v2"]["delta"] for a in v2 if a["v2"]["delta"] is not None)
+        med = deltas[len(deltas) // 2] if deltas else None
+        amp_sess = [a for a in v2 if a["v2"]["amp_ok"] is not None]
+        amp_good = sum(1 for a in amp_sess if a["v2"]["amp_ok"])
+        beta = [a for a in v2 if a["v2"]["algo"] == "tg"]
+        busers = {a["uid"] for a in beta}
+        bconv = sum(1 for a in beta if a["v2"]["conv"])
+        bdurs = sorted(a["v2"]["dur"] for a in beta if a["v2"]["conv"] and a["v2"]["dur"])
+        ttc = bdurs[len(bdurs) // 2] if bdurs else None
+        convp = round(100 * bconv / len(beta)) if beta else None
+        L.append(f"- 2.1 adoption: {len(users21)} users, {len(v2)} sessions — every one shadow-logs reg vs tg")
+        L.append("- Shadow agreement: median |tg−reg| = " + (f"{med:.1f} s/d over {len(deltas)} sessions" if med is not None else "n/a"))
+        L.append(f"- Amplitude plausible (135–360°): {amp_good}/{len(amp_sess)} sessions with a reading")
+        L.append(f"- Beta (Pro V2 selected): {len(busers)} users, {len(beta)} sessions, converged {bconv}/{len(beta)}"
+                 + (f", median time-to-converge {ttc}s" if ttc else ""))
+        g = FLIP_GATE
+        def _chk(v, target, le=False):
+            if v is None: return "–"
+            return "PASS" if (v <= target if le else v >= target) else "…"
+        L.append(f"- Flip gate: users {len(busers)}/{g['users']} [{_chk(len(busers), g['users'])}]"
+                 f" · sessions {len(beta)}/{g['sessions']} [{_chk(len(beta), g['sessions'])}]"
+                 f" · conv {convp if convp is not None else '–'}%/{g['conv_pct']}% [{_chk(convp, g['conv_pct'])}]"
+                 f" · TTC {ttc if ttc is not None else '–'}s ≤{g['ttc_median']}s [{_chk(ttc, g['ttc_median'], le=True)}]"
+                 f" · |tg−reg| {f'{med:.1f}' if med is not None else '–'} ≤{g['delta_median']} [{_chk(med, g['delta_median'], le=True)}]")
 
     L.append("\n## Failure modes — ranked by DISTINCT USERS affected (anti-recency)")
     L.append(f"{'mode':<14} {'users(cum)':>10} {'watches':>8} {'sess(cum)':>9} {'users(7d)':>9} {'fix':>7}")

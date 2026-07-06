@@ -111,6 +111,8 @@ def main():
 
     v2_users_all, v2_users_today = set(), set()
     v2_sessions_all = v2_sessions_today = 0
+    v21_users, v21_sessions = set(), 0      # 2.1 build (tg core; "[TGALGO" shadow marker)
+    beta_users, beta_sessions = set(), 0    # Pro V2 beta opt-ins (session_summary algo=tg)
     ext_users_today = set()             # all external users measuring today (any build)
     conv = defaultdict(int)             # convergence outcome of real-user 2.0 sessions
     v2_meas = []                        # (uid, watch_id, final_rate) per real-user 2.0 session
@@ -123,6 +125,10 @@ def main():
         today = s["first"] and s["first"] >= cutoff_24h
         if uid and not is_internal and today:
             ext_users_today.add(uid)
+        if "[TGALGO" in blob and uid and not is_internal:
+            v21_sessions += 1; v21_users.add(uid)
+            if re.search(r'"algo"\s*:\s*"tg"', blob):
+                beta_sessions += 1; beta_users.add(uid)
         if is_v2:
             v2_sessions_all += 1
             if uid and not is_internal:
@@ -177,6 +183,7 @@ def main():
         f"(of {len(ext_users_today)} external users measuring today) "
         f"| cumulative since {APPROVAL_DATE}: {len(v2_users_all)} users / {v2_sessions_all} sessions"
         + qual
+        + f" | 2.1: {len(v21_users)}u/{v21_sessions}s, beta {len(beta_users)}u/{beta_sessions}s"
     )
     print(f"### WRotate 2.0 Rollout — {date_str}\n")
     print(line)
