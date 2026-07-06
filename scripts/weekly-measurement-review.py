@@ -31,6 +31,9 @@ REPORT_TO = "ozgurdogan@gmail.com"
 RELEASE_DATE = "2026-06-11"                 # 2.0 release — cumulative window start
 SNAP_FILE = os.path.expanduser("~/.local/share/wrotate-measurement-history.log")
 LEDGER = os.path.expanduser("~/Documents/Claude project/watch tracker/docs/measurement-changelog.md")
+# launchd runs can't read ~/Documents (macOS TCC) — keep a cache the LaunchAgent can reach.
+# Manual runs refresh it from the repo copy.
+LEDGER_CACHE = os.path.expanduser("~/.local/share/wrotate-measurement-changelog.md")
 TMP = "/tmp/wrotate-weekly"
 # Usability proxy (no Weishi ground truth): a "good" session produced a believable,
 # well-supported reading.
@@ -42,6 +45,26 @@ MIN_WATCHES = 2
 
 os.makedirs(TMP, exist_ok=True)
 os.makedirs(os.path.dirname(SNAP_FILE), exist_ok=True)
+
+
+def read_ledger_lines(primary=None, cache=None):
+    """Ledger table rows, or None. Prefers the repo copy and refreshes the cache
+    from it; falls back to the cache when TCC blocks ~/Documents. Never raises."""
+    primary, cache = primary or LEDGER, cache or LEDGER_CACHE
+    text = None
+    try:
+        text = open(primary).read()
+        try:
+            with open(cache, "w") as f:
+                f.write(text)
+        except OSError:
+            pass
+    except OSError:
+        try:
+            text = open(cache).read()
+        except OSError:
+            return None
+    return [l for l in text.splitlines() if l.startswith("|") and "---" not in l]
 
 
 def curl(url, hdrs, method="GET", body=None):
@@ -235,12 +258,12 @@ def main():
 
     # echo the change ledger tail (what we shipped last week → did its metric move?)
     L.append("\n## Change ledger (most recent)")
-    try:
-        led = [l for l in open(LEDGER).read().splitlines() if l.startswith("|") and "---" not in l]
+    led = read_ledger_lines()
+    if led is None:
+        L.append("  (ledger unreadable — create docs/measurement-changelog.md, or run the script manually once to refresh the cache)")
+    else:
         for l in led[-3:]:
             L.append("  " + l)
-    except FileNotFoundError:
-        L.append("  (no ledger yet — create docs/measurement-changelog.md)")
 
     report = "\n".join(L)
     print(report)
