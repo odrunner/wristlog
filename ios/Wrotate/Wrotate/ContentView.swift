@@ -63,14 +63,17 @@ struct ContentView: View {
             webViewRef?.load(URLRequest(url: url))
         }
         .onChange(of: isLoading) {
-            if !isLoading { dispatchPendingQuickAction() }
+            if !isLoading { dispatchPendingQuickAction(); handleSharedImage() }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-            if !isLoading { dispatchPendingQuickAction() }
+            if !isLoading { dispatchPendingQuickAction(); handleSharedImage() }
         }
     }
 
     private func handleSharedImage() {
+        // Leave the pending key in place until the WebView can actually run the JS —
+        // a cold-start onOpenURL fires before the page loads and would lose the image.
+        guard !isLoading else { return }
         guard let defaults = UserDefaults(suiteName: "group.com.wrotate.Wrotate"),
               let path = defaults.string(forKey: "sharedImagePath") else { return }
         defaults.removeObject(forKey: "sharedImagePath")

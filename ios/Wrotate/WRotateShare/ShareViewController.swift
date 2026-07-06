@@ -71,19 +71,32 @@ class ShareViewController: UIViewController {
             return
         }
 
-        // Open main app via custom URL scheme
+        // Open the main app via the custom URL scheme. A share extension has no
+        // UIApplication in its responder chain (own process), so `r as? UIApplication`
+        // never matches — that was why sharing did nothing. Use the supported
+        // NSExtensionContext.open first, then the responder-chain `openURL:` selector.
         let url = URL(string: "wrotate://share-image")!
+        DispatchQueue.main.async {
+            self.extensionContext?.open(url) { [weak self] success in
+                if !success { self?.openViaResponderChain(url) }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    self?.close()
+                }
+            }
+        }
+    }
+
+    @objc private func openURL(_ url: URL) {}   // selector anchor for the responder walk
+
+    private func openViaResponderChain(_ url: URL) {
+        let selector = #selector(openURL(_:))
         var responder: UIResponder? = self
         while let r = responder {
-            if let app = r as? UIApplication {
-                app.open(url, options: [:], completionHandler: nil)
-                break
+            if r !== self, r.responds(to: selector) {
+                r.perform(selector, with: url)
+                return
             }
             responder = r.next
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            self.close()
         }
     }
 
