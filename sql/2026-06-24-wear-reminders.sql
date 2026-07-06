@@ -36,8 +36,18 @@ LANGUAGE sql SECURITY DEFINER SET search_path = public, auth AS $$
            (now() AT TIME ZONE v.timezone)::date AS local_today
     FROM valid v
     WHERE EXTRACT(hour FROM now() AT TIME ZONE v.timezone) = 17
-      AND EXISTS (SELECT 1 FROM logs l
-                  WHERE l.user_id = v.id AND l.created_at >= now() - interval '14 days')
+      -- Audience: recently active, OR a new account starting the day after its
+      -- first watch was added (the day-1 drip email owns the "add a watch" nudge;
+      -- reminders begin once there is something to log). New accounts age out at
+      -- 14 days unless they log — then the active branch covers them.
+      AND ( EXISTS (SELECT 1 FROM logs l
+                    WHERE l.user_id = v.id AND l.created_at >= now() - interval '14 days')
+            OR ( EXISTS (SELECT 1 FROM auth.users au
+                         WHERE au.id = v.id AND au.created_at >= now() - interval '14 days')
+                 AND EXISTS (SELECT 1 FROM watches w
+                             WHERE w.user_id = v.id
+                               AND (w.created_at AT TIME ZONE v.timezone)::date
+                                   < (now() AT TIME ZONE v.timezone)::date) ) )
       -- Skip anyone who has ALREADY engaged for today: a log dated today, OR
       -- any log/post CREATED today in their local timezone. The app lets you
       -- pick a log's date, so posts/wears are often backdated — keying only off
