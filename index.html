@@ -6825,7 +6825,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.07.45';
+const APP_VERSION = '06.07.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13416,7 +13416,29 @@ function renderDevFlags() {
         <span style="position:absolute;top:2px;left:${on ? '20px' : '2px'};width:18px;height:18px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
       </label>
     </div>`;
-  }).join('');
+  }).join('') + `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.7rem 0;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-size:.85rem;font-weight:500;">Pro V2 rollout stage <span style="color:var(--gold);font-size:.7rem;">GLOBAL — all users</span></div>
+        <div style="font-size:.72rem;color:var(--muted);font-family:monospace;">silent → beta → default (server-side)</div>
+      </div>
+      <select id="admin-prov2-stage" onchange="setProV2Stage(this.value)" style="padding:.35rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.8rem;">
+        <option value="silent">silent</option>
+        <option value="beta">beta</option>
+        <option value="default">default</option>
+      </select>
+    </div>`;
+  db.from('timegrapher_tuning').select('pro_v2_stage').eq('id', 1).single()
+    .then(({ data }) => { const s = document.getElementById('admin-prov2-stage'); if (s && data?.pro_v2_stage) s.value = data.pro_v2_stage; });
+}
+
+async function setProV2Stage(stage) {
+  const { error } = await db.from('timegrapher_tuning')
+    .update({ pro_v2_stage: stage, updated_at: new Date().toISOString() }).eq('id', 1);
+  if (error) { toast('Stage update failed: ' + error.message, 'error'); renderDevFlags(); return; }
+  PRO_V2_STAGE = stage;
+  initTgSourceSelector();
+  toast('Pro V2 stage → ' + stage + ' (all users at next app open)');
 }
 
 function switchAdminTab(tab) {
@@ -23225,6 +23247,7 @@ function onTgSourceChange() {
   localStorage.setItem('tg_input_source', v);
 }
 function initTgSourceSelector() {
+  fetchProV2Stage();   // async; re-runs this init once the server stage arrives
   const el = document.getElementById('tg-input-source');
   if (!el) return;
   if (featureFlag('tg_piezo')) {
@@ -23268,11 +23291,30 @@ function initTgSourceSelector() {
 }
 function onPzTune(key, val) { if (val !== '' && Number(val) > 0) { localStorage.setItem(key, val); sendPiezoTuning(); } }
 function _pzMode() { return localStorage.getItem('pz_mode') === 'measurement' ? 'measurement' : 'default'; }
-// Pro V2 (tg core) requires the 2.1 native build — the WebView injects _iosAppVersion.
-function _proV2Available() {
-  return _tgHasNative() && parseFloat(window._iosAppVersion || '0') >= 2.1;
+// Pro V2 (tg core) rollout stage — the remote gate, controlled from the admin portal
+// (dev-flags panel) via timegrapher_tuning.pro_v2_stage. Applies to ALL users at next
+// app open (fetched at measure-page init, refreshed by the tuning poll):
+//   'silent'  — nothing user-visible; 2.1 builds still shadow-log reg-vs-tg on every run
+//   'beta'    — the Pro V2 (beta) selector appears for 2.1 users (opt-in, default Standard)
+//   'default' — Pro V2 is the default engine (Standard still selectable)
+// Admins always have the selector via the tg_algo dev flag, at every stage.
+let PRO_V2_STAGE = 'silent';
+let _proV2StageFetched = false;
+async function fetchProV2Stage() {
+  if (_proV2StageFetched) return;
+  try {
+    const { data } = await db.from('timegrapher_tuning').select('pro_v2_stage').eq('id', 1).single();
+    if (data && data.pro_v2_stage) PRO_V2_STAGE = data.pro_v2_stage;
+    _proV2StageFetched = true;
+    initTgSourceSelector();   // re-apply visibility with the real stage
+  } catch (e) {}
 }
+function _native21() { return _tgHasNative() && parseFloat(window._iosAppVersion || '0') >= 2.1; }
+function _proV2Available() { return PRO_V2_STAGE !== 'silent' && _native21(); }
 function _tgAlgo() {
+  if (!_native21() && !featureFlag('tg_algo')) return 'original';  // engine not in this build
+  if (PRO_V2_STAGE === 'default' && !featureFlag('tg_algo'))       // default-on: opt OUT to Standard
+    return localStorage.getItem('tg_algo_sel') === 'original' ? 'original' : 'tg';
   if (!featureFlag('tg_algo') && !_proV2Available()) return 'original';
   return localStorage.getItem('tg_algo_sel') === 'tg' ? 'tg' : 'original';
 }
@@ -23762,6 +23804,7 @@ function startTuningPoll() {
       // Update UI controls
       if (data.peak_ratio_threshold != null) _remotePeakRatioThreshold = data.peak_ratio_threshold;
       if (data.buffer_seconds != null) _remoteBufferSeconds = data.buffer_seconds;
+      if (data.pro_v2_stage) { PRO_V2_STAGE = data.pro_v2_stage; }
       if (featureFlag('tg_quality_v2')) {
         _remoteTdm = (data.tick_detect_mult != null) ? data.tick_detect_mult : null;
         const _tdmEl = document.getElementById('msr-tune-tick-detect-mult');
