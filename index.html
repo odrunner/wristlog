@@ -6825,7 +6825,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.12.57';
+const APP_VERSION = '07.07.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23261,13 +23261,16 @@ function initTgSourceSelector() {
   }
   const algoSel = document.getElementById('tg-algo-sel');
   if (algoSel) {
+    const hint = document.getElementById('tg-algo-hint');
     // Public when the 2.1 native build is present; admins also see it via the tg_algo flag.
     if (featureFlag('tg_algo') || _proV2Available()) {
       algoSel.style.display = '';
       algoSel.value = localStorage.getItem('tg_algo_sel') || 'original';
-      const hint = document.getElementById('tg-algo-hint');
       if (hint) hint.style.display = algoSel.value === 'tg' ? '' : 'none';
-    } else algoSel.style.display = 'none';
+    } else {
+      algoSel.style.display = 'none';
+      if (hint) hint.style.display = 'none';   // hint must never outlive the selector (silent stage)
+    }
   }
   const knobPanel = document.getElementById('tg-knob-panel');
   if (knobPanel) {
