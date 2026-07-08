@@ -1022,15 +1022,15 @@ class TimegrapherEngine {
         if wallElapsed - lastTgComputeSec > 0.5 {
             lastTgComputeSec = wallElapsed
             tgRateCached = computeTgRate()
-            if useTgAlgo {
-                let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
-                let nominal = 7200.0 / Double(targetBph) * ringSampleRate
-                let env8 = recentEnvelope(Int(ringSampleRate * 8))
-                if let period = tgPeriod(env8, nominal: nominal, ringSampleRate: ringSampleRate),
-                   let fold = tgFoldedBeat(period: period) {
-                    tgFoldCached = fold
-                    tgAmpCached = tgAmplitude(fold: fold, period: period)
-                }
+            // Fold + amplitude compute even when the toggle is off, so silent/shadow
+            // sessions log amplitude in [TGALGO] too. Display stays gated on useTgAlgo.
+            let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
+            let nominal = 7200.0 / Double(targetBph) * ringSampleRate
+            let env8 = recentEnvelope(Int(ringSampleRate * 8))
+            if let period = tgPeriod(env8, nominal: nominal, ringSampleRate: ringSampleRate),
+               let fold = tgFoldedBeat(period: period) {
+                tgFoldCached = fold
+                tgAmpCached = tgAmplitude(fold: fold, period: period)
             }
         }
         // Pick the rate source: tg autocorrelation-period (when toggled) or Theil-Sen regression.
