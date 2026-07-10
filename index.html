@@ -3699,6 +3699,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <label>Stab win s<input type="number" step="1" id="tg-knob-stabwin" oninput="onTgKnob('tg_stabwin',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
         <label>Wall min s<input type="number" step="1" id="tg-knob-wallmin" oninput="onTgKnob('tg_wallmin',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
         <label>Lift °<input type="number" step="1" id="tg-knob-lift" oninput="onTgKnob('tg_lift',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Max win s<input type="number" step="8" id="tg-knob-maxwin" oninput="onTgKnob('tg_maxwin',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
       </div>
       <!-- Piezo live tuning (admin, gated by tg_piezo). Most apply live on change; BP low/high need stop/start. -->
       <div id="pz-tune-panel" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.75rem;font-size:.66rem;color:var(--muted);">
@@ -6825,7 +6826,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.21.51';
+const APP_VERSION = '10.10.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23282,6 +23283,7 @@ function initTgSourceSelector() {
       set('tg-knob-stabwin', _tgKnob('tg_stabwin', 6));
       set('tg-knob-wallmin', _tgKnob('tg_wallmin', 8));
       set('tg-knob-lift', _tgKnob('tg_lift', 52));
+      set('tg-knob-maxwin', _tgKnob('tg_maxwin', 16));
     } else knobPanel.style.display = 'none';
   }
   initPzTunePanel();
@@ -24611,9 +24613,9 @@ function openMsrSettings() {
 
 // Pro V2 precision presets → convergence knobs (wall-min / stability window / band s/d)
 const PROV2_PRECISION = {
-  quick:    { tg_wallmin: 5,  tg_stabwin: 4, tg_stabth: 4 },
-  balanced: { tg_wallmin: 8,  tg_stabwin: 6, tg_stabth: 3 },
-  strict:   { tg_wallmin: 12, tg_stabwin: 8, tg_stabth: 2 }
+  quick:    { tg_wallmin: 5,  tg_stabwin: 4, tg_stabth: 4, tg_maxwin: 16 },
+  balanced: { tg_wallmin: 8,  tg_stabwin: 6, tg_stabth: 3, tg_maxwin: 16 },
+  strict:   { tg_wallmin: 12, tg_stabwin: 8, tg_stabth: 2, tg_maxwin: 32 }  // 32s window = genuinely more precise, not just more patient
 };
 function onProV2Precision(p) {
   const m = PROV2_PRECISION[p]; if (!m) return;
@@ -25510,7 +25512,7 @@ function sendMsrTuning() {
   window.webkit.messageHandlers.timegrapher.postMessage({
     action: 'tuning',
     peakRatioThreshold: _remotePeakRatioThreshold ?? 2.5,
-    bufferSeconds: _remoteBufferSeconds ?? 30.0,
+    bufferSeconds: Math.max(_remoteBufferSeconds ?? 30.0, _tgKnob('tg_maxwin', 16) + 6),  // ring must hold the tg analysis window
     regSkipPairs: Number(document.getElementById('msr-tune-reg-skip').value),
     regMinN: Number(document.getElementById('msr-tune-reg-min-n').value),
     wallMinSec: Number(document.getElementById('msr-tune-wall-min').value),
@@ -25556,7 +25558,8 @@ function sendMsrTuning() {
     tgSigma: _tgKnob('tg_sigma', 0.0003),
     tgStabWin: _tgKnob('tg_stabwin', 6),
     tgWallMin: _tgKnob('tg_wallmin', 8),
-    tgStabTh: _tgKnob('tg_stabth', 3)
+    tgStabTh: _tgKnob('tg_stabth', 3),
+    tgMaxWin: _tgKnob('tg_maxwin', 16)
   });
 }
 function _tgKnob(k, d) { const v = Number(localStorage.getItem(k)); return Number.isFinite(v) && v > 0 ? v : d; }

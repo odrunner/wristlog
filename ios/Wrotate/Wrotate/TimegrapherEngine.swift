@@ -330,12 +330,14 @@ class TimegrapherEngine {
                     peakDetectGate: Double? = nil,
                     phaseLock: Bool? = nil, phaseLockWindow: Double? = nil, phaseLockMaxMiss: Int? = nil,
                     liftAngle: Double? = nil,
-                    tgSigma: Double? = nil, tgStabWin: Double? = nil, tgWallMin: Double? = nil, tgStabTh: Double? = nil) {
+                    tgSigma: Double? = nil, tgStabWin: Double? = nil, tgWallMin: Double? = nil, tgStabTh: Double? = nil,
+                    tgMaxWin: Double? = nil) {
         if let v = liftAngle, v >= 20, v <= 80 { liftAngleDeg = v }
         if let v = tgSigma, v > 0 { tgSigmaGate = v }
         if let v = tgStabWin, v >= 2 { tgStabWindowSec = v }
         if let v = tgWallMin, v >= 3 { tgWallMinSec = v }
         if let v = tgStabTh, v > 0 { tgStabThresh = v }
+        if let v = tgMaxWin, v >= 8, v <= 60 { tgMaxWindowSec = v }
         peakRatioThreshold = max(1.0, thresh)
         bufferDurationSec = max(5, min(120, bufSec))
         if let v = regSkipPairs { regressionSkipPairs = v }
@@ -367,7 +369,7 @@ class TimegrapherEngine {
         if let v = phaseLock { self.phaseLockEnabled = v }
         if let v = phaseLockWindow { self.phaseLockWindow = v }
         if let v = phaseLockMaxMiss { self.phaseLockMaxMiss = v }
-        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections) noiseFloor=\(self.noiseFloorMult) peakGate=\(self.peakDetectGate) phaseLock=\(self.phaseLockEnabled)/\(self.phaseLockWindow) tgKnobs=\(tgSigmaGate)/\(tgStabWindowSec)/\(tgWallMinSec)/\(tgStabThresh) lift=\(liftAngleDeg)")
+        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections) noiseFloor=\(self.noiseFloorMult) peakGate=\(self.peakDetectGate) phaseLock=\(self.phaseLockEnabled)/\(self.phaseLockWindow) tgKnobs=\(tgSigmaGate)/\(tgStabWindowSec)/\(tgWallMinSec)/\(tgStabThresh) maxWin=\(tgMaxWindowSec) lift=\(liftAngleDeg)")
     }
 
     // MARK: - Biquad HP filter
@@ -1409,6 +1411,7 @@ class TimegrapherEngine {
     private var tgStabWindowSec = 6.0     // rate must hold steady this long
     private var tgWallMinSec = 8.0        // earliest possible convergence
     private var tgStabThresh = 3.0        // steady = within this band (s/day)
+    private var tgMaxWindowSec = 16.0     // longest analysis window (32 = precision mode; needs bufferSeconds >= window+6)
 
     /// Most-recent `n` samples of the active envelope ring, linearized oldest→newest.
     private func recentEnvelope(_ n: Int) -> [Float] {
@@ -1464,7 +1467,7 @@ class TimegrapherEngine {
         let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
         let nominal = 7200.0 / Double(targetBph) * ringSampleRate
         var best: Double? = nil
-        for secs in [2.0, 4.0, 8.0, 16.0] {
+        for secs in [2.0, 4.0, 8.0, 16.0, 32.0] where secs <= tgMaxWindowSec {
             let want = Int(secs * ringSampleRate)
             let env = recentEnvelope(want)
             if env.count < Int(Double(want) * 0.9) { continue }
