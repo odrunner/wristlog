@@ -8,8 +8,8 @@ measurement v2
 tick-log archival Stage 2 (PAUSED 2026-06-22) — sustainable rolling retention for timegrapher_tick_logs. Stage 1 done (archived 37,564 pre-approval rows offline + pruned, 60MB→14MB). Stage 2 = make rollout-check.py track its cumulative count incrementally (persisted state file) instead of re-scanning the full table, then a weekly LaunchAgent archives+prunes a rolling 30-day tail. Needs sign-off: it changes how the rollout cumulative number is computed. Design: docs/superpowers/specs/2026-06-22-tick-log-archival-design.md
 ability to edit comment
 show microphone on measurement (pulsating) 
-7-second cap + in-composer trim slider — if the user picks an 8-30 sec video, show a trim UI to pick the 7-sec segment they want. Much more user-friendly but adds significant scope (trim UI + actual video clipping, which is hard in-browser).
-measurement advance settings
+
+
 
 ## To Explore
 Measurement precision — increase repeatability (feedback: "measurements vary a lot"). Backed by analysis of 200 real-user sessions (June 3-7, 19 users / 30 watches). Findings: median repeat-spread 14.2 s/day, but the engine floor (controlled long repeats) is only ~1.5-4 s/day — e.g. qbb251's Grand Seiko 6145 measured 6× at 35-60 dots = ±1.4 s/day. The rest is run-length noise + real watch/position variation (dexter888's Submariner spanned ±41 across 20 runs incl. 60-92 dot ones = position changes, not engine). Precision curve: 15-25 dots → median dev 5.4 s/day; 26-40 → 3.5; 41-60 → 3.5 (saturates ~40 dots). DONE: raised JS convergence dot floor 20→30 (index.html `minDots`). Still to try:
@@ -39,5 +39,5 @@ show facts about watches on the feed when user clicks on anyone watches they pos
 in the admin dashboard, i want to see if a user is an active and details. so when i click on the name instead of the profile, i want a modal that has info about the user, basics like watches, wears, wishlist, measurements (success rate including), enhancements, vlaue check. and also last login, repeat or not, feedbcak asked, given. by them? go build
 multiple pictures in a post
 if someone used advanced settings show that it's not default anymore
-
+measurement advance settings
 
