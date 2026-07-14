@@ -44,6 +44,13 @@ await page.evaluate(() => {
 });
 await page.waitForSelector('#strap-selector-card', { state: 'visible', timeout: 5_000 });
 await page.waitForTimeout(400);
+// White backdrop: the overlay behind the modal is translucent dark and shows
+// through outside the rounded corners as dark slivers in the cropped image.
+await page.evaluate(() => {
+  const ov = document.getElementById('track-log-modal');
+  ov.style.background = '#fff';
+  ov.style.backdropFilter = 'none';
+});
 // Crop: modal top down to just below the strap chips — the fields after the
 // strap (occasion, photo, caption, visibility) aren't the point of the shot.
 const clip = await page.evaluate(() => {
