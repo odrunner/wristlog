@@ -44,7 +44,14 @@ await page.evaluate(() => {
 });
 await page.waitForSelector('#strap-selector-card', { state: 'visible', timeout: 5_000 });
 await page.waitForTimeout(400);
-await page.locator('#track-log-modal .tl-modal').screenshot({ path: 'email-assets/strap-picker.png' });
+// Crop: modal top down to just below the strap chips — the fields after the
+// strap (occasion, photo, caption, visibility) aren't the point of the shot.
+const clip = await page.evaluate(() => {
+  const modal = document.querySelector('#track-log-modal .tl-modal').getBoundingClientRect();
+  const strap = document.getElementById('strap-selector-card').getBoundingClientRect();
+  return { x: modal.x, y: modal.y, width: modal.width, height: strap.bottom - modal.y + 12 };
+});
+await page.screenshot({ path: 'email-assets/strap-picker.png', clip });
 
 await browser.close();
 console.log('done — email-assets/ranking-game.png, email-assets/strap-picker.png');
