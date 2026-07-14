@@ -6826,7 +6826,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.18.38';
+const APP_VERSION = '13.19.50';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15711,7 +15711,7 @@ async function loadCampaigns() {
           <button class="btn btn-ghost" onclick="toggleCampaign('${c.id}', ${!c.is_active})" style="font-size:.72rem;padding:2px 8px;">${toggleIcon} ${toggleLabel}</button>
         </div>
       </div>
-      <div style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem;">Sends ${c.delay_days} day${c.delay_days === 1 ? '' : 's'} after signup · ${sends} sent total</div>
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem;">Sends ${c.delay_days} day${c.delay_days === 1 ? '' : 's'} after signup${(c.backfill_daily || 0) > 0 ? ` · backfill ${c.backfill_daily}/day` : ''} · ${sends} sent total</div>
       <div class="draft-form-row" style="margin-bottom:.4rem;">
         <label>Name (internal)</label>
         <input type="text" id="camp-name-${c.id}" value="${escHtml(c.name)}" style="font-size:.82rem;">
@@ -15736,6 +15736,10 @@ async function loadCampaigns() {
           <option value="has_log" ${c.skip_if_done === 'has_log' ? 'selected' : ''}>Has logged activity</option>
           <option value="has_measurement" ${c.skip_if_done === 'has_measurement' ? 'selected' : ''}>Has measured a watch</option>
         </select>
+      </div>
+      <div class="draft-form-row" style="margin-bottom:.4rem;">
+        <label>Backfill per day (0 = off) — also emails existing members who signed up before the delay window, newest first, this many per daily run</label>
+        <input type="number" id="camp-backfill-${c.id}" value="${c.backfill_daily || 0}" min="0" max="100" style="font-size:.82rem;width:60px;">
       </div>
       <div style="display:flex;gap:.5rem;margin-top:.5rem;">
         <button class="btn btn-ghost" onclick="saveCampaign('${c.id}')" style="flex:1;">Save</button>
@@ -15838,6 +15842,8 @@ async function saveCampaign(id) {
   if (delayEl) update.delay_days = parseInt(delayEl.value) || camp?.delay_days || 2;
   const skipEl = document.getElementById('camp-skip-' + id);
   if (skipEl) update.skip_if_done = skipEl.value || null;
+  const backfillEl = document.getElementById('camp-backfill-' + id);
+  if (backfillEl) update.backfill_daily = Math.max(0, parseInt(backfillEl.value, 10) || 0);
   if (!subject || !body_html) { toast('Subject and body are required', 'error'); return; }
   const { error } = await db.from('email_campaigns').update(update).eq('id', id);
   if (error) { toast('Failed to save: ' + error.message, 'error'); return; }
