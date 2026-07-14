@@ -30,6 +30,9 @@ AUTH_PASS = "wrotate-test-2026"
 REPORT_TO = "ozgurdogan@gmail.com"
 RELEASE_DATE = "2026-06-11"                 # 2.0 release — cumulative window start
 SNAP_FILE = os.path.expanduser("~/.local/share/wrotate-measurement-history.log")
+# Onboarding 4 email impact: per-user straps/elo state snapshotted 2026-07-13,
+# ~3h after the first 53 sends (see onboarding4_section).
+OB4_BASELINE = os.path.expanduser("~/.local/share/wrotate-logs/onboarding4-baseline.json")
 LEDGER = os.path.expanduser("~/Documents/Claude project/watch tracker/docs/measurement-changelog.md")
 # launchd runs can't read ~/Documents (macOS TCC) — keep a cache the LaunchAgent can reach.
 # Manual runs refresh it from the repo copy.
@@ -180,6 +183,42 @@ def summarize(sessions):
                 users=len({a["uid"] for a in sessions if a["uid"]}))
 
 
+def onboarding4_section(H):
+    """Onboarding 4 email (straps + ranking game) impact vs the 2026-07-13
+    baseline. Diffs per-user state from the onboarding4_feature_state RPC
+    (SECURITY DEFINER — watches are RLS-blocked to the test user). has_played =
+    any watch elo_rating <> 1000 default; users absent from the baseline count
+    from zero. Returns report lines; never raises."""
+    L = ["\n## Onboarding 4 email — straps & ranking game impact"]
+    try:
+        base = json.load(open(OB4_BASELINE))
+        cur = curl(f"{BASE_URL}/rest/v1/rpc/onboarding4_feature_state",
+                   H + ["Content-Type: application/json"], "POST", "{}")
+        if isinstance(cur, dict):
+            raise RuntimeError(f"rpc error: {cur}")
+        bu = base.get("per_user", {})
+        bs = base.get("summary", {})
+        recipients = sum(1 for r in cur if r.get("o4_sent_at"))
+        new_players, new_strappers, straps_added = [], [], 0
+        for r in cur:
+            b = bu.get(r["user_id"], {"has_played": False, "strap_ct": 0})
+            if r["has_played"] and not b["has_played"]:
+                new_players.append(r)
+            d = r["strap_ct"] - b["strap_ct"]
+            if d > 0:
+                new_strappers.append(r)
+                straps_added += d
+        emailed = lambda rows: sum(1 for r in rows if r.get("o4_sent_at"))
+        players_now = sum(1 for r in cur if r["has_played"])
+        strappers_now = sum(1 for r in cur if r["strap_ct"] > 0)
+        L.append(f"- Sent so far: {recipients} recipients with watches (50/day backfill + day-14 drip; baseline {base.get('snapshot_at','?')[:10]})")
+        L.append(f"- New ranking-game players since baseline: {len(new_players)} ({emailed(new_players)} of them emailed) — total {bs.get('users_played_ranking','?')} → {players_now}")
+        L.append(f"- Users who added straps since baseline: {len(new_strappers)} ({emailed(new_strappers)} of them emailed), +{straps_added} straps — users with straps {bs.get('users_with_straps','?')} → {strappers_now}")
+    except Exception as e:
+        L.append(f"  (section failed: {e})")
+    return L
+
+
 def main():
     auth = curl(f"{BASE_URL}/auth/v1/token?grant_type=password",
                 [f"apikey: {ANON_KEY}", "Content-Type: application/json"], "POST",
@@ -319,6 +358,8 @@ def main():
     else:
         for l in led[-3:]:
             L.append("  " + l)
+
+    L += onboarding4_section(H)
 
     report = "\n".join(L)
     print(report)
