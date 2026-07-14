@@ -6826,7 +6826,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.20.58';
+const APP_VERSION = '13.21.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16243,6 +16243,7 @@ function beginRankingGame() {
   gameQueue    = buildGameQueue(pool);
   gameTotal    = gameQueue.length;
   gameMatchNum = 0;
+  if (window.posthog) posthog.capture('ranking_game_started', { watch_count: pool.length });
   document.getElementById('game-intro-screen').style.display = 'none';
   document.getElementById('game-play-screen').style.display  = 'flex';
   nextMatch();
@@ -17277,6 +17278,7 @@ function confirmAddStrap() {
   if (!name) { showFieldError('strap-name-input', 'Strap name is required'); return; }
   const material = document.getElementById('strap-mat-input').value.trim();
   wEditStraps.push({ id: uid(), name, material, isOn: wEditStraps.length === 0 });
+  if (window.posthog) posthog.capture('strap_added', { strap_count: wEditStraps.length });
   hideAddStrapRow();
   renderStrapList();
 }
