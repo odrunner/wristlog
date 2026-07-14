@@ -6826,7 +6826,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.20.49';
+const APP_VERSION = '13.20.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15687,7 +15687,8 @@ let _campaignsData = [];
 async function loadCampaigns() {
   const container = document.getElementById('campaigns-list');
   if (!container) return;
-  const { data, error } = await db.from('email_campaigns').select('*').order('created_at', { ascending: false });
+  // Drip-sequence order (day 1 → 14), not newest-first — reads as campaign 1, 2, 3, 4.
+  const { data, error } = await db.from('email_campaigns').select('*').order('delay_days', { ascending: true }).order('created_at', { ascending: true });
   if (error) { container.innerHTML = `<div style="color:var(--error);font-size:.82rem;">Error: ${error.message}</div>`; return; }
   _campaignsData = data || [];
 
