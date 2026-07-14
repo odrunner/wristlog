@@ -1344,6 +1344,27 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wl-view-btn.active { background: var(--gold); color: #1c1c28; border-color: var(--gold); }
     .wl-actions .btn { white-space: nowrap; }
 
+    /* Wishlist brand folders */
+    .wl-folder-header {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: .8rem 1.1rem;
+      display: flex; align-items: center; gap: .8rem; cursor: pointer;
+      transition: border-color .15s; user-select: none;
+    }
+    .wl-folder-header:hover { border-color: color-mix(in srgb, var(--gold) 35%, transparent); }
+    .wl-folder-icon { color: var(--gold); flex-shrink: 0; display: flex; }
+    .wl-folder-name { font-weight: 700; font-size: .98rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .wl-folder-count { font-size: .75rem; font-weight: 700; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-pill); padding: .1rem .5rem; flex-shrink: 0; }
+    .wl-folder-thumbs { display: flex; flex-shrink: 0; margin-left: auto; }
+    .wl-folder-thumb, .wl-folder-thumb-avatar { width: 34px; height: 34px; border-radius: 8px; border: 2px solid var(--surface); margin-left: -10px; flex-shrink: 0; }
+    .wl-folder-thumb { object-fit: cover; }
+    .wl-folder-thumb-avatar { display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: .55rem; color: #000; }
+    .wl-folder-thumbs > :first-child { margin-left: 0; }
+    .wl-folder-chevron { color: var(--muted); flex-shrink: 0; display: flex; transition: transform .15s; }
+    .wl-folder.open .wl-folder-chevron { transform: rotate(90deg); }
+    .wl-folder-items { display: none; flex-direction: column; gap: .75rem; margin: .75rem 0 .25rem 1.25rem; }
+    .wl-folder.open .wl-folder-items { display: flex; }
+
     /* Wishlist gallery (photo-first) */
     .wl-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .7rem; }
     .wl-tile { display: flex; flex-direction: column; gap: .35rem; min-width: 0; border: 2px solid var(--border); border-radius: var(--radius); padding: .4rem; background: var(--surface2); transition: border-color .15s; }
@@ -2247,9 +2268,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New
     </div>
     <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;">
-      <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(74,222,128,.12);color:var(--success);padding:.15rem .5rem;border-radius:6px;">June 2026</span>
+      <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(74,222,128,.12);color:var(--success);padding:.15rem .5rem;border-radius:6px;">July 2026</span>
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Wishlist Brand Folders</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Big wishlist? The new folder view groups watches from the same brand into collapsible folders &#8212; tap the folder icon at the top of your Wishlist to try it. Brands with a single watch stay as regular cards.</div>
+      </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">New Badge: First Video Post</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Post your first video to the feed and earn the new First Video Post badge &#8212; a photo won&#8217;t do it, this one&#8217;s for bringing your watches to life in motion.</div>
@@ -3334,6 +3359,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div class="help-step">
             <div class="help-step-num">4</div>
             <div class="help-step-body">
+              <div class="help-step-title">Switch views: list, brand folders, or gallery</div>
+              <div class="help-step-desc">Use the view buttons at the top. The <strong>folder view</strong> groups watches from the same brand into collapsible folders (brands with a single watch stay as regular cards) — handy when several grails share a maker. The <strong>gallery view</strong> shows a photo-first grid.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">5</div>
+            <div class="help-step-body">
               <div class="help-step-title">Share your wishlist with friends</div>
               <div class="help-step-desc">Go to your profile → Privacy section → set <strong>Wishlist</strong> to Followers, Close Friends, or Public. Your followers can then see your wishlist on your profile — great for gift inspiration or comparing GAS lists.</div>
             </div>
@@ -3968,6 +4000,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div id="wishlist-view-toggle" class="wl-view-toggle" style="display:none;">
           <button type="button" class="wl-view-btn active" data-view="list" onclick="setWishlistView('list')" title="List view" aria-label="List view">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          </button>
+          <button type="button" class="wl-view-btn" data-view="folders" onclick="setWishlistView('folders')" title="Brand folders" aria-label="Brand folders view">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
           </button>
           <button type="button" class="wl-view-btn" data-view="gallery" onclick="setWishlistView('gallery')" title="Gallery view" aria-label="Gallery view">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -6826,7 +6861,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '14.10.59';
+const APP_VERSION = '14.11.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21627,7 +21662,32 @@ function cropWatchFromPhoto(blob, bbox, padding = 0.15) {
 // ══════════════════════════════════════════
 
 function wishlistViewFromStore(raw) {
-  return raw === 'gallery' ? 'gallery' : 'list';
+  return raw === 'gallery' || raw === 'folders' ? raw : 'list';
+}
+// Groups wishlist items by brand (trimmed, case-insensitive). Brands with 2+
+// watches become folders; single-watch and blank-brand items stay standalone.
+function groupWishlistByBrand(items) {
+  const byKey = new Map();
+  const singles = [];
+  for (const it of (items || [])) {
+    const key = String(it.brand || '').trim().toLowerCase();
+    if (!key) { singles.push(it); continue; }
+    if (!byKey.has(key)) byKey.set(key, { key, brand: String(it.brand).trim(), items: [] });
+    byKey.get(key).items.push(it);
+  }
+  const cmp = (a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: 'base' });
+  const folders = [];
+  for (const g of byKey.values()) {
+    if (g.items.length >= 2) {
+      g.items.sort((a, b) => cmp(a.name || '', b.name || ''));
+      folders.push(g);
+    } else {
+      singles.push(g.items[0]);
+    }
+  }
+  folders.sort((a, b) => cmp(a.brand, b.brand));
+  singles.sort((a, b) => cmp(a.brand || '', b.brand || '') || cmp(a.name || '', b.name || ''));
+  return { folders, singles };
 }
 function urlDomain(url) {
   if (!url) return '';
@@ -21641,6 +21701,44 @@ function setWishlistView(v) {
   _wishlistView = wishlistViewFromStore(v);
   try { localStorage.setItem('wr_wishlist_view', _wishlistView); } catch (e) {}
   renderWishlist(true);
+}
+
+// Expanded brand folders in the folders view (persisted; new folders start collapsed)
+let _wlFoldersOpen = (() => {
+  try { return new Set(JSON.parse(localStorage.getItem('wr_wishlist_folders_open') || '[]')); }
+  catch (e) { return new Set(); }
+})();
+
+function toggleWishlistFolder(key) {
+  if (_wlFoldersOpen.has(key)) _wlFoldersOpen.delete(key); else _wlFoldersOpen.add(key);
+  try { localStorage.setItem('wr_wishlist_folders_open', JSON.stringify([..._wlFoldersOpen])); } catch (e) {}
+  renderWishlist(true);
+}
+
+function wlCardHtml(w, draggable) {
+  const thumb = w.image
+    ? `<img loading="lazy" src="${escHtml(w.image)}" class="wl-card-img" alt="" onerror="this.style.display='none'">`
+    : `<div class="wl-card-avatar" style="background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
+  const meta = [
+    w.price != null ? fmtMoney(w.price) : '',
+    w.ref   ? w.ref : '',
+    w.addedDate ? fmtDate(w.addedDate) : ''
+  ].filter(Boolean).join(' · ');
+  const dragAttrs = draggable ? ` draggable="true"
+    ondragstart="wlDragStart(event,'${w.id}')"
+    ondragover="wlDragOver(event)"
+    ondrop="wlDrop(event,'${w.id}')"
+    ondragend="wlDragEnd(event)"` : '';
+  const handle = draggable ? `<span class="drag-handle" title="Drag to reorder" ontouchstart="wlTouchStart(event,'${w.id}')">⠿</span>` : '';
+  return `<div class="wl-card" data-id="${w.id}"${dragAttrs}>
+    ${handle}
+    ${thumb}
+    <div class="wl-info" onclick="openEditWishlist('${w.id}')" style="cursor:pointer">
+      <div class="wl-name"><span class="inline-val"><span>${escHtml(w.name)}</span></span></div>
+      <div class="wl-brand">${escHtml(w.brand)}</div>
+      ${meta ? `<div class="wl-meta">${meta}</div>` : ''}
+    </div>
+  </div>`;
 }
 
 function renderWishlist(force) {
@@ -21684,30 +21782,30 @@ function renderWishlist(force) {
     }).join('');
     return;
   }
+  if (_wishlistView === 'folders') {
+    el.className = 'wishlist-list';
+    const { folders, singles } = groupWishlistByBrand(visible);
+    el.innerHTML = folders.map(f => {
+      const open = _wlFoldersOpen.has(f.key);
+      const thumbs = f.items.slice(0, 3).map(w => w.image
+        ? `<img loading="lazy" src="${escHtml(w.image)}" class="wl-folder-thumb" alt="" onerror="this.style.display='none'">`
+        : `<div class="wl-folder-thumb-avatar" style="background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`
+      ).join('');
+      return `<div class="wl-folder${open ? ' open' : ''}" data-folder="${escAttr(f.key)}">
+        <div class="wl-folder-header" onclick="toggleWishlistFolder('${escAttr(f.key)}')" role="button" tabindex="0" aria-expanded="${open}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+          <span class="wl-folder-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+          <span class="wl-folder-name">${escHtml(f.brand)}</span>
+          <span class="wl-folder-count">${f.items.length}</span>
+          <span class="wl-folder-thumbs">${thumbs}</span>
+          <span class="wl-folder-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
+        </div>
+        <div class="wl-folder-items">${f.items.map(w => wlCardHtml(w, false)).join('')}</div>
+      </div>`;
+    }).join('') + singles.map(w => wlCardHtml(w, false)).join('');
+    return;
+  }
   el.className = 'wishlist-list';
-  el.innerHTML = visible.map((w, i) => {
-    const thumb = w.image
-      ? `<img loading="lazy" src="${escHtml(w.image)}" class="wl-card-img" alt="" onerror="this.style.display='none'">`
-      : `<div class="wl-card-avatar" style="background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
-    const meta = [
-      w.price != null ? fmtMoney(w.price) : '',
-      w.ref   ? w.ref : '',
-      w.addedDate ? fmtDate(w.addedDate) : ''
-    ].filter(Boolean).join(' · ');
-    return `<div class="wl-card" data-id="${w.id}" draggable="true"
-      ondragstart="wlDragStart(event,'${w.id}')"
-      ondragover="wlDragOver(event)"
-      ondrop="wlDrop(event,'${w.id}')"
-      ondragend="wlDragEnd(event)">
-      <span class="drag-handle" title="Drag to reorder" ontouchstart="wlTouchStart(event,'${w.id}')">⠿</span>
-      ${thumb}
-      <div class="wl-info" onclick="openEditWishlist('${w.id}')" style="cursor:pointer">
-        <div class="wl-name"><span class="inline-val"><span>${escHtml(w.name)}</span></span></div>
-        <div class="wl-brand">${escHtml(w.brand)}</div>
-        ${meta ? `<div class="wl-meta">${meta}</div>` : ''}
-      </div>
-    </div>`;
-  }).join('');
+  el.innerHTML = visible.map(w => wlCardHtml(w, true)).join('');
 }
 
 // ── Wishlist drag-and-drop reordering ────────────────────────────────────────

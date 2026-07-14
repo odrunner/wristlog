@@ -143,7 +143,32 @@ export function escAttr(s) {
   return escHtml(s).replace(/'/g, '&#39;');
 }
 export function wishlistViewFromStore(raw) {
-  return raw === 'gallery' ? 'gallery' : 'list';
+  return raw === 'gallery' || raw === 'folders' ? raw : 'list';
+}
+// Groups wishlist items by brand (trimmed, case-insensitive). Brands with 2+
+// watches become folders; single-watch and blank-brand items stay standalone.
+export function groupWishlistByBrand(items) {
+  const byKey = new Map();
+  const singles = [];
+  for (const it of (items || [])) {
+    const key = String(it.brand || '').trim().toLowerCase();
+    if (!key) { singles.push(it); continue; }
+    if (!byKey.has(key)) byKey.set(key, { key, brand: String(it.brand).trim(), items: [] });
+    byKey.get(key).items.push(it);
+  }
+  const cmp = (a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: 'base' });
+  const folders = [];
+  for (const g of byKey.values()) {
+    if (g.items.length >= 2) {
+      g.items.sort((a, b) => cmp(a.name || '', b.name || ''));
+      folders.push(g);
+    } else {
+      singles.push(g.items[0]);
+    }
+  }
+  folders.sort((a, b) => cmp(a.brand, b.brand));
+  singles.sort((a, b) => cmp(a.brand || '', b.brand || '') || cmp(a.name || '', b.name || ''));
+  return { folders, singles };
 }
 export function urlDomain(url) {
   if (!url) return '';

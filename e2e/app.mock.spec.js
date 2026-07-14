@@ -298,6 +298,48 @@ test.describe('Wishlist page (mocked)', () => {
     await page.locator('.wl-tile-imglink').first().click();
     await expect(page.locator('#wishlist-modal')).toBeVisible();
   });
+
+  test('folders view: groups 2+ same-brand watches, singles stay cards, expand/collapse persists', async ({ page }) => {
+    const WL = [
+      { id: 'wl1', brand: 'Patek Philippe', name: 'Nautilus 5711', sort_order: 0 },
+      { id: 'wl2', brand: 'Omega', name: 'Speedmaster', sort_order: 1 },
+      { id: 'wl3', brand: 'Patek Philippe', name: 'Aquanaut 5167', sort_order: 2 },
+    ];
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS, wishlist: WL });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await navigateTo(page, 'wishlist');
+    await expect(page.locator('#page-wishlist')).toBeVisible();
+
+    // Switch to folders view
+    await page.click('.wl-view-btn[data-view="folders"]');
+    expect(await page.evaluate(() => localStorage.getItem('wr_wishlist_view'))).toBe('folders');
+
+    // One folder (Patek ×2, collapsed) + one standalone card (Omega)
+    await expect(page.locator('.wl-folder')).toHaveCount(1);
+    await expect(page.locator('.wl-folder-name')).toHaveText('Patek Philippe');
+    await expect(page.locator('.wl-folder-count')).toHaveText('2');
+    await expect(page.locator('.wl-folder .wl-card').first()).not.toBeVisible();
+    await expect(page.locator('#wishlist-grid > .wl-card')).toHaveCount(1);
+    // No drag handles in folders view
+    await expect(page.locator('#wishlist-grid .drag-handle')).toHaveCount(0);
+
+    // Expand: both Patek watches appear, alphabetical (Aquanaut first)
+    await page.click('.wl-folder-header');
+    await expect(page.locator('.wl-folder .wl-card').first()).toBeVisible();
+    await expect(page.locator('.wl-folder .wl-card').nth(1)).toBeVisible();
+    await expect(page.locator('.wl-folder .wl-card .wl-name').first()).toHaveText('Aquanaut 5167');
+
+    // Expanded state persists across re-render
+    await page.click('.wl-view-btn[data-view="list"]');
+    await page.click('.wl-view-btn[data-view="folders"]');
+    await expect(page.locator('.wl-folder.open')).toHaveCount(1);
+
+    // Card inside folder still opens the edit modal
+    await page.locator('.wl-folder .wl-card .wl-info').first().click();
+    await expect(page.locator('#wishlist-modal')).toBeVisible();
+  });
 });
 
 // ── Log a Wear (Track Flow) ─────────────────────────────────────────────
