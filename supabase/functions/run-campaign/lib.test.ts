@@ -6,6 +6,7 @@ import {
   looksLikeName,
   personalizeBody,
   personalizeName,
+  pickBackfill,
   signupWindow,
   skipTable,
   splitAlreadySent,
@@ -177,4 +178,52 @@ Deno.test("dropDone removes users whose id is in doneIds, keeps the rest", () =>
   assertEquals(dropDone(users, new Set(["a", "c"])), [{ id: "b" }]);
   assertEquals(dropDone(users, []), users);
   assertEquals(dropDone(users, ["a", "b", "c"]), []);
+});
+
+// ---- pickBackfill ----
+Deno.test("pickBackfill — newest first, capped at limit", () => {
+  const out = pickBackfill(
+    [
+      { id: "a", created_at: "2026-01-01T00:00:00Z" },
+      { id: "b", created_at: "2026-03-01T00:00:00Z" },
+      { id: "c", created_at: "2026-02-01T00:00:00Z" },
+    ],
+    [],
+    [],
+    2,
+  );
+  assertEquals(out.map((p) => p.id), ["b", "c"]);
+});
+
+Deno.test("pickBackfill — excludes already-sent and emailed-this-run", () => {
+  const out = pickBackfill(
+    [
+      { id: "a", created_at: "2026-01-01T00:00:00Z" },
+      { id: "b", created_at: "2026-03-01T00:00:00Z" },
+      { id: "c", created_at: "2026-02-01T00:00:00Z" },
+    ],
+    ["b"],
+    ["c"],
+    10,
+  );
+  assertEquals(out.map((p) => p.id), ["a"]);
+});
+
+Deno.test("pickBackfill — accepts Sets directly", () => {
+  const out = pickBackfill(
+    [
+      { id: "a", created_at: "2026-01-01T00:00:00Z" },
+      { id: "b", created_at: "2026-03-01T00:00:00Z" },
+    ],
+    new Set(["a"]),
+    new Set<string>(),
+    10,
+  );
+  assertEquals(out.map((p) => p.id), ["b"]);
+});
+
+Deno.test("pickBackfill — limit 0 or negative yields empty", () => {
+  const profiles = [{ id: "a", created_at: "2026-01-01T00:00:00Z" }];
+  assertEquals(pickBackfill(profiles, [], [], 0), []);
+  assertEquals(pickBackfill(profiles, [], [], -5), []);
 });

@@ -112,4 +112,23 @@ export function dropDone<T extends { id: string }>(
   return users.filter((u) => !done.has(u.id));
 }
 
+
+// Backfill: pick up to `limit` members who haven't been sent this campaign and
+// weren't already emailed earlier this run. Newest members first — they're the
+// most likely to still be engaged. Caller pre-filters to profiles strictly
+// older than the drip window and applies filterEligible/dropDone.
+export function pickBackfill<T extends { id: string; created_at: string }>(
+  eligible: T[],
+  alreadySentIds: Iterable<string>,
+  emailedThisRunIds: Iterable<string>,
+  limit: number,
+): T[] {
+  const sent = alreadySentIds instanceof Set ? alreadySentIds : new Set(alreadySentIds);
+  const emailed = emailedThisRunIds instanceof Set ? emailedThisRunIds : new Set(emailedThisRunIds);
+  return eligible
+    .filter((p) => !sent.has(p.id) && !emailed.has(p.id))
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .slice(0, Math.max(0, limit));
+}
+
 export type { Profile };
