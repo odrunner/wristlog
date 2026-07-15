@@ -258,6 +258,16 @@ class TimegrapherEngine {
     private var ringSubsampleTarget: Int = 4  // 48kHz / 4 = 12kHz
     private var ringTargetRate: Double = 12000 // target ring sample rate (web-tunable)
     private var useTgAlgo = false              // rate via autocorrelation period (tg) vs regression
+    // tg dots: beats located on the tg-period grid over the envelope — the dots must come
+    // from the algorithm that produces the number, not the legacy detector (tg path only).
+    private var energyRingAbs = 0              // absolute ring-sample counter (write side)
+    private var tgDotNext: Double = -1         // predicted next beat (abs ring); -1 = bootstrap
+    private var tgDotPrevAbs: Double = -1
+    private var tgDotPairAccum: Double = 0
+    private var tgDotPairPhase = 0
+    private var tgDotCumMs: Double = 0
+    private var tgDotSkipPairs = 0
+    private var tgPendingDots: [TickDot] = []
     private var tgRateCached: Double? = nil    // cached tg rate (recomputed ~2x/sec)
     private var tgAmpCached: Double? = nil     // cached tg amplitude (degrees)
     private var tgFoldCached: [Float]? = nil   // cached folded beat waveform
@@ -411,6 +421,9 @@ class TimegrapherEngine {
         sampleCounter = 0
         lastAnalysisTime = 0
         energyRingWritePos = 0
+        energyRingAbs = 0
+        tgDotNext = -1; tgDotPrevAbs = -1; tgDotPairAccum = 0; tgDotPairPhase = 0
+        tgDotCumMs = 0; tgDotSkipPairs = 0; tgPendingDots = []
         energyRingCount = 0
         energySubsampleCounter = 0
         recentPeakEnergy = 0
@@ -538,6 +551,7 @@ class TimegrapherEngine {
                     subsamplePeaks[f] = 0
                 }
                 energyRingWritePos = (energyRingWritePos + 1) % energyRingCapacity
+                energyRingAbs += 1
                 energyRingCount = min(energyRingCount + 1, energyRingCapacity)
 
                 if peakEnergy > recentPeakEnergy { recentPeakEnergy = peakEnergy }
@@ -1014,7 +1028,8 @@ class TimegrapherEngine {
         }
 
         // Drain pending ticks
-        let ticks = pendingTicks
+        var ticks = pendingTicks
+        if useTgAlgo { ticks = tgPendingDots; tgPendingDots = [] }   // tg path: dots come from the tg grid, not the detector
         pendingTicks = []
 
         // Compute rate from Theil-Sen median regression on ALL accepted pairs
@@ -1029,10 +1044,12 @@ class TimegrapherEngine {
             let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
             let nominal = 7200.0 / Double(targetBph) * ringSampleRate
             let env8 = recentEnvelope(Int(ringSampleRate * 8))
-            if let period = tgPeriod(env8, nominal: nominal, ringSampleRate: ringSampleRate),
-               let fold = tgFoldedBeat(period: period) {
-                tgFoldCached = fold
-                tgAmpCached = tgAmplitude(fold: fold, period: period)
+            if let period = tgPeriod(env8, nominal: nominal, ringSampleRate: ringSampleRate) {
+                if let fold = tgFoldedBeat(period: period) {
+                    tgFoldCached = fold
+                    tgAmpCached = tgAmplitude(fold: fold, period: period)
+                }
+                if useTgAlgo { tgTrackDots(period: period, ringSampleRate: ringSampleRate, wallElapsed: wallElapsed) }
             }
         }
         // Pick the rate source: tg autocorrelation-period (when toggled) or Theil-Sen regression.
@@ -1476,6 +1493,56 @@ class TimegrapherEngine {
             if abs(rate) <= 200 { best = rate }   // longer valid window overwrites → longest wins
         }
         return best
+    }
+
+    /// Envelope sample at an absolute ring index (0 if it has scrolled out of the ring).
+    private func envAtAbs(_ a: Int) -> Float {
+        let back = energyRingAbs - a
+        guard back >= 1, back <= min(energyRingCount, energyRingCapacity) else { return 0 }
+        let idx = ((energyRingWritePos - back) % energyRingCapacity + energyRingCapacity) % energyRingCapacity
+        return energyRings[activeHpIndex][idx]
+    }
+
+    /// Locate beats on the tg-period grid and emit per-pair cumulative-deviation dots
+    /// (same convention as the detector's dots: pairing cancels beat error).
+    private func tgTrackDots(period: Double, ringSampleRate: Double, wallElapsed: Double) {
+        let halfP = period / 2
+        let nominalFull = 7200.0 / Double(targetBph) * ringSampleRate
+        let win = max(2.0, halfP * 0.12)
+        let absNow = Double(energyRingAbs)
+        if tgDotNext < 0 {
+            let span = Int(halfP * 1.5)
+            guard energyRingCount > span + 4 else { return }
+            var best: Float = -1; var bi = energyRingAbs - span
+            var a = energyRingAbs - span
+            while a < energyRingAbs { let v = envAtAbs(a); if v > best { best = v; bi = a }; a += 1 }
+            tgDotPrevAbs = Double(bi); tgDotNext = Double(bi) + halfP
+            tgDotPairAccum = 0; tgDotPairPhase = 0; tgDotSkipPairs = 1
+            return
+        }
+        var guardCount = 0
+        while tgDotNext + win < absNow, guardCount < 64 {
+            guardCount += 1
+            let lo = Int(tgDotNext - win), hi = Int(tgDotNext + win)
+            if energyRingAbs - lo > min(energyRingCount, energyRingCapacity) { tgDotNext = -1; return }  // fell behind — resync
+            var best: Float = -1; var bi = lo
+            var a = lo
+            while a <= hi { let v = envAtAbs(a); if v > best { best = v; bi = a }; a += 1 }
+            let p = Double(bi)
+            let interval = p - tgDotPrevAbs
+            tgDotPrevAbs = p
+            tgDotNext = p + halfP
+            if abs(interval - halfP) > halfP * 0.2 { tgDotPairAccum = 0; tgDotPairPhase = 0; continue }  // outlier — drop this pair
+            tgDotPairAccum += interval; tgDotPairPhase += 1
+            if tgDotPairPhase == 2 {
+                let devMs = (nominalFull - tgDotPairAccum) / ringSampleRate * 1000.0
+                tgDotPairAccum = 0; tgDotPairPhase = 0
+                if tgDotSkipPairs > 0 { tgDotSkipPairs -= 1; continue }
+                tgDotCumMs += devMs
+                let tSec = wallElapsed - (absNow - p) / ringSampleRate
+                tgPendingDots.append(TickDot(timeSec: max(0, tSec), deviationMs: tgDotCumMs))
+            }
+        }
     }
 
     /// tg-style averaged beat: fold the recent envelope at the measured period (trimmed mean per bin).
