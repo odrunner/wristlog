@@ -1566,35 +1566,65 @@ class TimegrapherEngine {
     }
 
     /// Amplitude (degrees) from the escapement pulse-pair + lift angle. nil if not plausible.
-    private func tgAmplitude(fold: [Float], period: Double) -> Double? {
-        let P = fold.count; guard P > 8 else { return nil }
-        let glob = fold.max() ?? 0
-        var absmean: Float = 0; for v in fold { absmean += abs(v) }; absmean /= Float(P)
-        let thr = max(0.01 * glob, 1.4 * absmean)
-        func pulseBefore(_ marker: Int) -> Int? {
-            func at(_ d: Int) -> Float { fold[((marker - d) % P + P) % P] }
-            var d = P/8
-            while d > 2, at(d) <= thr { d -= 1 }         // find the threshold crossing
-            guard d > 2 else { return nil }
-            // Walk from the crossing to the pulse's local PEAK. Returning the rising
-            // edge overestimates Δt by the pulse rise time, which systematically
-            // depressed amplitude ~20-35° vs the Weishi (amp ∝ 1/sin(π·Δt/T)).
-            while d > 3, at(d - 1) > at(d) { d -= 1 }
-            return d
+    /// tg's full recipe: 1ms leaky-max smoothing (noise bumps stopped the peak-walk early →
+    /// short Δt → amplitude read high), quiet-region noise floor, and a ×1.4 threshold
+    /// iteration that only accepts a mutually-consistent, plausible tic/toc pair.
+    private func tgAmplitude(fold rawFold: [Float], period: Double) -> Double? {
+        let P = rawFold.count; guard P > 8 else { return nil }
+        // 1ms leaky-max (peak-hold) smoothing, two passes for circular wrap (tg algo.c:611)
+        let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
+        let w = max(2, Int(ringSampleRate / 1000.0))
+        let k = 1.0 - 1.0 / Float(w)
+        var fold = rawFold
+        var hold: Float = 0
+        for pass in 0..<2 {
+            for i in 0..<P {
+                hold *= k
+                if rawFold[i] > hold { hold = rawFold[i] }
+                if pass == 1 || i > w { fold[i] = hold }
+            }
         }
+        let glob = fold.max() ?? 0; guard glob > 0 else { return nil }
+        // tic/toc markers from the smoothed fold
         var tic = 0; var tv = fold[0]
         for i in 1..<P where fold[i] > tv { tv = fold[i]; tic = i }
         let lo = (tic + Int(Double(P)*0.4)) % P, hi = (tic + Int(Double(P)*0.6)) % P
         var toc = lo; var bv = fold[lo]; var j = lo
         while j != hi { if fold[j] > bv { bv = fold[j]; toc = j }; j = (j + 1) % P }
-        var amps: [Double] = []
+        // Noise floor from the quiet region between the pulse clusters (d in [P/6, P/4]
+        // before each marker), not the whole-fold mean (which the pulses inflate).
+        var noise: Float = 0
         for mk in [tic, toc] {
-            guard let dt = pulseBefore(mk) else { return nil }
-            let s = sin(Double.pi * Double(dt) / period); if s <= 0 { return nil }
-            amps.append(liftAngleDeg / (2 * s))
+            var d = P/6
+            while d <= P/4 { let v = fold[((mk - d) % P + P) % P]; if v > noise { noise = v }; d += 1 }
         }
-        guard amps.allSatisfy({ 135 <= $0 && $0 <= 360 }), abs(amps[0] - amps[1]) <= 60 else { return nil }
-        return (amps[0] + amps[1]) / 2
+        // Threshold iteration (tg algo.c:770/809): accept the first level that yields a
+        // plausible, consistent pulse pair; a faint pulse that never qualifies → nil.
+        var thr = max(0.01 * glob, 1.4 * noise)
+        var iters = 0
+        while thr < glob, iters < 12 {
+            func pulseBefore(_ marker: Int) -> Int? {
+                func at(_ d: Int) -> Float { fold[((marker - d) % P + P) % P] }
+                var d = P/8
+                while d > 2, at(d) <= thr { d -= 1 }     // threshold crossing
+                guard d > 2 else { return nil }
+                while d > 3, at(d - 1) > at(d) { d -= 1 } // walk to the pulse peak
+                return d
+            }
+            var amps: [Double] = []
+            var ok = true
+            for mk in [tic, toc] {
+                guard let dt = pulseBefore(mk) else { ok = false; break }
+                let s = sin(Double.pi * Double(dt) / period)
+                guard s > 0 else { ok = false; break }
+                amps.append(liftAngleDeg / (2 * s))
+            }
+            if ok, amps.count == 2, amps.allSatisfy({ 135 <= $0 && $0 <= 360 }), abs(amps[0] - amps[1]) <= 60 {
+                return (amps[0] + amps[1]) / 2
+            }
+            thr *= 1.4; iters += 1
+        }
+        return nil
     }
 
     /// FFT-based autocorrelation using Accelerate's vDSP.

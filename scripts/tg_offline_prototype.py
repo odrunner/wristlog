@@ -71,31 +71,48 @@ def tg_fold(env, period):
     fold = np.sort(M, axis=0)[:keep].mean(axis=0)
     return fold - np.median(fold)
 
-def tg_amplitude(fold, period, la=52.0):
-    """Amplitude (deg) from the escapement pulse-pair + lift angle. None if not plausible."""
-    P = len(fold); glob = fold.max()
-    thr = max(0.01*glob, 1.4*np.median(np.abs(fold)))
-    def pulse_before(marker):
-        # find the threshold crossing scanning in from the far edge, then walk to the
-        # pulse's local PEAK (the rising edge overestimates Δt → depresses amplitude)
-        d = int(P/8)
-        while d > 2 and fold[(marker - d) % P] <= thr: d -= 1
-        if d <= 2: return None
-        while d > 3 and fold[(marker - (d-1)) % P] > fold[(marker - d) % P]: d -= 1
-        return d
+def tg_amplitude(rawfold, period, la=52.0, sr_ring=12000.0):
+    """Amplitude (deg): 1ms leaky-max smooth + quiet-region noise floor + x1.4 threshold
+    iteration; accept only a plausible, consistent tic/toc pair. None otherwise."""
+    P = len(rawfold)
+    w = max(2, int(sr_ring/1000)); k = 1.0 - 1.0/w
+    fold = np.array(rawfold, dtype=float); hold = 0.0
+    for _pass in range(2):
+        for i in range(P):
+            hold *= k
+            if rawfold[i] > hold: hold = rawfold[i]
+            if _pass == 1 or i > w: fold[i] = hold
+    glob = fold.max()
+    if glob <= 0: return None
     tic = int(np.argmax(fold))
     lo=(tic+int(P*0.4))%P; hi=(tic+int(P*0.6))%P
     idx=list(range(lo,hi)) if lo<hi else list(range(lo,P))+list(range(0,hi))
     toc = max(idx, key=lambda i: fold[i])
-    amps=[]
+    noise = 0.0
     for mk in (tic, toc):
-        dt = pulse_before(mk)
-        if dt is None: return None
-        s = math.sin(math.pi*dt/period)
-        if s <= 0: return None
-        amps.append(la/(2*s))
-    if not (135<=amps[0]<=360 and 135<=amps[1]<=360 and abs(amps[0]-amps[1])<=60): return None
-    return sum(amps)/2
+        for d in range(int(P/6), int(P/4)+1):
+            v = fold[(mk-d) % P]
+            if v > noise: noise = v
+    thr = max(0.01*glob, 1.4*noise)
+    for _ in range(12):
+        if thr >= glob: break
+        def pulse_before(marker):
+            d = int(P/8)
+            while d > 2 and fold[(marker - d) % P] <= thr: d -= 1
+            if d <= 2: return None
+            while d > 3 and fold[(marker - (d-1)) % P] > fold[(marker - d) % P]: d -= 1
+            return d
+        amps=[]
+        for mk in (tic, toc):
+            dt = pulse_before(mk)
+            if dt is None: amps=None; break
+            s = math.sin(math.pi*dt/period)
+            if s <= 0: amps=None; break
+            amps.append(la/(2*s))
+        if amps and 135<=amps[0]<=360 and 135<=amps[1]<=360 and abs(amps[0]-amps[1])<=60:
+            return sum(amps)/2
+        thr *= 1.4
+    return None
 
 def phaselock_rate(x, sr, bph):
     """Our approach (compact): band-pass envelope -> phase-locked peaks -> Theil-Sen slope."""
