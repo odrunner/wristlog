@@ -76,9 +76,13 @@ def tg_amplitude(fold, period, la=52.0):
     P = len(fold); glob = fold.max()
     thr = max(0.01*glob, 1.4*np.median(np.abs(fold)))
     def pulse_before(marker):
-        for d in range(int(P/8), 2, -1):
-            if fold[(marker - d) % P] > thr: return d      # Δt (samples) pulse→marker
-        return None
+        # find the threshold crossing scanning in from the far edge, then walk to the
+        # pulse's local PEAK (the rising edge overestimates Δt → depresses amplitude)
+        d = int(P/8)
+        while d > 2 and fold[(marker - d) % P] <= thr: d -= 1
+        if d <= 2: return None
+        while d > 3 and fold[(marker - (d-1)) % P] > fold[(marker - d) % P]: d -= 1
+        return d
     tic = int(np.argmax(fold))
     lo=(tic+int(P*0.4))%P; hi=(tic+int(P*0.6))%P
     idx=list(range(lo,hi)) if lo<hi else list(range(lo,P))+list(range(0,hi))

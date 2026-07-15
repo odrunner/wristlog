@@ -1505,9 +1505,15 @@ class TimegrapherEngine {
         var absmean: Float = 0; for v in fold { absmean += abs(v) }; absmean /= Float(P)
         let thr = max(0.01 * glob, 1.4 * absmean)
         func pulseBefore(_ marker: Int) -> Int? {
+            func at(_ d: Int) -> Float { fold[((marker - d) % P + P) % P] }
             var d = P/8
-            while d > 2 { if fold[((marker - d) % P + P) % P] > thr { return d }; d -= 1 }
-            return nil
+            while d > 2, at(d) <= thr { d -= 1 }         // find the threshold crossing
+            guard d > 2 else { return nil }
+            // Walk from the crossing to the pulse's local PEAK. Returning the rising
+            // edge overestimates Δt by the pulse rise time, which systematically
+            // depressed amplitude ~20-35° vs the Weishi (amp ∝ 1/sin(π·Δt/T)).
+            while d > 3, at(d - 1) > at(d) { d -= 1 }
+            return d
         }
         var tic = 0; var tv = fold[0]
         for i in 1..<P where fold[i] > tv { tv = fold[i]; tic = i }
