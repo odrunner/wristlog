@@ -6861,7 +6861,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.13.39';
+const APP_VERSION = '15.15.08';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -24092,7 +24092,7 @@ window._tgNativeCallback = function(data) {
         // Track tick acceptance rate: expected ~8 ticks/sec for 28800 BPH (conservative: use 3/sec as baseline)
         const expectedTicks = Math.max(1, elapsed * 3);
         // Dev user: use JS dot count if native acceptance is 0 but JS has dots
-        const effectiveTickCount = _isDevUser() && data.tickCount === 0 && _msrScatterData.length > 0 ? _msrScatterData.length : data.tickCount;
+        const effectiveTickCount = (_isDevUser() || _tgAlgo() === 'tg') && data.tickCount === 0 && _msrScatterData.length > 0 ? _msrScatterData.length : data.tickCount;
         _msrAcceptRate = effectiveTickCount > 0 ? effectiveTickCount / expectedTicks : 0;
         // Update signal bars
         updateMsrSignalBars(_msrAcceptRate, elapsed, effectiveTickCount);
@@ -24109,9 +24109,12 @@ window._tgNativeCallback = function(data) {
       // Early warning: no ticks yet, nudge user to reposition.
       // Manual mode: calibration ~2s + engine lock-on ~3-4s = ticks expected ~5s, warn at 7s.
       // Auto mode: BPH detection ~5s + calibration ~2s = ticks expected ~7s, warn at 10s.
+      // tg path: signal presence = the tg core having a rate. The legacy detector's
+      // tickCount can be 0 on watches tg reads fine (it aborted such runs as 'no signal').
+      const tgHasSignal = _tgAlgo() === 'tg' && (data.rate != null || _msrScatterData.length > 0);
       const tickWarnStart = _msrIsAuto ? 10 : 7;
       const tickWarnEnd = _msrIsAuto ? 15 : 12;
-      if (elapsed >= tickWarnStart && elapsed < tickWarnEnd && data.tickCount === 0 && !_msrShown.weak) {
+      if (!tgHasSignal && elapsed >= tickWarnStart && elapsed < tickWarnEnd && data.tickCount === 0 && !_msrShown.weak) {
         const hasSignal = _msrBphLocked || _msrLastConf > 0;
         const statusText = document.getElementById('msr-status-text');
         if (hasSignal) {
@@ -24149,7 +24152,7 @@ window._tgNativeCallback = function(data) {
       const noTickTimeout = _msrIsAuto ? 15 : 12;
       const hasSignal = _msrBphLocked || _msrLastConf > 0;
       const recalExhausted = hasSignal && elapsed >= 25 && data.tickCount === 0;
-      if (!_tgRunnerActive() && elapsed >= noTickTimeout && data.tickCount === 0 && (!hasSignal || recalExhausted)) {  // a runner logs the empty run itself; don't auto-fail mid-run
+      if (!_tgRunnerActive() && !tgHasSignal && elapsed >= noTickTimeout && data.tickCount === 0 && (!hasSignal || recalExhausted)) {  // a runner logs the empty run itself; don't auto-fail mid-run
         stopMsrListen(recalExhausted ? 'no_ticks_signal_lost' : 'no_ticks_after_recal');
         const statusText = document.getElementById('msr-status-text');
         if (statusText) {
