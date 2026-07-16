@@ -6966,9 +6966,19 @@ function formatCommentTime(createdAt) {
 // ── My Profile ────────────────────────────────────────────────────────────
 async function loadMyProfile() {
   if (!currentUser) return;
-  let { data } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
+  let { data, error: readErr } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
   let isNewUser = false;
   if (!data) {
+    // A transient read failure (network hiccup, timeout, token refresh) also yields
+    // null data — NOT just a genuinely missing row. Auto-creating in that case would
+    // upsert defaults over the existing profile (onConflict:'id' overwrites), clobbering
+    // the user's display_name, theme and privacy settings. PostgREST returns code
+    // 'PGRST116' ("no rows") for a .single() that matched nothing; only that means the
+    // profile is truly absent. On any other error, bail without touching the profile.
+    if (readErr && readErr.code !== 'PGRST116') {
+      console.warn('[WristLog] Profile load failed — skipping auto-create to avoid clobbering:', readErr.message);
+      return;
+    }
     // Auto-create profile for OAuth users (Google, Apple — trigger may not have fired)
     const email       = currentUser.email || '';
     const meta        = currentUser.user_metadata || {};
