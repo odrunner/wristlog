@@ -6872,7 +6872,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.11.53';
+const APP_VERSION = '17.12.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13782,6 +13782,12 @@ async function loadAdminStats() {
     // Active-user D/D: distinct DAU last 24h vs the prior 24h (24–48h ago)
     const dauRes = await withTimeout(db.rpc('admin_active_dau'), 10000);
     const dauDod = dauRes.data || {};
+    // Email unsubscribes + Pro V2 beta usage
+    const [unsubRes, betaRes] = await withTimeout(Promise.all([
+      db.rpc('admin_unsub_stats'), db.rpc('admin_prov2_beta_stats'),
+    ]), 10000);
+    const unsub = unsubRes.data || {};
+    const betaStats = betaRes.data || {};
 
     // Per-user breakdowns via SECURITY DEFINER RPCs (bypass RLS)
     const d1ago = new Date(Date.now() - 24 * 3600000).toISOString();
@@ -13972,6 +13978,8 @@ async function loadAdminStats() {
         ${statRow('Enhances', extEnh, dod.enhances)}
         ${statRow('Measurements', extMsr, dod.measurements)}
         ${statRow('Advanced mode (24h)', advSessions24h, advUsers24h > 0 ? advUsers24h + ' user' + (advUsers24h === 1 ? '' : 's') : '')}
+        ${statRow('Pro V2 Beta users', Number(betaStats.beta_users) || 0, (Number(betaStats.beta_sessions) || 0) + ' sessions' + (Number(betaStats.beta_users_24h) ? ', ' + betaStats.beta_users_24h + ' user' + (Number(betaStats.beta_users_24h) === 1 ? '' : 's') + ' (24h)' : ''))}
+        ${statRow('Email Unsubs', Number(unsub.unsub_total) || 0, (Number(unsub.unsub_24h) || Number(unsub.unsub_prev24h)) ? (Number(unsub.unsub_24h) || 0) + ' (24h) vs ' + (Number(unsub.unsub_prev24h) || 0) + ' prior' : '')}
         ${statRow('Wishlist Items', wishItems, dod.wish)}
         ${statRow('Clubs', clubs, dod.clubs)}
         ${statRow('Follows', follows, dod.follows)}

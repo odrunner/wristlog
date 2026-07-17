@@ -61,6 +61,17 @@ serve(async (req) => {
     return htmlPage("Error", "<h1>Something went wrong</h1><p>We couldn't update your preferences. Try again or open WRotate to manage them manually.</p><a href='https://wrotate.com/open' class='btn'>Open WRotate</a>");
   }
 
+  // Log the unsubscribe so the admin portal can trend day-over-day (best-effort).
+  try {
+    await supabase.from("email_events").insert({
+      event_type: "unsubscribed",
+      email_to: uid,          // user id (we don't need the address here)
+      subject: cat,           // category unsubscribed from
+    });
+  } catch (e) {
+    console.error("[email-unsubscribe] event log failed:", e);
+  }
+
   const label = categoryLabel(cat);
   const allLink = cat !== "all"
     ? `<p class="muted"><a href="/functions/v1/email-unsubscribe?uid=${uid}&cat=all&sig=${await hmacSign(uid, "all", hmacKey)}" style="color:#b8941f;">Unsubscribe from all emails</a></p>`
