@@ -6872,7 +6872,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.11.44';
+const APP_VERSION = '17.11.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13467,8 +13467,46 @@ function showAdminPage() {
   loadAdminFeedback();
   loadAdminReports();
   loadOfficialDrafts();
+  seedProV2BroadcastDraft();
   renderBroadcastDrafts();
   renderDevFlags();
+}
+
+// One-time: seed the Pro V2 beta announcement into the broadcast drafts list
+// (drafts are device-local; this places it on whichever device opens Admin).
+function seedProV2BroadcastDraft() {
+  const FLAG = 'wr_seed_prov2_draft_v1';
+  if (localStorage.getItem(FLAG)) return;
+  localStorage.setItem(FLAG, '1');
+  const drafts = getBroadcastDrafts();
+  drafts.unshift({
+    id: Date.now(),
+    subject: 'Your watch has more to tell you — meet the Pro V2 engine (beta)',
+    heading: 'Meet Pro V2 — our new measurement engine, now in open beta',
+    body: `We rebuilt WRotate's timegrapher engine from the ground up, and it's now in open beta. Here's what your wrist has been waiting for:
+<br><br>
+<b>Results in about 10 seconds.</b><br>
+Rest your watch on the phone's mic, and Pro V2 locks onto its rate in roughly ten seconds. Measure your whole collection over a coffee.
+<br><br>
+<b>Amplitude — the pro-level metric, now on your phone.</b><br>
+Amplitude is the balance wheel's swing, measured in degrees — the number watchmakers check first to judge a movement's health. Until now it took a dedicated bench machine. Pro V2 reads it straight from your phone's mic. A healthy movement typically swings 220–300°; a low number can mean it's time for a service.
+<br><br>
+<b>Steady, repeatable readings.</b><br>
+Pro V2 measures the beat across the whole signal at once, so back-to-back measurements agree — with each other, and with the bench machines we test against.
+<br><br>
+<b>See your watch's heartbeat.</b><br>
+A new live waveform shows every tick and tock overlaid — sharp spikes mean a clean read. It's oddly beautiful.
+<br><br>
+<b>How to try it:</b> open <b>Measure</b>, switch the engine selector to <b>Pro V2 (beta)</b>, and measure. That's it — no settings required. You'll need app version 2.1 or later, and you can switch back to Standard anytime.
+<br><br>
+It's a beta, and your measurements are what make it better — if a reading ever looks off, just reply to this email.
+<br><br>
+Happy measuring,<br>
+The WRotate team`,
+    imageUrls: [],
+    savedAt: new Date().toISOString(),
+  });
+  localStorage.setItem(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 10)));
 }
 
 function renderDevFlags() {
