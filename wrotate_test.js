@@ -26,6 +26,16 @@ export function addDaysStr(dateStr, delta) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// Profile-load guard: only PGRST116 ("0 rows") from PostgREST means the
+// profile row is genuinely absent. Any other error (expired JWT, network
+// failure, 5xx) must NOT enter the auto-create path — creating there has
+// overwritten a real user's username/display name/privacy settings before.
+export function classifyProfileLoad(data, error) {
+  if (data) return 'ok';
+  if (!error || error.code === 'PGRST116') return 'missing';
+  return 'error';
+}
+
 export function computeStreaks(logs, today) {
   const dates = [...new Set((logs || []).map(l => l.date).filter(Boolean))].sort();
   if (dates.length === 0) return { current: 0, best: 0, status: 'none' };

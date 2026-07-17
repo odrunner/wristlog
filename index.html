@@ -6861,7 +6861,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.16.04';
+const APP_VERSION = '17.11.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6964,9 +6964,26 @@ function formatCommentTime(createdAt) {
 }
 
 // ── My Profile ────────────────────────────────────────────────────────────
+// Only PGRST116 ("0 rows") means the profile row is genuinely absent. Any other
+// error (expired JWT, network failure, 5xx) must NOT enter the auto-create path.
+function classifyProfileLoad(data, error) {
+  if (data) return 'ok';
+  if (!error || error.code === 'PGRST116') return 'missing';
+  return 'error';
+}
+
 async function loadMyProfile() {
   if (!currentUser) return;
-  let { data } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
+  let { data, error } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
+  if (classifyProfileLoad(data, error) === 'error') {
+    // Transient failure — retry once, then bail. Falling through to auto-create
+    // here has overwritten a real user's profile with OAuth-metadata defaults.
+    ({ data, error } = await db.from('profiles').select('*').eq('id', currentUser.id).single());
+    if (classifyProfileLoad(data, error) === 'error') {
+      console.error('[WristLog] Profile load failed, skipping:', error && error.message);
+      return;
+    }
+  }
   let isNewUser = false;
   if (!data) {
     // Auto-create profile for OAuth users (Google, Apple — trigger may not have fired)
@@ -6984,24 +7001,32 @@ async function loadMyProfile() {
     // Usernames must start with a letter — prefix digit-leading names with 'u'
     if (!/^[a-z]/.test(username)) username = 'u' + username;
     const abVariant = localStorage.getItem('ab_landing') || null;
-    const { data: created, error: createErr } = await db.from('profiles').upsert(
-      { id: currentUser.id, username, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'public', collection_visibility: 'public', wishlist_visibility: 'public', ab_variant: abVariant },
-      { onConflict: 'id' }
+    // insert, never upsert: if the row exists after all (race with another tab
+    // or the auth trigger), this must fail instead of overwriting it.
+    const { data: created, error: createErr } = await db.from('profiles').insert(
+      { id: currentUser.id, username, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'public', collection_visibility: 'public', wishlist_visibility: 'public', ab_variant: abVariant }
     ).select().single();
     if (createErr) {
       console.error('[WristLog] Profile create error:', createErr.message, createErr);
-      // Retry with a guaranteed-unique username (e.g. username conflict)
-      const fallback = 'user' + Math.random().toString(36).slice(2, 8);
-      const { data: retry, error: retryErr } = await db.from('profiles').upsert(
-        { id: currentUser.id, username: fallback, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'public', collection_visibility: 'public', wishlist_visibility: 'public', ab_variant: abVariant },
-        { onConflict: 'id' }
-      ).select().single();
-      if (retryErr) console.error('[WristLog] Profile create retry error:', retryErr.message, retryErr);
-      data = retry;
+      // The row may exist after all (duplicate id) — re-select before assuming
+      // a username conflict.
+      const { data: existing } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
+      if (existing) {
+        data = existing;
+      } else {
+        // Retry with a guaranteed-unique username (e.g. username conflict)
+        const fallback = 'user' + Math.random().toString(36).slice(2, 8);
+        const { data: retry, error: retryErr } = await db.from('profiles').insert(
+          { id: currentUser.id, username: fallback, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'public', collection_visibility: 'public', wishlist_visibility: 'public', ab_variant: abVariant }
+        ).select().single();
+        if (retryErr) console.error('[WristLog] Profile create retry error:', retryErr.message, retryErr);
+        data = retry;
+        isNewUser = !!retry;
+      }
     } else {
       data = created;
+      isNewUser = true;
     }
-    isNewUser = true;
   }
   myProfile = data;
   // Capture IANA timezone for server-side daily reminders (writes only when it changes).
