@@ -2272,6 +2272,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Pro V2 Measurement Engine &#9889; (Beta)</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">A rebuilt timegrapher engine you can try today: converges in about 10 seconds, holds steady between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing, a key health indicator watchmakers look at. On the Measure page, switch the engine selector to <strong>Pro V2 (beta)</strong>. Needs app version 2.1 or later; switch back to Standard anytime. Amplitude shows only when the signal is clean enough to trust &#8212; if it&#8217;s blank, reposition and try again.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Wishlist Brand Folders</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Big wishlist? The new folder view groups watches from the same brand into collapsible folders &#8212; tap the folder icon at the top of your Wishlist to try it. Brands with a single watch stay as regular cards.</div>
       </div>
@@ -3262,6 +3266,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-body">
               <div class="help-step-title">Trouble getting a reading? Use Advanced Settings</div>
               <div class="help-step-desc">Tap the &#9881; gear (top-right of the Measure screen) to pick an environment preset &#8212; Quiet Room, Noisy Environment, or Weak Signal &#8212; or adjust Sensitivity and Convergence Speed yourself. Higher Sensitivity helps faint or quiet watches register ticks; these settings can rescue a watch that won&#8217;t converge on the defaults.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">6</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Try the Pro V2 engine (beta)</div>
+              <div class="help-step-desc">On app version 2.1+, the engine selector on the Measure screen offers <strong>Pro V2 &#9889; (beta)</strong>: a rebuilt detection core that converges in about 10 seconds, holds steadier between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing (healthy watches typically read 220&#8211;300&deg;). It also shows the averaged tick/tock waveform under the chart; sharp spikes mean a clean signal. Amplitude appears only when the signal is clean enough to trust. With Pro V2 selected, the gear offers its own settings: a Precision preset (Quick / Balanced / Strict) and the movement&#8217;s lift angle (52&deg; fits most modern movements). Switch back to Standard anytime.</div>
             </div>
           </div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Measure in a quiet environment for best results. Watches with display casebacks (transparent backs) produce a stronger signal than solid steel cases.</span></div>
@@ -6861,7 +6872,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.11.35';
+const APP_VERSION = '17.11.44';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
