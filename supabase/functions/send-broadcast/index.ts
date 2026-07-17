@@ -16,6 +16,7 @@ import {
   capRecipients,
   COHORTS,
   dormantCutoffMs,
+  drainBudget,
   effectiveLimit as computeEffectiveLimit,
   excludeAlreadyEmailed,
   excludeIds,
@@ -29,6 +30,7 @@ import {
   segmentUserId,
   unsubFooter,
   unsubUrl,
+  utcDayStart,
   validateBroadcastInput,
 } from "./lib.ts";
 
@@ -84,30 +86,40 @@ serve(async (req) => {
   }
 
   try {
-    // Verify admin — check Authorization header for service role or user JWT
     const authHeader = req.headers.get("Authorization") ?? "";
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-    // Create client with the caller's JWT to verify they are admin
-    const token = authHeader.replace("Bearer ", "");
-    const supabaseAuth = createClient(supabaseUrl, supabaseServiceKey);
+    const body = await req.json();
+    const { subject, html, test_email, segment = "all", campaign_id, cohort, dry_run, limit, enqueue, drain } = body;
 
-    // Verify the caller is admin
-    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
-    console.log("[send-broadcast] Auth check:", {
-      hasToken: !!token,
-      tokenLen: token?.length,
-      userId: user?.id,
-      error: userError?.message,
-      adminMatch: user?.id === ADMIN_USER_ID
-    });
-    if (userError || !user || user.id !== ADMIN_USER_ID) {
-      return jsonResponse({ error: "Unauthorized", details: userError?.message }, 403);
+    // Drain can be invoked by the nightly pg_cron job via the campaign secret
+    // (no user JWT); everything else requires the admin JWT below.
+    const cronSecret = Deno.env.get("CAMPAIGN_TRIGGER_SECRET") ?? "";
+    const isCronDrain = !!drain && !!cronSecret &&
+      req.headers.get("x-campaign-secret") === cronSecret;
+
+    if (!isCronDrain) {
+      // Verify the caller is admin
+      const token = authHeader.replace("Bearer ", "");
+      const supabaseAuth = createClient(supabaseUrl, supabaseServiceKey);
+      const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
+      console.log("[send-broadcast] Auth check:", {
+        hasToken: !!token,
+        tokenLen: token?.length,
+        userId: user?.id,
+        error: userError?.message,
+        adminMatch: user?.id === ADMIN_USER_ID
+      });
+      if (userError || !user || user.id !== ADMIN_USER_ID) {
+        return jsonResponse({ error: "Unauthorized", details: userError?.message }, 403);
+      }
     }
 
-    const body = await req.json();
-    const { subject, html, test_email, segment = "all", campaign_id, cohort, dry_run, limit } = body;
+    if (drain) {
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      return await drainQueue(supabase, supabaseUrl, supabaseServiceKey);
+    }
 
     const inputError = validateBroadcastInput({ subject, html, cohort, campaign_id, segment });
     if (inputError) {
@@ -249,6 +261,30 @@ serve(async (req) => {
       filteredRecipients = batchSegment(cappedRecipients, segment);
     }
 
+    // Queue mode: insert rows for the nightly drain instead of sending now.
+    // Skips recipients already pending with the same subject (re-click safe).
+    if (enqueue) {
+      const { data: pendingRows } = await fetchAllRows<{ uid: string }>((from, to) => supabase
+        .from("broadcast_queue")
+        .select("uid")
+        .eq("status", "pending")
+        .eq("subject", subject)
+        .range(from, to));
+      const alreadyQueued = new Set((pendingRows || []).map(r => r.uid));
+      const toQueue = filteredRecipients.filter(r => !alreadyQueued.has(r.uid));
+      const rows = toQueue.map(r => ({ uid: r.uid, email: r.email, subject, html: safeHtml }));
+      let queued = 0;
+      for (let i = 0; i < rows.length; i += 500) {
+        const { error: insErr } = await supabase.from("broadcast_queue").insert(rows.slice(i, i + 500));
+        if (insErr) {
+          return jsonResponse({ error: "Queue insert failed", details: insErr.message, queued }, 500);
+        }
+        queued += Math.min(500, rows.length - i);
+      }
+      console.log(`[send-broadcast] Queued ${queued} (skipped ${alreadyQueued.size} already pending) for nightly drain`);
+      return jsonResponse({ queued, skipped_already_queued: filteredRecipients.length - toQueue.length, total_eligible: filteredRecipients.length });
+    }
+
     // Send via Resend batch API (up to 100 per request)
     let sent = 0;
     let failed = 0;
@@ -321,6 +357,87 @@ serve(async (req) => {
     return jsonResponse({ error: String(err) }, 500);
   }
 });
+
+// Nightly drain: send queued broadcast rows with whatever daily quota remains.
+// used_today comes from email_events (the Resend webhook logs every send from every
+// function), so transactional + campaign email automatically takes priority.
+async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl: string, serviceKey: string) {
+  const dayStart = utcDayStart(Date.now());
+  const { count: usedToday, error: cntErr } = await supabase
+    .from("email_events")
+    .select("id", { count: "exact", head: true })
+    .eq("event_type", "sent")
+    .gte("created_at", dayStart);
+  if (cntErr) {
+    return jsonResponse({ error: "Quota count failed", details: cntErr.message }, 500);
+  }
+  const budget = drainBudget(usedToday ?? 0);
+  if (budget <= 0) {
+    console.log(`[send-broadcast] Drain: no quota left (used ${usedToday} today)`);
+    return jsonResponse({ drained: 0, used_today: usedToday, budget });
+  }
+
+  const { data: rows, error: qErr } = await supabase
+    .from("broadcast_queue")
+    .select("id, uid, email, subject, html")
+    .eq("status", "pending")
+    .order("id", { ascending: true })
+    .limit(budget);
+  if (qErr) {
+    return jsonResponse({ error: "Queue read failed", details: qErr.message }, 500);
+  }
+  if (!rows || rows.length === 0) {
+    return jsonResponse({ drained: 0, used_today: usedToday, budget, queue_empty: true });
+  }
+
+  let sent = 0, failed = 0;
+  const errors: string[] = [];
+  const batchSize = 100;
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const batch = rows.slice(i, i + batchSize);
+    const payload = await Promise.all(batch.map(async (r) => {
+      const sig = await hmacSign(r.uid, "updates", serviceKey);
+      const url = unsubUrl(supabaseUrl, r.uid, sig, "updates");
+      return {
+        from: FROM_EMAIL,
+        to: [r.email],
+        subject: r.subject,
+        html: r.html + unsubFooter(url),
+        headers: {
+          "List-Unsubscribe": `<${url}>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+      };
+    }));
+    const ids = batch.map(r => r.id);
+    try {
+      const res = await fetch("https://api.resend.com/emails/batch", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        failed += batch.length;
+        errors.push(`Batch error: ${JSON.stringify(data)}`);
+        await supabase.from("broadcast_queue")
+          .update({ status: "failed", error: JSON.stringify(data).slice(0, 500) }).in("id", ids);
+      } else {
+        sent += batch.length;
+        await supabase.from("broadcast_queue")
+          .update({ status: "sent", sent_at: new Date().toISOString() }).in("id", ids);
+      }
+    } catch (err) {
+      failed += batch.length;
+      errors.push(`Batch exception: ${String(err)}`);
+      await supabase.from("broadcast_queue")
+        .update({ status: "failed", error: String(err).slice(0, 500) }).in("id", ids);
+    }
+    if (i + batchSize < rows.length) await new Promise(r => setTimeout(r, 200));
+  }
+  console.log(`[send-broadcast] Drain: sent ${sent}, failed ${failed}, used_today ${usedToday}, budget ${budget}`);
+  return jsonResponse({ drained: sent, failed, used_today: usedToday, budget, errors: errors.slice(0, 3) });
+}
 
 async function sendEmail(to: string, subject: string, html: string) {
   const res = await fetch("https://api.resend.com/emails", {

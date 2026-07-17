@@ -3150,6 +3150,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <button class="btn btn-primary" id="broadcast-send-btn" onclick="sendBroadcastAll()" style="flex:1;">Send to Segment</button>
         </div>
         <div id="broadcast-status" aria-live="polite" style="font-size:.82rem;margin-top:.5rem;"></div>
+        <div id="broadcast-queue-status" aria-live="polite" style="font-size:.78rem;color:var(--muted);margin-top:.4rem;"></div>
       </div>
     </div>
 
@@ -6872,7 +6873,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.12.01';
+const APP_VERSION = '17.12.13';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13469,7 +13470,42 @@ function showAdminPage() {
   loadOfficialDrafts();
   seedProV2BroadcastDraft();
   renderBroadcastDrafts();
+  renderBroadcastQueueStatus();
   renderDevFlags();
+}
+
+// Broadcast queue status (pending/sent/quota) + manual drain
+async function renderBroadcastQueueStatus() {
+  const el = document.getElementById('broadcast-queue-status');
+  if (!el) return;
+  try {
+    const { data } = await db.rpc('admin_broadcast_queue_status');
+    const q = data || {};
+    if (!Number(q.pending) && !Number(q.sent) && !Number(q.failed)) { el.innerHTML = ''; return; }
+    const budget = Math.max(0, 100 - (Number(q.used_today) || 0) - 10);
+    el.innerHTML = `Queue: <b>${Number(q.pending) || 0}</b> pending · ${Number(q.sent) || 0} sent (${Number(q.sent_today) || 0} today) · ${Number(q.failed) || 0} failed · quota used today ${Number(q.used_today) || 0}/100 · next drain ≈ ${budget} emails (nightly 21:30 UTC)
+      <button class="btn btn-ghost" onclick="drainBroadcastNow()" style="font-size:.72rem;padding:.2rem .5rem;margin-left:.4rem;">Drain now</button>`;
+  } catch (_) { el.innerHTML = ''; }
+}
+
+async function drainBroadcastNow() {
+  const el = document.getElementById('broadcast-queue-status');
+  if (el) el.innerHTML = '<span style="color:var(--gold);">Draining…</span>';
+  try {
+    const session = await db.auth.getSession();
+    const token = session.data?.session?.access_token;
+    const res = await fetch(SUPABASE_URL + '/functions/v1/send-broadcast', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ drain: true }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Drain failed');
+    toast(`Drained ${data.drained} emails (budget was ${data.budget})`);
+  } catch (e) {
+    toast('Drain failed: ' + e.message, 'error');
+  }
+  renderBroadcastQueueStatus();
 }
 
 // One-time: seed the Pro V2 beta announcement into the broadcast drafts list
@@ -15467,7 +15503,7 @@ async function confirmBroadcastAll() {
   setBroadcastBtnsDisabled(true);
   const subject = document.getElementById('broadcast-subject')?.value?.trim();
   const statusEl = document.getElementById('broadcast-status');
-  statusEl.innerHTML = '<span style="color:var(--gold);">Uploading images & sending to all users…</span>';
+  statusEl.innerHTML = '<span style="color:var(--gold);">Uploading images & queueing broadcast…</span>';
 
   try {
     const images = await uploadBroadcastImages();
@@ -15483,12 +15519,13 @@ async function confirmBroadcastAll() {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_KEY,
       },
-      body: JSON.stringify({ subject, html, segment: document.getElementById('broadcast-segment')?.value || 'all' }),
+      body: JSON.stringify({ subject, html, enqueue: true, segment: document.getElementById('broadcast-segment')?.value || 'all' }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed');
-    statusEl.innerHTML = `<span style="color:var(--success);">Sent to ${data.sent} users${data.failed ? `, ${data.failed} failed` : ''}${data.segment ? ` [${data.segment}]` : ''}</span>`;
-    toast(`Broadcast sent to ${data.sent} users!`);
+    statusEl.innerHTML = `<span style="color:var(--success);">Queued ${data.queued} recipients${data.skipped_already_queued ? ` (${data.skipped_already_queued} already queued)` : ''} — drains nightly at 21:30 UTC with leftover email quota (~80/night)</span>`;
+    toast(`Broadcast queued for ${data.queued} users`);
+    renderBroadcastQueueStatus();
   } catch (e) {
     statusEl.innerHTML = `<span style="color:var(--danger);">Error: ${escHtml(e.message)}</span>`;
     toast('Broadcast failed: ' + e.message, 'error');

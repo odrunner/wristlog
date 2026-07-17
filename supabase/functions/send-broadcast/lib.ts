@@ -191,3 +191,20 @@ export function unsubUrl(supabaseUrl: string, uid: string, sig: string, cat = "u
 }
 
 export type { Profile };
+
+// ── Broadcast queue (100/day Resend limit) ─────────────────────────────────────
+// Daily quota resets at midnight UTC. The nightly drain sends broadcast rows with
+// whatever quota is left, keeping a reserve for late-night transactional email.
+export const DAILY_EMAIL_LIMIT = 100;
+export const DRAIN_RESERVE = 10;
+
+// How many queued broadcast emails tonight's drain may send.
+export function drainBudget(usedToday: number, dailyLimit = DAILY_EMAIL_LIMIT, reserve = DRAIN_RESERVE): number {
+  return Math.max(0, dailyLimit - usedToday - reserve);
+}
+
+// UTC midnight for "today" — the Resend quota window start.
+export function utcDayStart(nowMs: number): string {
+  const d = new Date(nowMs);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())).toISOString();
+}
