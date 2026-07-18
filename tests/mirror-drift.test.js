@@ -40,11 +40,11 @@ const VERBATIM = [
   'extractCleanChunks', 'medianStd', 'buildBadgeNotificationRows',
   'addDaysStr', 'computeStreaks', 'streakChipState', 'streakCalendarGrid', 'computeStreaksFrozen',
   'badgePostPlan', 'pinFeatured', 'initialsTextColor', 'pickIdentifiedWatch',
-  'classifyProfileLoad',
+  'classifyProfileLoad', 'cleanBrandList',
 ];
 
 const ADAPTED = [
-  'MSR_CARD_MIN_DOTS', 'checkContent', 'computeFriendships', 'computeRobustRate', 'computeWatchRec',
+  'BRAND_COLOR_SUFFIXES', 'MSR_CARD_MIN_DOTS', 'checkContent', 'computeFriendships', 'computeRobustRate', 'computeWatchRec',
   'fmtMoney', 'formatCommentTime', 'formatFeedDate', 'getMentionQuery', 'incrSettle', 'initials',
   'isBase64', 'logToRow', 'markDirty', 'monthRevNav', 'profileInitials',
   'renderCommentBody', 'todayStr', 'warrantyStatus', 'watchToRow', 'wishToRow',

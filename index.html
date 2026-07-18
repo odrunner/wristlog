@@ -20057,6 +20057,34 @@ function addReceiptFromEdit() {
 // ── Brand autocomplete ─────────────────────────────────────────────────────
 let _brandAcIdx = -1; // keyboard-focused row index
 
+// The brands list is a shared, ever-growing catalogue (synced from the `brands`
+// table + URL auto-detect), so it accumulates junk: whitespace/case duplicates
+// and dial-colour variants like "Rolex blue" sitting next to "Rolex". Present a
+// cleaned, de-duplicated, sorted list to the picker so users don't see the mess.
+const BRAND_COLOR_SUFFIXES = new Set(['black','blue','white','green','silver','gold','grey','gray','rose','brown','salmon','champagne','red','orange','yellow','pink','purple','teal','bronze','slate','olive','burgundy']);
+function cleanBrandList(list) {
+  // 1. Trim + collapse whitespace, drop blanks, merge case-insensitive dupes,
+  //    preferring a label that starts with an uppercase letter.
+  const byKey = new Map();
+  for (const raw of (list || [])) {
+    const name = String(raw == null ? '' : raw).replace(/\s+/g, ' ').trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    const prev = byKey.get(key);
+    if (!prev || (/^[a-z]/.test(prev) && /^[A-Z]/.test(name))) byKey.set(key, name);
+  }
+  const keys = new Set(byKey.keys());
+  // 2. Drop "<brand> <colour>" entries when the bare brand is already listed.
+  const out = [];
+  for (const [key, name] of byKey) {
+    const sp = key.lastIndexOf(' ');
+    if (sp > 0 && BRAND_COLOR_SUFFIXES.has(key.slice(sp + 1)) && keys.has(key.slice(0, sp))) continue;
+    out.push(name);
+  }
+  out.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  return out;
+}
+
 function autoSizeInput(el) {
   const val = el.value || el.placeholder || '';
   el.size = Math.max(val.length + 1, 10);
@@ -20072,10 +20100,10 @@ function setBrandAC(selected = '') {
 
 function filterBrands(query) {
   const q = (query || '').trim().toLowerCase();
-  const sorted = [...brands].sort((a, b) => a.localeCompare(b));
+  const cleaned = cleanBrandList(brands);
   const matches = q
-    ? sorted.filter(b => b.toLowerCase().includes(q))
-    : sorted;
+    ? cleaned.filter(b => b.toLowerCase().includes(q))
+    : cleaned;
 
   const list = document.getElementById('brand-ac-list');
   _brandAcIdx = -1;
@@ -20087,7 +20115,7 @@ function filterBrands(query) {
   ).join('');
 
   // "Request brand" row when no exact match
-  const exactMatch = brands.some(b => b.toLowerCase() === q);
+  const exactMatch = cleaned.some(b => b.toLowerCase() === q);
   const requestRow = q && !exactMatch
     ? `<div class="brand-ac-request" onmousedown="requestBrand('${escHtml(query.trim())}')">
          "${escHtml(query.trim())}" not listed — request it
@@ -22582,15 +22610,15 @@ function setWlBrandAC(selected = '') {
 
 function filterWlBrands(query) {
   const q = (query || '').trim().toLowerCase();
-  const sorted = [...brands].sort((a, b) => a.localeCompare(b));
-  const matches = q ? sorted.filter(b => b.toLowerCase().includes(q)) : sorted;
+  const cleaned = cleanBrandList(brands);
+  const matches = q ? cleaned.filter(b => b.toLowerCase().includes(q)) : cleaned;
   const list = document.getElementById('wl-brand-ac-list');
   _wlBrandAcIdx = -1;
   if (!matches.length && !q) { list.classList.add('hidden'); return; }
   const items = matches.map(b =>
     `<div class="brand-ac-item" onmousedown="selectWlBrand('${escHtml(b)}')">${escHtml(b)}</div>`
   ).join('');
-  const exactMatch = brands.some(b => b.toLowerCase() === q);
+  const exactMatch = cleaned.some(b => b.toLowerCase() === q);
   const requestRow = q && !exactMatch
     ? `<div class="brand-ac-request" onmousedown="requestBrand('${escHtml(query.trim())}')">
          "${escHtml(query.trim())}" not listed — request it

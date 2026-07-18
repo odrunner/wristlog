@@ -180,6 +180,30 @@ export function groupWishlistByBrand(items) {
   singles.sort((a, b) => cmp(a.brand || '', b.brand || '') || cmp(a.name || '', b.name || ''));
   return { folders, singles };
 }
+// Cleans the shared brand catalogue for the brand pickers: trims/collapses
+// whitespace, drops blanks, merges case-insensitive duplicates (preferring an
+// uppercase-initial label), and drops "<brand> <colour>" junk like "Rolex blue"
+// when the bare brand ("Rolex") is already present. Keep in sync with index.html.
+export const BRAND_COLOR_SUFFIXES = new Set(['black','blue','white','green','silver','gold','grey','gray','rose','brown','salmon','champagne','red','orange','yellow','pink','purple','teal','bronze','slate','olive','burgundy']);
+export function cleanBrandList(list) {
+  const byKey = new Map();
+  for (const raw of (list || [])) {
+    const name = String(raw == null ? '' : raw).replace(/\s+/g, ' ').trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    const prev = byKey.get(key);
+    if (!prev || (/^[a-z]/.test(prev) && /^[A-Z]/.test(name))) byKey.set(key, name);
+  }
+  const keys = new Set(byKey.keys());
+  const out = [];
+  for (const [key, name] of byKey) {
+    const sp = key.lastIndexOf(' ');
+    if (sp > 0 && BRAND_COLOR_SUFFIXES.has(key.slice(sp + 1)) && keys.has(key.slice(0, sp))) continue;
+    out.push(name);
+  }
+  out.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  return out;
+}
 export function urlDomain(url) {
   if (!url) return '';
   try { return new URL(url).hostname.replace(/^www\./, ''); }
