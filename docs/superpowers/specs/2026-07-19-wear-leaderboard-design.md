@@ -107,20 +107,38 @@ logging.
 which **excludes** measurement-share posts (`useCase === 'measurement'`). The
 leaderboard uses this same definition.
 
-### E. Pre-existing inconsistency (fix included, separable)
+### E. Pre-existing inconsistency (confirmed fix)
 
 `filteredLogs()` filters raw `logs` by date only and does **not** exclude
 measurement posts, so the Stats Collection Report counts them as wears while
-Track does not. The same watch can therefore show different wear counts on the
-two pages.
+Track does not. The same watch can show different wear counts on the two pages.
 
 Impact measured: **4 logs across 3 users.**
 
-The plan fixes `filteredLogs()` to exclude measurement posts, aligning Stats with
-Track and the documented rule. This is the only change that alters existing
-numbers, it is listed as its own step, and it can be dropped without affecting
-the rest of the feature. Dropping it means shipping three views on two pages with
-two different definitions of "a wear".
+**Rule (confirmed by the user):** a measurement share is not a wear, so it must
+not count towards wears — but it *may* still count towards streaks, badges and
+other engagement signals.
+
+That maps exactly onto the existing code split, so the fix is narrow:
+
+- `filteredLogs()` feeds only the wear-oriented Stats sections (stat row,
+  Collection Report, day-of-week, use-case chart). Excluding measurement there
+  aligns Stats with Track.
+- Streaks (`displayStreak` / `computeStreaksFrozen`) and badge checks read the
+  raw `logs` array directly and are **left untouched**, so measurement keeps
+  counting towards them.
+
+This distinction matters. Two of the four measurement logs are the only log on
+their date, and one of them (user `ae5ff73d`, 2026-06-13) sits at the end of a
+Jun 10-13 run. Excluding measurement from streaks would have shortened that
+user's best streak from 4 days to 3. Scoping the change to `filteredLogs()`
+avoids any such regression.
+
+**Known remaining oddity, deliberately out of scope:** Track's "worn today"
+badge (`wornToday`, built from raw `logs`) will still light up for a
+measurement-only day, even though that day no longer counts as a wear. It is a
+one-line change to align, but it is a behaviour change beyond this feature and
+is left for a separate decision.
 
 ## Components
 

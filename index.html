@@ -4053,14 +4053,17 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="stats-filters">
         <select class="filter-select" id="report-period" onchange="renderStats(true)">
           <option value="all">All Time</option>
-          <option value="30">Last 30 Days</option>
-          <option value="90">Last 90 Days</option>
-          <option value="365">Last Year</option>
+          <option value="30">1M</option>
+          <option value="90">3M</option>
+          <option value="ytd">YTD</option>
+          <option value="365">1Y</option>
         </select>
       </div>
     </div>
 
     <div class="stats-row" id="stats-row"></div>
+
+    <div class="card" id="wear-leaderboard" style="margin-bottom:1.25rem;"></div>
 
     <div class="card" style="margin-bottom:1.25rem;">
       <div class="section-title">Collection Report</div>
@@ -6895,7 +6898,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.15.29';
+const APP_VERSION = '19.15.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6913,6 +6916,67 @@ function profileInitials(p) {
   if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   return name.slice(0, 2).toUpperCase() || '';
 }
+// ── Wear leaderboard ───────────────────────────────────────────────────────
+// Spec: docs/superpowers/specs/2026-07-19-wear-leaderboard-design.md
+// An all-time ranking permanently punishes recently acquired watches, so the
+// leaderboard supports shorter windows.
+
+// Period value -> inclusive cutoff date (YYYY-MM-DD), or null for all time.
+// Unknown values fall back to all-time rather than throwing.
+function periodCutoff(period, today) {
+  if (!period || period === 'all') return null;
+  const base = new Date(today + 'T12:00:00'); // noon-anchored, avoids DST drift
+  if (period === 'ytd') return `${base.getFullYear()}-01-01`;
+  const days = parseInt(period, 10);
+  if (!Number.isFinite(days)) return null;
+  base.setDate(base.getDate() - days);
+  return `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}-${String(base.getDate()).padStart(2, '0')}`;
+}
+
+// Ranked rows: [{ id, wears, pct, rank }], most-worn first, zero-wear watches
+// last. A wear is a UNIQUE DATE on which a watch was logged; measurement shares
+// are not wears (they may still count towards streaks/badges elsewhere).
+function wearLeaderboard(watches, logs, cutoff) {
+  const list = watches || [];
+  if (!list.length) return [];
+  const owned = new Set(list.map(w => w.id));
+  const days = new Map(); // watchId -> Set of dates
+
+  for (const l of logs || []) {
+    if (!l || !l.watchId || !l.date) continue;
+    if (l.useCase === 'measurement') continue;
+    if (!owned.has(l.watchId)) continue;
+    if (cutoff && l.date < cutoff) continue;
+    if (!days.has(l.watchId)) days.set(l.watchId, new Set());
+    days.get(l.watchId).add(l.date);
+  }
+
+  const rows = list.map(w => ({
+    id: w.id,
+    wears: (days.get(w.id) || new Set()).size,
+    name: `${w.brand || ''} ${w.name || ''}`.trim().toLowerCase(),
+  }));
+  const total = rows.reduce((s, r) => s + r.wears, 0);
+
+  rows.sort((a, b) => (b.wears - a.wears) || a.name.localeCompare(b.name));
+
+  // Competition ranking: equal wear counts share a rank, the next distinct
+  // count skips ahead (1, 2, 2, 4).
+  let lastWears = null, lastRank = 0;
+  return rows.map((r, i) => {
+    const rank = r.wears === lastWears ? lastRank : i + 1;
+    lastWears = r.wears; lastRank = rank;
+    return {
+      id: r.id,
+      wears: r.wears,
+      // null (not 0) when the watch has no wears, so the UI can show an em dash
+      // and keep "genuinely unworn" distinct from "rounds down to 0%".
+      pct: r.wears > 0 && total > 0 ? Math.round(r.wears / total * 100) : null,
+      rank,
+    };
+  });
+}
+
 // ── Admin → Traffic → "By Campaign" ────────────────────────────────────────
 // Per-actor notification subjects ("masont mentioned you", "SA also commented")
 // collapse into one bucket each, so they read as campaigns rather than dozens
@@ -15741,9 +15805,15 @@ function renderWatchSelector() {
     if (aLast && bLast) return bLast.localeCompare(aLast);
     return 0; // both unworn — keep collection order
   });
+  // All-time share of wears, so a row reads "12 wears · 8%". Track has no period
+  // filter, so this is deliberately all-time. Suppressed when nothing is logged
+  // yet, to avoid a meaningless 0% on a brand-new collection.
+  const _share = new Map(wearLeaderboard(watches, logs, null).map(r => [r.id, r.pct]));
+
   el.innerHTML = `<div class="watch-list">${
     sorted.map(w => {
       const cnt    = (lastWorn.get(w.id) || { count: 0 }).count;
+      const pct    = _share.get(w.id);
       const isWorn = wornToday.has(w.id);
       const thumb  = w.image
         ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
@@ -15753,7 +15823,7 @@ function renderWatchSelector() {
         ${thumb}
         <div style="flex:1;min-width:0;">
           <div class="watch-info-name">${escHtml(w.brand)} ${escHtml(w.name)}</div>
-          <div class="watch-info-sub">${cnt} wear${cnt!==1?'s':''}</div>
+          <div class="watch-info-sub">${cnt} wear${cnt!==1?'s':''}${pct != null ? ` · ${pct}%` : ''}</div>
         </div>
         ${isWorn ? `<span class="watch-worn-badge">worn today</span>` : ''}
       </div>`;
@@ -18322,16 +18392,16 @@ function confirmDelete() {
 // ══════════════════════════════════════════
 //  STATS PAGE
 // ══════════════════════════════════════════
+// Wear-oriented log set for the Stats page. Measurement shares are NOT wears,
+// so they are excluded here — this is what made the Collection Report disagree
+// with Track, which has always excluded them (see rebuildLogsByWatch).
+// Streaks and badges read the raw `logs` array separately and deliberately keep
+// counting measurement shares as activity.
 function filteredLogs() {
   const p = document.getElementById('report-period').value;
-  let result = logs;
-  if (p !== 'all') {
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - parseInt(p));
-    const cs = cutoff.toISOString().split('T')[0];
-    result = result.filter(l => l.date >= cs);
-  }
-  return result;
+  const cutoff = periodCutoff(p, todayStr());
+  return logs.filter(l =>
+    l.useCase !== 'measurement' && (!cutoff || l.date >= cutoff));
 }
 
 // ══════════════════════════════════════════
@@ -18850,12 +18920,51 @@ function renderStats(force) {
   if (typeof Chart === 'undefined') { toast('Charts still loading…', 'error'); return; }
   const fl = filteredLogs();
   renderStatsRow(fl);
+  renderWearLeaderboard(fl);
   renderCollectionReport(fl);
   renderDowReport();
   renderChUsecase(fl);
   renderChCollectionValue();
   renderYearInReview();
   renderMonthlyReview();
+}
+
+// "Most Worn" card. Ranked by wears in the selected period so a recently
+// acquired watch is not permanently stuck at the bottom by all-time totals.
+// Zero-wear watches stay listed (that is the point — you want to watch a watch
+// climb as the window shortens); their share renders as an em dash, which keeps
+// "never worn" distinct from "rounds down to 0%".
+function renderWearLeaderboard(fl) {
+  const el = document.getElementById('wear-leaderboard');
+  if (!el) return;
+  if (!watches.length) { el.style.display = 'none'; return; }
+  el.style.display = '';
+
+  const rows = wearLeaderboard(watches, fl, null); // fl is already period-filtered
+  const anyWears = rows.some(r => r.wears > 0);
+
+  const body = !anyWears
+    ? `<div class="empty-sub" style="padding:.6rem 0;">No wears logged in this period.</div>`
+    : rows.map(r => {
+        const w = watches.find(x => x.id === r.id);
+        if (!w) return '';
+        const thumb = w.image
+          ? `<img loading="lazy" src="${escHtml(w.image)}" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
+          : `<div class="avatar" style="width:32px;height:32px;background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
+        const share = r.pct == null ? '—' : r.pct + '%';
+        const dim = r.wears === 0 ? 'opacity:.55;' : '';
+        return `<div style="display:flex;align-items:center;gap:.6rem;padding:.45rem 0;border-bottom:1px solid var(--border);${dim}">
+          <span style="min-width:2.1rem;font-size:.78rem;font-weight:700;color:var(--muted);">#${r.rank}</span>
+          ${thumb}
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.82rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(w.brand)} ${escHtml(w.name)}</div>
+          </div>
+          <span style="font-size:.78rem;color:var(--muted);white-space:nowrap;">${r.wears} wear${r.wears !== 1 ? 's' : ''}</span>
+          <span style="font-size:.78rem;font-weight:700;color:var(--gold);min-width:2.6rem;text-align:right;">${share}</span>
+        </div>`;
+      }).join('');
+
+  el.innerHTML = `<div class="section-title">Most Worn</div>${body}`;
 }
 
 function renderStatsRow(fl) {

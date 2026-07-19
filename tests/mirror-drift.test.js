@@ -41,7 +41,7 @@ const VERBATIM = [
   'addDaysStr', 'computeStreaks', 'streakChipState', 'streakCalendarGrid', 'computeStreaksFrozen',
   'badgePostPlan', 'pinFeatured', 'initialsTextColor', 'pickIdentifiedWatch',
   'classifyProfileLoad', 'buildBrandList', 'brandRequestTitle',
-  'campaignSubject', 'campaignGroupOf',
+  'campaignSubject', 'campaignGroupOf', 'periodCutoff', 'wearLeaderboard',
 ];
 
 const ADAPTED = [

@@ -107,6 +107,67 @@ export function campaignGroupOf(subj) {
   return { group: 3, rank: 0 };
 }
 
+// ── Wear leaderboard ───────────────────────────────────────────────────────
+// Spec: docs/superpowers/specs/2026-07-19-wear-leaderboard-design.md
+// An all-time ranking permanently punishes recently acquired watches, so the
+// leaderboard supports shorter windows.
+
+// Period value -> inclusive cutoff date (YYYY-MM-DD), or null for all time.
+// Unknown values fall back to all-time rather than throwing.
+export function periodCutoff(period, today) {
+  if (!period || period === 'all') return null;
+  const base = new Date(today + 'T12:00:00'); // noon-anchored, avoids DST drift
+  if (period === 'ytd') return `${base.getFullYear()}-01-01`;
+  const days = parseInt(period, 10);
+  if (!Number.isFinite(days)) return null;
+  base.setDate(base.getDate() - days);
+  return `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}-${String(base.getDate()).padStart(2, '0')}`;
+}
+
+// Ranked rows: [{ id, wears, pct, rank }], most-worn first, zero-wear watches
+// last. A wear is a UNIQUE DATE on which a watch was logged; measurement shares
+// are not wears (they may still count towards streaks/badges elsewhere).
+export function wearLeaderboard(watches, logs, cutoff) {
+  const list = watches || [];
+  if (!list.length) return [];
+  const owned = new Set(list.map(w => w.id));
+  const days = new Map(); // watchId -> Set of dates
+
+  for (const l of logs || []) {
+    if (!l || !l.watchId || !l.date) continue;
+    if (l.useCase === 'measurement') continue;
+    if (!owned.has(l.watchId)) continue;
+    if (cutoff && l.date < cutoff) continue;
+    if (!days.has(l.watchId)) days.set(l.watchId, new Set());
+    days.get(l.watchId).add(l.date);
+  }
+
+  const rows = list.map(w => ({
+    id: w.id,
+    wears: (days.get(w.id) || new Set()).size,
+    name: `${w.brand || ''} ${w.name || ''}`.trim().toLowerCase(),
+  }));
+  const total = rows.reduce((s, r) => s + r.wears, 0);
+
+  rows.sort((a, b) => (b.wears - a.wears) || a.name.localeCompare(b.name));
+
+  // Competition ranking: equal wear counts share a rank, the next distinct
+  // count skips ahead (1, 2, 2, 4).
+  let lastWears = null, lastRank = 0;
+  return rows.map((r, i) => {
+    const rank = r.wears === lastWears ? lastRank : i + 1;
+    lastWears = r.wears; lastRank = rank;
+    return {
+      id: r.id,
+      wears: r.wears,
+      // null (not 0) when the watch has no wears, so the UI can show an em dash
+      // and keep "genuinely unworn" distinct from "rounds down to 0%".
+      pct: r.wears > 0 && total > 0 ? Math.round(r.wears / total * 100) : null,
+      rank,
+    };
+  });
+}
+
 export function computeStreaks(logs, today) {
   const dates = [...new Set((logs || []).map(l => l.date).filter(Boolean))].sort();
   if (dates.length === 0) return { current: 0, best: 0, status: 'none' };
