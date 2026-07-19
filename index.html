@@ -1333,7 +1333,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* Wishlist header actions: view toggle + add buttons all on one row */
     /* wrap, not nowrap: with nowrap the row grew past the viewport on phones
        and "+ Add to Wishlist" was clipped off the right edge. */
-    .wl-actions { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; }
+    .wl-actions { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; justify-content: flex-start; }
     .wl-view-toggle { display: flex; gap: .3rem; flex-shrink: 0; }
     .wl-view-btn {
       display: inline-flex; align-items: center; justify-content: center;
@@ -6895,7 +6895,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.12.04';
+const APP_VERSION = '19.12.18';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6913,6 +6913,45 @@ function profileInitials(p) {
   if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   return name.slice(0, 2).toUpperCase() || '';
 }
+// ── Admin → Traffic → "By Campaign" ────────────────────────────────────────
+// Per-actor notification subjects ("masont mentioned you", "SA also commented")
+// collapse into one bucket each, so they read as campaigns rather than dozens
+// of one-off rows in "Older campaigns".
+function campaignSubject(subj) {
+  const t = (subj || '').toLowerCase();
+  if (t.includes('mentioned you')) return 'Mentions';
+  if (t.includes('commented')) return 'Comments';
+  if (t.includes('follow') || t.includes('close friend')) return 'Follows';
+  return subj;
+}
+
+const CAMPAIGN_ONBOARDING = [
+  'Add your first watch',
+  'Start tracking your wears',
+  'How accurate is your watch?',
+  'Which watch is really your favorite?',
+];
+// Follows / Comments / Mentions — the recurring social notifications. Their own
+// section: they are ongoing and comparable to each other, unlike finished sends.
+const CAMPAIGN_NOTIFICATIONS = ['Follows', 'Comments', 'Mentions'];
+// Broadcasts still draining from broadcast_queue — remove once fully sent and
+// they fall through to "Older campaigns".
+const CAMPAIGN_ACTIVE_BROADCASTS = [
+  'Your watch has more to tell you — meet the Pro V2 engine (beta)',
+];
+const CAMPAIGN_GROUP_LABELS = [
+  'Onboarding', 'Notifications', 'Broadcast — in progress', 'Older campaigns',
+];
+
+function campaignGroupOf(subj) {
+  let i = CAMPAIGN_ONBOARDING.indexOf(subj);
+  if (i >= 0) return { group: 0, rank: i };
+  i = CAMPAIGN_NOTIFICATIONS.indexOf(subj);
+  if (i >= 0) return { group: 1, rank: i };
+  if (CAMPAIGN_ACTIVE_BROADCASTS.includes(subj)) return { group: 2, rank: 0 };
+  return { group: 3, rank: 0 };
+}
+
 function escHtml(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -14342,18 +14381,12 @@ function renderEmailEngagement(data) {
   let bySubjectRows = data.by_subject || [];
   const recent = data.recent || [];
 
-  // Exclude founder-only internal emails — these go to ADMIN_EMAIL (the founder),
-  // not to users, so they'd inflate engagement stats (e.g. >100% open rate from
-  // re-opening your own alerts). Covers:
-  //  - signup alerts ("New WRotate user: …")
-  //  - the weekly measurement analysis report ("WRotate Weekly Measurements — …"
-  //    and its failure variant "⚠️ WRotate weekly analysis FAILED — …")
-  bySubjectRows = bySubjectRows.filter(r => {
-    const subj = r.subject || '';
-    if (subj.startsWith('New WRotate user:')) return false;
-    if (/weekly measurements|weekly analysis/i.test(subj)) return false;
-    return true;
-  });
+  // Internal-account emails (founder signup alerts, the weekly measurement
+  // reports, test/demo accounts) are excluded server-side by the RPC, filtered
+  // by RECIPIENT against the internal_accounts table. That replaced a
+  // subject-regex filter here which kept missing variants — "WRotate Weekly
+  // Measurement Review — …" and "⚠️ WRotate weekly-review FAILED — …" both
+  // slipped through and showed up under "Older campaigns".
   if (!bySubjectRows.length && !recent.length) return '';
 
   // Overall totals = sum across all (non-founder) subjects, all time.
@@ -14370,12 +14403,8 @@ function renderEmailEngagement(data) {
   const statRow = (label, value, sub) => `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>${label}</span><span style="font-weight:600;"><span style="color:var(--gold);">${value}</span>${sub ? `<span style="color:var(--muted);font-size:.72rem;margin-left:.3rem;">${sub}</span>` : ''}</span></div>`;
 
   // Collapse per-actor notification subjects into one campaign bucket each.
-  const campaignSubject = (subj) => {
-    const t = (subj || '').toLowerCase();
-    if (t.includes('commented')) return 'Comments';
-    if (t.includes('follow') || t.includes('close friend')) return 'Follows';
-    return subj;
-  };
+  // (campaignSubject / campaignGroupOf / CAMPAIGN_GROUP_LABELS are defined once
+  // near the top of this script and mirrored in wrotate_test.js for unit tests.)
   const bySubject = {};
   bySubjectRows.forEach(r => {
     if (!r.subject) return;
@@ -14388,31 +14417,12 @@ function renderEmailEngagement(data) {
     s.clicked += +r.clicked || 0;
   });
 
-  // Display order: onboarding drips 1-4, ongoing notification buckets, in-flight
-  // broadcasts, then everything else (finished/old campaigns) by volume.
-  const ONBOARDING = [
-    'Add your first watch',
-    'Start tracking your wears',
-    'How accurate is your watch?',
-    'Which watch is really your favorite?',
-  ];
-  const ONGOING = ['Follows', 'Comments'];
-  // Broadcasts still draining from broadcast_queue — move to "Older" (just delete
-  // from this list) once fully sent.
-  const ACTIVE_BROADCASTS = ['Your watch has more to tell you — meet the Pro V2 engine (beta)'];
-  const GROUP_LABELS = ['Onboarding', 'Ongoing', 'Broadcast — in progress', 'Older campaigns'];
-  const groupOf = (subj) => {
-    if (ONBOARDING.includes(subj)) return 0;
-    if (ONGOING.includes(subj)) return 1;
-    if (ACTIVE_BROADCASTS.includes(subj)) return 2;
-    return 3;
-  };
-  const rankOf = (subj) => {
-    const g = groupOf(subj);
-    if (g === 0) return ONBOARDING.indexOf(subj);
-    if (g === 1) return ONGOING.indexOf(subj);
-    return 0;
-  };
+  // Display order: onboarding drips 1-4, the social notification buckets
+  // (Follows / Comments / Mentions) as their own section, in-flight broadcasts,
+  // then everything else (finished/old campaigns) by volume.
+  const GROUP_LABELS = CAMPAIGN_GROUP_LABELS;
+  const groupOf = (subj) => campaignGroupOf(subj).group;
+  const rankOf  = (subj) => campaignGroupOf(subj).rank;
 
   let lastGroup = -1;
   const subjectRows = Object.entries(bySubject)
@@ -14430,7 +14440,8 @@ function renderEmailEngagement(data) {
         ? `<div style="font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:${lastGroup === -1 ? '0' : '.6rem'} 0 .1rem;">${GROUP_LABELS[g]}</div>`
         : '';
       lastGroup = g;
-      const label = g === 0 ? `${ONBOARDING.indexOf(subj) + 1}. ${subj}` : subj;
+      // Onboarding drips are numbered 1-4 by their position in the sequence.
+      const label = g === 0 ? `${rankOf(subj) + 1}. ${subj}` : subj;
       return `${header}<div style="padding:.45rem 0;border-bottom:1px solid var(--border);">
         <div style="font-size:.78rem;font-weight:600;margin-bottom:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(label)}</div>
         <div style="font-size:.7rem;color:var(--muted);display:flex;gap:.6rem;flex-wrap:wrap;">

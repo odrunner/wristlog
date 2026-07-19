@@ -41,9 +41,14 @@ const VERBATIM = [
   'addDaysStr', 'computeStreaks', 'streakChipState', 'streakCalendarGrid', 'computeStreaksFrozen',
   'badgePostPlan', 'pinFeatured', 'initialsTextColor', 'pickIdentifiedWatch',
   'classifyProfileLoad', 'buildBrandList', 'brandRequestTitle',
+  'campaignSubject', 'campaignGroupOf',
 ];
 
 const ADAPTED = [
+  // Array literal, not a {...} body — extractBody can't read it, so the
+  // byte-identical check can't run. tests/campaign-groups.test.js asserts the
+  // two copies match instead.
+  'CAMPAIGN_GROUP_LABELS',
   'MSR_CARD_MIN_DOTS', 'checkContent', 'computeFriendships', 'computeRobustRate', 'computeWatchRec',
   'fmtMoney', 'formatCommentTime', 'formatFeedDate', 'getMentionQuery', 'incrSettle', 'initials',
   'isBase64', 'logToRow', 'markDirty', 'monthRevNav', 'profileInitials',
