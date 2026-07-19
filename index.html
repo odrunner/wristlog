@@ -6653,7 +6653,7 @@ async function loadUserData() {
     _q(db.from('watches').select('id,brand,name,ref,movement,price,purchase_date,color,image,url,tags,straps,owner,market_price,market_price_date,market_price_src,watch_charts_url,price_history,warranty_expiry,has_box,has_papers,insurance,insured_value,insurance_notes,receipts,watch_privacy,elo_rating,year_range,movement_type,caliber,case_material,case_diameter,case_length,case_thickness,weight,water_resistance,crystal_type,gender,origin,description,background,functions,bph').eq('user_id', uid)),
     _q(db.from('logs').select('id,watch_id,date,use_case,notes,strap_id,photo_url,visibility,club_id').eq('user_id', uid)),
     _q(db.from('wishlist').select('id,brand,name,ref,price,url,image,notes,color,tags,market_price,market_price_date,market_price_src,watch_charts_url,wish_privacy,added_date,sort_order').eq('user_id', uid)),
-    _q(db.from('brands').select('name')),
+    _q(db.from('brands').select('name').eq('is_canonical', true)),
   ]), 15000);
   // Only overwrite each table if the query succeeded — keep localStorage cache on failure
   if (wRes.error) console.error('[WristLog] watches SELECT error:', wRes.error.message, wRes.error);
@@ -6663,10 +6663,10 @@ async function loadUserData() {
   if (wlRes.error) console.error('[WristLog] wishlist SELECT error:', wlRes.error.message, wlRes.error);
   else { wishlist = (wlRes.data || []).map(rowToWish).sort((a, b) => (a._rank ?? 0) - (b._rank ?? 0)); safeSetJSON(STORE_WL, wishlist); }
   if (!brRes.error && brRes.data) {
-    const known = new Set(brands.map(b => b.toLowerCase()));
-    for (const r of brRes.data) {
-      if (r.name && !known.has(r.name.toLowerCase())) { brands.push(r.name); known.add(r.name.toLowerCase()); }
-    }
+    // Rebuild, don't accumulate: the old append-only merge meant any brand that
+    // ever reached this device stayed in the picker forever, including other
+    // users' junk. Canonical rows + this user's own brands, nothing else.
+    brands = buildBrandList(brRes.data.map(r => r.name), watches, wishlist);
     saveBrands();
   }
   // Rebuild eloRatings map from watch rows
@@ -6873,7 +6873,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.12.13';
+const APP_VERSION = '19.06.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12969,6 +12969,17 @@ let watches        = safeGetJSON(STORE_W,  []);
 let logs           = safeGetJSON(STORE_L,  []);
 let brands = safeGetJSON(STORE_B, []);
 let wishlist       = safeGetJSON(STORE_WL, []);
+// One-time purge of the polluted cached brand list (other users' "Rolex op blue"
+// etc.). The old merge was append-only, so a stale cache would otherwise keep
+// serving that junk until — and between — successful loads. Drop back to this
+// user's own brands; the canonical list arrives on the next loadUserData.
+try {
+  if (!localStorage.getItem('wristlog_brands_rebuilt_v1')) {
+    brands = buildBrandList([], watches, wishlist);
+    safeSetJSON(STORE_B, brands);
+    localStorage.setItem('wristlog_brands_rebuilt_v1', '1');
+  }
+} catch (e) { /* private mode / quota — next load rebuilds anyway */ }
 let eloRatings     = safeGetJSON(STORE_ELO, {}); // {watchId: score}
 
 // ── SOCIAL STATE ────────────────────────────────────────────────────────────
@@ -13104,6 +13115,32 @@ const saveWishlist = () => {
 };
 const saveBrands   = () => { safeSetJSON(STORE_B,  brands); };
 
+// The brand picker is NOT user-editable. What a user sees is the canonical list
+// plus any non-canonical brand already in their own collection — so a user who
+// typed "Rolex op blue" keeps seeing it, and nobody else does. New brands enter
+// the shared list only via the "Please add X" feedback → auto-add-brand flow.
+function buildBrandList(canonical, ownWatches, ownWishlist) {
+  const out = [];
+  const seen = new Set();
+  const add = (raw) => {
+    if (!raw) return;
+    const n = String(raw).trim();
+    if (!n) return;
+    const k = n.toLowerCase();
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push(n);
+  };
+  // Canonical first so its spelling wins over a user's casing variant.
+  for (const b of canonical || []) add(b);
+  for (const w of ownWatches || []) add(w && w.brand);
+  for (const w of ownWishlist || []) add(w && w.brand);
+  return out.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+}
+
+// Local-only: makes a just-typed brand selectable straight away. Deliberately
+// does NOT write to the shared brands table — that is what polluted the global
+// list with "Rolex op blue", "Omega blue strap" etc.
 function ensureBrand(name) {
   if (!name) return;
   const n = name.trim();
@@ -13111,9 +13148,6 @@ function ensureBrand(name) {
   if (brands.some(b => b.toLowerCase() === lower)) return;
   brands.push(n);
   saveBrands();
-  if (db) {
-    db.from('brands').upsert({ name: n }, { onConflict: 'name' }).then(() => {});
-  }
 }
 
 // ── Pre-computed logs-by-watch map (avoids O(n*m) in render loops) ──────────

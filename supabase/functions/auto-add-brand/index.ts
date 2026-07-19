@@ -115,6 +115,10 @@ Deno.serve(async (req: Request) => {
 
     if (existing) {
       console.log(`[auto-add-brand] "${finalName}" already in brands table`);
+      // It may exist as a personal-only row (is_canonical false) from before the
+      // list was locked down. Claude just verified it is a real brand, so
+      // promote it into the shared list rather than leaving it hidden.
+      await supabase.from("brands").update({ is_canonical: true }).eq("name", existing.name);
       await supabase.from("feedback").update({ status: "resolved" }).eq("id", record.id);
       if (userId) {
         await supabase.from("notifications").insert({
@@ -126,9 +130,11 @@ Deno.serve(async (req: Request) => {
 
     // ── Step 3: Insert brand into DB ────────────────────────────────────────
 
+    // is_canonical: true — this is the ONLY sanctioned way into the shared brand
+    // list. Client-side writes are blocked by RLS; rows default to false.
     const { error: insertError } = await supabase
       .from("brands")
-      .insert({ name: finalName });
+      .insert({ name: finalName, is_canonical: true });
 
     if (insertError) {
       console.error("[auto-add-brand] Insert failed:", insertError.message);

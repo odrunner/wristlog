@@ -36,6 +36,28 @@ export function classifyProfileLoad(data, error) {
   return 'error';
 }
 
+// The brand picker is NOT user-editable. What a user sees is the canonical list
+// plus any non-canonical brand already present in their own collection — so a
+// user who typed "Rolex op blue" keeps seeing it, and nobody else does.
+export function buildBrandList(canonical, ownWatches, ownWishlist) {
+  const out = [];
+  const seen = new Set();
+  const add = (raw) => {
+    if (!raw) return;
+    const n = String(raw).trim();
+    if (!n) return;
+    const k = n.toLowerCase();
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push(n);
+  };
+  // Canonical first so its spelling wins over a user's casing variant.
+  for (const b of canonical || []) add(b);
+  for (const w of ownWatches || []) add(w && w.brand);
+  for (const w of ownWishlist || []) add(w && w.brand);
+  return out.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+}
+
 export function computeStreaks(logs, today) {
   const dates = [...new Set((logs || []).map(l => l.date).filter(Boolean))].sort();
   if (dates.length === 0) return { current: 0, best: 0, status: 'none' };

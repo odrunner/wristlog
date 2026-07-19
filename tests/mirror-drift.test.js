@@ -40,7 +40,7 @@ const VERBATIM = [
   'extractCleanChunks', 'medianStd', 'buildBadgeNotificationRows',
   'addDaysStr', 'computeStreaks', 'streakChipState', 'streakCalendarGrid', 'computeStreaksFrozen',
   'badgePostPlan', 'pinFeatured', 'initialsTextColor', 'pickIdentifiedWatch',
-  'classifyProfileLoad',
+  'classifyProfileLoad', 'buildBrandList',
 ];
 
 const ADAPTED = [
