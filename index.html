@@ -1610,6 +1610,23 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       /* Touch-friendly tap targets */
       .btn { min-height: 40px; }
       .btn-sm { min-height: 34px; padding: .38rem .7rem; }
+
+      /* Wishlist toolbar + edit-modal footer: size down so each stays on ONE
+         line on a phone. Wrapping (the safety net below) only kicks in on very
+         narrow devices, where wrapping still beats clipping.
+         Measured at 390px: toolbar needed 388px in 363px, footer 407px in 380px. */
+      /* Own row, full width. Without this the parent .page-header keeps the
+         toolbar squeezed beside the "Wishlist" title (263px of 363px) — it
+         only fits next to the title if allowed to wrap internally, which is
+         exactly what we are trying to avoid. */
+      .page-header .wl-actions { flex: 0 0 100%; gap: .25rem; }
+      .wl-view-toggle { gap: .2rem; }
+      /* Horizontal padding only — vertical is unchanged so the tap target
+         keeps its height while the row gets ~15px narrower (fits 375px). */
+      .wl-view-btn { padding: .35rem .3rem; }
+      .wl-actions .btn-sm { padding: .38rem .5rem; font-size: .74rem; }
+      #wishlist-modal .modal-actions { gap: .3rem; }
+      #wishlist-modal .modal-actions .btn { padding: .6rem .55rem; font-size: .78rem; }
       .feed-action-btn, .feed-edit-btn, .btn-icon { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; }
 
       /* Stats: 2 cols */
@@ -6878,7 +6895,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.11.52';
+const APP_VERSION = '19.12.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments

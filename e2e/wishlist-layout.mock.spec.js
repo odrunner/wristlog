@@ -6,18 +6,24 @@ import {
 
 // Reported 2026-07-18 (iPhone screenshots):
 //   1. Edit Wishlist Item — the bottom action row (Save / Cancel / Move to
-//      Collection / delete) runs off the right edge; the delete button is cut off.
+//      Collection / delete) ran off the right edge; delete was cut off.
 //   2. Wishlist page — the top toolbar (view toggle + Add from Photo +
-//      "+ Add to Wishlist") runs off the right edge on landing.
+//      "+ Add to Wishlist") ran off the right edge on landing.
 //
-// Root causes:
-//   1. #wishlist-modal .modal-actions carried an INLINE flex-wrap:nowrap, which
-//      beats the @media (max-width:640px) `.modal-actions { flex-wrap: wrap }`
-//      rule — inline styles win over media queries.
-//   2. .wl-actions was hard-coded flex-wrap:nowrap with no mobile override.
+// First fix let both rows wrap, which stopped the clipping but looked bad
+// (a lone trash button / lone "+ Add to Wishlist" on a second line). The
+// requirement is ONE LINE on a phone, so the controls are sized down on
+// small screens instead of wrapping.
+//
+// flex-wrap:wrap is kept as a safety net: on very narrow/old devices (320px)
+// wrapping is still preferable to clipping, so those only assert no overflow.
 
-const PHONE = { width: 390, height: 844 };   // iPhone 14/15 logical size
-const NARROW = { width: 320, height: 720 };  // iPhone SE 1st gen — worst case
+const SIZES = [
+  { label: '430px', vp: { width: 430, height: 932 }, oneLine: true },  // iPhone Pro Max
+  { label: '390px', vp: { width: 390, height: 844 }, oneLine: true },  // iPhone 14/15 — reported
+  { label: '375px', vp: { width: 375, height: 812 }, oneLine: true },  // iPhone SE 2/3, 13 mini
+  { label: '320px', vp: { width: 320, height: 720 }, oneLine: false }, // iPhone SE 1st gen
+];
 
 const WL = [
   { id: 'wl1', brand: 'Rolex', name: 'Cosmograph Daytona', ref: '126519LN',
@@ -37,83 +43,76 @@ async function openWishlist(page, viewport) {
   await expect(page.locator('#page-wishlist')).toBeVisible();
 }
 
-// True when any child sticks out past its container's right/left edge.
-async function overflowReport(page, selector) {
+// Rows: how many distinct offsetTop values the visible children occupy.
+// Spills: children extending past the viewport's right edge.
+async function rowReport(page, selector) {
   return page.evaluate((sel) => {
     const el = document.querySelector(sel);
     if (!el) return { missing: true };
-    const box = el.getBoundingClientRect();
-    const kids = [...el.children].filter(c => c.offsetParent !== null || c.getClientRects().length);
+    const kids = [...el.children].filter(c => c.getClientRects().length);
+    // Cluster by vertical CENTER, not top: children of different heights are
+    // centred on the same row, so their `top` values legitimately differ by a
+    // few px. Anything within 12px is the same visual row.
+    const centers = kids
+      .map(c => { const b = c.getBoundingClientRect(); return b.top + b.height / 2; })
+      .sort((a, b) => a - b);
+    const tops = centers.reduce((acc, y) => {
+      if (!acc.length || y - acc[acc.length - 1] > 12) acc.push(y);
+      return acc;
+    }, []);
     const spills = kids
-      .map(c => {
-        const r = c.getBoundingClientRect();
-        return { text: (c.textContent || c.getAttribute('aria-label') || '').trim().slice(0, 28),
-                 right: Math.round(r.right), left: Math.round(r.left) };
-      })
-      .filter(k => k.right > Math.round(box.right) + 1 || k.left < Math.round(box.left) - 1);
-    return {
-      missing: false,
-      containerRight: Math.round(box.right),
-      scrollWidth: el.scrollWidth,
-      clientWidth: el.clientWidth,
-      spills,
-    };
+      .map(c => ({
+        text: (c.textContent || c.getAttribute('aria-label') || '').trim().slice(0, 24),
+        right: Math.round(c.getBoundingClientRect().right),
+      }))
+      .filter(k => k.right > window.innerWidth + 1);
+    return { missing: false, rows: tops.length, spills, count: kids.length };
   }, selector);
 }
 
 test.describe('Wishlist layout on phones (mocked)', () => {
-  for (const [label, vp] of [['390px', PHONE], ['320px', NARROW]]) {
-    test(`top toolbar does not overflow at ${label}`, async ({ page }) => {
+  for (const { label, vp, oneLine } of SIZES) {
+    test(`top toolbar fits at ${label}`, async ({ page }) => {
       await openWishlist(page, vp);
-      // With flex-wrap:nowrap the container itself grows past the viewport, so
-      // the children "fit" inside it — measure against the viewport instead.
-      const r = await page.evaluate(() => {
-        const el = document.querySelector('.wl-actions');
-        if (!el) return { missing: true };
-        const box = el.getBoundingClientRect();
-        const spills = [...el.children]
-          .map(c => {
-            const cr = c.getBoundingClientRect();
-            return { text: (c.textContent || c.getAttribute('aria-label') || '').trim().slice(0, 28),
-                     right: Math.round(cr.right) };
-          })
-          .filter(k => k.right > window.innerWidth + 1);
-        return { missing: false, right: Math.round(box.right), viewport: window.innerWidth, spills };
-      });
+      const r = await rowReport(page, '.wl-actions');
       expect(r.missing).toBe(false);
       expect(r.spills).toEqual([]);
-      expect(r.right).toBeLessThanOrEqual(r.viewport + 1);
+      if (oneLine) expect(r.rows).toBe(1);
+    });
+
+    test(`edit-item actions fit at ${label}`, async ({ page }) => {
+      await openWishlist(page, vp);
+      await page.evaluate(() => openEditWishlist('wl1'));
+      await expect(page.locator('#wishlist-modal')).toBeVisible();
+      await expect(page.locator('#wl-move-btn')).toBeVisible();
+      await expect(page.locator('#wl-delete-btn')).toBeVisible();
+
+      const r = await rowReport(page, '#wishlist-modal .modal-actions');
+      expect(r.missing).toBe(false);
+      expect(r.count).toBe(4);          // Save, Cancel, Move to Collection, delete
+      expect(r.spills).toEqual([]);
+      if (oneLine) expect(r.rows).toBe(1);
     });
 
     test(`page does not scroll horizontally at ${label}`, async ({ page }) => {
       await openWishlist(page, vp);
-      const over = await page.evaluate(() => ({
+      const o = await page.evaluate(() => ({
         scrollWidth: document.documentElement.scrollWidth,
         clientWidth: document.documentElement.clientWidth,
       }));
-      expect(over.scrollWidth).toBeLessThanOrEqual(over.clientWidth + 1);
-    });
-
-    test(`edit-item action buttons do not overflow at ${label}`, async ({ page }) => {
-      await openWishlist(page, vp);
-      // Open the edit modal for the first item.
-      await page.locator('.wl-name, .wl-item-name, .wl-tile-name').first().click();
-      await expect(page.locator('#wishlist-modal')).toBeVisible();
-      // Edit mode shows Move to Collection + Delete alongside Save/Cancel.
-      await expect(page.locator('#wl-move-btn')).toBeVisible();
-      await expect(page.locator('#wl-delete-btn')).toBeVisible();
-
-      const r = await overflowReport(page, '#wishlist-modal .modal-actions');
-      expect(r.missing).toBe(false);
-      expect(r.spills).toEqual([]);
-      expect(r.scrollWidth).toBeLessThanOrEqual(r.clientWidth + 1);
+      expect(o.scrollWidth).toBeLessThanOrEqual(o.clientWidth + 1);
     });
   }
 
-  test('the whole page never scrolls horizontally at 320px', async ({ page }) => {
-    await openWishlist(page, NARROW);
-    const overflows = await page.evaluate(() =>
-      document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
-    expect(overflows).toBe(false);
+  test('buttons stay comfortably tappable at 375px', async ({ page }) => {
+    await openWishlist(page, { width: 375, height: 812 });
+    await page.evaluate(() => openEditWishlist('wl1'));
+    await expect(page.locator('#wishlist-modal')).toBeVisible();
+    const heights = await page.evaluate(() =>
+      [...document.querySelectorAll('#wishlist-modal .modal-actions > *')]
+        .filter(c => c.getClientRects().length)
+        .map(c => Math.round(c.getBoundingClientRect().height)));
+    // Shrinking to fit must not produce sub-32px tap targets.
+    for (const h of heights) expect(h).toBeGreaterThanOrEqual(32);
   });
 });
