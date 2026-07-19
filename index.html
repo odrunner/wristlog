@@ -1331,7 +1331,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     /* Wishlist view toggle */
     /* Wishlist header actions: view toggle + add buttons all on one row */
-    .wl-actions { display: flex; align-items: center; gap: .4rem; flex-wrap: nowrap; }
+    /* wrap, not nowrap: with nowrap the row grew past the viewport on phones
+       and "+ Add to Wishlist" was clipped off the right edge. */
+    .wl-actions { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; }
     .wl-view-toggle { display: flex; gap: .3rem; flex-shrink: 0; }
     .wl-view-btn {
       display: inline-flex; align-items: center; justify-content: center;
@@ -4640,7 +4642,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
 
-    <div class="modal-actions" style="flex-wrap:nowrap;gap:.4rem;">
+    <!-- No inline flex-wrap: an inline style beats the @media(max-width:640px)
+         `.modal-actions { flex-wrap: wrap }` rule, which pushed the delete button
+         off the right edge on phones. -->
+    <div class="modal-actions" style="gap:.4rem;">
       <button class="btn btn-primary" onclick="saveWishlistItem()" style="flex:1;">Save</button>
       <button class="btn btn-ghost"   onclick="closeWishlistModal()">Cancel</button>
       <button id="wl-move-btn" class="btn btn-ghost" onclick="moveWishlistToCollection()" style="display:none;white-space:nowrap;">Move to Collection</button>
@@ -6873,7 +6878,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.07.02';
+const APP_VERSION = '19.11.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
