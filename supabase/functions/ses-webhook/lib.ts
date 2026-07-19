@@ -70,6 +70,20 @@ export function isValidSnsEnvelope(
   return !!(msg && msg.Type && msg.MessageId && msg.TopicArn);
 }
 
+// True if the SNS Timestamp (ISO 8601) is within `toleranceSec` of now —
+// blocks replay of captured, validly-signed payloads (mirrors resend-webhook's
+// timestampWithinTolerance; SNS timestamps are ISO strings, not epoch seconds).
+export function timestampWithinTolerance(
+  timestamp: string | undefined,
+  nowMs: number,
+  toleranceSec = 300,
+): boolean {
+  if (!timestamp) return false;
+  const ts = Date.parse(timestamp);
+  if (!Number.isFinite(ts)) return false;
+  return Math.abs(nowMs - ts) <= toleranceSec * 1000;
+}
+
 function isSnsAwsHost(urlStr: string): URL | null {
   try {
     const u = new URL(urlStr);

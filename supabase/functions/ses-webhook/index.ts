@@ -17,6 +17,7 @@ import {
   isValidCertUrl,
   isValidSnsEnvelope,
   isValidSubscribeUrl,
+  timestampWithinTolerance,
   type SnsEnvelope,
 } from "./lib.ts";
 
@@ -82,6 +83,12 @@ serve(async (req) => {
     const msg = JSON.parse(await req.text()) as SnsEnvelope;
     if (!isValidSnsEnvelope(msg)) {
       return new Response(JSON.stringify({ error: "Invalid SNS envelope" }), { status: 400 });
+    }
+
+    // Replay protection: reject payloads older than the tolerance window even
+    // if validly signed (mirrors resend-webhook).
+    if (!timestampWithinTolerance(msg.Timestamp, Date.now())) {
+      return new Response(JSON.stringify({ error: "Stale or missing timestamp" }), { status: 401 });
     }
 
     // Layer 2: only our topic.

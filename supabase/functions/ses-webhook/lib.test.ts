@@ -7,6 +7,7 @@ import {
   isValidSnsEnvelope,
   isValidSubscribeUrl,
   mapSesEventType,
+  timestampWithinTolerance,
 } from "./lib.ts";
 
 Deno.test("mapSesEventType maps SES names to legacy email_events values", () => {
@@ -95,4 +96,18 @@ Deno.test("isValidSnsEnvelope requires Type, MessageId, TopicArn", () => {
   assertEquals(isValidSnsEnvelope({ Type: "Notification", MessageId: "1", TopicArn: "a", Message: "{}" }), true);
   assertEquals(isValidSnsEnvelope({ Type: "Notification" }), false);
   assertEquals(isValidSnsEnvelope(null), false);
+});
+
+Deno.test("timestampWithinTolerance accepts fresh ISO timestamps", () => {
+  const now = Date.parse("2026-07-19T12:00:00.000Z");
+  assertEquals(timestampWithinTolerance("2026-07-19T11:58:00.000Z", now), true);
+  assertEquals(timestampWithinTolerance("2026-07-19T12:04:59.000Z", now), true);
+});
+
+Deno.test("timestampWithinTolerance rejects stale, missing, and garbage timestamps", () => {
+  const now = Date.parse("2026-07-19T12:00:00.000Z");
+  assertEquals(timestampWithinTolerance("2026-07-19T11:54:59.000Z", now), false);
+  assertEquals(timestampWithinTolerance("2026-07-19T12:05:01.000Z", now), false);
+  assertEquals(timestampWithinTolerance(undefined, now), false);
+  assertEquals(timestampWithinTolerance("not-a-date", now), false);
 });
