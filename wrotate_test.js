@@ -112,6 +112,13 @@ export function campaignGroupOf(subj) {
 // An all-time ranking permanently punishes recently acquired watches, so the
 // leaderboard supports shorter windows.
 
+// The single definition of "this log is a wear". A measurement share is NOT a
+// wear — it may still count towards streaks and badges (which read the raw logs
+// array), but it must never read as "you wore this".
+export function isWearEntry(l) {
+  return !!(l && l.watchId) && l.useCase !== 'measurement';
+}
+
 // Period value -> inclusive cutoff date (YYYY-MM-DD), or null for all time.
 // Unknown values fall back to all-time rather than throwing.
 export function periodCutoff(period, today) {
@@ -134,8 +141,7 @@ export function wearLeaderboard(watches, logs, cutoff) {
   const days = new Map(); // watchId -> Set of dates
 
   for (const l of logs || []) {
-    if (!l || !l.watchId || !l.date) continue;
-    if (l.useCase === 'measurement') continue;
+    if (!isWearEntry(l) || !l.date) continue;
     if (!owned.has(l.watchId)) continue;
     if (cutoff && l.date < cutoff) continue;
     if (!days.has(l.watchId)) days.set(l.watchId, new Set());

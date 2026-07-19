@@ -6898,7 +6898,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.15.39';
+const APP_VERSION = '19.15.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6920,6 +6920,13 @@ function profileInitials(p) {
 // Spec: docs/superpowers/specs/2026-07-19-wear-leaderboard-design.md
 // An all-time ranking permanently punishes recently acquired watches, so the
 // leaderboard supports shorter windows.
+
+// The single definition of "this log is a wear". A measurement share is NOT a
+// wear — it may still count towards streaks and badges (which read the raw logs
+// array), but it must never read as "you wore this".
+function isWearEntry(l) {
+  return !!(l && l.watchId) && l.useCase !== 'measurement';
+}
 
 // Period value -> inclusive cutoff date (YYYY-MM-DD), or null for all time.
 // Unknown values fall back to all-time rather than throwing.
@@ -6943,8 +6950,7 @@ function wearLeaderboard(watches, logs, cutoff) {
   const days = new Map(); // watchId -> Set of dates
 
   for (const l of logs || []) {
-    if (!l || !l.watchId || !l.date) continue;
-    if (l.useCase === 'measurement') continue;
+    if (!isWearEntry(l) || !l.date) continue;
     if (!owned.has(l.watchId)) continue;
     if (cutoff && l.date < cutoff) continue;
     if (!days.has(l.watchId)) days.set(l.watchId, new Set());
@@ -12213,7 +12219,7 @@ async function saveNewPost() {
   const postedWatch = trackWatchId ? watches.find(x => x.id === trackWatchId) : null;
   // A measurement share tags a watch for attribution but is NOT a wear — don't
   // dismiss the wear reminder or claim a wear was logged for it.
-  const isWear = !!postedWatch && useCase !== 'measurement';
+  const isWear = !!postedWatch && isWearEntry({ watchId: postedWatch.id, useCase });
   if (isWear) dismissReminder(); // wear was logged, dismiss the reminder
   closeNewPost();
   if (window.posthog) posthog.capture('post_created', { has_photo: !!entry.photoUrl, photo_count: parsePhotoUrl(entry.photoUrl).length, has_watch: !!trackWatchId });
@@ -15764,7 +15770,7 @@ function renderWornNotice() {
   const ind  = document.getElementById('date-log-indicator');
   if (!ind) return;
   if (!date) { ind.textContent = ''; return; }
-  const worn = logs.filter(l => l.date === date);
+  const worn = logs.filter(l => isWearEntry(l) && l.date === date);
   if (worn.length === 0) { ind.textContent = ''; return; }
   const names = worn.map(l => {
     const w = watches.find(x => x.id === l.watchId);
@@ -15788,7 +15794,7 @@ function renderWatchSelector() {
     return;
   }
   const today     = todayStr();
-  const wornToday = new Set(logs.filter(l => l.date === today).map(l => l.watchId));
+  const wornToday = new Set(logs.filter(l => isWearEntry(l) && l.date === today).map(l => l.watchId));
   // Sort by most recently worn (unworn watches at the end, in collection order)
   const lastWorn = new Map();
   for (const w of watches) {
@@ -18400,8 +18406,7 @@ function confirmDelete() {
 function filteredLogs() {
   const p = document.getElementById('report-period').value;
   const cutoff = periodCutoff(p, todayStr());
-  return logs.filter(l =>
-    l.useCase !== 'measurement' && (!cutoff || l.date >= cutoff));
+  return logs.filter(l => isWearEntry(l) && (!cutoff || l.date >= cutoff));
 }
 
 // ══════════════════════════════════════════

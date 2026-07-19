@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { describe, it, expect } from 'vitest';
-import { periodCutoff, wearLeaderboard } from '../wrotate_test.js';
+import { periodCutoff, wearLeaderboard, isWearEntry } from '../wrotate_test.js';
 
 // Spec: docs/superpowers/specs/2026-07-19-wear-leaderboard-design.md
 //
@@ -140,6 +140,52 @@ describe('wearLeaderboard', () => {
   });
 });
 
+// Confirmed rule: a measurement share is not a wear. It may still count towards
+// streaks and badges, but it must not read as "you wore this" anywhere.
+describe('isWearEntry', () => {
+  it('a normal log is a wear', () => {
+    expect(isWearEntry({ watchId: 'a', date: '2026-07-01', useCase: 'work' })).toBe(true);
+  });
+
+  it('a log with no use case is a wear', () => {
+    expect(isWearEntry({ watchId: 'a', date: '2026-07-01' })).toBe(true);
+  });
+
+  it('a measurement share is NOT a wear', () => {
+    expect(isWearEntry({ watchId: 'a', date: '2026-07-01', useCase: 'measurement' })).toBe(false);
+  });
+
+  it('a log with no watch is not a wear', () => {
+    expect(isWearEntry({ date: '2026-07-01', useCase: 'work' })).toBe(false);
+  });
+
+  it('tolerates null', () => {
+    expect(isWearEntry(null)).toBe(false);
+    expect(isWearEntry(undefined)).toBe(false);
+  });
+});
+
+describe('"worn today" excludes measurement (index.html)', () => {
+  it('the worn-today set is built from wear entries only', () => {
+    const start = html.indexOf('const wornToday =');
+    const line = html.slice(start, html.indexOf('\n', start));
+    expect(line).toContain('isWearEntry');
+  });
+
+  it('the date "logged" notice is built from wear entries only', () => {
+    const start = html.indexOf('function renderWornNotice(');
+    const fn = html.slice(start, html.indexOf('\n}', start));
+    expect(fn).toContain('isWearEntry');
+  });
+
+  it('there is one shared definition, not a repeated inline check', () => {
+    // Every place that decides "is this a wear" must route through isWearEntry
+    // rather than open-coding a measurement comparison.
+    const inline = html.match(/useCase !== 'measurement'/g) || [];
+    expect(inline.length).toBeLessThanOrEqual(1); // only inside isWearEntry
+  });
+});
+
 describe('wear leaderboard wiring (index.html)', () => {
   it('the period filter offers YTD', () => {
     const sel = html.slice(html.indexOf('id="report-period"'), html.indexOf('</select>', html.indexOf('id="report-period"')));
@@ -149,10 +195,10 @@ describe('wear leaderboard wiring (index.html)', () => {
     expect(sel).toMatch(/value="365"/);
   });
 
-  it('filteredLogs excludes measurement shares', () => {
+  it('filteredLogs excludes measurement shares via the shared predicate', () => {
     const start = html.indexOf('function filteredLogs(');
     const fn = html.slice(start, html.indexOf('\n}', start));
-    expect(fn).toContain("measurement");
+    expect(fn).toContain('isWearEntry(');
     expect(fn).toContain('periodCutoff(');
   });
 

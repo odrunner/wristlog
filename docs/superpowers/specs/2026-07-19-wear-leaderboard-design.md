@@ -134,11 +134,21 @@ Jun 10-13 run. Excluding measurement from streaks would have shortened that
 user's best streak from 4 days to 3. Scoping the change to `filteredLogs()`
 avoids any such regression.
 
-**Known remaining oddity, deliberately out of scope:** Track's "worn today"
-badge (`wornToday`, built from raw `logs`) will still light up for a
-measurement-only day, even though that day no longer counts as a wear. It is a
-one-line change to align, but it is a behaviour change beyond this feature and
-is left for a separate decision.
+**Follow-up, since confirmed and shipped:** Track's "worn today" badge and the
+"✓ … logged" date notice both read raw `logs` and lit up for a measurement-only
+day. Both now route through a single shared predicate:
+
+```js
+function isWearEntry(l) {
+  return !!(l && l.watchId) && l.useCase !== 'measurement';
+}
+```
+
+`filteredLogs()`, `wearLeaderboard()`, `wornToday`, `renderWornNotice()` and the
+post-creation "wear logged" toast all use it, so "is this a wear" has exactly one
+definition. A unit test asserts no second inline `useCase !== 'measurement'`
+check reappears. Streaks and badges still read the raw `logs` array and are
+deliberately unaffected.
 
 ## Components
 

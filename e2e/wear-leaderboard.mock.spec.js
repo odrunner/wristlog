@@ -117,6 +117,47 @@ test.describe('Wear leaderboard (mocked)', () => {
     expect(opts).toEqual(['all', '30', '90', 'ytd', '365']);
   });
 
+  test('a measurement share today does NOT show the "worn today" badge', async ({ page }) => {
+    const today = new Date().toISOString().slice(0, 10);
+    await mockSupabase(page, {
+      watches: WATCHES,
+      wishlist: [],
+      logs: [
+        { id: 'm1', watch_id: 'w3', date: today, use_case: 'measurement' }, // not a wear
+        { id: 'r1', watch_id: 'w1', date: today, use_case: 'work' },        // a real wear
+      ],
+    });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await navigateTo(page, 'track');
+
+    const state = await page.evaluate(() =>
+      [...document.querySelectorAll('#watch-selector .watch-option')].map(el => ({
+        name: el.querySelector('.watch-info-name')?.textContent.trim() || '',
+        badge: !!el.querySelector('.watch-worn-badge'),
+      })));
+    const ro = state.find(s => s.name.includes('Royal Oak'));
+    const sub = state.find(s => s.name.includes('Submariner'));
+    expect(ro.badge).toBe(false);  // measurement only
+    expect(sub.badge).toBe(true);  // genuine wear
+  });
+
+  test('the date notice ignores a measurement-only day', async ({ page }) => {
+    const today = new Date().toISOString().slice(0, 10);
+    await mockSupabase(page, {
+      watches: WATCHES, wishlist: [],
+      logs: [{ id: 'm1', watch_id: 'w3', date: today, use_case: 'measurement' }],
+    });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await navigateTo(page, 'track');
+    const notice = await page.evaluate(() =>
+      document.getElementById('date-log-indicator')?.textContent.trim() || '');
+    expect(notice).toBe('');
+  });
+
   test('Track rows show wears and all-time share', async ({ page }) => {
     await openStats(page);
     await navigateTo(page, 'track');

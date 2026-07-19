@@ -42,6 +42,7 @@ const VERBATIM = [
   'badgePostPlan', 'pinFeatured', 'initialsTextColor', 'pickIdentifiedWatch',
   'classifyProfileLoad', 'buildBrandList', 'brandRequestTitle',
   'campaignSubject', 'campaignGroupOf', 'periodCutoff', 'wearLeaderboard',
+  'isWearEntry',
 ];
 
 const ADAPTED = [
