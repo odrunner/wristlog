@@ -58,6 +58,16 @@ export function buildBrandList(canonical, ownWatches, ownWishlist) {
   return out.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 }
 
+// The feedback title the auto-add-brand edge function parses. Deliberately NOT
+// HTML-escaped: this goes into a form field's .value, and escaping turned
+// "Marole & Wood" into "Marole &amp; Wood", which the function's
+// isValidBrandName() rejects (';'), silently dropping the request.
+// Must stay in sync with parseBrandRequest() in
+// supabase/functions/auto-add-brand/lib.ts.
+export function brandRequestTitle(name) {
+  return `Please add "${String(name || '').trim()}" to the WRotate brand list.`;
+}
+
 export function computeStreaks(logs, today) {
   const dates = [...new Set((logs || []).map(l => l.date).filter(Boolean))].sort();
   if (dates.length === 0) return { current: 0, best: 0, status: 'none' };

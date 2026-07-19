@@ -6873,7 +6873,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.06.15';
+const APP_VERSION = '19.06.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20117,13 +20117,15 @@ function filterBrands(query) {
   if (!matches.length && !q) { list.classList.add('hidden'); return; }
 
   const items = matches.map((b, i) =>
-    `<div class="brand-ac-item" onmousedown="selectBrand('${escHtml(b)}')">${escHtml(b)}</div>`
+    // data-brand, not an inlined JS string: "Beda'a" would terminate the
+    // literal and throw a SyntaxError, making the brand unselectable.
+    `<div class="brand-ac-item" data-brand="${escAttr(b)}" onmousedown="selectBrand(this.dataset.brand)">${escHtml(b)}</div>`
   ).join('');
 
   // "Request brand" row when no exact match
   const exactMatch = brands.some(b => b.toLowerCase() === q);
   const requestRow = q && !exactMatch
-    ? `<div class="brand-ac-request" onmousedown="requestBrand('${escHtml(query.trim())}')">
+    ? `<div class="brand-ac-request" data-brand="${escAttr(query.trim())}" onmousedown="requestBrand(this.dataset.brand)">
          "${escHtml(query.trim())}" not listed — request it
        </div>`
     : '';
@@ -22622,11 +22624,12 @@ function filterWlBrands(query) {
   _wlBrandAcIdx = -1;
   if (!matches.length && !q) { list.classList.add('hidden'); return; }
   const items = matches.map(b =>
-    `<div class="brand-ac-item" onmousedown="selectWlBrand('${escHtml(b)}')">${escHtml(b)}</div>`
+    // data-brand, not an inlined JS string — see brandAC() above.
+    `<div class="brand-ac-item" data-brand="${escAttr(b)}" onmousedown="selectWlBrand(this.dataset.brand)">${escHtml(b)}</div>`
   ).join('');
   const exactMatch = brands.some(b => b.toLowerCase() === q);
   const requestRow = q && !exactMatch
-    ? `<div class="brand-ac-request" onmousedown="requestBrand('${escHtml(query.trim())}')">
+    ? `<div class="brand-ac-request" data-brand="${escAttr(query.trim())}" onmousedown="requestBrand(this.dataset.brand)">
          "${escHtml(query.trim())}" not listed — request it
        </div>`
     : '';
@@ -23086,10 +23089,20 @@ function openFeedback() {
   document.getElementById('feedback-modal').classList.remove('hidden');
 }
 
+// The feedback title the auto-add-brand edge function parses. Deliberately NOT
+// HTML-escaped: this goes into a form field's .value, and escaping turned
+// "Marole & Wood" into "Marole &amp; Wood", which the function's
+// isValidBrandName() rejects (';'), silently dropping the request.
+// Must stay in sync with parseBrandRequest() in
+// supabase/functions/auto-add-brand/lib.ts.
+function brandRequestTitle(name) {
+  return `Please add "${String(name || '').trim()}" to the WRotate brand list.`;
+}
+
 function requestBrand(name) {
   hideBrandAC();
   hideWlBrandAC();
-  document.getElementById('fb-desc').value = `Please add "${escHtml(name)}" to the WRotate brand list.`;
+  document.getElementById('fb-desc').value = brandRequestTitle(name);
   document.getElementById('fb-submit-btn').disabled = false;
   document.getElementById('fb-submit-btn').textContent = 'Submit Feedback';
   document.getElementById('fb-type-picker').style.display = 'none';
