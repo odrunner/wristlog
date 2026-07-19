@@ -6873,7 +6873,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.06.24';
+const APP_VERSION = '19.07.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14350,8 +14350,8 @@ function renderEmailEngagement(data) {
   // Collapse per-actor notification subjects into one campaign bucket each.
   const campaignSubject = (subj) => {
     const t = (subj || '').toLowerCase();
-    if (t.includes('commented')) return 'Commented on your post';
-    if (t.includes('follow')) return 'Follows';
+    if (t.includes('commented')) return 'Comments';
+    if (t.includes('follow') || t.includes('close friend')) return 'Follows';
     return subj;
   };
   const bySubject = {};
@@ -14365,13 +14365,52 @@ function renderEmailEngagement(data) {
     s.opened += +r.opened || 0;
     s.clicked += +r.clicked || 0;
   });
+
+  // Display order: onboarding drips 1-4, ongoing notification buckets, in-flight
+  // broadcasts, then everything else (finished/old campaigns) by volume.
+  const ONBOARDING = [
+    'Add your first watch',
+    'Start tracking your wears',
+    'How accurate is your watch?',
+    'Which watch is really your favorite?',
+  ];
+  const ONGOING = ['Follows', 'Comments'];
+  // Broadcasts still draining from broadcast_queue — move to "Older" (just delete
+  // from this list) once fully sent.
+  const ACTIVE_BROADCASTS = ['Your watch has more to tell you — meet the Pro V2 engine (beta)'];
+  const GROUP_LABELS = ['Onboarding', 'Ongoing', 'Broadcast — in progress', 'Older campaigns'];
+  const groupOf = (subj) => {
+    if (ONBOARDING.includes(subj)) return 0;
+    if (ONGOING.includes(subj)) return 1;
+    if (ACTIVE_BROADCASTS.includes(subj)) return 2;
+    return 3;
+  };
+  const rankOf = (subj) => {
+    const g = groupOf(subj);
+    if (g === 0) return ONBOARDING.indexOf(subj);
+    if (g === 1) return ONGOING.indexOf(subj);
+    return 0;
+  };
+
+  let lastGroup = -1;
   const subjectRows = Object.entries(bySubject)
-    .sort((a, b) => (b[1].sent + b[1].delivered) - (a[1].sent + a[1].delivered))
-    .slice(0, 10)
+    .sort((a, b) => {
+      const ga = groupOf(a[0]), gb = groupOf(b[0]);
+      if (ga !== gb) return ga - gb;
+      const ra = rankOf(a[0]), rb = rankOf(b[0]);
+      if (ra !== rb) return ra - rb;
+      return (b[1].sent + b[1].delivered) - (a[1].sent + a[1].delivered);
+    })
     .map(([subj, s]) => {
       const base = s.delivered || s.sent || 1;
-      return `<div style="padding:.45rem 0;border-bottom:1px solid var(--border);">
-        <div style="font-size:.78rem;font-weight:600;margin-bottom:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(subj)}</div>
+      const g = groupOf(subj);
+      const header = g !== lastGroup
+        ? `<div style="font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:${lastGroup === -1 ? '0' : '.6rem'} 0 .1rem;">${GROUP_LABELS[g]}</div>`
+        : '';
+      lastGroup = g;
+      const label = g === 0 ? `${ONBOARDING.indexOf(subj) + 1}. ${subj}` : subj;
+      return `${header}<div style="padding:.45rem 0;border-bottom:1px solid var(--border);">
+        <div style="font-size:.78rem;font-weight:600;margin-bottom:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(label)}</div>
         <div style="font-size:.7rem;color:var(--muted);display:flex;gap:.6rem;flex-wrap:wrap;">
           <span>Delivered: ${s.delivered}</span>
           <span>Opened: ${s.opened} (${pct(s.opened, base)})</span>
