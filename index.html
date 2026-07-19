@@ -2291,12 +2291,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Most Worn Leaderboard</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Stats now opens with a <strong>Most Worn</strong> ranking of your collection, and the period filter adds <strong>1M, 3M, YTD and 1Y</strong> alongside All Time. A watch you bought last month no longer sits at the bottom forever &#8212; switch to a shorter window to see what you&#8217;re actually reaching for. Track also shows each watch&#8217;s share of your all-time wears.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Pro V2 Measurement Engine &#9889; (Beta)</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">A rebuilt timegrapher engine you can try today: converges in about 10 seconds, holds steady between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing, a key health indicator watchmakers look at. On the Measure page, switch the engine selector to <strong>Pro V2 (beta)</strong>. Needs app version 2.1 or later; switch back to Standard anytime. Amplitude shows only when the signal is clean enough to trust &#8212; if it&#8217;s blank, reposition and try again.</div>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Wishlist Brand Folders</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Big wishlist? The new folder view groups watches from the same brand into collapsible folders &#8212; tap the folder icon at the top of your Wishlist to try it. Brands with a single watch stay as regular cards.</div>
+      </div>
+      <div style="margin:.75rem 0;border-top:1px solid var(--border);padding-top:.75rem;">
+        <span class="eyebrow eyebrow-muted">June 2026</span>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">New Badge: First Video Post</div>
@@ -2335,15 +2342,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">We rebuilt the microphone timegrapher from the ground up &#8212; new tick detection, a steadier beat-error reading, and a smarter sense of when a measurement has truly settled. Validated across hundreds of calibrations against a professional reference, readings now track much more closely to a pro machine and stay consistent run to run, so the same watch reads the same. For the most reliable result, measure in a quiet spot with your watch in a consistent position.</div>
       </div>
       <div style="margin-bottom:.75rem;">
-        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Advanced Measure Settings</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Tap the &#9881; gear on the Measure screen to fine-tune how readings are taken. Pick an environment preset &#8212; Quiet Room, Noisy Environment, or Weak Signal &#8212; or adjust Sensitivity and Convergence Speed yourself to get a reliable reading from trickier watches.</div>
-      </div>
-      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Share Any of Your Posts</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">You can now share your own posts no matter who they&#8217;re for &#8212; not just public ones. Public posts open a rich preview link anyone can see. For Followers and Close Friends posts, the link opens privately in WRotate and only shows the post to people you actually shared it with, so nothing leaks to anyone else.</div>
       </div>
       <div style="margin:.75rem 0;border-top:1px solid var(--border);padding-top:.75rem;">
         <span class="eyebrow eyebrow-muted">May 2026</span>
+      </div>
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Advanced Measure Settings</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Tap the &#9881; gear on the Measure screen to fine-tune how readings are taken. Pick an environment preset &#8212; Quiet Room, Noisy Environment, or Weak Signal &#8212; or adjust Sensitivity and Convergence Speed yourself to get a reliable reading from trickier watches.</div>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Delete Comments</div>
@@ -3582,8 +3589,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div class="help-step">
             <div class="help-step-num">—</div>
             <div class="help-step-body">
+              <div class="help-step-title">Most Worn leaderboard</div>
+              <div class="help-step-desc">A ranking of your collection by wears, with each watch&#8217;s share of the total. Use the period filter at the top of Stats &#8212; <strong>All Time, 1M, 3M, YTD, 1Y</strong> &#8212; to change the window. A watch you bought recently will always look low on all-time numbers, so switch to a shorter range to see what you&#8217;re actually reaching for. Watches you haven&#8217;t worn in the window stay listed at the bottom.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">—</div>
+            <div class="help-step-body">
               <div class="help-step-title">Wear frequency &amp; streaks</div>
-              <div class="help-step-desc">See how often you wear each watch, your longest streak, and which days of the week you reach for each piece most.</div>
+              <div class="help-step-desc">See how often you wear each watch, your longest streak, and which days of the week you reach for each piece most. Every section on Stats follows the period filter. Measurement shares aren&#8217;t wears, so they don&#8217;t count towards these numbers.</div>
             </div>
           </div>
           <div class="help-step">
@@ -6898,7 +6912,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.15.46';
+const APP_VERSION = '19.15.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
