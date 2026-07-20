@@ -192,11 +192,32 @@ export function unsubUrl(supabaseUrl: string, uid: string, sig: string, cat = "u
 
 export type { Profile };
 
-// ── Broadcast queue (100/day Resend limit) ─────────────────────────────────────
+// ── Broadcast queue daily quota ───────────────────────────────────────────────
 // Daily quota resets at midnight UTC. The nightly drain sends broadcast rows with
 // whatever quota is left, keeping a reserve for late-night transactional email.
-export const DAILY_EMAIL_LIMIT = 100;
+//
+// This was 100 with the comment "100/day Resend limit" — a constant that outlived
+// the provider. After the SES migration, transactional volume alone (90-93/day)
+// consumed the whole budget, so the drain sent NOTHING on 2026-07-17/18/19 while
+// 324 rows sat pending.
+//
+// The live SES quota is read at drain time (getSesQuota); this is only the
+// fallback when that call fails (it currently does — the IAM key appears to lack
+// ses:GetAccount). 1000 is deliberately far below a production SES account's
+// default 50k/day but far above our transactional volume (~100/day). The account
+// is confirmed OUT of sandbox: 407 distinct arbitrary recipients were delivered
+// to between 2026-07-13 and 07-19, which sandbox does not permit.
+export const DAILY_EMAIL_LIMIT = 1000;
 export const DRAIN_RESERVE = 10;
+
+// Per-run ceiling, separate from the daily quota. sendSesBatch paces at ~10/sec
+// with a 1s sleep between waves, so N queued emails cost ~N/10 seconds of wall
+// clock. Without this cap, raising the daily limit would let one drain try to
+// send hundreds of emails and hit the edge-function time limit — the exact
+// regression the 2026-07-19 performance audit predicted if the cap was raised.
+// 150 ≈ 15s of pacing, comfortably inside the limit, and clears a 324-row
+// backlog in three nights.
+export const MAX_PER_DRAIN = 150;
 
 // How many queued broadcast emails tonight's drain may send.
 export function drainBudget(usedToday: number, dailyLimit = DAILY_EMAIL_LIMIT, reserve = DRAIN_RESERVE): number {

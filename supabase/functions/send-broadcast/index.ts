@@ -14,6 +14,8 @@ import {
   batchSegment,
   capRecipients,
   COHORTS,
+  DAILY_EMAIL_LIMIT,
+  MAX_PER_DRAIN,
   dormantCutoffMs,
   drainBudget,
   effectiveLimit as computeEffectiveLimit,
@@ -32,7 +34,7 @@ import {
   utcDayStart,
   validateBroadcastInput,
 } from "./lib.ts";
-import { sendSesBatch, sendSesEmail } from "../_shared/ses.ts";
+import { getSesQuota, sendSesBatch, sendSesEmail } from "../_shared/ses.ts";
 import type { SesMessage } from "../_shared/ses.ts";
 
 const ADMIN_USER_ID = "d70b1a85-4f31-4431-b3b7-db76543daaf5";
@@ -118,7 +120,7 @@ serve(async (req) => {
 
     if (drain) {
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
-      return await drainQueue(supabase, supabaseUrl, supabaseServiceKey);
+      return await drainQueue(supabase, supabaseUrl, supabaseServiceKey, !!body.quota_only);
     }
 
     const inputError = validateBroadcastInput({ subject, html, cohort, campaign_id, segment });
@@ -342,7 +344,7 @@ serve(async (req) => {
 // Nightly drain: send queued broadcast rows with whatever daily quota remains.
 // used_today comes from email_events (the SES webhook logs every send from every
 // function), so transactional + campaign email automatically takes priority.
-async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl: string, serviceKey: string) {
+async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl: string, serviceKey: string, quotaOnly = false) {
   const dayStart = utcDayStart(Date.now());
   const { count: usedToday, error: cntErr } = await supabase
     .from("email_events")
@@ -352,10 +354,34 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
   if (cntErr) {
     return jsonResponse({ error: "Quota count failed", details: cntErr.message }, 500);
   }
-  const budget = drainBudget(usedToday ?? 0);
+  // Read the real SES quota rather than trusting a hardcoded constant. Falls back
+  // to DAILY_EMAIL_LIMIT (the sandbox floor) if the account call fails.
+  const quota = await getSesQuota();
+  const dailyLimit = quota?.max24Hour ?? DAILY_EMAIL_LIMIT;
+  // Per-run cap keeps one drain inside the edge-function time limit even when
+  // the daily quota is large.
+  const budget = Math.min(drainBudget(usedToday ?? 0, dailyLimit), MAX_PER_DRAIN);
+
+  // Read-only introspection: report the live quota and what tonight's drain would
+  // send, without sending anything. Used to verify the quota wiring after deploy.
+  if (quotaOnly) {
+    const { count: pending } = await supabase
+      .from("broadcast_queue")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending");
+    return jsonResponse({
+      quota_only: true,
+      ses_quota: quota,
+      fallback_used: quota === null,
+      daily_limit: dailyLimit,
+      used_today: usedToday,
+      budget,
+      pending,
+    });
+  }
   if (budget <= 0) {
-    console.log(`[send-broadcast] Drain: no quota left (used ${usedToday} today)`);
-    return jsonResponse({ drained: 0, used_today: usedToday, budget });
+    console.log(`[send-broadcast] Drain: no quota left (used ${usedToday} of ${dailyLimit} today)`);
+    return jsonResponse({ drained: 0, used_today: usedToday, daily_limit: dailyLimit, budget });
   }
 
   const { data: rows, error: qErr } = await supabase
@@ -371,7 +397,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
     return jsonResponse({ drained: 0, used_today: usedToday, budget, queue_empty: true });
   }
 
-  let sent = 0, failed = 0;
+  let sent = 0, failed = 0, deferred = 0;
   const errors: string[] = [];
   const batchSize = 100;
   for (let i = 0; i < rows.length; i += batchSize) {
@@ -394,28 +420,41 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
     const { results } = await sendSesBatch(messages);
     const okIds: number[] = [];
     const failedRows: { id: number; error: string }[] = [];
+    // Transient failures (throttling, 5xx, network) stay `pending` so a later
+    // drain retries them. Marking them `failed` dropped those recipients for
+    // good — the drain only ever re-selects `pending`.
+    const deferredRows: { id: number; error: string }[] = [];
     for (let idx = 0; idx < results.length; idx++) {
       const r = results[idx];
       if (r.ok) okIds.push(batch[idx].id);
-      else {
+      else if (r.retryable) {
+        deferredRows.push({ id: batch[idx].id, error: r.error });
+        errors.push(`[retryable] ${r.error}`);
+      } else {
         failedRows.push({ id: batch[idx].id, error: r.error });
         errors.push(r.error);
       }
     }
     sent += okIds.length;
     failed += failedRows.length;
+    deferred += deferredRows.length;
     if (okIds.length) {
       await supabase.from("broadcast_queue")
         .update({ status: "sent", sent_at: new Date().toISOString() }).in("id", okIds);
     }
-    // Failures are rare; one update per failed row keeps each row's own SES error.
+    // Failures are rare; one update per row keeps each row's own SES error.
     for (const fr of failedRows) {
       await supabase.from("broadcast_queue")
         .update({ status: "failed", error: fr.error.slice(0, 500) }).in("id", [fr.id]);
     }
+    // Left pending on purpose — record why, without changing status.
+    for (const dr of deferredRows) {
+      await supabase.from("broadcast_queue")
+        .update({ error: `retrying: ${dr.error.slice(0, 480)}` }).in("id", [dr.id]);
+    }
   }
-  console.log(`[send-broadcast] Drain: sent ${sent}, failed ${failed}, used_today ${usedToday}, budget ${budget}`);
-  return jsonResponse({ drained: sent, failed, used_today: usedToday, budget, errors: errors.slice(0, 3) });
+  console.log(`[send-broadcast] Drain: sent ${sent}, failed ${failed}, deferred ${deferred}, used_today ${usedToday}, limit ${dailyLimit}, budget ${budget}`);
+  return jsonResponse({ drained: sent, failed, deferred, used_today: usedToday, daily_limit: dailyLimit, budget, errors: errors.slice(0, 3) });
 }
 
 async function sendEmail(to: string, subject: string, html: string) {

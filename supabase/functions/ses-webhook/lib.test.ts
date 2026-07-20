@@ -111,3 +111,47 @@ Deno.test("timestampWithinTolerance rejects stale, missing, and garbage timestam
   assertEquals(timestampWithinTolerance(undefined, now), false);
   assertEquals(timestampWithinTolerance("not-a-date", now), false);
 });
+
+// 2026-07-19 audit: every opened/clicked row was stamped with mail.timestamp
+// (the SEND time) instead of the event time, so engagement windows were wrong.
+Deno.test("buildEmailEventRow uses the open timestamp, not the send timestamp", () => {
+  const row = buildEmailEventRow({
+    eventType: "Open",
+    mail: { messageId: "m1", timestamp: "2026-07-19T00:00:00.000Z", destination: ["a@b.com"] },
+    open: { timestamp: "2026-07-26T12:34:56.000Z" },
+  }, "2026-07-30T00:00:00.000Z");
+  assertEquals(row.created_at, "2026-07-26T12:34:56.000Z");
+  assertEquals(row.event_type, "opened");
+});
+
+Deno.test("buildEmailEventRow uses the click timestamp", () => {
+  const row = buildEmailEventRow({
+    eventType: "Click",
+    mail: { messageId: "m2", timestamp: "2026-07-19T00:00:00.000Z" },
+    click: { timestamp: "2026-07-22T08:00:00.000Z" },
+  }, "2026-07-30T00:00:00.000Z");
+  assertEquals(row.created_at, "2026-07-22T08:00:00.000Z");
+});
+
+Deno.test("buildEmailEventRow uses the delivery timestamp", () => {
+  const row = buildEmailEventRow({
+    eventType: "Delivery",
+    mail: { messageId: "m3", timestamp: "2026-07-19T00:00:00.000Z" },
+    delivery: { timestamp: "2026-07-19T00:00:03.000Z" },
+  }, "2026-07-30T00:00:00.000Z");
+  assertEquals(row.created_at, "2026-07-19T00:00:03.000Z");
+});
+
+Deno.test("buildEmailEventRow falls back to mail.timestamp for Send", () => {
+  // For a Send event the two are legitimately the same.
+  const row = buildEmailEventRow({
+    eventType: "Send",
+    mail: { messageId: "m4", timestamp: "2026-07-19T00:00:00.000Z" },
+  }, "2026-07-30T00:00:00.000Z");
+  assertEquals(row.created_at, "2026-07-19T00:00:00.000Z");
+});
+
+Deno.test("buildEmailEventRow falls back to now when no timestamp at all", () => {
+  const row = buildEmailEventRow({ eventType: "Open" }, "2026-07-30T00:00:00.000Z");
+  assertEquals(row.created_at, "2026-07-30T00:00:00.000Z");
+});

@@ -19,6 +19,13 @@ export function mapSesEventType(eventType: string): string {
 
 export interface SesEvent {
   eventType?: string;
+  // Per-event blocks. Each carries the time the EVENT happened; mail.timestamp is
+  // only ever the time the message was sent.
+  open?: { timestamp?: string };
+  click?: { timestamp?: string };
+  delivery?: { timestamp?: string };
+  bounce?: { timestamp?: string };
+  complaint?: { timestamp?: string };
   mail?: {
     messageId?: string;
     timestamp?: string;
@@ -43,9 +50,28 @@ export function buildEmailEventRow(ev: SesEvent, nowIso: string): {
     event_type: mapSesEventType(ev.eventType ?? "unknown"),
     email_to: mail.destination?.[0] ?? null,
     subject: mail.commonHeaders?.subject ?? null,
-    created_at: mail.timestamp ?? nowIso,
+    created_at: sesEventTimestamp(ev) ?? nowIso,
     raw: ev,
   };
+}
+
+// When the event happened — NOT when the message was sent.
+//
+// This used `mail.timestamp`, which SES sets to the original send time on every
+// notification. So an open a week after the send was recorded on the send date:
+// "recent opens" never surfaced it and every engagement window mis-attributed it.
+// Verified in production 2026-07-19 — `sent`, `delivered` and `opened` all shared
+// an identical max(created_at), which is impossible if opens were timed
+// independently. Falls back to mail.timestamp for Send events, where the two are
+// legitimately the same.
+export function sesEventTimestamp(ev: SesEvent): string | null {
+  return ev.open?.timestamp
+    ?? ev.click?.timestamp
+    ?? ev.delivery?.timestamp
+    ?? ev.bounce?.timestamp
+    ?? ev.complaint?.timestamp
+    ?? ev.mail?.timestamp
+    ?? null;
 }
 
 // ── SNS envelope validation ──
