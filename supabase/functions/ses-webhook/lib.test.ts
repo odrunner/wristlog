@@ -30,7 +30,7 @@ Deno.test("buildEmailEventRow shapes a row from a SES event", () => {
       commonHeaders: { subject: "Welcome to WRotate" },
     },
   };
-  const row = buildEmailEventRow(ev, "2026-07-19T10:05:00.000Z");
+  const row = buildEmailEventRow(ev, "2026-07-19T10:05:00.000Z", "sns-msg-1");
   assertEquals(row, {
     email_id: "ses-msg-1",
     event_type: "delivered",
@@ -38,15 +38,17 @@ Deno.test("buildEmailEventRow shapes a row from a SES event", () => {
     subject: "Welcome to WRotate",
     created_at: "2026-07-19T10:00:00.000Z",
     raw: ev,
+    sns_message_id: "sns-msg-1",
   });
 });
 
 Deno.test("buildEmailEventRow falls back to nowIso and nulls", () => {
-  const row = buildEmailEventRow({ eventType: "Send", mail: {} }, "2026-07-19T10:05:00.000Z");
+  const row = buildEmailEventRow({ eventType: "Send", mail: {} }, "2026-07-19T10:05:00.000Z", null);
   assertEquals(row.email_id, null);
   assertEquals(row.email_to, null);
   assertEquals(row.subject, null);
   assertEquals(row.created_at, "2026-07-19T10:05:00.000Z");
+  assertEquals(row.sns_message_id, null);
 });
 
 Deno.test("isValidCertUrl accepts only https sns.<region>.amazonaws.com .pem URLs", () => {
@@ -119,7 +121,7 @@ Deno.test("buildEmailEventRow uses the open timestamp, not the send timestamp", 
     eventType: "Open",
     mail: { messageId: "m1", timestamp: "2026-07-19T00:00:00.000Z", destination: ["a@b.com"] },
     open: { timestamp: "2026-07-26T12:34:56.000Z" },
-  }, "2026-07-30T00:00:00.000Z");
+  }, "2026-07-30T00:00:00.000Z", null);
   assertEquals(row.created_at, "2026-07-26T12:34:56.000Z");
   assertEquals(row.event_type, "opened");
 });
@@ -129,7 +131,7 @@ Deno.test("buildEmailEventRow uses the click timestamp", () => {
     eventType: "Click",
     mail: { messageId: "m2", timestamp: "2026-07-19T00:00:00.000Z" },
     click: { timestamp: "2026-07-22T08:00:00.000Z" },
-  }, "2026-07-30T00:00:00.000Z");
+  }, "2026-07-30T00:00:00.000Z", null);
   assertEquals(row.created_at, "2026-07-22T08:00:00.000Z");
 });
 
@@ -138,7 +140,7 @@ Deno.test("buildEmailEventRow uses the delivery timestamp", () => {
     eventType: "Delivery",
     mail: { messageId: "m3", timestamp: "2026-07-19T00:00:00.000Z" },
     delivery: { timestamp: "2026-07-19T00:00:03.000Z" },
-  }, "2026-07-30T00:00:00.000Z");
+  }, "2026-07-30T00:00:00.000Z", null);
   assertEquals(row.created_at, "2026-07-19T00:00:03.000Z");
 });
 
@@ -147,11 +149,11 @@ Deno.test("buildEmailEventRow falls back to mail.timestamp for Send", () => {
   const row = buildEmailEventRow({
     eventType: "Send",
     mail: { messageId: "m4", timestamp: "2026-07-19T00:00:00.000Z" },
-  }, "2026-07-30T00:00:00.000Z");
+  }, "2026-07-30T00:00:00.000Z", null);
   assertEquals(row.created_at, "2026-07-19T00:00:00.000Z");
 });
 
 Deno.test("buildEmailEventRow falls back to now when no timestamp at all", () => {
-  const row = buildEmailEventRow({ eventType: "Open" }, "2026-07-30T00:00:00.000Z");
+  const row = buildEmailEventRow({ eventType: "Open" }, "2026-07-30T00:00:00.000Z", null);
   assertEquals(row.created_at, "2026-07-30T00:00:00.000Z");
 });

@@ -36,13 +36,18 @@ export interface SesEvent {
 
 // Shape an email_events row from a SES event notification.
 // `nowIso` is injected so the fallback timestamp is testable.
-export function buildEmailEventRow(ev: SesEvent, nowIso: string): {
+// `snsMessageId` is the SNS envelope's MessageId (not the SES mail.messageId) —
+// used to dedup at-least-once SNS redelivery of the same notification; null for
+// callers that don't have one (there are none in production, but keeps the
+// function testable without an envelope).
+export function buildEmailEventRow(ev: SesEvent, nowIso: string, snsMessageId: string | null): {
   email_id: string | null;
   event_type: string;
   email_to: string | null;
   subject: string | null;
   created_at: string;
   raw: unknown;
+  sns_message_id: string | null;
 } {
   const mail = ev.mail ?? {};
   return {
@@ -52,6 +57,7 @@ export function buildEmailEventRow(ev: SesEvent, nowIso: string): {
     subject: mail.commonHeaders?.subject ?? null,
     created_at: sesEventTimestamp(ev) ?? nowIso,
     raw: ev,
+    sns_message_id: snsMessageId,
   };
 }
 

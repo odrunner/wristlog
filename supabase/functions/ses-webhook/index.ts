@@ -116,13 +116,15 @@ serve(async (req) => {
     }
 
     const sesEvent = JSON.parse(msg.Message ?? "{}");
-    const row = buildEmailEventRow(sesEvent, new Date().toISOString());
+    const row = buildEmailEventRow(sesEvent, new Date().toISOString(), msg.MessageId ?? null);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
-    const { error } = await supabase.from("email_events").insert(row);
+    const { error } = await supabase
+      .from("email_events")
+      .upsert(row, { onConflict: "sns_message_id", ignoreDuplicates: true });
     if (error) {
       console.error("[ses-webhook] Insert error:", error);
       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
