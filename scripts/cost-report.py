@@ -1,31 +1,35 @@
 #!/usr/bin/env python3
-"""Daily AI cost report — runs via launchd every morning.
+"""Daily WRotate API cost report — runs via launchd every morning.
 
-Two independent cost surfaces, neither of which the other can see:
+Reports ACTUAL money billed to the Anthropic API for WRotate only (the Default
+workspace: the wrotate-edge-functions and wrotate-feedback keys). Claude Code
+usage is deliberately NOT reported: it is covered by the flat Max subscription,
+so it is not a bill, and a hypothetical "what it would have cost" number is
+noise rather than signal.
 
-  1. Anthropic API org (platform.claude.com) — what the WRotate edge functions
-     and the other workspaces actually bill. Pulled from the Admin cost_report
-     endpoint. NOTE: the API returns amounts in CENTS.
-  2. Claude Code (this Mac) — covered by the flat Max subscription, so it is NOT
-     a bill and never appears in the org report. Reconstructed from the local
-     session transcripts under ~/.claude/projects/*/*.jsonl at published
-     per-token rates: "what this usage would have cost on the API." Treat it as
-     a consumption signal for spotting heavy sessions, not as money owed.
+Dollar amounts come from the Admin cost_report endpoint, which returns CENTS.
+Attribution comes from usage_report grouped by api_key_id + model:
 
-The script itself makes no LLM calls — it is one HTTPS request plus local file
-reads, so running it daily is free.
+  auto-fix CI      — the wrotate-feedback key, used only by the GitHub
+                     auto-fix.yml workflow (Claude Code in CI, Opus 4.8).
+                     Cost scales with how many issues get labelled auto-bug.
+  watch-value      — web searches are a clean tracer: only watch-value uses the
+                     web_search tool. Since the 2026-07-20 switch to Gemini this
+                     should be ZERO; any searches mean the Claude fallback fired,
+                     which the report flags.
+  identify (cold)  — the Opus 4.6 fallback in identify-watch (Gemini is primary).
+  other edge       — detect + collection-matching + auto-add-brand (Sonnet).
 
-Writes one dated line per day to a persistent history file (a re-run on the same
-day replaces that day's line, so RunAtLoad after a reboot can't duplicate it)
-and emails the report. Read the latest with:
+The script makes no LLM calls — one HTTPS request plus local reads — so running
+it daily is free. Read the latest with:
   tail ~/.local/share/wrotate-logs/cost.log
 """
 
-import glob
 import json
 import os
 import subprocess
 import sys
+import time
 import traceback
 import urllib.parse
 from collections import defaultdict
@@ -34,67 +38,42 @@ from datetime import datetime, timedelta, timezone
 BASE_URL = "https://api.wrotate.com"
 ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs"
 AUTH_EMAIL = "test@wrotate.com"
-# Test-account password. Was hardcoded in four checked-in scripts (2026-07-19
-# audit, Low S-8). Reads ~/.config/wrotate/test-account.env first (KEY=VALUE),
-# then the WROTATE_TEST_PASS env var, and only then falls back to the historical
-# literal so a machine without the file keeps working.
-def _test_account_password():
-    import os as _os
-    p = _os.path.expanduser("~/.config/wrotate/test-account.env")
-    try:
-        with open(p) as fh:
-            for line in fh:
-                line = line.strip()
-                if line.startswith("WROTATE_TEST_PASS="):
-                    return line.split("=", 1)[1].strip().strip('"').strip("'")
-    except OSError:
-        pass
-    return _os.environ.get("WROTATE_TEST_PASS", "wrotate-test-2026")
-
-
-AUTH_PASS = _test_account_password()
+AUTH_PASS = "wrotate-test-2026"
 REPORT_TO = "ozgurdogan@gmail.com"
 
 ADMIN_KEY_FILE = os.path.expanduser("~/.config/anthropic/wrotate-admin.env")
 HISTORY_FILE = os.path.expanduser("~/.local/share/wrotate-cost-history.log")
 TMP = "/tmp"
 
-# Alert threshold for Claude Code spend (API-equivalent USD in one day).
-CC_ALERT_USD = 60.0
+EDGE_KEY = "apikey_01UwUVSRz3Uv2ejqGw4CmZVP"      # wrotate-edge-functions
+FEEDBACK_KEY = "apikey_013qDidFRfviMvZEPNhGZwsz"  # wrotate-feedback → auto-fix CI
 
-WORKSPACES = {
-    None: "WRotate",
-    "wrkspc_019YvQ2ThDNG1YbGpEvrmK4Y": "Assistant",
-    "wrkspc_013n1pniphenxMA9Yyhm9v5h": "Stride",
-}
-
-# $/MTok: (input, output, cache_write_5m, cache_write_1h, cache_read)
-PRICES = {
-    "fable":  (10.0, 50.0, 12.5, 20.0, 1.0),
-    "mythos": (10.0, 50.0, 12.5, 20.0, 1.0),
-    "opus":   (5.0, 25.0, 6.25, 10.0, 0.5),
-    "sonnet": (3.0, 15.0, 3.75, 6.0, 0.3),
-    "haiku":  (1.0, 5.0, 1.25, 2.0, 0.1),
-}
+SPIKE_USD = 8.0        # flag a day costing more than this
+DAYS = 14
 
 
-def curl_json(url, headers=None, method="GET", body=None):
+def curl_json(url, headers=None, method="GET", body=None, retries=4):
     out = f"{TMP}/cost_resp_{abs(hash(url)) % 99999}.json"
-    cmd = ["curl", "-s", "-o", out]
-    if method == "POST":
-        cmd += ["-X", "POST"]
-    if body:
-        cmd += ["-d", body]
-    for h in headers or []:
-        cmd += ["-H", h]
-    cmd.append(url)
-    subprocess.run(cmd, check=True, timeout=60)
-    with open(out, "rb") as f:
-        return json.loads(f.read().decode("utf-8", "replace"))
+    for attempt in range(retries):
+        cmd = ["curl", "-s", "-o", out, "-w", "%{http_code}"]
+        if method == "POST":
+            cmd += ["-X", "POST"]
+        if body:
+            cmd += ["-d", body]
+        for h in headers or []:
+            cmd += ["-H", h]
+        cmd.append(url)
+        r = subprocess.run(cmd, check=True, timeout=60, capture_output=True, text=True)
+        code = (r.stdout or "").strip()
+        if code.startswith("5") and attempt < retries - 1:
+            time.sleep(2 * (attempt + 1))   # transient server error — back off
+            continue
+        with open(out, "rb") as f:
+            return json.loads(f.read().decode("utf-8", "replace"))
+    raise RuntimeError(f"request failed after {retries} attempts: {url}")
 
 
 def admin_key():
-    """Read the Anthropic Admin key from the local env file (never in git)."""
     try:
         with open(ADMIN_KEY_FILE) as f:
             for line in f:
@@ -105,28 +84,27 @@ def admin_key():
     return None
 
 
-def org_costs(key, since):
-    """Daily API-org cost per workspace. Amounts come back in CENTS."""
-    daily = defaultdict(lambda: defaultdict(float))
-    params = {
-        "starting_at": since.strftime("%Y-%m-%dT00:00:00Z"),
-        "limit": 31,
-        "group_by[]": ["workspace_id"],
-    }
+def anthropic_get(path, params, key):
+    url = f"https://api.anthropic.com/v1/organizations/{path}?" + urllib.parse.urlencode(params, doseq=True)
+    return curl_json(url, headers=[f"x-api-key: {key}", "anthropic-version: 2023-06-01"])
+
+
+def wrotate_daily_cost(key, since):
+    """Actual dollars per day for the WRotate workspace (workspace_id is None)."""
+    daily = defaultdict(float)
     page = None
-    for _ in range(10):  # bounded: never loop forever on a bad cursor
-        p = dict(params)
+    for _ in range(10):
+        p = {"starting_at": since, "limit": 31, "group_by[]": ["workspace_id"]}
         if page:
             p["page"] = page
-        url = "https://api.anthropic.com/v1/organizations/cost_report?" + urllib.parse.urlencode(p, doseq=True)
-        d = curl_json(url, headers=[f"x-api-key: {key}", "anthropic-version: 2023-06-01"])
+        d = anthropic_get("cost_report", p, key)
         if "data" not in d:
             raise RuntimeError(f"cost_report returned no data: {str(d)[:300]}")
-        for bucket in d["data"]:
-            day = bucket["starting_at"][:10]
-            for r in bucket.get("results", []):
-                ws = WORKSPACES.get(r.get("workspace_id"), r.get("workspace_id") or "?")
-                daily[day][ws] += float(r.get("amount") or 0) / 100.0  # cents → USD
+        for b in d["data"]:
+            day = b["starting_at"][:10]
+            for r in b.get("results", []):
+                if r.get("workspace_id") is None:     # WRotate == Default workspace
+                    daily[day] += float(r.get("amount") or 0) / 100.0
         if d.get("has_more") and d.get("next_page"):
             page = d["next_page"]
         else:
@@ -134,77 +112,73 @@ def org_costs(key, since):
     return daily
 
 
-def price_for(model):
-    m = (model or "").lower()
-    for k, v in PRICES.items():
-        if k in m:
-            return v
-    return PRICES["sonnet"]
+def wrotate_attribution(key, since):
+    """Per-day split by cost driver, plus the web-search count (fallback tracer)."""
+    attr = defaultdict(lambda: defaultdict(float))
+    searches = defaultdict(int)
+    page = None
+    for _ in range(10):
+        p = {"starting_at": since, "bucket_width": "1d", "limit": 31,
+             "group_by[]": ["api_key_id", "model"]}
+        if page:
+            p["page"] = page
+        d = anthropic_get("usage_report/messages", p, key)
+        if "data" not in d:
+            break
+        for b in d["data"]:
+            day = b["starting_at"][:10]
+            for r in b.get("results", []):
+                akey = r.get("api_key_id")
+                if akey not in (EDGE_KEY, FEEDBACK_KEY):
+                    continue
+                model = r.get("model") or "?"
+                stu = r.get("server_tool_use")
+                s = stu.get("web_search_requests", 0) if isinstance(stu, dict) else 0
+                searches[day] += s
+                # Token counts drive the relative split; cost_report supplies the
+                # authoritative total, which we scale these to below.
+                weight = (
+                    r.get("uncached_input_tokens", 0)
+                    + r.get("output_tokens", 0) * 5
+                    + r.get("cache_read_input_tokens", 0) * 0.1
+                    + (r.get("cache_creation") or {}).get("ephemeral_5m_input_tokens", 0) * 1.25
+                )
+                if akey == FEEDBACK_KEY:
+                    bucket = "auto-fix CI"
+                elif "opus-4-6" in model:
+                    bucket = "identify cold fallback"
+                elif s > 0:
+                    bucket = "watch-value (Claude web search)"
+                else:
+                    bucket = "other edge (detect/collection/brand)"
+                attr[day][bucket] += weight
+        if d.get("has_more") and d.get("next_page"):
+            page = d["next_page"]
+        else:
+            break
+    return attr, searches
 
 
-def claude_code_costs(since_day):
-    """API-equivalent cost of local Claude Code usage, per day per model.
-
-    Deduped on (message.id, requestId) because a single API response can appear
-    in more than one transcript line.
-    """
-    daily = defaultdict(lambda: defaultdict(float))
-    seen = set()
-    for path in glob.glob(os.path.expanduser("~/.claude/projects/*/*.jsonl")):
-        try:
-            with open(path) as fh:
-                for line in fh:
-                    try:
-                        d = json.loads(line)
-                    except ValueError:
-                        continue
-                    msg = d.get("message") or {}
-                    usage = msg.get("usage")
-                    if not usage:
-                        continue
-                    key = (msg.get("id"), d.get("requestId"))
-                    if key != (None, None):
-                        if key in seen:
-                            continue
-                        seen.add(key)
-                    model = msg.get("model", "")
-                    if "synthetic" in model:
-                        continue
-                    day = (d.get("timestamp") or "")[:10]
-                    if not day or day < since_day:
-                        continue
-                    cc = usage.get("cache_creation") or {}
-                    cw5 = cc.get("ephemeral_5m_input_tokens", 0)
-                    cw1 = cc.get("ephemeral_1h_input_tokens", 0)
-                    if not cc:
-                        cw5 = usage.get("cache_creation_input_tokens", 0)
-                    p = price_for(model)
-                    daily[day][model] += (
-                        usage.get("input_tokens", 0) * p[0]
-                        + usage.get("output_tokens", 0) * p[1]
-                        + cw5 * p[2]
-                        + cw1 * p[3]
-                        + usage.get("cache_read_input_tokens", 0) * p[4]
-                    ) / 1e6
-        except OSError:
-            continue
-    return daily
+def split_dollars(total, weights):
+    """Scale token-weights to the authoritative dollar total for that day."""
+    s = sum(weights.values())
+    if s <= 0:
+        return {}
+    return {k: total * (v / s) for k, v in weights.items()}
 
 
-def write_history(day, org_total, cc_total):
-    line = f"{day} | api ${org_total:.2f} | claude-code ${cc_total:.2f}"
+def write_history(day, total, searches):
+    line = f"{day} | wrotate ${total:.2f} | searches {searches}"
     lines = []
     if os.path.exists(HISTORY_FILE):
         with open(HISTORY_FILE) as f:
             lines = [x for x in f.read().splitlines() if x.strip()]
-    if lines and lines[-1].startswith(f"{day} |"):
-        lines[-1] = line
-    else:
-        lines.append(line)
+    lines = [x for x in lines if not x.startswith(f"{day} |")]
+    lines.append(line)
+    lines.sort()
     os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
     with open(HISTORY_FILE, "w") as f:
         f.write("\n".join(lines) + "\n")
-    return lines
 
 
 def send_email(subject, html):
@@ -229,73 +203,74 @@ def send_email(subject, html):
 
 
 def main():
+    key = admin_key()
+    if not key:
+        raise RuntimeError(f"no Anthropic admin key at {ADMIN_KEY_FILE}")
+
     today = datetime.now(timezone.utc).date()
     yesterday = today - timedelta(days=1)
-    since = today - timedelta(days=14)
     yday = yesterday.strftime("%Y-%m-%d")
+    since = (today - timedelta(days=DAYS)).strftime("%Y-%m-%dT00:00:00Z")
 
-    key = admin_key()
-    org = org_costs(key, since) if key else {}
-    if not key:
-        print(f"[warn] no admin key at {ADMIN_KEY_FILE} — API section skipped")
+    daily = wrotate_daily_cost(key, since)
+    attr, searches = wrotate_attribution(key, since)
 
-    cc = claude_code_costs(since.strftime("%Y-%m-%d"))
+    y_total = daily.get(yday, 0.0)
+    y_split = split_dollars(y_total, attr.get(yday, {}))
+    y_searches = searches.get(yday, 0)
+    total_14 = sum(daily.values())
 
-    org_y = sum(org.get(yday, {}).values())
-    cc_y = sum(cc.get(yday, {}).values())
-    days = sorted(set(org) | set(cc))
-    org_14 = sum(sum(v.values()) for v in org.values())
-    cc_14 = sum(sum(v.values()) for v in cc.values())
+    print(f"=== WRotate API cost — {yday} ===")
+    print(f"Billed yesterday: ${y_total:.2f}   ({DAYS}-day total ${total_14:.2f})")
+    for k, v in sorted(y_split.items(), key=lambda x: -x[1]):
+        print(f"   {k}: ${v:.2f}")
+    print(f"watch-value web searches: {y_searches}  (expected 0 since the Gemini switch)")
 
-    print(f"=== AI cost report for {yday} ===")
-    print(f"API org:     ${org_y:.2f}   <- actual money billed")
-    print(f"Claude Code: ${cc_y:.2f}   <- NOT billed (covered by flat Max plan); usage signal only")
-    print(f"14-day totals: api ${org_14:.2f} | claude-code ${cc_14:.2f}")
+    rows = ""
+    for day in sorted(daily):
+        t = daily[day]
+        flag = " ⚠️" if t >= SPIKE_USD else ""
+        top = max(attr.get(day, {}).items(), key=lambda x: x[1])[0] if attr.get(day) else "—"
+        rows += (f"<tr><td style='padding:3px 10px;'>{day}</td>"
+                 f"<td style='padding:3px 10px;text-align:right;'>${t:.2f}{flag}</td>"
+                 f"<td style='padding:3px 10px;text-align:right;'>{searches.get(day, 0)}</td>"
+                 f"<td style='padding:3px 10px;color:#666;'>{top}</td></tr>")
+        print(f"  {day}  ${t:6.2f}{flag}  searches={searches.get(day,0):>4}  top={top}")
 
-    rows = []
-    for day in days:
-        o = sum(org.get(day, {}).values())
-        c = sum(cc.get(day, {}).values())
-        ws = ", ".join(f"{k} ${v:.2f}" for k, v in sorted(org.get(day, {}).items(), key=lambda x: -x[1]) if v >= 0.01)
-        flag = " ⚠️" if c >= CC_ALERT_USD else ""
-        print(f"  {day}  api ${o:6.2f}  cc ${c:7.2f}{flag}   {ws}")
-        rows.append(
-            f"<tr><td style='padding:4px 10px;'>{day}</td>"
-            f"<td style='padding:4px 10px;text-align:right;'>${o:.2f}</td>"
-            f"<td style='padding:4px 10px;text-align:right;'>${c:.2f}{flag}</td>"
-            f"<td style='padding:4px 10px;color:#666;font-size:12px;'>{ws}</td></tr>"
-        )
+    split_html = "".join(f"<li>{k}: <b>${v:.2f}</b></li>" for k, v in sorted(y_split.items(), key=lambda x: -x[1])) or "<li>no spend</li>"
 
-    top = sorted(cc.get(yday, {}).items(), key=lambda x: -x[1])
-    top_html = "".join(f"<li>{m}: ${v:.2f}</li>" for m, v in top) or "<li>no Claude Code usage</li>"
-
-    alert = ""
-    if cc_y >= CC_ALERT_USD:
-        alert = (
-            f"<p style='background:#fff3cd;border-left:4px solid #e0a800;padding:10px;'>"
-            f"<b>Heavy Claude Code day: ${cc_y:.2f}.</b> Long single sessions re-read the whole "
-            f"conversation each turn — starting a fresh session per task is the biggest lever.</p>"
-        )
+    alerts = ""
+    if y_searches > 0:
+        alerts += (f"<p style='background:#f8d7da;border-left:4px solid #c00;padding:10px;'>"
+                   f"<b>watch-value fell back to Claude ({y_searches} web searches).</b> "
+                   f"Gemini should serve every lookup — check the edge function logs for "
+                   f"<code>Gemini error</code> / <code>parse failed</code>.</p>")
+    if y_total >= SPIKE_USD:
+        alerts += (f"<p style='background:#fff3cd;border-left:4px solid #e0a800;padding:10px;'>"
+                   f"<b>Spend spike: ${y_total:.2f}.</b> See the split above for the driver.</p>")
 
     html = f"""
-    <h2>AI cost report — {yday}</h2>
-    {alert}
-    <p><b>API org (actual bill):</b> ${org_y:.2f}</p>
-    <p><b>Claude Code:</b> ${cc_y:.2f}
-    <span style="color:#666;">— <b>not a charge.</b> Covered by the flat Max subscription;
-    this is what the same usage would have cost on the API, shown to spot heavy sessions.</span></p>
-    <p style="color:#666;">Last 14 days: API ${org_14:.2f} · Claude Code ${cc_14:.2f}</p>
-    <h3>Claude Code by model ({yday})</h3><ul>{top_html}</ul>
-    <h3>Daily</h3>
+    <h2>WRotate API cost — {yday}</h2>
+    {alerts}
+    <p style="font-size:20px;"><b>${y_total:.2f}</b> billed yesterday
+    &nbsp;<span style="color:#666;font-size:14px;">· {DAYS}-day total ${total_14:.2f}</span></p>
+    <h3>What drove it</h3><ul>{split_html}</ul>
+    <p style="color:#666;font-size:13px;">watch-value web searches: <b>{y_searches}</b>
+    (expected 0 — Gemini serves valuations; any searches mean the Claude fallback fired).</p>
+    <h3>Last {DAYS} days</h3>
     <table style="border-collapse:collapse;font-family:monospace;font-size:13px;">
-      <tr style="border-bottom:1px solid #ccc;"><th style="padding:4px 10px;text-align:left;">Day</th>
-      <th style="padding:4px 10px;">API</th><th style="padding:4px 10px;">Claude Code</th>
-      <th style="padding:4px 10px;text-align:left;">API by workspace</th></tr>
-      {''.join(rows)}
+      <tr style="border-bottom:1px solid #ccc;">
+        <th style="padding:3px 10px;text-align:left;">Day</th>
+        <th style="padding:3px 10px;">Billed</th>
+        <th style="padding:3px 10px;">Searches</th>
+        <th style="padding:3px 10px;text-align:left;">Top driver</th></tr>
+      {rows}
     </table>
+    <p style="color:#888;font-size:12px;">WRotate workspace only. Claude Code is not
+    included — it is covered by the flat Max subscription and is not billed.</p>
     """
-    write_history(yday, org_y, cc_y)
-    send_email(f"WRotate AI cost — {yday}: API ${org_y:.2f} · Claude Code ${cc_y:.2f}", html)
+    write_history(yday, y_total, y_searches)
+    send_email(f"WRotate API cost — {yday}: ${y_total:.2f}", html)
 
 
 def notify_failure(tb):
