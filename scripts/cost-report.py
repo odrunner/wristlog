@@ -34,7 +34,25 @@ from datetime import datetime, timedelta, timezone
 BASE_URL = "https://api.wrotate.com"
 ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs"
 AUTH_EMAIL = "test@wrotate.com"
-AUTH_PASS = "wrotate-test-2026"
+# Test-account password. Was hardcoded in four checked-in scripts (2026-07-19
+# audit, Low S-8). Reads ~/.config/wrotate/test-account.env first (KEY=VALUE),
+# then the WROTATE_TEST_PASS env var, and only then falls back to the historical
+# literal so a machine without the file keeps working.
+def _test_account_password():
+    import os as _os
+    p = _os.path.expanduser("~/.config/wrotate/test-account.env")
+    try:
+        with open(p) as fh:
+            for line in fh:
+                line = line.strip()
+                if line.startswith("WROTATE_TEST_PASS="):
+                    return line.split("=", 1)[1].strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return _os.environ.get("WROTATE_TEST_PASS", "wrotate-test-2026")
+
+
+AUTH_PASS = _test_account_password()
 REPORT_TO = "ozgurdogan@gmail.com"
 
 ADMIN_KEY_FILE = os.path.expanduser("~/.config/anthropic/wrotate-admin.env")

@@ -23,6 +23,32 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
+// Follow redirects one hop at a time, revalidating each Location against
+// validateUrl so an attacker-controlled redirect can't reach a private host.
+async function fetchFollowingSafeRedirects(startUrl: string, maxHops = 5): Promise<Response> {
+  let current = startUrl;
+  for (let hop = 0; hop <= maxHops; hop++) {
+    const res = await fetch(current, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; WRotateBot/1.0)",
+        "Accept": "text/html,application/xhtml+xml",
+      },
+      redirect: "manual",
+    });
+    if (res.status < 300 || res.status > 399) return res;
+    const loc = res.headers.get("location");
+    if (!loc) return res;
+    const next = new URL(loc, current).href;   // Location may be relative
+    const check = validateUrl(next);
+    if (!check.ok) {
+      throw new Error(`Blocked redirect to disallowed host: ${check.error}`);
+    }
+    current = next;
+  }
+  throw new Error("Too many redirects");
+}
+
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
@@ -63,13 +89,11 @@ Deno.serve(async (req: Request) => {
     }
 
     // Fetch the page
-    const pageRes = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; WRotateBot/1.0)",
-        "Accept": "text/html,application/xhtml+xml",
-      },
-      redirect: "follow",
-    });
+    // redirect:"manual" + per-hop revalidation. With redirect:"follow" the
+    // up-front validateUrl() check was bypassable: a public URL could 302 to
+    // 169.254.169.254 or localhost and the fetch would follow it (2026-07-19
+    // audit, Low S-9). Every hop is re-checked against the same blocklist.
+    const pageRes = await fetchFollowingSafeRedirects(url);
 
     if (!pageRes.ok) {
       return jsonResponse(
