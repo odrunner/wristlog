@@ -75,10 +75,15 @@ describe('Post location — index.html wiring', () => {
     expect(html).toContain('id="ep-location-chips"');
   });
 
-  it('offers Home / Work / Travel preset chips', () => {
-    for (const p of ['Home', 'Work', 'Travel']) {
+  it('offers Home / Work preset chips', () => {
+    for (const p of ['Home', 'Work']) {
       expect(html).toContain(`data-loc="${p}"`);
     }
+  });
+
+  it('no longer offers a Travel preset chip (free text still allowed)', () => {
+    expect(html).not.toContain('data-loc="Travel"');
+    expect(html).toContain("POST_LOCATION_PRESETS = ['Home', 'Work']");
   });
 
   it('saves location on new post and includes it in the logs upsert', () => {

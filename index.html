@@ -4844,11 +4844,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div id="np-details-body" style="display:none;margin-top:.5rem;">
           <div class="tl-label">Occasion</div>
           <div class="chips" id="np-usecase-chips">
-            <div class="chip selected" data-uc="unspecified" onclick="selectNpUseCase('unspecified')">—</div>
-            <div class="chip"          data-uc="work"        onclick="selectNpUseCase('work')">Work</div>
-            <div class="chip"          data-uc="leisure"     onclick="selectNpUseCase('leisure')">Leisure</div>
-            <div class="chip"          data-uc="dinner"      onclick="selectNpUseCase('dinner')">Dinner</div>
-            <div class="chip"          data-uc="travel"      onclick="selectNpUseCase('travel')">Travel</div>
+            <div class="chip" data-uc="work"    onclick="selectNpUseCase('work')">Work</div>
+            <div class="chip" data-uc="leisure" onclick="selectNpUseCase('leisure')">Leisure</div>
+            <div class="chip" data-uc="dinner"  onclick="selectNpUseCase('dinner')">Dinner</div>
+            <div class="chip" data-uc="travel"  onclick="selectNpUseCase('travel')">Travel</div>
           </div>
           <div id="np-strap-card" style="display:none;margin-top:.6rem;">
             <div class="tl-label">Strap / Bracelet</div>
@@ -4863,14 +4862,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div class="form-group">
       <label style="font-size:.78rem;color:var(--muted);">Location (optional)</label>
-      <div class="chips" id="np-location-chips">
-        <div class="chip" data-loc="Home" onclick="selectPostLocationChip('np','Home')">Home</div>
-        <div class="chip" data-loc="Work" onclick="selectPostLocationChip('np','Work')">Work</div>
-        <div class="chip" data-loc="Travel" onclick="selectPostLocationChip('np','Travel')">Travel</div>
+      <div style="display:flex;align-items:center;gap:.45rem;">
+        <div class="chips" id="np-location-chips" style="flex-wrap:nowrap;">
+          <div class="chip" data-loc="Home" onclick="selectPostLocationChip('np','Home')">Home</div>
+          <div class="chip" data-loc="Work" onclick="selectPostLocationChip('np','Work')">Work</div>
+        </div>
+        <input type="text" id="np-location-input" placeholder="Add a location…" maxlength="60"
+          oninput="onPostLocationInput('np')"
+          style="flex:1;min-width:0;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem;font-family:inherit;">
       </div>
-      <input type="text" id="np-location-input" placeholder="Add a location…" maxlength="60"
-        oninput="onPostLocationInput('np')"
-        style="width:100%;margin-top:.4rem;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem;font-family:inherit;">
     </div>
     <div class="form-group">
       <label style="font-size:.78rem;color:var(--muted);">Who can see this?</label>
@@ -4920,11 +4920,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div id="ep-details-body" style="display:none;margin-top:.5rem;">
           <div class="tl-label">Occasion</div>
           <div class="chips" id="ep-usecase-chips">
-            <div class="chip selected" data-uc="unspecified" onclick="selectEpUseCase('unspecified')">—</div>
-            <div class="chip"          data-uc="work"        onclick="selectEpUseCase('work')">Work</div>
-            <div class="chip"          data-uc="leisure"     onclick="selectEpUseCase('leisure')">Leisure</div>
-            <div class="chip"          data-uc="dinner"      onclick="selectEpUseCase('dinner')">Dinner</div>
-            <div class="chip"          data-uc="travel"      onclick="selectEpUseCase('travel')">Travel</div>
+            <div class="chip" data-uc="work"    onclick="selectEpUseCase('work')">Work</div>
+            <div class="chip" data-uc="leisure" onclick="selectEpUseCase('leisure')">Leisure</div>
+            <div class="chip" data-uc="dinner"  onclick="selectEpUseCase('dinner')">Dinner</div>
+            <div class="chip" data-uc="travel"  onclick="selectEpUseCase('travel')">Travel</div>
           </div>
           <div id="ep-strap-card" style="display:none;margin-top:.6rem;">
             <div class="tl-label">Strap / Bracelet</div>
@@ -4939,14 +4938,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div class="form-group">
       <label style="font-size:.78rem;color:var(--muted);">Location (optional)</label>
-      <div class="chips" id="ep-location-chips">
-        <div class="chip" data-loc="Home" onclick="selectPostLocationChip('ep','Home')">Home</div>
-        <div class="chip" data-loc="Work" onclick="selectPostLocationChip('ep','Work')">Work</div>
-        <div class="chip" data-loc="Travel" onclick="selectPostLocationChip('ep','Travel')">Travel</div>
+      <div style="display:flex;align-items:center;gap:.45rem;">
+        <div class="chips" id="ep-location-chips" style="flex-wrap:nowrap;">
+          <div class="chip" data-loc="Home" onclick="selectPostLocationChip('ep','Home')">Home</div>
+          <div class="chip" data-loc="Work" onclick="selectPostLocationChip('ep','Work')">Work</div>
+        </div>
+        <input type="text" id="ep-location-input" placeholder="Add a location…" maxlength="60"
+          oninput="onPostLocationInput('ep')"
+          style="flex:1;min-width:0;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem;font-family:inherit;">
       </div>
-      <input type="text" id="ep-location-input" placeholder="Add a location…" maxlength="60"
-        oninput="onPostLocationInput('ep')"
-        style="width:100%;margin-top:.4rem;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.85rem;font-family:inherit;">
     </div>
     <div class="form-group">
       <label style="font-size:.78rem;color:var(--muted);">Who can see this?</label>
@@ -6922,7 +6922,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.15.10';
+const APP_VERSION = '20.15.55';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11513,7 +11513,8 @@ function toggleEpDetails() {
 }
 
 function selectEpUseCase(uc) {
-  epUseCase = uc;
+  // No dedicated "None" chip — tapping the selected occasion again clears it.
+  epUseCase = (epUseCase === uc) ? 'unspecified' : uc;
   renderEpDetails();
 }
 
@@ -11781,7 +11782,7 @@ function openNewPost(opts) {
 // ── Post location field (shared by new-post 'np' and edit-post 'ep') ─────────
 // One value or none: a preset chip OR free text. Tapping a chip fills the text
 // input and selects the chip; typing clears the chip selection.
-const POST_LOCATION_PRESETS = ['Home', 'Work', 'Travel'];
+const POST_LOCATION_PRESETS = ['Home', 'Work'];
 
 function selectPostLocationChip(prefix, value) {
   const input = document.getElementById(`${prefix}-location-input`);
@@ -12082,7 +12083,8 @@ function toggleNpDetails() {
 }
 
 function selectNpUseCase(uc) {
-  npUseCase = uc;
+  // No dedicated "None" chip — tapping the selected occasion again clears it.
+  npUseCase = (npUseCase === uc) ? 'unspecified' : uc;
   renderNpDetails();
 }
 
