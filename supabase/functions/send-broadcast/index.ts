@@ -15,7 +15,6 @@ import {
   capRecipients,
   COHORTS,
   DAILY_EMAIL_LIMIT,
-  MAX_PER_DRAIN,
   dormantCutoffMs,
   drainBudget,
   effectiveLimit as computeEffectiveLimit,
@@ -34,7 +33,7 @@ import {
   utcDayStart,
   validateBroadcastInput,
 } from "./lib.ts";
-import { getSesQuota, sendSesBatch, sendSesEmail } from "../_shared/ses.ts";
+import { sendSesBatch, sendSesEmail } from "../_shared/ses.ts";
 import type { SesMessage } from "../_shared/ses.ts";
 
 const ADMIN_USER_ID = "d70b1a85-4f31-4431-b3b7-db76543daaf5";
@@ -354,13 +353,9 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
   if (cntErr) {
     return jsonResponse({ error: "Quota count failed", details: cntErr.message }, 500);
   }
-  // Read the real SES quota rather than trusting a hardcoded constant. Falls back
-  // to DAILY_EMAIL_LIMIT (the sandbox floor) if the account call fails.
-  const quota = await getSesQuota();
-  const dailyLimit = quota?.max24Hour ?? DAILY_EMAIL_LIMIT;
-  // Per-run cap keeps one drain inside the edge-function time limit even when
-  // the daily quota is large.
-  const budget = Math.min(drainBudget(usedToday ?? 0, dailyLimit), MAX_PER_DRAIN);
+  const quota = null;
+  const dailyLimit = DAILY_EMAIL_LIMIT;
+  const budget = drainBudget(usedToday ?? 0, dailyLimit);
 
   // Read-only introspection: report the live quota and what tonight's drain would
   // send, without sending anything. Used to verify the quota wiring after deploy.
