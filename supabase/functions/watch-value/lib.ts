@@ -67,3 +67,13 @@ export function mergePriceHistory(
   history.push({ src: "WRotate", date: today, price: mid });
   return history;
 }
+
+// Round a value estimate to the nearest $50 — raw engine output can carry false
+// precision (e.g. 4801.5 from averaging listings). Values that would round to 0
+// keep whole-dollar rounding instead so tiny estimates aren't wiped out.
+export function roundEstimate(v: unknown, step = 50): number | null {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const rounded = Math.round(n / step) * step;
+  return rounded === 0 ? Math.round(n) : rounded;
+}

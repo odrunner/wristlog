@@ -5,6 +5,7 @@ import {
   isCacheFresh,
   isInRateWindow,
   mergePriceHistory,
+  roundEstimate,
   utcDayStartIso,
 } from "./lib.ts";
 
@@ -102,4 +103,24 @@ Deno.test("mergePriceHistory — no prior price just appends the new one", () =>
   const watch = { market_price: null, market_price_date: null, price_history: null };
   const out = mergePriceHistory(watch, 4200, "2026-06-01");
   assertEquals(out, [{ src: "WRotate", date: "2026-06-01", price: 4200 }]);
+});
+
+Deno.test("roundEstimate — rounds to nearest $50", () => {
+  assertEquals(roundEstimate(4801.5), 4800);
+  assertEquals(roundEstimate(4826), 4850);
+  assertEquals(roundEstimate(9500), 9500);
+  assertEquals(roundEstimate(337), 350);
+});
+
+Deno.test("roundEstimate — tiny values keep whole-dollar rounding instead of 0", () => {
+  assertEquals(roundEstimate(12.4), 12);
+  assertEquals(roundEstimate(24.9), 25);
+  assertEquals(roundEstimate(30), 50);
+});
+
+Deno.test("roundEstimate — invalid input returns null", () => {
+  assertEquals(roundEstimate(null), null);
+  assertEquals(roundEstimate("n/a"), null);
+  assertEquals(roundEstimate(-100), null);
+  assertEquals(roundEstimate(0), null);
 });

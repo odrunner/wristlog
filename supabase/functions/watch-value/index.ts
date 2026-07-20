@@ -12,6 +12,7 @@ import {
   buildWatchDesc,
   extractJson,
   isCacheFresh,
+  roundEstimate,
   utcDayStartIso,
 } from "./lib.ts";
 
@@ -203,6 +204,16 @@ Rules:
         return new Response(JSON.stringify({ error: "parse_failed", raw: textBlock?.text?.slice(0, 500) }), { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
       }
       parsed._engine = "claude";
+    }
+
+    // Strip false precision from the estimate range (e.g. $4,801.5 → $4,800).
+    // Data points and MSRP are real observed prices — leave those untouched.
+    const ev = parsed.estimated_value_usd as Record<string, unknown> | undefined;
+    if (ev) {
+      for (const k of ["low", "mid", "high"]) {
+        const rounded = roundEstimate(ev[k]);
+        if (rounded !== null) ev[k] = rounded;
+      }
     }
 
     // Add metadata
