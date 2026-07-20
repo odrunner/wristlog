@@ -37,3 +37,7 @@ app store files/
 # Local tooling / editor config
 .superpowers/
 .claude/settings.json
+
+# Local research scratch. Note the rest of docs/research/ IS tracked, so this
+# is a single-file entry rather than ignoring the directory.
+docs/research/2026-06-30-social-platform-feature-catalog.md
