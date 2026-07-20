@@ -49,3 +49,39 @@ describe('Admin advanced-mode surfacing', () => {
     expect(html).toContain('d.advanced_sessions');
   });
 });
+
+describe('Totals card day-over-day deltas', () => {
+  // Every count metric on the totals card wires a dod.* delta from admin_dod_counts
+  // (SECURITY DEFINER RPC, external users only, last 24h). Spec: sql/2026-07-20-admin-dod-full.sql.
+  const dodKeys = ['users', 'watches', 'wears', 'priceChecks', 'enhances',
+    'measurements', 'wish', 'clubs', 'follows', 'friends', 'likes', 'comments'];
+
+  it.each(dodKeys)('passes dod.%s into a statRow', (key) => {
+    expect(html).toContain(`dod.${key}`);
+  });
+
+  it('fetches the deltas from the admin_dod_counts RPC', () => {
+    expect(html).toContain("db.rpc('admin_dod_counts')");
+  });
+
+  it('Advanced mode delta compares 24h vs the prior 24h window', () => {
+    expect(html).toMatch(/advDelta\s*=\s*advSessions24h\s*-\s*advSessionsPrev24h/);
+    // prior-window advanced sessions parsed identically to the 24h window
+    expect(html).toContain('advSessionsPrevByUser');
+    expect(html).toMatch(/statRow\('Advanced mode \(24h\)',\s*advSessions24h,\s*advDelta/);
+  });
+
+  it('Pro V2 Beta delta uses active beta users vs prior 24h', () => {
+    expect(html).toContain('beta_users_prev24h');
+    expect(html).toMatch(/statRow\('Pro V2 Beta users'[^\n]*beta_users_24h[^\n]*beta_users_prev24h/);
+  });
+
+  it('Email Unsubs delta is inverted (a rise is not green)', () => {
+    // trailing `true` arg flags higher-is-bad so an increase renders muted, not success
+    expect(html).toMatch(/statRow\('Email Unsubs'[^\n]*unsub_prev24h[^\n]*,\s*true\)/);
+  });
+
+  it('statRow renders green only when good, honoring the invert flag', () => {
+    expect(html).toMatch(/const good = invert \? delta < 0 : delta > 0;/);
+  });
+});

@@ -6922,7 +6922,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.15.55';
+const APP_VERSION = '20.16.16';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14051,13 +14051,15 @@ async function loadAdminStats() {
 
     // Per-user breakdowns via SECURITY DEFINER RPCs (bypass RLS)
     const d1ago = new Date(Date.now() - 24 * 3600000).toISOString();
-    const [profilesR, msrR, userStatsR, newWatchesR, newWearsR, newMsrR, newValR, newEnhR, lastActiveR] = await withTimeout(Promise.all([
+    const d2ago = new Date(Date.now() - 48 * 3600000).toISOString();
+    const [profilesR, msrR, userStatsR, newWatchesR, newWearsR, newMsrR, prevMsrR, newValR, newEnhR, lastActiveR] = await withTimeout(Promise.all([
       db.from('profiles').select('id, username, display_name, avatar_url, created_at').order('created_at', { ascending: false }).limit(500),
       db.rpc('admin_measurement_counts'),
       db.rpc('admin_user_stats'),
       db.from('watches').select('user_id').gte('created_at', d1ago),
       db.from('logs').select('user_id').neq('use_case', 'measurement').gte('created_at', d1ago),
       db.from('timegrapher_tick_logs').select('messages').like('messages', '%session_summary%').gte('created_at', d1ago),
+      db.from('timegrapher_tick_logs').select('messages').like('messages', '%session_summary%').gte('created_at', d2ago).lt('created_at', d1ago),
       db.from('valuation_events').select('user_id').gte('created_at', d1ago),
       db.from('identify_attempts').select('user_id').eq('mode', 'enhance').gte('created_at', d1ago),
       db.rpc('admin_last_active'),
@@ -14094,6 +14096,17 @@ async function loadAdminStats() {
     const advEntries = Object.entries(advSessionsByUser).filter(([uid]) => !INTERNAL_IDS.has(uid));
     const advUsers24h = advEntries.length;
     const advSessions24h = advEntries.reduce((s, [, c]) => s + c, 0);
+    // Prior 24h (24–48h ago) advanced sessions, parsed identically, for the D/D delta.
+    const advSessionsPrevByUser = {};
+    (prevMsrR.data || []).forEach(r => {
+      try {
+        const msg = typeof r.messages === 'string' ? JSON.parse(r.messages) : r.messages;
+        if (msg?.user_id && msg.advanced_used) advSessionsPrevByUser[msg.user_id] = (advSessionsPrevByUser[msg.user_id] || 0) + 1;
+      } catch {}
+    });
+    const advSessionsPrev24h = Object.entries(advSessionsPrevByUser)
+      .filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0);
+    const advDelta = advSessions24h - advSessionsPrev24h;
     const newValByUser = _countBy(newValR.data);
     const newEnhByUser = _countBy(newEnhR.data);
 
@@ -14149,9 +14162,14 @@ async function loadAdminStats() {
     const profileList = allProfiles.filter(p => !INTERNAL_IDS.has(p.id)).map(toProfileItem);
     const internalList = allProfiles.filter(p => INTERNAL_IDS.has(p.id)).map(toProfileItem);
 
-    const statRow = (label, value, delta) => {
-      const deltaHtml = delta != null ? `<span style="color:${delta > 0 ? 'var(--success)' : 'var(--muted)'};font-size:.68rem;font-weight:500;margin-left:.4rem;">${delta > 0 ? '+' : ''}${delta}</span>` : '';
-      return `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span style="color:var(--text);">${label}</span><span style="color:var(--gold);font-weight:600;">${value}${deltaHtml}</span></div>`;
+    const statRow = (label, value, delta, sub, invert) => {
+      // delta (number): green day-over-day change; when `invert`, a rise is bad so
+      // only a drop shows green. sub (string): muted context shown after the delta.
+      const good = invert ? delta < 0 : delta > 0;
+      const deltaHtml = typeof delta === 'number'
+        ? `<span style="color:${good ? 'var(--success)' : 'var(--muted)'};font-size:.68rem;font-weight:500;margin-left:.4rem;">${delta > 0 ? '+' : ''}${delta}</span>` : '';
+      const subHtml = sub ? `<span style="color:var(--muted);font-size:.68rem;font-weight:500;margin-left:.4rem;">${sub}</span>` : '';
+      return `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span style="color:var(--text);">${label}</span><span style="color:var(--gold);font-weight:600;">${value}${deltaHtml}${subHtml}</span></div>`;
     };
 
     window._adminTableSort = window._adminTableSort || {};
@@ -14237,9 +14255,9 @@ async function loadAdminStats() {
         ${statRow('Price Checks', extVal, dod.priceChecks)}
         ${statRow('Enhances', extEnh, dod.enhances)}
         ${statRow('Measurements', extMsr, dod.measurements)}
-        ${statRow('Advanced mode (24h)', advSessions24h, advUsers24h > 0 ? advUsers24h + ' user' + (advUsers24h === 1 ? '' : 's') : '')}
-        ${statRow('Pro V2 Beta users', Number(betaStats.beta_users) || 0, (Number(betaStats.beta_sessions) || 0) + ' sessions' + (Number(betaStats.beta_users_24h) ? ', ' + betaStats.beta_users_24h + ' user' + (Number(betaStats.beta_users_24h) === 1 ? '' : 's') + ' (24h)' : ''))}
-        ${statRow('Email Unsubs', Number(unsub.unsub_total) || 0, (Number(unsub.unsub_24h) || Number(unsub.unsub_prev24h)) ? (Number(unsub.unsub_24h) || 0) + ' (24h) vs ' + (Number(unsub.unsub_prev24h) || 0) + ' prior' : '')}
+        ${statRow('Advanced mode (24h)', advSessions24h, advDelta, advUsers24h > 0 ? advUsers24h + ' user' + (advUsers24h === 1 ? '' : 's') : '')}
+        ${statRow('Pro V2 Beta users', Number(betaStats.beta_users) || 0, (Number(betaStats.beta_users_24h) || 0) - (Number(betaStats.beta_users_prev24h) || 0), (Number(betaStats.beta_sessions) || 0) + ' sessions' + (Number(betaStats.beta_users_24h) ? ', ' + betaStats.beta_users_24h + ' user' + (Number(betaStats.beta_users_24h) === 1 ? '' : 's') + ' (24h)' : ''))}
+        ${statRow('Email Unsubs', Number(unsub.unsub_total) || 0, (Number(unsub.unsub_24h) || 0) - (Number(unsub.unsub_prev24h) || 0), (Number(unsub.unsub_24h) || Number(unsub.unsub_prev24h)) ? (Number(unsub.unsub_24h) || 0) + ' (24h) vs ' + (Number(unsub.unsub_prev24h) || 0) + ' prior' : '', true)}
         ${statRow('Wishlist Items', wishItems, dod.wish)}
         ${statRow('Clubs', clubs, dod.clubs)}
         ${statRow('Follows', follows, dod.follows)}
