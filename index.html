@@ -7183,7 +7183,10 @@ async function loadMyProfile() {
     // insert, never upsert: if the row exists after all (race with another tab
     // or the auth trigger), this must fail instead of overwriting it.
     const { data: created, error: createErr } = await db.from('profiles').insert(
-      { id: currentUser.id, username, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'public', collection_visibility: 'public', wishlist_visibility: 'public', ab_variant: abVariant }
+      // Content defaults to 'followers' (matching the app's fallback defaults, e.g.
+      // getDefaultVis / collection_visibility fallbacks) so new users aren't silently
+      // public. Profile stays public so accounts remain discoverable/followable.
+      { id: currentUser.id, username, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'followers', collection_visibility: 'followers', wishlist_visibility: 'followers', ab_variant: abVariant }
     ).select().single();
     if (createErr) {
       console.error('[WristLog] Profile create error:', createErr.message, createErr);
@@ -7196,7 +7199,7 @@ async function loadMyProfile() {
         // Retry with a guaranteed-unique username (e.g. username conflict)
         const fallback = 'user' + Math.random().toString(36).slice(2, 8);
         const { data: retry, error: retryErr } = await db.from('profiles').insert(
-          { id: currentUser.id, username: fallback, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'public', collection_visibility: 'public', wishlist_visibility: 'public', ab_variant: abVariant }
+          { id: currentUser.id, username: fallback, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'followers', collection_visibility: 'followers', wishlist_visibility: 'followers', ab_variant: abVariant }
         ).select().single();
         if (retryErr) console.error('[WristLog] Profile create retry error:', retryErr.message, retryErr);
         data = retry;
@@ -13001,7 +13004,9 @@ function selVisChip(cId, val) {
   document.querySelectorAll(`#${cId} .chip`).forEach(c => c.classList.toggle('selected', c.dataset.vis === val));
 }
 function getVisChip(cId) {
-  return document.querySelector(`#${cId} .chip.selected`)?.dataset.vis || 'public';
+  // Fall back to 'followers' (never 'public') when no chip is selected, so a
+  // missing/legacy selection can't silently flip a setting to public on save.
+  return document.querySelector(`#${cId} .chip.selected`)?.dataset.vis || 'followers';
 }
 async function savePrivacyField(field, value) {
   if (demoGuard()) return;
