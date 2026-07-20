@@ -5,7 +5,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { absolutizeImageUrl, extractMeta, validateUrl } from "./lib.ts";
+import { absolutizeImageUrl, extractMeta, fetchFollowingSafeRedirects, validateUrl } from "./lib.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -23,30 +23,6 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
-// Follow redirects one hop at a time, revalidating each Location against
-// validateUrl so an attacker-controlled redirect can't reach a private host.
-async function fetchFollowingSafeRedirects(startUrl: string, maxHops = 5): Promise<Response> {
-  let current = startUrl;
-  for (let hop = 0; hop <= maxHops; hop++) {
-    const res = await fetch(current, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; WRotateBot/1.0)",
-        "Accept": "text/html,application/xhtml+xml",
-      },
-      redirect: "manual",
-    });
-    if (res.status < 300 || res.status > 399) return res;
-    const loc = res.headers.get("location");
-    if (!loc) return res;
-    const next = new URL(loc, current).href;   // Location may be relative
-    const check = validateUrl(next);
-    if (!check.ok) {
-      throw new Error(`Blocked redirect to disallowed host: ${check.error}`);
-    }
-    current = next;
-  }
-  throw new Error("Too many redirects");
-}
 
 
 Deno.serve(async (req: Request) => {

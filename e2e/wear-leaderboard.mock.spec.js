@@ -216,3 +216,62 @@ test.describe('Wear leaderboard (mocked)', () => {
     expect(subs.some(s => s === '0 wears')).toBe(true);
   });
 });
+
+// High #5/#6 (2026-07-19 audit): By Day of Week, Year in Review and Monthly
+// Review kept reading the raw `logs` array, so a measurement share counted as a
+// wear. 4 of 5 measurement logs in production are the only log for that watch
+// that date, so each produced a genuine phantom wear.
+test.describe('Stats measurement rule, end to end (mocked)', () => {
+  // Two watches, each with exactly one log on the same day. w1's is a real wear,
+  // w3's is a measurement share — so every wear total must say 1, never 2.
+  const DAY = '2026-06-13';   // a Saturday
+  const LOGS_ONE_REAL_ONE_MEASUREMENT = [
+    { id: 'r1', watch_id: 'w1', date: DAY, use_case: 'work' },
+    { id: 'm1', watch_id: 'w3', date: DAY, use_case: 'measurement' },
+  ];
+
+  async function open(page) {
+    await mockSupabase(page, {
+      watches: WATCHES, wishlist: [], logs: LOGS_ONE_REAL_ONE_MEASUREMENT,
+    });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await navigateTo(page, 'stats');
+    await setPeriod(page, 'all');
+  }
+
+  test('the stat row counts one wear, not two', async ({ page }) => {
+    await open(page);
+    const total = await page.evaluate(() =>
+      document.querySelector('#stats-row .stat-card .stat-val')?.textContent.trim());
+    expect(total).toBe('1');
+  });
+
+  test('By Day of Week counts one wear on that Saturday', async ({ page }) => {
+    await open(page);
+    const dow = await page.evaluate(() =>
+      document.getElementById('dow-report')?.textContent.replace(/\s+/g, ' ') || '');
+    // Two logs land on the same weekday; only the real wear may be counted.
+    expect(dow).not.toMatch(/\b2\b/);
+  });
+
+  test('Year in Review counts one wear', async ({ page }) => {
+    await open(page);
+    const yir = await page.evaluate(() => {
+      renderYearInReview();
+      return document.getElementById('year-in-review')?.textContent.replace(/\s+/g, ' ') || '';
+    });
+    expect(yir).toMatch(/\b1\b/);
+    expect(yir).not.toMatch(/2 wears/i);
+  });
+
+  test('the measurement-only watch is never the most worn', async ({ page }) => {
+    await open(page);
+    const rows = await page.evaluate(() =>
+      [...document.querySelectorAll('#wear-leaderboard .wlb-row')]
+        .map(d => d.textContent.replace(/\s+/g, ' ').trim()));
+    expect(rows[0]).toContain('Submariner');       // the real wear
+    expect(rows[0]).not.toContain('Royal Oak');    // the measurement share
+  });
+});

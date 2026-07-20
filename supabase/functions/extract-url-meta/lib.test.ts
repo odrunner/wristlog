@@ -1,5 +1,6 @@
 import { assertEquals } from "jsr:@std/assert";
 import {
+  fetchFollowingSafeRedirects,
   absolutizeImageUrl,
   decodeEntities,
   extractMeta,
@@ -175,4 +176,78 @@ Deno.test("absolutizeImageUrl — absolute url passes through", () => {
 
 Deno.test("absolutizeImageUrl — empty image stays empty", () => {
   assertEquals(absolutizeImageUrl("", "https://example.com"), "");
+});
+
+// ── fetchFollowingSafeRedirects (2026-07-19 audit, Low S-9) ──
+// redirect:"follow" made the up-front validateUrl() check bypassable: a public
+// URL could 302 to a private host and fetch would follow it.
+
+function res(status: number, location?: string): Response {
+  const h = new Headers();
+  if (location) h.set("location", location);
+  return new Response(null, { status, headers: h });
+}
+
+// Returns a fetch stub that walks a scripted list of responses, recording URLs.
+function stubFetch(steps: Response[], seen: string[]) {
+  let i = 0;
+  return ((url: string | URL | Request) => {
+    seen.push(String(url));
+    return Promise.resolve(steps[i++] ?? res(200));
+  }) as unknown as typeof fetch;
+}
+
+Deno.test("fetchFollowingSafeRedirects blocks a redirect to a link-local address", async () => {
+  const seen: string[] = [];
+  const f = stubFetch([res(302, "http://169.254.169.254/latest/meta-data/")], seen);
+  let msg = "";
+  try {
+    await fetchFollowingSafeRedirects("https://example.com/a", 5, f);
+  } catch (e) { msg = (e as Error).message; }
+  assertEquals(msg.includes("Blocked redirect"), true);
+  // The private host must never actually be requested.
+  assertEquals(seen.length, 1);
+  assertEquals(seen[0], "https://example.com/a");
+});
+
+Deno.test("fetchFollowingSafeRedirects blocks a redirect to localhost", async () => {
+  const seen: string[] = [];
+  const f = stubFetch([res(301, "http://localhost:8000/admin")], seen);
+  let threw = false;
+  try { await fetchFollowingSafeRedirects("https://example.com/a", 5, f); }
+  catch { threw = true; }
+  assertEquals(threw, true);
+  assertEquals(seen.length, 1);
+});
+
+Deno.test("fetchFollowingSafeRedirects follows a safe public redirect", async () => {
+  const seen: string[] = [];
+  const f = stubFetch([res(302, "https://elsewhere.example/final"), res(200)], seen);
+  const out = await fetchFollowingSafeRedirects("https://example.com/a", 5, f);
+  assertEquals(out.status, 200);
+  assertEquals(seen, ["https://example.com/a", "https://elsewhere.example/final"]);
+});
+
+Deno.test("fetchFollowingSafeRedirects resolves a relative Location against the current URL", async () => {
+  const seen: string[] = [];
+  const f = stubFetch([res(302, "/moved"), res(200)], seen);
+  await fetchFollowingSafeRedirects("https://example.com/a/b", 5, f);
+  assertEquals(seen[1], "https://example.com/moved");
+});
+
+Deno.test("fetchFollowingSafeRedirects enforces the hop limit", async () => {
+  const seen: string[] = [];
+  // Endless public redirects — must stop rather than loop forever.
+  const loop = Array.from({ length: 10 }, (_, i) => res(302, `https://example.com/${i + 1}`));
+  let msg = "";
+  try { await fetchFollowingSafeRedirects("https://example.com/0", 3, stubFetch(loop, seen)); }
+  catch (e) { msg = (e as Error).message; }
+  assertEquals(msg, "Too many redirects");
+  assertEquals(seen.length, 4);      // initial + 3 hops
+});
+
+Deno.test("fetchFollowingSafeRedirects returns a 3xx with no Location rather than looping", async () => {
+  const seen: string[] = [];
+  const out = await fetchFollowingSafeRedirects("https://example.com/a", 5, stubFetch([res(304)], seen));
+  assertEquals(out.status, 304);
 });

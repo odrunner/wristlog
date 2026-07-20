@@ -88,3 +88,4 @@ Deno.test("pickFinalBrandName — falls back to requested when canonical missing
   assertEquals(pickFinalBrandName(undefined, "Anoma"), "Anoma");
   assertEquals(pickFinalBrandName("", "Anoma"), "Anoma");
 });
+

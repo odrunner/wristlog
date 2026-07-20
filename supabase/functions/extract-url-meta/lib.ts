@@ -93,3 +93,38 @@ export function absolutizeImageUrl(imageUrl: string, pageUrl: string): string {
   }
   return imageUrl;
 }
+
+/**
+ * Follow redirects one hop at a time, revalidating each Location against
+ * validateUrl. With redirect:"follow" the up-front private-host check was
+ * bypassable — a public URL could 302 to 169.254.169.254 and fetch would follow
+ * it (2026-07-19 audit, Low S-9).
+ *
+ * `fetchImpl` is injectable so the redirect chain is testable without network.
+ */
+export async function fetchFollowingSafeRedirects(
+  startUrl: string,
+  maxHops = 5,
+  fetchImpl: typeof fetch = fetch,
+): Promise<Response> {
+  let current = startUrl;
+  for (let hop = 0; hop <= maxHops; hop++) {
+    const res = await fetchImpl(current, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; WRotateBot/1.0)",
+        "Accept": "text/html,application/xhtml+xml",
+      },
+      redirect: "manual",
+    });
+    if (res.status < 300 || res.status > 399) return res;
+    const loc = res.headers.get("location");
+    if (!loc) return res;
+    const next = new URL(loc, current).href;   // Location may be relative
+    const check = validateUrl(next);
+    if (!check.ok) {
+      throw new Error(`Blocked redirect to disallowed host: ${check.error}`);
+    }
+    current = next;
+  }
+  throw new Error("Too many redirects");
+}
