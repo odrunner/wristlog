@@ -1,14 +1,14 @@
 // Supabase Edge Function: send-email
 // Triggered by Database Webhook on INSERT into notifications table.
-// Sends an email notification via Resend to the target user.
+// Sends an email notification via SES to the target user.
 //
 // Required Supabase secrets (set via `supabase secrets set`):
-//   RESEND_API_KEY             — API key from resend.com
 //   SUPABASE_URL               — auto-provided
 //   SUPABASE_SERVICE_ROLE_KEY  — auto-provided
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendSesEmail } from "../_shared/ses.ts";
 import {
   base64UrlEncode,
   buildEmailContent,
@@ -20,8 +20,6 @@ import {
   shouldFetchCommentBody,
   TYPE_TO_CATEGORY,
 } from "./lib.ts";
-
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const FROM_EMAIL = "WRotate <notifications@wrotate.com>";
 
 async function hmacSign(uid: string, cat: string, key: string): Promise<string> {
@@ -139,34 +137,25 @@ serve(async (req) => {
 
     const html = buildHtmlEmail(content.subject, content.body, unsubUrl);
 
-    // Send via Resend API
-    const resendRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
+    // Send via SES
+    const result = await sendSesEmail({
+      from: FROM_EMAIL,
+      to: [recipientEmail],
+      subject: content.subject,
+      html,
       headers: {
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
+        "List-Unsubscribe": `<${unsubUrl}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
       },
-      body: JSON.stringify({
-        from: FROM_EMAIL,
-        to: [recipientEmail],
-        subject: content.subject,
-        html,
-        headers: {
-          "List-Unsubscribe": `<${unsubUrl}>`,
-          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        },
-      }),
     });
 
-    const resendData = await resendRes.json();
-
-    if (!resendRes.ok) {
-      console.error("[send-email] Resend error:", resendData);
-      return new Response(JSON.stringify({ error: "resend failed", details: resendData }), { status: 500 });
+    if (!result.ok) {
+      console.error("[send-email] SES error:", result.error);
+      return new Response(JSON.stringify({ error: "email send failed", details: result.error }), { status: 500 });
     }
 
     console.log(`[send-email] Sent to ${recipientEmail} (${type}/${category})`);
-    return new Response(JSON.stringify({ sent: true, id: resendData.id }), { status: 200 });
+    return new Response(JSON.stringify({ sent: true, id: result.id }), { status: 200 });
 
   } catch (err) {
     console.error("[send-email] Error:", err);

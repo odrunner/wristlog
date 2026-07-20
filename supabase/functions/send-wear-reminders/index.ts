@@ -2,10 +2,11 @@
 // pg_cron-triggered hourly. At each user's local 5pm, nudges recently-active
 // loggers who haven't logged today — push (iOS) or throttled email (web).
 // Deploy with --no-verify-jwt (auth handled here). Secrets: CAMPAIGN_TRIGGER_SECRET,
-// APNS_KEY_P8/KEY_ID/TEAM_ID, RESEND_API_KEY, SUPABASE_URL/SERVICE_ROLE_KEY (auto).
+// APNS_KEY_P8/KEY_ID/TEAM_ID, SUPABASE_URL/SERVICE_ROLE_KEY (auto).
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendSesEmail } from "../_shared/ses.ts";
 import {
   apnsHost, buildHtmlEmail, buildReminderEmail, buildReminderPush,
   createAPNsJWT, hmacSign, sendPush, timingSafeEqual, unsubUrl,
@@ -13,7 +14,6 @@ import {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const FROM_EMAIL = "WRotate <hello@wrotate.com>";
 const APNS_KEY_P8 = Deno.env.get("APNS_KEY_P8") ?? "";
 const APNS_KEY_ID = Deno.env.get("APNS_KEY_ID") ?? "";
@@ -60,13 +60,19 @@ serve(async (req) => {
         } else {
           if (!t.email) continue;
           const sig = await hmacSign(t.user_id, "reminders", SERVICE_KEY);
-          const html = buildHtmlEmail(mail.subject, mail.body, unsubUrl(SUPABASE_URL, t.user_id, sig, "reminders"));
-          const res = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ from: FROM_EMAIL, to: t.email, subject: mail.subject, html }),
+          const url = unsubUrl(SUPABASE_URL, t.user_id, sig, "reminders");
+          const html = buildHtmlEmail(mail.subject, mail.body, url);
+          const result = await sendSesEmail({
+            from: FROM_EMAIL,
+            to: [t.email],
+            subject: mail.subject,
+            html,
+            headers: {
+              "List-Unsubscribe": `<${url}>`,
+              "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            },
           });
-          if (!res.ok) { failed++; continue; }
+          if (!result.ok) { failed++; continue; }
           emailed++;
         }
         await supabase.from("wear_reminder_sends")
