@@ -393,23 +393,25 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
 
     const { results } = await sendSesBatch(messages);
     const okIds: number[] = [];
-    const failedIds: number[] = [];
+    const failedRows: { id: number; error: string }[] = [];
     for (let idx = 0; idx < results.length; idx++) {
-      if (results[idx].ok) okIds.push(batch[idx].id);
+      const r = results[idx];
+      if (r.ok) okIds.push(batch[idx].id);
       else {
-        failedIds.push(batch[idx].id);
-        errors.push((results[idx] as { error: string }).error);
+        failedRows.push({ id: batch[idx].id, error: r.error });
+        errors.push(r.error);
       }
     }
     sent += okIds.length;
-    failed += failedIds.length;
+    failed += failedRows.length;
     if (okIds.length) {
       await supabase.from("broadcast_queue")
         .update({ status: "sent", sent_at: new Date().toISOString() }).in("id", okIds);
     }
-    if (failedIds.length) {
+    // Failures are rare; one update per failed row keeps each row's own SES error.
+    for (const fr of failedRows) {
       await supabase.from("broadcast_queue")
-        .update({ status: "failed", error: errors.slice(-1)[0]?.slice(0, 500) ?? "send failed" }).in("id", failedIds);
+        .update({ status: "failed", error: fr.error.slice(0, 500) }).in("id", [fr.id]);
     }
   }
   console.log(`[send-broadcast] Drain: sent ${sent}, failed ${failed}, used_today ${usedToday}, budget ${budget}`);
