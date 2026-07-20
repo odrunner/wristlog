@@ -1,12 +1,11 @@
 // Supabase Edge Function: run-campaign
 // Invoked daily (via cron or manual trigger) to send drip campaign emails.
 // For each active campaign, finds users who signed up `delay_days` ago
-// and haven't been sent yet. Sends via Resend batch API.
+// and haven't been sent yet. Sends via AWS SES batch API.
 // Campaigns with backfill_daily > 0 also drain existing members (older than
 // the signup window) at that rate per run, newest first, until exhausted.
 //
 // Required Supabase secrets:
-//   RESEND_API_KEY             — API key from resend.com
 //   SUPABASE_URL               — auto-provided
 //   SUPABASE_SERVICE_ROLE_KEY  — auto-provided
 
@@ -23,8 +22,9 @@ import {
   splitAlreadySent,
   unsubUrl,
 } from "./lib.ts";
+import { sendSesBatch } from "../_shared/ses.ts";
+import type { SesMessage } from "../_shared/ses.ts";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const FROM_EMAIL = "WRotate <hello@wrotate.com>";
@@ -89,8 +89,8 @@ async function resolveRecipients(supabase: Db, users: ProfileRow[]): Promise<Rec
   return recipients;
 }
 
-// Send personalized campaign emails via the Resend batch API, recording each
-// successful batch in email_campaign_sends immediately.
+// Send personalized campaign emails via the SES batch API, recording each
+// successful recipient in email_campaign_sends immediately.
 async function deliver(
   supabase: Db,
   campaign: Campaign,
@@ -102,10 +102,9 @@ async function deliver(
 
   for (let i = 0; i < toSend.length; i += batchSize) {
     const batch = toSend.slice(i, i + batchSize);
-    const batchPayload = await Promise.all(batch.map(async (r) => {
+    const messages: SesMessage[] = await Promise.all(batch.map(async (r) => {
       const sig = await hmacSign(r.uid, "updates", SUPABASE_SERVICE_ROLE_KEY);
       const url = unsubUrl(SUPABASE_URL, r.uid, sig, "updates");
-      // Replace {{name}} placeholder with display name or "there"
       const personalizedBody = personalizeBody(campaign.body_html, r.displayName);
       const html = buildHtmlEmail(campaign.subject, personalizedBody, url);
       return {
@@ -120,42 +119,26 @@ async function deliver(
       };
     }));
 
-    try {
-      const res = await fetch("https://api.resend.com/emails/batch", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${RESEND_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(batchPayload),
-      });
-      if (res.ok) {
-        sent += batch.length;
-        // Record this batch's sends immediately: recording all batches at the
-        // end (recipients.slice(0, sent)) misattributed sends when an earlier
-        // batch failed — the failed users were marked sent (never retried) and
-        // the sent users weren't (re-emailed next run).
-        const { error: trackErr } = await supabase
-          .from("email_campaign_sends")
-          .upsert(
-            batch.map((r) => ({ campaign_id: campaign.id, user_id: r.uid })),
-            { onConflict: "campaign_id,user_id", ignoreDuplicates: true },
-          );
-        if (trackErr) {
-          console.error(`[run-campaign] Send-tracking upsert error:`, trackErr);
-        }
-      } else {
-        const errData = await res.json();
-        console.error(`[run-campaign] Resend batch error:`, errData);
-        failed += batch.length;
-      }
-    } catch (err) {
-      console.error(`[run-campaign] Resend exception:`, err);
-      failed += batch.length;
+    const { results } = await sendSesBatch(messages);
+    // Track ONLY the recipients whose individual send succeeded — per-recipient
+    // results are finer than the old all-or-nothing Resend batch semantics.
+    const okRecipients = batch.filter((_, idx) => results[idx].ok);
+    sent += okRecipients.length;
+    failed += batch.length - okRecipients.length;
+    for (let idx = 0; idx < results.length; idx++) {
+      const r = results[idx];
+      if (!r.ok) console.error(`[run-campaign] SES send failed for ${batch[idx].uid}:`, r.error);
     }
-
-    if (i + batchSize < toSend.length) {
-      await new Promise((resolve) => setTimeout(resolve, 200));
+    if (okRecipients.length) {
+      const { error: trackErr } = await supabase
+        .from("email_campaign_sends")
+        .upsert(
+          okRecipients.map((r) => ({ campaign_id: campaign.id, user_id: r.uid })),
+          { onConflict: "campaign_id,user_id", ignoreDuplicates: true },
+        );
+      if (trackErr) {
+        console.error(`[run-campaign] Send-tracking upsert error:`, trackErr);
+      }
     }
   }
 

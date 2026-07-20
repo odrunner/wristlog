@@ -5,7 +5,6 @@
 // Otherwise, sends to all users who have not disabled marketing emails.
 //
 // Required Supabase secrets:
-//   RESEND_API_KEY             — API key from resend.com
 //   SUPABASE_URL               — auto-provided
 //   SUPABASE_SERVICE_ROLE_KEY  — auto-provided
 
@@ -33,8 +32,9 @@ import {
   utcDayStart,
   validateBroadcastInput,
 } from "./lib.ts";
+import { sendSesBatch, sendSesEmail } from "../_shared/ses.ts";
+import type { SesMessage } from "../_shared/ses.ts";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ADMIN_USER_ID = "d70b1a85-4f31-4431-b3b7-db76543daaf5";
 const FROM_EMAIL = "WRotate <hello@wrotate.com>";
 
@@ -285,7 +285,7 @@ serve(async (req) => {
       return jsonResponse({ queued, skipped_already_queued: filteredRecipients.length - toQueue.length, total_eligible: filteredRecipients.length });
     }
 
-    // Send via Resend batch API (up to 100 per request)
+    // Send via SES in chunks of 100 (tracking upserts stay ≤100 rows each)
     let sent = 0;
     let failed = 0;
     const errors: string[] = [];
@@ -293,7 +293,7 @@ serve(async (req) => {
 
     for (let i = 0; i < filteredRecipients.length; i += batchSize) {
       const batch = filteredRecipients.slice(i, i + batchSize);
-      const batchPayload = await Promise.all(batch.map(async (r) => {
+      const messages: SesMessage[] = await Promise.all(batch.map(async (r) => {
         const sig = await hmacSign(r.uid, "updates", supabaseServiceKey);
         const url = unsubUrl(supabaseUrl, r.uid, sig, "updates");
         return {
@@ -308,44 +308,25 @@ serve(async (req) => {
         };
       }));
 
-      try {
-        const res = await fetch("https://api.resend.com/emails/batch", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${RESEND_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(batchPayload),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          failed += batch.length;
-          errors.push(`Batch error: ${JSON.stringify(data)}`);
-        } else {
-          sent += batch.length;
-          // Cohort blast: record sends so re-clicking won't double-send
-          if (cohort && campaign_id) {
-            const now = new Date().toISOString();
-            const rows = batch.map(r => ({ campaign_id, user_id: r.uid, sent_at: now }));
-            // upsert (not insert): a single duplicate (campaign_id,user_id) must not
-            // fail the whole 100-row write, which would leave that cohort un-tracked
-            // and re-emailed next run. Mirrors run-campaign's send-tracking.
-            const { error: trackErr } = await supabase
-              .from("email_campaign_sends")
-              .upsert(rows, { onConflict: "campaign_id,user_id", ignoreDuplicates: true });
-            if (trackErr) {
-              errors.push(`Tracking upsert error: ${trackErr.message}`);
-            }
-          }
-        }
-      } catch (err) {
-        failed += batch.length;
-        errors.push(`Batch exception: ${String(err)}`);
+      const { results } = await sendSesBatch(messages);
+      const okRecipients = batch.filter((_, idx) => results[idx].ok);
+      sent += okRecipients.length;
+      failed += batch.length - okRecipients.length;
+      for (let idx = 0; idx < results.length; idx++) {
+        const r = results[idx];
+        if (!r.ok) errors.push(`${batch[idx].email}: ${r.error}`);
       }
 
-      // Small delay between batches
-      if (i + batchSize < filteredRecipients.length) {
-        await new Promise(resolve => setTimeout(resolve, 200));
+      // Cohort blast: record successful sends so re-clicking won't double-send
+      if (cohort && campaign_id && okRecipients.length) {
+        const now = new Date().toISOString();
+        const rows = okRecipients.map(r => ({ campaign_id, user_id: r.uid, sent_at: now }));
+        const { error: trackErr } = await supabase
+          .from("email_campaign_sends")
+          .upsert(rows, { onConflict: "campaign_id,user_id", ignoreDuplicates: true });
+        if (trackErr) {
+          errors.push(`Tracking upsert error: ${trackErr.message}`);
+        }
       }
     }
 
@@ -359,7 +340,7 @@ serve(async (req) => {
 });
 
 // Nightly drain: send queued broadcast rows with whatever daily quota remains.
-// used_today comes from email_events (the Resend webhook logs every send from every
+// used_today comes from email_events (the SES webhook logs every send from every
 // function), so transactional + campaign email automatically takes priority.
 async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl: string, serviceKey: string) {
   const dayStart = utcDayStart(Date.now());
@@ -395,7 +376,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
   const batchSize = 100;
   for (let i = 0; i < rows.length; i += batchSize) {
     const batch = rows.slice(i, i + batchSize);
-    const payload = await Promise.all(batch.map(async (r) => {
+    const messages: SesMessage[] = await Promise.all(batch.map(async (r) => {
       const sig = await hmacSign(r.uid, "updates", serviceKey);
       const url = unsubUrl(supabaseUrl, r.uid, sig, "updates");
       return {
@@ -409,54 +390,36 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
         },
       };
     }));
-    const ids = batch.map(r => r.id);
-    try {
-      const res = await fetch("https://api.resend.com/emails/batch", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        failed += batch.length;
-        errors.push(`Batch error: ${JSON.stringify(data)}`);
-        await supabase.from("broadcast_queue")
-          .update({ status: "failed", error: JSON.stringify(data).slice(0, 500) }).in("id", ids);
-      } else {
-        sent += batch.length;
-        await supabase.from("broadcast_queue")
-          .update({ status: "sent", sent_at: new Date().toISOString() }).in("id", ids);
+
+    const { results } = await sendSesBatch(messages);
+    const okIds: number[] = [];
+    const failedIds: number[] = [];
+    for (let idx = 0; idx < results.length; idx++) {
+      if (results[idx].ok) okIds.push(batch[idx].id);
+      else {
+        failedIds.push(batch[idx].id);
+        errors.push((results[idx] as { error: string }).error);
       }
-    } catch (err) {
-      failed += batch.length;
-      errors.push(`Batch exception: ${String(err)}`);
-      await supabase.from("broadcast_queue")
-        .update({ status: "failed", error: String(err).slice(0, 500) }).in("id", ids);
     }
-    if (i + batchSize < rows.length) await new Promise(r => setTimeout(r, 200));
+    sent += okIds.length;
+    failed += failedIds.length;
+    if (okIds.length) {
+      await supabase.from("broadcast_queue")
+        .update({ status: "sent", sent_at: new Date().toISOString() }).in("id", okIds);
+    }
+    if (failedIds.length) {
+      await supabase.from("broadcast_queue")
+        .update({ status: "failed", error: errors.slice(-1)[0]?.slice(0, 500) ?? "send failed" }).in("id", failedIds);
+    }
   }
   console.log(`[send-broadcast] Drain: sent ${sent}, failed ${failed}, used_today ${usedToday}, budget ${budget}`);
   return jsonResponse({ drained: sent, failed, used_today: usedToday, budget, errors: errors.slice(0, 3) });
 }
 
 async function sendEmail(to: string, subject: string, html: string) {
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: FROM_EMAIL,
-      to: [to],
-      subject,
-      html,
-    }),
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(`Resend error: ${JSON.stringify(data)}`);
+  const result = await sendSesEmail({ from: FROM_EMAIL, to: [to], subject, html });
+  if (!result.ok) {
+    throw new Error(`SES error: ${result.error}`);
   }
-  return data;
+  return { id: result.id };
 }
