@@ -197,27 +197,26 @@ serve(async (req) => {
       eligibleProfiles = filterNeverMeasured(eligibleProfiles, (measuredRows || []).map(r => r.user_id));
     }
 
-    // Resolve emails + user IDs from auth.users in parallel batches of 50
-    // For cohort blasts, also require dormant (last_sign_in_at < NOW - 21d)
+    // Resolve emails via paginated listUsers (1-2 requests) instead of one
+    // GoTrue admin call per profile.
+    const usersById = new Map<string, { email?: string; last_sign_in_at?: string }>();
+    for (let page = 1; ; page++) {
+      const { data: pageData, error: listErr } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+      if (listErr) {
+        return jsonResponse({ error: "Failed to list users", details: listErr.message }, 500);
+      }
+      const users = pageData?.users ?? [];
+      for (const u of users) usersById.set(u.id, { email: u.email, last_sign_in_at: u.last_sign_in_at });
+      if (users.length < 1000) break;
+    }
+
     const DORMANT_CUTOFF_MS = dormantCutoffMs(Date.now());
     const recipients: { uid: string; email: string }[] = [];
-    const resolveSize = 50;
-    for (let i = 0; i < eligibleProfiles.length; i += resolveSize) {
-      const batch = eligibleProfiles.slice(i, i + resolveSize);
-      const results = await Promise.allSettled(
-        batch.map(async (profile) => {
-          const { data: authUser } = await supabase.auth.admin.getUserById(profile.id);
-          const user = authUser?.user;
-          if (!user?.email) return null;
-          if (cohort) {
-            if (!isDormant(user.last_sign_in_at, DORMANT_CUTOFF_MS)) return null; // active user, skip
-          }
-          return { uid: profile.id, email: user.email };
-        })
-      );
-      for (const r of results) {
-        if (r.status === "fulfilled" && r.value) recipients.push(r.value);
-      }
+    for (const profile of eligibleProfiles) {
+      const user = usersById.get(profile.id);
+      if (!user?.email) continue;
+      if (cohort && !isDormant(user.last_sign_in_at, DORMANT_CUTOFF_MS)) continue; // active user, skip
+      recipients.push({ uid: profile.id, email: user.email });
     }
 
     // Optional limit (e.g. test slice of 20 before sending to whole cohort)
