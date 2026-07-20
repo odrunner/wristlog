@@ -6,11 +6,11 @@ Two independent cost surfaces, neither of which the other can see:
   1. Anthropic API org (platform.claude.com) — what the WRotate edge functions
      and the other workspaces actually bill. Pulled from the Admin cost_report
      endpoint. NOTE: the API returns amounts in CENTS.
-  2. Claude Code (this Mac) — billed against the Max subscription, so it never
-     appears in the org report. Reconstructed from the local session transcripts
-     under ~/.claude/projects/*/*.jsonl at published per-token rates, which is
-     what the same usage *would* cost on the API. That is the number that drives
-     Max extra-usage charges on heavy days.
+  2. Claude Code (this Mac) — covered by the flat Max subscription, so it is NOT
+     a bill and never appears in the org report. Reconstructed from the local
+     session transcripts under ~/.claude/projects/*/*.jsonl at published
+     per-token rates: "what this usage would have cost on the API." Treat it as
+     a consumption signal for spotting heavy sessions, not as money owed.
 
 The script itself makes no LLM calls — it is one HTTPS request plus local file
 reads, so running it daily is free.
@@ -230,8 +230,8 @@ def main():
     cc_14 = sum(sum(v.values()) for v in cc.values())
 
     print(f"=== AI cost report for {yday} ===")
-    print(f"API org:     ${org_y:.2f}")
-    print(f"Claude Code: ${cc_y:.2f} (API-equivalent; billed via Max plan)")
+    print(f"API org:     ${org_y:.2f}   <- actual money billed")
+    print(f"Claude Code: ${cc_y:.2f}   <- NOT billed (covered by flat Max plan); usage signal only")
     print(f"14-day totals: api ${org_14:.2f} | claude-code ${cc_14:.2f}")
 
     rows = []
@@ -262,8 +262,10 @@ def main():
     html = f"""
     <h2>AI cost report — {yday}</h2>
     {alert}
-    <p><b>API org:</b> ${org_y:.2f} &nbsp;·&nbsp; <b>Claude Code:</b> ${cc_y:.2f}
-    <span style="color:#666;">(API-equivalent; billed against the Max plan)</span></p>
+    <p><b>API org (actual bill):</b> ${org_y:.2f}</p>
+    <p><b>Claude Code:</b> ${cc_y:.2f}
+    <span style="color:#666;">— <b>not a charge.</b> Covered by the flat Max subscription;
+    this is what the same usage would have cost on the API, shown to spot heavy sessions.</span></p>
     <p style="color:#666;">Last 14 days: API ${org_14:.2f} · Claude Code ${cc_14:.2f}</p>
     <h3>Claude Code by model ({yday})</h3><ul>{top_html}</ul>
     <h3>Daily</h3>
