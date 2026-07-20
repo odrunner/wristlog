@@ -2273,6 +2273,24 @@ export function msrCardResultText({ rate, beatError, bph }) {
   return out;
 }
 
+// True when the Pro V2 (tg) tick/tock beat scope should be added to the share
+// card: the run used the tg engine AND we captured a usable folded waveform.
+// Mirrors the live gate at the native message handler (algo==='tg' && wave>8).
+export function msrCardShowScope({ algo, wave }) {
+  return algo === 'tg' && Array.isArray(wave) && wave.length > 8;
+}
+
+// Formats the amplitude readout for the Pro V2 share card, with the same color
+// thresholds as the live readout (≥250 green, ≥200 yellow, else red). Returns
+// null when there's no valid amplitude so the caller draws nothing.
+export function msrCardAmpText(amp) {
+  const a = Number(amp);
+  if (amp == null || amp === '' || !isFinite(a)) return null;
+  const deg = Math.round(a);
+  const color = a >= 250 ? '#4ade80' : (a >= 200 ? '#eab308' : '#ef4444');
+  return { text: 'Amplitude ' + deg + '°', color };
+}
+
 // ══════════════════════════════════════════
 //  POST LOCATION (pure helpers) — mirrors index.html
 // ══════════════════════════════════════════

@@ -6,6 +6,8 @@ import {
   MSR_CARD_MIN_DOTS,
   msrCardHasEnoughData,
   msrCardResultText,
+  msrCardShowScope,
+  msrCardAmpText,
 } from '../wrotate_test.js';
 
 // Spec: 2026-05-31-measurement-share-graph-card-design.md
@@ -74,6 +76,54 @@ describe('msrCardResultText', () => {
   });
 });
 
+describe('msrCardShowScope (Pro V2 tick/tock panel gate)', () => {
+  const wave = (n) => Array.from({ length: n }, (_, i) => i);
+
+  it('is true only for the tg engine with a usable waveform', () => {
+    expect(msrCardShowScope({ algo: 'tg', wave: wave(20) })).toBe(true);
+  });
+
+  it('is false on the original engine even with a waveform', () => {
+    expect(msrCardShowScope({ algo: 'original', wave: wave(20) })).toBe(false);
+  });
+
+  it('is false when the waveform is too short (matches live >8 gate)', () => {
+    expect(msrCardShowScope({ algo: 'tg', wave: wave(8) })).toBe(false);
+    expect(msrCardShowScope({ algo: 'tg', wave: wave(9) })).toBe(true);
+  });
+
+  it('handles missing / non-array waveform safely', () => {
+    expect(msrCardShowScope({ algo: 'tg', wave: null })).toBe(false);
+    expect(msrCardShowScope({ algo: 'tg' })).toBe(false);
+    expect(msrCardShowScope({ algo: 'tg', wave: 'nope' })).toBe(false);
+  });
+});
+
+describe('msrCardAmpText (Pro V2 amplitude readout)', () => {
+  it('formats a rounded amplitude with a degree sign', () => {
+    expect(msrCardAmpText(278.4).text).toBe('Amplitude 278°');
+  });
+
+  it('colors healthy amplitude green (≥250)', () => {
+    expect(msrCardAmpText(250).color).toBe('#4ade80');
+  });
+
+  it('colors moderate amplitude yellow (≥200, <250)', () => {
+    expect(msrCardAmpText(210).color).toBe('#eab308');
+  });
+
+  it('colors low amplitude red (<200)', () => {
+    expect(msrCardAmpText(180).color).toBe('#ef4444');
+  });
+
+  it('returns null for missing / non-numeric amplitude', () => {
+    expect(msrCardAmpText(null)).toBe(null);
+    expect(msrCardAmpText(undefined)).toBe(null);
+    expect(msrCardAmpText('')).toBe(null);
+    expect(msrCardAmpText(NaN)).toBe(null);
+  });
+});
+
 // Guard rails on the index.html wiring — keep the share flow intact.
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(join(__dirname, '..', 'index.html'), 'utf8');
@@ -98,6 +148,24 @@ describe('Measurement share card — index.html wiring', () => {
     // Both the live plot and the card renderer call the shared core.
     const coreCalls = html.match(/drawMsrScatterCore\(/g) || [];
     expect(coreCalls.length).toBeGreaterThanOrEqual(3); // definition + 2 callers
+  });
+
+  it('shares the beat-scope draw core between the live scope and the card', () => {
+    expect(html).toContain('function drawBeatScopeCore(');
+    // Live scope wrapper + card both draw through the shared core.
+    const coreCalls = html.match(/drawBeatScopeCore\(/g) || [];
+    expect(coreCalls.length).toBeGreaterThanOrEqual(3); // definition + 2 callers
+  });
+
+  it('captures the last beat waveform for the card and clears it on reset', () => {
+    expect(html).toContain('_msrLastWave = data.beatWaveform.slice()');
+    expect(html).toContain('_msrLastWave = null;'); // reset in _resetMsrState
+  });
+
+  it('passes the Pro V2 waveform, amplitude and algo into the card only for tg', () => {
+    expect(html).toContain("_tgAlgo() === 'tg' && Array.isArray(_msrLastWave)");
+    expect(html).toContain('amplitude: _msrLastAmp,');
+    expect(html).toContain('algo: _tgAlgo(),');
   });
 });
 
@@ -128,7 +196,10 @@ describe('Share button at completion — wiring', () => {
 describe('Measurement share — compact card + not-a-wear', () => {
   it('card height is derived from content (compact), not a fixed 1350 canvas', () => {
     // The renderer computes H from the layout instead of hard-coding 1350.
-    expect(html).toMatch(/const H = \(sub \? subY : rateY\) \+ padBottom/);
+    // baseBottom is the result-line bottom (sub ? subY : rateY); the Pro V2
+    // scope strip extends contentBottom below it, and H follows the content.
+    expect(html).toMatch(/const baseBottom = sub \? subY : rateY/);
+    expect(html).toMatch(/const H = contentBottom \+ padBottom/);
     expect(html).not.toMatch(/const W = 1080, H = 1350/);
   });
 
