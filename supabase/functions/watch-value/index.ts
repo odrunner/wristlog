@@ -12,7 +12,6 @@ import {
   buildWatchDesc,
   extractJson,
   isCacheFresh,
-  mergePriceHistory,
   utcDayStartIso,
 } from "./lib.ts";
 
@@ -84,9 +83,9 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Rate limit: 20 lookups per user per day. Atomic check-and-increment via RPC —
+    // Rate limit: 40 lookups per user per day. Atomic check-and-increment via RPC —
     // the prior read-then-update let concurrent requests slip past the cap.
-    const DAILY_LIMIT = 20;
+    const DAILY_LIMIT = 40;
     const todayStartIso = utcDayStartIso(Date.now());
     const rlKey = `watch-value:${user.id}`;
     const { data: rlCount } = await supabase.rpc("bump_rate_limit", {
@@ -208,42 +207,15 @@ Rules:
 
     // Add metadata
     parsed.query = { brand, model, reference, condition, year };
-    const today = new Date().toISOString().slice(0, 10);
     parsed.looked_up_at = new Date().toISOString();
 
-    const mid = parsed.estimated_value_usd?.mid;
     console.log(`[watch-value] ${watchDesc} → $${parsed.estimated_value_usd?.low}-${parsed.estimated_value_usd?.high} (${parsed.confidence}) engine=${parsed._engine}`);
 
-    // Save to DB if watch_id provided — verify caller owns the watch
-    if (watch_id && mid) {
-      const { data: watch } = await supabase
-        .from("watches")
-        .select("market_price, market_price_date, price_history")
-        .eq("id", watch_id)
-        .eq("user_id", user.id)
-        .single();
-
-      if (watch) {
-        const history = mergePriceHistory(watch, mid, today);
-
-        const { error } = await supabase
-          .from("watches")
-          .update({
-            market_price: mid,
-            market_price_date: today,
-            market_price_src: "WRotate",
-            price_history: history,
-          })
-          .eq("id", watch_id)
-          .eq("user_id", user.id);
-
-        if (error) {
-          console.error("[watch-value] DB update failed:", error.message);
-        } else {
-          console.log(`[watch-value] Saved $${mid} for watch ${watch_id}`);
-        }
-      }
-    }
+    // NOTE: The looked-up price is intentionally NOT written to the collection here.
+    // Prices must never be applied without explicit user approval — the client
+    // surfaces the estimate as a "pending" value and only persists it when the user
+    // taps Apply/Save (see applyPendingPrice / saveValueResult in index.html).
+    // Auto-saving here would silently overwrite the user's stored market price.
 
     return new Response(JSON.stringify(parsed), {
       status: 200,
