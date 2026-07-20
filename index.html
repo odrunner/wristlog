@@ -6920,7 +6920,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.21.32';
+const APP_VERSION = '19.22.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16883,7 +16883,7 @@ async function openUpdatePrices() {
     .eq('function_name', 'watch-value:' + currentUser.id)
     .eq('user_id', currentUser.id)
     .single();
-  if (rl && rl.window_start >= todayStart.toISOString() && rl.request_count >= 20) {
+  if (rl && rl.window_start >= todayStart.toISOString() && rl.request_count >= 40) {
     status.textContent = 'You already updated prices today. Try again tomorrow.';
     return;
   }
@@ -16941,12 +16941,19 @@ async function openUpdatePrices() {
       return r.json();
     })
     .then(data => {
-      if (_uprRateLimited) {
-        status.textContent = 'Daily limit reached. Try again tomorrow.';
-        actions.style.display = 'none';
+      done++;
+      // A 429 only affects the watches it hit — successful lookups still render
+      // and can be applied. Mark this row and keep going.
+      if (data.error === 'daily_limit') {
+        const limCell = document.getElementById('upr-val-' + w.id);
+        if (limCell) limCell.innerHTML = '<span style="color:var(--danger);font-size:.7rem;">Daily limit</span>';
+        if (done === eligible.length) {
+          status.textContent = `Done — ${Object.keys(_priceUpdateResults).length} prices found (daily limit hit for the rest).`;
+          if (Object.keys(_priceUpdateResults).length > 0) actions.style.display = 'flex';
+          _uprLogComplete();
+        }
         return;
       }
-      done++;
       status.innerHTML = done < eligible.length
         ? `<span style="display:inline-flex;align-items:center;gap:.4rem;"><span class="spinner" style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Found ${done} of ${eligible.length}...</span>`
         : `Done — checking results...`;
