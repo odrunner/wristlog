@@ -50,6 +50,10 @@ FEEDBACK_KEY = "apikey_013qDidFRfviMvZEPNhGZwsz"  # wrotate-feedback → auto-fi
 
 SPIKE_USD = 8.0        # flag a day costing more than this
 DAYS = 14
+# watch-value moved from Claude+web-search to Gemini on this date. Before it,
+# web searches are normal (Claude was primary); on/after it, any search means
+# the Claude fallback fired. The alert must not fire for pre-switch days.
+GEMINI_SWITCH_DATE = "2026-07-20"
 
 
 def curl_json(url, headers=None, method="GET", body=None, retries=4):
@@ -224,7 +228,10 @@ def main():
     print(f"Billed yesterday: ${y_total:.2f}   ({DAYS}-day total ${total_14:.2f})")
     for k, v in sorted(y_split.items(), key=lambda x: -x[1]):
         print(f"   {k}: ${v:.2f}")
-    print(f"watch-value web searches: {y_searches}  (expected 0 since the Gemini switch)")
+    if yday >= GEMINI_SWITCH_DATE:
+        print(f"watch-value web searches: {y_searches}  (expected 0 post-Gemini; >0 = Claude fallback fired)")
+    else:
+        print(f"watch-value web searches: {y_searches}  (normal — pre-{GEMINI_SWITCH_DATE}, Claude was primary)")
 
     rows = ""
     for day in sorted(daily):
@@ -239,8 +246,9 @@ def main():
 
     split_html = "".join(f"<li>{k}: <b>${v:.2f}</b></li>" for k, v in sorted(y_split.items(), key=lambda x: -x[1])) or "<li>no spend</li>"
 
+    post_switch = yday >= GEMINI_SWITCH_DATE
     alerts = ""
-    if y_searches > 0:
+    if y_searches > 0 and post_switch:
         alerts += (f"<p style='background:#f8d7da;border-left:4px solid #c00;padding:10px;'>"
                    f"<b>watch-value fell back to Claude ({y_searches} web searches).</b> "
                    f"Gemini should serve every lookup — check the edge function logs for "
@@ -256,7 +264,9 @@ def main():
     &nbsp;<span style="color:#666;font-size:14px;">· {DAYS}-day total ${total_14:.2f}</span></p>
     <h3>What drove it</h3><ul>{split_html}</ul>
     <p style="color:#666;font-size:13px;">watch-value web searches: <b>{y_searches}</b>
-    (expected 0 — Gemini serves valuations; any searches mean the Claude fallback fired).</p>
+    {"(expected 0 — Gemini serves valuations; any searches mean the Claude fallback fired)."
+     if post_switch else
+     f"(normal — this day predates the {GEMINI_SWITCH_DATE} switch to Gemini, when Claude was the primary engine)."}</p>
     <h3>Last {DAYS} days</h3>
     <table style="border-collapse:collapse;font-family:monospace;font-size:13px;">
       <tr style="border-bottom:1px solid #ccc;">
