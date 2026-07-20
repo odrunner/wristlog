@@ -212,7 +212,7 @@ Rules:
     parsed.looked_up_at = new Date().toISOString();
 
     const mid = parsed.estimated_value_usd?.mid;
-    console.log(`[watch-value] ${watchDesc} → $${parsed.estimated_value_usd?.low}-${parsed.estimated_value_usd?.high} (${parsed.confidence})`);
+    console.log(`[watch-value] ${watchDesc} → $${parsed.estimated_value_usd?.low}-${parsed.estimated_value_usd?.high} (${parsed.confidence}) engine=${parsed._engine}`);
 
     // Save to DB if watch_id provided — verify caller owns the watch
     if (watch_id && mid) {
