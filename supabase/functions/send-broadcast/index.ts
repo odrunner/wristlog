@@ -344,6 +344,13 @@ serve(async (req) => {
 // used_today comes from email_events (the SES webhook logs every send from every
 // function), so transactional + campaign email automatically takes priority.
 async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl: string, serviceKey: string, quotaOnly = false) {
+  // Reap claims from crashed drains: anything 'sending' for >15 min goes back
+  // to pending. A healthy drain finishes a wave in well under a minute.
+  await supabase.from("broadcast_queue")
+    .update({ status: "pending", claimed_at: null })
+    .eq("status", "sending")
+    .lt("claimed_at", new Date(Date.now() - 15 * 60 * 1000).toISOString());
+
   const dayStart = utcDayStart(Date.now());
   const { count: usedToday, error: cntErr } = await supabase
     .from("email_events")
@@ -392,11 +399,28 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
     return jsonResponse({ drained: 0, used_today: usedToday, budget, queue_empty: true });
   }
 
+  // Claim: move the selected rows to 'sending' first, and work only on the
+  // ones the claim actually won — protects against a concurrent drain
+  // claiming the same rows between this read and the claim update.
+  const ids = rows.map((r) => r.id);
+  const { data: claimed, error: claimErr } = await supabase
+    .from("broadcast_queue")
+    .update({ status: "sending", claimed_at: new Date().toISOString() })
+    .in("id", ids)
+    .eq("status", "pending")
+    .select("id, uid, email, subject, html");
+  if (claimErr) {
+    return jsonResponse({ error: "Queue claim failed", details: claimErr.message }, 500);
+  }
+  if (!claimed || claimed.length === 0) {
+    return jsonResponse({ drained: 0, used_today: usedToday, budget, queue_empty: true });
+  }
+
   let sent = 0, failed = 0, deferred = 0;
   const errors: string[] = [];
   const batchSize = 100;
-  for (let i = 0; i < rows.length; i += batchSize) {
-    const batch = rows.slice(i, i + batchSize);
+  for (let i = 0; i < claimed.length; i += batchSize) {
+    const batch = claimed.slice(i, i + batchSize);
     const messages: SesMessage[] = await Promise.all(batch.map(async (r) => {
       const sig = await hmacSign(r.uid, "updates", serviceKey);
       const url = unsubUrl(supabaseUrl, r.uid, sig, "updates");
@@ -435,17 +459,18 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
     deferred += deferredRows.length;
     if (okIds.length) {
       await supabase.from("broadcast_queue")
-        .update({ status: "sent", sent_at: new Date().toISOString() }).in("id", okIds);
+        .update({ status: "sent", sent_at: new Date().toISOString(), claimed_at: null }).in("id", okIds);
     }
     // Failures are rare; one update per row keeps each row's own SES error.
     for (const fr of failedRows) {
       await supabase.from("broadcast_queue")
-        .update({ status: "failed", error: fr.error.slice(0, 500) }).in("id", [fr.id]);
+        .update({ status: "failed", error: fr.error.slice(0, 500), claimed_at: null }).in("id", [fr.id]);
     }
-    // Left pending on purpose — record why, without changing status.
+    // Rows are 'sending' now (claimed above), so a retryable failure MUST be
+    // reset to pending — otherwise it strands in 'sending' until the reaper.
     for (const dr of deferredRows) {
       await supabase.from("broadcast_queue")
-        .update({ error: `retrying: ${dr.error.slice(0, 480)}` }).in("id", [dr.id]);
+        .update({ status: "pending", claimed_at: null, error: `retrying: ${dr.error.slice(0, 480)}` }).in("id", [dr.id]);
     }
   }
   console.log(`[send-broadcast] Drain: sent ${sent}, failed ${failed}, deferred ${deferred}, used_today ${usedToday}, limit ${dailyLimit}, budget ${budget}`);
