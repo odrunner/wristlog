@@ -48,7 +48,7 @@ async function hmacSign(uid: string, cat: string, key: string): Promise<string> 
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-type PassResult = { sent: number; skipped: number; failed: number };
+type PassResult = { sent: number; skipped: number; failed: number; trackingFailed: boolean };
 type Recipient = { uid: string; email: string; displayName: string };
 type ProfileRow = {
   id: string;
@@ -95,9 +95,10 @@ async function deliver(
   supabase: Db,
   campaign: Campaign,
   toSend: Recipient[],
-): Promise<{ sent: number; failed: number }> {
+): Promise<{ sent: number; failed: number; trackingFailed: boolean }> {
   let sent = 0;
   let failed = 0;
+  let trackingFailed = false;
   const batchSize = 100;
 
   for (let i = 0; i < toSend.length; i += batchSize) {
@@ -130,19 +131,27 @@ async function deliver(
       if (!r.ok) console.error(`[run-campaign] SES send failed for ${batch[idx].uid}:`, r.error);
     }
     if (okRecipients.length) {
+      const trackRows = okRecipients.map((r) => ({ campaign_id: campaign.id, user_id: r.uid }));
       const { error: trackErr } = await supabase
         .from("email_campaign_sends")
-        .upsert(
-          okRecipients.map((r) => ({ campaign_id: campaign.id, user_id: r.uid })),
-          { onConflict: "campaign_id,user_id", ignoreDuplicates: true },
-        );
+        .upsert(trackRows, { onConflict: "campaign_id,user_id", ignoreDuplicates: true });
       if (trackErr) {
-        console.error(`[run-campaign] Send-tracking upsert error:`, trackErr);
+        console.error(`[run-campaign] Send-tracking upsert error, retrying once:`, trackErr);
+        // A failed upsert here means backfill will treat these recipients as
+        // never-sent and re-email them tomorrow — worth one retry before we
+        // give up and surface it.
+        const { error: retryErr } = await supabase
+          .from("email_campaign_sends")
+          .upsert(trackRows, { onConflict: "campaign_id,user_id", ignoreDuplicates: true });
+        if (retryErr) {
+          console.error(`[run-campaign] Send-tracking retry also failed:`, retryErr);
+          trackingFailed = true;
+        }
       }
     }
   }
 
-  return { sent, failed };
+  return { sent, failed, trackingFailed };
 }
 
 // Original per-campaign pass: users who signed up exactly delay_days ago
@@ -165,7 +174,7 @@ async function windowPass(
 
   if (eligErr) {
     console.error(`[run-campaign] Failed to fetch eligible users:`, eligErr);
-    return { sent: 0, skipped: 0, failed: 0 };
+    return { sent: 0, skipped: 0, failed: 0, trackingFailed: false };
   }
 
   // Filter: not internal, not unsubscribed from updates
@@ -173,7 +182,7 @@ async function windowPass(
 
   if (!users.length) {
     console.log(`[run-campaign] "${name}": no eligible users in window`);
-    return { sent: 0, skipped: 0, failed: 0 };
+    return { sent: 0, skipped: 0, failed: 0, trackingFailed: false };
   }
 
   // Behavior-aware skip: drop users who already did the campaign's target action.
@@ -186,13 +195,13 @@ async function windowPass(
     if (doneErr) {
       // Fail safe: never send unfiltered. Skip this campaign this run; retry next day.
       console.error(`[run-campaign] "${name}": skip query (${skipTbl}) failed — skipping:`, doneErr);
-      return { sent: 0, skipped: users.length, failed: 0 };
+      return { sent: 0, skipped: users.length, failed: 0, trackingFailed: false };
     }
     const beforeSkip = users.length;
     users = dropDone(users, (doneRows || []).map((r: { user_id: string }) => r.user_id));
     if (!users.length) {
       console.log(`[run-campaign] "${name}": all eligible already did the action`);
-      return { sent: 0, skipped: beforeSkip, failed: 0 };
+      return { sent: 0, skipped: beforeSkip, failed: 0, trackingFailed: false };
     }
   }
 
@@ -205,7 +214,7 @@ async function windowPass(
     .in("user_id", users.map((u: ProfileRow) => u.id));
   if (sentErr) {
     console.error(`[run-campaign] "${name}": failed to fetch send history — skipping:`, sentErr);
-    return { sent: 0, skipped: users.length, failed: 0 };
+    return { sent: 0, skipped: users.length, failed: 0, trackingFailed: false };
   }
 
   const split = splitAlreadySent(users, (alreadySent || []).map((r: { user_id: string }) => r.user_id));
@@ -214,7 +223,7 @@ async function windowPass(
 
   if (!users.length) {
     console.log(`[run-campaign] "${name}": all eligible already sent`);
-    return { sent: 0, skipped, failed: 0 };
+    return { sent: 0, skipped, failed: 0, trackingFailed: false };
   }
 
   const recipients = await resolveRecipients(supabase, users);
@@ -225,8 +234,8 @@ async function windowPass(
   const crossSkipped = recipients.length - toSend.length;
   for (const r of toSend) emailedThisRun.add(r.uid);
 
-  const { sent, failed } = await deliver(supabase, campaign, toSend);
-  return { sent, skipped: skipped + crossSkipped, failed };
+  const { sent, failed, trackingFailed } = await deliver(supabase, campaign, toSend);
+  return { sent, skipped: skipped + crossSkipped, failed, trackingFailed };
 }
 
 // Backfill pass: drain existing members (signed up before the drip window) at
@@ -255,7 +264,7 @@ async function backfillPass(
   );
   if (profErr) {
     console.error(`[run-campaign] "${name}" backfill: profiles fetch failed — skipping:`, profErr);
-    return { sent: 0, skipped: 0, failed: 0 };
+    return { sent: 0, skipped: 0, failed: 0, trackingFailed: false };
   }
 
   let candidates = filterEligible(profiles || [], internalIds);
@@ -271,7 +280,7 @@ async function backfillPass(
     if (doneErr) {
       // Fail safe: never send unfiltered. Skip this run; retry next day.
       console.error(`[run-campaign] "${name}" backfill: skip query (${skipTbl}) failed — skipping:`, doneErr);
-      return { sent: 0, skipped: candidates.length, failed: 0 };
+      return { sent: 0, skipped: candidates.length, failed: 0, trackingFailed: false };
     }
     candidates = dropDone(candidates, (doneRows || []).map((r) => r.user_id));
   }
@@ -287,7 +296,7 @@ async function backfillPass(
   );
   if (sentErr) {
     console.error(`[run-campaign] "${name}" backfill: send history failed — skipping:`, sentErr);
-    return { sent: 0, skipped: 0, failed: 0 };
+    return { sent: 0, skipped: 0, failed: 0, trackingFailed: false };
   }
 
   const sentSet = new Set((sentRows || []).map((r) => r.user_id));
@@ -296,15 +305,15 @@ async function backfillPass(
 
   if (!picked.length) {
     console.log(`[run-campaign] "${name}" backfill: complete (0 pending)`);
-    return { sent: 0, skipped: 0, failed: 0 };
+    return { sent: 0, skipped: 0, failed: 0, trackingFailed: false };
   }
 
   const recipients = await resolveRecipients(supabase, picked);
   for (const r of recipients) emailedThisRun.add(r.uid);
 
-  const { sent, failed } = await deliver(supabase, campaign, recipients);
+  const { sent, failed, trackingFailed } = await deliver(supabase, campaign, recipients);
   console.log(`[run-campaign] "${name}" backfill: sent=${sent} failed=${failed} remaining=${pendingCount - picked.length}`);
-  return { sent, skipped: 0, failed };
+  return { sent, skipped: 0, failed, trackingFailed };
 }
 
 Deno.serve(async (req: Request) => {
@@ -365,11 +374,12 @@ Deno.serve(async (req: Request) => {
     // Track everyone emailed across all campaigns this run so a user can't receive
     // two campaigns in one invocation (e.g. two active campaigns sharing delay_days).
     const emailedThisRun = new Set<string>();
+    let anyTrackingFailed = false;
 
     for (const campaign of campaigns) {
       console.log(`[run-campaign] Processing "${campaign.name}" (delay=${campaign.delay_days}d)`);
       const win = await windowPass(supabase, campaign, internalIds, emailedThisRun);
-      let bf: PassResult = { sent: 0, skipped: 0, failed: 0 };
+      let bf: PassResult = { sent: 0, skipped: 0, failed: 0, trackingFailed: false };
       if ((campaign.backfill_daily ?? 0) > 0) {
         bf = await backfillPass(supabase, campaign, internalIds, emailedThisRun);
       }
@@ -377,12 +387,18 @@ Deno.serve(async (req: Request) => {
         sent: win.sent + bf.sent,
         skipped: win.skipped + bf.skipped,
         failed: win.failed + bf.failed,
+        trackingFailed: win.trackingFailed || bf.trackingFailed,
       };
+      anyTrackingFailed = anyTrackingFailed || total.trackingFailed;
       console.log(`[run-campaign] "${campaign.name}": sent=${total.sent} skipped=${total.skipped} failed=${total.failed}`);
       results[campaign.name] = total;
     }
 
-    return new Response(JSON.stringify({ results }), { status: 200 });
+    // A failed send-tracking upsert means backfill will re-email the same users
+    // tomorrow — surface it as a 5xx so the cron's log shows the failure.
+    return new Response(JSON.stringify({ results, tracking_failure: anyTrackingFailed }), {
+      status: anyTrackingFailed ? 500 : 200,
+    });
   } catch (err) {
     console.error("[run-campaign] Error:", err);
     return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
