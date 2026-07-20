@@ -29,9 +29,13 @@ BEGIN
     JOIN auth.users u ON u.id = ia.user_id
     WHERE u.email IS NOT NULL
   ), ext AS (
-    SELECT *
+    -- Bounded to 90 days and to the columns actually used. This aggregated the
+    -- whole table with SELECT *; intake jumped 4.6x during the SES migration
+    -- week, which put an unbounded seq-scan on a path to seconds per page load.
+    SELECT e.event_type, e.email_id, e.email_to, e.subject, e.created_at
     FROM email_events e
-    WHERE e.email_to IS NOT NULL
+    WHERE e.created_at >= now() - interval '90 days'
+      AND e.email_to IS NOT NULL
       AND lower(e.email_to) NOT IN (SELECT email FROM internal)
       AND lower(e.email_to) NOT LIKE '%@wrotate.com'
   )
@@ -43,8 +47,11 @@ BEGIN
           subject,
           count(*) FILTER (WHERE event_type = 'sent') AS sent,
           count(*) FILTER (WHERE event_type = 'delivered') AS delivered,
-          count(*) FILTER (WHERE event_type = 'opened') AS opened,
-          count(*) FILTER (WHERE event_type = 'clicked') AS clicked,
+          -- DISTINCT email_id: 'delivered' is one event per email but 'opened'
+          -- fires per open (prefetch, re-opens), so raw counts rendered 200% and
+          -- 300% open rates. Also makes this robust to duplicate webhook rows.
+          count(DISTINCT email_id) FILTER (WHERE event_type = 'opened') AS opened,
+          count(DISTINCT email_id) FILTER (WHERE event_type = 'clicked') AS clicked,
           count(*) FILTER (WHERE event_type IN ('bounced','complained')) AS bounced
         FROM ext
         WHERE subject IS NOT NULL

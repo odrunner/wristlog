@@ -1628,6 +1628,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       #wishlist-modal .modal-actions { gap: .3rem; }
       #wishlist-modal .modal-actions .btn { padding: .6rem .55rem; font-size: .78rem; }
       .feed-action-btn, .feed-edit-btn, .btn-icon { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; }
+      /* Height only. min-width:40px would widen the toggle group from 99px to
+         126px and push the toolbar to 379px against 348px available at 375px,
+         breaking the one-line layout. 27x28 -> 27x40 is the improvement that
+         costs no horizontal space. */
+      .wl-view-btn { min-height: 40px; }
 
       /* Stats: 2 cols */
       .stats-row { grid-template-columns: repeat(2, 1fr); }
@@ -4053,8 +4058,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
           </button>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="openWishlistPhoto()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
-        <button class="btn btn-primary btn-sm" onclick="openAddWishlist()">+ Add to Wishlist</button>
+        <button class="btn btn-primary btn-sm" onclick="openWishlistPhoto()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
+        <button class="btn btn-ghost btn-sm" onclick="openAddWishlist()">+ Add to Wishlist</button>
       </div>
     </div>
     <div id="wishlist-grid"></div>
@@ -6690,9 +6695,12 @@ async function loadUserData() {
   const _q = query => Promise.resolve(query).catch(e => { console.error('[WristLog] loadUserData query error:', e?.message); return { data: null, error: e }; });
   const [wRes, lRes, wlRes, brRes] = await withTimeout(Promise.all([
     _q(db.from('watches').select('id,brand,name,ref,movement,price,purchase_date,color,image,url,tags,straps,owner,market_price,market_price_date,market_price_src,watch_charts_url,price_history,warranty_expiry,has_box,has_papers,insurance,insured_value,insurance_notes,receipts,watch_privacy,elo_rating,year_range,movement_type,caliber,case_material,case_diameter,case_length,case_thickness,weight,water_resistance,crystal_type,gender,origin,description,background,functions,bph').eq('user_id', uid)),
-    _q(db.from('logs').select('id,watch_id,date,use_case,notes,strap_id,photo_url,visibility,club_id').eq('user_id', uid)),
+    // .range(): PostgREST caps an unbounded select at 1000 rows silently. A
+    // truncated log set would quietly re-rank the Most Worn leaderboard rather
+    // than fail, so ask for a bound well above the current max (422/user).
+    _q(db.from('logs').select('id,watch_id,date,use_case,notes,strap_id,photo_url,visibility,club_id').eq('user_id', uid).range(0, 9999)),
     _q(db.from('wishlist').select('id,brand,name,ref,price,url,image,notes,color,tags,market_price,market_price_date,market_price_src,watch_charts_url,wish_privacy,added_date,sort_order').eq('user_id', uid)),
-    _q(db.from('brands').select('name').eq('is_canonical', true)),
+    _q(db.from('brands').select('name').eq('is_canonical', true).range(0, 9999)),
   ]), 15000);
   // Only overwrite each table if the query succeeded — keep localStorage cache on failure
   if (wRes.error) console.error('[WristLog] watches SELECT error:', wRes.error.message, wRes.error);
@@ -6912,7 +6920,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.18.59';
+const APP_VERSION = '19.19.26';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15862,7 +15870,7 @@ function renderWatchSelector() {
         ${thumb}
         <div style="flex:1;min-width:0;">
           <div class="watch-info-name">${escHtml(w.brand)} ${escHtml(w.name)}</div>
-          <div class="watch-info-sub">${cnt} wear${cnt!==1?'s':''}${pct != null ? ` · ${pct}%` : ''}</div>
+          <div class="watch-info-sub">${cnt} wear${cnt!==1?'s':''}${pct != null ? ` · ${pct}% all-time` : ''}</div>
         </div>
         ${isWorn ? `<span class="watch-worn-badge">worn today</span>` : ''}
       </div>`;
@@ -18710,7 +18718,10 @@ function computeWatchRec(skipSet) {
   const DRESSY_TAGS = new Set(['Dress','Sport-Luxury','Complication','Skeleton','Vintage']);
 
   // Fair-share baseline: expected wears per watch if collection were rotated evenly
-  const totalLogs = logs.length;
+  // Same unit as _wWears below (unique wear days, measurement excluded). Using
+  // logs.length here compared raw rows against wear-days and inflated the
+  // 'neglected' baseline by ~7.5% for users who log several rows a day.
+  const totalLogs = watches.reduce((sum, w) => sum + wearsForWatch(w.id), 0);
   const fairShare = watches.length > 0 ? totalLogs / watches.length : 0;
 
   // Top-ranked set: watches in the top 20% (min 1, max 5) of Elo ratings.
@@ -21173,6 +21184,13 @@ function af2Undo(idx) {
   af2RenderSheet();
 }
 
+function af2PickBrand(idx, brand) {
+  const input = document.getElementById('af2-edit-brand-' + idx);
+  if (input) input.value = brand;
+  const ac = document.getElementById('af2-brand-ac-' + idx);
+  if (ac) ac.style.display = 'none';
+}
+
 function af2Edit(idx) {
   const w = _af2Watches[idx];
   if (!w) return;
@@ -21198,7 +21216,10 @@ function af2Edit(idx) {
     const q = brandInput.value.trim().toLowerCase();
     const matches = q ? sorted.filter(b => b.toLowerCase().includes(q)) : sorted;
     if (!matches.length) { acList.style.display = 'none'; return; }
-    acList.innerHTML = matches.map(b => `<div style="padding:6px 8px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border);" onmousedown="document.getElementById('af2-edit-brand-${idx}').value='${escHtml(b)}';document.getElementById('af2-brand-ac-${idx}').style.display='none';">${escHtml(b)}</div>`).join('');
+    // data-brand + escAttr, not an inlined JS string: escHtml does not escape
+    // apostrophes, so a brand like "Beda'a" terminated the literal and threw.
+    // Same fix already applied to the collection and wishlist pickers.
+    acList.innerHTML = matches.map(b => `<div style="padding:6px 8px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border);" data-brand="${escAttr(b)}" onmousedown="af2PickBrand(${idx}, this.dataset.brand)">${escHtml(b)}</div>`).join('');
     acList.style.display = '';
   };
   brandInput.addEventListener('input', updateAC);

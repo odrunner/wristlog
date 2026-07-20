@@ -219,7 +219,37 @@ def onboarding4_section(H):
     return L
 
 
+def _already_ran_this_week():
+    """True if a snapshot line for the current ISO week already exists.
+
+    The LaunchAgent now has RunAtLoad=true so a Mac that is asleep or off at
+    Sunday 08:00 still produces the week's review on next login. That means the
+    job can fire more than once in a week, so guard on the snapshot file the way
+    rollout-check guards on its per-day history line.
+    """
+    try:
+        wk = datetime.now().date().isocalendar()[:2]      # (year, week)
+        with open(SNAP_FILE) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    d = json.loads(line).get("date", "")
+                    if datetime.fromisoformat(d).date().isocalendar()[:2] == wk:
+                        return True
+                except (ValueError, json.JSONDecodeError, AttributeError):
+                    continue
+    except FileNotFoundError:
+        pass
+    return False
+
+
 def main():
+    if _already_ran_this_week() and "--force" not in sys.argv:
+        print("[weekly-review] Already ran this ISO week — skipping (use --force to override).")
+        return
+
     auth = curl(f"{BASE_URL}/auth/v1/token?grant_type=password",
                 [f"apikey: {ANON_KEY}", "Content-Type: application/json"], "POST",
                 json.dumps({"email": AUTH_EMAIL, "password": AUTH_PASS}))

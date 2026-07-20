@@ -21,11 +21,19 @@ import {
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const TRIGGER_SECRET = Deno.env.get("CAMPAIGN_TRIGGER_SECRET") ?? "";
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
   try {
+    // The DB webhook is the only legitimate caller. Without this the function was
+    // reachable unauthenticated: anyone could replay a known feedback id and burn
+    // an Anthropic web-search call per request (verified 200 with no auth header).
+    if (TRIGGER_SECRET && req.headers.get("x-campaign-secret") !== TRIGGER_SECRET) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
+    }
+
     const body = await req.json();
     const record = body.record;
     if (!record) {
@@ -45,9 +53,13 @@ Deno.serve(async (req: Request) => {
     // ── Webhook verification: confirm record exists in database ─────────────
     const { data: verifyRecord, error: verifyError } = await supabase
       .from("feedback")
-      .select("id")
+      .select("id, status")
       .eq("id", record.id)
       .maybeSingle();
+    if (!verifyError && verifyRecord?.status === "resolved") {
+      // Already handled — replaying must not spend another verification call.
+      return new Response(JSON.stringify({ skipped: "already resolved" }), { status: 200 });
+    }
     if (verifyError || !verifyRecord) {
       console.warn(`[auto-add-brand] Record ${record.id} not found in feedback table — rejecting`);
       return new Response(JSON.stringify({ error: "Record not found" }), { status: 400 });
@@ -103,6 +115,13 @@ Deno.serve(async (req: Request) => {
     }
 
     const finalName = pickFinalBrandName(parsed.canonical_name, requestedName);
+    // canonical_name comes from the model and was never re-validated. Since these
+    // rows are written with is_canonical:true they render in EVERY user's brand
+    // picker, so a prompt-injected name would be stored app-wide.
+    if (!isValidBrandName(finalName)) {
+      console.warn(`[auto-add-brand] Rejected canonical name: "${finalName}"`);
+      return new Response(JSON.stringify({ error: "Invalid canonical brand name" }), { status: 400 });
+    }
     console.log(`[auto-add-brand] Verified "${requestedName}" → canonical: "${finalName}"`);
 
     // ── Step 2: Check if brand already exists in DB ─────────────────────────

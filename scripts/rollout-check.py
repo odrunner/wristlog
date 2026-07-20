@@ -27,6 +27,14 @@ AUTH_PASS = "wrotate-test-2026"
 REPORT_TO = "ozgurdogan@gmail.com"     # failure alerts go here (see notify_failure)
 APPROVAL_DATE = "2026-06-11"          # 2.0 App Store approval — cumulative window start
 HISTORY_FILE = os.path.expanduser("~/.local/share/wrotate-rollout-history.log")
+# Derived per-session facts for sessions old enough to be immutable, so each run
+# only pulls recent tick logs instead of the whole corpus since APPROVAL_DATE.
+# That corpus reached 42 MB / ~14s per run by 2026-07-19 and grows ~663 rows/day.
+# NOTE: do NOT "optimise" this by filtering to session_summary rows — the psBE=
+# 2.0 marker appears in 16,713 tick rows and ZERO summary rows, so a summary-only
+# filter reports 0 users on 2.0. Delete this file to force a full rebuild.
+CACHE_FILE = os.path.expanduser("~/.local/share/wrotate-rollout-session-cache.json")
+FREEZE_DAYS = 14                        # sessions older than this never change
 TMP = "/tmp/wrotate-rollout"
 V2_MARKER = "psBE="                    # native 2.0 build signature in [TGTICK] logs
 
@@ -88,8 +96,18 @@ def main():
     else:
         print(f"WARN: could not read internal_accounts ({ia}) — counts include internal")
 
-    # Tick logs since approval (covers both 'today' and cumulative in one pull)
-    since = f"{APPROVAL_DATE}T00:00:00"
+    # Incremental pull: everything before `cache_through` is already summarised in
+    # CACHE_FILE, so only fetch from there onward.
+    cached, cache_through = {}, None
+    try:
+        with open(CACHE_FILE) as f:
+            blob = json.load(f)
+        cached = blob.get("sessions", {})
+        cache_through = blob.get("through")
+    except (FileNotFoundError, ValueError):
+        pass
+
+    since = f"{cache_through or APPROVAL_DATE + 'T00:00:00'}"
     rows = fetch_paginated(
         f"/rest/v1/timegrapher_tick_logs?created_at=gte.{since}&order=created_at.asc&select=session_id,created_at,messages",
         hdrs,
@@ -116,38 +134,65 @@ def main():
     ext_users_today = set()             # all external users measuring today (any build)
     conv = defaultdict(int)             # convergence outcome of real-user 2.0 sessions
     v2_meas = []                        # (uid, watch_id, final_rate) per real-user 2.0 session
+    # Reduce each freshly-fetched session to the same small fact dict the cache
+    # stores, so cached and fresh sessions go through identical downstream logic.
+    facts = dict(cached)
     for sid, s in sessions.items():
         blob = "\n".join(s["msgs"])
-        is_v2 = V2_MARKER in blob
-        m = re.search(r'"user_id"\s*:\s*"([0-9a-f-]{36})"', blob)
-        uid = m.group(1) if m else None
+        rates = re.findall(r'rate=([-\d.]+)', blob)
+        wm = re.search(r'"watch_id"\s*:\s*"([^"]+)"', blob)
+        um = re.search(r'"user_id"\s*:\s*"([0-9a-f-]{36})"', blob)
+        conv_out = ("plateau" if "plateau" in blob else
+                    "cap" if "duration_cap" in blob else
+                    "stopped" if ("user_stopped" in blob or "user_quit" in blob) else "other")
+        rate = None
+        if rates:
+            try: rate = float(rates[-1])
+            except ValueError: rate = None
+        facts[sid] = {
+            "first": s["first"], "is_v2": V2_MARKER in blob, "uid": um.group(1) if um else None,
+            "v21": "[TGALGO" in blob, "beta": bool(re.search(r'"algo"\s*:\s*"tg"', blob)),
+            "conv": conv_out, "rate": rate, "watch": wm.group(1) if wm else None,
+        }
+
+    for sid, f in facts.items():
+        is_v2 = f["is_v2"]
+        uid = f["uid"]
+        s = {"first": f["first"]}
+        # is_internal is resolved per-run (internal_accounts can change), never cached
         is_internal = uid in internal if uid else False
         today = s["first"] and s["first"] >= cutoff_24h
         if uid and not is_internal and today:
             ext_users_today.add(uid)
-        if "[TGALGO" in blob and uid and not is_internal:
+        if f["v21"] and uid and not is_internal:
             v21_sessions += 1; v21_users.add(uid)
-            if re.search(r'"algo"\s*:\s*"tg"', blob):
+            if f["beta"]:
                 beta_sessions += 1; beta_users.add(uid)
         if is_v2:
             v2_sessions_all += 1
             if uid and not is_internal:
                 v2_users_all.add(uid)
                 # convergence outcome (real users only) — how the measurement ended
-                if "plateau" in blob: conv["plateau"] += 1
-                elif "duration_cap" in blob: conv["cap"] += 1
-                elif "user_stopped" in blob or "user_quit" in blob: conv["stopped"] += 1
-                else: conv["other"] += 1
+                conv[f["conv"]] += 1
                 # final rate + watch for quality (from the logs — timegrapher_results is RLS-blocked)
-                rates = re.findall(r'rate=([-\d.]+)', blob)
-                wm = re.search(r'"watch_id"\s*:\s*"([^"]+)"', blob)
-                if rates:
-                    try: v2_meas.append((uid, wm.group(1) if wm else None, float(rates[-1])))
-                    except ValueError: pass
+                if f["rate"] is not None:
+                    v2_meas.append((uid, f["watch"], f["rate"]))
             if today:
                 v2_sessions_today += 1
                 if uid and not is_internal:
                     v2_users_today.add(uid)
+
+    # Freeze sessions old enough to be immutable into the cache, so the next run
+    # fetches only from `freeze` onward. Sessions newer than that stay live.
+    freeze = (now - timedelta(days=FREEZE_DAYS)).strftime("%Y-%m-%dT%H:%M:%S")
+    try:
+        keep = {sid: f for sid, f in facts.items() if (f.get("first") or "") < freeze}
+        tmp = CACHE_FILE + ".tmp"
+        with open(tmp, "w") as fh:
+            json.dump({"through": freeze, "sessions": keep}, fh)
+        os.replace(tmp, CACHE_FILE)     # atomic: a crash can't leave a partial cache
+    except OSError as e:
+        print(f"WARN: could not write session cache ({e}) — next run does a full pull")
 
     # Resolve usernames for the cumulative 2.0 user list
     names = {}
