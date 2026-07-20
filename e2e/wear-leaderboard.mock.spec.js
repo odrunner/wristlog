@@ -41,22 +41,21 @@ async function setPeriod(page, value) {
 }
 
 // [{ rank, name, wears, share }]
-async function rows(page) {
+// Row layout: rank span, thumb, then a stacked name + "N wears · P%" line.
+// Zero-wear watches are collapsed behind "Show all" — pass {all:true} to expand.
+async function rows(page, opts = {}) {
+  if (opts.all) {
+    const btn = page.locator('#wear-leaderboard button', { hasText: /Show all/ });
+    if (await btn.count()) await btn.click();
+  }
   return page.evaluate(() =>
-    [...document.querySelectorAll('#wear-leaderboard > div')]
-      .filter(d => d.textContent.trim().startsWith('#'))
-      .map(d => {
-        const spans = [...d.querySelectorAll('span')].map(s => s.textContent.trim());
-        // The name lives inside the flex:1 wrapper. A plain 'div > div' would
-        // match the avatar fallback first and yield its initials.
-        const nameEl = d.querySelector('[style*="flex:1"] > div');
-        return {
-          rank: spans[0],
-          name: nameEl ? nameEl.textContent.trim() : '',
-          wears: spans[spans.length - 2],
-          share: spans[spans.length - 1],
-        };
-      }));
+    [...document.querySelectorAll('#wear-leaderboard .wlb-row')].map(d => {
+      const rank = d.querySelector('span')?.textContent.trim() || '';
+      const divs = d.querySelectorAll('[style*="flex:1"] > div');
+      const stats = (divs[1]?.textContent || '').trim();      // "4 wears · 57%"
+      const [wears, share] = stats.split('·').map(t => t.trim());
+      return { rank, name: (divs[0]?.textContent || '').trim(), wears, share };
+    }));
 }
 
 test.describe('Wear leaderboard (mocked)', () => {
@@ -83,7 +82,7 @@ test.describe('Wear leaderboard (mocked)', () => {
   test('a measurement-only watch has zero wears and an em dash, ranked last', async ({ page }) => {
     await openStats(page);
     await setPeriod(page, 'all');
-    const r = await rows(page);
+    const r = await rows(page, { all: true });
     const ro = r[r.length - 1];
     expect(ro.name).toContain('Royal Oak');
     expect(ro.wears).toBe('0 wears');
@@ -93,7 +92,7 @@ test.describe('Wear leaderboard (mocked)', () => {
   test('shortening the window re-ranks — the point of the feature', async ({ page }) => {
     await openStats(page);
     await setPeriod(page, '30');
-    const r = await rows(page);
+    const r = await rows(page, { all: true });
     // Speedmaster's wears are from February, so at 1M it drops to zero.
     const speedy = r.find(x => x.name.includes('Speedmaster'));
     expect(speedy.wears).toBe('0 wears');
@@ -164,6 +163,46 @@ test.describe('Wear leaderboard (mocked)', () => {
     const notice = await page.evaluate(() =>
       document.getElementById('date-log-indicator')?.textContent.trim() || '');
     expect(notice).toBe('');
+  });
+
+  // 2026-07-19 audit U19-1/2/3/5/7 — the card shipped with truncated names, an
+  // uncapped zero-wear tail, an unlabeled %, inert rows and no period shown.
+  test('unworn watches are collapsed behind a toggle, not listed in full', async ({ page }) => {
+    await openStats(page);
+    await setPeriod(page, 'all');
+    const collapsed = await rows(page);
+    expect(collapsed.every(r => r.wears !== '0 wears')).toBe(true);
+    await expect(page.locator('#wear-leaderboard')).toContainText('not worn in this period');
+    const expanded = await rows(page, { all: true });
+    expect(expanded.length).toBeGreaterThan(collapsed.length);
+  });
+
+  test('watch names are not truncated', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openStats(page);
+    const clipped = await page.evaluate(() =>
+      [...document.querySelectorAll('#wear-leaderboard .wlb-row [style*="flex:1"] > div')]
+        .filter(d => d.scrollWidth > d.clientWidth + 1).length);
+    expect(clipped).toBe(0);
+  });
+
+  test('the card states the active period and labels the percentage', async ({ page }) => {
+    await openStats(page);
+    await setPeriod(page, '30');
+    await expect(page.locator('#wear-leaderboard')).toContainText('last 30 days');
+    await expect(page.locator('#wear-leaderboard')).toContainText('share of wears in this period');
+    await setPeriod(page, 'ytd');
+    await expect(page.locator('#wear-leaderboard')).toContainText('year to date');
+  });
+
+  test('rows are keyboard-reachable and open the watch', async ({ page }) => {
+    await openStats(page);
+    const a11y = await page.evaluate(() => {
+      const r = document.querySelector('#wear-leaderboard .wlb-row');
+      return { role: r.getAttribute('role'), tabindex: r.getAttribute('tabindex'),
+               cursor: getComputedStyle(r).cursor, hasClick: !!r.getAttribute('onclick') };
+    });
+    expect(a11y).toEqual({ role: 'button', tabindex: '0', cursor: 'pointer', hasClick: true });
   });
 
   test('Track rows show wears and all-time share', async ({ page }) => {
