@@ -6912,7 +6912,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.17.17';
+const APP_VERSION = '19.18.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -6934,6 +6934,20 @@ function profileInitials(p) {
 // Spec: docs/superpowers/specs/2026-07-19-wear-leaderboard-design.md
 // An all-time ranking permanently punishes recently acquired watches, so the
 // leaderboard supports shorter windows.
+
+// Is the image at `idx` the measurement accuracy card? Those are wide, compact
+// graphics that must render whole (object-fit:contain), not cropped into the
+// 4:5 photo slot. Keyed off use_case rather than the filename: the single-image
+// upload path names the file `_accuracy.jpg`, but as soon as a second photo is
+// attached the multi-image path names files `_0.jpg` / `_1.jpg`, and the card
+// silently lost its uncropped styling. The card is always the first image —
+// the composer prefills it as file 0 and any wrist shots are appended after.
+function isMeasurementCardImage(useCase, urls, idx) {
+  const url = (urls || [])[idx];
+  if (!url) return false;
+  if (/_accuracy\.jpg(\?|$)/.test(url)) return true; // legacy single-image posts
+  return useCase === 'measurement' && idx === 0;
+}
 
 // The single definition of "this log is a wear". A measurement share is NOT a
 // wear — it may still count towards streaks and badges (which read the raw logs
@@ -10598,13 +10612,13 @@ function renderFeedCard(item) {
     const _urls = parsePhotoUrl(item.photo_url);
     const heroUrl = _urls[0] || '';
     const heroIsVideo = isVideoUrl(heroUrl);
-    // Accuracy share cards (single _accuracy.jpg) are compact graphics — render at
-    // natural height, not the fixed 4:5 photo slot, so there's no blank padding.
-    const isAccuracyCard = _urls.length === 1 && /_accuracy\.jpg(\?|$)/.test(heroUrl);
+    // Accuracy share cards are compact graphics — render at natural height, not
+    // the fixed 4:5 photo slot, so they aren't cropped.
+    const isAccuracyCard = isMeasurementCardImage(item.use_case, _urls, 0);
     const heroInner = heroIsVideo
       ? `<video id="feed-hero-${item.id}" muted autoplay loop playsinline webkit-playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;display:block;"><source src="${escHtml(heroUrl)}" type="${videoSourceType(heroUrl)}"></video>`
       : `<img id="feed-hero-${item.id}" src="${escHtml(heroUrl)}" loading="lazy" onerror="this.parentElement.style.display='none'">`;
-    heroHtml = `<div class="feed-card-photo${isAccuracyCard ? ' feed-card-photo--accuracy' : ''}" onclick="openImageViewer(${escAttr(JSON.stringify(_urls))},0)">
+    heroHtml = `<div class="feed-card-photo${isAccuracyCard ? ' feed-card-photo--accuracy' : ''}" data-usecase="${escAttr(item.use_case || '')}" onclick="openImageViewer(${escAttr(JSON.stringify(_urls))},0)">
       ${heroInner}
       ${heroIsVideo ? `<button class="feed-vid-mute" onclick="toggleFeedVideoSound(event,'${item.id}')" aria-label="Toggle sound">${MUTE_ICON_OFF}</button>` : ''}
       ${_urls.length > 1 ? `<span class="feed-card-photo-count">1/${_urls.length}</span>` : ''}
@@ -10920,6 +10934,11 @@ function feedThumbTap(logId, idx, urls) {
   if (!heroContainer) return;
   const url = urls[idx];
   const isVid = isVideoUrl(url);
+  // Only the accuracy card renders uncropped. Swapping to a wrist shot in the
+  // same post must drop the modifier, and swapping back must restore it.
+  heroContainer.classList.toggle(
+    'feed-card-photo--accuracy',
+    isMeasurementCardImage(heroContainer.dataset.usecase || '', urls, idx));
   let innerHtml = '';
   if (isVid) {
     innerHtml = `<video id="feed-hero-${logId}" muted autoplay loop playsinline webkit-playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;display:block;"><source src="${escHtml(url)}" type="${videoSourceType(url)}"></video>`

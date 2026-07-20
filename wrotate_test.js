@@ -112,6 +112,20 @@ export function campaignGroupOf(subj) {
 // An all-time ranking permanently punishes recently acquired watches, so the
 // leaderboard supports shorter windows.
 
+// Is the image at `idx` the measurement accuracy card? Those are wide, compact
+// graphics that must render whole (object-fit:contain), not cropped into the
+// 4:5 photo slot. Keyed off use_case rather than the filename: the single-image
+// upload path names the file `_accuracy.jpg`, but as soon as a second photo is
+// attached the multi-image path names files `_0.jpg` / `_1.jpg`, and the card
+// silently lost its uncropped styling. The card is always the first image —
+// the composer prefills it as file 0 and any wrist shots are appended after.
+export function isMeasurementCardImage(useCase, urls, idx) {
+  const url = (urls || [])[idx];
+  if (!url) return false;
+  if (/_accuracy\.jpg(\?|$)/.test(url)) return true; // legacy single-image posts
+  return useCase === 'measurement' && idx === 0;
+}
+
 // The single definition of "this log is a wear". A measurement share is NOT a
 // wear — it may still count towards streaks and badges (which read the raw logs
 // array), but it must never read as "you wore this".

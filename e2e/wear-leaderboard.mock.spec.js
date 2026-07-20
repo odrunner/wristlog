@@ -118,7 +118,11 @@ test.describe('Wear leaderboard (mocked)', () => {
   });
 
   test('a measurement share today does NOT show the "worn today" badge', async ({ page }) => {
-    const today = new Date().toISOString().slice(0, 10);
+    // The app keys off the LOCAL date (todayStr). toISOString() is UTC, so
+    // between local midnight and UTC midnight it yields tomorrow and the log
+    // matches nothing.
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     await mockSupabase(page, {
       watches: WATCHES,
       wishlist: [],
@@ -144,7 +148,11 @@ test.describe('Wear leaderboard (mocked)', () => {
   });
 
   test('the date notice ignores a measurement-only day', async ({ page }) => {
-    const today = new Date().toISOString().slice(0, 10);
+    // The app keys off the LOCAL date (todayStr). toISOString() is UTC, so
+    // between local midnight and UTC midnight it yields tomorrow and the log
+    // matches nothing.
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     await mockSupabase(page, {
       watches: WATCHES, wishlist: [],
       logs: [{ id: 'm1', watch_id: 'w3', date: today, use_case: 'measurement' }],
