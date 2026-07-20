@@ -41,3 +41,6 @@ app store files/
 # Local research scratch. Note the rest of docs/research/ IS tracked, so this
 # is a single-file entry rather than ignoring the directory.
 docs/research/2026-06-30-social-platform-feature-catalog.md
+
+# Claude Code local settings (may contain approved command strings)
+.claude/settings.local.json
