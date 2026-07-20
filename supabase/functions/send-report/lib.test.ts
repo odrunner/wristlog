@@ -1,6 +1,6 @@
 import { assertEquals } from "jsr:@std/assert";
 import {
-  buildResendBody,
+  buildEmailFields,
   extractBearerToken,
   FROM_EMAIL,
   hasRequiredFields,
@@ -47,8 +47,8 @@ Deno.test("hasRequiredFields — false for null/undefined/empty payload", () => 
   assertEquals(hasRequiredFields({}), false);
 });
 
-Deno.test("buildResendBody — assembles body with default from address", () => {
-  assertEquals(buildResendBody("a@b.com", "Hi", "<p>x</p>"), {
+Deno.test("buildEmailFields — assembles body with default from address", () => {
+  assertEquals(buildEmailFields("a@b.com", "Hi", "<p>x</p>"), {
     from: FROM_EMAIL,
     to: "a@b.com",
     subject: "Hi",
@@ -56,13 +56,13 @@ Deno.test("buildResendBody — assembles body with default from address", () => 
   });
 });
 
-Deno.test("buildResendBody — preserves array recipients", () => {
-  const out = buildResendBody(["a@b.com", "c@d.com"], "S", "H");
+Deno.test("buildEmailFields — preserves array recipients", () => {
+  const out = buildEmailFields(["a@b.com", "c@d.com"], "S", "H");
   assertEquals(out.to, ["a@b.com", "c@d.com"]);
 });
 
-Deno.test("buildResendBody — honors a custom from address", () => {
-  assertEquals(buildResendBody("a@b.com", "S", "H", "Other <x@y.com>").from, "Other <x@y.com>");
+Deno.test("buildEmailFields — honors a custom from address", () => {
+  assertEquals(buildEmailFields("a@b.com", "S", "H", "Other <x@y.com>").from, "Other <x@y.com>");
 });
 
 Deno.test("FROM_EMAIL — unchanged sender identity", () => {

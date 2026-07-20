@@ -1,12 +1,12 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendSesEmail } from "../_shared/ses.ts";
 import {
-  buildResendBody,
+  buildEmailFields,
   extractBearerToken,
   hasRequiredFields,
 } from "./lib.ts";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
@@ -42,18 +42,15 @@ serve(async (req) => {
   }
   const { to, subject, html } = payload;
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(buildResendBody(to, subject, html)),
+  const fields = buildEmailFields(to, subject, html);
+  const result = await sendSesEmail({
+    from: fields.from,
+    to: Array.isArray(fields.to) ? fields.to as string[] : [fields.to as string],
+    subject: fields.subject as string,
+    html: fields.html as string,
   });
-
-  const body = await res.text();
-  if (!res.ok) {
-    return new Response(body, { status: 502 });
+  if (!result.ok) {
+    return new Response(result.error, { status: 502 });
   }
 
   return new Response(JSON.stringify({ ok: true }), {

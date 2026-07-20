@@ -10,9 +10,9 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendSesEmail } from "../_shared/ses.ts";
 import { buildHtmlBody, buildSubject, esc, profileName } from "./lib.ts";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") ?? "";
 
 serve(async (req) => {
@@ -41,8 +41,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Record not found" }), { status: 400 });
     }
 
-    if (!RESEND_API_KEY || !ADMIN_EMAIL) {
-      console.warn("[report-notify] Missing RESEND_API_KEY or ADMIN_EMAIL");
+    if (!ADMIN_EMAIL) {
+      console.warn("[report-notify] Missing ADMIN_EMAIL");
       return new Response(JSON.stringify({ skipped: true, reason: "Missing config" }), { status: 200 });
     }
 
@@ -59,31 +59,22 @@ serve(async (req) => {
     const subject = buildSubject(record, reportedRawName);
     const htmlBody = buildHtmlBody(record, reporterName, reportedName);
 
-    const emailRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "WRotate Reports <reports@wrotate.com>",
-        to: [ADMIN_EMAIL],
-        subject,
-        html: htmlBody,
-      }),
+    const result = await sendSesEmail({
+      from: "WRotate Reports <reports@wrotate.com>",
+      to: [ADMIN_EMAIL],
+      subject,
+      html: htmlBody,
     });
-
-    const emailData = await emailRes.json();
-    if (!emailRes.ok) {
-      // Don't report success on a Resend failure — a silently-dropped moderation
+    if (!result.ok) {
+      // Don't report success on a send failure — a silently-dropped moderation
       // alert means a report goes unseen.
-      console.error("[report-notify] Resend error:", emailRes.status, emailData);
+      console.error("[report-notify] SES error:", result.status, result.error);
       return new Response(
-        JSON.stringify({ error: "Email send failed", status: emailRes.status, details: emailData }),
+        JSON.stringify({ error: "Email send failed", status: result.status, details: result.error }),
         { status: 502 },
       );
     }
-    console.log("[report-notify] Email sent:", emailData);
+    console.log("[report-notify] Email sent:", result.id);
 
     return new Response(JSON.stringify({ sent: true }), { status: 200 });
   } catch (err) {

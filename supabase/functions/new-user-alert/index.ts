@@ -10,9 +10,9 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendSesEmail } from "../_shared/ses.ts";
 import { buildEmailHtml, buildSubject, esc, providerFromEmail } from "./lib.ts";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") ?? "";
 
 serve(async (req) => {
@@ -39,8 +39,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Record not found" }), { status: 400 });
     }
 
-    if (!RESEND_API_KEY || !ADMIN_EMAIL) {
-      console.warn("[new-user-alert] Missing RESEND_API_KEY or ADMIN_EMAIL");
+    if (!ADMIN_EMAIL) {
+      console.warn("[new-user-alert] Missing ADMIN_EMAIL");
       return new Response(JSON.stringify({ skipped: true, reason: "Missing config" }), { status: 200 });
     }
 
@@ -70,29 +70,20 @@ serve(async (req) => {
     const subject = buildSubject(displayName, username);
     const htmlBody = buildEmailHtml({ displayName, username, userEmail, provider, createdAt, count });
 
-    const emailRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "WRotate <notifications@wrotate.com>",
-        to: [ADMIN_EMAIL],
-        subject,
-        html: htmlBody,
-      }),
+    const result = await sendSesEmail({
+      from: "WRotate <notifications@wrotate.com>",
+      to: [ADMIN_EMAIL],
+      subject,
+      html: htmlBody,
     });
 
-    const emailData = await emailRes.json();
-
-    if (!emailRes.ok) {
-      console.error("[new-user-alert] Resend error:", emailData);
-      return new Response(JSON.stringify({ error: "resend failed", details: emailData }), { status: 500 });
+    if (!result.ok) {
+      console.error("[new-user-alert] SES error:", result.error);
+      return new Response(JSON.stringify({ error: "email send failed", details: result.error }), { status: 500 });
     }
 
     console.log(`[new-user-alert] Sent alert for @${username} (${userEmail})`);
-    return new Response(JSON.stringify({ sent: true, id: emailData.id }), { status: 200 });
+    return new Response(JSON.stringify({ sent: true, id: result.id }), { status: 200 });
 
   } catch (err) {
     console.error("[new-user-alert] Error:", err);

@@ -20,8 +20,8 @@ export function hasRequiredFields(
   return !!payload && !!payload.to && !!payload.subject && !!payload.html;
 }
 
-// Build the Resend API request body for an outgoing email.
-export function buildResendBody(
+// Build the outgoing email fields (provider-agnostic).
+export function buildEmailFields(
   to: unknown,
   subject: unknown,
   html: unknown,
