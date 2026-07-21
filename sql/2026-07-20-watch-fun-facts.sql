@@ -98,3 +98,41 @@ begin
 end $$;
 
 grant execute on function public.pick_watch_fact(text, text, date) to authenticated;
+
+-- RPC: commit_watch_fact — race-safe append of a freshly generated fact + cursor advance.
+create or replace function public.commit_watch_fact(
+  p_brand text, p_name text, p_wear_date date, p_fact text
+) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  v_uid  uuid := auth.uid();
+  v_key  text := lower(trim(p_brand)) || '|' || lower(trim(p_name));
+  v_last int;
+  v_next int;
+  v_fact public.watch_facts%rowtype;
+begin
+  if v_uid is null then raise exception 'not authenticated'; end if;
+  if p_fact is null or length(trim(p_fact)) = 0 then raise exception 'empty fact'; end if;
+
+  select last_position into v_last from public.watch_fact_progress
+    where user_id = v_uid and model_key = v_key;
+  if v_last is null then v_last := -1; end if;
+  v_next := v_last + 1;
+
+  -- Race-safe append: if a concurrent wearer already filled this slot, keep theirs.
+  insert into public.watch_facts(model_key, position, fact)
+    values (v_key, v_next, trim(p_fact))
+    on conflict (model_key, position) do nothing;
+
+  select * into v_fact from public.watch_facts where model_key = v_key and position = v_next;
+
+  insert into public.watch_fact_progress(user_id, model_key, last_position, last_wear_date, current_fact_id)
+    values (v_uid, v_key, v_next, p_wear_date, v_fact.id)
+  on conflict (user_id, model_key) do update
+    set last_position = v_next, last_wear_date = p_wear_date,
+        current_fact_id = v_fact.id, updated_at = now();
+
+  return json_build_object('fact_id', v_fact.id, 'fact', v_fact.fact);
+end $$;
+
+grant execute on function public.commit_watch_fact(text, text, date, text) to authenticated;
