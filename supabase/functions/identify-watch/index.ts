@@ -248,7 +248,7 @@ Deno.serve(async (req: Request) => {
               body: JSON.stringify({
                 contents: [{ parts }],
                 tools: [{ google_search: {} }],
-                generationConfig: { temperature: 0.4, maxOutputTokens: 1024 },
+                generationConfig: { temperature: 0.4, maxOutputTokens: 4096 },
               }),
             }
           );
