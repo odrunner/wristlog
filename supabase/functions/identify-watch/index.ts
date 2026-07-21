@@ -10,6 +10,7 @@ import {
   buildClaudeFallbackPrompt,
   buildCollectionPrompt,
   buildEnhancePrompt,
+  buildFactsPrompt,
   COLD_PROMPT,
   detectMediaType,
   DETECT_PROMPT,
@@ -205,6 +206,81 @@ Deno.serve(async (req: Request) => {
 
       await logAttempt(null, `enhance_failed:${lastGeminiError.slice(0, 200)}`);
       return new Response(JSON.stringify({ error: "enhance_temporary", message: "Enhancement is temporarily unavailable. Please try again in a moment." }), {
+        status: 502,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── FACTS MODE: one distinct trivia fact about the watch model ──
+    if (mode === "facts" && watchInfo) {
+      const { brand, model, reference } = watchInfo;
+      if (!brand || !model) {
+        await logAttempt(null, "facts_no_info");
+        return new Response(JSON.stringify({ error: "Brand and model required" }), {
+          status: 400,
+          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        });
+      }
+      if (!GEMINI_API_KEY) {
+        await logAttempt(null, "facts_no_gemini_key");
+        return new Response(JSON.stringify({ error: "Facts not available" }), {
+          status: 503,
+          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        });
+      }
+
+      const existingFacts: string[] = Array.isArray(watchInfo.existingFacts) ? watchInfo.existingFacts : [];
+      const factsPrompt = buildFactsPrompt({ brand, model, reference }, existingFacts);
+      const parts: any[] = [{ text: factsPrompt }];
+
+      const MAX_RETRIES = 3;
+      let lastErr = "";
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+          const abort = new AbortController();
+          const timer = setTimeout(() => abort.abort(), 45000);
+          const resp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              signal: abort.signal,
+              body: JSON.stringify({
+                contents: [{ parts }],
+                tools: [{ google_search: {} }],
+                generationConfig: { temperature: 0.4, maxOutputTokens: 1024 },
+              }),
+            }
+          );
+          clearTimeout(timer);
+          if (resp.ok) {
+            const result = await resp.json();
+            const candidate = result.candidates?.[0];
+            const finishReason = candidate?.finishReason || "unknown";
+            const textParts = (candidate?.content?.parts ?? [])
+              .filter((p: any) => p.text).map((p: any) => p.text).join("");
+            if (finishReason === "RECITATION" || finishReason === "SAFETY") {
+              lastErr = `blocked_${finishReason}`; continue;
+            }
+            const parsed = extractJson(textParts);
+            if (parsed && typeof parsed.fact === "string" && parsed.fact.trim()) {
+              await logAttempt(1, null);
+              return new Response(JSON.stringify({ fact: parsed.fact.trim(), _engine: "gemini" }), {
+                headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+              });
+            }
+            lastErr = `parse_fail(${finishReason})`;
+          } else {
+            const errText = await resp.text();
+            lastErr = `gemini_${resp.status}:${errText.slice(0, 120)}`;
+            if (resp.status === 429) await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+          }
+        } catch (e: any) {
+          lastErr = `exception:${e.message}`;
+        }
+      }
+      await logAttempt(null, `facts_failed:${lastErr.slice(0, 200)}`);
+      return new Response(JSON.stringify({ error: "facts_temporary" }), {
         status: 502,
         headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
       });

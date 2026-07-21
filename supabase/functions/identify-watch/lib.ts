@@ -7,9 +7,12 @@ export function extractJson(text: string) {
   return m ? JSON.parse(m[0]) : null;
 }
 
-// Normalize the request `mode` to one of the three supported modes for logging.
-export function normalizeMode(mode: unknown): "detect" | "enhance" | "identify" {
-  return mode === "detect" ? "detect" : mode === "enhance" ? "enhance" : "identify";
+// Normalize the request `mode` to one of the supported modes for logging.
+export function normalizeMode(mode: unknown): "detect" | "enhance" | "identify" | "facts" {
+  return mode === "detect" ? "detect"
+    : mode === "enhance" ? "enhance"
+    : mode === "facts" ? "facts"
+    : "identify";
 }
 
 // True when a non-empty collection array was supplied.
@@ -82,6 +85,29 @@ Rules:
 - For background: focus on what makes this model interesting or significant — history, heritage, notable wearers, records, etc.
 - For functions: list complications and key features (e.g. "date", "chronograph", "GMT", "200m water resistance", "power reserve indicator")
 - If a field like caseDiameter or caseThickness is commonly published for this brand, search harder before returning empty.`;
+}
+
+// Build the facts-mode prompt: one distinct, interesting, verifiable trivia fact.
+export function buildFactsPrompt(info: WatchInfo, existingFacts: string[]): string {
+  const { brand, model, reference } = info;
+  const usedBlock = existingFacts.length
+    ? `\nThese facts have already been used — do NOT repeat, rephrase, or overlap with any of them:\n${existingFacts.map((f, i) => `${i + 1}. ${f}`).join("\n")}\n`
+    : "";
+  return `You are writing a single "fun fact" for a watch enthusiast about this watch model:
+Brand: ${brand}
+Model: ${model}
+${reference ? `Reference: ${reference}` : ""}
+${usedBlock}
+Use search to find the single most interesting, genuinely surprising, and VERIFIABLE fact about this model that a knowledgeable collector would enjoy — history, design heritage, records, notable wearers, engineering quirks, or cultural moments.
+
+Rules:
+- Exactly ONE fact, ONE sentence, museum-placard tone. No preamble, no "Did you know", no citations, no emoji.
+- It must be about the watch MODEL (not a specific owner). Must be true — if unsure, pick a safer well-documented fact.
+- It must be clearly distinct from any already-used fact listed above.
+- Prefer the most interesting fact first; only reach for smaller details once the obvious ones are used.
+
+Return JSON only:
+{"fact": "one-sentence fact here"}`;
 }
 
 // Detect-mode prompt (count watches + bounding boxes). Static.

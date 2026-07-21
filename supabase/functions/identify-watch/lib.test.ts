@@ -4,6 +4,7 @@ import {
   buildClaudeFallbackPrompt,
   buildCollectionPrompt,
   buildEnhancePrompt,
+  buildFactsPrompt,
   COLD_PROMPT,
   detectMediaType,
   DETECT_PROMPT,
@@ -114,6 +115,27 @@ Deno.test("buildCollectionPrompt — empty collection still produces valid promp
   const p = buildCollectionPrompt([]);
   assertStringIncludes(p, "The user owns: ");
   assertStringIncludes(p, '{"watches": []}');
+});
+
+// ── normalizeMode: facts ──
+Deno.test("normalizeMode — recognizes facts mode", () => {
+  assertEquals(normalizeMode("facts"), "facts");
+});
+
+// ── buildFactsPrompt ──
+Deno.test("buildFactsPrompt — includes brand/model and asks for one distinct fact", () => {
+  const p = buildFactsPrompt({ brand: "Omega", model: "Speedmaster" }, []);
+  assertStringIncludes(p, "Omega");
+  assertStringIncludes(p, "Speedmaster");
+  assertStringIncludes(p, '"fact"');
+});
+
+Deno.test("buildFactsPrompt — lists existing facts to avoid repeating", () => {
+  const p = buildFactsPrompt({ brand: "Rolex", model: "Submariner" }, [
+    "It debuted in 1953.",
+  ]);
+  assertStringIncludes(p, "It debuted in 1953.");
+  assertStringIncludes(p, "already been used");
 });
 
 // ── static prompts ──
