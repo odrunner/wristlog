@@ -85,14 +85,13 @@ begin
   v_serve := case when v_pool > 0 then v_next % v_pool else 0 end;
   select * into v_fact from public.watch_facts where model_key = v_key and position = v_serve;
 
-  update public.watch_fact_progress
-    set last_position = v_next, last_wear_date = p_wear_date,
-        current_fact_id = v_fact.id, updated_at = now()
-    where user_id = v_uid and model_key = v_key;
-  if not found then
-    insert into public.watch_fact_progress(user_id, model_key, last_position, last_wear_date, current_fact_id)
-    values (v_uid, v_key, v_next, p_wear_date, v_fact.id);
-  end if;
+  insert into public.watch_fact_progress(user_id, model_key, last_position, last_wear_date, current_fact_id)
+    values (v_uid, v_key, v_next, p_wear_date, v_fact.id)
+  on conflict (user_id, model_key) do update
+    set last_position = excluded.last_position,
+        last_wear_date = excluded.last_wear_date,
+        current_fact_id = excluded.current_fact_id,
+        updated_at = now();
 
   return json_build_object('fact_id', v_fact.id, 'fact', v_fact.fact,
                            'needs_generation', false, 'existing_facts', '[]'::json);
