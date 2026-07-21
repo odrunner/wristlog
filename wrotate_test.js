@@ -490,6 +490,7 @@ export function rowToLog(r) {
     visibility: r.visibility || 'public',
     clubId: r.club_id || null,
     badgeRefs: r.badge_refs || null,
+    factId: r.fact_id || null,
   };
 }
 
@@ -2363,4 +2364,11 @@ export function initialsTextColor(bg) {
   if (h.length !== 6 || /[^0-9a-fA-F]/.test(h)) return '#000';
   const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
   return (r * 299 + g * 587 + b * 114) / 1000 >= 140 ? '#000' : '#fff';
+}
+
+// Daily fun-fact delight card, shown after logging a wear (mirrored in index.html).
+export function funFactCardHTML({ fact }) {
+  if (!fact || !String(fact).trim()) return '';
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return `<div class="funfact-card"><span class="funfact-bulb">💡</span><span class="funfact-text">${esc(fact)}</span></div>`;
 }
