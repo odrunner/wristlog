@@ -2534,20 +2534,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="new-features-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="new-features-title">
   <div class="modal" style="max-width:380px;text-align:center;padding:2rem 1.75rem;">
     <div class="eyebrow" style="margin-bottom:1rem;">New in WRotate</div>
-    <div id="new-features-title" style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.75rem;">We're excited to bring you two new features we'd like you to give a try.</div>
+    <div id="new-features-title" style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.75rem;">Meet Pro V2 &#9889; — our new measurement engine, now in beta.</div>
     <div style="text-align:left;margin-bottom:1rem;">
-      <div style="display:flex;gap:.6rem;align-items:flex-start;margin-bottom:.85rem;">
-        <span style="font-size:1.1rem;flex-shrink:0;margin-top:.1rem;">☆</span>
-        <div>
-          <div style="font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.2rem;">Enhance Your Collection</div>
-          <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Tap <strong>Enhance</strong> on any watch to auto-fill specs, history, and background — powered by AI. Or use the ☆ button in your collection header to enhance all your watches at once.</div>
-        </div>
-      </div>
       <div style="display:flex;gap:.6rem;align-items:flex-start;">
-        <span style="font-size:1.1rem;flex-shrink:0;margin-top:.1rem;">📷</span>
+        <span style="font-size:1.1rem;flex-shrink:0;margin-top:.1rem;">&#9889;</span>
         <div>
-          <div style="font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.2rem;">Improved Photo Recognition</div>
-          <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Point your camera at any watch and WRotate identifies the brand, model, and reference in seconds. Accuracy has been significantly improved.</div>
+          <div style="font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.2rem;">Pro V2 Measurement Engine (Beta)</div>
+          <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">A rebuilt timegrapher engine you can try today: converges in about 10 seconds, holds steady between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing, a key health indicator watchmakers look at. On the Measure page, switch the engine selector to <strong>Pro V2 (beta)</strong>. Needs app version 2.1 or later; switch back to Standard anytime.</div>
         </div>
       </div>
     </div>
@@ -6922,7 +6915,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.20.00';
+const APP_VERSION = '20.20.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13701,7 +13694,7 @@ function closeWhatsNew() {
 
 function maybeShowNewFeatures() {
   if (!currentUser || !watches.length) return;
-  const key = 'wrotate_newfeatures_v2';
+  const key = 'wrotate_newfeatures_v3';
   if (localStorage.getItem(key)) return;
   localStorage.setItem(key, '1');
   setTimeout(() => document.getElementById('new-features-modal').classList.remove('hidden'), 800);
