@@ -1479,6 +1479,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .pi-card-conf.medium { background:rgba(251,191,36,.12); color:#fbbf24; }
     .pi-card-conf.low { background:rgba(239,68,68,.12); color:var(--danger); }
     .pi-card-actions { display:flex; gap:.4rem; flex-shrink:0; }
+    .funfact-card{display:flex;gap:.5rem;align-items:flex-start;background:var(--badge-bg);border:.5px solid var(--badge-border);border-radius:8px;padding:.5rem .6rem;font-size:.8rem;line-height:1.45;color:var(--text);}
+    .funfact-bulb{flex:0 0 auto;}
+    .funfact-text{color:var(--muted);}
 
     /* Crop adjuster overlay */
     .crop-adjuster { position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,.92); display:flex; flex-direction:column; }
@@ -6627,6 +6630,7 @@ function logToRow(l) {
     visibility: vis,
     club_id: l.clubId || null,
     badge_refs: l.badgeRefs || null,
+    fact_id: l.factId || null,
   };
 }
 function rowToLog(r) {
@@ -6637,6 +6641,7 @@ function rowToLog(r) {
     visibility: r.visibility || 'public',
     clubId: r.club_id || null,
     badgeRefs: r.badge_refs || null,
+    factId: r.fact_id || null,
   };
 }
 function wishToRow(w, idx) {
@@ -6915,7 +6920,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.07.02';
+const APP_VERSION = '21.07.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16205,6 +16210,41 @@ function renderTrackHistory() {
   }
 }
 
+// Pick or generate a daily fun fact for a wear log, persist logEntry.factId, and
+// return the fact text (or '' on any failure — must never block logging).
+async function attachFunFact(logEntry, watch) {
+  try {
+    if (!watch || !watch.brand || !watch.name || !currentUser) return '';
+    const brand = watch.brand, name = watch.name, ref = watch.ref || '';
+    const { data: picked, error: pErr } = await db.rpc('pick_watch_fact',
+      { p_brand: brand, p_name: name, p_wear_date: logEntry.date });
+    if (pErr || !picked) return '';
+    let factId = picked.fact_id, factText = picked.fact;
+    if (picked.needs_generation) {
+      const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+        method: 'POST',
+        body: JSON.stringify({ mode: 'facts',
+          watchInfo: { brand, model: name, reference: ref, existingFacts: picked.existing_facts || [] } }),
+      });
+      if (!resp.ok) return '';
+      const gen = await resp.json();
+      if (!gen || !gen.fact) return '';
+      const { data: committed, error: cErr } = await db.rpc('commit_watch_fact',
+        { p_brand: brand, p_name: name, p_wear_date: logEntry.date, p_fact: gen.fact });
+      if (cErr || !committed) return '';
+      factId = committed.fact_id; factText = committed.fact;
+    }
+    if (!factId) return '';
+    logEntry.factId = factId;
+    markDirty('logs', logEntry.id);
+    save();
+    return factText || '';
+  } catch (e) {
+    console.error('[funfact] attach failed:', e && e.message);
+    return '';
+  }
+}
+
 async function saveLog() {
   if (demoGuard()) return;
   const date = document.getElementById('track-date').value;
@@ -16261,6 +16301,8 @@ async function saveLog() {
       });
     }
   }
+  const _factWatch = watches.find(x => x.id === selWatchId) || null;
+  const _factText = await attachFunFact(logEntry, _factWatch);
   closeTrackModal();
   clearTrackPhoto();
   if (date === todayStr()) dismissReminder();
@@ -16268,6 +16310,7 @@ async function saveLog() {
   renderTrack();
   updateStreakChip();
   toast(isUpdate ? 'Wear log updated!' : 'Wear logged!');
+  if (_factText) toast('💡 ' + _factText);
   haptic('success');
   if (!isUpdate) maybeShowReviewPrompt('wear_log');
   checkAndAwardBadges('wear', logEntry.id).then(() => foldBadgeCardsIntoPost(logEntry.id));
@@ -19138,6 +19181,12 @@ function skipRec() {
   if (!el) return;
   if (!watches.length) { el.innerHTML = ''; return; }
   el.innerHTML = recCardHTML(next);
+}
+
+// Daily fun-fact delight card, shown after logging a wear (mirrored in wrotate_test.js).
+function funFactCardHTML({ fact }) {
+  if (!fact || !String(fact).trim()) return '';
+  return `<div class="funfact-card"><span class="funfact-bulb">💡</span><span class="funfact-text">${escHtml(fact)}</span></div>`;
 }
 
 function recCardHTML(rec) {
@@ -24784,8 +24833,11 @@ window._tgNativeCallback = function(data) {
       const r = data.rate;
       rateEl.textContent = (r >= 0 ? '+' : '') + r.toFixed(1);
       rateEl.style.color = Math.abs(r) <= 5 ? '#22c55e' : Math.abs(r) <= 15 ? '#eab308' : 'var(--danger)';
-      const _beShown = _msrStableBeatError(data);
-      if (beEl) beEl.textContent = _beShown != null ? _beShown.toFixed(2) + ' ms' : '—';
+      // Pro V2: beat error still comes from the legacy estimator and reads high
+      // (2.7-4.5ms vs Weishi 0.0-0.5ms) — hide it until the fold-based BE ships.
+      const _isProV2 = isMsr && _tgAlgo() === 'tg';
+      const _beShown = _isProV2 ? null : _msrStableBeatError(data);
+      if (beEl) beEl.textContent = _beShown != null ? 'BE ' + _beShown.toFixed(2) + ' ms' : (_isProV2 ? '' : '—');
       if (isMsr) {
         _msrLastRate = data.rate;
         if (_beShown != null) _msrLastBe = _beShown;
