@@ -42,7 +42,7 @@ const VERBATIM = [
   'badgePostPlan', 'pinFeatured', 'initialsTextColor', 'pickIdentifiedWatch',
   'classifyProfileLoad', 'buildBrandList', 'brandRequestTitle',
   'campaignSubject', 'campaignGroupOf', 'periodCutoff', 'wearLeaderboard',
-  'isWearEntry', 'isMeasurementCardImage',
+  'isWearEntry', 'isMeasurementCardImage', 'feedKeysetFilter', 'dedupeNewFeedLogs',
 ];
 
 const ADAPTED = [

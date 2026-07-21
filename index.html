@@ -6922,7 +6922,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '20.19.51';
+const APP_VERSION = '20.20.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10191,6 +10191,25 @@ function pinFeatured(rawLogs, featuredId, featuredLog) {
   if (!pin) return rest;
   return [{ ...pin, __featured: true }, ...rest];
 }
+
+// ── Feed pagination helpers (mirrored in wrotate_test.js for unit tests) ──────
+// Composite (date, created_at) keyset: fetch posts strictly older than cursor.
+function feedKeysetFilter(cursor) {
+  if (!cursor || !cursor.date || !cursor.created_at) return null;
+  return `date.lt.${cursor.date},and(date.eq.${cursor.date},created_at.lt.${cursor.created_at})`;
+}
+// Keep only brand-new rows (deduped vs shown ids and within the batch).
+function dedupeNewFeedLogs(existingIds, incoming) {
+  const seen = existingIds instanceof Set ? new Set(existingIds) : new Set(existingIds || []);
+  const out = [];
+  for (const row of (incoming || [])) {
+    if (!row || seen.has(row.id)) continue;
+    seen.add(row.id);
+    out.push(row);
+  }
+  return out;
+}
+
 async function loadFeed() {
   if (!currentUser) return;
   // If feedLoading is stuck true for >8s, treat it as dead and allow re-entry
@@ -10204,6 +10223,9 @@ async function loadFeed() {
   feedLoading = true;
   _feedLoadStartedAt = Date.now();
   feedError = false;
+  // Fresh full load → reset pagination so "load more" starts clean.
+  feedHasMore = true;
+  feedLoadingMore = false;
   // Snapshot following size — used at end to detect race condition
   const _followingAtStart = following.size;
   // Master safety net: if loadFeed hasn't finished in 8s, force-render error state
@@ -10426,6 +10448,157 @@ async function loadFeed() {
   document.querySelectorAll('.feed-card-photo > video').forEach(v => { try { v.load(); v.play().catch(() => {}); } catch (_) {} observeFeedVideo(v); });
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// loadMoreFeed — keyset-paginated "load more". Fetches the next page of OLDER
+// posts (composite date/created_at cursor from the current last item), dedupes
+// against what's shown, enriches, and APPENDS new cards without a full re-render
+// (preserving scroll, playing videos, and open comment drafts).
+// ═══════════════════════════════════════════════════════════════════════════
+async function loadMoreFeed() {
+  // Bail if a full loadFeed() is mid-flight — its Phase-2 render replaces feedItems.
+  if (!currentUser || feedLoading || feedLoadingMore || !feedHasMore || feedItems.length === 0) return;
+  const cursor = feedItems[feedItems.length - 1];
+  const keyset = feedKeysetFilter(cursor && { date: cursor.date, created_at: cursor.created_at });
+  if (!keyset) { feedHasMore = false; mountFeedLoadMoreSentinel(); return; }
+
+  feedLoadingMore = true;
+  try {
+    const followingArr = [...following];
+    const myClubIds = myClubs.map(c => c.id);
+
+    // Same union as loadFeed(), each query filtered to posts older than cursor.
+    const older = q => q.or(keyset);
+    const promises = [
+      older(db.from('logs').select(FEED_LOG_COLS).eq('visibility', 'public'))
+        .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50),
+      older(db.from('logs').select(FEED_LOG_COLS).eq('user_id', currentUser.id))
+        .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50),
+    ];
+    if (followingArr.length > 0) {
+      promises.push(
+        older(db.from('logs').select(FEED_LOG_COLS).in('user_id', followingArr).eq('visibility', 'followers'))
+          .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50));
+      const friendsArr = followingArr.filter(id => friendships.has(id));
+      if (friendsArr.length > 0) {
+        promises.push(
+          older(db.from('logs').select(FEED_LOG_COLS).in('user_id', friendsArr).eq('visibility', 'friends'))
+            .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50));
+      }
+      promises.push(
+        older(db.from('logs').select(FEED_LOG_COLS).in('user_id', followingArr).is('visibility', null))
+          .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50));
+    }
+    if (myClubIds.length) {
+      promises.push(
+        older(db.from('logs').select(FEED_LOG_COLS).in('club_id', myClubIds))
+          .order('date', { ascending: false }).order('created_at', { ascending: false }).limit(50));
+    }
+
+    const results = await withTimeout(Promise.all(promises), 8000);
+    if (results.some(r => r.error)) throw results.find(r => r.error).error;
+
+    // Merge → dedupe vs already-shown ids AND within batch → sort → cap.
+    const shownIds = new Set(feedItems.map(i => i.id));
+    let batch = dedupeNewFeedLogs(shownIds, results.flatMap(r => r.data || []))
+      .sort((a, b) => (b.date || '').localeCompare(a.date || '') ||
+                      (b.created_at || '').localeCompare(a.created_at || ''))
+      .slice(0, 50);
+
+    // Same authoritative filters as loadFeed() (blocked → club strip → visibility).
+    batch = batch.filter(l => !blockedUsers.has(l.user_id));
+    batch = batch.filter(l => !l.club_id || myClubIds.includes(l.club_id));
+    batch = batch.filter(log => {
+      if (log.user_id === currentUser.id) return true;
+      if (log.club_id && myClubIds.includes(log.club_id)) return log.visibility !== 'private';
+      if (log.visibility === 'private')   return false;
+      if (log.visibility === 'public')    return true;
+      if (log.visibility === 'followers') return following.has(log.user_id);
+      if (log.visibility === 'friends')   return friendships.has(log.user_id);
+      return following.has(log.user_id);
+    });
+
+    if (batch.length === 0) { feedHasMore = false; mountFeedLoadMoreSentinel(); return; }
+
+    // ── Enrich the new batch and merge into the global feed maps ──────────────
+    const logIds = batch.map(l => l.id);
+    const watchIds = [...new Set(batch.filter(l => l.watch_id).map(l => l.watch_id))];
+    const userIds = [...new Set(batch.map(l => l.user_id))];
+    const [watchResult, profileResult, likesResult, commentResult] = await withTimeout(Promise.all([
+      watchIds.length
+        ? db.from('watches').select('id, brand, name, color, image, ref, url, description, background, functions').in('id', watchIds)
+        : { data: [] },
+      db.from('profiles').select('id, username, display_name, avatar_url, is_official').in('id', userIds),
+      db.from('likes').select('log_id, user_id').in('log_id', logIds),
+      db.from('comments').select('id, log_id, user_id, body, created_at, moderation_status')
+        .in('log_id', logIds).order('created_at', { ascending: true }).limit(500),
+    ]), 8000);
+
+    const watchMap = {};
+    (watchResult.data || []).forEach(w => watchMap[w.id] = w);
+    const profileMap = {};
+    (profileResult.data || []).forEach(p => profileMap[p.id] = p);
+
+    logIds.forEach(id => feedLikes[id] = { count: 0, liked: false });
+    (likesResult.data || []).forEach(l => {
+      if (!feedLikes[l.log_id]) feedLikes[l.log_id] = { count: 0, liked: false };
+      feedLikes[l.log_id].count++;
+      if (l.user_id === currentUser.id) feedLikes[l.log_id].liked = true;
+    });
+
+    const commentData = commentResult.data;
+    if (commentData && commentData.length) {
+      const commenterIds = [...new Set(commentData.map(c => c.user_id))];
+      const allCommentIds = commentData.map(c => c.id);
+      const [commenterResult, clResult] = await withTimeout(Promise.all([
+        db.from('profiles').select('id, username, display_name, is_official').in('id', commenterIds),
+        allCommentIds.length
+          ? db.from('comment_likes').select('comment_id, user_id').in('comment_id', allCommentIds)
+          : { data: [] },
+      ]), 8000);
+      const cpm = {};
+      (commenterResult.data || []).forEach(p => cpm[p.id] = p);
+      commentData.forEach(c => {
+        if (!feedComments[c.log_id]) feedComments[c.log_id] = [];
+        feedComments[c.log_id].push({ ...c, profile: cpm[c.user_id] || null });
+      });
+      (clResult.data || []).forEach(cl => {
+        if (!commentLikes[cl.comment_id]) commentLikes[cl.comment_id] = { count: 0, liked: false };
+        commentLikes[cl.comment_id].count++;
+        if (cl.user_id === currentUser.id) commentLikes[cl.comment_id].liked = true;
+      });
+    }
+    logIds.forEach(id => feedCommentCounts[id] = (feedComments[id] || []).length);
+
+    const enriched = batch.map(l => ({
+      ...l,
+      profile: profileMap[l.user_id] || null,
+      watch: l.watch_id ? (watchMap[l.watch_id] || null) : null,
+    }));
+
+    // ── Append to feedItems and insert cards before the sentinel ──────────────
+    feedItems = feedItems.concat(enriched);
+    const listEl = document.getElementById('feed-list');
+    const sentinel = document.getElementById('feed-load-sentinel');
+    const html = enriched.map(item => renderFeedCard(item)).join('');
+    if (sentinel) sentinel.insertAdjacentHTML('beforebegin', html);
+    else if (listEl) listEl.insertAdjacentHTML('beforeend', html);
+
+    // Wire up any newly-inserted feed videos.
+    document.querySelectorAll('.feed-card-photo > video').forEach(v => {
+      try { v.load(); v.play().catch(() => {}); } catch (_) {}
+      observeFeedVideo(v);
+    });
+
+    // Re-arm the observer on the (still-present) sentinel for the next page.
+    mountFeedLoadMoreSentinel();
+  } catch (e) {
+    console.warn('Feed load-more error:', e?.message);
+    showFeedLoadMoreButton();
+  } finally {
+    feedLoadingMore = false;
+  }
+}
+
 async function scrollToFeedPost(postId) {
   if (!postId) { nav(document.querySelector('nav button[data-page=\'feed\']')); return; }
   expandedComments.add(postId);
@@ -10578,6 +10751,43 @@ function renderFeed() {
     const inp = document.getElementById(id);
     if (inp) inp.value = val;
   });
+
+  // Infinite-scroll sentinel: appended after the cards when more posts may exist.
+  mountFeedLoadMoreSentinel();
+}
+
+// Append (or refresh) the load-more sentinel at the bottom of the feed and wire
+// an IntersectionObserver that auto-loads the next page as it scrolls into view.
+function mountFeedLoadMoreSentinel() {
+  const el = document.getElementById('feed-list');
+  if (!el) return;
+  el.querySelector('#feed-load-sentinel')?.remove();
+  if (!feedHasMore || feedError || feedItems.length === 0) {
+    if (_feedLoadMoreObserver) _feedLoadMoreObserver.disconnect();
+    return;
+  }
+  const sentinel = document.createElement('div');
+  sentinel.id = 'feed-load-sentinel';
+  sentinel.style.cssText = 'padding:1.25rem 1rem 2rem;text-align:center;';
+  sentinel.innerHTML = '<div class="feed-load-spinner" style="width:22px;height:22px;margin:0 auto;border:2px solid var(--border,#3334);border-top-color:var(--gold,#9a7628);border-radius:50%;animation:spin 0.7s linear infinite;"></div>';
+  el.appendChild(sentinel);
+
+  if (!_feedLoadMoreObserver) {
+    _feedLoadMoreObserver = new IntersectionObserver(entries => {
+      if (entries.some(e => e.isIntersecting)) loadMoreFeed();
+    }, { rootMargin: '400px' });
+  } else {
+    _feedLoadMoreObserver.disconnect();
+  }
+  _feedLoadMoreObserver.observe(sentinel);
+}
+
+// Swap the sentinel spinner for a tappable "Load more" button (error fallback).
+function showFeedLoadMoreButton() {
+  const s = document.getElementById('feed-load-sentinel');
+  if (!s) return;
+  if (_feedLoadMoreObserver) _feedLoadMoreObserver.disconnect();
+  s.innerHTML = '<button class="btn btn-ghost" style="font-size:.82rem;padding:.5rem 1.1rem;" onclick="loadMoreFeed()">Load more</button>';
 }
 
 function renderFeedCard(item) {
@@ -13190,6 +13400,9 @@ let feedLoading       = false;
 let _feedLoadStartedAt = 0;          // when feedLoading was set true (stuck-guard)
 let feedError         = false;       // true when loadFeed() fails — shows retry UI
 let feedLoadedAt      = 0;           // timestamp of last successful feed load (for cache)
+let feedLoadingMore   = false;       // true while loadMoreFeed() is in flight (re-entrancy guard)
+let feedHasMore       = true;        // false once a load-more batch returns 0 new posts
+let _feedLoadMoreObserver = null;    // IntersectionObserver on #feed-load-sentinel
 let myProfile         = null;      // current user's profile row
 let discoverUsers     = [];        // search results in discover modal
 let searchDebounce    = null;

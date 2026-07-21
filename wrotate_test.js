@@ -2330,6 +2330,30 @@ export function pinFeatured(rawLogs, featuredId, featuredLog) {
   return [{ ...pin, __featured: true }, ...rest];
 }
 
+// ── Feed pagination ("load more" / infinite scroll) ──────────────────────────
+// Build the PostgREST `.or()` filter that fetches posts strictly OLDER than the
+// current oldest post, keyed on a composite (date, created_at) cursor so many
+// posts sharing one date paginate correctly. Returns null when there's no valid
+// cursor (nothing to page from).
+export function feedKeysetFilter(cursor) {
+  if (!cursor || !cursor.date || !cursor.created_at) return null;
+  return `date.lt.${cursor.date},and(date.eq.${cursor.date},created_at.lt.${cursor.created_at})`;
+}
+
+// Given the ids already shown (Set or array) and an incoming batch of logs,
+// return only the brand-new rows — deduped against what's shown AND against
+// duplicates within the batch itself. An empty result means "no more pages."
+export function dedupeNewFeedLogs(existingIds, incoming) {
+  const seen = existingIds instanceof Set ? new Set(existingIds) : new Set(existingIds || []);
+  const out = [];
+  for (const row of (incoming || [])) {
+    if (!row || seen.has(row.id)) continue;
+    seen.add(row.id);
+    out.push(row);
+  }
+  return out;
+}
+
 // Pick readable initials text color (#000/#fff) for a given avatar background
 // via YIQ perceived brightness. Used for watch-color avatars (dark dials vs light).
 export function initialsTextColor(bg) {
