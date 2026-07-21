@@ -726,8 +726,9 @@ describe('feed fun-fact rendering', () => {
   it('feed enrichment fetches watch_facts by id', () => {
     expect(html).toMatch(/from\('watch_facts'\)\.select\([^)]*\)\.in\('id'/);
   });
-  it('renderFeedCard emits a tappable fun-fact block', () => {
+  it('renderFeedCard emits a tappable fun-fact pill', () => {
     expect(html).toContain('toggleFunFact(');
+    expect(html).toContain('funfact-pill');
   });
 });
 ```
@@ -770,35 +771,43 @@ Update the destructuring to capture it: `const [watchResult, profileResult, like
 
 Where items are assigned `item.watch` / `item.profile`, also set: `item.fact = it.fact_id ? (factMap[it.fact_id] || '') : '';` (match the exact enrichment loop variable used nearby).
 
-- [ ] **Step 5: Render the collapsed affordance in `renderFeedCard`**
+- [ ] **Step 5: Render the fun-fact PILL in `renderFeedCard`**
 
-In `renderFeedCard`, only for wear-posts (an `item.watch` exists), after the watch chip block (~10904), insert a tappable, collapsed fun-fact row (nothing renders when `item.fact` is empty):
+The fact is a **pill** that sits in the post's pill row alongside the existing watch chip / use-case / location pills, and **expands the fact inline** below the row on tap. First read how the existing pills in `renderFeedCard` are marked up and styled (the watch chip ~10891-10904, the use-case/location meta ~10809-10817 via `renderPostLocationHtml`) and **match that pill's exact classes, padding, radius, and colors** — the fun-fact pill must look native to the row, not bespoke.
+
+Only for wear-posts (an `item.watch` exists) and when `item.fact` is non-empty, add a pill to the same pill row and an inline body directly after the row:
 
 ```js
-        ${item.fact ? `<div class="funfact-wrap">
-          <button type="button" class="funfact-toggle" onclick="toggleFunFact(this)" aria-expanded="false">💡 Did you know?</button>
-          <div class="funfact-body" hidden>${funFactCardHTML({ fact: item.fact })}</div>
-        </div>` : ''}
+        ${item.fact ? `<button type="button" class="funfact-pill" onclick="toggleFunFact(this)" aria-expanded="false">💡 Fun fact</button>` : ''}
 ```
 
-Add `toggleFunFact` near the other feed helpers:
+…and immediately after the pill row's closing container, the collapsed body:
+
+```js
+        ${item.fact ? `<div class="funfact-body" hidden>${funFactCardHTML({ fact: item.fact })}</div>` : ''}
+```
+
+Add `toggleFunFact` near the other feed helpers. It finds the sibling `.funfact-body` (walk up to the card, then query within it — the pill and body are siblings under the card, not the same parent):
 
 ```js
 function toggleFunFact(btn) {
-  const body = btn.parentElement.querySelector('.funfact-body');
+  const card = btn.closest('.feed-card') || btn.parentElement;
+  const body = card && card.querySelector('.funfact-body');
   if (!body) return;
   const open = !body.hasAttribute('hidden');
-  if (open) { body.setAttribute('hidden',''); btn.setAttribute('aria-expanded','false'); }
-  else { body.removeAttribute('hidden'); btn.setAttribute('aria-expanded','true'); }
+  if (open) { body.setAttribute('hidden',''); btn.setAttribute('aria-expanded','false'); btn.classList.remove('funfact-pill-open'); }
+  else { body.removeAttribute('hidden'); btn.setAttribute('aria-expanded','true'); btn.classList.add('funfact-pill-open'); }
 }
 ```
 
-Add CSS by the `.funfact-card` rule:
+Note: confirm the feed card's actual container class (e.g. `.feed-card`) by reading `renderFeedCard`, and use it in `closest(...)`. If a single card can show multiple fun-fact pills (it can't — one watch per post), scoping to the card is still correct.
+
+Add CSS. Start from the existing pill/chip rule so it matches, then the body + open-state accent:
 
 ```css
-.funfact-wrap{margin-top:.4rem;}
-.funfact-toggle{background:none;border:0;color:var(--badge-accent);font:inherit;font-size:.78rem;font-weight:500;cursor:pointer;padding:.15rem 0;}
-.funfact-body{margin-top:.35rem;}
+.funfact-pill{ /* copy the existing post-pill base styling (padding/radius/font/border/bg) so it matches the watch & location pills */ cursor:pointer; }
+.funfact-pill-open{ color:var(--badge-accent); border-color:var(--badge-border); }
+.funfact-body{margin-top:.4rem;}
 ```
 
 - [ ] **Step 6: Run unit tests + full suite**
@@ -806,10 +815,12 @@ Add CSS by the `.funfact-card` rule:
 Run: `cd "/Users/ozgurdogan/Documents/Claude project/watch tracker" && npx vitest run tests/watch-fun-fact.test.js && npm test`
 Expected: PASS (new file + full 970-test suite green).
 
-- [ ] **Step 7: E2E mocked + manual cross-account UAT**
+- [ ] **Step 7: E2E mocked + manual cross-account UAT + UX REVIEW**
 
 Run: `npm run test:e2e`
-Expected: pass. Then on the dev server: as testuser, open the feed, find the wear-post from Task 6 — confirm "💡 Did you know?" expands to the fact. Log in as testuser2 (mutual close friend) and confirm testuser2 sees the **same** frozen fact on that post (they should, via `logs.fact_id`).
+Expected: pass. Then on the dev server: as testuser, open the feed, find the wear-post from Task 6 — confirm the "💡 Fun fact" pill sits inline with the other pills and expands the fact below on tap. Log in as testuser2 (mutual close friend) and confirm testuser2 sees the **same** frozen fact on that post (via `logs.fact_id`).
+
+**UX review checkpoint:** before committing Task 7, present the rendered pill to the user (screenshot or the dev-server URL) for sign-off — they explicitly want to review this surface. Adjust styling/interaction per their feedback, then commit.
 
 - [ ] **Step 8: Commit**
 
