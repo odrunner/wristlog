@@ -73,3 +73,23 @@ describe('feed fun-fact rendering', () => {
     expect(html).toContain('funfact-pill');
   });
 });
+
+describe('fun-fact engagement tracking + admin metrics', () => {
+  it('pill carries data-log-id', () => {
+    expect(html).toMatch(/funfact-pill[^>]*data-log-id=/);
+  });
+  it('toggleFunFact records a click on open', () => {
+    expect(html).toContain("recordFactClick(btn.getAttribute('data-log-id'))");
+  });
+  it('recordFactClick does a PLAIN insert into fact_clicks (not upsert)', () => {
+    expect(html).toMatch(/from\('fact_clicks'\)\.insert\(/);
+    expect(html).not.toMatch(/from\('fact_clicks'\)\.upsert\(/);
+  });
+  it('admin dashboard calls admin_fact_counts and shows the four rows', () => {
+    expect(html).toContain('admin_fact_counts');
+    expect(html).toContain('Fun fact clicks');
+    expect(html).toContain('Fun fact viewers');
+    expect(html).toContain('Fun facts generated');
+    expect(html).toContain('Watches with facts');
+  });
+});

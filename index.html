@@ -6938,7 +6938,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.16.17';
+const APP_VERSION = '22.16.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10944,7 +10944,7 @@ function renderFeedCard(item) {
 
   // Fun-fact pill — wear posts only, and only when a fact was frozen onto the post
   const funFactPill = (w && item.fact)
-    ? `<button type="button" class="funfact-pill" onclick="toggleFunFact(this)" aria-expanded="false">💡 Fun fact</button>`
+    ? `<button type="button" class="funfact-pill" onclick="toggleFunFact(this)" aria-expanded="false" data-log-id="${escHtml(item.id)}">💡 Fun fact</button>`
     : '';
   const funFactBody = (w && item.fact)
     ? `<div class="funfact-body" hidden>${funFactCardHTML({ fact: item.fact })}</div>`
@@ -11177,6 +11177,16 @@ async function unfeaturePost(logId) {
 }
 
 // ── Fun-fact pill: expand/collapse the frozen fact inline on the card ────
+// Record a fun-fact pill expand (first open per user, per post). Plain insert —
+// the PK conflict on a repeat open is expected and ignored. Fire-and-forget;
+// never blocks the UI. Powers the admin "Fun fact clicks/viewers" metrics.
+function recordFactClick(logId) {
+  if (!logId || !currentUser) return;
+  try {
+    db.from('fact_clicks').insert({ user_id: currentUser.id, log_id: logId }).then(() => {}).catch(() => {});
+  } catch (e) {}
+}
+
 function toggleFunFact(btn) {
   const card = btn.closest('.feed-card') || btn.parentElement;
   const body = card && card.querySelector('.funfact-body');
@@ -11190,6 +11200,7 @@ function toggleFunFact(btn) {
     body.removeAttribute('hidden');
     btn.setAttribute('aria-expanded', 'true');
     btn.classList.add('funfact-pill-open');
+    recordFactClick(btn.getAttribute('data-log-id'));
   }
 }
 
@@ -14311,6 +14322,9 @@ async function loadAdminStats() {
     // Day-over-day: single RPC (SECURITY DEFINER, excludes internal accounts)
     const dodRes = await withTimeout(db.rpc('admin_dod_counts'), 10000);
     const dod = dodRes.data || {};
+    // Fun-fact engagement + generation (totals + last-24h deltas)
+    const factRes = await withTimeout(db.rpc('admin_fact_counts'), 10000);
+    const fc = factRes.data || {};
     // Active-user D/D: distinct DAU last 24h vs the prior 24h (24–48h ago)
     const dauRes = await withTimeout(db.rpc('admin_active_dau'), 10000);
     const dauDod = dauRes.data || {};
@@ -14534,6 +14548,10 @@ async function loadAdminStats() {
         ${statRow('Price Checks', extVal, dod.priceChecks)}
         ${statRow('Enhances', extEnh, dod.enhances)}
         ${statRow('Measurements', extMsr, dod.measurements)}
+        ${statRow('Fun fact clicks', Number(fc.clicks_total) || 0, Number(fc.clicks_24h) || 0)}
+        ${statRow('Fun fact viewers', Number(fc.viewers_total) || 0, Number(fc.viewers_24h) || 0)}
+        ${statRow('Fun facts generated', Number(fc.generated_total) || 0, Number(fc.generated_24h) || 0)}
+        ${statRow('Watches with facts', Number(fc.watches_total) || 0, Number(fc.watches_24h) || 0)}
         ${statRow('Advanced mode (24h)', advSessions24h, advDelta, advUsers24h > 0 ? advUsers24h + ' user' + (advUsers24h === 1 ? '' : 's') : '')}
         ${statRow('Pro V2 Beta users (total)', Number(betaStats.beta_users) || 0, null, (Number(betaStats.beta_sessions) || 0) + ' sessions · ' + (Number(betaStats.beta_users_24h) || 0) + ' active (24h)' + inlineDelta((Number(betaStats.beta_users_24h) || 0) - (Number(betaStats.beta_users_prev24h) || 0), false))}
         ${statRow('Email Unsubs (total)', Number(unsub.unsub_total) || 0, null, (Number(unsub.unsub_24h) || 0) + ' (24h)' + inlineDelta((Number(unsub.unsub_24h) || 0) - (Number(unsub.unsub_prev24h) || 0), true))}
