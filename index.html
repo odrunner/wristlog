@@ -12543,7 +12543,15 @@ async function saveNewPost() {
   const isWear = !!postedWatch && isWearEntry({ watchId: postedWatch.id, useCase });
   if (isWear) dismissReminder(); // wear was logged, dismiss the reminder
   // Fire-and-forget fun fact for genuine wears (excludes measurement shares) — never blocks.
-  if (isWear) attachFunFact(entry, postedWatch).then(factText => { if (factText) toast('💡 ' + factText); });
+  // The fact resolves AFTER the feed re-fetch below (it may call an edge function), so the
+  // just-posted card would render with no Fun fact pill. Once the fact lands, invalidate the
+  // feed cache and reload so the pill populates on the user's latest post.
+  if (isWear) attachFunFact(entry, postedWatch).then(factText => {
+    if (!factText) return;
+    toast('💡 ' + factText);
+    feedLoadedAt = 0;
+    if (document.getElementById('page-feed').classList.contains('active')) loadFeed();
+  });
   closeNewPost();
   if (window.posthog) posthog.capture('post_created', { has_photo: !!entry.photoUrl, photo_count: parsePhotoUrl(entry.photoUrl).length, has_watch: !!trackWatchId });
   toast(isWear ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : (useCase === 'measurement' ? 'Shared to feed!' : 'Posted!'));
@@ -16306,6 +16314,10 @@ async function attachFunFact(logEntry, watch) {
     logEntry.factId = factId;
     markDirty('logs', logEntry.id);
     save();
+    // save() only debounces cloudSync (~500ms). The feed re-fetches fact_id straight
+    // from the DB, so write the column now — otherwise a feed reload fired right after
+    // this resolves (see saveNewPost) races the debounce and the pill stays empty.
+    try { await db.from('logs').update({ fact_id: factId }).eq('id', logEntry.id); } catch (_) {}
     return factText || '';
   } catch (e) {
     console.error('[funfact] attach failed:', e && e.message);

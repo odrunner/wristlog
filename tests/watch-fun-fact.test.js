@@ -58,6 +58,31 @@ describe('fun-fact covers every wear-creation path', () => {
   });
 });
 
+describe('fun fact populates the just-posted feed card', () => {
+  // Regression guard for "Fun fact didn't populate for my latest post": the feed is
+  // DB-driven, so a fact must (a) be written to logs.fact_id immediately — not just via
+  // the ~500ms debounced cloudSync — and (b) trigger a feed reload once it lands, since
+  // saveNewPost's own loadFeed() runs before attachFunFact resolves.
+  const fnBody = (marker) => {
+    const i = html.indexOf(marker);
+    if (i === -1) return '';
+    const rest = html.slice(i + marker.length);
+    const next = rest.search(/\n(async )?function [a-zA-Z]/);
+    return next === -1 ? rest : rest.slice(0, next);
+  };
+  it('attachFunFact writes fact_id to the DB immediately (not only via debounced save)', () => {
+    const body = fnBody('async function attachFunFact(');
+    expect(body).toMatch(/from\('logs'\)\.update\(\{\s*fact_id[^}]*\}\)\.eq\('id'/);
+  });
+  it('saveNewPost reloads the feed once the fact resolves', () => {
+    const body = fnBody('async function saveNewPost(');
+    // the attachFunFact callback must invalidate the feed cache and reload
+    const cb = body.slice(body.indexOf('attachFunFact('));
+    expect(cb).toMatch(/feedLoadedAt\s*=\s*0/);
+    expect(cb).toContain('loadFeed()');
+  });
+});
+
 describe('feed fun-fact rendering', () => {
   it('FEED_LOG_COLS includes fact_id', () => {
     expect(html).toMatch(/const FEED_LOG_COLS = '[^']*fact_id[^']*'/);
