@@ -1841,6 +1841,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       background: var(--surface2); border-radius: 20px; padding: .22rem .65rem;
     }
 
+    /* Fun-fact pill — same base shape as the watch chip, tappable to expand */
+    .funfact-pill {
+      display: inline-flex; align-items: center; gap: .35rem;
+      margin: 0 1rem .75rem; font-size: .72rem; color: var(--muted);
+      background: var(--surface2); border: 1px solid transparent; border-radius: 20px;
+      padding: .22rem .65rem; font-family: inherit; cursor: pointer;
+    }
+    .funfact-pill-open { color: var(--badge-accent); border-color: var(--badge-border); }
+    .funfact-body { margin: 0 1rem .75rem; }
+    /* Keep the watch chip and fun-fact pill on one row; the expanded fact drops below. */
+    .feed-chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 1rem .75rem; }
+    .feed-chip-row .feed-watch-chip, .feed-chip-row .funfact-pill { margin: 0; }
+
     /* Edit-caption pencil button in card header (own cards) */
     .feed-edit-btn {
       background: none; border: none; color: var(--muted); cursor: pointer;
@@ -6920,7 +6933,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.19.58';
+const APP_VERSION = '21.20.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10169,7 +10182,7 @@ function closeLoginPrompt() {
 }
 
 // ── Feed ──────────────────────────────────────────────────────────────────
-const FEED_LOG_COLS = 'id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility, moderation_status, location, badge_refs';
+const FEED_LOG_COLS = 'id, user_id, watch_id, club_id, photo_url, notes, use_case, date, created_at, visibility, moderation_status, location, badge_refs, fact_id';
 // Pick readable initials text color (#000/#fff) for a given avatar background
 // via YIQ perceived brightness. Used for watch-color avatars (dark dials vs light).
 function initialsTextColor(bg) {
@@ -10364,8 +10377,9 @@ async function loadFeed() {
     // ═══════════════════════════════════════════════════════════════════════
     const watchIds = [...new Set(rawLogs.filter(l => l.watch_id).map(l => l.watch_id))];
     const userIds = [...new Set(rawLogs.map(l => l.user_id))];
+    const factIds = [...new Set(rawLogs.filter(l => l.fact_id).map(l => l.fact_id))];
 
-    const [watchResult, profileResult, likesResult, commentResult] = await withTimeout(Promise.all([
+    const [watchResult, profileResult, likesResult, commentResult, factResult] = await withTimeout(Promise.all([
       watchIds.length
         ? db.from('watches').select('id, brand, name, color, image, ref, url, description, background, functions').in('id', watchIds)
         : { data: [] },
@@ -10373,6 +10387,9 @@ async function loadFeed() {
       db.from('likes').select('log_id, user_id').in('log_id', logIds),
       db.from('comments').select('id, log_id, user_id, body, created_at, moderation_status')
         .in('log_id', logIds).order('created_at', { ascending: true }).limit(500),
+      factIds.length
+        ? db.from('watch_facts').select('id, fact').in('id', factIds)
+        : Promise.resolve({ data: [] }),
     ]), 8000);
 
     const watchMap = {};
@@ -10380,6 +10397,9 @@ async function loadFeed() {
 
     const profileMap = {};
     (profileResult.data || []).forEach(p => profileMap[p.id] = p);
+
+    const factMap = {};
+    (factResult.data || []).forEach(f => factMap[f.id] = f.fact);
 
     feedLikes = {};
     logIds.forEach(id => feedLikes[id] = { count: 0, liked: false });
@@ -10421,6 +10441,7 @@ async function loadFeed() {
       ...l,
       profile: profileMap[l.user_id] || null,
       watch: l.watch_id ? (watchMap[l.watch_id] || null) : null,
+      fact: l.fact_id ? (factMap[l.fact_id] || '') : '',
     }));
     renderFeed();
   } catch(e) { console.warn('Feed error:', e?.message); feedError = true; }
@@ -10521,7 +10542,8 @@ async function loadMoreFeed() {
     const logIds = batch.map(l => l.id);
     const watchIds = [...new Set(batch.filter(l => l.watch_id).map(l => l.watch_id))];
     const userIds = [...new Set(batch.map(l => l.user_id))];
-    const [watchResult, profileResult, likesResult, commentResult] = await withTimeout(Promise.all([
+    const factIds = [...new Set(batch.filter(l => l.fact_id).map(l => l.fact_id))];
+    const [watchResult, profileResult, likesResult, commentResult, factResult] = await withTimeout(Promise.all([
       watchIds.length
         ? db.from('watches').select('id, brand, name, color, image, ref, url, description, background, functions').in('id', watchIds)
         : { data: [] },
@@ -10529,12 +10551,17 @@ async function loadMoreFeed() {
       db.from('likes').select('log_id, user_id').in('log_id', logIds),
       db.from('comments').select('id, log_id, user_id, body, created_at, moderation_status')
         .in('log_id', logIds).order('created_at', { ascending: true }).limit(500),
+      factIds.length
+        ? db.from('watch_facts').select('id, fact').in('id', factIds)
+        : Promise.resolve({ data: [] }),
     ]), 8000);
 
     const watchMap = {};
     (watchResult.data || []).forEach(w => watchMap[w.id] = w);
     const profileMap = {};
     (profileResult.data || []).forEach(p => profileMap[p.id] = p);
+    const factMap = {};
+    (factResult.data || []).forEach(f => factMap[f.id] = f.fact);
 
     logIds.forEach(id => feedLikes[id] = { count: 0, liked: false });
     (likesResult.data || []).forEach(l => {
@@ -10571,6 +10598,7 @@ async function loadMoreFeed() {
       ...l,
       profile: profileMap[l.user_id] || null,
       watch: l.watch_id ? (watchMap[l.watch_id] || null) : null,
+      fact: l.fact_id ? (factMap[l.fact_id] || '') : '',
     }));
 
     // ── Append to feedItems and insert cards before the sentinel ──────────────
@@ -10909,6 +10937,14 @@ function renderFeedCard(item) {
            data-watch-func="${escHtml((w.functions||[]).join(', '))}">${escHtml((w.brand||'') + ' ' + (w.name||''))}</div>`
     : '';
 
+  // Fun-fact pill — wear posts only, and only when a fact was frozen onto the post
+  const funFactPill = (w && item.fact)
+    ? `<button type="button" class="funfact-pill" onclick="toggleFunFact(this)" aria-expanded="false">💡 Fun fact</button>`
+    : '';
+  const funFactBody = (w && item.fact)
+    ? `<div class="funfact-body" hidden>${funFactCardHTML({ fact: item.fact })}</div>`
+    : '';
+
   // Visibility badge — only shown to the author on non-public posts
   const vis = item.visibility || 'public';
   const visBadge = (isMe && vis !== 'public')
@@ -11104,7 +11140,8 @@ function renderFeedCard(item) {
       </div>
       ${captionHtml}
       ${badgeRibbon}
-      ${watchChip}
+      ${(watchChip || funFactPill) ? `<div class="feed-chip-row">${watchChip}${funFactPill}</div>` : ''}
+      ${funFactBody}
       ${visBadge}
       ${clubBadge}
       ${commentsHtml}
@@ -11131,6 +11168,23 @@ async function unfeaturePost(logId) {
     feedLoadedAt = 0; loadFeed();
   } catch (e) {
     toast(e?.message || 'Could not un-feature this post', 'error');
+  }
+}
+
+// ── Fun-fact pill: expand/collapse the frozen fact inline on the card ────
+function toggleFunFact(btn) {
+  const card = btn.closest('.feed-card') || btn.parentElement;
+  const body = card && card.querySelector('.funfact-body');
+  if (!body) return;
+  const open = !body.hasAttribute('hidden');
+  if (open) {
+    body.setAttribute('hidden', '');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.classList.remove('funfact-pill-open');
+  } else {
+    body.removeAttribute('hidden');
+    btn.setAttribute('aria-expanded', 'true');
+    btn.classList.add('funfact-pill-open');
   }
 }
 

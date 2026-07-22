@@ -35,3 +35,16 @@ describe('fun-fact wiring in index.html', () => {
     expect(html).toContain("commit_watch_fact");
   });
 });
+
+describe('feed fun-fact rendering', () => {
+  it('FEED_LOG_COLS includes fact_id', () => {
+    expect(html).toMatch(/const FEED_LOG_COLS = '[^']*fact_id[^']*'/);
+  });
+  it('feed enrichment fetches watch_facts by id', () => {
+    expect(html).toMatch(/from\('watch_facts'\)\.select\([^)]*\)\.in\('id'/);
+  });
+  it('renderFeedCard emits a tappable fun-fact pill', () => {
+    expect(html).toContain('toggleFunFact(');
+    expect(html).toContain('funfact-pill');
+  });
+});
