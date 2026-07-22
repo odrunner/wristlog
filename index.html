@@ -6920,7 +6920,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.07.12';
+const APP_VERSION = '21.19.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16302,7 +16302,10 @@ async function saveLog() {
     }
   }
   const _factWatch = watches.find(x => x.id === selWatchId) || null;
-  const _factText = await attachFunFact(logEntry, _factWatch);
+  // Fire-and-forget: fun-fact pick/generation (cold models take several seconds
+  // of grounded AI) must never delay the log confirmation. attachFunFact
+  // self-persists logEntry.factId and never throws; the delight toast fires when ready.
+  attachFunFact(logEntry, _factWatch).then(factText => { if (factText) toast('💡 ' + factText); });
   closeTrackModal();
   clearTrackPhoto();
   if (date === todayStr()) dismissReminder();
@@ -16310,7 +16313,6 @@ async function saveLog() {
   renderTrack();
   updateStreakChip();
   toast(isUpdate ? 'Wear log updated!' : 'Wear logged!');
-  if (_factText) toast('💡 ' + _factText);
   haptic('success');
   if (!isUpdate) maybeShowReviewPrompt('wear_log');
   checkAndAwardBadges('wear', logEntry.id).then(() => foldBadgeCardsIntoPost(logEntry.id));
