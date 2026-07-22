@@ -6938,7 +6938,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.21.05';
+const APP_VERSION = '22.07.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12542,6 +12542,8 @@ async function saveNewPost() {
   // dismiss the wear reminder or claim a wear was logged for it.
   const isWear = !!postedWatch && isWearEntry({ watchId: postedWatch.id, useCase });
   if (isWear) dismissReminder(); // wear was logged, dismiss the reminder
+  // Fire-and-forget fun fact for genuine wears (excludes measurement shares) — never blocks.
+  if (isWear) attachFunFact(entry, postedWatch).then(factText => { if (factText) toast('💡 ' + factText); });
   closeNewPost();
   if (window.posthog) posthog.capture('post_created', { has_photo: !!entry.photoUrl, photo_count: parsePhotoUrl(entry.photoUrl).length, has_watch: !!trackWatchId });
   toast(isWear ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : (useCase === 'measurement' ? 'Shared to feed!' : 'Posted!'));
@@ -14441,6 +14443,13 @@ async function loadAdminStats() {
       const subHtml = sub ? `<span style="color:var(--muted);font-size:.68rem;font-weight:500;margin-left:.4rem;">${sub}</span>` : '';
       return `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span style="color:var(--text);">${label}</span><span style="color:var(--gold);font-weight:600;">${value}${deltaHtml}${subHtml}</span></div>`;
     };
+    // Colored day-over-day delta to embed INSIDE a sub string, so the change sits next
+    // to the 24h figure it describes (not glued to an all-time total). `invert`: a rise is bad.
+    const inlineDelta = (delta, invert) => {
+      if (typeof delta !== 'number' || delta === 0) return '';
+      const good = invert ? delta < 0 : delta > 0;
+      return ` <span style="color:${good ? 'var(--success)' : 'var(--muted)'};font-weight:600;">${delta > 0 ? '+' : ''}${delta}</span>`;
+    };
 
     window._adminTableSort = window._adminTableSort || {};
     window._adminUserLists = { 'admin-users': profileList, 'admin-internal': internalList };
@@ -14526,8 +14535,8 @@ async function loadAdminStats() {
         ${statRow('Enhances', extEnh, dod.enhances)}
         ${statRow('Measurements', extMsr, dod.measurements)}
         ${statRow('Advanced mode (24h)', advSessions24h, advDelta, advUsers24h > 0 ? advUsers24h + ' user' + (advUsers24h === 1 ? '' : 's') : '')}
-        ${statRow('Pro V2 Beta users', Number(betaStats.beta_users) || 0, (Number(betaStats.beta_users_24h) || 0) - (Number(betaStats.beta_users_prev24h) || 0), (Number(betaStats.beta_sessions) || 0) + ' sessions' + (Number(betaStats.beta_users_24h) ? ', ' + betaStats.beta_users_24h + ' user' + (Number(betaStats.beta_users_24h) === 1 ? '' : 's') + ' (24h)' : ''))}
-        ${statRow('Email Unsubs', Number(unsub.unsub_total) || 0, (Number(unsub.unsub_24h) || 0) - (Number(unsub.unsub_prev24h) || 0), (Number(unsub.unsub_24h) || Number(unsub.unsub_prev24h)) ? (Number(unsub.unsub_24h) || 0) + ' (24h) vs ' + (Number(unsub.unsub_prev24h) || 0) + ' prior' : '', true)}
+        ${statRow('Pro V2 Beta users (total)', Number(betaStats.beta_users) || 0, null, (Number(betaStats.beta_sessions) || 0) + ' sessions · ' + (Number(betaStats.beta_users_24h) || 0) + ' active (24h)' + inlineDelta((Number(betaStats.beta_users_24h) || 0) - (Number(betaStats.beta_users_prev24h) || 0), false))}
+        ${statRow('Email Unsubs (total)', Number(unsub.unsub_total) || 0, null, (Number(unsub.unsub_24h) || 0) + ' (24h)' + inlineDelta((Number(unsub.unsub_24h) || 0) - (Number(unsub.unsub_prev24h) || 0), true))}
         ${statRow('Wishlist Items', wishItems, dod.wish)}
         ${statRow('Clubs', clubs, dod.clubs)}
         ${statRow('Follows', follows, dod.follows)}
@@ -18382,13 +18391,16 @@ function quickLog(watchId) {
   const alreadyWorn = logsForWatch(watchId).some(l => l.date === today);
   if (alreadyWorn) return;
   const qId = uid();
-  logs.push({ id: qId, watchId, date: today, useCase: 'unspecified', notes: '' });
+  const qEntry = { id: qId, watchId, date: today, useCase: 'unspecified', notes: '' };
+  logs.push(qEntry);
   markDirty('logs', qId);
   save();
   if (document.getElementById('page-collection').classList.contains('active')) renderCollection();
   dismissReminder();
   toast('Wear logged!');
   haptic('success');
+  // Fire-and-forget fun fact (mirrors saveLog / saveNewPost) — never blocks logging.
+  attachFunFact(qEntry, watches.find(x => x.id === watchId) || null).then(factText => { if (factText) toast('💡 ' + factText); });
 }
 
 // ── Today's Pick log modal ────────────────────────────────────────────────────

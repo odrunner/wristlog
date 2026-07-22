@@ -36,6 +36,28 @@ describe('fun-fact wiring in index.html', () => {
   });
 });
 
+describe('fun-fact covers every wear-creation path', () => {
+  // Regression guard: attachFunFact was originally wired only into saveLog, so
+  // wears logged via quickLog (collection one-tap) and saveNewPost (New Post
+  // composer with a watch tagged) silently got no fact. All three must call it.
+  const fnBody = (marker) => {
+    const i = html.indexOf(marker);
+    if (i === -1) return '';
+    const rest = html.slice(i + marker.length);
+    const next = rest.search(/\n(async )?function [a-zA-Z]/);
+    return next === -1 ? rest : rest.slice(0, next);
+  };
+  it('saveLog (Track modal) calls attachFunFact', () => {
+    expect(fnBody('async function saveLog(')).toContain('attachFunFact(');
+  });
+  it('quickLog (collection one-tap) calls attachFunFact', () => {
+    expect(fnBody('function quickLog(')).toContain('attachFunFact(');
+  });
+  it('saveNewPost (composer) calls attachFunFact', () => {
+    expect(fnBody('async function saveNewPost(')).toContain('attachFunFact(');
+  });
+});
+
 describe('feed fun-fact rendering', () => {
   it('FEED_LOG_COLS includes fact_id', () => {
     expect(html).toMatch(/const FEED_LOG_COLS = '[^']*fact_id[^']*'/);

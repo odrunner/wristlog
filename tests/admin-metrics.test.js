@@ -71,14 +71,20 @@ describe('Totals card day-over-day deltas', () => {
     expect(html).toMatch(/statRow\('Advanced mode \(24h\)',\s*advSessions24h,\s*advDelta/);
   });
 
-  it('Pro V2 Beta delta uses active beta users vs prior 24h', () => {
+  it('Pro V2 Beta row: total stands alone, active-vs-prior change lives in the sub', () => {
     expect(html).toContain('beta_users_prev24h');
-    expect(html).toMatch(/statRow\('Pro V2 Beta users'[^\n]*beta_users_24h[^\n]*beta_users_prev24h/);
+    // total passes null delta (no change glued to the all-time total); the 24h-active
+    // change is folded into the sub via inlineDelta, next to the "active (24h)" figure
+    expect(html).toMatch(/statRow\('Pro V2 Beta users \(total\)',[^\n]*null,[^\n]*inlineDelta\([^\n]*beta_users_24h[^\n]*beta_users_prev24h/);
   });
 
-  it('Email Unsubs delta is inverted (a rise is not green)', () => {
-    // trailing `true` arg flags higher-is-bad so an increase renders muted, not success
-    expect(html).toMatch(/statRow\('Email Unsubs'[^\n]*unsub_prev24h[^\n]*,\s*true\)/);
+  it('Email Unsubs row: total stands alone, 24h change inverted (a rise is not green)', () => {
+    // total passes null delta; the 24h change is inverted (higher-is-bad) via inlineDelta(..., true)
+    expect(html).toMatch(/statRow\('Email Unsubs \(total\)',[^\n]*null,[^\n]*inlineDelta\([^\n]*unsub_prev24h[^\n]*,\s*true\)/);
+  });
+
+  it('inlineDelta colors an embedded change and inverts when a rise is bad', () => {
+    expect(html).toMatch(/const inlineDelta = \(delta, invert\) => \{[\s\S]*?const good = invert \? delta < 0 : delta > 0;/);
   });
 
   it('statRow renders green only when good, honoring the invert flag', () => {
