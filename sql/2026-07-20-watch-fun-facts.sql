@@ -146,3 +146,60 @@ begin
 end $$;
 
 grant execute on function public.commit_watch_fact(text, text, date, text) to authenticated;
+
+-- Server-side commit: same pool/cursor logic as commit_watch_fact but for an
+-- explicit user (from a validated JWT in the edge function, NOT auth.uid()), and
+-- it also stamps logs.fact_id atomically. Granted to service_role ONLY so the
+-- edge function can persist the fact even if the client goes away mid-generation
+-- (the fragile window that lost cold-model facts). Never granted to clients.
+-- NOTE: logs.id is TEXT (app-generated string ids), so p_log_id must be text —
+-- comparing a uuid param to logs.id throws "operator does not exist: text = uuid".
+drop function if exists public.commit_watch_fact_srv(uuid, text, text, date, text, uuid);
+create or replace function public.commit_watch_fact_srv(
+  p_user uuid, p_brand text, p_name text, p_wear_date date, p_fact text, p_log_id text
+) returns json
+language plpgsql security definer set search_path = public as $$
+declare
+  v_key  text := lower(trim(p_brand)) || '|' || lower(trim(p_name));
+  v_last int;
+  v_next int;
+  v_pool int;
+  v_fact public.watch_facts%rowtype;
+begin
+  if p_user is null then raise exception 'user required'; end if;
+  if p_fact is null or length(trim(p_fact)) = 0 then raise exception 'empty fact'; end if;
+
+  select last_position into v_last from public.watch_fact_progress
+    where user_id = p_user and model_key = v_key;
+  if v_last is null then v_last := -1; end if;
+  v_next := v_last + 1;
+
+  if v_next < 10 then
+    insert into public.watch_facts(model_key, position, fact)
+      values (v_key, v_next, left(trim(p_fact), 500))
+      on conflict (model_key, position) do nothing;
+    select * into v_fact from public.watch_facts where model_key = v_key and position = v_next;
+  else
+    select count(*) into v_pool from public.watch_facts where model_key = v_key;
+    if v_pool = 0 then raise exception 'no facts to serve'; end if;
+    select * into v_fact from public.watch_facts where model_key = v_key and position = (v_next % v_pool);
+  end if;
+
+  insert into public.watch_fact_progress(user_id, model_key, last_position, last_wear_date, current_fact_id)
+    values (p_user, v_key, v_next, p_wear_date, v_fact.id)
+  on conflict (user_id, model_key) do update
+    set last_position = v_next, last_wear_date = p_wear_date,
+        current_fact_id = v_fact.id, updated_at = now();
+
+  -- Stamp the post so the fact is frozen even if the client never comes back.
+  if p_log_id is not null then
+    update public.logs set fact_id = v_fact.id where id = p_log_id and user_id = p_user;
+  end if;
+
+  return json_build_object('fact_id', v_fact.id, 'fact', v_fact.fact);
+end $$;
+
+-- Lock to service_role only: strip the default anon/authenticated execute so a
+-- client cannot call this (it takes an explicit p_user, which would be spoofable).
+revoke all on function public.commit_watch_fact_srv(uuid, text, text, date, text, text) from public, anon, authenticated;
+grant execute on function public.commit_watch_fact_srv(uuid, text, text, date, text, text) to service_role;

@@ -6938,7 +6938,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.07.28';
+const APP_VERSION = '22.16.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16289,18 +16289,19 @@ async function attachFunFact(logEntry, watch) {
     if (pErr || !picked) return '';
     let factId = picked.fact_id, factText = picked.fact;
     if (picked.needs_generation) {
+      // The edge function generates AND commits server-side (pool + cursor +
+      // logs.fact_id), so a cold-model fact survives the client disconnecting
+      // during the slow (~10-15s) grounded generation. We just read the result.
       const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
         method: 'POST',
         body: JSON.stringify({ mode: 'facts',
-          watchInfo: { brand, model: name, reference: ref, existingFacts: picked.existing_facts || [] } }),
+          watchInfo: { brand, model: name, reference: ref, existingFacts: picked.existing_facts || [] },
+          commit: { logId: logEntry.id, wearDate: logEntry.date } }),
       });
       if (!resp.ok) return '';
       const gen = await resp.json();
-      if (!gen || !gen.fact) return '';
-      const { data: committed, error: cErr } = await db.rpc('commit_watch_fact',
-        { p_brand: brand, p_name: name, p_wear_date: logEntry.date, p_fact: gen.fact });
-      if (cErr || !committed) return '';
-      factId = committed.fact_id; factText = committed.fact;
+      if (!gen || !gen.fact || !gen.fact_id) return '';
+      factId = gen.fact_id; factText = gen.fact;
     }
     if (!factId) return '';
     logEntry.factId = factId;

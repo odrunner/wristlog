@@ -30,9 +30,12 @@ describe('fun-fact wiring in index.html', () => {
   it('saveLog attaches a fun fact for wear logs', () => {
     expect(html).toContain('attachFunFact(');
   });
-  it('pick/commit RPCs are called by name', () => {
+  it('pick RPC is called; generation commits server-side via the edge', () => {
     expect(html).toContain("pick_watch_fact");
-    expect(html).toContain("commit_watch_fact");
+    // The client no longer commits directly — it passes commit:{logId,wearDate}
+    // to the edge function, which persists pool+cursor+logs.fact_id server-side
+    // so a cold-model fact survives the client disconnecting mid-generation.
+    expect(html).toMatch(/commit:\s*\{\s*logId:\s*logEntry\.id/);
   });
 });
 

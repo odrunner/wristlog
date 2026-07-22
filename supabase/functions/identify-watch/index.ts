@@ -113,7 +113,7 @@ Deno.serve(async (req: Request) => {
   };
 
   try {
-    const { image, collection, mode, watchInfo } = await req.json();
+    const { image, collection, mode, watchInfo, commit } = await req.json();
     loggedMode = normalizeMode(mode);
     loggedHasCollection = hasCollectionFn(collection);
 
@@ -265,7 +265,24 @@ Deno.serve(async (req: Request) => {
             const parsed = extractJson(textParts);
             if (parsed && typeof parsed.fact === "string" && parsed.fact.trim()) {
               await logAttempt(1, null);
-              return new Response(JSON.stringify({ fact: parsed.fact.trim(), _engine: "gemini" }), {
+              const factText = parsed.fact.trim();
+              let factId: string | null = null;
+              // Persist server-side (pool + cursor + logs.fact_id) so the fact
+              // survives the client disconnecting during this slow generation —
+              // the fragile window that previously lost cold-model facts.
+              if (commit && commit.logId && commit.wearDate && user?.id) {
+                try {
+                  const { data: committed, error: cErr } = await supabase.rpc("commit_watch_fact_srv", {
+                    p_user: user.id, p_brand: brand, p_name: model,
+                    p_wear_date: commit.wearDate, p_fact: factText, p_log_id: commit.logId,
+                  });
+                  if (!cErr && committed) factId = (committed as any).fact_id ?? null;
+                  else console.error("[identify-watch] facts commit_srv error:", cErr?.message);
+                } catch (e: any) {
+                  console.error("[identify-watch] facts commit_srv exception:", e.message);
+                }
+              }
+              return new Response(JSON.stringify({ fact: factText, fact_id: factId, _engine: "gemini" }), {
                 headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
               });
             }
