@@ -269,6 +269,7 @@ class TimegrapherEngine {
     private var tgDotSkipPairs = 0
     private var tgPendingDots: [TickDot] = []
     private var tgRateCached: Double? = nil    // cached tg rate (recomputed ~2x/sec)
+    private var tgBeCached: Double? = nil      // cached tg beat error (ms, from the fold)
     private var tgAmpCached: Double? = nil     // cached tg amplitude (degrees)
     private var tgFoldCached: [Float]? = nil   // cached folded beat waveform
     private var liftAngleDeg: Double = 52.0    // escapement lift angle for amplitude (tunable)
@@ -467,7 +468,7 @@ class TimegrapherEngine {
             targetBph = bph
             detectedBph = bph // user-selected = immediately locked
         }
-        tgRateCached = nil; tgAmpCached = nil; tgFoldCached = nil; lastTgComputeSec = -1; lastTgLogSec = -1
+        tgRateCached = nil; tgBeCached = nil; tgAmpCached = nil; tgFoldCached = nil; lastTgComputeSec = -1; lastTgLogSec = -1
         debugLog("[TGSTART] bph=\(bph) autoBph=\(autoBph) targetBph=\(targetBph) detectedBph=\(String(describing: detectedBph)) useTg=\(useTgAlgo)")
 
         do {
@@ -1048,6 +1049,7 @@ class TimegrapherEngine {
                 if let fold = tgFoldedBeat(period: period) {
                     tgFoldCached = fold
                     tgAmpCached = tgAmplitude(fold: fold, period: period)
+                    tgBeCached = tgBeatError(fold: fold, period: period, ringSampleRate: ringSampleRate)
                 }
                 if useTgAlgo { tgTrackDots(period: period, ringSampleRate: ringSampleRate, wallElapsed: wallElapsed) }
             }
@@ -1071,7 +1073,7 @@ class TimegrapherEngine {
         // Log BOTH rates every ~2s so we get a free offline A/B even when the toggle is off.
         if wallElapsed - lastTgLogSec > 2.0 {
             lastTgLogSec = wallElapsed
-            debugLog("[TGALGO @ \(String(format: "%.0f", wallElapsed))s] useTg=\(useTgAlgo) reg=\(regRateLog.map { String(format: "%+.1f", $0) } ?? "nil") tg=\(tgRateCached.map { String(format: "%+.1f", $0) } ?? "nil") amp=\(tgAmpCached.map { String(format: "%.0f", $0) } ?? "nil")")
+            debugLog("[TGALGO @ \(String(format: "%.0f", wallElapsed))s] useTg=\(useTgAlgo) reg=\(regRateLog.map { String(format: "%+.1f", $0) } ?? "nil") tg=\(tgRateCached.map { String(format: "%+.1f", $0) } ?? "nil") amp=\(tgAmpCached.map { String(format: "%.0f", $0) } ?? "nil") be=\(tgBeCached.map { String(format: "%.2f", $0) } ?? "nil")")
         }
 
         // Stability: rate has stayed within ±threshold for the full stability window
@@ -1111,7 +1113,7 @@ class TimegrapherEngine {
         debugMessages = []
 
         let update = Update(
-            rate: rateForUpdate, beatError: currentBeatError,   // folded estimate: stable in the field. phaseSepBeatError rides per-tick devs that phase-walk (climb+flip) when watch rate != nominal BPH — kept for logging only (psBE= in TGTICK).
+            rate: rateForUpdate, beatError: useTgAlgo ? tgBeCached : currentBeatError,   // tg path: fold-based BE; legacy folded estimate: stable in the field. phaseSepBeatError rides per-tick devs that phase-walk (climb+flip) when watch rate != nominal BPH — kept for logging only (psBE= in TGTICK).
             tickCount: tickCount,
             confidence: tickConfidence, noiseLevel: currentNoiseLevel,
             detectedIntervalMs: expectedTickInterval > 0 ? 1000.0 / (actualSampleRate / Double(ringSubsampleTarget) / expectedTickInterval) : 0,
@@ -1543,6 +1545,23 @@ class TimegrapherEngine {
                 tgPendingDots.append(TickDot(timeSec: max(0, tSec), deviationMs: tgDotCumMs))
             }
         }
+    }
+
+    /// Beat error (ms) from the folded beat: the toc's offset from exactly half a period.
+    /// (tg derives B.E. the same way — tic→toc spacing vs period/2.)
+    private func tgBeatError(fold: [Float], period: Double, ringSampleRate: Double) -> Double? {
+        let P = fold.count; guard P > 8 else { return nil }
+        var tic = 0; var tv = fold[0]
+        for i in 1..<P where fold[i] > tv { tv = fold[i]; tic = i }
+        // strongest point in the window [tic + 0.4P, tic + 0.6P] (circular) = toc
+        var best: Float = -1; var toc = tic
+        for off in Int(Double(P) * 0.4)...Int(Double(P) * 0.6) {
+            let i = (tic + off) % P
+            if fold[i] > best { best = fold[i]; toc = i }
+        }
+        let d = Double(((toc - tic) % P + P) % P)          // tic→toc spacing, samples
+        let be = abs(d - period / 2) / ringSampleRate * 1000.0
+        return be < 10 ? be : nil                          // >10ms = fold not clean, don't report
     }
 
     /// tg-style averaged beat: fold the recent envelope at the measured period (trimmed mean per bin).

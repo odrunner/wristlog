@@ -6938,7 +6938,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.20.58';
+const APP_VERSION = '21.21.05';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -24894,10 +24894,16 @@ window._tgNativeCallback = function(data) {
       const r = data.rate;
       rateEl.textContent = (r >= 0 ? '+' : '') + r.toFixed(1);
       rateEl.style.color = Math.abs(r) <= 5 ? '#22c55e' : Math.abs(r) <= 15 ? '#eab308' : 'var(--danger)';
-      // Pro V2: beat error still comes from the legacy estimator and reads high
-      // (2.7-4.5ms vs Weishi 0.0-0.5ms) — hide it until the fold-based BE ships.
+      // Pro V2 BE: on 2.3+ builds data.beatError IS the tg fold-based value — show it.
+      // Older builds send the legacy estimator's value (reads 2.7-4.5ms vs Weishi
+      // 0.0-0.5ms) — hide it there rather than show a wrong number.
       const _isProV2 = isMsr && _tgAlgo() === 'tg';
-      const _beShown = _isProV2 ? null : _msrStableBeatError(data);
+      let _beShown = null;
+      if (_isProV2) {
+        if (parseFloat(window._iosAppVersion || '0') >= 2.3 && data.beatError != null) _beShown = data.beatError;
+      } else {
+        _beShown = _msrStableBeatError(data);
+      }
       if (beEl) beEl.textContent = _beShown != null ? 'BE ' + _beShown.toFixed(2) + ' ms' : (_isProV2 ? '' : '—');
       if (isMsr) {
         _msrLastRate = data.rate;
