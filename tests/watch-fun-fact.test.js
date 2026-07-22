@@ -56,8 +56,10 @@ describe('fun-fact covers every wear-creation path', () => {
   it('quickLog (collection one-tap) calls attachFunFact', () => {
     expect(fnBody('function quickLog(')).toContain('attachFunFact(');
   });
-  it('saveNewPost (composer) calls attachFunFact', () => {
-    expect(fnBody('async function saveNewPost(')).toContain('attachFunFact(');
+  it('saveNewPost calls attachFunFact for any watch-tagged post (incl. measurement)', () => {
+    // Guarded by postedWatch, NOT isWear — measurement shares tag a watch and
+    // should get a fact about it too.
+    expect(fnBody('async function saveNewPost(')).toMatch(/if \(postedWatch\) attachFunFact/);
   });
 });
 

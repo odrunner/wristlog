@@ -6938,7 +6938,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.16.40';
+const APP_VERSION = '22.16.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12553,8 +12553,10 @@ async function saveNewPost() {
   // dismiss the wear reminder or claim a wear was logged for it.
   const isWear = !!postedWatch && isWearEntry({ watchId: postedWatch.id, useCase });
   if (isWear) dismissReminder(); // wear was logged, dismiss the reminder
-  // Fire-and-forget fun fact for genuine wears (excludes measurement shares) — never blocks.
-  if (isWear) attachFunFact(entry, postedWatch).then(factText => { if (factText) toast('💡 ' + factText); });
+  // Fire-and-forget fun fact for ANY watch-tagged post (wears AND measurement shares —
+  // the fact is about the watch) — never blocks. Same-day gate keeps it consistent with
+  // a wear of the same watch that day.
+  if (postedWatch) attachFunFact(entry, postedWatch).then(factText => { if (factText) toast('💡 ' + factText); });
   closeNewPost();
   if (window.posthog) posthog.capture('post_created', { has_photo: !!entry.photoUrl, photo_count: parsePhotoUrl(entry.photoUrl).length, has_watch: !!trackWatchId });
   toast(isWear ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : (useCase === 'measurement' ? 'Shared to feed!' : 'Posted!'));
