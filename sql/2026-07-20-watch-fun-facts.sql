@@ -109,6 +109,7 @@ declare
   v_key  text := lower(trim(p_brand)) || '|' || lower(trim(p_name));
   v_last int;
   v_next int;
+  v_pool int;
   v_fact public.watch_facts%rowtype;
 begin
   if v_uid is null then raise exception 'not authenticated'; end if;
@@ -119,12 +120,21 @@ begin
   if v_last is null then v_last := -1; end if;
   v_next := v_last + 1;
 
-  -- Race-safe append: if a concurrent wearer already filled this slot, keep theirs.
-  insert into public.watch_facts(model_key, position, fact)
-    values (v_key, v_next, trim(p_fact))
-    on conflict (model_key, position) do nothing;
-
-  select * into v_fact from public.watch_facts where model_key = v_key and position = v_next;
+  -- Hard-cap the shared pool at 10 facts/model: never create a position >= 10, so a
+  -- client calling this RPC directly cannot grow the pool without bound. Below the cap
+  -- we append (race-safe: keep a concurrent wearer's fact if the slot is taken, and
+  -- length-bound the stored text defensively); at/above the cap we serve an existing
+  -- fact by wrapping, mirroring pick_watch_fact.
+  if v_next < 10 then
+    insert into public.watch_facts(model_key, position, fact)
+      values (v_key, v_next, left(trim(p_fact), 500))
+      on conflict (model_key, position) do nothing;
+    select * into v_fact from public.watch_facts where model_key = v_key and position = v_next;
+  else
+    select count(*) into v_pool from public.watch_facts where model_key = v_key;
+    if v_pool = 0 then raise exception 'no facts to serve'; end if;
+    select * into v_fact from public.watch_facts where model_key = v_key and position = (v_next % v_pool);
+  end if;
 
   insert into public.watch_fact_progress(user_id, model_key, last_position, last_wear_date, current_fact_id)
     values (v_uid, v_key, v_next, p_wear_date, v_fact.id)
