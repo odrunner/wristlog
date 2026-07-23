@@ -7,6 +7,11 @@ struct ContentView: View {
     @State private var isLoading = true
     @State private var hasError = false
     @State private var webViewRef: WKWebView?
+    @State private var lastBackgrounded: Date?
+    // Reload the WebView on foreground after this much idle, so shipped web updates
+    // reach the app. The WebView loads wrotate.com once and keeps that JS otherwise,
+    // so a resident app can run code from many deploys ago until manually refreshed.
+    private static let staleReloadThreshold: TimeInterval = 30 * 60
 
     var body: some View {
         ZStack {
@@ -65,7 +70,19 @@ struct ContentView: View {
         .onChange(of: isLoading) {
             if !isLoading { dispatchPendingQuickAction(); handleSharedImage() }
         }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+            lastBackgrounded = Date()
+        }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            // Refresh the WebView after a long idle so shipped web updates reach the app.
+            // !isLoading avoids interrupting an in-progress load; the threshold avoids
+            // disrupting an active session (e.g. a half-written post). The service worker
+            // is network-first for HTML, so reload() pulls the latest code seamlessly.
+            if !isLoading, let bg = lastBackgrounded,
+               Date().timeIntervalSince(bg) > Self.staleReloadThreshold {
+                webViewRef?.reload()
+            }
+            lastBackgrounded = nil
             if !isLoading { dispatchPendingQuickAction(); handleSharedImage() }
         }
     }

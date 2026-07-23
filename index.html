@@ -6938,7 +6938,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.16.43';
+const APP_VERSION = '22.21.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13922,6 +13922,7 @@ function reviewPromptYes() {
 }
 
 function reviewPromptNo() {
+  _logReviewEvent('no'); // count every negative response, even if they abandon without details
   document.getElementById('review-step-ask').style.display = 'none';
   document.getElementById('review-step-feedback').style.display = '';
   document.getElementById('review-feedback-text').value = '';
