@@ -10647,8 +10647,19 @@ async function scrollToFeedPost(postId) {
     return true;
   };
 
-  // Try immediately — card may already be in the rendered feed
-  if (highlight()) return;
+  // Card may already be in the rendered feed. If so, its comments were loaded
+  // when the feed first rendered and won't include the new comment that
+  // triggered this notification — re-fetch them, re-render the card, then
+  // highlight so the comment actually shows.
+  if (document.getElementById('feedcard-' + postId)) {
+    highlight();
+    try {
+      await fetchComments(postId);
+      refreshFeedCard(postId);
+    } catch (e) { console.warn('[WRotate] scrollToFeedPost refresh:', e?.message); }
+    highlight();
+    return;
+  }
 
   // Card not in current feed — it may be older than the top 50.
   // Fetch it directly and prepend to feedItems so renderFeed includes it.
