@@ -50,3 +50,26 @@ describe('scrollToFeedPost — notification tap to a post', () => {
     expect(body).toMatch(/setTimeout\(attempt,/);
   });
 });
+
+describe('toggleComments — expanding a post refreshes stale comments', () => {
+  const body = fnBody('async function toggleComments(');
+
+  it('is present', () => {
+    expect(body).not.toBe('');
+  });
+
+  // Regression: this was guarded on `if (!feedComments[logId]) await fetchComments(...)`,
+  // so a post whose comments were already cached never refreshed — a comment added by
+  // someone else after the feed loaded stayed hidden no matter how often you expanded it.
+  it('refreshes an already-cached comment list in the background', () => {
+    expect(body).toContain('fetchComments(logId).then(');
+  });
+
+  it('renders cached comments before that refresh, so expanding stays instant', () => {
+    const bg = body.indexOf('fetchComments(logId).then(');
+    expect(bg).toBeGreaterThan(-1);
+    const renderedFirst = body.lastIndexOf('refreshFeedCard(logId);', bg);
+    expect(renderedFirst).toBeGreaterThan(-1);
+    expect(renderedFirst).toBeLessThan(bg);
+  });
+});

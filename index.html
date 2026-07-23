@@ -6938,7 +6938,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.16.30';
+const APP_VERSION = '23.16.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12718,12 +12718,21 @@ function refreshFeedCard(logId) {
 async function toggleComments(logId) {
   if (expandedComments.has(logId)) {
     expandedComments.delete(logId);
-  } else {
-    expandedComments.add(logId);
-    // Fetch if not yet loaded (e.g. posted while feed was open)
-    if (!feedComments[logId]) await fetchComments(logId);
+    refreshFeedCard(logId);
+    return;
   }
+  expandedComments.add(logId);
+  if (!feedComments[logId]) {
+    // Nothing cached — must wait for the first load.
+    await fetchComments(logId);
+    refreshFeedCard(logId);
+    return;
+  }
+  // Show the cached comments instantly, then refresh in the background: the feed has
+  // no realtime, so a cached list goes stale as soon as someone else comments. Without
+  // this, expanding a post you'd already loaded showed the old comments forever.
   refreshFeedCard(logId);
+  fetchComments(logId).then(() => refreshFeedCard(logId)).catch(() => {});
 }
 async function fetchComments(logId) {
   const { data } = await db.from('comments').select('*').eq('log_id', logId).order('created_at', { ascending: true });
