@@ -6938,7 +6938,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.21.54';
+const APP_VERSION = '23.16.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10633,7 +10633,7 @@ async function loadMoreFeed() {
 async function scrollToFeedPost(postId) {
   if (!postId) { nav(document.querySelector('nav button[data-page=\'feed\']')); return; }
   expandedComments.add(postId);
-  // Switch to feed page without forcing reload — preserve existing cards
+  // Switch to feed page without forcing a full reload — preserve existing cards
   nav(document.querySelector('nav button[data-page=\'feed\']'));
 
   const highlight = () => {
@@ -10647,49 +10647,44 @@ async function scrollToFeedPost(postId) {
     return true;
   };
 
-  // Try immediately — card may already be in the rendered feed
-  if (highlight()) return;
-
-  // Card not in current feed — it may be older than the top 50.
-  // Fetch it directly and prepend to feedItems so renderFeed includes it.
+  // ALWAYS refresh this post before scrolling. There's no realtime on the feed, so
+  // the card may already be on screen but with a stale comment cache — a comment
+  // added by someone else after the feed loaded wouldn't show otherwise. Fetch the
+  // post if it's older than the loaded page, then always re-fetch its comments/likes
+  // and re-render so the newest comments appear.
   try {
-    const { data: post } = await db.from('logs').select(FEED_LOG_COLS).eq('id', postId).maybeSingle();
-    if (post && !feedItems.find(f => f.id === postId)) {
-      // Enrich with profile and watch data
-      const [profRes, watchRes] = await Promise.all([
-        db.from('profiles').select('id, username, display_name, avatar_url').eq('id', post.user_id).maybeSingle(),
-        post.watch_id ? db.from('watches').select('id, brand, name, color, image, ref, url, description, background, functions').eq('id', post.watch_id).maybeSingle() : { data: null },
-      ]);
-      post.profile = profRes.data || null;
-      post.watch = watchRes.data || null;
-      // Fetch likes and comments for this post
-      const [likesRes, commentsRes] = await Promise.all([
-        db.from('likes').select('log_id, user_id').eq('log_id', postId),
-        db.from('comments').select('id, log_id, user_id, body, created_at, moderation_status')
-          .eq('log_id', postId).order('created_at', { ascending: true }),
-      ]);
-      feedLikes[postId] = { count: 0, liked: false };
-      (likesRes.data || []).forEach(l => { feedLikes[postId].count++; if (l.user_id === currentUser.id) feedLikes[postId].liked = true; });
-      const cData = commentsRes.data || [];
-      if (cData.length) {
-        const cUids = [...new Set(cData.map(c => c.user_id))];
-        const { data: cProfs } = await db.from('profiles').select('id, username, display_name, is_official').in('id', cUids);
-        const cpm = {}; (cProfs || []).forEach(p => cpm[p.id] = p);
-        feedComments[postId] = cData.map(c => ({ ...c, profile: cpm[c.user_id] || null }));
-      } else {
-        feedComments[postId] = [];
+    let post = feedItems.find(f => f.id === postId);
+    if (!post) {
+      const { data } = await db.from('logs').select(FEED_LOG_COLS).eq('id', postId).maybeSingle();
+      post = data || null;
+      if (post) {
+        const [profRes, watchRes] = await Promise.all([
+          db.from('profiles').select('id, username, display_name, avatar_url').eq('id', post.user_id).maybeSingle(),
+          post.watch_id ? db.from('watches').select('id, brand, name, color, image, ref, url, description, background, functions').eq('id', post.watch_id).maybeSingle() : { data: null },
+        ]);
+        post.profile = profRes.data || null;
+        post.watch = watchRes.data || null;
+        const { data: likesData } = await db.from('likes').select('log_id, user_id').eq('log_id', postId);
+        feedLikes[postId] = { count: 0, liked: false };
+        (likesData || []).forEach(l => { feedLikes[postId].count++; if (l.user_id === currentUser.id) feedLikes[postId].liked = true; });
+        feedItems.unshift(post);
       }
-      feedCommentCounts[postId] = (feedComments[postId] || []).length;
-      feedItems.unshift(post);
+    }
+    if (post) {
+      await fetchComments(postId);   // force-refresh comments — shows a comment added after feed load
       renderFeed();
     }
-  } catch (e) { console.warn('[WRotate] scrollToFeedPost fetch:', e?.message); }
+  } catch (e) { console.warn('[WRotate] scrollToFeedPost:', e?.message); }
 
-  // Retry until card appears
-  const attempt = (tries) => {
-    if (!highlight() && tries > 0) setTimeout(() => attempt(tries - 1), 300);
+  // Robust scroll: retry until the card exists, then re-scroll a couple of times as
+  // async layout settles (images loading, the comment section expanding) so it doesn't
+  // land half-way.
+  let tries = 14;
+  const attempt = () => {
+    if (highlight()) { setTimeout(highlight, 350); setTimeout(highlight, 850); return; }
+    if (--tries > 0) setTimeout(attempt, 250);
   };
-  attempt(10);
+  setTimeout(attempt, 60);
 }
 
 function renderOnboardingChecklist() {
