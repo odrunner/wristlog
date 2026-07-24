@@ -1875,6 +1875,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .vis-badge.followers { background:color-mix(in srgb, var(--gold) 15%, transparent); color:var(--gold); }
     .vis-badge.friends { background:rgba(167,123,250,.15); color:var(--vis-friends); }
     .vis-badge.private { background:rgba(224,85,85,.12); color:var(--danger); }
+    /* Overlay variant — sits top-right inside the post photo so own posts keep
+       the same card height as everyone else's */
+    .vis-badge--overlay { position:absolute; top:8px; right:8px; margin:0; z-index:3;
+      pointer-events:none; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
+    .vis-badge--overlay.followers { background:rgba(0,0,0,.55); color:#f2dc9a; }
+    .vis-badge--overlay.friends   { background:rgba(0,0,0,.55); color:#cbb2ff; }
+    .vis-badge--overlay.private   { background:rgba(0,0,0,.55); color:#ff9f9f; }
+    /* Photo-less posts (compact wear, text, badge) — badge rides in the header */
+    .vis-badge--inline { margin:0; flex:0 0 auto; }
+    .feed-card-photo-count--left { right:auto; left:8px; }
 
     /* Inline caption editing area */
     .feed-caption-edit { padding: .4rem 1rem .5rem; }
@@ -6938,7 +6948,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.16.59';
+const APP_VERSION = '23.20.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10852,8 +10862,18 @@ function renderFeedCard(item) {
   const editingCaption = isMe && feedEditingCaption.has(item.id);
   const compactWear = !!(w && !item.photo_url); // wear log with no user photo → compact layout
 
+  // Visibility badge — only shown to the author on non-public posts.
+  // Rendered top-right inside the photo when there is one (so own posts are the
+  // same height as everyone else's), otherwise inline in the card header.
+  const vis = item.visibility || 'public';
+  const visLabel = vis === 'followers' ? 'Followers only' : vis === 'friends' ? 'Close Friends only' : 'Only you';
+  const showVis = isMe && vis !== 'public';
+  const visBadgeOverlay = showVis ? `<div class="vis-badge vis-badge--overlay ${vis}">${visLabel}</div>` : '';
+  const visBadgeInline  = showVis ? `<div class="vis-badge vis-badge--inline ${vis}">${visLabel}</div>` : '';
+
   // Hero area
   let heroHtml = '';
+  let heroIsPhoto = false;
   if (item.use_case === 'badge' && Array.isArray(item.badge_refs) && item.badge_refs.length) {
     const _b = BADGE_BY_REF[Number(item.badge_refs[0])];
     if (_b) heroHtml = `<div class="feed-badge-hero" onclick="openBadgeDetail(${_b.ref})">`
@@ -10871,10 +10891,12 @@ function renderFeedCard(item) {
     const heroInner = heroIsVideo
       ? `<video id="feed-hero-${item.id}" muted autoplay loop playsinline webkit-playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;display:block;"><source src="${escHtml(heroUrl)}" type="${videoSourceType(heroUrl)}"></video>`
       : `<img id="feed-hero-${item.id}" src="${escHtml(heroUrl)}" loading="lazy" onerror="this.parentElement.style.display='none'">`;
+    heroIsPhoto = true;
     heroHtml = `<div class="feed-card-photo${isAccuracyCard ? ' feed-card-photo--accuracy' : ''}" data-usecase="${escAttr(item.use_case || '')}" data-idx="0" onclick="openImageViewer(${escAttr(JSON.stringify(_urls))}, +(this.dataset.idx||0))">
       ${heroInner}
       ${heroIsVideo ? `<button class="feed-vid-mute" onclick="toggleFeedVideoSound(event,'${item.id}')" aria-label="Toggle sound">${MUTE_ICON_OFF}</button>` : ''}
-      ${_urls.length > 1 ? `<span class="feed-card-photo-count">1/${_urls.length}</span>` : ''}
+      ${_urls.length > 1 ? `<span class="feed-card-photo-count${visBadgeOverlay ? ' feed-card-photo-count--left' : ''}">1/${_urls.length}</span>` : ''}
+      ${visBadgeOverlay}
     </div>`;
     if (_urls.length > 1) {
       heroHtml += `<div class="feed-card-thumbnails">`;
@@ -10945,11 +10967,6 @@ function renderFeedCard(item) {
     ? `<div class="funfact-body" hidden>${funFactCardHTML({ fact: item.fact })}</div>`
     : '';
 
-  // Visibility badge — only shown to the author on non-public posts
-  const vis = item.visibility || 'public';
-  const visBadge = (isMe && vis !== 'public')
-    ? `<div class="vis-badge ${vis}">${vis === 'followers' ? 'Followers only' : vis === 'friends' ? 'Close Friends only' : 'Only you'}</div>`
-    : '';
   const featuredPill = item.__featured
     ? `<span class="pill" style="color:var(--gold);background:var(--gold-dim);margin-left:.4rem;vertical-align:middle;">★ Featured</span>`
     : '';
@@ -11104,6 +11121,7 @@ function renderFeedCard(item) {
       <div class="feed-card-header">
         <div class="feed-user-avatar" onclick="viewUserProfile('${item.user_id}')" style="cursor:pointer;">${profileInitials(p)}</div>
         <div style="flex:1;min-width:0;">${headerBody}</div>
+        ${heroIsPhoto ? '' : visBadgeInline}
         <div class="feed-dots-wrap" style="position:relative;">
           ${isMe
             ? `<button class="feed-edit-btn" onclick="event.stopPropagation();toggleFeedMenu('${item.id}')" title="Edit post"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
@@ -11142,7 +11160,6 @@ function renderFeedCard(item) {
       ${badgeRibbon}
       ${(watchChip || funFactPill) ? `<div class="feed-chip-row">${watchChip}${funFactPill}</div>` : ''}
       ${funFactBody}
-      ${visBadge}
       ${clubBadge}
       ${commentsHtml}
     </div>`;
@@ -11231,6 +11248,8 @@ function feedThumbTap(logId, idx, urls) {
     isMeasurementCardImage(heroContainer.dataset.usecase || '', urls, idx));
   // Keep the viewer in sync with what's actually displayed.
   heroContainer.dataset.idx = String(idx);
+  // innerHTML is replaced below — carry the visibility badge overlay across
+  const visHtml = heroContainer.querySelector('.vis-badge--overlay')?.outerHTML || '';
   let innerHtml = '';
   if (isVid) {
     innerHtml = `<video id="feed-hero-${logId}" muted autoplay loop playsinline webkit-playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;display:block;"><source src="${escHtml(url)}" type="${videoSourceType(url)}"></video>`
@@ -11239,8 +11258,9 @@ function feedThumbTap(logId, idx, urls) {
     innerHtml = `<img id="feed-hero-${logId}" src="${escHtml(url)}" loading="lazy" onerror="this.parentElement.style.display='none'">`;
   }
   if (urls.length > 1) {
-    innerHtml += `<span class="feed-card-photo-count">${idx + 1}/${urls.length}</span>`;
+    innerHtml += `<span class="feed-card-photo-count${visHtml ? ' feed-card-photo-count--left' : ''}">${idx + 1}/${urls.length}</span>`;
   }
+  innerHtml += visHtml;
   heroContainer.innerHTML = innerHtml;
   if (isVid) {
     const v = document.getElementById('feed-hero-' + logId);
