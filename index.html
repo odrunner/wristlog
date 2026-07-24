@@ -6948,7 +6948,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.20.11';
+const APP_VERSION = '24.16.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7403,6 +7403,10 @@ function viewUserProfile(userId) {
   document.querySelectorAll('.overlay:not(.hidden)').forEach(o => o.classList.add('hidden'));
   const active = document.querySelector('.page.active');
   profilePagePrev   = active?.id || 'page-feed';
+  // Remember where we were on the previous page so Back can restore it. nav()
+  // (used by goBackFromProfile) unconditionally scrolls to top; the feed DOM is
+  // preserved by loadFeed's 60s cache, so only the offset needs restoring.
+  profilePagePrevScrollY = window.scrollY || 0;
   profilePageUserId = userId;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-profile').classList.add('active');
@@ -7414,9 +7418,16 @@ function viewUserProfile(userId) {
 function goBackFromProfile() {
   profilePageUserId = null;
   const navTarget = profilePagePrev.replace('page-', '');
+  const restoreY = profilePagePrevScrollY;
+  profilePagePrevScrollY = 0;
   const btn = document.querySelector(`nav button[data-page="${navTarget}"]`);
   if (btn) nav(btn);
   else goHome();
+  // nav()/goHome() scroll to top; restore the prior offset now that the page is
+  // active again. rAF lets layout settle first (double rAF for iOS Safari).
+  if (restoreY > 0) {
+    requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, restoreY)));
+  }
 }
 
 const _profileCache = {}; // { [userId]: { args, ts } }
@@ -13504,6 +13515,7 @@ let discoverUsers     = [];        // search results in discover modal
 let searchDebounce    = null;
 let profilePageUserId = null;      // user ID shown on full profile page
 let profilePagePrev   = 'page-feed'; // page to return to on Back
+let profilePagePrevScrollY = 0;      // scroll offset of that page, restored on Back
 
 // ── FRIEND / PRIVACY STATE ──────────────────────────────────────────────────
 let userNotifs       = [];        // loaded notifications (enriched with .actor profile)
