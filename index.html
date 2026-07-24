@@ -7403,6 +7403,8 @@ function viewUserProfile(userId) {
   document.querySelectorAll('.overlay:not(.hidden)').forEach(o => o.classList.add('hidden'));
   const active = document.querySelector('.page.active');
   profilePagePrev   = active?.id || 'page-feed';
+  // Remember where we were scrolled so Back can restore it (pages share the window scroll).
+  profilePrevScroll = window.scrollY || document.documentElement.scrollTop || 0;
   profilePageUserId = userId;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-profile').classList.add('active');
@@ -7417,6 +7419,10 @@ function goBackFromProfile() {
   const btn = document.querySelector(`nav button[data-page="${navTarget}"]`);
   if (btn) nav(btn);
   else goHome();
+  // Restore the prior scroll position. nav() scrolls to top and (for a fresh feed)
+  // keeps the existing cards, so re-apply the saved offset after layout settles.
+  const y = profilePrevScroll;
+  if (y > 0) requestAnimationFrame(() => window.scrollTo(0, y));
 }
 
 const _profileCache = {}; // { [userId]: { args, ts } }
@@ -13504,6 +13510,7 @@ let discoverUsers     = [];        // search results in discover modal
 let searchDebounce    = null;
 let profilePageUserId = null;      // user ID shown on full profile page
 let profilePagePrev   = 'page-feed'; // page to return to on Back
+let profilePrevScroll = 0;         // scroll offset of the page we left, restored on Back
 
 // ── FRIEND / PRIVACY STATE ──────────────────────────────────────────────────
 let userNotifs       = [];        // loaded notifications (enriched with .actor profile)
