@@ -43,6 +43,7 @@ const VERBATIM = [
   'classifyProfileLoad', 'buildBrandList', 'brandRequestTitle',
   'campaignSubject', 'campaignGroupOf', 'periodCutoff', 'wearLeaderboard',
   'isWearEntry', 'isMeasurementCardImage', 'feedKeysetFilter', 'dedupeNewFeedLogs',
+  'shouldPromptFirstWear',
 ];
 
 const ADAPTED = [

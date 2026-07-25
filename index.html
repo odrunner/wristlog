@@ -5152,6 +5152,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
     </div>
 
+    <!-- Onboarding nudge: shown only when the compose was auto-opened for a first-ever wear-log -->
+    <div id="tl-onboarding-line" style="display:none;margin:.1rem 0 .6rem;padding:.5rem .7rem;background:rgba(201,168,76,.14);border:1px solid rgba(201,168,76,.35);border-radius:10px;font-size:.82rem;color:var(--text);text-align:center;">Last step — what are you wearing today? 👋</div>
+
     <!-- Date + worn notice -->
     <div class="tl-field">
       <div class="tl-label">Date</div>
@@ -6763,6 +6766,7 @@ async function loadUserData() {
   else if (_activePage === 'page-stats') renderStats(true);
   updateStreakChip();
   maybeFreezeToast();
+  firstWearOnboardingBackfill();
 }
 
 // ══════════════════════════════════════════
@@ -6948,7 +6952,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.16.15';
+const APP_VERSION = '25.08.32';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10740,6 +10744,72 @@ function markMeasurementTried() {
   renderOnboardingChecklist();
 }
 
+// ── First wear-log onboarding prompt ─────────────────────────────────────────
+// 84% of new users add a watch but only 18% ever log a wear — the biggest funnel
+// leak. Right after a brand-new user finishes adding their first watch(es), auto-
+// open the wear-log compose so the watch-add moment converts into the first log.
+// Fires exactly once, ever.
+const FIRST_WEAR_KEY = 'wrotate_first_wear_prompted';
+let _firstWearOnboarding = false;   // drives the onboarding header copy in the compose
+let _firstWearPending = false;      // a fire is already scheduled — don't stack timers
+let _firstWearInitDone = false;
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function shouldPromptFirstWear(state) {
+  const { loggedIn, isDemo, watchCount, logCount, alreadyShown } = state;
+  return !!loggedIn && !isDemo && watchCount >= 1 && logCount === 0 && !alreadyShown;
+}
+
+function _firstWearState() {
+  return {
+    loggedIn: !!currentUser,
+    isDemo: !!_isDemoMode,
+    watchCount: (typeof watches !== 'undefined' && watches) ? watches.length : 0,
+    logCount: (typeof logs !== 'undefined' && logs) ? logs.length : 0,
+    alreadyShown: localStorage.getItem(FIRST_WEAR_KEY) === '1',
+  };
+}
+
+// One-time on first authenticated load: latch existing users (any watch or log)
+// out of the prompt, so only genuinely new users stay eligible. Called from
+// loadUserData once data is authoritative.
+function firstWearOnboardingBackfill() {
+  if (_firstWearInitDone) return;
+  _firstWearInitDone = true;
+  try {
+    if (localStorage.getItem(FIRST_WEAR_KEY)) return;
+    if ((typeof watches !== 'undefined' && watches && watches.length) ||
+        (typeof logs !== 'undefined' && logs && logs.length)) {
+      localStorage.setItem(FIRST_WEAR_KEY, '1');
+    }
+  } catch (_) {}
+}
+
+// Catch-all: called from the main renders. Schedules a deferred open that re-checks
+// eligibility AND that no overlay/sheet is open first, so it never stacks on top of
+// the add-watch flow's own follow-up screens (e.g. af2 "See details").
+function maybePromptFirstWear() {
+  if (_firstWearPending) return;
+  if (!shouldPromptFirstWear(_firstWearState())) return;
+  _firstWearPending = true;
+  setTimeout(() => {
+    _firstWearPending = false;
+    if (!shouldPromptFirstWear(_firstWearState())) return;
+    if (document.querySelector('.overlay:not(.hidden)')) return;         // a modal is open — retry next render
+    const af2 = document.getElementById('af2-sheet');
+    if (af2 && !af2.classList.contains('hidden')) return;               // add-watch sheet still up
+    localStorage.setItem(FIRST_WEAR_KEY, '1');                          // once ever
+    _firstWearOnboarding = true;
+    if (watches.length === 1) {
+      openTrackModal(watches[0].id);                                    // single → prefilled compose
+    } else {
+      const b = document.querySelector('[data-page="track"]');         // batch → track-page picker
+      if (b) nav(b);
+      toast("You're all set — pick the one you're wearing today");
+    }
+  }, 500);
+}
+
 function toggleOnboardingCollapse() {
   const cur = localStorage.getItem('wrotate_onboarding_collapsed') === '1';
   localStorage.setItem('wrotate_onboarding_collapsed', cur ? '0' : '1');
@@ -10758,6 +10828,7 @@ function renderFeed() {
   const el = document.getElementById('feed-list');
   if (!el) return;
   renderOnboardingChecklist();
+  maybePromptFirstWear();
 
   // Preserve any in-progress comment text so it survives re-renders
   const _savedCommentDrafts = {};
@@ -16285,6 +16356,10 @@ function openTrackModal(id) {
   renderStrapSelector();
   renderWornNotice();
 
+  // Onboarding nudge copy — only when this compose was auto-opened for a first-ever log
+  const obLine = document.getElementById('tl-onboarding-line');
+  if (obLine) obLine.style.display = _firstWearOnboarding ? '' : 'none';
+
   document.getElementById('track-log-modal').classList.remove('hidden');
 }
 
@@ -16292,6 +16367,7 @@ function closeTrackModal() {
   document.getElementById('track-log-modal').classList.add('hidden');
   selWatchId = null;
   selStrapId = null;
+  _firstWearOnboarding = false;   // clear onboarding framing (covers both dismiss and save-then-close)
 }
 
 
@@ -17488,6 +17564,7 @@ function renderTagFilterBar() {
 }
 
 function renderCollection(force) {
+  maybePromptFirstWear();
   if (!force && _lastRenderedGen.collection === _dataGen) return;
   _lastRenderedGen.collection = _dataGen;
   const priceBtn = document.getElementById('coll-update-prices-btn');

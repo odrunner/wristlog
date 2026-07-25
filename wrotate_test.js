@@ -1493,6 +1493,16 @@ export function onboardingChecklistState(earnedRefs, opts = {}) {
   return { steps, doneCount, total: steps.length, complete: doneCount === steps.length };
 }
 
+// Whether to auto-open the first-wear-log onboarding compose. Fires once ever,
+// for a brand-new user (>=1 watch, no wear-logs yet) who hasn't been shown it.
+// The "brand-new" restriction is enforced upstream: on first authenticated load
+// any user who already has watches or logs gets alreadyShown latched, so only
+// genuinely new users reach here eligible. Pure — caller passes explicit state.
+export function shouldPromptFirstWear(state) {
+  const { loggedIn, isDemo, watchCount, logCount, alreadyShown } = state;
+  return !!loggedIn && !isDemo && watchCount >= 1 && logCount === 0 && !alreadyShown;
+}
+
 // ══════════════════════════════════════════
 //  RESILIENCE UTILITIES
 // ══════════════════════════════════════════
