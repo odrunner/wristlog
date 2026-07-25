@@ -3962,11 +3962,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input type="hidden" id="msr-be-input">
         <input type="hidden" id="msr-notes-input" value="">
       </div>
-      <!-- Share-to-feed CTA shown after a successful save -->
+      <!-- Post-save CTA: log a wear (primary, the core action) + share result -->
       <div id="msr-share-cta" style="display:none;">
-        <div style="font-size:.82rem;font-weight:600;color:var(--text);margin-bottom:.5rem;text-align:center;">Saved &mdash; share result to feed?</div>
+        <div id="msr-cta-title" style="font-size:.82rem;font-weight:600;color:var(--text);margin-bottom:.5rem;text-align:center;">Saved &mdash; log your wear?</div>
+        <button id="msr-log-wear-btn" class="btn btn-primary btn-sm" style="width:100%;margin-bottom:.4rem;">👋 Log you're wearing it</button>
         <div style="display:flex;gap:.4rem;">
-          <button id="msr-share-btn" class="btn btn-primary btn-sm" style="flex:1;">Share</button>
+          <button id="msr-share-btn" class="btn btn-ghost btn-sm" style="flex:1;">Share result</button>
           <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--muted);" onclick="dismissMsrShareCta()">Done</button>
         </div>
       </div>
@@ -6951,7 +6952,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.09.34';
+const APP_VERSION = '25.10.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10764,6 +10765,11 @@ function _firstWearKey() {
 function shouldPromptFirstWear(state) {
   const { loggedIn, isDemo, isNewAccount, watchCount, logCount, alreadyShown } = state;
   return !!loggedIn && !isDemo && !!isNewAccount && watchCount >= 1 && logCount === 0 && !alreadyShown;
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function hasWornToday(logs, watchId, today) {
+  return (logs || []).some(l => l && l.watchId === watchId && l.date === today && isWearEntry(l));
 }
 
 function _firstWearState() {
@@ -27229,8 +27235,32 @@ function showMsrShareCta(watchId, rate) {
   if (saveSection) saveSection.style.display = 'none';
   const btn = document.getElementById('msr-share-btn');
   if (btn) btn.onclick = () => shareMsrToFeed(watchId, Number(rate));
+  // Primary CTA: log a wear (the core action) — the watch is literally in hand.
+  // Skip it if this watch already has a wear logged today, so repeat-measurers
+  // aren't nagged twice; fall back to the share-only framing.
+  const logBtn = document.getElementById('msr-log-wear-btn');
+  const title  = document.getElementById('msr-cta-title');
+  if (logBtn) {
+    if (hasWornToday(logs, watchId, todayStr())) {
+      logBtn.style.display = 'none';
+      if (title) title.textContent = 'Saved — share result to feed?';
+    } else {
+      logBtn.style.display = '';
+      logBtn.onclick = () => logWearFromMeasure(watchId);
+      if (title) title.textContent = 'Saved — log your wear?';
+      _logPostCtaEvent('shown', 'measurement_log_wear');
+    }
+  }
   cta.style.display = '';
   _logPostCtaEvent('shown', 'measurement');
+}
+
+// Ride the measurement hook into the core loop: open the wear-log compose for the
+// just-measured watch (a real wear entry, useCase != 'measurement').
+function logWearFromMeasure(watchId) {
+  _logPostCtaEvent('clicked', 'measurement_log_wear');
+  closeMeasureModal();
+  openTrackModal(watchId);
 }
 
 function dismissMsrShareCta() {

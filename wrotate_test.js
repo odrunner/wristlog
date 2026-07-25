@@ -1503,6 +1503,13 @@ export function shouldPromptFirstWear(state) {
   return !!loggedIn && !isDemo && !!isNewAccount && watchCount >= 1 && logCount === 0 && !alreadyShown;
 }
 
+// True if this watch already has a WEAR entry logged today (measurement shares
+// don't count — see isWearEntry). Used to suppress the post-measurement
+// "log a wear" prompt so repeat-measurers aren't nagged twice in one day.
+export function hasWornToday(logs, watchId, today) {
+  return (logs || []).some(l => l && l.watchId === watchId && l.date === today && isWearEntry(l));
+}
+
 // ══════════════════════════════════════════
 //  RESILIENCE UTILITIES
 // ══════════════════════════════════════════
