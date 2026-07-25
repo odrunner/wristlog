@@ -21,6 +21,7 @@ import {
   excludeAlreadyEmailed,
   excludeIds,
   filterNeverMeasured,
+  filterOneAndDoneChurned,
   filterOptedIn,
   isDormant,
   nextBatchSlice,
@@ -195,6 +196,20 @@ serve(async (req) => {
         return jsonResponse({ error: "Failed to fetch measurement users", details: measuredErr }, 500);
       }
       eligibleProfiles = filterNeverMeasured(eligibleProfiles, (measuredRows || []).map(r => r.user_id));
+    }
+
+    // Segment filter: "one_done_winback" keeps one-and-done churned wear-loggers.
+    if (segment === "one_done_winback") {
+      const { data: logRows, error: logErr } = await fetchAllRows<{ user_id: string; use_case: string | null; created_at: string }>((from, to) => supabase
+        .from("logs")
+        .select("user_id, use_case, created_at")
+        .range(from, to));
+      if (logErr) {
+        return jsonResponse({ error: "Failed to fetch logs for win-back segment", details: logErr }, 500);
+      }
+      eligibleProfiles = filterOneAndDoneChurned(eligibleProfiles, logRows || [], Date.now());
+      const { data: internalRows } = await supabase.from("internal_accounts").select("user_id");
+      eligibleProfiles = excludeIds(eligibleProfiles, (internalRows || []).map(r => r.user_id));
     }
 
     // Resolve emails via paginated listUsers (1-2 requests) instead of one

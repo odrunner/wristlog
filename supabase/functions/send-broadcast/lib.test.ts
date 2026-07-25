@@ -8,6 +8,7 @@ import {
   excludeAlreadyEmailed,
   excludeIds,
   filterNeverMeasured,
+  filterOneAndDoneChurned,
   filterOptedIn,
   isDormant,
   isKnownSegment,
@@ -375,4 +376,26 @@ Deno.test("unsubFooter — standard 'Unsubscribe · Manage preferences' footer",
   assertEquals(out.includes("Unsubscribe"), true);
   assertEquals(out.includes("Manage preferences"), true);
   assertEquals(out.includes('href="https://wrotate.com/open"'), true); // manage prefs → open app
+});
+
+Deno.test("isKnownSegment — accepts one_done_winback", () => {
+  assertEquals(isKnownSegment("one_done_winback"), true);
+});
+
+Deno.test("filterOneAndDoneChurned — keeps exactly-one-wear churned users only", () => {
+  const NOW = Date.parse("2026-07-25T00:00:00Z");
+  const old = "2026-07-01T00:00:00Z";   // > 14 days before NOW
+  const recent = "2026-07-24T00:00:00Z"; // < 14 days
+  const profiles = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }, { id: "e" }];
+  const logs = [
+    { user_id: "a", use_case: "daily", created_at: old },                       // 1 wear, churned  ✓
+    { user_id: "b", use_case: "daily", created_at: old },                       // 2 wears (below)   ✗
+    { user_id: "b", use_case: "daily", created_at: old },
+    { user_id: "c", use_case: "daily", created_at: recent },                    // 1 wear, recent    ✗
+    { user_id: "d", use_case: "measurement", created_at: old },                 // only a measurement ✗
+    { user_id: "e", use_case: "daily", created_at: old },                       // 1 wear + a share  ✓
+    { user_id: "e", use_case: "measurement", created_at: recent },              // measurement doesn't count/recency
+  ];
+  const out = filterOneAndDoneChurned(profiles, logs, NOW).map((p) => p.id).sort();
+  assertEquals(out, ["a", "e"]);
 });

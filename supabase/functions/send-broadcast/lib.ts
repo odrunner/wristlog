@@ -36,6 +36,7 @@ export function segmentUserId(segment: string): string | null {
 export function isKnownSegment(segment: string | undefined | null): boolean {
   if (!segment || segment === "all") return true;
   if (segment === "never_measured") return true;
+  if (segment === "one_done_winback") return true;
   if (segment === "batch_1" || segment === "batch_2" || segment === "batch_3") return true;
   if (segmentUserId(segment)) return true;                 // uid:<uuid>
   const hasSuffix = /_\d+of\d+$/.test(segment);
@@ -108,6 +109,30 @@ export function filterNeverMeasured<T extends { id: string }>(
 ): T[] {
   const set = new Set([...measuredUserIds].filter(Boolean) as string[]);
   return (profiles || []).filter((p) => !set.has(p.id));
+}
+
+// "one_done_winback" segment: keep users who logged exactly ONE wear (a log whose
+// use_case is not 'measurement' — measurement shares are not wears) and whose most
+// recent wear is older than churnDays. These are one-and-done loggers who have
+// since gone quiet — the win-back target.
+export function filterOneAndDoneChurned<T extends { id: string }>(
+  profiles: T[],
+  logRows: { user_id?: string | null; use_case?: string | null; created_at?: string | null }[],
+  nowMs: number,
+  churnDays = 14,
+): T[] {
+  const wearCount = new Map<string, number>();
+  const lastMs = new Map<string, number>();
+  for (const l of logRows || []) {
+    const uid = l?.user_id;
+    if (!uid) continue;
+    if ((l.use_case ?? "") === "measurement") continue; // wears only
+    wearCount.set(uid, (wearCount.get(uid) ?? 0) + 1);
+    const t = l.created_at ? Date.parse(l.created_at) : 0;
+    if (t > (lastMs.get(uid) ?? 0)) lastMs.set(uid, t);
+  }
+  const cutoff = nowMs - churnDays * 24 * 60 * 60 * 1000;
+  return (profiles || []).filter((p) => wearCount.get(p.id) === 1 && (lastMs.get(p.id) ?? 0) < cutoff);
 }
 
 // Dormant predicate for cohort blasts: true if the user has NOT signed in since

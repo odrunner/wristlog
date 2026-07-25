@@ -3195,6 +3195,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <label for="broadcast-segment">Segment</label>
           <select id="broadcast-segment">
             <option value="all">All users (updates opt-in)</option>
+            <option value="one_done_winback">One-and-done loggers (win-back)</option>
           </select>
         </div>
 
@@ -7037,7 +7038,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.11.15';
+const APP_VERSION = '25.14.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14179,6 +14180,7 @@ function showAdminPage() {
   loadAdminReports();
   loadOfficialDrafts();
   seedProV2BroadcastDraft();
+  seedWinbackBroadcastDraft();
   renderBroadcastDrafts();
   renderBroadcastQueueStatus();
   renderDevFlags();
@@ -14251,6 +14253,37 @@ A new live waveform shows every tick and tock overlaid — sharp spikes mean a c
 It's a beta, and your measurements are what make it better — if a reading ever looks off, just reply to this email.
 
 Happy measuring,
+The WRotate team`,
+    imageUrls: [],
+    savedAt: new Date().toISOString(),
+  });
+  localStorage.setItem(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 10)));
+}
+
+// One-time seed of the one-and-done win-back draft into the composer's drafts list,
+// ready to load, copy-edit, and send to the "one_done_winback" segment via drain.
+function seedWinbackBroadcastDraft() {
+  const FLAG = 'wr_seed_winback_one_done_draft_v1';
+  if (localStorage.getItem(FLAG)) return;
+  localStorage.setItem(FLAG, '1');
+  const SUBJECT = 'Your watches miss you';
+  const drafts = getBroadcastDrafts().filter(d => d.subject !== SUBJECT);
+  drafts.unshift({
+    id: Date.now() + 1,
+    subject: SUBJECT,
+    heading: 'Come back and log today’s wear',
+    body: `You logged a wear once and then things went quiet — no worries, life gets busy. But WRotate really comes alive once logging becomes a habit:
+
+<b>Build a streak.</b> Log the watch on your wrist each day and watch your run grow.
+
+<b>Discover your Most Worn.</b> The more you log, the clearer your real favourites become — the numbers are often surprising.
+
+<b>Share your wrist.</b> Post today’s watch to the feed and see what everyone else is wearing.
+
+It takes about ten seconds: open WRotate, tap <b>Track</b>, and log what’s on your wrist right now.
+
+We’d love to see you back.
+
 The WRotate team`,
     imageUrls: [],
     savedAt: new Date().toISOString(),
