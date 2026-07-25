@@ -5295,6 +5295,17 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="badge-toast" class="badge-toast" aria-live="polite"></div>
 <div id="badge-wall-modal" class="overlay hidden"><div class="modal" style="max-width:520px;background:var(--badge-bg2);border-color:var(--badge-border);position:relative;"><button onclick="closeBadgeWall()" class="modal-close" aria-label="Close">&times;</button><div id="badge-wall-content"></div></div></div>
 <div id="badge-detail-modal" class="overlay hidden" style="z-index:210;"><div class="modal" style="max-width:360px;background:var(--badge-bg2);border-color:var(--badge-border);position:relative;"><button onclick="closeBadgeDetail()" class="modal-close" aria-label="Close">&times;</button><div id="badge-detail-content"></div></div></div>
+<div id="badge-reveal-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="badge-reveal-title">
+  <div class="modal" style="max-width:340px;background:var(--badge-bg2);border-color:var(--badge-border);text-align:center;">
+    <div class="modal-title" id="badge-reveal-title" style="justify-content:center;color:var(--badge-text);">🎉 <span id="badge-reveal-count"></span></div>
+    <div id="badge-reveal-medallions" style="display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center;margin:.7rem 0 .4rem;"></div>
+    <div id="badge-reveal-names" style="font-size:.8rem;color:var(--badge-text);opacity:.7;margin-bottom:1rem;line-height:1.5;"></div>
+    <div style="display:flex;gap:.5rem;">
+      <button class="btn btn-primary" style="flex:1;" onclick="badgeRevealSeeThem()">See them</button>
+      <button class="btn btn-ghost" style="flex:1;color:var(--muted);" onclick="closeBadgeReveal()">Dismiss</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // Prevent iOS PWA from restoring previous scroll position on launch
@@ -5730,11 +5741,81 @@ function openBadgeWall() {
   if (unseen.length && currentUser) {
     unseen.forEach(e => e.seen = true);
     db.from('user_badges').update({ seen: true }).eq('user_id', currentUser.id).eq('seen', false).then(() => {});
+    if (typeof renderProfileBadgeDot === 'function') renderProfileBadgeDot();
   }
 }
 
 function closeBadgeWall() {
   document.getElementById('badge-wall-modal').classList.add('hidden');
+}
+
+// ── Badge reveal (modal on open + persistent dot) ──
+// seen is only flipped by opening the wall, and almost nobody visits it, so ~73%
+// of earned badges never register. Surface them: a count dot on the profile button
+// (ongoing) + a one-per-batch reveal modal on app open (re-engagement).
+const BADGE_REVEAL_KEY = 'wr_badge_reveal_count';
+
+function unseenBadgeCount() {
+  return (_earnedBadges || []).filter(e => e && !e.seen).length;
+}
+
+function renderProfileBadgeDot() {
+  const btn = document.getElementById('profile-btn');
+  if (!btn) return;
+  let dot = document.getElementById('profile-badge-dot');
+  const n = currentUser ? unseenBadgeCount() : 0;
+  if (n <= 0) { if (dot) dot.classList.add('hidden'); return; }
+  if (!dot) {
+    dot = document.createElement('span');
+    dot.id = 'profile-badge-dot';
+    dot.className = 'bell-badge';   // reuse the notification-count styling
+    btn.style.position = 'relative';
+    btn.appendChild(dot);
+  }
+  dot.textContent = n > 9 ? '9+' : String(n);
+  dot.classList.remove('hidden');
+}
+
+function openBadgeRevealModal() {
+  const unseen = (_earnedBadges || []).filter(e => e && !e.seen);
+  const badges = unseen.map(e => BADGE_BY_REF[e.badge_ref]).filter(Boolean);
+  if (!badges.length) return;
+  const modal = document.getElementById('badge-reveal-modal');
+  if (!modal) { openBadgeWall(); return; }   // fallback: straight to the wall
+  const countEl = document.getElementById('badge-reveal-count');
+  if (countEl) countEl.textContent = badges.length === 1 ? '1 badge unlocked' : `${badges.length} badges unlocked`;
+  const medEl = document.getElementById('badge-reveal-medallions');
+  if (medEl) medEl.innerHTML = badges.slice(0, 8).map(b => badgeMedallionSvg(b, 52, true)).join('');
+  const namesEl = document.getElementById('badge-reveal-names');
+  if (namesEl) namesEl.textContent = badges.map(b => b.name).join(' · ');
+  modal.classList.remove('hidden');
+  haptic('success');
+}
+
+function closeBadgeReveal() {
+  const m = document.getElementById('badge-reveal-modal');
+  if (m) m.classList.add('hidden');
+}
+
+function badgeRevealSeeThem() {
+  closeBadgeReveal();
+  openBadgeWall();            // marks the badges seen
+  renderProfileBadgeDot();    // clear the dot
+}
+
+// Called after badges load / the retroactive scan. Pops the reveal once per new
+// batch (guarded so it never stacks on another open modal — retries next open).
+function maybeRevealBadges() {
+  if (!currentUser || _isDemoMode) return;
+  let lastRevealed = 0;
+  try { lastRevealed = parseInt(localStorage.getItem(BADGE_REVEAL_KEY) || '0', 10) || 0; } catch (_) {}
+  if (!shouldRevealBadges({ earnedCount: (_earnedBadges || []).length, unseenCount: unseenBadgeCount(), lastRevealedCount: lastRevealed })) return;
+  setTimeout(() => {
+    if (!currentUser || _isDemoMode || unseenBadgeCount() <= 0) return;
+    if (document.querySelector('.overlay:not(.hidden)')) return;   // busy — retry next open
+    try { localStorage.setItem(BADGE_REVEAL_KEY, String((_earnedBadges || []).length)); } catch (_) {}
+    openBadgeRevealModal();
+  }, 800);
 }
 
 function openBadgeDetail(ref) {
@@ -6222,6 +6303,7 @@ async function checkAndAwardBadges(context, postId) {
   if (newlyEarned.length > 0) {
     showBadgeToast(newlyEarned);
     notifyBadgesEarned(newlyEarned);
+    renderProfileBadgeDot();
   }
   if (newlyEarned.length > 0 && myProfile && myProfile.share_achievements !== false) {
     const _bp = badgePostPlan(newlyEarned, context, postId);
@@ -6249,6 +6331,7 @@ async function loadEarnedBadges() {
     .select('*')
     .eq('user_id', currentUser.id);
   if (!error && data) _earnedBadges = data;
+  renderProfileBadgeDot();
 }
 
 async function retroactiveBadgeScan() {
@@ -6256,6 +6339,8 @@ async function retroactiveBadgeScan() {
   _badgeScanDone = true;
   await loadEarnedBadges();
   await checkAndAwardBadges('retroactive');
+  renderProfileBadgeDot();
+  maybeRevealBadges();
 }
 
 // ── Badge wall section for profile ──
@@ -6952,7 +7037,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.10.25';
+const APP_VERSION = '25.11.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10770,6 +10855,11 @@ function shouldPromptFirstWear(state) {
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
 function hasWornToday(logs, watchId, today) {
   return (logs || []).some(l => l && l.watchId === watchId && l.date === today && isWearEntry(l));
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function shouldRevealBadges({ earnedCount, unseenCount, lastRevealedCount }) {
+  return unseenCount > 0 && earnedCount > (lastRevealedCount || 0);
 }
 
 function _firstWearState() {

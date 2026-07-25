@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { shouldPromptFirstWear, hasWornToday } from '../wrotate_test.js';
+import { shouldPromptFirstWear, hasWornToday, shouldRevealBadges } from '../wrotate_test.js';
 
 const base = { loggedIn: true, isDemo: false, isNewAccount: true, watchCount: 1, logCount: 0, alreadyShown: false };
 
@@ -54,5 +54,23 @@ describe('hasWornToday', () => {
   it('false on empty / null logs', () => {
     expect(hasWornToday([], 'w1', T)).toBe(false);
     expect(hasWornToday(null, 'w1', T)).toBe(false);
+  });
+});
+
+describe('shouldRevealBadges', () => {
+  it('reveals when unseen badges exist and the count grew since last reveal', () => {
+    expect(shouldRevealBadges({ earnedCount: 3, unseenCount: 3, lastRevealedCount: 0 })).toBe(true);
+  });
+  it('reveals when a new badge arrives beyond the high-water mark', () => {
+    expect(shouldRevealBadges({ earnedCount: 4, unseenCount: 1, lastRevealedCount: 3 })).toBe(true);
+  });
+  it('no reveal when nothing is unseen (all viewed in the wall)', () => {
+    expect(shouldRevealBadges({ earnedCount: 5, unseenCount: 0, lastRevealedCount: 0 })).toBe(false);
+  });
+  it('no reveal when the batch was already revealed (dismissed) and no new badges', () => {
+    expect(shouldRevealBadges({ earnedCount: 3, unseenCount: 3, lastRevealedCount: 3 })).toBe(false);
+  });
+  it('treats missing lastRevealedCount as zero', () => {
+    expect(shouldRevealBadges({ earnedCount: 1, unseenCount: 1 })).toBe(true);
   });
 });

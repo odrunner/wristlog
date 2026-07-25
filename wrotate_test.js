@@ -1510,6 +1510,14 @@ export function hasWornToday(logs, watchId, today) {
   return (logs || []).some(l => l && l.watchId === watchId && l.date === today && isWearEntry(l));
 }
 
+// Whether to pop the badge-reveal modal on app open: only when there are unseen
+// earned badges AND the earned count has grown since the last reveal (a localStorage
+// high-water mark), so it fires once per new-badge batch and never re-nags a user
+// who dismissed (the persistent dot covers ongoing awareness).
+export function shouldRevealBadges({ earnedCount, unseenCount, lastRevealedCount }) {
+  return unseenCount > 0 && earnedCount > (lastRevealedCount || 0);
+}
+
 // ══════════════════════════════════════════
 //  RESILIENCE UTILITIES
 // ══════════════════════════════════════════
