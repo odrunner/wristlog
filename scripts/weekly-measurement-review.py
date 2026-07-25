@@ -139,12 +139,16 @@ def prov2_stats(blob):
     if not pairs:
         return None
     both = [(float(r), float(t)) for r, t, _ in pairs if r != "nil" and t != "nil"]
+    tgs = [float(t) for _, t, _ in pairs if t != "nil"]
+    regs = [float(r) for r, _, _ in pairs if r != "nil"]
     amps = [float(a) for _, _, a in pairs if a and a != "nil"]
     algo = (re.search(r'"algo"\s*:\s*"(\w+)"', blob) or [None, None])[1]
     conv = '"converged":true' in blob.replace(" ", "")
     dur = (re.search(r'"duration_sec"\s*:\s*(\d+)', blob) or [None, None])[1]
     return dict(
         delta=abs(both[-1][1] - both[-1][0]) if both else None,   # final |tg − reg|
+        tg_final=tgs[-1] if tgs else None,     # tg engine's own final rate (the shipped number in beta)
+        reg_final=regs[-1] if regs else None,
         amp=amps[-1] if amps else None,
         amp_ok=(135 <= amps[-1] <= 360) if amps else None,
         algo=algo or "original", conv=conv,
@@ -155,22 +159,42 @@ FLIP_GATE = dict(users=20, sessions=100, conv_pct=80, ttc_median=15, delta_media
 
 
 def is_good(a):
+    # Pro V2 (tg engine) bypasses the legacy per-tick detector, so it emits few
+    # TGTICK lines (median ~15) and would ALWAYS fail the >=40-tick gate — which
+    # silently mis-scored every beta session as a failure. For a tg session the
+    # good-signal proxy is instead: it converged AND its own tg rate is believable.
+    v2 = a.get("v2")
+    if v2 and v2.get("algo") == "tg":
+        r = v2.get("tg_final")
+        return r is not None and abs(r) <= GOOD_MAX_RATE and bool(v2.get("conv"))
     return a["final"] is not None and abs(a["final"]) <= GOOD_MAX_RATE and a["n_acc"] >= GOOD_MIN_TICKS
 
 
 def failure_mode(a):
     """Primary failure mode (priority order → clean partition)."""
-    if not is_good(a):
-        if a["n_acc"] < GOOD_MIN_TICKS:
-            return "weak_signal"          # couldn't hear the watch (coupling / faint)
-        if a["pair_rej"] + a["phase_rej"] > a["n_acc"]:
-            return "reject_storm"          # noise / twin-peak thrash
+    if is_good(a):
+        return None
+    # Pro V2 (tg) sessions can't be scored with the legacy detector's tick/reject
+    # counts — classify them on the tg engine's own convergence + rate instead.
+    v2 = a.get("v2")
+    if v2 and v2.get("algo") == "tg":
+        r = v2.get("tg_final")
+        if not v2.get("conv"):
+            return "tg_no_converge"        # tg didn't settle on a stable period
+        if r is not None and abs(r) > 40:
+            return "gross_wild"            # tg harmonic lock
         if a["bph"] and int(a["bph"]) <= 21600:
-            return "low_bph"               # low-beat regime (harmonic / drift)
-        if a["final"] is not None and abs(a["final"]) > 40:
-            return "gross_wild"            # likely harmonic lock at any bph
+            return "low_bph"               # tg low-beat harmonic regime (see #2 native guard)
         return "moderate_wild"             # 15–40 s/day off
-    return None
+    if a["n_acc"] < GOOD_MIN_TICKS:
+        return "weak_signal"          # couldn't hear the watch (coupling / faint)
+    if a["pair_rej"] + a["phase_rej"] > a["n_acc"]:
+        return "reject_storm"          # noise / twin-peak thrash
+    if a["bph"] and int(a["bph"]) <= 21600:
+        return "low_bph"               # low-beat regime (harmonic / drift)
+    if a["final"] is not None and abs(a["final"]) > 40:
+        return "gross_wild"            # likely harmonic lock at any bph
+    return "moderate_wild"             # 15–40 s/day off
 
 
 MODE_FIX = {
@@ -179,6 +203,7 @@ MODE_FIX = {
     "low_bph":      ("native", "Low-BPH harmonic rejection + low-beat detection tuning (18000/21600)"),
     "gross_wild":   ("native", "Harmonic-lock guard: reject candidate rates implying 2×/0.5× the selected period"),
     "moderate_wild":("native", "Convergence/outlier tightening for mid-range drift"),
+    "tg_no_converge":("native", "Pro V2 (tg) convergence: settle-rule / low-BPH lock tuning so it reaches a stable period"),
 }
 
 
@@ -290,7 +315,10 @@ def main():
     cum, week = [], []
     for sid, s in sess.items():
         blob = "\n".join(s["msgs"])
-        if "psBE=" not in blob: continue
+        # 2.0+ native sessions carry psBE=; the 2.1 tg build also carries [TGALGO.
+        # Fast-converging Pro V2 runs don't always emit psBE (they bypass the
+        # phase-sep BE path), so accept either marker or ~29% of beta is dropped.
+        if "psBE=" not in blob and "[TGALGO" not in blob: continue
         a = analyze(blob)
         if not a["uid"] or a["uid"] in internal: continue
         a["v2"] = prov2_stats(blob)
