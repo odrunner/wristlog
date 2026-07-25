@@ -342,13 +342,14 @@ class TimegrapherEngine {
                     phaseLock: Bool? = nil, phaseLockWindow: Double? = nil, phaseLockMaxMiss: Int? = nil,
                     liftAngle: Double? = nil,
                     tgSigma: Double? = nil, tgStabWin: Double? = nil, tgWallMin: Double? = nil, tgStabTh: Double? = nil,
-                    tgMaxWin: Double? = nil) {
+                    tgMaxWin: Double? = nil, tgAgree: Double? = nil) {
         if let v = liftAngle, v >= 20, v <= 80 { liftAngleDeg = v }
         if let v = tgSigma, v > 0 { tgSigmaGate = v }
         if let v = tgStabWin, v >= 2 { tgStabWindowSec = v }
         if let v = tgWallMin, v >= 3 { tgWallMinSec = v }
         if let v = tgStabTh, v > 0 { tgStabThresh = v }
         if let v = tgMaxWin, v >= 8, v <= 60 { tgMaxWindowSec = v }
+        if let v = tgAgree, v > 0 { tgAgreeBand = v }
         peakRatioThreshold = max(1.0, thresh)
         bufferDurationSec = max(5, min(120, bufSec))
         if let v = regSkipPairs { regressionSkipPairs = v }
@@ -380,7 +381,7 @@ class TimegrapherEngine {
         if let v = phaseLock { self.phaseLockEnabled = v }
         if let v = phaseLockWindow { self.phaseLockWindow = v }
         if let v = phaseLockMaxMiss { self.phaseLockMaxMiss = v }
-        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections) noiseFloor=\(self.noiseFloorMult) peakGate=\(self.peakDetectGate) phaseLock=\(self.phaseLockEnabled)/\(self.phaseLockWindow) tgKnobs=\(tgSigmaGate)/\(tgStabWindowSec)/\(tgWallMinSec)/\(tgStabThresh) maxWin=\(tgMaxWindowSec) lift=\(liftAngleDeg)")
+        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections) noiseFloor=\(self.noiseFloorMult) peakGate=\(self.peakDetectGate) phaseLock=\(self.phaseLockEnabled)/\(self.phaseLockWindow) tgKnobs=\(tgSigmaGate)/\(tgStabWindowSec)/\(tgWallMinSec)/\(tgStabThresh) maxWin=\(tgMaxWindowSec) agreeBand=\(tgAgreeBand) lift=\(liftAngleDeg)")
     }
 
     // MARK: - Biquad HP filter
@@ -1431,6 +1432,7 @@ class TimegrapherEngine {
     private var tgWallMinSec = 8.0        // earliest possible convergence
     private var tgStabThresh = 3.0        // steady = within this band (s/day)
     private var tgMaxWindowSec = 16.0     // longest analysis window (32 = precision mode; needs bufferSeconds >= window+6)
+    private var tgAgreeBand = 12.0        // harmonic-reject guard: longest-window rate must agree with the window median within this (s/day); set very high (e.g. 999) to disable
 
     /// Most-recent `n` samples of the active envelope ring, linearized oldest→newest.
     private func recentEnvelope(_ n: Int) -> [Float] {
@@ -1485,16 +1487,29 @@ class TimegrapherEngine {
     private func computeTgRate() -> Double? {
         let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
         let nominal = 7200.0 / Double(targetBph) * ringSampleRate
-        var best: Double? = nil
+        var rates: [(secs: Double, rate: Double)] = []
         for secs in [2.0, 4.0, 8.0, 16.0, 32.0] where secs <= tgMaxWindowSec {
             let want = Int(secs * ringSampleRate)
             let env = recentEnvelope(want)
             if env.count < Int(Double(want) * 0.9) { continue }
             guard let period = tgPeriod(env, nominal: nominal, ringSampleRate: ringSampleRate) else { continue }
             let rate = (nominal / period - 1) * 86400
-            if abs(rate) <= 200 { best = rate }   // longer valid window overwrites → longest wins
+            if abs(rate) <= 200 { rates.append((secs, rate)) }
         }
-        return best
+        guard !rates.isEmpty else { return nil }
+        // Harmonic-reject guard: a low-BPH harmonic lock shows up as ONE window
+        // reading ~2x off. The longest window is the headline, but only trust it if
+        // it agrees with the median of all valid windows; otherwise fall back to the
+        // median. On a clean watch every window agrees, so the longest still wins
+        // (no-op). Set tgAgreeBand very high to disable.
+        let sorted = rates.map { $0.rate }.sorted()
+        let median = sorted[sorted.count / 2]
+        let longest = rates.max { $0.secs < $1.secs }!.rate
+        if rates.count >= 2 && abs(longest - median) > tgAgreeBand {
+            debugLog(String(format: "[TGALGO harmonic-guard] longest=%.1f median=%.1f band=%.0f -> median", longest, median, tgAgreeBand))
+            return median
+        }
+        return longest
     }
 
     /// Envelope sample at an absolute ring index (0 if it has scrolled out of the ring).

@@ -1,5 +1,10 @@
 # tg harmonic-reject guard — native design (2026-07-22)
 
+**STATUS: Layer 1 IMPLEMENTED (2026-07-25)** — `computeTgRate()` multi-window agreement
+guard + JS-tunable `tgAgreeBand` (default 12 s/day; admin knob "Agree band", 999 = off)
+wired through `applyTuning` / `TimegrapherBridge` / `sendMsrTuning`. Lands in the 2.3
+App Store build. Layer 2 (octave check) still deferred (needs mic raw capture).
+
 Queued native change for the next App Store build. Author against `ios/Wrotate/Wrotate/TimegrapherEngine.swift`.
 Related: [[project_tg_detection_core]], [[project_measurement_quality]], `docs/measurement-changelog.md`.
 
