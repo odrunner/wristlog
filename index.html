@@ -6951,7 +6951,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.09.27';
+const APP_VERSION = '25.09.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16353,9 +16353,18 @@ function openTrackModal(id) {
   renderStrapSelector();
   renderWornNotice();
 
-  // Onboarding nudge copy — only when this compose was auto-opened for a first-ever log
+  // Onboarding nudge copy — only when this compose was auto-opened for a first-ever log.
+  // Name the watch so it's unmistakable which one is being logged (textContent = safe).
   const obLine = document.getElementById('tl-onboarding-line');
-  if (obLine) obLine.style.display = _firstWearOnboarding ? '' : 'none';
+  if (obLine) {
+    obLine.style.display = _firstWearOnboarding ? '' : 'none';
+    if (_firstWearOnboarding) {
+      const wLabel = (w.name || w.brand || '').trim();
+      obLine.textContent = wLabel
+        ? `Last step — log wearing your ${wLabel} and post it 👋`
+        : 'Last step — log your wear and post it 👋';
+    }
+  }
 
   document.getElementById('track-log-modal').classList.remove('hidden');
 }
