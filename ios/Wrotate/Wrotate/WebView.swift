@@ -161,6 +161,20 @@ struct WebView: UIViewRepresentable {
             })();
             """
             webView.evaluateJavaScript(js, completionHandler: nil)
+
+            // Report the current OS push-notification status so the web primer only
+            // shows when it's still notDetermined, and the settings row reflects reality.
+            UNUserNotificationCenter.current().getNotificationSettings { settings in
+                DispatchQueue.main.async {
+                    self.reportPushStatus(PushManager.statusString(settings.authorizationStatus), to: webView)
+                }
+            }
+        }
+
+        // Push the OS push-auth status into the web layer.
+        func reportPushStatus(_ status: String, to webView: WKWebView?) {
+            let js = "window._pushAuthStatus='\(status)';if(window.onPushAuthStatus){window.onPushAuthStatus('\(status)');}"
+            (webView ?? self.webView)?.evaluateJavaScript(js, completionHandler: nil)
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
@@ -325,6 +339,18 @@ struct WebView: UIViewRepresentable {
                             if let scene = UIApplication.shared.connectedScenes
                                 .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
                                 SKStoreReviewController.requestReview(in: scene)
+                            }
+                        }
+                    } else if action == "requestPushPermission" {
+                        // Warm ask, driven by the in-app primer — report the result back to JS.
+                        let wv = message.webView ?? self.webView
+                        PushManager.shared.requestPermissionAndRegister { status in
+                            DispatchQueue.main.async { self.reportPushStatus(status, to: wv) }
+                        }
+                    } else if action == "openAppSettings" {
+                        DispatchQueue.main.async {
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(url)
                             }
                         }
                     }

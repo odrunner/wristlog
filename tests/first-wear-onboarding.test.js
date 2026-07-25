@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { shouldPromptFirstWear, hasWornToday, shouldRevealBadges } from '../wrotate_test.js';
+import { shouldPromptFirstWear, hasWornToday, shouldRevealBadges, shouldShowPushPrimer } from '../wrotate_test.js';
 
 const base = { loggedIn: true, isDemo: false, isNewAccount: true, watchCount: 1, logCount: 0, alreadyShown: false };
 
@@ -72,5 +72,29 @@ describe('shouldRevealBadges', () => {
   });
   it('treats missing lastRevealedCount as zero', () => {
     expect(shouldRevealBadges({ earnedCount: 1, unseenCount: 1 })).toBe(true);
+  });
+});
+
+describe('shouldShowPushPrimer', () => {
+  const NOW = Date.parse('2026-07-25T00:00:00Z');
+  const base = { available: true, authStatus: 'notDetermined', declineCount: 0, lastDeclinedMs: 0, nowMs: NOW };
+  it('shows on a native build, notDetermined, no prior declines', () => {
+    expect(shouldShowPushPrimer(base)).toBe(true);
+  });
+  it('suppressed on a non-native/old build (not available)', () => {
+    expect(shouldShowPushPrimer({ ...base, available: false })).toBe(false);
+  });
+  it('suppressed once granted or denied (status not notDetermined)', () => {
+    expect(shouldShowPushPrimer({ ...base, authStatus: 'authorized' })).toBe(false);
+    expect(shouldShowPushPrimer({ ...base, authStatus: 'denied' })).toBe(false);
+  });
+  it('suppressed within the decline cooldown', () => {
+    expect(shouldShowPushPrimer({ ...base, declineCount: 1, lastDeclinedMs: NOW - 2 * 86400000 })).toBe(false);
+  });
+  it('shows again after the cooldown elapses', () => {
+    expect(shouldShowPushPrimer({ ...base, declineCount: 1, lastDeclinedMs: NOW - 8 * 86400000 })).toBe(true);
+  });
+  it('suppressed once the decline cap is reached', () => {
+    expect(shouldShowPushPrimer({ ...base, declineCount: 3, lastDeclinedMs: NOW - 100 * 86400000 })).toBe(false);
   });
 });

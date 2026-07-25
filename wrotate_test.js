@@ -1518,6 +1518,19 @@ export function shouldRevealBadges({ earnedCount, unseenCount, lastRevealedCount
   return unseenCount > 0 && earnedCount > (lastRevealedCount || 0);
 }
 
+// Whether to show the push-notifications primer. Only on a native build that can
+// request permission (available), only when the OS status is still notDetermined
+// (never asked — iOS lets us ask once), and not while a decline cooldown/cap is in
+// effect (so a "Not now" isn't nagged). Pure — caller passes explicit state.
+export function shouldShowPushPrimer(s) {
+  const { available, authStatus, declineCount, lastDeclinedMs, nowMs, cooldownDays = 7, cap = 3 } = s;
+  if (!available) return false;
+  if (authStatus !== 'notDetermined') return false;
+  if ((declineCount || 0) >= cap) return false;
+  if (lastDeclinedMs && (nowMs - lastDeclinedMs) < cooldownDays * 86400000) return false;
+  return true;
+}
+
 // ══════════════════════════════════════════
 //  RESILIENCE UTILITIES
 // ══════════════════════════════════════════

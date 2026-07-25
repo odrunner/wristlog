@@ -14,11 +14,22 @@ class PushManager {
 
     private init() {}
 
-    // Called when user signs into the web app
+    // Called when user signs into the web app.
+    // Do NOT cold-ask for permission here — iOS only lets us show the system
+    // dialog once, and a cold ask at sign-in (before the user sees any value) is
+    // mostly declined. Instead: if permission was already granted, silently refresh
+    // the device token; otherwise wait for the in-app primer to call
+    // requestPermissionAndRegister() (via the "requestPushPermission" app action).
     func handleSignIn(userId: String, accessToken: String? = nil) {
         currentUserId = userId
         userAccessToken = accessToken
-        requestPermissionAndRegister()
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            if settings.authorizationStatus == .authorized {
+                DispatchQueue.main.async {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            }
+        }
     }
 
     // Called when user signs out
@@ -29,18 +40,32 @@ class PushManager {
         currentUserId = nil
     }
 
-    func requestPermissionAndRegister() {
+    // Maps an OS authorization status to the string the web layer expects.
+    static func statusString(_ s: UNAuthorizationStatus) -> String {
+        switch s {
+        case .authorized, .provisional, .ephemeral: return "authorized"
+        case .denied: return "denied"
+        case .notDetermined: return "notDetermined"
+        @unknown default: return "notDetermined"
+        }
+    }
+
+    // Triggered by the in-app primer ("requestPushPermission"). Shows the real OS
+    // dialog, registers on grant, and reports the resulting status back via completion.
+    func requestPermissionAndRegister(completion: ((String) -> Void)? = nil) {
         UNUserNotificationCenter.current().requestAuthorization(
             options: [.alert, .badge, .sound]
         ) { granted, error in
             if let error = error {
                 print("[WRotate] Push permission error: \(error.localizedDescription)")
-                return
             }
             if granted {
                 DispatchQueue.main.async {
                     UIApplication.shared.registerForRemoteNotifications()
                 }
+            }
+            UNUserNotificationCenter.current().getNotificationSettings { settings in
+                completion?(PushManager.statusString(settings.authorizationStatus))
             }
         }
     }
