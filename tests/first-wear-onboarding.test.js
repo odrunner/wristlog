@@ -1,11 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { shouldPromptFirstWear } from '../wrotate_test.js';
 
-const base = { loggedIn: true, isDemo: false, watchCount: 1, logCount: 0, alreadyShown: false };
+const base = { loggedIn: true, isDemo: false, isNewAccount: true, watchCount: 1, logCount: 0, alreadyShown: false };
 
 describe('shouldPromptFirstWear', () => {
-  it('fires for a brand-new user: logged in, 1 watch, 0 logs, not shown, not demo', () => {
+  it('fires for a brand-new user: logged in, new account, 1 watch, 0 logs, not shown, not demo', () => {
     expect(shouldPromptFirstWear(base)).toBe(true);
+  });
+
+  it('suppressed for a pre-existing account (old account, e.g. silent watch-owner)', () => {
+    expect(shouldPromptFirstWear({ ...base, isNewAccount: false })).toBe(false);
   });
 
   it('fires regardless of how many watches were just added (batch)', () => {

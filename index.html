@@ -6766,7 +6766,6 @@ async function loadUserData() {
   else if (_activePage === 'page-stats') renderStats(true);
   updateStreakChip();
   maybeFreezeToast();
-  firstWearOnboardingBackfill();
 }
 
 // ══════════════════════════════════════════
@@ -6952,7 +6951,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.08.32';
+const APP_VERSION = '25.08.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10750,39 +10749,37 @@ function markMeasurementTried() {
 // open the wear-log compose so the watch-add moment converts into the first log.
 // Fires exactly once, ever.
 const FIRST_WEAR_KEY = 'wrotate_first_wear_prompted';
+const FIRST_WEAR_MAX_AGE_DAYS = 14;   // only genuinely new accounts are onboarded
 let _firstWearOnboarding = false;   // drives the onboarding header copy in the compose
 let _firstWearPending = false;      // a fire is already scheduled — don't stack timers
-let _firstWearInitDone = false;
+
+// Keyed PER USER, not per browser: two accounts on the same device (e.g. a shared
+// phone, or testing) each get their own decision — otherwise account A's latch
+// suppresses the prompt for brand-new account B in the same browser.
+function _firstWearKey() {
+  return currentUser ? FIRST_WEAR_KEY + '_' + currentUser.id : FIRST_WEAR_KEY;
+}
 
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
 function shouldPromptFirstWear(state) {
-  const { loggedIn, isDemo, watchCount, logCount, alreadyShown } = state;
-  return !!loggedIn && !isDemo && watchCount >= 1 && logCount === 0 && !alreadyShown;
+  const { loggedIn, isDemo, isNewAccount, watchCount, logCount, alreadyShown } = state;
+  return !!loggedIn && !isDemo && !!isNewAccount && watchCount >= 1 && logCount === 0 && !alreadyShown;
 }
 
 function _firstWearState() {
+  // Account age gates out pre-existing users (e.g. the silent watch-owners we
+  // don't want to nag); genuinely new signups are within the window. Missing
+  // created_at → treat as old (fail closed: never prompt on uncertainty).
+  const createdAt = (typeof myProfile !== 'undefined' && myProfile) ? myProfile.created_at : null;
+  const ageDays = createdAt ? (Date.now() - new Date(createdAt).getTime()) / 86400000 : Infinity;
   return {
     loggedIn: !!currentUser,
     isDemo: !!_isDemoMode,
+    isNewAccount: ageDays <= FIRST_WEAR_MAX_AGE_DAYS,
     watchCount: (typeof watches !== 'undefined' && watches) ? watches.length : 0,
     logCount: (typeof logs !== 'undefined' && logs) ? logs.length : 0,
-    alreadyShown: localStorage.getItem(FIRST_WEAR_KEY) === '1',
+    alreadyShown: localStorage.getItem(_firstWearKey()) === '1',
   };
-}
-
-// One-time on first authenticated load: latch existing users (any watch or log)
-// out of the prompt, so only genuinely new users stay eligible. Called from
-// loadUserData once data is authoritative.
-function firstWearOnboardingBackfill() {
-  if (_firstWearInitDone) return;
-  _firstWearInitDone = true;
-  try {
-    if (localStorage.getItem(FIRST_WEAR_KEY)) return;
-    if ((typeof watches !== 'undefined' && watches && watches.length) ||
-        (typeof logs !== 'undefined' && logs && logs.length)) {
-      localStorage.setItem(FIRST_WEAR_KEY, '1');
-    }
-  } catch (_) {}
 }
 
 // Catch-all: called from the main renders. Schedules a deferred open that re-checks
@@ -10798,7 +10795,7 @@ function maybePromptFirstWear() {
     if (document.querySelector('.overlay:not(.hidden)')) return;         // a modal is open — retry next render
     const af2 = document.getElementById('af2-sheet');
     if (af2 && !af2.classList.contains('hidden')) return;               // add-watch sheet still up
-    localStorage.setItem(FIRST_WEAR_KEY, '1');                          // once ever
+    localStorage.setItem(_firstWearKey(), '1');                        // once ever, per user
     _firstWearOnboarding = true;
     if (watches.length === 1) {
       openTrackModal(watches[0].id);                                    // single → prefilled compose
@@ -21778,6 +21775,9 @@ function closeAf2Sheet() {
     _af2Timers = {};
     document.getElementById('af2-sheet').classList.add('hidden');
   }
+  // Image add-flow just closed — the render catch-all doesn't cover a plain
+  // sheet dismiss, so trigger the first-wear prompt here too (guarded internally).
+  maybePromptFirstWear();
 }
 
 function af2DismissToBackground() {

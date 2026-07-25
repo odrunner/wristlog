@@ -7,19 +7,17 @@ Data (2026-07-24 full user analysis): 84% of new users add a watch within 24h, b
 Auto-open a prefilled wear-log compose the moment a brand-new user finishes adding their first watch(es), converting the strong watch-add moment into the first log. Fires **exactly once, ever**.
 
 ## Trigger
-A central guard `maybePromptFirstWear(newlyAddedIds)` fires only when ALL hold:
-- collection went **0 → ≥1** watches (first watch ever),
-- user has **0 wear-logs** (`logs.length === 0`),
-- not already shown — persistent flag `wrotate_first_wear_prompted`,
-- not demo/guest (`demoGuard()` / no `currentUser`).
+Pure decision `shouldPromptFirstWear(state)` fires only when ALL hold:
+- logged in, not demo,
+- **new account** — `myProfile.created_at` within `FIRST_WEAR_MAX_AGE_DAYS` (14). This is what excludes pre-existing silent watch-owners; account age (not "has a watch") is the correct signal.
+- **≥1 watch**, **0 wear-logs** (`logs.length === 0`),
+- not already shown — a **per-user** flag `wrotate_first_wear_prompted_<userId>` (NOT per-browser: two accounts on one device must decide independently, else account A's latch suppresses new account B).
 
-It sets the flag immediately on show, so it never re-fires (2nd watch, next session, etc.).
+The impure `maybePromptFirstWear()` sets the flag on show (once ever per user), then opens the compose. Called (all guarded + deferred with an overlay/sheet re-check so it never stacks on the add flow's own follow-up screens):
+- `renderFeed()` / `renderCollection()` — the catch-all covering the manual `saveWatch()` path (which calls `renderCollection`) and any settle-on-a-main-page moment.
+- `closeAf2Sheet()` — the batch/photo ("af2") add path, whose plain dismiss does not otherwise re-render.
 
-Called at the completion of BOTH add paths:
-- manual `saveWatch()` — new-watch branch, after `closeWatchModal()` + `renderCollection()`.
-- batch photo-identify "af2" sheet — at its terminal done/close handler.
-
-Both call after a small `setTimeout` so the success toast shows and the add modal/sheet finishes closing before the compose opens (no stacked modals).
+**No load-time backfill.** An earlier design latched existing users out on load by "has a watch," but that also latched a brand-new user who added a watch then reloaded before logging (exactly the target). The account-age gate replaces it correctly.
 
 ## Behavior by add count
 - **One watch added** → `openTrackModal(newWatchId)` — prefilled watch + today's date + default visibility (existing behavior of that fn). One tap on "Log" saves.
