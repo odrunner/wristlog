@@ -7072,7 +7072,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.16.42';
+const APP_VERSION = '26.16.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14391,22 +14391,39 @@ async function renderBroadcastQueueStatus() {
     // tab — and one with per-recipient subjects can't even be grouped by
     // subject, so it read as an unnamed row count.
     if (sendsEl) {
+      // The drain claims pending rows FIFO by queue id, so the first still-
+      // draining broadcast finishes before the next one gets any quota at all.
+      // The RPC returns them in that order; number them so it's visible.
+      let position = 0;
       const rows = (q.breakdown || []).map(b => {
         const pending = Number(b.pending) || 0;
         const sent = Number(b.sent) || 0;
         const failed = Number(b.failed) || 0;
+        const total = Number(b.total) || (pending + sent + failed);
         const done = pending === 0;
+        if (!done) position++;
+        // Nights left at tonight's budget. Only the one actually next in line
+        // gets the full budget; anything behind it waits its turn.
+        const nights = (!done && position === 1 && budget > 0) ? Math.ceil(pending / budget) : 0;
         const when = b.last_sent ? new Date(b.last_sent).toLocaleDateString() : '';
-        return `<div style="display:flex;align-items:center;gap:.4rem;padding:.35rem .5rem;background:var(--surface);border-radius:6px;margin-bottom:.25rem;font-size:.82rem;border-left:3px solid ${done ? 'var(--border)' : 'var(--gold)'};">
-          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(b.label || '(unnamed)')}</span>
-          <span style="color:${done ? 'var(--muted)' : 'var(--gold)'};font-size:.75rem;white-space:nowrap;">${
-            done ? `all ${sent} sent` : `${pending} pending · ${sent} sent`
-          }${failed ? ` · <span style="color:var(--error);">${failed} failed</span>` : ''}</span>
-          <span style="color:var(--muted);font-size:.72rem;white-space:nowrap;">${escHtml(when)}</span>
+        const rank = done
+          ? '<span style="color:var(--muted);">done</span>'
+          : (position === 1
+              ? '<span style="color:var(--gold);font-weight:700;">next</span>'
+              : `<span style="color:var(--muted);">#${position} in line</span>`);
+        return `<div style="padding:.4rem .5rem;background:var(--surface);border-radius:6px;margin-bottom:.25rem;font-size:.82rem;border-left:3px solid ${done ? 'var(--border)' : (position === 1 ? 'var(--gold)' : 'var(--border)')};">
+          <div style="display:flex;align-items:center;gap:.4rem;">
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(b.label || '(unnamed)')}</span>
+            <span style="font-size:.72rem;white-space:nowrap;">${rank}</span>
+            <span style="color:var(--muted);font-size:.72rem;white-space:nowrap;">${escHtml(when)}</span>
+          </div>
+          <div style="color:var(--muted);font-size:.74rem;margin-top:.15rem;">
+            ${done ? `all ${sent} sent` : `${sent} of ${total} sent · ${pending} left${nights ? ` · ≈${nights} night${nights === 1 ? '' : 's'}` : ''}`}${failed ? ` · <span style="color:var(--error);">${failed} failed</span>` : ''}
+          </div>
         </div>`;
       }).join('');
       sendsEl.innerHTML = rows
-        ? '<div class="eyebrow eyebrow-muted" style="margin-bottom:.3rem;">Sent &amp; Queued</div>' + rows
+        ? '<div class="eyebrow eyebrow-muted" style="margin-bottom:.3rem;">Sent &amp; Queued <span style="text-transform:none;font-weight:400;">— drains oldest first, one broadcast at a time</span></div>' + rows
         : '';
     }
 
@@ -14471,12 +14488,16 @@ Log on consecutive days and your streak starts building.`,
 // once and went quiet well before fun facts shipped (2026-07-20), so it's new
 // to them — a concrete fact about their own watch beats a feature list.
 function seedWinbackFunFactDraft() {
-  const FLAG = 'wr_seed_winback_funfact_draft_v1';
+  // v2: v1 filtered on a subject that never existed, so the original win-back
+  // draft survived alongside this one and the tab showed three drafts for two
+  // broadcasts. This replaces it.
+  const FLAG = 'wr_seed_winback_funfact_draft_v2';
   if (localStorage.getItem(FLAG)) return;
   localStorage.setItem(FLAG, '1');
-  const SUBJECT = 'A fun fact about {{watchPhrase}}';
   const OLD = 'Your watches miss you';
-  const drafts = getBroadcastDrafts().filter(d => d.subject !== OLD + ' (fun fact)');
+  const NEW_SUBJECT = OLD + ' \u2014 here\u2019s a fun fact about {{watchPhrase}}';
+  const drafts = getBroadcastDrafts()
+    .filter(d => d.subject !== OLD && d.subject !== NEW_SUBJECT);
   drafts.unshift({
     id: Date.now() + 3,
     subject: OLD + ' — here\u2019s a fun fact about {{watchPhrase}}',
