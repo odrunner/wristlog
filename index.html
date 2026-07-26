@@ -7066,7 +7066,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.16.11';
+const APP_VERSION = '26.16.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14372,8 +14372,19 @@ async function renderBroadcastQueueStatus() {
     const q = data || {};
     if (!Number(q.pending) && !Number(q.sent) && !Number(q.failed)) { el.innerHTML = ''; return; }
     const budget = Math.max(0, 100 - (Number(q.used_today) || 0) - 10);
+    // Per-broadcast rows: a send with personalized subjects (the streak fun-fact
+    // one) is otherwise invisible here — it can't be identified by subject.
+    const rows = (q.breakdown || []).map(b => {
+      const pending = Number(b.pending) || 0;
+      const done = pending === 0;
+      return `<div style="margin-top:.25rem;padding-left:.5rem;border-left:2px solid ${done ? 'var(--border)' : 'var(--gold)'};">
+        <b>${escHtml(b.label || '(unnamed)')}</b> — ${done
+          ? `all ${Number(b.sent) || 0} sent`
+          : `<b>${pending}</b> pending · ${Number(b.sent) || 0} sent`}${Number(b.failed) ? ` · <span style="color:var(--error);">${Number(b.failed)} failed</span>` : ''}
+      </div>`;
+    }).join('');
     el.innerHTML = `Queue: <b>${Number(q.pending) || 0}</b> pending · ${Number(q.sent) || 0} sent (${Number(q.sent_today) || 0} today) · ${Number(q.failed) || 0} failed · quota used today ${Number(q.used_today) || 0}/100 · next drain ≈ ${budget} emails (nightly 21:30 UTC)
-      <button class="btn btn-ghost" onclick="drainBroadcastNow()" style="font-size:.72rem;padding:.2rem .5rem;margin-left:.4rem;">Drain now</button>`;
+      <button class="btn btn-ghost" onclick="drainBroadcastNow()" style="font-size:.72rem;padding:.2rem .5rem;margin-left:.4rem;">Drain now</button>${rows}`;
   } catch (_) { el.innerHTML = ''; }
 }
 

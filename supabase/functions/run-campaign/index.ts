@@ -656,7 +656,10 @@ async function enqueueStreakBroadcast(supabase: Db, limit: number) {
     if (!cur || f.position < cur.position) bestByKey.set(f.model_key, f);
   }
 
-  const rows: Array<{ uid: string; email: string; subject: string; html: string }> = [];
+  // Names this send in the admin Broadcast tab. Per-recipient subjects mean
+  // the queue can't identify it by subject the way single-subject sends do.
+  const STREAK_BROADCAST_LABEL = "Start your streak — fun fact";
+  const rows: Array<{ uid: string; email: string; subject: string; html: string; label: string }> = [];
   let personalized = 0;
   let fallback = 0;
   let noEmail = 0;
@@ -683,6 +686,7 @@ async function enqueueStreakBroadcast(supabase: Db, limit: number) {
       subject: personalizeSubject(campaign.subject, r.display_name, vars),
       // Footer-less: the drain appends unsubFooter() with a freshly signed URL.
       html: buildHtmlEmail("", personalizeBody(campaign.body_html, r.display_name, vars), ""),
+      label: STREAK_BROADCAST_LABEL,
     });
   }
 
