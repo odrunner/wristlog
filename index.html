@@ -3201,6 +3201,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <select id="broadcast-segment">
             <option value="all">All users (updates opt-in)</option>
             <option value="one_done_winback">One-and-done loggers (win-back)</option>
+            <option value="never_logged">Never logged a wear (excl. onboarding drip)</option>
           </select>
         </div>
 
@@ -7071,7 +7072,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.16.28';
+const APP_VERSION = '26.16.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14363,6 +14364,8 @@ function showAdminPage() {
   loadOfficialDrafts();
   seedProV2BroadcastDraft();
   seedWinbackBroadcastDraft();
+  seedStreakFunFactDraft();
+  seedWinbackFunFactDraft();
   renderBroadcastDrafts();
   renderBroadcastQueueStatus();
   renderDevFlags();
@@ -14434,6 +14437,66 @@ async function drainBroadcastNow() {
 
 // One-time: seed the Pro V2 beta announcement into the broadcast drafts list
 // (drafts are device-local; this places it on whichever device opens Admin).
+// The fun-fact card, shared by both drafts below. {{watch}} and {{fact}} are
+// filled per recipient by send-broadcast at queue time from their own
+// collection; {{watchPhrase}} is the possessive form for the subject line.
+const FUNFACT_CARD_HTML = '<div style="background:#faf7ee;border:1px solid #e8dcc0;border-left:3px solid #b8941f;border-radius:8px;padding:14px 16px;margin:0 0 18px;"><div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#b8941f;margin-bottom:7px;">&#128161; Fun fact &middot; {{watch}}</div><div style="font-size:15px;line-height:1.55;color:#333;">{{fact}}</div></div>';
+
+// One-off counterpart to the day-3 drip, for members who never logged a wear.
+// Seeded as an editable draft rather than queued directly so the copy is
+// visible and changeable here before anything sends.
+function seedStreakFunFactDraft() {
+  const FLAG = 'wr_seed_streak_funfact_draft_v1';
+  if (localStorage.getItem(FLAG)) return;
+  localStorage.setItem(FLAG, '1');
+  const SUBJECT = 'A fun fact about {{watchPhrase}}';
+  const drafts = getBroadcastDrafts().filter(d => d.subject !== SUBJECT);
+  drafts.unshift({
+    id: Date.now() + 2,
+    subject: SUBJECT,
+    heading: '',
+    body: `${FUNFACT_CARD_HTML}
+There's one of these waiting every time you log a wear — a fresh bit of trivia about whatever's on your wrist, and a new one each day you wear it.
+
+<b>Log today's watch to unlock your next fact.</b> Two taps: snap a photo, our AI identifies the watch automatically, and you choose who sees it — everyone, your followers, or just you.
+
+Log on consecutive days and your streak starts building.`,
+    images: [],
+    savedAt: Date.now(),
+  });
+  localStorage.setItem(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 10)));
+}
+
+// Win-back, reworked to lead with the fun fact. These members logged exactly
+// once and went quiet well before fun facts shipped (2026-07-20), so it's new
+// to them — a concrete fact about their own watch beats a feature list.
+function seedWinbackFunFactDraft() {
+  const FLAG = 'wr_seed_winback_funfact_draft_v1';
+  if (localStorage.getItem(FLAG)) return;
+  localStorage.setItem(FLAG, '1');
+  const SUBJECT = 'A fun fact about {{watchPhrase}}';
+  const OLD = 'Your watches miss you';
+  const drafts = getBroadcastDrafts().filter(d => d.subject !== OLD + ' (fun fact)');
+  drafts.unshift({
+    id: Date.now() + 3,
+    subject: OLD + ' — here\u2019s a fun fact about {{watchPhrase}}',
+    heading: 'Something new since you were last here',
+    body: `${FUNFACT_CARD_HTML}
+That's new: every wear you log now comes with a fact about the watch on your wrist, a fresh one each day you wear it. It didn't exist when you last logged.
+
+You logged a wear once and then things went quiet — no worries, life gets busy. Logging again takes about ten seconds: open WRotate, tap <b>Track</b>, and log what's on your wrist right now.
+
+<b>Build a streak.</b> Log each day and watch your run grow.
+
+<b>Discover your Most Worn.</b> The more you log, the clearer your real favourites become — the numbers are often surprising.
+
+We'd love to see you back.`,
+    images: [],
+    savedAt: Date.now(),
+  });
+  localStorage.setItem(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 10)));
+}
+
 function seedProV2BroadcastDraft() {
   const FLAG = 'wr_seed_prov2_draft_v2';
   if (localStorage.getItem(FLAG)) return;
@@ -17187,13 +17250,6 @@ async function sendToCohort(id) {
   const subject = document.getElementById('camp-subject-' + id)?.value?.trim() || camp.subject;
   const body = document.getElementById('camp-body-' + id)?.value?.trim() || camp.body_html;
   if (!subject || !body) { toast('Subject and body are required', 'error'); return; }
-  // send-broadcast renders one HTML for everyone, so it cannot fill per-recipient
-  // tokens — they'd reach real inboxes as literal braces. Only run-campaign can.
-  const unresolved = unresolvedCampaignTokens(subject + body);
-  if (unresolved.length) {
-    toast(`Cohort sends can't personalize ${unresolved.join(' / ')} — use Run Now instead`, 'error');
-    return;
-  }
   const limitRaw = document.getElementById('camp-limit-' + id)?.value?.trim();
   const limit = limitRaw ? Math.max(1, parseInt(limitRaw, 10)) : null;
   const statusEl = document.getElementById('camp-status-' + id);

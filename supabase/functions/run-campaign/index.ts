@@ -593,47 +593,67 @@ async function loadAudience(supabase: Db): Promise<AudienceRow[]> {
 // Generate facts for up to `limit` audience models that have none yet. Idempotent:
 // re-running only picks up what's still uncovered, so it's safe to call in a loop
 // until `remaining` hits 0.
-async function prewarmFacts(supabase: Db, limit: number) {
-  const audience = await loadAudience(supabase);
-  const byKey = new Map<string, AudienceRow>();
-  for (const r of audience) if (r.model_key && !byKey.has(r.model_key)) byKey.set(r.model_key, r);
+async function prewarmFacts(supabase: Db, limit: number, segment = "never_logged") {
+  // Which audience to warm. Both are broadcast segments now; the drip warms
+  // itself lazily at send time because it only touches a few users a day.
+  const rpc = segment === "winback" ? "one_and_done_winback_users" : "never_logged_users";
+  const args = segment === "winback" ? { p_churn_days: 14 } : { p_min_age_days: 4 };
+  const { data: seg, error: segErr } = await supabase.rpc(rpc, args);
+  if (segErr) throw new Error(`${rpc} failed: ${segErr.message}`);
+  const uids = ((seg ?? []) as Array<{ user_id: string }>).map((r) => r.user_id);
+  if (!uids.length) return { segment, audience_models: 0, already_covered: 0, attempted: 0, generated: 0, failed: 0, remaining: 0 };
+
+  const { data: varsRows, error: vErr } = await supabase.rpc("fun_fact_vars", { p_uids: uids });
+  if (vErr) throw new Error(`fun_fact_vars failed: ${vErr.message}`);
+  type VarRow = { user_id: string; brand: string | null; name: string | null; model_key: string | null; fact: string | null };
+
+  // One entry per model. `fact` non-null means the pool already has a usable
+  // one, so it needs no generation.
+  const byKey = new Map<string, { brand: string; name: string; covered: boolean }>();
+  for (const r of (varsRows ?? []) as VarRow[]) {
+    if (!r.model_key || !r.brand || !r.name) continue;
+    const prev = byKey.get(r.model_key);
+    const covered = !!r.fact || !!prev?.covered;
+    byKey.set(r.model_key, { brand: r.brand.trim(), name: r.name.trim(), covered });
+  }
 
   const keys = [...byKey.keys()];
-  const facts = await fetchFactsForKeys(supabase, keys);
-  const covered = new Set(
-    facts.filter((f) => looksCompleteFact(f.fact)).map((f) => f.model_key),
-  );
-  // A key can hold truncated rows only; position must not collide with those.
-  const poolSize = new Map<string, number>();
-  for (const f of facts) poolSize.set(f.model_key, (poolSize.get(f.model_key) ?? 0) + 1);
+  const covered = keys.filter((k) => byKey.get(k)!.covered);
+  const todo = keys.filter((k) => !byKey.get(k)!.covered).slice(0, Math.max(0, limit));
 
-  const todo = keys.filter((k) => !covered.has(k)).slice(0, Math.max(0, limit));
+  // Existing pool size per model, so a generated fact never collides with a
+  // truncated row already sitting at position 0.
+  const existing = await fetchFactsForKeys(supabase, todo);
+  const poolSize = new Map<string, number>();
+  for (const f of existing) poolSize.set(f.model_key, (poolSize.get(f.model_key) ?? 0) + 1);
+
   const results = await pooled(
     todo.map((key) => async () => {
-      const row = byKey.get(key)!;
-      const fact = await generateFact(row.brand!.trim(), row.name!.trim(), row.ref, []);
-      if (!fact) return { key, ok: false };
+      const w = byKey.get(key)!;
+      const fact = await generateFact(w.brand, w.name, null, []);
+      if (!fact) return { ok: false };
       const position = poolSize.get(key) ?? 0;
-      if (position >= 10) return { key, ok: false };
+      if (position >= 10) return { ok: false };
       const { error } = await supabase
         .from("watch_facts").insert({ model_key: key, position, fact: fact.slice(0, 500) });
       if (error) {
         console.error(`[run-campaign] prewarm insert failed for ${key}@${position}:`, error.message);
-        return { key, ok: false };
+        return { ok: false };
       }
-      return { key, ok: true };
+      return { ok: true };
     }),
     5,
   );
 
   const generated = results.filter((r) => r.ok).length;
   return {
+    segment,
     audience_models: keys.length,
-    already_covered: covered.size,
+    already_covered: covered.length,
     attempted: todo.length,
     generated,
     failed: todo.length - generated,
-    remaining: keys.length - covered.size - generated,
+    remaining: keys.length - covered.length - generated,
   };
 }
 
@@ -740,7 +760,8 @@ Deno.serve(async (req: Request) => {
     // hands off to send-broadcast's quota-aware nightly drain).
     const body = await req.json().catch(() => ({} as Record<string, unknown>));
     if (typeof body?.prewarm_facts === "number") {
-      const result = await prewarmFacts(supabase, body.prewarm_facts as number);
+      const result = await prewarmFacts(supabase, body.prewarm_facts as number,
+        typeof body.segment === "string" ? body.segment : "never_logged");
       console.log(`[run-campaign] prewarm:`, JSON.stringify(result));
       return new Response(JSON.stringify(result), { status: 200 });
     }

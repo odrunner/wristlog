@@ -35,6 +35,18 @@ import {
   utcDayStart,
   validateBroadcastInput,
 } from "./lib.ts";
+// Same personalization the onboarding drip uses, so a broadcast carrying the
+// same copy renders identically. {{watch}}/{{watchPhrase}}/{{fact}} are filled
+// per recipient from their own collection + the shared fact pool.
+import {
+  FALLBACK_FACT,
+  looksLikeRealWatchLabel,
+  needsFactVars,
+  personalizeBody,
+  personalizeSubject,
+  watchLabel,
+  watchPhrase,
+} from "../_shared/email-personalize.ts";
 // Transport: Resend. The SES client (../_shared/ses.ts) is interface-compatible
 // and stays in the tree, but AWS never granted SES production access — in
 // sandbox it rejects every unverified recipient, which silently burned the last
@@ -88,6 +100,34 @@ async function fetchAllRows<T>(
   return { data: all, error: null };
 }
 
+
+// Per-recipient {{watch}}/{{watchPhrase}}/{{fact}} values. One RPC round trip
+// for the whole send rather than two queries each. Recipients with no usable
+// watch, no complete pool fact, or a free-text name that would embarrass in a
+// subject line ("Omega Fake Omega - Likely ETA 2824-2") get the curated
+// fallback — never a broken email, never a dropped recipient.
+async function factVarsFor(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  uids: string[],
+): Promise<Map<string, Record<string, string>>> {
+  const out = new Map<string, Record<string, string>>();
+  if (!uids.length) return out;
+  const { data, error } = await supabase.rpc("fun_fact_vars", { p_uids: uids });
+  if (error) {
+    console.error("[send-broadcast] fun_fact_vars failed, using fallback for all:", error.message);
+    return out;
+  }
+  for (const r of (data ?? []) as Array<{ user_id: string; brand: string | null; name: string | null; fact: string | null }>) {
+    const label = r.brand && r.name ? watchLabel(r.brand.trim(), r.name.trim()) : "";
+    if (r.fact && looksLikeRealWatchLabel(label)) {
+      out.set(r.user_id, { watch: label, watchPhrase: watchPhrase(label), fact: r.fact });
+    }
+  }
+  return out;
+}
+
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: CORS_HEADERS });
@@ -100,6 +140,8 @@ serve(async (req) => {
 
     const body = await req.json();
     const { subject, html, test_email, segment = "all", campaign_id, cohort, dry_run, limit, enqueue, drain } = body;
+    // Set once the admin JWT is verified; used to personalize a test send.
+    let adminUserId: string | null = null;
 
     // Drain can be invoked by the nightly pg_cron job via the campaign secret
     // (no user JWT); everything else requires the admin JWT below.
@@ -119,6 +161,7 @@ serve(async (req) => {
         error: userError?.message,
         adminMatch: user?.id === ADMIN_USER_ID
       });
+      adminUserId = user?.id ?? null;
       if (userError || !user || user.id !== ADMIN_USER_ID) {
         return jsonResponse({ error: "Unauthorized", details: userError?.message }, 403);
       }
@@ -141,7 +184,16 @@ serve(async (req) => {
 
     // Test mode: send to a single email
     if (test_email) {
-      const result = await sendEmail(test_email, subject, safeHtml);
+      // Personalize against the caller's own collection — a test that shows
+      // "{{fact}}" tells you nothing about what recipients will get.
+      let tSubject = subject, tHtml = safeHtml;
+      if (needsFactVars({ subject, body_html: safeHtml }) && adminUserId) {
+        const vars = await factVarsFor(supabase, [adminUserId]);
+        const v = vars.get(adminUserId) ?? { ...FALLBACK_FACT };
+        tSubject = personalizeSubject(subject, null, v);
+        tHtml = personalizeBody(safeHtml, null, v);
+      }
+      const result = await sendEmail(test_email, tSubject, tHtml);
       return jsonResponse({ sent: 1, test: true, result });
     }
 
@@ -216,6 +268,18 @@ serve(async (req) => {
         return jsonResponse({ error: "Failed to resolve win-back segment", details: wbErr }, 500);
       }
       eligibleProfiles = keepIds(eligibleProfiles, (winbackRows || []).map((r: { user_id: string }) => r.user_id));
+    }
+
+    // Segment filter: "never_logged" — members who have never logged a wear.
+    // The one-off counterpart to the day-3 "Start your streak" drip; the RPC
+    // excludes anyone that drip already emailed, so the two never overlap.
+    if (segment === "never_logged") {
+      const { data: nlRows, error: nlErr } = await supabase
+        .rpc("never_logged_users", { p_min_age_days: 4 });
+      if (nlErr) {
+        return jsonResponse({ error: "Failed to resolve never-logged segment", details: nlErr }, 500);
+      }
+      eligibleProfiles = keepIds(eligibleProfiles, (nlRows || []).map((r: { user_id: string }) => r.user_id));
     }
 
     // Resolve emails via paginated listUsers (1-2 requests) instead of one
@@ -293,7 +357,19 @@ serve(async (req) => {
         .range(from, to));
       const alreadyQueued = new Set((pendingRows || []).map(r => r.uid));
       const toQueue = filteredRecipients.filter(r => !alreadyQueued.has(r.uid));
-      const rows = toQueue.map(r => ({ uid: r.uid, email: r.email, subject, html: safeHtml }));
+      // Rows are stored fully rendered, so the drain stays a dumb sender.
+      const wantsFact = needsFactVars({ subject, body_html: safeHtml });
+      const vars = wantsFact ? await factVarsFor(supabase, toQueue.map(r => r.uid)) : new Map();
+      const rows = toQueue.map(r => {
+        const v = wantsFact ? (vars.get(r.uid) ?? { ...FALLBACK_FACT }) : {};
+        return {
+          uid: r.uid,
+          email: r.email,
+          subject: personalizeSubject(subject, null, v),
+          html: personalizeBody(safeHtml, null, v),
+          label: subject,
+        };
+      });
       let queued = 0;
       for (let i = 0; i < rows.length; i += 500) {
         const { error: insErr } = await supabase.from("broadcast_queue").insert(rows.slice(i, i + 500));
@@ -312,16 +388,22 @@ serve(async (req) => {
     const errors: string[] = [];
     const batchSize = 100;
 
+    const directWantsFact = needsFactVars({ subject, body_html: safeHtml });
+    const directVars = directWantsFact
+      ? await factVarsFor(supabase, filteredRecipients.map((r) => r.uid))
+      : new Map<string, Record<string, string>>();
+
     for (let i = 0; i < filteredRecipients.length; i += batchSize) {
       const batch = filteredRecipients.slice(i, i + batchSize);
       const messages: ResendMessage[] = await Promise.all(batch.map(async (r) => {
         const sig = await hmacSign(r.uid, "updates", supabaseServiceKey);
         const url = unsubUrl(supabaseUrl, r.uid, sig, "updates");
+        const v = directWantsFact ? (directVars.get(r.uid) ?? { ...FALLBACK_FACT }) : {};
         return {
           from: FROM_EMAIL,
           to: [r.email],
-          subject,
-          html: safeHtml + unsubFooter(url),
+          subject: personalizeSubject(subject, null, v),
+          html: personalizeBody(safeHtml, null, v) + unsubFooter(url),
           headers: {
             "List-Unsubscribe": `<${url}>`,
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
