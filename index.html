@@ -7048,7 +7048,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.16.03';
+const APP_VERSION = '25.17.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7090,6 +7090,23 @@ function isMeasurementCardImage(useCase, urls, idx) {
 // array), but it must never read as "you wore this".
 function isWearEntry(l) {
   return !!(l && l.watchId) && l.useCase !== 'measurement';
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+// Compare the native app version componentwise. parseFloat() was used at four
+// feature gates until 2026-07-25, which breaks the moment a version has a
+// two-digit minor: parseFloat('2.10') === 2.1, so a 2.10 build would silently
+// FAIL a `>= 2.3` gate and quietly lose the push primer, the Pro V2 beat-error
+// readout and the V2 convergence path — no error, just features vanishing on the
+// newest build. Absent/garbage versions compare as 0 (web, older shells).
+function iosAtLeast(ver, min) {
+  const parts = (s) => String(s == null ? '' : s).split('.').map((n) => parseInt(n, 10) || 0);
+  const a = parts(ver), b = parts(min);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i] || 0, y = b[i] || 0;
+    if (x !== y) return x > y;
+  }
+  return true;
 }
 
 // Period value -> inclusive cutoff date (YYYY-MM-DD), or null for all time.
@@ -10898,7 +10915,7 @@ function shouldShowPushPrimer(s) {
 const PUSH_PRIMER_STATE = 'wr_push_primer';   // { declineCount, lastDeclinedMs }
 function _pushBridge() { return window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.appAction; }
 function _pushPrimerAvailable() {
-  return !!_pushBridge() && parseFloat(window._iosAppVersion || '0') >= 2.3;
+  return !!_pushBridge() && iosAtLeast(window._iosAppVersion, '2.3');
 }
 function _pushPrimerState() {
   try { return JSON.parse(localStorage.getItem(PUSH_PRIMER_STATE) || '{}') || {}; } catch (_) { return {}; }
@@ -24643,7 +24660,7 @@ async function fetchProV2Stage() {
     initTgSourceSelector();   // re-apply visibility with the real stage
   } catch (e) {}
 }
-function _native21() { return _tgHasNative() && parseFloat(window._iosAppVersion || '0') >= 2.1; }
+function _native21() { return _tgHasNative() && iosAtLeast(window._iosAppVersion, '2.1'); }
 function _proV2Available() { return PRO_V2_STAGE !== 'silent' && _native21(); }
 function _tgAlgo() {
   if (!_native21() && !featureFlag('tg_algo')) return 'original';  // engine not in this build
@@ -25274,7 +25291,7 @@ window._tgNativeCallback = function(data) {
       const _isProV2 = isMsr && _tgAlgo() === 'tg';
       let _beShown = null;
       if (_isProV2) {
-        if (parseFloat(window._iosAppVersion || '0') >= 2.3 && data.beatError != null) _beShown = data.beatError;
+        if (iosAtLeast(window._iosAppVersion, '2.3') && data.beatError != null) _beShown = data.beatError;
       } else {
         _beShown = _msrStableBeatError(data);
       }
@@ -26302,9 +26319,9 @@ let _q2LastBand = null;   // residual band (s/day) from the last incrSettle — 
 // the native app build that also carries phase-lock detection + phase-separated beat error
 // (_iosAppVersion >= 2.0). Older app builds and web keep the legacy bucket-stability finish.
 // The admin tg_quality_v2 flag forces it on for testing on any build.
-const _TG_V2_MIN_BUILD = 2.0;
+const _TG_V2_MIN_BUILD = '2.0';
 function _tgV2Convergence() {
-  return featureFlag('tg_quality_v2') || parseFloat(window._iosAppVersion || '0') >= _TG_V2_MIN_BUILD;
+  return featureFlag('tg_quality_v2') || iosAtLeast(window._iosAppVersion, _TG_V2_MIN_BUILD);
 }
 
 // Quick/Accurate -> incrSettle params; every field overridable by a q2_* localStorage knob (live tuning).

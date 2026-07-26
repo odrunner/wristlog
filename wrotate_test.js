@@ -133,6 +133,23 @@ export function isWearEntry(l) {
   return !!(l && l.watchId) && l.useCase !== 'measurement';
 }
 
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+// Compare the native app version componentwise. parseFloat() was used at four
+// feature gates until 2026-07-25, which breaks the moment a version has a
+// two-digit minor: parseFloat('2.10') === 2.1, so a 2.10 build would silently
+// FAIL a `>= 2.3` gate and quietly lose the push primer, the Pro V2 beat-error
+// readout and the V2 convergence path — no error, just features vanishing on the
+// newest build. Absent/garbage versions compare as 0 (web, older shells).
+export function iosAtLeast(ver, min) {
+  const parts = (s) => String(s == null ? '' : s).split('.').map((n) => parseInt(n, 10) || 0);
+  const a = parts(ver), b = parts(min);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i] || 0, y = b[i] || 0;
+    if (x !== y) return x > y;
+  }
+  return true;
+}
+
 // Period value -> inclusive cutoff date (YYYY-MM-DD), or null for all time.
 // Unknown values fall back to all-time rather than throwing.
 export function periodCutoff(period, today) {

@@ -3,9 +3,9 @@
 
 Counts how many measurement sessions / distinct external users are on the new
 native app build (2.0 = phase-lock detection + phase-separated beat error +
-adaptive convergence). Detection: the native 2.0 build emits a `psBE=` token in
-its [TGTICK] debug logs (older builds don't), so any tick_log session whose
-messages contain `psBE=` is a 2.0 session. Sessions map to users via the
+adaptive convergence). Detection: a 2.0+ build emits `psBE=` in its [TGTICK] debug
+logs, and the 2.1+ tg core emits `[TGALGO` — a session carrying EITHER marker is a
+2.0+ session (see V2_MARKERS). Sessions map to users via the
 session_summary line's user_id; internal/test accounts (internal_accounts table)
 are excluded so the number reflects real adoption.
 
@@ -54,7 +54,22 @@ HISTORY_FILE = os.path.expanduser("~/.local/share/wrotate-rollout-history.log")
 CACHE_FILE = os.path.expanduser("~/.local/share/wrotate-rollout-session-cache.json")
 FREEZE_DAYS = 14                        # sessions older than this never change
 TMP = "/tmp/wrotate-rollout"
-V2_MARKER = "psBE="                    # native 2.0 build signature in [TGTICK] logs
+# Native 2.0+ build signatures in [TGTICK] logs. A session counts as 2.0 if it
+# carries EITHER marker.
+#   psBE=    — phase-separated beat error, emitted by the 2.0 estimator.
+#   [TGALGO  — the 2.1+ tg core. Fast-converging Pro V2 runs bypass the phase-sep
+#              BE path entirely and so never emit psBE=.
+# Keying on psBE= alone (as this did until 2026-07-25) made 28.3% of real 2.0+
+# sessions invisible — measured over 30 days: 1,544 true sessions, 1,107 counted,
+# 118 distinct external users vs 105 reported. weekly-measurement-review.py hit the
+# same defect and was fixed in 337340e; this is the same fix for its twin.
+# Keep the two scripts' predicates in step.
+V2_MARKERS = ("psBE=", "[TGALGO")
+CACHE_VERSION = 2                       # bump to invalidate CACHE_FILE after a rule change
+
+
+def is_v2_blob(blob):
+    return any(m in blob for m in V2_MARKERS)
 
 os.makedirs(TMP, exist_ok=True)
 os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
@@ -116,12 +131,19 @@ def main():
 
     # Incremental pull: everything before `cache_through` is already summarised in
     # CACHE_FILE, so only fetch from there onward.
+    # Cached entries carry is_v2 as classified by the rule in force when they were
+    # frozen. A rule change (e.g. the 2026-07-25 V2_MARKERS fix) must therefore
+    # discard the cache, or history stays classified under the old, wrong rule —
+    # changing the marker alone would only fix sessions from here forward.
     cached, cache_through = {}, None
     try:
         with open(CACHE_FILE) as f:
             blob = json.load(f)
-        cached = blob.get("sessions", {})
-        cache_through = blob.get("through")
+        if blob.get("cache_version") == CACHE_VERSION:
+            cached = blob.get("sessions", {})
+            cache_through = blob.get("through")
+        else:
+            print("Session cache built under an older classification rule — rebuilding.")
     except (FileNotFoundError, ValueError):
         pass
 
@@ -131,7 +153,7 @@ def main():
         hdrs,
     )
 
-    # Group by session; classify 2.0 (psBE marker) + extract user_id from summary
+    # Group by session; classify 2.0 (V2_MARKERS) + extract user_id from summary
     sessions = defaultdict(lambda: {"msgs": [], "first": None})
     for r in rows:
         sid = r.get("session_id")
@@ -168,7 +190,7 @@ def main():
             try: rate = float(rates[-1])
             except ValueError: rate = None
         facts[sid] = {
-            "first": s["first"], "is_v2": V2_MARKER in blob, "uid": um.group(1) if um else None,
+            "first": s["first"], "is_v2": is_v2_blob(blob), "uid": um.group(1) if um else None,
             "v21": "[TGALGO" in blob, "beta": bool(re.search(r'"algo"\s*:\s*"tg"', blob)),
             "conv": conv_out, "rate": rate, "watch": wm.group(1) if wm else None,
         }
@@ -207,7 +229,7 @@ def main():
         keep = {sid: f for sid, f in facts.items() if (f.get("first") or "") < freeze}
         tmp = CACHE_FILE + ".tmp"
         with open(tmp, "w") as fh:
-            json.dump({"through": freeze, "sessions": keep}, fh)
+            json.dump({"cache_version": CACHE_VERSION, "through": freeze, "sessions": keep}, fh)
         os.replace(tmp, CACHE_FILE)     # atomic: a crash can't leave a partial cache
     except OSError as e:
         print(f"WARN: could not write session cache ({e}) — next run does a full pull")

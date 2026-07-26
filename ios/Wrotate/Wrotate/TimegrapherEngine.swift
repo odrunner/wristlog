@@ -1502,11 +1502,20 @@ class TimegrapherEngine {
         // it agrees with the median of all valid windows; otherwise fall back to the
         // median. On a clean watch every window agrees, so the longest still wins
         // (no-op). Set tgAgreeBand very high to disable.
+        //
+        // Needs >= 3 windows to mean anything. With exactly 2, the "median" is just
+        // max(rate0, rate1) — there is no majority for it to express — so a
+        // disagreement would hand the reading to whichever window happens to read
+        // higher. That is a coin flip, and when it loses it discards the long window
+        // (the more stable estimate) in favour of the short one (the noisier estimate,
+        // and the one MORE prone to harmonic lock) — the exact inversion of intent.
         let sorted = rates.map { $0.rate }.sorted()
-        let median = sorted[sorted.count / 2]
+        let median = sorted.count % 2 == 1
+            ? sorted[sorted.count / 2]
+            : (sorted[sorted.count / 2 - 1] + sorted[sorted.count / 2]) / 2
         let longest = rates.max { $0.secs < $1.secs }!.rate
-        if rates.count >= 2 && abs(longest - median) > tgAgreeBand {
-            debugLog(String(format: "[TGALGO harmonic-guard] longest=%.1f median=%.1f band=%.0f -> median", longest, median, tgAgreeBand))
+        if rates.count >= 3 && abs(longest - median) > tgAgreeBand {
+            debugLog(String(format: "[TGALGO harmonic-guard] longest=%.1f median=%.1f band=%.0f n=%d -> median", longest, median, tgAgreeBand, rates.count))
             return median
         }
         return longest

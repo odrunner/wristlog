@@ -8,6 +8,7 @@
 // - NEVER interacts with public posts or real users
 
 import { test, expect } from '@playwright/test';
+import { NEW_FEATURES_KEY } from './helpers.js';
 
 const APP_URL = '/';
 
@@ -362,7 +363,7 @@ test.describe('12. Full navigation smoke', () => {
     const errors = [];
     page.on('pageerror', err => errors.push(err.message));
 
-    await page.evaluate(() => localStorage.setItem('wrotate_newfeatures_v2', '1'));
+    await page.evaluate((k) => localStorage.setItem(k, '1'), NEW_FEATURES_KEY);
     await devLogin(page);
 
     for (const pageName of ['feed', 'track', 'collection', 'wishlist', 'stats']) {
@@ -386,7 +387,7 @@ test.describe('12. Full navigation smoke', () => {
     const errors = [];
     page.on('pageerror', err => errors.push(err.message));
 
-    await page.evaluate(() => localStorage.setItem('wrotate_newfeatures_v2', '1'));
+    await page.evaluate((k) => localStorage.setItem(k, '1'), NEW_FEATURES_KEY);
     await devLogin(page, true);
 
     for (const pageName of ['feed', 'track', 'collection', 'wishlist', 'stats']) {

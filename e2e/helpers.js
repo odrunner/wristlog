@@ -148,6 +148,12 @@ export async function mockSupabase(page, opts = {}) {
  * Inject a fake Supabase auth session into localStorage so the app's
  * getSession() call succeeds without a real login.
  */
+// Seen-key for the one-time "new features" popover. MUST match the `key` const in
+// maybeShowNewFeatures() (index.html) — when that key is bumped, bump it here too.
+// Kept as a single exported constant because the previous copy-per-file version
+// silently desynced on the v2 -> v3 bump and turned 5 mocked tests red.
+export const NEW_FEATURES_KEY = 'wrotate_newfeatures_v3';
+
 export async function injectSession(page, user = FAKE_USER) {
   const storageKey = 'sb-xnzweevzrojmouzhpwzv-auth-token';
   // Build a minimal valid JWT (header.payload.signature) so the Supabase
@@ -181,7 +187,7 @@ export async function injectSession(page, user = FAKE_USER) {
     // intercepts clicks — a load-dependent flake. Pre-setting its seen-key makes
     // the popover skip deterministically. (What's New no longer auto-shows; it
     // only opens from the in-app button.)
-    localStorage.setItem('wrotate_newfeatures_v2', '1');
+    localStorage.setItem(args.newFeaturesKey, '1');
 
     // Suppress the anniversary popover. checkAnniversary() shows a blocking
     // overlay when a sample watch's purchase_date matches today's month/day
@@ -240,7 +246,7 @@ export async function injectSession(page, user = FAKE_USER) {
       },
       get() { return undefined; },
     });
-  }, { key: storageKey, session });
+  }, { key: storageKey, session, newFeaturesKey: NEW_FEATURES_KEY });
 }
 
 /**

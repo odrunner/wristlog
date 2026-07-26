@@ -111,13 +111,26 @@ export function filterNeverMeasured<T extends { id: string }>(
   return (profiles || []).filter((p) => !set.has(p.id));
 }
 
-// "one_done_winback" segment: keep users who logged exactly ONE wear (a log whose
-// use_case is not 'measurement' — measurement shares are not wears) and whose most
+// "one_done_winback" segment: keep users who logged exactly ONE wear and whose most
 // recent wear is older than churnDays. These are one-and-done loggers who have
 // since gone quiet — the win-back target.
-export function filterOneAndDoneChurned<T extends { id: string }>(
+//
+// The wear test MUST match isWearEntry() in index.html — `watchId && useCase !==
+// 'measurement'` — the single definition of a wear used by Stats, Track, Year in
+// Review and Monthly Review. Omitting the watch_id half (as this did until
+// 2026-07-25) counts watch-less posts as wears, which both emails "your watches
+// miss you" to people who never logged one AND scores a genuine one-and-done
+// wearer as 2 so they never get the campaign.
+export function filterOneAndDoneChurned<
+  T extends { id: string },
+>(
   profiles: T[],
-  logRows: { user_id?: string | null; use_case?: string | null; created_at?: string | null }[],
+  logRows: {
+    user_id?: string | null;
+    watch_id?: string | null;
+    use_case?: string | null;
+    created_at?: string | null;
+  }[],
   nowMs: number,
   churnDays = 14,
 ): T[] {
@@ -126,6 +139,7 @@ export function filterOneAndDoneChurned<T extends { id: string }>(
   for (const l of logRows || []) {
     const uid = l?.user_id;
     if (!uid) continue;
+    if (!l.watch_id) continue;                          // no watch → not a wear
     if ((l.use_case ?? "") === "measurement") continue; // wears only
     wearCount.set(uid, (wearCount.get(uid) ?? 0) + 1);
     const t = l.created_at ? Date.parse(l.created_at) : 0;

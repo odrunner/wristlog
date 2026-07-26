@@ -5,7 +5,7 @@
 import { test, expect } from '@playwright/test';
 import {
   mockSupabase, injectSession, waitForAppBoot, navigateTo,
-  FAKE_USER, FAKE_PROFILE, SAMPLE_WATCHES, SAMPLE_LOGS,
+  FAKE_USER, FAKE_PROFILE, SAMPLE_WATCHES, SAMPLE_LOGS, NEW_FEATURES_KEY,
 } from './helpers.js';
 
 // ── Boot & Auth ──────────────────────────────────────────────────────────
@@ -1494,17 +1494,22 @@ test.describe('Post location (mocked)', () => {
     await expect(page.locator('#new-post-modal')).toBeVisible();
   });
 
-  test('composer shows Home/Work/Travel chips and a free-text input', async ({ page }) => {
+  // 9390b33 ("one-line occasion & location rows") trimmed POST_LOCATION_PRESETS to
+  // ['Home', 'Work'] so the row fits on one line — Travel became free text like any
+  // other place. These assertions still named Travel as a chip and had been failing
+  // ever since; the new-features overlay bug masked them as click-interception noise.
+  test('composer shows Home/Work chips and a free-text input', async ({ page }) => {
     await expect(page.locator('#np-location-chips [data-loc="Home"]')).toBeVisible();
     await expect(page.locator('#np-location-chips [data-loc="Work"]')).toBeVisible();
-    await expect(page.locator('#np-location-chips [data-loc="Travel"]')).toBeVisible();
     await expect(page.locator('#np-location-input')).toBeVisible();
+    // Exactly the shipped presets — a third chip would break the one-line row.
+    await expect(page.locator('#np-location-chips .chip')).toHaveCount(2);
   });
 
   test('tapping a preset chip fills the input and selects the chip', async ({ page }) => {
-    await page.locator('#np-location-chips [data-loc="Travel"]').click();
-    await expect(page.locator('#np-location-chips [data-loc="Travel"]')).toHaveClass(/selected/);
-    await expect(page.locator('#np-location-input')).toHaveValue('Travel');
+    await page.locator('#np-location-chips [data-loc="Work"]').click();
+    await expect(page.locator('#np-location-chips [data-loc="Work"]')).toHaveClass(/selected/);
+    await expect(page.locator('#np-location-input')).toHaveValue('Work');
   });
 
   test('typing free text clears any chip selection (one value or none)', async ({ page }) => {
@@ -1537,9 +1542,20 @@ test.describe('Post location (mocked)', () => {
     await page.evaluate(() => closeNewPost());
     await page.evaluate(() => openEditPost('log-001'));
     await expect(page.locator('#edit-post-modal')).toBeVisible();
-    // log-001's location is 'Travel' (a preset) → input filled + chip selected.
+    // log-001's location is 'Travel', which is no longer a preset (see 9390b33) →
+    // it round-trips through the free-text input with NO chip selected.
     await expect(page.locator('#ep-location-input')).toHaveValue('Travel');
-    await expect(page.locator('#ep-location-chips [data-loc="Travel"]')).toHaveClass(/selected/);
+    await expect(page.locator('#ep-location-chips .chip.selected')).toHaveCount(0);
+  });
+
+  test('edit-post selects the chip when the stored value IS a preset', async ({ page }) => {
+    await page.evaluate(() => closeNewPost());
+    await page.evaluate(() => openEditPost('log-002'));
+    await expect(page.locator('#edit-post-modal')).toBeVisible();
+    // Set a preset value through the shipped handler, then confirm chip + input agree.
+    await page.evaluate(() => selectPostLocationChip('ep', 'Home'));
+    await expect(page.locator('#ep-location-input')).toHaveValue('Home');
+    await expect(page.locator('#ep-location-chips [data-loc="Home"]')).toHaveClass(/selected/);
   });
 
   test('edit-post shows occasion details for a watch-tagged post', async ({ page }) => {
@@ -1940,7 +1956,7 @@ test.describe('Comment deletion (mocked)', () => {
       route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
     );
     // Suppress the "new features" modal so it doesn't overlay the feed
-    await page.addInitScript(() => localStorage.setItem('wrotate_newfeatures_v2', '1'));
+    await page.addInitScript((k) => localStorage.setItem(k, '1'), NEW_FEATURES_KEY);
     await page.goto('/');
     await waitForAppBoot(page);
     await page.waitForTimeout(2000);

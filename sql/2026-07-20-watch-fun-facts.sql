@@ -145,7 +145,14 @@ begin
   return json_build_object('fact_id', v_fact.id, 'fact', v_fact.fact);
 end $$;
 
-grant execute on function public.commit_watch_fact(text, text, date, text) to authenticated;
+-- SUPERSEDED 2026-07-25 (audit S1). The client no longer calls this: attachFunFact
+-- calls pick_watch_fact, and the identify-watch edge function commits server-side via
+-- commit_watch_fact_srv (see fe17a2e). Left executable, it let ANY authenticated user
+-- write 500 chars of arbitrary text into watch_facts — a shared table whose RLS is
+-- `select ... using (true)` and which the feed serves to every user who wears that
+-- model. Zero callers, so revoking is a no-op for the app. Applied live 2026-07-25.
+revoke execute on function public.commit_watch_fact(text, text, date, text)
+  from public, anon, authenticated;
 
 -- Server-side commit: same pool/cursor logic as commit_watch_fact but for an
 -- explicit user (from a validated JWT in the edge function, NOT auth.uid()), and

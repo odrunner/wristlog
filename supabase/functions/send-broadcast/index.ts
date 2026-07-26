@@ -200,9 +200,9 @@ serve(async (req) => {
 
     // Segment filter: "one_done_winback" keeps one-and-done churned wear-loggers.
     if (segment === "one_done_winback") {
-      const { data: logRows, error: logErr } = await fetchAllRows<{ user_id: string; use_case: string | null; created_at: string }>((from, to) => supabase
+      const { data: logRows, error: logErr } = await fetchAllRows<{ user_id: string; watch_id: string | null; use_case: string | null; created_at: string }>((from, to) => supabase
         .from("logs")
-        .select("user_id, use_case, created_at")
+        .select("user_id, watch_id, use_case, created_at")
         .range(from, to));
       if (logErr) {
         return jsonResponse({ error: "Failed to fetch logs for win-back segment", details: logErr }, 500);
