@@ -5,6 +5,7 @@
 // Otherwise, sends to all users who have not disabled marketing emails.
 //
 // Required Supabase secrets:
+//   RESEND_API_KEY             — API key from resend.com
 //   SUPABASE_URL               — auto-provided
 //   SUPABASE_SERVICE_ROLE_KEY  — auto-provided
 
@@ -34,8 +35,13 @@ import {
   utcDayStart,
   validateBroadcastInput,
 } from "./lib.ts";
-import { sendSesBatch, sendSesEmail } from "../_shared/ses.ts";
-import type { SesMessage } from "../_shared/ses.ts";
+// Transport: Resend. The SES client (../_shared/ses.ts) is interface-compatible
+// and stays in the tree, but AWS never granted SES production access — in
+// sandbox it rejects every unverified recipient, which silently burned the last
+// 22 rows of the Pro V2 broadcast on 2026-07-25. Switch this import back to
+// ../_shared/ses.ts only once production access is approved.
+import { sendResendBatch, sendResendEmail } from "../_shared/resend.ts";
+import type { ResendMessage } from "../_shared/resend.ts";
 
 const ADMIN_USER_ID = "d70b1a85-4f31-4431-b3b7-db76543daaf5";
 const FROM_EMAIL = "WRotate <hello@wrotate.com>";
@@ -300,7 +306,7 @@ serve(async (req) => {
       return jsonResponse({ queued, skipped_already_queued: filteredRecipients.length - toQueue.length, total_eligible: filteredRecipients.length });
     }
 
-    // Send via SES in chunks of 100 (tracking upserts stay ≤100 rows each)
+    // Send via Resend in chunks of 100 (tracking upserts stay ≤100 rows each)
     let sent = 0;
     let failed = 0;
     const errors: string[] = [];
@@ -308,7 +314,7 @@ serve(async (req) => {
 
     for (let i = 0; i < filteredRecipients.length; i += batchSize) {
       const batch = filteredRecipients.slice(i, i + batchSize);
-      const messages: SesMessage[] = await Promise.all(batch.map(async (r) => {
+      const messages: ResendMessage[] = await Promise.all(batch.map(async (r) => {
         const sig = await hmacSign(r.uid, "updates", supabaseServiceKey);
         const url = unsubUrl(supabaseUrl, r.uid, sig, "updates");
         return {
@@ -323,7 +329,7 @@ serve(async (req) => {
         };
       }));
 
-      const { results } = await sendSesBatch(messages);
+      const { results } = await sendResendBatch(messages);
       const okRecipients = batch.filter((_, idx) => results[idx].ok);
       sent += okRecipients.length;
       failed += batch.length - okRecipients.length;
@@ -355,7 +361,7 @@ serve(async (req) => {
 });
 
 // Nightly drain: send queued broadcast rows with whatever daily quota remains.
-// used_today comes from email_events (the SES webhook logs every send from every
+// used_today comes from email_events (the Resend webhook logs every send from every
 // function), so transactional + campaign email automatically takes priority.
 async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl: string, serviceKey: string, quotaOnly = false) {
   // Reap claims from crashed drains: anything 'sending' for >15 min goes back
@@ -374,7 +380,6 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
   if (cntErr) {
     return jsonResponse({ error: "Quota count failed", details: cntErr.message }, 500);
   }
-  const quota = null;
   const dailyLimit = DAILY_EMAIL_LIMIT;
   const budget = drainBudget(usedToday ?? 0, dailyLimit);
 
@@ -387,8 +392,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
       .eq("status", "pending");
     return jsonResponse({
       quota_only: true,
-      ses_quota: quota,
-      fallback_used: quota === null,
+      provider: "resend",
       daily_limit: dailyLimit,
       used_today: usedToday,
       budget,
@@ -435,7 +439,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
   const batchSize = 100;
   for (let i = 0; i < claimed.length; i += batchSize) {
     const batch = claimed.slice(i, i + batchSize);
-    const messages: SesMessage[] = await Promise.all(batch.map(async (r) => {
+    const messages: ResendMessage[] = await Promise.all(batch.map(async (r) => {
       const sig = await hmacSign(r.uid, "updates", serviceKey);
       const url = unsubUrl(supabaseUrl, r.uid, sig, "updates");
       return {
@@ -450,7 +454,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
       };
     }));
 
-    const { results } = await sendSesBatch(messages);
+    const { results } = await sendResendBatch(messages);
     const okIds: number[] = [];
     const failedRows: { id: number; error: string }[] = [];
     // Transient failures (throttling, 5xx, network) stay `pending` so a later
@@ -475,7 +479,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
       await supabase.from("broadcast_queue")
         .update({ status: "sent", sent_at: new Date().toISOString(), claimed_at: null }).in("id", okIds);
     }
-    // Failures are rare; one update per row keeps each row's own SES error.
+    // Failures are rare; one update per row keeps each row's own Resend error.
     for (const fr of failedRows) {
       await supabase.from("broadcast_queue")
         .update({ status: "failed", error: fr.error.slice(0, 500), claimed_at: null }).in("id", [fr.id]);
@@ -492,9 +496,9 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
 }
 
 async function sendEmail(to: string, subject: string, html: string) {
-  const result = await sendSesEmail({ from: FROM_EMAIL, to: [to], subject, html });
+  const result = await sendResendEmail({ from: FROM_EMAIL, to: [to], subject, html });
   if (!result.ok) {
-    throw new Error(`SES error: ${result.error}`);
+    throw new Error(`Resend error: ${result.error}`);
   }
   return { id: result.id };
 }
