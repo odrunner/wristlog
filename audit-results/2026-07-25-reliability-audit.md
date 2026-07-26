@@ -303,11 +303,19 @@ suspended, become internal, or already received the subject.
 from the Management API and contains zero SES references; live `quota_only` drain
 returns `{provider: "resend", pending: 22}`.
 
+**Follow-up, same day — `run-campaign`, `send-email`, `send-wear-reminders` moved
+to Resend-primary (`c542cda`).** These three held undeployed SES code, so the next
+`functions deploy` on any of them would have moved drip campaigns, notification
+email and wear reminders onto sandbox SES. They now import `_shared/resend.ts`.
+Not redeployed — production was already running their pre-migration Resend code,
+so the tree change removes the hazard without altering live behavior.
+
 **Still open — carried forward:**
 - `new-user-alert`, `report-notify` and `send-report` are deployed on SES. They
   only reach verified admin addresses, so they work today, but they are one
   recipient change away from the same silent failure.
-- `run-campaign`, `send-email`, `send-wear-reminders` hold SES code in the tree
-  that is not deployed. The next `functions deploy` on any of them moves user-facing
-  mail onto sandbox SES. **Do not deploy those three until SES is approved.**
-- No alert exists on `broadcast_queue.status='failed'`.
+- No alert exists on `broadcast_queue.status='failed'`. A queue that drains to
+  zero pending looks the same whether it completed or gave up.
+- The SES transition is still the intended destination. When AWS grants production
+  access, each of the four user-facing senders flips back via the two-line import
+  swap marked in its header comment — no code was deleted.
