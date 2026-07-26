@@ -6,7 +6,11 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sendSesEmail } from "../_shared/ses.ts";
+// Transport: Resend is primary. ../_shared/ses.ts is interface-compatible and
+// stays in the tree for the planned SES transition — but AWS has not granted
+// production access, so in sandbox SES rejects every unverified recipient.
+// Flip this import (and only this) once approval lands.
+import { sendResendEmail } from "../_shared/resend.ts";
 import {
   apnsHost, buildHtmlEmail, buildReminderEmail, buildReminderPush,
   createAPNsJWT, hmacSign, sendPush, timingSafeEqual, unsubUrl,
@@ -62,7 +66,7 @@ serve(async (req) => {
           const sig = await hmacSign(t.user_id, "reminders", SERVICE_KEY);
           const url = unsubUrl(SUPABASE_URL, t.user_id, sig, "reminders");
           const html = buildHtmlEmail(mail.subject, mail.body, url);
-          const result = await sendSesEmail({
+          const result = await sendResendEmail({
             from: FROM_EMAIL,
             to: [t.email],
             subject: mail.subject,

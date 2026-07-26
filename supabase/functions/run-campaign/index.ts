@@ -1,7 +1,7 @@
 // Supabase Edge Function: run-campaign
 // Invoked daily (via cron or manual trigger) to send drip campaign emails.
 // For each active campaign, finds users who signed up `delay_days` ago
-// and haven't been sent yet. Sends via AWS SES batch API.
+// and haven't been sent yet. Sends via the Resend batch API.
 // Campaigns with backfill_daily > 0 also drain existing members (older than
 // the signup window) at that rate per run, newest first, until exhausted.
 //
@@ -22,8 +22,12 @@ import {
   splitAlreadySent,
   unsubUrl,
 } from "./lib.ts";
-import { sendSesBatch } from "../_shared/ses.ts";
-import type { SesMessage } from "../_shared/ses.ts";
+// Transport: Resend is primary. ../_shared/ses.ts is interface-compatible and
+// stays in the tree for the planned SES transition — but AWS has not granted
+// production access, so in sandbox SES rejects every unverified recipient.
+// Flip these two imports (and only these) once approval lands.
+import { sendResendBatch } from "../_shared/resend.ts";
+import type { ResendMessage } from "../_shared/resend.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -89,7 +93,7 @@ async function resolveRecipients(supabase: Db, users: ProfileRow[]): Promise<Rec
   return recipients;
 }
 
-// Send personalized campaign emails via the SES batch API, recording each
+// Send personalized campaign emails via the Resend batch API, recording each
 // successful recipient in email_campaign_sends immediately.
 async function deliver(
   supabase: Db,
@@ -103,7 +107,7 @@ async function deliver(
 
   for (let i = 0; i < toSend.length; i += batchSize) {
     const batch = toSend.slice(i, i + batchSize);
-    const messages: SesMessage[] = await Promise.all(batch.map(async (r) => {
+    const messages: ResendMessage[] = await Promise.all(batch.map(async (r) => {
       const sig = await hmacSign(r.uid, "updates", SUPABASE_SERVICE_ROLE_KEY);
       const url = unsubUrl(SUPABASE_URL, r.uid, sig, "updates");
       const personalizedBody = personalizeBody(campaign.body_html, r.displayName);
@@ -120,15 +124,17 @@ async function deliver(
       };
     }));
 
-    const { results } = await sendSesBatch(messages);
-    // Track ONLY the recipients whose individual send succeeded — per-recipient
-    // results are finer than the old all-or-nothing Resend batch semantics.
+    const { results } = await sendResendBatch(messages);
+    // Track ONLY the recipients whose send succeeded. Resend validates a batch
+    // as a unit, so results are uniform within a chunk today — reading them
+    // per-recipient keeps this correct either way, and unchanged if the
+    // transport switches to SES (which does report per-recipient).
     const okRecipients = batch.filter((_, idx) => results[idx].ok);
     sent += okRecipients.length;
     failed += batch.length - okRecipients.length;
     for (let idx = 0; idx < results.length; idx++) {
       const r = results[idx];
-      if (!r.ok) console.error(`[run-campaign] SES send failed for ${batch[idx].uid}:`, r.error);
+      if (!r.ok) console.error(`[run-campaign] Resend send failed for ${batch[idx].uid}:`, r.error);
     }
     if (okRecipients.length) {
       const trackRows = okRecipients.map((r) => ({ campaign_id: campaign.id, user_id: r.uid }));
