@@ -14,14 +14,25 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
   buildHtmlEmail,
   dropDone,
+  FALLBACK_FACT,
   filterEligible,
+  modelKey,
+  needsFactVars,
   personalizeBody,
+  personalizeSubject,
   pickBackfill,
+  pickFeaturedWatch,
+  pickPoolFact,
   signupWindow,
   skipTable,
   splitAlreadySent,
   unsubUrl,
+  watchLabel,
+  watchPhrase,
 } from "./lib.ts";
+// Same grounded-search prompt + JSON extractor the in-app fun-fact path uses, so
+// a fact minted for the email is indistinguishable from one minted on a wear log.
+import { buildFactsPrompt, extractJson } from "../identify-watch/lib.ts";
 // Transport: Resend is primary. ../_shared/ses.ts is interface-compatible and
 // stays in the tree for the planned SES transition — but AWS has not granted
 // production access, so in sandbox SES rejects every unverified recipient.
@@ -31,8 +42,14 @@ import type { ResendMessage } from "../_shared/resend.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
 const FROM_EMAIL = "WRotate <hello@wrotate.com>";
 const ADMIN_USER_ID = "d70b1a85-4f31-4431-b3b7-db76543daaf5";
+// Ceiling on live fact generations per invocation. Each is a grounded Gemini
+// search taking seconds; the drip window is a handful of users a day, but a
+// campaign switched to backfill must not stall the run or spike spend. Past the
+// cap recipients get the curated fallback fact — never a broken email.
+const MAX_FACT_GENERATIONS = 10;
 
 // Constant-time compare for the shared trigger secret.
 function timingSafeEqual(a: string, b: string): boolean {
@@ -93,6 +110,168 @@ async function resolveRecipients(supabase: Db, users: ProfileRow[]): Promise<Rec
   return recipients;
 }
 
+// A fact to headline the email, plus the pool coordinates needed to advance the
+// recipient's cursor once the send succeeds. key/factId are null for the
+// curated fallback (no watch, or nothing generatable) — nothing to advance.
+type ResolvedFact = {
+  watch: string;
+  watchPhrase: string;
+  fact: string;
+  key: string | null;
+  factId: string | null;
+  position: number | null;
+};
+
+// One grounded Gemini fact for a model, same call the in-app path makes.
+// Returns null on any failure — the caller falls back rather than failing send.
+async function generateFact(
+  brand: string,
+  name: string,
+  reference: string | null,
+  existingFacts: string[],
+): Promise<string | null> {
+  if (!GEMINI_API_KEY) return null;
+  const prompt = buildFactsPrompt({ brand, model: name, reference: reference ?? "" }, existingFacts);
+  try {
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), 45000);
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: abort.signal,
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          tools: [{ google_search: {} }],
+          generationConfig: { temperature: 0.4, maxOutputTokens: 4096 },
+        }),
+      },
+    );
+    clearTimeout(timer);
+    if (!resp.ok) {
+      console.error(`[run-campaign] fact generation HTTP ${resp.status} for ${brand} ${name}`);
+      return null;
+    }
+    const result = await resp.json();
+    const candidate = result.candidates?.[0];
+    const text = (candidate?.content?.parts ?? [])
+      // deno-lint-ignore no-explicit-any
+      .filter((p: any) => p.text).map((p: any) => p.text).join("");
+    const parsed = extractJson(text);
+    const fact = typeof parsed?.fact === "string" ? parsed.fact.trim() : "";
+    return fact || null;
+  } catch (e) {
+    console.error(`[run-campaign] fact generation failed for ${brand} ${name}:`, (e as Error).message);
+    return null;
+  }
+}
+
+// Resolve the {{watch}}/{{fact}} pair for one recipient: their newest watch,
+// then a complete fact from the shared pool, then a freshly generated one
+// (which is written back to the pool so every future wearer of that model gets
+// it too), then the curated fallback.
+async function resolveFact(
+  supabase: Db,
+  uid: string,
+  budget: { left: number },
+): Promise<ResolvedFact> {
+  const fallback: ResolvedFact = { ...FALLBACK_FACT, key: null, factId: null, position: null };
+
+  type WatchRow = { brand: string | null; name: string | null; ref: string | null; created_at: string | null };
+  const { data: watches, error: wErr } = await supabase
+    .from("watches").select("brand, name, ref, created_at").eq("user_id", uid);
+  if (wErr) {
+    console.error(`[run-campaign] watches fetch failed for ${uid}:`, wErr);
+    return fallback;
+  }
+  const watch = pickFeaturedWatch<WatchRow>((watches ?? []) as WatchRow[]);
+  if (!watch) return fallback;
+
+  const brand = (watch.brand as string).trim();
+  const name = (watch.name as string).trim();
+  const key = modelKey(brand, name);
+  const label = watchLabel(brand, name);
+  const phrase = watchPhrase(label);
+
+  type PoolRow = { id: string; position: number; fact: string };
+  const { data: poolRows, error: pErr } = await supabase
+    .from("watch_facts").select("id, position, fact").eq("model_key", key);
+  if (pErr) {
+    console.error(`[run-campaign] fact pool fetch failed for ${key}:`, pErr);
+    return fallback;
+  }
+  const pool = (poolRows ?? []) as PoolRow[];
+  const hit = pickPoolFact(pool);
+  if (hit) {
+    return { watch: label, watchPhrase: phrase, fact: hit.fact, key, factId: hit.id, position: hit.position };
+  }
+
+  // Nothing usable in the pool. Generate — but only while budget remains, and
+  // never past the shared 10-fact-per-model cap the RPCs enforce.
+  if (budget.left <= 0 || pool.length >= 10) return { ...fallback, watch: label, watchPhrase: phrase };
+  budget.left--;
+  const generated = await generateFact(brand, name, watch.ref ?? null, pool.map((r) => r.fact));
+  if (!generated) return { ...fallback, watch: label, watchPhrase: phrase };
+
+  const position = pool.length;
+  const { error: insErr } = await supabase
+    .from("watch_facts").insert({ model_key: key, position, fact: generated.slice(0, 500) });
+  if (insErr) {
+    // Lost a race with a concurrent wearer for this slot — still email the fact
+    // we generated, just don't claim a pool position for the cursor advance.
+    console.error(`[run-campaign] fact pool insert failed for ${key}@${position}:`, insErr);
+    return { watch: label, watchPhrase: phrase, fact: generated, key: null, factId: null, position: null };
+  }
+  const { data: inserted } = await supabase
+    .from("watch_facts").select("id").eq("model_key", key).eq("position", position).maybeSingle();
+  return { watch: label, watchPhrase: phrase, fact: generated, key, factId: inserted?.id ?? null, position };
+}
+
+// After a successful send, park the recipient's cursor on the fact they just
+// read so their first in-app wear log serves the NEXT one — the email promises
+// a new fact every day they wear it, and repeating it on log one would break
+// that. last_wear_date stays null so even a same-day log advances.
+async function advanceFactCursors(
+  supabase: Db,
+  facts: Array<{ uid: string; f: ResolvedFact }>,
+): Promise<void> {
+  const candidates = facts.filter(({ f }) => f.key && f.factId && f.position !== null);
+  if (!candidates.length) return;
+
+  // Never rewind. A recipient can already have a cursor for this model (e.g.
+  // they logged a wear and later deleted it), and moving it backwards would
+  // replay a fact they've already read in the app.
+  const { data: existing, error: readErr } = await supabase
+    .from("watch_fact_progress")
+    .select("user_id, model_key, last_position")
+    .in("user_id", candidates.map(({ uid }) => uid));
+  if (readErr) {
+    console.error(`[run-campaign] fact cursor read failed:`, readErr);
+    return;
+  }
+  const at = new Map<string, number>(
+    ((existing ?? []) as Array<{ user_id: string; model_key: string; last_position: number }>)
+      .map((r) => [`${r.user_id}|${r.model_key}`, r.last_position]),
+  );
+
+  const rows = candidates
+    .filter(({ uid, f }) => (at.get(`${uid}|${f.key}`) ?? -1) < (f.position as number))
+    .map(({ uid, f }) => ({
+      user_id: uid,
+      model_key: f.key,
+      last_position: f.position,
+      last_wear_date: null,
+      current_fact_id: f.factId,
+    }));
+  if (!rows.length) return;
+  const { error } = await supabase
+    .from("watch_fact_progress").upsert(rows, { onConflict: "user_id,model_key" });
+  // Non-fatal: a missed advance just means their first log repeats the emailed
+  // fact. Never fail a delivered send over it.
+  if (error) console.error(`[run-campaign] fact cursor advance failed:`, error);
+}
+
 // Send personalized campaign emails via the Resend batch API, recording each
 // successful recipient in email_campaign_sends immediately.
 async function deliver(
@@ -104,18 +283,33 @@ async function deliver(
   let failed = 0;
   let trackingFailed = false;
   const batchSize = 100;
+  // Fact lookups/generation are per-recipient and can hit Gemini, so they run
+  // sequentially outside the message fan-out, under a per-run budget.
+  const wantsFact = needsFactVars(campaign);
+  const factBudget = { left: MAX_FACT_GENERATIONS };
 
   for (let i = 0; i < toSend.length; i += batchSize) {
     const batch = toSend.slice(i, i + batchSize);
+
+    const facts = new Map<string, ResolvedFact>();
+    if (wantsFact) {
+      for (const r of batch) facts.set(r.uid, await resolveFact(supabase, r.uid, factBudget));
+    }
+
     const messages: ResendMessage[] = await Promise.all(batch.map(async (r) => {
       const sig = await hmacSign(r.uid, "updates", SUPABASE_SERVICE_ROLE_KEY);
       const url = unsubUrl(SUPABASE_URL, r.uid, sig, "updates");
-      const personalizedBody = personalizeBody(campaign.body_html, r.displayName);
-      const html = buildHtmlEmail(campaign.subject, personalizedBody, url);
+      const f = facts.get(r.uid);
+      const vars: Record<string, string> = f
+        ? { watch: f.watch, watchPhrase: f.watchPhrase, fact: f.fact }
+        : {};
+      const subject = personalizeSubject(campaign.subject, r.displayName, vars);
+      const personalizedBody = personalizeBody(campaign.body_html, r.displayName, vars);
+      const html = buildHtmlEmail(subject, personalizedBody, url);
       return {
         from: FROM_EMAIL,
         to: [r.email],
-        subject: campaign.subject,
+        subject,
         html,
         headers: {
           "List-Unsubscribe": `<${url}>`,
@@ -132,6 +326,14 @@ async function deliver(
     const okRecipients = batch.filter((_, idx) => results[idx].ok);
     sent += okRecipients.length;
     failed += batch.length - okRecipients.length;
+    if (wantsFact && okRecipients.length) {
+      await advanceFactCursors(
+        supabase,
+        okRecipients
+          .map((r) => ({ uid: r.uid, f: facts.get(r.uid) }))
+          .filter((x): x is { uid: string; f: ResolvedFact } => !!x.f),
+      );
+    }
     for (let idx = 0; idx < results.length; idx++) {
       const r = results[idx];
       if (!r.ok) console.error(`[run-campaign] Resend send failed for ${batch[idx].uid}:`, r.error);

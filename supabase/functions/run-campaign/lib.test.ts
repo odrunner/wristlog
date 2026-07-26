@@ -2,15 +2,25 @@ import { assertEquals } from "jsr:@std/assert";
 import {
   buildHtmlEmail,
   dropDone,
+  escapeHtml,
+  FALLBACK_FACT,
   filterEligible,
+  looksCompleteFact,
   looksLikeName,
+  modelKey,
+  needsFactVars,
   personalizeBody,
   personalizeName,
+  personalizeSubject,
   pickBackfill,
+  pickFeaturedWatch,
+  pickPoolFact,
   signupWindow,
   skipTable,
   splitAlreadySent,
   unsubUrl,
+  watchLabel,
+  watchPhrase,
 } from "./lib.ts";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -226,4 +236,115 @@ Deno.test("pickBackfill — limit 0 or negative yields empty", () => {
   const profiles = [{ id: "a", created_at: "2026-01-01T00:00:00Z" }];
   assertEquals(pickBackfill(profiles, [], [], 0), []);
   assertEquals(pickBackfill(profiles, [], [], -5), []);
+});
+
+// ---- fun-fact personalization ----
+Deno.test("modelKey — matches the SQL: lower(trim(brand))|lower(trim(name))", () => {
+  assertEquals(modelKey("  Rolex ", "Explorer"), "rolex|explorer");
+  assertEquals(modelKey("Axios Watches", "Tribune 38 Teal"), "axios watches|tribune 38 teal");
+});
+
+Deno.test("pickFeaturedWatch — newest watch with both brand and name", () => {
+  const out = pickFeaturedWatch([
+    { brand: "Seiko", name: "SKX007", created_at: "2026-01-01T00:00:00Z" },
+    { brand: "Rolex", name: "Explorer", created_at: "2026-03-01T00:00:00Z" },
+  ]);
+  assertEquals(out?.name, "Explorer");
+});
+
+Deno.test("pickFeaturedWatch — skips rows missing brand or name", () => {
+  const out = pickFeaturedWatch([
+    { brand: "Tudor", name: "", created_at: "2026-05-01T00:00:00Z" },
+    { brand: "  ", name: "Black Bay", created_at: "2026-04-01T00:00:00Z" },
+    { brand: "Seiko", name: "SKX007", created_at: "2026-01-01T00:00:00Z" },
+  ]);
+  assertEquals(out?.name, "SKX007");
+});
+
+Deno.test("pickFeaturedWatch — no usable watch yields null", () => {
+  assertEquals(pickFeaturedWatch([]), null);
+  assertEquals(pickFeaturedWatch([{ brand: "Omega", name: null }]), null);
+});
+
+Deno.test("watchLabel — joins brand and name, collapsing a repeated brand", () => {
+  assertEquals(watchLabel("Seiko", "SKX007"), "Seiko SKX007");
+  assertEquals(watchLabel("Rolex", "Rolex Submariner"), "Rolex Submariner");
+  assertEquals(watchLabel("omega", "Omega Speedmaster"), "Omega Speedmaster");
+});
+
+Deno.test("looksCompleteFact — rejects truncated pool rows", () => {
+  // Real shape of the early-bug rows: cut mid-sentence, no terminal punctuation.
+  assertEquals(
+    looksCompleteFact("The GA-2100RGB achieves its aesthetic through brightly colored accents "),
+    false,
+  );
+  assertEquals(
+    looksCompleteFact("Rolex's first serially produced model with a rotating bezel was the Turn-O-Graph."),
+    true,
+  );
+  assertEquals(looksCompleteFact("Too short."), false);
+  assertEquals(looksCompleteFact(""), false);
+  assertEquals(looksCompleteFact(null), false);
+});
+
+Deno.test("pickPoolFact — lowest position wins, truncated rows skipped", () => {
+  const rows = [
+    { position: 2, fact: "A perfectly complete second fact about this watch model here." },
+    { position: 0, fact: "This one was cut off mid sentence and never finished properly " },
+    { position: 1, fact: "The earliest complete fact in the pool for this particular model." },
+  ];
+  assertEquals(pickPoolFact(rows)?.position, 1);
+});
+
+Deno.test("pickPoolFact — empty or all-truncated pool yields null", () => {
+  assertEquals(pickPoolFact([]), null);
+  assertEquals(pickPoolFact([{ position: 0, fact: "cut off " }]), null);
+});
+
+Deno.test("watchPhrase — possessive form for a watch they own", () => {
+  assertEquals(watchPhrase("Seiko SKX007"), "your Seiko SKX007");
+});
+
+Deno.test("FALLBACK_FACT — phrase never claims ownership", () => {
+  // "A fun fact about your Omega Speedmaster" would be a lie for the ~16% of
+  // recipients with no watch yet, so the fallback carries its own article.
+  assertEquals(FALLBACK_FACT.watchPhrase, "the Omega Speedmaster");
+  assertEquals(FALLBACK_FACT.watchPhrase.startsWith("your"), false);
+});
+
+Deno.test("needsFactVars — only campaigns using the tokens opt in", () => {
+  assertEquals(needsFactVars({ subject: "A fun fact about {{watchPhrase}}", body_html: "x" }), true);
+  assertEquals(needsFactVars({ subject: "A fun fact about your {{watch}}", body_html: "x" }), true);
+  assertEquals(needsFactVars({ subject: "Hi", body_html: "<i>{{fact}}</i>" }), true);
+  assertEquals(needsFactVars({ subject: "Add your first watch", body_html: "Hi {{name}}" }), false);
+  assertEquals(needsFactVars({}), false);
+});
+
+Deno.test("personalizeBody — substitutes fact vars and escapes them for HTML", () => {
+  const out = personalizeBody("<b>{{watch}}</b>: {{fact}}", "Sam", {
+    watch: "A. Lange & Söhne 1815",
+    fact: 'It was <the> "first".',
+  });
+  assertEquals(out, "<b>A. Lange &amp; Söhne 1815</b>: It was &lt;the&gt; &quot;first&quot;.");
+});
+
+Deno.test("personalizeSubject — substitutes raw so headers read correctly", () => {
+  assertEquals(
+    personalizeSubject("A fun fact about your {{watch}}", "Sam", { watch: "A. Lange & Söhne 1815" }),
+    "A fun fact about your A. Lange & Söhne 1815",
+  );
+});
+
+Deno.test("personalizeBody — unresolved fact tokens stay put when no vars given", () => {
+  // Guards the non-fact campaigns: they must be byte-identical to before.
+  assertEquals(personalizeBody("Hi {{name}}, add a watch", "Sam"), "Hi Sam, add a watch");
+});
+
+Deno.test("escapeHtml — escapes the five HTML-significant characters", () => {
+  assertEquals(escapeHtml(`<&>"'`), "&lt;&amp;&gt;&quot;&#39;");
+});
+
+Deno.test("FALLBACK_FACT — is a shippable pair", () => {
+  assertEquals(looksCompleteFact(FALLBACK_FACT.fact), true);
+  assertEquals(FALLBACK_FACT.watch.length > 0, true);
 });
