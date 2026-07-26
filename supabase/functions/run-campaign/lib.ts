@@ -99,8 +99,17 @@ export function escapeHtml(s: string): string {
 }
 
 // Wrap a campaign body in the branded HTML email shell.
+// Pass an empty unsubUrl to omit the footer row: broadcast_queue rows are
+// stored footer-less because send-broadcast's drain appends its own
+// unsubFooter() (with a freshly signed URL) at send time.
 export function buildHtmlEmail(subject: string, body: string, unsubUrl: string): string {
   const unsubLine = `<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">Manage preferences</a>`;
+  const footerRow = unsubUrl
+    ? `
+        <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
+          <div style="font-size:11px;color:#999;line-height:1.5;">${unsubLine}</div>
+        </td></tr>`
+    : "";
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -118,9 +127,7 @@ export function buildHtmlEmail(subject: string, body: string, unsubUrl: string):
         <tr><td style="padding:4px 28px 28px;">
           <a href="https://wrotate.com/?utm_source=email&utm_medium=campaign&utm_campaign=welcome" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
         </td></tr>
-        <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
-          <div style="font-size:11px;color:#999;line-height:1.5;">${unsubLine}</div>
-        </td></tr>
+${footerRow}
       </table>
     </td></tr>
   </table>
@@ -224,6 +231,22 @@ export function pickPoolFact<T extends { position: number; fact: string }>(rows:
   return (rows || [])
     .filter((r) => looksCompleteFact(r.fact))
     .sort((a, b) => a.position - b.position)[0] ?? null;
+}
+
+// Watch names are free text, and this one goes in the SUBJECT LINE. Most odd
+// names are legitimate and stay ("Omega Seamaster Diver 300M Co-Axial Master
+// Chronometer 42mm", "Mr Jones Watches A Perfectly Useless Afternoon"), so this
+// is deliberately narrow: only reject entries that would read as broken or
+// insulting, e.g. "Omega Fake Omega - Likely ETA 2824-2" or "TestBrand Test".
+// Rejected labels fall back to the curated pair rather than dropping the email.
+const JUNK_LABEL = /\b(fake|replica|unknown|untitled|tbd|n\/a|no name|placeholder|test|xxx+)\b|\?/i;
+
+export function looksLikeRealWatchLabel(label: string | null | undefined): boolean {
+  const t = (label ?? "").trim();
+  if (t.length < 3 || t.length > 60) return false;
+  if (JUNK_LABEL.test(t)) return false;
+  // Needs at least one letter — a bare reference number reads as a mistake.
+  return /\p{L}/u.test(t);
 }
 
 // Possessive-safe phrase for the subject line and prose: "your Seiko SKX007"

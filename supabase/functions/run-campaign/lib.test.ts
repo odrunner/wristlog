@@ -7,6 +7,7 @@ import {
   filterEligible,
   looksCompleteFact,
   looksLikeName,
+  looksLikeRealWatchLabel,
   modelKey,
   needsFactVars,
   personalizeBody,
@@ -347,4 +348,49 @@ Deno.test("escapeHtml — escapes the five HTML-significant characters", () => {
 Deno.test("FALLBACK_FACT — is a shippable pair", () => {
   assertEquals(looksCompleteFact(FALLBACK_FACT.fact), true);
   assertEquals(FALLBACK_FACT.watch.length > 0, true);
+});
+
+Deno.test("buildHtmlEmail — empty unsubUrl omits the footer row", () => {
+  // broadcast_queue rows are stored footer-less; send-broadcast's drain appends
+  // unsubFooter() with a freshly signed URL. Two footers would ship otherwise.
+  const out = buildHtmlEmail("Subj", "<p>b</p>", "");
+  assertEquals(out.includes("Unsubscribe"), false);
+  assertEquals(out.includes("Manage preferences"), false);
+  assertEquals(out.includes("<p>b</p>"), true);
+  assertEquals(out.trimEnd().endsWith("</html>"), true);
+});
+
+Deno.test("buildHtmlEmail — a real unsubUrl still renders the footer", () => {
+  const out = buildHtmlEmail("Subj", "<p>b</p>", "https://u/x");
+  assertEquals(out.includes('href="https://u/x"'), true);
+  assertEquals(out.includes("Manage preferences"), true);
+});
+
+// ---- subject-line safety for free-text watch names ----
+Deno.test("looksLikeRealWatchLabel — keeps legitimate names, including long and odd ones", () => {
+  assertEquals(looksLikeRealWatchLabel("Seiko SKX007"), true);
+  assertEquals(looksLikeRealWatchLabel("Omega Seamaster Diver 300M Co-Axial Master Chronometer 42mm"), true);
+  assertEquals(looksLikeRealWatchLabel("Mr Jones Watches A Perfectly Useless Afternoon"), true);
+  assertEquals(looksLikeRealWatchLabel("Studio Underd0g 02SERIES Collection"), true);
+  assertEquals(looksLikeRealWatchLabel("A. Lange & Söhne 1815"), true);
+  // "Homage" is how microbrands describe themselves — not an insult.
+  assertEquals(looksLikeRealWatchLabel("Baltany 9039 Automatic 1921 Homage Driver Watch"), true);
+});
+
+Deno.test("looksLikeRealWatchLabel — rejects names that would embarrass in a subject line", () => {
+  // Real row from the audience; the subject read "A fun fact about your Omega
+  // Fake Omega - Likely ETA 2824-2".
+  assertEquals(looksLikeRealWatchLabel("Omega Fake Omega - Likely ETA 2824-2"), false);
+  assertEquals(looksLikeRealWatchLabel("TestBrand Test"), false);
+  assertEquals(looksLikeRealWatchLabel("Unknown Unknown"), false);
+  assertEquals(looksLikeRealWatchLabel("Rolex Submariner?"), false);
+  assertEquals(looksLikeRealWatchLabel("x"), false);
+  assertEquals(looksLikeRealWatchLabel(""), false);
+  assertEquals(looksLikeRealWatchLabel(null), false);
+  assertEquals(looksLikeRealWatchLabel("12345"), false); // bare reference number
+});
+
+Deno.test("looksLikeRealWatchLabel — 'test' matches as a word, not inside another", () => {
+  assertEquals(looksLikeRealWatchLabel("Protest Diver"), true);
+  assertEquals(looksLikeRealWatchLabel("Seiko Test"), false);
 });

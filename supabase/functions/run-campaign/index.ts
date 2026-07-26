@@ -16,6 +16,8 @@ import {
   dropDone,
   FALLBACK_FACT,
   filterEligible,
+  looksCompleteFact,
+  looksLikeRealWatchLabel,
   modelKey,
   needsFactVars,
   personalizeBody,
@@ -192,6 +194,9 @@ async function resolveFact(
   const name = (watch.name as string).trim();
   const key = modelKey(brand, name);
   const label = watchLabel(brand, name);
+  // Free text headed for the subject line — fall back rather than mail someone
+  // "A fun fact about your Omega Fake Omega - Likely ETA 2824-2".
+  if (!looksLikeRealWatchLabel(label)) return fallback;
   const phrase = watchPhrase(label);
 
   type PoolRow = { id: string; position: number; fact: string };
@@ -524,6 +529,186 @@ async function backfillPass(
   return { sent, skipped: 0, failed, trackingFailed };
 }
 
+// ── One-off "Start your streak" broadcast ────────────────────────────────────
+// The daily drip only reaches new signups. To reach the existing members it
+// never covered, we render the same personalized email per recipient and hand
+// the rows to send-broadcast's queue, whose 21:30 UTC drain sends whatever the
+// Resend daily quota has left (100 − used_today − 10 reserve). That drain is
+// the right slot: ~95% of the day's transactional email lands after 10:00 UTC,
+// so run-campaign's own window can't safely claim the day's quota.
+//
+// Fact generation is deliberately NOT done at drain time — 183 uncovered models
+// × a grounded Gemini call would blow the function's wall clock. prewarmFacts()
+// fills the shared pool first (which also benefits every future wearer of those
+// models in-app), then enqueue is pure DB reads and Resend is the only limit.
+const STREAK_CAMPAIGN_ID = "14a9156c-f132-435c-9beb-32800b8c97cb";
+
+type AudienceRow = {
+  user_id: string;
+  display_name: string | null;
+  brand: string | null;
+  name: string | null;
+  ref: string | null;
+  model_key: string | null;
+};
+
+// Run `jobs` with at most `width` in flight. Generation is IO-bound on Gemini,
+// so serial execution would make a 20-model prewarm take ~7 minutes.
+async function pooled<T>(jobs: Array<() => Promise<T>>, width: number): Promise<T[]> {
+  const out: T[] = new Array(jobs.length);
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(width, jobs.length) }, async () => {
+      for (;;) {
+        const i = next++;
+        if (i >= jobs.length) return;
+        out[i] = await jobs[i]();
+      }
+    }),
+  );
+  return out;
+}
+
+// .in() with 183 keys overflows the request URL — read the pool in slices.
+async function fetchFactsForKeys(
+  supabase: Db,
+  keys: string[],
+): Promise<Array<{ model_key: string; position: number; fact: string }>> {
+  const all: Array<{ model_key: string; position: number; fact: string }> = [];
+  for (let i = 0; i < keys.length; i += 50) {
+    const { data, error } = await supabase
+      .from("watch_facts").select("model_key, position, fact").in("model_key", keys.slice(i, i + 50));
+    if (error) throw new Error(`watch_facts read failed: ${error.message}`);
+    all.push(...(data ?? []));
+  }
+  return all;
+}
+
+async function loadAudience(supabase: Db): Promise<AudienceRow[]> {
+  const { data, error } = await supabase.rpc("streak_broadcast_audience");
+  if (error) throw new Error(`audience rpc failed: ${error.message}`);
+  return (data ?? []) as AudienceRow[];
+}
+
+// Generate facts for up to `limit` audience models that have none yet. Idempotent:
+// re-running only picks up what's still uncovered, so it's safe to call in a loop
+// until `remaining` hits 0.
+async function prewarmFacts(supabase: Db, limit: number) {
+  const audience = await loadAudience(supabase);
+  const byKey = new Map<string, AudienceRow>();
+  for (const r of audience) if (r.model_key && !byKey.has(r.model_key)) byKey.set(r.model_key, r);
+
+  const keys = [...byKey.keys()];
+  const facts = await fetchFactsForKeys(supabase, keys);
+  const covered = new Set(
+    facts.filter((f) => looksCompleteFact(f.fact)).map((f) => f.model_key),
+  );
+  // A key can hold truncated rows only; position must not collide with those.
+  const poolSize = new Map<string, number>();
+  for (const f of facts) poolSize.set(f.model_key, (poolSize.get(f.model_key) ?? 0) + 1);
+
+  const todo = keys.filter((k) => !covered.has(k)).slice(0, Math.max(0, limit));
+  const results = await pooled(
+    todo.map((key) => async () => {
+      const row = byKey.get(key)!;
+      const fact = await generateFact(row.brand!.trim(), row.name!.trim(), row.ref, []);
+      if (!fact) return { key, ok: false };
+      const position = poolSize.get(key) ?? 0;
+      if (position >= 10) return { key, ok: false };
+      const { error } = await supabase
+        .from("watch_facts").insert({ model_key: key, position, fact: fact.slice(0, 500) });
+      if (error) {
+        console.error(`[run-campaign] prewarm insert failed for ${key}@${position}:`, error.message);
+        return { key, ok: false };
+      }
+      return { key, ok: true };
+    }),
+    5,
+  );
+
+  const generated = results.filter((r) => r.ok).length;
+  return {
+    audience_models: keys.length,
+    already_covered: covered.size,
+    attempted: todo.length,
+    generated,
+    failed: todo.length - generated,
+    remaining: keys.length - covered.size - generated,
+  };
+}
+
+// Render the campaign per recipient and queue it. Pool reads only — anything
+// still uncovered after prewarm falls back rather than generating here.
+async function enqueueStreakBroadcast(supabase: Db, limit: number) {
+  const { data: campaign, error: cErr } = await supabase
+    .from("email_campaigns").select("subject, body_html").eq("id", STREAK_CAMPAIGN_ID).single();
+  if (cErr || !campaign) throw new Error(`campaign read failed: ${cErr?.message}`);
+
+  const audience = (await loadAudience(supabase)).slice(0, Math.max(0, limit));
+  if (!audience.length) return { queued: 0, audience: 0 };
+
+  const keys = [...new Set(audience.map((r) => r.model_key).filter(Boolean))] as string[];
+  const facts = await fetchFactsForKeys(supabase, keys);
+  const bestByKey = new Map<string, { position: number; fact: string }>();
+  for (const f of facts) {
+    if (!looksCompleteFact(f.fact)) continue;
+    const cur = bestByKey.get(f.model_key);
+    if (!cur || f.position < cur.position) bestByKey.set(f.model_key, f);
+  }
+
+  const rows: Array<{ uid: string; email: string; subject: string; html: string }> = [];
+  let personalized = 0;
+  let fallback = 0;
+  let noEmail = 0;
+
+  for (const r of audience) {
+    const { data: authUser } = await supabase.auth.admin.getUserById(r.user_id);
+    const email = authUser?.user?.email;
+    if (!email) { noEmail++; continue; }
+
+    const hit = r.model_key ? bestByKey.get(r.model_key) : undefined;
+    const label = r.brand && r.name ? watchLabel(r.brand.trim(), r.name.trim()) : "";
+    let vars: Record<string, string>;
+    if (hit && looksLikeRealWatchLabel(label)) {
+      vars = { watch: label, watchPhrase: watchPhrase(label), fact: hit.fact };
+      personalized++;
+    } else {
+      vars = { ...FALLBACK_FACT };
+      fallback++;
+    }
+
+    rows.push({
+      uid: r.user_id,
+      email,
+      subject: personalizeSubject(campaign.subject, r.display_name, vars),
+      // Footer-less: the drain appends unsubFooter() with a freshly signed URL.
+      html: buildHtmlEmail("", personalizeBody(campaign.body_html, r.display_name, vars), ""),
+    });
+  }
+
+  let queued = 0;
+  for (let i = 0; i < rows.length; i += 500) {
+    const slice = rows.slice(i, i + 500);
+    const { error } = await supabase.from("broadcast_queue").insert(slice);
+    if (error) throw new Error(`queue insert failed after ${queued}: ${error.message}`);
+    queued += slice.length;
+  }
+
+  // Record the send against the campaign so this cohort can never be picked up
+  // again — by a re-run of this action, or by backfill_daily if it's ever
+  // raised. Written at enqueue rather than at drain because the generic drain
+  // knows nothing about campaigns; the cost is that a row that never drains
+  // still counts as sent.
+  for (let i = 0; i < rows.length; i += 500) {
+    const track = rows.slice(i, i + 500).map((r) => ({ campaign_id: STREAK_CAMPAIGN_ID, user_id: r.uid }));
+    const { error } = await supabase
+      .from("email_campaign_sends").upsert(track, { onConflict: "campaign_id,user_id", ignoreDuplicates: true });
+    if (error) console.error(`[run-campaign] enqueue send-tracking failed:`, error.message);
+  }
+
+  return { audience: audience.length, queued, personalized, fallback, no_email: noEmail };
+}
+
 Deno.serve(async (req: Request) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -550,6 +735,22 @@ Deno.serve(async (req: Request) => {
       }
     } else {
       console.warn("[run-campaign] CAMPAIGN_TRIGGER_SECRET not set — running WITHOUT caller auth (INSECURE). Set the secret + add the x-campaign-secret header to the cron to enable enforcement.");
+    }
+
+    // One-off broadcast tooling, behind the same auth as the daily run. Both
+    // are idempotent and return counts; neither sends email itself (enqueue
+    // hands off to send-broadcast's quota-aware nightly drain).
+    const body = await req.json().catch(() => ({} as Record<string, unknown>));
+    if (typeof body?.prewarm_facts === "number") {
+      const result = await prewarmFacts(supabase, body.prewarm_facts as number);
+      console.log(`[run-campaign] prewarm:`, JSON.stringify(result));
+      return new Response(JSON.stringify(result), { status: 200 });
+    }
+    if (body?.enqueue_streak_broadcast) {
+      const limit = typeof body.limit === "number" ? body.limit : 10000;
+      const result = await enqueueStreakBroadcast(supabase, limit);
+      console.log(`[run-campaign] enqueue:`, JSON.stringify(result));
+      return new Response(JSON.stringify(result), { status: 200 });
     }
 
     // Fetch active campaigns
