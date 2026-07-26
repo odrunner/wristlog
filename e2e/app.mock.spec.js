@@ -1481,6 +1481,19 @@ test.describe('Boot popovers (mocked)', () => {
   });
 });
 
+// openEditPost() reads straight out of the in-memory `logs` array, which the app
+// fills asynchronously after boot. waitForAppBoot() only waits for the nav, so under
+// full-suite load a test could open the edit modal before its log existed and get an
+// empty form — a load-dependent flake (observed once in three full runs). Wait for
+// the specific log instead of racing it. try/catch because `logs` is a top-level
+// `let`, so it is in TDZ until the app script has run.
+async function waitForLog(page, logId) {
+  await page.waitForFunction(
+    (id) => { try { return logs.some((l) => l.id === id); } catch (_) { return false; } },
+    logId, { timeout: 10_000 },
+  );
+}
+
 // ── Post location field (mocked) ─────────────────────────────────────────────
 // Spec: 2026-06-01-post-location-design.md. Covers the composer UI: preset chips,
 // free text, and the one-value-or-none exclusivity rule (pure UI, no network).
@@ -1540,6 +1553,7 @@ test.describe('Post location (mocked)', () => {
   test('edit-post prefills the location from the stored value', async ({ page }) => {
     // Close the new-post modal opened in beforeEach, then open edit for log-001.
     await page.evaluate(() => closeNewPost());
+    await waitForLog(page, 'log-001');
     await page.evaluate(() => openEditPost('log-001'));
     await expect(page.locator('#edit-post-modal')).toBeVisible();
     // log-001's location is 'Travel', which is no longer a preset (see 9390b33) →
@@ -1550,6 +1564,7 @@ test.describe('Post location (mocked)', () => {
 
   test('edit-post selects the chip when the stored value IS a preset', async ({ page }) => {
     await page.evaluate(() => closeNewPost());
+    await waitForLog(page, 'log-002');
     await page.evaluate(() => openEditPost('log-002'));
     await expect(page.locator('#edit-post-modal')).toBeVisible();
     // Set a preset value through the shipped handler, then confirm chip + input agree.
