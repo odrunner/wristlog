@@ -262,3 +262,52 @@ is to make low-BPH readings *more* trustworthy.
 
 **Suggested order:** R3 (one-line, unblocks the suite) → R1 (email goes to real
 users) → C1 (before the 2.3 build) → R2 → R4 → R5.
+
+---
+
+## R-INC1 — SES sandbox silently dropped the tail of the Pro V2 broadcast — **High** — **FIXED 2026-07-26 (DEPLOYED)**
+
+`supabase/functions/send-broadcast/index.ts` · found 2026-07-26, not by this audit
+
+**What happened.** The 2026-07-19 migration (`49daeb5` → `93c36df`) switched every
+email sender in the tree from Resend to AWS SES v2 (`us-west-2`). AWS production
+access was never requested or granted, so the account is still in the SES sandbox,
+where any recipient that is not a verified identity is rejected outright.
+
+Deployed state had drifted apart from the tree: `run-campaign`, `send-email` and
+`send-wear-reminders` were still on Resend only because their last deploy predated
+the migration commit. `send-broadcast` did get the SES build, and the nightly
+`drain-broadcast-queue` run at **2026-07-25 21:30 UTC** claimed the final 22
+pending rows of the Pro V2 broadcast. SES rejected all 22 with
+`Email address is not verified. The following identities failed the check in
+region US-WEST-2`. Those rows were classified as permanent failures and set to
+`status='failed'` — a status the drain never re-selects, so they were dropped for
+good. The first 379 of the 401-row queue had already gone out on Resend between
+07-17 and 07-24 (confirmed: every `email_events` row for that subject has a null
+`sns_message_id`).
+
+**Why it was invisible.** Nothing alerts on `broadcast_queue.status='failed'`, and
+the queue draining to zero pending looks identical to the queue completing.
+
+**Fix.** New `_shared/resend.ts`, interface-compatible with `_shared/ses.ts` (same
+result shape, same retryable classification, same batch contract), so the
+transport is a one-import switch in either direction. `send-broadcast` now imports
+it; the SES client stays in the tree for when AWS approves production access. All
+hardening added since the migration is retained (row claiming, crashed-drain
+reaper, retryable-vs-permanent handling, per-row error capture).
+
+The 22 rows were reset to `pending` after verifying none had unsubscribed, been
+suspended, become internal, or already received the subject.
+
+**Verification.** 405 deno + 1497 vitest pass; the deployed bundle was re-fetched
+from the Management API and contains zero SES references; live `quota_only` drain
+returns `{provider: "resend", pending: 22}`.
+
+**Still open — carried forward:**
+- `new-user-alert`, `report-notify` and `send-report` are deployed on SES. They
+  only reach verified admin addresses, so they work today, but they are one
+  recipient change away from the same silent failure.
+- `run-campaign`, `send-email`, `send-wear-reminders` hold SES code in the tree
+  that is not deployed. The next `functions deploy` on any of them moves user-facing
+  mail onto sandbox SES. **Do not deploy those three until SES is approved.**
+- No alert exists on `broadcast_queue.status='failed'`.
