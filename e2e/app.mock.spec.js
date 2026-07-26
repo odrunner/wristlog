@@ -1575,6 +1575,7 @@ test.describe('Post location (mocked)', () => {
 
   test('edit-post shows occasion details for a watch-tagged post', async ({ page }) => {
     await page.evaluate(() => closeNewPost());
+    await waitForLog(page, 'log-001');
     await page.evaluate(() => openEditPost('log-001'));
     await expect(page.locator('#edit-post-modal')).toBeVisible();
     // log-001 is tagged (watch-001, use_case 'work') → Details shown and expanded.

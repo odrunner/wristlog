@@ -1535,6 +1535,15 @@ export function shouldRevealBadges({ earnedCount, unseenCount, lastRevealedCount
   return unseenCount > 0 && earnedCount > (lastRevealedCount || 0);
 }
 
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+// Names line for the reveal modal, capped to the number of medallions shown so the
+// two never disagree. Beyond the cap it degrades to "… and N more".
+export function badgeRevealNames(names, shown = 8) {
+  const list = (names || []).filter(Boolean);
+  if (list.length <= shown) return list.join(' · ');
+  return list.slice(0, shown).join(' · ') + ' · and ' + (list.length - shown) + ' more';
+}
+
 // Whether to show the push-notifications primer. Only on a native build that can
 // request permission (available), only when the OS status is still notDetermined
 // (never asked — iOS lets us ask once), and not while a decline cooldown/cap is in
@@ -2399,6 +2408,22 @@ export function feedKeysetFilter(cursor) {
 // Given the ids already shown (Set or array) and an incoming batch of logs,
 // return only the brand-new rows — deduped against what's shown AND against
 // duplicates within the batch itself. An empty result means "no more pages."
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+// What loadMoreFeed() should do with a fetched page, given how many rows survived the
+// blocked/club/visibility filters. Before 2026-07-26 a page that filtered to nothing
+// set feedHasMore=false, dead-ending infinite scroll while older VISIBLE posts were
+// still behind it (e.g. 50 consecutive public posts from a blocked user) — and it
+// looked exactly like reaching the end of the feed.
+//   end    — no new rows at all; genuinely nothing older left
+//   render — something survived; show it
+//   skip   — page fully filtered; step the cursor past it and look further back
+//   pause  — out of attempts; keep feedHasMore true and resume on the next scroll
+export function feedPageOutcome({ pageLength, visibleLength, attempt, maxAttempts }) {
+  if (!pageLength) return 'end';
+  if (visibleLength > 0) return 'render';
+  return (attempt + 1 >= maxAttempts) ? 'pause' : 'skip';
+}
+
 export function dedupeNewFeedLogs(existingIds, incoming) {
   const seen = existingIds instanceof Set ? new Set(existingIds) : new Set(existingIds || []);
   const out = [];

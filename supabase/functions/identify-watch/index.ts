@@ -18,6 +18,7 @@ import {
   hasCollection as hasCollectionFn,
   normalizeDetectCount,
   normalizeMode,
+  ownsFactModel,
   stripDataUriPrefix,
 } from "./lib.ts";
 
@@ -225,6 +226,21 @@ Deno.serve(async (req: Request) => {
         await logAttempt(null, "facts_no_gemini_key");
         return new Response(JSON.stringify({ error: "Facts not available" }), {
           status: 503,
+          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        });
+      }
+
+      // Only generate for a watch the caller actually owns. brand/model arrive
+      // straight from the client, and each call is a grounded Gemini 2.5 Pro search
+      // that writes into the SHARED fact pool — unvalidated, one user could mint up
+      // to their whole hourly rate-limit worth of pools for watches nobody owns.
+      // Fail CLOSED on a query error: a DB blip must not reopen the hole.
+      const { data: ownedWatches, error: ownErr } = await supabase
+        .from("watches").select("brand, name").eq("user_id", user.id);
+      if (ownErr || !ownsFactModel(ownedWatches || [], brand, model)) {
+        await logAttempt(null, ownErr ? "facts_owner_check_failed" : "facts_not_owned");
+        return new Response(JSON.stringify({ error: "Watch not in your collection" }), {
+          status: 403,
           headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
         });
       }

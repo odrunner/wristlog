@@ -30,12 +30,16 @@ async function check(name, fn) {
   }
 }
 
-async function callFn(path, opts = {}) {
+// expectStatus asserts a specific status instead of any 2xx — used for the paths
+// whose CORRECT behaviour is a rejection (403 on a not-owned watch, 400 on a
+// missing id). Without it a silently-removed guard would still read as "passing".
+async function callFn(path, opts = {}, expectStatus = null) {
   const start = Date.now();
   const resp = await fetch(`${SUPABASE_URL}/functions/v1/${path}`, opts);
   const ms = Date.now() - start;
   const body = await resp.text();
-  return { ok: resp.ok, status: resp.status, ms, body };
+  const ok = expectStatus === null ? resp.ok : resp.status === expectStatus;
+  return { ok, status: resp.status, ms, body };
 }
 
 async function getAuthToken() {
@@ -89,6 +93,20 @@ async function run() {
       headers: authHeaders,
       body: JSON.stringify({ image: TINY_IMAGE }),
     })
+  );
+
+  // Facts mode only generates for a watch the caller owns (2026-07-25 audit S3).
+  // A brand/model the test user cannot own must be rejected BEFORE any Gemini call,
+  // so this costs nothing to run.
+  await check('identify-watch facts (not-owned watch → 403)', () =>
+    callFn('identify-watch', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        mode: 'facts',
+        watchInfo: { brand: 'ZZ-Not-A-Real-Brand', model: 'zz-not-owned-model' },
+      }),
+    }, 403)
   );
 
   await check('search-watch-image (auth)', () =>

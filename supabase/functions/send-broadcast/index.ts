@@ -20,8 +20,8 @@ import {
   effectiveLimit as computeEffectiveLimit,
   excludeAlreadyEmailed,
   excludeIds,
+  keepIds,
   filterNeverMeasured,
-  filterOneAndDoneChurned,
   filterOptedIn,
   isDormant,
   nextBatchSlice,
@@ -199,17 +199,17 @@ serve(async (req) => {
     }
 
     // Segment filter: "one_done_winback" keeps one-and-done churned wear-loggers.
+    // Aggregated server-side (sql/2026-07-26-winback-segment-rpc.sql) rather than
+    // pulling the whole logs table and counting in JS. The RPC owns the wear rule
+    // (watch_id IS NOT NULL AND use_case <> 'measurement', matching isWearEntry) and
+    // excludes internal accounts, so there is exactly one definition to keep right.
     if (segment === "one_done_winback") {
-      const { data: logRows, error: logErr } = await fetchAllRows<{ user_id: string; watch_id: string | null; use_case: string | null; created_at: string }>((from, to) => supabase
-        .from("logs")
-        .select("user_id, watch_id, use_case, created_at")
-        .range(from, to));
-      if (logErr) {
-        return jsonResponse({ error: "Failed to fetch logs for win-back segment", details: logErr }, 500);
+      const { data: winbackRows, error: wbErr } = await supabase
+        .rpc("one_and_done_winback_users", { p_churn_days: 14 });
+      if (wbErr) {
+        return jsonResponse({ error: "Failed to resolve win-back segment", details: wbErr }, 500);
       }
-      eligibleProfiles = filterOneAndDoneChurned(eligibleProfiles, logRows || [], Date.now());
-      const { data: internalRows } = await supabase.from("internal_accounts").select("user_id");
-      eligibleProfiles = excludeIds(eligibleProfiles, (internalRows || []).map(r => r.user_id));
+      eligibleProfiles = keepIds(eligibleProfiles, (winbackRows || []).map((r: { user_id: string }) => r.user_id));
     }
 
     // Resolve emails via paginated listUsers (1-2 requests) instead of one

@@ -203,3 +203,24 @@ For estimatedColor pick from: #c9a84c (gold), #94a3b8 (slate/silver), #818cf8 (i
 Only provide reference if you are confident. Do NOT guess reference numbers.
 If no watches: {"watches": []}`;
 }
+
+// Model key for the shared fun-fact pool. MUST match the SQL in
+// sql/2026-07-20-watch-fun-facts.sql — `lower(trim(brand)) || '|' || lower(trim(name))`
+// — because that is what pick/commit_watch_fact key the pool on.
+export function factModelKey(brand: string, name: string): string {
+  return `${(brand ?? "").trim().toLowerCase()}|${(name ?? "").trim().toLowerCase()}`;
+}
+
+// True when the caller owns a watch matching this brand/model. Facts generation is
+// gated on this: brand/model arrived straight from the client with no validation, so
+// one user could mint a fact pool (and burn a grounded Gemini search) for any string
+// they liked, for watches nobody owns. Compared on the same normalized key the pool
+// itself uses, so "  rolex " and "Rolex" are the same watch.
+export function ownsFactModel(
+  watchRows: { brand?: string | null; name?: string | null }[],
+  brand: string,
+  model: string,
+): boolean {
+  const want = factModelKey(brand, model);
+  return (watchRows || []).some((w) => factModelKey(w?.brand ?? "", w?.name ?? "") === want);
+}

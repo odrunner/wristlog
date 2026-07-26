@@ -102,6 +102,14 @@ export function excludeIds<T extends { id: string }>(profiles: T[], excludedIds:
   return (profiles || []).filter((p) => !set.has(p.id));
 }
 
+// Inverse of excludeIds: keep only profiles whose id is in the list. Used to
+// intersect the eligible set with a server-resolved segment (see
+// one_and_done_winback_users). An empty id list correctly yields an empty segment.
+export function keepIds<T extends { id: string }>(profiles: T[], keptIds: Iterable<string>): T[] {
+  const set = keptIds instanceof Set ? keptIds : new Set(keptIds);
+  return (profiles || []).filter((p) => set.has(p.id));
+}
+
 // "never_measured" segment: drop anyone who has a measurement row.
 export function filterNeverMeasured<T extends { id: string }>(
   profiles: T[],
@@ -109,44 +117,6 @@ export function filterNeverMeasured<T extends { id: string }>(
 ): T[] {
   const set = new Set([...measuredUserIds].filter(Boolean) as string[]);
   return (profiles || []).filter((p) => !set.has(p.id));
-}
-
-// "one_done_winback" segment: keep users who logged exactly ONE wear and whose most
-// recent wear is older than churnDays. These are one-and-done loggers who have
-// since gone quiet — the win-back target.
-//
-// The wear test MUST match isWearEntry() in index.html — `watchId && useCase !==
-// 'measurement'` — the single definition of a wear used by Stats, Track, Year in
-// Review and Monthly Review. Omitting the watch_id half (as this did until
-// 2026-07-25) counts watch-less posts as wears, which both emails "your watches
-// miss you" to people who never logged one AND scores a genuine one-and-done
-// wearer as 2 so they never get the campaign.
-export function filterOneAndDoneChurned<
-  T extends { id: string },
->(
-  profiles: T[],
-  logRows: {
-    user_id?: string | null;
-    watch_id?: string | null;
-    use_case?: string | null;
-    created_at?: string | null;
-  }[],
-  nowMs: number,
-  churnDays = 14,
-): T[] {
-  const wearCount = new Map<string, number>();
-  const lastMs = new Map<string, number>();
-  for (const l of logRows || []) {
-    const uid = l?.user_id;
-    if (!uid) continue;
-    if (!l.watch_id) continue;                          // no watch → not a wear
-    if ((l.use_case ?? "") === "measurement") continue; // wears only
-    wearCount.set(uid, (wearCount.get(uid) ?? 0) + 1);
-    const t = l.created_at ? Date.parse(l.created_at) : 0;
-    if (t > (lastMs.get(uid) ?? 0)) lastMs.set(uid, t);
-  }
-  const cutoff = nowMs - churnDays * 24 * 60 * 60 * 1000;
-  return (profiles || []).filter((p) => wearCount.get(p.id) === 1 && (lastMs.get(p.id) ?? 0) < cutoff);
 }
 
 // Dormant predicate for cohort blasts: true if the user has NOT signed in since

@@ -5772,6 +5772,7 @@ function closeBadgeWall() {
 // of earned badges never register. Surface them: a count dot on the profile button
 // (ongoing) + a one-per-batch reveal modal on app open (re-engagement).
 const BADGE_REVEAL_KEY = 'wr_badge_reveal_count';
+const BADGE_REVEAL_SHOWN = 8;   // medallions rendered; names are capped to match
 
 function unseenBadgeCount() {
   return (_earnedBadges || []).filter(e => e && !e.seen).length;
@@ -5794,20 +5795,29 @@ function renderProfileBadgeDot() {
   dot.classList.remove('hidden');
 }
 
+// Returns true only if the reveal actually rendered. maybeRevealBadges() burns the
+// once-per-batch seen-key on that answer — an unseen badge whose badge_ref isn't in
+// BADGE_BY_REF (awarded by a newer build, or since renamed) makes `badges` empty
+// while unseenBadgeCount() stays non-zero, so a void return used to consume the
+// reveal and leave the profile dot lit with nothing behind it.
 function openBadgeRevealModal() {
   const unseen = (_earnedBadges || []).filter(e => e && !e.seen);
   const badges = unseen.map(e => BADGE_BY_REF[e.badge_ref]).filter(Boolean);
-  if (!badges.length) return;
+  if (!badges.length) return false;
   const modal = document.getElementById('badge-reveal-modal');
-  if (!modal) { openBadgeWall(); return; }   // fallback: straight to the wall
+  if (!modal) { openBadgeWall(); return true; }   // fallback: straight to the wall
   const countEl = document.getElementById('badge-reveal-count');
   if (countEl) countEl.textContent = badges.length === 1 ? '1 badge unlocked' : `${badges.length} badges unlocked`;
   const medEl = document.getElementById('badge-reveal-medallions');
-  if (medEl) medEl.innerHTML = badges.slice(0, 8).map(b => badgeMedallionSvg(b, 52, true)).join('');
+  if (medEl) medEl.innerHTML = badges.slice(0, BADGE_REVEAL_SHOWN).map(b => badgeMedallionSvg(b, 52, true)).join('');
   const namesEl = document.getElementById('badge-reveal-names');
-  if (namesEl) namesEl.textContent = badges.map(b => b.name).join(' · ');
+  // Cap the names to the medallions shown. The first reveal for an existing user is
+  // a retroactive batch (most earned badges were never marked seen), so an uncapped
+  // list read "15 badges unlocked" over 8 medallions and 15 names in a 340px dialog.
+  if (namesEl) namesEl.textContent = badgeRevealNames(badges.map(b => b.name), BADGE_REVEAL_SHOWN);
   modal.classList.remove('hidden');
   haptic('success');
+  return true;
 }
 
 function closeBadgeReveal() {
@@ -5831,8 +5841,9 @@ function maybeRevealBadges() {
   setTimeout(() => {
     if (!currentUser || _isDemoMode || unseenBadgeCount() <= 0) return;
     if (document.querySelector('.overlay:not(.hidden)')) return;   // busy — retry next open
+    // Consume the batch only if the modal actually rendered — see openBadgeRevealModal().
+    if (!openBadgeRevealModal()) return;
     try { localStorage.setItem(BADGE_REVEAL_KEY, String((_earnedBadges || []).length)); } catch (_) {}
-    openBadgeRevealModal();
   }, 800);
 }
 
@@ -7055,7 +7066,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.08.51';
+const APP_VERSION = '26.09.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10364,6 +10375,22 @@ function feedKeysetFilter(cursor) {
   if (!cursor || !cursor.date || !cursor.created_at) return null;
   return `date.lt.${cursor.date},and(date.eq.${cursor.date},created_at.lt.${cursor.created_at})`;
 }
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+// What loadMoreFeed() should do with a fetched page, given how many rows survived the
+// blocked/club/visibility filters. Before 2026-07-26 a page that filtered to nothing
+// set feedHasMore=false, dead-ending infinite scroll while older VISIBLE posts were
+// still behind it (e.g. 50 consecutive public posts from a blocked user) — and it
+// looked exactly like reaching the end of the feed.
+//   end    — no new rows at all; genuinely nothing older left
+//   render — something survived; show it
+//   skip   — page fully filtered; step the cursor past it and look further back
+//   pause  — out of attempts; keep feedHasMore true and resume on the next scroll
+function feedPageOutcome({ pageLength, visibleLength, attempt, maxAttempts }) {
+  if (!pageLength) return 'end';
+  if (visibleLength > 0) return 'render';
+  return (attempt + 1 >= maxAttempts) ? 'pause' : 'skip';
+}
+
 // Keep only brand-new rows (deduped vs shown ids and within the batch).
 function dedupeNewFeedLogs(existingIds, incoming) {
   const seen = existingIds instanceof Set ? new Set(existingIds) : new Set(existingIds || []);
@@ -10392,6 +10419,7 @@ async function loadFeed() {
   // Fresh full load → reset pagination so "load more" starts clean.
   feedHasMore = true;
   feedLoadingMore = false;
+  _feedSkipCursor = null;
   // Snapshot following size — used at end to detect race condition
   const _followingAtStart = following.size;
   // Master safety net: if loadFeed hasn't finished in 8s, force-render error state
@@ -10631,8 +10659,13 @@ async function loadFeed() {
 async function loadMoreFeed() {
   // Bail if a full loadFeed() is mid-flight — its Phase-2 render replaces feedItems.
   if (!currentUser || feedLoading || feedLoadingMore || !feedHasMore || feedItems.length === 0) return;
-  const cursor = feedItems[feedItems.length - 1];
-  const keyset = feedKeysetFilter(cursor && { date: cursor.date, created_at: cursor.created_at });
+  // Normally we page from the oldest rendered item. _feedSkipCursor is set when a
+  // previous call burned its attempts skipping fully-filtered pages (a long run of
+  // blocked-user posts); resuming from it means that work isn't repeated.
+  const last = feedItems[feedItems.length - 1];
+  const startCursor = _feedSkipCursor ||
+    (last && { date: last.date, created_at: last.created_at });
+  let keyset = feedKeysetFilter(startCursor);
   if (!keyset) { feedHasMore = false; mountFeedLoadMoreSentinel(); return; }
 
   feedLoadingMore = true;
@@ -10640,6 +10673,14 @@ async function loadMoreFeed() {
     const followingArr = [...following];
     const myClubIds = myClubs.map(c => c.id);
 
+    // A page can filter down to nothing — e.g. 50 consecutive public posts from a
+    // blocked user. Treating that as "end of feed" dead-ended infinite scroll with
+    // older visible posts still behind it, and looked identical to genuinely
+    // reaching the end. Instead, skip past the exhausted page and try again, up to
+    // FEED_MAX_EMPTY_PAGES times so a long blocked run can't spin forever.
+    const FEED_MAX_EMPTY_PAGES = 3;
+    let batch = [];
+    for (let attempt = 0; attempt < FEED_MAX_EMPTY_PAGES; attempt++) {
     // Same union as loadFeed(), each query filtered to posts older than cursor.
     const older = q => q.or(keyset);
     const promises = [
@@ -10673,13 +10714,16 @@ async function loadMoreFeed() {
 
     // Merge → dedupe vs already-shown ids AND within batch → sort → cap.
     const shownIds = new Set(feedItems.map(i => i.id));
-    let batch = dedupeNewFeedLogs(shownIds, results.flatMap(r => r.data || []))
+    const page = dedupeNewFeedLogs(shownIds, results.flatMap(r => r.data || []))
       .sort((a, b) => (b.date || '').localeCompare(a.date || '') ||
                       (b.created_at || '').localeCompare(a.created_at || ''))
       .slice(0, 50);
 
+    // Oldest row we have now considered. Sorted desc, so it's the last one.
+    const pageOldest = page[page.length - 1];
+
     // Same authoritative filters as loadFeed() (blocked → club strip → visibility).
-    batch = batch.filter(l => !blockedUsers.has(l.user_id));
+    batch = page.filter(l => !blockedUsers.has(l.user_id));
     batch = batch.filter(l => !l.club_id || myClubIds.includes(l.club_id));
     batch = batch.filter(log => {
       if (log.user_id === currentUser.id) return true;
@@ -10691,7 +10735,19 @@ async function loadMoreFeed() {
       return following.has(log.user_id);
     });
 
-    if (batch.length === 0) { feedHasMore = false; mountFeedLoadMoreSentinel(); return; }
+    const outcome = feedPageOutcome({
+      pageLength: page.length, visibleLength: batch.length,
+      attempt, maxAttempts: FEED_MAX_EMPTY_PAGES,
+    });
+    if (outcome === 'end')    { feedHasMore = false; mountFeedLoadMoreSentinel(); return; }
+    if (outcome === 'render') { _feedSkipCursor = null; break; }
+    // 'skip' / 'pause' — remember where we got to so the next call resumes there
+    // instead of re-walking the pages we just discarded.
+    _feedSkipCursor = { date: pageOldest.date, created_at: pageOldest.created_at };
+    if (outcome === 'pause')  { mountFeedLoadMoreSentinel(); return; }
+    keyset = feedKeysetFilter(_feedSkipCursor);
+    if (!keyset) { feedHasMore = false; mountFeedLoadMoreSentinel(); return; }
+    }
 
     // ── Enrich the new batch and merge into the global feed maps ──────────────
     const logIds = batch.map(l => l.id);
@@ -10901,6 +10957,15 @@ function hasWornToday(logs, watchId, today) {
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
 function shouldRevealBadges({ earnedCount, unseenCount, lastRevealedCount }) {
   return unseenCount > 0 && earnedCount > (lastRevealedCount || 0);
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+// Names line for the reveal modal, capped to the number of medallions shown so the
+// two never disagree. Beyond the cap it degrades to "… and N more".
+function badgeRevealNames(names, shown = 8) {
+  const list = (names || []).filter(Boolean);
+  if (list.length <= shown) return list.join(' · ');
+  return list.slice(0, shown).join(' · ') + ' · and ' + (list.length - shown) + ' more';
 }
 
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
@@ -13785,6 +13850,7 @@ let feedError         = false;       // true when loadFeed() fails — shows ret
 let feedLoadedAt      = 0;           // timestamp of last successful feed load (for cache)
 let feedLoadingMore   = false;       // true while loadMoreFeed() is in flight (re-entrancy guard)
 let feedHasMore       = true;        // false once a load-more batch returns 0 new posts
+let _feedSkipCursor   = null;        // {date, created_at} to resume from when a page filtered out entirely
 let _feedLoadMoreObserver = null;    // IntersectionObserver on #feed-load-sentinel
 let myProfile         = null;      // current user's profile row
 let discoverUsers     = [];        // search results in discover modal

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { feedKeysetFilter, dedupeNewFeedLogs } from '../wrotate_test.js';
+import { feedKeysetFilter, dedupeNewFeedLogs, feedPageOutcome } from '../wrotate_test.js';
 
 // ── feedKeysetFilter ─────────────────────────────────────────────────────────
 // Builds the PostgREST `.or()` string that fetches posts strictly OLDER than
@@ -63,5 +63,50 @@ describe('dedupeNewFeedLogs', () => {
 
   it('handles empty incoming', () => {
     expect(dedupeNewFeedLogs(seen, [])).toEqual([]);
+  });
+});
+
+// ── feedPageOutcome ──────────────────────────────────────────────────────────
+// 2026-07-25 audit #11. loadMoreFeed() fetches a page, then applies the
+// blocked/club/visibility filters client-side. A page that filtered to nothing used
+// to set feedHasMore=false — dead-ending infinite scroll with older VISIBLE posts
+// still behind it, and looking identical to genuinely reaching the end.
+
+describe('feedPageOutcome', () => {
+  const MAX = 3;
+  const call = (pageLength, visibleLength, attempt = 0) =>
+    feedPageOutcome({ pageLength, visibleLength, attempt, maxAttempts: MAX });
+
+  it('renders when anything survived the filters', () => {
+    expect(call(50, 50)).toBe('render');
+    expect(call(50, 1)).toBe('render');
+    // Still renders on the final attempt.
+    expect(call(50, 1, MAX - 1)).toBe('render');
+  });
+
+  it('ends only when the page itself was empty', () => {
+    // No new rows at all → genuinely nothing older left.
+    expect(call(0, 0)).toBe('end');
+    expect(call(0, 0, MAX - 1)).toBe('end');
+  });
+
+  it('skips a fully-filtered page instead of ending the feed', () => {
+    // The regression: 50 rows fetched, all from a blocked user, none visible.
+    expect(call(50, 0)).toBe('skip');
+    expect(call(50, 0, 1)).toBe('skip');
+    expect(call(50, 0)).not.toBe('end');
+  });
+
+  it('pauses rather than spinning once attempts run out', () => {
+    expect(call(50, 0, MAX - 1)).toBe('pause');
+    // 'pause' must not be 'end' — feedHasMore stays true so the next scroll resumes.
+    expect(call(50, 0, MAX - 1)).not.toBe('end');
+  });
+
+  it('never returns skip past the attempt budget', () => {
+    for (let a = 0; a < MAX; a++) {
+      const out = call(50, 0, a);
+      expect(a + 1 >= MAX ? out === 'pause' : out === 'skip').toBe(true);
+    }
   });
 });

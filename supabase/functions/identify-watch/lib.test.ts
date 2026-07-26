@@ -9,7 +9,9 @@ import {
   detectMediaType,
   DETECT_PROMPT,
   extractJson,
+  factModelKey,
   hasCollection,
+  ownsFactModel,
   normalizeDetectCount,
   normalizeMode,
   stripDataUriPrefix,
@@ -151,4 +153,36 @@ Deno.test("buildClaudeFallbackPrompt — embeds the BRAND_CUES block", () => {
   const p = buildClaudeFallbackPrompt();
   assertStringIncludes(p, BRAND_CUES);
   assertStringIncludes(p, "GRØNE");
+});
+
+// ── Fun-fact ownership gate (2026-07-25 audit S3) ────────────────────────────
+Deno.test("factModelKey — matches the SQL pool key exactly", () => {
+  // sql/2026-07-20-watch-fun-facts.sql: lower(trim(brand)) || '|' || lower(trim(name))
+  assertEquals(factModelKey("Rolex", "Submariner"), "rolex|submariner");
+  assertEquals(factModelKey("  Rolex ", " Submariner  "), "rolex|submariner");
+  assertEquals(factModelKey("ROLEX", "SUBMARINER"), "rolex|submariner");
+  assertEquals(factModelKey("", ""), "|");
+});
+
+Deno.test("ownsFactModel — only generates for a watch the caller owns", () => {
+  const owned = [
+    { brand: "Rolex", name: "Submariner" },
+    { brand: "Seiko", name: "SKX007" },
+  ];
+  assertEquals(ownsFactModel(owned, "Rolex", "Submariner"), true);
+  assertEquals(ownsFactModel(owned, "Seiko", "SKX007"), true);
+  // Case and whitespace insensitive, same as the pool key.
+  assertEquals(ownsFactModel(owned, " rolex ", "SUBMARINER"), true);
+  // Not owned — this is the abuse case the gate exists for.
+  assertEquals(ownsFactModel(owned, "Patek Philippe", "Nautilus"), false);
+  assertEquals(ownsFactModel(owned, "Rolex", "Daytona"), false);
+  // Empty collection can never match.
+  assertEquals(ownsFactModel([], "Rolex", "Submariner"), false);
+});
+
+Deno.test("ownsFactModel — tolerates null/missing fields without matching", () => {
+  assertEquals(ownsFactModel([{ brand: null, name: null }], "Rolex", "Submariner"), false);
+  assertEquals(ownsFactModel([{}], "Rolex", "Submariner"), false);
+  // A watch with empty brand/name must not match an empty request either way round.
+  assertEquals(ownsFactModel([{ brand: "", name: "" }], "Rolex", "Submariner"), false);
 });

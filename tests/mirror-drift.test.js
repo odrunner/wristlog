@@ -30,7 +30,7 @@ const tst = readFileSync(join(root, 'wrotate_test.js'), 'utf8');
 const VERBATIM = [
   'TG_ALG_VERSION', 'TG_PRESETS', 'autoSuggestTags', 'buildGameQueue',
   'canDeleteComment', 'classifyDevice', 'computeMedianRate', 'eloExpected',
-  'escAttr', 'escHtml', 'fmtDate', 'fmtMonYear', 'guessOEMStrap', 'imgSnippet', 'iosAtLeast',
+  'badgeRevealNames', 'escAttr', 'escHtml', 'fmtDate', 'fmtMonYear', 'guessOEMStrap', 'imgSnippet', 'iosAtLeast',
   'inlineImages', 'isVideoUrl', 'isVideoPostLog', 'marketPriceRowHTML', 'matchIdentifiedToCollection',
   'msrCardHasEnoughData', 'msrCardResultText', 'msrCardShowScope', 'msrCardAmpText', 'normalizeLocation', 'onboardingChecklistState', 'parsePhotoUrl', '_q2Ls',
   'posterUrlFor', 'renderPostLocationHtml', 'rowToLog', 'rowToWatch', 'rowToWish',
@@ -42,7 +42,7 @@ const VERBATIM = [
   'badgePostPlan', 'pinFeatured', 'initialsTextColor', 'pickIdentifiedWatch',
   'classifyProfileLoad', 'buildBrandList', 'brandRequestTitle',
   'campaignSubject', 'campaignGroupOf', 'periodCutoff', 'wearLeaderboard',
-  'isWearEntry', 'isMeasurementCardImage', 'feedKeysetFilter', 'dedupeNewFeedLogs',
+  'isWearEntry', 'isMeasurementCardImage', 'feedKeysetFilter', 'dedupeNewFeedLogs', 'feedPageOutcome',
   'shouldPromptFirstWear', 'hasWornToday', 'shouldRevealBadges', 'shouldShowPushPrimer',
 ];
 

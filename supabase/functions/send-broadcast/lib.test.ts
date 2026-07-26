@@ -8,7 +8,7 @@ import {
   excludeAlreadyEmailed,
   excludeIds,
   filterNeverMeasured,
-  filterOneAndDoneChurned,
+  keepIds,
   filterOptedIn,
   isDormant,
   isKnownSegment,
@@ -382,42 +382,20 @@ Deno.test("isKnownSegment — accepts one_done_winback", () => {
   assertEquals(isKnownSegment("one_done_winback"), true);
 });
 
-Deno.test("filterOneAndDoneChurned — keeps exactly-one-wear churned users only", () => {
-  const NOW = Date.parse("2026-07-25T00:00:00Z");
-  const old = "2026-07-01T00:00:00Z";   // > 14 days before NOW
-  const recent = "2026-07-24T00:00:00Z"; // < 14 days
-  const W = "watch-1";
-  const profiles = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }, { id: "e" }];
-  const logs = [
-    { user_id: "a", watch_id: W, use_case: "daily", created_at: old },          // 1 wear, churned  ✓
-    { user_id: "b", watch_id: W, use_case: "daily", created_at: old },          // 2 wears (below)   ✗
-    { user_id: "b", watch_id: W, use_case: "daily", created_at: old },
-    { user_id: "c", watch_id: W, use_case: "daily", created_at: recent },       // 1 wear, recent    ✗
-    { user_id: "d", watch_id: W, use_case: "measurement", created_at: old },    // only a measurement ✗
-    { user_id: "e", watch_id: W, use_case: "daily", created_at: old },          // 1 wear + a share  ✓
-    { user_id: "e", watch_id: W, use_case: "measurement", created_at: recent }, // measurement doesn't count/recency
-  ];
-  const out = filterOneAndDoneChurned(profiles, logs, NOW).map((p) => p.id).sort();
-  assertEquals(out, ["a", "e"]);
+Deno.test("keepIds — intersects the eligible set with a server-resolved segment", () => {
+  const profiles = [{ id: "a" }, { id: "b" }, { id: "c" }];
+  // one_and_done_winback_users() returns the segment; keepIds narrows to it.
+  assertEquals(keepIds(profiles, ["a", "c"]).map((p) => p.id), ["a", "c"]);
+  assertEquals(keepIds(profiles, new Set(["b"])).map((p) => p.id), ["b"]);
+  // Ids not present among the profiles are simply ignored.
+  assertEquals(keepIds(profiles, ["a", "zzz"]).map((p) => p.id), ["a"]);
 });
 
-// Regression: the wear test must match isWearEntry() — `watchId && useCase !==
-// 'measurement'`. Before 2026-07-25 the watch_id half was missing, which put 3 users
-// into the live 30-person segment who had never logged a wear and dropped 2 who had.
-Deno.test("filterOneAndDoneChurned — a watch-less post is not a wear", () => {
-  const NOW = Date.parse("2026-07-25T00:00:00Z");
-  const old = "2026-07-01T00:00:00Z";
-  const W = "watch-1";
-  const profiles = [{ id: "p" }, { id: "q" }, { id: "r" }];
-  const logs = [
-    // p: only a watch-less post — never logged a wear, must NOT be emailed.
-    { user_id: "p", watch_id: null, use_case: "daily", created_at: old },
-    // q: one real wear plus a watch-less post — still one-and-done, MUST be emailed.
-    { user_id: "q", watch_id: W, use_case: "daily", created_at: old },
-    { user_id: "q", watch_id: null, use_case: "daily", created_at: old },
-    // r: undefined watch_id (column absent) is treated the same as null.
-    { user_id: "r", use_case: "daily", created_at: old },
-  ];
-  const out = filterOneAndDoneChurned(profiles, logs, NOW).map((p) => p.id).sort();
-  assertEquals(out, ["q"]);
+Deno.test("keepIds — an empty segment sends to nobody, never to everybody", () => {
+  // The dangerous failure for a broadcast filter: an empty result must NOT be
+  // treated as "no filter" and blast the whole eligible list.
+  const profiles = [{ id: "a" }, { id: "b" }];
+  assertEquals(keepIds(profiles, []).length, 0);
+  assertEquals(keepIds(profiles, new Set()).length, 0);
+  assertEquals(keepIds([], ["a"]).length, 0);
 });
