@@ -698,17 +698,11 @@ async function enqueueStreakBroadcast(supabase: Db, limit: number) {
     queued += slice.length;
   }
 
-  // Record the send against the campaign so this cohort can never be picked up
-  // again — by a re-run of this action, or by backfill_daily if it's ever
-  // raised. Written at enqueue rather than at drain because the generic drain
-  // knows nothing about campaigns; the cost is that a row that never drains
-  // still counts as sent.
-  for (let i = 0; i < rows.length; i += 500) {
-    const track = rows.slice(i, i + 500).map((r) => ({ campaign_id: STREAK_CAMPAIGN_ID, user_id: r.uid }));
-    const { error } = await supabase
-      .from("email_campaign_sends").upsert(track, { onConflict: "campaign_id,user_id", ignoreDuplicates: true });
-    if (error) console.error(`[run-campaign] enqueue send-tracking failed:`, error.message);
-  }
+  // Deliberately does NOT write email_campaign_sends. That table is the
+  // onboarding drip's record; adding broadcast recipients to it made the
+  // campaign report 343 sends when only 77 people got it as onboarding email.
+  // streak_broadcast_audience() excludes anyone already in broadcast_queue
+  // under this label, so re-running here is still idempotent.
 
   return { audience: audience.length, queued, personalized, fallback, no_email: noEmail };
 }

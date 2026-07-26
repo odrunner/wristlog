@@ -3187,8 +3187,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
         <div id="broadcast-draft-status" aria-live="polite" style="font-size:.78rem;color:var(--muted);margin-bottom:.5rem;"></div>
 
-        <!-- Saved drafts list -->
+        <!-- Saved drafts list (localStorage — this browser only) -->
         <div id="broadcast-drafts-list" style="margin-bottom:.6rem;"></div>
+
+        <!-- Real sends from broadcast_queue. Separate from drafts above, which
+             live in localStorage: a send queued server-side has no local draft
+             and would otherwise be invisible on this tab. -->
+        <div id="broadcast-sends-list" style="margin-bottom:.6rem;"></div>
 
         <!-- Segment selector -->
         <div class="draft-form-row" style="margin-bottom:.5rem;">
@@ -7066,7 +7071,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.16.21';
+const APP_VERSION = '26.16.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14366,25 +14371,44 @@ function showAdminPage() {
 // Broadcast queue status (pending/sent/quota) + manual drain
 async function renderBroadcastQueueStatus() {
   const el = document.getElementById('broadcast-queue-status');
+  const sendsEl = document.getElementById('broadcast-sends-list');
   if (!el) return;
   try {
     const { data } = await db.rpc('admin_broadcast_queue_status');
     const q = data || {};
-    if (!Number(q.pending) && !Number(q.sent) && !Number(q.failed)) { el.innerHTML = ''; return; }
+    if (!Number(q.pending) && !Number(q.sent) && !Number(q.failed)) {
+      el.innerHTML = '';
+      if (sendsEl) sendsEl.innerHTML = '';
+      return;
+    }
     const budget = Math.max(0, 100 - (Number(q.used_today) || 0) - 10);
-    // Per-broadcast rows: a send with personalized subjects (the streak fun-fact
-    // one) is otherwise invisible here — it can't be identified by subject.
-    const rows = (q.breakdown || []).map(b => {
-      const pending = Number(b.pending) || 0;
-      const done = pending === 0;
-      return `<div style="margin-top:.25rem;padding-left:.5rem;border-left:2px solid ${done ? 'var(--border)' : 'var(--gold)'};">
-        <b>${escHtml(b.label || '(unnamed)')}</b> — ${done
-          ? `all ${Number(b.sent) || 0} sent`
-          : `<b>${pending}</b> pending · ${Number(b.sent) || 0} sent`}${Number(b.failed) ? ` · <span style="color:var(--error);">${Number(b.failed)} failed</span>` : ''}
-      </div>`;
-    }).join('');
+
+    // Real sends, listed like the drafts above them. Without this a broadcast
+    // queued server-side has no localStorage draft and appears nowhere on the
+    // tab — and one with per-recipient subjects can't even be grouped by
+    // subject, so it read as an unnamed row count.
+    if (sendsEl) {
+      const rows = (q.breakdown || []).map(b => {
+        const pending = Number(b.pending) || 0;
+        const sent = Number(b.sent) || 0;
+        const failed = Number(b.failed) || 0;
+        const done = pending === 0;
+        const when = b.last_sent ? new Date(b.last_sent).toLocaleDateString() : '';
+        return `<div style="display:flex;align-items:center;gap:.4rem;padding:.35rem .5rem;background:var(--surface);border-radius:6px;margin-bottom:.25rem;font-size:.82rem;border-left:3px solid ${done ? 'var(--border)' : 'var(--gold)'};">
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(b.label || '(unnamed)')}</span>
+          <span style="color:${done ? 'var(--muted)' : 'var(--gold)'};font-size:.75rem;white-space:nowrap;">${
+            done ? `all ${sent} sent` : `${pending} pending · ${sent} sent`
+          }${failed ? ` · <span style="color:var(--error);">${failed} failed</span>` : ''}</span>
+          <span style="color:var(--muted);font-size:.72rem;white-space:nowrap;">${escHtml(when)}</span>
+        </div>`;
+      }).join('');
+      sendsEl.innerHTML = rows
+        ? '<div class="eyebrow eyebrow-muted" style="margin-bottom:.3rem;">Sent &amp; Queued</div>' + rows
+        : '';
+    }
+
     el.innerHTML = `Queue: <b>${Number(q.pending) || 0}</b> pending · ${Number(q.sent) || 0} sent (${Number(q.sent_today) || 0} today) · ${Number(q.failed) || 0} failed · quota used today ${Number(q.used_today) || 0}/100 · next drain ≈ ${budget} emails (nightly 21:30 UTC)
-      <button class="btn btn-ghost" onclick="drainBroadcastNow()" style="font-size:.72rem;padding:.2rem .5rem;margin-left:.4rem;">Drain now</button>${rows}`;
+      <button class="btn btn-ghost" onclick="drainBroadcastNow()" style="font-size:.72rem;padding:.2rem .5rem;margin-left:.4rem;">Drain now</button>`;
   } catch (_) { el.innerHTML = ''; }
 }
 
