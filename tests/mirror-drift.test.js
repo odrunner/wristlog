@@ -44,6 +44,7 @@ const VERBATIM = [
   'campaignSubject', 'campaignGroupOf', 'periodCutoff', 'wearLeaderboard',
   'isWearEntry', 'isMeasurementCardImage', 'feedKeysetFilter', 'dedupeNewFeedLogs', 'feedPageOutcome',
   'shouldPromptFirstWear', 'hasWornToday', 'shouldRevealBadges', 'shouldShowPushPrimer',
+  'fillCampaignTokens', 'unresolvedCampaignTokens',
 ];
 
 const ADAPTED = [

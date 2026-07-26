@@ -107,6 +107,25 @@ export function campaignGroupOf(subj) {
   return { group: 3, rank: 0 };
 }
 
+// ── Campaign token substitution (admin preview / test send) ────────────────
+// run-campaign fills {{watch}}/{{watchPhrase}}/{{fact}} per recipient from their
+// own collection. The admin preview and "Send Test to Me" have no recipient, so
+// they substitute a sample — without this the raw braces shipped in the test
+// email. Mirrors fillCampaignTokens in index.html.
+export function fillCampaignTokens(text, vars, esc) {
+  return String(text || '')
+    .replace(/\{\{name\}\}/g, 'Ozgur')
+    .replace(/\{\{watchPhrase\}\}/g, esc(vars.watchPhrase))
+    .replace(/\{\{watch\}\}/g, esc(vars.watch))
+    .replace(/\{\{fact\}\}/g, esc(vars.fact));
+}
+
+// Tokens no single pre-rendered HTML can fill. send-broadcast (cohort blasts)
+// renders once for everyone, so a body carrying these must be blocked there.
+export function unresolvedCampaignTokens(text) {
+  return [...new Set(String(text || '').match(/\{\{(watch|watchPhrase|fact)\}\}/g) || [])];
+}
+
 // ── Wear leaderboard ───────────────────────────────────────────────────────
 // Spec: docs/superpowers/specs/2026-07-19-wear-leaderboard-design.md
 // An all-time ranking permanently punishes recently acquired watches, so the

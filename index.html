@@ -7066,7 +7066,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.14.28';
+const APP_VERSION = '26.14.37';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16866,6 +16866,77 @@ function clearTrackPhoto() {
 
 let _campaignsData = [];
 
+// {{watch}}/{{watchPhrase}}/{{fact}} are resolved PER RECIPIENT by run-campaign
+// (their own watch + a fact from the shared pool). The admin preview and the
+// "Send Test to Me" button have no recipient, so they render a sample instead —
+// otherwise the raw tokens ship into the test email.
+// Kept in sync with FALLBACK_FACT in supabase/functions/run-campaign/lib.ts.
+const CAMPAIGN_FALLBACK_FACT = {
+  watch: 'Omega Speedmaster',
+  watchPhrase: 'the Omega Speedmaster',
+  fact: "It was never designed for space — Omega built it as a motorsport chronograph in 1957, and NASA found it years later by sending a staffer to buy chronographs off the shelf at a Houston jeweller, without saying who they were for.",
+};
+let _campaignSampleVars = null;
+
+// Your own newest watch that has a fact in the pool. Deliberately "newest WITH a
+// fact" rather than the server's plain "newest" — a preview should show the
+// personalized case, not the fallback, whenever one is available.
+async function loadCampaignSampleVars() {
+  try {
+    const { data: watches } = await db.from('watches')
+      .select('brand, name, created_at').eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false });
+    const usable = (watches || []).filter(w => (w.brand || '').trim() && (w.name || '').trim());
+    if (!usable.length) return;
+    const keys = usable.map(w => `${w.brand.trim().toLowerCase()}|${w.name.trim().toLowerCase()}`);
+    const { data: facts } = await db.from('watch_facts')
+      .select('model_key, position, fact').in('model_key', keys);
+    if (!facts?.length) return;
+    // Same completeness bar the server applies (looksCompleteFact): no rows cut
+    // mid-sentence by the early generation bug.
+    const usableFacts = facts.filter(f => {
+      const t = (f.fact || '').trim();
+      return t.length >= 40 && t.length <= 500 && /[.!?]$/.test(t);
+    });
+    for (const w of usable) {
+      const key = `${w.brand.trim().toLowerCase()}|${w.name.trim().toLowerCase()}`;
+      const hit = usableFacts.filter(f => f.model_key === key).sort((a, b) => a.position - b.position)[0];
+      if (!hit) continue;
+      const label = w.name.trim().toLowerCase().startsWith(w.brand.trim().toLowerCase())
+        ? w.name.trim() : `${w.brand.trim()} ${w.name.trim()}`;
+      _campaignSampleVars = { watch: label, watchPhrase: `your ${label}`, fact: hit.fact };
+      return;
+    }
+  } catch (e) {
+    console.warn('[campaigns] sample fact lookup failed, using fallback:', e.message);
+  }
+}
+
+// {{watchPhrase}} is substituted before {{watch}} so the longer token wins.
+function fillCampaignTokens(text, vars, esc) {
+  return String(text || '')
+    .replace(/\{\{name\}\}/g, 'Ozgur')
+    .replace(/\{\{watchPhrase\}\}/g, esc(vars.watchPhrase))
+    .replace(/\{\{watch\}\}/g, esc(vars.watch))
+    .replace(/\{\{fact\}\}/g, esc(vars.fact));
+}
+
+// Subject is a plain-text header — substitute raw, like personalizeSubject().
+function fillCampaignSubject(text) {
+  return fillCampaignTokens(text, _campaignSampleVars || CAMPAIGN_FALLBACK_FACT, s => s);
+}
+
+// Body lands inside HTML — escape the values, like personalizeBody().
+function fillCampaignBody(text) {
+  return fillCampaignTokens(text, _campaignSampleVars || CAMPAIGN_FALLBACK_FACT, escHtml);
+}
+
+// Tokens run-campaign fills per recipient. Any other surface that sends this
+// copy to real users has to be blocked, or they receive the literal braces.
+function unresolvedCampaignTokens(text) {
+  return [...new Set(String(text || '').match(/\{\{(watch|watchPhrase|fact)\}\}/g) || [])];
+}
+
 async function loadCampaigns() {
   const container = document.getElementById('campaigns-list');
   if (!container) return;
@@ -16873,6 +16944,10 @@ async function loadCampaigns() {
   const { data, error } = await db.from('email_campaigns').select('*').order('delay_days', { ascending: true }).order('created_at', { ascending: true });
   if (error) { container.innerHTML = `<div style="color:var(--error);font-size:.82rem;">Error: ${error.message}</div>`; return; }
   _campaignsData = data || [];
+
+  // Resolve the sample fact once per load — updateCampaignPreview runs on every
+  // keystroke and must stay synchronous.
+  if (!_campaignSampleVars) await loadCampaignSampleVars();
 
   // Also load send counts
   const { data: sendCounts } = await db.rpc('campaign_send_counts') || { data: [] };
@@ -16904,7 +16979,7 @@ async function loadCampaigns() {
         <input type="text" id="camp-subject-${c.id}" value="${escHtml(c.subject)}" style="font-size:.82rem;" oninput="updateCampaignPreview('${c.id}')">
       </div>
       <div class="draft-form-row" style="margin-bottom:.4rem;">
-        <label>Body (HTML, use {{name}} for user's name)</label>
+        <label>Body (HTML) — {{name}}, plus {{watch}} / {{watchPhrase}} / {{fact}} for their own watch and a fact about it. Preview and test send show a sample; real sends resolve per recipient.</label>
         <textarea id="camp-body-${c.id}" rows="10" style="font-size:.82rem;min-height:160px;" oninput="updateCampaignPreview('${c.id}')">${escHtml(c.body_html)}</textarea>
       </div>
       <div class="draft-form-row" style="margin-bottom:.4rem;">
@@ -16950,8 +17025,8 @@ async function loadCampaigns() {
 function updateCampaignPreview(id) {
   const el = document.getElementById('camp-preview-' + id);
   if (!el) return;
-  const subject = document.getElementById('camp-subject-' + id)?.value?.trim() || '';
-  const body = (document.getElementById('camp-body-' + id)?.value?.trim() || '').replace(/\{\{name\}\}/g, 'Ozgur');
+  const subject = fillCampaignSubject(document.getElementById('camp-subject-' + id)?.value?.trim() || '');
+  const body = fillCampaignBody(document.getElementById('camp-body-' + id)?.value?.trim() || '');
   if (!subject && !body) {
     el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">Start typing to see preview</div>';
     return;
@@ -17037,8 +17112,8 @@ async function saveCampaign(id) {
 async function testCampaign(id) {
   const camp = _campaignsData.find(c => c.id === id);
   if (!camp) return;
-  const subject = document.getElementById('camp-subject-' + id)?.value?.trim() || camp.subject;
-  const body = (document.getElementById('camp-body-' + id)?.value?.trim() || camp.body_html).replace(/\{\{name\}\}/g, 'Ozgur');
+  const subject = fillCampaignSubject(document.getElementById('camp-subject-' + id)?.value?.trim() || camp.subject);
+  const body = fillCampaignBody(document.getElementById('camp-body-' + id)?.value?.trim() || camp.body_html);
   const statusEl = document.getElementById('camp-status-' + id);
   if (statusEl) statusEl.textContent = 'Sending test...';
   try {
@@ -17077,6 +17152,13 @@ async function sendToCohort(id) {
   const subject = document.getElementById('camp-subject-' + id)?.value?.trim() || camp.subject;
   const body = document.getElementById('camp-body-' + id)?.value?.trim() || camp.body_html;
   if (!subject || !body) { toast('Subject and body are required', 'error'); return; }
+  // send-broadcast renders one HTML for everyone, so it cannot fill per-recipient
+  // tokens — they'd reach real inboxes as literal braces. Only run-campaign can.
+  const unresolved = unresolvedCampaignTokens(subject + body);
+  if (unresolved.length) {
+    toast(`Cohort sends can't personalize ${unresolved.join(' / ')} — use Run Now instead`, 'error');
+    return;
+  }
   const limitRaw = document.getElementById('camp-limit-' + id)?.value?.trim();
   const limit = limitRaw ? Math.max(1, parseInt(limitRaw, 10)) : null;
   const statusEl = document.getElementById('camp-status-' + id);
