@@ -87,7 +87,7 @@ Nothing calls it, so this is a no-op for the app. Do **not** revoke
 
 ---
 
-## S2 — Nine `admin_*` RPCs are still anon-executable (guard holds) — **Low**
+## S2 — Nine `admin_*` RPCs are still anon-executable (guard holds) — **Low** — **FIXED 2026-07-26 (LIVE)**
 
 Carried forward from **2026-07-19 #1**, which is *mostly* closed. That fix added an
 `is_admin` guard to all admin RPCs and `REVOKE`d six of them. Twelve now correctly
@@ -118,7 +118,7 @@ understood; the remaining nine are just unfinished cleanup.
 
 ---
 
-## S3 — `identify-watch` facts mode: unvalidated model key, expensive per call — **Low**
+## S3 — `identify-watch` facts mode: unvalidated model key, expensive per call — **Low** — **FIXED 2026-07-26 (DEPLOYED)**
 
 `supabase/functions/identify-watch/index.ts:215`
 

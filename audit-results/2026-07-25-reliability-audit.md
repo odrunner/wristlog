@@ -187,7 +187,7 @@ componentwise, used by all four sites.
 
 ---
 
-## R5 — `loadMoreFeed` can dead-end the feed early — **Low**
+## R5 — `loadMoreFeed` can dead-end the feed early — **Low** — **FIXED 2026-07-26**
 
 `index.html:10670`
 

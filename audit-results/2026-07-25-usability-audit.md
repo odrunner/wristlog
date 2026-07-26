@@ -10,7 +10,7 @@ the in-app Help and What's New against what actually shipped.
 
 ---
 
-## U1 — What's New and Help do not cover anything shipped in the last five days — **Low-Medium**
+## U1 — What's New and Help do not cover anything shipped in the last five days — **Low-Medium** — **FIXED 2026-07-26** (Help only — What's New skipped by request: these are plumbing, not announcements)
 
 `index.html:2321-2339`
 
@@ -40,7 +40,7 @@ setting and the badge dot.
 
 ---
 
-## U2 — The badge reveal shows 8 medallions but every name — **Low**
+## U2 — The badge reveal shows 8 medallions but every name — **Low** — **FIXED 2026-07-26**
 
 `index.html` (`openBadgeRevealModal`, commit `c7adaa0`)
 
@@ -65,7 +65,7 @@ and let the flex row wrap (it already has `flex-wrap: wrap`).
 
 ---
 
-## U3 — A reveal can be permanently consumed without ever being shown — **Low**
+## U3 — A reveal can be permanently consumed without ever being shown — **Low** — **FIXED 2026-07-26**
 
 `index.html` (`maybeRevealBadges`, commit `c7adaa0`)
 

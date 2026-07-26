@@ -89,7 +89,7 @@ the point is that the index is there when the crossover happens.
 
 ---
 
-## P2 — The win-back segment reads the whole `logs` table per send — **Low**
+## P2 — The win-back segment reads the whole `logs` table per send — **Low** — **FIXED 2026-07-26 (LIVE)**
 
 `supabase/functions/send-broadcast/index.ts:201`
 
