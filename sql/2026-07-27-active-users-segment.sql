@@ -19,7 +19,7 @@ as $$
     );
 $$;
 
-revoke execute on function public.active_users_with_watches(integer) from public, anon;
+revoke execute on function public.active_users_with_watches(integer) from public, anon, authenticated;
 grant execute on function public.active_users_with_watches(integer) to service_role;
 
 notify pgrst, 'reload schema';

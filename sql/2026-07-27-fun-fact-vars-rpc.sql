@@ -52,7 +52,7 @@ as $$
   ) f on true;
 $$;
 
-revoke execute on function public.fun_fact_vars(uuid[]) from public, anon;
+revoke execute on function public.fun_fact_vars(uuid[]) from public, anon, authenticated;
 grant execute on function public.fun_fact_vars(uuid[]) to service_role;
 
 -- Segment: members who have never logged a wear. The "Start your streak"
@@ -78,7 +78,7 @@ as $$
     );
 $$;
 
-revoke execute on function public.never_logged_users(integer) from public, anon;
+revoke execute on function public.never_logged_users(integer) from public, anon, authenticated;
 grant execute on function public.never_logged_users(integer) to service_role;
 
 notify pgrst, 'reload schema';
