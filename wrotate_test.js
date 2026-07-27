@@ -126,6 +126,36 @@ export function unresolvedCampaignTokens(text) {
   return [...new Set(String(text || '').match(/\{\{(watch|watchPhrase|fact)\}\}/g) || [])];
 }
 
+// ── Login fun-fact modal ───────────────────────────────────────────────────
+// Spec: docs/superpowers/specs/2026-07-27-login-fun-fact-modal-design.md
+// Fun facts are only reachable after logging a wear, so the people who most
+// need the nudge never see one. This shows one, once, to a user who hasn't
+// logged that day. factReady is false when the fact would need a ~10-15s
+// generation — we skip entirely rather than show a spinner.
+export function shouldShowFactModal({ loggedIn, isDemo, watchCount, loggedToday, alreadyShown, factReady }) {
+  return !!loggedIn && !isDemo && (watchCount || 0) >= 1 && !loggedToday && !alreadyShown && !!factReady;
+}
+
+// Which watch to feature: most-worn, tie-broken by most recently added, falling
+// back to most recently added when there are no wears at all — the lapsed and
+// never-logged case, which is most of the audience. Mirrors how the emails pick
+// (pickFeaturedWatch), so the same person sees a consistent "their watch"
+// across channels. Measurement shares are not wears and don't count.
+export function pickFactModalWatch(watches, logs) {
+  const usable = (watches || []).filter(w => w && (w.brand || '').trim() && (w.name || '').trim());
+  if (!usable.length) return null;
+  const wearCount = new Map();
+  for (const l of (logs || [])) {
+    if (!l || !l.watchId || l.useCase === 'measurement') continue;
+    wearCount.set(l.watchId, (wearCount.get(l.watchId) || 0) + 1);
+  }
+  return usable.slice().sort((a, b) => {
+    const d = (wearCount.get(b.id) || 0) - (wearCount.get(a.id) || 0);
+    if (d !== 0) return d;
+    return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+  })[0];
+}
+
 // ── Wear leaderboard ───────────────────────────────────────────────────────
 // Spec: docs/superpowers/specs/2026-07-19-wear-leaderboard-design.md
 // An all-time ranking permanently punishes recently acquired watches, so the
