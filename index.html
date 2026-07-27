@@ -7072,7 +7072,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.16.54';
+const APP_VERSION = '26.17.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14391,45 +14391,69 @@ async function renderBroadcastQueueStatus() {
     // tab — and one with per-recipient subjects can't even be grouped by
     // subject, so it read as an unnamed row count.
     if (sendsEl) {
-      // The drain claims pending rows FIFO by queue id, so the first still-
-      // draining broadcast finishes before the next one gets any quota at all.
-      // The RPC returns them in that order; number them so it's visible.
+      // The drain sends one broadcast at a time, ordered by priority then id —
+      // anything behind the first gets no quota until that one finishes. The
+      // arrows rewrite that order (admin_move_broadcast).
+      const pendingCount = (q.breakdown || []).filter(b => Number(b.pending) > 0).length;
       let position = 0;
       const rows = (q.breakdown || []).map(b => {
         const pending = Number(b.pending) || 0;
         const sent = Number(b.sent) || 0;
         const failed = Number(b.failed) || 0;
+        const sentToday = Number(b.sent_today) || 0;
         const total = Number(b.total) || (pending + sent + failed);
         const done = pending === 0;
         if (!done) position++;
-        // Nights left at tonight's budget. Only the one actually next in line
-        // gets the full budget; anything behind it waits its turn.
-        const nights = (!done && position === 1 && budget > 0) ? Math.ceil(pending / budget) : 0;
+        const isNext = !done && position === 1;
+        // Only the broadcast actually next in line gets the nightly budget, so
+        // an ETA for anything behind it would be fiction.
+        const nights = (isNext && budget > 0) ? Math.ceil(pending / budget) : 0;
+        const pct = total ? Math.round((sent / total) * 100) : 0;
+        const label = b.label || '(unnamed)';
         const when = b.last_sent ? new Date(b.last_sent).toLocaleDateString() : '';
+        const arrows = done ? '' : `
+          <button class="btn btn-ghost" style="padding:0 .3rem;font-size:.7rem;line-height:1.2;" ${position === 1 ? 'disabled' : ''}
+            onclick="moveBroadcast(${JSON.stringify(label).replace(/"/g, '&quot;')}, -1)" aria-label="Send ${escAttr(label)} earlier">▲</button>
+          <button class="btn btn-ghost" style="padding:0 .3rem;font-size:.7rem;line-height:1.2;" ${position === pendingCount ? 'disabled' : ''}
+            onclick="moveBroadcast(${JSON.stringify(label).replace(/"/g, '&quot;')}, 1)" aria-label="Send ${escAttr(label)} later">▼</button>`;
         const rank = done
           ? '<span style="color:var(--muted);">done</span>'
-          : (position === 1
-              ? '<span style="color:var(--gold);font-weight:700;">next</span>'
-              : `<span style="color:var(--muted);">#${position} in line</span>`);
-        return `<div style="padding:.4rem .5rem;background:var(--surface);border-radius:6px;margin-bottom:.25rem;font-size:.82rem;border-left:3px solid ${done ? 'var(--border)' : (position === 1 ? 'var(--gold)' : 'var(--border)')};">
+          : (isNext ? '<span style="color:var(--gold);font-weight:700;">sending next</span>'
+                    : `<span style="color:var(--muted);">#${position} in line</span>`);
+        return `<div style="padding:.4rem .5rem;background:var(--surface);border-radius:6px;margin-bottom:.25rem;font-size:.82rem;border-left:3px solid ${isNext ? 'var(--gold)' : 'var(--border)'};">
           <div style="display:flex;align-items:center;gap:.4rem;">
-            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(b.label || '(unnamed)')}</span>
-            <span style="font-size:.72rem;white-space:nowrap;">${rank}</span>
-            <span style="color:var(--muted);font-size:.72rem;white-space:nowrap;">${escHtml(when)}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(label)}</span>
+            <span style="font-size:.72rem;white-space:nowrap;">${rank}</span>${arrows}
           </div>
           <div style="color:var(--muted);font-size:.74rem;margin-top:.15rem;">
-            ${done ? `all ${sent} sent` : `${sent} of ${total} sent · ${pending} left${nights ? ` · ≈${nights} night${nights === 1 ? '' : 's'}` : ''}`}${failed ? ` · <span style="color:var(--error);">${failed} failed</span>` : ''}
+            ${sent} of ${total} sent (${pct}%)${done ? '' : ` · ${pending} left`}${sentToday ? ` · ${sentToday} tonight` : ''}${nights ? ` · ≈${nights} night${nights === 1 ? '' : 's'} to go` : ''}${failed ? ` · <span style="color:var(--error);">${failed} failed</span>` : ''}${when ? ` · last ${escHtml(when)}` : ''}
           </div>
         </div>`;
       }).join('');
       sendsEl.innerHTML = rows
-        ? '<div class="eyebrow eyebrow-muted" style="margin-bottom:.3rem;">Sent &amp; Queued <span style="text-transform:none;font-weight:400;">— drains oldest first, one broadcast at a time</span></div>' + rows
+        ? '<div class="eyebrow eyebrow-muted" style="margin-bottom:.3rem;">Sent &amp; Queued <span style="text-transform:none;font-weight:400;">— one at a time, in this order</span></div>' + rows
         : '';
     }
 
-    el.innerHTML = `Queue: <b>${Number(q.pending) || 0}</b> pending · ${Number(q.sent) || 0} sent (${Number(q.sent_today) || 0} today) · ${Number(q.failed) || 0} failed · quota used today ${Number(q.used_today) || 0}/100 · next drain ≈ ${budget} emails (nightly 21:30 UTC)
+    // Per-broadcast progress lives in the list above; this line is only the
+    // shared Resend quota, which is genuinely global.
+    el.innerHTML = `Shared quota today ${Number(q.used_today) || 0}/100 · next drain ≈ ${budget} emails (nightly 21:30 UTC)
       <button class="btn btn-ghost" onclick="drainBroadcastNow()" style="font-size:.72rem;padding:.2rem .5rem;margin-left:.4rem;">Drain now</button>`;
   } catch (_) { el.innerHTML = ''; }
+}
+
+
+// Move a queued broadcast earlier (-1) or later (+1) in the drain order.
+async function moveBroadcast(label, direction) {
+  try {
+    const { data, error } = await db.rpc('admin_move_broadcast', { p_label: label, p_direction: direction });
+    if (error) throw error;
+    if (data && data.moved === false) { toast(data.reason || 'Could not move', 'error'); return; }
+    toast(direction < 0 ? 'Moved earlier' : 'Moved later');
+  } catch (e) {
+    toast('Reorder failed: ' + e.message, 'error');
+  }
+  renderBroadcastQueueStatus();
 }
 
 async function drainBroadcastNow() {

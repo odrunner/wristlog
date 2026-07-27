@@ -490,6 +490,9 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
     .from("broadcast_queue")
     .select("id, uid, email, subject, html")
     .eq("status", "pending")
+    // priority first (admin_move_broadcast reorders it), id as tie-breaker.
+    // With every priority at its 0 default this is the original FIFO.
+    .order("priority", { ascending: true })
     .order("id", { ascending: true })
     .limit(budget);
   if (qErr) {
