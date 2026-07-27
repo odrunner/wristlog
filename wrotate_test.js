@@ -69,41 +69,58 @@ export function brandRequestTitle(name) {
 }
 
 // ── Admin → Traffic → "By Campaign" ────────────────────────────────────────
-// Per-actor notification subjects ("masont mentioned you", "SA also commented")
-// collapse into one bucket each, so they read as campaigns rather than dozens
-// of one-off rows in "Older campaigns".
+// Collapses subjects that vary per recipient into one campaign key, so they read
+// as campaigns rather than dozens of one-off rows in "Older campaigns". Two
+// families need this: per-actor social notifications ("masont mentioned you"),
+// and campaigns whose subject line is personalized with the recipient's own
+// watch ("A fun fact about your Seiko Sekonda" — the day-3 onboarding drip).
+export const CAMPAIGN_FUNFACT_DRIP = 'A fun fact about your watch';
+export const CAMPAIGN_WINBACK_FUNFACT = 'Your watches miss you';
 export function campaignSubject(subj) {
   const t = (subj || '').toLowerCase();
   if (t.includes('mentioned you')) return 'Mentions';
   if (t.includes('commented')) return 'Comments';
-  if (t.includes('follow') || t.includes('close friend')) return 'Follows';
+  // One bucket for the whole follow/friend graph. "accepted your friend
+  // request" matches neither 'follow' nor 'close friend', so it used to escape
+  // into "Older campaigns" as a lone 1-delivered row.
+  if (t.includes('follow') || t.includes('friend request') || t.includes('close friend')) return 'Connections';
+  // Anchored, not substring: the win-back broadcast subject also contains "fun
+  // fact about", and folding it into the onboarding drip would double-count two
+  // separate campaigns. Order doesn't matter given both are anchored, but the
+  // anchors do.
+  if (/^your watches miss you/.test(t)) return CAMPAIGN_WINBACK_FUNFACT;
+  if (/^a fun fact about /.test(t)) return CAMPAIGN_FUNFACT_DRIP;
   return subj;
 }
 
+// The four live onboarding drips, in send order. Slot 2 is the fun-fact drip
+// (email_campaigns "Onboarding 2 — Start your streak", subject
+// "A fun fact about {{watchPhrase}}"), which replaced "Start tracking your
+// wears" — that one is retired now and belongs in "Older campaigns" with its
+// history, not in slot 2 pretending to be current.
 const CAMPAIGN_ONBOARDING = [
   'Add your first watch',
-  'Start tracking your wears',
+  CAMPAIGN_FUNFACT_DRIP,
   'How accurate is your watch?',
   'Which watch is really your favorite?',
 ];
-// Follows / Comments / Mentions — the recurring social notifications. Their own
-// section: they are ongoing and comparable to each other, unlike finished sends.
-const CAMPAIGN_NOTIFICATIONS = ['Follows', 'Comments', 'Mentions'];
-// Broadcasts still draining from broadcast_queue — remove once fully sent and
-// they fall through to "Older campaigns".
-const CAMPAIGN_ACTIVE_BROADCASTS = [
-  'Your watch has more to tell you — meet the Pro V2 engine (beta)',
-];
+// Connections / Comments / Mentions — the recurring social notifications. Their
+// own section: they are ongoing and comparable to each other, unlike finished sends.
+const CAMPAIGN_NOTIFICATIONS = ['Connections', 'Comments', 'Mentions'];
 export const CAMPAIGN_GROUP_LABELS = [
   'Onboarding', 'Notifications', 'Broadcast — in progress', 'Older campaigns',
 ];
 
-export function campaignGroupOf(subj) {
+// `activeKeys` is the set of campaign keys still draining from broadcast_queue,
+// built by the caller from the RPC's active_broadcasts. This used to be a
+// hardcoded subject list, which meant a finished broadcast kept claiming the
+// "in progress" section until someone edited the array by hand.
+export function campaignGroupOf(subj, activeKeys) {
   let i = CAMPAIGN_ONBOARDING.indexOf(subj);
   if (i >= 0) return { group: 0, rank: i };
   i = CAMPAIGN_NOTIFICATIONS.indexOf(subj);
   if (i >= 0) return { group: 1, rank: i };
-  if (CAMPAIGN_ACTIVE_BROADCASTS.includes(subj)) return { group: 2, rank: 0 };
+  if (activeKeys && activeKeys.has(subj)) return { group: 2, rank: 0 };
   return { group: 3, rank: 0 };
 }
 

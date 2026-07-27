@@ -7068,7 +7068,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.10.02';
+const APP_VERSION = '27.16.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7185,41 +7185,58 @@ function wearLeaderboard(watches, logs, cutoff) {
 }
 
 // ── Admin → Traffic → "By Campaign" ────────────────────────────────────────
-// Per-actor notification subjects ("masont mentioned you", "SA also commented")
-// collapse into one bucket each, so they read as campaigns rather than dozens
-// of one-off rows in "Older campaigns".
+// Collapses subjects that vary per recipient into one campaign key, so they read
+// as campaigns rather than dozens of one-off rows in "Older campaigns". Two
+// families need this: per-actor social notifications ("masont mentioned you"),
+// and campaigns whose subject line is personalized with the recipient's own
+// watch ("A fun fact about your Seiko Sekonda" — the day-3 onboarding drip).
+const CAMPAIGN_FUNFACT_DRIP = 'A fun fact about your watch';
+const CAMPAIGN_WINBACK_FUNFACT = 'Your watches miss you';
 function campaignSubject(subj) {
   const t = (subj || '').toLowerCase();
   if (t.includes('mentioned you')) return 'Mentions';
   if (t.includes('commented')) return 'Comments';
-  if (t.includes('follow') || t.includes('close friend')) return 'Follows';
+  // One bucket for the whole follow/friend graph. "accepted your friend
+  // request" matches neither 'follow' nor 'close friend', so it used to escape
+  // into "Older campaigns" as a lone 1-delivered row.
+  if (t.includes('follow') || t.includes('friend request') || t.includes('close friend')) return 'Connections';
+  // Anchored, not substring: the win-back broadcast subject also contains "fun
+  // fact about", and folding it into the onboarding drip would double-count two
+  // separate campaigns. Order doesn't matter given both are anchored, but the
+  // anchors do.
+  if (/^your watches miss you/.test(t)) return CAMPAIGN_WINBACK_FUNFACT;
+  if (/^a fun fact about /.test(t)) return CAMPAIGN_FUNFACT_DRIP;
   return subj;
 }
 
+// The four live onboarding drips, in send order. Slot 2 is the fun-fact drip
+// (email_campaigns "Onboarding 2 — Start your streak", subject
+// "A fun fact about {{watchPhrase}}"), which replaced "Start tracking your
+// wears" — that one is retired now and belongs in "Older campaigns" with its
+// history, not in slot 2 pretending to be current.
 const CAMPAIGN_ONBOARDING = [
   'Add your first watch',
-  'Start tracking your wears',
+  CAMPAIGN_FUNFACT_DRIP,
   'How accurate is your watch?',
   'Which watch is really your favorite?',
 ];
-// Follows / Comments / Mentions — the recurring social notifications. Their own
-// section: they are ongoing and comparable to each other, unlike finished sends.
-const CAMPAIGN_NOTIFICATIONS = ['Follows', 'Comments', 'Mentions'];
-// Broadcasts still draining from broadcast_queue — remove once fully sent and
-// they fall through to "Older campaigns".
-const CAMPAIGN_ACTIVE_BROADCASTS = [
-  'Your watch has more to tell you — meet the Pro V2 engine (beta)',
-];
+// Connections / Comments / Mentions — the recurring social notifications. Their
+// own section: they are ongoing and comparable to each other, unlike finished sends.
+const CAMPAIGN_NOTIFICATIONS = ['Connections', 'Comments', 'Mentions'];
 const CAMPAIGN_GROUP_LABELS = [
   'Onboarding', 'Notifications', 'Broadcast — in progress', 'Older campaigns',
 ];
 
-function campaignGroupOf(subj) {
+// `activeKeys` is the set of campaign keys still draining from broadcast_queue,
+// built by the caller from the RPC's active_broadcasts. This used to be a
+// hardcoded subject list, which meant a finished broadcast kept claiming the
+// "in progress" section until someone edited the array by hand.
+function campaignGroupOf(subj, activeKeys) {
   let i = CAMPAIGN_ONBOARDING.indexOf(subj);
   if (i >= 0) return { group: 0, rank: i };
   i = CAMPAIGN_NOTIFICATIONS.indexOf(subj);
   if (i >= 0) return { group: 1, rank: i };
-  if (CAMPAIGN_ACTIVE_BROADCASTS.includes(subj)) return { group: 2, rank: 0 };
+  if (activeKeys && activeKeys.has(subj)) return { group: 2, rank: 0 };
   return { group: 3, rank: 0 };
 }
 
@@ -15532,8 +15549,9 @@ async function renderAdminTraffic() {
 
 function renderEmailEngagement(data) {
   // `data` is the admin_email_engagement RPC result: all-time per-subject
-  // aggregates plus a recent opens/clicks list (computed server-side so the
-  // numbers are cumulative, not just the last ~week's worth of raw events).
+  // aggregates, the subjects still pending in broadcast_queue, and a recent
+  // opens/clicks list (computed server-side so the numbers are cumulative, not
+  // just the last ~week's worth of raw events).
   data = data || {};
   let bySubjectRows = data.by_subject || [];
   const recent = data.recent || [];
@@ -15544,7 +15562,7 @@ function renderEmailEngagement(data) {
   // subject-regex filter here which kept missing variants — "WRotate Weekly
   // Measurement Review — …" and "⚠️ WRotate weekly-review FAILED — …" both
   // slipped through and showed up under "Older campaigns".
-  if (!bySubjectRows.length && !recent.length) return '';
+  if (!bySubjectRows.length && !recent.length && !(data.active_broadcasts || []).length) return '';
 
   // Overall totals = sum across all (non-founder) subjects, all time.
   let sent = 0, delivered = 0, opened = 0, clicked = 0, bounced = 0;
@@ -15574,15 +15592,36 @@ function renderEmailEngagement(data) {
     s.clicked += +r.clicked || 0;
   });
 
+  // Which campaigns are mid-send, from broadcast_queue's pending rows rather
+  // than a hardcoded list. Normalized through campaignSubject so a broadcast
+  // with per-recipient subjects collapses to the same key as its email_events.
+  const activeKeys = new Set(
+    (data.active_broadcasts || []).map(s => campaignSubject(s)).filter(Boolean)
+  );
+
+  // Seed a zero row for any queued broadcast with no engagement yet, so a send
+  // that is genuinely in flight is visible from the moment it is queued. Without
+  // this the section is empty until the first external delivery lands — and the
+  // very first sends of a broadcast are often internal test sends, which the RPC
+  // filters out by recipient.
+  activeKeys.forEach(k => {
+    if (!bySubject[k]) bySubject[k] = { sent: 0, delivered: 0, opened: 0, clicked: 0 };
+  });
+
   // Display order: onboarding drips 1-4, the social notification buckets
-  // (Follows / Comments / Mentions) as their own section, in-flight broadcasts,
-  // then everything else (finished/old campaigns) by volume.
+  // (Connections / Comments / Mentions) as their own section, in-flight
+  // broadcasts, then everything else (finished/old campaigns) by volume.
   const GROUP_LABELS = CAMPAIGN_GROUP_LABELS;
-  const groupOf = (subj) => campaignGroupOf(subj).group;
-  const rankOf  = (subj) => campaignGroupOf(subj).rank;
+  const groupOf = (subj) => campaignGroupOf(subj, activeKeys).group;
+  const rankOf  = (subj) => campaignGroupOf(subj, activeKeys).rank;
 
   let lastGroup = -1;
   const subjectRows = Object.entries(bySubject)
+    // A campaign that reached exactly one inbox isn't a campaign — it's a test
+    // send or a stray personalized one-off ("We miss you, Tyler"). Only applied
+    // to group 3: a known drip or an in-flight broadcast stays visible from its
+    // very first delivery, which is when you most want to watch it.
+    .filter(([subj, s]) => groupOf(subj) !== 3 || (s.delivered || s.sent || 0) > 1)
     .sort((a, b) => {
       const ga = groupOf(a[0]), gb = groupOf(b[0]);
       if (ga !== gb) return ga - gb;
