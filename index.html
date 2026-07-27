@@ -7068,7 +7068,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.08.44';
+const APP_VERSION = '27.08.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11011,6 +11011,64 @@ function factModalLogNow() {
   if (id) openTrackModal(id);
 }
 
+// Catch-all: called from the main renders. Copies maybePromptFirstWear's deferred
+// open — re-check eligibility after a beat, and bail if any overlay is already up
+// so this can never stack on the badge reveal, push primer, or add-watch sheet.
+// (`.overlay:not(.hidden)` already covers #af2-sheet, which carries the same
+// class; the explicit af2 check mirrors maybePromptFirstWear rather than diverge.)
+//
+// Every failure path is "show nothing, stay eligible": the once-ever key is
+// written only when the modal actually renders, so being bumped just means the
+// user becomes eligible again next session.
+function maybeShowFactModal() {
+  if (_factModalPending) return;
+  if (!_factModalPreCheck()) return;
+  _factModalPending = true;
+  setTimeout(async () => {
+    _factModalPending = false;
+    try {
+      if (!_factModalPreCheck()) return;
+      if (document.querySelector('.overlay:not(.hidden)')) return;   // something else is up
+      const af2 = document.getElementById('af2-sheet');
+      if (af2 && !af2.classList.contains('hidden')) return;
+      if (_firstWearPending) return;                                 // first-wear prompt owns this session
+
+      const watch = pickFactModalWatch(watches, logs);
+      if (!watch) return;
+
+      const { data, error } = await db.rpc('peek_watch_fact',
+        { p_brand: watch.brand, p_name: watch.name });
+      // needs_generation means the pool has nothing new; the RPC wrote nothing.
+      // Skip silently and stay eligible rather than wait ~10-15s on a spinner.
+      if (error || !data || data.needs_generation || !data.fact) return;
+
+      if (!shouldShowFactModal(_factModalState(true))) return;       // re-check after the await
+      localStorage.setItem(_factModalKey(), '1');                    // once ever, per user
+      openFactModal(watch, data.fact);
+    } catch (e) {
+      console.error('[factmodal] skipped:', e && e.message);         // never surfaces to the user
+    }
+  }, 600);
+}
+
+// Cheap synchronous gate, used before scheduling and again inside the timer.
+// factReady is unknown until the RPC answers, so it is asserted true here and
+// re-evaluated for real once the fact is in hand.
+function _factModalState(factReady) {
+  return {
+    loggedIn: !!currentUser,
+    isDemo: _isDemoMode,
+    watchCount: (watches || []).length,
+    loggedToday: (logs || []).some(l => l && l.date === todayStr() && isWearEntry(l)),
+    alreadyShown: localStorage.getItem(_factModalKey()) === '1',
+    factReady: !!factReady,
+  };
+}
+
+function _factModalPreCheck() {
+  return shouldShowFactModal(_factModalState(true));
+}
+
 // ── First wear-log onboarding prompt ─────────────────────────────────────────
 // 84% of new users add a watch but only 18% ever log a wear — the biggest funnel
 // leak. Right after a brand-new user finishes adding their first watch(es), auto-
@@ -11184,6 +11242,7 @@ function renderFeed() {
   if (!el) return;
   renderOnboardingChecklist();
   maybePromptFirstWear();
+  maybeShowFactModal();
 
   // Preserve any in-progress comment text so it survives re-renders
   const _savedCommentDrafts = {};
@@ -18203,6 +18262,7 @@ function renderTagFilterBar() {
 
 function renderCollection(force) {
   maybePromptFirstWear();
+  maybeShowFactModal();
   if (!force && _lastRenderedGen.collection === _dataGen) return;
   _lastRenderedGen.collection = _dataGen;
   const priceBtn = document.getElementById('coll-update-prices-btn');
@@ -22419,6 +22479,7 @@ function closeAf2Sheet() {
   // Image add-flow just closed — the render catch-all doesn't cover a plain
   // sheet dismiss, so trigger the first-wear prompt here too (guarded internally).
   maybePromptFirstWear();
+  maybeShowFactModal();
 }
 
 function af2DismissToBackground() {
