@@ -7068,7 +7068,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.08.48';
+const APP_VERSION = '27.09.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11025,7 +11025,6 @@ function maybeShowFactModal() {
   if (!_factModalPreCheck()) return;
   _factModalPending = true;
   setTimeout(async () => {
-    _factModalPending = false;
     try {
       if (!_factModalPreCheck()) return;
       if (document.querySelector('.overlay:not(.hidden)')) return;   // something else is up
@@ -11043,10 +11042,19 @@ function maybeShowFactModal() {
       if (error || !data || data.needs_generation || !data.fact) return;
 
       if (!shouldShowFactModal(_factModalState(true))) return;       // re-check after the await
+      // Re-check AFTER the await: the pre-RPC check can go stale while the
+      // request is in flight (e.g. the push primer opens), and _factModalState
+      // reads data only, never the DOM. Without this the modal can render on
+      // top of another overlay — the exact thing the deferred open prevents.
+      if (document.querySelector('.overlay:not(.hidden)')) return;
+      const af2b = document.getElementById('af2-sheet');
+      if (af2b && !af2b.classList.contains('hidden')) return;
       localStorage.setItem(_factModalKey(), '1');                    // once ever, per user
       openFactModal(watch, data.fact);
     } catch (e) {
       console.error('[factmodal] skipped:', e && e.message);         // never surfaces to the user
+    } finally {
+      _factModalPending = false;
     }
   }, 600);
 }
