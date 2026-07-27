@@ -139,7 +139,11 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
     const body = await req.json();
-    const { subject, html, test_email, segment = "all", campaign_id, cohort, dry_run, limit, enqueue, drain } = body;
+    const { subject, html, test_email, segment = "all", campaign_id, cohort, dry_run, limit, enqueue, drain, priority } = body;
+    // Drain order for a queued broadcast: lower goes first, id breaks ties.
+    // Comes from the draft's position in the admin's Saved Drafts list, so the
+    // order can be set before anything is sent. Defaults to 0 = old FIFO.
+    const queuePriority = Number.isFinite(Number(priority)) ? Math.trunc(Number(priority)) : 0;
     // Set once the admin JWT is verified; used to personalize a test send.
     let adminUserId: string | null = null;
 
@@ -368,6 +372,7 @@ serve(async (req) => {
           subject: personalizeSubject(subject, null, v),
           html: personalizeBody(safeHtml, null, v),
           label: subject,
+          priority: queuePriority,
         };
       });
       let queued = 0;

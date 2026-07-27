@@ -7072,7 +7072,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.17.01';
+const APP_VERSION = '26.17.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16517,17 +16517,43 @@ function clearBroadcastForm() {
   document.getElementById('broadcast-status').innerHTML = '';
 }
 
+// Draft order IS send order: a draft queued from position 1 drains before one
+// queued from position 2, so the ▲▼ here set priority before anything is sent.
+// (Sending is still per-draft — this decides who wins when both are queued.)
 function renderBroadcastDrafts() {
   const el = document.getElementById('broadcast-drafts-list');
   if (!el) return;
   const drafts = getBroadcastDrafts();
   if (!drafts.length) { el.innerHTML = ''; return; }
-  el.innerHTML = '<div class="eyebrow eyebrow-muted" style="margin-bottom:.3rem;">Saved Drafts</div>' +
-    drafts.map(d => `<div style="display:flex;align-items:center;gap:.4rem;padding:.35rem .5rem;background:var(--surface);border-radius:6px;margin-bottom:.25rem;font-size:.82rem;">
+  el.innerHTML = '<div class="eyebrow eyebrow-muted" style="margin-bottom:.3rem;">Saved Drafts <span style="text-transform:none;font-weight:400;">— order here sets which sends first</span></div>' +
+    drafts.map((d, i) => `<div style="display:flex;align-items:center;gap:.4rem;padding:.35rem .5rem;background:var(--surface);border-radius:6px;margin-bottom:.25rem;font-size:.82rem;">
+      <span style="color:var(--muted);font-size:.72rem;width:1.1rem;text-align:right;flex:0 0 auto;">${i + 1}</span>
       <button class="btn btn-ghost" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;padding:.1rem .3rem;font-size:.82rem;" onclick="loadBroadcastDraft(${d.id})" title="Click to load">${escHtml(d.subject || '(no subject)')}</button>
+      <button class="btn btn-ghost" style="padding:0 .3rem;font-size:.7rem;line-height:1.2;" ${i === 0 ? 'disabled' : ''} onclick="moveBroadcastDraft(${d.id}, -1)" aria-label="Send earlier: ${escAttr(d.subject || 'untitled')}">▲</button>
+      <button class="btn btn-ghost" style="padding:0 .3rem;font-size:.7rem;line-height:1.2;" ${i === drafts.length - 1 ? 'disabled' : ''} onclick="moveBroadcastDraft(${d.id}, 1)" aria-label="Send later: ${escAttr(d.subject || 'untitled')}">▼</button>
       <span style="color:var(--muted);font-size:.72rem;white-space:nowrap;">${new Date(d.savedAt).toLocaleDateString()}</span>
       <button class="btn btn-ghost" style="padding:.1rem .3rem;font-size:.7rem;" onclick="deleteBroadcastDraft(${d.id})" aria-label="Delete draft: ${escAttr(d.subject || 'untitled')}">✕</button>
     </div>`).join('');
+}
+
+// Swap a draft with its neighbour. Persisted, so the order survives reloads and
+// is what sendBroadcastAll reads to set the queue priority.
+function moveBroadcastDraft(id, direction) {
+  const drafts = getBroadcastDrafts();
+  const i = drafts.findIndex(d => d.id === id);
+  const j = i + direction;
+  if (i < 0 || j < 0 || j >= drafts.length) return;
+  [drafts[i], drafts[j]] = [drafts[j], drafts[i]];
+  localStorage.setItem(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts));
+  renderBroadcastDrafts();
+}
+
+// Where the composer's current subject sits in the drafts list — becomes the
+// queued broadcast's priority, so the order set above carries into the drain.
+function currentDraftPriority() {
+  const subject = document.getElementById('broadcast-subject')?.value?.trim() || '';
+  const i = getBroadcastDrafts().findIndex(d => (d.subject || '') === subject);
+  return i < 0 ? 999 : i;
 }
 
 let _broadcastSending = false;
@@ -16625,7 +16651,9 @@ async function confirmBroadcastAll() {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_KEY,
       },
-      body: JSON.stringify({ subject, html, enqueue: true, segment: document.getElementById('broadcast-segment')?.value || 'all' }),
+      // priority = this draft's position in Saved Drafts, so the order set
+      // there decides which queued broadcast drains first.
+      body: JSON.stringify({ subject, html, enqueue: true, priority: currentDraftPriority(), segment: document.getElementById('broadcast-segment')?.value || 'all' }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed');
