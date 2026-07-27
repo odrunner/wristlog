@@ -10,6 +10,7 @@ import {
   buildCommentAlsoTargets,
   buildBadgeNotificationRows,
   notificationOpensBadgeWall,
+  notifStaysUnreadOnPanelOpen,
 } from '../wrotate_test.js';
 
 // ── notificationBody ──────────────────────────────────────────────────────────
@@ -583,5 +584,30 @@ describe('badge_earned notifications', () => {
   it('routes badge taps to the badge wall, not posts/clubs/profiles', () => {
     expect(notificationOpensBadgeWall('badge_earned')).toBe(true);
     expect(notificationOpensBadgeWall('follow')).toBe(false);
+  });
+
+  // The badge row replaced the red count dot on the profile avatar, so it has to
+  // behave like that dot did: it stays lit until the user reaches the badge wall,
+  // rather than being wiped by the panel's auto mark-all-read on open.
+  it('survives the panel auto mark-all-read; every other type does not', () => {
+    expect(notifStaysUnreadOnPanelOpen('badge_earned')).toBe(true);
+    for (const t of ['follow', 'like', 'comment', 'mention', 'system',
+                     'club_invite', 'friend_request', 'follow_accepted']) {
+      expect(notifStaysUnreadOnPanelOpen(t)).toBe(false);
+    }
+  });
+
+  it('leaves only badge rows unread when the panel auto-marks on open', () => {
+    const notifs = [
+      { id: 'a', type: 'follow', is_read: false },
+      { id: 'b', type: 'badge_earned', is_read: false },
+      { id: 'c', type: 'like', is_read: false },
+      { id: 'd', type: 'badge_earned', is_read: true },
+    ];
+    // Mirrors the markAllNotifsRead(includeBadges) filter in index.html.
+    const auto = notifs.filter(n => !n.is_read && !notifStaysUnreadOnPanelOpen(n.type));
+    expect(auto.map(n => n.id)).toEqual(['a', 'c']);
+    const explicit = notifs.filter(n => !n.is_read);
+    expect(explicit.map(n => n.id)).toEqual(['a', 'b', 'c']);
   });
 });

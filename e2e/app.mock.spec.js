@@ -2055,6 +2055,24 @@ test.describe('Badge earned notification (mocked)', () => {
     await page.locator('#notif-bn-1').click();
     await expect(page.locator('#badge-wall-modal')).toBeVisible({ timeout: 5000 });
   });
+
+  // This row replaced the red count dot that used to sit on the profile avatar,
+  // so it must outlive the panel's auto mark-all-read (fires 1.2s after open) —
+  // otherwise the nudge dies the first time the user glances at the bell.
+  test('badge row stays unread after the panel auto-marks everything else read', async ({ page }) => {
+    await page.locator('#bell-btn').click();
+    const row = page.locator('#notif-bn-1');
+    await expect(row).toBeVisible({ timeout: 5000 });
+    await expect(row).toHaveClass(/notif-unread/);
+    await page.waitForTimeout(2000);   // past the 1200ms auto mark-all-read
+    await expect(row).toHaveClass(/notif-unread/);
+    await expect(page.locator('#bell-badge')).not.toHaveClass(/hidden/);
+  });
+
+  // The dot is gone from the header — the bell is the only badge indicator now.
+  test('no unseen-badge dot is rendered on the profile button', async ({ page }) => {
+    await expect(page.locator('#profile-badge-dot')).toHaveCount(0);
+  });
 });
 
 // ── Wishlist: Add from Photo (mocked) ────────────────────────────────────

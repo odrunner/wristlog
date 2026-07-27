@@ -1462,6 +1462,15 @@ export function notificationOpensBadgeWall(type) {
 }
 
 /**
+ * Types that survive the panel's auto mark-all-read. Badge rows are the
+ * unseen-badge nudge — merely opening the bell shouldn't extinguish them; only
+ * reaching the badge wall (or an explicit "Mark all read") does.
+ */
+export function notifStaysUnreadOnPanelOpen(type) {
+  return type === 'badge_earned';
+}
+
+/**
  * Build the bell-inbox rows for a set of newly-earned badges.
  * Self-addressed (recipient = earner) and actor-less, like 'system'.
  * badges: [{ ref, name }]. ref_id is the badge ref as a string.
