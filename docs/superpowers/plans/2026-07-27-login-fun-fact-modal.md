@@ -1105,10 +1105,10 @@ git push origin main
 
 Run:
 ```bash
-until curl -s "https://wrotate.com/sw.js?cb=$RANDOM" | grep -q "wristlog-v954"; do sleep 5; done
+until curl -s "https://wrotate.com/sw.js?cb=$RANDOM" | grep -q "wristlog-v955"; do sleep 5; done
 curl -s "https://wrotate.com/?cb=$RANDOM" | grep -c "maybeShowFactModal"
 ```
-Expected: the loop exits (production serving v954) and the grep reports `4`.
+Expected: the loop exits (production serving v955) and the grep reports `4`.
 
 ---
 

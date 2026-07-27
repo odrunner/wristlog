@@ -7068,7 +7068,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.09.24';
+const APP_VERSION = '27.10.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10967,6 +10967,7 @@ function _factModalKey() {
 
 let _factModalPending = false;   // a check is already scheduled — don't stack timers
 let _factModalWatchId = null;    // the watch the open modal is about
+let _factModalCache = null;      // { watchId, fact } — reuse instead of burning another cursor position
 
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
 function shouldShowFactModal({ loggedIn, isDemo, watchCount, loggedToday, alreadyShown, factReady }) {
@@ -11030,16 +11031,26 @@ function maybeShowFactModal() {
       if (document.querySelector('.overlay:not(.hidden)')) return;   // something else is up
       const af2 = document.getElementById('af2-sheet');
       if (af2 && !af2.classList.contains('hidden')) return;
-      if (_firstWearPending) return;                                 // first-wear prompt owns this session
+      // Defer to the first-wear prompt whenever it is still owed. Checking
+      // _firstWearPending is useless — maybePromptFirstWear clears it at the top
+      // of its own callback, before this one runs — so ask the real gate instead.
+      if (_firstWearPending || shouldPromptFirstWear(_firstWearState())) return;
 
       const watch = pickFactModalWatch(watches, logs);
       if (!watch) return;
 
-      const { data, error } = await db.rpc('peek_watch_fact',
-        { p_brand: watch.brand, p_name: watch.name });
-      // needs_generation means the pool has nothing new; the RPC wrote nothing.
-      // Skip silently and stay eligible rather than wait ~10-15s on a spinner.
-      if (error || !data || data.needs_generation || !data.fact) return;
+      let fact;
+      if (_factModalCache && _factModalCache.watchId === watch.id) {
+        fact = _factModalCache.fact;                                 // reuse — don't burn another cursor position
+      } else {
+        const { data, error } = await db.rpc('peek_watch_fact',
+          { p_brand: watch.brand, p_name: watch.name });
+        // needs_generation means the pool has nothing new; the RPC wrote nothing.
+        // Skip silently and stay eligible rather than wait ~10-15s on a spinner.
+        if (error || !data || data.needs_generation || !data.fact) return;
+        fact = data.fact;
+        _factModalCache = { watchId: watch.id, fact };
+      }
 
       if (!shouldShowFactModal(_factModalState(true))) return;       // re-check after the await
       // Re-check AFTER the await: the pre-RPC check can go stale while the
@@ -11050,7 +11061,7 @@ function maybeShowFactModal() {
       const af2b = document.getElementById('af2-sheet');
       if (af2b && !af2b.classList.contains('hidden')) return;
       localStorage.setItem(_factModalKey(), '1');                    // once ever, per user
-      openFactModal(watch, data.fact);
+      openFactModal(watch, fact);
     } catch (e) {
       console.error('[factmodal] skipped:', e && e.message);         // never surfaces to the user
     } finally {
@@ -19580,7 +19591,7 @@ async function saveWatch() {
     toast('Watch updated!');
   } else {
     const newId = uid();
-    watches.push({ id: newId, ...data });
+    watches.push({ id: newId, createdAt: new Date().toISOString(), ...data });
     markDirty('watches', newId);
     if (window.posthog) posthog.capture('watch_added', { brand: data.brand, from_wishlist: !!movingFromWishlistId, source: movingFromWishlistId ? 'wishlist' : 'manual' });
     toast(movingFromWishlistId ? 'Moved to collection!' : 'Watch added to collection!');
@@ -22220,7 +22231,7 @@ async function af2Confirm(idx) {
     }
     ensureBrand(w.brand);
     const watchData = {
-      id: newId, brand: w.brand || '', name: w.model || '',
+      id: newId, createdAt: new Date().toISOString(), brand: w.brand || '', name: w.model || '',
       ref: w.reference || '', movement: w.caliber || w.movementType || '',
       color: w.estimatedColor || '#94a3b8',
       ...(imageUrl ? { image: imageUrl } : {}),
@@ -24803,6 +24814,7 @@ const _overlayCloseMap = {
   'confirm-modal':       _confirmCancel,
   'photo-paste-modal':   closePhotoPasteModal,
   'af2-sheet':            closeAf2Sheet,
+  'fact-modal':           closeFactModal,
   'af2-debug-sheet':      () => document.getElementById('af2-debug-sheet').classList.add('hidden'),
   'enhance-all-modal':    closeEnhanceAll,
   'value-check-modal':    closeValueCheck,
