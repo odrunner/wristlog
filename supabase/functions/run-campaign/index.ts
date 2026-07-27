@@ -596,8 +596,14 @@ async function loadAudience(supabase: Db): Promise<AudienceRow[]> {
 async function prewarmFacts(supabase: Db, limit: number, segment = "never_logged") {
   // Which audience to warm. Both are broadcast segments now; the drip warms
   // itself lazily at send time because it only touches a few users a day.
-  const rpc = segment === "winback" ? "one_and_done_winback_users" : "never_logged_users";
-  const args = segment === "winback" ? { p_churn_days: 14 } : { p_min_age_days: 4 };
+  // "active_users" warms the pool for the login fun-fact modal, which is gated on
+  // a fact being instantly available and skips rather than showing a spinner.
+  const rpc = segment === "winback" ? "one_and_done_winback_users"
+            : segment === "active_users" ? "active_users_with_watches"
+            : "never_logged_users";
+  const args = segment === "winback" ? { p_churn_days: 14 }
+             : segment === "active_users" ? { p_days: 30 }
+             : { p_min_age_days: 4 };
   const { data: seg, error: segErr } = await supabase.rpc(rpc, args);
   if (segErr) throw new Error(`${rpc} failed: ${segErr.message}`);
   const uids = ((seg ?? []) as Array<{ user_id: string }>).map((r) => r.user_id);
