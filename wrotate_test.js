@@ -510,7 +510,7 @@ export function watchToRow(w, userId, eloRatings = {}) {
 
 export function rowToWatch(r) {
   return {
-    id: r.id, brand: r.brand || '', name: r.name || '', ref: r.ref || '',
+    id: r.id, createdAt: r.created_at || null, brand: r.brand || '', name: r.name || '', ref: r.ref || '',
     movement: r.movement || '',
     price: r.price || null, purchaseDate: r.purchase_date || null,
     color: r.color || '#c9a84c',

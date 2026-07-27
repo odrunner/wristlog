@@ -5331,6 +5331,17 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
+<div id="fact-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="fact-modal-title">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-title" id="fact-modal-title" style="justify-content:center;">Did you know?</div>
+    <div id="fact-modal-eyebrow" style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:.5rem 0 .4rem;text-align:center;"></div>
+    <div id="fact-modal-card" style="margin-bottom:.9rem;"></div>
+    <div style="font-size:.82rem;color:var(--muted);line-height:1.5;margin-bottom:1.1rem;text-align:center;">You get a new one every day you wear it.</div>
+    <button class="btn btn-primary" style="width:100%;margin-bottom:.5rem;" onclick="factModalLogNow()">Log this watch</button>
+    <button class="btn btn-ghost" style="width:100%;color:var(--muted);" onclick="closeFactModal()">Maybe later</button>
+  </div>
+</div>
+
 <script>
 // Prevent iOS PWA from restoring previous scroll position on launch
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
@@ -6730,7 +6741,7 @@ function watchToRow(w) {
 }
 function rowToWatch(r) {
   return {
-    id: r.id, brand: r.brand||'', name: r.name||'', ref: r.ref||'',
+    id: r.id, createdAt: r.created_at||null, brand: r.brand||'', name: r.name||'', ref: r.ref||'',
     movement: r.movement||'',
     price: r.price||null, purchaseDate: r.purchase_date||null,
     color: r.color||'#c9a84c',
@@ -6830,7 +6841,7 @@ async function loadUserData() {
   // Promise.resolve() converts the Supabase thenable to a real Promise (thenables lack .catch())
   const _q = query => Promise.resolve(query).catch(e => { console.error('[WristLog] loadUserData query error:', e?.message); return { data: null, error: e }; });
   const [wRes, lRes, wlRes, brRes] = await withTimeout(Promise.all([
-    _q(db.from('watches').select('id,brand,name,ref,movement,price,purchase_date,color,image,url,tags,straps,owner,market_price,market_price_date,market_price_src,watch_charts_url,price_history,warranty_expiry,has_box,has_papers,insurance,insured_value,insurance_notes,receipts,watch_privacy,elo_rating,year_range,movement_type,caliber,case_material,case_diameter,case_length,case_thickness,weight,water_resistance,crystal_type,gender,origin,description,background,functions,bph').eq('user_id', uid)),
+    _q(db.from('watches').select('id,created_at,brand,name,ref,movement,price,purchase_date,color,image,url,tags,straps,owner,market_price,market_price_date,market_price_src,watch_charts_url,price_history,warranty_expiry,has_box,has_papers,insurance,insured_value,insurance_notes,receipts,watch_privacy,elo_rating,year_range,movement_type,caliber,case_material,case_diameter,case_length,case_thickness,weight,water_resistance,crystal_type,gender,origin,description,background,functions,bph').eq('user_id', uid)),
     // .range(): PostgREST caps an unbounded select at 1000 rows silently. A
     // truncated log set would quietly re-rank the Most Worn leaderboard rather
     // than fail, so ask for a bound well above the current max (422/user).
@@ -7057,7 +7068,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.08.38';
+const APP_VERSION = '27.08.44';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10938,6 +10949,66 @@ function markMeasurementTried() {
   localStorage.setItem('wrotate_tried_measure', '1');
   renderOnboardingChecklist();
   maybeShowPushPrimer();   // engagement moment — a good time to prime notifications
+}
+
+// ── Login fun-fact modal ─────────────────────────────────────────────────────
+// Spec: docs/superpowers/specs/2026-07-27-login-fun-fact-modal-design.md
+// Fun facts are only reachable after logging a wear, so the users who most need
+// the nudge never see one: of 91 users who signed in over 30 days, 23 logged a
+// wear and 56 owned a watch but logged nothing. Shows one real fact about their
+// own watch, once ever, when they haven't logged that day.
+const FACT_MODAL_KEY = 'wrotate_fact_modal_shown';
+
+// Keyed PER USER, matching _firstWearKey(): two accounts on one device each get
+// their own decision.
+function _factModalKey() {
+  return currentUser ? FACT_MODAL_KEY + '_' + currentUser.id : FACT_MODAL_KEY;
+}
+
+let _factModalPending = false;   // a check is already scheduled — don't stack timers
+let _factModalWatchId = null;    // the watch the open modal is about
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function shouldShowFactModal({ loggedIn, isDemo, watchCount, loggedToday, alreadyShown, factReady }) {
+  return !!loggedIn && !isDemo && (watchCount || 0) >= 1 && !loggedToday && !alreadyShown && !!factReady;
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function pickFactModalWatch(watches, logs) {
+  const usable = (watches || []).filter(w => w && (w.brand || '').trim() && (w.name || '').trim());
+  if (!usable.length) return null;
+  const wearCount = new Map();
+  for (const l of (logs || [])) {
+    if (!l || !l.watchId || l.useCase === 'measurement') continue;
+    wearCount.set(l.watchId, (wearCount.get(l.watchId) || 0) + 1);
+  }
+  return usable.slice().sort((a, b) => {
+    const d = (wearCount.get(b.id) || 0) - (wearCount.get(a.id) || 0);
+    if (d !== 0) return d;
+    return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+  })[0];
+}
+
+function openFactModal(watch, factText) {
+  const card = document.getElementById('fact-modal-card');
+  const eyebrow = document.getElementById('fact-modal-eyebrow');
+  if (!card || !eyebrow || !watch || !factText) return;
+  _factModalWatchId = watch.id;
+  eyebrow.textContent = `💡 Fun fact · ${watch.brand} ${watch.name}`;
+  card.innerHTML = funFactCardHTML({ fact: factText });
+  document.getElementById('fact-modal').classList.remove('hidden');
+  if (window.posthog) posthog.capture('fact_modal_shown', { watch_id: watch.id });
+}
+
+function closeFactModal() {
+  document.getElementById('fact-modal')?.classList.add('hidden');
+}
+
+function factModalLogNow() {
+  const id = _factModalWatchId;
+  closeFactModal();
+  if (window.posthog) posthog.capture('fact_modal_log_clicked', { watch_id: id });
+  if (id) openTrackModal(id);
 }
 
 // ── First wear-log onboarding prompt ─────────────────────────────────────────
