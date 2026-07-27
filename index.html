@@ -5765,40 +5765,26 @@ function openBadgeWall() {
   if (unseen.length && currentUser) {
     unseen.forEach(e => e.seen = true);
     db.from('user_badges').update({ seen: true }).eq('user_id', currentUser.id).eq('seen', false).then(() => {});
-    if (typeof renderProfileBadgeDot === 'function') renderProfileBadgeDot();
   }
+  // Reaching the wall is what clears the bell nudge — see markBadgeNotifsRead().
+  if (typeof markBadgeNotifsRead === 'function') markBadgeNotifsRead();
 }
 
 function closeBadgeWall() {
   document.getElementById('badge-wall-modal').classList.add('hidden');
 }
 
-// ── Badge reveal (modal on open + persistent dot) ──
+// ── Badge reveal (modal on open + persistent bell nudge) ──
 // seen is only flipped by opening the wall, and almost nobody visits it, so ~73%
-// of earned badges never register. Surface them: a count dot on the profile button
-// (ongoing) + a one-per-batch reveal modal on app open (re-engagement).
+// of earned badges never register. Surface them: a bell row per badge that stays
+// unread until the user reaches the wall (ongoing — see notifStaysUnreadOnPanelOpen)
+// + a one-per-batch reveal modal on app open (re-engagement). The nudge used to be
+// a count dot on the profile avatar; it crowded the header, so it moved to the bell.
 const BADGE_REVEAL_KEY = 'wr_badge_reveal_count';
 const BADGE_REVEAL_SHOWN = 8;   // medallions rendered; names are capped to match
 
 function unseenBadgeCount() {
   return (_earnedBadges || []).filter(e => e && !e.seen).length;
-}
-
-function renderProfileBadgeDot() {
-  const btn = document.getElementById('profile-btn');
-  if (!btn) return;
-  let dot = document.getElementById('profile-badge-dot');
-  const n = currentUser ? unseenBadgeCount() : 0;
-  if (n <= 0) { if (dot) dot.classList.add('hidden'); return; }
-  if (!dot) {
-    dot = document.createElement('span');
-    dot.id = 'profile-badge-dot';
-    dot.className = 'bell-badge';   // reuse the notification-count styling
-    btn.style.position = 'relative';
-    btn.appendChild(dot);
-  }
-  dot.textContent = n > 9 ? '9+' : String(n);
-  dot.classList.remove('hidden');
 }
 
 // Returns true only if the reveal actually rendered. maybeRevealBadges() burns the
@@ -5833,8 +5819,7 @@ function closeBadgeReveal() {
 
 function badgeRevealSeeThem() {
   closeBadgeReveal();
-  openBadgeWall();            // marks the badges seen
-  renderProfileBadgeDot();    // clear the dot
+  openBadgeWall();            // marks the badges seen + clears the bell rows
 }
 
 // Called after badges load / the retroactive scan. Pops the reveal once per new
@@ -5909,6 +5894,9 @@ async function notifyBadgesEarned(badges) {
   if (!currentUser || !badges || !badges.length) return;
   try {
     await db.from('notifications').insert(buildBadgeNotificationRows(badges, currentUser.id));
+    // The bell IS the unseen-badge indicator now — light it immediately rather
+    // than waiting for the next poll.
+    loadNotifications();
   } catch (e) { console.warn('[Badges] notif insert failed:', e?.message); }
   try {
     await db.functions.invoke('send-badge-push', { body: { badgeNames: badges.map(b => b.name) } });
@@ -6338,7 +6326,6 @@ async function checkAndAwardBadges(context, postId) {
   if (newlyEarned.length > 0) {
     showBadgeToast(newlyEarned);
     notifyBadgesEarned(newlyEarned);
-    renderProfileBadgeDot();
   }
   if (newlyEarned.length > 0 && myProfile && myProfile.share_achievements !== false) {
     const _bp = badgePostPlan(newlyEarned, context, postId);
@@ -6366,7 +6353,6 @@ async function loadEarnedBadges() {
     .select('*')
     .eq('user_id', currentUser.id);
   if (!error && data) _earnedBadges = data;
-  renderProfileBadgeDot();
 }
 
 async function retroactiveBadgeScan() {
@@ -6374,7 +6360,6 @@ async function retroactiveBadgeScan() {
   _badgeScanDone = true;
   await loadEarnedBadges();
   await checkAndAwardBadges('retroactive');
-  renderProfileBadgeDot();
   maybeRevealBadges();
 }
 
@@ -7072,7 +7057,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.17.39';
+const APP_VERSION = '27.07.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9951,10 +9936,18 @@ async function unfollowUser(userId, btn) {
 }
 
 
-async function markAllNotifsRead() {
+// Types that survive the panel's auto mark-all-read. Badge rows are the
+// unseen-badge nudge — merely opening the bell shouldn't extinguish them; only
+// reaching the badge wall (or an explicit "Mark all read") does.
+function notifStaysUnreadOnPanelOpen(type) {
+  return type === 'badge_earned';
+}
+
+// includeBadges: false for the auto mark-on-open, true for the explicit button.
+async function markAllNotifsRead(includeBadges = true) {
   if (demoGuard()) return;
   if (!currentUser) return;
-  const toMark = userNotifs.filter(n => !n.is_read);
+  const toMark = userNotifs.filter(n => !n.is_read && (includeBadges || !notifStaysUnreadOnPanelOpen(n.type)));
   if (!toMark.length) return;
   const ids = toMark.map(n => n.id);
   const { error: markErr } = await db.from('notifications').update({ is_read: true })
@@ -9964,6 +9957,21 @@ async function markAllNotifsRead() {
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
   updateBellBadge();
   renderNotificationPanel();
+}
+
+// Called when the badge wall opens (from the bell row, the profile, or the
+// reveal modal) — that's the only thing that clears the badge nudge.
+async function markBadgeNotifsRead() {
+  if (!currentUser || _isDemoMode) return;
+  const toMark = (userNotifs || []).filter(n => n.type === 'badge_earned' && !n.is_read);
+  if (!toMark.length) return;
+  toMark.forEach(n => n.is_read = true);
+  unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
+  updateBellBadge();
+  renderNotificationPanel();
+  const { error } = await db.from('notifications').update({ is_read: true })
+    .eq('user_id', currentUser.id).in('id', toMark.map(n => n.id));
+  if (error) console.error('markBadgeNotifsRead error:', error.message);
 }
 
 // ── Notification Panel ─────────────────────────────────────────────────────
@@ -9979,7 +9987,7 @@ function toggleNotifPanel() {
     Promise.all([loadNotifications(), loadFriendRequests(true)])
       .then(() => renderNotificationPanel());
     renderNotificationPanel(); // show cached data immediately
-    setTimeout(markAllNotifsRead, 1200);
+    setTimeout(() => markAllNotifsRead(false), 1200);
   } else {
     panel.classList.add('hidden');
     if (btn) btn.setAttribute('aria-expanded', 'false');
