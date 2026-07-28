@@ -20,3 +20,43 @@ create index if not exists fact_impressions_created_at_idx
   on public.fact_impressions (created_at);
 
 notify pgrst, 'reload schema';
+
+-- Extend admin_fact_counts() with impressions_total / impressions_24h so the
+-- admin panel can compute an expand rate (clicks / impressions). Everything
+-- else is unchanged, including the admin gate and internal_accounts exclusion.
+create or replace function public.admin_fact_counts()
+returns json
+language plpgsql
+security definer
+set search_path to 'pg_catalog', 'public'
+as $function$
+declare
+  d24h timestamptz := now() - interval '24 hours';
+  internal_ids uuid[] := array(select user_id from internal_accounts);
+  result json;
+begin
+  if not exists (select 1 from profiles where id = auth.uid() and is_admin = true) then
+    raise exception 'Not authorized';
+  end if;
+
+  select json_build_object(
+    'clicks_total',      (select count(*) from fact_clicks where user_id <> all(internal_ids)),
+    'clicks_24h',        (select count(*) from fact_clicks where created_at >= d24h and user_id <> all(internal_ids)),
+    'viewers_total',     (select count(distinct user_id) from fact_clicks where user_id <> all(internal_ids)),
+    'viewers_24h',       (select count(distinct user_id) from fact_clicks where created_at >= d24h and user_id <> all(internal_ids)),
+    'impressions_total', (select count(*) from fact_impressions where user_id <> all(internal_ids)),
+    'impressions_24h',   (select count(*) from fact_impressions where created_at >= d24h and user_id <> all(internal_ids)),
+    'generated_total',   (select count(*) from watch_facts),
+    'generated_24h',     (select count(*) from watch_facts where created_at >= d24h),
+    'watches_total',     (select count(distinct model_key) from watch_facts),
+    'watches_24h',       (select count(distinct wf.model_key) from watch_facts wf
+                           where not exists (
+                             select 1 from watch_facts wf2
+                             where wf2.model_key = wf.model_key and wf2.created_at < d24h))
+  ) into result;
+
+  return result;
+end;
+$function$;
+
+notify pgrst, 'reload schema';

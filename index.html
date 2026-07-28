@@ -7086,7 +7086,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.20.25';
+const APP_VERSION = '27.20.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15365,6 +15365,8 @@ async function loadAdminStats() {
         ${statRow('Measurements', extMsr, dod.measurements)}
         ${statRow('Fun fact clicks', Number(fc.clicks_total) || 0, Number(fc.clicks_24h) || 0)}
         ${statRow('Fun fact viewers', Number(fc.viewers_total) || 0, Number(fc.viewers_24h) || 0)}
+        ${statRow('Fun fact impressions', Number(fc.impressions_total) || 0, Number(fc.impressions_24h) || 0)}
+        ${statRow('Fun fact expand rate', (Number(fc.impressions_total) > 0 ? Math.round(Number(fc.clicks_total) / Number(fc.impressions_total) * 100) : 0) + '%', null, 'clicks / impressions')}
         ${statRow('Fun facts generated', Number(fc.generated_total) || 0, Number(fc.generated_24h) || 0)}
         ${statRow('Watches with facts', Number(fc.watches_total) || 0, Number(fc.watches_24h) || 0)}
         ${statRow('Advanced mode (24h)', advSessions24h, advDelta, advUsers24h > 0 ? advUsers24h + ' user' + (advUsers24h === 1 ? '' : 's') : '')}

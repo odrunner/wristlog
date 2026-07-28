@@ -434,3 +434,10 @@ describe('fix: _factImpSeen is reset on sign-out so it cannot survive an account
     expect(inserted).toHaveLength(2);
   });
 });
+
+describe('admin fun-fact stats', () => {
+  it('shows impressions and an expand rate beside the click counts', () => {
+    expect(html).toContain("statRow('Fun fact impressions'");
+    expect(html).toContain("statRow('Fun fact expand rate'");
+  });
+});
