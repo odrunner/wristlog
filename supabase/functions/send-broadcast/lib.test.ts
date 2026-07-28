@@ -382,6 +382,38 @@ Deno.test("isKnownSegment — accepts one_done_winback", () => {
   assertEquals(isKnownSegment("one_done_winback"), true);
 });
 
+// Every segment the admin UI offers must pass validation. never_logged was
+// implemented end to end — dropdown option, index.ts filter, never_logged_users
+// RPC — but missing from this whitelist, so choosing it failed with
+// "Unknown segment: never_logged" before the filter ever ran.
+Deno.test("isKnownSegment — accepts every segment the admin dropdown offers", () => {
+  for (const s of ["all", "one_done_winback", "never_logged"]) {
+    assertEquals(isKnownSegment(s), true, `expected known: ${s}`);
+  }
+});
+
+Deno.test("validateBroadcastInput — accepts never_logged", () => {
+  assertEquals(
+    validateBroadcastInput({ subject: "s", html: "<p>h</p>", segment: "never_logged" }),
+    null,
+  );
+});
+
+// Reads the real dropdown rather than a copied list: a new <option> added to the
+// admin UI without a matching whitelist entry fails here instead of at send time.
+Deno.test("isKnownSegment — every #broadcast-segment option in index.html validates", () => {
+  const html = Deno.readTextFileSync(
+    new URL("../../../index.html", import.meta.url),
+  );
+  const select = /<select id="broadcast-segment">([\s\S]*?)<\/select>/.exec(html);
+  assertEquals(select !== null, true, "could not find the #broadcast-segment select");
+  const values = [...select![1].matchAll(/<option value="([^"]+)"/g)].map((m) => m[1]);
+  assertEquals(values.length > 0, true, "no <option> values parsed");
+  for (const v of values) {
+    assertEquals(isKnownSegment(v), true, `dropdown offers "${v}" but isKnownSegment rejects it`);
+  }
+});
+
 Deno.test("keepIds — intersects the eligible set with a server-resolved segment", () => {
   const profiles = [{ id: "a" }, { id: "b" }, { id: "c" }];
   // one_and_done_winback_users() returns the segment; keepIds narrows to it.

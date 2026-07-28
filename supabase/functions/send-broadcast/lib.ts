@@ -37,6 +37,7 @@ export function isKnownSegment(segment: string | undefined | null): boolean {
   if (!segment || segment === "all") return true;
   if (segment === "never_measured") return true;
   if (segment === "one_done_winback") return true;
+  if (segment === "never_logged") return true;
   if (segment === "batch_1" || segment === "batch_2" || segment === "batch_3") return true;
   if (segmentUserId(segment)) return true;                 // uid:<uuid>
   const hasSuffix = /_\d+of\d+$/.test(segment);
