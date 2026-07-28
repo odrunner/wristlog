@@ -300,7 +300,9 @@
 
       // Update page title + OG
       document.title = `${profile.display_name || profile.username} — WRotate`;
-      const profileUrl = `https://wrotate.com/profile?u=${encodeURIComponent(profile.username || '')}`;
+      // Trailing slash matters: /profile?u=x 301s to /profile/?u=x, and a canonical
+      // that redirects is a wasted hop for crawlers.
+      const profileUrl = `https://wrotate.com/profile/?u=${encodeURIComponent(profile.username || '')}`;
       document.getElementById('canonical-link').href = profileUrl;
       document.getElementById('og-title').content = `${profile.display_name || profile.username} — WRotate`;
       document.getElementById('og-description').content = profile.bio || `Check out ${profile.display_name || profile.username}'s watch collection on WRotate.`;

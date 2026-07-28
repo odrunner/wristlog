@@ -106,7 +106,7 @@ Deno.test("avatarInnerHtml — empty name falls back to '?'", () => {
 });
 
 Deno.test("profileUrl — encodes username", () => {
-  assertEquals(profileUrl("a b"), "https://wrotate.com/profile?u=a%20b");
+  assertEquals(profileUrl("a b"), "https://wrotate.com/profile/?u=a%20b");
 });
 
 Deno.test("profileUrl — null username goes to home", () => {

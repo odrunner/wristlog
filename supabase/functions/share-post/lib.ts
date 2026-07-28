@@ -130,7 +130,8 @@ export function avatarInnerHtml(avatarUrl: string | null | undefined, displayNam
     : esc((displayName || "?").trim().split(/\s+/).map((w: string) => w[0] || "").join("").slice(0, 2).toUpperCase());
 }
 
-// Profile link: /profile?u=<username> when username present, else WRotate home.
+// Profile link: /profile/?u=<username> when username present, else WRotate home.
+// Trailing slash avoids the 301 that /profile?u=x would take.
 export function profileUrl(username: string | null | undefined): string {
-  return username ? `https://wrotate.com/profile?u=${encodeURIComponent(username)}` : "https://wrotate.com/";
+  return username ? `https://wrotate.com/profile/?u=${encodeURIComponent(username)}` : "https://wrotate.com/";
 }
