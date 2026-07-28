@@ -7068,7 +7068,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.18.32';
+const APP_VERSION = '27.18.41';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14562,7 +14562,6 @@ function showAdminPage() {
   loadAdminFeedback();
   loadAdminReports();
   loadOfficialDrafts();
-  seedProV2BroadcastDraft();
   seedWinbackBroadcastDraft();
   seedStreakFunFactDraft();
   seedWinbackFunFactDraft();
@@ -14676,8 +14675,6 @@ async function drainBroadcastNow() {
   renderBroadcastQueueStatus();
 }
 
-// One-time: seed the Pro V2 beta announcement into the broadcast drafts list
-// (drafts are device-local; this places it on whichever device opens Admin).
 // The fun-fact card, shared by both drafts below. {{watch}} and {{fact}} are
 // filled per recipient by send-broadcast at queue time from their own
 // collection; {{watchPhrase}} is the possessive form for the subject line.
@@ -14738,44 +14735,6 @@ You logged a wear once and then things went quiet — no worries, life gets busy
 We'd love to see you back.`,
     images: [],
     savedAt: Date.now(),
-  });
-  localStorage.setItem(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 10)));
-}
-
-function seedProV2BroadcastDraft() {
-  const FLAG = 'wr_seed_prov2_draft_v2';
-  if (localStorage.getItem(FLAG)) return;
-  localStorage.setItem(FLAG, '1');
-  const SUBJECT = 'Your watch has more to tell you — meet the Pro V2 engine (beta)';
-  // Plain newlines only — buildBroadcastHtml turns \n into <br> and blank lines into
-  // paragraphs, so explicit <br> tags double the spacing (the v1 seed's mistake).
-  const drafts = getBroadcastDrafts().filter(d => d.subject !== SUBJECT);
-  drafts.unshift({
-    id: Date.now(),
-    subject: SUBJECT,
-    heading: 'Meet Pro V2 — our new measurement engine, now in open beta',
-    body: `We rebuilt WRotate's timegrapher engine from the ground up, and it's now in open beta. Here's what your wrist has been waiting for:
-
-<b>Results in about 10 seconds.</b>
-Rest your watch on the phone's mic, and Pro V2 locks onto its rate in roughly ten seconds. Measure your whole collection over a coffee.
-
-<b>Amplitude — the pro-level metric, now on your phone.</b>
-Amplitude is the balance wheel's swing, measured in degrees — the number watchmakers check first to judge a movement's health. Until now it took a dedicated bench machine. Pro V2 reads it straight from your phone's mic. A healthy movement typically swings 220–300°; a low number can mean it's time for a service.
-
-<b>Steady, repeatable readings.</b>
-Pro V2 measures the beat across the whole signal at once, so back-to-back measurements agree — with each other, and with the bench machines we test against.
-
-<b>See your watch's heartbeat.</b>
-A new live waveform shows every tick and tock overlaid — sharp spikes mean a clean read. It's oddly beautiful.
-
-<b>How to try it:</b> open <b>Measure</b>, switch the engine selector to <b>Pro V2 (beta)</b>, and measure. That's it — no settings required. You'll need app version 2.1 or later, and you can switch back to Standard anytime.
-
-It's a beta, and your measurements are what make it better — if a reading ever looks off, just reply to this email.
-
-Happy measuring,
-The WRotate team`,
-    imageUrls: [],
-    savedAt: new Date().toISOString(),
   });
   localStorage.setItem(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 10)));
 }
@@ -16565,6 +16524,9 @@ function buildBroadcastEmailHtml(heading, bodyHtml, images, footerHtml = '') {
 </html>`;
 }
 
+// Body copy is written with PLAIN NEWLINES — this turns \n into <br> and blank lines
+// into paragraphs, so explicit <br> tags in a draft double the spacing (the mistake the
+// v1 Pro V2 seed shipped with). Keep that in mind when seeding or pasting draft bodies.
 function buildBroadcastHtml() {
   const heading = document.getElementById('broadcast-heading')?.value?.trim() || '';
   const body = document.getElementById('broadcast-body')?.value?.trim() || '';
