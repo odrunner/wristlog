@@ -280,8 +280,157 @@ describe('fun-fact impression tracking', () => {
     expect(fn).toContain("classList.add('is-truncated')");
   });
 
-  it('re-attaches after every feed render', () => {
+  it('re-attaches after every feed render, dropping stale observer registrations (freshRender=true)', () => {
     const fn = html.slice(html.indexOf('function renderFeed()'), html.indexOf('function mountFeedLoadMoreSentinel'));
-    expect(fn).toContain('initFactRows()');
+    expect(fn).toContain('initFactRows(true)');
+  });
+});
+
+describe('fix: paginated posts (loadMoreFeed) are counted too', () => {
+  // 2026-07-27 review finding (Critical): loadMoreFeed() appends cards via
+  // insertAdjacentHTML and never called initFactRows(), so posts loaded by
+  // infinite scroll got no is-truncated flag and no impression observer —
+  // forever. Clicks are recorded on every page (toggleFunFact has no such
+  // gap), so this silently inflated expand rate by undercounting the
+  // denominator. Guard both that the call exists AND that it runs after the
+  // new cards actually land in the DOM.
+  const fn = html.slice(html.indexOf('async function loadMoreFeed('), html.indexOf('async function scrollToFeedPost('));
+
+  it('calls initFactRows() after appending the new cards', () => {
+    const insertIdx = fn.indexOf("insertAdjacentHTML('beforeend', html)");
+    const initIdx = fn.indexOf('initFactRows()');
+    expect(insertIdx).toBeGreaterThan(-1);
+    expect(initIdx).toBeGreaterThan(insertIdx);
+  });
+
+  it('does not pass freshRender=true — an append must not disconnect rows still awaiting their first render\'s observer', () => {
+    expect(fn).not.toContain('initFactRows(true)');
+  });
+});
+
+describe('fix: full re-render vs. append are handled differently by initFactRows (observer leak)', () => {
+  // 2026-07-27 review finding (Important): the single module-level
+  // _factImpObserver was created once and never disconnected. Every full
+  // renderFeed() replaces #feed-list's innerHTML, detaching any row that
+  // hadn't intersected yet; IntersectionObserver holds strong references to
+  // observed targets, so those detached rows leaked for the rest of the
+  // session. A full render must drop the old observer; an append (pagination)
+  // must NOT, or rows from the previous page mid-scroll would stop counting.
+  const src = html.slice(html.indexOf('let _factImpObserver = null;'), html.indexOf('function toggleFeedMenu('));
+
+  class FakeObserver {
+    constructor(cb) {
+      this.cb = cb;
+      this.observed = new Set();
+      this.disconnected = false;
+      FakeObserver.instances.push(this);
+    }
+    observe(el) { this.observed.add(el); }
+    unobserve(el) { this.observed.delete(el); }
+    disconnect() { this.disconnected = true; this.observed.clear(); }
+  }
+
+  function makeRow() {
+    const attrs = {};
+    return {
+      getAttribute: (k) => (k in attrs ? attrs[k] : null),
+      setAttribute: (k, v) => { attrs[k] = v; },
+      classList: { add: () => {} },
+      querySelector: () => null, // not truncated; irrelevant to this test
+    };
+  }
+
+  // Builds a fresh, real, callable initFactRows straight out of the shipped
+  // source (not a reimplementation) with a fake document/IntersectionObserver
+  // wired in, mirroring the toggleFunFact race-guard test's approach below.
+  function build() {
+    FakeObserver.instances = [];
+    let liveRows = [];
+    const fakeDocument = {
+      querySelectorAll: () => liveRows.filter(r => !r.getAttribute('data-fact-init')),
+    };
+    const fakeWindow = { IntersectionObserver: FakeObserver };
+    const currentUser = { id: 'user1' };
+    const db = { from: () => ({ insert: () => ({ then: (cb) => { cb && cb(); return { catch: () => {} }; } }) }) };
+    const factory = new Function(
+      'window', 'document', 'IntersectionObserver', 'currentUser', 'db',
+      `${src}\nreturn { initFactRows, getObserver: () => _factImpObserver };`
+    );
+    const api = factory(fakeWindow, fakeDocument, FakeObserver, currentUser, db);
+    return { ...api, setLiveRows: (rows) => { liveRows = rows; }, instances: FakeObserver.instances };
+  }
+
+  it('a full render (freshRender=true) disconnects the previous observer instead of leaking it', () => {
+    const { initFactRows, getObserver, setLiveRows, instances } = build();
+    const rowA = makeRow();
+    setLiveRows([rowA]);
+    initFactRows(true);
+    const firstObserver = getObserver();
+    expect(instances).toHaveLength(1);
+    expect(firstObserver.observed.has(rowA)).toBe(true);
+
+    // Simulate the next full renderFeed(): the whole list is replaced, so rowA
+    // is detached and a brand-new rowB takes its place.
+    const rowB = makeRow();
+    setLiveRows([rowB]);
+    initFactRows(true);
+
+    expect(firstObserver.disconnected).toBe(true); // stale registration dropped, not leaked
+    const secondObserver = getObserver();
+    expect(secondObserver).not.toBe(firstObserver);
+    expect(instances).toHaveLength(2);
+    expect(secondObserver.observed.has(rowB)).toBe(true);
+  });
+
+  it('an append (no freshRender flag) reuses the existing observer and keeps prior rows registered', () => {
+    const { initFactRows, getObserver, setLiveRows, instances } = build();
+    const rowA = makeRow();
+    setLiveRows([rowA]);
+    initFactRows(true); // the page's initial renderFeed()
+    const observerAfterFirstRender = getObserver();
+
+    // Simulate loadMoreFeed(): rowA is still on screen (not replaced), rowB is
+    // newly appended alongside it.
+    const rowB = makeRow();
+    setLiveRows([rowA, rowB]);
+    initFactRows(); // append — freshRender omitted
+
+    expect(getObserver()).toBe(observerAfterFirstRender); // same instance — not disconnected
+    expect(observerAfterFirstRender.disconnected).toBe(false);
+    expect(instances).toHaveLength(1); // no new observer created
+    expect(observerAfterFirstRender.observed.has(rowA)).toBe(true); // survived the append
+    expect(observerAfterFirstRender.observed.has(rowB)).toBe(true); // newly observed
+  });
+});
+
+describe('fix: _factImpSeen is reset on sign-out so it cannot survive an account switch', () => {
+  // 2026-07-27 review finding (Important): _factImpSeen is never reset on
+  // sign-out. clearUserState() deliberately resets feed state to stop stale
+  // data leaking across accounts but omitted this new Set — so a post already
+  // seen under account A would never fire an impression for account B in the
+  // same tab.
+  it('clearUserState() clears _factImpSeen', () => {
+    const fn = html.slice(html.indexOf('function clearUserState()'), html.indexOf('// ── Timegrapher'));
+    expect(fn).toContain('_factImpSeen.clear()');
+  });
+
+  it('recordFactImpression fires again for the same log id once the set is cleared (simulating an account switch)', () => {
+    const src = html.slice(html.indexOf('let _factImpObserver = null;'), html.indexOf('function initFactRows('));
+    const inserted = [];
+    const db = { from: () => ({ insert: (row) => { inserted.push(row); return { then: (cb) => { cb && cb(); return { catch: () => {} }; } }; } }) };
+    const currentUser = { id: 'userA' };
+    const factory = new Function(
+      'currentUser', 'db',
+      `${src}\nreturn { recordFactImpression, clearSeen: () => _factImpSeen.clear() };`
+    );
+    const { recordFactImpression, clearSeen } = factory(currentUser, db);
+
+    recordFactImpression('log1');
+    recordFactImpression('log1'); // same session, same post — suppressed by design
+    expect(inserted).toHaveLength(1);
+
+    clearSeen(); // exactly what clearUserState() now does on sign-out
+    recordFactImpression('log1'); // next account happens to see the same log id
+    expect(inserted).toHaveLength(2);
   });
 });

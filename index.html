@@ -7086,7 +7086,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.20.14';
+const APP_VERSION = '27.20.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10906,6 +10906,12 @@ async function loadMoreFeed() {
     if (sentinel) sentinel.insertAdjacentHTML('beforebegin', html);
     else if (listEl) listEl.insertAdjacentHTML('beforeend', html);
 
+    // Flag truncated fun-fact rows and start counting impressions on the newly
+    // appended cards. No freshRender flag here — this is an append, not a
+    // replace, so any not-yet-intersected rows from earlier pages must stay
+    // registered with the existing observer.
+    initFactRows();
+
     // Wire up any newly-inserted feed videos.
     document.querySelectorAll('.feed-card-photo > video').forEach(v => {
       try { v.load(); v.play().catch(() => {}); } catch (_) {}
@@ -11364,8 +11370,10 @@ function renderFeed() {
     if (inp) inp.value = val;
   });
 
-  // Flag truncated fun-fact rows and start counting impressions.
-  initFactRows();
+  // Flag truncated fun-fact rows and start counting impressions. The whole
+  // list was just replaced, so drop any observer registrations left over from
+  // the previous render (freshRender=true) before wiring the new rows.
+  initFactRows(true);
 
   // Infinite-scroll sentinel: appended after the cards when more posts may exist.
   mountFeedLoadMoreSentinel();
@@ -11841,9 +11849,24 @@ function recordFactImpression(logId) {
   } catch (e) {}
 }
 
-// Called after every feed render. Flags which rows actually overflow (so `more`
-// isn't advertised on a fact that fits) and wires the impression observer.
-function initFactRows() {
+// Called after every feed render AND after every infinite-scroll append. Flags
+// which rows actually overflow (so `more` isn't advertised on a fact that
+// fits) and wires the impression observer.
+//
+// freshRender=true (renderFeed): the whole card list was just replaced via
+// innerHTML, so every previously-observed row is now detached from the DOM.
+// IntersectionObserver holds strong references to observed targets, so without
+// disconnecting here those detached rows would leak for the rest of the
+// session. Drop the old observer and build a new one.
+//
+// freshRender omitted/false (loadMoreFeed): cards are appended, not replaced —
+// existing observed rows are still live and must stay registered, so the
+// observer is reused as-is.
+function initFactRows(freshRender) {
+  if (freshRender && _factImpObserver) {
+    _factImpObserver.disconnect();
+    _factImpObserver = null;
+  }
   const rows = document.querySelectorAll('.funfact-row:not([data-fact-init])');
   if (!rows.length) return;
   if (!_factImpObserver && 'IntersectionObserver' in window) {
@@ -25168,6 +25191,7 @@ function clearUserState() {
   myClubs = []; pendingClubRequests.clear(); myProfile = null;
   userNotifs = []; unreadNotifCount = 0; notifPanelOpen = false;
   commentLikes = {}; discoverUsers = []; profilePageUserId = null;
+  _factImpSeen.clear(); // fun-fact impressions already seen this session — must not survive an account switch
   feedLoading = false; _feedLoadStartedAt = 0; feedError = false; feedLoadedAt = 0; _clubsLoaded = false; _frLoadedAt = 0;
   Object.keys(_profileCache).forEach(k => delete _profileCache[k]);
   if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }
