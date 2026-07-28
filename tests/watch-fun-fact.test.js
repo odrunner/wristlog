@@ -81,7 +81,7 @@ describe('fun-fact engagement tracking + admin metrics', () => {
     expect(html).toMatch(/funFactRowHTML\(\{\s*fact:\s*item\.fact,\s*logId:\s*item\.id\s*\}\)/);
   });
   it('toggleFunFact records a click on open', () => {
-    expect(html).toContain("recordFactClick(btn.getAttribute('data-log-id'))");
+    expect(html).toContain("recordFactClick(row.getAttribute('data-log-id'))");
   });
   it('recordFactClick does a PLAIN insert into fact_clicks (not upsert)', () => {
     expect(html).toMatch(/from\('fact_clicks'\)\.insert\(/);
@@ -137,16 +137,9 @@ describe('funFactRowHTML', () => {
 });
 
 describe('feed card uses the footnote row, not the pill', () => {
-  it('has removed the pill and the amber feed body from the CSS and card template (toggleFunFact itself is Task 3)', () => {
-    // toggleFunFact still drives the old .funfact-body / funfact-pill-open
-    // classes until Task 3 rewrites it to work on .funfact-row — carve that
-    // function out so this test targets only what Task 2 owns: the CSS rules
-    // and the card template.
-    const toggleStart = html.indexOf('function toggleFunFact(');
-    const toggleEnd = html.indexOf('// ── Feed three-dot menu');
-    const withoutToggle = html.slice(0, toggleStart) + html.slice(toggleEnd);
-    expect(withoutToggle).not.toContain('funfact-pill');
-    expect(withoutToggle).not.toContain('funfact-body');
+  it('has removed the pill and the amber feed body from the CSS, card template and toggleFunFact', () => {
+    expect(html).not.toContain('funfact-pill');
+    expect(html).not.toContain('funfact-body');
   });
 
   it('renders the row from the feed card template', () => {
@@ -163,5 +156,31 @@ describe('feed card uses the footnote row, not the pill', () => {
     expect(css).toContain('var(--badge-accent)');
     expect(css).not.toContain('--badge-tier');
     expect(css).not.toContain('#B8952A');
+  });
+});
+
+describe('toggleFunFact', () => {
+  const fn = html.slice(html.indexOf('function toggleFunFact('), html.indexOf('// ── Feed three-dot menu'));
+
+  it('drives the row, not a separate hidden body', () => {
+    expect(fn).not.toContain('funfact-body');
+    expect(fn).toContain("querySelector('.funfact-clamp')");
+  });
+
+  it('toggles aria-expanded in both directions', () => {
+    expect(fn).toContain("aria-expanded', expanding ? 'true' : 'false'");
+  });
+
+  it('still records the expand exactly once, on expand only', () => {
+    expect(fn.match(/recordFactClick\(/g)).toHaveLength(1);
+  });
+
+  it('honours prefers-reduced-motion', () => {
+    expect(fn).toContain('prefers-reduced-motion: reduce');
+  });
+
+  it('uses the shared 3-line constant rather than a magic number', () => {
+    expect(html).toContain('const FUNFACT_CLAMP_PX = 58.5');
+    expect(fn).toContain('FUNFACT_CLAMP_PX');
   });
 });

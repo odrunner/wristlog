@@ -7086,7 +7086,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.19.53';
+const APP_VERSION = '27.19.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11762,7 +11762,7 @@ async function unfeaturePost(logId) {
   }
 }
 
-// ── Fun-fact pill: expand/collapse the frozen fact inline on the card ────
+// ── Fun-fact footnote: expand/collapse the frozen fact in place ─────────
 // Record a fun-fact pill expand (first open per user, per post). Plain insert —
 // the PK conflict on a repeat open is expected and ignored. Fire-and-forget;
 // never blocks the UI. Powers the admin "Fun fact clicks/viewers" metrics.
@@ -11773,20 +11773,41 @@ function recordFactClick(logId) {
   } catch (e) {}
 }
 
-function toggleFunFact(btn) {
-  const card = btn.closest('.feed-card') || btn.parentElement;
-  const body = card && card.querySelector('.funfact-body');
-  if (!body) return;
-  const open = !body.hasAttribute('hidden');
-  if (open) {
-    body.setAttribute('hidden', '');
-    btn.setAttribute('aria-expanded', 'false');
-    btn.classList.remove('funfact-pill-open');
+// 3 lines of 13px text at line-height 1.5. Must match the max-height in the
+// .funfact-row.is-clamped .funfact-clamp rule.
+const FUNFACT_CLAMP_PX = 58.5;
+
+// Expand/collapse the footnote in place. line-clamp can't be transitioned, so
+// the clamp class comes off for the duration and max-height carries the
+// animation; it goes back on at transitionend to restore the ellipsis.
+function toggleFunFact(row) {
+  const clamp = row.querySelector('.funfact-clamp');
+  if (!clamp) return;
+  const expanding = row.getAttribute('aria-expanded') !== 'true';
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  row.setAttribute('aria-expanded', expanding ? 'true' : 'false');
+
+  if (expanding) {
+    row.classList.remove('is-clamped');
+    clamp.style.maxHeight = '';
+    if (!reduce) {
+      clamp.style.maxHeight = FUNFACT_CLAMP_PX + 'px';
+      const full = clamp.scrollHeight;
+      requestAnimationFrame(() => { clamp.style.maxHeight = full + 'px'; });
+      clamp.addEventListener('transitionend', () => { clamp.style.maxHeight = ''; }, { once: true });
+    }
+    recordFactClick(row.getAttribute('data-log-id'));
+  } else if (reduce) {
+    row.classList.add('is-clamped');
+    clamp.style.maxHeight = '';
   } else {
-    body.removeAttribute('hidden');
-    btn.setAttribute('aria-expanded', 'true');
-    btn.classList.add('funfact-pill-open');
-    recordFactClick(btn.getAttribute('data-log-id'));
+    clamp.style.maxHeight = clamp.scrollHeight + 'px';
+    void clamp.offsetHeight;  // force reflow so the next value animates
+    clamp.style.maxHeight = FUNFACT_CLAMP_PX + 'px';
+    clamp.addEventListener('transitionend', () => {
+      row.classList.add('is-clamped');
+      clamp.style.maxHeight = '';
+    }, { once: true });
   }
 }
 
