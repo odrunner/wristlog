@@ -7086,7 +7086,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.20.04';
+const APP_VERSION = '27.20.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11364,6 +11364,9 @@ function renderFeed() {
     if (inp) inp.value = val;
   });
 
+  // Flag truncated fun-fact rows and start counting impressions.
+  initFactRows();
+
   // Infinite-scroll sentinel: appended after the cards when more posts may exist.
   mountFeedLoadMoreSentinel();
 }
@@ -11822,6 +11825,43 @@ function toggleFunFact(row) {
       clamp.style.maxHeight = '';
     }, { once: true });
   }
+}
+
+// Fun-fact impressions — the denominator for expand rate. Fired once per post
+// per user: a session Set suppresses repeats within a page view, the table's
+// composite PK handles the rest. Fire-and-forget; never blocks the UI.
+let _factImpObserver = null;
+const _factImpSeen = new Set();
+
+function recordFactImpression(logId) {
+  if (!logId || !currentUser || _factImpSeen.has(logId)) return;
+  _factImpSeen.add(logId);
+  try {
+    db.from('fact_impressions').insert({ user_id: currentUser.id, log_id: logId }).then(() => {}).catch(() => {});
+  } catch (e) {}
+}
+
+// Called after every feed render. Flags which rows actually overflow (so `more`
+// isn't advertised on a fact that fits) and wires the impression observer.
+function initFactRows() {
+  const rows = document.querySelectorAll('.funfact-row:not([data-fact-init])');
+  if (!rows.length) return;
+  if (!_factImpObserver && 'IntersectionObserver' in window) {
+    _factImpObserver = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        recordFactImpression(e.target.getAttribute('data-log-id'));
+        _factImpObserver.unobserve(e.target);
+      });
+    }, { threshold: 0.5 });
+  }
+  rows.forEach(row => {
+    row.setAttribute('data-fact-init', '1');
+    const clamp = row.querySelector('.funfact-clamp');
+    if (clamp && clamp.scrollHeight > clamp.clientHeight + 1) row.classList.add('is-truncated');
+    if (_factImpObserver) _factImpObserver.observe(row);
+    else recordFactImpression(row.getAttribute('data-log-id'));
+  });
 }
 
 // ── Feed three-dot menu ──────────────────────────────────────────────────

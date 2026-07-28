@@ -262,3 +262,26 @@ describe('toggleFunFact race guard: a stale transitionend cannot mutate a newer 
     expect(clicks).toEqual(['log1', 'log1']); // recordFactClick fired once per expand (taps 1 and 3)
   });
 });
+
+describe('fun-fact impression tracking', () => {
+  it('inserts impressions into their own table', () => {
+    expect(html).toContain("db.from('fact_impressions').insert(");
+  });
+
+  it('dedups within the page view before hitting the network', () => {
+    const fn = html.slice(html.indexOf('function recordFactImpression('), html.indexOf('function initFactRows('));
+    expect(fn).toContain('_factImpSeen.has(logId)');
+    expect(fn).toContain('_factImpSeen.add(logId)');
+  });
+
+  it('marks truncated rows so the more affordance only shows when it is true', () => {
+    const fn = html.slice(html.indexOf('function initFactRows('), html.indexOf('// ── Feed three-dot menu'));
+    expect(fn).toContain('scrollHeight > clamp.clientHeight');
+    expect(fn).toContain("classList.add('is-truncated')");
+  });
+
+  it('re-attaches after every feed render', () => {
+    const fn = html.slice(html.indexOf('function renderFeed()'), html.indexOf('function mountFeedLoadMoreSentinel'));
+    expect(fn).toContain('initFactRows()');
+  });
+});
