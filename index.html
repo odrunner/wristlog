@@ -1856,7 +1856,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
       max-height: 58.5px;
     }
-    .funfact-bulb { color: var(--badge-accent); vertical-align: -2px; margin-right: .3rem; }
+    .funfact-row .funfact-bulb { color: var(--badge-accent); vertical-align: -2px; margin-right: .3rem; }
     /* Uses the badge accent, not the tier gold: that gold measures 2.64:1 on
        the light card surface and fails AA for 13px text. */
     .funfact-label { color: var(--badge-accent); font-weight: 500; }
@@ -7086,7 +7086,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.20.41';
+const APP_VERSION = '27.20.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11859,9 +11859,21 @@ function recordFactImpression(logId) {
 // disconnecting here those detached rows would leak for the rest of the
 // session. Drop the old observer and build a new one.
 //
-// freshRender omitted/false (loadMoreFeed): cards are appended, not replaced —
-// existing observed rows are still live and must stay registered, so the
-// observer is reused as-is.
+// freshRender omitted/false (loadMoreFeed, refreshFeedCard): cards are
+// appended or a single card is swapped, not a full replace — existing
+// observed rows are still live and must stay registered, so the observer is
+// reused as-is.
+//
+// Truncation (scrollHeight vs. clientHeight) is measured lazily, inside the
+// observer callback at first real visibility — not here, synchronously, right
+// after the HTML lands. If the feed isn't the visible page at init time (a
+// deep link or restored route can switch away while loadFeed()'s async work
+// is still in flight), both values read 0; measuring then would wrongly and
+// permanently skip is-truncated, since data-fact-init blocks remeasurement
+// for the rest of the session. Waiting for the observer means layout has
+// actually settled by the time it's measured. The no-IntersectionObserver
+// fallback has no such "later" moment to defer to, so it still measures
+// synchronously, same as before.
 function initFactRows(freshRender) {
   if (freshRender && _factImpObserver) {
     _factImpObserver.disconnect();
@@ -11873,6 +11885,8 @@ function initFactRows(freshRender) {
     _factImpObserver = new IntersectionObserver(entries => {
       entries.forEach(e => {
         if (!e.isIntersecting) return;
+        const clamp = e.target.querySelector('.funfact-clamp');
+        if (clamp && clamp.scrollHeight > clamp.clientHeight + 1) e.target.classList.add('is-truncated');
         recordFactImpression(e.target.getAttribute('data-log-id'));
         _factImpObserver.unobserve(e.target);
       });
@@ -11880,10 +11894,15 @@ function initFactRows(freshRender) {
   }
   rows.forEach(row => {
     row.setAttribute('data-fact-init', '1');
-    const clamp = row.querySelector('.funfact-clamp');
-    if (clamp && clamp.scrollHeight > clamp.clientHeight + 1) row.classList.add('is-truncated');
-    if (_factImpObserver) _factImpObserver.observe(row);
-    else recordFactImpression(row.getAttribute('data-log-id'));
+    if (_factImpObserver) {
+      _factImpObserver.observe(row);
+    } else {
+      // No IntersectionObserver support: no later visibility moment to defer
+      // to, so measure synchronously here, as before.
+      const clamp = row.querySelector('.funfact-clamp');
+      if (clamp && clamp.scrollHeight > clamp.clientHeight + 1) row.classList.add('is-truncated');
+      recordFactImpression(row.getAttribute('data-log-id'));
+    }
   });
 }
 
@@ -13402,6 +13421,11 @@ function refreshFeedCard(logId) {
   if (!item) return;
   const el = document.getElementById(`feedcard-${logId}`);
   if (el) el.outerHTML = renderFeedCard(item);
+  // Re-wire the fun-fact row on the brand-new node: it has no data-fact-init,
+  // no observer registration and no is-truncated class yet. No freshRender
+  // flag — this is a single-card swap, not a full feed replace, so the shared
+  // observer (and every other row still registered on it) must stay intact.
+  initFactRows();
   document.querySelectorAll('.feed-card-photo > video').forEach(v => { try { v.load(); v.play().catch(() => {}); } catch (_) {} observeFeedVideo(v); });
 }
 

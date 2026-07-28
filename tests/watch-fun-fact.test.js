@@ -441,3 +441,171 @@ describe('admin fun-fact stats', () => {
     expect(html).toContain("statRow('Fun fact expand rate'");
   });
 });
+
+describe('fix: refreshFeedCard re-initialises the fun-fact row after replacing the card', () => {
+  // 2026-07-27 final review finding (Important): refreshFeedCard() replaces a
+  // single card via outerHTML but never re-ran initFactRows(), so the brand-new
+  // DOM node had no data-fact-init, no observer registration and no
+  // is-truncated class. It has 19 call sites (like, unlike, comment like, post
+  // comment, delete comment, caption edit, report, toggleComments, ...) — the
+  // most common feed actions. Consequence: the "more" affordance silently
+  // disappears, and if the row hadn't yet crossed the observer's threshold its
+  // impression is never recorded even though a later tap still fires
+  // recordFactClick — a click with no matching impression, inflating expand
+  // rate.
+  const fn = html.slice(html.indexOf('function refreshFeedCard('), html.indexOf('// ── Comments'));
+
+  it('calls initFactRows() after replacing the card', () => {
+    expect(fn).toMatch(/initFactRows\(\s*\)/);
+  });
+
+  it('does not pass a truthy freshRender argument (that would disconnect the shared observer and drop every other row on the page)', () => {
+    const calls = fn.match(/initFactRows\(([^)]*)\)/g) || [];
+    expect(calls.length).toBeGreaterThan(0);
+    calls.forEach((c) => {
+      const arg = c.slice('initFactRows('.length, -1).trim();
+      expect(arg).toBe(''); // must be the bare, no-argument form
+    });
+  });
+
+  it('calls initFactRows() after the outerHTML swap, not before (the row must exist in the DOM first)', () => {
+    const swapIdx = fn.indexOf('.outerHTML = renderFeedCard(item)');
+    const initIdx = fn.indexOf('initFactRows(');
+    expect(swapIdx).toBeGreaterThan(-1);
+    expect(initIdx).toBeGreaterThan(swapIdx);
+  });
+});
+
+describe('fix: .funfact-bulb footnote color/spacing rule is scoped to the footnote row', () => {
+  // 2026-07-27 final review finding (Minor): the rule added for the new
+  // footnote (`color`, `vertical-align`, `margin-right`) was unscoped, so it
+  // also matched the bulb inside funFactCardHTML's amber card (post-wear card,
+  // login fun-fact modal, watch preview panel). That card already has its own
+  // `gap: .5rem`, so the extra margin-right widened its spacing — and this
+  // feature was explicitly required not to alter that card's appearance.
+  it('scopes the color/vertical-align/margin-right rule under .funfact-row .funfact-bulb', () => {
+    expect(html).toContain('.funfact-row .funfact-bulb { color: var(--badge-accent); vertical-align: -2px; margin-right: .3rem; }');
+  });
+
+  it('does not leave a bare, unscoped .funfact-bulb rule that would also style the amber card bulb', () => {
+    expect(html).not.toMatch(/(?<!\.funfact-row )\.funfact-bulb\s*\{\s*color:/);
+  });
+
+  it('leaves the pre-existing layout-only rule untouched', () => {
+    expect(html).toContain('.funfact-bulb{flex:0 0 auto;}');
+  });
+});
+
+describe('fix: truncation is measured at first real visibility, not synchronously at init', () => {
+  // 2026-07-27 final review finding (Minor): initFactRows previously measured
+  // scrollHeight/clientHeight synchronously, right after the HTML was
+  // injected. If the feed wasn't the visible page at that moment (the boot
+  // path calls loadFeed() unconditionally and asynchronously, so a deep link
+  // or restored route can have switched away), both values read 0 and no row
+  // got is-truncated — and the data-fact-init guard then blocks any later
+  // remeasurement for the rest of the session, so "more" never appears.
+  // Fix: measure inside the IntersectionObserver callback, at first
+  // visibility, when layout has actually settled. The no-IntersectionObserver
+  // fallback still measures synchronously, as before.
+  const src = html.slice(html.indexOf('let _factImpObserver = null;'), html.indexOf('function toggleFeedMenu('));
+
+  class FakeObserver {
+    constructor(cb) { this.cb = cb; this.observed = new Set(); }
+    observe(el) { this.observed.add(el); }
+    unobserve(el) { this.observed.delete(el); }
+    disconnect() { this.observed.clear(); }
+    fire(entries) { this.cb(entries); }
+  }
+
+  function makeRow(clamp, logId) {
+    const attrs = { 'data-log-id': logId || 'log1' };
+    const classes = new Set(['is-clamped']);
+    return {
+      getAttribute: (k) => (k in attrs ? attrs[k] : null),
+      setAttribute: (k, v) => { attrs[k] = v; },
+      classList: { add: (c) => classes.add(c), contains: (c) => classes.has(c) },
+      querySelector: (sel) => (sel === '.funfact-clamp' ? clamp : null),
+      _classes: classes,
+    };
+  }
+
+  function buildWithObserver() {
+    let liveRows = [];
+    const fakeDocument = { querySelectorAll: () => liveRows.filter((r) => !r.getAttribute('data-fact-init')) };
+    const fakeWindow = { IntersectionObserver: FakeObserver };
+    const currentUser = { id: 'user1' };
+    const inserted = [];
+    const db = { from: () => ({ insert: (row) => { inserted.push(row); return { then: (cb) => { cb && cb(); return { catch: () => {} }; } }; } }) };
+    const factory = new Function(
+      'window', 'document', 'IntersectionObserver', 'currentUser', 'db',
+      `${src}\nreturn { initFactRows, getObserver: () => _factImpObserver };`
+    );
+    const api = factory(fakeWindow, fakeDocument, FakeObserver, currentUser, db);
+    return { ...api, setLiveRows: (rows) => { liveRows = rows; }, inserted };
+  }
+
+  it('does not stamp is-truncated at init time when layout has not settled (scrollHeight/clientHeight both read 0)', () => {
+    const { initFactRows, setLiveRows } = buildWithObserver();
+    const clamp = { scrollHeight: 0, clientHeight: 0 }; // page not visible yet, exactly as in the bug report
+    const row = makeRow(clamp);
+    setLiveRows([row]);
+    initFactRows();
+    expect(row._classes.has('is-truncated')).toBe(false); // correct — nothing measurable yet, no false negative locked in
+  });
+
+  it('measures truncation lazily, at first real visibility, once layout has settled — not frozen at init', () => {
+    const { initFactRows, getObserver, setLiveRows } = buildWithObserver();
+    const clamp = { scrollHeight: 0, clientHeight: 0 }; // not settled when initFactRows runs
+    const row = makeRow(clamp);
+    setLiveRows([row]);
+    initFactRows();
+
+    // Layout settles later (row becomes visible for real) and genuinely overflows.
+    clamp.scrollHeight = 90;
+    clamp.clientHeight = 58;
+    getObserver().fire([{ isIntersecting: true, target: row }]);
+
+    expect(row._classes.has('is-truncated')).toBe(true);
+  });
+
+  it('does not mark a row truncated at first visibility if it never actually overflows', () => {
+    const { initFactRows, getObserver, setLiveRows } = buildWithObserver();
+    const clamp = { scrollHeight: 40, clientHeight: 40 };
+    const row = makeRow(clamp);
+    setLiveRows([row]);
+    initFactRows();
+    getObserver().fire([{ isIntersecting: true, target: row }]);
+    expect(row._classes.has('is-truncated')).toBe(false);
+  });
+
+  it('still records the impression when the observer fires, unchanged', () => {
+    const { initFactRows, getObserver, setLiveRows, inserted } = buildWithObserver();
+    const clamp = { scrollHeight: 90, clientHeight: 58 };
+    const row = makeRow(clamp, 'log42');
+    setLiveRows([row]);
+    initFactRows();
+    getObserver().fire([{ isIntersecting: true, target: row }]);
+    expect(inserted).toHaveLength(1);
+    expect(inserted[0]).toMatchObject({ user_id: 'user1', log_id: 'log42' });
+  });
+
+  it('fallback (no IntersectionObserver in the environment) still measures synchronously at init, as before', () => {
+    let liveRows = [];
+    const fakeDocument = { querySelectorAll: () => liveRows.filter((r) => !r.getAttribute('data-fact-init')) };
+    const fakeWindow = {}; // no IntersectionObserver — forces the fallback branch
+    const currentUser = { id: 'user1' };
+    const inserted = [];
+    const db = { from: () => ({ insert: (row) => { inserted.push(row); return { then: (cb) => { cb && cb(); return { catch: () => {} }; } }; } }) };
+    const factory = new Function(
+      'window', 'document', 'currentUser', 'db',
+      `${src}\nreturn { initFactRows };`
+    );
+    const { initFactRows } = factory(fakeWindow, fakeDocument, currentUser, db);
+    const clamp = { scrollHeight: 90, clientHeight: 58 };
+    const row = makeRow(clamp);
+    liveRows = [row];
+    initFactRows();
+    expect(row._classes.has('is-truncated')).toBe(true);
+    expect(inserted).toHaveLength(1);
+  });
+});
