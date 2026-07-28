@@ -12681,6 +12681,25 @@ async function saveEditPost() {
       }
     }
   }
+  // A watch newly added (or swapped) via edit needs its own fun fact: the post
+  // had none while it was untagged, or one about the previous watch. Clear the
+  // stale fact now, then attach a fresh one for the new watch. Fire-and-forget —
+  // the slow grounded generation must never block the save (mirrors saveLog /
+  // saveNewPost / quickLog). A removed watch just leaves the fact cleared.
+  if (log && finalWatchId !== (oldLog ? oldLog.watchId : null)) {
+    log.factId = null;
+    if (fi) fi.fact = '';
+    if (finalWatchId) {
+      const factWatch = watches.find(x => x.id === finalWatchId) || null;
+      attachFunFact(log, factWatch).then(factText => {
+        if (!factText) return;
+        const fi2 = feedItems.find(i => i.id === editPostLogId);
+        if (fi2) fi2.fact = factText;
+        refreshFeedCard(editPostLogId);
+        toast('💡 ' + factText);
+      });
+    }
+  }
   refreshFeedCard(editPostLogId);
   closeEditPost();
   toast('Post updated!');
