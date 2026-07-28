@@ -10,7 +10,7 @@
     "test:e2e:int": "playwright test --project=integration",
     "test:e2e:all": "playwright test",
     "test:smoke": "node scripts/smoke-test-functions.js",
-    "test:functions": "deno test supabase/functions/",
+    "test:functions": "deno test --allow-read supabase/functions/",
     "test:coverage": "vitest run --coverage",
     "test:scripts": "python3 scripts/test-python-helpers.py"
   },
