@@ -1518,6 +1518,19 @@ export function notifStaysUnreadOnPanelOpen(type) {
 }
 
 /**
+ * Fold the separately-fetched unread badge rows into the recency window, deduped
+ * and newest-first. Chronological order is kept deliberately: an old badge row
+ * sorted to the top would sit above today's notifications and read as a bug.
+ */
+export function mergeBadgeNotifs(recent, badgeRows) {
+  const have = new Set((recent || []).map(n => n && n.id));
+  const extra = (badgeRows || []).filter(n => n && !have.has(n.id));
+  if (!extra.length) return recent || [];
+  return [...(recent || []), ...extra]
+    .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+}
+
+/**
  * Build the bell-inbox rows for a set of newly-earned badges.
  * Self-addressed (recipient = earner) and actor-less, like 'system'.
  * badges: [{ ref, name }]. ref_id is the badge ref as a string.

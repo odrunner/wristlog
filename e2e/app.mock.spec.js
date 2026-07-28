@@ -2075,6 +2075,54 @@ test.describe('Badge earned notification (mocked)', () => {
   });
 });
 
+// ── Badge nudge survives the 30-row window (mocked) ─────────────────────────
+// loadNotifications() fetches only the 30 newest rows. A badge row buried under
+// newer traffic dropped out of that window and silently killed the nudge while
+// it was still unread in the DB — the indicator was supposed to be persistent.
+// It's now topped up by a separate unread-badge query (mergeBadgeNotifs).
+test.describe('Buried badge notification (mocked)', () => {
+  const BURIED_BADGE = {
+    id: 'bn-old', user_id: FAKE_USER.id, type: 'badge_earned', actor_id: null,
+    ref_id: '1', is_read: false, created_at: '2026-01-01T00:00:00Z',
+  };
+  // 30 newer, already-read rows — exactly fills the recency window.
+  const FILLER = Array.from({ length: 30 }, (_, i) => ({
+    id: `fill-${i}`, user_id: FAKE_USER.id, type: 'system', actor_id: null,
+    ref_id: null, is_read: true,
+    created_at: `2026-07-${String(i + 1).padStart(2, '0')}T00:00:00Z`,
+  }));
+
+  test.beforeEach(async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.route('**/rest/v1/notifications*', (route) => {
+      if (route.request().method() !== 'GET') {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      }
+      // The top-up query filters to unread badge rows; the main window doesn't.
+      const body = route.request().url().includes('type=eq.badge_earned') ? [BURIED_BADGE] : FILLER;
+      return route.fulfill({
+        status: 200, contentType: 'application/json', body: JSON.stringify(body),
+      });
+    });
+    await page.goto('/');
+    await waitForAppBoot(page);
+  });
+
+  test('bell counts a badge row that fell outside the 30-row window', async ({ page }) => {
+    await page.locator('#bell-btn').click();
+    const badge = page.locator('#bell-badge');
+    await expect(badge).not.toHaveClass(/hidden/, { timeout: 5000 });
+    await expect(badge).toHaveText('1');
+  });
+
+  test('the buried badge row still renders in the panel', async ({ page }) => {
+    await page.locator('#bell-btn').click();
+    await expect(page.locator('#notif-bn-old')).toBeAttached({ timeout: 5000 });
+    await expect(page.locator('#notif-bn-old')).toHaveClass(/notif-unread/);
+  });
+});
+
 // ── Wishlist: Add from Photo (mocked) ────────────────────────────────────
 test.describe('Wishlist add-from-photo (mocked)', () => {
   // 1x1 PNG — decodable by the canvas resize helpers.

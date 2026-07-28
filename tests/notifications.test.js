@@ -11,6 +11,7 @@ import {
   buildBadgeNotificationRows,
   notificationOpensBadgeWall,
   notifStaysUnreadOnPanelOpen,
+  mergeBadgeNotifs,
 } from '../wrotate_test.js';
 
 // ── notificationBody ──────────────────────────────────────────────────────────
@@ -609,5 +610,43 @@ describe('badge_earned notifications', () => {
     expect(auto.map(n => n.id)).toEqual(['a', 'c']);
     const explicit = notifs.filter(n => !n.is_read);
     expect(explicit.map(n => n.id)).toEqual(['a', 'b', 'c']);
+  });
+});
+
+// The bell fetch is a 30-row recency window. Because badge rows are the
+// persistent nudge, an old one has to survive being buried under newer traffic —
+// otherwise the indicator dies while the row is still unread in the DB.
+describe('mergeBadgeNotifs', () => {
+  const recent = [
+    { id: 'r1', type: 'follow', created_at: '2026-07-27T10:00:00Z' },
+    { id: 'r2', type: 'like',   created_at: '2026-07-26T10:00:00Z' },
+  ];
+
+  it('adds an unread badge row that fell outside the recency window', () => {
+    const buried = [{ id: 'b1', type: 'badge_earned', is_read: false, created_at: '2026-06-01T10:00:00Z' }];
+    const out = mergeBadgeNotifs(recent, buried);
+    expect(out.map(n => n.id)).toEqual(['r1', 'r2', 'b1']);
+  });
+
+  it('keeps chronological order rather than pinning old badges to the top', () => {
+    const buried = [{ id: 'b1', type: 'badge_earned', is_read: false, created_at: '2026-07-26T20:00:00Z' }];
+    expect(mergeBadgeNotifs(recent, buried).map(n => n.id)).toEqual(['r1', 'b1', 'r2']);
+  });
+
+  it('does not duplicate a badge row already in the window', () => {
+    const dup = [{ id: 'r2', type: 'like', created_at: '2026-07-26T10:00:00Z' }];
+    expect(mergeBadgeNotifs(recent, dup).map(n => n.id)).toEqual(['r1', 'r2']);
+  });
+
+  it('returns the window untouched when the top-up is empty or failed', () => {
+    expect(mergeBadgeNotifs(recent, [])).toBe(recent);
+    expect(mergeBadgeNotifs(recent, null)).toBe(recent);
+    expect(mergeBadgeNotifs(recent, undefined)).toBe(recent);
+  });
+
+  it('survives a missing recency window', () => {
+    const b = [{ id: 'b1', type: 'badge_earned', created_at: '2026-06-01T10:00:00Z' }];
+    expect(mergeBadgeNotifs(null, b).map(n => n.id)).toEqual(['b1']);
+    expect(mergeBadgeNotifs(undefined, [])).toEqual([]);
   });
 });

@@ -7068,7 +7068,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.17.04';
+const APP_VERSION = '27.17.16';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9684,23 +9684,47 @@ async function loadNotifications() {
     return;
   }
   if (!data) return;
+  // The fetch above is a 30-row recency window, but badge rows are the persistent
+  // unseen-badge nudge (they survive the panel's auto mark-all-read). An active
+  // user buries one under 30 newer notifications within days, which dropped it
+  // from the window and silently extinguished the indicator while it was still
+  // unread in the DB. Top up with the unread badge rows, whatever their age.
+  let rows = data;
+  try {
+    const { data: badgeRows } = await withTimeout(db.from('notifications')
+      .select('id, type, actor_id, ref_id, is_read, created_at')
+      .eq('user_id', currentUser.id).eq('type', 'badge_earned').eq('is_read', false)
+      .order('created_at', { ascending: false }).limit(20));
+    rows = mergeBadgeNotifs(data, badgeRows);
+  } catch (_) { /* top-up failed — fall back to the recency window alone */ }
   let pMap = {}, clubMap = {};
   try {
-    const actorIds = [...new Set(data.map(n => n.actor_id).filter(Boolean))];
+    const actorIds = [...new Set(rows.map(n => n.actor_id).filter(Boolean))];
     if (actorIds.length) {
       const { data: ps } = await db.from('profiles').select('id, username, display_name, avatar_url, is_official').in('id', actorIds);
       (ps || []).forEach(p => pMap[p.id] = p);
     }
     const clubNotifTypes = ['club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted'];
-    const clubIds = [...new Set(data.filter(n => clubNotifTypes.includes(n.type) && n.ref_id).map(n => n.ref_id))];
+    const clubIds = [...new Set(rows.filter(n => clubNotifTypes.includes(n.type) && n.ref_id).map(n => n.ref_id))];
     if (clubIds.length) {
       const { data: clubs } = await db.from('clubs').select('id, name').in('id', clubIds);
       (clubs || []).forEach(c => clubMap[c.id] = c);
     }
   } catch (_) { /* enrichment failed — render with fallback names */ }
-  userNotifs = data.map(n => ({ ...n, actor: pMap[n.actor_id] || null, club: clubMap[n.ref_id] || null }));
+  userNotifs = rows.map(n => ({ ...n, actor: pMap[n.actor_id] || null, club: clubMap[n.ref_id] || null }));
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
   updateBellBadge();
+}
+
+// Fold the separately-fetched unread badge rows into the recency window, deduped
+// and newest-first. Chronological order is kept deliberately: an old badge row
+// sorted to the top would sit above today's notifications and read as a bug.
+function mergeBadgeNotifs(recent, badgeRows) {
+  const have = new Set((recent || []).map(n => n && n.id));
+  const extra = (badgeRows || []).filter(n => n && !have.has(n.id));
+  if (!extra.length) return recent || [];
+  return [...(recent || []), ...extra]
+    .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
 }
 
 function updateBellBadge() {
@@ -9997,8 +10021,10 @@ async function markBadgeNotifsRead() {
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
   updateBellBadge();
   renderNotificationPanel();
+  // Clear by filter, not by the loaded ids — the wall shows every badge, so any
+  // unread badge row is answered by this visit even if it never got fetched.
   const { error } = await db.from('notifications').update({ is_read: true })
-    .eq('user_id', currentUser.id).in('id', toMark.map(n => n.id));
+    .eq('user_id', currentUser.id).eq('type', 'badge_earned').eq('is_read', false);
   if (error) console.error('markBadgeNotifsRead error:', error.message);
 }
 
