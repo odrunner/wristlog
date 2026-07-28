@@ -71,11 +71,16 @@ describe('Totals card day-over-day deltas', () => {
     expect(html).toMatch(/statRow\('Advanced mode \(24h\)',\s*advSessions24h,\s*advDelta/);
   });
 
-  it('Pro V2 Beta row: total stands alone, active-vs-prior change lives in the sub', () => {
-    expect(html).toContain('beta_users_prev24h');
-    // total passes null delta (no change glued to the all-time total); the 24h-active
-    // change is folded into the sub via inlineDelta, next to the "active (24h)" figure
-    expect(html).toMatch(/statRow\('Pro V2 Beta users \(total\)',[^\n]*null,[^\n]*inlineDelta\([^\n]*beta_users_24h[^\n]*beta_users_prev24h/);
+  it('Totals splits measurements by engine — Pro V2 and Original, each with users + sessions', () => {
+    expect(html).toContain("db.rpc('admin_engine_stats')");
+    expect(html).toMatch(/engineRow\('Measurements — Pro V2',\s*eng\.prov2_sessions,\s*eng\.prov2_users,\s*eng\.prov2_sessions_24h,\s*eng\.prov2_sessions_prev24h\)/);
+    expect(html).toMatch(/engineRow\('Measurements — Original',\s*eng\.orig_sessions,\s*eng\.orig_users,\s*eng\.orig_sessions_24h,\s*eng\.orig_sessions_prev24h\)/);
+  });
+
+  it('engineRow: sessions is the headline, users + 24h change live in the sub', () => {
+    // sessions passed as the value with a null delta (no change glued to the all-time
+    // total); the 24h-vs-prior change is folded into the sub next to the 24h figure
+    expect(html).toMatch(/const engineRow = \(label, sessions, users, s24, sPrev24\) => \{[\s\S]*?statRow\(label, n, null,[\s\S]*?inlineDelta\(h24 - p24, false\)\)/);
   });
 
   it('Email Unsubs row: total stands alone, 24h change inverted (a rise is not green)', () => {
