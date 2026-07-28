@@ -2330,8 +2330,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Stats now opens with a <strong>Most Worn</strong> ranking of your collection, and the period filter adds <strong>1M, 3M, YTD and 1Y</strong> alongside All Time. A watch you bought last month no longer sits at the bottom forever &#8212; switch to a shorter window to see what you&#8217;re actually reaching for. Track also shows each watch&#8217;s share of your all-time wears.</div>
       </div>
       <div style="margin-bottom:.75rem;">
-        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Pro V2 Measurement Engine &#9889; (Beta)</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">A rebuilt timegrapher engine you can try today: converges in about 10 seconds, holds steady between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing, a key health indicator watchmakers look at. On the Measure page, switch the engine selector to <strong>Pro V2 (beta)</strong>. Needs app version 2.1 or later; switch back to Standard anytime. Amplitude shows only when the signal is clean enough to trust &#8212; if it&#8217;s blank, reposition and try again.</div>
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Pro V2 Measurement Engine &#9889; &#8212; now the default</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Our rebuilt timegrapher engine is out of beta and now runs by default on the Measure page &#8212; nothing to switch on. It converges in about 10 seconds, holds steady between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing, a key health indicator watchmakers look at. Needs app version 2.1 or later. Prefer the previous behaviour? Pick <strong>Standard</strong> from the engine selector anytime. Amplitude shows only when the signal is clean enough to trust &#8212; if it&#8217;s blank, reposition and try again.</div>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Wishlist Brand Folders</div>
@@ -2564,13 +2564,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 <div id="new-features-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="new-features-title">
   <div class="modal" style="max-width:380px;text-align:center;padding:2rem 1.75rem;">
     <div class="eyebrow" style="margin-bottom:1rem;">New in WRotate</div>
-    <div id="new-features-title" style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.75rem;">Meet Pro V2 &#9889; — our new measurement engine, now in beta.</div>
+    <div id="new-features-title" style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.75rem;">Meet Pro V2 &#9889; — our new measurement engine, now on by default.</div>
     <div style="text-align:left;margin-bottom:1rem;">
       <div style="display:flex;gap:.6rem;align-items:flex-start;">
         <span style="font-size:1.1rem;flex-shrink:0;margin-top:.1rem;">&#9889;</span>
         <div>
-          <div style="font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.2rem;">Pro V2 Measurement Engine (Beta)</div>
-          <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">A rebuilt timegrapher engine you can try today: converges in about 10 seconds, holds steady between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing, a key health indicator watchmakers look at. On the Measure page, switch the engine selector to <strong>Pro V2 (beta)</strong>. Needs app version 2.1 or later; switch back to Standard anytime.</div>
+          <div style="font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.2rem;">Pro V2 Measurement Engine</div>
+          <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">A rebuilt timegrapher engine, now running by default on the Measure page: it converges in about 10 seconds, holds steady between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing, a key health indicator watchmakers look at. Needs app version 2.1 or later. You can switch to <strong>Standard</strong> from the engine selector anytime.</div>
         </div>
       </div>
     </div>
@@ -3327,14 +3327,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">5</div>
             <div class="help-step-body">
               <div class="help-step-title">Trouble getting a reading? Use Advanced Settings</div>
-              <div class="help-step-desc">Tap the &#9881; gear (top-right of the Measure screen) to pick an environment preset &#8212; Quiet Room, Noisy Environment, or Weak Signal &#8212; or adjust Sensitivity and Convergence Speed yourself. Higher Sensitivity helps faint or quiet watches register ticks; these settings can rescue a watch that won&#8217;t converge on the defaults.</div>
+              <div class="help-step-desc">Tap the &#9881; gear (top-right of the Measure screen) to pick an environment preset &#8212; Quiet Room, Noisy Environment, or Weak Signal &#8212; or adjust Sensitivity and Convergence Speed yourself. Higher Sensitivity helps faint or quiet watches register ticks; these settings can rescue a watch that won&#8217;t converge on the defaults. These appear with the <strong>Standard</strong> engine selected; Pro V2 has its own settings (see below).</div>
             </div>
           </div>
           <div class="help-step">
             <div class="help-step-num">6</div>
             <div class="help-step-body">
-              <div class="help-step-title">Try the Pro V2 engine (beta)</div>
-              <div class="help-step-desc">On app version 2.1+, the engine selector on the Measure screen offers <strong>Pro V2 &#9889; (beta)</strong>: a rebuilt detection core that converges in about 10 seconds, holds steadier between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing (healthy watches typically read 220&#8211;300&deg;). It also shows the averaged tick/tock waveform under the chart; sharp spikes mean a clean signal. Amplitude appears only when the signal is clean enough to trust. With Pro V2 selected, the gear offers its own settings: a Precision preset (Quick / Balanced / Strict) and the movement&#8217;s lift angle (52&deg; fits most modern movements). Switch back to Standard anytime.</div>
+              <div class="help-step-title">The Pro V2 engine &#9889; (default)</div>
+              <div class="help-step-desc">On app version 2.1+, <strong>Pro V2</strong> is the engine that runs by default &#8212; a rebuilt detection core that converges in about 10 seconds, holds steadier between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing (healthy watches typically read 220&#8211;300&deg;). It also shows the averaged tick/tock waveform under the chart; sharp spikes mean a clean signal. Amplitude appears only when the signal is clean enough to trust. With Pro V2 running, the gear offers its own settings: a Precision preset (Quick / Balanced / Strict) and the movement&#8217;s lift angle (52&deg; fits most modern movements). Prefer the previous engine? Pick <strong>Standard</strong> from the engine selector anytime.</div>
             </div>
           </div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Measure in a quiet environment for best results. Watches with display casebacks (transparent backs) produce a stronger signal than solid steel cases.</span></div>
@@ -7068,7 +7068,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.18.21';
+const APP_VERSION = '27.18.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
