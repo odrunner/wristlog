@@ -7086,7 +7086,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.19.57';
+const APP_VERSION = '27.20.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11786,6 +11786,15 @@ function toggleFunFact(row) {
   const expanding = row.getAttribute('aria-expanded') !== 'true';
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   row.setAttribute('aria-expanded', expanding ? 'true' : 'false');
+  // Bump a per-clamp generation on every tap. A rapid re-tap registers a new
+  // transitionend listener before the previous one's transition has actually
+  // finished; a superseded transition typically fires 'transitioncancel'
+  // (not 'transitionend'), so the old 'once' listener is never invoked or
+  // removed on its own and stays attached. It can then fire later alongside
+  // a subsequent, unrelated transitionend. Each callback below captures the
+  // generation at attach time and no-ops if a newer toggle has since
+  // superseded it, so a stale callback can never mutate a newer state.
+  const gen = (clamp._funfactGen = (clamp._funfactGen || 0) + 1);
 
   if (expanding) {
     row.classList.remove('is-clamped');
@@ -11794,7 +11803,10 @@ function toggleFunFact(row) {
       clamp.style.maxHeight = FUNFACT_CLAMP_PX + 'px';
       const full = clamp.scrollHeight;
       requestAnimationFrame(() => { clamp.style.maxHeight = full + 'px'; });
-      clamp.addEventListener('transitionend', () => { clamp.style.maxHeight = ''; }, { once: true });
+      clamp.addEventListener('transitionend', () => {
+        if (clamp._funfactGen !== gen) return;
+        clamp.style.maxHeight = '';
+      }, { once: true });
     }
     recordFactClick(row.getAttribute('data-log-id'));
   } else if (reduce) {
@@ -11805,6 +11817,7 @@ function toggleFunFact(row) {
     void clamp.offsetHeight;  // force reflow so the next value animates
     clamp.style.maxHeight = FUNFACT_CLAMP_PX + 'px';
     clamp.addEventListener('transitionend', () => {
+      if (clamp._funfactGen !== gen) return;
       row.classList.add('is-clamped');
       clamp.style.maxHeight = '';
     }, { once: true });

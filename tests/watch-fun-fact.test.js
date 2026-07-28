@@ -184,3 +184,81 @@ describe('toggleFunFact', () => {
     expect(fn).toContain('FUNFACT_CLAMP_PX');
   });
 });
+
+describe('toggleFunFact race guard: a stale transitionend cannot mutate a newer state', () => {
+  // Build a real, callable toggleFunFact straight out of the index.html source
+  // (not a reimplementation), so this test tracks the actual shipped logic.
+  const src = html.slice(html.indexOf('function toggleFunFact('), html.indexOf('// ── Feed three-dot menu'));
+
+  function buildToggleFunFact(recordFactClick) {
+    const factory = new Function(
+      'FUNFACT_CLAMP_PX', 'recordFactClick', 'window', 'requestAnimationFrame',
+      `${src}\nreturn toggleFunFact;`
+    );
+    return factory(
+      58.5,
+      recordFactClick,
+      { matchMedia: () => ({ matches: false }) }, // prefers-reduced-motion: no
+      (cb) => cb() // run synchronously; only the final state matters here
+    );
+  }
+
+  // Minimal EventTarget-ish clamp: addEventListener just records listeners.
+  // fireTransitionEnd() invokes every listener still attached for
+  // 'transitionend' in one shot — this is what a real browser does when an
+  // earlier transition was superseded (it gets 'transitioncancel', not
+  // 'transitionend', so its 'once' listener is never invoked or removed) and
+  // a later, unrelated transition then completes for real.
+  function makeClamp(scrollHeight) {
+    const listeners = [];
+    return {
+      style: { maxHeight: '' },
+      scrollHeight,
+      get offsetHeight() { return 0; },
+      addEventListener(evt, cb, opts) { listeners.push({ evt, cb, opts }); },
+      fireTransitionEnd() {
+        listeners.filter((l) => l.evt === 'transitionend').forEach((l) => l.cb());
+      },
+    };
+  }
+
+  function makeRow(clamp) {
+    const attrs = { 'aria-expanded': 'false', 'data-log-id': 'log1' };
+    const classes = new Set(['is-clamped']);
+    return {
+      querySelector: (sel) => (sel === '.funfact-clamp' ? clamp : null),
+      getAttribute: (k) => (k in attrs ? attrs[k] : null),
+      setAttribute: (k, v) => { attrs[k] = v; },
+      classList: {
+        add: (c) => classes.add(c),
+        remove: (c) => classes.delete(c),
+        contains: (c) => classes.has(c),
+      },
+      _classes: classes,
+    };
+  }
+
+  it('rapid expand/collapse/expand leaves the row matching its final aria-expanded state once the deferred transitionend lands', () => {
+    const clicks = [];
+    const toggleFunFact = buildToggleFunFact((logId) => clicks.push(logId));
+    const clamp = makeClamp(200);
+    const row = makeRow(clamp);
+
+    toggleFunFact(row); // tap 1: collapsed -> expanding   (registers stale listener A)
+    toggleFunFact(row); // tap 2: expanded  -> collapsing   (registers stale listener B)
+    toggleFunFact(row); // tap 3: collapsed -> expanding again (registers listener C — the only one still current)
+
+    // None of the three transitions ever completed on their own (each was
+    // superseded before its own event landed), so all three listeners are
+    // still attached. A later, real transitionend now fires once, and every
+    // attached listener sees it — exactly the merge described in the review.
+    clamp.fireTransitionEnd();
+
+    expect(row.getAttribute('aria-expanded')).toBe('true');
+    // The bug this guards against: listener B's callback unconditionally runs
+    // `row.classList.add('is-clamped')`. Without a generation check, B fires
+    // alongside C and re-clamps a row whose aria-expanded still says 'true'.
+    expect(row._classes.has('is-clamped')).toBe(false);
+    expect(clicks).toEqual(['log1', 'log1']); // recordFactClick fired once per expand (taps 1 and 3)
+  });
+});
