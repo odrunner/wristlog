@@ -87,7 +87,15 @@ export function buildEmailContent(
     case "club_promoted":
       return { subject: `You were promoted in a club`, body: `${actorName} made you an owner of the club on WRotate.` };
     case "mention":
-      return { subject: `${actorName} mentioned you`, body: `${actorName} mentioned you in a comment:${quote}` };
+      // Mentions come from comments AND from post / wear-log bodies, so don't
+      // claim "in a comment". When no text could be resolved, end on a period
+      // instead of a dangling colon (which rendered as an empty-looking email).
+      return {
+        subject: `${actorName} mentioned you`,
+        body: quote
+          ? `${actorName} mentioned you:${quote}`
+          : `${actorName} mentioned you on WRotate. Open the app to see it.`,
+      };
     default:
       return null;
   }

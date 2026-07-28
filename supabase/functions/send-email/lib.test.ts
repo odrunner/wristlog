@@ -101,6 +101,22 @@ Deno.test("buildEmailContent — comment without body has empty quote", () => {
   assertEquals(out?.body, "Alice commented on your post:");
 });
 
+Deno.test("buildEmailContent — mention with body quotes the text (no 'in a comment')", () => {
+  const out = buildEmailContent("mention", "Alice", "hey @bob nice piece");
+  assertEquals(out?.subject, "Alice mentioned you");
+  assertEquals(out!.body.startsWith("Alice mentioned you:"), true);
+  assertEquals(out!.body.includes("hey @bob nice piece"), true);
+  assertEquals(out!.body.includes("in a comment"), false);
+});
+
+Deno.test("buildEmailContent — mention without body ends cleanly (no dangling colon)", () => {
+  // Regression: a mention that resolved no text used to render as
+  // "… mentioned you in a comment:" with nothing after it — an empty email.
+  const out = buildEmailContent("mention", "Alice");
+  assertEquals(out?.body, "Alice mentioned you on WRotate. Open the app to see it.");
+  assertEquals(out!.body.endsWith(":"), false);
+});
+
 Deno.test("buildEmailContent — covers each non-quote type", () => {
   assertEquals(buildEmailContent("follow", "Bob")?.subject, "Bob started following you");
   assertEquals(buildEmailContent("follow_request", "Bob")?.subject, "Bob wants to follow you");

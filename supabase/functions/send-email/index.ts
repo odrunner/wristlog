@@ -127,6 +127,20 @@ serve(async (req) => {
         .maybeSingle();
       if (commentRow?.body) {
         commentBody = commentRow.body;
+      } else if (type === "mention") {
+        // Mentions can also originate from a post / wear-log body (ref_id = the
+        // log id), which has no comment row — the @username lives in logs.notes.
+        // Without this fallback such mentions produced an empty quote and the
+        // email read "… mentioned you:" with no content.
+        const { data: logRow } = await supabase
+          .from("logs")
+          .select("notes")
+          .eq("id", dbRecord.ref_id)
+          .eq("user_id", actor_id)
+          .maybeSingle();
+        if (logRow?.notes) {
+          commentBody = logRow.notes;
+        }
       }
     }
 
