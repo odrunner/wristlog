@@ -257,8 +257,10 @@ FUNCTION`, per project convention, followed by `NOTIFY pgrst, 'reload schema'`.
    unless both watch and fact are present. Assert the feed card no longer emits
    `funfact-pill`.
 2. **Mirror** — the row builder is extracted into `wrotate_test.js` and
-   registered in the `mirror-drift` guard's `VERBATIM` list
-   (`tests/mirror-drift.test.js`).
+   registered in the `mirror-drift` guard's `ADAPTED` list
+   (`tests/mirror-drift.test.js`). It cannot be VERBATIM: the mirror uses a
+   local `esc` where index.html uses the global `escHtml`, exactly as
+   `funFactCardHTML` already does.
 3. **Suite** — `npm test && npm run test:e2e` must pass before commit.
 4. **RLS check** — confirm the insert actually lands: sign in as a test account,
    trigger an impression, then verify the row via `supabase db query` (the table

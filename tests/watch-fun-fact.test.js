@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { funFactCardHTML } from '../wrotate_test.js';
+import { funFactCardHTML, funFactRowHTML } from '../wrotate_test.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(join(__dirname, '..', 'index.html'), 'utf8');
@@ -93,5 +93,45 @@ describe('fun-fact engagement tracking + admin metrics', () => {
     expect(html).toContain('Fun fact viewers');
     expect(html).toContain('Fun facts generated');
     expect(html).toContain('Watches with facts');
+  });
+});
+
+describe('funFactRowHTML', () => {
+  it('returns empty string when there is no fact', () => {
+    expect(funFactRowHTML({ fact: '', logId: 'log1' })).toBe('');
+    expect(funFactRowHTML({ fact: null, logId: 'log1' })).toBe('');
+    expect(funFactRowHTML({ fact: '   ', logId: 'log1' })).toBe('');
+  });
+
+  it('escapes the fact text', () => {
+    const out = funFactRowHTML({ fact: 'Made in 1953 <b>x</b>', logId: 'log1' });
+    expect(out).toContain('Made in 1953');
+    expect(out).toContain('&lt;b&gt;');
+    expect(out).not.toContain('<b>x</b>');
+  });
+
+  it('escapes the log id into the data attribute', () => {
+    const out = funFactRowHTML({ fact: 'A fact', logId: 'a"b' });
+    expect(out).toContain('data-log-id="a&quot;b"');
+  });
+
+  it('keeps the visible label inside the button so it lands in the accessible name', () => {
+    const out = funFactRowHTML({ fact: 'A fact', logId: 'log1' });
+    expect(out).toContain('>Fun fact</span>');
+    expect(out).not.toContain('aria-label');
+  });
+
+  it('renders collapsed, expandable and tagged with the log id', () => {
+    const out = funFactRowHTML({ fact: 'A fact', logId: 'log1' });
+    expect(out).toContain('class="funfact-row is-clamped"');
+    expect(out).toContain('aria-expanded="false"');
+    expect(out).toContain('data-log-id="log1"');
+    expect(out).toContain('funfact-clamp');
+    expect(out).toContain('funfact-more');
+  });
+
+  it('hides the bulb and the more affordance from assistive tech', () => {
+    const out = funFactRowHTML({ fact: 'A fact', logId: 'log1' });
+    expect(out.match(/aria-hidden="true"/g)).toHaveLength(2);
   });
 });

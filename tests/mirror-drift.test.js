@@ -58,7 +58,7 @@ const ADAPTED = [
   'fmtMoney', 'formatCommentTime', 'formatFeedDate', 'getMentionQuery', 'incrSettle', 'initials',
   'isBase64', 'logToRow', 'markDirty', 'monthRevNav', 'profileInitials',
   'renderCommentBody', 'todayStr', 'warrantyStatus', 'watchToRow', 'wishToRow',
-  'funFactCardHTML',
+  'funFactCardHTML', 'funFactRowHTML',
 ];
 
 // Extract a function/const body ({...} block) by name from a source string.

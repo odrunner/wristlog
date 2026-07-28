@@ -7068,7 +7068,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.19.40';
+const APP_VERSION = '27.19.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20127,6 +20127,17 @@ function skipRec() {
 function funFactCardHTML({ fact }) {
   if (!fact || !String(fact).trim()) return '';
   return `<div class="funfact-card"><span class="funfact-bulb">💡</span><span class="funfact-text">${escHtml(fact)}</span></div>`;
+}
+
+// Fun-fact footnote row for the feed card — always visible, clamped to 3 lines,
+// tap to expand. The label is inside the button's text content on purpose: it
+// becomes part of the accessible name, so screen-reader users get the same
+// "Fun fact" framing that marks the text as app-generated rather than caption.
+// The amber card (funFactCardHTML) is untouched — it still backs the login
+// modal and the watch preview. Mirrored in wrotate_test.js.
+function funFactRowHTML({ fact, logId }) {
+  if (!fact || !String(fact).trim()) return '';
+  return `<button type="button" class="funfact-row is-clamped" onclick="toggleFunFact(this)" aria-expanded="false" data-log-id="${escHtml(logId || '')}"><span class="funfact-clamp"><svg class="funfact-bulb" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span class="funfact-label">Fun fact</span> — ${escHtml(fact)}</span><span class="funfact-more" aria-hidden="true">more</span></button>`;
 }
 
 function recCardHTML(rec) {
