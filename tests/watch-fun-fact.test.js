@@ -70,15 +70,15 @@ describe('feed fun-fact rendering', () => {
   it('feed enrichment fetches watch_facts by id', () => {
     expect(html).toMatch(/from\('watch_facts'\)\.select\([^)]*\)\.in\('id'/);
   });
-  it('renderFeedCard emits a tappable fun-fact pill', () => {
+  it('renderFeedCard emits a tappable fun-fact footnote row', () => {
     expect(html).toContain('toggleFunFact(');
-    expect(html).toContain('funfact-pill');
+    expect(html).toContain('funfact-row');
   });
 });
 
 describe('fun-fact engagement tracking + admin metrics', () => {
-  it('pill carries data-log-id', () => {
-    expect(html).toMatch(/funfact-pill[^>]*data-log-id=/);
+  it('card template builds the row via funFactRowHTML with the log id', () => {
+    expect(html).toMatch(/funFactRowHTML\(\{\s*fact:\s*item\.fact,\s*logId:\s*item\.id\s*\}\)/);
   });
   it('toggleFunFact records a click on open', () => {
     expect(html).toContain("recordFactClick(btn.getAttribute('data-log-id'))");
@@ -133,5 +133,35 @@ describe('funFactRowHTML', () => {
   it('hides the bulb and the more affordance from assistive tech', () => {
     const out = funFactRowHTML({ fact: 'A fact', logId: 'log1' });
     expect(out.match(/aria-hidden="true"/g)).toHaveLength(2);
+  });
+});
+
+describe('feed card uses the footnote row, not the pill', () => {
+  it('has removed the pill and the amber feed body from the CSS and card template (toggleFunFact itself is Task 3)', () => {
+    // toggleFunFact still drives the old .funfact-body / funfact-pill-open
+    // classes until Task 3 rewrites it to work on .funfact-row — carve that
+    // function out so this test targets only what Task 2 owns: the CSS rules
+    // and the card template.
+    const toggleStart = html.indexOf('function toggleFunFact(');
+    const toggleEnd = html.indexOf('// ── Feed three-dot menu');
+    const withoutToggle = html.slice(0, toggleStart) + html.slice(toggleEnd);
+    expect(withoutToggle).not.toContain('funfact-pill');
+    expect(withoutToggle).not.toContain('funfact-body');
+  });
+
+  it('renders the row from the feed card template', () => {
+    expect(html).toMatch(/\$\{funFactRow\}/);
+  });
+
+  it('keeps the amber card for the login modal and watch preview', () => {
+    expect(html).toContain('.funfact-card{');
+    expect(html).toContain('function funFactCardHTML');
+  });
+
+  it('styles the label with the AA-compliant accent, not the tier gold', () => {
+    const css = html.slice(html.indexOf('.funfact-row {'), html.indexOf('.feed-chip-row {'));
+    expect(css).toContain('var(--badge-accent)');
+    expect(css).not.toContain('--badge-tier');
+    expect(css).not.toContain('#B8952A');
   });
 });

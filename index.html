@@ -1841,18 +1841,36 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       background: var(--surface2); border-radius: 20px; padding: .22rem .65rem;
     }
 
-    /* Fun-fact pill — same base shape as the watch chip, tappable to expand */
-    .funfact-pill {
-      display: inline-flex; align-items: center; gap: .35rem;
-      margin: 0 1rem .75rem; font-size: .72rem; color: var(--muted);
-      background: var(--surface2); border: 1px solid transparent; border-radius: 20px;
-      padding: .22rem .65rem; font-family: inherit; cursor: pointer;
+    /* Fun-fact footnote — always visible below the chip row, clamped to 3 lines.
+       Deliberately no container, background or border: it reads as a footnote to
+       the caption, not a module. 3 lines = 58.5px (13px x 1.5), already above the
+       44px tap-target floor, so no padding hack is needed. */
+    .funfact-row {
+      display: block; position: relative; width: calc(100% - 2rem);
+      margin: 0 1rem .75rem; padding: 0; text-align: left;
+      background: none; border: 0; font-family: inherit;
+      font-size: 13px; line-height: 1.5; color: var(--muted); cursor: pointer;
     }
-    .funfact-pill-open { color: var(--badge-accent); border-color: var(--badge-border); }
-    .funfact-body { margin: 0 1rem .75rem; }
-    /* Keep the watch chip and fun-fact pill on one row; the expanded fact drops below. */
+    .funfact-clamp { display: block; overflow: hidden; transition: max-height .2s ease; }
+    .funfact-row.is-clamped .funfact-clamp {
+      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+      max-height: 58.5px;
+    }
+    .funfact-bulb { color: var(--badge-accent); vertical-align: -2px; margin-right: .3rem; }
+    /* Uses the badge accent, not the tier gold: that gold measures 2.64:1 on
+       the light card surface and fails AA for 13px text. */
+    .funfact-label { color: var(--badge-accent); font-weight: 500; }
+    .funfact-more {
+      display: none; position: absolute; right: 0; bottom: 0; color: var(--muted);
+      padding-left: 1.6rem;
+      background: linear-gradient(90deg, transparent, var(--surface) 1.2rem);
+    }
+    .funfact-row.is-clamped.is-truncated .funfact-more { display: inline; }
+    @media (prefers-reduced-motion: reduce) { .funfact-clamp { transition: none; } }
+
+    /* The watch chip sits on its own row; the fun-fact footnote drops below it. */
     .feed-chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 1rem .75rem; }
-    .feed-chip-row .feed-watch-chip, .feed-chip-row .funfact-pill { margin: 0; }
+    .feed-chip-row .feed-watch-chip { margin: 0; }
 
     /* Edit-caption pencil button in card header (own cards) */
     .feed-edit-btn {
@@ -7068,7 +7086,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.19.45';
+const APP_VERSION = '27.19.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11517,12 +11535,10 @@ function renderFeedCard(item) {
            data-watch-func="${escHtml((w.functions||[]).join(', '))}">${escHtml((w.brand||'') + ' ' + (w.name||''))}</div>`
     : '';
 
-  // Fun-fact pill — wear posts only, and only when a fact was frozen onto the post
-  const funFactPill = (w && item.fact)
-    ? `<button type="button" class="funfact-pill" onclick="toggleFunFact(this)" aria-expanded="false" data-log-id="${escHtml(item.id)}">💡 Fun fact</button>`
-    : '';
-  const funFactBody = (w && item.fact)
-    ? `<div class="funfact-body" hidden>${funFactCardHTML({ fact: item.fact })}</div>`
+  // Fun-fact footnote — wear posts only, and only when a fact was frozen onto
+  // the post. Always visible, clamped to 3 lines, tap to expand.
+  const funFactRow = (w && item.fact)
+    ? funFactRowHTML({ fact: item.fact, logId: item.id })
     : '';
 
   const featuredPill = item.__featured
@@ -11716,8 +11732,8 @@ function renderFeedCard(item) {
       </div>
       ${captionHtml}
       ${badgeRibbon}
-      ${(watchChip || funFactPill) ? `<div class="feed-chip-row">${watchChip}${funFactPill}</div>` : ''}
-      ${funFactBody}
+      ${watchChip ? `<div class="feed-chip-row">${watchChip}</div>` : ''}
+      ${funFactRow}
       ${clubBadge}
       ${commentsHtml}
     </div>`;
