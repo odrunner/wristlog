@@ -179,9 +179,24 @@ describe('toggleFunFact', () => {
     expect(fn).toContain('prefers-reduced-motion: reduce');
   });
 
-  it('uses the shared 3-line constant rather than a magic number', () => {
-    expect(html).toContain('const FUNFACT_CLAMP_PX = 58.5');
+  it('uses the shared 2-line constant rather than a magic number', () => {
+    expect(html).toContain('const FUNFACT_CLAMP_PX = 39');
     expect(fn).toContain('FUNFACT_CLAMP_PX');
+  });
+
+  it('keeps the JS constant and the CSS max-height in lockstep', () => {
+    // These two encode the same 2-line height. If they drift, collapse animates
+    // to one height and the clamp snaps to another.
+    const css = html.slice(html.indexOf('.funfact-row.is-clamped .funfact-clamp'));
+    expect(css.slice(0, 200)).toContain('max-height: 39px');
+    expect(css.slice(0, 200)).toContain('-webkit-line-clamp: 2');
+  });
+
+  it('pads the row back over the 44px tap-target floor', () => {
+    // 2 lines is only 39px, under the 44px minimum, so the row carries 3px of
+    // vertical padding. Without it the whole tap target is too small.
+    const css = html.slice(html.indexOf('.funfact-row {'), html.indexOf('.funfact-clamp {'));
+    expect(css).toContain('padding: 3px 0');
   });
 });
 
@@ -196,7 +211,7 @@ describe('toggleFunFact race guard: a stale transitionend cannot mutate a newer 
       `${src}\nreturn toggleFunFact;`
     );
     return factory(
-      58.5,
+      39,
       recordFactClick,
       { matchMedia: () => ({ matches: false }) }, // prefers-reduced-motion: no
       (cb) => cb() // run synchronously; only the final state matters here

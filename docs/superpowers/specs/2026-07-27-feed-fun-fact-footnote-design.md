@@ -50,6 +50,15 @@ chosen: it shows ~69% of a median fact at 380px and ~57% at 320px, usually far
 enough past the setup clause to reach the point. Two lines frequently cuts
 before the verb.
 
+> **Amended 2026-07-27, after shipping.** Three lines went live and read as too
+> busy in the feed, so the clamp was reduced to **two lines (39px)**. The
+> trade-off above still stands and was accepted knowingly: the teaser now shows
+> ~85 chars at 380px and ~65 at 320px, so most facts cut before the payoff and
+> the tap carries more of the load. One consequence needed handling — 39px is
+> under the 44px tap-target floor, so the row carries 3px of vertical padding
+> (45px total), with a negative top margin and reduced bottom margin cancelling
+> it out visually.
+
 To re-measure after the corpus grows: render every `SELECT fact FROM
 watch_facts` row into a 319px-wide element at 13px / line-height 1.5 with the
 `Fun fact — ` prefix, and count `getBoundingClientRect().height / 19.5`. The
