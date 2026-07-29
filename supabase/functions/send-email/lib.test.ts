@@ -9,6 +9,7 @@ import {
   effectivePrefs,
   esc,
   isValidRecord,
+  pickMentionText,
   resolveActorName,
   shouldFetchCommentBody,
   TYPE_TO_CATEGORY,
@@ -96,9 +97,61 @@ Deno.test("buildEmailContent — comment includes name, post phrase, and quote",
   assertEquals(out!.body.includes("love it"), true);
 });
 
-Deno.test("buildEmailContent — comment without body has empty quote", () => {
+Deno.test("buildEmailContent — comment without body ends in a period, not a dangling colon", () => {
   const out = buildEmailContent("comment", "Alice");
-  assertEquals(out?.body, "Alice commented on your post:");
+  assertEquals(out?.body, "Alice commented on your post.");
+});
+
+Deno.test("buildEmailContent — mention from a post caption says 'in a post' and quotes the caption", () => {
+  const out = buildEmailContent("mention", "masont", "@crash it was a good idea", "post");
+  assertEquals(out?.subject, "masont mentioned you");
+  assertEquals(out?.body.startsWith("masont mentioned you in a post:"), true);
+  assertEquals(out!.body.includes("@crash it was a good idea"), true);
+});
+
+Deno.test("buildEmailContent — mention from a comment says 'in a comment' and quotes it", () => {
+  const out = buildEmailContent("mention", "masont", "hey @crash", "comment");
+  assertEquals(out?.body.startsWith("masont mentioned you in a comment:"), true);
+  assertEquals(out!.body.includes("hey @crash"), true);
+});
+
+Deno.test("buildEmailContent — mention with no text found has no dangling colon or surface claim", () => {
+  const out = buildEmailContent("mention", "masont");
+  assertEquals(out?.subject, "masont mentioned you");
+  assertEquals(out?.body, "masont mentioned you.");
+});
+
+Deno.test("pickMentionText — comment only", () => {
+  const out = pickMentionText("2026-07-28T15:51:48Z", { body: "hey @crash", created_at: "2026-07-28T15:51:48Z" }, null);
+  assertEquals(out, { text: "hey @crash", source: "comment" });
+});
+
+Deno.test("pickMentionText — post caption only (the empty-email bug)", () => {
+  const out = pickMentionText("2026-07-28T15:51:48Z", null, { notes: "@crash good idea", created_at: "2026-07-28T15:51:48Z" });
+  assertEquals(out, { text: "@crash good idea", source: "post" });
+});
+
+Deno.test("pickMentionText — neither found returns no text", () => {
+  assertEquals(pickMentionText("2026-07-28T15:51:48Z", null, null), {});
+  // a log with an empty caption is not a candidate
+  assertEquals(pickMentionText("2026-07-28T15:51:48Z", null, { notes: "", created_at: "2026-07-28T15:51:48Z" }), {});
+});
+
+Deno.test("pickMentionText — both exist: picks whichever the notification followed", () => {
+  const notifAt = "2026-07-28T15:51:48Z";
+  // actor commented on their own post hours earlier, then posted a caption mention
+  const comment = { body: "old comment", created_at: "2026-07-28T09:00:00Z" };
+  const log = { notes: "@crash good idea", created_at: "2026-07-28T15:51:48Z" };
+  assertEquals(pickMentionText(notifAt, comment, log), { text: "@crash good idea", source: "post" });
+  // reverse: caption posted long ago, mention came from a fresh comment
+  const oldLog = { notes: "no mention here", created_at: "2026-07-20T10:00:00Z" };
+  const freshComment = { body: "hey @crash", created_at: "2026-07-28T15:51:47Z" };
+  assertEquals(pickMentionText(notifAt, freshComment, oldLog), { text: "hey @crash", source: "comment" });
+});
+
+Deno.test("pickMentionText — unparseable timestamps fall back to the comment", () => {
+  const out = pickMentionText(null, { body: "c", created_at: null }, { notes: "n", created_at: null });
+  assertEquals(out, { text: "c", source: "comment" });
 });
 
 Deno.test("buildEmailContent — covers each non-quote type", () => {

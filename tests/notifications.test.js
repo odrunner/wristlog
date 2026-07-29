@@ -68,8 +68,10 @@ describe('notificationBody', () => {
   it('comment_like — "liked your comment"', () => {
     expect(notificationBody('comment_like', 'Steve')).toBe('Steve liked your comment');
   });
-  it('mention — "mentioned you in a comment"', () => {
-    expect(notificationBody('mention', 'Steve')).toBe('Steve mentioned you in a comment');
+  // A mention can come from a comment OR a post caption (both write ref_id = log id),
+  // and the row has no way to tell them apart — so the copy stays surface-neutral.
+  it('mention — "mentioned you"', () => {
+    expect(notificationBody('mention', 'Steve')).toBe('Steve mentioned you');
   });
   it('club_join_request — "wants to join your club"', () => {
     expect(notificationBody('club_join_request', 'Steve')).toBe('Steve wants to join your club');

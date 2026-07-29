@@ -7088,7 +7088,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.17.40';
+const APP_VERSION = '28.18.18';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10093,7 +10093,7 @@ function renderNotificationPanel() {
                : n.type === 'comment'         ? `${nm} commented on your post`
                : n.type === 'comment_also'    ? `${nm} also commented on a post you liked or commented on`
                : n.type === 'comment_like'   ? `${nm} liked your comment`
-               : n.type === 'mention'        ? `${nm} mentioned you in a comment`
+               : n.type === 'mention'        ? `${nm} mentioned you`
                : n.type === 'club_join_request'  ? `${nm} wants to join ${n.club?.name ? escHtml(n.club.name) : 'your club'}`
                : n.type === 'club_join_accepted' ? `${nm} approved your request to join ${n.club?.name ? escHtml(n.club.name) : 'a club'}`
                : n.type === 'club_invite'        ? `${nm} invited you to join ${n.club?.name ? escHtml(n.club.name) : 'a club'}`

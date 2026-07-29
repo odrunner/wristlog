@@ -1454,7 +1454,7 @@ export function notificationBody(type, actorName, opts = {}) {
     case 'comment':            return `${nm} commented on your post`;
     case 'comment_also':       return `${nm} also commented on a post you liked or commented on`;
     case 'comment_like':       return `${nm} liked your comment`;
-    case 'mention':            return `${nm} mentioned you in a comment`;
+    case 'mention':            return `${nm} mentioned you`;
     case 'club_join_request':  return `${nm} wants to join your club`;
     case 'club_join_accepted': return `${nm} approved your club request`;
     case 'club_invite':        return `${nm} invited you to join a club`;

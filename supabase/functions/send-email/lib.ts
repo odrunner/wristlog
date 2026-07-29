@@ -56,18 +56,24 @@ export function commentQuote(text: string): string {
 }
 
 // Notification type → human-readable email subject + body
-// commentBody is provided for comment/mention types when available
+// commentBody is provided for comment/mention types when available.
+// mentionSource says which surface a mention came from ("comment" | "post") —
+// see pickMentionText; undefined means we couldn't find the text at all.
 export function buildEmailContent(
   type: string,
   actorName: string,
   commentBody?: string,
+  mentionSource?: string,
 ): { subject: string; body: string } | null {
   const quote = commentBody ? commentQuote(commentBody) : '';
+  // "…:" + the blockquote when we have the text, a plain sentence when we don't —
+  // otherwise a missing/deleted body left the email ending in a dangling colon.
+  const withQuote = (lead: string) => quote ? `${lead}:${quote}` : `${lead}.`;
   switch (type) {
     case "comment":
-      return { subject: `${actorName} commented on your post`, body: `${actorName} commented on your post:${quote}` };
+      return { subject: `${actorName} commented on your post`, body: withQuote(`${actorName} commented on your post`) };
     case "comment_also":
-      return { subject: `${actorName} also commented`, body: `${actorName} also commented on a post you interacted with:${quote}` };
+      return { subject: `${actorName} also commented`, body: withQuote(`${actorName} also commented on a post you interacted with`) };
     case "follow":
       return { subject: `${actorName} started following you`, body: `${actorName} is now following you on WRotate.` };
     case "follow_request":
@@ -86,11 +92,41 @@ export function buildEmailContent(
       return { subject: `${actorName} approved your club request`, body: `${actorName} approved your request to join the club. Welcome in!` };
     case "club_promoted":
       return { subject: `You were promoted in a club`, body: `${actorName} made you an owner of the club on WRotate.` };
-    case "mention":
-      return { subject: `${actorName} mentioned you`, body: `${actorName} mentioned you in a comment:${quote}` };
+    case "mention": {
+      // Only claim a surface when we know it — a caption mention used to be
+      // announced as "in a comment:" with nothing after the colon.
+      const where = mentionSource === "post" ? " in a post"
+        : (mentionSource === "comment" || commentBody) ? " in a comment"
+        : "";
+      return { subject: `${actorName} mentioned you`, body: withQuote(`${actorName} mentioned you${where}`) };
+    }
     default:
       return null;
   }
+}
+
+// A mention notification writes ref_id = the log id whether the @name was typed
+// in a comment or in the post's own caption (index.html does both), so the row
+// alone can't say which. Both candidates are looked up and we take whichever the
+// notification actually followed — its created_at is within a second of the row
+// that triggered it. Returns {} when neither carries text.
+export function pickMentionText(
+  notifCreatedAt: string | null | undefined,
+  comment: { body?: string | null; created_at?: string | null } | null | undefined,
+  log: { notes?: string | null; created_at?: string | null } | null | undefined,
+): { text?: string; source?: string } {
+  const fromComment = comment?.body ? { text: comment.body, source: "comment", at: comment.created_at } : null;
+  const fromPost = log?.notes ? { text: log.notes, source: "post", at: log.created_at } : null;
+  if (!fromComment) return fromPost ? { text: fromPost.text, source: fromPost.source } : {};
+  if (!fromPost) return { text: fromComment.text, source: fromComment.source };
+  const gap = (at: string | null | undefined) => {
+    const t = at ? Date.parse(at) : NaN;
+    const n = notifCreatedAt ? Date.parse(notifCreatedAt) : NaN;
+    return (isNaN(t) || isNaN(n)) ? Infinity : Math.abs(n - t);
+  };
+  // ties (including two unparseable timestamps) go to the comment
+  const winner = gap(fromPost.at) < gap(fromComment.at) ? fromPost : fromComment;
+  return { text: winner.text, source: winner.source };
 }
 
 // Resolve a display name for the actor, falling back to "Someone".

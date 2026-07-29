@@ -21,6 +21,7 @@ import {
   buildUnsubUrl,
   effectivePrefs,
   isValidRecord,
+  pickMentionText,
   resolveActorName,
   shouldFetchCommentBody,
   TYPE_TO_CATEGORY,
@@ -55,7 +56,7 @@ serve(async (req) => {
 
     const { data: dbRecord, error: verifyError } = await supabase
       .from("notifications")
-      .select("id, user_id, type, actor_id, ref_id")
+      .select("id, user_id, type, actor_id, ref_id, created_at")
       .eq("id", record.id)
       .maybeSingle();
     if (verifyError || !dbRecord) {
@@ -116,22 +117,37 @@ serve(async (req) => {
 
     // For comment/mention types, look up the actual comment text
     let commentBody: string | undefined;
+    let mentionSource: string | undefined;
     if (shouldFetchCommentBody(type, dbRecord.ref_id, actor_id)) {
       const { data: commentRow } = await supabase
         .from("comments")
-        .select("body")
+        .select("body, created_at")
         .eq("log_id", dbRecord.ref_id)
         .eq("user_id", actor_id)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (commentRow?.body) {
-        commentBody = commentRow.body;
+
+      // A mention can also come from the post's own caption — same ref_id, no
+      // comment row — so look the log up too and let pickMentionText decide.
+      let logRow = null;
+      if (type === "mention") {
+        const { data } = await supabase
+          .from("logs")
+          .select("notes, created_at")
+          .eq("id", dbRecord.ref_id)
+          .eq("user_id", actor_id)
+          .maybeSingle();
+        logRow = data;
       }
+
+      const picked = pickMentionText(dbRecord.created_at, commentRow, logRow);
+      commentBody = picked.text;
+      mentionSource = picked.source;
     }
 
     // Build email content
-    const content = buildEmailContent(type, actorName, commentBody);
+    const content = buildEmailContent(type, actorName, commentBody, mentionSource);
     if (!content) {
       return new Response(JSON.stringify({ skipped: "no template for type" }), { status: 200 });
     }
