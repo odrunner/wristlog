@@ -7122,7 +7122,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.18.47';
+const APP_VERSION = '28.18.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15691,18 +15691,14 @@ async function renderAdminTraffic() {
         ${statRow('Last 7 days', dv.views_7d, (dv.unique_7d || 0) + ' unique IPs')}
       </div>` : '';
 
+    // The "Overview (All Time)" card used to live here. It was removed: its
+    // unique/repeat visitor counts were unmeasurable (page_visits carries no
+    // reliable per-person identity for logged-out traffic, so they degraded into
+    // "distinct User-Agent string" — 169 all-time "visitors" against 458
+    // profiles), and its visit totals only restated what By Source and Daily
+    // below already show. Real people are counted properly on the Usage tab,
+    // which derives DAU/WAU/MAU from 12 activity sources.
     el.innerHTML = `
-      <div class="admin-card">
-        <div class="eyebrow" style="margin-bottom:.5rem;">Overview (All Time)</div>
-        ${statRow('Total visits', t.total_visits)}
-        ${statRow('Unique visitors', t.unique_visitors)}
-        ${statRow('Repeat visitors', t.repeat_visitors, t.repeat_visitors > 0 ? (t.repeat_visitors / t.unique_visitors * 100).toFixed(0) + '% of unique' : '')}
-        <div style="height:.5rem;"></div>
-        ${statRow('Last 24 hours', t.visits_1d, t.unique_1d + ' unique')}
-        ${statRow('Last 7 days', t.visits_7d, t.unique_7d + ' unique')}
-        ${statRow('Last 30 days', t.visits_30d, t.unique_30d + ' unique')}
-        ${statRow('Repeat (7d)', t.repeat_7d)}
-      </div>
       ${demoViewsHtml}
       ${sourceRows ? `<div class="admin-card">
         <div class="eyebrow" style="margin-bottom:.5rem;">By Source</div>
