@@ -633,6 +633,67 @@ test.describe('Share post (mocked)', () => {
   });
 });
 
+// ── Feed action row spacing ─────────────────────────────────────────────
+// A zero-count comment badge used to render an empty <span>, which still
+// consumed the button's flex gap and pushed the icon off its own centre —
+// leaving the like/comment/share icons visibly unevenly spaced.
+
+test.describe('Feed action spacing (mocked)', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+    await page.waitForTimeout(2000);
+  });
+
+  test('comment button renders no empty span when the post has no comments', async ({ page }) => {
+    const card = page.locator('#feedcard-log-001');
+    if (await card.count() === 0) return;
+    const commentBtn = card.locator('.feed-actions .feed-action-btn').nth(1);
+    const emptySpans = await commentBtn.locator('span').evaluateAll(
+      els => els.filter(el => el.textContent.trim() === '').length
+    );
+    expect(emptySpans).toBe(0);
+  });
+
+  test('icon-only action buttons centre their icon', async ({ page }) => {
+    const card = page.locator('#feedcard-log-001');
+    if (await card.count() === 0) return;
+    const offsets = await card.locator('.feed-actions .feed-action-btn').evaluateAll(btns =>
+      btns
+        .filter(b => !b.querySelector('span'))
+        .map(b => {
+          const bb = b.getBoundingClientRect();
+          const ib = b.querySelector('svg').getBoundingClientRect();
+          return (ib.left + ib.right) / 2 - (bb.left + bb.right) / 2;
+        })
+    );
+    expect(offsets.length).toBeGreaterThan(0);
+    for (const off of offsets) expect(Math.abs(off)).toBeLessThan(0.5);
+  });
+
+  test('gaps between action icons are uniform', async ({ page }) => {
+    const card = page.locator('#feedcard-log-001');
+    if (await card.count() === 0) return;
+    // Ink-to-ink: right edge of one button's last visible content to the next icon's left edge.
+    const gaps = await card.locator('.feed-actions .feed-action-btn').evaluateAll(btns => {
+      const inkRight = b => {
+        const span = b.querySelector('span');
+        const el = span && span.textContent.trim() ? span : b.querySelector('svg');
+        return el.getBoundingClientRect().right;
+      };
+      const out = [];
+      for (let i = 1; i < btns.length; i++) {
+        out.push(btns[i].querySelector('svg').getBoundingClientRect().left - inkRight(btns[i - 1]));
+      }
+      return out;
+    });
+    expect(gaps.length).toBeGreaterThan(0);
+    expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThan(1.5);
+  });
+});
+
 // ── Search / Discover ───────────────────────────────────────────────────
 
 test.describe('Search / Discover (mocked)', () => {

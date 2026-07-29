@@ -1790,7 +1790,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .feed-action-btn {
       background: none; border: none; color: var(--muted);
-      cursor: pointer; font-size: .88rem; padding: .35rem .55rem;
+      cursor: pointer; font-size: .88rem; padding: .35rem .75rem;
       border-radius: 8px; font-family: inherit; font-weight: 600;
       display: flex; align-items: center; gap: .35rem;
       transition: all .15s;
@@ -7122,7 +7122,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.20.02';
+const APP_VERSION = '28.21.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11772,7 +11772,7 @@ function renderFeedCard(item) {
         </button>
 
         <button class="feed-action-btn" onclick="toggleComments('${item.id}')">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> <span>${cCount || ''}</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>${cCount ? `<span>${cCount}</span>` : ''}
         </button>
         ${addPhotoAction}
         ${(vis === 'public' || isMe) ? `<button class="feed-action-btn" onclick="sharePost('${item.id}')" title="Share post"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>` : ''}
