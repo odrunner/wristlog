@@ -6434,11 +6434,45 @@ function officialBadgeHtml(profile) {
 }
 
 // ── UTM / visit tracking ──────────────────────────────────────────────────
+// Locate the stored Supabase session. supabase-js derives the storage key from
+// the FIRST LABEL OF THE API HOSTNAME, not the project ref — because we point
+// the client at the custom domain api.wrotate.com, the real key is
+// "sb-api-auth-token". The old code hardcoded "sb-xnzweevzrojmouzhpwzv-auth-token"
+// (the project ref), so every lookup returned null: visits were never attributed
+// and the A/B guard below always read the user as signed-out. Discover the key
+// instead of hardcoding it, so it survives the next URL change too.
+function authTokenRaw() {
+  try {
+    const k = Object.keys(localStorage).find(x => /^sb-.*-auth-token$/.test(x));
+    return k ? localStorage.getItem(k) : null;
+  } catch(e) { return null; }
+}
+
+// The session is stored as plain JSON today, but supabase-js also has a
+// base64url-behind-"base64-" storage format — handle both so an SDK bump can't
+// silently break attribution again.
+function decodeAuthUserId(raw) {
+  try {
+    let t = raw;
+    if (!t) return null;
+    if (t.startsWith('base64-')) {
+      const b64 = t.slice(7).replace(/-/g, '+').replace(/_/g, '/');
+      const bin = atob(b64 + '='.repeat((4 - b64.length % 4) % 4));
+      const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+      t = new TextDecoder().decode(bytes);
+    }
+    return JSON.parse(t).user?.id || null;
+  } catch(e) { return null; }
+}
+function storedAuthUserId() {
+  return decodeAuthUserId(authTokenRaw());
+}
+
 (function trackVisit() {
   try {
     // Skip tracking if user will be redirected to r.html (avoid double-counting)
     const abVal = localStorage.getItem('ab_landing');
-    const hasAuth = localStorage.getItem('sb-xnzweevzrojmouzhpwzv-auth-token');
+    const hasAuth = authTokenRaw();
     const isOAuthReturn = location.search.indexOf('code=') !== -1 || location.hash.indexOf('access_token') !== -1;
     if (abVal === 'b' && !hasAuth && !isOAuthReturn) return;
 
@@ -6458,7 +6492,7 @@ function officialBadgeHtml(profile) {
     if (Date.now() - lastVisit < 1800000) return;
     localStorage.setItem(dedupKey, String(Date.now()));
     const _vid = crypto.randomUUID();
-    const _uid = window.currentUser?.id || (() => { try { const t = localStorage.getItem('sb-xnzweevzrojmouzhpwzv-auth-token'); return t ? JSON.parse(t).user?.id || null : null; } catch(e) { return null; } })();
+    const _uid = window.currentUser?.id || storedAuthUserId();
     if (!_uid) localStorage.setItem('_wrotate_visit_id', _vid);
     db.from('page_visits').insert({
       id: _vid,
@@ -6488,7 +6522,7 @@ function trackVisit(data) {
     db.from('page_visits').insert({
       ...data,
       user_agent: navigator.userAgent || null,
-      user_id: window.currentUser?.id || (() => { try { const t = localStorage.getItem('sb-xnzweevzrojmouzhpwzv-auth-token'); return t ? JSON.parse(t).user?.id || null : null; } catch(e) { return null; } })(),
+      user_id: window.currentUser?.id || storedAuthUserId(),
     }).then(() => {}).catch(() => {});
   } catch(e) {}
 }
@@ -7088,7 +7122,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.18.18';
+const APP_VERSION = '28.18.47';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -28318,11 +28352,13 @@ async function bootApp(user) {
   }
   clearUserState();
   currentUser = user;
-  // Backfill user_id on the anonymous page_visit from before auth resolved
+  // Backfill user_id on the anonymous page_visit from before auth resolved.
+  // Goes through a SECURITY DEFINER RPC: a direct UPDATE is silently dropped for
+  // everyone but the admin, because page_visits' only SELECT policy is
+  // admin-only and Postgres applies it to the UPDATE's WHERE clause.
   const _storedVisitId = localStorage.getItem('_wrotate_visit_id');
   if (_storedVisitId) {
-    db.from('page_visits').update({ user_id: user.id })
-      .eq('id', _storedVisitId).is('user_id', null)
+    db.rpc('attribute_page_visit', { p_visit_id: _storedVisitId })
       .then(() => { localStorage.removeItem('_wrotate_visit_id'); })
       .catch(() => {});
   }

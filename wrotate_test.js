@@ -2076,6 +2076,28 @@ export function displayImageFor(photoUrl) {
 }
 
 // ══════════════════════════════════════════
+//  VISIT ATTRIBUTION
+// ══════════════════════════════════════════
+
+// Pulls the signed-in user id out of the stored Supabase session so a
+// page_visit can be attributed at INSERT time. supabase-js >= 2.6x stores the
+// session base64url-encoded behind a "base64-" prefix; a bare JSON.parse throws
+// on it, which is why visits were landing with user_id NULL.
+export function decodeAuthUserId(raw) {
+  try {
+    let t = raw;
+    if (!t) return null;
+    if (t.startsWith('base64-')) {
+      const b64 = t.slice(7).replace(/-/g, '+').replace(/_/g, '/');
+      const bin = atob(b64 + '='.repeat((4 - b64.length % 4) % 4));
+      const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+      t = new TextDecoder().decode(bytes);
+    }
+    return JSON.parse(t).user?.id || null;
+  } catch(e) { return null; }
+}
+
+// ══════════════════════════════════════════
 //  DEVICE CLASSIFICATION
 // ══════════════════════════════════════════
 
