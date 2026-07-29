@@ -1630,7 +1630,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       .wl-actions .btn-sm { padding: .38rem .5rem; font-size: .74rem; }
       #wishlist-modal .modal-actions { gap: .3rem; }
       #wishlist-modal .modal-actions .btn { padding: .6rem .55rem; font-size: .78rem; }
-      .feed-action-btn, .feed-edit-btn, .btn-icon { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; }
+      .feed-edit-btn, .btn-icon { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; }
+      /* Height only for the feed actions. min-width:40px pinned every icon-only
+         button at 40px, so the ink between the like/comment/share icons was
+         floor-locked at 29px however small the padding got — and the like
+         button (already wider than 40px once it carries a count) never got the
+         same slack, so the row read as unevenly spaced. Content-sized widths
+         make the gaps identical and tighter; the 40px tap height is kept. */
+      .feed-action-btn { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; }
       /* Height only. min-width:40px would widen the toggle group from 99px to
          126px and push the toolbar to 379px against 348px available at 375px,
          breaking the one-line layout. 27x28 -> 27x40 is the improvement that
@@ -1790,7 +1797,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .feed-action-btn {
       background: none; border: none; color: var(--muted);
-      cursor: pointer; font-size: .88rem; padding: .35rem .75rem;
+      cursor: pointer; font-size: .88rem; padding: .35rem .4rem;
       border-radius: 8px; font-family: inherit; font-weight: 600;
       display: flex; align-items: center; gap: .35rem;
       transition: all .15s;
@@ -7122,7 +7129,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.21.33';
+const APP_VERSION = '28.21.55';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments

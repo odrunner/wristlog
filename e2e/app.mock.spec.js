@@ -692,6 +692,30 @@ test.describe('Feed action spacing (mocked)', () => {
     expect(gaps.length).toBeGreaterThan(0);
     expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThan(1.5);
   });
+
+  test('at phone width the gaps stay uniform and the tap height stays 40px', async ({ page }) => {
+    // The mobile rule drops min-width (which used to floor the gaps at 29px) but
+    // must keep min-height:40px — the buttons get narrower, not shorter.
+    await page.setViewportSize({ width: 402, height: 800 });
+    const card = page.locator('#feedcard-log-001');
+    if (await card.count() === 0) return;
+    const m = await card.locator('.feed-actions .feed-action-btn').evaluateAll(btns => {
+      const inkRight = b => {
+        const span = b.querySelector('span');
+        const el = span && span.textContent.trim() ? span : b.querySelector('svg');
+        return el.getBoundingClientRect().right;
+      };
+      const gaps = [];
+      for (let i = 1; i < btns.length; i++) {
+        gaps.push(btns[i].querySelector('svg').getBoundingClientRect().left - inkRight(btns[i - 1]));
+      }
+      return { gaps, heights: btns.map(b => b.getBoundingClientRect().height) };
+    });
+    expect(m.gaps.length).toBeGreaterThan(0);
+    expect(Math.max(...m.gaps) - Math.min(...m.gaps)).toBeLessThan(1.5);
+    expect(Math.max(...m.gaps)).toBeLessThan(22); // tight, not the old 29px floor
+    for (const h of m.heights) expect(h).toBeGreaterThanOrEqual(40);
+  });
 });
 
 // ── Search / Discover ───────────────────────────────────────────────────
