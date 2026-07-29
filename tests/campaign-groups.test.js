@@ -211,3 +211,28 @@ describe('index.html mirrors the campaign constants', () => {
     expect(fn).not.toMatch(/campaignSubject\(\s*b\.label/);
   });
 });
+
+// Admin → Campaigns. The tab shows live drips. Retired ones can't be deleted —
+// email_campaign_sends FKs to them and holds the real delivery history — so they
+// carry is_archived and drop out of the list instead.
+describe('Campaigns tab card filter', () => {
+  const m = html.match(/const drips = _campaignsData\.filter\(([\s\S]*?)\);\n/);
+  const keep = eval(m[1]);
+
+  it('keeps live drips', () => {
+    expect(keep({ campaign_type: 'drip', is_archived: false })).toBe(true);
+  });
+
+  it('drops archived drips', () => {
+    expect(keep({ campaign_type: 'drip', is_archived: true })).toBe(false);
+  });
+
+  it('still drops cohort blasts, archived or not', () => {
+    expect(keep({ campaign_type: 'cohort_blast', is_archived: false })).toBe(false);
+    expect(keep({ campaign_type: 'cohort_blast', is_archived: true })).toBe(false);
+  });
+
+  it('keeps rows predating the column, where is_archived is undefined', () => {
+    expect(keep({ campaign_type: 'drip' })).toBe(true);
+  });
+});

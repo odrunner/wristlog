@@ -7162,7 +7162,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '29.07.43';
+const APP_VERSION = '29.08.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17662,8 +17662,10 @@ async function loadCampaigns() {
     </div>`;
   };
 
-  // Campaigns tab = automated drips only.
-  const drips = _campaignsData.filter(c => c.campaign_type !== 'cohort_blast');
+  // Campaigns tab = live automated drips only. Archived ones (is_archived) are
+  // retired drips kept only so their email_campaign_sends history survives —
+  // they're inert (is_active false) and shouldn't clutter the list.
+  const drips = _campaignsData.filter(c => c.campaign_type !== 'cohort_blast' && !c.is_archived);
 
   container.innerHTML = drips.length
     ? drips.map(cardHtml).join('')
