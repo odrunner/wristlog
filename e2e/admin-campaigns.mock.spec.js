@@ -21,17 +21,22 @@ const DATA = {
     { subject: 'Dan accepted your friend request', sent: 1, delivered: 1, opened: 0, clicked: 0 },
     { subject: 'Call me T mentioned you', sent: 1, delivered: 1, opened: 1, clicked: 0 },
     { subject: 'masont mentioned you', sent: 2, delivered: 2, opened: 0, clicked: 0 },
-    { subject: 'Your watches miss you — here’s a fun fact about the Tudor Black Bay', sent: 1, delivered: 1, opened: 0, clicked: 0 },
-    // Drained broadcast: no pending queue rows below, so it belongs in Older.
-    { subject: 'Your watch has more to tell you — meet the Pro V2 engine (beta)', sent: 45, delivered: 39, opened: 12, clicked: 3 },
     { subject: '3 new things in WRotate since you joined', sent: 159, delivered: 159, opened: 50, clicked: 6 },
     // Stray personalized one-off — one inbox, not a campaign.
     { subject: 'We miss you, Tyler', sent: 1, delivered: 1, opened: 0, clicked: 0 },
   ],
-  // Mid-send broadcast, per-recipient subjects, as broadcast_queue stores them.
-  active_broadcasts: [
-    'Your watches miss you — here’s a fun fact about the Omega Speedmaster',
-    'Your watches miss you — here’s a fun fact about your Tudor Black Bay Ceramic',
+  // Broadcasts, keyed by broadcast_queue.label as the RPC returns them — the
+  // name the send was given, NOT the per-recipient rendered subject. Their
+  // events are already excluded from by_subject server-side.
+  broadcasts: [
+    { label: 'Your watches miss you — here’s a fun fact about {{watchPhrase}}', pending: 2, sent: 1, delivered: 1, opened: 0, clicked: 0 },
+    // Regression guard: this label shares the onboarding drip's prefix, so
+    // normalizing it through campaignSubject would collapse it onto
+    // CAMPAIGN_FUNFACT_DRIP and campaignGroupOf would file it under Onboarding —
+    // which is how a live 266-email send became invisible in By Campaign.
+    { label: 'A fun fact about {{watchPhrase}}', pending: 232, sent: 34, delivered: 32, opened: 3, clicked: 0 },
+    // Drained: no pending rows, so it belongs in Older, not in-progress forever.
+    { label: 'Pro V2 engine (beta)', pending: 0, sent: 45, delivered: 39, opened: 12, clicked: 3 },
   ],
   recent: [],
 };
@@ -99,20 +104,39 @@ test.describe('Admin — By Campaign grouping (mocked)', () => {
     expect(labels).not.toContain('A fun fact about the Omega Speedmaster');
   });
 
-  test('only the broadcast with pending queue rows is in progress', async ({ page }) => {
+  test('only the broadcasts with pending queue rows are in progress', async ({ page }) => {
     const labels = await renderLabels(page);
     const start = labels.indexOf('Broadcast — in progress');
     const section = labels.slice(start + 1, labels.indexOf('Older campaigns'));
-    expect(section).toEqual(['Your watches miss you']);
+    // Both pending broadcasts, ordered by volume within the group.
+    expect(section).toEqual([
+      'A fun fact about {{watchPhrase}}',
+      'Your watches miss you — here’s a fun fact about {{watchPhrase}}',
+    ]);
     // Drained: falls through to Older instead of claiming in-progress forever.
     const older = labels.slice(labels.indexOf('Older campaigns') + 1);
-    expect(older).toContain('Your watch has more to tell you — meet the Pro V2 engine (beta)');
+    expect(older).toContain('Pro V2 engine (beta)');
+  });
+
+  test('a broadcast sharing the drip prefix is not swallowed by Onboarding', async ({ page }) => {
+    // The reported bug: "A fun fact about {{watchPhrase}}" was queued and live,
+    // but By Campaign showed nothing for it — its numbers were folded into the
+    // day-3 onboarding drip row.
+    const labels = await renderLabels(page);
+    const inProgress = labels.slice(
+      labels.indexOf('Broadcast — in progress') + 1, labels.indexOf('Older campaigns'));
+    expect(inProgress).toContain('A fun fact about {{watchPhrase}}');
+    // The onboarding drip row still exists, and is still the drip — the two are
+    // separate campaigns that merely share a subject template.
+    const onboarding = labels.slice(0, labels.indexOf('Notifications'));
+    expect(onboarding).toContain('2. A fun fact about your watch');
+    expect(onboarding).not.toContain('A fun fact about {{watchPhrase}}');
   });
 
   test('an in-flight broadcast shows from its first delivery', async ({ page }) => {
     // 1 delivered, but exempt from the one-off filter because it is mid-send.
     const labels = await renderLabels(page);
-    expect(labels).toContain('Your watches miss you');
+    expect(labels).toContain('Your watches miss you — here’s a fun fact about {{watchPhrase}}');
   });
 
   test('a queued broadcast with no engagement yet still shows in progress', async ({ page }) => {
@@ -125,15 +149,15 @@ test.describe('Admin — By Campaign grouping (mocked)', () => {
         by_subject: [
           { subject: '3 new things in WRotate since you joined', sent: 159, delivered: 159, opened: 50, clicked: 6 },
         ],
-        active_broadcasts: ['Your watches miss you — here’s a fun fact about the Omega Speedmaster'],
+        broadcasts: [{ label: 'Your watches miss you — here’s a fun fact about {{watchPhrase}}', pending: 5, sent: 0, delivered: 0, opened: 0, clicked: 0 }],
         recent: [],
       });
       const all = [...d.querySelectorAll('div')]
         .map(e => (e.childElementCount === 0 ? e.textContent.trim() : ''))
-        .filter(t => t && !/^(Delivered|Opened|Clicked):/.test(t));
+        .filter(t => t && !/^(Queued|Delivered|Opened|Clicked):/.test(t));
       return all.slice(all.indexOf('Broadcast — in progress') + 1, all.indexOf('Older campaigns'));
     });
-    expect(section).toEqual(['Your watches miss you']);
+    expect(section).toEqual(['Your watches miss you — here’s a fun fact about {{watchPhrase}}']);
   });
 
   test('stray one-off sends are hidden from Older campaigns', async ({ page }) => {
@@ -154,7 +178,7 @@ test.describe('Admin — By Campaign grouping (mocked)', () => {
           { subject: 'updates', sent: 0, delivered: 0, opened: 0, clicked: 0 },
           { subject: 'reminders', sent: 0, delivered: 0, opened: 0, clicked: 0 },
         ],
-        active_broadcasts: [],
+        broadcasts: [],
         recent: [],
       });
       return [...d.querySelectorAll('div')]

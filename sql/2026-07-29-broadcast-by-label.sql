@@ -1,0 +1,160 @@
+-- Traffic → "By Campaign": identify broadcasts by their LABEL, not by the
+-- per-recipient rendered subject.
+--
+-- Bug: the "A fun fact about {{watchPhrase}}" broadcast (232 pending + 34 sent,
+-- queued 2026-07-28) did not appear in "By Campaign" at all. active_broadcasts
+-- returned DISTINCT q.subject — the rendered per-recipient line ("A fun fact
+-- about your Rolex Submariner", 174 of them) — so the client normalized every
+-- one through campaignSubject() to 'A fun fact about your watch', which
+-- campaignGroupOf() then matched against CAMPAIGN_ONBOARDING *first* and filed
+-- under Onboarding. The broadcast was absorbed into the day-3 onboarding drip
+-- row, "Broadcast — in progress" rendered empty, and the two campaigns'
+-- engagement was commingled.
+--
+-- broadcast_queue.label already holds the campaign name with its raw template
+-- ("A fun fact about {{watchPhrase}}"), which is both stable across recipients
+-- and what the operator actually named the send. So:
+--
+--   * 'broadcasts' — one row per label, with its own pending/sent/delivered/
+--     opened/clicked. Replaces 'active_broadcasts'. Labels are NOT passed
+--     through campaignSubject(): normalizing them would re-create the exact
+--     collision this fixes (the label starts with "A fun fact about ").
+--   * 'by_subject' — now EXCLUDES events attributable to a broadcast, so the
+--     onboarding drip row counts only genuine drip sends instead of double-
+--     counting the broadcast's.
+--
+-- Events attribute to a broadcast by (lower(recipient), subject) against
+-- broadcast_queue. Verified on the fun-fact family: 85 events, 69 matched to
+-- the broadcast, 16 left as real drip sends.
+
+CREATE OR REPLACE FUNCTION public.admin_email_engagement()
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $fn$
+DECLARE
+  result json;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  -- Internal email is excluded from every figure here, filtered by RECIPIENT.
+  -- Two sources, because neither alone is enough:
+  --   1. internal_accounts -> auth.users.email  (founder + official/demo/test
+  --      logins). Single source of truth per CLAUDE.md; no UUIDs hardcoded.
+  --   2. anything @wrotate.com. Company mailboxes like support@ are NOT user
+  --      accounts, so (1) misses them -- and support@ alone receives 744 events,
+  --      all "New WRotate user:" signup alerts, which forward to the founder.
+  --      Verified: the only @wrotate.com auth users are official/test/test2/demo,
+  --      all internal, so excluding the whole domain cannot drop a real user.
+  -- Subject-pattern filtering was tried first and kept missing new variants
+  -- ("WRotate Weekly Measurement Review", "weekly-review FAILED"); matching on
+  -- recipient is what makes this hold as new internal mail is added.
+  WITH internal AS (
+    SELECT lower(u.email) AS email
+    FROM internal_accounts ia
+    JOIN auth.users u ON u.id = ia.user_id
+    WHERE u.email IS NOT NULL
+  ), ext AS (
+    -- Bounded to 90 days and to the columns actually used. This aggregated the
+    -- whole table with SELECT *; intake jumped 4.6x during the SES migration
+    -- week, which put an unbounded seq-scan on a path to seconds per page load.
+    SELECT e.event_type, e.email_id, e.email_to, e.subject, e.created_at
+    FROM email_events e
+    WHERE e.created_at >= now() - interval '90 days'
+      AND e.email_to IS NOT NULL
+      AND lower(e.email_to) NOT IN (SELECT email FROM internal)
+      AND lower(e.email_to) NOT LIKE '%@wrotate.com'
+  ), bq AS (
+    -- One label per (recipient, subject). DISTINCT ON keeps the join from
+    -- fanning out and multiplying an event if the same person were ever queued
+    -- twice under the same rendered subject; newest queue row wins.
+    SELECT DISTINCT ON (lower(email), subject)
+      lower(email) AS em, subject, label
+    FROM broadcast_queue
+    WHERE label IS NOT NULL AND email IS NOT NULL AND subject IS NOT NULL
+    ORDER BY lower(email), subject, created_at DESC
+  ), ext_l AS (
+    SELECT e.event_type, e.email_id, e.email_to, e.subject, e.created_at, b.label
+    FROM ext e
+    LEFT JOIN bq b ON b.em = lower(e.email_to) AND b.subject = e.subject
+  ), qlab AS (
+    SELECT label, count(*) FILTER (WHERE status = 'pending') AS pending
+    FROM broadcast_queue
+    WHERE label IS NOT NULL
+    GROUP BY label
+  ), blab AS (
+    SELECT
+      label,
+      count(*) FILTER (WHERE event_type = 'sent') AS sent,
+      count(*) FILTER (WHERE event_type = 'delivered') AS delivered,
+      count(DISTINCT email_id) FILTER (WHERE event_type = 'opened') AS opened,
+      count(DISTINCT email_id) FILTER (WHERE event_type = 'clicked') AS clicked,
+      count(*) FILTER (WHERE event_type IN ('bounced','complained')) AS bounced
+    FROM ext_l
+    WHERE label IS NOT NULL AND event_type <> 'unsubscribed'
+    GROUP BY label
+  )
+  SELECT json_build_object(
+    'by_subject', (
+      SELECT coalesce(json_agg(row_to_json(s)), '[]'::json)
+      FROM (
+        SELECT
+          subject,
+          count(*) FILTER (WHERE event_type = 'sent') AS sent,
+          count(*) FILTER (WHERE event_type = 'delivered') AS delivered,
+          -- DISTINCT email_id: 'delivered' is one event per email but 'opened'
+          -- fires per open (prefetch, re-opens), so raw counts rendered 200% and
+          -- 300% open rates. Also makes this robust to duplicate webhook rows.
+          count(DISTINCT email_id) FILTER (WHERE event_type = 'opened') AS opened,
+          count(DISTINCT email_id) FILTER (WHERE event_type = 'clicked') AS clicked,
+          count(*) FILTER (WHERE event_type IN ('bounced','complained')) AS bounced
+        FROM ext_l
+        WHERE subject IS NOT NULL
+          -- See note 1 above: `subject` holds the unsub category, not a campaign.
+          AND event_type <> 'unsubscribed'
+          -- Broadcast sends are reported under their label in 'broadcasts';
+          -- leaving them here too would double-count them.
+          AND label IS NULL
+        GROUP BY subject
+      ) s
+    ),
+    -- One row per broadcast campaign, keyed by the operator-chosen label.
+    -- `pending` > 0 means it is still draining from broadcast_queue.
+    'broadcasts', (
+      SELECT coalesce(json_agg(row_to_json(b) ORDER BY b.pending DESC, b.delivered DESC), '[]'::json)
+      FROM (
+        SELECT
+          q.label,
+          q.pending,
+          coalesce(e.sent, 0)      AS sent,
+          coalesce(e.delivered, 0) AS delivered,
+          coalesce(e.opened, 0)    AS opened,
+          coalesce(e.clicked, 0)   AS clicked,
+          coalesce(e.bounced, 0)   AS bounced
+        FROM qlab q
+        LEFT JOIN blab e ON e.label = q.label
+      ) b
+    ),
+    'recent', (
+      SELECT coalesce(json_agg(row_to_json(r)), '[]'::json)
+      FROM (
+        SELECT event_type, email_to, created_at
+        FROM ext
+        WHERE event_type IN ('opened','clicked')
+        ORDER BY created_at DESC
+        LIMIT 40
+      ) r
+    )
+  ) INTO result;
+
+  RETURN result;
+END;
+$fn$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_email_engagement() FROM anon, public;
+GRANT  EXECUTE ON FUNCTION public.admin_email_engagement() TO authenticated, service_role;
+
+NOTIFY pgrst, 'reload schema';

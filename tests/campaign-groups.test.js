@@ -120,13 +120,27 @@ describe('campaignGroupOf', () => {
     expect(campaignGroupOf(subj).group).toBe(3);
   });
 
-  it('matches an in-flight broadcast by its collapsed key', () => {
-    // active_broadcasts carries per-recipient subjects; both sides go through
-    // campaignSubject so the personalized rows meet the queue rows.
-    const active = new Set(['Your watches miss you — here’s a fun fact about the Tudor Black Bay']
-      .map(campaignSubject));
-    expect(campaignGroupOf(campaignSubject(
-      'Your watches miss you — here’s a fun fact about the Omega Speedmaster'), active).group).toBe(2);
+  it('matches an in-flight broadcast by its queue label', () => {
+    // Broadcasts are keyed by broadcast_queue.label — the name the send was
+    // given — not by the per-recipient rendered subject.
+    const active = new Set(['Your watches miss you — here’s a fun fact about {{watchPhrase}}']);
+    expect(campaignGroupOf('Your watches miss you — here’s a fun fact about {{watchPhrase}}', active).group).toBe(2);
+  });
+
+  it('a broadcast label sharing a drip prefix is NOT absorbed into Onboarding', () => {
+    // Regression guard. "A fun fact about {{watchPhrase}}" was a live broadcast
+    // (232 pending) that never appeared in By Campaign: its per-recipient
+    // subjects normalized to CAMPAIGN_FUNFACT_DRIP, and campaignGroupOf checks
+    // CAMPAIGN_ONBOARDING before activeKeys — so a 266-email send vanished into
+    // the day-3 drip row while "Broadcast — in progress" rendered empty.
+    const LABEL = 'A fun fact about {{watchPhrase}}';
+    const active = new Set([LABEL]);
+    expect(campaignGroupOf(LABEL, active).group).toBe(2);
+    // The trap: normalizing the label first collapses it onto the drip key.
+    expect(campaignSubject(LABEL)).toBe(CAMPAIGN_FUNFACT_DRIP);
+    expect(campaignGroupOf(campaignSubject(LABEL), active).group).toBe(0);
+    // Drained: falls through to "Older campaigns", still on its own row.
+    expect(campaignGroupOf(LABEL, new Set()).group).toBe(3);
   });
 
   it('drops everything else into "Older campaigns"', () => {
@@ -178,8 +192,8 @@ describe('index.html mirrors the campaign constants', () => {
   });
 
   it('no hardcoded in-flight broadcast list survives', () => {
-    // The whole point of active_broadcasts: a finished broadcast should drop out
-    // on its own, with nobody editing an array.
+    // A finished broadcast should drop out on its own (pending hits zero), with
+    // nobody editing an array.
     expect(html).not.toContain('CAMPAIGN_ACTIVE_BROADCASTS');
   });
 
@@ -190,7 +204,10 @@ describe('index.html mirrors the campaign constants', () => {
     expect(fn).not.toMatch(/const campaignSubject\s*=/);
     // The old subject-regex filter is gone; the RPC filters by recipient now.
     expect(fn).not.toContain('weekly measurements|weekly analysis');
-    // In-progress comes from the queue, via the RPC.
-    expect(fn).toContain('active_broadcasts');
+    // In-progress comes from the queue, via the RPC's label-keyed broadcasts.
+    expect(fn).toContain('data.broadcasts');
+    // The label must reach campaignGroupOf raw. Normalizing it through
+    // campaignSubject is the bug that hid the fun-fact broadcast.
+    expect(fn).not.toMatch(/campaignSubject\(\s*b\.label/);
   });
 });

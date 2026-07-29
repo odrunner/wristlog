@@ -7122,7 +7122,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.18.59';
+const APP_VERSION = '28.19.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15734,6 +15734,9 @@ function renderEmailEngagement(data) {
   data = data || {};
   let bySubjectRows = data.by_subject || [];
   const recent = data.recent || [];
+  // One row per broadcast campaign, keyed by broadcast_queue.label. The RPC
+  // already excluded these events from by_subject, so nothing is double-counted.
+  const broadcasts = (data.broadcasts || []).filter(b => b && b.label);
 
   // Internal-account emails (founder signup alerts, the weekly measurement
   // reports, test/demo accounts) are excluded server-side by the RPC, filtered
@@ -15741,11 +15744,13 @@ function renderEmailEngagement(data) {
   // subject-regex filter here which kept missing variants — "WRotate Weekly
   // Measurement Review — …" and "⚠️ WRotate weekly-review FAILED — …" both
   // slipped through and showed up under "Older campaigns".
-  if (!bySubjectRows.length && !recent.length && !(data.active_broadcasts || []).length) return '';
+  if (!bySubjectRows.length && !recent.length && !broadcasts.length) return '';
 
-  // Overall totals = sum across all (non-founder) subjects, all time.
+  // Overall totals = sum across all (non-founder) subjects, all time. Broadcast
+  // events live in their own array now, so they have to be added back in here or
+  // the headline totals would silently lose every broadcast send.
   let sent = 0, delivered = 0, opened = 0, clicked = 0, bounced = 0;
-  bySubjectRows.forEach(r => {
+  bySubjectRows.concat(broadcasts).forEach(r => {
     sent += +r.sent || 0;
     delivered += +r.delivered || 0;
     opened += +r.opened || 0;
@@ -15771,20 +15776,32 @@ function renderEmailEngagement(data) {
     s.clicked += +r.clicked || 0;
   });
 
-  // Which campaigns are mid-send, from broadcast_queue's pending rows rather
-  // than a hardcoded list. Normalized through campaignSubject so a broadcast
-  // with per-recipient subjects collapses to the same key as its email_events.
-  const activeKeys = new Set(
-    (data.active_broadcasts || []).map(s => campaignSubject(s)).filter(Boolean)
-  );
-
-  // Seed a zero row for any queued broadcast with no engagement yet, so a send
-  // that is genuinely in flight is visible from the moment it is queued. Without
-  // this the section is empty until the first external delivery lands — and the
-  // very first sends of a broadcast are often internal test sends, which the RPC
-  // filters out by recipient.
-  activeKeys.forEach(k => {
-    if (!bySubject[k]) bySubject[k] = { sent: 0, delivered: 0, opened: 0, clicked: 0 };
+  // Broadcasts get one row each, keyed by their broadcast_queue label — the name
+  // the send was actually given ("A fun fact about {{watchPhrase}}").
+  //
+  // Labels deliberately do NOT go through campaignSubject(). That normalizer
+  // maps anything starting "a fun fact about " onto the onboarding drip key, and
+  // campaignGroupOf() matches CAMPAIGN_ONBOARDING before activeKeys — which is
+  // exactly how a 266-email broadcast used to vanish into the day-3 drip row
+  // with "Broadcast — in progress" left empty. Keying on the label keeps a
+  // broadcast distinct from a drip that merely shares a subject template.
+  //
+  // A label with pending rows is still draining, so it lands in group 2; one
+  // that has fully drained falls through to "Older campaigns" on its own.
+  const pendingByLabel = {};
+  const activeKeys = new Set();
+  broadcasts.forEach(b => {
+    pendingByLabel[b.label] = +b.pending || 0;
+    if (+b.pending > 0) activeKeys.add(b.label);
+    // Seeded even at zero engagement, so a send that is genuinely in flight is
+    // visible from the moment it is queued rather than only once the first
+    // external delivery lands.
+    if (!bySubject[b.label]) bySubject[b.label] = { sent: 0, delivered: 0, opened: 0, clicked: 0 };
+    const s = bySubject[b.label];
+    s.sent += +b.sent || 0;
+    s.delivered += +b.delivered || 0;
+    s.opened += +b.opened || 0;
+    s.clicked += +b.clicked || 0;
   });
 
   // Display order: onboarding drips 1-4, the social notification buckets
@@ -15817,9 +15834,13 @@ function renderEmailEngagement(data) {
       lastGroup = g;
       // Onboarding drips are numbered 1-4 by their position in the sequence.
       const label = g === 0 ? `${rankOf(subj) + 1}. ${subj}` : subj;
+      // Still-queued count, so a mid-send broadcast reads as in flight rather
+      // than as a campaign that only reached the handful already delivered.
+      const queued = pendingByLabel[subj] || 0;
       return `${header}<div style="padding:.45rem 0;border-bottom:1px solid var(--border);">
         <div style="font-size:.78rem;font-weight:600;margin-bottom:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(label)}</div>
         <div style="font-size:.7rem;color:var(--muted);display:flex;gap:.6rem;flex-wrap:wrap;">
+          ${queued ? `<span style="color:var(--gold);">Queued: ${queued}</span>` : ''}
           <span>Delivered: ${s.delivered}</span>
           <span>Opened: ${s.opened} (${pct(s.opened, base)})</span>
           <span>Clicked: ${s.clicked} (${pct(s.clicked, base)})</span>
