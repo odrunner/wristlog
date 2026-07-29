@@ -2577,8 +2577,11 @@ export function npIdentifyWait(inFlight, taggedWatchId, capMs, sleep) {
 // saveNewPost/saveLog/quickLog all attach a fact at creation time, so that
 // later tag was the one wear path that left fact_id null forever. Needs a local
 // log row: attachFunFact writes factId onto it.
-export function shouldAttachFactOnEdit(finalWatchId, log) {
-  return !!finalWatchId && !!log && !log.factId;
+// Also fires when the tag CHANGES: the old watch's fact is wrong for the new one
+// (a Rolex fact sat under a Cartier until this clause existed).
+export function shouldAttachFactOnEdit(finalWatchId, log, prevWatchId) {
+  if (!finalWatchId || !log) return false;
+  return !log.factId || prevWatchId !== finalWatchId;
 }
 
 // Daily fun-fact delight card, shown after logging a wear (mirrored in index.html).

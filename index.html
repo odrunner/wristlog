@@ -7162,7 +7162,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '29.06.36';
+const APP_VERSION = '29.07.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12756,10 +12756,25 @@ async function saveEditPost() {
     }
   }
   refreshFeedCard(editPostLogId);
+  // A changed (or removed) watch invalidates the attached fact — it describes the
+  // OLD model. Drop it first, locally and server-side, so a re-attach that fails
+  // leaves the post with no fact rather than a wrong one, and so pick_watch_fact's
+  // `fact_id is null` stamp can land.
+  const prevWatchId = oldLog ? (oldLog.watchId || null) : (oldFi ? (oldFi.watch_id || null) : null);
+  if (log && log.factId && prevWatchId !== finalWatchId) {
+    log.factId = null;
+    if (fi) fi.fact = null;
+    markDirty('logs', log.id); save();
+    if (currentUser) {
+      await db.from('logs').update({ fact_id: null })
+        .eq('id', editPostLogId).eq('user_id', currentUser.id);
+    }
+    refreshFeedCard(editPostLogId);
+  }
   // Tagging a watch on an untagged post makes it a wear — give it a fun fact,
   // like every other wear path. Fire-and-forget: generation is slow (~10-15s of
   // grounded AI) and must never hold the Save button.
-  if (shouldAttachFactOnEdit(finalWatchId, log)) {
+  if (shouldAttachFactOnEdit(finalWatchId, log, prevWatchId)) {
     attachFunFact(log, watches.find(w => w.id === finalWatchId) || null).then(factText => {
       if (!factText) return;
       if (fi) { fi.fact = factText; refreshFeedCard(editPostLogId); }
@@ -17347,8 +17362,11 @@ function renderTrackHistory() {
 // saveNewPost/saveLog/quickLog all attach a fact at creation time, so that
 // later tag was the one wear path that left fact_id null forever. Needs a local
 // log row: attachFunFact writes factId onto it.
-function shouldAttachFactOnEdit(finalWatchId, log) {
-  return !!finalWatchId && !!log && !log.factId;
+// Also fires when the tag CHANGES: the old watch's fact is wrong for the new one
+// (a Rolex fact sat under a Cartier until this clause existed).
+function shouldAttachFactOnEdit(finalWatchId, log, prevWatchId) {
+  if (!finalWatchId || !log) return false;
+  return !log.factId || prevWatchId !== finalWatchId;
 }
 
 // Pick or generate a daily fun fact for a wear log, persist logEntry.factId, and
@@ -17357,8 +17375,11 @@ async function attachFunFact(logEntry, watch) {
   try {
     if (!watch || !watch.brand || !watch.name || !currentUser) return '';
     const brand = watch.brand, name = watch.name, ref = watch.ref || '';
+    // p_log_id lets the RPC stamp logs.fact_id itself (it no-ops when the row
+    // hasn't synced yet, which is common — save() debounces 500ms). Belt and
+    // braces with the client write below, after a sync race lost facts outright.
     const { data: picked, error: pErr } = await db.rpc('pick_watch_fact',
-      { p_brand: brand, p_name: name, p_wear_date: logEntry.date });
+      { p_brand: brand, p_name: name, p_wear_date: logEntry.date, p_log_id: logEntry.id });
     if (pErr || !picked) return '';
     let factId = picked.fact_id, factText = picked.fact;
     if (picked.needs_generation) {
@@ -17524,7 +17545,8 @@ async function loadCampaignSampleVars() {
     // mid-sentence by the early generation bug.
     const usableFacts = facts.filter(f => {
       const t = (f.fact || '').trim();
-      return t.length >= 40 && t.length <= 500 && /[.!?]$/.test(t);
+      // Mirrors looksCompleteFact — terminal punctuation may close a quotation.
+      return t.length >= 40 && t.length <= 500 && /[.!?]["'”’)\]]*$/.test(t);
     });
     for (const w of usable) {
       const key = `${w.brand.trim().toLowerCase()}|${w.name.trim().toLowerCase()}`;

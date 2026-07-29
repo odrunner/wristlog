@@ -288,6 +288,33 @@ Deno.test("looksCompleteFact — rejects truncated pool rows", () => {
   assertEquals(looksCompleteFact(null), false);
 });
 
+Deno.test("looksCompleteFact — a sentence that closes a quotation is complete", () => {
+  // Four real pooled facts end this way and were being skipped as truncated.
+  assertEquals(
+    looksCompleteFact(
+      'The Turn-O-Graph became the issued watch for pilots of the U.S. Air Force\'s "Thunderbirds" aerobatic squadron, earning it the nickname "Thunderbird."',
+    ),
+    true,
+  );
+  assertEquals(
+    looksCompleteFact(
+      "Genta decried the 42mm Offshore as a caricature of his work, declaring that his creation had been “completely destroyed.”",
+    ),
+    true,
+  );
+  assertEquals(
+    looksCompleteFact(
+      "The 'Seahunter' name marked a limited edition commemorating Clive Cussler's book, 'The Sea Hunters.'",
+    ),
+    true,
+  );
+  // Still rejects a genuinely truncated row that happens to contain a quote.
+  assertEquals(
+    looksCompleteFact('The nickname "Thunderbird" came about when Rolex began '),
+    false,
+  );
+});
+
 Deno.test("pickPoolFact — lowest position wins, truncated rows skipped", () => {
   const rows = [
     { position: 2, fact: "A perfectly complete second fact about this watch model here." },

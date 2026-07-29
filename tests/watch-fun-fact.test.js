@@ -72,17 +72,53 @@ describe('fun-fact covers every wear-creation path', () => {
 
 describe('shouldAttachFactOnEdit', () => {
   it('attaches when an untagged post gets a watch', () => {
-    expect(shouldAttachFactOnEdit('w1', { id: 'l1', factId: null })).toBe(true);
+    expect(shouldAttachFactOnEdit('w1', { id: 'l1', factId: null }, null)).toBe(true);
   });
   it('does not attach when the post still has no watch', () => {
-    expect(shouldAttachFactOnEdit(null, { id: 'l1', factId: null })).toBe(false);
+    expect(shouldAttachFactOnEdit(null, { id: 'l1', factId: null }, null)).toBe(false);
   });
-  it('does not re-attach when the post already has a fact', () => {
-    expect(shouldAttachFactOnEdit('w1', { id: 'l1', factId: 'f1' })).toBe(false);
+  it('does not re-attach when the same watch already has a fact', () => {
+    expect(shouldAttachFactOnEdit('w1', { id: 'l1', factId: 'f1' }, 'w1')).toBe(false);
   });
   it('does not attach when the log is not in local state (nothing to write factId onto)', () => {
-    expect(shouldAttachFactOnEdit('w1', null)).toBe(false);
-    expect(shouldAttachFactOnEdit('w1', undefined)).toBe(false);
+    expect(shouldAttachFactOnEdit('w1', null, null)).toBe(false);
+    expect(shouldAttachFactOnEdit('w1', undefined, null)).toBe(false);
+  });
+  // F1: a Rolex fact stayed attached under a Cartier when the tag was swapped,
+  // and re-tagging never corrected it because factId was already set.
+  it('re-attaches when the tagged watch CHANGES, even though a fact exists', () => {
+    expect(shouldAttachFactOnEdit('w2', { id: 'l1', factId: 'f1' }, 'w1')).toBe(true);
+  });
+  it('re-attaches when a watch is added back after being removed', () => {
+    expect(shouldAttachFactOnEdit('w2', { id: 'l1', factId: 'f1' }, null)).toBe(true);
+  });
+});
+
+describe('watch-change invalidates the attached fact (F1)', () => {
+  const src = html.slice(html.indexOf('async function saveEditPost('),
+                         html.indexOf('function deletePostFromFeed('));
+  it('clears fact_id locally and server-side when the tag changes', () => {
+    expect(src).toMatch(/prevWatchId\s*!==\s*finalWatchId/);
+    expect(src).toMatch(/log\.factId = null/);
+    expect(src).toMatch(/update\(\{ fact_id: null \}\)/);
+  });
+  it('clears BEFORE re-attaching, so a failed re-attach leaves no fact rather than a wrong one', () => {
+    expect(src.indexOf('update({ fact_id: null })'))
+      .toBeLessThan(src.indexOf('shouldAttachFactOnEdit('));
+  });
+});
+
+describe('pick_watch_fact stamps the log server-side (F4)', () => {
+  it('attachFunFact passes the log id to the RPC', () => {
+    const i = html.indexOf('async function attachFunFact(');
+    const body = html.slice(i, i + 1600);
+    expect(body).toMatch(/p_log_id:\s*logEntry\.id/);
+  });
+  it('the client still writes factId itself — the stamp is a backstop, not a replacement', () => {
+    const i = html.indexOf('async function attachFunFact(');
+    const body = html.slice(i, i + 2200);
+    expect(body).toMatch(/logEntry\.factId = factId/);
+    expect(body).toMatch(/markDirty\('logs', logEntry\.id\)/);
   });
 });
 

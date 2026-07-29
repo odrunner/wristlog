@@ -109,7 +109,10 @@ export function watchLabel(brand: string, name: string): string {
 export function looksCompleteFact(fact: string | null | undefined): boolean {
   const t = (fact ?? "").trim();
   if (t.length < 40 || t.length > 500) return false;
-  return /[.!?]$/.test(t);
+  // Terminal punctuation may be followed by a closing quote or bracket — a fact
+  // ending `…the nickname "Thunderbird."` is complete, not truncated. A bare
+  // /[.!?]$/ rejected four perfectly good pooled facts.
+  return /[.!?]["'”’)\]]*$/.test(t);
 }
 
 // First usable fact in the pool, lowest position first (the generation prompt
