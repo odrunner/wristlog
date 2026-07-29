@@ -6964,9 +6964,38 @@ function _persistDirty() {
     wishlist: [..._dirty.wishlist], elo: [..._dirty.elo],
   })); } catch (_) {}
 }
+// Per-id write counter. cloudSync builds its payload BEFORE awaiting the
+// upsert, so an id re-marked during that await holds newer data than what went
+// over the wire — clearing it on success dropped that data silently (a fun fact
+// stamped by attachFunFact mid-sync was the real casualty). Not persisted: ids
+// restored from localStorage start at 0, which is what syncedIds expects.
+const _dirtyVer = { watches: new Map(), logs: new Map(), wishlist: new Map(), elo: new Map() };
+
 function markDirty(type, id) {
   const s = _dirty[type];
-  if (s) { Array.isArray(id) ? id.forEach(i => s.add(i)) : s.add(id); _persistDirty(); }
+  if (!s) return;
+  const v = _dirtyVer[type];
+  (Array.isArray(id) ? id : [id]).forEach(i => { s.add(i); if (v) v.set(i, (v.get(i) || 0) + 1); });
+  _persistDirty();
+}
+
+// Ids the finished write actually covered — those whose version still matches
+// the snapshot taken when the payload was built.
+function syncedIds(snapshot, versions) {
+  return [...snapshot.keys()].filter(id => (versions.get(id) || 0) === snapshot.get(id));
+}
+
+function snapDirty(type, ids) {
+  const v = _dirtyVer[type];
+  return new Map(ids.map(id => [id, v ? (v.get(id) || 0) : 0]));
+}
+
+// Clear only the ids that weren't re-marked mid-flight. Anything re-marked stays
+// dirty, so cloudSync's own retry carries the newer data on the next pass.
+function clearSynced(type, snapshot) {
+  const v = _dirtyVer[type];
+  syncedIds(snapshot, v || new Map()).forEach(id => { _dirty[type].delete(id); if (v) v.delete(id); });
+  _persistDirty();
 }
 
 // ── Pending deletes queue (persisted to localStorage for offline resilience) ──
@@ -7078,33 +7107,37 @@ async function cloudSync() {
     // Snapshot IDs, attempt upsert, only clear on success (new mutations during await stay in the live set)
     if (_dirty.watches.size) {
       const ids = [..._dirty.watches];
+      const snap = snapDirty('watches', ids);
       if (await upsert('watches', watches.filter(w => ids.includes(w.id)).map(watchToRow)))
-        { ids.forEach(id => _dirty.watches.delete(id)); _persistDirty(); }
+        clearSynced('watches', snap);
     }
     if (_dirty.logs.size) {
       const ids = [..._dirty.logs];
+      const snap = snapDirty('logs', ids);
       if (await upsert('logs', logs.filter(l => ids.includes(l.id)).map(logToRow)))
-        { ids.forEach(id => _dirty.logs.delete(id)); _persistDirty(); }
+        clearSynced('logs', snap);
     }
     if (_dirty.wishlist.size) {
       const ids = [..._dirty.wishlist];
       // Always sync all items when any are dirty to preserve rank order
       // Filter out items pending deletion to avoid re-inserting them
       const pendingDelIds = new Set(_pendingDeletes.filter(d => d.table === 'wishlist').map(d => d.id));
+      const snap = snapDirty('wishlist', ids);
       if (await upsert('wishlist', wishlist.filter(w => !pendingDelIds.has(w.id)).map((w, i) => wishToRow(w, i))))
-        { ids.forEach(id => _dirty.wishlist.delete(id)); _persistDirty(); }
+        clearSynced('wishlist', snap);
     }
     if (_dirty.elo.size) {
       const ids = [..._dirty.elo];
+      const snap = snapDirty('elo', ids);
       const eloUpdates = ids
         .filter(id => eloRatings[id] !== undefined)
         .map(id => ({ id, user_id: currentUser.id, elo_rating: eloRatings[id] }));
       if (eloUpdates.length) {
         const { error } = await db.from('watches').upsert(eloUpdates, { onConflict: 'id', ignoreDuplicates: false });
         if (error) console.error('[WristLog] cloudSync elo error:', error.message, error);
-        else { ids.forEach(id => _dirty.elo.delete(id)); _persistDirty(); }
+        else clearSynced('elo', snap);
       } else {
-        { ids.forEach(id => _dirty.elo.delete(id)); _persistDirty(); }
+        clearSynced('elo', snap);
       }
     }
     // Retry with exponential backoff if anything still pending
@@ -7129,7 +7162,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.21.55';
+const APP_VERSION = '29.06.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments

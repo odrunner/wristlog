@@ -2556,6 +2556,12 @@ export function initialsTextColor(bg) {
   return (r * 299 + g * 587 + b * 114) / 1000 >= 140 ? '#000' : '#fff';
 }
 
+// Ids the finished write actually covered — those whose version still matches
+// the snapshot taken when the payload was built.
+export function syncedIds(snapshot, versions) {
+  return [...snapshot.keys()].filter(id => (versions.get(id) || 0) === snapshot.get(id));
+}
+
 // Identification is fire-and-forget — it starts when the photo is attached and
 // can take 5s+. saveNewPost used to read npIdentifiedWatchId synchronously, so
 // posting before the result landed dropped the watch tag silently (and with it

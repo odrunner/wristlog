@@ -47,7 +47,7 @@ const VERBATIM = [
   'shouldPromptFirstWear', 'hasWornToday', 'shouldRevealBadges', 'shouldShowPushPrimer',
   'fillCampaignTokens', 'unresolvedCampaignTokens',
   'shouldShowFactModal', 'pickFactModalWatch', 'shouldAttachFactOnEdit',
-  'npIdentifyWait',
+  'npIdentifyWait', 'syncedIds',
 ];
 
 const ADAPTED = [
