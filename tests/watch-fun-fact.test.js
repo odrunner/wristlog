@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { funFactCardHTML, funFactRowHTML } from '../wrotate_test.js';
+import { funFactCardHTML, funFactRowHTML, shouldAttachFactOnEdit } from '../wrotate_test.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(join(__dirname, '..', 'index.html'), 'utf8');
@@ -60,6 +60,29 @@ describe('fun-fact covers every wear-creation path', () => {
     // Guarded by postedWatch, NOT isWear — measurement shares tag a watch and
     // should get a fact about it too.
     expect(fnBody('async function saveNewPost(')).toMatch(/if \(postedWatch\) attachFunFact/);
+  });
+  // Regression (@crash, 2026-07-28): a post can be created untagged and get its
+  // watch tagged afterwards via Edit post. That path wrote watch_id but never
+  // attached a fact, so the log kept fact_id null forever. Tagging is a
+  // wear-creation path too — the other three are not enough.
+  it('saveEditPost attaches a fun fact when a watch is tagged after posting', () => {
+    expect(fnBody('async function saveEditPost(')).toContain('attachFunFact(');
+  });
+});
+
+describe('shouldAttachFactOnEdit', () => {
+  it('attaches when an untagged post gets a watch', () => {
+    expect(shouldAttachFactOnEdit('w1', { id: 'l1', factId: null })).toBe(true);
+  });
+  it('does not attach when the post still has no watch', () => {
+    expect(shouldAttachFactOnEdit(null, { id: 'l1', factId: null })).toBe(false);
+  });
+  it('does not re-attach when the post already has a fact', () => {
+    expect(shouldAttachFactOnEdit('w1', { id: 'l1', factId: 'f1' })).toBe(false);
+  });
+  it('does not attach when the log is not in local state (nothing to write factId onto)', () => {
+    expect(shouldAttachFactOnEdit('w1', null)).toBe(false);
+    expect(shouldAttachFactOnEdit('w1', undefined)).toBe(false);
   });
 });
 

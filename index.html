@@ -7088,7 +7088,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.21.24';
+const APP_VERSION = '28.17.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12682,6 +12682,16 @@ async function saveEditPost() {
     }
   }
   refreshFeedCard(editPostLogId);
+  // Tagging a watch on an untagged post makes it a wear — give it a fun fact,
+  // like every other wear path. Fire-and-forget: generation is slow (~10-15s of
+  // grounded AI) and must never hold the Save button.
+  if (shouldAttachFactOnEdit(finalWatchId, log)) {
+    attachFunFact(log, watches.find(w => w.id === finalWatchId) || null).then(factText => {
+      if (!factText) return;
+      if (fi) { fi.fact = factText; refreshFeedCard(editPostLogId); }
+      toast('💡 ' + factText);
+    });
+  }
   closeEditPost();
   toast('Post updated!');
   } finally { if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; } }
@@ -12718,6 +12728,7 @@ let newPostFiles = [];    // array of File objects (photos or videos)
 let newPostPreviews = []; // array of object URLs for thumbnails (photo objectURL or poster objectURL)
 let newPostPosters = [];  // array of Blob (videos) or null (photos), parallel to newPostFiles
 let npIdentifiedWatchId = null; // watchId from AI identification (or null)
+let _npIdentifyInFlight = null; // pending npIdentifyWatch() promise, or null
 let npUseCase = 'unspecified';  // occasion chosen in the New Post "Details" block
 let npStrapId = null;           // strap chosen in the New Post "Details" block
 let npDetailsExpanded = false;  // whether the occasion/strap block is open
@@ -12755,7 +12766,7 @@ function openNewPost(opts) {
     renderNpThumbstrip();
     // A shared photo IS a watch photo — run the same identification a user-added
     // photo gets (graph-card prefills stay exempt: a chart isn't identifiable).
-    if (o.source === 'share' && newPostFiles[0]) npIdentifyWatch(newPostFiles[0]);
+    if (o.source === 'share' && newPostFiles[0]) _npIdentifyInFlight = npIdentifyWatch(newPostFiles[0]);
   }
   // Headless mode (e.g. direct measurement share): caller will force visibility
   // and submit immediately, so never show or focus the modal.
@@ -12879,7 +12890,7 @@ async function handleNewPostPhotos(input) {
     // otherwise from the file itself (works for photos and for videos when the
     // backend can read the raw file).
     const firstIsVideoWithPoster = !!newPostPosters[0];
-    npIdentifyWatch(firstIsVideoWithPoster ? newPostPosters[0] : firstFile);
+    _npIdentifyInFlight = npIdentifyWatch(firstIsVideoWithPoster ? newPostPosters[0] : firstFile);
   }
 }
 
@@ -12965,11 +12976,26 @@ function clearNewPostPhoto() {
   newPostPreviews = [];
   newPostPosters = [];
   npIdentifiedWatchId = null;
+  // Drop the pending identification with the photo it belongs to — otherwise a
+  // late result could tag the next post, or make the next Post click wait on it.
+  _npIdentifyInFlight = null;
   dismissNpWatchSuggestion();
   renderNpThumbstrip();
 }
 
 // ── New Post: AI watch identification ────────────────────────────────────────
+
+// Identification is fire-and-forget — it starts when the photo is attached and
+// can take 5s+. saveNewPost used to read npIdentifiedWatchId synchronously, so
+// posting before the result landed dropped the watch tag silently (and with it
+// the wear attribution and the fun fact). Wait for the in-flight call, capped:
+// a slow model must never hold the Post button hostage.
+const NP_IDENTIFY_WAIT_MS = 8000;
+function npIdentifyWait(inFlight, taggedWatchId, capMs, sleep) {
+  if (taggedWatchId || !inFlight) return Promise.resolve();
+  return Promise.race([Promise.resolve(inFlight).catch(() => {}), sleep(capMs)]).then(() => {});
+}
+
 async function npIdentifyWatch(file) {
   if (!currentUser || !watches.length) return;
   const sugEl = document.getElementById('np-watch-suggestion');
@@ -13111,13 +13137,18 @@ function toggleNpWatchPicker() {
   picker.style.display = '';
 }
 
+// An explicit pick from the picker beats the AI. Dropping the in-flight handle
+// stops a late identification from overriding the choice (including a
+// deliberate "No watch"), and stops Post from waiting on a result we'd ignore.
 function selectNpWatch(watchId) {
   npIdentifiedWatchId = watchId;
+  _npIdentifyInFlight = null;
   renderNpWatchDisplay();
 }
 
 function clearNpWatch() {
   npIdentifiedWatchId = null;
+  _npIdentifyInFlight = null;
   renderNpWatchDisplay();
 }
 
@@ -13145,6 +13176,10 @@ async function saveNewPost() {
   if (_npBtn) { _npBtn.disabled = true; _npBtn.textContent = 'Posting...'; }
   try {
   const vis = getVisChip('np-vis-chips');
+  // Don't snapshot the tag until identification has had its say — see
+  // npIdentifyWait. The button already reads "Posting…" while we wait.
+  await npIdentifyWait(_npIdentifyInFlight, npIdentifiedWatchId, NP_IDENTIFY_WAIT_MS,
+    ms => new Promise(r => setTimeout(r, ms)));
   const trackWatchId = npIdentifiedWatchId || null;
   // A measurement share tags the watch (for attribution) but is NOT a wear —
   // use_case 'measurement' excludes it from wear counts (see rebuildLogsByWatch
@@ -17205,6 +17240,15 @@ function renderTrackHistory() {
       <button class="btn btn-ghost btn-sm" onclick="_trackHistoryLimit+=50;renderTrackHistory()">Show more (${remaining} remaining)</button>
     </td></tr>`;
   }
+}
+
+// A post can be created untagged and get its watch tagged afterwards (Edit
+// post) — most often when the New Post AI identification hadn't landed yet.
+// saveNewPost/saveLog/quickLog all attach a fact at creation time, so that
+// later tag was the one wear path that left fact_id null forever. Needs a local
+// log row: attachFunFact writes factId onto it.
+function shouldAttachFactOnEdit(finalWatchId, log) {
+  return !!finalWatchId && !!log && !log.factId;
 }
 
 // Pick or generate a daily fun fact for a wear log, persist logEntry.factId, and

@@ -46,7 +46,8 @@ const VERBATIM = [
   'isWearEntry', 'isMeasurementCardImage', 'feedKeysetFilter', 'dedupeNewFeedLogs', 'feedPageOutcome',
   'shouldPromptFirstWear', 'hasWornToday', 'shouldRevealBadges', 'shouldShowPushPrimer',
   'fillCampaignTokens', 'unresolvedCampaignTokens',
-  'shouldShowFactModal', 'pickFactModalWatch',
+  'shouldShowFactModal', 'pickFactModalWatch', 'shouldAttachFactOnEdit',
+  'npIdentifyWait',
 ];
 
 const ADAPTED = [

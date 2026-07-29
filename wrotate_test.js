@@ -2534,6 +2534,25 @@ export function initialsTextColor(bg) {
   return (r * 299 + g * 587 + b * 114) / 1000 >= 140 ? '#000' : '#fff';
 }
 
+// Identification is fire-and-forget — it starts when the photo is attached and
+// can take 5s+. saveNewPost used to read npIdentifiedWatchId synchronously, so
+// posting before the result landed dropped the watch tag silently (and with it
+// the wear attribution and the fun fact). Wait for the in-flight call, capped:
+// a slow model must never hold the Post button hostage.
+export function npIdentifyWait(inFlight, taggedWatchId, capMs, sleep) {
+  if (taggedWatchId || !inFlight) return Promise.resolve();
+  return Promise.race([Promise.resolve(inFlight).catch(() => {}), sleep(capMs)]).then(() => {});
+}
+
+// A post can be created untagged and get its watch tagged afterwards (Edit
+// post) — most often when the New Post AI identification hadn't landed yet.
+// saveNewPost/saveLog/quickLog all attach a fact at creation time, so that
+// later tag was the one wear path that left fact_id null forever. Needs a local
+// log row: attachFunFact writes factId onto it.
+export function shouldAttachFactOnEdit(finalWatchId, log) {
+  return !!finalWatchId && !!log && !log.factId;
+}
+
 // Daily fun-fact delight card, shown after logging a wear (mirrored in index.html).
 export function funFactCardHTML({ fact }) {
   if (!fact || !String(fact).trim()) return '';
