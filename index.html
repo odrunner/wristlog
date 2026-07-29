@@ -7122,7 +7122,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.19.15';
+const APP_VERSION = '28.20.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14801,9 +14801,16 @@ async function renderBroadcastQueueStatus() {
       // The drain sends one broadcast at a time, ordered by priority then id —
       // anything behind the first gets no quota until that one finishes. The
       // arrows rewrite that order (admin_move_broadcast).
-      const pendingCount = (q.breakdown || []).filter(b => Number(b.pending) > 0).length;
+      // Only campaigns still going. A finished send is reported under
+      // Traffic → By Campaign, so repeating it here just buries the queue.
+      // Exception: a send that drained with FAILURES is not finished. The
+      // Traffic card counts delivered/opened/clicked only, so dropping it here
+      // too would leave a partly-failed broadcast invisible everywhere.
+      const live = (q.breakdown || []).filter(b =>
+        (Number(b.pending) || 0) > 0 || (Number(b.failed) || 0) > 0);
+      const pendingCount = live.filter(b => Number(b.pending) > 0).length;
       let position = 0;
-      const rows = (q.breakdown || []).map(b => {
+      const rows = live.map(b => {
         const pending = Number(b.pending) || 0;
         const sent = Number(b.sent) || 0;
         const failed = Number(b.failed) || 0;
@@ -14823,8 +14830,10 @@ async function renderBroadcastQueueStatus() {
             onclick="moveBroadcast(${JSON.stringify(label).replace(/"/g, '&quot;')}, -1)" aria-label="Send ${escAttr(label)} earlier">▲</button>
           <button class="btn btn-ghost" style="padding:0 .3rem;font-size:.7rem;line-height:1.2;" ${position === pendingCount ? 'disabled' : ''}
             onclick="moveBroadcast(${JSON.stringify(label).replace(/"/g, '&quot;')}, 1)" aria-label="Send ${escAttr(label)} later">▼</button>`;
+        // A drained row only survives the filter above when it has failures, so
+        // labelling it "done" would misreport a send that did not complete.
         const rank = done
-          ? '<span style="color:var(--muted);">done</span>'
+          ? '<span style="color:var(--error);">failed</span>'
           : (isNext ? '<span style="color:var(--gold);font-weight:700;">sending next</span>'
                     : `<span style="color:var(--muted);">#${position} in line</span>`);
         return `<div style="padding:.4rem .5rem;background:var(--surface);border-radius:6px;margin-bottom:.25rem;font-size:.82rem;border-left:3px solid ${isNext ? 'var(--gold)' : 'var(--border)'};">
@@ -14838,7 +14847,7 @@ async function renderBroadcastQueueStatus() {
         </div>`;
       }).join('');
       sendsEl.innerHTML = rows
-        ? '<div class="eyebrow eyebrow-muted" style="margin-bottom:.3rem;">Sent &amp; Queued <span style="text-transform:none;font-weight:400;">— one at a time, in this order</span></div>' + rows
+        ? '<div class="eyebrow eyebrow-muted" style="margin-bottom:.3rem;">In Flight <span style="text-transform:none;font-weight:400;">— one at a time, in this order</span></div>' + rows
         : '';
     }
 
