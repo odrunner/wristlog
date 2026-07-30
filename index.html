@@ -7162,7 +7162,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '29.08.01';
+const APP_VERSION = '29.17.36';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15293,12 +15293,13 @@ async function loadAdminStats() {
     // Active-user D/D: distinct DAU last 24h vs the prior 24h (24–48h ago)
     const dauRes = await withTimeout(db.rpc('admin_active_dau'), 10000);
     const dauDod = dauRes.data || {};
-    // Email unsubscribes + measurement volume split by detection engine
-    const [unsubRes, engineRes] = await withTimeout(Promise.all([
-      db.rpc('admin_unsub_stats'), db.rpc('admin_engine_stats'),
+    // Email unsubscribes + measurement volume split by detection engine + push approvals
+    const [unsubRes, engineRes, pushRes] = await withTimeout(Promise.all([
+      db.rpc('admin_unsub_stats'), db.rpc('admin_engine_stats'), db.rpc('admin_push_stats'),
     ]), 10000);
     const unsub = unsubRes.data || {};
     const eng = engineRes.data || {};
+    const push = pushRes.data || {};
 
     // Per-user breakdowns via SECURITY DEFINER RPCs (bypass RLS)
     const d1ago = new Date(Date.now() - 24 * 3600000).toISOString();
@@ -15370,6 +15371,14 @@ async function loadAdminStats() {
     const extEnh = Object.entries(enhByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0);
     const extMsr = Object.entries(msrByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0);
     const extUsers = allProfiles.filter(p => !INTERNAL_IDS.has(p.id)).length;
+    // In-app (push) notification approvals — distinct external users with at least one
+    // registered device token, which the iOS app only stores after the OS grants
+    // permission. Share is of ALL users, web included, so it reads low by design:
+    // web-only users never get the chance to approve. Spec: sql/2026-07-29-admin-push-stats.sql.
+    const pushUsers = Number(push.push_users) || 0;
+    const pushDevices = Number(push.push_devices) || 0;
+    const pushSub = (extUsers > 0 ? Math.round(pushUsers / extUsers * 100) : 0) + '% of users'
+      + (pushDevices > 0 ? ' · ' + pushDevices + ' device' + (pushDevices === 1 ? '' : 's') : '');
     // Active-user snapshot (DAU/WAU/MAU) — external users whose last activity
     // (same lastActiveByUser that powers the SEEN column) falls within the window.
     const _nowMs = Date.now();
@@ -15532,6 +15541,7 @@ async function loadAdminStats() {
         ${engineRow('Measurements — Pro V2', eng.prov2_sessions, eng.prov2_users, eng.prov2_sessions_24h, eng.prov2_sessions_prev24h)}
         ${engineRow('Measurements — Original', eng.orig_sessions, eng.orig_users, eng.orig_sessions_24h, eng.orig_sessions_prev24h)}
         ${statRow('Email Unsubs (total)', Number(unsub.unsub_total) || 0, null, (Number(unsub.unsub_24h) || 0) + ' (24h)' + inlineDelta((Number(unsub.unsub_24h) || 0) - (Number(unsub.unsub_prev24h) || 0), true))}
+        ${statRow('Push approved (users)', pushUsers, Number(push.push_users_24h) || 0, pushSub)}
         ${statRow('Wishlist Items', wishItems, dod.wish)}
         ${statRow('Clubs', clubs, dod.clubs)}
         ${statRow('Follows', follows, dod.follows)}

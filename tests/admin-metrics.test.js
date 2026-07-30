@@ -88,6 +88,19 @@ describe('Totals card day-over-day deltas', () => {
     expect(html).toMatch(/statRow\('Email Unsubs \(total\)',[^\n]*null,[^\n]*inlineDelta\([^\n]*unsub_prev24h[^\n]*,\s*true\)/);
   });
 
+  it('Push approvals row: distinct users from admin_push_stats, newly-approved 24h delta', () => {
+    // device_tokens is RLS-scoped to the owner, so the count has to come from the
+    // SECURITY DEFINER RPC — a client-side select would return only the admin's rows.
+    expect(html).toContain("db.rpc('admin_push_stats')");
+    expect(html).toMatch(/pushUsers\s*=\s*Number\(push\.push_users\)\s*\|\|\s*0/);
+    expect(html).toMatch(/statRow\('Push approved \(users\)',\s*pushUsers,\s*Number\(push\.push_users_24h\)[^\n]*pushSub\)/);
+  });
+
+  it('Push approvals sub: share of all users plus the device count', () => {
+    expect(html).toMatch(/pushSub\s*=\s*\(extUsers > 0 \? Math\.round\(pushUsers \/ extUsers \* 100\) : 0\) \+ '% of users'/);
+    expect(html).toMatch(/pushDevices\s*=\s*Number\(push\.push_devices\)\s*\|\|\s*0/);
+  });
+
   it('inlineDelta colors an embedded change and inverts when a rise is bad', () => {
     expect(html).toMatch(/const inlineDelta = \(delta, invert\) => \{[\s\S]*?const good = invert \? delta < 0 : delta > 0;/);
   });
