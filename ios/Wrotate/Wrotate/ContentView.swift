@@ -50,22 +50,26 @@ struct ContentView: View {
                 handleSharedImage()
                 return
             }
-            guard let host = url.host, host.hasSuffix("wrotate.com") else { return }
+            // Email click tracking wraps the real destination, so unwrap before
+            // routing — otherwise a tracked deep link to /p/123 falls through to a
+            // plain WebView load instead of scrolling to the post.
+            let target = unwrapTrackedLink(url) ?? url
+            guard let host = target.host, host.hasSuffix("wrotate.com") else { return }
             // /open — app is already open, nothing to do
-            if url.path == "/open" || url.path == "/open.html" { return }
+            if target.path == "/open" || target.path == "/open.html" { return }
             // Deep link to specific post or collection
-            let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+            let components = URLComponents(url: target, resolvingAgainstBaseURL: false)
             if let postId = components?.queryItems?.first(where: { $0.name == "id" })?.value,
-               (url.path.contains("share-post") || url.path.hasPrefix("/p/")) {
+               (target.path.contains("share-post") || target.path.hasPrefix("/p/")) {
                 webViewRef?.evaluateJavaScript("if(typeof scrollToPost==='function') scrollToPost('\(postId)');", completionHandler: nil)
                 return
             }
             if let username = components?.queryItems?.first(where: { $0.name == "u" })?.value,
-               url.path.contains("share-collection") {
+               target.path.contains("share-collection") {
                 webViewRef?.evaluateJavaScript("if(typeof viewUserByUsername==='function') viewUserByUsername('\(username)');", completionHandler: nil)
                 return
             }
-            webViewRef?.load(URLRequest(url: url))
+            webViewRef?.load(URLRequest(url: target))
         }
         .onChange(of: isLoading) {
             if !isLoading { dispatchPendingQuickAction(); handleSharedImage() }
@@ -85,6 +89,31 @@ struct ContentView: View {
             lastBackgrounded = nil
             if !isLoading { dispatchPendingQuickAction(); handleSharedImage() }
         }
+    }
+
+    /// Unwrap an email click-tracking link back to its real destination.
+    ///
+    /// SES rewrites every href in outgoing mail as
+    /// `https://<redirect-host>/L0/<percent-encoded destination>/<n>/<message id>/<hash>`.
+    /// iOS hands us that WRAPPER, not the destination, so routing must unwrap it
+    /// first or every tracked link degrades to a plain WebView load.
+    ///
+    /// Reads the *percent-encoded* path deliberately: `url.pathComponents` decodes
+    /// each segment, and the destination's own `%2F` separators would then be
+    /// indistinguishable from real path separators.
+    ///
+    /// Returns nil when the URL is not a tracking wrapper, so callers can fall
+    /// back to the URL as-is.
+    private func unwrapTrackedLink(_ url: URL) -> URL? {
+        guard let encodedPath = URLComponents(url: url, resolvingAgainstBaseURL: false)?.percentEncodedPath
+        else { return nil }
+        let segments = encodedPath.split(separator: "/", omittingEmptySubsequences: true).map(String.init)
+        guard segments.count >= 2, segments[0] == "L0",
+              let decoded = segments[1].removingPercentEncoding,
+              let destination = URL(string: decoded),
+              destination.scheme == "https" || destination.scheme == "http"
+        else { return nil }
+        return destination
     }
 
     private func handleSharedImage() {

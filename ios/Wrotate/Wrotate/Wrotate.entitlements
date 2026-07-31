@@ -8,6 +8,16 @@
 	<array>
 		<string>applinks:wrotate.com</string>
 		<string>applinks:api.wrotate.com</string>
+		<!-- Email click-tracking redirect host. SES click tracking rewrites every
+		     href in outgoing mail, and iOS matches Universal Links on the INITIAL
+		     URL's host — it does not re-evaluate after the redirect lands on
+		     wrotate.com. Without this entry a tracked link opens Safari instead of
+		     the app, which is why click tracking is currently DISABLED in SES.
+		     Listing a host that serves no AASA is harmless: iOS simply fails to
+		     associate it. Before re-enabling CLICK in SES, click.wrotate.com must
+		     serve a valid AASA over HTTPS (CloudFront + ACM in front of
+		     r.us-west-2.awstrack.me, forwarding the Host header). -->
+		<string>applinks:click.wrotate.com</string>
 	</array>
 	<key>com.apple.security.application-groups</key>
 	<array>
