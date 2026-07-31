@@ -109,26 +109,38 @@ def supabase_creds():
 
 
 def _event_count(url, key, event_type, since_iso):
-    """Exact row count for one event_type since a timestamp, via PostgREST."""
+    """Exact row count for one event_type since a timestamp, via PostgREST.
+
+    Returns None (never 0) when the request fails, the response is a
+    non-2xx status, or the Content-Range header is missing/unparseable —
+    so a failed lookup can never be mistaken for a genuine zero.
+    """
     endpoint = (
         f"{url}/rest/v1/email_events"
         f"?select=id&event_type=eq.{event_type}&created_at=gte.{since_iso}"
     )
-    out = subprocess.run(
-        ["curl", "-s", "-I", endpoint,
-         "-H", f"apikey: {key}",
-         "-H", f"Authorization: Bearer {key}",
-         "-H", "Range: 0-0",
-         "-H", "Prefer: count=exact"],
-        capture_output=True, text=True, timeout=30,
-    ).stdout
+    try:
+        r = subprocess.run(
+            ["curl", "-s", "-I", "--fail", endpoint,
+             "-H", f"apikey: {key}",
+             "-H", f"Authorization: Bearer {key}",
+             "-H", "Range: 0-0",
+             "-H", "Prefer: count=exact"],
+            capture_output=True, text=True, timeout=30,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+    if r.returncode != 0:
+        # --fail makes curl exit non-zero on non-2xx status, plus network/
+        # connect errors already exit non-zero on their own.
+        return None
     # Content-Range looks like "0-0/1234"; the total follows the slash.
-    for line in out.splitlines():
+    for line in r.stdout.splitlines():
         if line.lower().startswith("content-range:") and "/" in line:
             total = line.split("/")[-1].strip()
             if total.isdigit():
                 return int(total)
-    return 0
+    return None
 
 
 def email_health():
@@ -136,31 +148,53 @@ def email_health():
 
     SES suspends an account above 5% bounce or 0.1% complaint, so the two are
     reported separately. Returns an HTML fragment, or '' when unconfigured.
+
+    This function must never raise: it wraps all its work in a broad
+    try/except so a network hiccup here can't take down the whole daily
+    cost email (main() has no guard around the call site). It also never
+    renders a healthy-looking 0.00%/0.000% when the underlying counts are
+    unknown (a failed lookup) rather than genuinely zero — see
+    _event_count's None-vs-0 contract.
     """
-    url, key = supabase_creds()
-    if not url or not key:
-        return ""
-    now = datetime.now(timezone.utc)
-    since = (now - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    sent = _event_count(url, key, "sent", since)
-    if sent == 0:
-        return ""
-    bounced = _event_count(url, key, "bounced", since)
-    complained = _event_count(url, key, "complained", since)
-    b_rate = 100.0 * bounced / sent
-    c_rate = 100.0 * complained / sent
-    alarm = b_rate >= 5.0 or c_rate >= 0.1
-    warn = b_rate >= 2.5 or c_rate >= 0.05
-    colour = "#f85149" if alarm else ("#d29922" if warn else "#2ea043")
-    flag = " &mdash; ACTION NEEDED" if alarm else (" &mdash; watch" if warn else "")
-    return (
-        f'<h3 style="margin-top:24px">Email deliverability (7d)<span style="color:{colour}">{flag}</span></h3>'
-        f'<p style="color:{colour}">'
-        f"Bounce <b>{b_rate:.2f}%</b> (limit 5%) &middot; "
-        f"Complaint <b>{c_rate:.3f}%</b> (limit 0.1%) &middot; "
-        f"{sent} sent, {bounced} bounced, {complained} complaints"
-        f"</p>"
+    fail_html = (
+        '<h3 style="margin-top:24px">Email deliverability (7d)'
+        '<span style="color:#d29922"> &mdash; check failed</span></h3>'
+        '<p style="color:#d29922">Could not read email_events this run '
+        '(request failed or was unparseable) &mdash; deliverability status '
+        "is unknown, not necessarily healthy.</p>"
     )
+    try:
+        url, key = supabase_creds()
+        if not url or not key:
+            return ""
+        now = datetime.now(timezone.utc)
+        since = (now - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        sent = _event_count(url, key, "sent", since)
+        if sent is None:
+            return fail_html
+        if sent == 0:
+            return ""
+        bounced = _event_count(url, key, "bounced", since)
+        complained = _event_count(url, key, "complained", since)
+        if bounced is None or complained is None:
+            return fail_html
+        b_rate = 100.0 * bounced / sent
+        c_rate = 100.0 * complained / sent
+        alarm = b_rate >= 5.0 or c_rate >= 0.1
+        warn = b_rate >= 2.5 or c_rate >= 0.05
+        colour = "#f85149" if alarm else ("#d29922" if warn else "#2ea043")
+        flag = " &mdash; ACTION NEEDED" if alarm else (" &mdash; watch" if warn else "")
+        return (
+            f'<h3 style="margin-top:24px">Email deliverability (7d)<span style="color:{colour}">{flag}</span></h3>'
+            f'<p style="color:{colour}">'
+            f"Bounce <b>{b_rate:.2f}%</b> (limit 5%) &middot; "
+            f"Complaint <b>{c_rate:.3f}%</b> (limit 0.1%) &middot; "
+            f"{sent} sent, {bounced} bounced, {complained} complaints"
+            f"</p>"
+        )
+    except Exception as e:
+        print(f"[email_health] skipped section — {type(e).__name__}: {e}")
+        return fail_html
 
 
 def anthropic_get(path, params, key):
