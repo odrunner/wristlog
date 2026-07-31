@@ -7169,7 +7169,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.20.48';
+const APP_VERSION = '30.21.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15780,6 +15780,7 @@ async function renderAdminTraffic() {
     // below already show. Real people are counted properly on the Usage tab,
     // which derives DAU/WAU/MAU from 12 activity sources.
     el.innerHTML = `
+      ${renderEmailHealth(emailEventsR.data || {})}
       ${demoViewsHtml}
       ${sourceRows ? `<div class="admin-card">
         <div class="eyebrow" style="margin-bottom:.5rem;">By Source</div>
@@ -15807,6 +15808,28 @@ async function renderAdminTraffic() {
   }
 }
 
+// SES account health, rendered at the TOP of the Traffic page. Deliberately its
+// own function rather than part of renderEmailEngagement: that one returns ''
+// when there is no per-subject data, which would have hidden the one number
+// that decides whether SES keeps letting us send. Thresholds are AWS's —
+// suspension risk above 5% bounce or 0.1% complaint.
+function renderEmailHealth(data) {
+  const health = (data || {}).health || {};
+  if (!(+health.sent_7d > 0)) return '';
+  const rate = (n, d) => (+d > 0 ? (100 * (+n || 0)) / +d : 0);
+  const bounce7 = rate(health.bounced_7d, health.sent_7d);
+  const complaint7 = rate(health.complained_7d, health.sent_7d);
+  const state = (complaint7 >= 0.1 || bounce7 >= 5) ? 'bad'
+    : (complaint7 >= 0.05 || bounce7 >= 2.5) ? 'warn' : 'ok';
+  return `
+    <div class="email-health email-health--${state}">
+      <strong>Deliverability (7d)</strong>
+      <span>Bounce ${bounce7.toFixed(2)}% <em>/ 5% limit</em></span>
+      <span>Complaint ${complaint7.toFixed(3)}% <em>/ 0.1% limit</em></span>
+      <span>${+health.sent_7d} sent</span>
+    </div>`;
+}
+
 function renderEmailEngagement(data) {
   // `data` is the admin_email_engagement RPC result: all-time per-subject
   // aggregates, the subjects still pending in broadcast_queue, and a recent
@@ -15821,20 +15844,6 @@ function renderEmailEngagement(data) {
 
   // SES account health. Suspension thresholds are 5% bounce / 0.1% complaint,
   // so these are shown as separate rates, not folded into one "problems" count.
-  const health = data.health || {};
-  const rate = (n, d) => (+d > 0 ? (100 * (+n || 0)) / +d : 0);
-  const bounce7 = rate(health.bounced_7d, health.sent_7d);
-  const complaint7 = rate(health.complained_7d, health.sent_7d);
-  const healthState = (complaint7 >= 0.1 || bounce7 >= 5) ? 'bad'
-    : (complaint7 >= 0.05 || bounce7 >= 2.5) ? 'warn' : 'ok';
-  const healthHtml = +health.sent_7d > 0 ? `
-    <div class="email-health email-health--${healthState}">
-      <strong>Deliverability (7d)</strong>
-      <span>Bounce ${bounce7.toFixed(2)}% <em>/ 5% limit</em></span>
-      <span>Complaint ${complaint7.toFixed(3)}% <em>/ 0.1% limit</em></span>
-      <span>${+health.sent_7d} sent</span>
-    </div>` : '';
-
   // Internal-account emails (founder signup alerts, the weekly measurement
   // reports, test/demo accounts) are excluded server-side by the RPC, filtered
   // by RECIPIENT against the internal_accounts table. That replaced a
@@ -15958,7 +15967,7 @@ function renderEmailEngagement(data) {
     return `<div style="display:flex;justify-content:space-between;font-size:.78rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${icon} ${escHtml(masked)}</span><span style="color:var(--muted);font-size:.7rem;">${ago}</span></div>`;
   }).join('');
 
-  return `${healthHtml}
+  return `
   <div class="admin-card">
     <div class="eyebrow" style="margin-bottom:.5rem;">Email Engagement</div>
     ${statRow('Delivered', delivered)}
