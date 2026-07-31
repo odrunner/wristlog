@@ -10,7 +10,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sendSesEmail } from "../_shared/ses.ts";
+import { sendEmail } from "../_shared/mailer.ts";
 import { buildEmailHtml, buildSubject, esc, providerFromEmail } from "./lib.ts";
 
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") ?? "";
@@ -70,7 +70,7 @@ serve(async (req) => {
     const subject = buildSubject(displayName, username);
     const htmlBody = buildEmailHtml({ displayName, username, userEmail, provider, createdAt, count });
 
-    const result = await sendSesEmail({
+    const result = await sendEmail({
       from: "WRotate <notifications@wrotate.com>",
       to: [ADMIN_EMAIL],
       subject,

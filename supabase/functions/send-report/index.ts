@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sendSesEmail } from "../_shared/ses.ts";
+import { sendEmail } from "../_shared/mailer.ts";
 import {
   buildEmailFields,
   extractBearerToken,
@@ -43,7 +43,7 @@ serve(async (req) => {
   const { to, subject, html } = payload;
 
   const fields = buildEmailFields(to, subject, html);
-  const result = await sendSesEmail({
+  const result = await sendEmail({
     from: fields.from,
     to: Array.isArray(fields.to) ? fields.to as string[] : [fields.to as string],
     subject: fields.subject as string,

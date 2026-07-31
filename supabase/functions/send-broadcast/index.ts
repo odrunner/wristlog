@@ -47,13 +47,8 @@ import {
   watchLabel,
   watchPhrase,
 } from "../_shared/email-personalize.ts";
-// Transport: Resend. The SES client (../_shared/ses.ts) is interface-compatible
-// and stays in the tree, but AWS never granted SES production access — in
-// sandbox it rejects every unverified recipient, which silently burned the last
-// 22 rows of the Pro V2 broadcast on 2026-07-25. Switch this import back to
-// ../_shared/ses.ts only once production access is approved.
-import { sendResendBatch, sendResendEmail } from "../_shared/resend.ts";
-import type { ResendMessage } from "../_shared/resend.ts";
+import { currentProvider, sendBatch, sendEmail as sendProviderEmail } from "../_shared/mailer.ts";
+import type { MailMessage } from "../_shared/mailer.ts";
 
 const ADMIN_USER_ID = "d70b1a85-4f31-4431-b3b7-db76543daaf5";
 const FROM_EMAIL = "WRotate <hello@wrotate.com>";
@@ -400,7 +395,7 @@ serve(async (req) => {
 
     for (let i = 0; i < filteredRecipients.length; i += batchSize) {
       const batch = filteredRecipients.slice(i, i + batchSize);
-      const messages: ResendMessage[] = await Promise.all(batch.map(async (r) => {
+      const messages: MailMessage[] = await Promise.all(batch.map(async (r) => {
         const sig = await hmacSign(r.uid, "updates", supabaseServiceKey);
         const url = unsubUrl(supabaseUrl, r.uid, sig, "updates");
         const v = directWantsFact ? (directVars.get(r.uid) ?? { ...FALLBACK_FACT }) : {};
@@ -416,7 +411,7 @@ serve(async (req) => {
         };
       }));
 
-      const { results } = await sendResendBatch(messages);
+      const { results } = await sendBatch(messages);
       const okRecipients = batch.filter((_, idx) => results[idx].ok);
       sent += okRecipients.length;
       failed += batch.length - okRecipients.length;
@@ -586,9 +581,9 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
 }
 
 async function sendEmail(to: string, subject: string, html: string) {
-  const result = await sendResendEmail({ from: FROM_EMAIL, to: [to], subject, html });
+  const result = await sendProviderEmail({ from: FROM_EMAIL, to: [to], subject, html });
   if (!result.ok) {
-    throw new Error(`Resend error: ${result.error}`);
+    throw new Error(`Email send error (${currentProvider}): ${result.error}`);
   }
   return { id: result.id };
 }

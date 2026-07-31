@@ -35,12 +35,8 @@ import {
 // Same grounded-search prompt + JSON extractor the in-app fun-fact path uses, so
 // a fact minted for the email is indistinguishable from one minted on a wear log.
 import { buildFactsPrompt, extractJson } from "../identify-watch/lib.ts";
-// Transport: Resend is primary. ../_shared/ses.ts is interface-compatible and
-// stays in the tree for the planned SES transition — but AWS has not granted
-// production access, so in sandbox SES rejects every unverified recipient.
-// Flip these two imports (and only these) once approval lands.
-import { sendResendBatch } from "../_shared/resend.ts";
-import type { ResendMessage } from "../_shared/resend.ts";
+import { sendBatch } from "../_shared/mailer.ts";
+import type { MailMessage } from "../_shared/mailer.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -301,7 +297,7 @@ async function deliver(
       for (const r of batch) facts.set(r.uid, await resolveFact(supabase, r.uid, factBudget));
     }
 
-    const messages: ResendMessage[] = await Promise.all(batch.map(async (r) => {
+    const messages: MailMessage[] = await Promise.all(batch.map(async (r) => {
       const sig = await hmacSign(r.uid, "updates", SUPABASE_SERVICE_ROLE_KEY);
       const url = unsubUrl(SUPABASE_URL, r.uid, sig, "updates");
       const f = facts.get(r.uid);
@@ -323,7 +319,7 @@ async function deliver(
       };
     }));
 
-    const { results } = await sendResendBatch(messages);
+    const { results } = await sendBatch(messages);
     // Track ONLY the recipients whose send succeeded. Resend validates a batch
     // as a unit, so results are uniform within a chunk today — reading them
     // per-recipient keeps this correct either way, and unchanged if the
