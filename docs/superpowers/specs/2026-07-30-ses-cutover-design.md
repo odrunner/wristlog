@@ -129,9 +129,11 @@ Every metric keys off `email_events`. The row shape does not change; what fills 
 
   This was wrong as written. A bare CNAME to `r.us-west-2.awstrack.me` supports **HTTP only**. Tested live: `click.wrotate.com` presents no TLS certificate at all, while `r.us-west-2.awstrack.me` serves a valid one — the ALB holds a cert only for Amazon's own domain. AWS's documented default `HttpsPolicy: OPTIONAL` wraps click links "using the original protocol of the link", and WRotate's links are `https://`, so every tracked click would have become `https://click.wrotate.com/…` with an invalid certificate: a browser security warning on every link in every email. HTTPS on a custom redirect domain requires CloudFront (or another CDN) with an ACM certificate covering the subdomain and `Host` header forwarding.
 
-  **Decision: drop click tracking entirely.** `CLICK` was removed from the configuration set's event types, so SES never rewrites links. Applied and verified 2026-07-30 — `MatchingEventTypes` is now `SEND`, `DELIVERY`, `OPEN`, `BOUNCE`, `COMPLAINT`.
+  **Final decision (revised 2026-07-31): click tracking is ON, using Amazon's default `awstrack.me` redirect domain.** `MatchingEventTypes` is `SEND`, `DELIVERY`, `OPEN`, `CLICK`, `BOUNCE`, `COMPLAINT`. Verified end to end: a test send produced `sent → delivered → clicked`.
 
-  Consequences: links stay pristine `wrotate.com` URLs, which is strictly better for recipient trust. The `clicked` metric stops accruing — 118 events across all history, so the loss is small; existing rows are retained and the admin UI's clicked column simply stops incrementing. **Open tracking is unaffected**, as are `sent` and `delivered` — the events the drain quota and `_NofM` dedup depend on. The `click.wrotate.com` CNAME left in Cloudflare is now unused and can be deleted.
+  It was briefly dropped entirely on 2026-07-30. That was an over-correction on my part — I presented the choice as branded-domain-or-nothing, when the zero-effort `awstrack.me` option was available the whole time. The only cost of the default domain is that a recipient hovering a link sees `awstrack.me` rather than `wrotate.com`.
+
+  Branding the redirect remains possible but needs CloudFront + an ACM certificate for the subdomain, with `Host` header forwarding — **not** a bare CNAME. `CustomRedirectDomain` must never be set without that CDN in front. The unused `click.wrotate.com` CNAME was deleted from Cloudflare.
 - **Event volume grows.** SES emits more events per email than Resend — intake rose 4.6× during the July SES week, per the comment in `admin_email_engagement()`. The 90-day bound added at that time caps query cost; table growth should be watched but needs no action now.
 
 ### New: bounce and complaint monitoring
