@@ -75,39 +75,13 @@ async function sendSesOnce(msg: SesMessage): Promise<SesResult> {
   }
 }
 
-// Live SES sending quota. The broadcast drain used a hardcoded 100/day carried
-// over from Resend; reading the real quota removes the guess and keeps working if
-// the account moves out of sandbox.
-export type SesQuota = {
-  max24Hour: number;
-  maxSendRate: number;
-  sentLast24Hours: number;
-  productionAccess: boolean;
-};
-
-export async function getSesQuota(): Promise<SesQuota | null> {
-  try {
-    const res = await getClient().fetch(
-      `https://email.${REGION}.amazonaws.com/v2/email/account`,
-      { method: "GET" },
-    );
-    if (!res.ok) return null;
-    const d = await res.json() as {
-      SendQuota?: { Max24HourSend?: number; MaxSendRate?: number; SentLast24Hours?: number };
-      ProductionAccessEnabled?: boolean;
-    };
-    const q = d.SendQuota ?? {};
-    if (typeof q.Max24HourSend !== "number") return null;
-    return {
-      max24Hour: q.Max24HourSend,
-      maxSendRate: q.MaxSendRate ?? 0,
-      sentLast24Hours: q.SentLast24Hours ?? 0,
-      productionAccess: d.ProductionAccessEnabled === true,
-    };
-  } catch {
-    return null;
-  }
-}
+// A getSesQuota() helper lived here until 2026-07-31. It was never called, and it
+// could not have worked: the IAM user holds ses:SendEmail only, so ses:GetAccount
+// would have 403'd and the function would have returned null — a silent wrong
+// answer. Deleted rather than left as a trap. If a live quota is ever wanted, add
+// ses:GetAccount to the wrotate-ses-sender policy first. Note DAILY_EMAIL_LIMIT in
+// send-broadcast/lib.ts is deliberately NOT the SES quota — it is blast-radius
+// protection, so wiring the real 50,000 in would defeat its purpose.
 
 // SES has no arbitrary-payload batch endpoint (bulk requires stored templates),
 // so send individually: waves of 10 concurrent with a 1s pause between waves —

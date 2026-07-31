@@ -127,6 +127,39 @@ async function run() {
     return { ...r, ok: r.status === 403 };
   });
 
+  // Email transport. `quota_only` is a read-only introspection call — it sends
+  // nothing — and reports which provider _shared/mailer.ts actually resolved from
+  // the EMAIL_PROVIDER secret. That is the only way to know the live provider
+  // without grepping a deployed bundle, and a wrong flip is otherwise silent
+  // until real mail goes out. Needs the cron secret, so export it to get the full
+  // assertion: CAMPAIGN_TRIGGER_SECRET=… npm run test:smoke
+  const cronSecret = process.env.CAMPAIGN_TRIGGER_SECRET;
+  if (cronSecret) {
+    await check('send-broadcast (quota_only → provider is ses)', async () => {
+      const r = await callFn('send-broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-campaign-secret': cronSecret },
+        body: JSON.stringify({ drain: true, quota_only: true }),
+      });
+      if (!r.ok) return r;
+      let provider = null;
+      try { provider = JSON.parse(r.body).provider; } catch { /* fall through */ }
+      return { ...r, ok: provider === 'ses', body: `provider=${provider}` };
+    });
+  } else {
+    // Without the secret we can still prove the function is deployed and its auth
+    // gate works — the drain falls through to the admin-JWT check, which answers
+    // 403 with no token. That beats skipping silently.
+    await check('send-broadcast (no secret → 403)', () =>
+      callFn('send-broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ drain: true, quota_only: true }),
+      }, 403)
+    );
+    console.log('    ↳ set CAMPAIGN_TRIGGER_SECRET to also assert the live provider');
+  }
+
   // --- Summary ---
   console.log(`\n  ${passed} passed, ${failed} failed\n`);
   process.exit(failed > 0 ? 1 : 0);
