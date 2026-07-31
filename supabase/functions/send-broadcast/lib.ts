@@ -228,44 +228,49 @@ export function isCredentialFailure(status: number): boolean {
   return status === 401 || status === 403;
 }
 
-// Proportional, not absolute: trip when a MAJORITY of the batch failed
-// (okCount * 2 < batchSize — a strict inequality, so an even split does not
-// trip), not only when every single send failed.
+// Presence-based, not a success ratio: trip the moment the batch contains
+// ANY non-retryable failure, however few.
 //
-// An absolute okCount === 0 rule is right for Resend, which posts a whole
-// batch as ONE HTTP request — every message shares a single verdict, so a
-// transport failure is always 100% and an absolute rule always catches it.
-// It is NOT right for SES: _shared/ses.ts's sendSesBatch sends messages
-// individually, in waves of 10 with a pause between waves, so a failure
-// that begins mid-batch (a paused account, a DNS/identity change, a rate
-// limit) leaves the early waves' sends marked ok and okCount > 0 even
-// though the transport is broken. An 88-row batch is 9 waves over ~10
-// seconds — plenty of room for exactly that. Under an absolute rule those
-// failures are 400-class (isRetryableStatus says no), so every recipient
-// from the onset of the failure onward gets written `failed` and is lost
-// for good — the drain never re-selects `failed`. This is the 2026-07-25
-// incident reachable through a door an absolute rule does not cover.
+// Two earlier, weaker rules both left a real window open. An absolute
+// okCount === 0 rule is right for Resend (a whole batch is ONE HTTP request,
+// so every message shares a single verdict — a transport failure is always
+// 100%), but SES's _shared/ses.ts sendSesBatch sends individually, in waves
+// of 10 with a pause between waves, so a mid-batch failure (a paused
+// account, a DNS/identity change, a rate limit) leaves early waves marked ok
+// and okCount > 0 even though the transport is broken — that rule never
+// trips. A proportional majority-failed rule (okCount * 2 < batchSize)
+// closed most of that but not all of it: on the live 88-row queue (9 waves
+// of 10), a failure starting at wave 6 is 50 ok / 38 non-retryable, and
+// 50*2 > 88, so even the majority rule does not trip — 38 people would still
+// be written `failed` and lost forever, the 2026-07-25 outcome again.
 //
-// The proportional threshold is a deliberate asymmetry: deferring a row is
-// always recoverable (a later drain retries it); marking it `failed` is
-// never recoverable. When most of a batch is failing, the transport being
-// broken is vastly more likely than most of those specific recipients being
-// individually invalid — so the bias must be to defer. A minority failing
-// stays the ordinary case (some addresses really are bad) and must still be
-// marked `failed`, not endlessly deferred.
-export function shouldTripBreaker(okCount: number, batchSize: number): boolean {
-  return batchSize > 0 && okCount * 2 < batchSize;
+// The fix is to stop asking "how many failed" and ask "did anything fail in
+// a way the provider called permanent." One non-retryable verdict is enough
+// to distrust every other verdict in the same batch, including ones also
+// called permanent, because there is no way to tell — from inside this
+// function — a genuinely bad recipient from the first row hit by a breaking
+// transport. Retryable-only batches (throttling, 5xx, network) don't trip
+// here; they already defer through the ordinary per-row path with no signal
+// that anything is wrong with the transport itself.
+//
+// The owner accepted this trade explicitly: a truly bad address now gets a
+// few retries before it's obviously wrong in the logs, rather than being
+// caught on sight — deferring costs a night's delay. The alternative,
+// missing a live transport break because too few rows had failed yet by the
+// time the breaker was checked, costs someone their email permanently.
+export function shouldTripBreaker(permanentFailureCount: number, batchSize: number): boolean {
+  return batchSize > 0 && permanentFailureCount > 0;
 }
 
 // Fold a batch's raw per-row classification into the id lists that actually
-// get written. When shouldTripBreaker() says the batch is majority-failed,
-// no per-row verdict from this batch is trustworthy — including ones the
-// provider called permanent — so `failedRows` is folded into `deferredRows`
-// wholesale: nothing from a tripped batch may end up `failed`. This is the
-// 2026-07-25 incident: SES returned a 400-class "permanent" rejection for
-// every recipient because of a misconfigured provider, not 88 bad addresses.
-// Delegates the trip decision to shouldTripBreaker() itself (rather than
-// re-checking, say, okIds.length === 0) so the two can never disagree.
+// get written. shouldTripBreaker() is keyed on failedRows.length (the
+// non-retryable verdicts) — the moment it says the batch is untrustworthy,
+// `failedRows` is folded into `deferredRows` wholesale and returned empty:
+// nothing from a tripped batch may end up `failed`. Rows that already
+// succeeded are never touched — `sentIds` passes `okIds` straight through,
+// because a successful send can't be undone. Delegates the trip decision to
+// shouldTripBreaker() itself (rather than re-deriving it, e.g. checking
+// okIds.length === 0) so the two can never disagree.
 export function resolveBatchOutcome(
   okIds: number[],
   failedRows: { id: number; error: string }[],
@@ -276,7 +281,7 @@ export function resolveBatchOutcome(
   failedRows: { id: number; error: string }[];
   deferredRows: { id: number; error: string }[];
 } {
-  if (shouldTripBreaker(okIds.length, batchSize)) {
+  if (shouldTripBreaker(failedRows.length, batchSize)) {
     return { sentIds: okIds, failedRows: [], deferredRows: [...deferredRows, ...failedRows] };
   }
   return { sentIds: okIds, failedRows, deferredRows };

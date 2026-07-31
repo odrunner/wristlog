@@ -446,64 +446,57 @@ Deno.test("isCredentialFailure flags auth rejections only", () => {
   assertEquals(isCredentialFailure(0), false);
 });
 
-Deno.test("shouldTripBreaker fires when a majority of a non-empty batch failed", () => {
-  // All failed: the obvious case. Resend sends a whole batch as ONE HTTP
-  // request, so every message shares a single verdict — a transport failure
-  // is always 100%.
-  assertEquals(shouldTripBreaker(0, 100), true);
-  assertEquals(shouldTripBreaker(0, 1), true);
-  // SES is different: sendSesBatch sends individually, in waves of 10 with a
-  // pause between waves, so a failure that begins mid-batch (paused account,
-  // a DNS/identity change, a rate limit) leaves some early sends succeeding
-  // and okCount > 0 even though the transport is broken. A clear majority
-  // failing is still overwhelmingly more likely to be that than 90
-  // simultaneously-bad recipients, so it must still trip.
-  assertEquals(shouldTripBreaker(10, 100), true); // 90 failed — trips
-  // A minority failing is the ordinary case: some recipients are genuinely
-  // bad (typo'd address, full mailbox) and must still be marked `failed`,
-  // not endlessly deferred as if the transport were broken.
-  assertEquals(shouldTripBreaker(90, 100), false); // 10 failed — does not trip
-  // Exact boundary. "Majority failed" means MORE than half failed, so an
-  // even split does NOT trip — okCount * 2 < batchSize is a strict
-  // inequality and 2*50 == 100 is not less than 100. One recipient further
-  // (49 ok / 51 failed) crosses into majority-failed and trips.
-  assertEquals(shouldTripBreaker(50, 100), false);
-  assertEquals(shouldTripBreaker(49, 100), true);
-  assertEquals(shouldTripBreaker(100, 100), false);
+Deno.test("shouldTripBreaker fires whenever the batch has any non-retryable failure", () => {
+  // Even the proportional (majority-failed) rule left a window: SES sends in
+  // waves of 10, so a mid-batch failure can produce e.g. 50 ok / 38
+  // non-retryable out of 88 — 50*2 > 88, so a majority rule does not trip,
+  // and 38 people are dropped forever. The owner accepted the trade of the
+  // stricter rule explicitly: one real bad address gets a few retries before
+  // anyone notices (a deferral costs a night's delay); an actual transport
+  // break gets caught on the first non-retryable row instead of the 39th
+  // (a `failed` costs a person their email permanently).
+  assertEquals(shouldTripBreaker(1, 100), true);
+  assertEquals(shouldTripBreaker(38, 88), true); // the wave-6 scenario above
+  assertEquals(shouldTripBreaker(1, 1), true);
+  // Only retryable failures (throttling, 5xx, network) present. Those
+  // already defer through the normal per-row path — no permanent-looking
+  // verdict occurred, so there's nothing to distrust the rest of the batch
+  // over.
+  assertEquals(shouldTripBreaker(0, 100), false);
+  assertEquals(shouldTripBreaker(0, 1), false);
   // An empty batch is not evidence of anything.
   assertEquals(shouldTripBreaker(0, 0), false);
 });
 
-Deno.test("resolveBatchOutcome — a wholly-failed batch defers every row, fails none", () => {
-  // Same shape as the 2026-07-25 incident: SES rejects every send with a
-  // 400-class "permanent" error because credentials/domain are misconfigured.
-  // No per-row verdict from a broken transport is trustworthy, so nothing
-  // may end up `failed` — it all goes back to `pending`.
+Deno.test("resolveBatchOutcome — a single non-retryable failure defers the whole batch, fails none", () => {
+  // Same shape as the 2026-07-25 incident, but now catchable on the FIRST
+  // permanent-looking row rather than needing every row to look permanent:
+  // one 400-class rejection is enough to distrust the rest of the batch.
   const result = resolveBatchOutcome(
-    [],
-    [{ id: 1, error: "400 MailFromDomainNotVerified" }, { id: 2, error: "400 MailFromDomainNotVerified" }],
-    [{ id: 3, error: "429 throttled" }],
-    3,
+    [1, 2, 3],
+    [{ id: 4, error: "400 MailFromDomainNotVerified" }],
+    [{ id: 5, error: "429 throttled" }],
+    5,
   );
-  assertEquals(result.sentIds, []);
+  // A successful send is never undone — it's already been delivered.
+  assertEquals(result.sentIds, [1, 2, 3]);
   assertEquals(result.failedRows, []);
-  assertEquals(result.deferredRows.map((r) => r.id).sort(), [1, 2, 3]);
+  assertEquals(result.deferredRows.map((r) => r.id).sort(), [4, 5]);
 });
 
-Deno.test("resolveBatchOutcome — a minority-failed batch keeps real per-row failures as failed", () => {
-  // A clear majority succeeded (9 of 11), so the transport works — a
-  // rejected recipient in the same batch is a real, per-row failure, not
-  // evidence of a broken transport. Below shouldTripBreaker's proportional
-  // threshold, so it must NOT trip.
+Deno.test("resolveBatchOutcome — only retryable failures present does not trip", () => {
+  // No non-retryable verdict occurred, so there's no signal the transport is
+  // broken — the retryable rows already defer through the ordinary path,
+  // and there are no failedRows for the breaker to fold.
   const result = resolveBatchOutcome(
-    [1, 2, 3, 4, 5, 6, 7, 8, 9],
-    [{ id: 10, error: "400 malformed address" }],
-    [{ id: 11, error: "429 throttled" }],
-    11,
+    [1],
+    [],
+    [{ id: 2, error: "429 throttled" }, { id: 3, error: "500 server error" }],
+    3,
   );
-  assertEquals(result.sentIds, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
-  assertEquals(result.failedRows.map((r) => r.id), [10]);
-  assertEquals(result.deferredRows.map((r) => r.id), [11]);
+  assertEquals(result.sentIds, [1]);
+  assertEquals(result.failedRows, []);
+  assertEquals(result.deferredRows.map((r) => r.id), [2, 3]);
 });
 
 Deno.test("resolveBatchOutcome — an empty batch is untouched (not treated as a trip)", () => {

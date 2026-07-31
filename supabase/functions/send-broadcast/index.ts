@@ -561,10 +561,11 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
       }
     }
 
-    // Resolve BEFORE any DB write. If nothing in this batch succeeded, no
-    // per-row verdict here is trustworthy — including ones the provider
-    // called permanent — so resolveBatchOutcome() folds failedRows into
-    // deferredRows wholesale. A tripped batch must never write `failed`.
+    // Resolve BEFORE any DB write. A single non-retryable verdict is enough
+    // to distrust every other verdict in this batch — including other rows
+    // also called permanent — so resolveBatchOutcome() folds failedRows into
+    // deferredRows wholesale the moment one appears. A tripped batch must
+    // never write `failed`.
     const { failedRows, deferredRows } = resolveBatchOutcome(okIds, rawFailedRows, rawDeferredRows, batch.length);
     for (const fr of failedRows) errors.push(fr.error);
     for (const dr of deferredRows) errors.push(`[retryable] ${dr.error}`);
@@ -588,20 +589,27 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
         .update({ status: "pending", claimed_at: null, error: `retrying: ${dr.error.slice(0, 480)}` }).in("id", [dr.id]);
     }
 
-    // Circuit breaker. Every send in this batch failed, so the transport itself
-    // is broken (bad key, wrong region, provider down) — the remaining rows
-    // would fail identically. Release the rest of the claim back to `pending`
-    // and stop: rows left in `sending` would strand until the reaper. (The
-    // batch's own rows were already folded into deferredRows above, so they
-    // were written to `pending`, not `failed`, by the loop just above.)
-    if (shouldTripBreaker(okIds.length, batch.length)) {
+    // Circuit breaker. shouldTripBreaker() uses the same predicate
+    // resolveBatchOutcome() just used — rawFailedRows.length > 0 — so the two
+    // can never disagree: this batch's own rows were already folded into
+    // deferredRows above and written to `pending`, never `failed`, by the
+    // loop just above this comment. A single non-retryable verdict anywhere
+    // in the batch is enough to distrust the transport (bad key, wrong
+    // region, provider paused, DNS/identity change), so also release the
+    // rest of the claim — the unprocessed remainder from later batches in
+    // this drain — back to `pending` and stop: those rows would be walking
+    // into the same suspect transport, and leaving them in `sending` would
+    // strand them until the reaper.
+    if (shouldTripBreaker(rawFailedRows.length, batch.length)) {
       const remaining = claimed.slice(i + batchSize).map((r) => r.id);
       if (remaining.length) {
         await supabase.from("broadcast_queue")
           .update({ status: "pending", claimed_at: null }).in("id", remaining);
       }
       console.error(
-        `[send-broadcast] Drain: batch of ${batch.length} failed 100% — aborting, ${remaining.length} rows released to pending`,
+        `[send-broadcast] Drain: batch of ${batch.length} had ${rawFailedRows.length} non-retryable failure(s) ` +
+          `(${okIds.length} sent, ${deferredRows.length} deferred, 0 marked failed) — aborting, ` +
+          `${remaining.length} additional rows released to pending`,
       );
       break;
     }
