@@ -206,9 +206,12 @@ export type { Profile };
 // Daily quota resets at midnight UTC. The nightly drain sends broadcast rows with
 // whatever quota is left, keeping a reserve for late-night transactional email.
 //
-// We are on Resend. Its quota is 100/day. SES is code-complete but NOT rolled out.
-// Do not raise this until SES is actually live.
-export const DAILY_EMAIL_LIMIT = 100;
+// This is no longer a provider quota — SES allows 50,000/day. It is blast-radius
+// protection: the ceiling a runaway loop cannot exceed before the nightly cap
+// stops it. 500 lets any realistic single broadcast (~400 recipients) finish in
+// one night, which was the whole point of leaving Resend's 100/day cap, while
+// capping a bug at ~1% of the SES quota.
+export const DAILY_EMAIL_LIMIT = 500;
 export const DRAIN_RESERVE = 10;
 
 // How many queued broadcast emails tonight's drain may send.

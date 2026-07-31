@@ -479,7 +479,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
       .eq("status", "pending");
     return jsonResponse({
       quota_only: true,
-      provider: "resend",
+      provider: currentProvider,
       daily_limit: dailyLimit,
       used_today: usedToday,
       budget,
