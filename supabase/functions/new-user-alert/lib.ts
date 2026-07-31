@@ -56,7 +56,10 @@ export function buildEmailHtml(opts: {
           </table>
         </td></tr>
         <tr><td style="padding:4px 28px 28px;">
-          <a href="https://wrotate.com" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
+          <!-- /open, never the bare root: .well-known/apple-app-site-association
+               EXCLUDES "/" and "/index.html", so a root link opens Safari instead
+               of the installed iOS app. "/open" is the matched path. -->
+          <a href="https://wrotate.com/open" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
         </td></tr>
       </table>
     </td></tr>
