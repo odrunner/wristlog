@@ -81,7 +81,21 @@ Each gate must produce its proof before the next begins.
 | **C** | Flip `EMAIL_PROVIDER=ses`; UAT `send-report` to ozgurdogan@gmail.com | Email arrives, DKIM passes in "show original", `sent` + `delivered` rows in `email_events` |
 | **D** | UAT `send-email` across both test accounts | testuser2 comments on a private testuser post → notification email via SES; events land |
 | **E** | `send-broadcast` with `test_email`, then a `quota_only` call | Delivery confirmed; response reports `provider: "ses"` and the new budget |
-| **F** | Let the nightly drain take the pending queue | Rows move to `sent`, not `failed`; queue clears in one run |
+| **F** | Re-enable the drain job, let it take the pending queue | Rows move to `sent`, not `failed`; queue clears in one run |
+
+### The held queue — MUST be released at gate F
+
+On 2026-07-30 the pg_cron job **`drain-broadcast-queue` (jobid 5, `30 21 * * *`) was paused** — `SELECT cron.alter_job(5, active := false)` — deliberately holding **88 pending recipients** so they can serve as the live end-to-end test of the SES drain at gate F. This is the exact path that failed on 2026-07-25, and it is otherwise untestable until the next real broadcast.
+
+**Gate F begins by re-enabling it:**
+
+```sql
+SELECT cron.alter_job(5, active := true);
+```
+
+Until that runs, those 88 people receive nothing. If the cutover stalls or is abandoned at any gate, **re-enable the job anyway** — the queue must not stay held while the project is parked. A paused drain strands real recipients silently; nothing alerts on it.
+
+Verify with `SELECT jobid, active FROM cron.job WHERE jobid = 5;` and confirm the queue clears in one run (the new 500/day cap makes 88 a single-run drain).
 
 Rollback at any gate: `npx supabase secrets set EMAIL_PROVIDER=resend`. Seconds, no deploy, no revert commit.
 
