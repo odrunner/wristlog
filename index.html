@@ -7162,7 +7162,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.09.06';
+const APP_VERSION = '31.14.13';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -14828,6 +14828,8 @@ function showAdminPage() {
   seedWinbackBroadcastDraft();
   seedStreakFunFactDraft();
   seedWinbackFunFactDraft();
+  seedWishlistPhotoDraft();
+  seedCollectionExtrasDraft();
   renderBroadcastDrafts();
   renderBroadcastQueueStatus();
   renderDevFlags();
@@ -15038,6 +15040,66 @@ We’d love to see you back.
 The WRotate team`,
     imageUrls: [],
     savedAt: new Date().toISOString(),
+  });
+  localStorage.setItem(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 10)));
+}
+
+// Wishlist awareness: only 15 of 460 members have ever added a wishlist item, yet
+// "Add from Photo" (Wishlist tab, works on web and app) and the iOS share sheet
+// both land a watch there without typing. Leads with the how, then the why.
+function seedWishlistPhotoDraft() {
+  const FLAG = 'wr_seed_wishlist_photo_draft_v1';
+  if (localStorage.getItem(FLAG)) return;
+  localStorage.setItem(FLAG, '1');
+  const SUBJECT = 'Your next watch, added in one photo';
+  const drafts = getBroadcastDrafts().filter(d => d.subject !== SUBJECT);
+  drafts.unshift({
+    id: Date.now() + 4,
+    subject: SUBJECT,
+    heading: 'Add to your wishlist from a photo',
+    body: `Saw a watch you want? You don’t have to type a thing.
+
+Open <b>Wishlist</b>, tap <b>Add from Photo</b>, and pick any picture — a screenshot from Instagram, a dealer listing, a shot of a friend’s wrist. We identify the watch and fill in the brand, model and reference for you. Review it, add a price or a link if you like, and save.
+
+<b>On iPhone it’s faster still.</b> In the Photos app, hit Share and pick WRotate — we’ll ask whether it goes to a post, your collection, or your wishlist.
+
+A wishlist is worth keeping:
+
+<b>Know what it costs.</b> Wishlist items carry a market value, so you know the number before you’re standing in the shop.
+
+<b>Show it to people.</b> Set your wishlist to Public, Followers or Close Friends on your profile, or set it per item. Handy when someone asks what you actually want.
+
+<b>Stay tidy.</b> Once the list grows, watches from the same brand fold into collapsible folders.
+
+<a href="https://wrotate.com/open">Add one to your wishlist →</a>`,
+    imageUrls: [],
+    savedAt: Date.now(),
+  });
+  localStorage.setItem(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 10)));
+}
+
+// Two long-shipped collection features most members have never opened: multi-image
+// posts and Enhance / price checks. Button labels here match the live UI — inside a
+// watch it reads "⭐ Enhance" and "Check price", not the older What's New wording.
+function seedCollectionExtrasDraft() {
+  const FLAG = 'wr_seed_collection_extras_draft_v1';
+  if (localStorage.getItem(FLAG)) return;
+  localStorage.setItem(FLAG, '1');
+  const SUBJECT = 'Two things WRotate does that you may not have tried';
+  const drafts = getBroadcastDrafts().filter(d => d.subject !== SUBJECT);
+  drafts.unshift({
+    id: Date.now() + 5,
+    subject: SUBJECT,
+    heading: 'Six photos to a post — and specs filled in for you',
+    body: `<b>Post up to six photos.</b> A post isn’t one shot any more. Pick several at once, or add more with the <b>+</b> button, then drag the thumbnails to reorder — the first is your hero. In the feed, tapping it opens a fullscreen swipe viewer. The wrist shot, the dial, the caseback and the clasp can all live on one post.
+
+<b>Let us fill in the details.</b> Open any watch and tap <b>⭐ Enhance</b> — we’ll fill in the specs, dimensions, caliber and a bit of the model’s history. The <b>Enhance</b> button in your collection header does every watch in one go, and nothing saves until you’ve reviewed it.
+
+<b>And what it’s all worth.</b> Inside a watch, <b>Check price</b> gives an AI market estimate. The <b>$</b> button in the collection header prices your whole collection at once. Values are kept over time, so you can see which way your collection is moving.
+
+<a href="https://wrotate.com/open">Open WRotate →</a>`,
+    imageUrls: [],
+    savedAt: Date.now(),
   });
   localStorage.setItem(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 10)));
 }
