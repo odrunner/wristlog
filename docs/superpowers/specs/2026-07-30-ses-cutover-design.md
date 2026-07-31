@@ -125,7 +125,13 @@ Every metric keys off `email_events`. The row shape does not change; what fills 
 
 ### Changes
 
-- **Custom tracking domain `click.wrotate.com`** (one CNAME). SES otherwise rewrites every link through `awstrack.me`; a custom domain keeps links on-brand, avoids the deliverability cost of an unfamiliar redirect host, and keeps the `clicked` metric alive.
+- ~~**Custom tracking domain `click.wrotate.com`** (one CNAME).~~ **SUPERSEDED 2026-07-30 — click tracking dropped instead. See below.**
+
+  This was wrong as written. A bare CNAME to `r.us-west-2.awstrack.me` supports **HTTP only**. Tested live: `click.wrotate.com` presents no TLS certificate at all, while `r.us-west-2.awstrack.me` serves a valid one — the ALB holds a cert only for Amazon's own domain. AWS's documented default `HttpsPolicy: OPTIONAL` wraps click links "using the original protocol of the link", and WRotate's links are `https://`, so every tracked click would have become `https://click.wrotate.com/…` with an invalid certificate: a browser security warning on every link in every email. HTTPS on a custom redirect domain requires CloudFront (or another CDN) with an ACM certificate covering the subdomain and `Host` header forwarding.
+
+  **Decision: drop click tracking entirely.** `CLICK` was removed from the configuration set's event types, so SES never rewrites links. Applied and verified 2026-07-30 — `MatchingEventTypes` is now `SEND`, `DELIVERY`, `OPEN`, `BOUNCE`, `COMPLAINT`.
+
+  Consequences: links stay pristine `wrotate.com` URLs, which is strictly better for recipient trust. The `clicked` metric stops accruing — 118 events across all history, so the loss is small; existing rows are retained and the admin UI's clicked column simply stops incrementing. **Open tracking is unaffected**, as are `sent` and `delivered` — the events the drain quota and `_NofM` dedup depend on. The `click.wrotate.com` CNAME left in Cloudflare is now unused and can be deleted.
 - **Event volume grows.** SES emits more events per email than Resend — intake rose 4.6× during the July SES week, per the comment in `admin_email_engagement()`. The 90-day bound added at that time caps query cost; table growth should be watched but needs no action now.
 
 ### New: bounce and complaint monitoring
@@ -194,7 +200,7 @@ AWS account `392424878015`, region **`us-west-2`** (confirmed; the July plan doc
 **Two config gaps found — fold into the implementation plan:**
 
 1. **The `wrotate.com` identity's default configuration set is `my-first-configuration-set`, not `wrotate-events`.** Sends are unaffected today because `ses.ts` passes `ConfigurationSetName` explicitly on every call. But it is a live trap: any send path that ever omits the explicit config set silently lands on a set with no event destination, producing zero events — which breaks the drain quota and `_NofM` dedup with no error anywhere. Set the identity default to `wrotate-events` as defence in depth.
-2. **No custom tracking domain configured** (`TrackingOptions` absent), so click links currently rewrite through `awstrack.me`. Confirms the `click.wrotate.com` work in §4 is outstanding, not already done.
+2. ~~**No custom tracking domain configured**~~ — **RESOLVED 2026-07-30 by dropping click tracking** (see §4). `TrackingOptions` remains deliberately absent, and `CLICK` was removed from the event destination so no link rewriting occurs at all.
 
 **Minor, optional:**
 
