@@ -88,6 +88,81 @@ def admin_key():
     return None
 
 
+def supabase_creds():
+    """Read Supabase URL + service key from ~/.config/wrotate/supabase.env.
+
+    The LaunchAgent runs the ~/.local/bin copy of this script and cannot read
+    the repo (TCC blocks ~/Documents), so `npx supabase` is unavailable here.
+    Returns (None, None) when unconfigured so the report still sends.
+    """
+    path = os.path.expanduser("~/.config/wrotate/supabase.env")
+    if not os.path.exists(path):
+        return None, None
+    vals = {}
+    with open(path) as fh:
+        for line in fh:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                vals[k.strip()] = v.strip()
+    return vals.get("SUPABASE_URL"), vals.get("SUPABASE_SERVICE_ROLE_KEY")
+
+
+def _event_count(url, key, event_type, since_iso):
+    """Exact row count for one event_type since a timestamp, via PostgREST."""
+    endpoint = (
+        f"{url}/rest/v1/email_events"
+        f"?select=id&event_type=eq.{event_type}&created_at=gte.{since_iso}"
+    )
+    out = subprocess.run(
+        ["curl", "-s", "-I", endpoint,
+         "-H", f"apikey: {key}",
+         "-H", f"Authorization: Bearer {key}",
+         "-H", "Range: 0-0",
+         "-H", "Prefer: count=exact"],
+        capture_output=True, text=True, timeout=30,
+    ).stdout
+    # Content-Range looks like "0-0/1234"; the total follows the slash.
+    for line in out.splitlines():
+        if line.lower().startswith("content-range:") and "/" in line:
+            total = line.split("/")[-1].strip()
+            if total.isdigit():
+                return int(total)
+    return 0
+
+
+def email_health():
+    """Bounce/complaint rates vs the SES suspension thresholds.
+
+    SES suspends an account above 5% bounce or 0.1% complaint, so the two are
+    reported separately. Returns an HTML fragment, or '' when unconfigured.
+    """
+    url, key = supabase_creds()
+    if not url or not key:
+        return ""
+    now = datetime.now(timezone.utc)
+    since = (now - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    sent = _event_count(url, key, "sent", since)
+    if sent == 0:
+        return ""
+    bounced = _event_count(url, key, "bounced", since)
+    complained = _event_count(url, key, "complained", since)
+    b_rate = 100.0 * bounced / sent
+    c_rate = 100.0 * complained / sent
+    alarm = b_rate >= 5.0 or c_rate >= 0.1
+    warn = b_rate >= 2.5 or c_rate >= 0.05
+    colour = "#f85149" if alarm else ("#d29922" if warn else "#2ea043")
+    flag = " &mdash; ACTION NEEDED" if alarm else (" &mdash; watch" if warn else "")
+    return (
+        f'<h3 style="margin-top:24px">Email deliverability (7d)<span style="color:{colour}">{flag}</span></h3>'
+        f'<p style="color:{colour}">'
+        f"Bounce <b>{b_rate:.2f}%</b> (limit 5%) &middot; "
+        f"Complaint <b>{c_rate:.3f}%</b> (limit 0.1%) &middot; "
+        f"{sent} sent, {bounced} bounced, {complained} complaints"
+        f"</p>"
+    )
+
+
 def anthropic_get(path, params, key):
     url = f"https://api.anthropic.com/v1/organizations/{path}?" + urllib.parse.urlencode(params, doseq=True)
     return curl_json(url, headers=[f"x-api-key: {key}", "anthropic-version: 2023-06-01"])
@@ -280,6 +355,7 @@ def main():
     included — it is covered by the flat Max subscription and is not billed.</p>
     """
     write_history(yday, y_total, y_searches)
+    html += email_health()
     send_email(f"WRotate API cost — {yday}: ${y_total:.2f}", html)
 
 
