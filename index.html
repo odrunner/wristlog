@@ -7162,7 +7162,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.06.02';
+const APP_VERSION = '31.08.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15350,15 +15350,26 @@ async function loadAdminStats() {
     const advSessions24h = advEntries.reduce((s, [, c]) => s + c, 0);
     // Prior 24h (24–48h ago) advanced sessions, parsed identically, for the D/D delta.
     const advSessionsPrevByUser = {};
+    const prevMsrByUser = {};
     (prevMsrR.data || []).forEach(r => {
       try {
         const msg = typeof r.messages === 'string' ? JSON.parse(r.messages) : r.messages;
-        if (msg?.user_id && msg.advanced_used) advSessionsPrevByUser[msg.user_id] = (advSessionsPrevByUser[msg.user_id] || 0) + 1;
+        if (!msg?.user_id) return;
+        prevMsrByUser[msg.user_id] = (prevMsrByUser[msg.user_id] || 0) + 1;
+        if (msg.advanced_used) advSessionsPrevByUser[msg.user_id] = (advSessionsPrevByUser[msg.user_id] || 0) + 1;
       } catch {}
     });
-    const advSessionsPrev24h = Object.entries(advSessionsPrevByUser)
+    const _extSum = (byUser) => Object.entries(byUser)
       .filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0);
+    const advSessionsPrev24h = _extSum(advSessionsPrevByUser);
     const advDelta = advSessions24h - advSessionsPrev24h;
+    // Measurement volume for the headline row, in the SAME shape as the per-engine rows
+    // below it: "N (24h) +delta", where delta is vs the prior 24h. Without this the row
+    // showed a bare 24h count styled identically to the engines' day-over-day change —
+    // two different quantities, one row apart. The 24h figure keeps using the RPC's exact
+    // count; only the prior-24h side is parsed client-side (same rows the adv delta uses).
+    const msr24h = Number(dod.measurements) || 0;
+    const msrPrev24h = _extSum(prevMsrByUser);
     const newValByUser = _countBy(newValR.data);
     const newEnhByUser = _countBy(newEnhR.data);
 
@@ -15530,7 +15541,6 @@ async function loadAdminStats() {
         ${statRow('Wears', extWears, dod.wears)}
         ${statRow('Price Checks', extVal, dod.priceChecks)}
         ${statRow('Enhances', extEnh, dod.enhances)}
-        ${statRow('Measurements', extMsr, dod.measurements)}
         ${statRow('Fun fact clicks', Number(fc.clicks_total) || 0, Number(fc.clicks_24h) || 0)}
         ${statRow('Fun fact viewers', Number(fc.viewers_total) || 0, Number(fc.viewers_24h) || 0)}
         ${statRow('Fun fact impressions', Number(fc.impressions_total) || 0, Number(fc.impressions_24h) || 0)}
@@ -15538,6 +15548,7 @@ async function loadAdminStats() {
         ${statRow('Fun facts generated', Number(fc.generated_total) || 0, Number(fc.generated_24h) || 0)}
         ${statRow('Watches with facts', Number(fc.watches_total) || 0, Number(fc.watches_24h) || 0)}
         ${statRow('Advanced mode (24h)', advSessions24h, advDelta, advUsers24h > 0 ? advUsers24h + ' user' + (advUsers24h === 1 ? '' : 's') : '')}
+        ${statRow('Measurements', extMsr, null, msr24h + ' (24h)' + inlineDelta(msr24h - msrPrev24h, false))}
         ${engineRow('Measurements — Pro V2', eng.prov2_sessions, eng.prov2_users, eng.prov2_sessions_24h, eng.prov2_sessions_prev24h)}
         ${engineRow('Measurements — Original', eng.orig_sessions, eng.orig_users, eng.orig_sessions_24h, eng.orig_sessions_prev24h)}
         ${statRow('Email Unsubs (total)', Number(unsub.unsub_total) || 0, null, (Number(unsub.unsub_24h) || 0) + ' (24h)' + inlineDelta((Number(unsub.unsub_24h) || 0) - (Number(unsub.unsub_prev24h) || 0), true))}
