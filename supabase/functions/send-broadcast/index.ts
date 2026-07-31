@@ -47,6 +47,8 @@ import {
   watchLabel,
   watchPhrase,
 } from "../_shared/email-personalize.ts";
+// Transport: ../_shared/mailer.ts — provider chosen at runtime by the
+// EMAIL_PROVIDER secret (defaults to Resend).
 import { currentProvider, sendBatch, sendEmail as sendProviderEmail } from "../_shared/mailer.ts";
 import type { MailMessage } from "../_shared/mailer.ts";
 
@@ -524,7 +526,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
   const batchSize = 100;
   for (let i = 0; i < claimed.length; i += batchSize) {
     const batch = claimed.slice(i, i + batchSize);
-    const messages: ResendMessage[] = await Promise.all(batch.map(async (r) => {
+    const messages: MailMessage[] = await Promise.all(batch.map(async (r) => {
       const sig = await hmacSign(r.uid, "updates", serviceKey);
       const url = unsubUrl(supabaseUrl, r.uid, sig, "updates");
       return {
@@ -539,7 +541,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
       };
     }));
 
-    const { results } = await sendResendBatch(messages);
+    const { results } = await sendBatch(messages);
     const okIds: number[] = [];
     const failedRows: { id: number; error: string }[] = [];
     // Transient failures (throttling, 5xx, network) stay `pending` so a later

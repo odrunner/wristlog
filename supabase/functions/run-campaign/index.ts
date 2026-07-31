@@ -35,6 +35,8 @@ import {
 // Same grounded-search prompt + JSON extractor the in-app fun-fact path uses, so
 // a fact minted for the email is indistinguishable from one minted on a wear log.
 import { buildFactsPrompt, extractJson } from "../identify-watch/lib.ts";
+// Transport: ../_shared/mailer.ts — provider chosen at runtime by the
+// EMAIL_PROVIDER secret (defaults to Resend).
 import { sendBatch } from "../_shared/mailer.ts";
 import type { MailMessage } from "../_shared/mailer.ts";
 
