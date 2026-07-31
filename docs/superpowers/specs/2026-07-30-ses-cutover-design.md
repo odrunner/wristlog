@@ -158,14 +158,39 @@ Resend remains the rollback path for **30 days** after gate F. Then:
 - `npm run test:smoke` after every edge-function deploy, per CLAUDE.md
 - Gate B's proof is specifically that the full suite passes with the refactor in place and behaviour unchanged
 
-## Open items for gate A
+## Gate A results — verified 2026-07-30
 
-Two facts could not be verified at design time because the AWS CLI session had expired:
+AWS account `392424878015`, region **`us-west-2`** (confirmed; the July plan document's `us-east-1` is stale and should be disregarded).
 
-1. **Region.** `project_ses_not_approved` memory records `us-west-2`; the July plan document says `us-east-1` and is stale. The approval applies to a specific region, and `SES_REGION` plus the MAIL FROM MX record must match it.
-2. **Supabase Auth SMTP provider** (see §6).
+**Green — no action needed:**
 
-Both are checks, not decisions — neither changes the design.
+| Check | Result |
+|---|---|
+| Production access | `ProductionAccessEnabled: true`, case `178450792800650` GRANTED |
+| Quota | 50,000/day, 14/sec, `SentLast24Hours: 6` (the admin senders) |
+| Account health | `EnforcementStatus: HEALTHY`, `SendingEnabled: true` |
+| Domain identity | `wrotate.com` verified; DKIM `SUCCESS`, RSA_2048 |
+| MAIL FROM | `mail.wrotate.com`, status `SUCCESS` |
+| Config set events | `wrotate-events` publishes SEND, DELIVERY, OPEN, CLICK, BOUNCE, COMPLAINT to SNS |
+| **Open/click tracking** | **Active** — OPEN and CLICK are in `MatchingEventTypes`, which is what enables tracking. The highest-risk metrics item in §4 is clear |
+| SNS subscription | Confirmed (real ARN, not `PendingConfirmation`), pointing at the deployed `ses-webhook` with its token |
+| Suppression list | Empty — clean slate |
+| Auto-suppression | BOUNCE and COMPLAINT enabled account-wide |
+
+**Two config gaps found — fold into the implementation plan:**
+
+1. **The `wrotate.com` identity's default configuration set is `my-first-configuration-set`, not `wrotate-events`.** Sends are unaffected today because `ses.ts` passes `ConfigurationSetName` explicitly on every call. But it is a live trap: any send path that ever omits the explicit config set silently lands on a set with no event destination, producing zero events — which breaks the drain quota and `_NofM` dedup with no error anywhere. Set the identity default to `wrotate-events` as defence in depth.
+2. **No custom tracking domain configured** (`TrackingOptions` absent), so click links currently rewrite through `awstrack.me`. Confirms the `click.wrotate.com` work in §4 is outstanding, not already done.
+
+**Minor, optional:**
+
+- `ReputationMetricsEnabled: false` on the config set — no per-config-set reputation metrics in CloudWatch. §4's monitoring computes rates from `email_events`, so this is not required; enabling it is cheap and adds AWS's own view.
+- `TlsPolicy: OPTIONAL` — could be `REQUIRE`. Out of scope for this project; noted so it is not forgotten.
+- Account `MailType` is registered as `TRANSACTIONAL`, while announcements and onboarding campaigns are roughly 83% of send volume. SES does not enforce this the way some providers do, but it is what the granted case describes. Worth knowing, not worth acting on now.
+
+**Still open:**
+
+- **Supabase Auth SMTP provider** (see §6) — not checkable via the AWS CLI.
 
 ## Risks
 
