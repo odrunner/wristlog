@@ -21,6 +21,7 @@ import {
   effectiveLimit as computeEffectiveLimit,
   excludeAlreadyEmailed,
   excludeIds,
+  isCredentialFailure,
   keepIds,
   filterNeverMeasured,
   filterOptedIn,
@@ -30,6 +31,7 @@ import {
   sanitizeHtml,
   segmentDateGte,
   segmentUserId,
+  shouldTripBreaker,
   unsubFooter,
   unsubUrl,
   utcDayStart,
@@ -551,7 +553,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
     for (let idx = 0; idx < results.length; idx++) {
       const r = results[idx];
       if (r.ok) okIds.push(batch[idx].id);
-      else if (r.retryable) {
+      else if (r.retryable || isCredentialFailure(r.status)) {
         deferredRows.push({ id: batch[idx].id, error: r.error });
         errors.push(`[retryable] ${r.error}`);
       } else {
@@ -576,6 +578,22 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
     for (const dr of deferredRows) {
       await supabase.from("broadcast_queue")
         .update({ status: "pending", claimed_at: null, error: `retrying: ${dr.error.slice(0, 480)}` }).in("id", [dr.id]);
+    }
+
+    // Circuit breaker. Every send in this batch failed, so the transport itself
+    // is broken (bad key, wrong region, provider down) — the remaining rows
+    // would fail identically. Release the rest of the claim back to `pending`
+    // and stop: rows left in `sending` would strand until the reaper.
+    if (shouldTripBreaker(okIds.length, batch.length)) {
+      const remaining = claimed.slice(i + batchSize).map((r) => r.id);
+      if (remaining.length) {
+        await supabase.from("broadcast_queue")
+          .update({ status: "pending", claimed_at: null }).in("id", remaining);
+      }
+      console.error(
+        `[send-broadcast] Drain: batch of ${batch.length} failed 100% — aborting, ${remaining.length} rows released to pending`,
+      );
+      break;
     }
   }
   console.log(`[send-broadcast] Drain: sent ${sent}, failed ${failed}, deferred ${deferred}, used_today ${usedToday}, limit ${dailyLimit}, budget ${budget}`);

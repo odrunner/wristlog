@@ -216,6 +216,22 @@ export function drainBudget(usedToday: number, dailyLimit = DAILY_EMAIL_LIMIT, r
   return Math.max(0, dailyLimit - usedToday - reserve);
 }
 
+// 401/403 mean our credentials are wrong, not that the recipient is bad. The
+// send layer correctly calls these permanent (retrying a bad key is pointless),
+// but the QUEUE must not: marking these rows `failed` drops real recipients for
+// an operator mistake. Defer them instead — they retry once the key is fixed.
+// This is exactly the shape of the 2026-07-25 incident.
+export function isCredentialFailure(status: number): boolean {
+  return status === 401 || status === 403;
+}
+
+// A batch where every single send failed is a configuration problem, not a
+// hundred simultaneously-bad addresses. Stop the drain rather than walk the
+// whole queue converting it to failures.
+export function shouldTripBreaker(okCount: number, batchSize: number): boolean {
+  return batchSize > 0 && okCount === 0;
+}
+
 // UTC midnight for "today" — the Resend quota window start.
 export function utcDayStart(nowMs: number): string {
   const d = new Date(nowMs);

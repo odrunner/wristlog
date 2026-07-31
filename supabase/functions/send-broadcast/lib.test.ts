@@ -8,6 +8,7 @@ import {
   excludeAlreadyEmailed,
   excludeIds,
   filterNeverMeasured,
+  isCredentialFailure,
   keepIds,
   filterOptedIn,
   isDormant,
@@ -18,6 +19,7 @@ import {
   SEGMENT_DATE_GTE,
   segmentDateGte,
   segmentUserId,
+  shouldTripBreaker,
   unsubFooter,
   unsubUrl,
   validateBroadcastInput,
@@ -430,4 +432,25 @@ Deno.test("keepIds — an empty segment sends to nobody, never to everybody", ()
   assertEquals(keepIds(profiles, []).length, 0);
   assertEquals(keepIds(profiles, new Set()).length, 0);
   assertEquals(keepIds([], ["a"]).length, 0);
+});
+
+Deno.test("isCredentialFailure flags auth rejections only", () => {
+  assertEquals(isCredentialFailure(401), true);
+  assertEquals(isCredentialFailure(403), true);
+  // Not credentials: a rejected recipient, a throttle, a provider outage.
+  assertEquals(isCredentialFailure(400), false);
+  assertEquals(isCredentialFailure(422), false);
+  assertEquals(isCredentialFailure(429), false);
+  assertEquals(isCredentialFailure(500), false);
+  assertEquals(isCredentialFailure(0), false);
+});
+
+Deno.test("shouldTripBreaker fires only on a wholly failed non-empty batch", () => {
+  assertEquals(shouldTripBreaker(0, 100), true);
+  assertEquals(shouldTripBreaker(0, 1), true);
+  // One success proves the transport works — recipient-level failures are real.
+  assertEquals(shouldTripBreaker(1, 100), false);
+  assertEquals(shouldTripBreaker(100, 100), false);
+  // An empty batch is not evidence of anything.
+  assertEquals(shouldTripBreaker(0, 0), false);
 });
