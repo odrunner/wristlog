@@ -15,6 +15,7 @@ import {
   isKnownSegment,
   nextBatchSlice,
   parseBatchSuffix,
+  resolveBatchOutcome,
   sanitizeHtml,
   SEGMENT_DATE_GTE,
   segmentDateGte,
@@ -453,4 +454,41 @@ Deno.test("shouldTripBreaker fires only on a wholly failed non-empty batch", () 
   assertEquals(shouldTripBreaker(100, 100), false);
   // An empty batch is not evidence of anything.
   assertEquals(shouldTripBreaker(0, 0), false);
+});
+
+Deno.test("resolveBatchOutcome — a wholly-failed batch defers every row, fails none", () => {
+  // Same shape as the 2026-07-25 incident: SES rejects every send with a
+  // 400-class "permanent" error because credentials/domain are misconfigured.
+  // No per-row verdict from a broken transport is trustworthy, so nothing
+  // may end up `failed` — it all goes back to `pending`.
+  const result = resolveBatchOutcome(
+    [],
+    [{ id: 1, error: "400 MailFromDomainNotVerified" }, { id: 2, error: "400 MailFromDomainNotVerified" }],
+    [{ id: 3, error: "429 throttled" }],
+    3,
+  );
+  assertEquals(result.sentIds, []);
+  assertEquals(result.failedRows, []);
+  assertEquals(result.deferredRows.map((r) => r.id).sort(), [1, 2, 3]);
+});
+
+Deno.test("resolveBatchOutcome — a partially-failed batch keeps real per-row failures as failed", () => {
+  // At least one send succeeded, so the transport works — a rejected
+  // recipient in the same batch is a real, per-row failure.
+  const result = resolveBatchOutcome(
+    [10],
+    [{ id: 11, error: "400 malformed address" }],
+    [{ id: 12, error: "429 throttled" }],
+    3,
+  );
+  assertEquals(result.sentIds, [10]);
+  assertEquals(result.failedRows.map((r) => r.id), [11]);
+  assertEquals(result.deferredRows.map((r) => r.id), [12]);
+});
+
+Deno.test("resolveBatchOutcome — an empty batch is untouched (not treated as a trip)", () => {
+  const result = resolveBatchOutcome([], [], [], 0);
+  assertEquals(result.sentIds, []);
+  assertEquals(result.failedRows, []);
+  assertEquals(result.deferredRows, []);
 });

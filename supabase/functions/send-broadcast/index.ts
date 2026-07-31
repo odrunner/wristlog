@@ -28,6 +28,7 @@ import {
   isDormant,
   nextBatchSlice,
   parseBatchSuffix,
+  resolveBatchOutcome,
   sanitizeHtml,
   segmentDateGte,
   segmentUserId,
@@ -545,22 +546,29 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
 
     const { results } = await sendBatch(messages);
     const okIds: number[] = [];
-    const failedRows: { id: number; error: string }[] = [];
+    const rawFailedRows: { id: number; error: string }[] = [];
     // Transient failures (throttling, 5xx, network) stay `pending` so a later
     // drain retries them. Marking them `failed` dropped those recipients for
     // good — the drain only ever re-selects `pending`.
-    const deferredRows: { id: number; error: string }[] = [];
+    const rawDeferredRows: { id: number; error: string }[] = [];
     for (let idx = 0; idx < results.length; idx++) {
       const r = results[idx];
       if (r.ok) okIds.push(batch[idx].id);
       else if (r.retryable || isCredentialFailure(r.status)) {
-        deferredRows.push({ id: batch[idx].id, error: r.error });
-        errors.push(`[retryable] ${r.error}`);
+        rawDeferredRows.push({ id: batch[idx].id, error: r.error });
       } else {
-        failedRows.push({ id: batch[idx].id, error: r.error });
-        errors.push(r.error);
+        rawFailedRows.push({ id: batch[idx].id, error: r.error });
       }
     }
+
+    // Resolve BEFORE any DB write. If nothing in this batch succeeded, no
+    // per-row verdict here is trustworthy — including ones the provider
+    // called permanent — so resolveBatchOutcome() folds failedRows into
+    // deferredRows wholesale. A tripped batch must never write `failed`.
+    const { failedRows, deferredRows } = resolveBatchOutcome(okIds, rawFailedRows, rawDeferredRows, batch.length);
+    for (const fr of failedRows) errors.push(fr.error);
+    for (const dr of deferredRows) errors.push(`[retryable] ${dr.error}`);
+
     sent += okIds.length;
     failed += failedRows.length;
     deferred += deferredRows.length;
@@ -583,7 +591,9 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
     // Circuit breaker. Every send in this batch failed, so the transport itself
     // is broken (bad key, wrong region, provider down) — the remaining rows
     // would fail identically. Release the rest of the claim back to `pending`
-    // and stop: rows left in `sending` would strand until the reaper.
+    // and stop: rows left in `sending` would strand until the reaper. (The
+    // batch's own rows were already folded into deferredRows above, so they
+    // were written to `pending`, not `failed`, by the loop just above.)
     if (shouldTripBreaker(okIds.length, batch.length)) {
       const remaining = claimed.slice(i + batchSize).map((r) => r.id);
       if (remaining.length) {

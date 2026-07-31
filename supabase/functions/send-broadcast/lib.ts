@@ -232,6 +232,29 @@ export function shouldTripBreaker(okCount: number, batchSize: number): boolean {
   return batchSize > 0 && okCount === 0;
 }
 
+// Fold a batch's raw per-row classification into the id lists that actually
+// get written. When the breaker trips (no send in the batch succeeded), no
+// per-row verdict from this batch is trustworthy — including ones the
+// provider called permanent — so `failedRows` is folded into `deferredRows`
+// wholesale: nothing from a tripped batch may end up `failed`. This is the
+// 2026-07-25 incident: SES returned a 400-class "permanent" rejection for
+// every recipient because of a misconfigured provider, not 88 bad addresses.
+export function resolveBatchOutcome(
+  okIds: number[],
+  failedRows: { id: number; error: string }[],
+  deferredRows: { id: number; error: string }[],
+  batchSize: number,
+): {
+  sentIds: number[];
+  failedRows: { id: number; error: string }[];
+  deferredRows: { id: number; error: string }[];
+} {
+  if (shouldTripBreaker(okIds.length, batchSize)) {
+    return { sentIds: okIds, failedRows: [], deferredRows: [...deferredRows, ...failedRows] };
+  }
+  return { sentIds: okIds, failedRows, deferredRows };
+}
+
 // UTC midnight for "today" — the Resend quota window start.
 export function utcDayStart(nowMs: number): string {
   const d = new Date(nowMs);
