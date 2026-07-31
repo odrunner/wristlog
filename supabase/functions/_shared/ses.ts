@@ -8,7 +8,7 @@ import { buildSesPayload, chunk, sesEndpoint } from "./ses-lib.ts";
 import type { SesMessage } from "./ses-lib.ts";
 export type { SesMessage } from "./ses-lib.ts";
 
-const REGION = Deno.env.get("SES_REGION") ?? "us-east-1";
+const REGION = Deno.env.get("SES_REGION") ?? "us-west-2";
 const CONFIG_SET = Deno.env.get("SES_CONFIG_SET") ?? "wrotate-events";
 
 let client: AwsClient | null = null;

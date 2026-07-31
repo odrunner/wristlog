@@ -228,20 +228,44 @@ export function isCredentialFailure(status: number): boolean {
   return status === 401 || status === 403;
 }
 
-// A batch where every single send failed is a configuration problem, not a
-// hundred simultaneously-bad addresses. Stop the drain rather than walk the
-// whole queue converting it to failures.
+// Proportional, not absolute: trip when a MAJORITY of the batch failed
+// (okCount * 2 < batchSize — a strict inequality, so an even split does not
+// trip), not only when every single send failed.
+//
+// An absolute okCount === 0 rule is right for Resend, which posts a whole
+// batch as ONE HTTP request — every message shares a single verdict, so a
+// transport failure is always 100% and an absolute rule always catches it.
+// It is NOT right for SES: _shared/ses.ts's sendSesBatch sends messages
+// individually, in waves of 10 with a pause between waves, so a failure
+// that begins mid-batch (a paused account, a DNS/identity change, a rate
+// limit) leaves the early waves' sends marked ok and okCount > 0 even
+// though the transport is broken. An 88-row batch is 9 waves over ~10
+// seconds — plenty of room for exactly that. Under an absolute rule those
+// failures are 400-class (isRetryableStatus says no), so every recipient
+// from the onset of the failure onward gets written `failed` and is lost
+// for good — the drain never re-selects `failed`. This is the 2026-07-25
+// incident reachable through a door an absolute rule does not cover.
+//
+// The proportional threshold is a deliberate asymmetry: deferring a row is
+// always recoverable (a later drain retries it); marking it `failed` is
+// never recoverable. When most of a batch is failing, the transport being
+// broken is vastly more likely than most of those specific recipients being
+// individually invalid — so the bias must be to defer. A minority failing
+// stays the ordinary case (some addresses really are bad) and must still be
+// marked `failed`, not endlessly deferred.
 export function shouldTripBreaker(okCount: number, batchSize: number): boolean {
-  return batchSize > 0 && okCount === 0;
+  return batchSize > 0 && okCount * 2 < batchSize;
 }
 
 // Fold a batch's raw per-row classification into the id lists that actually
-// get written. When the breaker trips (no send in the batch succeeded), no
-// per-row verdict from this batch is trustworthy — including ones the
+// get written. When shouldTripBreaker() says the batch is majority-failed,
+// no per-row verdict from this batch is trustworthy — including ones the
 // provider called permanent — so `failedRows` is folded into `deferredRows`
 // wholesale: nothing from a tripped batch may end up `failed`. This is the
 // 2026-07-25 incident: SES returned a 400-class "permanent" rejection for
 // every recipient because of a misconfigured provider, not 88 bad addresses.
+// Delegates the trip decision to shouldTripBreaker() itself (rather than
+// re-checking, say, okIds.length === 0) so the two can never disagree.
 export function resolveBatchOutcome(
   okIds: number[],
   failedRows: { id: number; error: string }[],
