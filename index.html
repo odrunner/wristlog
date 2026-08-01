@@ -2361,8 +2361,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">We went back through thousands of real measurements and found Pro V2 was calling its answer before it had listened long enough to earn it. A <strong>Balanced</strong> reading now takes about 17 seconds instead of 10, and measure the same watch twice in a row and the two numbers land much closer together. Want the old speed? <strong>Quick</strong> is still there, and <strong>Strict</strong> now genuinely runs the long analysis it always promised. Saved readings also keep <strong>amplitude, how long the measurement ran, and how steady it was</strong>, so you can tell a rushed reading from a careful one later on.</div>
       </div>
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Low Amplitude Now Shows Up</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Amplitude used to go blank on a watch swinging below about 135&deg; &#8212; which meant it stayed silent on exactly the watches worth knowing about. It now reports low readings and marks them in red, so a movement that&#8217;s due for a service tells you so instead of showing nothing.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Pro V2 Measurement Engine &#9889; &#8212; now the default</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Our rebuilt timegrapher engine is out of beta and now runs by default on the Measure page &#8212; nothing to switch on. It settles fast, holds steady between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing, a key health indicator watchmakers look at. Needs app version 2.1 or later. Prefer the previous behaviour? Pick <strong>Standard</strong> from the engine selector anytime. Amplitude shows only when the signal is clean enough to trust &#8212; if it&#8217;s blank, reposition and try again.</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Our rebuilt timegrapher engine is out of beta and now runs by default on the Measure page &#8212; nothing to switch on. It settles fast, holds steady between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing, a key health indicator watchmakers look at. Needs app version 2.1 or later. Prefer the previous behaviour? Pick <strong>Standard</strong> from the engine selector anytime.</div>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Wishlist Brand Folders</div>
@@ -2601,7 +2605,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span style="font-size:1.1rem;flex-shrink:0;margin-top:.1rem;">&#9889;</span>
         <div>
           <div style="font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.2rem;">Pro V2 Measurement Engine</div>
-          <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">A rebuilt timegrapher engine, now running by default on the Measure page: it settles quickly, holds steady between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing, a key health indicator watchmakers look at. A Balanced reading takes about 17 seconds; Quick (~10s) and Strict (~33s) live under the &#9881; gear. Needs app version 2.1 or later. You can switch to <strong>Standard</strong> from the engine selector anytime. Amplitude shows only when the signal is clean enough to trust &#8212; if it&#8217;s blank, reposition and try again.</div>
+          <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">A rebuilt timegrapher engine, now running by default on the Measure page: it settles quickly, holds steady between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing, a key health indicator watchmakers look at. A Balanced reading takes about 17 seconds; Quick (~10s) and Strict (~33s) live under the &#9881; gear. Needs app version 2.1 or later. You can switch to <strong>Standard</strong> from the engine selector anytime.</div>
         </div>
       </div>
     </div>
@@ -3365,7 +3369,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">6</div>
             <div class="help-step-body">
               <div class="help-step-title">The Pro V2 engine &#9889; (default)</div>
-              <div class="help-step-desc">On app version 2.1+, <strong>Pro V2</strong> is the engine that runs by default &#8212; a rebuilt detection core that holds steadier between runs and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing (healthy watches typically read 220&#8211;300&deg;). It also shows the averaged tick/tock waveform under the chart; sharp spikes mean a clean signal. Amplitude appears only when the signal is clean enough to trust. With Pro V2 running, the gear offers its own settings: a <strong>Precision</strong> preset &#8212; Quick (~10s), Balanced (~17s, recommended) or Strict (~33s, tightest) &#8212; and the movement&#8217;s lift angle (52&deg; fits most modern movements). Longer settings listen to more of the watch before answering, so they repeat more closely; measuring twice and comparing is the quickest way to know a reading is trustworthy. Prefer the previous engine? Pick <strong>Standard</strong> from the engine selector anytime.</div>
+              <div class="help-step-desc">On app version 2.1+, <strong>Pro V2</strong> is the engine that runs by default &#8212; a rebuilt detection core that holds steadier between runs and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing (healthy watches typically read 220&#8211;300&deg;; a low reading shown in red usually means a service is due). It also shows the averaged tick/tock waveform under the chart; sharp spikes mean a clean signal. With Pro V2 running, the gear offers its own settings: a <strong>Precision</strong> preset &#8212; Quick (~10s), Balanced (~17s, recommended) or Strict (~33s, tightest) &#8212; and the movement&#8217;s lift angle (52&deg; fits most modern movements). Longer settings listen to more of the watch before answering, so they repeat more closely; measuring twice and comparing is the quickest way to know a reading is trustworthy. Prefer the previous engine? Pick <strong>Standard</strong> from the engine selector anytime.</div>
             </div>
           </div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Measure in a quiet environment for best results. Watches with display casebacks (transparent backs) produce a stronger signal than solid steel cases.</span></div>
@@ -7166,7 +7170,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.19.46';
+const APP_VERSION = '31.19.47';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
