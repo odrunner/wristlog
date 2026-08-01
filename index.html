@@ -2357,8 +2357,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Stats now opens with a <strong>Most Worn</strong> ranking of your collection, and the period filter adds <strong>1M, 3M, YTD and 1Y</strong> alongside All Time. A watch you bought last month no longer sits at the bottom forever &#8212; switch to a shorter window to see what you&#8217;re actually reaching for. Track also shows each watch&#8217;s share of your all-time wears.</div>
       </div>
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Steadier Measurements &#8212; and a fuller record</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">We went back through thousands of real measurements and found Pro V2 was calling its answer before it had listened long enough to earn it. A <strong>Balanced</strong> reading now takes about 17 seconds instead of 10, and measure the same watch twice in a row and the two numbers land much closer together. Want the old speed? <strong>Quick</strong> is still there, and <strong>Strict</strong> now genuinely runs the long analysis it always promised. Saved readings also keep <strong>amplitude, how long the measurement ran, and how steady it was</strong>, so you can tell a rushed reading from a careful one later on.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Pro V2 Measurement Engine &#9889; &#8212; now the default</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Our rebuilt timegrapher engine is out of beta and now runs by default on the Measure page &#8212; nothing to switch on. It converges in about 10 seconds, holds steady between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing, a key health indicator watchmakers look at. Needs app version 2.1 or later. Prefer the previous behaviour? Pick <strong>Standard</strong> from the engine selector anytime. Amplitude shows only when the signal is clean enough to trust &#8212; if it&#8217;s blank, reposition and try again.</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Our rebuilt timegrapher engine is out of beta and now runs by default on the Measure page &#8212; nothing to switch on. It settles fast, holds steady between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing, a key health indicator watchmakers look at. Needs app version 2.1 or later. Prefer the previous behaviour? Pick <strong>Standard</strong> from the engine selector anytime. Amplitude shows only when the signal is clean enough to trust &#8212; if it&#8217;s blank, reposition and try again.</div>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Wishlist Brand Folders</div>
@@ -2412,7 +2416,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Advanced Measure Settings</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Tap the &#9881; gear on the Measure screen to fine-tune how readings are taken. Pick an environment preset &#8212; Quiet Room, Noisy Environment, or Weak Signal &#8212; or adjust Sensitivity and Convergence Speed yourself to get a reliable reading from trickier watches.</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Tap the &#9881; gear on the Measure screen to fine-tune how readings are taken. On Pro V2, <strong>Precision</strong> trades time for accuracy &#8212; Quick (~10s), Balanced (~17s, recommended) or Strict (~33s, tightest) &#8212; and <strong>Lift angle</strong> tunes the amplitude reading to your movement. On Standard, pick an environment preset &#8212; Quiet Room, Noisy Environment, or Weak Signal &#8212; or adjust Sensitivity and Convergence Speed yourself.</div>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Delete Comments</div>
@@ -2597,7 +2601,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span style="font-size:1.1rem;flex-shrink:0;margin-top:.1rem;">&#9889;</span>
         <div>
           <div style="font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.2rem;">Pro V2 Measurement Engine</div>
-          <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">A rebuilt timegrapher engine, now running by default on the Measure page: it converges in about 10 seconds, holds steady between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing, a key health indicator watchmakers look at. Needs app version 2.1 or later. You can switch to <strong>Standard</strong> from the engine selector anytime.</div>
+          <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">A rebuilt timegrapher engine, now running by default on the Measure page: it settles quickly, holds steady between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing, a key health indicator watchmakers look at. A Balanced reading takes about 17 seconds; Quick (~10s) and Strict (~33s) live under the &#9881; gear. Needs app version 2.1 or later. You can switch to <strong>Standard</strong> from the engine selector anytime. Amplitude shows only when the signal is clean enough to trust &#8212; if it&#8217;s blank, reposition and try again.</div>
         </div>
       </div>
     </div>
@@ -2680,7 +2684,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div style="min-width:28px;height:28px;border-radius:50%;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;">3</div>
         <div>
           <div style="font-size:.85rem;font-weight:600;color:var(--text);margin-bottom:.15rem;">Tap Measure and hold still</div>
-          <div style="font-size:.78rem;color:var(--muted);line-height:1.5;">Keep the watch steady — measuring usually takes 30&#8211;60 seconds (up to 90). It auto-stops once it has a confident reading.</div>
+          <div style="font-size:.78rem;color:var(--muted);line-height:1.5;">Keep the watch steady — Pro V2 usually takes about 17 seconds on the default Balanced setting. It auto-stops once it has a confident reading.</div>
         </div>
       </div>
     </div>
@@ -3340,7 +3344,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">3</div>
             <div class="help-step-body">
               <div class="help-step-title">Tap Measure and wait for convergence</div>
-              <div class="help-step-desc">Dots appear on the scatter chart as ticks are detected. A preliminary rate shows within seconds, then refines until it converges (usually 30&#8211;60 seconds, up to 90). The signal bars in the bottom-left show how strong the signal is.</div>
+              <div class="help-step-desc">Dots appear on the scatter chart as ticks are detected. A preliminary rate shows within seconds, then refines until it converges &#8212; about 17 seconds on Pro V2&#8217;s default Balanced setting, or 30&#8211;60 seconds on Standard. The signal bars in the bottom-left show how strong the signal is.</div>
             </div>
           </div>
           <div class="help-step">
@@ -3361,7 +3365,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">6</div>
             <div class="help-step-body">
               <div class="help-step-title">The Pro V2 engine &#9889; (default)</div>
-              <div class="help-step-desc">On app version 2.1+, <strong>Pro V2</strong> is the engine that runs by default &#8212; a rebuilt detection core that converges in about 10 seconds, holds steadier between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing (healthy watches typically read 220&#8211;300&deg;). It also shows the averaged tick/tock waveform under the chart; sharp spikes mean a clean signal. Amplitude appears only when the signal is clean enough to trust. With Pro V2 running, the gear offers its own settings: a Precision preset (Quick / Balanced / Strict) and the movement&#8217;s lift angle (52&deg; fits most modern movements). Prefer the previous engine? Pick <strong>Standard</strong> from the engine selector anytime.</div>
+              <div class="help-step-desc">On app version 2.1+, <strong>Pro V2</strong> is the engine that runs by default &#8212; a rebuilt detection core that holds steadier between runs and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing (healthy watches typically read 220&#8211;300&deg;). It also shows the averaged tick/tock waveform under the chart; sharp spikes mean a clean signal. Amplitude appears only when the signal is clean enough to trust. With Pro V2 running, the gear offers its own settings: a <strong>Precision</strong> preset &#8212; Quick (~10s), Balanced (~17s, recommended) or Strict (~33s, tightest) &#8212; and the movement&#8217;s lift angle (52&deg; fits most modern movements). Longer settings listen to more of the watch before answering, so they repeat more closely; measuring twice and comparing is the quickest way to know a reading is trustworthy. Prefer the previous engine? Pick <strong>Standard</strong> from the engine selector anytime.</div>
             </div>
           </div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Measure in a quiet environment for best results. Watches with display casebacks (transparent backs) produce a stronger signal than solid steel cases.</span></div>
@@ -4031,15 +4035,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div id="msr-prov2-precision" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:1.2rem;">
           <button class="msr-preset-card" data-prec="quick" onclick="onProV2Precision('quick')">
             <div class="msr-preset-name">Quick</div>
-            <div class="msr-preset-desc">~5s result</div>
+            <div class="msr-preset-desc">~10s, roughest</div>
           </button>
           <button class="msr-preset-card" data-prec="balanced" onclick="onProV2Precision('balanced')">
             <div class="msr-preset-name">Balanced</div>
-            <div class="msr-preset-desc">~10s, recommended</div>
+            <div class="msr-preset-desc">~17s, recommended</div>
           </button>
           <button class="msr-preset-card" data-prec="strict" onclick="onProV2Precision('strict')">
             <div class="msr-preset-name">Strict</div>
-            <div class="msr-preset-desc">~15s, tightest</div>
+            <div class="msr-preset-desc">~33s, tightest</div>
           </button>
         </div>
         <div style="font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:.5rem;letter-spacing:.03em;">LIFT ANGLE</div>
@@ -7162,7 +7166,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.14.13';
+const APP_VERSION = '31.19.46';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -25550,11 +25554,11 @@ function initTgSourceSelector() {
       knobPanel.style.display = 'grid';
       const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v; };
       set('tg-knob-sigma4', _tgKnob('tg_sigma', 0.0003) * 10000);
-      set('tg-knob-stabth', _tgKnob('tg_stabth', 3));
-      set('tg-knob-stabwin', _tgKnob('tg_stabwin', 6));
-      set('tg-knob-wallmin', _tgKnob('tg_wallmin', 8));
+      set('tg-knob-stabth', _tgConvKnob('tg_stabth'));
+      set('tg-knob-stabwin', _tgConvKnob('tg_stabwin'));
+      set('tg-knob-wallmin', _tgConvKnob('tg_wallmin'));
       set('tg-knob-lift', _tgKnob('tg_lift', 52));
-      set('tg-knob-maxwin', _tgKnob('tg_maxwin', 16));
+      set('tg-knob-maxwin', _tgConvKnob('tg_maxwin'));
       set('tg-knob-agreeband', _tgKnob('tg_agreeband', 12));
     } else knobPanel.style.display = 'none';
   }
@@ -26167,6 +26171,7 @@ window._tgNativeCallback = function(data) {
     if (isMsr) {
       const isTgAlgo = _tgAlgo() === 'tg';
       if (data.amplitude != null) _msrLastAmp = data.amplitude;
+      if (typeof data.tickCount === 'number') _msrLastNativeTicks = data.tickCount;
       const ampWrap = document.getElementById('msr-live-amp-wrap');
       const ampEl = document.getElementById('msr-live-amp');
       if (ampWrap && ampEl) {
@@ -26330,8 +26335,14 @@ window._tgNativeCallback = function(data) {
       // ample time (faint movement / poor mic coupling) — the #1 weekly failure mode.
       // Stop and guide the user instead of grinding on to a garbage reading. Low-BPH
       // harmonic locks keep plenty of ticks, so they don't trip this (different mode).
+      // The Pro V2 rate comes off the energy envelope, not accepted ticks, so a thin tick
+      // count is no reason to kill a session that is producing a number. Deliberately a
+      // LIVE rate rather than tgHasSignal: that one stays true forever once a single dot
+      // has landed, which would suppress this stop for a run that has since lost its lock —
+      // exactly the run the user needs told to reposition.
+      const tgLiveRate = _tgAlgo() === 'tg' && data.rate != null;
       const weakStopAt = _msrIsAuto ? 30 : 28;
-      if (!_tgRunnerActive() && !_micBatchActive && _msrPhase !== 'converged'
+      if (!_tgRunnerActive() && !_micBatchActive && !tgLiveRate && _msrPhase !== 'converged'
           && elapsed >= weakStopAt && data.tickCount > 0 && data.tickCount < 25) {
         stopMsrListen('weak_signal');
         const statusText = document.getElementById('msr-status-text');
@@ -26460,7 +26471,7 @@ window._tgNativeCallback = function(data) {
         // Piezo engine does its own Theil-Sen + skip + trailing-window stability — trust its rateStable.
         if (isPz && data.rateStable && elapsed >= 15 && !pzWeak) jsConverged = true;
         // tg core (mic): converge on the engine's fast rateStable, bypassing the slow bucket logic.
-        if (isTgAlgo && data.rateStable && elapsed >= _tgKnob('tg_wallmin', 8)) jsConverged = true;
+        if (isTgAlgo && data.rateStable && elapsed >= _tgConvKnob('tg_wallmin')) jsConverged = true;
         if (_v2OwnsConverge) {
           // v2: _q2Tick (incremental-stability) owns the lock; never show CONVERGED prematurely.
           badge.style.display = 'none';
@@ -26565,7 +26576,8 @@ window._tgNativeCallback = function(data) {
     // Auto-stop on convergence or at 45s timeout
     if (isMsr && _msrListening && _msrListenStart) {
       const elapsed = (Date.now() - _msrListenStart) / 1000;
-      const maxDur = _tgHasNative() ? tgLoadSettings().values.maxDuration : 45;
+      const maxDur = _tgAlgo() === 'tg' ? _proV2MaxDuration()
+                   : (_tgHasNative() ? tgLoadSettings().values.maxDuration : 45);
       if (!_tgRunnerActive() && (_tgAlgo() === 'tg' || !_tgV2Convergence()) && (_msrPhase === 'converged' || elapsed >= maxDur)) {  // v2-on: _q2Tick owns the finish — EXCEPT the tg core, which owns its own converge+stop
         const wasConverged = _msrPhase === 'converged';
         // Haptic feedback on finish — success for converged, warning for timeout
@@ -26796,6 +26808,13 @@ let _msrCachedBucketRate = null; // cached result from last computeMedianRate ca
 let _msrAcceptRate = 0;    // shared signal quality metric (updated once per tick event)
 let _msrPzSig = null;      // piezo: smoothed real signal strength (engine periodicity×SNR, 0..1)
 let _msrLastAmp = null;    // tg: last computed amplitude (degrees)
+// Quality metadata for the saved reading. Until 2026-07-31 a timegrapher_results row held
+// only rate + beat_error + bph, so a 10s noisy measurement and a 40s clean one were
+// indistinguishable forever after — and Pro V2's amplitude never reached the user's history
+// at all (0 of 122 saved rows had one).
+let _msrLastNativeTicks = 0;   // native accepted-tick count at the last update
+let _msrLastDurationSec = null; // wall seconds the finished run actually listened for
+let _msrLastRateStd = null;     // SD of the final rate reports (s/day) — the audit's jitter metric
 let _msrLastWave = null;   // tg: last folded beat waveform (for the share-card scope)
 let _msrLastDotTime = 0;   // timestamp of last scatter dot added (starvation detection)
 let _msrShown = { weak: false, noise: false, prelim: false, advanced: false };
@@ -26879,12 +26898,33 @@ function openMsrSettings() {
   }
 }
 
-// Pro V2 precision presets → convergence knobs (wall-min / stability window / band s/d)
+// Pro V2 precision presets. tg_wallmin is the EARLIEST the engine may converge, and it is
+// the setting that decides accuracy — because computeTgRate can only use an analysis window
+// once enough envelope has been captured to fill it. recentEnvelope hands back what the ring
+// holds and computeTgRate skips any window under 90% full, so a W-second window first exists
+// at 0.9*W seconds of wall-elapsed (8s -> 7.2s, 16s -> 14.4s, 32s -> 28.8s; wallElapsed runs
+// from tick activation, which is engine start for a manually-set BPH — the worst case).
+// Converge before that and the reading comes off a shorter, noisier window no matter what
+// tg_maxwin says.
+//
+// Every preset shipped through 2026-07-31 undershot its own window: balanced converged at
+// 8s, so 34% of readings came off the 4s window and only 9% ever reached the 16s one, and
+// strict advertised a 32s window while converging at 12s — 0 of 13 strict sessions in the
+// field ever computed it. Wall-mins now clear the window they are named for.
+// Measured on real back-to-back same-watch pairs: |Δ| p50 3.5 s/day at <=11s wall-elapsed
+// vs 1.0 s/day at 12-13s (audit 2026-07-31).
+// Invariant, enforced by tests/prov2-precision.test.js: tg_wallmin >= 0.9 * tg_maxwin, so
+// the longest window a preset is allowed to use is already full the first moment it is
+// allowed to converge. A preset that permits a window it cannot have filled is claiming
+// precision it never delivers — which is what strict (32s window, 12s wall-min) did.
 const PROV2_PRECISION = {
-  quick:    { tg_wallmin: 5,  tg_stabwin: 4, tg_stabth: 4, tg_maxwin: 16 },
-  balanced: { tg_wallmin: 8,  tg_stabwin: 6, tg_stabth: 3, tg_maxwin: 16 },
-  strict:   { tg_wallmin: 12, tg_stabwin: 8, tg_stabth: 2, tg_maxwin: 32 }  // 32s window = genuinely more precise, not just more patient
+  quick:    { tg_wallmin: 8,  tg_stabwin: 4, tg_stabth: 4, tg_maxwin: 8 },    // 8s window
+  balanced: { tg_wallmin: 15, tg_stabwin: 6, tg_stabth: 2, tg_maxwin: 16 },   // 16s window
+  strict:   { tg_wallmin: 30, tg_stabwin: 8, tg_stabth: 2, tg_maxwin: 32 }    // 32s window
 };
+// Defaults for a user who has never opened the precision panel — must track `balanced`,
+// since _tgConvKnob falls back to these when the localStorage key is absent.
+const PROV2_DEFAULTS = PROV2_PRECISION.balanced;
 function onProV2Precision(p) {
   const m = PROV2_PRECISION[p]; if (!m) return;
   localStorage.setItem('tg_precision', p);
@@ -27059,6 +27099,7 @@ function _resetMsrState(bph) {
   _msrLastBe = null; _msrFoldedBE = null;
   _msrRateHistory = []; _msrBucketRateHistory = []; _msrCachedBucketRate = null;
   _msrLastDotTime = 0; _msrShown = { weak: false, noise: false, prelim: false, advanced: false }; _msrNoiseSamples = []; _msrAcceptRate = 0; _msrPzSig = null; _msrLastAmp = null; _msrLastWave = null; _msrLastConf = 0;
+  _msrLastNativeTicks = 0; _msrLastDurationSec = null; _msrLastRateStd = null;
   const scCanvas = document.getElementById('msr-scatter-plot');
   if (scCanvas) { const sctx = scCanvas.getContext('2d'); sctx.clearRect(0, 0, scCanvas.width, scCanvas.height); }
   document.getElementById('msr-live-rate').textContent = '—';
@@ -27847,7 +27888,7 @@ function sendMsrTuning() {
   window.webkit.messageHandlers.timegrapher.postMessage({
     action: 'tuning',
     peakRatioThreshold: _remotePeakRatioThreshold ?? 2.5,
-    bufferSeconds: Math.max(_remoteBufferSeconds ?? 30.0, _tgKnob('tg_maxwin', 16) + 6),  // ring must hold the tg analysis window
+    bufferSeconds: Math.max(_remoteBufferSeconds ?? 30.0, _tgConvKnob('tg_maxwin') + 6),  // ring must hold the tg analysis window
     regSkipPairs: Number(document.getElementById('msr-tune-reg-skip').value),
     regMinN: Number(document.getElementById('msr-tune-reg-min-n').value),
     wallMinSec: Number(document.getElementById('msr-tune-wall-min').value),
@@ -27891,14 +27932,32 @@ function sendMsrTuning() {
     // tg detection-core knobs (localStorage, admin panel next to the algo selector)
     liftAngle: _tgKnob('tg_lift', 52),
     tgSigma: _tgKnob('tg_sigma', 0.0003),
-    tgStabWin: _tgKnob('tg_stabwin', 6),
-    tgWallMin: _tgKnob('tg_wallmin', 8),
-    tgStabTh: _tgKnob('tg_stabth', 3),
-    tgMaxWin: _tgKnob('tg_maxwin', 16),
-    tgAgree: _tgKnob('tg_agreeband', 12)   // harmonic-reject guard band (s/day); 999 = off
+    tgStabWin: _tgConvKnob('tg_stabwin'),
+    tgWallMin: _tgConvKnob('tg_wallmin'),
+    tgStabTh: _tgConvKnob('tg_stabth'),
+    tgMaxWin: _tgConvKnob('tg_maxwin'),
+    tgAgree: _tgKnob('tg_agreeband', 12),  // harmonic-reject guard band (s/day); 999 = off
+    // 2.4 engine changes, each individually A/B-able from here without a rebuild.
+    tgPeriodFit: Number(localStorage.getItem('tg_periodfit') ?? 2),   // 0 legacy mean, 1 median, 2 weighted
+    tgHoldOnLock: localStorage.getItem('tg_holdonlock') !== '0',      // keep a locked session alive through detector starvation
+    tgAmpMin: _tgKnob('tg_ampmin', 90)     // lowest amplitude the plausibility gate reports (was 135)
   });
 }
 function _tgKnob(k, d) { const v = Number(localStorage.getItem(k)); return Number.isFinite(v) && v > 0 ? v : d; }
+// Pro V2 convergence knob with the `balanced` preset as its fallback. Every read of
+// tg_wallmin / tg_stabwin / tg_stabth / tg_maxwin goes through here so a user who never
+// opened the precision panel gets the same numbers as one who picked Balanced. These
+// defaults were previously repeated as literals at ten call sites, one edit away from
+// the panel and the no-panel path disagreeing.
+function _tgConvKnob(k) { return _tgKnob(k, PROV2_DEFAULTS[k]); }
+// Wall-clock ceiling for a Pro V2 run. The Standard engine's maxDuration (45s default) is
+// tuned for a regression that needs a long baseline; Pro V2 needs whatever its own precision
+// preset asks for, and a fixed 45s cap would guillotine Strict (30s wall-min + 8s stability)
+// before it could ever converge.
+function _proV2MaxDuration() {
+  const std = (tgLoadSettings().values || {}).maxDuration || 45;
+  return Math.max(std, Math.ceil(_tgConvKnob('tg_wallmin') + _tgConvKnob('tg_stabwin') + 10));
+}
 function onTgKnob(k, v) { if (v !== '' && Number(v) > 0) { localStorage.setItem(k, v); sendMsrTuning(); } }
 var _remotePeakRatioThreshold = 2.5;
 var _remoteBufferSeconds = 30.0;
@@ -28085,6 +28144,17 @@ function toggleMsrListen() {
   } catch (ex) { console.error('[TG JS] toggleMsrListen error:', ex); }
 }
 
+// Sample SD of the last few reported rates (s/day), or null when there aren't enough.
+// Deliberately the same definition the 2026-07-31 audit used for within-session jitter
+// (SD of the final five reports) so saved rows are directly comparable to it.
+function _msrRateStd(n = 5) {
+  const v = _msrRateHistory.slice(-n).filter(x => typeof x === 'number' && isFinite(x));
+  if (v.length < 3) return null;
+  const mean = v.reduce((a, b) => a + b, 0) / v.length;
+  const varr = v.reduce((a, x) => a + (x - mean) ** 2, 0) / (v.length - 1);
+  return Math.round(Math.sqrt(varr) * 100) / 100;
+}
+
 function stopMsrListen(reason) {
   _msrListening = false;
   _stopMsrBadge();
@@ -28115,6 +28185,10 @@ function stopMsrListen(reason) {
     _tgTickDebugBuffer = [];
     measureInsert('timegrapher_tick_logs', { session_id: _tgDebugSessionId, messages: batch });
   }
+  // Quality metadata for both the session log and the saved reading. Captured up here
+  // because _msrListenStart is nulled further down in this same function.
+  _msrLastDurationSec = _msrListenStart ? Math.round((Date.now() - _msrListenStart) / 1000) : null;
+  _msrLastRateStd = _msrRateStd();
   // Capture session data for every attempt (including zero-tick failures) for debugging
   if (_tgDebugSessionId && currentUser) {
     const elapsed = _msrListenStart ? (Date.now() - _msrListenStart) / 1000 : 0;
@@ -28151,7 +28225,18 @@ function stopMsrListen(reason) {
         tick_data: tickSnap.length > 0 ? tickSnap : null,
         advanced_used: _advFields.advanced_used,
         adv_preset: _advFields.preset,
-        adv_settings: _advFields.settings
+        adv_settings: _advFields.settings,
+        // Pro V2 precision preset + the convergence knobs the run actually used. Without
+        // these a bad reading could not be attributed to a short analysis window after the
+        // fact — which is exactly what the 2026-07-31 audit had to reconstruct from
+        // [TGTUNE] lines. rate_std is the within-session jitter of the final reports.
+        precision: _tgAlgo() === 'tg' ? (localStorage.getItem('tg_precision') || 'balanced') : null,
+        tg_wallmin: _tgConvKnob('tg_wallmin'),
+        tg_stabwin: _tgConvKnob('tg_stabwin'),
+        tg_stabth: _tgConvKnob('tg_stabth'),
+        tg_maxwin: _tgConvKnob('tg_maxwin'),
+        native_ticks: _msrLastNativeTicks,
+        rate_std: _msrLastRateStd
       })
     });
     _msrActiveSettings = null;
@@ -28334,9 +28419,22 @@ async function persistMsrReading() {
     const tickData = _msrScatterData.length > 0
       ? _msrScatterData.map(d => ({ t: Math.round(d.t * 100) / 100, d: Math.round(d.d * 1000) / 1000 }))
       : null;
+    // Quality metadata. Everything below was already computed during the run and thrown
+    // away at save time — the row kept only rate/beat_error/bph, so no saved reading could
+    // be judged for how well it was measured, and the Pro V2 amplitude never reached the
+    // user's own history (audit 2026-07-31). Amplitude is Pro V2-only by construction:
+    // the engine sends it just on the tg path.
+    // No user-facing position picker exists yet; this reads the admin batch-runner field
+    // so unattended runs are at least labelled. A real picker is a separate change.
+    const position = (document.getElementById('mic-batch-position')?.value || '').trim() || null;
     const { error } = await db.from('timegrapher_results').insert({
       user_id: currentUser.id, watch_id: watchId,
       rate, beat_error: beatError, bph, source: 'auto', notes,
+      amplitude: _msrLastAmp != null ? Math.round(_msrLastAmp) : null,
+      duration_seconds: _msrLastDurationSec,
+      tick_count: _msrLastNativeTicks || (_msrScatterData.length || null),
+      rate_std: _msrLastRateStd,
+      position,
       tick_data: tickData
     });
     if (error) { toast('Could not save — ' + error.message, 'error'); return { ok: false }; }
