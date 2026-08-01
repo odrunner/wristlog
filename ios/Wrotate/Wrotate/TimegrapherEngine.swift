@@ -66,6 +66,21 @@ class TimegrapherEngine {
     private var actualSampleRate: Double = 48000
     private var sampleCounter: Int64 = 0
 
+    // Audio-clock calibration (measurement only — nothing reads these yet).
+    // Every rate is (nominal/period - 1)*86400, where `nominal` is built from
+    // actualSampleRate and `period` is measured in real captured samples. If the capture
+    // clock does not run at exactly the rate the format advertises, that error lands
+    // straight in the s/day figure at 0.0864 s/day per ppm, identically for every watch on
+    // that device. Nothing cross-checked it before (audit 2026-07-31), so we regress
+    // captured frames against the host clock and log the ratio. Neither clock is absolute
+    // truth — this sizes the disagreement, it does not correct it.
+    private var clkHaveFirst = false
+    private var clkFirstHost: UInt64 = 0
+    private var clkFirstFrames: Int64 = 0
+    private var clkFrames: Int64 = 0
+    private var clkLastLogSec: Double = -1
+    private var clkPpm: Double? = nil
+
     // BPH — user-provided or auto-detected
     private var targetBph: Int = 28800
     private var autoBph: Bool = false
@@ -342,7 +357,11 @@ class TimegrapherEngine {
                     phaseLock: Bool? = nil, phaseLockWindow: Double? = nil, phaseLockMaxMiss: Int? = nil,
                     liftAngle: Double? = nil,
                     tgSigma: Double? = nil, tgStabWin: Double? = nil, tgWallMin: Double? = nil, tgStabTh: Double? = nil,
-                    tgMaxWin: Double? = nil, tgAgree: Double? = nil) {
+                    tgMaxWin: Double? = nil, tgAgree: Double? = nil,
+                    tgPeriodFit: Int? = nil, tgHoldOnLock: Bool? = nil, tgAmpMin: Double? = nil) {
+        if let v = tgPeriodFit, v >= 0, v <= 2 { self.tgPeriodFit = v }
+        if let v = tgHoldOnLock { self.tgHoldOnLock = v }
+        if let v = tgAmpMin, v >= 40, v <= 200 { tgAmpMinDeg = v }
         if let v = liftAngle, v >= 20, v <= 80 { liftAngleDeg = v }
         if let v = tgSigma, v > 0 { tgSigmaGate = v }
         if let v = tgStabWin, v >= 2 { tgStabWindowSec = v }
@@ -381,7 +400,7 @@ class TimegrapherEngine {
         if let v = phaseLock { self.phaseLockEnabled = v }
         if let v = phaseLockWindow { self.phaseLockWindow = v }
         if let v = phaseLockMaxMiss { self.phaseLockMaxMiss = v }
-        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections) noiseFloor=\(self.noiseFloorMult) peakGate=\(self.peakDetectGate) phaseLock=\(self.phaseLockEnabled)/\(self.phaseLockWindow) tgKnobs=\(tgSigmaGate)/\(tgStabWindowSec)/\(tgWallMinSec)/\(tgStabThresh) maxWin=\(tgMaxWindowSec) agreeBand=\(tgAgreeBand) lift=\(liftAngleDeg)")
+        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections) noiseFloor=\(self.noiseFloorMult) peakGate=\(self.peakDetectGate) phaseLock=\(self.phaseLockEnabled)/\(self.phaseLockWindow) tgKnobs=\(tgSigmaGate)/\(tgStabWindowSec)/\(tgWallMinSec)/\(tgStabThresh) maxWin=\(tgMaxWindowSec) agreeBand=\(tgAgreeBand) lift=\(liftAngleDeg) periodFit=\(self.tgPeriodFit) holdOnLock=\(self.tgHoldOnLock) ampMin=\(tgAmpMinDeg)")
     }
 
     // MARK: - Biquad HP filter
@@ -470,6 +489,8 @@ class TimegrapherEngine {
             detectedBph = bph // user-selected = immediately locked
         }
         tgRateCached = nil; tgBeCached = nil; tgAmpCached = nil; tgFoldCached = nil; lastTgComputeSec = -1; lastTgLogSec = -1
+        tgLastLockAbs = -1; tgLastWindowSec = 0; tgGateRejects = 0; tgBeOnsetCached = nil; tgRecalSuppressed = false
+        clkHaveFirst = false; clkFirstHost = 0; clkFirstFrames = 0; clkFrames = 0; clkLastLogSec = -1; clkPpm = nil
         debugLog("[TGSTART] bph=\(bph) autoBph=\(autoBph) targetBph=\(targetBph) detectedBph=\(String(describing: detectedBph)) useTg=\(useTgAlgo)")
 
         do {
@@ -496,6 +517,7 @@ class TimegrapherEngine {
             energyRings = (0..<3).map { _ in [Float](repeating: 0, count: energyRingCapacity) }
 
             inputNode.installTap(onBus: 0, bufferSize: 4096, format: format) { [weak self] buffer, time in
+                self?.noteAudioClock(time, frames: Int(buffer.frameLength))
                 self?.processAudioBuffer(buffer)
             }
 
@@ -520,6 +542,34 @@ class TimegrapherEngine {
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         return Result(rate: currentRate, beatError: currentBeatError,   // folded estimate: stable in the field. phaseSepBeatError rides per-tick devs that phase-walk (climb+flip) when watch rate != nominal BPH — kept for logging only (psBE= in TGTICK).
                       tickCount: peakCount, ticks: [])
+    }
+
+    /// Compare captured frames against the host clock. Runs on the audio thread, same as
+    /// processAudioBuffer, so it shares debugMessages without extra synchronisation.
+    /// `when.hostTime` stamps the FIRST frame of this buffer, so the frame count is read
+    /// before the buffer is added.
+    private func noteAudioClock(_ when: AVAudioTime, frames: Int) {
+        guard when.isHostTimeValid else { clkFrames += Int64(frames); return }
+        if !clkHaveFirst {
+            clkHaveFirst = true
+            clkFirstHost = when.hostTime
+            clkFirstFrames = clkFrames
+        } else if when.hostTime > clkFirstHost {
+            let hostSec = AVAudioTime.seconds(forHostTime: when.hostTime - clkFirstHost)
+            let frameSec = Double(clkFrames - clkFirstFrames) / actualSampleRate
+            // Under ~5 s the ratio is dominated by the granularity of a single buffer.
+            if hostSec > 5, frameSec > 0 {
+                let ppm = (frameSec / hostSec - 1.0) * 1e6
+                clkPpm = ppm
+                let el = Double(sampleCounter) / actualSampleRate
+                if el - clkLastLogSec > 10 {
+                    clkLastLogSec = el
+                    debugLog(String(format: "[TGCLOCK] fs=%.0f host=%.3fs frames=%.3fs ppm=%+.2f (=%+.2f s/day)",
+                                    actualSampleRate, hostSec, frameSec, ppm, ppm * 0.0864))
+                }
+            }
+        }
+        clkFrames += Int64(frames)
     }
 
     // MARK: - Per-sample processing
@@ -612,7 +662,15 @@ class TimegrapherEngine {
 
                         // Fallback recalibration: if calibration latched onto a transient and no ticks
                         // have been detected after recalTriggerSec, restart calibration with a fresh window.
-                        if tickCount == 0 && elDbg > recalTriggerSec && recalibrationsDone < maxRecalibrations {
+                        // Skipped while the tg core has a lock — recalibrating also rewinds
+                        // tickStartSample, which resets the tg convergence clock and throws away a
+                        // measurement that was already converging.
+                        if tickCount == 0 && elDbg > recalTriggerSec && tgHasRecentLock() {
+                            if !tgRecalSuppressed {
+                                tgRecalSuppressed = true
+                                debugLog("[TGRECALIBRATE SKIP] tg core holds a lock (win=\(String(format: "%.0f", tgLastWindowSec))s) — not resetting the detector")
+                            }
+                        } else if tickCount == 0 && elDbg > recalTriggerSec && recalibrationsDone < maxRecalibrations {
                             recalibrationsDone += 1
                             tickCalibrating = true
                             plHaveCand = false; plBestDist = Int.max; plMissCount = 0; plApplyCarry = false; plPendingCarry = 0
@@ -920,7 +978,7 @@ class TimegrapherEngine {
                                                 // Force softer recalibration if not already exhausted
                                                 debugLog("[TGBPH REJECT] implied \(impliedBph) BPH — no standard candidate. Forcing soft recalibration.")
                                                 bphCorrectionRejects = []
-                                                if recalibrationsDone < maxRecalibrations {
+                                                if recalibrationsDone < maxRecalibrations && !tgHasRecentLock() {
                                                     recalibrationsDone += 1
                                                     tickCalibrating = true
                                                     plHaveCand = false; plBestDist = Int.max; plMissCount = 0; plApplyCarry = false; plPendingCarry = 0
@@ -1074,7 +1132,10 @@ class TimegrapherEngine {
         // Log BOTH rates every ~2s so we get a free offline A/B even when the toggle is off.
         if wallElapsed - lastTgLogSec > 2.0 {
             lastTgLogSec = wallElapsed
-            debugLog("[TGALGO @ \(String(format: "%.0f", wallElapsed))s] useTg=\(useTgAlgo) reg=\(regRateLog.map { String(format: "%+.1f", $0) } ?? "nil") tg=\(tgRateCached.map { String(format: "%+.1f", $0) } ?? "nil") amp=\(tgAmpCached.map { String(format: "%.0f", $0) } ?? "nil") be=\(tgBeCached.map { String(format: "%.2f", $0) } ?? "nil")")
+            // win= is the analysis window the headline rate came from and gate= the running
+            // sigma-gate rejection count: without them a bad reading could not be attributed
+            // to a short window after the fact (audit 2026-07-31).
+            debugLog("[TGALGO @ \(String(format: "%.0f", wallElapsed))s] useTg=\(useTgAlgo) reg=\(regRateLog.map { String(format: "%+.1f", $0) } ?? "nil") tg=\(tgRateCached.map { String(format: "%+.1f", $0) } ?? "nil") amp=\(tgAmpCached.map { String(format: "%.0f", $0) } ?? "nil") be=\(tgBeCached.map { String(format: "%.2f", $0) } ?? "nil") beOn=\(tgBeOnsetCached.map { String(format: "%.2f", $0) } ?? "nil") win=\(String(format: "%.0f", tgLastWindowSec))s gate=\(tgGateRejects) fit=\(tgPeriodFit) ppm=\(clkPpm.map { String(format: "%+.2f", $0) } ?? "nil")")
         }
 
         // Stability: rate has stayed within ±threshold for the full stability window
@@ -1433,6 +1494,14 @@ class TimegrapherEngine {
     private var tgStabThresh = 3.0        // steady = within this band (s/day)
     private var tgMaxWindowSec = 16.0     // longest analysis window (32 = precision mode; needs bufferSeconds >= window+6)
     private var tgAgreeBand = 12.0        // harmonic-reject guard: longest-window rate must agree with the window median within this (s/day); set very high (e.g. 999) to disable
+    private var tgPeriodFit = 2           // 0 = legacy equal-weight mean, 1 = median, 2 = weighted fit (see tgPeriod)
+    private var tgHoldOnLock = true       // don't let the tick detector tear down a session the tg core is measuring fine
+    private var tgAmpMinDeg = 90.0        // lowest amplitude the plausibility gate will report (was hardcoded 135)
+    private var tgLastLockAbs: Int = -1   // energyRingAbs when computeTgRate last produced a rate
+    private var tgLastWindowSec = 0.0     // analysis window that produced the last rate (logged)
+    private var tgGateRejects = 0         // cumulative sigma-gate window rejections (logged)
+    private var tgBeOnsetCached: Double? = nil  // shadow onset-based beat error (logged, not displayed)
+    private var tgRecalSuppressed = false // logged once per session when tgHoldOnLock first blocks a recalibration
 
     /// Most-recent `n` samples of the active envelope ring, linearized oldest→newest.
     private func recentEnvelope(_ n: Int) -> [Float] {
@@ -1446,7 +1515,17 @@ class TimegrapherEngine {
     }
 
     /// Full (tic-to-tic) period in ring samples via FFT-autocorrelation, refined across
-    /// lag-cycles (tg algo.c:427-450). Returns (period, relSigma); period nil if σ-gate fails.
+    /// lag-cycles (tg algo.c:427-450). Returns nil if the σ-gate fails.
+    ///
+    /// The refinement is a straight line through the origin: the ACF peak near
+    /// `cyc * nominal` sits at `cyc * period`, so every cycle measures the same period —
+    /// but not equally well. A half-sample peak-location error is a half-sample of period
+    /// at cyc=1 and a 40th of one at cyc=40. Averaging `lag/cyc` with EQUAL weight (what
+    /// shipped through 2.3) therefore lets the worst estimates set the answer: error falls
+    /// off as ln(K)/K instead of 1/K. Weighted least squares through the origin with
+    /// w = cyc² is the right estimator for constant per-lag noise, and measured ~2x tighter
+    /// in Monte-Carlo at every window >= 4s (audit 2026-07-31, scripts in that audit).
+    /// tgPeriodFit keeps the old behaviour reachable from JS so the change can be A/B'd.
     private func tgPeriod(_ env: [Float], nominal: Double, ringSampleRate: Double) -> Double? {
         let n = env.count
         guard n > Int(nominal * 2.5) else { return nil }
@@ -1462,7 +1541,7 @@ class TimegrapherEngine {
         }
         let ac = fftAutocorrelation(e, count: n)
         let tol = ringSampleRate * 0.02
-        var ests: [Double] = []; var cyc = 1.0
+        var lags: [(cyc: Double, lag: Double)] = []; var cyc = 1.0
         while nominal * cyc < Double(n) * 0.66 {
             let lo = Int(nominal * cyc - tol), hi = Int(nominal * cyc + tol)
             if hi >= ac.count - 1 || lo < 1 { break }
@@ -1471,15 +1550,38 @@ class TimegrapherEngine {
             let a0 = Double(ac[best-1]), b0 = Double(ac[best]), c0 = Double(ac[best+1])
             let d = a0 - 2*b0 + c0
             let frac = abs(d) > 1e-9 ? 0.5*(a0 - c0)/d : 0
-            ests.append((Double(best) + frac) / cyc); cyc += 1
+            lags.append((cyc, Double(best) + frac)); cyc += 1
         }
-        guard !ests.isEmpty else { return nil }
-        let period = ests.reduce(0, +) / Double(ests.count)
-        if ests.count > 1 {
-            let varr = ests.map { ($0 - period)*($0 - period) }.reduce(0, +) / Double(ests.count)
-            if period > 0, sqrt(varr) / period > tgSigmaGate { return nil }
+        guard !lags.isEmpty else { return nil }
+        let period = tgFitPeriod(lags)
+        guard period > 1 else { return nil }
+        // σ-gate, unchanged in form: the residual (lag - period*cyc)/cyc IS the old
+        // (est - period), so tgSigmaGate keeps exactly the meaning it was tuned with —
+        // only the `period` it is measured against is now the fitted one.
+        if lags.count > 1 {
+            var ss = 0.0
+            for (c, l) in lags { let r = l / c - period; ss += r * r }
+            if sqrt(ss / Double(lags.count)) / period > tgSigmaGate { tgGateRejects += 1; return nil }
         }
-        return period > 1 ? period : nil
+        return period
+    }
+
+    /// Period (ring samples) from the per-cycle ACF peak lags. See tgPeriod for why the
+    /// weighting is the whole point; mode 0 reproduces the pre-2.4 estimator bit for bit.
+    private func tgFitPeriod(_ lags: [(cyc: Double, lag: Double)]) -> Double {
+        switch tgPeriodFit {
+        case 0:
+            return lags.reduce(0) { $0 + $1.lag / $1.cyc } / Double(lags.count)
+        case 1:
+            let s = lags.map { $0.lag / $0.cyc }.sorted()
+            return s.count % 2 == 1 ? s[s.count / 2] : (s[s.count / 2 - 1] + s[s.count / 2]) / 2
+        default:
+            // Weighted LS through the origin: period = Σ(w·cyc·lag) / Σ(w·cyc²), w = cyc².
+            var num = 0.0, den = 0.0
+            for (c, l) in lags { let w = c * c; num += w * c * l; den += w * c * c }
+            guard den > 0 else { return lags[lags.count - 1].lag / lags[lags.count - 1].cyc }
+            return num / den
+        }
     }
 
     /// tg-style rate: measure period over 2/4/8/16s windows of the envelope ring;
@@ -1513,12 +1615,29 @@ class TimegrapherEngine {
         let median = sorted.count % 2 == 1
             ? sorted[sorted.count / 2]
             : (sorted[sorted.count / 2 - 1] + sorted[sorted.count / 2]) / 2
-        let longest = rates.max { $0.secs < $1.secs }!.rate
+        let longestEntry = rates.max { $0.secs < $1.secs }!
+        let longest = longestEntry.rate
+        // A rate means the envelope is periodic at the expected BPH — that is a lock, and
+        // it is what tgHoldOnLock keys off. Recorded on the absolute ring counter because
+        // a recalibration rewinds wallElapsed.
+        tgLastLockAbs = energyRingAbs
+        tgLastWindowSec = longestEntry.secs
         if rates.count >= 3 && abs(longest - median) > tgAgreeBand {
             debugLog(String(format: "[TGALGO harmonic-guard] longest=%.1f median=%.1f band=%.0f n=%d -> median", longest, median, tgAgreeBand, rates.count))
             return median
         }
         return longest
+    }
+
+    /// True when the tg period core produced a rate in the last ~3 s. The tg path reads the
+    /// energy envelope straight out of the ring and needs no *accepted ticks* at all, so a
+    /// starving tick detector is not a reason to recalibrate — or tear down — a session that
+    /// is measuring perfectly well. 26% of Pro V2 sessions hit at least one recalibration and
+    /// their convergence rate collapsed from 86% to 26% (audit 2026-07-31).
+    private func tgHasRecentLock() -> Bool {
+        guard tgHoldOnLock, useTgAlgo, tgLastLockAbs >= 0 else { return false }
+        let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
+        return Double(energyRingAbs - tgLastLockAbs) < ringSampleRate * 3.0
     }
 
     /// Envelope sample at an absolute ring index (0 if it has scrolled out of the ring).
@@ -1583,9 +1702,63 @@ class TimegrapherEngine {
             let i = (tic + off) % P
             if fold[i] > best { best = fold[i]; toc = i }
         }
-        let d = Double(((toc - tic) % P + P) % P)          // tic→toc spacing, samples
+        // Sub-sample refinement. Integer bins quantise B.E. at one ring sample — 0.083 ms at
+        // the default 12 kHz ring — on a quantity whose entire useful range is 0-0.5 ms, so
+        // the reading moved in visible steps. Same parabolic fit the ACF peak search uses.
+        let d = tgCircularSpan(from: tgRefinePeak(fold, tic), to: tgRefinePeak(fold, toc), period: Double(P))
         let be = abs(d - period / 2) / ringSampleRate * 1000.0
+        // Shadow estimator: the same spacing measured from each pulse's leading EDGE instead
+        // of its peak. Peak position walks with pulse amplitude, so a tic/toc amplitude
+        // imbalance biases the peak-based figure; onsets do not. Logged only (beOn= in
+        // TGALGO) until there is field data to compare the two — do not wire it to the
+        // display before that comparison exists.
+        if let onTic = tgPulseOnset(fold, marker: tic), let onToc = tgPulseOnset(fold, marker: toc) {
+            let od = tgCircularSpan(from: onTic, to: onToc, period: Double(P))
+            let obe = abs(od - period / 2) / ringSampleRate * 1000.0
+            tgBeOnsetCached = obe < 10 ? obe : nil
+        } else { tgBeOnsetCached = nil }
         return be < 10 ? be : nil                          // >10ms = fold not clean, don't report
+    }
+
+    /// Forward distance from `a` to `b` on a circle of length `p`.
+    private func tgCircularSpan(from a: Double, to b: Double, period p: Double) -> Double {
+        var d = (b - a).truncatingRemainder(dividingBy: p)
+        if d < 0 { d += p }
+        return d
+    }
+
+    /// Sub-sample peak position around an integer argmax, by parabolic fit on the three
+    /// surrounding fold bins (circular). Clamped to ±1 bin so a flat top can't run away.
+    private func tgRefinePeak(_ fold: [Float], _ i: Int) -> Double {
+        let P = fold.count
+        let a = Double(fold[(i - 1 + P) % P]), b = Double(fold[i]), c = Double(fold[(i + 1) % P])
+        let d = a - 2 * b + c
+        guard abs(d) > 1e-12 else { return Double(i) }
+        return Double(i) + max(-1, min(1, 0.5 * (a - c) / d))
+    }
+
+    /// Leading-edge position of the pulse peaking at `marker`, as a fractional fold index
+    /// (may be negative — callers wrap it). Threshold sits halfway between the quiet region
+    /// (the same P/6..P/4 window tgAmplitude uses for its noise floor) and the peak, and the
+    /// crossing is linearly interpolated. nil when the pulse never clears the noise.
+    private func tgPulseOnset(_ fold: [Float], marker: Int) -> Double? {
+        let P = fold.count; guard P > 8 else { return nil }
+        func at(_ d: Int) -> Float { fold[((marker - d) % P + P) % P] }
+        var noise: Float = 0
+        var q = P / 6
+        while q <= P / 4 { if at(q) > noise { noise = at(q) }; q += 1 }
+        let peak = fold[marker]
+        guard peak > noise else { return nil }
+        let thr = noise + 0.5 * (peak - noise)
+        var d = 1
+        while d < P / 8, at(d) > thr { d += 1 }
+        // d == 1 is a legitimate crossing (between the peak bin and the one before it) —
+        // unlike tgAmplitude's pulseBefore, which needs room to walk on to a second peak.
+        // Bailing out only when no crossing was found inside P/8.
+        guard d < P / 8 else { return nil }
+        let hi = at(d - 1), lo = at(d)                     // hi > thr >= lo
+        let frac = hi > lo ? Double(thr - lo) / Double(hi - lo) : 0.0
+        return Double(marker) - Double(d) + frac
     }
 
     /// tg-style averaged beat: fold the recent envelope at the measured period (trimmed mean per bin).
@@ -1662,7 +1835,12 @@ class TimegrapherEngine {
                 guard s > 0 else { ok = false; break }
                 amps.append(liftAngleDeg / (2 * s))
             }
-            if ok, amps.count == 2, amps.allSatisfy({ 135 <= $0 && $0 <= 360 }), abs(amps[0] - amps[1]) <= 60 {
+            // Plausibility gate. The floor used to be a hardcoded 135°, which inverted the
+            // feature: a watch genuinely running at 120° — exactly the one whose owner needs
+            // telling — reported nothing at all, while a healthy one reported fine. 21% of
+            // tg-locked sessions produced no amplitude (audit 2026-07-31). tgAmpMinDeg drops
+            // the floor to 90° so a low reading comes through and the UI can colour it red.
+            if ok, amps.count == 2, amps.allSatisfy({ tgAmpMinDeg <= $0 && $0 <= 360 }), abs(amps[0] - amps[1]) <= 60 {
                 return (amps[0] + amps[1]) / 2
             }
             thr *= 1.4; iters += 1

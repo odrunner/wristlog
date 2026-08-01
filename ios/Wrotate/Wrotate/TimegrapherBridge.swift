@@ -116,7 +116,10 @@ class TimegrapherBridge {
                              liftAngle: body["liftAngle"] as? Double,
                              tgSigma: body["tgSigma"] as? Double, tgStabWin: body["tgStabWin"] as? Double,
                              tgWallMin: body["tgWallMin"] as? Double, tgStabTh: body["tgStabTh"] as? Double,
-                             tgMaxWin: body["tgMaxWin"] as? Double, tgAgree: body["tgAgree"] as? Double)
+                             tgMaxWin: body["tgMaxWin"] as? Double, tgAgree: body["tgAgree"] as? Double,
+                             tgPeriodFit: body["tgPeriodFit"] as? Int,
+                             tgHoldOnLock: body["tgHoldOnLock"] as? Bool,
+                             tgAmpMin: body["tgAmpMin"] as? Double)
 
         case "tuningPiezo":
             piezo.setTuning(
