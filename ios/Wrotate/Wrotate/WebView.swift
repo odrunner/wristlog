@@ -127,10 +127,10 @@ struct WebView: UIViewRepresentable {
                 if (window._wrotateNativeBridgeInstalled) return;
                 window._wrotateNativeBridgeInstalled = true;
                 window._wrotateNativeTimegrapher = true;
-                // NOT the bundle version — this string is hand-maintained and the 2.4 build
-                // shipped with it still reading '2.3'. Do NOT gate JS on '2.4': no device
-                // reports it. 2.1+ gates the Pro V2 beta toggle; 2.3+ gates Pro V2 BE display.
-                window._iosAppVersion = '2.3';
+                // NOT the bundle version — hand-maintained, so it must be bumped in the same
+                // commit as MARKETING_VERSION or it silently ships stale (2.4 build 1 did).
+                // 2.1+ gates the Pro V2 beta toggle; 2.3+ gates Pro V2 BE display.
+                window._iosAppVersion = '2.4';   // 2.4 = weighted period fit, hold-through-starvation, 90deg amp floor, sub-sample BE
 
                 // Wait for Supabase client to be ready
                 var checkInterval = setInterval(function() {
