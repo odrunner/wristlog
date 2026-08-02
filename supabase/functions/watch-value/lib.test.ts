@@ -1,4 +1,4 @@
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals, assertThrows } from "jsr:@std/assert";
 import {
   buildWatchDesc,
   extractJson,
@@ -21,6 +21,16 @@ Deno.test("extractJson — returns null when no object present", () => {
 
 Deno.test("extractJson — spans multiple lines", () => {
   assertEquals(extractJson('x\n{\n "v": 5\n}\ny'), { v: 5 });
+});
+
+// Both callers in index.ts must wrap this in try/catch: a truncated engine
+// response (Gemini hitting maxOutputTokens, Claude hitting max_tokens) still
+// matches the {...} regex but fails JSON.parse.
+Deno.test("extractJson — throws on truncated JSON rather than returning null", () => {
+  assertThrows(
+    () => extractJson('```json\n{"estimated_value_usd":{"low":200},"data_points":[{"source":"eBay"}'),
+    SyntaxError,
+  );
 });
 
 Deno.test("buildWatchDesc — full set joins in order", () => {

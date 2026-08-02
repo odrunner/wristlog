@@ -142,7 +142,13 @@ Rules:
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }],
               tools: [{ google_search: {} }],
-              generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
+              // The cap covers thinking + answer on 2.5 Flash. Measured live:
+              // answers run 651-1049 tokens, thinking 1596-2407. A heavy-thinking
+              // run (the 32-35s ones that failed to parse) can spend most of an
+              // 8192 budget before the JSON is finished, and a truncated object
+              // is unrecoverable at parse time — so give it headroom. Billing is
+              // per token generated, not per cap, so this costs nothing unused.
+              generationConfig: { temperature: 0.1, maxOutputTokens: 16384 },
             }),
           },
         );
@@ -203,7 +209,15 @@ Rules:
 
       const result = await resp.json();
       const textBlock = result.content?.find((b: { type: string }) => b.type === "text");
-      parsed = extractJson(textBlock?.text ?? "");
+      // extractJson throws on malformed/truncated JSON (Claude runs with a 2048
+      // max_tokens cap, so a long answer can be cut mid-object). Without this
+      // guard the throw skips the parse_failed branch below and surfaces a raw
+      // SyntaxError from the outer catch, losing the raw text we need to debug.
+      try {
+        parsed = extractJson(textBlock?.text ?? "");
+      } catch (_e) {
+        parsed = null;
+      }
 
       if (!parsed) {
         console.error("[watch-value] Could not parse response:", textBlock?.text);
