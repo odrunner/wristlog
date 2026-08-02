@@ -127,7 +127,10 @@ struct WebView: UIViewRepresentable {
                 if (window._wrotateNativeBridgeInstalled) return;
                 window._wrotateNativeBridgeInstalled = true;
                 window._wrotateNativeTimegrapher = true;
-                window._iosAppVersion = '2.3';   // 2.3 = fold-based beat error on the tg path. 2.1+ gates the Pro V2 beta toggle; 2.3+ gates Pro V2 BE display.
+                // NOT the bundle version — this string is hand-maintained and the 2.4 build
+                // shipped with it still reading '2.3'. Do NOT gate JS on '2.4': no device
+                // reports it. 2.1+ gates the Pro V2 beta toggle; 2.3+ gates Pro V2 BE display.
+                window._iosAppVersion = '2.3';
 
                 // Wait for Supabase client to be ready
                 var checkInterval = setInterval(function() {
