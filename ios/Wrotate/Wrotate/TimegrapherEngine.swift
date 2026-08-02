@@ -74,12 +74,21 @@ class TimegrapherEngine {
     // that device. Nothing cross-checked it before (audit 2026-07-31), so we regress
     // captured frames against the host clock and log the ratio. Neither clock is absolute
     // truth — this sizes the disagreement, it does not correct it.
+    // Least-squares slope of frames-against-host over the whole session. The first cut
+    // anchored on the FIRST buffer and took a two-point ratio, which made the noisiest
+    // sample in the session the pivot for every later estimate: the reported figure then
+    // climbed monotonically (+14.1 -> +19.7 ppm over 90s in one field run) and never
+    // settled, so it measured startup transient as much as clock error. Skipping the
+    // settling period and regressing all samples converges instead of drifting.
     private var clkHaveFirst = false
     private var clkFirstHost: UInt64 = 0
     private var clkFirstFrames: Int64 = 0
     private var clkFrames: Int64 = 0
     private var clkLastLogSec: Double = -1
     private var clkPpm: Double? = nil
+    private var clkSettleSec: Double = 2.0   // ignore samples before this; buffer pacing is irregular at start
+    private var clkN = 0
+    private var clkSh = 0.0, clkSf = 0.0, clkShh = 0.0, clkShf = 0.0
 
     // BPH — user-provided or auto-detected
     private var targetBph: Int = 28800
@@ -491,6 +500,7 @@ class TimegrapherEngine {
         tgRateCached = nil; tgBeCached = nil; tgAmpCached = nil; tgFoldCached = nil; lastTgComputeSec = -1; lastTgLogSec = -1
         tgLastLockAbs = -1; tgLastWindowSec = 0; tgGateRejects = 0; tgBeOnsetCached = nil; tgRecalSuppressed = false
         clkHaveFirst = false; clkFirstHost = 0; clkFirstFrames = 0; clkFrames = 0; clkLastLogSec = -1; clkPpm = nil
+        clkN = 0; clkSh = 0; clkSf = 0; clkShh = 0; clkShf = 0
         debugLog("[TGSTART] bph=\(bph) autoBph=\(autoBph) targetBph=\(targetBph) detectedBph=\(String(describing: detectedBph)) useTg=\(useTgAlgo)")
 
         do {
@@ -557,15 +567,23 @@ class TimegrapherEngine {
         } else if when.hostTime > clkFirstHost {
             let hostSec = AVAudioTime.seconds(forHostTime: when.hostTime - clkFirstHost)
             let frameSec = Double(clkFrames - clkFirstFrames) / actualSampleRate
-            // Under ~5 s the ratio is dominated by the granularity of a single buffer.
-            if hostSec > 5, frameSec > 0 {
-                let ppm = (frameSec / hostSec - 1.0) * 1e6
-                clkPpm = ppm
-                let el = Double(sampleCounter) / actualSampleRate
-                if el - clkLastLogSec > 10 {
-                    clkLastLogSec = el
-                    debugLog(String(format: "[TGCLOCK] fs=%.0f host=%.3fs frames=%.3fs ppm=%+.2f (=%+.2f s/day)",
-                                    actualSampleRate, hostSec, frameSec, ppm, ppm * 0.0864))
+            if hostSec > clkSettleSec, frameSec > 0 {
+                clkN += 1
+                clkSh += hostSec; clkSf += frameSec
+                clkShh += hostSec * hostSec; clkShf += hostSec * frameSec
+                let n = Double(clkN)
+                let den = n * clkShh - clkSh * clkSh
+                // Needs a real spread of host times before the slope means anything.
+                if clkN >= 8, den > 1e-9 {
+                    let slope = (n * clkShf - clkSh * clkSf) / den
+                    let ppm = (slope - 1.0) * 1e6
+                    clkPpm = ppm
+                    let el = Double(sampleCounter) / actualSampleRate
+                    if el - clkLastLogSec > 10 {
+                        clkLastLogSec = el
+                        debugLog(String(format: "[TGCLOCK] fs=%.0f host=%.3fs frames=%.3fs n=%d ppm=%+.2f (=%+.2f s/day)",
+                                        actualSampleRate, hostSec, frameSec, clkN, ppm, ppm * 0.0864))
+                    }
                 }
             }
         }
