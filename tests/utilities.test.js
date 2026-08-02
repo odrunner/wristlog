@@ -235,6 +235,19 @@ describe('formatFeedDate', () => {
     expect(formatFeedDate('2024-06-13', null, now)).toBe('2 days ago');
   });
 
+  // Backdated entries: created_at is "now" but the wear is for an earlier day.
+  // Relative time off created_at would read "Just now" for a wear the user
+  // explicitly logged for yesterday.
+  it('shows the log day, not the post time, for a backdated entry', () => {
+    const createdAt = new Date('2024-06-15T11:45:00').toISOString(); // logged 15 min ago
+    expect(formatFeedDate('2024-06-14', createdAt, now)).toBe('Yesterday');
+  });
+
+  it('shows the log day for an entry backdated several days', () => {
+    const createdAt = new Date('2024-06-15T11:00:00').toISOString(); // logged 1h ago
+    expect(formatFeedDate('2024-06-12', createdAt, now)).toBe('3 days ago');
+  });
+
   it('handles ISO timestamp dateStr without createdAt (notification timestamps)', () => {
     const ts = '2024-06-15T11:30:00.000Z';
     const result = formatFeedDate(ts, null, new Date('2024-06-15T12:00:00Z'));

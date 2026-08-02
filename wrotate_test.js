@@ -431,19 +431,24 @@ export function profileInitials(p) {
 
 export function formatFeedDate(dateStr, createdAt, now = new Date()) {
   if (!dateStr) return '';
-  // If we have a full timestamp try relative time within 18 h
-  const tsStr = createdAt || ((dateStr.includes('T') || dateStr.includes('Z')) ? dateStr : null);
-  if (tsStr) {
-    const diffH = (now - new Date(tsStr)) / 3600000;
-    if (diffH < 1)  return 'Just now';
-    if (diffH < 18) return `${Math.floor(diffH)}h ago`;
-  }
-  // Fall back to day-level comparison
-  const todayNorm = new Date(now); todayNorm.setHours(0, 0, 0, 0);
   const d = (dateStr.includes('T') || dateStr.includes('Z'))
     ? new Date(dateStr)
     : new Date(dateStr + 'T00:00:00');
   const dayStart = new Date(d); dayStart.setHours(0, 0, 0, 0);
+  // If we have a full timestamp try relative time within 18 h — only when the entry was
+  // posted on the day it is FOR, so a backdated wear doesn't read "Just now".
+  const tsStr = createdAt || ((dateStr.includes('T') || dateStr.includes('Z')) ? dateStr : null);
+  if (tsStr) {
+    const ts = new Date(tsStr);
+    const tsDay = new Date(ts); tsDay.setHours(0, 0, 0, 0);
+    if (tsDay.getTime() === dayStart.getTime()) {
+      const diffH = (now - ts) / 3600000;
+      if (diffH < 1)  return 'Just now';
+      if (diffH < 18) return `${Math.floor(diffH)}h ago`;
+    }
+  }
+  // Fall back to day-level comparison
+  const todayNorm = new Date(now); todayNorm.setHours(0, 0, 0, 0);
   const diff = Math.round((todayNorm - dayStart) / 86400000);
   if (diff <= 0) return 'Today';
   if (diff === 1) return 'Yesterday';
