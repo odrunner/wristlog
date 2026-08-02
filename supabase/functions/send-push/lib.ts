@@ -56,17 +56,118 @@ export function buildMessage(
   }
 }
 
+// Where the app should navigate when a push is tapped. Mirrors the click targets
+// in the web notification panel (renderNotificationPanel in index.html).
+//
+// This is resolved SERVER-side and shipped in the payload so a new notification
+// type can be routed without an App Store build — the app only switches on the
+// small, fixed set of route names below.
+export type PushRoute = { route: string; id: string | null };
+
+export function buildRoute(
+  type: string,
+  refId?: string | null,
+  actorId?: string | null,
+): PushRoute {
+  const to = (route: string, id?: string | null): PushRoute =>
+    // A route with no target would land the app on nothing — fall back to the
+    // bell, which is always a meaningful destination.
+    id ? { route, id } : { route: "bell", id: null };
+
+  switch (type) {
+    case "like":
+    case "comment":
+    case "comment_also":
+    case "comment_like":
+    case "mention":
+      return to("post", refId);
+    case "follow":
+    case "follow_accepted":
+    case "friend_accepted":
+      return to("profile", actorId);
+    case "club_join_accepted":
+    case "club_promoted":
+      return to("club", refId);
+    case "badge_earned":
+      return { route: "badges", id: null };
+    // follow_request, friend_request, club_invite, club_join_request and system
+    // deliberately fall through to the bell. Those rows carry Accept/Decline
+    // buttons and have NO click target in the panel — the bell is where the user
+    // can actually act on them. (tests/push-route.test.js holds this in step with
+    // the panel's own routing.)
+    default:
+      return { route: "bell", id: null };
+  }
+}
+
 // Build the APNs alert payload for a message.
+//
+// `badge` is the recipient's REAL unread count. It is omitted when unknown —
+// APNs leaves the icon badge untouched when the key is absent, which is the
+// right failure mode. (It used to be hardcoded to 1, so the icon claimed one
+// unread notification no matter what the account actually had.)
+//
+// `w` carries the tap-routing data the iOS app reads. `uid` is the intended
+// recipient: the app ignores a push addressed to an account it is not signed
+// into, so a token still attached to a stale account can't open the wrong thing.
 export function buildAlertPayload(
   message: { title: string; body: string },
-): { aps: { alert: { title: string; body: string }; sound: string; badge: number } } {
-  return {
-    aps: {
-      alert: { title: message.title, body: message.body },
-      sound: "default",
-      badge: 1,
-    },
+  opts: {
+    badge?: number | null;
+    route?: PushRoute;
+    userId?: string | null;
+    notifId?: string | null;
+    type?: string | null;
+  } = {},
+): Record<string, unknown> {
+  const aps: Record<string, unknown> = {
+    alert: { title: message.title, body: message.body },
+    sound: "default",
   };
+  if (typeof opts.badge === "number" && Number.isFinite(opts.badge)) {
+    aps.badge = Math.max(0, Math.trunc(opts.badge));
+  }
+
+  const payload: Record<string, unknown> = { aps };
+  if (opts.route || opts.userId || opts.notifId) {
+    payload.w = {
+      route: opts.route?.route ?? "bell",
+      id: opts.route?.id ?? null,
+      uid: opts.userId ?? null,
+      n: opts.notifId ?? null,
+      t: opts.type ?? null,
+    };
+  }
+  return payload;
+}
+
+// APNs rejections that mean "never send to this token again".
+//
+// 410 Unregistered           — the app was removed from the device.
+// 400 BadDeviceToken         — the token belongs to the OTHER APNs environment
+//                              (a dev/TestFlight token pushed to production) or
+//                              is malformed. Only 410 was cleaned up before, so
+//                              these accumulated forever — one account had 11.
+// 400 DeviceTokenNotForTopic — the token was issued for a different bundle id.
+export function isDeadToken(status: number, reason?: string | null): boolean {
+  if (status === 410) return true;
+  if (
+    status === 400 &&
+    (reason === "BadDeviceToken" || reason === "DeviceTokenNotForTopic")
+  ) return true;
+  return false;
+}
+
+// Pull APNs' failure reason out of its JSON error body. Returns null for an
+// empty or unparseable body so callers treat the failure as retryable.
+export function parseApnsReason(body: string | null | undefined): string | null {
+  if (!body) return null;
+  try {
+    const parsed = JSON.parse(body);
+    return typeof parsed?.reason === "string" ? parsed.reason : null;
+  } catch {
+    return null;
+  }
 }
 
 // Choose the APNs host based on the sandbox flag.

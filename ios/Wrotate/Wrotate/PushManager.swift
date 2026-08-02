@@ -1,18 +1,63 @@
 import UserNotifications
 import UIKit
 
-class PushManager {
+class PushManager: NSObject, UNUserNotificationCenterDelegate {
     static let shared = PushManager()
 
     var deviceToken: String?
     private var currentUserId: String?
     private var userAccessToken: String?
 
+    /// Set when a notification is tapped; drained by ContentView once the WebView
+    /// can actually run JS. A cold-start tap fires before the page has loaded, so
+    /// the route has to wait rather than be dispatched into nothing.
+    var pendingRoute: (route: String, id: String)?
+
     // Supabase config — same as web app
     private let supabaseURL = "https://api.wrotate.com"
     private let supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs"
 
-    private init() {}
+    private override init() { super.init() }
+
+    // MARK: - UNUserNotificationCenterDelegate
+    //
+    // Before this existed the app set no delegate at all, which meant:
+    //   • a tap did nothing but foreground the app on whatever page it was left on
+    //   • a push arriving while the app was open was silently dropped by iOS —
+    //     no banner — while the icon badge still went up
+    // Together those are why notifications felt like they led nowhere.
+
+    /// Show the banner even when the app is in the foreground.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        return [.banner, .list, .sound, .badge]
+    }
+
+    /// Route the tap. The destination is decided server-side and shipped in the
+    /// payload's `w` object, so new notification types can be routed without an
+    /// App Store build.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        let info = response.notification.request.content.userInfo
+        guard let w = info["w"] as? [String: Any] else { return }
+
+        // Ignore a push addressed to an account this device is no longer signed
+        // into — opening someone else's post is worse than doing nothing. The
+        // device_tokens_claim trigger should prevent these, but a push already in
+        // flight when the account switched can still land.
+        if let uid = w["uid"] as? String, let current = currentUserId, uid != current { return }
+
+        let route = (w["route"] as? String) ?? "bell"
+        // Ids reach JS inside a quoted string literal — keep them to the shape a
+        // uuid or log id actually has so nothing can break out of the quotes.
+        let rawId = (w["id"] as? String) ?? ""
+        let id = String(rawId.filter { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" })
+        pendingRoute = (route: route, id: id)
+    }
 
     // Called when user signs into the web app.
     // Do NOT cold-ask for permission here — iOS only lets us show the system

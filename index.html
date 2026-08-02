@@ -7170,7 +7170,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '31.19.47';
+const APP_VERSION = '01.18.13';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10131,6 +10131,13 @@ async function markBadgeNotifsRead() {
 }
 
 // ── Notification Panel ─────────────────────────────────────────────────────
+// Idempotent open, for the notification-tap deep link. A push whose target we
+// can't resolve falls back to the bell, and toggling would close the panel when
+// it happened to be open already.
+function openNotifPanel() {
+  if (!notifPanelOpen) toggleNotifPanel();
+}
+
 function toggleNotifPanel() {
   notifPanelOpen = !notifPanelOpen;
   const panel = document.getElementById('notif-panel');

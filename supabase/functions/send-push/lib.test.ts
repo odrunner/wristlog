@@ -6,7 +6,10 @@ import {
   base64UrlEncodeBytes,
   buildAlertPayload,
   buildMessage,
+  buildRoute,
+  isDeadToken,
   isValidRecord,
+  parseApnsReason,
   resolveActorName,
   stripPemArmor,
 } from "./lib.ts";
@@ -58,8 +61,106 @@ Deno.test("buildMessage — unknown type falls back to generic body", () => {
 
 Deno.test("buildAlertPayload — shapes the aps payload", () => {
   assertEquals(buildAlertPayload({ title: "T", body: "B" }), {
-    aps: { alert: { title: "T", body: "B" }, sound: "default", badge: 1 },
+    aps: { alert: { title: "T", body: "B" }, sound: "default" },
   });
+});
+
+Deno.test("buildAlertPayload — carries the real unread count, not a hardcoded 1", () => {
+  const p = buildAlertPayload({ title: "T", body: "B" }, { badge: 7 });
+  assertEquals((p.aps as Record<string, unknown>).badge, 7);
+});
+
+Deno.test("buildAlertPayload — a zero count clears the icon badge", () => {
+  const p = buildAlertPayload({ title: "T", body: "B" }, { badge: 0 });
+  assertEquals((p.aps as Record<string, unknown>).badge, 0);
+});
+
+Deno.test("buildAlertPayload — omits badge when the count is unknown", () => {
+  // APNs leaves the icon untouched when the key is absent. Guessing would be
+  // worse than saying nothing.
+  for (const badge of [null, undefined, NaN]) {
+    const p = buildAlertPayload({ title: "T", body: "B" }, { badge });
+    assertEquals("badge" in (p.aps as Record<string, unknown>), false);
+  }
+});
+
+Deno.test("buildAlertPayload — attaches routing data for the tap", () => {
+  const p = buildAlertPayload({ title: "T", body: "B" }, {
+    badge: 2,
+    route: { route: "post", id: "log-1" },
+    userId: "user-1",
+    notifId: "notif-1",
+    type: "like",
+  });
+  assertEquals(p.w, {
+    route: "post",
+    id: "log-1",
+    uid: "user-1",
+    n: "notif-1",
+    t: "like",
+  });
+});
+
+Deno.test("buildRoute — post types route to the post", () => {
+  for (const t of ["like", "comment", "comment_also", "comment_like", "mention"]) {
+    assertEquals(buildRoute(t, "log-1", "actor-1"), { route: "post", id: "log-1" });
+  }
+});
+
+Deno.test("buildRoute — people types route to the actor's profile", () => {
+  for (const t of ["follow", "follow_accepted", "friend_accepted"]) {
+    assertEquals(buildRoute(t, "log-1", "actor-1"), { route: "profile", id: "actor-1" });
+  }
+});
+
+Deno.test("buildRoute — club types route to the club", () => {
+  for (const t of ["club_join_accepted", "club_promoted"]) {
+    assertEquals(buildRoute(t, "club-1", "actor-1"), { route: "club", id: "club-1" });
+  }
+});
+
+Deno.test("buildRoute — request types go to the bell, where they can be actioned", () => {
+  // These render Accept/Decline buttons and have no click target in the panel.
+  for (const t of ["follow_request", "friend_request", "club_invite", "club_join_request", "system"]) {
+    assertEquals(buildRoute(t, "ref-1", "actor-1"), { route: "bell", id: null });
+  }
+});
+
+Deno.test("buildRoute — badges route to the badge wall", () => {
+  assertEquals(buildRoute("badge_earned", null, null), { route: "badges", id: null });
+});
+
+Deno.test("buildRoute — falls back to the bell when the target is missing", () => {
+  // A route with no id would open nothing — exactly the dead tap we're fixing.
+  assertEquals(buildRoute("like", null, "actor-1"), { route: "bell", id: null });
+  assertEquals(buildRoute("follow", "log-1", null), { route: "bell", id: null });
+  assertEquals(buildRoute("club_invite", null, null), { route: "bell", id: null });
+  assertEquals(buildRoute("system", null, null), { route: "bell", id: null });
+  assertEquals(buildRoute("something_new", null, null), { route: "bell", id: null });
+});
+
+Deno.test("isDeadToken — prunes permanent rejections only", () => {
+  assertEquals(isDeadToken(410, "Unregistered"), true);
+  assertEquals(isDeadToken(410, null), true);
+  // The 400s that used to accumulate untouched.
+  assertEquals(isDeadToken(400, "BadDeviceToken"), true);
+  assertEquals(isDeadToken(400, "DeviceTokenNotForTopic"), true);
+  // Retryable / not the token's fault — must survive.
+  assertEquals(isDeadToken(400, "BadMessageId"), false);
+  assertEquals(isDeadToken(429, "TooManyRequests"), false);
+  assertEquals(isDeadToken(500, "InternalServerError"), false);
+  assertEquals(isDeadToken(503, null), false);
+  assertEquals(isDeadToken(0, null), false); // network failure
+});
+
+Deno.test("parseApnsReason — reads the reason, tolerates junk", () => {
+  assertEquals(parseApnsReason('{"reason":"BadDeviceToken"}'), "BadDeviceToken");
+  assertEquals(parseApnsReason(""), null);
+  assertEquals(parseApnsReason(null), null);
+  assertEquals(parseApnsReason(undefined), null);
+  assertEquals(parseApnsReason("not json"), null);
+  assertEquals(parseApnsReason('{"reason":123}'), null);
+  assertEquals(parseApnsReason("{}"), null);
 });
 
 Deno.test("apnsHost — production vs sandbox", () => {

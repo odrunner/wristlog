@@ -1,4 +1,5 @@
 import UIKit
+import UserNotifications
 
 class AppDelegate: NSObject, UIApplicationDelegate {
 
@@ -6,6 +7,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        // Must be set before launch finishes, or a tap that cold-starts the app
+        // is delivered before anyone is listening and the route is lost.
+        UNUserNotificationCenter.current().delegate = PushManager.shared
         QuickActionManager.shared.registerShortcuts()
         if let shortcut = launchOptions?[.shortcutItem] as? UIApplicationShortcutItem {
             QuickActionManager.shared.handle(shortcut)

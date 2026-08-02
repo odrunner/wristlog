@@ -18,7 +18,10 @@ import {
   base64UrlEncodeBytes,
   buildAlertPayload,
   buildMessage,
+  buildRoute,
+  isDeadToken,
   isValidRecord,
+  parseApnsReason,
   resolveActorName,
   stripPemArmor,
 } from "./lib.ts";
@@ -72,11 +75,10 @@ async function createAPNsJWT(): Promise<string> {
 // Send push to a single device token
 async function sendPush(
   token: string,
-  message: { title: string; body: string },
+  payload: Record<string, unknown>,
   jwt: string
-): Promise<{ token: string; success: boolean; status: number }> {
+): Promise<{ token: string; success: boolean; status: number; reason: string | null }> {
   const url = apnsDeviceUrl(APNS_HOST, token);
-  const payload = buildAlertPayload(message);
 
   try {
     const response = await fetch(url, {
@@ -91,10 +93,15 @@ async function sendPush(
       body: JSON.stringify(payload),
     });
 
-    return { token, success: response.ok, status: response.status };
+    // APNs explains a rejection in a JSON body ({"reason":"BadDeviceToken"}).
+    // Read it so permanently-dead tokens can be pruned, not just 410s.
+    const reason = response.ok
+      ? null
+      : parseApnsReason(await response.text().catch(() => null));
+    return { token, success: response.ok, status: response.status, reason };
   } catch (err) {
     console.error(`[send-push] Failed to send to ${token}:`, err);
-    return { token, success: false, status: 0 };
+    return { token, success: false, status: 0, reason: null };
   }
 }
 
@@ -119,14 +126,14 @@ serve(async (req) => {
 
     const { data: dbRecord, error: verifyError } = await supabase
       .from("notifications")
-      .select("id, user_id, type, actor_id")
+      .select("id, user_id, type, actor_id, ref_id")
       .eq("id", record.id)
       .maybeSingle();
     if (verifyError || !dbRecord) {
       console.warn(`[send-push] Record ${record.id} not found in notifications table — rejecting`);
       return new Response(JSON.stringify({ error: "Record not found" }), { status: 400 });
     }
-    const { user_id, type, actor_id } = dbRecord;
+    const { user_id, type, actor_id, ref_id } = dbRecord;
 
     // Don't send push for self-notifications
     if (user_id === actor_id) {
@@ -170,30 +177,53 @@ serve(async (req) => {
       });
     }
 
+    // The recipient's REAL unread count drives the app-icon badge. Counted after
+    // the insert, so it includes the notification being pushed. A failed count
+    // leaves `badge` out of the payload rather than guessing.
+    const { count: unreadCount } = await supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user_id)
+      .eq("is_read", false);
+
+    const payload = buildAlertPayload(message, {
+      badge: unreadCount,
+      route: buildRoute(type, ref_id, actor_id),
+      userId: user_id,
+      notifId: dbRecord.id,
+      type,
+    });
+
     // Create APNs JWT
     const jwt = await createAPNsJWT();
 
     // Send to all devices
     const results = await Promise.all(
-      tokens.map((t: { token: string }) => sendPush(t.token, message, jwt))
+      tokens.map((t: { token: string }) => sendPush(t.token, payload, jwt))
     );
 
-    // Clean up expired tokens (410 = token no longer valid)
-    const expired = results.filter((r) => r.status === 410);
-    if (expired.length > 0) {
-      const expiredTokens = expired.map((r) => r.token);
+    // Prune tokens APNs will never accept again — 410 Unregistered plus the
+    // 400s (BadDeviceToken / DeviceTokenNotForTopic) that used to accumulate
+    // untouched. Scoped to this recipient: the same physical device may be
+    // legitimately registered to nobody else, but deleting by token alone would
+    // reach across accounts on a shared-token row we haven't purged yet.
+    const dead = results.filter((r) => isDeadToken(r.status, r.reason));
+    if (dead.length > 0) {
       await supabase
         .from("device_tokens")
         .delete()
-        .in("token", expiredTokens);
-      console.log(`[send-push] Cleaned up ${expired.length} expired tokens`);
+        .eq("user_id", user_id)
+        .in("token", dead.map((r) => r.token));
+      console.log(
+        `[send-push] Pruned ${dead.length} dead tokens (${dead.map((r) => r.reason ?? r.status).join(", ")})`
+      );
     }
 
     return new Response(
       JSON.stringify({
         sent: results.filter((r) => r.success).length,
         failed: results.filter((r) => !r.success).length,
-        cleaned: expired.length,
+        cleaned: dead.length,
       }),
       { status: 200 }
     );

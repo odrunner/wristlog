@@ -15,13 +15,23 @@ export function buildBadgePushMessage(
   return { title, body: `You earned ${badgeNames.length} badges! 🏅` };
 }
 
-export function buildAlertPayload(message: { title: string; body: string }) {
+// `badge` is the recipient's real unread count; omitted when unknown, which
+// leaves the app-icon badge untouched instead of asserting a wrong number.
+// `w` routes the tap — badge pushes always open the badge wall.
+export function buildAlertPayload(
+  message: { title: string; body: string },
+  opts: { badge?: number | null; userId?: string | null } = {},
+): Record<string, unknown> {
+  const aps: Record<string, unknown> = {
+    alert: { title: message.title, body: message.body },
+    sound: "default",
+  };
+  if (typeof opts.badge === "number" && Number.isFinite(opts.badge)) {
+    aps.badge = Math.max(0, Math.trunc(opts.badge));
+  }
   return {
-    aps: {
-      alert: { title: message.title, body: message.body },
-      sound: "default",
-      badge: 1,
-    },
+    aps,
+    w: { route: "badges", id: null, uid: opts.userId ?? null, n: null, t: "badge_earned" },
   };
 }
 
@@ -87,6 +97,7 @@ export async function sendPush(
   message: { title: string; body: string },
   jwt: string,
   host: string,
+  opts: { badge?: number | null; userId?: string | null } = {},
 ): Promise<{ token: string; success: boolean; status: number }> {
   const url = apnsDeviceUrl(host, token);
   try {
@@ -99,7 +110,7 @@ export async function sendPush(
         "apns-priority": "10",
         "content-type": "application/json",
       },
-      body: JSON.stringify(buildAlertPayload(message)),
+      body: JSON.stringify(buildAlertPayload(message, opts)),
     });
     return { token, success: response.ok, status: response.status };
   } catch (_err) {

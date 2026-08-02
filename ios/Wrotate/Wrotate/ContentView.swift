@@ -72,7 +72,7 @@ struct ContentView: View {
             webViewRef?.load(URLRequest(url: target))
         }
         .onChange(of: isLoading) {
-            if !isLoading { dispatchPendingQuickAction(); handleSharedImage() }
+            if !isLoading { dispatchPendingQuickAction(); dispatchPendingNotification(); handleSharedImage() }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
             lastBackgrounded = Date()
@@ -87,7 +87,7 @@ struct ContentView: View {
                 webViewRef?.reload()
             }
             lastBackgrounded = nil
-            if !isLoading { dispatchPendingQuickAction(); handleSharedImage() }
+            if !isLoading { dispatchPendingQuickAction(); dispatchPendingNotification(); handleSharedImage() }
         }
     }
 
@@ -129,6 +129,31 @@ struct ContentView: View {
         webViewRef?.evaluateJavaScript(js, completionHandler: nil)
         // Clean up shared file
         try? FileManager.default.removeItem(atPath: path)
+    }
+
+    /// Drain a notification tap into the WebView. Mirrors the quick-action
+    /// dispatch: the tap can arrive long before the page is ready, so it is held
+    /// on PushManager and dispatched once `isLoading` clears.
+    private func dispatchPendingNotification() {
+        guard let pending = PushManager.shared.pendingRoute else { return }
+        PushManager.shared.pendingRoute = nil
+        let id = pending.id
+        let js: String
+        switch pending.route {
+        case "post" where !id.isEmpty:
+            js = "if(typeof scrollToFeedPost==='function') scrollToFeedPost('\(id)');"
+        case "profile" where !id.isEmpty:
+            js = "if(typeof viewUserProfile==='function') viewUserProfile('\(id)');"
+        case "club" where !id.isEmpty:
+            js = "if(typeof openClubDetail==='function') openClubDetail('\(id)');"
+        case "badges":
+            js = "if(typeof openBadgeWall==='function') openBadgeWall();"
+        default:
+            // "bell", or a route whose target didn't survive — open the panel so
+            // the tap always lands somewhere the notification is visible.
+            js = "if(typeof openNotifPanel==='function') openNotifPanel();"
+        }
+        webViewRef?.evaluateJavaScript(js, completionHandler: nil)
     }
 
     private func dispatchPendingQuickAction() {
