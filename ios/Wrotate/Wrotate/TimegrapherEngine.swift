@@ -1555,13 +1555,19 @@ class TimegrapherEngine {
         guard !lags.isEmpty else { return nil }
         let period = tgFitPeriod(lags)
         guard period > 1 else { return nil }
-        // σ-gate, unchanged in form: the residual (lag - period*cyc)/cyc IS the old
-        // (est - period), so tgSigmaGate keeps exactly the meaning it was tuned with —
-        // only the `period` it is measured against is now the fitted one.
+        // σ-gate, measured around the unweighted MEAN on purpose — not around the fitted
+        // period. The gate asks "do the per-cycle estimates agree with each other", and
+        // tgSigmaGate was tuned against the spread about their mean, which by construction
+        // is the smallest such spread. Measuring it about the weighted fit instead leaves
+        // the threshold nominally identical while making it 1-7% stricter in practice, and
+        // that silently drops marginal windows — worst at the 4s window and low SNR, i.e.
+        // precisely the weak signals that already fail most. The gate keeps its own
+        // reference point; only the returned period changes.
         if lags.count > 1 {
-            var ss = 0.0
-            for (c, l) in lags { let r = l / c - period; ss += r * r }
-            if sqrt(ss / Double(lags.count)) / period > tgSigmaGate { tgGateRejects += 1; return nil }
+            let ests = lags.map { $0.lag / $0.cyc }
+            let mean = ests.reduce(0, +) / Double(ests.count)
+            let varr = ests.map { ($0 - mean) * ($0 - mean) }.reduce(0, +) / Double(ests.count)
+            if mean > 0, sqrt(varr) / mean > tgSigmaGate { tgGateRejects += 1; return nil }
         }
         return period
     }
