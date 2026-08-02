@@ -149,7 +149,9 @@ Rules:
         clearTimeout(geminiTimer);
         if (geminiResponse.ok) {
           const geminiResult = await geminiResponse.json();
-          const parts = geminiResult.candidates?.[0]?.content?.parts ?? [];
+          const candidate = geminiResult.candidates?.[0];
+          const finishReason = candidate?.finishReason || "unknown";
+          const parts = candidate?.content?.parts ?? [];
           const text = parts.filter((p: { text?: string }) => p.text).map((p: { text?: string }) => p.text).join("");
           try {
             parsed = extractJson(text);
@@ -157,10 +159,14 @@ Rules:
             parsed = null;
           }
           if (parsed && !parsed.estimated_value_usd) parsed = null;
+          console.log(`[watch-value] DIAG gemini finish=${finishReason} textLen=${text.length} ok=${!!parsed} usage=${JSON.stringify(geminiResult.usageMetadata ?? {})}`);
           if (parsed) {
             parsed._engine = "gemini";
           } else {
-            console.error("[watch-value] Gemini parse failed, falling back to Claude. Raw:", text.slice(0, 300));
+            const usage = geminiResult.usageMetadata ?? {};
+            console.error(
+              `[watch-value] Gemini parse failed, falling back to Claude. finish=${finishReason} len=${text.length} parts=${parts.length} tokens=${JSON.stringify(usage)} HEAD:${text.slice(0, 200)} TAIL:${text.slice(-300)}`,
+            );
           }
         } else {
           const errText = await geminiResponse.text();
