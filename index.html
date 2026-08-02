@@ -7166,7 +7166,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '01.18.15';
+const APP_VERSION = '02.08.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -25534,6 +25534,7 @@ function onTgSourceChange() {
   localStorage.setItem('tg_input_source', v);
 }
 function initTgSourceSelector() {
+  _migrateProV2Precision();
   const el = document.getElementById('tg-input-source');
   if (!el) return;
   if (featureFlag('tg_piezo')) {
@@ -26926,16 +26927,39 @@ function openMsrSettings() {
 // precision it never delivers — which is what strict (32s window, 12s wall-min) did.
 const PROV2_PRECISION = {
   quick:    { tg_wallmin: 8,  tg_stabwin: 4, tg_stabth: 4, tg_maxwin: 8 },    // 8s window
-  balanced: { tg_wallmin: 15, tg_stabwin: 6, tg_stabth: 2, tg_maxwin: 16 },   // 16s window
+  balanced: { tg_wallmin: 15, tg_stabwin: 6, tg_stabth: 3, tg_maxwin: 16 },   // 16s window
   strict:   { tg_wallmin: 30, tg_stabwin: 8, tg_stabth: 2, tg_maxwin: 32 }    // 32s window
 };
 // Defaults for a user who has never opened the precision panel — must track `balanced`,
 // since _tgConvKnob falls back to these when the localStorage key is absent.
 const PROV2_DEFAULTS = PROV2_PRECISION.balanced;
+
+// Preset DEFINITIONS change; the knob values a user already has in localStorage do not.
+// onProV2Precision writes the individual knobs the moment a card is tapped and nothing ever
+// rewrote them, so every user who had ever picked a preset stayed pinned to the values that
+// were current back then — and _tgConvKnob's new default only applies when the key is
+// ABSENT. The 2026-07-31 wall-min fix therefore reached nobody but brand-new users.
+// Caught on the first TestFlight build of the new engine: session_summary reported
+// precision "balanced" while [TGTUNE] logged wallMin=8, the OLD balanced value, and three
+// of five readings converged on the 8s window instead of the 16s one.
+//
+// The preset NAME is the source of truth. Bump PROV2_PRECISION_V whenever the values change
+// and every user re-derives their knobs from it exactly once; stamping the version means a
+// later per-knob tweak from the admin panel still survives.
+const PROV2_PRECISION_V = 2;
+function _migrateProV2Precision() {
+  try {
+    if (localStorage.getItem('tg_precision_v') === String(PROV2_PRECISION_V)) return;
+    const m = PROV2_PRECISION[localStorage.getItem('tg_precision')] || PROV2_DEFAULTS;
+    for (const [k, v] of Object.entries(m)) localStorage.setItem(k, String(v));
+    localStorage.setItem('tg_precision_v', String(PROV2_PRECISION_V));
+  } catch (_) { /* storage unavailable — _tgConvKnob's defaults still apply */ }
+}
 function onProV2Precision(p) {
   const m = PROV2_PRECISION[p]; if (!m) return;
   localStorage.setItem('tg_precision', p);
   for (const [k, v] of Object.entries(m)) localStorage.setItem(k, String(v));
+  localStorage.setItem('tg_precision_v', String(PROV2_PRECISION_V));
   sendMsrTuning();
   document.querySelectorAll('#msr-prov2-precision .msr-preset-card').forEach(c =>
     c.classList.toggle('active', c.dataset.prec === p));
@@ -28036,6 +28060,7 @@ function _stopMsrBadge() {
   clearInterval(_msrBadgeTimer);
 }
 function toggleMsrListen() {
+  _migrateProV2Precision();   // no-op once stamped; guarantees no run uses stale preset knobs
   if (demoGuard()) return;
   console.log('[TG JS] toggleMsrListen called, _msrListening:', _msrListening, 'hasNative:', _tgHasNative());
   if (_msrListening) { console.log('[TG JS] Stop button pressed'); stopMsrListen('user_stopped'); return; }

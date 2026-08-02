@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 // Coverage for the 2026-07-31 measurement audit fixes. These assert against the real
 // index.html rather than a copy of the logic, because every one of them is a "the number
@@ -85,6 +85,70 @@ describe('Pro V2 precision presets reach the window they claim', () => {
     const maxDur = (std, w, s) => Math.max(std, Math.ceil(w + s + 10));
     expect(maxDur(45, P2.strict.tg_wallmin, P2.strict.tg_stabwin))
       .toBeGreaterThan(P2.strict.tg_wallmin + P2.strict.tg_stabwin);
+  });
+});
+
+// Changing a preset's numbers is not enough: onProV2Precision copies them into localStorage
+// when a card is tapped, and _tgConvKnob's default only applies when the key is ABSENT. The
+// first TestFlight build of the new engine reported precision "balanced" while running the
+// OLD balanced wallMin=8, because that value was already in storage.
+describe('preset changes reach users who already picked one', () => {
+  const store = {};
+  const localStorage = {
+    getItem: k => (k in store ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+  };
+  const P = presets();
+  const migrate = new Function('localStorage', 'PROV2_PRECISION', 'PROV2_DEFAULTS', `
+    const PROV2_PRECISION_V = ${/const PROV2_PRECISION_V = (\d+);/.exec(html)[1]};
+    ${fnBody('_migrateProV2Precision')}\n}
+    return _migrateProV2Precision;
+  `)(localStorage, P, P.balanced);
+
+  beforeEach(() => { for (const k of Object.keys(store)) delete store[k]; });
+
+  it('rewrites stale knobs left by an older definition of the same preset', () => {
+    store.tg_precision = 'balanced';
+    store.tg_wallmin = '8';          // the value that shipped before 2026-07-31
+    store.tg_maxwin = '16';
+    migrate();
+    expect(Number(store.tg_wallmin)).toBe(P.balanced.tg_wallmin);
+    expect(Number(store.tg_wallmin)).not.toBe(8);
+  });
+
+  it('keeps the user on the preset they chose, not on balanced', () => {
+    store.tg_precision = 'strict';
+    store.tg_wallmin = '12';
+    migrate();
+    expect(Number(store.tg_wallmin)).toBe(P.strict.tg_wallmin);
+    expect(Number(store.tg_maxwin)).toBe(P.strict.tg_maxwin);
+  });
+
+  it('gives a user who never opened the panel the balanced values', () => {
+    migrate();
+    expect(Number(store.tg_wallmin)).toBe(P.balanced.tg_wallmin);
+  });
+
+  it('runs once, then leaves later per-knob tweaks alone', () => {
+    migrate();
+    store.tg_wallmin = '99';         // e.g. an admin tuning experiment
+    migrate();
+    expect(store.tg_wallmin).toBe('99');
+  });
+
+  it('survives an unknown preset name', () => {
+    store.tg_precision = 'nonsense-from-the-future';
+    migrate();
+    expect(Number(store.tg_wallmin)).toBe(P.balanced.tg_wallmin);
+  });
+
+  it('is invoked on init and again at measure start', () => {
+    expect(fnBody('initTgSourceSelector')).toContain('_migrateProV2Precision()');
+    expect(fnBody('toggleMsrListen')).toContain('_migrateProV2Precision()');
+  });
+
+  it('stamps the version when a card is tapped', () => {
+    expect(fnBody('onProV2Precision')).toContain("localStorage.setItem('tg_precision_v'");
   });
 });
 
