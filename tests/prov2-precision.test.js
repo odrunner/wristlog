@@ -152,6 +152,41 @@ describe('preset changes reach users who already picked one', () => {
   });
 });
 
+// Pro V2 improves with every release, so a user who tried Standard once must not be frozen
+// on the older engine forever. Before 2026-08-02 the pick lived in localStorage and did.
+describe('engine choice resets to Pro V2 each app session', () => {
+  it('does not persist the choice to localStorage', () => {
+    expect(html).not.toContain("localStorage.setItem('tg_algo_sel'");
+    expect(html).not.toContain("localStorage.getItem('tg_algo_sel')");
+  });
+
+  it('clears the retired key so an old pick cannot resurface', () => {
+    expect(fnBody('initTgSourceSelector')).toContain("localStorage.removeItem('tg_algo_sel')");
+  });
+
+  it('defaults to Pro V2, honours an in-session pick, and forgets it on reload', () => {
+    // Mirrors _tgAlgo/onTgAlgo: module state, so a page load starts from null again.
+    const mk = () => {
+      let sel = null;
+      return {
+        algo: (available = true) => (!available ? 'original' : sel === 'original' ? 'original' : 'tg'),
+        pick: (v) => { sel = v; },
+      };
+    };
+    let e = mk();
+    expect(e.algo()).toBe('tg');               // fresh session defaults to Pro V2
+    e.pick('original');
+    expect(e.algo()).toBe('original');         // the pick holds within the session
+    e = mk();                                  // app relaunch / WebView reload
+    expect(e.algo()).toBe('tg');               // and is forgotten
+  });
+
+  it('still falls back to Standard when the build has no Pro V2', () => {
+    const body = fnBody('_tgAlgo');
+    expect(body).toContain("if (!_proV2Available()) return 'original';");
+  });
+});
+
 describe('the tg core is not torn down by the tick detector', () => {
   it('guards the weak-signal stop on a live tg rate', () => {
     // The Pro V2 rate comes off the energy envelope, not accepted ticks. The no-ticks stop

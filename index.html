@@ -7166,7 +7166,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.09.09';
+const APP_VERSION = '02.09.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -25535,6 +25535,7 @@ function onTgSourceChange() {
 }
 function initTgSourceSelector() {
   _migrateProV2Precision();
+  try { localStorage.removeItem('tg_algo_sel'); } catch (_) {}   // retired: engine choice is per-session now
   const el = document.getElementById('tg-input-source');
   if (!el) return;
   if (featureFlag('tg_piezo')) {
@@ -25585,16 +25586,22 @@ function onPzTune(key, val) { if (val !== '' && Number(val) > 0) { localStorage.
 function _pzMode() { return localStorage.getItem('pz_mode') === 'measurement' ? 'measurement' : 'default'; }
 // Pro V2 (tg core) is the DEFAULT engine on native 2.1+ builds — no server-side stage
 // gate any more. Standard stays selectable on the measure page as the opt-out, and the
-// choice is remembered in tg_algo_sel (so a user who picked Standard keeps Standard).
+// choice lasts for the current app session only — see _tgAlgoSel.
 // Admins can also force the selector on non-2.1 builds via the tg_algo dev flag.
 function _native21() { return _tgHasNative() && iosAtLeast(window._iosAppVersion, '2.1'); }
 function _proV2Available() { return _native21() || featureFlag('tg_algo'); }
+// Engine choice for THIS app session only — deliberately not persisted. Pro V2 is the
+// better engine and gains accuracy with every release, so a user who tried Standard once
+// must not be silently frozen on the older path forever; before 2026-08-02 the pick lived in
+// localStorage and did exactly that. Holds until the WebView reloads or the app relaunches,
+// then falls back to Pro V2. Standard stays one tap away for anyone who wants it now.
+let _tgAlgoSel = null;   // 'original' | 'tg' | null = default (Pro V2)
 function _tgAlgo() {
   if (!_proV2Available()) return 'original';   // engine not in this build
-  return localStorage.getItem('tg_algo_sel') === 'original' ? 'original' : 'tg';
+  return _tgAlgoSel === 'original' ? 'original' : 'tg';
 }
 function onTgAlgo(v) {
-  localStorage.setItem('tg_algo_sel', v);
+  _tgAlgoSel = v;
   const hint = document.getElementById('tg-algo-hint');
   if (hint) hint.style.display = v === 'tg' ? '' : 'none';
 }

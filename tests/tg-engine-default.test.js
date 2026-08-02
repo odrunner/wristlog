@@ -1,8 +1,11 @@
 import { describe, it, expect } from 'vitest';
 
 // Mirrors index.html _proV2Available() / _tgAlgo(): Pro V2 is the DEFAULT engine on
-// native 2.1+ builds, Standard is the remembered opt-out (tg_algo_sel === 'original').
-// Admins can force the selector on non-2.1 builds via the tg_algo dev flag.
+// native 2.1+ builds, Standard is a per-app-session opt-out. `sel` here stands for the
+// in-memory _tgAlgoSel, which starts null every app session — it used to be a localStorage
+// key, which froze anyone who tried Standard once on the older engine permanently
+// (see tests/prov2-precision.test.js). Admins can force the selector on non-2.1 builds
+// via the tg_algo dev flag.
 function _proV2Available(native21, tgAlgoFlag) { return native21 || tgAlgoFlag; }
 function _tgAlgo(native21, tgAlgoFlag, sel) {
   if (!_proV2Available(native21, tgAlgoFlag)) return 'original';
@@ -13,8 +16,12 @@ describe('measurement engine default (Pro V2)', () => {
   it('runs Pro V2 on a 2.1 build when the user has never picked', () => {
     expect(_tgAlgo(true, false, null)).toBe('tg');
   });
-  it('respects an explicit opt-out to Standard', () => {
+  it('respects an explicit opt-out to Standard for the rest of the session', () => {
     expect(_tgAlgo(true, false, 'original')).toBe('original');
+  });
+  it('starts every app session on Pro V2, whatever was picked last time', () => {
+    // sel is module state, so a relaunch always arrives here as null.
+    expect(_tgAlgo(true, false, null)).toBe('tg');
   });
   it('keeps Pro V2 for a user who explicitly picked it', () => {
     expect(_tgAlgo(true, false, 'tg')).toBe('tg');
