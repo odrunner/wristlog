@@ -40,6 +40,78 @@ Strava's in-feed card pattern.
   reworking the renderer.
 - Surfaces other than the home feed.
 
+## Card design
+
+The card must read as *from WRotate* at a glance, without breaking the feed's
+rhythm. The approach is: **keep every geometric property of a post card,
+change only identity and structure.** A card that looks unrelated reads as an
+ad; a card that looks identical is a dark pattern.
+
+### Kept identical to `.feed-card`
+
+`border-radius: 16px`, `margin-bottom: 1.25rem`, `overflow: hidden`,
+`box-shadow: 0 2px 12px rgba(0,0,0,.18)`, `background: var(--surface)`, the
+470px `#page-feed` column width, and the header's `.85rem 1rem .6rem` padding
+with a 38px leading slot. Body copy sits at `--fs-base` / `--lh-body`, the same
+as post captions. Scrolling past it should feel like scrolling past a post.
+
+### The four differences
+
+```
+┌──────────────────────────────────────────────┐  ← border: 1px solid var(--gold-dim)
+│  ┌────┐                                   ✕  │     (post cards use --border)
+│  │ ◔  │  WRotate                             │  ← 1. rounded-rect mark, not a
+│  └────┘  NEW                                 │       round avatar
+├──────────────────────────────────────────────┤  ← 2. eyebrow replaces the timestamp
+│                                              │
+│            hero image — 16:9                 │  ← 3. never 4:5 (a post's signature)
+│                                              │
+├──────────────────────────────────────────────┤
+│  Rank your collection                        │  ← heading, --fs-md / --fw-bold
+│  Head-to-head matchups sort your watches …   │  ← body, --fs-base / --lh-body
+│                                              │
+│  ┌────────────────────────────────────────┐  │
+│  │            Start ranking               │  │  ← .btn.btn-primary, full width
+│  └────────────────────────────────────────┘  │
+└──────────────────────────────────────────────┘  ← 4. no like / comment row
+```
+
+1. **Identity block.** The 38px leading slot holds a `--radius-sm` (6px)
+   rounded-rect tile on `--gold-dim`, containing the existing WRotate rotor mark
+   ([index.html:2864](../../../index.html#L2864)) stroked in `--gold` — not a
+   `.feed-user-avatar` circle. Same slot size, so header height is unchanged;
+   square-vs-round is the fastest possible "not a person" cue. Name line reads
+   **WRotate** at `.feed-user-name` weight.
+
+2. **Eyebrow replaces the timestamp.** Where a post shows `.feed-meta`
+   ("2h ago · Seiko SKX007"), the card shows its `eyebrow` — uppercase, `.08em`
+   tracked, `--fs-sm`. Structurally the same line, semantically obviously not a post.
+
+3. **Hero image is 16:9.** Reusing `.feed-card-photo` but overriding
+   `aspect-ratio` to `16/9`. The 4:5 portrait crop is the visual signature of a
+   wrist shot; a promo must never occupy that shape.
+
+4. **No engagement row.** No like, comment, or share. This absence is the
+   strongest structural signal in the whole design — the eye reads the missing
+   row before it reads any copy. The CTA button takes that space instead. The ✕
+   dismiss sits exactly where a post's `⋯` menu sits, so the affordance is
+   where the thumb already expects one.
+
+Card border is `1px solid var(--gold-dim)` rather than `var(--border)` — a tint,
+not an outline. Visible on inspection, invisible at a glance.
+
+### Contrast
+
+The eyebrow uses **`--badge-accent`, not `--gold`**. This follows the decision
+already documented at [index.html:1869](../../../index.html#L1869): `--gold`
+measures 2.64:1 on the light card surface and fails WCAG AA for small text,
+which is why `.funfact-label` uses `--badge-accent` instead. The `.eyebrow`
+utility class is gold, so the card defines its own eyebrow rule rather than
+reusing it. The gold rotor mark and gold-dim border are non-text and exempt.
+
+Dark mode needs no override: `--gold` (`#c9a84c`) on `--surface` (`#141419`)
+clears AA comfortably. Both themes get checked during implementation.
+
 ## Data model
 
 ### `promo_slots`
@@ -293,6 +365,9 @@ nested unknown-inside-allowed, malformed/unclosed markup, external links get
 **Mocked E2E** — route `promo_slots` / `promo_config` / `promo_events` to
 fixtures; assert the card lands at the configured position, the CTA fires the
 mapped action, dismiss removes it, and it does not reappear after a re-render.
+Also assert the design invariants that keep it from impersonating a post: no
+like/comment/share controls in the card, and the hero renders 16:9 rather than
+the post 4:5.
 
 **RLS verification** per CLAUDE.md's checklist — confirm with
 `set_config('request.jwt.claims', …)` that a non-admin user can SELECT active
