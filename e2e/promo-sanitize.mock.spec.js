@@ -38,6 +38,10 @@ const CASES = [
     '<img src="javascript:alert(1)">', [], ['javascript:', '<img']],
   ['drops srcset',
     '<img src="https://x.test/a.jpg" srcset="https://evil.test/x 2x">', ['<img'], ['srcset', 'evil.test']],
+  ['drops a backslash-escaped href that resolves to an external origin',
+    '<a href="/\\evil.test/pwn">click</a>', ['click'], ['href', 'evil.test']],
+  ['strips the is attribute so it cannot re-emit as a customized built-in',
+    '<span is="evil-el" onclick="x">t</span>', ['t'], ['is=', 'onclick']],
 ];
 
 test('sanitizePromoHtml — allowlist walker', async ({ page }) => {

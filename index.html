@@ -7166,7 +7166,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.18.19';
+const APP_VERSION = '02.18.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21282,25 +21282,37 @@ function sanitizePromoHtml(html) {
         child.replaceWith(...child.childNodes);
         continue;
       }
+      // Rebuild as a fresh element rather than mutate the parsed one. A
+      // parsed element can carry internal state (e.g. a customized built-in
+      // registered via the "is" attribute) that removeAttribute() clears
+      // from the attribute list but that Blink's serializer still re-emits
+      // into the output string. A freshly created element has none of that
+      // state — confirmed empirically: mutating-in-place left `is="evil-el"`
+      // in the output even after `attributes` was empty; createElement does not.
+      const clean = doc.createElement(tag.toLowerCase());
       const allowed = PROMO_ATTRS_OK[tag] || new Set();
-      for (const attr of [...child.attributes]) {
-        if (!allowed.has(attr.name.toLowerCase())) child.removeAttribute(attr.name);
+      for (const attr of child.attributes) {
+        if (allowed.has(attr.name.toLowerCase())) clean.setAttribute(attr.name, attr.value);
       }
+      while (child.firstChild) clean.appendChild(child.firstChild);
+      child.replaceWith(clean);
       if (tag === 'A') {
-        const href = child.getAttribute('href') || '';
-        const ok = /^https:\/\//i.test(href) || /^\/[^/]/.test(href);
-        if (!ok) child.removeAttribute('href');
+        const href = clean.getAttribute('href') || '';
+        // [^/\\] also blocks a leading backslash — Chromium treats
+        // "/\evil.test" as scheme-relative and resolves it to https://evil.test.
+        const ok = /^https:\/\//i.test(href) || /^\/[^/\\]/.test(href);
+        if (!ok) clean.removeAttribute('href');
         else if (/^https:\/\//i.test(href)) {
-          child.setAttribute('target', '_blank');
-          child.setAttribute('rel', 'noopener noreferrer');
+          clean.setAttribute('target', '_blank');
+          clean.setAttribute('rel', 'noopener noreferrer');
         }
       }
       if (tag === 'IMG') {
-        const src = sanitizeImageUrl(child.getAttribute('src') || '', location.origin);
-        if (!src) { child.remove(); continue; }
-        child.setAttribute('src', src);
+        const src = sanitizeImageUrl(clean.getAttribute('src') || '', location.origin);
+        if (!src) { clean.remove(); continue; }
+        clean.setAttribute('src', src);
       }
-      walk(child);
+      walk(clean);
     }
   };
   walk(doc.body);
