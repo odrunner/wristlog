@@ -2645,3 +2645,31 @@ export function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown
     String(b.created_at || '').localeCompare(String(a.created_at || ''))
   );
 }
+
+// Post indices to insert a card BEFORE. Positions are absolute over the whole
+// feed, so an appended page continues the sequence rather than restarting it.
+// placedCount is how many cards this session has already shown.
+export function promoInjectPositions({ postCount, config, placedCount }) {
+  const cfg = config || {};
+  const max = cfg.max_per_session || 0;
+  const already = placedCount || 0;
+  if (max <= 0 || already >= max) return [];
+  if (!postCount) return [0];                       // empty feed: below the empty state
+
+  // A feed shorter than first_position puts the card at the top rather than
+  // trailing off the end — that short feed is exactly where it earns most.
+  const want = cfg.first_position || 0;
+  const first = want > postCount ? 0 : want;
+  const step = cfg.repeat_every || 0;
+
+  // `i` counts cards from the START of the session, not from this call, so
+  // positions consumed on an earlier page are skipped instead of re-emitted.
+  const out = [];
+  for (let i = already; i < max; i++) {
+    const pos = step > 0 ? first + step * i : first;
+    if (pos > postCount) break;
+    out.push(pos);
+    if (step <= 0) break;                           // no repeat: exactly one card
+  }
+  return out;
+}
