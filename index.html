@@ -3086,6 +3086,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button type="button" class="chip" data-tab="official" role="tab" aria-selected="false" aria-controls="admin-tab-official" onclick="switchAdminTab('official')">Official</button>
       <button type="button" class="chip" data-tab="broadcast" role="tab" aria-selected="false" aria-controls="admin-tab-broadcast" onclick="switchAdminTab('broadcast')">Broadcast</button>
       <button type="button" class="chip" data-tab="campaigns" role="tab" aria-selected="false" aria-controls="admin-tab-campaigns" onclick="switchAdminTab('campaigns')">Campaigns</button>
+      <button type="button" class="chip" data-tab="promos" role="tab" aria-selected="false" aria-controls="admin-tab-promos" onclick="switchAdminTab('promos')">Promos</button>
       <button type="button" class="chip" data-tab="dev" role="tab" aria-selected="false" aria-controls="admin-tab-dev" onclick="switchAdminTab('dev')">Dev</button>
     </div>
 
@@ -3300,6 +3301,95 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div id="campaigns-list" style="margin-bottom:1rem;">
         <div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">Loading campaigns...</div>
+      </div>
+    </div>
+
+    <!-- Tab: Promos -->
+    <div id="admin-tab-promos" class="admin-tab" role="tabpanel" style="display:none;">
+      <div style="margin-bottom:.75rem;"><div class="eyebrow">Merchandising Slots</div></div>
+
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:.85rem;margin-bottom:1rem;">
+        <div class="draft-form-row">
+          <label for="promo-eyebrow">Eyebrow</label>
+          <input type="text" id="promo-eyebrow" placeholder="New" oninput="updatePromoPreview()">
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-heading">Heading</label>
+          <input type="text" id="promo-heading" placeholder="Rank your collection" oninput="updatePromoPreview()">
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-body">Body (HTML: &lt;b&gt;, &lt;a&gt;, &lt;ul&gt;/&lt;li&gt;, &lt;img&gt;. Use [img1] [img2] [img3] for uploads)</label>
+          <textarea id="promo-body" rows="6" oninput="updatePromoPreview()"></textarea>
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-image-url">Hero image URL (16:9)</label>
+          <input type="text" id="promo-image-url" oninput="updatePromoPreview()">
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-images">Inline image URLs, one per line (referenced as [img1]…[img3])</label>
+          <textarea id="promo-images" rows="3" oninput="updatePromoPreview()"></textarea>
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-cta-label">CTA label</label>
+          <input type="text" id="promo-cta-label" placeholder="Start ranking" oninput="updatePromoPreview()">
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-cta-action">CTA action</label>
+          <select id="promo-cta-action" onchange="updatePromoPreview()"></select>
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-cta-url">…or an https URL (used when action is "Custom URL")</label>
+          <input type="text" id="promo-cta-url" placeholder="https://wrotate.com/open" oninput="updatePromoPreview()">
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-audience">Audience</label>
+          <select id="promo-audience"></select>
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-starts">Starts</label>
+          <input type="datetime-local" id="promo-starts">
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-ends">Ends</label>
+          <input type="datetime-local" id="promo-ends">
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-priority">Priority (higher wins)</label>
+          <input type="number" id="promo-priority" value="0">
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-max-impressions">Max impressions per user (blank = config default)</label>
+          <input type="number" id="promo-max-impressions" placeholder="3">
+        </div>
+
+        <div class="draft-form-row">
+          <label id="promo-preview-label">Card preview</label>
+          <div id="promo-preview" aria-labelledby="promo-preview-label" style="max-width:470px;"></div>
+        </div>
+
+        <button class="btn btn-primary" onclick="savePromoSlot()" style="width:100%;">Save as Draft</button>
+        <div id="promo-status" aria-live="polite" style="font-size:.82rem;margin-top:.5rem;"></div>
+      </div>
+
+      <div class="eyebrow" style="margin-bottom:.5rem;">Slots</div>
+      <div id="promo-list" style="margin-bottom:1rem;">Loading…</div>
+
+      <div class="eyebrow" style="margin-bottom:.5rem;">Delivery</div>
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:.85rem;">
+        <div class="draft-form-row"><label for="promo-cfg-enabled">Enabled</label>
+          <input type="checkbox" id="promo-cfg-enabled"></div>
+        <div class="draft-form-row"><label for="promo-cfg-first">First position (posts before the first card)</label>
+          <input type="number" id="promo-cfg-first" min="0"></div>
+        <div class="draft-form-row"><label for="promo-cfg-repeat">Repeat every N posts (0 = no repeat)</label>
+          <input type="number" id="promo-cfg-repeat" min="0"></div>
+        <div class="draft-form-row"><label for="promo-cfg-max">Max cards per session</label>
+          <input type="number" id="promo-cfg-max" min="0"></div>
+        <div class="draft-form-row"><label for="promo-cfg-imp">Default max impressions per user</label>
+          <input type="number" id="promo-cfg-imp" min="0"></div>
+        <div class="draft-form-row"><label for="promo-cfg-suppress">Suppress when a modal already fired</label>
+          <input type="checkbox" id="promo-cfg-suppress"></div>
+        <button class="btn btn-ghost" onclick="savePromoConfig()" style="width:100%;">Save delivery settings</button>
+        <div id="promo-cfg-status" aria-live="polite" style="font-size:.82rem;margin-top:.5rem;"></div>
       </div>
     </div>
 
@@ -7213,7 +7303,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.21.42';
+const APP_VERSION = '02.21.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15537,6 +15627,7 @@ function switchAdminTab(tab) {
   if (target) target.style.display = '';
   if (tab === 'campaigns') loadCampaigns();
   if (tab === 'featured') loadAdminFeatured();
+  if (tab === 'promos') loadPromoAdmin();
 }
 
 async function loadAdminFeatured() {
@@ -18099,6 +18190,133 @@ function fillCampaignBody(text) {
 // copy to real users has to be blocked, or they receive the literal braces.
 function unresolvedCampaignTokens(text) {
   return [...new Set(String(text || '').match(/\{\{(watch|watchPhrase|fact)\}\}/g) || [])];
+}
+
+// ── Admin Promos tab ─────────────────────────────────────────────────────
+// Dropdowns are GENERATED from the registries, so a new audience or action
+// appears in the admin UI automatically and the two can never drift.
+const PROMO_AUDIENCE_LABELS = {
+  all: 'All users', never_logged: 'Never logged a wear', no_wishlist: 'Empty wishlist',
+  never_measured: 'Never measured (iOS only)', no_clubs: 'In no club',
+  follows_few: 'Follows fewer than 3 people', never_ranked: 'Never played the ranking game',
+};
+const PROMO_ACTION_LABELS = {
+  '': 'No button', open_wishlist: 'Open Wishlist', open_collection: 'Open Collection',
+  open_track: 'Open Track', open_measure: 'Open Measure', open_clubs: 'Open Clubs',
+  open_discover: 'Open Discover', open_ranking_game: 'Start the ranking game',
+  'url:': 'Custom URL (https only)',
+};
+
+function renderPromoAdminOptions() {
+  const aud = document.getElementById('promo-audience');
+  const act = document.getElementById('promo-cta-action');
+  if (!aud || !act) return;
+  aud.innerHTML = Object.keys(PROMO_AUDIENCES)
+    .map((k) => `<option value="${escAttr(k)}">${escHtml(PROMO_AUDIENCE_LABELS[k] || k)}</option>`).join('');
+  act.innerHTML = ['', ...Object.keys(PROMO_ACTIONS), 'url:']
+    .map((k) => `<option value="${escAttr(k)}">${escHtml(PROMO_ACTION_LABELS[k] || k)}</option>`).join('');
+}
+
+function promoFormSlot() {
+  const val = (id) => document.getElementById(id)?.value?.trim() || '';
+  const action = val('promo-cta-action');
+  return {
+    id: 'preview',
+    eyebrow: val('promo-eyebrow'),
+    heading: val('promo-heading'),
+    body: val('promo-body'),
+    image_url: val('promo-image-url'),
+    images: val('promo-images').split('\n').map((s) => s.trim()).filter(Boolean),
+    cta_label: val('promo-cta-label'),
+    cta_action: action === 'url:' ? 'url:' + val('promo-cta-url') : action,
+    audience: val('promo-audience') || 'all',
+    priority: parseInt(val('promo-priority') || '0'),
+    max_impressions: val('promo-max-impressions') ? parseInt(val('promo-max-impressions')) : null,
+    starts_at: val('promo-starts') ? new Date(val('promo-starts')).toISOString() : null,
+    ends_at:   val('promo-ends')   ? new Date(val('promo-ends')).toISOString()   : null,
+  };
+}
+
+// Calls the REAL renderer — the preview is the shipped output, not a second
+// implementation that can drift from it.
+function updatePromoPreview() {
+  const el = document.getElementById('promo-preview');
+  if (el) el.innerHTML = renderPromoCard(promoFormSlot());
+}
+
+// Always saves as a draft. Activating a slot puts content in real users' feeds
+// and is a deliberate second step (setPromoStatus), never a side effect of saving.
+async function savePromoSlot() {
+  const st = document.getElementById('promo-status');
+  const slot = promoFormSlot();
+  if (!slot.heading) { if (st) st.textContent = 'A heading is required.'; return; }
+  delete slot.id;
+  slot.status = 'draft';
+  slot.created_by = currentUser?.id || null;
+  const { error } = await db.from('promo_slots').insert(slot);
+  if (st) st.textContent = error ? ('Error: ' + error.message) : 'Saved as draft.';
+  if (!error) loadPromoAdmin();
+}
+
+async function setPromoStatus(id, status) {
+  const { error } = await db.from('promo_slots').update({ status }).eq('id', id);
+  if (error) { toast('Could not update slot: ' + error.message, 'error'); return; }
+  loadPromoAdmin();
+}
+
+async function loadPromoAdmin() {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
+  renderPromoAdminOptions();
+  const listEl = document.getElementById('promo-list');
+
+  const [{ data: cfg }, { data: slots }, { data: stats }] = await Promise.all([
+    db.from('promo_config').select('*').limit(1).maybeSingle(),
+    db.from('promo_slots').select('*').order('created_at', { ascending: false }),
+    db.rpc('promo_slot_stats'),
+  ]);
+
+  if (cfg) {
+    document.getElementById('promo-cfg-enabled').checked = !!cfg.enabled;
+    document.getElementById('promo-cfg-first').value    = cfg.first_position;
+    document.getElementById('promo-cfg-repeat').value   = cfg.repeat_every;
+    document.getElementById('promo-cfg-max').value      = cfg.max_per_session;
+    document.getElementById('promo-cfg-imp').value      = cfg.default_max_impressions;
+    document.getElementById('promo-cfg-suppress').checked = !!cfg.suppress_after_modal;
+  }
+
+  const byId = {};
+  (stats || []).forEach((s) => { byId[s.slot_id] = s; });
+  if (!listEl) return;
+  listEl.innerHTML = (slots || []).length === 0
+    ? '<div style="color:var(--muted);font-size:.82rem;">No slots yet.</div>'
+    : slots.map((s) => {
+        const st = byId[s.id] || {};
+        const next = s.status === 'active' ? 'archived' : 'active';
+        return `<div class="admin-card">
+          <div style="font-weight:600;">${escHtml(s.heading)}</div>
+          <div style="font-size:.78rem;color:var(--muted);">
+            ${escHtml(s.status)} · ${escHtml(PROMO_AUDIENCE_LABELS[s.audience] || s.audience)} ·
+            ${st.impressions || 0} impressions · ${st.clicks || 0} clicks ·
+            ${st.dismissals || 0} dismissed · ${st.distinct_users || 0} users
+          </div>
+          <button class="btn btn-ghost" style="font-size:.78rem;margin-top:.4rem;"
+            onclick="setPromoStatus('${escAttr(s.id)}','${escAttr(next)}')">
+            ${next === 'active' ? 'Activate' : 'Archive'}</button>
+        </div>`;
+      }).join('');
+}
+
+async function savePromoConfig() {
+  const st = document.getElementById('promo-cfg-status');
+  const { error } = await db.from('promo_config').update({
+    enabled:                 document.getElementById('promo-cfg-enabled').checked,
+    first_position:          parseInt(document.getElementById('promo-cfg-first').value || '0'),
+    repeat_every:            parseInt(document.getElementById('promo-cfg-repeat').value || '0'),
+    max_per_session:         parseInt(document.getElementById('promo-cfg-max').value || '0'),
+    default_max_impressions: parseInt(document.getElementById('promo-cfg-imp').value || '0'),
+    suppress_after_modal:    document.getElementById('promo-cfg-suppress').checked,
+  }).eq('id', true);
+  if (st) st.textContent = error ? ('Error: ' + error.message) : 'Saved.';
 }
 
 async function loadCampaigns() {
