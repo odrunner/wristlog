@@ -121,8 +121,18 @@ test.describe('promo feed injection (mocked)', () => {
     // cache): it wipes a placed card's DOM node while _promoPlaced still
     // remembers the slot id, silently losing a card the user may never have
     // seen for the rest of the session.
+    //
+    // The prune loop refunds a slot's budget only when it's neither dismissed
+    // NOR impressed (see the impression-cap test below) — so this scenario
+    // must be deterministically UNSEEN. setup()'s card renders on-screen, and
+    // its real IntersectionObserver (threshold 0.5) does fire — measured ~24ms
+    // after injectPromoCards() — which is a race against the CDP round trip
+    // to the next page.evaluate(), not a guarantee. Force "never seen" the
+    // same way a genuinely-off-screen or not-yet-scrolled-to card would be:
+    // clear _promoImpressed for this slot immediately before the replace.
     await setup(page);
     await page.evaluate(() => {
+      _promoImpressed.delete('p1');
       const el = document.getElementById('feed-list');
       el.innerHTML = Array.from({ length: 6 }, (_, i) =>
         `<div class="feed-card" id="feedcard-${i}">post ${i}</div>`).join('');
