@@ -7212,7 +7212,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.20.20';
+const APP_VERSION = '02.20.47';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11541,10 +11541,14 @@ function injectPromoCards() {
   // scrollToFeedPost, a loadFeed past the cache) wipes a placed card's DOM node
   // while _promoPlaced still remembers the slot id — that would silently lose a
   // card the user may never have seen, for the rest of the session. Prune any
-  // placed id whose element is gone from the DOM, UNLESS it was explicitly
-  // dismissed: a dismiss must stick for the session even across re-renders.
+  // placed id whose element is gone from the DOM, UNLESS it counts against the
+  // session's max_per_session budget for a reason that must survive the wipe:
+  // explicitly dismissed, or already seen (an impression was logged). Either
+  // one means this session already "spent" that slot — refunding it would let
+  // a different slot silently fill its place and blow the per-session cap.
+  // Only a placed-but-never-seen card (the finding-B case) should refund.
   for (const id of [..._promoPlaced]) {
-    if (!_promoDismissed.has(id) && !document.getElementById('promocard-' + id)) {
+    if (!_promoDismissed.has(id) && !_promoImpressed.has(id) && !document.getElementById('promocard-' + id)) {
       _promoPlaced.delete(id);
     }
   }

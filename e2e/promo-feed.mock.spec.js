@@ -158,6 +158,42 @@ test.describe('promo feed injection (mocked)', () => {
     expect((await order(page)).filter((x) => x === 'PROMO')).toHaveLength(0);
   });
 
+  test('a slot that hit its impression cap this session keeps its session budget after a full DOM replace', async ({ page }) => {
+    // Regression: the prune loop's _promoDismissed guard covered explicit
+    // dismissal but not "seen and now capped" — a slot that reached its
+    // max_impressions during the session would still get pruned from
+    // _promoPlaced by the NEXT full re-render (any loadFeed past the 60s
+    // cache), refunding its max_per_session budget slot to a DIFFERENT,
+    // fresh slot. Reproduces the reviewer's repro verbatim: cap-hit p1 +
+    // re-render with max_per_session:1 must yield zero cards, not a p2
+    // substitute.
+    await setup(page, {
+      config: { max_per_session: 1 },
+      slots: [
+        { id: 'p1', heading: 'Promo 1', audience: 'all', priority: 1,
+          starts_at: null, ends_at: null, max_impressions: 1, images: [],
+          created_at: '2026-01-01T00:00:00Z' },
+        { id: 'p2', heading: 'Promo 2', audience: 'all', priority: 0,
+          starts_at: null, ends_at: null, max_impressions: null, images: [],
+          created_at: '2026-01-01T00:00:00Z' },
+      ],
+    });
+    // p1 is placed (priority 1 sorts first). Simulate the one impression its
+    // own max_impressions:1 cap allows — exactly what observePromoImpressions()
+    // does when the card scrolls into view.
+    await page.evaluate(() => {
+      _promoImpressed.add('p1');
+      logPromoEvent('p1', 'impression');
+    });
+    await page.evaluate(() => {
+      const el = document.getElementById('feed-list');
+      el.innerHTML = Array.from({ length: 6 }, (_, i) =>
+        `<div class="feed-card" id="feedcard-${i}">post ${i}</div>`).join('');
+      window.injectPromoCards();
+    });
+    expect((await order(page)).filter((x) => x === 'PROMO')).toHaveLength(0);
+  });
+
   test('a trailing card lands above the load-more sentinel, not pinned below it', async ({ page }) => {
     // Regression for a 2-post feed with default first_position:2 — pos===postCount
     // whenever first_position equals the post count, so the card takes the
