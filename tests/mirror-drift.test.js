@@ -47,7 +47,7 @@ const VERBATIM = [
   'shouldPromptFirstWear', 'hasWornToday', 'shouldRevealBadges', 'shouldShowPushPrimer',
   'fillCampaignTokens', 'unresolvedCampaignTokens',
   'shouldShowFactModal', 'pickFactModalWatch', 'shouldAttachFactOnEdit',
-  'npIdentifyWait', 'syncedIds', 'promoAudienceMatches',
+  'npIdentifyWait', 'syncedIds', 'promoAudienceMatches', 'eligiblePromoSlots',
 ];
 
 const ADAPTED = [
