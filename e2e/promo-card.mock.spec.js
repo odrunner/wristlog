@@ -27,9 +27,23 @@ test.describe('renderPromoCard', () => {
   });
 
   test('escapes the heading rather than rendering it as HTML', async ({ page }) => {
-    const out = await html(page, { ...SLOT, heading: '<img src=x onerror=alert(1)>' });
-    expect(out).not.toContain('onerror=alert');
-    expect(out).toContain('&lt;img');
+    await page.goto('/');
+    const res = await page.evaluate((s) => {
+      const host = document.createElement('div');
+      host.innerHTML = window.renderPromoCard(s);
+      const heading = host.querySelector('.promo-heading');
+      return {
+        headingText: heading.textContent,
+        headingChildCount: heading.children.length,
+        anyOnerror: !!host.querySelector('[onerror]'),
+        payloadImg: !!host.querySelector('img[src="x"]'),
+      };
+    }, { ...SLOT, heading: '<img src=x onerror=alert(1)>' });
+    // The markup arrives as literal text, creating no elements at all.
+    expect(res.headingText).toBe('<img src=x onerror=alert(1)>');
+    expect(res.headingChildCount).toBe(0);
+    expect(res.anyOnerror).toBe(false);
+    expect(res.payloadImg).toBe(false);
   });
 
   test('has no like, comment or share controls — the strongest not-a-post signal', async ({ page }) => {
