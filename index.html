@@ -7212,7 +7212,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.19.43';
+const APP_VERSION = '02.20.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11474,7 +11474,8 @@ function renderPromoCard(slot) {
 let _promoSlots  = [];
 let _promoConfig = null;
 let _promoEvents = [];
-let _promoPlaced = new Set();          // slot ids already placed this session
+let _promoPlaced = new Set();          // slot ids currently placed in the DOM this session
+let _promoDismissed = new Set();       // slot ids the user explicitly dismissed this session
 let _promoObserver = null;
 let _promoImpressed = new Set();       // impressions already logged this session
 
@@ -11526,6 +11527,7 @@ function logPromoEvent(slotId, event) {
 function dismissPromo(slotId) {
   document.getElementById('promocard-' + slotId)?.remove();
   _promoPlaced.add(slotId);              // keeps it out of this session's re-renders
+  _promoDismissed.add(slotId);           // ...permanently this session, unlike a mere DOM wipe
   logPromoEvent(slotId, 'dismiss');
 }
 
@@ -11534,6 +11536,18 @@ function dismissPromo(slotId) {
 function injectPromoCards() {
   const el = document.getElementById('feed-list');
   if (!el || !currentUser) return;
+
+  // A full re-render (renderFeed()'s innerHTML replace, block/report reload,
+  // scrollToFeedPost, a loadFeed past the cache) wipes a placed card's DOM node
+  // while _promoPlaced still remembers the slot id — that would silently lose a
+  // card the user may never have seen, for the rest of the session. Prune any
+  // placed id whose element is gone from the DOM, UNLESS it was explicitly
+  // dismissed: a dismiss must stick for the session even across re-renders.
+  for (const id of [..._promoPlaced]) {
+    if (!_promoDismissed.has(id) && !document.getElementById('promocard-' + id)) {
+      _promoPlaced.delete(id);
+    }
+  }
 
   const eligible = eligiblePromoSlots({
     slots: _promoSlots, config: _promoConfig, ctx: promoCtx(),
@@ -11546,13 +11560,22 @@ function injectPromoCards() {
   const positions = promoInjectPositions({
     postCount: posts.length, config: _promoConfig, placedCount: _promoPlaced.size,
   });
+  // mountFeedLoadMoreSentinel() appends #feed-load-sentinel as the last child
+  // before this runs — a trailing card must land above the spinner, not below
+  // it, or a repeat pass pins it to the very bottom forever (beforebegin the
+  // sentinel each time).
+  const sentinel = el.querySelector('#feed-load-sentinel');
 
   positions.forEach((pos, i) => {
     const slot = eligible[i];
     if (!slot) return;
     const html = renderPromoCard(slot);
-    if (pos >= posts.length) el.insertAdjacentHTML('beforeend', html);
-    else posts[pos].insertAdjacentHTML('beforebegin', html);
+    if (pos >= posts.length) {
+      if (sentinel) sentinel.insertAdjacentHTML('beforebegin', html);
+      else el.insertAdjacentHTML('beforeend', html);
+    } else {
+      posts[pos].insertAdjacentHTML('beforebegin', html);
+    }
     _promoPlaced.add(slot.id);
   });
 
