@@ -47,7 +47,8 @@ const VERBATIM = [
   'shouldPromptFirstWear', 'hasWornToday', 'shouldRevealBadges', 'shouldShowPushPrimer',
   'fillCampaignTokens', 'unresolvedCampaignTokens',
   'shouldShowFactModal', 'pickFactModalWatch', 'shouldAttachFactOnEdit',
-  'npIdentifyWait', 'syncedIds',
+  'npIdentifyWait', 'syncedIds', 'promoAudienceMatches', 'eligiblePromoSlots',
+  'promoInjectPositions',
 ];
 
 const ADAPTED = [
@@ -59,7 +60,7 @@ const ADAPTED = [
   'fmtMoney', 'formatCommentTime', 'formatFeedDate', 'getMentionQuery', 'incrSettle', 'initials',
   'isBase64', 'logToRow', 'markDirty', 'monthRevNav', 'profileInitials',
   'renderCommentBody', 'todayStr', 'warrantyStatus', 'watchToRow', 'wishToRow',
-  'funFactCardHTML', 'funFactRowHTML',
+  'funFactCardHTML', 'funFactRowHTML', 'PROMO_AUDIENCES',
 ];
 
 // Extract a function/const body ({...} block) by name from a source string.

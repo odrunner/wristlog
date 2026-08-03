@@ -129,7 +129,7 @@ export async function mockSupabase(page, opts = {}) {
   );
 
   // ── Social: friends, follows, likes, comments, notifications, badges ──
-  for (const table of ['friend_requests', 'follows', 'likes', 'comments', 'notifications', 'clubs', 'club_members', 'page_visits', 'feed_posts', 'earned_badges', 'review_prompt_events', 'internal_accounts', 'rate_limits']) {
+  for (const table of ['friend_requests', 'follows', 'likes', 'comments', 'notifications', 'clubs', 'club_members', 'page_visits', 'feed_posts', 'earned_badges', 'review_prompt_events', 'internal_accounts', 'rate_limits', 'promo_config', 'promo_slots', 'promo_events']) {
     await page.route(`**/rest/v1/${table}*`, route =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
     );
@@ -148,12 +148,6 @@ export async function mockSupabase(page, opts = {}) {
  * Inject a fake Supabase auth session into localStorage so the app's
  * getSession() call succeeds without a real login.
  */
-// Seen-key for the one-time "new features" popover. MUST match the `key` const in
-// maybeShowNewFeatures() (index.html) — when that key is bumped, bump it here too.
-// Kept as a single exported constant because the previous copy-per-file version
-// silently desynced on the v2 -> v3 bump and turned 5 mocked tests red.
-export const NEW_FEATURES_KEY = 'wrotate_newfeatures_v3';
-
 export async function injectSession(page, user = FAKE_USER) {
   const storageKey = 'sb-xnzweevzrojmouzhpwzv-auth-token';
   // Build a minimal valid JWT (header.payload.signature) so the Supabase
@@ -181,13 +175,6 @@ export async function injectSession(page, user = FAKE_USER) {
     localStorage.setItem(args.key, JSON.stringify(args.session));
     // Prevent A/B test redirect to r.html
     localStorage.setItem('ab_landing', 'a');
-    // Suppress the one-time "new features" popover. It fires on an 800ms timer
-    // at boot (maybeShowNewFeatures); under full-suite load the app takes >800ms
-    // to reach a test's first interaction, so the overlay un-hides mid-test and
-    // intercepts clicks — a load-dependent flake. Pre-setting its seen-key makes
-    // the popover skip deterministically. (What's New no longer auto-shows; it
-    // only opens from the in-app button.)
-    localStorage.setItem(args.newFeaturesKey, '1');
 
     // Suppress the anniversary popover. checkAnniversary() shows a blocking
     // overlay when a sample watch's purchase_date matches today's month/day
@@ -246,7 +233,7 @@ export async function injectSession(page, user = FAKE_USER) {
       },
       get() { return undefined; },
     });
-  }, { key: storageKey, session, newFeaturesKey: NEW_FEATURES_KEY });
+  }, { key: storageKey, session });
 }
 
 /**

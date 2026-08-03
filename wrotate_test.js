@@ -2603,3 +2603,79 @@ export function funFactRowHTML({ fact, logId }) {
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   return `<button type="button" class="funfact-row is-clamped" onclick="toggleFunFact(this)" aria-expanded="false" data-log-id="${esc(logId || '')}"><span class="funfact-clamp"><svg class="funfact-bulb" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span class="funfact-label">Fun fact</span> — ${esc(fact)}</span><span class="funfact-more" aria-hidden="true">more</span></button>`;
 }
+
+export const PROMO_AUDIENCES = {
+  all:             ()    => true,
+  never_logged:    (c)   => (c.wearCount || 0) === 0,
+  no_wishlist:     (c)   => (c.wishlistCount || 0) === 0,
+  never_measured:  (c)   => !!c.isIos && (c.measureCount || 0) === 0,
+  no_clubs:        (c)   => (c.clubCount || 0) === 0,
+  follows_few:     (c)   => (c.followingCount || 0) < 3,
+  never_ranked:    (c)   => !c.rankedEver,
+};
+
+export function promoAudienceMatches(key, ctx) {
+  const fn = PROMO_AUDIENCES[key];
+  return typeof fn === 'function' ? !!fn(ctx || {}) : false;
+}
+
+// Pure: `now` is injected rather than read from Date.now() so the tests are
+// deterministic and the caller controls the clock.
+export function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown }) {
+  const cfg = config || {};
+  if (!cfg.enabled) return [];
+  if (cfg.suppress_after_modal && modalShown) return [];
+
+  const dismissed = new Set();
+  const seen = {};
+  for (const e of (events || [])) {
+    if (e.event === 'dismiss') dismissed.add(e.slot_id);
+    else if (e.event === 'impression') seen[e.slot_id] = (seen[e.slot_id] || 0) + 1;
+  }
+
+  return (slots || []).filter((s) => {
+    if (!s || dismissed.has(s.id)) return false;
+    // Never trust RLS to have filtered status. The admin's own account matches
+    // BOTH the user policy and the is_admin "for all" policy, and policies OR
+    // together — so select('*') hands the owner drafts and archives too. Without
+    // this the owner publishes every draft to their own feed and archiving never
+    // takes a card down. Anything that is not exactly 'active' is out.
+    if (s.status !== 'active') return false;
+    if (s.starts_at && Date.parse(s.starts_at) > now) return false;
+    if (s.ends_at   && Date.parse(s.ends_at)  <= now) return false;
+    if (!promoAudienceMatches(s.audience, ctx)) return false;
+    const cap = s.max_impressions != null ? s.max_impressions : cfg.default_max_impressions;
+    return (seen[s.id] || 0) < cap;
+  }).sort((a, b) =>
+    (b.priority || 0) - (a.priority || 0) ||
+    String(b.created_at || '').localeCompare(String(a.created_at || ''))
+  );
+}
+
+// Post indices to insert a card BEFORE. Positions are absolute over the whole
+// feed, so an appended page continues the sequence rather than restarting it.
+// placedCount is how many cards this session has already shown.
+export function promoInjectPositions({ postCount, config, placedCount }) {
+  const cfg = config || {};
+  const max = cfg.max_per_session || 0;
+  const already = placedCount || 0;
+  if (max <= 0 || already >= max) return [];
+  if (!postCount) return [0];                       // empty feed: below the empty state
+
+  // A feed shorter than first_position puts the card at the top rather than
+  // trailing off the end — that short feed is exactly where it earns most.
+  const want = cfg.first_position || 0;
+  const first = want > postCount ? 0 : want;
+  const step = cfg.repeat_every || 0;
+
+  // `i` counts cards from the START of the session, not from this call, so
+  // positions consumed on an earlier page are skipped instead of re-emitted.
+  const out = [];
+  for (let i = already; i < max; i++) {
+    const pos = step > 0 ? first + step * i : first;
+    if (pos > postCount) break;
+    out.push(pos);
+    if (step <= 0) break;                           // no repeat: exactly one card
+  }
+  return out;
+}

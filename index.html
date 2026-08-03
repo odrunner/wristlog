@@ -1877,6 +1877,52 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .funfact-row.is-clamped.is-truncated .funfact-more { display: inline; }
     @media (prefers-reduced-motion: reduce) { .funfact-clamp { transition: none; } }
 
+    /* ── Merchandising slot card ──────────────────────────────────────────
+       Spec: docs/superpowers/specs/2026-08-02-merchandising-slots-design.md
+       Deliberately shares .feed-card's geometry (16px radius, 1.25rem gap,
+       shadow, surface) so it sits in the feed's rhythm. Only identity and
+       structure differ. */
+    .promo-card {
+      background: var(--surface); border-radius: 16px;
+      margin-bottom: 1.25rem; overflow: hidden;
+      border: 1px solid var(--gold-dim);          /* a tint, not an outline */
+      box-shadow: 0 2px 12px rgba(0,0,0,.18);
+      position: relative;
+    }
+    .promo-card-header { display: flex; align-items: center; gap: .75rem; padding: .85rem 1rem .6rem; }
+    /* Same 38px slot as .feed-user-avatar so header height is unchanged, but a
+       rounded rect rather than a circle — the fastest "not a person" cue. */
+    .promo-mark {
+      width: 38px; height: 38px; border-radius: var(--radius-sm);
+      background: var(--gold-dim); color: var(--gold);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .promo-name { font-weight: 700; font-size: .9rem; line-height: 1.2; }
+    /* --badge-accent, NOT --gold: gold measures 2.64:1 on the light card
+       surface and fails AA for small text. Same reason .funfact-label uses it
+       (see the note at .funfact-row). */
+    .promo-eyebrow {
+      font-size: var(--fs-sm); font-weight: 700;
+      letter-spacing: var(--ls-eyebrow); text-transform: uppercase;
+      color: var(--badge-accent);
+    }
+    /* 16:9, never the post's 4:5 — that portrait crop is a wrist shot's signature. */
+    .promo-card-hero { width: 100%; aspect-ratio: 16/9; overflow: hidden; background: var(--surface2); }
+    .promo-card-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .promo-card-body { padding: .85rem 1rem 1rem; }
+    .promo-heading { font-size: var(--fs-md); font-weight: var(--fw-bold); margin-bottom: .35rem; }
+    .promo-body { font-size: var(--fs-base); line-height: var(--lh-body); color: var(--muted); }
+    .promo-body img { max-width: 100%; height: auto; border-radius: var(--radius-sm); margin: .5rem 0; }
+    .promo-body a { color: var(--badge-accent); }
+    .promo-cta { width: 100%; margin-top: .85rem; }
+    /* Sits where a post's ⋯ menu sits, so the affordance is where the thumb expects it. */
+    .promo-dismiss {
+      position: absolute; top: .7rem; right: .7rem;
+      background: none; border: 0; color: var(--muted);
+      font-size: 1rem; line-height: 1; padding: .25rem .4rem; cursor: pointer;
+    }
+    .promo-dismiss:hover { color: var(--text); }
+
     /* The watch chip sits on its own row; the fun-fact footnote drops below it. */
     .feed-chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 1rem .75rem; }
     .feed-chip-row .feed-watch-chip { margin: 0; }
@@ -2345,9 +2391,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New
     </div>
     <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;">
-      <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(74,222,128,.12);color:var(--success);padding:.15rem .5rem;border-radius:6px;">July 2026</span>
+      <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(74,222,128,.12);color:var(--success);padding:.15rem .5rem;border-radius:6px;">August 2026</span>
     </div>
     <div style="max-height:60vh;overflow-y:auto;">
+      <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Occasional Cards from WRotate</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Every so often you&#8217;ll spot a card from WRotate itself in your feed, spotlighting a feature worth trying. It&#8217;s clearly marked as coming from us, not another user &#8212; no like, comment, or share on it &#8212; and a tap of the &#10005; dismisses it for good.</div>
+      </div>
+      <div style="margin:.75rem 0;border-top:1px solid var(--border);padding-top:.75rem;">
+        <span class="eyebrow eyebrow-muted">July 2026</span>
+      </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Daily Fun Facts</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Every watch you wear now comes with a <strong>fun fact</strong> &#8212; a bit of trivia about the model, fresh each day you wear it. You&#8217;ll see it the moment you log a wear, and it rides along on your post, so anyone viewing can learn something too &#8212; tap it to read the whole thing.</div>
@@ -2588,24 +2641,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-actions" style="margin-top:1rem;">
       <button class="btn btn-ghost" onclick="closeStreakCalendar()">Close</button>
     </div>
-  </div>
-</div>
-
-<!-- ════ NEW FEATURES POPOVER ════ -->
-<div id="new-features-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="new-features-title">
-  <div class="modal" style="max-width:380px;text-align:center;padding:2rem 1.75rem;">
-    <div class="eyebrow" style="margin-bottom:1rem;">New in WRotate</div>
-    <div id="new-features-title" style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.75rem;">Meet Pro V2 &#9889; — our new measurement engine, now on by default.</div>
-    <div style="text-align:left;margin-bottom:1rem;">
-      <div style="display:flex;gap:.6rem;align-items:flex-start;">
-        <span style="font-size:1.1rem;flex-shrink:0;margin-top:.1rem;">&#9889;</span>
-        <div>
-          <div style="font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.2rem;">Pro V2 Measurement Engine</div>
-          <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">A rebuilt timegrapher engine, now running by default on the Measure page: it settles quickly, holds steady between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing, a key health indicator watchmakers look at. A Balanced reading takes about 17 seconds; Quick (~10s) and Strict (~33s) live under the &#9881; gear. Needs app version 2.1 or later. You can switch to <strong>Standard</strong> from the engine selector anytime. Amplitude shows only when the signal is clean enough to trust &#8212; if it&#8217;s blank, reposition and try again.</div>
-        </div>
-      </div>
-    </div>
-    <button class="btn btn-ghost" onclick="closeNewFeatures()" style="width:100%;border-color:var(--gold);color:var(--gold);">Got it</button>
   </div>
 </div>
 
@@ -3040,6 +3075,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button type="button" class="chip" data-tab="official" role="tab" aria-selected="false" aria-controls="admin-tab-official" onclick="switchAdminTab('official')">Official</button>
       <button type="button" class="chip" data-tab="broadcast" role="tab" aria-selected="false" aria-controls="admin-tab-broadcast" onclick="switchAdminTab('broadcast')">Broadcast</button>
       <button type="button" class="chip" data-tab="campaigns" role="tab" aria-selected="false" aria-controls="admin-tab-campaigns" onclick="switchAdminTab('campaigns')">Campaigns</button>
+      <button type="button" class="chip" data-tab="promos" role="tab" aria-selected="false" aria-controls="admin-tab-promos" onclick="switchAdminTab('promos')">Promos</button>
       <button type="button" class="chip" data-tab="dev" role="tab" aria-selected="false" aria-controls="admin-tab-dev" onclick="switchAdminTab('dev')">Dev</button>
     </div>
 
@@ -3254,6 +3290,95 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div id="campaigns-list" style="margin-bottom:1rem;">
         <div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">Loading campaigns...</div>
+      </div>
+    </div>
+
+    <!-- Tab: Promos -->
+    <div id="admin-tab-promos" class="admin-tab" role="tabpanel" style="display:none;">
+      <div style="margin-bottom:.75rem;"><div class="eyebrow">Merchandising Slots</div></div>
+
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:.85rem;margin-bottom:1rem;">
+        <div class="draft-form-row">
+          <label for="promo-eyebrow">Eyebrow</label>
+          <input type="text" id="promo-eyebrow" placeholder="New" oninput="updatePromoPreview()">
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-heading">Heading</label>
+          <input type="text" id="promo-heading" placeholder="Rank your collection" oninput="updatePromoPreview()">
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-body">Body (HTML: &lt;b&gt;, &lt;a&gt;, &lt;ul&gt;/&lt;li&gt;, &lt;img&gt;. Use [img1] [img2] [img3] for uploads)</label>
+          <textarea id="promo-body" rows="6" oninput="updatePromoPreview()"></textarea>
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-image-url">Hero image URL (16:9)</label>
+          <input type="text" id="promo-image-url" oninput="updatePromoPreview()">
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-images">Inline image URLs, one per line (referenced as [img1]…[img3])</label>
+          <textarea id="promo-images" rows="3" oninput="updatePromoPreview()"></textarea>
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-cta-label">CTA label</label>
+          <input type="text" id="promo-cta-label" placeholder="Start ranking" oninput="updatePromoPreview()">
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-cta-action">CTA action</label>
+          <select id="promo-cta-action" onchange="updatePromoPreview()"></select>
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-cta-url">…or an https URL (used when action is "Custom URL")</label>
+          <input type="text" id="promo-cta-url" placeholder="https://wrotate.com/open" oninput="updatePromoPreview()">
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-audience">Audience</label>
+          <select id="promo-audience"></select>
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-starts">Starts</label>
+          <input type="datetime-local" id="promo-starts">
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-ends">Ends</label>
+          <input type="datetime-local" id="promo-ends">
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-priority">Priority (higher wins)</label>
+          <input type="number" id="promo-priority" value="0">
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-max-impressions">Max impressions per user (blank = config default)</label>
+          <input type="number" id="promo-max-impressions" placeholder="3">
+        </div>
+
+        <div class="draft-form-row">
+          <label id="promo-preview-label">Card preview</label>
+          <div id="promo-preview" aria-labelledby="promo-preview-label" style="max-width:470px;"></div>
+        </div>
+
+        <button class="btn btn-primary" onclick="savePromoSlot()" style="width:100%;">Save as Draft</button>
+        <div id="promo-status" aria-live="polite" style="font-size:.82rem;margin-top:.5rem;"></div>
+      </div>
+
+      <div class="eyebrow" style="margin-bottom:.5rem;">Slots</div>
+      <div id="promo-list" style="margin-bottom:1rem;">Loading…</div>
+
+      <div class="eyebrow" style="margin-bottom:.5rem;">Delivery</div>
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:.85rem;">
+        <div class="draft-form-row"><label for="promo-cfg-enabled">Enabled</label>
+          <input type="checkbox" id="promo-cfg-enabled"></div>
+        <div class="draft-form-row"><label for="promo-cfg-first">First position (posts before the first card)</label>
+          <input type="number" id="promo-cfg-first" min="0"></div>
+        <div class="draft-form-row"><label for="promo-cfg-repeat">Repeat every N posts (0 = no repeat)</label>
+          <input type="number" id="promo-cfg-repeat" min="0"></div>
+        <div class="draft-form-row"><label for="promo-cfg-max">Max cards per session</label>
+          <input type="number" id="promo-cfg-max" min="0"></div>
+        <div class="draft-form-row"><label for="promo-cfg-imp">Default max impressions per user</label>
+          <input type="number" id="promo-cfg-imp" min="0"></div>
+        <div class="draft-form-row"><label for="promo-cfg-suppress">Suppress when a modal already fired</label>
+          <input type="checkbox" id="promo-cfg-suppress"></div>
+        <button class="btn btn-ghost" onclick="savePromoConfig()" style="width:100%;">Save delivery settings</button>
+        <div id="promo-cfg-status" aria-live="polite" style="font-size:.82rem;margin-top:.5rem;"></div>
       </div>
     </div>
 
@@ -3512,6 +3637,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Pull down on the Feed to refresh. Swipe left or right anywhere to switch between tabs — works across the whole app on mobile.</span></div>
           <div class="help-tip">To unfollow, go to their profile and tap <strong>Following</strong> → it turns red and asks <strong>Unfollow?</strong> — tap again to confirm.</div>
+          <div class="help-tip">You may occasionally see a card <strong>from WRotate</strong> in your feed, highlighting a feature like Ranking Game. It's not from another user — no like, comment, or share on it — and you can dismiss it any time with the ✕ in the corner.</div>
         </div>
       </div>
 
@@ -5838,6 +5964,7 @@ function openBadgeRevealModal() {
   const unseen = (_earnedBadges || []).filter(e => e && !e.seen);
   const badges = unseen.map(e => BADGE_BY_REF[e.badge_ref]).filter(Boolean);
   if (!badges.length) return false;
+  notePromoModalShown();
   const modal = document.getElementById('badge-reveal-modal');
   if (!modal) { openBadgeWall(); return true; }   // fallback: straight to the wall
   const countEl = document.getElementById('badge-reveal-count');
@@ -7166,7 +7293,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.18.09';
+const APP_VERSION = '03.08.07';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11013,6 +11140,7 @@ async function loadMoreFeed() {
 
     // Re-arm the observer on the (still-present) sentinel for the next page.
     mountFeedLoadMoreSentinel();
+    injectPromoCards();
   } catch (e) {
     console.warn('Feed load-more error:', e?.message);
     showFeedLoadMoreButton();
@@ -11158,6 +11286,7 @@ function openFactModal(watch, factText) {
   eyebrow.textContent = `💡 Fun fact · ${watch.brand} ${watch.name}`;
   card.innerHTML = funFactCardHTML({ fact: factText });
   document.getElementById('fact-modal').classList.remove('hidden');
+  notePromoModalShown();
   if (window.posthog) posthog.capture('fact_modal_shown', { watch_id: watch.id });
 }
 
@@ -11228,6 +11357,377 @@ function maybeShowFactModal() {
       _factModalPending = false;
     }
   }, 600);
+}
+
+// ══════════════════════════════════════════
+//  MERCHANDISING SLOTS
+//  Spec: docs/superpowers/specs/2026-08-02-merchandising-slots-design.md
+// ══════════════════════════════════════════
+
+// Audience rules. Each is a pure predicate over counts already in memory after
+// loadUserData(), so targeting needs no server round-trip and no per-user
+// fan-out table. Adding an audience = one entry here; the admin dropdown is
+// generated from this object so the two can never drift.
+const PROMO_AUDIENCES = {
+  all:             ()    => true,
+  never_logged:    (c)   => (c.wearCount || 0) === 0,
+  no_wishlist:     (c)   => (c.wishlistCount || 0) === 0,
+  // iOS-only: #nav-measure-btn is hidden on web, so this CTA would go nowhere.
+  never_measured:  (c)   => !!c.isIos && (c.measureCount || 0) === 0,
+  no_clubs:        (c)   => (c.clubCount || 0) === 0,
+  follows_few:     (c)   => (c.followingCount || 0) < 3,
+  never_ranked:    (c)   => !c.rankedEver,
+};
+
+// An unknown key is FALSE, never true: a typo in the admin form hides the card
+// rather than blasting it to everyone.
+function promoAudienceMatches(key, ctx) {
+  const fn = PROMO_AUDIENCES[key];
+  return typeof fn === 'function' ? !!fn(ctx || {}) : false;
+}
+
+// Pure: `now` is injected rather than read from Date.now() so the tests are
+// deterministic and the caller controls the clock.
+function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown }) {
+  const cfg = config || {};
+  if (!cfg.enabled) return [];
+  if (cfg.suppress_after_modal && modalShown) return [];
+
+  const dismissed = new Set();
+  const seen = {};
+  for (const e of (events || [])) {
+    if (e.event === 'dismiss') dismissed.add(e.slot_id);
+    else if (e.event === 'impression') seen[e.slot_id] = (seen[e.slot_id] || 0) + 1;
+  }
+
+  return (slots || []).filter((s) => {
+    if (!s || dismissed.has(s.id)) return false;
+    // Never trust RLS to have filtered status. The admin's own account matches
+    // BOTH the user policy and the is_admin "for all" policy, and policies OR
+    // together — so select('*') hands the owner drafts and archives too. Without
+    // this the owner publishes every draft to their own feed and archiving never
+    // takes a card down. Anything that is not exactly 'active' is out.
+    if (s.status !== 'active') return false;
+    if (s.starts_at && Date.parse(s.starts_at) > now) return false;
+    if (s.ends_at   && Date.parse(s.ends_at)  <= now) return false;
+    if (!promoAudienceMatches(s.audience, ctx)) return false;
+    const cap = s.max_impressions != null ? s.max_impressions : cfg.default_max_impressions;
+    return (seen[s.id] || 0) < cap;
+  }).sort((a, b) =>
+    (b.priority || 0) - (a.priority || 0) ||
+    String(b.created_at || '').localeCompare(String(a.created_at || ''))
+  );
+}
+
+// Post indices to insert a card BEFORE. Positions are absolute over the whole
+// feed, so an appended page continues the sequence rather than restarting it.
+// placedCount is how many cards this session has already shown.
+function promoInjectPositions({ postCount, config, placedCount }) {
+  const cfg = config || {};
+  const max = cfg.max_per_session || 0;
+  const already = placedCount || 0;
+  if (max <= 0 || already >= max) return [];
+  if (!postCount) return [0];                       // empty feed: below the empty state
+
+  // A feed shorter than first_position puts the card at the top rather than
+  // trailing off the end — that short feed is exactly where it earns most.
+  const want = cfg.first_position || 0;
+  const first = want > postCount ? 0 : want;
+  const step = cfg.repeat_every || 0;
+
+  // `i` counts cards from the START of the session, not from this call, so
+  // positions consumed on an earlier page are skipped instead of re-emitted.
+  const out = [];
+  for (let i = already; i < max; i++) {
+    const pos = step > 0 ? first + step * i : first;
+    if (pos > postCount) break;
+    out.push(pos);
+    if (step <= 0) break;                           // no repeat: exactly one card
+  }
+  return out;
+}
+
+// CTA actions. A key here, never raw JS from the database — an admin-entered
+// string can only ever select one of these, or a validated https URL.
+const PROMO_ACTIONS = {
+  open_wishlist:      () => nav(document.querySelector('nav button[data-page="wishlist"]')),
+  open_collection:    () => nav(document.querySelector('nav button[data-page="collection"]')),
+  open_track:         () => nav(document.querySelector('nav button[data-page="track"]')),
+  open_measure:       () => nav(document.getElementById('nav-measure-btn')),
+  open_clubs:         () => showClubsPage(),
+  open_discover:      () => openDiscover(),
+  open_ranking_game:  () => beginRankingGame(),
+};
+
+// Returns a callable for a slot's cta_action, or null. Null means "render no
+// button" — an unknown key must never throw and never fall through to a default.
+// hasOwnProperty guard (not a bare PROMO_ACTIONS[key] lookup): a plain object's
+// keys include inherited Object.prototype members — constructor, toString,
+// valueOf, hasOwnProperty, __proto__ — which read as truthy under a bare
+// lookup. An admin typo of cta_action: '__proto__' must still render no
+// button, not a live CTA that throws TypeError on click.
+function promoActionFor(key) {
+  if (!key) return null;
+  if (Object.prototype.hasOwnProperty.call(PROMO_ACTIONS, key)) return PROMO_ACTIONS[key];
+  if (key.startsWith('url:')) {
+    const url = key.slice(4);
+    if (/^https:\/\//i.test(url)) return () => window.open(url, '_blank', 'noopener');
+  }
+  return null;
+}
+
+function runPromoAction(slotId) {
+  const slot = (_promoSlots || []).find((s) => s.id === slotId);
+  if (!slot) return;
+  logPromoEvent(slotId, 'click');
+  const fn = promoActionFor(slot.cta_action);
+  if (fn) fn();
+}
+
+// Mirrors the Broadcast composer's [imgN] convention so the authoring muscle
+// memory carries over. Expanded BEFORE sanitizing, so the generated tags go
+// through the same allowlist as everything else.
+function expandPromoImages(body, images) {
+  return String(body || '').replace(/\[img(\d)\]/g, (_, n) => {
+    const url = (images || [])[Number(n) - 1];
+    return url ? `<img src="${escAttr(url)}" alt="">` : '';
+  });
+}
+
+// Single document-level delegated click handler for every promo card,
+// installed at most once (guarded by _promoClickDelegated). Cards use
+// data-promo-cta / data-promo-dismiss + closest() instead of an inline
+// onclick="...('${escAttr(slot.id)}')": escAttr closes the HTML-attribute
+// context but not the JS string literal nested inside an onclick value — the
+// HTML parser decodes an entity like &#39; back to a literal ' BEFORE the
+// inline JS is compiled, so a crafted id containing a quote could break out
+// of the string and run arbitrary JS. Reading the id from .dataset instead
+// never re-enters an HTML or JS parser, so there is no nested context to
+// escape out of.
+let _promoClickDelegated = false;
+function installPromoClickDelegation() {
+  if (_promoClickDelegated) return;
+  _promoClickDelegated = true;
+  document.addEventListener('click', (event) => {
+    const cta = event.target.closest('[data-promo-cta]');
+    const dismiss = event.target.closest('[data-promo-dismiss]');
+    if (!cta && !dismiss) return;
+    const card = event.target.closest('[data-promo-id]');
+    if (!card) return;
+    const slotId = card.dataset.promoId;
+    if (cta) runPromoAction(slotId);
+    else dismissPromo(slotId);
+  });
+}
+
+function renderPromoCard(slot) {
+  installPromoClickDelegation();
+  const action = promoActionFor(slot.cta_action);
+  const cta = (action && slot.cta_label)
+    ? `<button type="button" class="btn btn-primary promo-cta" data-promo-cta>${escHtml(slot.cta_label)}</button>`
+    : '';
+  // Same https-or-site-relative allowlist as body images ([imgN] tokens) —
+  // image_url is admin-entered and rendered into every viewer's feed, so it
+  // gets the same scheme check rather than a bare escAttr passthrough.
+  const heroUrl = sanitizeImageUrl(slot.image_url, location.origin);
+  const hero = heroUrl
+    ? `<div class="promo-card-hero"><img src="${escAttr(heroUrl)}" alt=""></div>`
+    : '';
+  const eyebrow = slot.eyebrow
+    ? `<div class="promo-eyebrow">${escHtml(slot.eyebrow)}</div>` : '';
+  const body = slot.body
+    ? `<div class="promo-body">${sanitizePromoHtml(expandPromoImages(slot.body, slot.images))}</div>` : '';
+
+  return `<div class="promo-card" id="promocard-${escAttr(slot.id)}" data-promo-id="${escAttr(slot.id)}">
+    <button type="button" class="promo-dismiss" aria-label="Dismiss" data-promo-dismiss>✕</button>
+    <div class="promo-card-header">
+      <div class="promo-mark" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
+          <path d="M 21 7.3 A 10 10 0 1 1 11 7.3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          <polygon points="11,7.3 8.5,9.5 7.7,6.6" fill="currentColor"/>
+          <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
+        </svg>
+      </div>
+      <div><div class="promo-name">WRotate</div>${eyebrow}</div>
+    </div>
+    ${hero}
+    <div class="promo-card-body">
+      <div class="promo-heading">${escHtml(slot.heading || '')}</div>
+      ${body}
+      ${cta}
+    </div>
+  </div>`;
+}
+
+// Set by any modal that takes over the screen. injectPromoCards() reads it so a
+// user never gets a modal AND a slot in the same session (promo_config
+// .suppress_after_modal). On window so E2E can drive it.
+window._modalShownThisSession = false;
+
+let _promoSlots  = [];
+let _promoConfig = null;
+let _promoEvents = [];
+let _promoPlaced = new Set();          // slot ids currently placed in the DOM this session
+let _promoDismissed = new Set();       // slot ids the user explicitly dismissed this session
+let _promoObserver = null;
+let _promoImpressed = new Set();       // impressions already logged this session
+
+// Every modal opener calls this instead of setting the flag directly.
+//
+// Setting the flag alone loses the race it exists to win: renderFeed() calls
+// maybeShowFactModal() and injectPromoCards() in the SAME synchronous pass, but
+// every opener defers first — a setTimeout, and for the fact modal an awaited
+// peek_watch_fact RPC; the push primer waits 900ms. So the flag is still false
+// when the card is injected, and flips seconds later with the card already on
+// screen: the user gets a modal AND a slot, exactly what suppress_after_modal
+// promises to prevent.
+//
+// So the flag also RETRACTS: any card the user has not actually seen (no
+// impression logged) comes back out and its session budget is refunded, so the
+// slot can appear in a later session instead of being silently spent. A card
+// already seen stays put — yanking it out from under a reader is worse than the
+// double surface, and its impression is already logged and paid for.
+function notePromoModalShown() {
+  window._modalShownThisSession = true;
+  if (!_promoConfig || !_promoConfig.suppress_after_modal) return;
+  for (const id of [..._promoPlaced]) {
+    if (_promoImpressed.has(id) || _promoDismissed.has(id)) continue;
+    const node = document.getElementById('promocard-' + id);
+    if (node) { if (_promoObserver) _promoObserver.unobserve(node); node.remove(); }
+    _promoPlaced.delete(id);
+  }
+}
+
+// Counts the audience predicates run against. Everything here is already in
+// memory after loadUserData(), so targeting costs no round-trip.
+function promoCtx() {
+  return {
+    watchCount:     (watches || []).length,
+    // The authoritative wear rule — routes through the shared isWearEntry()
+    // rather than open-coding the measurement comparison here too.
+    wearCount:      (logs || []).filter(isWearEntry).length,
+    wishlistCount:  (wishlist || []).length,
+    followingCount: following ? following.size : 0,
+    measureCount:   parseInt(localStorage.getItem('wristlog_msr_count') || '0'),
+    clubCount:      (myClubs || []).length,
+    rankedEver:     Object.keys(eloRatings || {}).length > 0,
+    daysSinceSignup: myProfile?.created_at
+      ? Math.floor((Date.now() - Date.parse(myProfile.created_at)) / 86400000) : 0,
+    isIos:          !!window._iosAppVersion,
+  };
+}
+
+// Non-fatal by design: a broken promo fetch must never degrade the feed.
+async function loadPromoSlots() {
+  if (!currentUser) return;
+  try {
+    const [cfgRes, slotRes, evRes] = await Promise.all([
+      db.from('promo_config').select('*').limit(1).maybeSingle(),
+      // Belt and braces alongside the status check in eligiblePromoSlots():
+      // for the admin's own account RLS returns drafts and archives too.
+      db.from('promo_slots').select('*').eq('status', 'active'),
+      db.from('promo_events').select('slot_id,event').eq('user_id', currentUser.id),
+    ]);
+    _promoConfig = cfgRes?.data || null;
+    _promoSlots  = slotRes?.data || [];
+    _promoEvents = evRes?.data || [];
+  } catch (e) {
+    console.warn('[promo] load failed:', e.message);
+    _promoConfig = null; _promoSlots = []; _promoEvents = [];
+  }
+}
+
+function logPromoEvent(slotId, event) {
+  if (!currentUser) return;
+  db.from('promo_events')
+    .insert({ user_id: currentUser.id, slot_id: slotId, event })
+    .then(() => {}).catch(() => {});
+  _promoEvents.push({ slot_id: slotId, event });
+}
+
+function dismissPromo(slotId) {
+  document.getElementById('promocard-' + slotId)?.remove();
+  _promoPlaced.add(slotId);              // keeps it out of this session's re-renders
+  _promoDismissed.add(slotId);           // ...permanently this session, unlike a mere DOM wipe
+  logPromoEvent(slotId, 'dismiss');
+}
+
+// Idempotent. Runs after renderFeed() and after loadMoreFeed()'s append; a slot
+// already placed is never placed twice, so re-renders and appended pages are safe.
+function injectPromoCards() {
+  const el = document.getElementById('feed-list');
+  if (!el || !currentUser) return;
+
+  // A full re-render (renderFeed()'s innerHTML replace, block/report reload,
+  // scrollToFeedPost, a loadFeed past the cache) wipes a placed card's DOM node
+  // while _promoPlaced still remembers the slot id — that would silently lose a
+  // card the user may never have seen, for the rest of the session. Prune any
+  // placed id whose element is gone from the DOM, UNLESS it counts against the
+  // session's max_per_session budget for a reason that must survive the wipe:
+  // explicitly dismissed, or already seen (an impression was logged). Either
+  // one means this session already "spent" that slot — refunding it would let
+  // a different slot silently fill its place and blow the per-session cap.
+  // Only a placed-but-never-seen card (the finding-B case) should refund.
+  for (const id of [..._promoPlaced]) {
+    if (!_promoDismissed.has(id) && !_promoImpressed.has(id) && !document.getElementById('promocard-' + id)) {
+      _promoPlaced.delete(id);
+    }
+  }
+
+  const eligible = eligiblePromoSlots({
+    slots: _promoSlots, config: _promoConfig, ctx: promoCtx(),
+    events: _promoEvents, now: Date.now(),
+    modalShown: !!window._modalShownThisSession,
+  }).filter((s) => !_promoPlaced.has(s.id));
+  if (!eligible.length) return;
+
+  const posts = [...el.querySelectorAll(':scope > .feed-card')];
+  const positions = promoInjectPositions({
+    postCount: posts.length, config: _promoConfig, placedCount: _promoPlaced.size,
+  });
+  // mountFeedLoadMoreSentinel() appends #feed-load-sentinel as the last child
+  // before this runs — a trailing card must land above the spinner, not below
+  // it, or a repeat pass pins it to the very bottom forever (beforebegin the
+  // sentinel each time).
+  const sentinel = el.querySelector('#feed-load-sentinel');
+
+  positions.forEach((pos, i) => {
+    const slot = eligible[i];
+    if (!slot) return;
+    const html = renderPromoCard(slot);
+    if (pos >= posts.length) {
+      if (sentinel) sentinel.insertAdjacentHTML('beforebegin', html);
+      else el.insertAdjacentHTML('beforeend', html);
+    } else {
+      posts[pos].insertAdjacentHTML('beforebegin', html);
+    }
+    _promoPlaced.add(slot.id);
+  });
+
+  observePromoImpressions();
+}
+
+function observePromoImpressions() {
+  if (!_promoObserver) {
+    _promoObserver = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        const id = e.target.dataset.promoId;
+        if (id && !_promoImpressed.has(id)) {
+          _promoImpressed.add(id);
+          logPromoEvent(id, 'impression');
+        }
+        _promoObserver.unobserve(e.target);
+      }
+    }, { threshold: 0.5 });
+  }
+  // Scoped to the feed, never document-wide: the admin composer's live preview
+  // renders through the same renderPromoCard(), so a document-wide query also
+  // observed the preview and logged impressions with slot_id 'preview' — rows
+  // that fail the uuid cast silently.
+  const feed = document.getElementById('feed-list');
+  if (!feed) return;
+  feed.querySelectorAll('.promo-card[data-promo-id]').forEach((c) => _promoObserver.observe(c));
 }
 
 // Cheap synchronous gate, used before scheduling and again inside the timer.
@@ -11331,7 +11831,7 @@ function maybeShowPushPrimer() {
   setTimeout(() => {
     if (document.querySelector('.overlay:not(.hidden)')) return;   // don't stack — retry next trigger
     const m = document.getElementById('push-primer-modal');
-    if (m) { m.classList.remove('hidden'); _logPostCtaEvent('shown', 'push_primer'); }
+    if (m) { m.classList.remove('hidden'); notePromoModalShown(); _logPostCtaEvent('shown', 'push_primer'); }
   }, 900);
 }
 function pushPrimerEnable() {
@@ -11453,6 +11953,11 @@ function renderFeed() {
         </div>
         <button class="btn btn-primary" onclick="openDiscover()" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People to Follow</button>
       </div>`;
+    // The empty feed is the highest-value slot placement — a user following
+    // nobody otherwise hits a dead end here. promoInjectPositions() already
+    // returns [0] for postCount 0; without this call that branch is unreachable.
+    // The error branch above deliberately still returns without injecting.
+    injectPromoCards();
     return;
   }
   el.innerHTML = feedItems.map(item => renderFeedCard(item)).join('');
@@ -11470,6 +11975,7 @@ function renderFeed() {
 
   // Infinite-scroll sentinel: appended after the cards when more posts may exist.
   mountFeedLoadMoreSentinel();
+  injectPromoCards();
 }
 
 // Append (or refresh) the load-more sentinel at the bottom of the feed and wire
@@ -14635,17 +15141,6 @@ function closeWhatsNew() {
   document.getElementById('whats-new-modal').classList.add('hidden');
 }
 
-function maybeShowNewFeatures() {
-  if (!currentUser || !watches.length) return;
-  const key = 'wrotate_newfeatures_v3';
-  if (localStorage.getItem(key)) return;
-  localStorage.setItem(key, '1');
-  setTimeout(() => document.getElementById('new-features-modal').classList.remove('hidden'), 800);
-}
-function closeNewFeatures() {
-  document.getElementById('new-features-modal').classList.add('hidden');
-}
-
 // ── Anniversary check ──────────────────────────────────────────────────────
 let _annivQueue = []; // watches with anniversaries today, shown one at a time
 function checkAnniversary() {
@@ -14680,6 +15175,7 @@ function showNextAnniversary() {
   const textEl = document.getElementById('anniversary-text');
   textEl.innerHTML = `Your <strong style="color:var(--text);">${escHtml(w.brand)} ${escHtml(w.name)}</strong> joined your collection ${years} year${plural} ago today.`;
   document.getElementById('anniversary-modal').classList.remove('hidden');
+  notePromoModalShown();
 }
 function dismissAnniversary() {
   if (_annivQueue.length > 0) {
@@ -15155,6 +15651,7 @@ function switchAdminTab(tab) {
   if (target) target.style.display = '';
   if (tab === 'campaigns') loadCampaigns();
   if (tab === 'featured') loadAdminFeatured();
+  if (tab === 'promos') loadPromoAdmin();
 }
 
 async function loadAdminFeatured() {
@@ -17717,6 +18214,149 @@ function fillCampaignBody(text) {
 // copy to real users has to be blocked, or they receive the literal braces.
 function unresolvedCampaignTokens(text) {
   return [...new Set(String(text || '').match(/\{\{(watch|watchPhrase|fact)\}\}/g) || [])];
+}
+
+// ── Admin Promos tab ─────────────────────────────────────────────────────
+// Dropdowns are GENERATED from the registries, so a new audience or action
+// appears in the admin UI automatically and the two can never drift.
+const PROMO_AUDIENCE_LABELS = {
+  all: 'All users', never_logged: 'Never logged a wear', no_wishlist: 'Empty wishlist',
+  never_measured: 'Never measured (iOS only)', no_clubs: 'In no club',
+  follows_few: 'Follows fewer than 3 people', never_ranked: 'Never played the ranking game',
+};
+const PROMO_ACTION_LABELS = {
+  '': 'No button', open_wishlist: 'Open Wishlist', open_collection: 'Open Collection',
+  open_track: 'Open Track', open_measure: 'Open Measure', open_clubs: 'Open Clubs',
+  open_discover: 'Open Discover', open_ranking_game: 'Start the ranking game',
+  'url:': 'Custom URL (https only)',
+};
+
+function renderPromoAdminOptions() {
+  const aud = document.getElementById('promo-audience');
+  const act = document.getElementById('promo-cta-action');
+  if (!aud || !act) return;
+  aud.innerHTML = Object.keys(PROMO_AUDIENCES)
+    .map((k) => `<option value="${escAttr(k)}">${escHtml(PROMO_AUDIENCE_LABELS[k] || k)}</option>`).join('');
+  act.innerHTML = ['', ...Object.keys(PROMO_ACTIONS), 'url:']
+    .map((k) => `<option value="${escAttr(k)}">${escHtml(PROMO_ACTION_LABELS[k] || k)}</option>`).join('');
+}
+
+function promoFormSlot() {
+  const val = (id) => document.getElementById(id)?.value?.trim() || '';
+  const action = val('promo-cta-action');
+  return {
+    id: 'preview',
+    eyebrow: val('promo-eyebrow'),
+    heading: val('promo-heading'),
+    body: val('promo-body'),
+    image_url: val('promo-image-url'),
+    images: val('promo-images').split('\n').map((s) => s.trim()).filter(Boolean),
+    cta_label: val('promo-cta-label'),
+    cta_action: action === 'url:' ? 'url:' + val('promo-cta-url') : action,
+    audience: val('promo-audience') || 'all',
+    priority: parseInt(val('promo-priority') || '0'),
+    max_impressions: val('promo-max-impressions') ? parseInt(val('promo-max-impressions')) : null,
+    starts_at: val('promo-starts') ? new Date(val('promo-starts')).toISOString() : null,
+    ends_at:   val('promo-ends')   ? new Date(val('promo-ends')).toISOString()   : null,
+  };
+}
+
+// Calls the REAL renderer — the preview is the shipped output, not a second
+// implementation that can drift from it.
+function updatePromoPreview() {
+  const el = document.getElementById('promo-preview');
+  if (!el) return;
+  el.innerHTML = renderPromoCard(promoFormSlot());
+  // ...and then make it inert. The preview is the real card, so it carries the
+  // real interaction hooks: the delegated handler would read its id 'preview'
+  // and run dismissPromo('preview'), burning the session's max_per_session
+  // budget and poisoning _promoDismissed for the rest of the session. Stripping
+  // the hooks leaves the composer showing exactly the shipped markup while no
+  // click in it can reach feed state.
+  el.querySelectorAll('[data-promo-id],[data-promo-cta],[data-promo-dismiss]').forEach((n) => {
+    n.removeAttribute('data-promo-id');
+    n.removeAttribute('data-promo-cta');
+    n.removeAttribute('data-promo-dismiss');
+    n.removeAttribute('id');
+  });
+}
+
+// Always saves as a draft. Activating a slot puts content in real users' feeds
+// and is a deliberate second step (setPromoStatus), never a side effect of saving.
+async function savePromoSlot() {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
+  const st = document.getElementById('promo-status');
+  const slot = promoFormSlot();
+  if (!slot.heading) { if (st) st.textContent = 'A heading is required.'; return; }
+  delete slot.id;
+  slot.status = 'draft';
+  slot.created_by = currentUser?.id || null;
+  const { error } = await db.from('promo_slots').insert(slot);
+  if (st) st.textContent = error ? ('Error: ' + error.message) : 'Saved as draft.';
+  if (!error) loadPromoAdmin();
+}
+
+async function setPromoStatus(id, status) {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
+  const { error } = await db.from('promo_slots').update({ status }).eq('id', id);
+  if (error) { toast('Could not update slot: ' + error.message, 'error'); return; }
+  loadPromoAdmin();
+}
+
+async function loadPromoAdmin() {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
+  renderPromoAdminOptions();
+  const listEl = document.getElementById('promo-list');
+
+  const [{ data: cfg }, { data: slots }, { data: stats }] = await Promise.all([
+    db.from('promo_config').select('*').limit(1).maybeSingle(),
+    db.from('promo_slots').select('*').order('created_at', { ascending: false }),
+    db.rpc('promo_slot_stats'),
+  ]);
+
+  if (cfg) {
+    document.getElementById('promo-cfg-enabled').checked = !!cfg.enabled;
+    document.getElementById('promo-cfg-first').value    = cfg.first_position;
+    document.getElementById('promo-cfg-repeat').value   = cfg.repeat_every;
+    document.getElementById('promo-cfg-max').value      = cfg.max_per_session;
+    document.getElementById('promo-cfg-imp').value      = cfg.default_max_impressions;
+    document.getElementById('promo-cfg-suppress').checked = !!cfg.suppress_after_modal;
+  }
+
+  const byId = {};
+  (stats || []).forEach((s) => { byId[s.slot_id] = s; });
+  if (!listEl) return;
+  listEl.innerHTML = (slots || []).length === 0
+    ? '<div style="color:var(--muted);font-size:.82rem;">No slots yet.</div>'
+    : slots.map((s) => {
+        const st = byId[s.id] || {};
+        const next = s.status === 'active' ? 'archived' : 'active';
+        return `<div class="admin-card">
+          <div style="font-weight:600;">${escHtml(s.heading)}</div>
+          <div style="font-size:.78rem;color:var(--muted);">
+            ${escHtml(s.status)} · ${escHtml(PROMO_AUDIENCE_LABELS[s.audience] || s.audience)} ·
+            ${st.impressions || 0} impressions · ${st.clicks || 0} clicks ·
+            ${st.dismissals || 0} dismissed · ${st.distinct_users || 0} users
+          </div>
+          <button class="btn btn-ghost" style="font-size:.78rem;margin-top:.4rem;"
+            onclick="setPromoStatus('${escAttr(s.id)}','${escAttr(next)}')">
+            ${next === 'active' ? 'Activate' : 'Archive'}</button>
+        </div>`;
+      }).join('');
+}
+
+async function savePromoConfig() {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
+  const st = document.getElementById('promo-cfg-status');
+  const { error } = await db.from('promo_config').update({
+    enabled:                 document.getElementById('promo-cfg-enabled').checked,
+    first_position:          parseInt(document.getElementById('promo-cfg-first').value || '0'),
+    repeat_every:            parseInt(document.getElementById('promo-cfg-repeat').value || '0'),
+    max_per_session:         parseInt(document.getElementById('promo-cfg-max').value || '0'),
+    default_max_impressions: parseInt(document.getElementById('promo-cfg-imp').value || '0'),
+    suppress_after_modal:    document.getElementById('promo-cfg-suppress').checked,
+  }).eq('id', true);
+  if (st) st.textContent = error ? ('Error: ' + error.message) : 'Saved.';
 }
 
 async function loadCampaigns() {
@@ -21255,6 +21895,68 @@ function sanitizeImageUrl(url, baseUrl) {
   if (url.startsWith('https://')) return url;
   // Block javascript:, data:, http:, and anything else
   return null;
+}
+
+// ── Promo HTML sanitizer ─────────────────────────────────────────────────────
+// Spec: docs/superpowers/specs/2026-08-02-merchandising-slots-design.md
+// promo_slots.body is admin-authored HTML rendered into every user's feed.
+// Allowlist, never blocklist. Sanitize at RENDER, not at save: rows already in
+// the table get cleaned on the way out, so a bad row can never become a stored
+// payload that outlives a fix here.
+const PROMO_TAGS_OK   = new Set(['B','STRONG','I','EM','U','BR','P','UL','OL','LI','A','IMG','SPAN']);
+// Removed WITH their contents. Unwrapping these would dump script source into
+// the page as visible text, or re-parse in a foreign content mode.
+const PROMO_TAGS_KILL = new Set(['SCRIPT','STYLE','IFRAME','OBJECT','EMBED','TEMPLATE','SVG','MATH','NOSCRIPT']);
+const PROMO_ATTRS_OK  = { A: new Set(['href']), IMG: new Set(['src','alt']) };
+
+function sanitizePromoHtml(html) {
+  if (!html) return '';
+  const doc = new DOMParser().parseFromString(String(html), 'text/html');
+  const walk = (node) => {
+    // Snapshot children first — the loop mutates the live child list.
+    for (const child of [...node.children]) {
+      const tag = child.tagName.toUpperCase();
+      if (PROMO_TAGS_KILL.has(tag)) { child.remove(); continue; }
+      if (!PROMO_TAGS_OK.has(tag)) {
+        walk(child);                                  // clean before unwrapping
+        child.replaceWith(...child.childNodes);
+        continue;
+      }
+      // Rebuild as a fresh element rather than mutate the parsed one. A
+      // parsed element can carry internal state (e.g. a customized built-in
+      // registered via the "is" attribute) that removeAttribute() clears
+      // from the attribute list but that Blink's serializer still re-emits
+      // into the output string. A freshly created element has none of that
+      // state — confirmed empirically: mutating-in-place left `is="evil-el"`
+      // in the output even after `attributes` was empty; createElement does not.
+      const clean = doc.createElement(tag.toLowerCase());
+      const allowed = PROMO_ATTRS_OK[tag] || new Set();
+      for (const attr of child.attributes) {
+        if (allowed.has(attr.name.toLowerCase())) clean.setAttribute(attr.name, attr.value);
+      }
+      while (child.firstChild) clean.appendChild(child.firstChild);
+      child.replaceWith(clean);
+      if (tag === 'A') {
+        const href = clean.getAttribute('href') || '';
+        // [^/\\] also blocks a leading backslash — Chromium treats
+        // "/\evil.test" as scheme-relative and resolves it to https://evil.test.
+        const ok = /^https:\/\//i.test(href) || /^\/[^/\\]/.test(href);
+        if (!ok) clean.removeAttribute('href');
+        else if (/^https:\/\//i.test(href)) {
+          clean.setAttribute('target', '_blank');
+          clean.setAttribute('rel', 'noopener noreferrer');
+        }
+      }
+      if (tag === 'IMG') {
+        const src = sanitizeImageUrl(clean.getAttribute('src') || '', location.origin);
+        if (!src) { clean.remove(); continue; }
+        clean.setAttribute('src', src);
+      }
+      walk(clean);
+    }
+  };
+  walk(doc.body);
+  return doc.body.innerHTML;
 }
 
 // Fetch an image URL (direct then via proxy) and return { blob, directUrl }
@@ -25285,7 +25987,6 @@ const _overlayCloseMap = {
   'af2-debug-sheet':      () => document.getElementById('af2-debug-sheet').classList.add('hidden'),
   'enhance-all-modal':    closeEnhanceAll,
   'value-check-modal':    closeValueCheck,
-  'new-features-modal':   closeNewFeatures,
   'snap-match-modal':     closeSnapMatch,
   'wishlist-modal':      closeWishlistModal,
   'watch-preview-modal': closeWatchPreview,
@@ -25520,6 +26221,13 @@ function clearUserState() {
   userNotifs = []; unreadNotifCount = 0; notifPanelOpen = false;
   commentLikes = {}; discoverUsers = []; profilePageUserId = null;
   _factImpSeen.clear(); // fun-fact impressions already seen this session — must not survive an account switch
+  // Promo session state — same rule. signOut() never reloads the page, so
+  // account A's spent max_per_session budget, dismissals, impressions and modal
+  // flag would otherwise silently deny account B its card.
+  _promoPlaced.clear(); _promoDismissed.clear(); _promoImpressed.clear();
+  _promoSlots = []; _promoEvents = []; _promoConfig = null;
+  if (_promoObserver) { _promoObserver.disconnect(); _promoObserver = null; } // disconnect, not just drop — A's nodes stay registered otherwise
+  window._modalShownThisSession = false;
   feedLoading = false; _feedLoadStartedAt = 0; feedError = false; feedLoadedAt = 0; _clubsLoaded = false; _frLoadedAt = 0;
   Object.keys(_profileCache).forEach(k => delete _profileCache[k]);
   if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }
@@ -28748,6 +29456,7 @@ async function bootApp(user) {
   } catch(e) {
     console.error('[WristLog] bootApp loadUserData error:', e.message, e);
   }
+  await loadPromoSlots();   // audience predicates need the counts loadUserData() fills
   // Retry any dirty state persisted from a previous session
   const _hasPersisted = _dirty.watches.size || _dirty.logs.size || _dirty.wishlist.size || _dirty.elo.size || _pendingDeletes.length;
   if (_hasPersisted) { console.log('[WRotate] Retrying persisted dirty state'); cloudSync(); }
@@ -28757,8 +29466,6 @@ async function bootApp(user) {
   checkReminderNow();
   // Show anniversary modal if any watch has an anniversary today
   checkAnniversary();
-  // Show new features popover for repeat users (once)
-  maybeShowNewFeatures();
   // Retroactive badge scan (runs once per session, after data is loaded)
   retroactiveBadgeScan();
   // Seed measurement count from DB so review prompt works across devices
