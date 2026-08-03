@@ -7166,7 +7166,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.18.15';
+const APP_VERSION = '02.18.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21255,6 +21255,56 @@ function sanitizeImageUrl(url, baseUrl) {
   if (url.startsWith('https://')) return url;
   // Block javascript:, data:, http:, and anything else
   return null;
+}
+
+// ── Promo HTML sanitizer ─────────────────────────────────────────────────────
+// Spec: docs/superpowers/specs/2026-08-02-merchandising-slots-design.md
+// promo_slots.body is admin-authored HTML rendered into every user's feed.
+// Allowlist, never blocklist. Sanitize at RENDER, not at save: rows already in
+// the table get cleaned on the way out, so a bad row can never become a stored
+// payload that outlives a fix here.
+const PROMO_TAGS_OK   = new Set(['B','STRONG','I','EM','U','BR','P','UL','OL','LI','A','IMG','SPAN']);
+// Removed WITH their contents. Unwrapping these would dump script source into
+// the page as visible text, or re-parse in a foreign content mode.
+const PROMO_TAGS_KILL = new Set(['SCRIPT','STYLE','IFRAME','OBJECT','EMBED','TEMPLATE','SVG','MATH','NOSCRIPT']);
+const PROMO_ATTRS_OK  = { A: new Set(['href']), IMG: new Set(['src','alt']) };
+
+function sanitizePromoHtml(html) {
+  if (!html) return '';
+  const doc = new DOMParser().parseFromString(String(html), 'text/html');
+  const walk = (node) => {
+    // Snapshot children first — the loop mutates the live child list.
+    for (const child of [...node.children]) {
+      const tag = child.tagName.toUpperCase();
+      if (PROMO_TAGS_KILL.has(tag)) { child.remove(); continue; }
+      if (!PROMO_TAGS_OK.has(tag)) {
+        walk(child);                                  // clean before unwrapping
+        child.replaceWith(...child.childNodes);
+        continue;
+      }
+      const allowed = PROMO_ATTRS_OK[tag] || new Set();
+      for (const attr of [...child.attributes]) {
+        if (!allowed.has(attr.name.toLowerCase())) child.removeAttribute(attr.name);
+      }
+      if (tag === 'A') {
+        const href = child.getAttribute('href') || '';
+        const ok = /^https:\/\//i.test(href) || /^\/[^/]/.test(href);
+        if (!ok) child.removeAttribute('href');
+        else if (/^https:\/\//i.test(href)) {
+          child.setAttribute('target', '_blank');
+          child.setAttribute('rel', 'noopener noreferrer');
+        }
+      }
+      if (tag === 'IMG') {
+        const src = sanitizeImageUrl(child.getAttribute('src') || '', location.origin);
+        if (!src) { child.remove(); continue; }
+        child.setAttribute('src', src);
+      }
+      walk(child);
+    }
+  };
+  walk(doc.body);
+  return doc.body.innerHTML;
 }
 
 // Fetch an image URL (direct then via proxy) and return { blob, directUrl }
