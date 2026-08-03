@@ -1877,6 +1877,52 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .funfact-row.is-clamped.is-truncated .funfact-more { display: inline; }
     @media (prefers-reduced-motion: reduce) { .funfact-clamp { transition: none; } }
 
+    /* ── Merchandising slot card ──────────────────────────────────────────
+       Spec: docs/superpowers/specs/2026-08-02-merchandising-slots-design.md
+       Deliberately shares .feed-card's geometry (16px radius, 1.25rem gap,
+       shadow, surface) so it sits in the feed's rhythm. Only identity and
+       structure differ. */
+    .promo-card {
+      background: var(--surface); border-radius: 16px;
+      margin-bottom: 1.25rem; overflow: hidden;
+      border: 1px solid var(--gold-dim);          /* a tint, not an outline */
+      box-shadow: 0 2px 12px rgba(0,0,0,.18);
+      position: relative;
+    }
+    .promo-card-header { display: flex; align-items: center; gap: .75rem; padding: .85rem 1rem .6rem; }
+    /* Same 38px slot as .feed-user-avatar so header height is unchanged, but a
+       rounded rect rather than a circle — the fastest "not a person" cue. */
+    .promo-mark {
+      width: 38px; height: 38px; border-radius: var(--radius-sm);
+      background: var(--gold-dim); color: var(--gold);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .promo-name { font-weight: 700; font-size: .9rem; line-height: 1.2; }
+    /* --badge-accent, NOT --gold: gold measures 2.64:1 on the light card
+       surface and fails AA for small text. Same reason .funfact-label uses it
+       (see the note at .funfact-row). */
+    .promo-eyebrow {
+      font-size: var(--fs-sm); font-weight: 700;
+      letter-spacing: var(--ls-eyebrow); text-transform: uppercase;
+      color: var(--badge-accent);
+    }
+    /* 16:9, never the post's 4:5 — that portrait crop is a wrist shot's signature. */
+    .promo-card-hero { width: 100%; aspect-ratio: 16/9; overflow: hidden; background: var(--surface2); }
+    .promo-card-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .promo-card-body { padding: .85rem 1rem 1rem; }
+    .promo-heading { font-size: var(--fs-md); font-weight: var(--fw-bold); margin-bottom: .35rem; }
+    .promo-body { font-size: var(--fs-base); line-height: var(--lh-body); color: var(--muted); }
+    .promo-body img { max-width: 100%; height: auto; border-radius: var(--radius-sm); margin: .5rem 0; }
+    .promo-body a { color: var(--badge-accent); }
+    .promo-cta { width: 100%; margin-top: .85rem; }
+    /* Sits where a post's ⋯ menu sits, so the affordance is where the thumb expects it. */
+    .promo-dismiss {
+      position: absolute; top: .7rem; right: .7rem;
+      background: none; border: 0; color: var(--muted);
+      font-size: 1rem; line-height: 1; padding: .25rem .4rem; cursor: pointer;
+    }
+    .promo-dismiss:hover { color: var(--text); }
+
     /* The watch chip sits on its own row; the fun-fact footnote drops below it. */
     .feed-chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 1rem .75rem; }
     .feed-chip-row .feed-watch-chip { margin: 0; }
@@ -7166,7 +7212,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.18.45';
+const APP_VERSION = '02.18.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11310,6 +11356,84 @@ function promoInjectPositions({ postCount, config, placedCount }) {
     if (step <= 0) break;                           // no repeat: exactly one card
   }
   return out;
+}
+
+// CTA actions. A key here, never raw JS from the database — an admin-entered
+// string can only ever select one of these, or a validated https URL.
+const PROMO_ACTIONS = {
+  open_wishlist:      () => nav(document.querySelector('nav button[data-page="wishlist"]')),
+  open_collection:    () => nav(document.querySelector('nav button[data-page="collection"]')),
+  open_track:         () => nav(document.querySelector('nav button[data-page="track"]')),
+  open_measure:       () => nav(document.getElementById('nav-measure-btn')),
+  open_clubs:         () => showClubsPage(),
+  open_discover:      () => openDiscover(),
+  open_ranking_game:  () => beginRankingGame(),
+};
+
+// Returns a callable for a slot's cta_action, or null. Null means "render no
+// button" — an unknown key must never throw and never fall through to a default.
+function promoActionFor(key) {
+  if (!key) return null;
+  if (PROMO_ACTIONS[key]) return PROMO_ACTIONS[key];
+  if (key.startsWith('url:')) {
+    const url = key.slice(4);
+    if (/^https:\/\//i.test(url)) return () => window.open(url, '_blank', 'noopener');
+  }
+  return null;
+}
+
+function runPromoAction(slotId) {
+  const slot = (_promoSlots || []).find((s) => s.id === slotId);
+  if (!slot) return;
+  logPromoEvent(slotId, 'click');
+  const fn = promoActionFor(slot.cta_action);
+  if (fn) fn();
+}
+
+// Mirrors the Broadcast composer's [imgN] convention so the authoring muscle
+// memory carries over. Expanded BEFORE sanitizing, so the generated tags go
+// through the same allowlist as everything else.
+function expandPromoImages(body, images) {
+  return String(body || '').replace(/\[img(\d)\]/g, (_, n) => {
+    const url = (images || [])[Number(n) - 1];
+    return url ? `<img src="${escAttr(url)}" alt="">` : '';
+  });
+}
+
+function renderPromoCard(slot) {
+  const action = promoActionFor(slot.cta_action);
+  const cta = (action && slot.cta_label)
+    ? `<button type="button" class="btn btn-primary promo-cta"
+         onclick="runPromoAction('${escAttr(slot.id)}')">${escHtml(slot.cta_label)}</button>`
+    : '';
+  const hero = slot.image_url
+    ? `<div class="promo-card-hero"><img src="${escAttr(slot.image_url)}" alt=""></div>`
+    : '';
+  const eyebrow = slot.eyebrow
+    ? `<div class="promo-eyebrow">${escHtml(slot.eyebrow)}</div>` : '';
+  const body = slot.body
+    ? `<div class="promo-body">${sanitizePromoHtml(expandPromoImages(slot.body, slot.images))}</div>` : '';
+
+  return `<div class="promo-card" id="promocard-${escAttr(slot.id)}" data-promo-id="${escAttr(slot.id)}">
+    <button type="button" class="promo-dismiss" aria-label="Dismiss"
+      onclick="dismissPromo('${escAttr(slot.id)}')">✕</button>
+    <div class="promo-card-header">
+      <div class="promo-mark" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
+          <path d="M 21 7.3 A 10 10 0 1 1 11 7.3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          <polygon points="11,7.3 8.5,9.5 7.7,6.6" fill="currentColor"/>
+          <circle cx="16" cy="16" r="2.5" fill="currentColor"/>
+        </svg>
+      </div>
+      <div><div class="promo-name">WRotate</div>${eyebrow}</div>
+    </div>
+    ${hero}
+    <div class="promo-card-body">
+      <div class="promo-heading">${escHtml(slot.heading || '')}</div>
+      ${body}
+      ${cta}
+    </div>
+  </div>`;
 }
 
 // Cheap synchronous gate, used before scheduling and again inside the timer.
