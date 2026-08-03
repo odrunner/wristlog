@@ -5,7 +5,7 @@
 import { test, expect } from '@playwright/test';
 import {
   mockSupabase, injectSession, waitForAppBoot, navigateTo,
-  FAKE_USER, FAKE_PROFILE, SAMPLE_WATCHES, SAMPLE_LOGS, NEW_FEATURES_KEY,
+  FAKE_USER, FAKE_PROFILE, SAMPLE_WATCHES, SAMPLE_LOGS,
 } from './helpers.js';
 
 // ── Boot & Auth ──────────────────────────────────────────────────────────
@@ -1537,22 +1537,12 @@ test.describe('Review prompt (mocked)', () => {
 });
 
 // ── Boot-time popovers must not intercept test interactions ─────────────────
-// Regression guard: maybeShowNewFeatures() un-hides a full-screen overlay on an
-// 800ms timer at boot. Under full-suite load the app reaches a test's first
-// click after 800ms, so the overlay covered the screen and stole clicks — the
-// "occasion chip" flake. The test harness pre-sets its seen-key; this asserts
-// the overlay never appears, so the suppression can't silently regress.
+// The new-features popover (maybeShowNewFeatures) was retired in Task 10 —
+// promo slots replace it, and #new-features-modal/maybeShowNewFeatures no
+// longer exist. That regression is covered by
+// e2e/promo-no-newfeatures.mock.spec.js. This describe block now only guards
+// the anniversary popover, which is still a real boot-time interrupt.
 test.describe('Boot popovers (mocked)', () => {
-  test('new-features overlay stays hidden after boot', async ({ page }) => {
-    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
-    await injectSession(page);
-    await page.goto('/');
-    await waitForAppBoot(page);
-    // Wait well past the 800ms auto-show timer.
-    await page.waitForTimeout(1200);
-    await expect(page.locator('#new-features-modal')).toBeHidden();
-  });
-
   // The Speedmaster fixture's purchase_date (2024-06-01) makes checkAnniversary()
   // pop a blocking overlay every June 1. The harness pre-dismisses it; this guards
   // that suppression so it can't silently regress and start eating clicks again.
@@ -2056,8 +2046,6 @@ test.describe('Comment deletion (mocked)', () => {
     await page.route('**/rest/v1/comment_likes*', route =>
       route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
     );
-    // Suppress the "new features" modal so it doesn't overlay the feed
-    await page.addInitScript((k) => localStorage.setItem(k, '1'), NEW_FEATURES_KEY);
     await page.goto('/');
     await waitForAppBoot(page);
     await page.waitForTimeout(2000);

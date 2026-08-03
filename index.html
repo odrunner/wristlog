@@ -2637,24 +2637,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 </div>
 
-<!-- ════ NEW FEATURES POPOVER ════ -->
-<div id="new-features-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="new-features-title">
-  <div class="modal" style="max-width:380px;text-align:center;padding:2rem 1.75rem;">
-    <div class="eyebrow" style="margin-bottom:1rem;">New in WRotate</div>
-    <div id="new-features-title" style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.75rem;">Meet Pro V2 &#9889; — our new measurement engine, now on by default.</div>
-    <div style="text-align:left;margin-bottom:1rem;">
-      <div style="display:flex;gap:.6rem;align-items:flex-start;">
-        <span style="font-size:1.1rem;flex-shrink:0;margin-top:.1rem;">&#9889;</span>
-        <div>
-          <div style="font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.2rem;">Pro V2 Measurement Engine</div>
-          <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">A rebuilt timegrapher engine, now running by default on the Measure page: it settles quickly, holds steady between runs, and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing, a key health indicator watchmakers look at. A Balanced reading takes about 17 seconds; Quick (~10s) and Strict (~33s) live under the &#9881; gear. Needs app version 2.1 or later. You can switch to <strong>Standard</strong> from the engine selector anytime. Amplitude shows only when the signal is clean enough to trust &#8212; if it&#8217;s blank, reposition and try again.</div>
-        </div>
-      </div>
-    </div>
-    <button class="btn btn-ghost" onclick="closeNewFeatures()" style="width:100%;border-color:var(--gold);color:var(--gold);">Got it</button>
-  </div>
-</div>
-
 <!-- ════ ANNIVERSARY MODAL ════ -->
 <div id="anniversary-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="anniversary-modal-title">
   <div class="modal" style="max-width:360px;text-align:center;padding:2rem 1.75rem;">
@@ -7303,7 +7285,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.21.59';
+const APP_VERSION = '02.22.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15104,17 +15086,6 @@ function openWhatsNew() {
 }
 function closeWhatsNew() {
   document.getElementById('whats-new-modal').classList.add('hidden');
-}
-
-function maybeShowNewFeatures() {
-  if (!currentUser || !watches.length) return;
-  const key = 'wrotate_newfeatures_v3';
-  if (localStorage.getItem(key)) return;
-  localStorage.setItem(key, '1');
-  setTimeout(() => document.getElementById('new-features-modal').classList.remove('hidden'), 800);
-}
-function closeNewFeatures() {
-  document.getElementById('new-features-modal').classList.add('hidden');
 }
 
 // ── Anniversary check ──────────────────────────────────────────────────────
@@ -25950,7 +25921,6 @@ const _overlayCloseMap = {
   'af2-debug-sheet':      () => document.getElementById('af2-debug-sheet').classList.add('hidden'),
   'enhance-all-modal':    closeEnhanceAll,
   'value-check-modal':    closeValueCheck,
-  'new-features-modal':   closeNewFeatures,
   'snap-match-modal':     closeSnapMatch,
   'wishlist-modal':      closeWishlistModal,
   'watch-preview-modal': closeWatchPreview,
@@ -29423,8 +29393,6 @@ async function bootApp(user) {
   checkReminderNow();
   // Show anniversary modal if any watch has an anniversary today
   checkAnniversary();
-  // Show new features popover for repeat users (once)
-  maybeShowNewFeatures();
   // Retroactive badge scan (runs once per session, after data is loaded)
   retroactiveBadgeScan();
   // Seed measurement count from DB so review prompt works across devices
