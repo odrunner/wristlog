@@ -93,7 +93,12 @@ describe('Totals card day-over-day deltas', () => {
     // SECURITY DEFINER RPC — a client-side select would return only the admin's rows.
     expect(html).toContain("db.rpc('admin_push_stats')");
     expect(html).toMatch(/pushUsers\s*=\s*Number\(push\.push_users\)\s*\|\|\s*0/);
-    expect(html).toMatch(/statRow\('Push approved \(users\)',\s*pushUsers,\s*Number\(push\.push_users_24h\)[^\n]*pushSub\)/);
+    // Total stands alone (null headline delta) like the Email Unsubs / engine rows;
+    // the 24h activity and its day-over-day change live in the sub. Gluing the raw
+    // 24h count onto the sign-out-eroded total read as a frozen/broken delta.
+    expect(html).toMatch(/push24h\s*=\s*Number\(push\.push_users_24h\)\s*\|\|\s*0/);
+    expect(html).toMatch(/pushPrev24h\s*=\s*Number\(push\.push_users_prev24h\)\s*\|\|\s*0/);
+    expect(html).toMatch(/statRow\('Push approved \(users\)',\s*pushUsers,\s*null,[^\n]*push24h[^\n]*inlineDelta\(push24h - pushPrev24h, false\)\)/);
   });
 
   it('Push approvals sub: share of all users plus the device count', () => {

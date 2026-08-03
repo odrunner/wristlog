@@ -15467,6 +15467,11 @@ async function loadAdminStats() {
     // web-only users never get the chance to approve. Spec: sql/2026-07-29-admin-push-stats.sql.
     const pushUsers = Number(push.push_users) || 0;
     const pushDevices = Number(push.push_devices) || 0;
+    // Newly-approved users in the last 24h and the prior 24h, so the row can carry a
+    // real day-over-day change instead of gluing a raw count onto the (slow-moving,
+    // sign-out-eroded) total where it reads as a frozen/broken delta.
+    const push24h = Number(push.push_users_24h) || 0;
+    const pushPrev24h = Number(push.push_users_prev24h) || 0;
     const pushSub = (extUsers > 0 ? Math.round(pushUsers / extUsers * 100) : 0) + '% of users'
       + (pushDevices > 0 ? ' · ' + pushDevices + ' device' + (pushDevices === 1 ? '' : 's') : '');
     // Active-user snapshot (DAU/WAU/MAU) — external users whose last activity
@@ -15631,7 +15636,7 @@ async function loadAdminStats() {
         ${engineRow('Measurements — Pro V2', eng.prov2_sessions, eng.prov2_users, eng.prov2_sessions_24h, eng.prov2_sessions_prev24h)}
         ${engineRow('Measurements — Original', eng.orig_sessions, eng.orig_users, eng.orig_sessions_24h, eng.orig_sessions_prev24h)}
         ${statRow('Email Unsubs (total)', Number(unsub.unsub_total) || 0, null, (Number(unsub.unsub_24h) || 0) + ' (24h)' + inlineDelta((Number(unsub.unsub_24h) || 0) - (Number(unsub.unsub_prev24h) || 0), true))}
-        ${statRow('Push approved (users)', pushUsers, Number(push.push_users_24h) || 0, pushSub)}
+        ${statRow('Push approved (users)', pushUsers, null, pushSub + ' · ' + push24h + ' new (24h)' + inlineDelta(push24h - pushPrev24h, false))}
         ${statRow('Wishlist Items', wishItems, dod.wish)}
         ${statRow('Clubs', clubs, dod.clubs)}
         ${statRow('Follows', follows, dod.follows)}
