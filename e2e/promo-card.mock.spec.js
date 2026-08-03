@@ -121,8 +121,10 @@ test.describe('renderPromoCard', () => {
       window.__pwned = undefined;
       window.logPromoEvent = () => {};
       const evilId = "x');window.__pwned=true;//";
-      window._promoSlots = [{ ...s, id: evilId }];
-      document.body.insertAdjacentHTML('afterbegin', window.renderPromoCard(window._promoSlots[0]));
+      // _promoSlots is a top-level `let` in index.html, not a window property
+      // (added in Task 7) — set it as a bare identifier so runPromoAction sees it.
+      _promoSlots = [{ ...s, id: evilId }];
+      document.body.insertAdjacentHTML('afterbegin', window.renderPromoCard(_promoSlots[0]));
       document.querySelector('[data-promo-cta]').click();
       return window.__pwned;
     }, SLOT);
@@ -132,8 +134,8 @@ test.describe('renderPromoCard', () => {
       window.logPromoEvent = () => {};
       let opened = null;
       window.open = (url) => { opened = url; };
-      window._promoSlots = [{ ...s, id: 'a-normal-uuid', cta_action: 'url:https://wrotate.com/open' }];
-      document.body.insertAdjacentHTML('afterbegin', window.renderPromoCard(window._promoSlots[0]));
+      _promoSlots = [{ ...s, id: 'a-normal-uuid', cta_action: 'url:https://wrotate.com/open' }];
+      document.body.insertAdjacentHTML('afterbegin', window.renderPromoCard(_promoSlots[0]));
       document.querySelector('[data-promo-cta]').click();
       return opened;
     }, SLOT);

@@ -7212,7 +7212,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.19.05';
+const APP_VERSION = '02.19.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11059,6 +11059,7 @@ async function loadMoreFeed() {
 
     // Re-arm the observer on the (still-present) sentinel for the next page.
     mountFeedLoadMoreSentinel();
+    injectPromoCards();
   } catch (e) {
     console.warn('Feed load-more error:', e?.message);
     showFeedLoadMoreButton();
@@ -11470,6 +11471,111 @@ function renderPromoCard(slot) {
   </div>`;
 }
 
+let _promoSlots  = [];
+let _promoConfig = null;
+let _promoEvents = [];
+let _promoPlaced = new Set();          // slot ids already placed this session
+let _promoObserver = null;
+let _promoImpressed = new Set();       // impressions already logged this session
+
+// Counts the audience predicates run against. Everything here is already in
+// memory after loadUserData(), so targeting costs no round-trip.
+function promoCtx() {
+  return {
+    watchCount:     (watches || []).length,
+    // The authoritative wear rule — routes through the shared isWearEntry()
+    // rather than open-coding the measurement comparison here too.
+    wearCount:      (logs || []).filter(isWearEntry).length,
+    wishlistCount:  (wishlist || []).length,
+    followingCount: following ? following.size : 0,
+    measureCount:   parseInt(localStorage.getItem('wristlog_msr_count') || '0'),
+    clubCount:      (myClubs || []).length,
+    rankedEver:     Object.keys(eloRatings || {}).length > 0,
+    daysSinceSignup: myProfile?.created_at
+      ? Math.floor((Date.now() - Date.parse(myProfile.created_at)) / 86400000) : 0,
+    isIos:          !!window._iosAppVersion,
+  };
+}
+
+// Non-fatal by design: a broken promo fetch must never degrade the feed.
+async function loadPromoSlots() {
+  if (!currentUser) return;
+  try {
+    const [cfgRes, slotRes, evRes] = await Promise.all([
+      db.from('promo_config').select('*').limit(1).maybeSingle(),
+      db.from('promo_slots').select('*'),
+      db.from('promo_events').select('slot_id,event').eq('user_id', currentUser.id),
+    ]);
+    _promoConfig = cfgRes?.data || null;
+    _promoSlots  = slotRes?.data || [];
+    _promoEvents = evRes?.data || [];
+  } catch (e) {
+    console.warn('[promo] load failed:', e.message);
+    _promoConfig = null; _promoSlots = []; _promoEvents = [];
+  }
+}
+
+function logPromoEvent(slotId, event) {
+  if (!currentUser) return;
+  db.from('promo_events')
+    .insert({ user_id: currentUser.id, slot_id: slotId, event })
+    .then(() => {}).catch(() => {});
+  _promoEvents.push({ slot_id: slotId, event });
+}
+
+function dismissPromo(slotId) {
+  document.getElementById('promocard-' + slotId)?.remove();
+  _promoPlaced.add(slotId);              // keeps it out of this session's re-renders
+  logPromoEvent(slotId, 'dismiss');
+}
+
+// Idempotent. Runs after renderFeed() and after loadMoreFeed()'s append; a slot
+// already placed is never placed twice, so re-renders and appended pages are safe.
+function injectPromoCards() {
+  const el = document.getElementById('feed-list');
+  if (!el || !currentUser) return;
+
+  const eligible = eligiblePromoSlots({
+    slots: _promoSlots, config: _promoConfig, ctx: promoCtx(),
+    events: _promoEvents, now: Date.now(),
+    modalShown: !!window._modalShownThisSession,
+  }).filter((s) => !_promoPlaced.has(s.id));
+  if (!eligible.length) return;
+
+  const posts = [...el.querySelectorAll(':scope > .feed-card')];
+  const positions = promoInjectPositions({
+    postCount: posts.length, config: _promoConfig, placedCount: _promoPlaced.size,
+  });
+
+  positions.forEach((pos, i) => {
+    const slot = eligible[i];
+    if (!slot) return;
+    const html = renderPromoCard(slot);
+    if (pos >= posts.length) el.insertAdjacentHTML('beforeend', html);
+    else posts[pos].insertAdjacentHTML('beforebegin', html);
+    _promoPlaced.add(slot.id);
+  });
+
+  observePromoImpressions();
+}
+
+function observePromoImpressions() {
+  if (!_promoObserver) {
+    _promoObserver = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        const id = e.target.dataset.promoId;
+        if (id && !_promoImpressed.has(id)) {
+          _promoImpressed.add(id);
+          logPromoEvent(id, 'impression');
+        }
+        _promoObserver.unobserve(e.target);
+      }
+    }, { threshold: 0.5 });
+  }
+  document.querySelectorAll('.promo-card[data-promo-id]').forEach((c) => _promoObserver.observe(c));
+}
+
 // Cheap synchronous gate, used before scheduling and again inside the timer.
 // factReady is unknown until the RPC answers, so it is asserted true here and
 // re-evaluated for real once the fact is in hand.
@@ -11710,6 +11816,7 @@ function renderFeed() {
 
   // Infinite-scroll sentinel: appended after the cards when more posts may exist.
   mountFeedLoadMoreSentinel();
+  injectPromoCards();
 }
 
 // Append (or refresh) the load-more sentinel at the bottom of the feed and wire
@@ -29050,6 +29157,7 @@ async function bootApp(user) {
   } catch(e) {
     console.error('[WristLog] bootApp loadUserData error:', e.message, e);
   }
+  await loadPromoSlots();   // audience predicates need the counts loadUserData() fills
   // Retry any dirty state persisted from a previous session
   const _hasPersisted = _dirty.watches.size || _dirty.logs.size || _dirty.wishlist.size || _dirty.elo.size || _pendingDeletes.length;
   if (_hasPersisted) { console.log('[WRotate] Retrying persisted dirty state'); cloudSync(); }
