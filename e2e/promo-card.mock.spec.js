@@ -71,8 +71,22 @@ test.describe('renderPromoCard', () => {
   });
 
   test('omits the button when there is no label', async ({ page }) => {
-    const out = await html(page, { ...SLOT, cta_label: '' });
-    expect(out).not.toContain('runPromoAction');
+    await page.goto('/');
+    const res = await page.evaluate((s) => {
+      const withoutLabel = document.createElement('div');
+      withoutLabel.innerHTML = window.renderPromoCard({ ...s, cta_label: '' });
+      const withLabel = document.createElement('div');
+      withLabel.innerHTML = window.renderPromoCard(s);
+      return {
+        withoutLabel: !!withoutLabel.querySelector('[data-promo-cta]'),
+        withLabel: !!withLabel.querySelector('[data-promo-cta]'),
+      };
+    }, SLOT);
+    expect(res.withoutLabel).toBe(false);
+    // Positive half: the same render WITH a label must produce the button —
+    // otherwise this test can't tell a correct renderer from one that never
+    // emits a CTA at all.
+    expect(res.withLabel).toBe(true);
   });
 
   test('rejects a non-https url: action', async ({ page }) => {
