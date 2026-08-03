@@ -5884,6 +5884,7 @@ function openBadgeRevealModal() {
   const unseen = (_earnedBadges || []).filter(e => e && !e.seen);
   const badges = unseen.map(e => BADGE_BY_REF[e.badge_ref]).filter(Boolean);
   if (!badges.length) return false;
+  window._modalShownThisSession = true;
   const modal = document.getElementById('badge-reveal-modal');
   if (!modal) { openBadgeWall(); return true; }   // fallback: straight to the wall
   const countEl = document.getElementById('badge-reveal-count');
@@ -7212,7 +7213,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.21.07';
+const APP_VERSION = '02.21.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11205,6 +11206,7 @@ function openFactModal(watch, factText) {
   eyebrow.textContent = `💡 Fun fact · ${watch.brand} ${watch.name}`;
   card.innerHTML = funFactCardHTML({ fact: factText });
   document.getElementById('fact-modal').classList.remove('hidden');
+  window._modalShownThisSession = true;
   if (window.posthog) posthog.capture('fact_modal_shown', { watch_id: watch.id });
 }
 
@@ -11471,6 +11473,11 @@ function renderPromoCard(slot) {
   </div>`;
 }
 
+// Set by any modal that takes over the screen. injectPromoCards() reads it so a
+// user never gets a modal AND a slot in the same session (promo_config
+// .suppress_after_modal). On window so E2E can drive it.
+window._modalShownThisSession = false;
+
 let _promoSlots  = [];
 let _promoConfig = null;
 let _promoEvents = [];
@@ -11704,7 +11711,7 @@ function maybeShowPushPrimer() {
   setTimeout(() => {
     if (document.querySelector('.overlay:not(.hidden)')) return;   // don't stack — retry next trigger
     const m = document.getElementById('push-primer-modal');
-    if (m) { m.classList.remove('hidden'); _logPostCtaEvent('shown', 'push_primer'); }
+    if (m) { m.classList.remove('hidden'); window._modalShownThisSession = true; _logPostCtaEvent('shown', 'push_primer'); }
   }, 900);
 }
 function pushPrimerEnable() {
@@ -15054,6 +15061,7 @@ function showNextAnniversary() {
   const textEl = document.getElementById('anniversary-text');
   textEl.innerHTML = `Your <strong style="color:var(--text);">${escHtml(w.brand)} ${escHtml(w.name)}</strong> joined your collection ${years} year${plural} ago today.`;
   document.getElementById('anniversary-modal').classList.remove('hidden');
+  window._modalShownThisSession = true;
 }
 function dismissAnniversary() {
   if (_annivQueue.length > 0) {
