@@ -7303,7 +7303,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.21.53';
+const APP_VERSION = '02.21.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18247,6 +18247,7 @@ function updatePromoPreview() {
 // Always saves as a draft. Activating a slot puts content in real users' feeds
 // and is a deliberate second step (setPromoStatus), never a side effect of saving.
 async function savePromoSlot() {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
   const st = document.getElementById('promo-status');
   const slot = promoFormSlot();
   if (!slot.heading) { if (st) st.textContent = 'A heading is required.'; return; }
@@ -18259,6 +18260,7 @@ async function savePromoSlot() {
 }
 
 async function setPromoStatus(id, status) {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
   const { error } = await db.from('promo_slots').update({ status }).eq('id', id);
   if (error) { toast('Could not update slot: ' + error.message, 'error'); return; }
   loadPromoAdmin();
@@ -18307,6 +18309,7 @@ async function loadPromoAdmin() {
 }
 
 async function savePromoConfig() {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
   const st = document.getElementById('promo-cfg-status');
   const { error } = await db.from('promo_config').update({
     enabled:                 document.getElementById('promo-cfg-enabled').checked,
