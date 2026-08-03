@@ -94,4 +94,77 @@ test.describe('renderPromoCard', () => {
     const out = await html(page, { ...SLOT, body: 'a [img3] b', images: [] });
     expect(out).not.toContain('[img3]');
   });
+
+  test('a crafted slot id cannot break out of the CTA click handler, and a normal id still fires its action', async ({ page }) => {
+    await page.goto('/');
+    // Reviewer's payload: a slot id containing a quote, closing paren and ';'
+    // — with the old inline onclick="runPromoAction('${escAttr(id)}')" this
+    // decoded back to a literal ' inside the JS string literal (escAttr only
+    // closes the HTML-attribute context, not the nested JS context) and ran
+    // arbitrary script on click. Delegation reads the id from a data
+    // attribute instead, so there is no JS string literal to break out of.
+    const pwned = await page.evaluate((s) => {
+      window.__pwned = undefined;
+      window.logPromoEvent = () => {};
+      const evilId = "x');window.__pwned=true;//";
+      window._promoSlots = [{ ...s, id: evilId }];
+      document.body.insertAdjacentHTML('afterbegin', window.renderPromoCard(window._promoSlots[0]));
+      document.querySelector('[data-promo-cta]').click();
+      return window.__pwned;
+    }, SLOT);
+    expect(pwned).toBeUndefined();
+
+    const openedUrl = await page.evaluate((s) => {
+      window.logPromoEvent = () => {};
+      let opened = null;
+      window.open = (url) => { opened = url; };
+      window._promoSlots = [{ ...s, id: 'a-normal-uuid', cta_action: 'url:https://wrotate.com/open' }];
+      document.body.insertAdjacentHTML('afterbegin', window.renderPromoCard(window._promoSlots[0]));
+      document.querySelector('[data-promo-cta]').click();
+      return opened;
+    }, SLOT);
+    expect(openedUrl).toBe('https://wrotate.com/open');
+  });
+
+  test('omits the hero for a non-https image_url', async ({ page }) => {
+    const http = await html(page, { ...SLOT, image_url: 'http://evil.test/t.gif?u=1' });
+    expect(http).not.toContain('promo-card-hero');
+    expect(http).not.toContain('evil.test');
+
+    const js = await html(page, { ...SLOT, image_url: 'javascript:alert(1)' });
+    expect(js).not.toContain('promo-card-hero');
+    expect(js).not.toContain('javascript:alert(1)');
+  });
+
+  test('rejects Object.prototype-shaped cta_action keys without throwing', async ({ page }) => {
+    await page.goto('/');
+    const direct = await page.evaluate(() => ({
+      proto: window.promoActionFor('__proto__'),
+      ctor: window.promoActionFor('constructor'),
+      hasOwn: window.promoActionFor('hasOwnProperty'),
+    }));
+    expect(direct.proto).toBeNull();
+    expect(direct.ctor).toBeNull();
+    expect(direct.hasOwn).toBeNull();
+
+    const protoOut = await html(page, { ...SLOT, cta_action: '__proto__' });
+    expect(protoOut).not.toContain('Start ranking');
+    expect(protoOut).not.toContain('data-promo-cta');
+
+    const ctorOut = await html(page, { ...SLOT, cta_action: 'constructor' });
+    expect(ctorOut).not.toContain('Start ranking');
+    expect(ctorOut).not.toContain('data-promo-cta');
+
+    // Rendering (and, if it had rendered, clicking) must never throw.
+    const noThrow = await page.evaluate((s) => {
+      window.logPromoEvent = () => {};
+      window._promoSlots = [{ ...s, id: 'y1', cta_action: '__proto__' }];
+      const markup = window.renderPromoCard(window._promoSlots[0]);
+      document.body.insertAdjacentHTML('afterbegin', markup);
+      // No CTA button was rendered, so runPromoAction is only reachable via
+      // the delegated handler if one somehow existed — confirm it doesn't.
+      return !document.querySelector('[data-promo-cta]');
+    }, SLOT);
+    expect(noThrow).toBe(true);
+  });
 });

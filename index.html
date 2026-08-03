@@ -7212,7 +7212,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.18.55';
+const APP_VERSION = '02.19.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11372,9 +11372,14 @@ const PROMO_ACTIONS = {
 
 // Returns a callable for a slot's cta_action, or null. Null means "render no
 // button" — an unknown key must never throw and never fall through to a default.
+// hasOwnProperty guard (not a bare PROMO_ACTIONS[key] lookup): a plain object's
+// keys include inherited Object.prototype members — constructor, toString,
+// valueOf, hasOwnProperty, __proto__ — which read as truthy under a bare
+// lookup. An admin typo of cta_action: '__proto__' must still render no
+// button, not a live CTA that throws TypeError on click.
 function promoActionFor(key) {
   if (!key) return null;
-  if (PROMO_ACTIONS[key]) return PROMO_ACTIONS[key];
+  if (Object.prototype.hasOwnProperty.call(PROMO_ACTIONS, key)) return PROMO_ACTIONS[key];
   if (key.startsWith('url:')) {
     const url = key.slice(4);
     if (/^https:\/\//i.test(url)) return () => window.open(url, '_blank', 'noopener');
@@ -11400,14 +11405,44 @@ function expandPromoImages(body, images) {
   });
 }
 
+// Single document-level delegated click handler for every promo card,
+// installed at most once (guarded by _promoClickDelegated). Cards use
+// data-promo-cta / data-promo-dismiss + closest() instead of an inline
+// onclick="...('${escAttr(slot.id)}')": escAttr closes the HTML-attribute
+// context but not the JS string literal nested inside an onclick value — the
+// HTML parser decodes an entity like &#39; back to a literal ' BEFORE the
+// inline JS is compiled, so a crafted id containing a quote could break out
+// of the string and run arbitrary JS. Reading the id from .dataset instead
+// never re-enters an HTML or JS parser, so there is no nested context to
+// escape out of.
+let _promoClickDelegated = false;
+function installPromoClickDelegation() {
+  if (_promoClickDelegated) return;
+  _promoClickDelegated = true;
+  document.addEventListener('click', (event) => {
+    const cta = event.target.closest('[data-promo-cta]');
+    const dismiss = event.target.closest('[data-promo-dismiss]');
+    if (!cta && !dismiss) return;
+    const card = event.target.closest('[data-promo-id]');
+    if (!card) return;
+    const slotId = card.dataset.promoId;
+    if (cta) runPromoAction(slotId);
+    else dismissPromo(slotId);
+  });
+}
+
 function renderPromoCard(slot) {
+  installPromoClickDelegation();
   const action = promoActionFor(slot.cta_action);
   const cta = (action && slot.cta_label)
-    ? `<button type="button" class="btn btn-primary promo-cta"
-         onclick="runPromoAction('${escAttr(slot.id)}')">${escHtml(slot.cta_label)}</button>`
+    ? `<button type="button" class="btn btn-primary promo-cta" data-promo-cta>${escHtml(slot.cta_label)}</button>`
     : '';
-  const hero = slot.image_url
-    ? `<div class="promo-card-hero"><img src="${escAttr(slot.image_url)}" alt=""></div>`
+  // Same https-or-site-relative allowlist as body images ([imgN] tokens) —
+  // image_url is admin-entered and rendered into every viewer's feed, so it
+  // gets the same scheme check rather than a bare escAttr passthrough.
+  const heroUrl = sanitizeImageUrl(slot.image_url, location.origin);
+  const hero = heroUrl
+    ? `<div class="promo-card-hero"><img src="${escAttr(heroUrl)}" alt=""></div>`
     : '';
   const eyebrow = slot.eyebrow
     ? `<div class="promo-eyebrow">${escHtml(slot.eyebrow)}</div>` : '';
@@ -11415,8 +11450,7 @@ function renderPromoCard(slot) {
     ? `<div class="promo-body">${sanitizePromoHtml(expandPromoImages(slot.body, slot.images))}</div>` : '';
 
   return `<div class="promo-card" id="promocard-${escAttr(slot.id)}" data-promo-id="${escAttr(slot.id)}">
-    <button type="button" class="promo-dismiss" aria-label="Dismiss"
-      onclick="dismissPromo('${escAttr(slot.id)}')">✕</button>
+    <button type="button" class="promo-dismiss" aria-label="Dismiss" data-promo-dismiss>✕</button>
     <div class="promo-card-header">
       <div class="promo-mark" aria-hidden="true">
         <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
