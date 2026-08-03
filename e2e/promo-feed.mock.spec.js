@@ -11,7 +11,7 @@ async function setup(page, { postCount = 6, config = {}, slots = null } = {}) {
                      max_per_session: 1, default_max_impressions: 3,
                      suppress_after_modal: true, ...config };
     _promoSlots = slots || [{
-      id: 'p1', heading: 'Promo one', body: 'b', audience: 'all',
+      id: 'p1', heading: 'Promo one', body: 'b', audience: 'all', status: 'active',
       priority: 0, starts_at: null, ends_at: null, max_impressions: null,
       cta_label: 'Go', cta_action: 'open_wishlist', images: [],
       created_at: '2026-01-01T00:00:00Z',
@@ -56,7 +56,7 @@ test.describe('promo feed injection (mocked)', () => {
       postCount: 12,
       config: { repeat_every: 4, max_per_session: 2 },
       slots: [1, 2, 3].map((n) => ({
-        id: `p${n}`, heading: `Promo ${n}`, audience: 'all', priority: 0,
+        id: `p${n}`, heading: `Promo ${n}`, audience: 'all', status: 'active', priority: 0,
         starts_at: null, ends_at: null, max_impressions: null, images: [],
         created_at: '2026-01-01T00:00:00Z',
       })),
@@ -95,7 +95,7 @@ test.describe('promo feed injection (mocked)', () => {
       postCount: 4,
       config: { repeat_every: 4, max_per_session: 2 },
       slots: [1, 2].map((n) => ({
-        id: `p${n}`, heading: `Promo ${n}`, audience: 'all', priority: 0,
+        id: `p${n}`, heading: `Promo ${n}`, audience: 'all', status: 'active', priority: 0,
         starts_at: null, ends_at: null, max_impressions: null, images: [],
         created_at: '2026-01-01T00:00:00Z',
       })),
@@ -153,7 +153,7 @@ test.describe('promo feed injection (mocked)', () => {
     await setup(page, {
       config: { max_per_session: 1 },
       slots: ['p1', 'p2'].map((id, i) => ({
-        id, heading: `Promo ${id}`, audience: 'all', priority: 1 - i,
+        id, heading: `Promo ${id}`, audience: 'all', status: 'active', priority: 1 - i,
         starts_at: null, ends_at: null, max_impressions: null, images: [],
         created_at: '2026-01-01T00:00:00Z',
       })),
@@ -180,10 +180,10 @@ test.describe('promo feed injection (mocked)', () => {
     await setup(page, {
       config: { max_per_session: 1 },
       slots: [
-        { id: 'p1', heading: 'Promo 1', audience: 'all', priority: 1,
+        { id: 'p1', heading: 'Promo 1', audience: 'all', status: 'active', priority: 1,
           starts_at: null, ends_at: null, max_impressions: 1, images: [],
           created_at: '2026-01-01T00:00:00Z' },
-        { id: 'p2', heading: 'Promo 2', audience: 'all', priority: 0,
+        { id: 'p2', heading: 'Promo 2', audience: 'all', status: 'active', priority: 0,
           starts_at: null, ends_at: null, max_impressions: null, images: [],
           created_at: '2026-01-01T00:00:00Z' },
       ],
@@ -218,7 +218,7 @@ test.describe('promo feed injection (mocked)', () => {
                        max_per_session: 1, default_max_impressions: 3,
                        suppress_after_modal: true };
       _promoSlots = [{
-        id: 'p1', heading: 'Promo one', body: 'b', audience: 'all',
+        id: 'p1', heading: 'Promo one', body: 'b', audience: 'all', status: 'active',
         priority: 0, starts_at: null, ends_at: null, max_impressions: null,
         cta_label: 'Go', cta_action: 'open_wishlist', images: [],
         created_at: '2026-01-01T00:00:00Z',
@@ -256,4 +256,70 @@ test.describe('promo feed injection (mocked)', () => {
     });
     expect(await order(page)).toEqual(['post']);
   });
+});
+
+// ── The empty feed: the spec's highest-value case ───────────────────────────
+// "Empty feed: append below the empty state. This is the highest-value case —
+// users following nobody currently hit a dead end." promoInjectPositions()
+// carries the `if (!postCount) return [0]` branch for it, but renderFeed()
+// returned from the empty-state branch before ever calling injectPromoCards(),
+// so the branch was unreachable in the app.
+test('an empty feed gets a card appended below the empty state', async ({ page }) => {
+  await page.goto('/');
+  const res = await page.evaluate(() => {
+    currentUser = { id: 'u1' };
+    document.getElementById('auth-screen').style.display = 'none';
+    watches = []; logs = [];                 // keeps the fact modal / first-wear prompt out
+    feedItems = []; feedError = false; feedHasMore = false;
+    following = new Set();
+    _promoConfig = { enabled: true, first_position: 2, repeat_every: 0,
+                     max_per_session: 1, default_max_impressions: 3,
+                     suppress_after_modal: true };
+    _promoSlots = [{
+      id: 'p1', heading: 'Promo one', body: 'b', audience: 'all', status: 'active',
+      priority: 0, starts_at: null, ends_at: null, max_impressions: null,
+      cta_label: 'Go', cta_action: 'open_discover', images: [],
+      created_at: '2026-01-01T00:00:00Z',
+    }];
+    _promoEvents = []; _promoPlaced = new Set();
+    _promoDismissed = new Set(); _promoImpressed = new Set();
+    window._modalShownThisSession = false;
+    db.from = () => ({ insert: async () => ({ error: null }) });
+
+    window.renderFeed();
+
+    const el = document.getElementById('feed-list');
+    return {
+      emptyState: !!el.querySelector('.feed-empty-state'),
+      promos: el.querySelectorAll('.promo-card').length,
+      lastIsPromo: !!el.lastElementChild?.classList.contains('promo-card'),
+    };
+  });
+  expect(res.emptyState).toBe(true);   // the empty state still renders
+  expect(res.promos).toBe(1);          // ...with the card below it
+  expect(res.lastIsPromo).toBe(true);
+});
+
+test('a feed ERROR state still gets no card', async ({ page }) => {
+  // The spec is explicit: "Feed error state: no injection." Wiring the empty
+  // branch must not wire the error branch by accident.
+  await page.goto('/');
+  const promos = await page.evaluate(() => {
+    currentUser = { id: 'u1' };
+    watches = []; logs = [];
+    feedItems = []; feedError = true; following = new Set();
+    _promoConfig = { enabled: true, first_position: 0, repeat_every: 0,
+                     max_per_session: 1, default_max_impressions: 3,
+                     suppress_after_modal: true };
+    _promoSlots = [{
+      id: 'p1', heading: 'Promo one', audience: 'all', status: 'active', priority: 0,
+      starts_at: null, ends_at: null, max_impressions: null, images: [],
+      created_at: '2026-01-01T00:00:00Z',
+    }];
+    _promoEvents = []; _promoPlaced = new Set();
+    db.from = () => ({ insert: async () => ({ error: null }) });
+    window.renderFeed();
+    return document.getElementById('feed-list').querySelectorAll('.promo-card').length;
+  });
+  expect(promos).toBe(0);
 });

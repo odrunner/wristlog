@@ -21,6 +21,34 @@ describe('eligiblePromoSlots', () => {
     expect(run().map((s) => s.id)).toEqual(['s1']);
   });
 
+  // The admin's own account matches BOTH the user SELECT policy and the
+  // is_admin "for all" policy, and RLS policies OR together — so select('*')
+  // hands the owner every row, drafts and archives included. status is the one
+  // field the client used to trust RLS to have filtered, which meant the admin
+  // published every draft to their own feed and archiving never removed a card.
+  // The filter is here rather than only in the query so it holds whatever the
+  // caller was handed.
+  it('excludes a draft slot even when RLS handed it to us', () => {
+    expect(run({ slots: [slot({ status: 'draft' })] })).toEqual([]);
+  });
+
+  it('excludes an archived slot even when RLS handed it to us', () => {
+    expect(run({ slots: [slot({ status: 'archived' })] })).toEqual([]);
+  });
+
+  it('excludes a slot with no status at all', () => {
+    expect(run({ slots: [slot({ status: undefined })] })).toEqual([]);
+  });
+
+  it('includes an active slot alongside a draft and an archived one', () => {
+    const out = run({ slots: [
+      slot({ id: 'd', status: 'draft' }),
+      slot({ id: 'a', status: 'active' }),
+      slot({ id: 'z', status: 'archived' }),
+    ] });
+    expect(out.map((s) => s.id)).toEqual(['a']);
+  });
+
   it('returns nothing when the feature is disabled', () => {
     expect(run({ config: { ...CFG, enabled: false } })).toEqual([]);
   });

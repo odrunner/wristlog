@@ -2635,6 +2635,12 @@ export function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown
 
   return (slots || []).filter((s) => {
     if (!s || dismissed.has(s.id)) return false;
+    // Never trust RLS to have filtered status. The admin's own account matches
+    // BOTH the user policy and the is_admin "for all" policy, and policies OR
+    // together — so select('*') hands the owner drafts and archives too. Without
+    // this the owner publishes every draft to their own feed and archiving never
+    // takes a card down. Anything that is not exactly 'active' is out.
+    if (s.status !== 'active') return false;
     if (s.starts_at && Date.parse(s.starts_at) > now) return false;
     if (s.ends_at   && Date.parse(s.ends_at)  <= now) return false;
     if (!promoAudienceMatches(s.audience, ctx)) return false;

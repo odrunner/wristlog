@@ -5964,7 +5964,7 @@ function openBadgeRevealModal() {
   const unseen = (_earnedBadges || []).filter(e => e && !e.seen);
   const badges = unseen.map(e => BADGE_BY_REF[e.badge_ref]).filter(Boolean);
   if (!badges.length) return false;
-  window._modalShownThisSession = true;
+  notePromoModalShown();
   const modal = document.getElementById('badge-reveal-modal');
   if (!modal) { openBadgeWall(); return true; }   // fallback: straight to the wall
   const countEl = document.getElementById('badge-reveal-count');
@@ -7293,7 +7293,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.07.47';
+const APP_VERSION = '03.08.07';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11286,7 +11286,7 @@ function openFactModal(watch, factText) {
   eyebrow.textContent = `💡 Fun fact · ${watch.brand} ${watch.name}`;
   card.innerHTML = funFactCardHTML({ fact: factText });
   document.getElementById('fact-modal').classList.remove('hidden');
-  window._modalShownThisSession = true;
+  notePromoModalShown();
   if (window.posthog) posthog.capture('fact_modal_shown', { watch_id: watch.id });
 }
 
@@ -11402,6 +11402,12 @@ function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown }) {
 
   return (slots || []).filter((s) => {
     if (!s || dismissed.has(s.id)) return false;
+    // Never trust RLS to have filtered status. The admin's own account matches
+    // BOTH the user policy and the is_admin "for all" policy, and policies OR
+    // together — so select('*') hands the owner drafts and archives too. Without
+    // this the owner publishes every draft to their own feed and archiving never
+    // takes a card down. Anything that is not exactly 'active' is out.
+    if (s.status !== 'active') return false;
     if (s.starts_at && Date.parse(s.starts_at) > now) return false;
     if (s.ends_at   && Date.parse(s.ends_at)  <= now) return false;
     if (!promoAudienceMatches(s.audience, ctx)) return false;
@@ -11566,6 +11572,32 @@ let _promoDismissed = new Set();       // slot ids the user explicitly dismissed
 let _promoObserver = null;
 let _promoImpressed = new Set();       // impressions already logged this session
 
+// Every modal opener calls this instead of setting the flag directly.
+//
+// Setting the flag alone loses the race it exists to win: renderFeed() calls
+// maybeShowFactModal() and injectPromoCards() in the SAME synchronous pass, but
+// every opener defers first — a setTimeout, and for the fact modal an awaited
+// peek_watch_fact RPC; the push primer waits 900ms. So the flag is still false
+// when the card is injected, and flips seconds later with the card already on
+// screen: the user gets a modal AND a slot, exactly what suppress_after_modal
+// promises to prevent.
+//
+// So the flag also RETRACTS: any card the user has not actually seen (no
+// impression logged) comes back out and its session budget is refunded, so the
+// slot can appear in a later session instead of being silently spent. A card
+// already seen stays put — yanking it out from under a reader is worse than the
+// double surface, and its impression is already logged and paid for.
+function notePromoModalShown() {
+  window._modalShownThisSession = true;
+  if (!_promoConfig || !_promoConfig.suppress_after_modal) return;
+  for (const id of [..._promoPlaced]) {
+    if (_promoImpressed.has(id) || _promoDismissed.has(id)) continue;
+    const node = document.getElementById('promocard-' + id);
+    if (node) { if (_promoObserver) _promoObserver.unobserve(node); node.remove(); }
+    _promoPlaced.delete(id);
+  }
+}
+
 // Counts the audience predicates run against. Everything here is already in
 // memory after loadUserData(), so targeting costs no round-trip.
 function promoCtx() {
@@ -11591,7 +11623,9 @@ async function loadPromoSlots() {
   try {
     const [cfgRes, slotRes, evRes] = await Promise.all([
       db.from('promo_config').select('*').limit(1).maybeSingle(),
-      db.from('promo_slots').select('*'),
+      // Belt and braces alongside the status check in eligiblePromoSlots():
+      // for the admin's own account RLS returns drafts and archives too.
+      db.from('promo_slots').select('*').eq('status', 'active'),
       db.from('promo_events').select('slot_id,event').eq('user_id', currentUser.id),
     ]);
     _promoConfig = cfgRes?.data || null;
@@ -11687,7 +11721,13 @@ function observePromoImpressions() {
       }
     }, { threshold: 0.5 });
   }
-  document.querySelectorAll('.promo-card[data-promo-id]').forEach((c) => _promoObserver.observe(c));
+  // Scoped to the feed, never document-wide: the admin composer's live preview
+  // renders through the same renderPromoCard(), so a document-wide query also
+  // observed the preview and logged impressions with slot_id 'preview' — rows
+  // that fail the uuid cast silently.
+  const feed = document.getElementById('feed-list');
+  if (!feed) return;
+  feed.querySelectorAll('.promo-card[data-promo-id]').forEach((c) => _promoObserver.observe(c));
 }
 
 // Cheap synchronous gate, used before scheduling and again inside the timer.
@@ -11791,7 +11831,7 @@ function maybeShowPushPrimer() {
   setTimeout(() => {
     if (document.querySelector('.overlay:not(.hidden)')) return;   // don't stack — retry next trigger
     const m = document.getElementById('push-primer-modal');
-    if (m) { m.classList.remove('hidden'); window._modalShownThisSession = true; _logPostCtaEvent('shown', 'push_primer'); }
+    if (m) { m.classList.remove('hidden'); notePromoModalShown(); _logPostCtaEvent('shown', 'push_primer'); }
   }, 900);
 }
 function pushPrimerEnable() {
@@ -11913,6 +11953,11 @@ function renderFeed() {
         </div>
         <button class="btn btn-primary" onclick="openDiscover()" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Find People to Follow</button>
       </div>`;
+    // The empty feed is the highest-value slot placement — a user following
+    // nobody otherwise hits a dead end here. promoInjectPositions() already
+    // returns [0] for postCount 0; without this call that branch is unreachable.
+    // The error branch above deliberately still returns without injecting.
+    injectPromoCards();
     return;
   }
   el.innerHTML = feedItems.map(item => renderFeedCard(item)).join('');
@@ -15130,7 +15175,7 @@ function showNextAnniversary() {
   const textEl = document.getElementById('anniversary-text');
   textEl.innerHTML = `Your <strong style="color:var(--text);">${escHtml(w.brand)} ${escHtml(w.name)}</strong> joined your collection ${years} year${plural} ago today.`;
   document.getElementById('anniversary-modal').classList.remove('hidden');
-  window._modalShownThisSession = true;
+  notePromoModalShown();
 }
 function dismissAnniversary() {
   if (_annivQueue.length > 0) {
@@ -18220,7 +18265,20 @@ function promoFormSlot() {
 // implementation that can drift from it.
 function updatePromoPreview() {
   const el = document.getElementById('promo-preview');
-  if (el) el.innerHTML = renderPromoCard(promoFormSlot());
+  if (!el) return;
+  el.innerHTML = renderPromoCard(promoFormSlot());
+  // ...and then make it inert. The preview is the real card, so it carries the
+  // real interaction hooks: the delegated handler would read its id 'preview'
+  // and run dismissPromo('preview'), burning the session's max_per_session
+  // budget and poisoning _promoDismissed for the rest of the session. Stripping
+  // the hooks leaves the composer showing exactly the shipped markup while no
+  // click in it can reach feed state.
+  el.querySelectorAll('[data-promo-id],[data-promo-cta],[data-promo-dismiss]').forEach((n) => {
+    n.removeAttribute('data-promo-id');
+    n.removeAttribute('data-promo-cta');
+    n.removeAttribute('data-promo-dismiss');
+    n.removeAttribute('id');
+  });
 }
 
 // Always saves as a draft. Activating a slot puts content in real users' feeds
@@ -26163,6 +26221,13 @@ function clearUserState() {
   userNotifs = []; unreadNotifCount = 0; notifPanelOpen = false;
   commentLikes = {}; discoverUsers = []; profilePageUserId = null;
   _factImpSeen.clear(); // fun-fact impressions already seen this session — must not survive an account switch
+  // Promo session state — same rule. signOut() never reloads the page, so
+  // account A's spent max_per_session budget, dismissals, impressions and modal
+  // flag would otherwise silently deny account B its card.
+  _promoPlaced.clear(); _promoDismissed.clear(); _promoImpressed.clear();
+  _promoSlots = []; _promoEvents = []; _promoConfig = null;
+  if (_promoObserver) { _promoObserver.disconnect(); _promoObserver = null; } // disconnect, not just drop — A's nodes stay registered otherwise
+  window._modalShownThisSession = false;
   feedLoading = false; _feedLoadStartedAt = 0; feedError = false; feedLoadedAt = 0; _clubsLoaded = false; _frLoadedAt = 0;
   Object.keys(_profileCache).forEach(k => delete _profileCache[k]);
   if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }

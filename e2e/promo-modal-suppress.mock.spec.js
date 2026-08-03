@@ -7,7 +7,7 @@ test('a modal that fired this session suppresses the slot', async ({ page }) => 
     _promoConfig = { enabled: true, first_position: 0, repeat_every: 0,
                      max_per_session: 1, default_max_impressions: 3,
                      suppress_after_modal: true };
-    _promoSlots = [{ id: 'p1', heading: 'H', audience: 'all', priority: 0,
+    _promoSlots = [{ id: 'p1', heading: 'H', audience: 'all', status: 'active', priority: 0,
                      starts_at: null, ends_at: null, max_impressions: null,
                      images: [], created_at: '2026-01-01T00:00:00Z' }];
     _promoEvents = []; _promoPlaced = new Set();
@@ -48,7 +48,7 @@ test.describe('end-to-end: a real modal opener suppresses the promo slot, and on
       _promoConfig = { enabled: true, first_position: 0, repeat_every: 0,
                        max_per_session: 1, default_max_impressions: 3,
                        suppress_after_modal: suppress };
-      _promoSlots = [{ id: 'p1', heading: 'H', audience: 'all', priority: 0,
+      _promoSlots = [{ id: 'p1', heading: 'H', audience: 'all', status: 'active', priority: 0,
                        starts_at: null, ends_at: null, max_impressions: null,
                        images: [], created_at: '2026-01-01T00:00:00Z' }];
       _promoEvents = []; _promoPlaced = new Set();
@@ -86,5 +86,76 @@ test.describe('end-to-end: a real modal opener suppresses the promo slot, and on
       return document.querySelectorAll('.promo-card').length;
     });
     expect(count).toBe(1);
+  });
+});
+
+// ── Ordering, not just wiring ───────────────────────────────────────────────
+// The tests above set the flag BEFORE injection, which is the one ordering that
+// never happens in production. renderFeed() calls maybeShowFactModal() and then
+// injectPromoCards() in the same synchronous pass, but every opener defers — a
+// setTimeout, then an awaited peek_watch_fact RPC — so the flag is still false
+// at injection time and flips seconds later, with the card already on screen.
+// suppress_after_modal then loses the exact race it exists to win. The fix is a
+// retraction: an opener pulls back any card the user has not yet SEEN and
+// refunds its session budget.
+test.describe('a modal that fires AFTER injection still wins', () => {
+  const SLOT = {
+    id: 'p1', heading: 'H', audience: 'all', status: 'active', priority: 0,
+    starts_at: null, ends_at: null, max_impressions: null, images: [],
+    created_at: '2026-01-01T00:00:00Z',
+  };
+
+  async function placeThenOpenModal(page, { suppress = true, seen = false } = {}) {
+    await page.goto('/');
+    return page.evaluate(({ SLOT, suppress, seen }) => {
+      currentUser = { id: 'u1' };
+      document.getElementById('auth-screen').style.display = 'none';
+      _promoConfig = { enabled: true, first_position: 0, repeat_every: 0,
+                       max_per_session: 1, default_max_impressions: 3,
+                       suppress_after_modal: suppress };
+      _promoSlots = [SLOT]; _promoEvents = [];
+      _promoPlaced = new Set(); _promoDismissed = new Set(); _promoImpressed = new Set();
+      window._modalShownThisSession = false;
+      db.from = () => ({ insert: async () => ({ error: null }) });
+      document.getElementById('feed-list').innerHTML = '<div class="feed-card">p</div>';
+
+      window.injectPromoCards();                       // 1. card lands first
+      const placed = document.querySelectorAll('.promo-card').length;
+      if (seen) _promoImpressed.add('p1');             // the user scrolled it into view
+
+      window.openFactModal({ id: 'w1', brand: 'Seiko', name: 'SKX' }, 'A fact.'); // 2. modal, later
+
+      return {
+        placed,
+        after: document.querySelectorAll('.promo-card').length,
+        budget: _promoPlaced.size,
+        flag: window._modalShownThisSession,
+        modalOpen: !document.getElementById('fact-modal').classList.contains('hidden'),
+      };
+    }, { SLOT, suppress, seen });
+  }
+
+  test('an unseen card is retracted and its session budget refunded', async ({ page }) => {
+    const r = await placeThenOpenModal(page);
+    expect(r.placed).toBe(1);        // the card really was on screen first
+    expect(r.modalOpen).toBe(true);  // the real opener really ran
+    expect(r.flag).toBe(true);
+    expect(r.after).toBe(0);         // ...and the card is gone again
+    expect(r.budget).toBe(0);        // refunded, so it can appear next session
+  });
+
+  test('a card the user has already SEEN is left alone', async ({ page }) => {
+    // Pulling a card out from under someone mid-read is worse than the double
+    // surface it would prevent, and the impression is already logged and paid for.
+    const r = await placeThenOpenModal(page, { seen: true });
+    expect(r.after).toBe(1);
+    expect(r.budget).toBe(1);
+  });
+
+  test('suppress_after_modal:false leaves the card in place', async ({ page }) => {
+    const r = await placeThenOpenModal(page, { suppress: false });
+    expect(r.flag).toBe(true);
+    expect(r.after).toBe(1);
+    expect(r.budget).toBe(1);
   });
 });
