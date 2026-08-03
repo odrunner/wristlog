@@ -7166,7 +7166,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '02.18.29';
+const APP_VERSION = '02.18.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11228,6 +11228,33 @@ function maybeShowFactModal() {
       _factModalPending = false;
     }
   }, 600);
+}
+
+// ══════════════════════════════════════════
+//  MERCHANDISING SLOTS
+//  Spec: docs/superpowers/specs/2026-08-02-merchandising-slots-design.md
+// ══════════════════════════════════════════
+
+// Audience rules. Each is a pure predicate over counts already in memory after
+// loadUserData(), so targeting needs no server round-trip and no per-user
+// fan-out table. Adding an audience = one entry here; the admin dropdown is
+// generated from this object so the two can never drift.
+const PROMO_AUDIENCES = {
+  all:             ()    => true,
+  never_logged:    (c)   => (c.wearCount || 0) === 0,
+  no_wishlist:     (c)   => (c.wishlistCount || 0) === 0,
+  // iOS-only: #nav-measure-btn is hidden on web, so this CTA would go nowhere.
+  never_measured:  (c)   => !!c.isIos && (c.measureCount || 0) === 0,
+  no_clubs:        (c)   => (c.clubCount || 0) === 0,
+  follows_few:     (c)   => (c.followingCount || 0) < 3,
+  never_ranked:    (c)   => !c.rankedEver,
+};
+
+// An unknown key is FALSE, never true: a typo in the admin form hides the card
+// rather than blasting it to everyone.
+function promoAudienceMatches(key, ctx) {
+  const fn = PROMO_AUDIENCES[key];
+  return typeof fn === 'function' ? !!fn(ctx || {}) : false;
 }
 
 // Cheap synchronous gate, used before scheduling and again inside the timer.
