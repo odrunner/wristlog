@@ -170,7 +170,7 @@ serve(async (req) => {
     }
 
     // Build message
-    const message = buildMessage(type, actorName);
+    const message = buildMessage(type, actorName, ref_id);
     if (!message) {
       return new Response(JSON.stringify({ skipped: "unknown type" }), {
         status: 200,

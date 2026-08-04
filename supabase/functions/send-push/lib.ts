@@ -17,10 +17,14 @@ export function resolveActorName(
 }
 
 // Notification type → human-readable push message.
-// Unknown types fall back to a generic body (never null in practice).
+// Unknown types fall back to a generic body.
+//
+// `refId` is the row's ref_id. Only `system` needs it (it holds the brand name);
+// every other type describes itself from the actor alone.
 export function buildMessage(
   type: string,
   actorName: string,
+  refId?: string | null,
 ): { title: string; body: string } | null {
   const title = "WRotate";
   switch (type) {
@@ -54,6 +58,14 @@ export function buildMessage(
       return { title, body: `${actorName} mentioned you` };
     case "comment_like":
       return { title, body: `${actorName} liked your comment` };
+    // The auto-add-brand confirmation: actor-less, brand name in ref_id. It used
+    // to push "Someone sent you a notification" (or a bystander's name, for the
+    // six rows that carry an actor) — no hint that a brand request came through.
+    // A row with no brand has nothing to report, so send nothing.
+    case "system":
+      return refId
+        ? { title, body: `Your requested brand "${refId}" has been added to WRotate!` }
+        : null;
     case "badge_earned":
       // Badges are pushed by the send-badge-push function (batched), not the insert webhook.
       return null;

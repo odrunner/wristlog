@@ -61,6 +61,19 @@ Deno.test("buildMessage — known types", () => {
   );
 });
 
+// A `system` row is the auto-add-brand confirmation: actor-less, with the brand
+// name in ref_id. Without the ref it pushed "Someone sent you a notification".
+Deno.test("buildMessage — system names the brand that was added", () => {
+  assertEquals(
+    buildMessage("system", "Someone", "Aviator")?.body,
+    'Your requested brand "Aviator" has been added to WRotate!',
+  );
+  // A system row with no brand has nothing to say — skip the push rather than
+  // deliver an empty one. (No such row exists; this is the safety net.)
+  assertEquals(buildMessage("system", "Someone"), null);
+  assertEquals(buildMessage("system", "Someone", ""), null);
+});
+
 Deno.test("buildMessage — unknown type falls back to generic body", () => {
   assertEquals(buildMessage("zzz", "A")?.body, "A sent you a notification");
   assertEquals(buildMessage("", "A")?.body, "A sent you a notification");
