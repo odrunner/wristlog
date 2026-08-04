@@ -157,6 +157,69 @@ test.describe('admin Promos tab — load/edit (mocked)', () => {
     expect(Object.prototype.hasOwnProperty.call(result.updatePatch, 'created_by')).toBe(false);
   });
 
+  // Reviewer-caught regression: _editingPromoId used to survive a successful
+  // update, so a second Save silently re-updated (overwrote) the SAME row
+  // instead of inserting a new one. Repro: edit live-slot "Live" -> Update ->
+  // type a completely different slot -> Save -> live-slot is destroyed and
+  // replaced, no new row created. The fix must exit edit mode on success and
+  // stay in edit mode on failure (so an in-flight edit isn't lost to a
+  // transient error).
+  test('a successful update exits edit mode: the next Save inserts, not a second update on the same row', async ({ page }) => {
+    await page.goto('/');
+    const result = await page.evaluate(async (id) => {
+      currentUser = { id };
+      const calls = [];
+      db.from = () => ({
+        insert: async (r) => { calls.push({ op: 'insert', row: r }); return { data: [r], error: null }; },
+        update: (patch) => ({ eq: async (col, eid) => { calls.push({ op: 'update', id: eid, patch }); return { data: null, error: null }; } }),
+      });
+      window.loadPromoIntoForm({ id: 'live-slot', heading: 'Live', status: 'active', images: [], max_impressions: null });
+      document.getElementById('promo-heading').value = 'Live';
+      await window.savePromoSlot(); // update #1 — succeeds
+      const editingAfterFirstSave = _editingPromoId;
+      const saveLabelAfterFirstSave = document.getElementById('promo-save-btn').textContent;
+      document.getElementById('promo-heading').value = 'A totally different slot';
+      await window.savePromoSlot(); // must be an INSERT, never a second update('live-slot', ...)
+      return { calls, editingAfterFirstSave, saveLabelAfterFirstSave };
+    }, ADMIN_ID);
+    expect(result.editingAfterFirstSave).toBeNull();
+    expect(result.saveLabelAfterFirstSave).toBe('Save as Draft');
+    expect(result.calls.map((c) => c.op)).toEqual(['update', 'insert']);
+    expect(result.calls[1].row.heading).toBe('A totally different slot');
+    expect(result.calls.filter((c) => c.op === 'update' && c.id === 'live-slot').length).toBe(1);
+  });
+
+  test('a failed update stays in edit mode: the next Save still targets the same row', async ({ page }) => {
+    await page.goto('/');
+    const result = await page.evaluate(async (id) => {
+      currentUser = { id };
+      let attempt = 0;
+      const calls = [];
+      db.from = () => ({
+        insert: async (r) => { calls.push({ op: 'insert', row: r }); return { data: [r], error: null }; },
+        update: (patch) => ({
+          eq: async (col, eid) => {
+            attempt++;
+            calls.push({ op: 'update', id: eid, patch, attempt });
+            if (attempt === 1) return { data: null, error: { message: 'network blip' } };
+            return { data: null, error: null };
+          },
+        }),
+      });
+      window.loadPromoIntoForm({ id: 'live-slot', heading: 'Live', status: 'active', images: [], max_impressions: null });
+      document.getElementById('promo-heading').value = 'Edited while offline';
+      await window.savePromoSlot(); // fails
+      const editingAfterFailure = _editingPromoId;
+      const saveLabelAfterFailure = document.getElementById('promo-save-btn').textContent;
+      await window.savePromoSlot(); // retried save must still be an UPDATE on live-slot
+      return { calls, editingAfterFailure, saveLabelAfterFailure };
+    }, ADMIN_ID);
+    expect(result.editingAfterFailure).toBe('live-slot');
+    expect(result.saveLabelAfterFailure).toBe('Update slot');
+    expect(result.calls.map((c) => c.op)).toEqual(['update', 'update']);
+    expect(result.calls[1].id).toBe('live-slot');
+  });
+
   test('the datetime round trip is drift-free: edit -> save -> edit -> save yields identical timestamps', async ({ page }) => {
     await page.goto('/');
     const result = await page.evaluate(() => {

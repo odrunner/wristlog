@@ -7288,7 +7288,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.19.03';
+const APP_VERSION = '03.19.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18417,8 +18417,18 @@ async function savePromoSlot() {
 
   if (_editingPromoId) {
     const { error } = await db.from('promo_slots').update(slot).eq('id', _editingPromoId);
-    if (st) st.textContent = error ? ('Error: ' + error.message) : 'Slot updated.';
-    if (!error) loadPromoAdmin();
+    if (error) {
+      if (st) st.textContent = 'Error: ' + error.message;
+      return; // stay in edit mode — the in-progress edit isn't lost on failure
+    }
+    // Exit edit mode on success. Leaving _editingPromoId set would make a
+    // second Save silently re-update (i.e. overwrite) this same row instead
+    // of creating a new one — a live slot's content destroyed by an
+    // unrelated next edit, with the "Update slot" button label as the only
+    // (easy to miss) signal that was about to happen.
+    clearPromoForm();
+    if (st) st.textContent = 'Slot updated.';
+    loadPromoAdmin();
     return;
   }
 
@@ -18459,8 +18469,10 @@ function promoStatusActions(status) {
 let _promoAdminListDelegated = false;
 function installPromoAdminListDelegation() {
   if (_promoAdminListDelegated) return;
+  const listEl = document.getElementById('promo-list');
+  if (!listEl) return; // don't latch the flag on a failed attach — retry next call
   _promoAdminListDelegated = true;
-  document.getElementById('promo-list')?.addEventListener('click', (event) => {
+  listEl.addEventListener('click', (event) => {
     const editBtn = event.target.closest('[data-promo-edit]');
     if (editBtn) {
       const slot = _promoAdminSlots.find((s) => s.id === editBtn.dataset.promoEdit);
