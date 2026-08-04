@@ -2653,30 +2653,65 @@ export function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown
   );
 }
 
-// Post indices to insert a card BEFORE. Positions are absolute over the whole
-// feed, so an appended page continues the sequence rather than restarting it.
-// placedCount is how many cards this session has already shown.
-export function promoInjectPositions({ postCount, config, placedCount }) {
+// Slot + position pairs, in placement order. Positions are absolute over the
+// whole feed, so an appended page continues the sequence rather than
+// restarting it. placedCount is how many cards this session has already
+// shown. `slots` is the eligible list in priority order (eligiblePromoSlots'
+// sort) — index i is placement priority, not necessarily array position,
+// since i counts from placedCount upward.
+export function promoSlotPositions({ slots, postCount, config, placedCount }) {
   const cfg = config || {};
   const max = cfg.max_per_session || 0;
   const already = placedCount || 0;
+  const list = slots || [];
   if (max <= 0 || already >= max) return [];
-  if (!postCount) return [0];                       // empty feed: below the empty state
 
-  // A feed shorter than first_position puts the card at the top rather than
-  // trailing off the end — that short feed is exactly where it earns most.
-  const want = cfg.first_position || 0;
-  const first = want > postCount ? 0 : want;
+  // Empty feed: below the empty state. Only the highest-priority slot in
+  // line gets it — matches the old config-only behavior, which never emitted
+  // more than one position for an empty feed regardless of max_per_session.
+  if (!postCount) {
+    const s0 = list[0];
+    return s0 ? [{ id: s0.id, pos: 0 }] : [];
+  }
+
   const step = cfg.repeat_every || 0;
+  const taken = new Set();
+  const out = [];
+
+  // A feed shorter than the requested base position puts the card at the
+  // top rather than trailing off the end — that short feed is exactly where
+  // it earns most. Computed once, before the loop, so it doesn't get
+  // re-armed by a later append (an appended page continues the sequence
+  // rather than restarting it).
+  const base = cfg.first_position || 0;
+  const first = base > postCount ? 0 : base;
 
   // `i` counts cards from the START of the session, not from this call, so
   // positions consumed on an earlier page are skipped instead of re-emitted.
-  const out = [];
   for (let i = already; i < max; i++) {
-    const pos = step > 0 ? first + step * i : first;
-    if (pos > postCount) break;
-    out.push(pos);
-    if (step <= 0) break;                           // no repeat: exactly one card
+    const slot = list[i - already];
+    if (!slot) break;
+
+    const explicit = slot.first_position != null;
+    let want = explicit ? slot.first_position : first + step * i;
+
+    // Each explicit per-slot override is its own independent placement
+    // decision, so it clamps to the top on overflow like the base case
+    // above. A config-driven repeat that runs off the end just stops
+    // instead of piling more cards at the top.
+    if (want > postCount) {
+      if (explicit) want = 0;
+      else break;
+    }
+
+    // Slots arrive in priority order, so a lower-priority slot colliding
+    // with an already-placed higher-priority one yields to the next free spot.
+    let pos = want;
+    while (taken.has(pos) && pos < postCount) pos++;
+    taken.add(pos);
+    out.push({ id: slot.id, pos });
+
+    if (!explicit && step <= 0) break;               // no repeat: exactly one card
   }
   return out;
 }

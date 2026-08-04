@@ -64,6 +64,31 @@ test.describe('promo feed injection (mocked)', () => {
     expect((await order(page)).filter((x) => x === 'PROMO')).toHaveLength(2);
   });
 
+  test('two active slots with explicit first_position each land at their own spot', async ({ page }) => {
+    // p1 (higher priority) wants position 1, p2 (lower priority) wants
+    // position 4 — distinct explicit positions, so neither collides with the
+    // other, and per-slot first_position must win over the config default
+    // (2) for both.
+    await setup(page, {
+      postCount: 6,
+      config: { max_per_session: 2 },
+      slots: [
+        { id: 'p1', heading: 'Promo 1', audience: 'all', status: 'active', priority: 1,
+          starts_at: null, ends_at: null, max_impressions: null, images: [],
+          first_position: 1, created_at: '2026-01-01T00:00:00Z' },
+        { id: 'p2', heading: 'Promo 2', audience: 'all', status: 'active', priority: 0,
+          starts_at: null, ends_at: null, max_impressions: null, images: [],
+          first_position: 4, created_at: '2026-01-01T00:00:00Z' },
+      ],
+    });
+    expect(await order(page)).toEqual(
+      ['post', 'PROMO', 'post', 'post', 'post', 'PROMO', 'post', 'post']
+    );
+    const ids = await page.evaluate(() =>
+      [...document.querySelectorAll('.promo-card')].map((c) => c.dataset.promoId));
+    expect(ids).toEqual(['p1', 'p2']);
+  });
+
   test('injects nothing when disabled', async ({ page }) => {
     await setup(page, { config: { enabled: false } });
     expect((await order(page)).filter((x) => x === 'PROMO')).toHaveLength(0);

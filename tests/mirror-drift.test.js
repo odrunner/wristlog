@@ -48,7 +48,7 @@ const VERBATIM = [
   'fillCampaignTokens', 'unresolvedCampaignTokens',
   'shouldShowFactModal', 'pickFactModalWatch', 'shouldAttachFactOnEdit',
   'npIdentifyWait', 'syncedIds', 'promoAudienceMatches', 'eligiblePromoSlots',
-  'promoInjectPositions', 'PROMO_AUDIENCES',
+  'promoSlotPositions', 'PROMO_AUDIENCES',
 ];
 
 const ADAPTED = [
