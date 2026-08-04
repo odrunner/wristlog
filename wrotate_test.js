@@ -2713,12 +2713,14 @@ export function promoSlotPositions({ slots, postCount, config, placedCount, reme
   const base = cfg.first_position || 0;
   const first = base > postCount ? 0 : base;
 
-  // `freshIndex` counts FRESH (non-reclaiming) cards from the START of the
+  // `freshIndex` counts formula-grid slots consumed from the START of the
   // session, not from this call, so positions consumed on an earlier page are
-  // skipped instead of re-emitted. A reclaiming slot is skipped for this
-  // count entirely — it isn't spending a new formula slot, it's resuming one
-  // it already spent, so it must not shift the index a later fresh slot
-  // computes its own position from.
+  // skipped instead of re-emitted. EVERY placed slot advances it, reclaims
+  // included: a reclaiming slot still occupies the grid position it took
+  // originally, so a FRESH slot placed later in the same pass must compute
+  // the index it would have had were the reclaimer still in the picture.
+  // See the note at the `freshIndex++` below — skipping the advance for a
+  // reclaim is exactly the bug that collapsed repeat_every spacing.
   let freshIndex = already;
   const limit = max - already;
 
