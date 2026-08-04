@@ -44,18 +44,18 @@ function constSrc(name) {
   return m[0];
 }
 
-function buildLocalCounters({ currentUser, localStorage }) {
+function buildLocalCounters({ currentUser, localStorage, promoSlots }) {
   const src = [
     constSrc('PROMO_IMPRESSIONS_KEY'),
     fnSrc('_promoImpressionsKey'),
     fnSrc('_readLocalPromoImpressions'),
     fnSrc('_incrementLocalPromoImpression'),
   ].join('\n');
-  const factory = new Function('currentUser', 'localStorage', `
+  const factory = new Function('currentUser', 'localStorage', '_promoSlots', `
     ${src}
     return { _promoImpressionsKey, _readLocalPromoImpressions, _incrementLocalPromoImpression };
   `);
-  return factory(currentUser, localStorage);
+  return factory(currentUser, localStorage, promoSlots || []);
 }
 
 function buildMaybeLogPromoImpression({ promoImpressed, logPromoEvent }) {
@@ -209,15 +209,15 @@ describe('local counter is per-user', () => {
     _incrementLocalPromoImpression('s1');
     _incrementLocalPromoImpression('s1');
     _incrementLocalPromoImpression('s1');
-    expect(_readLocalPromoImpressions().s1).toBe(3);
+    expect(_readLocalPromoImpressions().s1.n).toBe(3);
 
     currentUser.id = 'userB'; // account switch, same device/localStorage
-    expect(_readLocalPromoImpressions().s1 || 0).toBe(0); // userB starts fresh
+    expect(_readLocalPromoImpressions().s1?.n || 0).toBe(0); // userB starts fresh
     _incrementLocalPromoImpression('s1');
-    expect(_readLocalPromoImpressions().s1).toBe(1);
+    expect(_readLocalPromoImpressions().s1.n).toBe(1);
 
     currentUser.id = 'userA'; // switch back
-    expect(_readLocalPromoImpressions().s1).toBe(3); // untouched by userB's writes
+    expect(_readLocalPromoImpressions().s1.n).toBe(3); // untouched by userB's writes
   });
 });
 

@@ -2645,11 +2645,20 @@ export function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown
     if (s.ends_at   && Date.parse(s.ends_at)  <= now) return false;
     if (!promoAudienceMatches(s.audience, ctx)) return false;
     const cap = s.max_impressions != null ? s.max_impressions : cfg.default_max_impressions;
+    // Local entries carry the epoch they were recorded under ({ n, e }); only
+    // honour one that matches this slot's CURRENT updated_at (mirrors the app
+    // — see index.html for the full rationale).
+    const entry = local[s.id];
+    const localEpoch = (entry && typeof entry === 'object') ? (entry.e ?? null) : null;
+    const localN     = (entry && typeof entry === 'object') ? (entry.n || 0)
+                      : (typeof entry === 'number' ? entry : 0);
+    const slotEpoch = s.updated_at || null;
+    const effectiveLocal = (localEpoch === slotEpoch) ? localN : 0;
     // The GREATER of the server-derived and local counts: a promo_events
     // insert that failed (and was discarded before this guardrail existed)
     // must not let the cap silently reset every new session — the local
     // mirror stays bounded even when every write this session failed.
-    const count = Math.max(seen[s.id] || 0, local[s.id] || 0);
+    const count = Math.max(seen[s.id] || 0, effectiveLocal);
     return count < cap;
   }).sort((a, b) =>
     (b.priority || 0) - (a.priority || 0) ||

@@ -145,4 +145,33 @@ describe('eligiblePromoSlots', () => {
   it('tolerates missing slots, events and config without throwing', () => {
     expect(eligiblePromoSlots({ slots: null, config: null, ctx: CTX, events: null, now: NOW, modalShown: false })).toEqual([]);
   });
+
+  // ── Reset impressions (epoch) ──────────────────────────────────────────────
+  // A local count carries the epoch (slot.updated_at) it was recorded under.
+  // The admin's "Reset impressions" action bumps updated_at specifically to
+  // invalidate every device's stored count — without this check that bump is
+  // a no-op and truncating promo_events alone leaves the card retired forever
+  // on any device that already recorded an impression.
+  it('ignores a stored local count whose epoch no longer matches the slot\'s updated_at — the card shows again', () => {
+    const out = run({
+      slots: [slot({ updated_at: '2026-08-04T00:00:00Z' })],
+      events: [],
+      // Recorded under a stale epoch (before the admin's reset bumped it) —
+      // at the cap, but must not count.
+      localCounts: { s1: { n: 3, e: '2026-08-01T00:00:00Z' } },
+    });
+    expect(out).toHaveLength(1);
+  });
+
+  it('still honours a stored local count whose epoch matches the slot\'s current updated_at', () => {
+    const withMatchingEpoch = (n) => run({
+      slots: [slot({ updated_at: '2026-08-04T00:00:00Z' })],
+      events: [],
+      localCounts: { s1: { n, e: '2026-08-04T00:00:00Z' } },
+    });
+    // Below the cap: the count is read correctly (not corrupted to 0 or NaN).
+    expect(withMatchingEpoch(2)).toHaveLength(1);
+    // At the cap: the guardrail itself must not regress.
+    expect(withMatchingEpoch(3)).toEqual([]);
+  });
 });
