@@ -516,39 +516,35 @@ test.describe('admin Promos tab — write guards (mocked)', () => {
 
 // ── The composer preview must not touch feed state ──────────────────────────
 // The preview deliberately renders through the REAL renderPromoCard(), so the
-// node it produces carries data-promo-id="preview", data-promo-cta and
-// data-promo-dismiss — the same hooks the delegated feed handler listens for.
-// Clicking ✕ in the composer therefore ran dismissPromo('preview'), which burnt
-// the session's max_per_session budget and permanently poisoned _promoDismissed;
-// and the document-wide impression observer logged impression events with
-// slot_id 'preview', which fail the uuid cast silently.
+// node it produces carries data-promo-id="preview" and data-promo-cta — the
+// same hooks the delegated feed handler listens for. Clicking the CTA in the
+// composer would otherwise run runPromoAction('preview') against a slot id
+// that doesn't exist; and the document-wide impression observer logged
+// impression events with slot_id 'preview', which fail the uuid cast silently.
 test.describe('admin preview is inert (mocked)', () => {
-  test('clicking ✕ in the preview burns no budget and logs no event', async ({ page }) => {
+  test('clicking the CTA in the preview burns no budget and logs no event', async ({ page }) => {
     await page.goto('/');
     const res = await page.evaluate(() => {
       currentUser = { id: 'u1' };
       window.__events = [];
       db.from = (t) => ({ insert: async (row) => { window.__events.push({ t, row }); return { error: null }; } });
-      _promoPlaced = new Set(); _promoDismissed = new Set(); _promoImpressed = new Set();
+      _promoPlaced = new Set(); _promoImpressed = new Set();
       document.getElementById('promo-heading').value = 'Preview me';
       document.getElementById('promo-cta-label').value = 'Go';
       window.updatePromoPreview();
 
       const prev = document.getElementById('promo-preview');
-      prev.querySelector('.promo-dismiss').click();
       prev.querySelector('.promo-cta')?.click();
 
       return {
         placed: [..._promoPlaced],
-        dismissed: [..._promoDismissed],
         events: window.__events,
         stillRendered: !!prev.querySelector('.promo-card'),
       };
     });
     expect(res.placed).toEqual([]);
-    expect(res.dismissed).toEqual([]);
     expect(res.events).toEqual([]);
-    expect(res.stillRendered).toBe(true);   // the preview is not a live card to dismiss
+    expect(res.stillRendered).toBe(true);   // the preview is not a live card
   });
 
   test('the impression observer only watches cards inside the feed', async ({ page }) => {

@@ -114,7 +114,7 @@ test.describe('a modal that fires AFTER injection still wins', () => {
                        max_per_session: 1, default_max_impressions: 3,
                        suppress_after_modal: suppress };
       _promoSlots = [SLOT]; _promoEvents = [];
-      _promoPlaced = new Set(); _promoDismissed = new Set(); _promoImpressed = new Set();
+      _promoPlaced = new Set(); _promoImpressed = new Set();
       window._modalShownThisSession = false;
       db.from = () => ({ insert: async () => ({ error: null }) });
       document.getElementById('feed-list').innerHTML = '<div class="feed-card">p</div>';

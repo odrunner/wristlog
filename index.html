@@ -1915,13 +1915,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .promo-body img { max-width: 100%; height: auto; border-radius: var(--radius-sm); margin: .5rem 0; }
     .promo-body a { color: var(--badge-accent); }
     .promo-cta { width: 100%; margin-top: .85rem; }
-    /* Sits where a post's ⋯ menu sits, so the affordance is where the thumb expects it. */
-    .promo-dismiss {
-      position: absolute; top: .7rem; right: .7rem;
-      background: none; border: 0; color: var(--muted);
-      font-size: 1rem; line-height: 1; padding: .25rem .4rem; cursor: pointer;
-    }
-    .promo-dismiss:hover { color: var(--text); }
 
     /* The watch chip sits on its own row; the fun-fact footnote drops below it. */
     .feed-chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 1rem .75rem; }
@@ -7305,7 +7298,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '04.08.03';
+const APP_VERSION = '04.08.47';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11410,15 +11403,13 @@ function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown }) {
   if (!cfg.enabled) return [];
   if (cfg.suppress_after_modal && modalShown) return [];
 
-  const dismissed = new Set();
   const seen = {};
   for (const e of (events || [])) {
-    if (e.event === 'dismiss') dismissed.add(e.slot_id);
-    else if (e.event === 'impression') seen[e.slot_id] = (seen[e.slot_id] || 0) + 1;
+    if (e.event === 'impression') seen[e.slot_id] = (seen[e.slot_id] || 0) + 1;
   }
 
   return (slots || []).filter((s) => {
-    if (!s || dismissed.has(s.id)) return false;
+    if (!s) return false;
     // Never trust RLS to have filtered status. The admin's own account matches
     // BOTH the user policy and the is_admin "for all" policy, and policies OR
     // together — so select('*') hands the owner drafts and archives too. Without
@@ -11548,7 +11539,7 @@ function expandPromoImages(body, images) {
 
 // Single document-level delegated click handler for every promo card,
 // installed at most once (guarded by _promoClickDelegated). Cards use
-// data-promo-cta / data-promo-dismiss + closest() instead of an inline
+// data-promo-cta + closest() instead of an inline
 // onclick="...('${escAttr(slot.id)}')": escAttr closes the HTML-attribute
 // context but not the JS string literal nested inside an onclick value — the
 // HTML parser decodes an entity like &#39; back to a literal ' BEFORE the
@@ -11562,13 +11553,10 @@ function installPromoClickDelegation() {
   _promoClickDelegated = true;
   document.addEventListener('click', (event) => {
     const cta = event.target.closest('[data-promo-cta]');
-    const dismiss = event.target.closest('[data-promo-dismiss]');
-    if (!cta && !dismiss) return;
+    if (!cta) return;
     const card = event.target.closest('[data-promo-id]');
     if (!card) return;
-    const slotId = card.dataset.promoId;
-    if (cta) runPromoAction(slotId);
-    else dismissPromo(slotId);
+    runPromoAction(card.dataset.promoId);
   });
 }
 
@@ -11591,7 +11579,6 @@ function renderPromoCard(slot) {
     ? `<div class="promo-body">${sanitizePromoHtml(expandPromoImages(slot.body, slot.images))}</div>` : '';
 
   return `<div class="promo-card" id="promocard-${escAttr(slot.id)}" data-promo-id="${escAttr(slot.id)}">
-    <button type="button" class="promo-dismiss" aria-label="Dismiss" data-promo-dismiss>✕</button>
     <div class="promo-card-header">
       <div class="promo-mark" aria-hidden="true">
         <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
@@ -11620,7 +11607,6 @@ let _promoSlots  = [];
 let _promoConfig = null;
 let _promoEvents = [];
 let _promoPlaced = new Set();          // slot ids currently placed in the DOM this session
-let _promoDismissed = new Set();       // slot ids the user explicitly dismissed this session
 let _promoObserver = null;
 let _promoImpressed = new Set();       // impressions already logged this session
 // Distinct slot ids that have consumed this session's max_per_session budget.
@@ -11657,7 +11643,7 @@ function notePromoModalShown() {
   window._modalShownThisSession = true;
   if (!_promoConfig || !_promoConfig.suppress_after_modal) return;
   for (const id of [..._promoPlaced]) {
-    if (_promoImpressed.has(id) || _promoDismissed.has(id)) continue;
+    if (_promoImpressed.has(id)) continue;
     const node = document.getElementById('promocard-' + id);
     if (node) { if (_promoObserver) _promoObserver.unobserve(node); node.remove(); }
     _promoPlaced.delete(id);
@@ -11722,14 +11708,6 @@ function logPromoEvent(slotId, event) {
   _promoEvents.push({ slot_id: slotId, event });
 }
 
-function dismissPromo(slotId) {
-  document.getElementById('promocard-' + slotId)?.remove();
-  _promoPlaced.add(slotId);              // keeps it out of this session's re-renders
-  _promoDismissed.add(slotId);           // ...permanently this session, unlike a mere DOM wipe
-  _promoBudgetUsed.add(slotId);          // spent for good — a dismissal never refunds
-  logPromoEvent(slotId, 'dismiss');
-}
-
 // Idempotent. Runs after renderFeed() and after loadMoreFeed()'s append; a slot
 // already placed is never placed twice, so re-renders and appended pages are safe.
 function injectPromoCards() {
@@ -11742,20 +11720,17 @@ function injectPromoCards() {
   // CURRENTLY MOUNTED, not what this session has spent — the session budget
   // lives separately in _promoBudgetUsed (monotonic, see its declaration
   // above), so pruning a wiped id here is always safe: it never refunds
-  // anything. A dismissed slot is the one exception — its node is gone on
-  // purpose and it must never come back, so it stays in _promoPlaced forever
-  // as a standing "never re-place" marker (belt-and-braces alongside
-  // eligiblePromoSlots' own dismissed-event filtering below).
+  // anything.
   //
-  // This now prunes IMPRESSED-but-wiped slots too, unlike before (a card
-  // already seen used to "stay put" by never being pruned). The impression
-  // fires the moment the card enters the viewport — ~24ms after injection,
-  // past the observer's 0.5 threshold — long before a human could actually
-  // read it, so "impression logged" is not "the user saw it": a wipe must
-  // still bring it back. _promoImpressed itself is untouched here and still
-  // guards against a duplicate impression log below.
+  // This prunes IMPRESSED-but-wiped slots too (a card already seen still gets
+  // re-mounted). The impression fires the moment the card enters the
+  // viewport — ~24ms after injection, past the observer's 0.5 threshold —
+  // long before a human could actually read it, so "impression logged" is
+  // not "the user saw it": a wipe must still bring it back. _promoImpressed
+  // itself is untouched here and still guards against a duplicate impression
+  // log below.
   for (const id of [..._promoPlaced]) {
-    if (!_promoDismissed.has(id) && !document.getElementById('promocard-' + id)) {
+    if (!document.getElementById('promocard-' + id)) {
       _promoPlaced.delete(id);
     }
   }
@@ -18494,14 +18469,12 @@ function updatePromoPreview() {
   el.innerHTML = renderPromoCard(promoFormSlot());
   // ...and then make it inert. The preview is the real card, so it carries the
   // real interaction hooks: the delegated handler would read its id 'preview'
-  // and run dismissPromo('preview'), burning the session's max_per_session
-  // budget and poisoning _promoDismissed for the rest of the session. Stripping
-  // the hooks leaves the composer showing exactly the shipped markup while no
-  // click in it can reach feed state.
-  el.querySelectorAll('[data-promo-id],[data-promo-cta],[data-promo-dismiss]').forEach((n) => {
+  // and run runPromoAction('preview') on a CTA click, which isn't a real slot.
+  // Stripping the hooks leaves the composer showing exactly the shipped
+  // markup while no click in it can reach feed state.
+  el.querySelectorAll('[data-promo-id],[data-promo-cta]').forEach((n) => {
     n.removeAttribute('data-promo-id');
     n.removeAttribute('data-promo-cta');
-    n.removeAttribute('data-promo-dismiss');
     n.removeAttribute('id');
   });
 }
@@ -18641,7 +18614,7 @@ async function loadPromoAdmin() {
           <div style="font-size:.78rem;color:var(--muted);">
             ${escHtml(statusLabel)} · ${escHtml(PROMO_AUDIENCE_LABELS[s.audience] || s.audience)} · ${escHtml(posLabel)} ·
             ${st.impressions || 0} impressions · ${st.clicks || 0} clicks ·
-            ${st.dismissals || 0} dismissed · ${st.distinct_users || 0} users
+            ${st.distinct_users || 0} users
           </div>
           <div style="display:flex;gap:.4rem;margin-top:.4rem;">
             <button class="btn btn-ghost" style="font-size:.78rem;" data-promo-edit="${escAttr(s.id)}">Edit</button>
@@ -26528,9 +26501,9 @@ function clearUserState() {
   commentLikes = {}; discoverUsers = []; profilePageUserId = null;
   _factImpSeen.clear(); // fun-fact impressions already seen this session — must not survive an account switch
   // Promo session state — same rule. signOut() never reloads the page, so
-  // account A's spent max_per_session budget, dismissals, impressions and modal
-  // flag would otherwise silently deny account B its card.
-  _promoPlaced.clear(); _promoDismissed.clear(); _promoImpressed.clear(); _promoBudgetUsed.clear();
+  // account A's spent max_per_session budget, impressions and modal flag
+  // would otherwise silently deny account B its card.
+  _promoPlaced.clear(); _promoImpressed.clear(); _promoBudgetUsed.clear();
   _promoSlots = []; _promoEvents = []; _promoConfig = null;
   _promoIsInternal = false;      // re-evaluated for whoever signs in next
   if (_promoObserver) { _promoObserver.disconnect(); _promoObserver = null; } // disconnect, not just drop — A's nodes stay registered otherwise

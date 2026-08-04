@@ -94,21 +94,6 @@ test.describe('promo feed injection (mocked)', () => {
     expect((await order(page)).filter((x) => x === 'PROMO')).toHaveLength(0);
   });
 
-  test('dismiss removes the card and writes a dismiss event', async ({ page }) => {
-    await setup(page);
-    await page.click('.promo-dismiss');
-    expect((await order(page)).filter((x) => x === 'PROMO')).toHaveLength(0);
-    const evs = await page.evaluate(() => window.__events);
-    expect(evs.some((e) => e.t === 'promo_events' && e.row.event === 'dismiss')).toBe(true);
-  });
-
-  test('a dismissed card does not come back on the next injection', async ({ page }) => {
-    await setup(page);
-    await page.click('.promo-dismiss');
-    await page.evaluate(() => window.injectPromoCards());
-    expect((await order(page)).filter((x) => x === 'PROMO')).toHaveLength(0);
-  });
-
   test('the dedupe filter prevents a slot from being placed twice across repeat_every passes', async ({ page }) => {
     // Regression for a mutant that deletes the `.filter((s) => !_promoPlaced.has(s.id))`
     // line from injectPromoCards(). promoInjectPositions()'s `already >= max`
@@ -147,8 +132,8 @@ test.describe('promo feed injection (mocked)', () => {
     // remembers the slot id, silently losing a card the user may never have
     // seen for the rest of the session.
     //
-    // The prune loop refunds a slot's budget only when it's neither dismissed
-    // NOR impressed (see the impression-cap test below) — so this scenario
+    // The prune loop refunds a slot's budget only when it's not yet impressed
+    // (see the impression-cap test below) — so this scenario
     // must be deterministically UNSEEN. setup()'s card renders on-screen, and
     // its real IntersectionObserver (threshold 0.5) does fire — measured ~24ms
     // after injectPromoCards() — which is a race against the CDP round trip
@@ -215,49 +200,10 @@ test.describe('promo feed injection (mocked)', () => {
     expect(ids).toEqual(['p1']);   // p1 back, p2 never got a chance
   });
 
-  test('a dismissed card still does not return after a full DOM replace', async ({ page }) => {
-    await setup(page);
-    await page.click('.promo-dismiss');
-    await page.evaluate(() => {
-      const el = document.getElementById('feed-list');
-      el.innerHTML = Array.from({ length: 6 }, (_, i) =>
-        `<div class="feed-card" id="feedcard-${i}">post ${i}</div>`).join('');
-      window.injectPromoCards();
-    });
-    expect((await order(page)).filter((x) => x === 'PROMO')).toHaveLength(0);
-  });
-
-  test('a dismissed card does not get its session budget refunded by a full DOM replace', async ({ page }) => {
-    // Regression for the prune loop treating a DISMISSED slot the same as any
-    // other slot whose DOM node is gone: dismissPromo() already removed the
-    // node, so an unconditional prune would drop it from _promoPlaced and
-    // "un-spend" the max_per_session budget, letting a second slot silently
-    // fill the dismissed one's place after the next full re-render. (The
-    // dismissed slot p1 itself can never reappear either way — eligiblePromoSlots
-    // permanently excludes it via the recorded dismiss event — so the
-    // observable regression is the budget leak, not p1 resurrecting.)
-    await setup(page, {
-      config: { max_per_session: 1 },
-      slots: ['p1', 'p2'].map((id, i) => ({
-        id, heading: `Promo ${id}`, audience: 'all', status: 'active', priority: 1 - i,
-        starts_at: null, ends_at: null, max_impressions: null, images: [],
-        created_at: '2026-01-01T00:00:00Z',
-      })),
-    });
-    await page.click('.promo-dismiss'); // dismisses p1 (placed first: higher priority)
-    await page.evaluate(() => {
-      const el = document.getElementById('feed-list');
-      el.innerHTML = Array.from({ length: 6 }, (_, i) =>
-        `<div class="feed-card" id="feedcard-${i}">post ${i}</div>`).join('');
-      window.injectPromoCards();
-    });
-    expect((await order(page)).filter((x) => x === 'PROMO')).toHaveLength(0);
-  });
-
   test('a slot that hit its impression cap this session keeps its session budget after a full DOM replace', async ({ page }) => {
-    // Regression: the prune loop's _promoDismissed guard covered explicit
-    // dismissal but not "seen and now capped" — a slot that reached its
-    // max_impressions during the session would still get pruned from
+    // Regression: the prune loop used to only guard against re-adding a slot
+    // that still had a live DOM node, but not "seen and now capped" — a slot
+    // that reached its max_impressions during the session would still get pruned from
     // _promoPlaced by the NEXT full re-render (any loadFeed past the 60s
     // cache), refunding its max_per_session budget slot to a DIFFERENT,
     // fresh slot. Reproduces the reviewer's repro verbatim: cap-hit p1 +
@@ -368,7 +314,7 @@ test('an empty feed gets a card appended below the empty state', async ({ page }
       created_at: '2026-01-01T00:00:00Z',
     }];
     _promoEvents = []; _promoPlaced = new Set();
-    _promoDismissed = new Set(); _promoImpressed = new Set();
+    _promoImpressed = new Set();
     window._modalShownThisSession = false;
     db.from = () => ({ insert: async () => ({ error: null }) });
 
