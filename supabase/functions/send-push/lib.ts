@@ -28,6 +28,12 @@ export function buildMessage(
       return { title, body: `${actorName} liked your post` };
     case "comment":
       return { title, body: `${actorName} commented on your post` };
+    // Not a direct interaction — the actor commented on someone else's post that
+    // the recipient also liked or commented on. Say so: the generic fallback read
+    // as "they did something to you", which is misleading. Wording matches the
+    // bell panel (renderNotificationPanel in index.html).
+    case "comment_also":
+      return { title, body: `${actorName} also commented on a post you liked or commented on` };
     case "follow":
       return { title, body: `${actorName} started following you` };
     case "follow_request":

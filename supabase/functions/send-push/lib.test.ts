@@ -52,6 +52,13 @@ Deno.test("buildMessage — known types", () => {
   assertEquals(buildMessage("club_join_accepted", "A")?.body, "A approved your club request");
   assertEquals(buildMessage("mention", "A")?.body, "A mentioned you");
   assertEquals(buildMessage("comment_like", "A")?.body, "A liked your comment");
+  // comment_also is the third-most-common notification type. It fell through to
+  // the generic "sent you a notification" body, which reads as a direct
+  // interaction the actor never made. Wording matches the bell panel.
+  assertEquals(
+    buildMessage("comment_also", "A")?.body,
+    "A also commented on a post you liked or commented on",
+  );
 });
 
 Deno.test("buildMessage — unknown type falls back to generic body", () => {
