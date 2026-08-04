@@ -185,3 +185,72 @@ describe('promoSlotPositions (edge cases: missing/empty slots, falsy config defa
     expect(result).toEqual([{ id: 's0', pos: 0 }]);
   });
 });
+
+// Regression: a slot's position must depend on ITSELF, not on how many other
+// slots happen to be placed alongside it. Before rememberedPositions existed,
+// a reclaiming slot's position was recomputed from `first_position + repeat_every
+// * i`, where `i` is derived from placedCount — and placedCount shrinks
+// whenever a lower-priority slot drops out (see injectPromoCards()'s
+// `Math.max(0, _promoBudgetUsed.size - returning.length)`), so the survivor's
+// `i` — and therefore its position — silently drifted. This is the caller's
+// exact contract: a reclaiming slot is looked up in rememberedPositions and
+// pulled to the front of `slots`, ahead of any fresh slot.
+describe('promoSlotPositions (session position memory — rememberedPositions)', () => {
+  const CFG2 = { first_position: 2, repeat_every: 3, max_per_session: 2 };
+
+  it("reviewer's exact scenario: p1@2 + p2@5, p2 goes ineligible, p1 stays at 2 on reclaim", () => {
+    // Baseline: both slots fresh, nothing remembered yet.
+    const baseline = promoSlotPositions({
+      slots: [{ id: 'p1', first_position: null }, { id: 'p2', first_position: null }],
+      postCount: 20, config: CFG2, placedCount: 0, rememberedPositions: {},
+    });
+    expect(baseline).toEqual([{ id: 'p1', pos: 2 }, { id: 'p2', pos: 5 }]);
+
+    // p2 goes ineligible (draft) and is dropped from the eligible list. p1 is
+    // the lone survivor, reclaiming via the memo recorded from the baseline
+    // call above — mirrors injectPromoCards()'s reduced placedCount (budget
+    // used 2, minus the 1 returning slot, minus... here just p1 returning).
+    const reclaim = promoSlotPositions({
+      slots: [{ id: 'p1', first_position: null }],
+      postCount: 20, config: CFG2, placedCount: 1,
+      rememberedPositions: { p1: 2, p2: 5 },
+    });
+    expect(reclaim).toEqual([{ id: 'p1', pos: 2 }]);
+  });
+
+  it('a remembered position past the current feed length clamps to the top, not vanish or overrun', () => {
+    const result = promoSlotPositions({
+      slots: [{ id: 'p1', first_position: null }],
+      postCount: 3, config: CFG2, placedCount: 0,
+      rememberedPositions: { p1: 5 },
+    });
+    expect(result).toEqual([{ id: 'p1', pos: 0 }]);
+  });
+
+  it('a reclaim and a fresh placement in the same pass do not collide — the reclaim keeps its spot', () => {
+    const cfg = { first_position: 2, repeat_every: 0, max_per_session: 2 };
+    // p1 is reclaiming (remembered at 2, pulled to the front per the caller's
+    // contract); p3 is fresh and would ALSO want position 2 from the config
+    // default — it must yield to the next free slot instead of colliding.
+    const result = promoSlotPositions({
+      slots: [{ id: 'p1', first_position: null }, { id: 'p3', first_position: null }],
+      postCount: 20, config: cfg, placedCount: 0,
+      rememberedPositions: { p1: 2 },
+    });
+    expect(result).toEqual([{ id: 'p1', pos: 2 }, { id: 'p3', pos: 3 }]);
+  });
+
+  it('an explicit per-slot first_position still wins even when the slot is also remembered', () => {
+    // Belt-and-suspenders: remembered and explicit agreeing is the only way
+    // this ever arises in practice (the memo is only ever written from what
+    // promoSlotPositions itself returned), but the lookup order must still
+    // put the remembered value first without needing the explicit value to
+    // match, since a reclaim never falls through to the formula either way.
+    const result = promoSlotPositions({
+      slots: [{ id: 's0', first_position: 7 }],
+      postCount: 10, config: CFG, placedCount: 0,
+      rememberedPositions: { s0: 7 },
+    });
+    expect(result).toEqual([{ id: 's0', pos: 7 }]);
+  });
+});

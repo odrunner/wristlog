@@ -24,6 +24,7 @@ test('clearUserState() wipes every piece of promo session state', async ({ page 
   const after = await page.evaluate(() => {
     _promoPlaced = new Set(['p1']);
     _promoImpressed = new Set(['p1']);
+    _promoSlotPositionMemo = { p1: 5 };
     _promoIsInternal = true;
     window._modalShownThisSession = true;
     window.__disconnected = false;
@@ -43,13 +44,59 @@ test('clearUserState() wipes every piece of promo session state', async ({ page 
       disconnected: window.__disconnected,
       modalFlag: window._modalShownThisSession,
       isInternal: _promoIsInternal,
+      positionMemo: Object.keys(_promoSlotPositionMemo).length,
     };
   });
   expect(after).toEqual({
     placed: 0, impressed: 0,
     observerCleared: true, disconnected: true, modalFlag: false,
-    isInternal: false,
+    isInternal: false, positionMemo: 0,
   });
+});
+
+test('an in-page account switch does not let account B inherit account A\'s stale card position', async ({ page }) => {
+  // Same root cause as the reviewer's position-drift scenario, but via the
+  // OTHER path that could leak a remembered position across sessions: an
+  // account switch without a page reload. Account A places p1 at a position
+  // driven by repeat_every (so a stale, unreset memo would visibly mis-place
+  // it); B must place the SAME slot id fresh, at the formula's own answer.
+  const SLOT2 = { ...SLOT, id: 'p1' };
+  const CFG2 = { ...CFG, first_position: 2, repeat_every: 3, max_per_session: 1 };
+  await page.goto('/');
+  const positions = await page.evaluate(({ SLOT2, CFG2 }) => {
+    const posts = () => Array.from({ length: 10 },
+      (_, i) => `<div class="feed-card" id="feedcard-${i}">post ${i}</div>`).join('');
+    const posBefore = () => {
+      const kids = [...document.getElementById('feed-list').children];
+      const idx = kids.findIndex((n) => n.dataset && n.dataset.promoId === 'p1');
+      return kids.slice(0, idx).filter((n) => n.classList.contains('feed-card')).length;
+    };
+    db.from = () => ({ insert: async () => ({ error: null }) });
+    document.getElementById('auth-screen').style.display = 'none';
+
+    // ── account A: places p1 at post-2 and corrupts the memo as if a later,
+    // shorter-feed reclaim had clamped it — this is exactly the stale state
+    // that must NOT leak to B. ──
+    currentUser = { id: 'u1' };
+    _promoConfig = CFG2; _promoSlots = [SLOT2]; _promoEvents = [];
+    _promoPlaced = new Set(); _promoImpressed = new Set(); _promoBudgetUsed = new Set();
+    document.getElementById('feed-list').innerHTML = posts();
+    window.injectPromoCards();
+    const a = posBefore();
+    _promoSlotPositionMemo.p1 = 99;   // simulate a stale/corrupted memo entry
+
+    // ── sign out, sign in as B (no page reload) ──
+    clearUserState();
+    currentUser = { id: 'u2' };
+    _promoConfig = CFG2; _promoSlots = [SLOT2]; _promoEvents = [];
+    document.getElementById('feed-list').innerHTML = posts();
+    window.injectPromoCards();
+    const b = posBefore();
+
+    return { a, b };
+  }, { SLOT2, CFG2 });
+  expect(positions.a).toBe(2);
+  expect(positions.b).toBe(2);   // B computed its own position, not A's corrupted 99
 });
 
 test('the second account still gets a card after an in-page account switch', async ({ page }) => {
