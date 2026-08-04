@@ -25,6 +25,7 @@ test('clearUserState() wipes every piece of promo session state', async ({ page 
     _promoPlaced = new Set(['p1']);
     _promoDismissed = new Set(['p1']);
     _promoImpressed = new Set(['p1']);
+    _promoIsInternal = true;
     window._modalShownThisSession = true;
     window.__disconnected = false;
     // A live observer must be disconnected, not merely dropped — dropping the
@@ -43,11 +44,13 @@ test('clearUserState() wipes every piece of promo session state', async ({ page 
       observerCleared: _promoObserver === null,
       disconnected: window.__disconnected,
       modalFlag: window._modalShownThisSession,
+      isInternal: _promoIsInternal,
     };
   });
   expect(after).toEqual({
     placed: 0, dismissed: 0, impressed: 0,
     observerCleared: true, disconnected: true, modalFlag: false,
+    isInternal: false,
   });
 });
 

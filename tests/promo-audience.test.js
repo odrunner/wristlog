@@ -57,4 +57,21 @@ describe('promoAudienceMatches', () => {
     expect(promoAudienceMatches('never_logged', {})).toBe(true);
     expect(promoAudienceMatches('no_wishlist', {})).toBe(true);
   });
+
+  // internal_only: lets the owner activate a slot that renders ONLY for their
+  // own internal_accounts rows, to test end-to-end without showing real users.
+  // isInternal is looked up async in loadPromoSlots() (promoCtx() can't do an
+  // async lookup) and must default-deny, same as the unknown-key case above.
+  it('internal_only matches when the ctx flag is true', () => {
+    expect(promoAudienceMatches('internal_only', { ...FULL, isInternal: true })).toBe(true);
+  });
+
+  it('internal_only does not match when the ctx flag is false', () => {
+    expect(promoAudienceMatches('internal_only', { ...FULL, isInternal: false })).toBe(false);
+  });
+
+  it('internal_only does not match when the flag is absent entirely (default-deny)', () => {
+    expect(promoAudienceMatches('internal_only', FULL)).toBe(false);
+    expect(promoAudienceMatches('internal_only', {})).toBe(false);
+  });
 });

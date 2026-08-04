@@ -7293,7 +7293,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.08.07';
+const APP_VERSION = '03.17.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11377,6 +11377,11 @@ const PROMO_AUDIENCES = {
   no_clubs:        (c)   => (c.clubCount || 0) === 0,
   follows_few:     (c)   => (c.followingCount || 0) < 3,
   never_ranked:    (c)   => !c.rankedEver,
+  // Internal-only testing lane: matches only the owner's own internal_accounts
+  // rows, never real users. isInternal is looked up async in loadPromoSlots()
+  // (promoCtx() is synchronous and reads in-memory state) and defaults to
+  // false, so a failed or still-pending fetch never leaks the card.
+  internal_only:   (c)   => !!c.isInternal,
 };
 
 // An unknown key is FALSE, never true: a typo in the admin form hides the card
@@ -11571,6 +11576,11 @@ let _promoPlaced = new Set();          // slot ids currently placed in the DOM t
 let _promoDismissed = new Set();       // slot ids the user explicitly dismissed this session
 let _promoObserver = null;
 let _promoImpressed = new Set();       // impressions already logged this session
+// Whether the signed-in user is one of the owner's own internal_accounts rows
+// (for the internal_only audience). Looked up once in loadPromoSlots() —
+// defaults to false so a failed or still-pending fetch never leaks the card
+// to a non-internal user.
+let _promoIsInternal = false;
 
 // Every modal opener calls this instead of setting the flag directly.
 //
@@ -11614,6 +11624,7 @@ function promoCtx() {
     daysSinceSignup: myProfile?.created_at
       ? Math.floor((Date.now() - Date.parse(myProfile.created_at)) / 86400000) : 0,
     isIos:          !!window._iosAppVersion,
+    isInternal:     _promoIsInternal,
   };
 }
 
@@ -11621,19 +11632,25 @@ function promoCtx() {
 async function loadPromoSlots() {
   if (!currentUser) return;
   try {
-    const [cfgRes, slotRes, evRes] = await Promise.all([
+    const [cfgRes, slotRes, evRes, intRes] = await Promise.all([
       db.from('promo_config').select('*').limit(1).maybeSingle(),
       // Belt and braces alongside the status check in eligiblePromoSlots():
       // for the admin's own account RLS returns drafts and archives too.
       db.from('promo_slots').select('*').eq('status', 'active'),
       db.from('promo_events').select('slot_id,event').eq('user_id', currentUser.id),
+      // internal_accounts is the single source of truth (CLAUDE.md — never
+      // hardcode account ids). A membership check, not a full-table fetch;
+      // promoCtx() is synchronous so this can't run there.
+      db.from('internal_accounts').select('user_id').eq('user_id', currentUser.id).maybeSingle(),
     ]);
     _promoConfig = cfgRes?.data || null;
     _promoSlots  = slotRes?.data || [];
     _promoEvents = evRes?.data || [];
+    _promoIsInternal = !!intRes?.data;
   } catch (e) {
     console.warn('[promo] load failed:', e.message);
     _promoConfig = null; _promoSlots = []; _promoEvents = [];
+    _promoIsInternal = false;
   }
 }
 
@@ -18223,6 +18240,7 @@ const PROMO_AUDIENCE_LABELS = {
   all: 'All users', never_logged: 'Never logged a wear', no_wishlist: 'Empty wishlist',
   never_measured: 'Never measured (iOS only)', no_clubs: 'In no club',
   follows_few: 'Follows fewer than 3 people', never_ranked: 'Never played the ranking game',
+  internal_only: 'Internal accounts only (testing)',
 };
 const PROMO_ACTION_LABELS = {
   '': 'No button', open_wishlist: 'Open Wishlist', open_collection: 'Open Collection',
@@ -26226,6 +26244,7 @@ function clearUserState() {
   // flag would otherwise silently deny account B its card.
   _promoPlaced.clear(); _promoDismissed.clear(); _promoImpressed.clear();
   _promoSlots = []; _promoEvents = []; _promoConfig = null;
+  _promoIsInternal = false;      // re-evaluated for whoever signs in next
   if (_promoObserver) { _promoObserver.disconnect(); _promoObserver = null; } // disconnect, not just drop — A's nodes stay registered otherwise
   window._modalShownThisSession = false;
   feedLoading = false; _feedLoadStartedAt = 0; feedError = false; feedLoadedAt = 0; _clubsLoaded = false; _frLoadedAt = 0;
