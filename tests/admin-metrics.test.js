@@ -109,3 +109,41 @@ describe('Totals card day-over-day deltas', () => {
     expect(html).toMatch(/const good = invert \? delta < 0 : delta > 0;/);
   });
 });
+
+describe('Email metrics day-over-day', () => {
+  // Email Engagement + By Campaign carry a last-24h delta on every engagement
+  // figure, summed from the per-row *_24h fields admin_email_engagement returns.
+  // Spec: sql/2026-08-04-email-engagement-dod.sql.
+  it('sums the 24h fields alongside the all-time totals', () => {
+    expect(html).toMatch(/let delivered24 = 0, opened24 = 0, clicked24 = 0, bounced24 = 0;/);
+    for (const f of ['delivered_24h', 'opened_24h', 'clicked_24h', 'bounced_24h']) {
+      expect(html).toContain(`r.${f}`);
+    }
+  });
+
+  it('dodDelta hides a zero change and inverts when a rise is bad', () => {
+    expect(html).toMatch(/const dodDelta = \(n, invert\) => \{[\s\S]*?if \(!d\) return '';[\s\S]*?const good = invert \? d < 0 : d > 0;/);
+  });
+
+  it('headline card shows a delta on delivered, opened, clicked and bounced', () => {
+    expect(html).toContain("statRow('Delivered', delivered, null, dodDelta(delivered24))");
+    expect(html).toContain("statRow('Opened', opened, pct(opened, delivered), dodDelta(opened24))");
+    expect(html).toContain("statRow('Clicked', clicked, pct(clicked, delivered), dodDelta(clicked24))");
+    // bounces invert: a rise is not a green number
+    expect(html).toContain("dodDelta(bounced24, true)");
+  });
+
+  it('per-campaign rows carry their own 24h deltas', () => {
+    expect(html).toContain('Delivered: ${s.delivered}${dodDelta(s.delivered24)}');
+    expect(html).toContain('dodDelta(s.opened24)');
+    expect(html).toContain('dodDelta(s.clicked24)');
+  });
+
+  it('accumulates per-campaign 24h counts for both subjects and broadcast labels', () => {
+    // one accumulator per source: by_subject rows (r.*) and broadcast rows (b.*)
+    expect(html).toContain('s.delivered24 += +r.delivered_24h || 0;');
+    expect(html).toContain('s.delivered24 += +b.delivered_24h || 0;');
+    expect(html).toContain('s.opened24 += +b.opened_24h || 0;');
+    expect(html).toContain('s.clicked24 += +b.clicked_24h || 0;');
+  });
+});

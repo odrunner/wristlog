@@ -7298,7 +7298,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '04.14.40';
+const APP_VERSION = '04.14.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16684,16 +16684,35 @@ function renderEmailEngagement(data) {
   // events live in their own array now, so they have to be added back in here or
   // the headline totals would silently lose every broadcast send.
   let sent = 0, delivered = 0, opened = 0, clicked = 0, bounced = 0;
+  // Day-over-day: the same figures over the last 24h, summed from the per-row
+  // *_24h fields the RPC now returns. Summing the rows (rather than taking a
+  // separate top-level total) means the headline delta and the per-campaign
+  // deltas can never disagree. Window matches admin_dod_counts, so a "+N" here
+  // means the same thing as a "+N" on the Totals card.
+  let delivered24 = 0, opened24 = 0, clicked24 = 0, bounced24 = 0;
   bySubjectRows.concat(broadcasts).forEach(r => {
     sent += +r.sent || 0;
     delivered += +r.delivered || 0;
     opened += +r.opened || 0;
     clicked += +r.clicked || 0;
     bounced += +r.bounced || 0;
+    delivered24 += +r.delivered_24h || 0;
+    opened24 += +r.opened_24h || 0;
+    clicked24 += +r.clicked_24h || 0;
+    bounced24 += +r.bounced_24h || 0;
   });
   const pct = (n, d) => d > 0 ? (n / d * 100).toFixed(1) + '%' : '—';
 
-  const statRow = (label, value, sub) => `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>${label}</span><span style="font-weight:600;"><span style="color:var(--gold);">${value}</span>${sub ? `<span style="color:var(--muted);font-size:.72rem;margin-left:.3rem;">${sub}</span>` : ''}</span></div>`;
+  // Last-24h change, colored like the Totals card: green when the move is good,
+  // muted otherwise. `invert` for bounces, where a rise is the bad direction.
+  const dodDelta = (n, invert) => {
+    const d = +n || 0;
+    if (!d) return '';
+    const good = invert ? d < 0 : d > 0;
+    return `<span style="color:${good ? 'var(--success)' : 'var(--muted)'};font-size:.68rem;font-weight:600;margin-left:.3rem;">+${d}</span>`;
+  };
+
+  const statRow = (label, value, sub, delta) => `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>${label}</span><span style="font-weight:600;"><span style="color:var(--gold);">${value}</span>${delta || ''}${sub ? `<span style="color:var(--muted);font-size:.72rem;margin-left:.3rem;">${sub}</span>` : ''}</span></div>`;
 
   // Collapse per-actor notification subjects into one campaign bucket each.
   // (campaignSubject / campaignGroupOf / CAMPAIGN_GROUP_LABELS are defined once
@@ -16702,12 +16721,15 @@ function renderEmailEngagement(data) {
   bySubjectRows.forEach(r => {
     if (!r.subject) return;
     const key = campaignSubject(r.subject);
-    if (!bySubject[key]) bySubject[key] = { sent: 0, delivered: 0, opened: 0, clicked: 0 };
+    if (!bySubject[key]) bySubject[key] = { sent: 0, delivered: 0, opened: 0, clicked: 0, delivered24: 0, opened24: 0, clicked24: 0 };
     const s = bySubject[key];
     s.sent += +r.sent || 0;
     s.delivered += +r.delivered || 0;
     s.opened += +r.opened || 0;
     s.clicked += +r.clicked || 0;
+    s.delivered24 += +r.delivered_24h || 0;
+    s.opened24 += +r.opened_24h || 0;
+    s.clicked24 += +r.clicked_24h || 0;
   });
 
   // Broadcasts get one row each, keyed by their broadcast_queue label — the name
@@ -16730,12 +16752,15 @@ function renderEmailEngagement(data) {
     // Seeded even at zero engagement, so a send that is genuinely in flight is
     // visible from the moment it is queued rather than only once the first
     // external delivery lands.
-    if (!bySubject[b.label]) bySubject[b.label] = { sent: 0, delivered: 0, opened: 0, clicked: 0 };
+    if (!bySubject[b.label]) bySubject[b.label] = { sent: 0, delivered: 0, opened: 0, clicked: 0, delivered24: 0, opened24: 0, clicked24: 0 };
     const s = bySubject[b.label];
     s.sent += +b.sent || 0;
     s.delivered += +b.delivered || 0;
     s.opened += +b.opened || 0;
     s.clicked += +b.clicked || 0;
+    s.delivered24 += +b.delivered_24h || 0;
+    s.opened24 += +b.opened_24h || 0;
+    s.clicked24 += +b.clicked_24h || 0;
   });
 
   // Display order: onboarding drips 1-4, the social notification buckets
@@ -16775,9 +16800,9 @@ function renderEmailEngagement(data) {
         <div style="font-size:.78rem;font-weight:600;margin-bottom:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(label)}</div>
         <div style="font-size:.7rem;color:var(--muted);display:flex;gap:.6rem;flex-wrap:wrap;">
           ${queued ? `<span style="color:var(--gold);">Queued: ${queued}</span>` : ''}
-          <span>Delivered: ${s.delivered}</span>
-          <span>Opened: ${s.opened} (${pct(s.opened, base)})</span>
-          <span>Clicked: ${s.clicked} (${pct(s.clicked, base)})</span>
+          <span>Delivered: ${s.delivered}${dodDelta(s.delivered24)}</span>
+          <span>Opened: ${s.opened} (${pct(s.opened, base)})${dodDelta(s.opened24)}</span>
+          <span>Clicked: ${s.clicked} (${pct(s.clicked, base)})${dodDelta(s.clicked24)}</span>
         </div>
       </div>`;
     }).join('');
@@ -16797,11 +16822,11 @@ function renderEmailEngagement(data) {
 
   return `
   <div class="admin-card">
-    <div class="eyebrow" style="margin-bottom:.5rem;">Email Engagement</div>
-    ${statRow('Delivered', delivered)}
-    ${statRow('Opened', opened, pct(opened, delivered))}
-    ${statRow('Clicked', clicked, pct(clicked, delivered))}
-    ${bounced ? statRow('Bounced / Complained', bounced) : ''}
+    <div class="eyebrow" style="margin-bottom:.5rem;">Email Engagement <span style="text-transform:none;letter-spacing:0;color:var(--muted);font-weight:400;">· green = last 24h</span></div>
+    ${statRow('Delivered', delivered, null, dodDelta(delivered24))}
+    ${statRow('Opened', opened, pct(opened, delivered), dodDelta(opened24))}
+    ${statRow('Clicked', clicked, pct(clicked, delivered), dodDelta(clicked24))}
+    ${bounced ? statRow('Bounced / Complained', bounced, null, dodDelta(bounced24, true)) : ''}
   </div>
   ${subjectRows ? `<div class="admin-card">
     <div class="eyebrow" style="margin-bottom:.5rem;">By Campaign</div>
