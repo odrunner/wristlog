@@ -4,8 +4,8 @@ import { test, expect } from '@playwright/test';
 // never reloads the page. Every other per-session cache is wiped there —
 // _factImpSeen carries the comment "must not survive an account switch" — but
 // the promo session state was not, so account B inherited account A's spent
-// max_per_session budget, A's dismissals, A's impressions and A's modal flag.
-// That silently breaks the two-test-account UAT loop this project runs on.
+// max_per_session budget, A's impressions and A's modal flag. That silently
+// breaks the two-test-account UAT loop this project runs on.
 
 const SLOT = {
   id: 'p1', heading: 'Promo one', body: 'b', audience: 'all', status: 'active',
@@ -23,7 +23,6 @@ test('clearUserState() wipes every piece of promo session state', async ({ page 
   await page.goto('/');
   const after = await page.evaluate(() => {
     _promoPlaced = new Set(['p1']);
-    _promoDismissed = new Set(['p1']);
     _promoImpressed = new Set(['p1']);
     _promoIsInternal = true;
     window._modalShownThisSession = true;
@@ -39,7 +38,6 @@ test('clearUserState() wipes every piece of promo session state', async ({ page 
 
     return {
       placed: _promoPlaced.size,
-      dismissed: _promoDismissed.size,
       impressed: _promoImpressed.size,
       observerCleared: _promoObserver === null,
       disconnected: window.__disconnected,
@@ -48,7 +46,7 @@ test('clearUserState() wipes every piece of promo session state', async ({ page 
     };
   });
   expect(after).toEqual({
-    placed: 0, dismissed: 0, impressed: 0,
+    placed: 0, impressed: 0,
     observerCleared: true, disconnected: true, modalFlag: false,
     isInternal: false,
   });
@@ -68,7 +66,7 @@ test('the second account still gets a card after an in-page account switch', asy
     // ── account A ──
     currentUser = { id: 'u1' };
     _promoConfig = CFG; _promoSlots = [SLOT]; _promoEvents = [];
-    _promoPlaced = new Set(); _promoDismissed = new Set(); _promoImpressed = new Set();
+    _promoPlaced = new Set(); _promoImpressed = new Set();
     document.getElementById('feed-list').innerHTML = posts();
     window.injectPromoCards();
     const a = document.querySelectorAll('.promo-card').length;

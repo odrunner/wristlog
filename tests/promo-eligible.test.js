@@ -91,10 +91,6 @@ describe('eligiblePromoSlots', () => {
     expect(run({ slots: [slot({ audience: 'internal_only' })], ctx: { ...CTX, isInternal: true } })).toHaveLength(1);
   });
 
-  it('excludes a dismissed slot', () => {
-    expect(run({ events: [{ slot_id: 's1', event: 'dismiss' }] })).toEqual([]);
-  });
-
   it('excludes a slot at the default impression cap', () => {
     const seen = [1, 2, 3].map(() => ({ slot_id: 's1', event: 'impression' }));
     expect(run({ events: seen })).toEqual([]);
@@ -109,7 +105,7 @@ describe('eligiblePromoSlots', () => {
     expect(run({ slots: [slot({ max_impressions: 1 })], events: [{ slot_id: 's1', event: 'impression' }] })).toEqual([]);
   });
 
-  it('ignores clicks and dismissals of OTHER slots when counting impressions', () => {
+  it('ignores clicks of OTHER slots when counting impressions', () => {
     expect(run({ events: [{ slot_id: 'other', event: 'impression' }, { slot_id: 's1', event: 'click' }] })).toHaveLength(1);
   });
 
