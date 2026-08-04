@@ -67,14 +67,28 @@ describe('promoSlotPositions (all slots first_position: null — legacy config-o
   // Regression: the clamp-against-postCount for the config-driven base
   // position must happen ONCE, before the loop, not be re-applied whenever
   // `i === already`. Re-arming it on every call (a bug introduced when
-  // per-slot first_position was added) silently drops later repeats and can
-  // pin a card back to the top of the feed on a later page. These two cases
-  // are verbatim from the code-review finding; both assert the pre-refactor
-  // (old promoInjectPositions) expected output.
+  // per-slot first_position was added) resurrects a phantom card at the top
+  // of the feed on a page-2+ append instead of correctly dropping the rest
+  // of an exhausted repeat sequence.
+  //
+  // All three cases below need placedCount > 0: the re-arm condition is
+  // `i === already`, and with placedCount 0 that's always the loop's first
+  // iteration, where the once-hoisted `first` is already <= postCount and
+  // can never overflow — so a placedCount:0 case can only ever exercise a
+  // full revert of the hoist, never the narrow re-arm condition alone.
+  // Verified by an exhaustive differential over first_position 0-8 x
+  // repeat_every 0-4 x max_per_session 0-4 x postCount 0-8 x placedCount
+  // 0-3: every input where the narrow mutation (`i === already` reinstated,
+  // hoist otherwise intact) diverges from the fix has placedCount > 0 and
+  // the fixed/expected output is `[]`.
   it('does not lose a later repeat when the base position overflows the feed (lost-repeats regression)', () => {
-    // first_position:5 overflows postCount:3, so the base clamps to 0 once;
-    // the repeat at step 2 must still land at position 2, not vanish.
-    expect(at({ first_position: 5, repeat_every: 2, max_per_session: 3 }, 3, 0)).toEqual([0, 2]);
+    // Session already placed 2 cards (placedCount:2), so this call starts at
+    // i=2. first_position:5 overflows postCount:3, so the hoisted base
+    // clamps to 0 — but 0 + repeat_every(2)*i(2) = 4 still overflows
+    // postCount:3 on this very iteration. The repeat has run off the end of
+    // the feed and must be dropped outright (old promoInjectPositions: []),
+    // not re-clamped back to a phantom card at position 0.
+    expect(at({ first_position: 5, repeat_every: 2, max_per_session: 3 }, 3, 2)).toEqual([]);
   });
 
   it('does not teleport a card back to the top on a later page (mid-scroll teleport regression)', () => {
@@ -86,11 +100,14 @@ describe('promoSlotPositions (all slots first_position: null — legacy config-o
   });
 
   it('continues repeating correctly when placedCount > 0 and repeat_every > 0 together', () => {
-    // A mid-session continuation (placedCount:1) with an active repeat
-    // interval and plenty of feed room — the loop must keep advancing by
-    // `step` from the session start, not re-trigger the top-of-feed clamp
-    // just because this is the first slot handled by *this* call.
-    expect(at({ first_position: 2, repeat_every: 3, max_per_session: 4 }, 20, 1)).toEqual([5, 8, 11]);
+    // A different base/step/session-length combination from the other two
+    // cases, still with placedCount > 0 (i=3 here) so the base's overflow
+    // clamp — first_position:6 overflows postCount:4, hoisting to first:0 —
+    // is exercised on this call's own first iteration rather than at session
+    // start: 0 + repeat_every(3)*i(3) = 9 still overflows postCount:4, so
+    // the sequence has run out and must stop (old promoInjectPositions: []),
+    // not resume by re-clamping to the top.
+    expect(at({ first_position: 6, repeat_every: 3, max_per_session: 5 }, 4, 3)).toEqual([]);
   });
 });
 
