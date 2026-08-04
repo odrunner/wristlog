@@ -96,7 +96,7 @@ describe('campaignGroupOf', () => {
   });
 
   it('retires "Start tracking your wears" to Older campaigns', () => {
-    expect(campaignGroupOf('Start tracking your wears').group).toBe(3);
+    expect(campaignGroupOf('Start tracking your wears').group).toBe(4);
   });
 
   it('puts Connections, Comments and Mentions together in the notifications group', () => {
@@ -116,8 +116,8 @@ describe('campaignGroupOf', () => {
     expect(campaignGroupOf(subj, new Set([subj])).group).toBe(2);
     // Drained: no pending rows, so it falls through to "Older campaigns"
     // instead of claiming the in-progress section forever.
-    expect(campaignGroupOf(subj, new Set()).group).toBe(3);
-    expect(campaignGroupOf(subj).group).toBe(3);
+    expect(campaignGroupOf(subj, new Set()).group).toBe(4);
+    expect(campaignGroupOf(subj).group).toBe(4);
   });
 
   it('matches an in-flight broadcast by its queue label', () => {
@@ -140,21 +140,46 @@ describe('campaignGroupOf', () => {
     expect(campaignSubject(LABEL)).toBe(CAMPAIGN_FUNFACT_DRIP);
     expect(campaignGroupOf(campaignSubject(LABEL), active).group).toBe(0);
     // Drained: falls through to "Older campaigns", still on its own row.
-    expect(campaignGroupOf(LABEL, new Set()).group).toBe(3);
+    expect(campaignGroupOf(LABEL, new Set()).group).toBe(4);
+  });
+
+  it('files the daily wear reminder under Recurring, not Older campaigns', () => {
+    // Regression guard. "What's on your wrist today?" is send-wear-reminders'
+    // subject — fired hourly by cron, delivered at each user's local 5pm, so it
+    // sends every day, forever. It has no broadcast_queue rows, so nothing could
+    // ever promote it out of group 4: it sat in "Older campaigns" logging fresh
+    // sends daily (13 of the last 14 days) while filed as history.
+    expect(campaignGroupOf("What's on your wrist today?").group).toBe(3);
+    expect(campaignGroupOf("What's on your wrist today?", new Set()).group).toBe(3);
+  });
+
+  it('an in-flight broadcast still outranks the recurring list', () => {
+    // activeKeys is checked first: losing sight of a draining send is the worse
+    // failure, so a label collision resolves to "in progress", not "Recurring".
+    const subj = "What's on your wrist today?";
+    expect(campaignGroupOf(subj, new Set([subj])).group).toBe(2);
+  });
+
+  it('the reminder survives the one-inbox filter that only applies to group 4', () => {
+    // The filter drops group-4 rows with <=1 delivery; a recurring send sits in
+    // group 3, so a quiet day cannot make it disappear from the list.
+    expect(campaignGroupOf("What's on your wrist today?").group).not.toBe(4);
   });
 
   it('drops everything else into "Older campaigns"', () => {
-    expect(campaignGroupOf('3 new things in WRotate since you joined').group).toBe(3);
-    expect(campaignGroupOf('A massive upgrade to measurement accuracy').group).toBe(3);
+    expect(campaignGroupOf('3 new things in WRotate since you joined').group).toBe(4);
+    expect(campaignGroupOf('A massive upgrade to measurement accuracy').group).toBe(4);
   });
 
   it('mentions no longer land in Older campaigns', () => {
-    expect(campaignGroupOf(campaignSubject('masont mentioned you')).group).not.toBe(3);
+    expect(campaignGroupOf(campaignSubject('masont mentioned you')).group).not.toBe(4);
   });
 
   it('labels the notifications group distinctly', () => {
-    expect(CAMPAIGN_GROUP_LABELS).toHaveLength(4);
+    expect(CAMPAIGN_GROUP_LABELS).toHaveLength(5);
     expect(CAMPAIGN_GROUP_LABELS[1]).toMatch(/notification/i);
+    expect(CAMPAIGN_GROUP_LABELS[3]).toMatch(/recurring/i);
+    expect(CAMPAIGN_GROUP_LABELS[4]).toMatch(/older/i);
   });
 });
 
@@ -185,6 +210,12 @@ describe('index.html mirrors the campaign constants', () => {
 
   it('the notification bucket list is Connections/Comments/Mentions', () => {
     expect(arrayIn('CAMPAIGN_NOTIFICATIONS')).toEqual(['Connections', 'Comments', 'Mentions']);
+  });
+
+  it('the recurring list carries the wear-reminder subject verbatim', () => {
+    // Must match send-wear-reminders/lib.ts byte for byte — a typo silently
+    // drops the reminder back into "Older campaigns" with no test failure.
+    expect(arrayIn('CAMPAIGN_RECURRING')).toEqual(["What's on your wrist today?"]);
   });
 
   it('onboarding slot 2 is the fun-fact drip constant, not a retired subject', () => {

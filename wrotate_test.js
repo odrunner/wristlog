@@ -107,8 +107,16 @@ const CAMPAIGN_ONBOARDING = [
 // Connections / Comments / Mentions — the recurring social notifications. Their
 // own section: they are ongoing and comparable to each other, unlike finished sends.
 const CAMPAIGN_NOTIFICATIONS = ['Connections', 'Comments', 'Mentions'];
+// Scheduled system email that sends every day, forever — not a campaign with a
+// beginning and an end. The wear reminder (send-wear-reminders, fired hourly by
+// the send-wear-reminders-hourly cron and delivered when each user's LOCAL hour
+// hits 5pm) has never been in broadcast_queue, so nothing could ever promote it
+// out of "Older campaigns" — it sat there posting fresh sends every day while
+// filed as history. Its own group, because it is neither a finished send nor a
+// per-actor social notification.
+const CAMPAIGN_RECURRING = ["What's on your wrist today?"];
 export const CAMPAIGN_GROUP_LABELS = [
-  'Onboarding', 'Notifications', 'Broadcast — in progress', 'Older campaigns',
+  'Onboarding', 'Notifications', 'Broadcast — in progress', 'Recurring', 'Older campaigns',
 ];
 
 // `activeKeys` is the set of campaign keys still draining from broadcast_queue,
@@ -120,8 +128,14 @@ export function campaignGroupOf(subj, activeKeys) {
   if (i >= 0) return { group: 0, rank: i };
   i = CAMPAIGN_NOTIFICATIONS.indexOf(subj);
   if (i >= 0) return { group: 1, rank: i };
+  // activeKeys is checked BEFORE the recurring list: a broadcast genuinely in
+  // flight must always win the "in progress" slot, even in the unlikely event
+  // someone labels one after a recurring subject. Losing sight of a draining
+  // send is the worse failure — that is the bug the label keying already fixed.
   if (activeKeys && activeKeys.has(subj)) return { group: 2, rank: 0 };
-  return { group: 3, rank: 0 };
+  i = CAMPAIGN_RECURRING.indexOf(subj);
+  if (i >= 0) return { group: 3, rank: i };
+  return { group: 4, rank: 0 };
 }
 
 // ── Campaign token substitution (admin preview / test send) ────────────────

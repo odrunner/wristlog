@@ -7298,7 +7298,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '04.14.48';
+const APP_VERSION = '04.16.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -7453,8 +7453,16 @@ const CAMPAIGN_ONBOARDING = [
 // Connections / Comments / Mentions — the recurring social notifications. Their
 // own section: they are ongoing and comparable to each other, unlike finished sends.
 const CAMPAIGN_NOTIFICATIONS = ['Connections', 'Comments', 'Mentions'];
+// Scheduled system email that sends every day, forever — not a campaign with a
+// beginning and an end. The wear reminder (send-wear-reminders, fired hourly by
+// the send-wear-reminders-hourly cron and delivered when each user's LOCAL hour
+// hits 5pm) has never been in broadcast_queue, so nothing could ever promote it
+// out of "Older campaigns" — it sat there posting fresh sends every day while
+// filed as history. Its own group, because it is neither a finished send nor a
+// per-actor social notification.
+const CAMPAIGN_RECURRING = ["What's on your wrist today?"];
 const CAMPAIGN_GROUP_LABELS = [
-  'Onboarding', 'Notifications', 'Broadcast — in progress', 'Older campaigns',
+  'Onboarding', 'Notifications', 'Broadcast — in progress', 'Recurring', 'Older campaigns',
 ];
 
 // `activeKeys` is the set of campaign keys still draining from broadcast_queue,
@@ -7466,8 +7474,14 @@ function campaignGroupOf(subj, activeKeys) {
   if (i >= 0) return { group: 0, rank: i };
   i = CAMPAIGN_NOTIFICATIONS.indexOf(subj);
   if (i >= 0) return { group: 1, rank: i };
+  // activeKeys is checked BEFORE the recurring list: a broadcast genuinely in
+  // flight must always win the "in progress" slot, even in the unlikely event
+  // someone labels one after a recurring subject. Losing sight of a draining
+  // send is the worse failure — that is the bug the label keying already fixed.
   if (activeKeys && activeKeys.has(subj)) return { group: 2, rank: 0 };
-  return { group: 3, rank: 0 };
+  i = CAMPAIGN_RECURRING.indexOf(subj);
+  if (i >= 0) return { group: 3, rank: i };
+  return { group: 4, rank: 0 };
 }
 
 function escHtml(s) {
@@ -16765,7 +16779,8 @@ function renderEmailEngagement(data) {
 
   // Display order: onboarding drips 1-4, the social notification buckets
   // (Connections / Comments / Mentions) as their own section, in-flight
-  // broadcasts, then everything else (finished/old campaigns) by volume.
+  // broadcasts, recurring system email, then everything else (finished/old
+  // campaigns) by volume.
   const GROUP_LABELS = CAMPAIGN_GROUP_LABELS;
   const groupOf = (subj) => campaignGroupOf(subj, activeKeys).group;
   const rankOf  = (subj) => campaignGroupOf(subj, activeKeys).rank;
@@ -16774,9 +16789,10 @@ function renderEmailEngagement(data) {
   const subjectRows = Object.entries(bySubject)
     // A campaign that reached exactly one inbox isn't a campaign — it's a test
     // send or a stray personalized one-off ("We miss you, Tyler"). Only applied
-    // to group 3: a known drip or an in-flight broadcast stays visible from its
-    // very first delivery, which is when you most want to watch it.
-    .filter(([subj, s]) => groupOf(subj) !== 3 || (s.delivered || s.sent || 0) > 1)
+    // to group 4 (Older campaigns): a known drip, an in-flight broadcast or a
+    // recurring send stays visible from its very first delivery, which is when
+    // you most want to watch it.
+    .filter(([subj, s]) => groupOf(subj) !== 4 || (s.delivered || s.sent || 0) > 1)
     .sort((a, b) => {
       const ga = groupOf(a[0]), gb = groupOf(b[0]);
       if (ga !== gb) return ga - gb;
