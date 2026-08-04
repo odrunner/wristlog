@@ -61,6 +61,13 @@ Deno.test("buildMessage — known types", () => {
   );
 });
 
+// The last type the app actually creates that had no message of its own. The
+// panel names the club; the push can't without an extra lookup, so it says "a
+// club" — same shape as club_invite.
+Deno.test("buildMessage — club_promoted", () => {
+  assertEquals(buildMessage("club_promoted", "A")?.body, "A made you an owner of a club");
+});
+
 // A `system` row is the auto-add-brand confirmation: actor-less, with the brand
 // name in ref_id. Without the ref it pushed "Someone sent you a notification".
 Deno.test("buildMessage — system names the brand that was added", () => {

@@ -54,6 +54,11 @@ export function buildMessage(
       return { title, body: `${actorName} wants to join your club` };
     case "club_join_accepted":
       return { title, body: `${actorName} approved your club request` };
+    // The panel names the club (it joins the row to clubs); naming it here would
+    // cost an extra lookup for a rare notification, so keep it generic like
+    // club_invite rather than leave it on the meaningless default.
+    case "club_promoted":
+      return { title, body: `${actorName} made you an owner of a club` };
     case "mention":
       return { title, body: `${actorName} mentioned you` };
     case "comment_like":
