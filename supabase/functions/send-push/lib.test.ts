@@ -42,6 +42,7 @@ Deno.test("buildMessage — title is always WRotate", () => {
 Deno.test("buildMessage — known types", () => {
   assertEquals(buildMessage("like", "A")?.body, "A liked your post");
   assertEquals(buildMessage("comment", "A")?.body, "A commented on your post");
+  assertEquals(buildMessage("comment_also", "A")?.body, "A also commented on a post you liked or commented on");
   assertEquals(buildMessage("follow", "A")?.body, "A started following you");
   assertEquals(buildMessage("follow_request", "A")?.body, "A requested to follow you");
   assertEquals(buildMessage("follow_accepted", "A")?.body, "A accepted your follow request");
@@ -50,6 +51,7 @@ Deno.test("buildMessage — known types", () => {
   assertEquals(buildMessage("club_invite", "A")?.body, "A invited you to join a club");
   assertEquals(buildMessage("club_join_request", "A")?.body, "A wants to join your club");
   assertEquals(buildMessage("club_join_accepted", "A")?.body, "A approved your club request");
+  assertEquals(buildMessage("club_promoted", "A")?.body, "A made you an owner of a club");
   assertEquals(buildMessage("mention", "A")?.body, "A mentioned you");
   assertEquals(buildMessage("comment_like", "A")?.body, "A liked your comment");
 });

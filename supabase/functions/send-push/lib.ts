@@ -28,6 +28,8 @@ export function buildMessage(
       return { title, body: `${actorName} liked your post` };
     case "comment":
       return { title, body: `${actorName} commented on your post` };
+    case "comment_also":
+      return { title, body: `${actorName} also commented on a post you liked or commented on` };
     case "follow":
       return { title, body: `${actorName} started following you` };
     case "follow_request":
@@ -44,6 +46,8 @@ export function buildMessage(
       return { title, body: `${actorName} wants to join your club` };
     case "club_join_accepted":
       return { title, body: `${actorName} approved your club request` };
+    case "club_promoted":
+      return { title, body: `${actorName} made you an owner of a club` };
     case "mention":
       return { title, body: `${actorName} mentioned you` };
     case "comment_like":
