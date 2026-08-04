@@ -48,7 +48,7 @@ const VERBATIM = [
   'fillCampaignTokens', 'unresolvedCampaignTokens',
   'shouldShowFactModal', 'pickFactModalWatch', 'shouldAttachFactOnEdit',
   'npIdentifyWait', 'syncedIds', 'promoAudienceMatches', 'eligiblePromoSlots',
-  'promoInjectPositions',
+  'promoInjectPositions', 'PROMO_AUDIENCES',
 ];
 
 const ADAPTED = [
@@ -60,7 +60,7 @@ const ADAPTED = [
   'fmtMoney', 'formatCommentTime', 'formatFeedDate', 'getMentionQuery', 'incrSettle', 'initials',
   'isBase64', 'logToRow', 'markDirty', 'monthRevNav', 'profileInitials',
   'renderCommentBody', 'todayStr', 'warrantyStatus', 'watchToRow', 'wishToRow',
-  'funFactCardHTML', 'funFactRowHTML', 'PROMO_AUDIENCES',
+  'funFactCardHTML', 'funFactRowHTML',
 ];
 
 // Extract a function/const body ({...} block) by name from a source string.
@@ -94,9 +94,14 @@ function extractBody(src, name) {
       p++;
     }
   } else {
-    // `const NAME = (...) => {...}` — skip an optional parenthesized param list
-    // (itself possibly destructured) before looking for the arrow/body.
+    // `const NAME = (...) => {...}` or `const NAME = async (...) => {...}` —
+    // skip an optional `async` keyword, then an optional parenthesized param
+    // list (itself possibly destructured), before looking for the arrow/body.
     while (p < src.length && /\s/.test(src[p])) p++;
+    if (/^async\b/.test(src.slice(p, p + 6))) {
+      p += 5;
+      while (p < src.length && /\s/.test(src[p])) p++;
+    }
     if (src[p] === '(') {
       let depth = 1; p++;
       while (p < src.length && depth > 0) {
@@ -172,5 +177,21 @@ describe('mirror-drift guard', () => {
     expect(VERBATIM.filter((n) => ADAPTED.includes(n))).toEqual([]);
     expect(new Set(VERBATIM).size).toBe(VERBATIM.length);
     expect(new Set(ADAPTED).size).toBe(ADAPTED.length);
+  });
+
+  it('extractBody finds the real body of an async arrow const with destructured params', () => {
+    // Regression test for the same failure mode the destructured-param fix
+    // closed for `function`/plain-arrow consts: without an `async` skip, the
+    // 'else' branch's `src[p] === '('` check never fires (the next token is
+    // the `async` keyword, not `(`), so the param-list skip is bypassed and
+    // the first '{' found is the destructuring pattern, not the body.
+    const src = `
+const doThing = async ({ a, b }) => {
+  return a + b;
+};
+`;
+    const body = extractBody(src, 'doThing');
+    expect(body).not.toBe('{ a, b }');
+    expect(body).toContain('return a + b;');
   });
 });
