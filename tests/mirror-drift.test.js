@@ -94,14 +94,26 @@ function extractBody(src, name) {
       p++;
     }
   } else {
-    // `const NAME = (...) => {...}` or `const NAME = async (...) => {...}` —
-    // skip an optional `async` keyword, then an optional parenthesized param
-    // list (itself possibly destructured), before looking for the arrow/body.
+    // `const NAME = <head> {...}` where <head> is any of: an arrow's
+    // parenthesized (possibly destructured) params, an arrow's bare
+    // identifier param, or a function expression — `function`, `async
+    // function`, or `async`, each optionally named, in any combination —
+    // followed by its own (possibly destructured) params. Rather than
+    // hardcoding one keyword at a time (this is the third patch for the
+    // same failure mode), skip whitespace and any run of `async`/`function`
+    // keywords generically, then an optional function-expression name
+    // immediately before '(', before balance-skipping the parameter list.
     while (p < src.length && /\s/.test(src[p])) p++;
-    if (/^async\b/.test(src.slice(p, p + 6))) {
-      p += 5;
+    const kwRe = /^(?:async|function)\b/;
+    while (kwRe.test(src.slice(p))) {
+      p += kwRe.exec(src.slice(p))[0].length;
       while (p < src.length && /\s/.test(src[p])) p++;
     }
+    // An identifier directly followed by '(' here is a function expression's
+    // name (`function foo(...)`) — an arrow's bare param is followed by
+    // '=>', not '(', so this can't misfire on `const f = x => {...}`.
+    const nameMatch = /^[A-Za-z_$][A-Za-z0-9_$]*\s*(?=\()/.exec(src.slice(p));
+    if (nameMatch) p += nameMatch[0].length;
     if (src[p] === '(') {
       let depth = 1; p++;
       while (p < src.length && depth > 0) {
@@ -179,19 +191,61 @@ describe('mirror-drift guard', () => {
     expect(new Set(ADAPTED).size).toBe(ADAPTED.length);
   });
 
-  it('extractBody finds the real body of an async arrow const with destructured params', () => {
-    // Regression test for the same failure mode the destructured-param fix
-    // closed for `function`/plain-arrow consts: without an `async` skip, the
-    // 'else' branch's `src[p] === '('` check never fires (the next token is
-    // the `async` keyword, not `(`), so the param-list skip is bypassed and
-    // the first '{' found is the destructuring pattern, not the body.
-    const src = `
+  describe('extractBody handles every async/function-expression const shape', () => {
+    // Regression tests for the same failure mode, fixed generically instead of
+    // one keyword at a time: `const NAME = <async/function keywords, in any
+    // combination, optionally named> (<possibly destructured params>) {...}`.
+    // Each must return the real body, never the destructured param pattern.
+
+    it('const f = async (a) => {...} (plain param, no destructuring)', () => {
+      const src = `
+const doThing = async (a) => {
+  return a + 1;
+};
+`;
+      expect(extractBody(src, 'doThing')).toContain('return a + 1;');
+    });
+
+    it('const f = async ({a}) => {...} (destructured arrow param)', () => {
+      const src = `
 const doThing = async ({ a, b }) => {
   return a + b;
 };
 `;
-    const body = extractBody(src, 'doThing');
-    expect(body).not.toBe('{ a, b }');
-    expect(body).toContain('return a + b;');
+      const body = extractBody(src, 'doThing');
+      expect(body).not.toBe('{ a, b }');
+      expect(body).toContain('return a + b;');
+    });
+
+    it('async function f({a}) {...} (declared function, unaffected by this branch)', () => {
+      const src = `
+async function doThing({ a, b }) {
+  return a + b;
+}
+`;
+      const body = extractBody(src, 'doThing');
+      expect(body).not.toBe('{ a, b }');
+      expect(body).toContain('return a + b;');
+    });
+
+    it('const f = async function ({a}) {...} (named/anonymous function expression)', () => {
+      const anon = `
+const doThing = async function ({ a, b }) {
+  return a + b;
+};
+`;
+      const anonBody = extractBody(anon, 'doThing');
+      expect(anonBody).not.toBe('{ a, b }');
+      expect(anonBody).toContain('return a + b;');
+
+      const named = `
+const doOtherThing = async function doOtherThingImpl({ a, b }) {
+  return a - b;
+};
+`;
+      const namedBody = extractBody(named, 'doOtherThing');
+      expect(namedBody).not.toBe('{ a, b }');
+      expect(namedBody).toContain('return a - b;');
+    });
   });
 });
