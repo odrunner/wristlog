@@ -2749,10 +2749,17 @@ export function promoSlotPositions({ slots, postCount, config, placedCount, reme
     taken.add(pos);
     out.push({ id: slot.id, pos });
 
-    if (!reclaim) {
-      freshIndex++;
-      if (!explicit && step <= 0) break;              // no repeat: exactly one card
-    }
+    // Every PLACED slot occupies a formula slot, reclaim or not — a
+    // reclaiming slot's own placement consumed one back when it first
+    // formula-placed, and freshIndex must stay in lockstep with that so a
+    // FRESH slot processed later in this same call computes the index it
+    // would have gotten had the reclaimer never dropped out of the picture.
+    // Skipping the advance for a reclaim (an earlier version of this fix)
+    // left a fresh slot in the same pass recomputing the reclaimer's own
+    // index, guaranteeing a collision that the taken-set resolves with a
+    // bare `+1` — destroying repeat_every's spacing instead of preserving it.
+    freshIndex++;
+    if (!reclaim && !explicit && step <= 0) break;     // no repeat: exactly one FRESH card
   }
   return out;
 }

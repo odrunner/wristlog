@@ -240,6 +240,40 @@ describe('promoSlotPositions (session position memory — rememberedPositions)',
     expect(result).toEqual([{ id: 'p1', pos: 2 }, { id: 'p3', pos: 3 }]);
   });
 
+  it('a reclaim in the same pass as a fresh slot must not steal the fresh slot\'s formula index (repeat_every spacing regression)', () => {
+    // Round-2 regression: freshIndex must advance for EVERY placed slot,
+    // reclaim or not — a reclaiming slot's own placement consumed a formula
+    // index back when it first placed, so a later FRESH slot in the same
+    // call must compute its index as if the reclaimer had never dropped out
+    // of the picture. Skipping the advance on reclaim left the fresh slot
+    // recomputing the SAME index the reclaimer already holds, guaranteeing a
+    // collision the taken-set resolves with a bare +1 — destroying
+    // repeat_every's spacing (p2 landing at 3, one post after p1, instead of
+    // its true formula position 5).
+    //
+    // First render, feed only 3 posts long: p1 (higher priority) fits at 2;
+    // p2's formula position (5) overflows the 3-post feed and is correctly
+    // dropped rather than placed.
+    const firstPass = promoSlotPositions({
+      slots: [{ id: 'p1', first_position: null }, { id: 'p2', first_position: null }],
+      postCount: 3, config: CFG2, placedCount: 0, rememberedPositions: {},
+    });
+    expect(firstPass).toEqual([{ id: 'p1', pos: 2 }]);
+
+    // A later full re-render (renderFeed()'s ordinary path) on a 10-post
+    // feed: p1 is now reclaiming (remembered at 2, pulled to the front by
+    // the caller); p2 is placing FRESH for the first time. p2 must land at
+    // its own formula position (2 + 3*1 = 5) — matching what it would have
+    // gotten had it been placed straight after p1 in a single pass — not
+    // collide with p1's spot and get pushed to 3.
+    const secondPass = promoSlotPositions({
+      slots: [{ id: 'p1', first_position: null }, { id: 'p2', first_position: null }],
+      postCount: 10, config: CFG2, placedCount: 0,
+      rememberedPositions: { p1: 2 },
+    });
+    expect(secondPass).toEqual([{ id: 'p1', pos: 2 }, { id: 'p2', pos: 5 }]);
+  });
+
   it('an explicit per-slot first_position still wins even when the slot is also remembered', () => {
     // Belt-and-suspenders: remembered and explicit agreeing is the only way
     // this ever arises in practice (the memo is only ever written from what

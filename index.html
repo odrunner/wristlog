@@ -7298,7 +7298,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '04.10.34';
+const APP_VERSION = '04.10.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11531,10 +11531,17 @@ function promoSlotPositions({ slots, postCount, config, placedCount, rememberedP
     taken.add(pos);
     out.push({ id: slot.id, pos });
 
-    if (!reclaim) {
-      freshIndex++;
-      if (!explicit && step <= 0) break;              // no repeat: exactly one card
-    }
+    // Every PLACED slot occupies a formula slot, reclaim or not — a
+    // reclaiming slot's own placement consumed one back when it first
+    // formula-placed, and freshIndex must stay in lockstep with that so a
+    // FRESH slot processed later in this same call computes the index it
+    // would have gotten had the reclaimer never dropped out of the picture.
+    // Skipping the advance for a reclaim (an earlier version of this fix)
+    // left a fresh slot in the same pass recomputing the reclaimer's own
+    // index, guaranteeing a collision that the taken-set resolves with a
+    // bare `+1` — destroying repeat_every's spacing instead of preserving it.
+    freshIndex++;
+    if (!reclaim && !explicit && step <= 0) break;     // no repeat: exactly one FRESH card
   }
   return out;
 }
@@ -11894,13 +11901,6 @@ function injectPromoCards() {
     slots: ordered, postCount: posts.length, config: _promoConfig, placedCount,
     rememberedPositions: _promoSlotPositionMemo,
   });
-  // Remember each slot's position the FIRST time it's placed this session —
-  // never overwritten after that (see _promoSlotPositionMemo's declaration),
-  // so a reclaim always resumes from where it was originally placed rather
-  // than a later, possibly-clamped, recomputation.
-  placements.forEach(({ id, pos }) => {
-    if (!(id in _promoSlotPositionMemo)) _promoSlotPositionMemo[id] = pos;
-  });
   // mountFeedLoadMoreSentinel() appends #feed-load-sentinel as the last child
   // before this runs — a trailing card must land above the spinner, not below
   // it, or a repeat pass pins it to the very bottom forever (beforebegin the
@@ -11921,6 +11921,18 @@ function injectPromoCards() {
     }
     _promoPlaced.add(slot.id);
     _promoBudgetUsed.add(slot.id);       // no-op for a returning slot; spends for a new one
+    // Remember the position the FIRST time this slot actually mounts —
+    // never overwritten after that (see _promoSlotPositionMemo's
+    // declaration), so a reclaim always resumes from where it was originally
+    // placed rather than a later, possibly-clamped, recomputation. Guarded
+    // by `posts.length`, not just the mount succeeding: an empty feed always
+    // returns pos:0 as a degenerate fallback (promoSlotPositions' `if
+    // (!postCount)` branch), not a position this slot actually chose — an
+    // empty feed that later loads posts must still place the slot at its
+    // real first_position, not stay pinned to the top all session.
+    if (posts.length && !(slot.id in _promoSlotPositionMemo)) {
+      _promoSlotPositionMemo[slot.id] = pos;
+    }
   });
 
   observePromoImpressions();
