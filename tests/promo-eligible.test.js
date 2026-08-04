@@ -105,6 +105,26 @@ describe('eligiblePromoSlots', () => {
     expect(run({ slots: [slot({ max_impressions: 1 })], events: [{ slot_id: 's1', event: 'impression' }] })).toEqual([]);
   });
 
+  // localCounts is the local (localStorage) impression guardrail — mirrored
+  // in case a promo_events insert failed and never made it into `events`.
+  it('excludes a slot at the cap via localCounts alone, with no server events', () => {
+    expect(run({ events: [], localCounts: { s1: 3 } })).toEqual([]);
+  });
+
+  it('uses the GREATER of server-derived and local counts', () => {
+    const seen = [1, 2].map(() => ({ slot_id: 's1', event: 'impression' })); // 2 server
+    expect(run({ events: seen, localCounts: { s1: 1 } })).toHaveLength(1);   // max(2,1)=2 < 3
+    expect(run({ events: seen, localCounts: { s1: 3 } })).toEqual([]);       // max(2,3)=3, not < 3
+  });
+
+  it('ignores localCounts for a different slot id', () => {
+    expect(run({ events: [], localCounts: { other: 99 } })).toHaveLength(1);
+  });
+
+  it('tolerates a missing localCounts (defaults to no local contribution)', () => {
+    expect(run({ events: [] })).toHaveLength(1);
+  });
+
   it('ignores clicks of OTHER slots when counting impressions', () => {
     expect(run({ events: [{ slot_id: 'other', event: 'impression' }, { slot_id: 's1', event: 'click' }] })).toHaveLength(1);
   });
@@ -124,5 +144,34 @@ describe('eligiblePromoSlots', () => {
 
   it('tolerates missing slots, events and config without throwing', () => {
     expect(eligiblePromoSlots({ slots: null, config: null, ctx: CTX, events: null, now: NOW, modalShown: false })).toEqual([]);
+  });
+
+  // ── Reset impressions (epoch) ──────────────────────────────────────────────
+  // A local count carries the epoch (slot.updated_at) it was recorded under.
+  // The admin's "Reset impressions" action bumps updated_at specifically to
+  // invalidate every device's stored count — without this check that bump is
+  // a no-op and truncating promo_events alone leaves the card retired forever
+  // on any device that already recorded an impression.
+  it('ignores a stored local count whose epoch no longer matches the slot\'s updated_at — the card shows again', () => {
+    const out = run({
+      slots: [slot({ updated_at: '2026-08-04T00:00:00Z' })],
+      events: [],
+      // Recorded under a stale epoch (before the admin's reset bumped it) —
+      // at the cap, but must not count.
+      localCounts: { s1: { n: 3, e: '2026-08-01T00:00:00Z' } },
+    });
+    expect(out).toHaveLength(1);
+  });
+
+  it('still honours a stored local count whose epoch matches the slot\'s current updated_at', () => {
+    const withMatchingEpoch = (n) => run({
+      slots: [slot({ updated_at: '2026-08-04T00:00:00Z' })],
+      events: [],
+      localCounts: { s1: { n, e: '2026-08-04T00:00:00Z' } },
+    });
+    // Below the cap: the count is read correctly (not corrupted to 0 or NaN).
+    expect(withMatchingEpoch(2)).toHaveLength(1);
+    // At the cap: the guardrail itself must not regress.
+    expect(withMatchingEpoch(3)).toEqual([]);
   });
 });

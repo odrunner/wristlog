@@ -514,6 +514,122 @@ test.describe('admin Promos tab — write guards (mocked)', () => {
   });
 });
 
+// ── Reset impressions ────────────────────────────────────────────────────────
+// The finding this closes: deleting a slot's promo_events rows used to be the
+// ONLY lever to re-air a spent card, but the local per-device impression
+// mirror (eligiblePromoSlots' localCounts) has no TTL and no reset path of its
+// own — a truncate alone left every returning device still capped forever.
+// Reset impressions must do BOTH writes: delete the events AND bump
+// promo_slots.updated_at, which is the epoch the local mirror is keyed to.
+test.describe('admin Promos tab — reset impressions (mocked)', () => {
+  const ADMIN_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
+  const NON_ADMIN_ID = '11111111-1111-1111-1111-111111111111';
+
+  test('deletes the slot\'s promo_events AND bumps promo_slots.updated_at', async ({ page }) => {
+    await page.goto('/');
+    const calls = await page.evaluate(async (id) => {
+      currentUser = { id };
+      window.showConfirm = async () => true; // admin confirmed the destructive dialog
+      const calls = [];
+      db.from = (table) => {
+        if (table === 'promo_events') {
+          return { delete: () => ({ eq: async (col, val) => { calls.push({ table, op: 'delete', col, val }); return { data: null, error: null }; } }) };
+        }
+        if (table === 'promo_slots') {
+          return { update: (patch) => ({ eq: async (col, val) => { calls.push({ table, op: 'update', col, val, patch }); return { data: null, error: null }; } }) };
+        }
+        const emptyChain = { limit: () => emptyChain, order: async () => ({ data: [], error: null }), maybeSingle: async () => ({ data: null, error: null }) };
+        return { select: () => emptyChain };
+      };
+      db.rpc = async () => ({ data: [], error: null });
+      _promoAdminSlots = [{ id: 'slot-1', heading: 'Test slot' }];
+      await window.resetPromoImpressions('slot-1');
+      return calls;
+    }, ADMIN_ID);
+
+    expect(calls).toHaveLength(2);
+    const del = calls.find((c) => c.op === 'delete');
+    const upd = calls.find((c) => c.op === 'update');
+    expect(del.table).toBe('promo_events');
+    expect(del.col).toBe('slot_id');
+    expect(del.val).toBe('slot-1');
+    expect(upd.table).toBe('promo_slots');
+    expect(upd.col).toBe('id');
+    expect(upd.val).toBe('slot-1');
+    expect(Object.prototype.hasOwnProperty.call(upd.patch, 'updated_at')).toBe(true);
+    expect(typeof upd.patch.updated_at).toBe('string');
+  });
+
+  test('a non-admin can do neither — no delete and no update call at all', async ({ page }) => {
+    await page.goto('/');
+    const calls = await page.evaluate(async (id) => {
+      currentUser = { id };
+      window.showConfirm = async () => true;
+      const calls = [];
+      db.from = (table) => ({
+        delete: () => ({ eq: async () => { calls.push({ table, op: 'delete' }); return { data: null, error: null }; } }),
+        update: () => ({ eq: async () => { calls.push({ table, op: 'update' }); return { data: null, error: null }; } }),
+      });
+      _promoAdminSlots = [{ id: 'slot-1', heading: 'Test slot' }];
+      await window.resetPromoImpressions('slot-1');
+      return calls;
+    }, NON_ADMIN_ID);
+    expect(calls).toEqual([]);
+  });
+
+  test('the row uses a delegated data-promo-reset handler (no inline onclick) and passes the right slot id', async ({ page }) => {
+    await page.goto('/');
+    const result = await page.evaluate(async () => {
+      currentUser = { id: 'd70b1a85-4f31-4431-b3b7-db76543daaf5' };
+      window.showConfirm = async () => true;
+      const slots = [{ id: 's1', heading: 'Slot One', status: 'active', audience: 'all', images: [], max_impressions: null, cta_action: '' }];
+      const emptyChain = { limit: () => emptyChain, order: async () => ({ data: [], error: null }), maybeSingle: async () => ({ data: null, error: null }) };
+      const slotsChain = { order: async () => ({ data: slots, error: null }) };
+      let updatePatch = null;
+      let deleteVal = null;
+      db.from = (table) => {
+        if (table === 'promo_slots') {
+          return {
+            select: () => slotsChain,
+            update: (patch) => ({ eq: async (col, id) => { updatePatch = { col, id, patch }; return { data: null, error: null }; } }),
+          };
+        }
+        if (table === 'promo_events') {
+          return { delete: () => ({ eq: async (col, val) => { deleteVal = val; return { data: null, error: null }; } }) };
+        }
+        return { select: () => emptyChain };
+      };
+      db.rpc = async () => ({ data: [], error: null });
+      await window.loadPromoAdmin();
+      const listHtml = document.getElementById('promo-list').innerHTML;
+      document.querySelector('[data-promo-reset]').click();
+      await new Promise((r) => setTimeout(r, 50));
+      return { hasOnclick: listHtml.includes('onclick='), updatePatch, deleteVal };
+    });
+    expect(result.hasOnclick).toBe(false);
+    expect(result.deleteVal).toBe('s1');
+    expect(result.updatePatch.id).toBe('s1');
+    expect(Object.prototype.hasOwnProperty.call(result.updatePatch.patch, 'updated_at')).toBe(true);
+  });
+
+  test('a declined confirm makes neither write', async ({ page }) => {
+    await page.goto('/');
+    const calls = await page.evaluate(async (id) => {
+      currentUser = { id };
+      window.showConfirm = async () => false; // admin backed out of the dialog
+      const calls = [];
+      db.from = (table) => ({
+        delete: () => ({ eq: async () => { calls.push({ table, op: 'delete' }); return { data: null, error: null }; } }),
+        update: () => ({ eq: async () => { calls.push({ table, op: 'update' }); return { data: null, error: null }; } }),
+      });
+      _promoAdminSlots = [{ id: 'slot-1', heading: 'Test slot' }];
+      await window.resetPromoImpressions('slot-1');
+      return calls;
+    }, ADMIN_ID);
+    expect(calls).toEqual([]);
+  });
+});
+
 // ── The composer preview must not touch feed state ──────────────────────────
 // The preview deliberately renders through the REAL renderPromoCard(), so the
 // node it produces carries data-promo-id="preview" and data-promo-cta — the

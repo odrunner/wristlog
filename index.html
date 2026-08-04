@@ -7298,7 +7298,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '04.08.47';
+const APP_VERSION = '04.09.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11398,7 +11398,7 @@ function promoAudienceMatches(key, ctx) {
 
 // Pure: `now` is injected rather than read from Date.now() so the tests are
 // deterministic and the caller controls the clock.
-function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown }) {
+function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown, localCounts }) {
   const cfg = config || {};
   if (!cfg.enabled) return [];
   if (cfg.suppress_after_modal && modalShown) return [];
@@ -11407,6 +11407,7 @@ function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown }) {
   for (const e of (events || [])) {
     if (e.event === 'impression') seen[e.slot_id] = (seen[e.slot_id] || 0) + 1;
   }
+  const local = localCounts || {};
 
   return (slots || []).filter((s) => {
     if (!s) return false;
@@ -11420,7 +11421,27 @@ function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown }) {
     if (s.ends_at   && Date.parse(s.ends_at)  <= now) return false;
     if (!promoAudienceMatches(s.audience, ctx)) return false;
     const cap = s.max_impressions != null ? s.max_impressions : cfg.default_max_impressions;
-    return (seen[s.id] || 0) < cap;
+    // The local entry carries the EPOCH it was recorded under ({ n, e }), so a
+    // stored count is only honoured while it still matches this slot's
+    // CURRENT updated_at. That's what makes "Reset impressions" (which bumps
+    // updated_at) actually work: without this check, truncating promo_events
+    // is a no-op — the local mirror on every device that already recorded an
+    // impression keeps the card retired forever, since nothing else ever
+    // shrinks it. A legacy plain-number entry (written before this epoch
+    // existed) is treated as epoch null, same as a slot that has never been
+    // edited — so a slot nobody has touched yet doesn't spuriously reset.
+    const entry = local[s.id];
+    const localEpoch = (entry && typeof entry === 'object') ? (entry.e ?? null) : null;
+    const localN     = (entry && typeof entry === 'object') ? (entry.n || 0)
+                      : (typeof entry === 'number' ? entry : 0);
+    const slotEpoch = s.updated_at || null;
+    const effectiveLocal = (localEpoch === slotEpoch) ? localN : 0;
+    // The GREATER of the server-derived and local counts: a promo_events
+    // insert that failed (and was discarded before this guardrail existed)
+    // must not let the cap silently reset every new session — the local
+    // mirror stays bounded even when every write this session failed.
+    const count = Math.max(seen[s.id] || 0, effectiveLocal);
+    return count < cap;
   }).sort((a, b) =>
     (b.priority || 0) - (a.priority || 0) ||
     String(b.created_at || '').localeCompare(String(a.created_at || ''))
@@ -11657,6 +11678,13 @@ function notePromoModalShown() {
 // Counts the audience predicates run against. Everything here is already in
 // memory after loadUserData(), so targeting costs no round-trip.
 function promoCtx() {
+  // Unguarded before this: with storage disabled (e.g. Safari private
+  // browsing) localStorage.getItem() throws, and this ran before the
+  // properly-guarded local-impression helpers below — injectPromoCards()
+  // threw and the feed never rendered. A promo targeting signal must never
+  // take the feed down with it.
+  let measureCount = 0;
+  try { measureCount = parseInt(localStorage.getItem('wristlog_msr_count') || '0'); } catch (e) {}
   return {
     watchCount:     (watches || []).length,
     // The authoritative wear rule — routes through the shared isWearEntry()
@@ -11664,7 +11692,7 @@ function promoCtx() {
     wearCount:      (logs || []).filter(isWearEntry).length,
     wishlistCount:  (wishlist || []).length,
     followingCount: following ? following.size : 0,
-    measureCount:   parseInt(localStorage.getItem('wristlog_msr_count') || '0'),
+    measureCount,
     clubCount:      (myClubs || []).length,
     rankedEver:     Object.keys(eloRatings || {}).length > 0,
     daysSinceSignup: myProfile?.created_at
@@ -11700,12 +11728,74 @@ async function loadPromoSlots() {
   }
 }
 
+// Local per-user impression guardrail. promo_events inserts can fail
+// silently — the Supabase client RESOLVES with `{ error }` rather than
+// rejecting, so a bare `.then(() => {})` (the old code) discarded a failed
+// write with no trace. That now matters: the dismiss (✕) control was
+// removed, so max_impressions is the ONLY thing that ever retires a card —
+// a run of failed writes would show it forever, with no user-side escape.
+// Mirroring impression counts into localStorage gives eligiblePromoSlots() a
+// fallback that still bounds the session even when every insert this
+// session failed. Keyed PER USER like _factModalKey(): two accounts on one
+// device must not share, or leak into, each other's count.
+const PROMO_IMPRESSIONS_KEY = 'wrotate_promo_impressions';
+
+function _promoImpressionsKey() {
+  return currentUser ? PROMO_IMPRESSIONS_KEY + '_' + currentUser.id : PROMO_IMPRESSIONS_KEY;
+}
+
+// Degrades to {} (today's behavior — server-derived count only) on disabled
+// storage, a full quota, or corrupt JSON. A promo guardrail must never break
+// the feed.
+function _readLocalPromoImpressions() {
+  try {
+    const raw = localStorage.getItem(_promoImpressionsKey());
+    const parsed = raw ? JSON.parse(raw) : null;
+    return (parsed && typeof parsed === 'object') ? parsed : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+// Stores { n, e }: n is the count, e is the slot's updated_at at write time
+// (looked up from _promoSlots — null for a slot never edited). eligiblePromoSlots()
+// only honours a stored count while its epoch still matches the slot's CURRENT
+// updated_at, so an admin's "Reset impressions" (which bumps updated_at) is
+// what actually re-arms the card on every device — see eligiblePromoSlots()'s
+// comment. A prior count recorded under a DIFFERENT (now-stale) epoch does not
+// carry forward; it restarts at 1, same as a device that never recorded one.
+function _incrementLocalPromoImpression(slotId) {
+  try {
+    const counts = _readLocalPromoImpressions();
+    const slot = (_promoSlots || []).find((s) => s && s.id === slotId);
+    const epoch = slot ? (slot.updated_at || null) : null;
+    const prev = counts[slotId];
+    const prevEpoch = (prev && typeof prev === 'object') ? (prev.e ?? null) : null;
+    const prevN     = (prev && typeof prev === 'object') ? (prev.n || 0)
+                     : (typeof prev === 'number' ? prev : 0);
+    const n = (prevEpoch === epoch ? prevN : 0) + 1;
+    counts[slotId] = { n, e: epoch };
+    localStorage.setItem(_promoImpressionsKey(), JSON.stringify(counts));
+  } catch (e) {
+    // Storage disabled/full — silently no-op. The server-derived count (and
+    // the in-session _promoImpressed guard) still bound this session; only
+    // the cross-session fallback is lost.
+  }
+}
+
 function logPromoEvent(slotId, event) {
   if (!currentUser) return;
   db.from('promo_events')
     .insert({ user_id: currentUser.id, slot_id: slotId, event })
-    .then(() => {}).catch(() => {});
+    .then(({ error }) => {
+      // The Supabase client resolves with { error } rather than rejecting —
+      // a bare .then(() => {}) discarded a failed insert with no trace.
+      if (error) console.warn('[promo] event insert failed:', slotId, event, error.message);
+    })
+    .catch((e) => console.warn('[promo] event insert failed:', slotId, event, e && e.message));
   _promoEvents.push({ slot_id: slotId, event });
+  // Only impressions count against max_impressions — clicks cap nothing.
+  if (event === 'impression') _incrementLocalPromoImpression(slotId);
 }
 
 // Idempotent. Runs after renderFeed() and after loadMoreFeed()'s append; a slot
@@ -11739,6 +11829,7 @@ function injectPromoCards() {
     slots: _promoSlots, config: _promoConfig, ctx: promoCtx(),
     events: _promoEvents, now: Date.now(),
     modalShown: !!window._modalShownThisSession,
+    localCounts: _readLocalPromoImpressions(),
   }).filter((s) => !_promoPlaced.has(s.id));
   if (!eligible.length) return;
 
@@ -11784,16 +11875,25 @@ function injectPromoCards() {
   observePromoImpressions();
 }
 
+// Logs an impression exactly once per slot per session. Pulled out of the
+// IntersectionObserver callback so the dedup guard is its own testable unit:
+// injectPromoCards() re-mounts an impressed-but-wiped card after a re-render
+// (see its comment above), which re-enters the viewport and re-fires the
+// observer for the same slot id — this must not double-log, and since
+// logPromoEvent() now mirrors impressions into the local guardrail counter,
+// it must not double-count that counter either.
+function maybeLogPromoImpression(id) {
+  if (!id || _promoImpressed.has(id)) return;
+  _promoImpressed.add(id);
+  logPromoEvent(id, 'impression');
+}
+
 function observePromoImpressions() {
   if (!_promoObserver) {
     _promoObserver = new IntersectionObserver((entries) => {
       for (const e of entries) {
         if (!e.isIntersecting) continue;
-        const id = e.target.dataset.promoId;
-        if (id && !_promoImpressed.has(id)) {
-          _promoImpressed.add(id);
-          logPromoEvent(id, 'impression');
-        }
+        maybeLogPromoImpression(e.target.dataset.promoId);
         _promoObserver.unobserve(e.target);
       }
     }, { threshold: 0.5 });
@@ -18492,6 +18592,12 @@ async function savePromoSlot() {
   const slot = promoFormSlot();
   if (!slot.heading) { if (st) st.textContent = 'A heading is required.'; return; }
   delete slot.id;
+  // Every write bumps the epoch every device's local impression mirror is
+  // keyed to (eligiblePromoSlots()) — an edit re-arms the slot for anyone who
+  // already hit the cap, same as the dedicated "Reset impressions" action but
+  // as a side effect of ordinary content changes rather than a deliberate
+  // wipe (it doesn't touch promo_events).
+  slot.updated_at = new Date().toISOString();
 
   if (_editingPromoId) {
     const { error } = await db.from('promo_slots').update(slot).eq('id', _editingPromoId);
@@ -18544,6 +18650,38 @@ function promoStatusActions(status) {
   return [{ next: 'active', label: 'Activate' }, { next: 'archived', label: 'Archive' }];
 }
 
+// Deletes every promo_events row for this slot AND bumps its updated_at in
+// the SAME action. Both are required: the local per-device impression mirror
+// (eligiblePromoSlots()) is only reset by an epoch change, so deleting the
+// events alone — the old, and only, way to "re-air" a slot — left every
+// device that had already recorded a count retired forever. Two separate
+// writes rather than one RPC, same shape as every other admin write here.
+async function resetPromoImpressions(id) {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
+  const slot = _promoAdminSlots.find((s) => s.id === id);
+  const label = slot?.heading || 'this slot';
+  if (!await showConfirm(
+    `This permanently deletes every recorded impression and click for "${label}" and re-arms it on every device — including devices that already hit the cap. This cannot be undone.`,
+    { title: 'Reset impressions?', confirmLabel: 'Reset impressions' }
+  )) return;
+
+  const { error: delError } = await db.from('promo_events').delete().eq('slot_id', id);
+  if (delError) { toast('Could not reset: ' + delError.message, 'error'); return; }
+
+  const { error: updError } = await db.from('promo_slots')
+    .update({ updated_at: new Date().toISOString() }).eq('id', id);
+  if (updError) {
+    // The events are already gone at this point — surface this loudly rather
+    // than silently leaving the slot looking "reset" in the list while every
+    // device that already saw it is still capped.
+    toast('Events cleared, but the epoch bump failed — devices will still show it as spent: ' + updError.message, 'error');
+    return;
+  }
+
+  toast('Impressions reset — the slot is re-armed on every device.', 'success');
+  loadPromoAdmin();
+}
+
 let _promoAdminListDelegated = false;
 function installPromoAdminListDelegation() {
   if (_promoAdminListDelegated) return;
@@ -18555,6 +18693,11 @@ function installPromoAdminListDelegation() {
     if (editBtn) {
       const slot = _promoAdminSlots.find((s) => s.id === editBtn.dataset.promoEdit);
       if (slot) loadPromoIntoForm(slot);
+      return;
+    }
+    const resetBtn = event.target.closest('[data-promo-reset]');
+    if (resetBtn) {
+      resetPromoImpressions(resetBtn.dataset.promoReset);
       return;
     }
     const toggleBtn = event.target.closest('[data-promo-toggle]');
@@ -18619,6 +18762,9 @@ async function loadPromoAdmin() {
           <div style="display:flex;gap:.4rem;margin-top:.4rem;">
             <button class="btn btn-ghost" style="font-size:.78rem;" data-promo-edit="${escAttr(s.id)}">Edit</button>
             ${actionsHtml}
+          </div>
+          <div style="display:flex;gap:.4rem;margin-top:.4rem;padding-top:.4rem;border-top:1px dashed var(--border,rgba(128,128,128,.25));">
+            <button class="btn btn-danger" style="font-size:.78rem;" data-promo-reset="${escAttr(s.id)}" title="Deletes recorded impressions/clicks and re-arms this slot on every device — separate from Pause/Archive">Reset impressions</button>
           </div>
         </div>`;
       }).join('');
