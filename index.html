@@ -27030,9 +27030,22 @@ function sendPiezoTuning() {
   });
 }
 function haptic(type) { try { window.webkit.messageHandlers.haptic.postMessage({ type: type || 'light' }); } catch(e) {} }
+// Photo handed in by the iOS share extension (camera → "send to WRotate").
+// On a cold start the native side dispatches this the moment the *page* finishes
+// loading — which is usually before auth has restored, so currentUser is still
+// null. It has also already deleted its copy of the image, so silently dropping
+// it here loses the photo entirely ("open WRotate for next steps" → nothing).
+// Stash it instead and let bootApp() drain it once the user is confirmed.
+let _pendingSharedImage = null;
 function handleSharedImage(base64) {
-  if (!currentUser) return;
+  if (!currentUser) { _pendingSharedImage = base64; return; }
   handleSharedImageV2(base64);
+}
+function drainPendingSharedImage() {
+  const b64 = _pendingSharedImage;
+  if (!b64) return;
+  _pendingSharedImage = null;
+  handleSharedImageV2(b64);
 }
 let _tgWatchId = null;
 let _tgEditingId = null;
@@ -29905,6 +29918,9 @@ async function bootApp(user) {
       if (data) OFFICIAL_USER_ID = data.id;
     });
   }
+  // A photo shared from the camera/share sheet may have arrived (and been dropped)
+  // before auth restored — process it now that currentUser is set.
+  drainPendingSharedImage();
 }
 
 // ── PRIMARY: explicit getSession() on every page load ─────────────────────
