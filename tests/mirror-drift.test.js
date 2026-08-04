@@ -64,6 +64,12 @@ const ADAPTED = [
 ];
 
 // Extract a function/const body ({...} block) by name from a source string.
+//
+// The body brace search must start AFTER the parameter list, not right after the
+// function name — a destructured parameter like `function f({ a, b }) {` has its
+// own '{...}', and naively taking the first '{' after the name grabs that param
+// list instead of the real body, making two different bodies with identical
+// signatures compare as "equal".
 function extractBody(src, name) {
   const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const pats = [
@@ -75,9 +81,41 @@ function extractBody(src, name) {
   let m = null;
   for (const p of pats) { m = p.exec(src); if (m) break; }
   if (!m) return null;
-  const open = src.indexOf('{', m.index);
-  // Reject if the next brace is implausibly far (e.g. a one-line const w/o block)
-  if (open === -1 || open - m.index > 140) return null;
+
+  // Position right after the matched declaration head. `function NAME(` patterns
+  // end at the parameter list's opening '(' (depth already 1); `const NAME =`
+  // patterns end at the '='.
+  let p = m.index + m[0].length;
+  if (m[0].endsWith('(')) {
+    let depth = 1;
+    while (p < src.length && depth > 0) {
+      if (src[p] === '(') depth++;
+      else if (src[p] === ')') depth--;
+      p++;
+    }
+  } else {
+    // `const NAME = (...) => {...}` — skip an optional parenthesized param list
+    // (itself possibly destructured) before looking for the arrow/body.
+    while (p < src.length && /\s/.test(src[p])) p++;
+    if (src[p] === '(') {
+      let depth = 1; p++;
+      while (p < src.length && depth > 0) {
+        if (src[p] === '(') depth++;
+        else if (src[p] === ')') depth--;
+        p++;
+      }
+    }
+  }
+  while (p < src.length && /\s/.test(src[p])) p++;
+  if (src.slice(p, p + 2) === '=>') {
+    p += 2;
+    while (p < src.length && /\s/.test(src[p])) p++;
+  }
+
+  const open = src.indexOf('{', p);
+  // Reject if the body brace is implausibly far past the parameter list/'=' (e.g.
+  // a one-line const w/o a block body at all).
+  if (open === -1 || open - p > 140) return null;
   let depth = 0;
   for (let i = open; i < src.length; i++) {
     if (src[i] === '{') depth++;
