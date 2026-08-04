@@ -2622,7 +2622,7 @@ export function promoAudienceMatches(key, ctx) {
 
 // Pure: `now` is injected rather than read from Date.now() so the tests are
 // deterministic and the caller controls the clock.
-export function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown }) {
+export function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown, localCounts }) {
   const cfg = config || {};
   if (!cfg.enabled) return [];
   if (cfg.suppress_after_modal && modalShown) return [];
@@ -2631,6 +2631,7 @@ export function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown
   for (const e of (events || [])) {
     if (e.event === 'impression') seen[e.slot_id] = (seen[e.slot_id] || 0) + 1;
   }
+  const local = localCounts || {};
 
   return (slots || []).filter((s) => {
     if (!s) return false;
@@ -2644,7 +2645,12 @@ export function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown
     if (s.ends_at   && Date.parse(s.ends_at)  <= now) return false;
     if (!promoAudienceMatches(s.audience, ctx)) return false;
     const cap = s.max_impressions != null ? s.max_impressions : cfg.default_max_impressions;
-    return (seen[s.id] || 0) < cap;
+    // The GREATER of the server-derived and local counts: a promo_events
+    // insert that failed (and was discarded before this guardrail existed)
+    // must not let the cap silently reset every new session — the local
+    // mirror stays bounded even when every write this session failed.
+    const count = Math.max(seen[s.id] || 0, local[s.id] || 0);
+    return count < cap;
   }).sort((a, b) =>
     (b.priority || 0) - (a.priority || 0) ||
     String(b.created_at || '').localeCompare(String(a.created_at || ''))

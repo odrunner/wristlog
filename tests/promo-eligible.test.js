@@ -105,6 +105,26 @@ describe('eligiblePromoSlots', () => {
     expect(run({ slots: [slot({ max_impressions: 1 })], events: [{ slot_id: 's1', event: 'impression' }] })).toEqual([]);
   });
 
+  // localCounts is the local (localStorage) impression guardrail — mirrored
+  // in case a promo_events insert failed and never made it into `events`.
+  it('excludes a slot at the cap via localCounts alone, with no server events', () => {
+    expect(run({ events: [], localCounts: { s1: 3 } })).toEqual([]);
+  });
+
+  it('uses the GREATER of server-derived and local counts', () => {
+    const seen = [1, 2].map(() => ({ slot_id: 's1', event: 'impression' })); // 2 server
+    expect(run({ events: seen, localCounts: { s1: 1 } })).toHaveLength(1);   // max(2,1)=2 < 3
+    expect(run({ events: seen, localCounts: { s1: 3 } })).toEqual([]);       // max(2,3)=3, not < 3
+  });
+
+  it('ignores localCounts for a different slot id', () => {
+    expect(run({ events: [], localCounts: { other: 99 } })).toHaveLength(1);
+  });
+
+  it('tolerates a missing localCounts (defaults to no local contribution)', () => {
+    expect(run({ events: [] })).toHaveLength(1);
+  });
+
   it('ignores clicks of OTHER slots when counting impressions', () => {
     expect(run({ events: [{ slot_id: 'other', event: 'impression' }, { slot_id: 's1', event: 'click' }] })).toHaveLength(1);
   });

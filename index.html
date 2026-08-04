@@ -7298,7 +7298,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '04.08.47';
+const APP_VERSION = '04.09.18';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11398,7 +11398,7 @@ function promoAudienceMatches(key, ctx) {
 
 // Pure: `now` is injected rather than read from Date.now() so the tests are
 // deterministic and the caller controls the clock.
-function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown }) {
+function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown, localCounts }) {
   const cfg = config || {};
   if (!cfg.enabled) return [];
   if (cfg.suppress_after_modal && modalShown) return [];
@@ -11407,6 +11407,7 @@ function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown }) {
   for (const e of (events || [])) {
     if (e.event === 'impression') seen[e.slot_id] = (seen[e.slot_id] || 0) + 1;
   }
+  const local = localCounts || {};
 
   return (slots || []).filter((s) => {
     if (!s) return false;
@@ -11420,7 +11421,12 @@ function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown }) {
     if (s.ends_at   && Date.parse(s.ends_at)  <= now) return false;
     if (!promoAudienceMatches(s.audience, ctx)) return false;
     const cap = s.max_impressions != null ? s.max_impressions : cfg.default_max_impressions;
-    return (seen[s.id] || 0) < cap;
+    // The GREATER of the server-derived and local counts: a promo_events
+    // insert that failed (and was discarded before this guardrail existed)
+    // must not let the cap silently reset every new session — the local
+    // mirror stays bounded even when every write this session failed.
+    const count = Math.max(seen[s.id] || 0, local[s.id] || 0);
+    return count < cap;
   }).sort((a, b) =>
     (b.priority || 0) - (a.priority || 0) ||
     String(b.created_at || '').localeCompare(String(a.created_at || ''))
@@ -11700,12 +11706,60 @@ async function loadPromoSlots() {
   }
 }
 
+// Local per-user impression guardrail. promo_events inserts can fail
+// silently — the Supabase client RESOLVES with `{ error }` rather than
+// rejecting, so a bare `.then(() => {})` (the old code) discarded a failed
+// write with no trace. That now matters: the dismiss (✕) control was
+// removed, so max_impressions is the ONLY thing that ever retires a card —
+// a run of failed writes would show it forever, with no user-side escape.
+// Mirroring impression counts into localStorage gives eligiblePromoSlots() a
+// fallback that still bounds the session even when every insert this
+// session failed. Keyed PER USER like _factModalKey(): two accounts on one
+// device must not share, or leak into, each other's count.
+const PROMO_IMPRESSIONS_KEY = 'wrotate_promo_impressions';
+
+function _promoImpressionsKey() {
+  return currentUser ? PROMO_IMPRESSIONS_KEY + '_' + currentUser.id : PROMO_IMPRESSIONS_KEY;
+}
+
+// Degrades to {} (today's behavior — server-derived count only) on disabled
+// storage, a full quota, or corrupt JSON. A promo guardrail must never break
+// the feed.
+function _readLocalPromoImpressions() {
+  try {
+    const raw = localStorage.getItem(_promoImpressionsKey());
+    const parsed = raw ? JSON.parse(raw) : null;
+    return (parsed && typeof parsed === 'object') ? parsed : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function _incrementLocalPromoImpression(slotId) {
+  try {
+    const counts = _readLocalPromoImpressions();
+    counts[slotId] = (counts[slotId] || 0) + 1;
+    localStorage.setItem(_promoImpressionsKey(), JSON.stringify(counts));
+  } catch (e) {
+    // Storage disabled/full — silently no-op. The server-derived count (and
+    // the in-session _promoImpressed guard) still bound this session; only
+    // the cross-session fallback is lost.
+  }
+}
+
 function logPromoEvent(slotId, event) {
   if (!currentUser) return;
   db.from('promo_events')
     .insert({ user_id: currentUser.id, slot_id: slotId, event })
-    .then(() => {}).catch(() => {});
+    .then(({ error }) => {
+      // The Supabase client resolves with { error } rather than rejecting —
+      // a bare .then(() => {}) discarded a failed insert with no trace.
+      if (error) console.warn('[promo] event insert failed:', slotId, event, error.message);
+    })
+    .catch((e) => console.warn('[promo] event insert failed:', slotId, event, e && e.message));
   _promoEvents.push({ slot_id: slotId, event });
+  // Only impressions count against max_impressions — clicks cap nothing.
+  if (event === 'impression') _incrementLocalPromoImpression(slotId);
 }
 
 // Idempotent. Runs after renderFeed() and after loadMoreFeed()'s append; a slot
@@ -11739,6 +11793,7 @@ function injectPromoCards() {
     slots: _promoSlots, config: _promoConfig, ctx: promoCtx(),
     events: _promoEvents, now: Date.now(),
     modalShown: !!window._modalShownThisSession,
+    localCounts: _readLocalPromoImpressions(),
   }).filter((s) => !_promoPlaced.has(s.id));
   if (!eligible.length) return;
 
@@ -11784,16 +11839,25 @@ function injectPromoCards() {
   observePromoImpressions();
 }
 
+// Logs an impression exactly once per slot per session. Pulled out of the
+// IntersectionObserver callback so the dedup guard is its own testable unit:
+// injectPromoCards() re-mounts an impressed-but-wiped card after a re-render
+// (see its comment above), which re-enters the viewport and re-fires the
+// observer for the same slot id — this must not double-log, and since
+// logPromoEvent() now mirrors impressions into the local guardrail counter,
+// it must not double-count that counter either.
+function maybeLogPromoImpression(id) {
+  if (!id || _promoImpressed.has(id)) return;
+  _promoImpressed.add(id);
+  logPromoEvent(id, 'impression');
+}
+
 function observePromoImpressions() {
   if (!_promoObserver) {
     _promoObserver = new IntersectionObserver((entries) => {
       for (const e of entries) {
         if (!e.isIntersecting) continue;
-        const id = e.target.dataset.promoId;
-        if (id && !_promoImpressed.has(id)) {
-          _promoImpressed.add(id);
-          logPromoEvent(id, 'impression');
-        }
+        maybeLogPromoImpression(e.target.dataset.promoId);
         _promoObserver.unobserve(e.target);
       }
     }, { threshold: 0.5 });
