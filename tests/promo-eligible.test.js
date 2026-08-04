@@ -81,6 +81,16 @@ describe('eligiblePromoSlots', () => {
     expect(run({ slots: [slot({ audience: 'typo' })] })).toEqual([]);
   });
 
+  // internal_only: the owner's testing lane — a slot targeting it must never
+  // reach a real (non-internal) user, even though every other field is eligible.
+  it('excludes an internal_only slot for a non-internal user', () => {
+    expect(run({ slots: [slot({ audience: 'internal_only' })], ctx: { ...CTX, isInternal: false } })).toEqual([]);
+  });
+
+  it('includes an internal_only slot for an internal user', () => {
+    expect(run({ slots: [slot({ audience: 'internal_only' })], ctx: { ...CTX, isInternal: true } })).toHaveLength(1);
+  });
+
   it('excludes a dismissed slot', () => {
     expect(run({ events: [{ slot_id: 's1', event: 'dismiss' }] })).toEqual([]);
   });

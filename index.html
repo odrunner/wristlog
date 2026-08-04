@@ -2390,15 +2390,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="modal-title" id="whats-new-modal-title" style="display:flex;align-items:center;gap:.5rem;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> What's New
     </div>
-    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;">
-      <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgba(74,222,128,.12);color:var(--success);padding:.15rem .5rem;border-radius:6px;">August 2026</span>
-    </div>
     <div style="max-height:60vh;overflow-y:auto;">
       <div style="margin-bottom:.75rem;">
-        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Occasional Cards from WRotate</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Every so often you&#8217;ll spot a card from WRotate itself in your feed, spotlighting a feature worth trying. It&#8217;s clearly marked as coming from us, not another user &#8212; no like, comment, or share on it &#8212; and a tap of the &#10005; dismisses it for good.</div>
-      </div>
-      <div style="margin:.75rem 0;border-top:1px solid var(--border);padding-top:.75rem;">
         <span class="eyebrow eyebrow-muted">July 2026</span>
       </div>
       <div style="margin-bottom:.75rem;">
@@ -3637,7 +3630,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Pull down on the Feed to refresh. Swipe left or right anywhere to switch between tabs — works across the whole app on mobile.</span></div>
           <div class="help-tip">To unfollow, go to their profile and tap <strong>Following</strong> → it turns red and asks <strong>Unfollow?</strong> — tap again to confirm.</div>
-          <div class="help-tip">You may occasionally see a card <strong>from WRotate</strong> in your feed, highlighting a feature like Ranking Game. It's not from another user — no like, comment, or share on it — and you can dismiss it any time with the ✕ in the corner.</div>
         </div>
       </div>
 
@@ -7293,7 +7285,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.08.07';
+const APP_VERSION = '03.18.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11377,6 +11369,11 @@ const PROMO_AUDIENCES = {
   no_clubs:        (c)   => (c.clubCount || 0) === 0,
   follows_few:     (c)   => (c.followingCount || 0) < 3,
   never_ranked:    (c)   => !c.rankedEver,
+  // Internal-only testing lane: matches only the owner's own internal_accounts
+  // rows, never real users. isInternal is looked up async in loadPromoSlots()
+  // (promoCtx() is synchronous and reads in-memory state) and defaults to
+  // false, so a failed or still-pending fetch never leaks the card.
+  internal_only:   (c)   => !!c.isInternal,
 };
 
 // An unknown key is FALSE, never true: a typo in the admin form hides the card
@@ -11571,6 +11568,11 @@ let _promoPlaced = new Set();          // slot ids currently placed in the DOM t
 let _promoDismissed = new Set();       // slot ids the user explicitly dismissed this session
 let _promoObserver = null;
 let _promoImpressed = new Set();       // impressions already logged this session
+// Whether the signed-in user is one of the owner's own internal_accounts rows
+// (for the internal_only audience). Looked up once in loadPromoSlots() —
+// defaults to false so a failed or still-pending fetch never leaks the card
+// to a non-internal user.
+let _promoIsInternal = false;
 
 // Every modal opener calls this instead of setting the flag directly.
 //
@@ -11614,6 +11616,7 @@ function promoCtx() {
     daysSinceSignup: myProfile?.created_at
       ? Math.floor((Date.now() - Date.parse(myProfile.created_at)) / 86400000) : 0,
     isIos:          !!window._iosAppVersion,
+    isInternal:     _promoIsInternal,
   };
 }
 
@@ -11621,19 +11624,25 @@ function promoCtx() {
 async function loadPromoSlots() {
   if (!currentUser) return;
   try {
-    const [cfgRes, slotRes, evRes] = await Promise.all([
+    const [cfgRes, slotRes, evRes, intRes] = await Promise.all([
       db.from('promo_config').select('*').limit(1).maybeSingle(),
       // Belt and braces alongside the status check in eligiblePromoSlots():
       // for the admin's own account RLS returns drafts and archives too.
       db.from('promo_slots').select('*').eq('status', 'active'),
       db.from('promo_events').select('slot_id,event').eq('user_id', currentUser.id),
+      // internal_accounts is the single source of truth (CLAUDE.md — never
+      // hardcode account ids). A membership check, not a full-table fetch;
+      // promoCtx() is synchronous so this can't run there.
+      db.from('internal_accounts').select('user_id').eq('user_id', currentUser.id).maybeSingle(),
     ]);
     _promoConfig = cfgRes?.data || null;
     _promoSlots  = slotRes?.data || [];
     _promoEvents = evRes?.data || [];
+    _promoIsInternal = !!intRes?.data;
   } catch (e) {
     console.warn('[promo] load failed:', e.message);
     _promoConfig = null; _promoSlots = []; _promoEvents = [];
+    _promoIsInternal = false;
   }
 }
 
@@ -18223,6 +18232,7 @@ const PROMO_AUDIENCE_LABELS = {
   all: 'All users', never_logged: 'Never logged a wear', no_wishlist: 'Empty wishlist',
   never_measured: 'Never measured (iOS only)', no_clubs: 'In no club',
   follows_few: 'Follows fewer than 3 people', never_ranked: 'Never played the ranking game',
+  internal_only: 'Internal accounts only (testing)',
 };
 const PROMO_ACTION_LABELS = {
   '': 'No button', open_wishlist: 'Open Wishlist', open_collection: 'Open Collection',
@@ -26226,6 +26236,7 @@ function clearUserState() {
   // flag would otherwise silently deny account B its card.
   _promoPlaced.clear(); _promoDismissed.clear(); _promoImpressed.clear();
   _promoSlots = []; _promoEvents = []; _promoConfig = null;
+  _promoIsInternal = false;      // re-evaluated for whoever signs in next
   if (_promoObserver) { _promoObserver.disconnect(); _promoObserver = null; } // disconnect, not just drop — A's nodes stay registered otherwise
   window._modalShownThisSession = false;
   feedLoading = false; _feedLoadStartedAt = 0; feedError = false; feedLoadedAt = 0; _clubsLoaded = false; _frLoadedAt = 0;

@@ -2612,6 +2612,7 @@ export const PROMO_AUDIENCES = {
   no_clubs:        (c)   => (c.clubCount || 0) === 0,
   follows_few:     (c)   => (c.followingCount || 0) < 3,
   never_ranked:    (c)   => !c.rankedEver,
+  internal_only:   (c)   => !!c.isInternal,
 };
 
 export function promoAudienceMatches(key, ctx) {

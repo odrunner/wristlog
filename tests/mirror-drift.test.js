@@ -48,7 +48,7 @@ const VERBATIM = [
   'fillCampaignTokens', 'unresolvedCampaignTokens',
   'shouldShowFactModal', 'pickFactModalWatch', 'shouldAttachFactOnEdit',
   'npIdentifyWait', 'syncedIds', 'promoAudienceMatches', 'eligiblePromoSlots',
-  'promoInjectPositions',
+  'promoInjectPositions', 'PROMO_AUDIENCES',
 ];
 
 const ADAPTED = [
@@ -60,10 +60,16 @@ const ADAPTED = [
   'fmtMoney', 'formatCommentTime', 'formatFeedDate', 'getMentionQuery', 'incrSettle', 'initials',
   'isBase64', 'logToRow', 'markDirty', 'monthRevNav', 'profileInitials',
   'renderCommentBody', 'todayStr', 'warrantyStatus', 'watchToRow', 'wishToRow',
-  'funFactCardHTML', 'funFactRowHTML', 'PROMO_AUDIENCES',
+  'funFactCardHTML', 'funFactRowHTML',
 ];
 
 // Extract a function/const body ({...} block) by name from a source string.
+//
+// The body brace search must start AFTER the parameter list, not right after the
+// function name — a destructured parameter like `function f({ a, b }) {` has its
+// own '{...}', and naively taking the first '{' after the name grabs that param
+// list instead of the real body, making two different bodies with identical
+// signatures compare as "equal".
 function extractBody(src, name) {
   const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const pats = [
@@ -75,9 +81,58 @@ function extractBody(src, name) {
   let m = null;
   for (const p of pats) { m = p.exec(src); if (m) break; }
   if (!m) return null;
-  const open = src.indexOf('{', m.index);
-  // Reject if the next brace is implausibly far (e.g. a one-line const w/o block)
-  if (open === -1 || open - m.index > 140) return null;
+
+  // Position right after the matched declaration head. `function NAME(` patterns
+  // end at the parameter list's opening '(' (depth already 1); `const NAME =`
+  // patterns end at the '='.
+  let p = m.index + m[0].length;
+  if (m[0].endsWith('(')) {
+    let depth = 1;
+    while (p < src.length && depth > 0) {
+      if (src[p] === '(') depth++;
+      else if (src[p] === ')') depth--;
+      p++;
+    }
+  } else {
+    // `const NAME = <head> {...}` where <head> is any of: an arrow's
+    // parenthesized (possibly destructured) params, an arrow's bare
+    // identifier param, or a function expression — `function`, `async
+    // function`, or `async`, each optionally named, in any combination —
+    // followed by its own (possibly destructured) params. Rather than
+    // hardcoding one keyword at a time (this is the third patch for the
+    // same failure mode), skip whitespace and any run of `async`/`function`
+    // keywords generically, then an optional function-expression name
+    // immediately before '(', before balance-skipping the parameter list.
+    while (p < src.length && /\s/.test(src[p])) p++;
+    const kwRe = /^(?:async|function)\b/;
+    while (kwRe.test(src.slice(p))) {
+      p += kwRe.exec(src.slice(p))[0].length;
+      while (p < src.length && /\s/.test(src[p])) p++;
+    }
+    // An identifier directly followed by '(' here is a function expression's
+    // name (`function foo(...)`) — an arrow's bare param is followed by
+    // '=>', not '(', so this can't misfire on `const f = x => {...}`.
+    const nameMatch = /^[A-Za-z_$][A-Za-z0-9_$]*\s*(?=\()/.exec(src.slice(p));
+    if (nameMatch) p += nameMatch[0].length;
+    if (src[p] === '(') {
+      let depth = 1; p++;
+      while (p < src.length && depth > 0) {
+        if (src[p] === '(') depth++;
+        else if (src[p] === ')') depth--;
+        p++;
+      }
+    }
+  }
+  while (p < src.length && /\s/.test(src[p])) p++;
+  if (src.slice(p, p + 2) === '=>') {
+    p += 2;
+    while (p < src.length && /\s/.test(src[p])) p++;
+  }
+
+  const open = src.indexOf('{', p);
+  // Reject if the body brace is implausibly far past the parameter list/'=' (e.g.
+  // a one-line const w/o a block body at all).
+  if (open === -1 || open - p > 140) return null;
   let depth = 0;
   for (let i = open; i < src.length; i++) {
     if (src[i] === '{') depth++;
@@ -134,5 +189,63 @@ describe('mirror-drift guard', () => {
     expect(VERBATIM.filter((n) => ADAPTED.includes(n))).toEqual([]);
     expect(new Set(VERBATIM).size).toBe(VERBATIM.length);
     expect(new Set(ADAPTED).size).toBe(ADAPTED.length);
+  });
+
+  describe('extractBody handles every async/function-expression const shape', () => {
+    // Regression tests for the same failure mode, fixed generically instead of
+    // one keyword at a time: `const NAME = <async/function keywords, in any
+    // combination, optionally named> (<possibly destructured params>) {...}`.
+    // Each must return the real body, never the destructured param pattern.
+
+    it('const f = async (a) => {...} (plain param, no destructuring)', () => {
+      const src = `
+const doThing = async (a) => {
+  return a + 1;
+};
+`;
+      expect(extractBody(src, 'doThing')).toContain('return a + 1;');
+    });
+
+    it('const f = async ({a}) => {...} (destructured arrow param)', () => {
+      const src = `
+const doThing = async ({ a, b }) => {
+  return a + b;
+};
+`;
+      const body = extractBody(src, 'doThing');
+      expect(body).not.toBe('{ a, b }');
+      expect(body).toContain('return a + b;');
+    });
+
+    it('async function f({a}) {...} (declared function, unaffected by this branch)', () => {
+      const src = `
+async function doThing({ a, b }) {
+  return a + b;
+}
+`;
+      const body = extractBody(src, 'doThing');
+      expect(body).not.toBe('{ a, b }');
+      expect(body).toContain('return a + b;');
+    });
+
+    it('const f = async function ({a}) {...} (named/anonymous function expression)', () => {
+      const anon = `
+const doThing = async function ({ a, b }) {
+  return a + b;
+};
+`;
+      const anonBody = extractBody(anon, 'doThing');
+      expect(anonBody).not.toBe('{ a, b }');
+      expect(anonBody).toContain('return a + b;');
+
+      const named = `
+const doOtherThing = async function doOtherThingImpl({ a, b }) {
+  return a - b;
+};
+`;
+      const namedBody = extractBody(named, 'doOtherThing');
+      expect(namedBody).not.toBe('{ a, b }');
+      expect(namedBody).toContain('return a - b;');
+    });
   });
 });
