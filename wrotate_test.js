@@ -2678,6 +2678,14 @@ export function promoSlotPositions({ slots, postCount, config, placedCount }) {
   const taken = new Set();
   const out = [];
 
+  // A feed shorter than the requested base position puts the card at the
+  // top rather than trailing off the end — that short feed is exactly where
+  // it earns most. Computed once, before the loop, so it doesn't get
+  // re-armed by a later append (an appended page continues the sequence
+  // rather than restarting it).
+  const base = cfg.first_position || 0;
+  const first = base > postCount ? 0 : base;
+
   // `i` counts cards from the START of the session, not from this call, so
   // positions consumed on an earlier page are skipped instead of re-emitted.
   for (let i = already; i < max; i++) {
@@ -2685,16 +2693,14 @@ export function promoSlotPositions({ slots, postCount, config, placedCount }) {
     if (!slot) break;
 
     const explicit = slot.first_position != null;
-    let want = explicit ? slot.first_position : (cfg.first_position || 0) + step * i;
+    let want = explicit ? slot.first_position : first + step * i;
 
-    // A feed shorter than the requested position puts the card at the top
-    // rather than trailing off the end — that short feed is exactly where it
-    // earns most. Applies to any explicit per-slot override (each is its own
-    // independent placement decision), and to the first config-driven slot
-    // in this pass. A LATER config-driven repeat that runs off the end just
-    // stops instead of piling more cards at the top.
+    // Each explicit per-slot override is its own independent placement
+    // decision, so it clamps to the top on overflow like the base case
+    // above. A config-driven repeat that runs off the end just stops
+    // instead of piling more cards at the top.
     if (want > postCount) {
-      if (explicit || i === already) want = 0;
+      if (explicit) want = 0;
       else break;
     }
 

@@ -63,6 +63,35 @@ describe('promoSlotPositions (all slots first_position: null — legacy config-o
   it('tolerates a missing config without throwing', () => {
     expect(promoSlotPositions({ slots: slots(1), postCount: 5, config: null, placedCount: 0 })).toEqual([]);
   });
+
+  // Regression: the clamp-against-postCount for the config-driven base
+  // position must happen ONCE, before the loop, not be re-applied whenever
+  // `i === already`. Re-arming it on every call (a bug introduced when
+  // per-slot first_position was added) silently drops later repeats and can
+  // pin a card back to the top of the feed on a later page. These two cases
+  // are verbatim from the code-review finding; both assert the pre-refactor
+  // (old promoInjectPositions) expected output.
+  it('does not lose a later repeat when the base position overflows the feed (lost-repeats regression)', () => {
+    // first_position:5 overflows postCount:3, so the base clamps to 0 once;
+    // the repeat at step 2 must still land at position 2, not vanish.
+    expect(at({ first_position: 5, repeat_every: 2, max_per_session: 3 }, 3, 0)).toEqual([0, 2]);
+  });
+
+  it('does not teleport a card back to the top on a later page (mid-scroll teleport regression)', () => {
+    // placedCount:1 means this card is the session's 2nd; its wanted position
+    // (2 + 4*1 = 6) overflows postCount:5. Because it isn't the first card of
+    // the session, it must be dropped (break), never re-clamped to the top of
+    // a feed region the user already scrolled past.
+    expect(at({ first_position: 2, repeat_every: 4, max_per_session: 2 }, 5, 1)).toEqual([]);
+  });
+
+  it('continues repeating correctly when placedCount > 0 and repeat_every > 0 together', () => {
+    // A mid-session continuation (placedCount:1) with an active repeat
+    // interval and plenty of feed room — the loop must keep advancing by
+    // `step` from the session start, not re-trigger the top-of-feed clamp
+    // just because this is the first slot handled by *this* call.
+    expect(at({ first_position: 2, repeat_every: 3, max_per_session: 4 }, 20, 1)).toEqual([5, 8, 11]);
+  });
 });
 
 describe('promoSlotPositions (per-slot first_position override)', () => {
