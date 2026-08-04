@@ -3343,6 +3343,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <label for="promo-max-impressions">Max impressions per user (blank = config default)</label>
           <input type="number" id="promo-max-impressions" placeholder="3">
         </div>
+        <div class="draft-form-row">
+          <label for="promo-position">Position in feed (blank = Delivery default)</label>
+          <input type="number" id="promo-position" min="0" placeholder="2">
+        </div>
 
         <div class="draft-form-row">
           <label id="promo-preview-label">Card preview</label>
@@ -3363,7 +3367,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div style="background:var(--surface2);border-radius:var(--radius);padding:.85rem;">
         <div class="draft-form-row"><label for="promo-cfg-enabled">Enabled</label>
           <input type="checkbox" id="promo-cfg-enabled"></div>
-        <div class="draft-form-row"><label for="promo-cfg-first">First position (posts before the first card)</label>
+        <div class="draft-form-row"><label for="promo-cfg-first">Default position (posts before the first card, for slots that don't set their own)</label>
           <input type="number" id="promo-cfg-first" min="0"></div>
         <div class="draft-form-row"><label for="promo-cfg-repeat">Repeat every N posts (0 = no repeat)</label>
           <input type="number" id="promo-cfg-repeat" min="0"></div>
@@ -7288,7 +7292,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.19.17';
+const APP_VERSION = '03.20.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11419,30 +11423,59 @@ function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown }) {
   );
 }
 
-// Post indices to insert a card BEFORE. Positions are absolute over the whole
-// feed, so an appended page continues the sequence rather than restarting it.
-// placedCount is how many cards this session has already shown.
-function promoInjectPositions({ postCount, config, placedCount }) {
+// Slot + position pairs, in placement order. Positions are absolute over the
+// whole feed, so an appended page continues the sequence rather than
+// restarting it. placedCount is how many cards this session has already
+// shown. `slots` is the eligible list in priority order (eligiblePromoSlots'
+// sort) — index i is placement priority, not necessarily array position,
+// since i counts from placedCount upward.
+function promoSlotPositions({ slots, postCount, config, placedCount }) {
   const cfg = config || {};
   const max = cfg.max_per_session || 0;
   const already = placedCount || 0;
+  const list = slots || [];
   if (max <= 0 || already >= max) return [];
-  if (!postCount) return [0];                       // empty feed: below the empty state
 
-  // A feed shorter than first_position puts the card at the top rather than
-  // trailing off the end — that short feed is exactly where it earns most.
-  const want = cfg.first_position || 0;
-  const first = want > postCount ? 0 : want;
+  // Empty feed: below the empty state. Only the highest-priority slot in
+  // line gets it — matches the old config-only behavior, which never emitted
+  // more than one position for an empty feed regardless of max_per_session.
+  if (!postCount) {
+    const s0 = list[0];
+    return s0 ? [{ id: s0.id, pos: 0 }] : [];
+  }
+
   const step = cfg.repeat_every || 0;
+  const taken = new Set();
+  const out = [];
 
   // `i` counts cards from the START of the session, not from this call, so
   // positions consumed on an earlier page are skipped instead of re-emitted.
-  const out = [];
   for (let i = already; i < max; i++) {
-    const pos = step > 0 ? first + step * i : first;
-    if (pos > postCount) break;
-    out.push(pos);
-    if (step <= 0) break;                           // no repeat: exactly one card
+    const slot = list[i - already];
+    if (!slot) break;
+
+    const explicit = slot.first_position != null;
+    let want = explicit ? slot.first_position : (cfg.first_position || 0) + step * i;
+
+    // A feed shorter than the requested position puts the card at the top
+    // rather than trailing off the end — that short feed is exactly where it
+    // earns most. Applies to any explicit per-slot override (each is its own
+    // independent placement decision), and to the first config-driven slot
+    // in this pass. A LATER config-driven repeat that runs off the end just
+    // stops instead of piling more cards at the top.
+    if (want > postCount) {
+      if (explicit || i === already) want = 0;
+      else break;
+    }
+
+    // Slots arrive in priority order, so a lower-priority slot colliding
+    // with an already-placed higher-priority one yields to the next free spot.
+    let pos = want;
+    while (taken.has(pos) && pos < postCount) pos++;
+    taken.add(pos);
+    out.push({ id: slot.id, pos });
+
+    if (!explicit && step <= 0) break;               // no repeat: exactly one card
   }
   return out;
 }
@@ -11694,17 +11727,19 @@ function injectPromoCards() {
   if (!eligible.length) return;
 
   const posts = [...el.querySelectorAll(':scope > .feed-card')];
-  const positions = promoInjectPositions({
-    postCount: posts.length, config: _promoConfig, placedCount: _promoPlaced.size,
+  const placements = promoSlotPositions({
+    slots: eligible, postCount: posts.length, config: _promoConfig, placedCount: _promoPlaced.size,
   });
   // mountFeedLoadMoreSentinel() appends #feed-load-sentinel as the last child
   // before this runs — a trailing card must land above the spinner, not below
   // it, or a repeat pass pins it to the very bottom forever (beforebegin the
   // sentinel each time).
   const sentinel = el.querySelector('#feed-load-sentinel');
+  const byId = {};
+  eligible.forEach((s) => { byId[s.id] = s; });
 
-  positions.forEach((pos, i) => {
-    const slot = eligible[i];
+  placements.forEach(({ id, pos }) => {
+    const slot = byId[id];
     if (!slot) return;
     const html = renderPromoCard(slot);
     if (pos >= posts.length) {
@@ -18292,6 +18327,7 @@ function promoFormSlot() {
     audience: val('promo-audience') || 'all',
     priority: parseInt(val('promo-priority') || '0'),
     max_impressions: val('promo-max-impressions') ? parseInt(val('promo-max-impressions')) : null,
+    first_position: val('promo-position') ? parseInt(val('promo-position')) : null,
     starts_at: val('promo-starts') ? new Date(val('promo-starts')).toISOString() : null,
     ends_at:   val('promo-ends')   ? new Date(val('promo-ends')).toISOString()   : null,
   };
@@ -18314,7 +18350,8 @@ function updatePromoFormMode() {
 //   - cta_action: 'url:https://…' → select 'url:' + the url field; a plain
 //     registry key selects that key and clears the url field.
 //   - images: jsonb array → newline-joined textarea text.
-//   - max_impressions: null loads as an EMPTY field, not 0 or "null".
+//   - max_impressions / first_position: null loads as an EMPTY field, not 0
+//     or "null" — same treatment for both nullable per-slot overrides.
 //   - starts_at/ends_at: stored UTC ISO → local datetime-local value via
 //     utcISOToLocalInput (see its comment for why this can't be a raw slice).
 function loadPromoIntoForm(slot) {
@@ -18343,6 +18380,8 @@ function loadPromoIntoForm(slot) {
   set('promo-priority', slot.priority ?? 0);
   set('promo-max-impressions',
     (slot.max_impressions === null || slot.max_impressions === undefined) ? '' : slot.max_impressions);
+  set('promo-position',
+    (slot.first_position === null || slot.first_position === undefined) ? '' : slot.first_position);
 
   _editingPromoId = slot.id;
   updatePromoFormMode();
@@ -18373,6 +18412,7 @@ function clearPromoForm() {
   set('promo-ends', '');
   set('promo-priority', '0');
   set('promo-max-impressions', '');
+  set('promo-position', '');
 
   _editingPromoId = null;
   updatePromoFormMode();
@@ -18522,13 +18562,19 @@ async function loadPromoAdmin() {
         // impressions > 0 means it was live at some point and got paused,
         // so "paused" reads more accurately there than "draft".
         const statusLabel = (s.status === 'draft' && (st.impressions || 0) > 0) ? 'paused' : s.status;
+        // Same != null override pattern as max_impressions: a null slot value
+        // falls back to the Delivery default, shown here so the effective
+        // position is visible without opening the composer.
+        const posLabel = s.first_position != null
+          ? `position ${s.first_position}`
+          : `position ${cfg?.first_position ?? 0} (default)`;
         const actionsHtml = promoStatusActions(s.status).map((a) =>
           `<button class="btn btn-ghost" style="font-size:.78rem;" data-promo-toggle="${escAttr(s.id)}" data-promo-next="${escAttr(a.next)}">${escHtml(a.label)}</button>`
         ).join('');
         return `<div class="admin-card">
           <div style="font-weight:600;">${escHtml(s.heading)}</div>
           <div style="font-size:.78rem;color:var(--muted);">
-            ${escHtml(statusLabel)} · ${escHtml(PROMO_AUDIENCE_LABELS[s.audience] || s.audience)} ·
+            ${escHtml(statusLabel)} · ${escHtml(PROMO_AUDIENCE_LABELS[s.audience] || s.audience)} · ${escHtml(posLabel)} ·
             ${st.impressions || 0} impressions · ${st.clicks || 0} clicks ·
             ${st.dismissals || 0} dismissed · ${st.distinct_users || 0} users
           </div>
