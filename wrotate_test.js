@@ -2669,14 +2669,28 @@ export function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown
 // Slot + position pairs, in placement order. Positions are absolute over the
 // whole feed, so an appended page continues the sequence rather than
 // restarting it. placedCount is how many cards this session has already
-// shown. `slots` is the eligible list in priority order (eligiblePromoSlots'
-// sort) — index i is placement priority, not necessarily array position,
-// since i counts from placedCount upward.
-export function promoSlotPositions({ slots, postCount, config, placedCount }) {
+// shown (excluding any slot already covered by rememberedPositions — see
+// below). `slots` is the eligible list in priority order (eligiblePromoSlots'
+// sort), with any RECLAIMING slot (one this session already placed) pulled to
+// the front by the caller so it comes back before a fresh slot spends budget.
+//
+// `rememberedPositions` is a plain `{ [slotId]: pos }` map the caller keeps
+// for the session: the position a slot was assigned the FIRST time it was
+// placed. A slot present in it is reclaiming, not freshly placing — its `pos`
+// comes straight from the map instead of being recomputed from `first_position
+// + repeat_every * i`, which depends on how many OTHER slots happen to be
+// placed alongside it this call. Recomputing from `i` is exactly the bug this
+// guards against: a lower-priority slot going ineligible shifts `i` for every
+// slot placed after it, so a survivor reusing the formula drifts to a new
+// position even though nothing about the survivor itself changed. Purity is
+// preserved — this reads the map, it never writes it; the caller owns
+// remembering a slot's position the first time it appears here.
+export function promoSlotPositions({ slots, postCount, config, placedCount, rememberedPositions }) {
   const cfg = config || {};
   const max = cfg.max_per_session || 0;
   const already = placedCount || 0;
   const list = slots || [];
+  const remembered = rememberedPositions || {};
   if (max <= 0 || already >= max) return [];
 
   // Empty feed: below the empty state. Only the highest-priority slot in
@@ -2699,21 +2713,34 @@ export function promoSlotPositions({ slots, postCount, config, placedCount }) {
   const base = cfg.first_position || 0;
   const first = base > postCount ? 0 : base;
 
-  // `i` counts cards from the START of the session, not from this call, so
-  // positions consumed on an earlier page are skipped instead of re-emitted.
-  for (let i = already; i < max; i++) {
-    const slot = list[i - already];
+  // `freshIndex` counts formula-grid slots consumed from the START of the
+  // session, not from this call, so positions consumed on an earlier page are
+  // skipped instead of re-emitted. EVERY placed slot advances it, reclaims
+  // included: a reclaiming slot still occupies the grid position it took
+  // originally, so a FRESH slot placed later in the same pass must compute
+  // the index it would have had were the reclaimer still in the picture.
+  // See the note at the `freshIndex++` below — skipping the advance for a
+  // reclaim is exactly the bug that collapsed repeat_every spacing.
+  let freshIndex = already;
+  const limit = max - already;
+
+  for (let n = 0; n < limit; n++) {
+    const slot = list[n];
     if (!slot) break;
 
+    const reclaim = Object.prototype.hasOwnProperty.call(remembered, slot.id);
     const explicit = slot.first_position != null;
-    let want = explicit ? slot.first_position : first + step * i;
+    let want = reclaim ? remembered[slot.id]
+             : explicit ? slot.first_position
+             : first + step * freshIndex;
 
-    // Each explicit per-slot override is its own independent placement
-    // decision, so it clamps to the top on overflow like the base case
-    // above. A config-driven repeat that runs off the end just stops
-    // instead of piling more cards at the top.
+    // Each explicit per-slot override (and a reclaim, which is just as much
+    // its own independent placement decision) clamps to the top on overflow
+    // like the base case above — that's what handles the feed having shrunk
+    // since a reclaimed position was first recorded. A config-driven repeat
+    // that runs off the end just stops instead of piling more cards at the top.
     if (want > postCount) {
-      if (explicit) want = 0;
+      if (explicit || reclaim) want = 0;
       else break;
     }
 
@@ -2724,7 +2751,17 @@ export function promoSlotPositions({ slots, postCount, config, placedCount }) {
     taken.add(pos);
     out.push({ id: slot.id, pos });
 
-    if (!explicit && step <= 0) break;               // no repeat: exactly one card
+    // Every PLACED slot occupies a formula slot, reclaim or not — a
+    // reclaiming slot's own placement consumed one back when it first
+    // formula-placed, and freshIndex must stay in lockstep with that so a
+    // FRESH slot processed later in this same call computes the index it
+    // would have gotten had the reclaimer never dropped out of the picture.
+    // Skipping the advance for a reclaim (an earlier version of this fix)
+    // left a fresh slot in the same pass recomputing the reclaimer's own
+    // index, guaranteeing a collision that the taken-set resolves with a
+    // bare `+1` — destroying repeat_every's spacing instead of preserving it.
+    freshIndex++;
+    if (!reclaim && !explicit && step <= 0) break;     // no repeat: exactly one FRESH card
   }
   return out;
 }

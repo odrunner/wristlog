@@ -236,6 +236,54 @@ test.describe('promo feed injection (mocked)', () => {
     expect((await order(page)).filter((x) => x === 'PROMO')).toHaveLength(0);
   });
 
+  test("reviewer's scenario: a reclaiming card keeps its ORIGINAL position when a lower-priority slot goes ineligible", async ({ page }) => {
+    // Root cause: promoSlotPositions() derived a slot's `i` (and therefore its
+    // formula position, first_position + repeat_every*i) from placedCount,
+    // which shrinks whenever a lower-priority slot drops out of the eligible
+    // list — so a survivor reusing the formula silently drifted to a new spot
+    // even though nothing about the survivor itself changed. Baseline:
+    // p1 (priority 1) lands at post-2, p2 (priority 0) at post-5
+    // (first_position:2, repeat_every:3). p2 then goes to draft and a full
+    // re-render must leave p1 at post-2, not shift it to post-5.
+    await setup(page, {
+      postCount: 10,
+      config: { first_position: 2, repeat_every: 3, max_per_session: 2 },
+      slots: [
+        { id: 'p1', heading: 'Promo 1', audience: 'all', status: 'active', priority: 1,
+          starts_at: null, ends_at: null, max_impressions: null, images: [],
+          created_at: '2026-01-01T00:00:00Z' },
+        { id: 'p2', heading: 'Promo 2', audience: 'all', status: 'active', priority: 0,
+          starts_at: null, ends_at: null, max_impressions: null, images: [],
+          created_at: '2026-01-01T00:00:00Z' },
+      ],
+    });
+
+    const postsBefore = (id) => page.evaluate((id) => {
+      const kids = [...document.getElementById('feed-list').children];
+      const idx = kids.findIndex((n) => n.dataset && n.dataset.promoId === id);
+      return kids.slice(0, idx).filter((n) => n.classList.contains('feed-card')).length;
+    }, id);
+
+    expect(await postsBefore('p1')).toBe(2);
+    expect(await postsBefore('p2')).toBe(5);
+
+    // p2 goes to draft; a full DOM replace (any re-render path) wipes both
+    // placed nodes while the session state (budget, positions) survives.
+    await page.evaluate(() => {
+      _promoSlots.find((s) => s.id === 'p2').status = 'draft';
+      const el = document.getElementById('feed-list');
+      el.innerHTML = Array.from({ length: 10 }, (_, i) =>
+        `<div class="feed-card" id="feedcard-${i}">post ${i}</div>`).join('');
+      window.injectPromoCards();
+    });
+
+    expect(await order(page)).toContain('PROMO');
+    const ids = await page.evaluate(() =>
+      [...document.querySelectorAll('.promo-card')].map((c) => c.dataset.promoId));
+    expect(ids).toEqual(['p1']);           // p2 dropped out entirely
+    expect(await postsBefore('p1')).toBe(2);   // and p1 kept ITS original spot
+  });
+
   test('a trailing card lands above the load-more sentinel, not pinned below it', async ({ page }) => {
     // Regression for a 2-post feed with default first_position:2 — pos===postCount
     // whenever first_position equals the post count, so the card takes the
