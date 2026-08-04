@@ -21,7 +21,8 @@ struct ContentView: View {
                 hasError: $hasError,
                 onReload: { webView in
                     self.webViewRef = webView
-                }
+                },
+                onPageLoaded: { self.drainPending() }
             )
             .ignoresSafeArea()
 
@@ -71,9 +72,6 @@ struct ContentView: View {
             }
             webViewRef?.load(URLRequest(url: target))
         }
-        .onChange(of: isLoading) {
-            if !isLoading { dispatchPendingQuickAction(); dispatchPendingNotification(); handleSharedImage() }
-        }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
             lastBackgrounded = Date()
         }
@@ -82,12 +80,17 @@ struct ContentView: View {
             // !isLoading avoids interrupting an in-progress load; the threshold avoids
             // disrupting an active session (e.g. a half-written post). The service worker
             // is network-first for HTML, so reload() pulls the latest code seamlessly.
+            var reloading = false
             if !isLoading, let bg = lastBackgrounded,
                Date().timeIntervalSince(bg) > Self.staleReloadThreshold {
                 webViewRef?.reload()
+                reloading = true
             }
             lastBackgrounded = nil
-            if !isLoading { dispatchPendingQuickAction(); dispatchPendingNotification(); handleSharedImage() }
+            // Draining into a page we just told to reload evaluates JS against a
+            // document about to be replaced — the shared-image modal was consumed
+            // and then wiped, and nothing re-fired afterwards. Let didFinish drain.
+            if !isLoading, !reloading { drainPending() }
         }
     }
 
@@ -116,19 +119,43 @@ struct ContentView: View {
         return destination
     }
 
+    /// Hand every pending item to the web layer. Called after each completed load,
+    /// and on foreground when no reload was started. Each drain is a no-op when
+    /// nothing is pending, so calling it twice is harmless.
+    private func drainPending() {
+        dispatchPendingQuickAction()
+        dispatchPendingNotification()
+        handleSharedImage()
+    }
+
     private func handleSharedImage() {
-        // Leave the pending key in place until the WebView can actually run the JS —
-        // a cold-start onOpenURL fires before the page loads and would lose the image.
-        guard !isLoading else { return }
         guard let defaults = UserDefaults(suiteName: "group.com.wrotate.Wrotate"),
               let path = defaults.string(forKey: "sharedImagePath") else { return }
-        defaults.removeObject(forKey: "sharedImagePath")
-        guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else { return }
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+            // The file is gone but the key survived — nothing to hand off ever
+            // again, so drop the key rather than retry on every load.
+            defaults.removeObject(forKey: "sharedImagePath")
+            return
+        }
         let base64 = data.base64EncodedString()
-        let js = "if(typeof handleSharedImage==='function') handleSharedImage('data:image/jpeg;base64,\(base64)');"
-        webViewRef?.evaluateJavaScript(js, completionHandler: nil)
-        // Clean up shared file
-        try? FileManager.default.removeItem(atPath: path)
+        // The marker distinguishes "the web layer took it" from "this evaluation
+        // went nowhere" — a page mid-reload, or one whose JS predates the handler.
+        // Nothing is deleted until the hand-off is confirmed, so a lost evaluation
+        // retries on the next load instead of silently eating the user's photo.
+        // That confirmation is also why no isLoading guard is needed here: calling
+        // this too early costs one failed evaluation, not the image.
+        let js = """
+        (function(){
+            if (typeof handleSharedImage !== 'function') return false;
+            handleSharedImage('data:image/jpeg;base64,\(base64)');
+            return true;
+        })();
+        """
+        webViewRef?.evaluateJavaScript(js) { result, _ in
+            guard (result as? Bool) == true else { return }
+            defaults.removeObject(forKey: "sharedImagePath")
+            try? FileManager.default.removeItem(atPath: path)
+        }
     }
 
     /// Drain a notification tap into the WebView. Mirrors the quick-action
