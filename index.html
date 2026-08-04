@@ -3377,8 +3377,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <!-- 4. Defaults — GLOBAL fallback/kill-switch, applies only when a slot leaves a field blank. -->
       <div style="margin-bottom:.5rem;"><div class="eyebrow">Global Defaults — fallback &amp; kill switch for ALL slots</div></div>
       <div style="background:var(--surface2);border-radius:var(--radius);padding:.85rem;">
-        <div class="draft-form-row"><label for="promo-cfg-enabled">Enabled (master kill switch — off hides every slot)</label>
-          <input type="checkbox" id="promo-cfg-enabled"></div>
+        <div class="draft-form-row"><label for="promo-cfg-enabled">Show promo cards to users</label>
+          <input type="checkbox" id="promo-cfg-enabled">
+          <div style="font-size:.72rem;color:var(--muted);margin-top:.15rem;">Unchecked hides every slot from everyone</div></div>
         <div class="draft-form-row"><label for="promo-cfg-first">Default position (posts before the first card, for slots that don't set their own)</label>
           <input type="number" id="promo-cfg-first" min="0"></div>
         <div class="draft-form-row"><label for="promo-cfg-repeat">Repeat every N posts (0 = no repeat)</label>
@@ -7304,7 +7305,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.22.05';
+const APP_VERSION = '04.08.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11622,6 +11623,15 @@ let _promoPlaced = new Set();          // slot ids currently placed in the DOM t
 let _promoDismissed = new Set();       // slot ids the user explicitly dismissed this session
 let _promoObserver = null;
 let _promoImpressed = new Set();       // impressions already logged this session
+// Distinct slot ids that have consumed this session's max_per_session budget.
+// Monotonic — unlike _promoPlaced (which only tracks what's CURRENTLY mounted
+// in the DOM and gets pruned whenever a re-render wipes a node), this never
+// shrinks except on a genuine refund (notePromoModalShown() retracting a card
+// nobody saw) or a full session reset. A slot already in here owns its
+// placement for the rest of the session: it can be re-mounted after a DOM
+// wipe for free, but a DIFFERENT slot can never spend budget this id already
+// spent, even while the owning slot is off-screen or has since gone ineligible.
+let _promoBudgetUsed = new Set();
 // Whether the signed-in user is one of the owner's own internal_accounts rows
 // (for the internal_only audience). Looked up once in loadPromoSlots() —
 // defaults to false so a failed or still-pending fetch never leaks the card
@@ -11651,6 +11661,10 @@ function notePromoModalShown() {
     const node = document.getElementById('promocard-' + id);
     if (node) { if (_promoObserver) _promoObserver.unobserve(node); node.remove(); }
     _promoPlaced.delete(id);
+    // This is a genuine refund (the card is confirmed never-seen), unlike a
+    // mere DOM wipe from a re-render — so, unlike injectPromoCards()'s prune
+    // loop below, the budget really is freed for a different slot.
+    _promoBudgetUsed.delete(id);
   }
 }
 
@@ -11712,6 +11726,7 @@ function dismissPromo(slotId) {
   document.getElementById('promocard-' + slotId)?.remove();
   _promoPlaced.add(slotId);              // keeps it out of this session's re-renders
   _promoDismissed.add(slotId);           // ...permanently this session, unlike a mere DOM wipe
+  _promoBudgetUsed.add(slotId);          // spent for good — a dismissal never refunds
   logPromoEvent(slotId, 'dismiss');
 }
 
@@ -11723,16 +11738,24 @@ function injectPromoCards() {
 
   // A full re-render (renderFeed()'s innerHTML replace, block/report reload,
   // scrollToFeedPost, a loadFeed past the cache) wipes a placed card's DOM node
-  // while _promoPlaced still remembers the slot id — that would silently lose a
-  // card the user may never have seen, for the rest of the session. Prune any
-  // placed id whose element is gone from the DOM, UNLESS it counts against the
-  // session's max_per_session budget for a reason that must survive the wipe:
-  // explicitly dismissed, or already seen (an impression was logged). Either
-  // one means this session already "spent" that slot — refunding it would let
-  // a different slot silently fill its place and blow the per-session cap.
-  // Only a placed-but-never-seen card (the finding-B case) should refund.
+  // while _promoPlaced still remembers the slot id. _promoPlaced tracks what's
+  // CURRENTLY MOUNTED, not what this session has spent — the session budget
+  // lives separately in _promoBudgetUsed (monotonic, see its declaration
+  // above), so pruning a wiped id here is always safe: it never refunds
+  // anything. A dismissed slot is the one exception — its node is gone on
+  // purpose and it must never come back, so it stays in _promoPlaced forever
+  // as a standing "never re-place" marker (belt-and-braces alongside
+  // eligiblePromoSlots' own dismissed-event filtering below).
+  //
+  // This now prunes IMPRESSED-but-wiped slots too, unlike before (a card
+  // already seen used to "stay put" by never being pruned). The impression
+  // fires the moment the card enters the viewport — ~24ms after injection,
+  // past the observer's 0.5 threshold — long before a human could actually
+  // read it, so "impression logged" is not "the user saw it": a wipe must
+  // still bring it back. _promoImpressed itself is untouched here and still
+  // guards against a duplicate impression log below.
   for (const id of [..._promoPlaced]) {
-    if (!_promoDismissed.has(id) && !_promoImpressed.has(id) && !document.getElementById('promocard-' + id)) {
+    if (!_promoDismissed.has(id) && !document.getElementById('promocard-' + id)) {
       _promoPlaced.delete(id);
     }
   }
@@ -11744,9 +11767,22 @@ function injectPromoCards() {
   }).filter((s) => !_promoPlaced.has(s.id));
   if (!eligible.length) return;
 
+  // A slot already in _promoBudgetUsed owns its placement for the rest of the
+  // session and must come straight back — it is NOT subject to
+  // max_per_session again (it already paid for its spot), and it must not
+  // lose that spot to a different, unrelated slot just because it happens to
+  // sort lower in priority. So it's pulled to the front of the list handed to
+  // promoSlotPositions(), and its share is subtracted from the count that
+  // function checks against the ceiling, leaving only the budget a genuinely
+  // NEW slot would need to spend.
+  const returning = eligible.filter((s) => _promoBudgetUsed.has(s.id));
+  const fresh     = eligible.filter((s) => !_promoBudgetUsed.has(s.id));
+  const ordered   = [...returning, ...fresh];
+  const placedCount = Math.max(0, _promoBudgetUsed.size - returning.length);
+
   const posts = [...el.querySelectorAll(':scope > .feed-card')];
   const placements = promoSlotPositions({
-    slots: eligible, postCount: posts.length, config: _promoConfig, placedCount: _promoPlaced.size,
+    slots: ordered, postCount: posts.length, config: _promoConfig, placedCount,
   });
   // mountFeedLoadMoreSentinel() appends #feed-load-sentinel as the last child
   // before this runs — a trailing card must land above the spinner, not below
@@ -11767,6 +11803,7 @@ function injectPromoCards() {
       posts[pos].insertAdjacentHTML('beforebegin', html);
     }
     _promoPlaced.add(slot.id);
+    _promoBudgetUsed.add(slot.id);       // no-op for a returning slot; spends for a new one
   });
 
   observePromoImpressions();
@@ -26493,7 +26530,7 @@ function clearUserState() {
   // Promo session state — same rule. signOut() never reloads the page, so
   // account A's spent max_per_session budget, dismissals, impressions and modal
   // flag would otherwise silently deny account B its card.
-  _promoPlaced.clear(); _promoDismissed.clear(); _promoImpressed.clear();
+  _promoPlaced.clear(); _promoDismissed.clear(); _promoImpressed.clear(); _promoBudgetUsed.clear();
   _promoSlots = []; _promoEvents = []; _promoConfig = null;
   _promoIsInternal = false;      // re-evaluated for whoever signs in next
   if (_promoObserver) { _promoObserver.disconnect(); _promoObserver = null; } // disconnect, not just drop — A's nodes stay registered otherwise

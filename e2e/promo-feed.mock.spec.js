@@ -166,6 +166,67 @@ test.describe('promo feed injection (mocked)', () => {
     expect((await order(page)).filter((x) => x === 'PROMO')).toHaveLength(1);
   });
 
+  test('an IMPRESSED card wiped by a full DOM replace comes back — same slot, no second impression', async ({ page }) => {
+    // Defect: the impression fires ~24ms after injection (the card sits in
+    // the opening viewport, past the observer's 0.5 threshold) — long before
+    // a human could actually read it. The old prune loop treated "impressed"
+    // as "seen, never refund", so a wipe right after that early impression
+    // lost the card for the rest of the session even though the owner never
+    // really saw it. It must come back — the SAME slot — without logging a
+    // second impression (_promoImpressed still guards that).
+    await setup(page);
+    await page.evaluate(() => {
+      _promoImpressed.add('p1');
+      logPromoEvent('p1', 'impression');
+      const el = document.getElementById('feed-list');
+      el.innerHTML = Array.from({ length: 6 }, (_, i) =>
+        `<div class="feed-card" id="feedcard-${i}">post ${i}</div>`).join('');
+      window.injectPromoCards();
+    });
+    const ids = await page.evaluate(() =>
+      [...document.querySelectorAll('.promo-card')].map((c) => c.dataset.promoId));
+    expect(ids).toEqual(['p1']);
+    const impressions = await page.evaluate(() =>
+      window.__events.filter((e) => e.t === 'promo_events' && e.row.event === 'impression' && e.row.slot_id === 'p1'));
+    expect(impressions).toHaveLength(1);
+  });
+
+  test('re-placing a returning card spends no new budget — a second slot still does not appear', async ({ page }) => {
+    // Regression guard for the fix above: bringing the SAME slot back after a
+    // wipe must not free a NEW max_per_session slot for a DIFFERENT card.
+    await setup(page, {
+      config: { max_per_session: 1 },
+      slots: ['p1', 'p2'].map((id, i) => ({
+        id, heading: `Promo ${id}`, audience: 'all', status: 'active', priority: 1 - i,
+        starts_at: null, ends_at: null, max_impressions: null, images: [],
+        created_at: '2026-01-01T00:00:00Z',
+      })),
+    });
+    await page.evaluate(() => {
+      _promoImpressed.add('p1');
+      logPromoEvent('p1', 'impression');
+      const el = document.getElementById('feed-list');
+      el.innerHTML = Array.from({ length: 6 }, (_, i) =>
+        `<div class="feed-card" id="feedcard-${i}">post ${i}</div>`).join('');
+      window.injectPromoCards();
+    });
+    const ids = await page.evaluate(() =>
+      [...document.querySelectorAll('.promo-card')].map((c) => c.dataset.promoId));
+    expect(ids).toEqual(['p1']);   // p1 back, p2 never got a chance
+  });
+
+  test('a dismissed card still does not return after a full DOM replace', async ({ page }) => {
+    await setup(page);
+    await page.click('.promo-dismiss');
+    await page.evaluate(() => {
+      const el = document.getElementById('feed-list');
+      el.innerHTML = Array.from({ length: 6 }, (_, i) =>
+        `<div class="feed-card" id="feedcard-${i}">post ${i}</div>`).join('');
+      window.injectPromoCards();
+    });
+    expect((await order(page)).filter((x) => x === 'PROMO')).toHaveLength(0);
+  });
+
   test('a dismissed card does not get its session budget refunded by a full DOM replace', async ({ page }) => {
     // Regression for the prune loop treating a DISMISSED slot the same as any
     // other slot whose DOM node is gone: dismissPromo() already removed the
