@@ -7288,7 +7288,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '03.18.56';
+const APP_VERSION = '03.19.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18444,6 +18444,18 @@ async function setPromoStatus(id, status) {
 // the HTML parser decodes an entity like &#39; back to a literal ' BEFORE the
 // inline JS is compiled, so a crafted value could break out of the string.
 // Reading ids from .dataset never re-enters an HTML or JS parser.
+// Which status-change buttons a slot's CURRENT status offers, and where each
+// one goes. Draft/active/archived all route through setPromoStatus() — the
+// same single write path as before, just offered from three states instead
+// of a binary active<->archived toggle (there was previously no way back to
+// draft, i.e. no pause).
+function promoStatusActions(status) {
+  if (status === 'active')   return [{ next: 'draft', label: 'Pause' }, { next: 'archived', label: 'Archive' }];
+  if (status === 'archived') return [{ next: 'active', label: 'Activate' }];
+  // draft (or any unrecognized status) — offer both forward transitions.
+  return [{ next: 'active', label: 'Activate' }, { next: 'archived', label: 'Archive' }];
+}
+
 let _promoAdminListDelegated = false;
 function installPromoAdminListDelegation() {
   if (_promoAdminListDelegated) return;
@@ -18491,18 +18503,26 @@ async function loadPromoAdmin() {
     ? '<div style="color:var(--muted);font-size:.82rem;">No slots yet.</div>'
     : _promoAdminSlots.map((s) => {
         const st = byId[s.id] || {};
-        const next = s.status === 'active' ? 'archived' : 'active';
+        // A paused slot is stored as 'draft' — same row shape as a slot that
+        // was never activated. Distinguish them in the label using recorded
+        // impressions rather than a second status value (no migration, and
+        // draft's CHECK-constraint meaning stays "not currently live"):
+        // impressions > 0 means it was live at some point and got paused,
+        // so "paused" reads more accurately there than "draft".
+        const statusLabel = (s.status === 'draft' && (st.impressions || 0) > 0) ? 'paused' : s.status;
+        const actionsHtml = promoStatusActions(s.status).map((a) =>
+          `<button class="btn btn-ghost" style="font-size:.78rem;" data-promo-toggle="${escAttr(s.id)}" data-promo-next="${escAttr(a.next)}">${escHtml(a.label)}</button>`
+        ).join('');
         return `<div class="admin-card">
           <div style="font-weight:600;">${escHtml(s.heading)}</div>
           <div style="font-size:.78rem;color:var(--muted);">
-            ${escHtml(s.status)} · ${escHtml(PROMO_AUDIENCE_LABELS[s.audience] || s.audience)} ·
+            ${escHtml(statusLabel)} · ${escHtml(PROMO_AUDIENCE_LABELS[s.audience] || s.audience)} ·
             ${st.impressions || 0} impressions · ${st.clicks || 0} clicks ·
             ${st.dismissals || 0} dismissed · ${st.distinct_users || 0} users
           </div>
           <div style="display:flex;gap:.4rem;margin-top:.4rem;">
             <button class="btn btn-ghost" style="font-size:.78rem;" data-promo-edit="${escAttr(s.id)}">Edit</button>
-            <button class="btn btn-ghost" style="font-size:.78rem;" data-promo-toggle="${escAttr(s.id)}" data-promo-next="${escAttr(next)}">
-              ${next === 'active' ? 'Activate' : 'Archive'}</button>
+            ${actionsHtml}
           </div>
         </div>`;
       }).join('');

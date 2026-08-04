@@ -234,6 +234,139 @@ test.describe('admin Promos tab — load/edit (mocked)', () => {
   });
 });
 
+// ── Pause / resume ───────────────────────────────────────────────────────
+// Before this, `next = s.status === 'active' ? 'archived' : 'active'` made
+// the list a single binary toggle: an active slot could only go to archived,
+// with no way back to draft (no pause). All three transitions route through
+// the same setPromoStatus(id, status) write path and the same delegated
+// data-promo-toggle/data-promo-next handler as before — this only changes
+// which buttons a row offers for its current status.
+test.describe('admin Promos tab — pause/resume (mocked)', () => {
+  const ADMIN_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
+  const NON_ADMIN_ID = '11111111-1111-1111-1111-111111111111';
+
+  const threeSlots = () => [
+    { id: 'active-1', status: 'active', heading: 'Active slot', audience: 'all', images: [], max_impressions: null, cta_action: '' },
+    { id: 'draft-1', status: 'draft', heading: 'Draft slot', audience: 'all', images: [], max_impressions: null, cta_action: '' },
+    { id: 'archived-1', status: 'archived', heading: 'Archived slot', audience: 'all', images: [], max_impressions: null, cta_action: '' },
+  ];
+
+  async function installReadOnlyDb(page, slots) {
+    await page.evaluate((slots) => {
+      const emptyChain = { limit: () => emptyChain, order: async () => ({ data: [], error: null }), maybeSingle: async () => ({ data: null, error: null }) };
+      const slotsChain = { order: async () => ({ data: slots, error: null }) };
+      db.from = (table) => ({ select: () => (table === 'promo_slots' ? slotsChain : emptyChain) });
+      db.rpc = async () => ({ data: [], error: null });
+    }, slots);
+  }
+
+  test('active offers Pause + Archive; draft offers Activate + Archive; archived offers only Activate', async ({ page }) => {
+    await page.goto('/');
+    await installReadOnlyDb(page, threeSlots());
+    const rows = await page.evaluate(async () => {
+      currentUser = { id: 'd70b1a85-4f31-4431-b3b7-db76543daaf5' };
+      await window.loadPromoAdmin();
+      return [...document.querySelectorAll('#promo-list .admin-card')].map((c) => ({
+        heading: c.querySelector('div').textContent,
+        buttons: [...c.querySelectorAll('[data-promo-toggle]')].map((b) => ({ label: b.textContent.trim(), next: b.dataset.promoNext })),
+      }));
+    });
+    const byHeading = Object.fromEntries(rows.map((r) => [r.heading, r.buttons]));
+    expect(byHeading['Active slot']).toEqual([{ label: 'Pause', next: 'draft' }, { label: 'Archive', next: 'archived' }]);
+    expect(byHeading['Draft slot']).toEqual([{ label: 'Activate', next: 'active' }, { label: 'Archive', next: 'archived' }]);
+    expect(byHeading['Archived slot']).toEqual([{ label: 'Activate', next: 'active' }]);
+  });
+
+  test('Pause on an active slot sets status to exactly "draft" and nothing else, via the delegated Pause button', async ({ page }) => {
+    await page.goto('/');
+    await installReadOnlyDb(page, [threeSlots()[0]]); // active-1 only
+    const result = await page.evaluate(async () => {
+      currentUser = { id: 'd70b1a85-4f31-4431-b3b7-db76543daaf5' };
+      let captured = null;
+      await window.loadPromoAdmin();
+      // setPromoStatus() reloads the list on success, so `select` has to stay
+      // answerable — only `update` is the thing this test cares about.
+      const emptyChain = { limit: () => emptyChain, order: async () => ({ data: [], error: null }), maybeSingle: async () => ({ data: null, error: null }) };
+      db.from = () => ({
+        select: () => emptyChain,
+        update: (patch) => ({ eq: async (col, eid) => { captured = { col, eid, patch }; return { data: null, error: null }; } }),
+      });
+      db.rpc = async () => ({ data: [], error: null });
+      const pauseBtn = [...document.querySelectorAll('[data-promo-toggle="active-1"]')].find((b) => b.dataset.promoNext === 'draft');
+      pauseBtn.click();
+      await new Promise((r) => setTimeout(r, 50));
+      return captured;
+    });
+    expect(result.col).toBe('id');
+    expect(result.eid).toBe('active-1');
+    expect(Object.keys(result.patch)).toEqual(['status']);
+    expect(result.patch.status).toBe('draft');
+  });
+
+  test('Activate still works from draft and from archived, through the delegated handler', async ({ page }) => {
+    await page.goto('/');
+    const slots = threeSlots().filter((s) => s.id !== 'active-1');
+    const captured = await page.evaluate(async (slots) => {
+      currentUser = { id: 'd70b1a85-4f31-4431-b3b7-db76543daaf5' };
+      const calls = [];
+      // setPromoStatus() reloads the list after each write, so `select` has
+      // to keep answering with both rows (statically — this mock doesn't
+      // model the actual status change) or the second button disappears
+      // from the DOM before it can be clicked.
+      const emptyChain = { limit: () => emptyChain, order: async () => ({ data: [], error: null }), maybeSingle: async () => ({ data: null, error: null }) };
+      const slotsChain = { order: async () => ({ data: slots, error: null }) };
+      db.from = (table) => ({
+        select: () => (table === 'promo_slots' ? slotsChain : emptyChain),
+        update: (patch) => ({ eq: async (col, eid) => { calls.push({ eid, patch }); return { data: null, error: null }; } }),
+      });
+      db.rpc = async () => ({ data: [], error: null });
+      await window.loadPromoAdmin();
+      [...document.querySelectorAll('[data-promo-toggle="draft-1"]')].find((b) => b.dataset.promoNext === 'active').click();
+      await new Promise((r) => setTimeout(r, 50));
+      document.querySelector('[data-promo-toggle="archived-1"]').click();
+      await new Promise((r) => setTimeout(r, 50));
+      return calls;
+    }, slots);
+    expect(captured).toEqual([
+      { eid: 'draft-1', patch: { status: 'active' } },
+      { eid: 'archived-1', patch: { status: 'active' } },
+    ]);
+  });
+
+  test('a non-admin cannot pause, resume, or archive a slot', async ({ page }) => {
+    await page.goto('/');
+    const called = await page.evaluate(async (id) => {
+      currentUser = { id };
+      let called = false;
+      db.from = () => ({ update: () => ({ eq: async () => { called = true; return { data: null, error: null }; } }) });
+      await window.setPromoStatus('active-1', 'draft');
+      await window.setPromoStatus('draft-1', 'active');
+      await window.setPromoStatus('archived-1', 'active');
+      return called;
+    }, NON_ADMIN_ID);
+    expect(called).toBe(false);
+  });
+
+  test('a paused (draft-with-impressions) slot reads "paused" in the list, not "draft"', async ({ page }) => {
+    await page.goto('/');
+    await page.evaluate(() => {
+      const slots = [{ id: 'paused-1', status: 'draft', heading: 'Paused slot', audience: 'all', images: [], max_impressions: null, cta_action: '' }];
+      const stats = [{ slot_id: 'paused-1', impressions: 42, clicks: 3, dismissals: 1, distinct_users: 10 }];
+      const emptyChain = { limit: () => emptyChain, order: async () => ({ data: [], error: null }), maybeSingle: async () => ({ data: null, error: null }) };
+      const slotsChain = { order: async () => ({ data: slots, error: null }) };
+      db.from = (table) => ({ select: () => (table === 'promo_slots' ? slotsChain : emptyChain) });
+      db.rpc = async () => ({ data: stats, error: null });
+    });
+    const rowText = await page.evaluate(async () => {
+      currentUser = { id: 'd70b1a85-4f31-4431-b3b7-db76543daaf5' };
+      await window.loadPromoAdmin();
+      return document.querySelector('#promo-list .admin-card').textContent;
+    });
+    expect(rowText).toContain('paused');
+    expect(rowText).not.toContain('draft');
+  });
+});
+
 // The write functions (savePromoSlot, setPromoStatus, savePromoConfig) must
 // gate on ADMIN_USER_ID the same way every sibling admin write function does
 // (adminConfirmRemoval, saveOfficialDraft, etc.) — RLS is the real boundary,
