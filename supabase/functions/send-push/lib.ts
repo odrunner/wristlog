@@ -17,10 +17,14 @@ export function resolveActorName(
 }
 
 // Notification type → human-readable push message.
-// Unknown types fall back to a generic body (never null in practice).
+// Unknown types fall back to a generic body.
+//
+// `refId` is the row's ref_id. Only `system` needs it (it holds the brand name);
+// every other type describes itself from the actor alone.
 export function buildMessage(
   type: string,
   actorName: string,
+  refId?: string | null,
 ): { title: string; body: string } | null {
   const title = "WRotate";
   switch (type) {
@@ -28,6 +32,12 @@ export function buildMessage(
       return { title, body: `${actorName} liked your post` };
     case "comment":
       return { title, body: `${actorName} commented on your post` };
+    // Not a direct interaction — the actor commented on someone else's post that
+    // the recipient also liked or commented on. Say so: the generic fallback read
+    // as "they did something to you", which is misleading. Wording matches the
+    // bell panel (renderNotificationPanel in index.html).
+    case "comment_also":
+      return { title, body: `${actorName} also commented on a post you liked or commented on` };
     case "follow":
       return { title, body: `${actorName} started following you` };
     case "follow_request":
@@ -44,10 +54,23 @@ export function buildMessage(
       return { title, body: `${actorName} wants to join your club` };
     case "club_join_accepted":
       return { title, body: `${actorName} approved your club request` };
+    // The panel names the club (it joins the row to clubs); naming it here would
+    // cost an extra lookup for a rare notification, so keep it generic like
+    // club_invite rather than leave it on the meaningless default.
+    case "club_promoted":
+      return { title, body: `${actorName} made you an owner of a club` };
     case "mention":
       return { title, body: `${actorName} mentioned you` };
     case "comment_like":
       return { title, body: `${actorName} liked your comment` };
+    // The auto-add-brand confirmation: actor-less, brand name in ref_id. It used
+    // to push "Someone sent you a notification" (or a bystander's name, for the
+    // six rows that carry an actor) — no hint that a brand request came through.
+    // A row with no brand has nothing to report, so send nothing.
+    case "system":
+      return refId
+        ? { title, body: `Your requested brand "${refId}" has been added to WRotate!` }
+        : null;
     case "badge_earned":
       // Badges are pushed by the send-badge-push function (batched), not the insert webhook.
       return null;

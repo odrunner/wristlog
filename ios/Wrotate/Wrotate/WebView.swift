@@ -8,6 +8,12 @@ struct WebView: UIViewRepresentable {
     @Binding var isLoading: Bool
     @Binding var hasError: Bool
     var onReload: ((WKWebView) -> Void)?
+    /// Fires after EVERY completed load, not just the first. `isLoading` only ever
+    /// moves true → false (nothing sets it back on a navigation start), so an
+    /// `onChange(of: isLoading)` observer fires exactly once per launch and misses
+    /// every reload. Pending hand-offs (shared image, quick action, push route)
+    /// hang off this instead.
+    var onPageLoaded: (() -> Void)?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -130,7 +136,7 @@ struct WebView: UIViewRepresentable {
                 // NOT the bundle version — hand-maintained, so it must be bumped in the same
                 // commit as MARKETING_VERSION or it silently ships stale (2.4 build 1 did).
                 // 2.1+ gates the Pro V2 beta toggle; 2.3+ gates Pro V2 BE display.
-                window._iosAppVersion = '2.4';   // 2.4 = weighted period fit, hold-through-starvation, 90deg amp floor, sub-sample BE
+                window._iosAppVersion = '2.5';   // 2.5 = shared-image hand-off survives the foreground reload
 
                 // Wait for Supabase client to be ready
                 var checkInterval = setInterval(function() {
@@ -164,6 +170,10 @@ struct WebView: UIViewRepresentable {
             })();
             """
             webView.evaluateJavaScript(js, completionHandler: nil)
+
+            // After the bridge, so anything handed over lands on a page that already
+            // knows it is running natively (_iosAppVersion gates several flows).
+            parent.onPageLoaded?()
 
             // Report the current OS push-notification status so the web primer only
             // shows when it's still notDetermined, and the settings row reflects reality.

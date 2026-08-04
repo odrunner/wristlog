@@ -52,6 +52,33 @@ Deno.test("buildMessage — known types", () => {
   assertEquals(buildMessage("club_join_accepted", "A")?.body, "A approved your club request");
   assertEquals(buildMessage("mention", "A")?.body, "A mentioned you");
   assertEquals(buildMessage("comment_like", "A")?.body, "A liked your comment");
+  // comment_also is the third-most-common notification type. It fell through to
+  // the generic "sent you a notification" body, which reads as a direct
+  // interaction the actor never made. Wording matches the bell panel.
+  assertEquals(
+    buildMessage("comment_also", "A")?.body,
+    "A also commented on a post you liked or commented on",
+  );
+});
+
+// The last type the app actually creates that had no message of its own. The
+// panel names the club; the push can't without an extra lookup, so it says "a
+// club" — same shape as club_invite.
+Deno.test("buildMessage — club_promoted", () => {
+  assertEquals(buildMessage("club_promoted", "A")?.body, "A made you an owner of a club");
+});
+
+// A `system` row is the auto-add-brand confirmation: actor-less, with the brand
+// name in ref_id. Without the ref it pushed "Someone sent you a notification".
+Deno.test("buildMessage — system names the brand that was added", () => {
+  assertEquals(
+    buildMessage("system", "Someone", "Aviator")?.body,
+    'Your requested brand "Aviator" has been added to WRotate!',
+  );
+  // A system row with no brand has nothing to say — skip the push rather than
+  // deliver an empty one. (No such row exists; this is the safety net.)
+  assertEquals(buildMessage("system", "Someone"), null);
+  assertEquals(buildMessage("system", "Someone", ""), null);
 });
 
 Deno.test("buildMessage — unknown type falls back to generic body", () => {

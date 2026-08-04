@@ -62,6 +62,13 @@ class ShareViewController: UIViewController {
             return
         }
 
+        // A hand-off the app couldn't complete leaves its file behind for a retry.
+        // Once this share replaces the key that file is unreachable, so drop it here
+        // rather than let unclaimed photos pile up in the app group container.
+        if let stale = defaults.string(forKey: "sharedImagePath"), stale != fileURL.path {
+            try? FileManager.default.removeItem(atPath: stale)
+        }
+
         do {
             try imageData.write(to: fileURL)
             defaults.set(fileURL.path, forKey: "sharedImagePath")
