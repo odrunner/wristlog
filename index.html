@@ -7298,7 +7298,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '04.16.51';
+const APP_VERSION = '04.21.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11255,7 +11255,12 @@ function markMeasurementTried() {
   if (localStorage.getItem('wrotate_tried_measure') === '1') return;
   localStorage.setItem('wrotate_tried_measure', '1');
   renderOnboardingChecklist();
-  maybeShowPushPrimer();   // engagement moment — a good time to prime notifications
+  // The push primer used to fire here. This runs on the "Start Listening" tap,
+  // so the modal landed 900ms later on top of a measurement the user had just
+  // begun — phone held against the watch, nothing finished, nothing earned.
+  // First 25 shows: 0 taps on "Turn on notifications", 25 dismissals at a median
+  // of 1.9s, 17 of them inside a measurement window. It now fires from
+  // dismissMsrShareCta(), once a reading is actually saved.
 }
 
 // ── Login fun-fact modal ─────────────────────────────────────────────────────
@@ -29792,6 +29797,11 @@ function dismissMsrShareCta() {
   const cta = document.getElementById('msr-share-cta');
   if (cta) cta.style.display = 'none';
   closeMeasureModal();
+  // Engagement moment, on the success side: the reading is saved and the user is
+  // done with it. Deliberately not in showMsrShareCta — that reveals "Saved —
+  // log your wear?", the core-loop CTA, and a modal over it would just trade one
+  // funnel for another. Users who take that CTA instead get primed by saveLog().
+  maybeShowPushPrimer();
 }
 
 // ── Measurement share-to-feed auto-popup ────────────────────────────────────
