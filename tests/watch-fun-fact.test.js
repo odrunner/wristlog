@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { funFactCardHTML, funFactRowHTML, shouldAttachFactOnEdit } from '../wrotate_test.js';
+import { funFactCardHTML, funFactRowHTML, shouldAttachFactOnEdit, showsFunFact } from '../wrotate_test.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(join(__dirname, '..', 'index.html'), 'utf8');
@@ -681,5 +681,79 @@ describe('fix: truncation is measured at first real visibility, not synchronousl
     initFactRows();
     expect(row._classes.has('is-truncated')).toBe(true);
     expect(inserted).toHaveLength(1);
+  });
+});
+
+// Regression: @diegovagni logged the same Citizen NY0107-85L twice on
+// 2026-08-02 (11 minutes apart). Both posts froze the same fact_id, so the feed
+// rendered the identical footnote on both cards.
+describe('showsFunFact (feed dedup)', () => {
+  const W = { id: 'w1' };
+  const mk = (id, fact, watch = W) => ({ id, fact, watch, user_id: 'u1' });
+
+  it('shows the fact on the first post carrying it', () => {
+    const items = [mk('a', 'Citizen made this bulletproof.'), mk('b', 'Citizen made this bulletproof.')];
+    expect(showsFunFact(items[0], items)).toBe(true);
+  });
+
+  it('suppresses the fact on the second post carrying it', () => {
+    const items = [mk('a', 'Citizen made this bulletproof.'), mk('b', 'Citizen made this bulletproof.')];
+    expect(showsFunFact(items[1], items)).toBe(false);
+  });
+
+  it('suppresses every repeat, not just the second', () => {
+    const items = [mk('a', 'Same fact'), mk('b', 'Same fact'), mk('c', 'Same fact')];
+    expect(items.map(i => showsFunFact(i, items))).toEqual([true, false, false]);
+  });
+
+  it('leaves distinct facts alone', () => {
+    const items = [mk('a', 'Fact one'), mk('b', 'Fact two')];
+    expect(items.map(i => showsFunFact(i, items))).toEqual([true, true]);
+  });
+
+  it('matches on text, so two fact rows with identical copy still dedup', () => {
+    const items = [mk('a', 'Same fact'), mk('b', '  SAME FACT  ')];
+    expect(showsFunFact(items[1], items)).toBe(false);
+  });
+
+  // Deliberately NOT deduped across users: a post with no fun fact looks broken
+  // to the person who wrote it, and that is worse than reading a fact twice.
+  // The picker's per-user offset is what keeps this rare.
+  it('does NOT dedup across users — someone else wearing the same reference keeps their fact', () => {
+    const items = [
+      { id: 'a', fact: 'Shared fact', watch: W, user_id: 'u1' },
+      { id: 'b', fact: 'Shared fact', watch: W, user_id: 'u2' },
+    ];
+    expect(items.map(i => showsFunFact(i, items))).toEqual([true, true]);
+  });
+
+  it('still dedups the same poster even when another user sits between the two posts', () => {
+    const items = [
+      { id: 'a', fact: 'Shared fact', watch: W, user_id: 'u1' },
+      { id: 'b', fact: 'Shared fact', watch: W, user_id: 'u2' },
+      { id: 'c', fact: 'Shared fact', watch: W, user_id: 'u1' },
+    ];
+    expect(items.map(i => showsFunFact(i, items))).toEqual([true, true, false]);
+  });
+
+  it('returns false with no fact, no watch, or no item', () => {
+    expect(showsFunFact(mk('a', ''), [mk('a', '')])).toBe(false);
+    expect(showsFunFact(mk('a', '   '), [])).toBe(false);
+    expect(showsFunFact({ id: 'a', fact: 'Fact', watch: null }, [])).toBe(false);
+    expect(showsFunFact(null, [])).toBe(false);
+  });
+
+  it('a watchless post never claims a fact away from a post that would show it', () => {
+    const items = [{ id: 'a', fact: 'Fact', watch: null, user_id: 'u1' }, mk('b', 'Fact')];
+    expect(showsFunFact(items[1], items)).toBe(true);
+  });
+
+  it('shows the fact for an item not in the list (club feed renders outside feedItems)', () => {
+    expect(showsFunFact(mk('x', 'Fact'), [])).toBe(true);
+  });
+
+  it('index.html mirrors the helper and gates the footnote on it', () => {
+    expect(html).toContain('function showsFunFact(item, items)');
+    expect(html).toContain('const funFactRow = showsFunFact(item, feedItems)');
   });
 });

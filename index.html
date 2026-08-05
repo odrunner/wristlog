@@ -7298,7 +7298,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '04.21.58';
+const APP_VERSION = '05.07.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12407,8 +12407,9 @@ function renderFeedCard(item) {
     : '';
 
   // Fun-fact footnote — wear posts only, and only when a fact was frozen onto
-  // the post. Always visible, clamped to 3 lines, tap to expand.
-  const funFactRow = (w && item.fact)
+  // the post. Always visible, clamped to 3 lines, tap to expand. Suppressed on
+  // repeats so the same trivia never appears twice in one scroll (showsFunFact).
+  const funFactRow = showsFunFact(item, feedItems)
     ? funFactRowHTML({ fact: item.fact, logId: item.id })
     : '';
 
@@ -21755,6 +21756,27 @@ function funFactCardHTML({ fact }) {
 function funFactRowHTML({ fact, logId }) {
   if (!fact || !String(fact).trim()) return '';
   return `<button type="button" class="funfact-row is-clamped" onclick="toggleFunFact(this)" aria-expanded="false" data-log-id="${escHtml(logId || '')}"><span class="funfact-clamp"><svg class="funfact-bulb" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span class="funfact-label">Fun fact</span> — ${escHtml(fact)}</span><span class="funfact-more" aria-hidden="true">more</span></button>`;
+}
+
+// One person logging the same watch twice in a day freezes the same fact onto
+// both posts, and showing identical trivia twice in one scroll reads as a bug —
+// so only the FIRST of that person's posts keeps the footnote.
+// Scoped to the poster on purpose: if someone else wore the same reference and
+// drew the same fact, THEIR post keeps its footnote too. A post that silently
+// has no fun fact looks broken to the person who wrote it, and that is a worse
+// failure than a repeat. pick_watch_fact generates a fresh fact for the second
+// owner of a watch (sql/2026-08-05-fact-cross-user-desync.sql), so a cross-user
+// repeat only happens once a model is at its 10-fact cap.
+// Items with no watch are skipped entirely — they never render a footnote, so
+// letting one "claim" a fact would hide it from every post that would.
+// Mirrored in wrotate_test.js.
+function showsFunFact(item, items) {
+  if (!item || !item.watch) return false;
+  const norm = i => (i && i.fact ? String(i.fact) : '').trim().toLowerCase();
+  const key = norm(item);
+  if (!key) return false;
+  const first = (items || []).find(i => i && i.watch && i.user_id === item.user_id && norm(i) === key);
+  return !first || first.id === item.id;
 }
 
 function recCardHTML(rec) {
