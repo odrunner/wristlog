@@ -59,22 +59,37 @@ class PushManager: NSObject, UNUserNotificationCenterDelegate {
         pendingRoute = (route: route, id: id)
     }
 
-    // Called when user signs into the web app.
-    // Do NOT cold-ask for permission here — iOS only lets us show the system
-    // dialog once, and a cold ask at sign-in (before the user sees any value) is
-    // mostly declined. Instead: if permission was already granted, silently refresh
-    // the device token; otherwise wait for the in-app primer to call
-    // requestPermissionAndRegister() (via the "requestPushPermission" app action).
+    // Called when user signs into the web app. Asks for permission here.
+    //
+    // 2.3 removed this ask on the theory that a cold prompt "before the user sees
+    // any value" was being declined, and that a warm in-app primer would beat it.
+    // The field data says the opposite, decisively. Signup -> push within 7 days,
+    // external accounts, equal window:
+    //
+    //     cold ask (pre Jul 25)   45/162   27.8%
+    //     primer   (post Jul 25)   2/15    13.3%   <- and those 2 are old builds
+    //
+    // The primer's own funnel over its first 25 shows: 25 dismissed, 0 clicked.
+    // New external device_tokens rows stopped entirely on Jul 27. A prompt asking
+    // at 28% beats a prompt nobody taps, so the ask comes back.
+    //
+    // The real cost of asking cold is that iOS shows the system dialog ONCE per
+    // install: everyone who declines is unreachable in-app forever, only
+    // recoverable through Settings. That is the price being paid knowingly here —
+    // 28% granted beats 0% granted with the one shot still theoretically in hand.
+    //
+    // requestPermissionAndRegister is a no-op past the first call (iOS returns the
+    // existing decision without re-prompting), so signing in again is harmless and
+    // still re-registers an already-authorized device.
+    //
+    // The in-app primer stays in the web layer and is NOT dead code: 2.3/2.4 users
+    // have no cold ask in their binary, so it remains their only route until they
+    // update. On 2.5 it self-disables — shouldShowPushPrimer requires
+    // notDetermined, and after this ask nobody is.
     func handleSignIn(userId: String, accessToken: String? = nil) {
         currentUserId = userId
         userAccessToken = accessToken
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
-            if settings.authorizationStatus == .authorized {
-                DispatchQueue.main.async {
-                    UIApplication.shared.registerForRemoteNotifications()
-                }
-            }
-        }
+        requestPermissionAndRegister()
     }
 
     // Called when user signs out
