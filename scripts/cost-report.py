@@ -72,6 +72,15 @@ SUPABASE_TOKEN_FILE = os.path.expanduser("~/.config/supabase/env")
 # yesterday, so this is headroom, not a limit we run into.
 LOG_ROW_CAP = 2000
 
+# auto-fix.yml opens a PR per auto-bug issue and never merges it. Nothing else
+# tells you one is waiting, so 19 of them silently piled up between 2026-03-27
+# and 2026-08-04 while the same bugs got re-fixed by hand — paying for the CI
+# run and then again for the interactive session. The repo is public, so this
+# needs no token.
+GITHUB_REPO = "odrunner/wristlog"
+AUTOFIX_BRANCH_PREFIX = "auto-fix/"
+AUTOFIX_STALE_DAYS = 7       # amber once a PR has waited this long
+
 
 def curl_json(url, headers=None, method="GET", body=None, retries=4):
     out = f"{TMP}/cost_resp_{abs(hash(url)) % 99999}.json"
@@ -278,6 +287,65 @@ def watch_value_engines(day):
     return stats
 
 
+def open_autofix_prs():
+    """Auto-fix PRs sitting unmerged, oldest first.
+
+    Returns a list of {number, title, days} dicts, or None if the lookup
+    failed — None renders as "unknown", never as a reassuring empty list.
+    """
+    url = (f"https://api.github.com/repos/{GITHUB_REPO}/pulls"
+           "?state=open&per_page=100&sort=created&direction=asc")
+    try:
+        d = curl_json(url, headers=["Accept: application/vnd.github+json"], retries=3)
+    except Exception as e:
+        print(f"[open_autofix_prs] lookup failed — {type(e).__name__}: {e}")
+        return None
+    if not isinstance(d, list):
+        print(f"[open_autofix_prs] unexpected response: {str(d)[:200]}")
+        return None
+    now = datetime.now(timezone.utc)
+    out = []
+    for p in d:
+        try:
+            if not p["head"]["ref"].startswith(AUTOFIX_BRANCH_PREFIX):
+                continue
+            created = datetime.strptime(p["created_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+            out.append({"number": p["number"], "title": p["title"],
+                        "days": (now - created).days})
+        except (KeyError, TypeError, ValueError):
+            continue
+    return out
+
+
+def autofix_html(prs):
+    """Report fragment for the unmerged auto-fix backlog."""
+    if prs is None:
+        return ('<h3 style="margin-top:24px">Auto-fix PRs'
+                '<span style="color:#d29922"> &mdash; check failed</span></h3>'
+                '<p style="color:#d29922">Could not read the open PR list this run.</p>')
+    if not prs:
+        return ('<h3 style="margin-top:24px">Auto-fix PRs</h3>'
+                '<p style="color:#2ea043">None waiting &mdash; the backlog is clear.</p>')
+    oldest = prs[0]["days"]
+    colour = "#f85149" if oldest >= AUTOFIX_STALE_DAYS else "#d29922"
+    items = "".join(
+        f'<li>#{p["number"]} &mdash; {p["days"]}d &mdash; {p["title"]}</li>'
+        for p in prs[:8]
+    )
+    more = f"<li>&hellip; and {len(prs) - 8} more</li>" if len(prs) > 8 else ""
+    return (
+        f'<h3 style="margin-top:24px">Auto-fix PRs<span style="color:{colour}">'
+        f' &mdash; {len(prs)} waiting</span></h3>'
+        f'<p style="color:{colour}">The pipeline opens a PR per auto-bug issue and '
+        f'never merges it. Oldest has waited <b>{oldest} days</b>. Unmerged fixes '
+        f'get re-done by hand later, so the bug is paid for twice.</p>'
+        f'<ul style="font-size:13px;">{items}{more}</ul>'
+        f'<p style="font-size:12px;color:#888;">'
+        f'<a href="https://github.com/{GITHUB_REPO}/pulls">Review them</a> &middot; '
+        f'edge-function PRs still need <code>supabase functions deploy</code> after merging.</p>'
+    )
+
+
 def anthropic_get(path, params, key):
     url = f"https://api.anthropic.com/v1/organizations/{path}?" + urllib.parse.urlencode(params, doseq=True)
     return curl_json(url, headers=[f"x-api-key: {key}", "anthropic-version: 2023-06-01"])
@@ -437,6 +505,15 @@ def main():
         for r in engines["reasons"][:5]:
             print(f"   ! {r}")
     print(f"web searches (auto-add-brand + any Claude fallback): {y_searches}")
+    prs = open_autofix_prs()
+    if prs is None:
+        print("auto-fix PRs waiting: UNKNOWN — could not read the PR list")
+    elif prs:
+        print(f"auto-fix PRs waiting: {len(prs)} (oldest {prs[0]['days']}d)")
+        for p in prs[:8]:
+            print(f"   #{p['number']:<4} {p['days']:>4}d  {p['title'][:60]}")
+    else:
+        print("auto-fix PRs waiting: 0")
 
     rows = ""
     for day in sorted(daily):
@@ -497,6 +574,7 @@ def main():
     included — it is covered by the flat Max subscription and is not billed.</p>
     """
     write_history(yday, y_total, y_searches, engines)
+    html += autofix_html(prs)
     html += email_health()
     send_email(f"WRotate API cost — {yday}: ${y_total:.2f}", html)
 
