@@ -13,12 +13,23 @@ Attribution comes from usage_report grouped by api_key_id + model:
   auto-fix CI      — the wrotate-feedback key, used only by the GitHub
                      auto-fix.yml workflow (Claude Code in CI, Opus 4.8).
                      Cost scales with how many issues get labelled auto-bug.
-  watch-value      — web searches are a clean tracer: only watch-value uses the
-                     web_search tool. Since the 2026-07-20 switch to Gemini this
-                     should be ZERO; any searches mean the Claude fallback fired,
-                     which the report flags.
   identify (cold)  — the Opus 4.6 fallback in identify-watch (Gemini is primary).
-  other edge       — detect + collection-matching + auto-add-brand (Sonnet).
+  edge (Sonnet)    — everything else on the edge key: identify-watch's Sonnet
+                     passes, auto-add-brand, detect, collection-matching, and
+                     the watch-value Claude fallback.
+
+That last bucket is deliberately coarse. usage_report groups by
+api_key_id + model only, so a day's whole claude-sonnet-4-6 spend arrives as ONE
+row with no way to split it per function. An earlier version tried to carve out
+watch-value using web_search_requests as a tracer ("only watch-value searches").
+That was wrong twice over: auto-add-brand also calls web_search, and because the
+test ran on the merged row, ONE search relabelled the entire day's Sonnet spend
+as watch-value. It fired a false "Gemini is broken" alert on every day a brand
+was auto-added. Do not reintroduce a tracer here — the data cannot support it.
+
+The Gemini-fallback alert now reads the real signal instead: watch-value logs
+`engine=gemini` / `engine=claude` on every lookup, so we count those directly
+from the Supabase function logs (see watch_value_engines).
 
 The script makes no LLM calls — one HTTPS request plus local reads — so running
 it daily is free. Read the latest with:
@@ -50,10 +61,16 @@ FEEDBACK_KEY = "apikey_013qDidFRfviMvZEPNhGZwsz"  # wrotate-feedback → auto-fi
 
 SPIKE_USD = 8.0        # flag a day costing more than this
 DAYS = 14
-# watch-value moved from Claude+web-search to Gemini on this date. Before it,
-# web searches are normal (Claude was primary); on/after it, any search means
-# the Claude fallback fired. The alert must not fire for pre-switch days.
+# watch-value moved from Claude+web-search to Gemini on this date. The fallback
+# alert must not fire for days that predate the switch, when Claude was primary
+# and serving every lookup was the expected behaviour.
 GEMINI_SWITCH_DATE = "2026-07-20"
+
+SUPABASE_PROJECT_REF = "xnzweevzrojmouzhpwzv"
+SUPABASE_TOKEN_FILE = os.path.expanduser("~/.config/supabase/env")
+# Supabase keeps ~7 days of function logs on Pro. The report only ever asks for
+# yesterday, so this is headroom, not a limit we run into.
+LOG_ROW_CAP = 2000
 
 
 def curl_json(url, headers=None, method="GET", body=None, retries=4):
@@ -197,6 +214,70 @@ def email_health():
         return fail_html
 
 
+def supabase_access_token():
+    """Management-API token from ~/.config/supabase/env (`export KEY=value`)."""
+    try:
+        with open(SUPABASE_TOKEN_FILE) as fh:
+            for line in fh:
+                line = line.strip()
+                if line.startswith("export "):
+                    line = line[len("export "):]
+                if line.startswith("SUPABASE_ACCESS_TOKEN=") and "=" in line:
+                    return line.split("=", 1)[1].strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return None
+
+
+def watch_value_engines(day):
+    """Which engine actually served each watch-value lookup on `day` (UTC).
+
+    Reads the Supabase function logs rather than inferring from Anthropic
+    billing. watch-value logs `engine=gemini` or `engine=claude` on every
+    successful lookup, and logs a reason line whenever Gemini is skipped, so
+    this is the ground truth the old web_search tracer only approximated.
+
+    Returns {"gemini": int, "claude": int, "reasons": [str]}, or None when the
+    logs could not be read. None must never be rendered as a healthy zero —
+    an unread log means unknown, not "no fallbacks".
+    """
+    token = supabase_access_token()
+    if not token:
+        return None
+    params = {
+        "sql": (
+            "select event_message from function_logs "
+            "where event_message like '%[watch-value]%' "
+            f"order by timestamp desc limit {LOG_ROW_CAP}"
+        ),
+        "iso_timestamp_start": f"{day}T00:00:00Z",
+        "iso_timestamp_end": f"{day}T23:59:59Z",
+    }
+    url = (
+        f"https://api.supabase.com/v1/projects/{SUPABASE_PROJECT_REF}"
+        "/analytics/endpoints/logs.all?" + urllib.parse.urlencode(params)
+    )
+    try:
+        d = curl_json(url, headers=[f"Authorization: Bearer {token}"], retries=3)
+    except Exception as e:
+        print(f"[watch_value_engines] log read failed — {type(e).__name__}: {e}")
+        return None
+    rows = d.get("result")
+    if rows is None:
+        print(f"[watch_value_engines] unexpected response: {str(d)[:200]}")
+        return None
+    stats = {"gemini": 0, "claude": 0, "reasons": []}
+    for row in rows:
+        msg = (row.get("event_message") or "").strip()
+        if "engine=gemini" in msg:
+            stats["gemini"] += 1
+        elif "engine=claude" in msg:
+            stats["claude"] += 1
+        if any(m in msg for m in ("Gemini error", "Gemini parse failed", "Gemini exception")):
+            stats["reasons"].append(msg.replace("\n", " ")[:300])
+    return stats
+
+
 def anthropic_get(path, params, key):
     url = f"https://api.anthropic.com/v1/organizations/{path}?" + urllib.parse.urlencode(params, doseq=True)
     return curl_json(url, headers=[f"x-api-key: {key}", "anthropic-version: 2023-06-01"])
@@ -226,7 +307,12 @@ def wrotate_daily_cost(key, since):
 
 
 def wrotate_attribution(key, since):
-    """Per-day split by cost driver, plus the web-search count (fallback tracer)."""
+    """Per-day split by cost driver, plus the raw web-search count.
+
+    The search count is reported as-is (it is mostly auto-add-brand, sometimes a
+    watch-value Claude fallback) and is NOT used to attribute cost or to decide
+    whether Gemini is healthy. watch_value_engines answers that.
+    """
     attr = defaultdict(lambda: defaultdict(float))
     searches = defaultdict(int)
     page = None
@@ -260,10 +346,11 @@ def wrotate_attribution(key, since):
                     bucket = "auto-fix CI"
                 elif "opus-4-6" in model:
                     bucket = "identify cold fallback"
-                elif s > 0:
-                    bucket = "watch-value (Claude web search)"
                 else:
-                    bucket = "other edge (detect/collection/brand)"
+                    # Everything else on the edge key is one merged Sonnet row.
+                    # There is no per-function signal in usage_report, so do not
+                    # attempt to split it — see the module docstring.
+                    bucket = "edge functions (Sonnet)"
                 attr[day][bucket] += weight
         if d.get("has_more") and d.get("next_page"):
             page = d["next_page"]
@@ -280,8 +367,10 @@ def split_dollars(total, weights):
     return {k: total * (v / s) for k, v in weights.items()}
 
 
-def write_history(day, total, searches):
+def write_history(day, total, searches, engines=None):
     line = f"{day} | wrotate ${total:.2f} | searches {searches}"
+    if engines is not None:
+        line += f" | gemini {engines['gemini']} | claude-fallback {engines['claude']}"
     lines = []
     if os.path.exists(HISTORY_FILE):
         with open(HISTORY_FILE) as f:
@@ -332,15 +421,22 @@ def main():
     y_split = split_dollars(y_total, attr.get(yday, {}))
     y_searches = searches.get(yday, 0)
     total_14 = sum(daily.values())
+    post_switch = yday >= GEMINI_SWITCH_DATE
+    engines = watch_value_engines(yday) if post_switch else None
 
     print(f"=== WRotate API cost — {yday} ===")
     print(f"Billed yesterday: ${y_total:.2f}   ({DAYS}-day total ${total_14:.2f})")
     for k, v in sorted(y_split.items(), key=lambda x: -x[1]):
         print(f"   {k}: ${v:.2f}")
-    if yday >= GEMINI_SWITCH_DATE:
-        print(f"watch-value web searches: {y_searches}  (expected 0 post-Gemini; >0 = Claude fallback fired)")
+    if not post_switch:
+        print(f"watch-value engine: Claude (pre-{GEMINI_SWITCH_DATE}, before the Gemini switch)")
+    elif engines is None:
+        print("watch-value engine: UNKNOWN — could not read the function logs")
     else:
-        print(f"watch-value web searches: {y_searches}  (normal — pre-{GEMINI_SWITCH_DATE}, Claude was primary)")
+        print(f"watch-value engine: {engines['gemini']} gemini, {engines['claude']} claude fallback")
+        for r in engines["reasons"][:5]:
+            print(f"   ! {r}")
+    print(f"web searches (auto-add-brand + any Claude fallback): {y_searches}")
 
     rows = ""
     for day in sorted(daily):
@@ -355,13 +451,26 @@ def main():
 
     split_html = "".join(f"<li>{k}: <b>${v:.2f}</b></li>" for k, v in sorted(y_split.items(), key=lambda x: -x[1])) or "<li>no spend</li>"
 
-    post_switch = yday >= GEMINI_SWITCH_DATE
+    if not post_switch:
+        engine_html = (f"watch-value ran on Claude this day &mdash; it predates the "
+                       f"{GEMINI_SWITCH_DATE} switch to Gemini.")
+    elif engines is None:
+        engine_html = ('<span style="color:#d29922">watch-value engine: <b>unknown</b> '
+                       "&mdash; could not read the function logs this run.</span>")
+    elif engines["gemini"] + engines["claude"] == 0:
+        engine_html = "watch-value: no lookups this day."
+    else:
+        engine_html = (f"watch-value engine: <b>{engines['gemini']}</b> Gemini, "
+                       f"<b>{engines['claude']}</b> Claude fallback.")
+
     alerts = ""
-    if y_searches > 0 and post_switch:
+    if post_switch and engines and engines["claude"] > 0:
+        why = "".join(f"<li><code>{r}</code></li>" for r in engines["reasons"][:5])
         alerts += (f"<p style='background:#f8d7da;border-left:4px solid #c00;padding:10px;'>"
-                   f"<b>watch-value fell back to Claude ({y_searches} web searches).</b> "
-                   f"Gemini should serve every lookup — check the edge function logs for "
-                   f"<code>Gemini error</code> / <code>parse failed</code>.</p>")
+                   f"<b>watch-value fell back to Claude on {engines['claude']} of "
+                   f"{engines['gemini'] + engines['claude']} lookups.</b> "
+                   f"Gemini should serve every one.</p>"
+                   + (f"<ul style='font-size:12px;'>{why}</ul>" if why else ""))
     if y_total >= SPIKE_USD:
         alerts += (f"<p style='background:#fff3cd;border-left:4px solid #e0a800;padding:10px;'>"
                    f"<b>Spend spike: ${y_total:.2f}.</b> See the split above for the driver.</p>")
@@ -372,10 +481,9 @@ def main():
     <p style="font-size:20px;"><b>${y_total:.2f}</b> billed yesterday
     &nbsp;<span style="color:#666;font-size:14px;">· {DAYS}-day total ${total_14:.2f}</span></p>
     <h3>What drove it</h3><ul>{split_html}</ul>
-    <p style="color:#666;font-size:13px;">watch-value web searches: <b>{y_searches}</b>
-    {"(expected 0 — Gemini serves valuations; any searches mean the Claude fallback fired)."
-     if post_switch else
-     f"(normal — this day predates the {GEMINI_SWITCH_DATE} switch to Gemini, when Claude was the primary engine)."}</p>
+    <p style="color:#666;font-size:13px;">{engine_html}</p>
+    <p style="color:#888;font-size:12px;">Web searches: <b>{y_searches}</b>
+    &mdash; mostly auto-add-brand verifying a new brand; not a Gemini health signal.</p>
     <h3>Last {DAYS} days</h3>
     <table style="border-collapse:collapse;font-family:monospace;font-size:13px;">
       <tr style="border-bottom:1px solid #ccc;">
@@ -388,7 +496,7 @@ def main():
     <p style="color:#888;font-size:12px;">WRotate workspace only. Claude Code is not
     included — it is covered by the flat Max subscription and is not billed.</p>
     """
-    write_history(yday, y_total, y_searches)
+    write_history(yday, y_total, y_searches, engines)
     html += email_health()
     send_email(f"WRotate API cost — {yday}: ${y_total:.2f}", html)
 
