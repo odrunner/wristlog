@@ -7544,7 +7544,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.13.18';
+const APP_VERSION = '07.13.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17226,13 +17226,25 @@ function renderEmailEngagement(data) {
   // with "Broadcast — in progress" left empty. Keying on the label keeps a
   // broadcast distinct from a drip that merely shares a subject template.
   //
-  // A label with pending rows is still draining, so it lands in group 2; one
-  // that has fully drained falls through to "Older campaigns" on its own.
+  // A label with rows still owed is in flight, so it lands in group 2; one that
+  // has fully drained falls through to "Older campaigns" on its own.
+  //
+  // "Owed" is pending PLUS held. A staged send sits at pending = 0 with its
+  // remainder held for review, so a pending-only test read it as finished and
+  // filed a campaign that was 50 of 457 sent under "Older campaigns" — invisible
+  // exactly when you're deciding whether to release the rest.
+  //
+  // Tracked separately for display, because they mean different things to the
+  // reader: queued rows go out on the next drain by themselves, held rows go
+  // nowhere until you release them. Collapsing both into "Queued" would promise
+  // a send that is actually still waiting on a decision.
   const pendingByLabel = {};
+  const heldByLabel = {};
   const activeKeys = new Set();
   broadcasts.forEach(b => {
     pendingByLabel[b.label] = +b.pending || 0;
-    if (+b.pending > 0) activeKeys.add(b.label);
+    heldByLabel[b.label] = +b.held || 0;
+    if (pendingByLabel[b.label] > 0 || heldByLabel[b.label] > 0) activeKeys.add(b.label);
     // Seeded even at zero engagement, so a send that is genuinely in flight is
     // visible from the moment it is queued rather than only once the first
     // external delivery lands.
@@ -17282,10 +17294,12 @@ function renderEmailEngagement(data) {
       // Still-queued count, so a mid-send broadcast reads as in flight rather
       // than as a campaign that only reached the handful already delivered.
       const queued = pendingByLabel[subj] || 0;
+      const held = heldByLabel[subj] || 0;
       return `${header}<div style="padding:.45rem 0;border-bottom:1px solid var(--border);">
         <div style="font-size:.78rem;font-weight:600;margin-bottom:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(label)}</div>
         <div style="font-size:.7rem;color:var(--muted);display:flex;gap:.6rem;flex-wrap:wrap;">
           ${queued ? `<span style="color:var(--gold);">Queued: ${queued}</span>` : ''}
+          ${held ? `<span style="color:var(--gold);">Held for review: ${held}</span>` : ''}
           <span>Delivered: ${s.delivered}${dodDelta(s.delivered24)}</span>
           <span>Opened: ${s.opened} (${pct(s.opened, base)})${dodDelta(s.opened24)}</span>
           <span>Clicked: ${s.clicked} (${pct(s.clicked, base)})${dodDelta(s.clicked24)}</span>

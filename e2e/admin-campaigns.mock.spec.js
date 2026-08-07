@@ -189,3 +189,62 @@ test.describe('Admin — By Campaign grouping (mocked)', () => {
     expect(labels).not.toContain('reminders');
   });
 });
+
+// A staged send sits at pending = 0 with its remainder held for review. The
+// in-flight test used to read only `pending`, so a campaign 50 of 457 sent was
+// filed under "Older campaigns" — hidden exactly while you were deciding
+// whether to release the other 407.
+test.describe('Admin — By Campaign, staged sends (mocked)', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockSupabase(page, {});
+    await injectSession(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+  });
+
+  const render = (page, broadcasts) => page.evaluate((broadcasts) => {
+    const d = document.createElement('div');
+    d.innerHTML = renderEmailEngagement({ by_subject: [], broadcasts, recent: [] });
+    return d.innerHTML;
+  }, broadcasts);
+
+  test('a held-only campaign lands in "Broadcast — in progress", not Older', async ({ page }) => {
+    const html = await render(page, [
+      { label: 'What should we build next?', pending: 0, held: 407, sent: 50, delivered: 48, opened: 22, clicked: 0 },
+    ]);
+    const inProgress = html.indexOf('Broadcast — in progress');
+    const older = html.indexOf('Older campaigns');
+    expect(inProgress).toBeGreaterThan(-1);
+    // Either Older is absent, or the campaign sits before it.
+    const campaign = html.indexOf('What should we build next?');
+    expect(campaign).toBeGreaterThan(inProgress);
+    if (older > -1) expect(campaign).toBeLessThan(older);
+  });
+
+  test('held rows read as held, not as queued to send', async ({ page }) => {
+    // "Queued" promises a send that happens by itself; held rows go nowhere
+    // until released. The two must not be collapsed into one number.
+    const html = await render(page, [
+      { label: 'What should we build next?', pending: 0, held: 407, sent: 50, delivered: 48, opened: 22, clicked: 0 },
+    ]);
+    expect(html).toContain('Held for review: 407');
+    expect(html).not.toContain('Queued: 407');
+  });
+
+  test('a campaign both draining and holding reports the two separately', async ({ page }) => {
+    const html = await render(page, [
+      { label: 'Mixed', pending: 12, held: 30, sent: 8, delivered: 8, opened: 2, clicked: 0 },
+    ]);
+    expect(html).toContain('Queued: 12');
+    expect(html).toContain('Held for review: 30');
+  });
+
+  test('a fully drained campaign still falls through to Older', async ({ page }) => {
+    // The fix must not pin every past broadcast in "in progress" forever.
+    const html = await render(page, [
+      { label: 'Pro V2 engine (beta)', pending: 0, held: 0, sent: 401, delivered: 392, opened: 160, clicked: 12 },
+    ]);
+    expect(html).toContain('Older campaigns');
+    expect(html).not.toContain('Held for review');
+  });
+});
