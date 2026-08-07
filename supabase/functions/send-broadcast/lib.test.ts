@@ -21,6 +21,7 @@ import {
   segmentDateGte,
   segmentUserId,
   shouldTripBreaker,
+  splitFirstBatch,
   unsubFooter,
   unsubUrl,
   validateBroadcastInput,
@@ -504,4 +505,58 @@ Deno.test("resolveBatchOutcome — an empty batch is untouched (not treated as a
   assertEquals(result.sentIds, []);
   assertEquals(result.failedRows, []);
   assertEquals(result.deferredRows, []);
+});
+
+// ── splitFirstBatch ──────────────────────────────────────────────────────────
+const TEN = Array.from({ length: 10 }, (_, i) => i + 1);
+
+Deno.test("splitFirstBatch — holds everything past the first N", () => {
+  const { pending, held } = splitFirstBatch(TEN, 3);
+  assertEquals(pending, [1, 2, 3]);
+  assertEquals(held, [4, 5, 6, 7, 8, 9, 10]);
+});
+
+Deno.test("splitFirstBatch — no batch size means send it all, the old behaviour", () => {
+  for (const v of [undefined, null, 0, "", false]) {
+    const { pending, held } = splitFirstBatch(TEN, v);
+    assertEquals(pending.length, 10, `${JSON.stringify(v)} should hold nothing`);
+    assertEquals(held.length, 0);
+  }
+});
+
+Deno.test("splitFirstBatch — junk is treated as no batch, never as a hold-everything", () => {
+  // A NaN reaching the slice as 0 would hold the ENTIRE audience behind a
+  // review gate the operator never asked for — silence is the wrong failure.
+  for (const v of ["abc", {}, [], NaN, Infinity, -Infinity, -5]) {
+    const { pending, held } = splitFirstBatch(TEN, v);
+    assertEquals(pending.length, 10, `${JSON.stringify(v)} should hold nothing`);
+    assertEquals(held.length, 0);
+  }
+});
+
+Deno.test("splitFirstBatch — a batch at or above the audience holds nothing", () => {
+  // Not a staged send at all. Holding zero rows while flagging the campaign
+  // HELD would strand a "Send remaining 0" button in the admin list.
+  for (const n of [10, 11, 500]) {
+    const { pending, held } = splitFirstBatch(TEN, n);
+    assertEquals(pending.length, 10);
+    assertEquals(held.length, 0);
+  }
+});
+
+Deno.test("splitFirstBatch — a fractional batch truncates rather than throwing", () => {
+  const { pending, held } = splitFirstBatch(TEN, 2.9);
+  assertEquals(pending, [1, 2]);
+  assertEquals(held.length, 8);
+});
+
+Deno.test("splitFirstBatch — every row lands in exactly one side, order preserved", () => {
+  const { pending, held } = splitFirstBatch(TEN, 4);
+  assertEquals([...pending, ...held], TEN);
+});
+
+Deno.test("splitFirstBatch — an empty audience is not a staged send", () => {
+  const { pending, held } = splitFirstBatch([], 50);
+  assertEquals(pending, []);
+  assertEquals(held, []);
 });

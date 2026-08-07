@@ -33,6 +33,7 @@ import {
   segmentDateGte,
   segmentUserId,
   shouldTripBreaker,
+  splitFirstBatch,
   unsubFooter,
   unsubUrl,
   utcDayStart,
@@ -139,7 +140,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
     const body = await req.json();
-    const { subject, html, test_email, segment = "all", campaign_id, cohort, dry_run, limit, enqueue, drain, priority } = body;
+    const { subject, html, test_email, segment = "all", campaign_id, cohort, dry_run, limit, enqueue, drain, priority, first_batch } = body;
     // Drain order for a queued broadcast: lower goes first, id breaks ties.
     // Comes from the draft's position in the admin's Saved Drafts list, so the
     // order can be set before anything is sent. Defaults to 0 = old FIFO.
@@ -353,10 +354,13 @@ serve(async (req) => {
     // Queue mode: insert rows for the nightly drain instead of sending now.
     // Skips recipients already pending with the same subject (re-click safe).
     if (enqueue) {
+      // 'held' counts as already queued just as much as 'pending' does — a
+      // staged send leaves most of the audience held, and a re-click that only
+      // looked at 'pending' would queue every held recipient a second time.
       const { data: pendingRows } = await fetchAllRows<{ uid: string }>((from, to) => supabase
         .from("broadcast_queue")
         .select("uid")
-        .eq("status", "pending")
+        .in("status", ["pending", "held"])
         .eq("subject", subject)
         .range(from, to));
       const alreadyQueued = new Set((pendingRows || []).map(r => r.uid));
@@ -364,7 +368,7 @@ serve(async (req) => {
       // Rows are stored fully rendered, so the drain stays a dumb sender.
       const wantsFact = needsFactVars({ subject, body_html: safeHtml });
       const vars = wantsFact ? await factVarsFor(supabase, toQueue.map(r => r.uid)) : new Map();
-      const rows = toQueue.map(r => {
+      const baseRows = toQueue.map(r => {
         const v = wantsFact ? (vars.get(r.uid) ?? { ...FALLBACK_FACT }) : {};
         return {
           uid: r.uid,
@@ -375,6 +379,13 @@ serve(async (req) => {
           priority: queuePriority,
         };
       });
+      // Staged send: the first `first_batch` rows go out on the next drain, the
+      // rest wait as 'held' until the operator has read the batch-1 metrics.
+      const split = splitFirstBatch(baseRows, first_batch);
+      const rows = [
+        ...split.pending.map(r => ({ ...r, status: "pending" })),
+        ...split.held.map(r => ({ ...r, status: "held" })),
+      ];
       let queued = 0;
       for (let i = 0; i < rows.length; i += 500) {
         const { error: insErr } = await supabase.from("broadcast_queue").insert(rows.slice(i, i + 500));
@@ -383,8 +394,14 @@ serve(async (req) => {
         }
         queued += Math.min(500, rows.length - i);
       }
-      console.log(`[send-broadcast] Queued ${queued} (skipped ${alreadyQueued.size} already pending) for nightly drain`);
-      return jsonResponse({ queued, skipped_already_queued: filteredRecipients.length - toQueue.length, total_eligible: filteredRecipients.length });
+      console.log(`[send-broadcast] Queued ${queued} (${split.held.length} held, skipped ${alreadyQueued.size} already queued) for nightly drain`);
+      return jsonResponse({
+        queued,
+        held: split.held.length,
+        first_batch: split.pending.length,
+        skipped_already_queued: filteredRecipients.length - toQueue.length,
+        total_eligible: filteredRecipients.length,
+      });
     }
 
     // Send via Resend in chunks of 100 (tracking upserts stay ≤100 rows each)

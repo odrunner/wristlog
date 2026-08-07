@@ -7302,7 +7302,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.08.20';
+const APP_VERSION = '07.09.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15627,20 +15627,29 @@ function showAdminPage() {
   renderDevFlags();
 }
 
-// Broadcast queue status (pending/sent/quota) + manual drain
+// Must match DAILY_EMAIL_LIMIT and DRAIN_RESERVE in send-broadcast/lib.ts —
+// this is display only; the server enforces the real thing.
+const BROADCAST_DAILY_LIMIT = 500;
+const BROADCAST_DRAIN_RESERVE = 10;
+
+// Broadcast queue status (pending/held/sent/quota) + manual drain
 async function renderBroadcastQueueStatus() {
   const el = document.getElementById('broadcast-queue-status');
   const sendsEl = document.getElementById('broadcast-sends-list');
   if (!el) return;
+  installBroadcastQueueDelegation();
   try {
     const { data } = await db.rpc('admin_broadcast_queue_status');
     const q = data || {};
-    if (!Number(q.pending) && !Number(q.sent) && !Number(q.failed)) {
+    if (!Number(q.pending) && !Number(q.held) && !Number(q.sent) && !Number(q.failed)) {
       el.innerHTML = '';
       if (sendsEl) sendsEl.innerHTML = '';
       return;
     }
-    const budget = Math.max(0, 100 - (Number(q.used_today) || 0) - 10);
+    // Mirrors DAILY_EMAIL_LIMIT/DRAIN_RESERVE in send-broadcast/lib.ts. This
+    // read 100 long after the SES cutover raised the limit to 500, so every
+    // "next drain ≈ N" line understated the budget by 400.
+    const budget = Math.max(0, BROADCAST_DAILY_LIMIT - (Number(q.used_today) || 0) - BROADCAST_DRAIN_RESERVE);
 
     // Real sends, listed like the drafts above them. Without this a broadcast
     // queued server-side has no localStorage draft and appears nowhere on the
@@ -15656,15 +15665,16 @@ async function renderBroadcastQueueStatus() {
       // Traffic card counts delivered/opened/clicked only, so dropping it here
       // too would leave a partly-failed broadcast invisible everywhere.
       const live = (q.breakdown || []).filter(b =>
-        (Number(b.pending) || 0) > 0 || (Number(b.failed) || 0) > 0);
+        (Number(b.pending) || 0) > 0 || (Number(b.held) || 0) > 0 || (Number(b.failed) || 0) > 0);
       const pendingCount = live.filter(b => Number(b.pending) > 0).length;
       let position = 0;
       const rows = live.map(b => {
         const pending = Number(b.pending) || 0;
+        const held = Number(b.held) || 0;
         const sent = Number(b.sent) || 0;
         const failed = Number(b.failed) || 0;
         const sentToday = Number(b.sent_today) || 0;
-        const total = Number(b.total) || (pending + sent + failed);
+        const total = Number(b.total) || (pending + held + sent + failed);
         const done = pending === 0;
         if (!done) position++;
         const isNext = !done && position === 1;
@@ -15681,18 +15691,31 @@ async function renderBroadcastQueueStatus() {
             onclick="moveBroadcast(${JSON.stringify(label).replace(/"/g, '&quot;')}, 1)" aria-label="Send ${escAttr(label)} later">▼</button>`;
         // A drained row only survives the filter above when it has failures, so
         // labelling it "done" would misreport a send that did not complete.
-        const rank = done
-          ? '<span style="color:var(--error);">failed</span>'
-          : (isNext ? '<span style="color:var(--gold);font-weight:700;">sending next</span>'
-                    : `<span style="color:var(--muted);">#${position} in line</span>`);
-        return `<div style="padding:.4rem .5rem;background:var(--surface);border-radius:6px;margin-bottom:.25rem;font-size:.82rem;border-left:3px solid ${isNext ? 'var(--gold)' : 'var(--border)'};">
+        // A campaign with a held remainder and nothing pending is waiting on the
+        // operator, not on quota — "failed" or "#N in line" would both misread it.
+        const waiting = held > 0 && pending === 0;
+        const rank = waiting
+          ? '<span style="color:var(--gold);font-weight:700;">held for review</span>'
+          : (done ? '<span style="color:var(--error);">failed</span>'
+                  : (isNext ? '<span style="color:var(--gold);font-weight:700;">sending next</span>'
+                            : `<span style="color:var(--muted);">#${position} in line</span>`));
+        // Metrics + release controls load per campaign, on demand — one RPC per
+        // held campaign, and only for the one the operator is actually judging.
+        const gate = held > 0
+          ? `<div data-bc-gate style="margin-top:.35rem;padding-top:.35rem;border-top:1px dashed var(--border,rgba(128,128,128,.25));">
+               <button class="btn btn-ghost" style="font-size:.72rem;padding:.2rem .5rem;"
+                 data-bc-metrics="${escAttr(label)}">Show batch results</button>
+             </div>`
+          : '';
+        return `<div style="padding:.4rem .5rem;background:var(--surface);border-radius:6px;margin-bottom:.25rem;font-size:.82rem;border-left:3px solid ${(isNext || waiting) ? 'var(--gold)' : 'var(--border)'};">
           <div style="display:flex;align-items:center;gap:.4rem;">
             <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(label)}</span>
             <span style="font-size:.72rem;white-space:nowrap;">${rank}</span>${arrows}
           </div>
           <div style="color:var(--muted);font-size:.74rem;margin-top:.15rem;">
-            ${sent} of ${total} sent (${pct}%)${done ? '' : ` · ${pending} left`}${sentToday ? ` · ${sentToday} tonight` : ''}${nights ? ` · ≈${nights} night${nights === 1 ? '' : 's'} to go` : ''}${failed ? ` · <span style="color:var(--error);">${failed} failed</span>` : ''}${when ? ` · last ${escHtml(when)}` : ''}
+            ${sent} of ${total} sent (${pct}%)${done || waiting ? '' : ` · ${pending} left`}${held ? ` · <span style="color:var(--gold);">${held} held</span>` : ''}${sentToday ? ` · ${sentToday} tonight` : ''}${nights ? ` · ≈${nights} night${nights === 1 ? '' : 's'} to go` : ''}${failed ? ` · <span style="color:var(--error);">${failed} failed</span>` : ''}${when ? ` · last ${escHtml(when)}` : ''}
           </div>
+          ${gate}
         </div>`;
       }).join('');
       sendsEl.innerHTML = rows
@@ -15702,11 +15725,89 @@ async function renderBroadcastQueueStatus() {
 
     // Per-broadcast progress lives in the list above; this line is only the
     // shared Resend quota, which is genuinely global.
-    el.innerHTML = `Shared quota today ${Number(q.used_today) || 0}/100 · next drain ≈ ${budget} emails (nightly 21:30 UTC)
+    el.innerHTML = `Shared quota today ${Number(q.used_today) || 0}/${BROADCAST_DAILY_LIMIT} · next drain ≈ ${budget} emails (nightly 21:30 UTC)
       <button class="btn btn-ghost" onclick="drainBroadcastNow()" style="font-size:.72rem;padding:.2rem .5rem;margin-left:.4rem;">Drain now</button>`;
   } catch (_) { el.innerHTML = ''; }
 }
 
+
+// Delegated, installed once. Labels are admin-authored subject lines that
+// routinely contain apostrophes ("Your watches miss you — here's a fun fact"),
+// and an inline onclick would have to survive both the HTML-attribute and the
+// nested JS-string context. Reading the label from .dataset re-enters neither.
+let _bcQueueDelegated = false;
+function installBroadcastQueueDelegation() {
+  if (_bcQueueDelegated) return;
+  _bcQueueDelegated = true;
+  document.addEventListener('click', (e) => {
+    const show = e.target.closest('[data-bc-metrics]');
+    if (show) return showBroadcastBatchMetrics(show.dataset.bcMetrics, show);
+    const rel = e.target.closest('[data-bc-release]');
+    if (rel) return releaseBroadcastRemainder(rel.dataset.bcRelease);
+    const can = e.target.closest('[data-bc-cancel]');
+    if (can) return cancelBroadcastRemainder(can.dataset.bcCancel);
+  });
+}
+
+// Batch-1 results for a held campaign, plus the two ways out of the gate.
+// No click rate: click tracking has been off since 2026-07-31, so a 0% would
+// read as "nobody clicked" rather than "not measured".
+async function showBroadcastBatchMetrics(label, btn) {
+  const gate = btn.closest('[data-bc-gate]');
+  if (!gate) return;
+  gate.innerHTML = '<span style="color:var(--muted);font-size:.74rem;">Loading…</span>';
+  let m;
+  try {
+    const { data, error } = await db.rpc('admin_broadcast_batch_metrics', { p_label: label });
+    if (error) throw error;
+    m = data || {};
+  } catch (err) {
+    gate.innerHTML = `<span style="color:var(--error);font-size:.74rem;">Could not load results: ${escHtml(err.message)}</span>`;
+    return;
+  }
+  const sent = Number(m.sent) || 0;
+  const pct = (n) => sent ? Math.round((Number(n) || 0) / sent * 100) : 0;
+  // Rates are over rows actually SENT, not over the whole audience — the held
+  // remainder hasn't had a chance to open anything.
+  const warn = (Number(m.unsubscribed) || 0) > 0 || (Number(m.bounced) || 0) > 0 || (Number(m.complained) || 0) > 0;
+  gate.innerHTML = `
+    <div style="font-size:.74rem;color:var(--muted);margin-bottom:.3rem;">
+      batch of ${sent}: ${m.delivered || 0} delivered · ${m.opened || 0} opened (${pct(m.opened)}%)
+      · <span style="${warn ? 'color:var(--gold);' : ''}">${m.unsubscribed || 0} unsubscribed</span>
+      · ${m.bounced || 0} bounced${(Number(m.complained) || 0) ? ` · <span style="color:var(--error);">${m.complained} spam complaints</span>` : ''}
+    </div>
+    <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+      <button class="btn btn-primary" style="font-size:.72rem;padding:.2rem .5rem;" data-bc-release="${escAttr(label)}">Send remaining</button>
+      <button class="btn btn-danger" style="font-size:.72rem;padding:.2rem .5rem;" data-bc-cancel="${escAttr(label)}">Cancel remaining</button>
+    </div>`;
+}
+
+// Release flips held → pending and then runs the ordinary drain, so the button
+// does what it says instead of queueing for 21:30 and looking like a no-op.
+async function releaseBroadcastRemainder(label) {
+  try {
+    const { data, error } = await db.rpc('admin_release_broadcast', { p_label: label });
+    if (error) throw error;
+    const n = Number(data?.released) || 0;
+    if (!n) { toast('Nothing held to release', 'error'); renderBroadcastQueueStatus(); return; }
+    toast(`Released ${n} — draining now`);
+    await drainBroadcastNow();
+  } catch (e) {
+    toast('Release failed: ' + e.message, 'error');
+    renderBroadcastQueueStatus();
+  }
+}
+
+async function cancelBroadcastRemainder(label) {
+  try {
+    const { data, error } = await db.rpc('admin_cancel_broadcast', { p_label: label });
+    if (error) throw error;
+    toast(`Cancelled ${Number(data?.cancelled) || 0} held recipients`);
+  } catch (e) {
+    toast('Cancel failed: ' + e.message, 'error');
+  }
+  renderBroadcastQueueStatus();
+}
 
 // Move a queued broadcast earlier (-1) or later (+1) in the drain order.
 async function moveBroadcast(label, direction) {
@@ -18018,13 +18119,47 @@ async function sendBroadcastAll() {
     ? 'ALL users'
     : (segEl?.selectedOptions?.[0]?.textContent?.trim() || segment);
   const statusEl = document.getElementById('broadcast-status');
-  statusEl.innerHTML = `<div style="display:flex;gap:.5rem;align-items:center;padding:.5rem;background:var(--surface2);border-radius:8px;" role="alertdialog" aria-label="Confirm broadcast">
-    <span style="color:var(--danger);font-weight:600;">Send to ${segmentLabel}?</span>
-    <button class="btn btn-primary btn-sm" id="broadcast-confirm-yes" onclick="confirmBroadcastAll()">Yes, send it</button>
-    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('broadcast-status').innerHTML='';document.getElementById('broadcast-send-btn').focus()">Cancel</button>
+  // Staged send is the default choice, not the exotic one: reading a first
+  // batch's opens and unsubscribes before committing the rest is the whole
+  // point of the queue. "Send to everyone" stays one radio click away.
+  statusEl.innerHTML = `<div style="padding:.5rem;background:var(--surface2);border-radius:8px;" role="alertdialog" aria-label="Confirm broadcast">
+    <div style="color:var(--danger);font-weight:600;margin-bottom:.4rem;">Send to ${escHtml(segmentLabel)}?</div>
+    <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;margin-bottom:.3rem;">
+      <input type="radio" name="bc-stage" value="batch" checked onchange="syncBroadcastStageUI()">
+      Send a first batch of
+      <input type="number" id="broadcast-first-batch" value="50" min="1" step="1"
+             style="width:4.5rem;padding:.15rem .3rem;font-size:.82rem;">
+      then hold the rest for review
+    </label>
+    <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;margin-bottom:.5rem;">
+      <input type="radio" name="bc-stage" value="all" onchange="syncBroadcastStageUI()">
+      Send to everyone now
+    </label>
+    <div style="display:flex;gap:.5rem;">
+      <button class="btn btn-primary btn-sm" id="broadcast-confirm-yes" onclick="confirmBroadcastAll()">Yes, queue it</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('broadcast-status').innerHTML='';document.getElementById('broadcast-send-btn').focus()">Cancel</button>
+    </div>
   </div>`;
+  syncBroadcastStageUI();
   // Move focus to the confirm button
   setTimeout(() => document.getElementById('broadcast-confirm-yes')?.focus(), 50);
+}
+
+// The batch-size box is meaningless under "send to everyone" — disable rather
+// than hide so the layout doesn't jump between the two choices.
+function syncBroadcastStageUI() {
+  const staged = document.querySelector('input[name="bc-stage"]:checked')?.value === 'batch';
+  const box = document.getElementById('broadcast-first-batch');
+  if (box) { box.disabled = !staged; box.style.opacity = staged ? '1' : '.45'; }
+}
+
+// null means "no staging" — the value confirmBroadcastAll() sends when the
+// operator picked "everyone", and the value send-broadcast treats as the
+// original unstaged path.
+function selectedFirstBatch() {
+  if (document.querySelector('input[name="bc-stage"]:checked')?.value !== 'batch') return null;
+  const n = parseInt(document.getElementById('broadcast-first-batch')?.value, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 async function confirmBroadcastAll() {
@@ -18033,6 +18168,8 @@ async function confirmBroadcastAll() {
   setBroadcastBtnsDisabled(true);
   const subject = document.getElementById('broadcast-subject')?.value?.trim();
   const statusEl = document.getElementById('broadcast-status');
+  // Read BEFORE the status area is overwritten — the radios live inside it.
+  const firstBatch = selectedFirstBatch();
   statusEl.innerHTML = '<span style="color:var(--gold);">Uploading images & queueing broadcast…</span>';
 
   try {
@@ -18051,12 +18188,18 @@ async function confirmBroadcastAll() {
       },
       // priority = this draft's position in Saved Drafts, so the order set
       // there decides which queued broadcast drains first.
-      body: JSON.stringify({ subject, html, enqueue: true, priority: currentDraftPriority(), segment: document.getElementById('broadcast-segment')?.value || 'all' }),
+      body: JSON.stringify({ subject, html, enqueue: true, priority: currentDraftPriority(), segment: document.getElementById('broadcast-segment')?.value || 'all', first_batch: firstBatch }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed');
-    statusEl.innerHTML = `<span style="color:var(--success);">Queued ${data.queued} recipients${data.skipped_already_queued ? ` (${data.skipped_already_queued} already queued)` : ''} — drains nightly at 21:30 UTC with leftover email quota (~80/night)</span>`;
-    toast(`Broadcast queued for ${data.queued} users`);
+    // data.held is authoritative, not firstBatch: the server holds nothing when
+    // the batch covers the whole audience, so echoing the requested number here
+    // would promise a review gate that doesn't exist.
+    const held = Number(data.held) || 0;
+    statusEl.innerHTML = held
+      ? `<span style="color:var(--success);">Queued ${data.queued} — first batch of ${data.first_batch} sends on the next drain, ${held} held for your review</span>`
+      : `<span style="color:var(--success);">Queued ${data.queued} recipients${data.skipped_already_queued ? ` (${data.skipped_already_queued} already queued)` : ''} — drains nightly at 21:30 UTC</span>`;
+    toast(held ? `First batch of ${data.first_batch} queued, ${held} held` : `Broadcast queued for ${data.queued} users`);
     renderBroadcastQueueStatus();
   } catch (e) {
     statusEl.innerHTML = `<span style="color:var(--danger);">Error: ${escHtml(e.message)}</span>`;

@@ -287,6 +287,24 @@ export function resolveBatchOutcome(
   return { sentIds: okIds, failedRows, deferredRows };
 }
 
+// ── Staged sends ──────────────────────────────────────────────────────────────
+// Split a queue insert into what goes out now and what waits for the operator's
+// go-ahead. Held rows carry status 'held', which the drain never selects (it
+// asks for 'pending'), so neither the 21:30 cron nor a manual Drain now can
+// touch them until admin_release_broadcast() flips them.
+//
+// Anything that isn't a usable positive count means "send it all" — the
+// pre-existing behaviour. That covers an omitted field, 0, a negative, a
+// non-number, and a batch at least as large as the audience: in the last case
+// holding nothing is not a degenerate staged send, it IS an unstaged send, and
+// leaving a campaign marked HELD with zero held rows would strand a "Send
+// remaining 0" button in the admin list forever.
+export function splitFirstBatch<T>(rows: T[], firstBatch: unknown): { pending: T[]; held: T[] } {
+  const n = Math.trunc(Number(firstBatch));
+  if (!Number.isFinite(n) || n <= 0 || n >= rows.length) return { pending: rows, held: [] };
+  return { pending: rows.slice(0, n), held: rows.slice(n) };
+}
+
 // UTC midnight for "today" — the Resend quota window start.
 export function utcDayStart(nowMs: number): string {
   const d = new Date(nowMs);
