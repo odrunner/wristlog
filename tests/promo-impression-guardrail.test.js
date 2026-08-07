@@ -44,18 +44,24 @@ function constSrc(name) {
   return m[0];
 }
 
-function buildLocalCounters({ currentUser, localStorage, promoSlots }) {
+// `recap` stands in for currentMonthRecap(): the local counter records a recap
+// slot's count under the recap PERIOD rather than updated_at, so the sandbox
+// needs both promoSlotEpoch() and something to return the period. Defaults to
+// null — the no-recap-in-window case, which is every one of these tests bar the
+// recap-specific ones.
+function buildLocalCounters({ currentUser, localStorage, promoSlots, recap }) {
   const src = [
     constSrc('PROMO_IMPRESSIONS_KEY'),
     fnSrc('_promoImpressionsKey'),
     fnSrc('_readLocalPromoImpressions'),
+    fnSrc('promoSlotEpoch'),
     fnSrc('_incrementLocalPromoImpression'),
   ].join('\n');
-  const factory = new Function('currentUser', 'localStorage', '_promoSlots', `
+  const factory = new Function('currentUser', 'localStorage', '_promoSlots', 'currentMonthRecap', `
     ${src}
     return { _promoImpressionsKey, _readLocalPromoImpressions, _incrementLocalPromoImpression };
   `);
-  return factory(currentUser, localStorage, promoSlots || []);
+  return factory(currentUser, localStorage, promoSlots || [], () => recap || null);
 }
 
 function buildMaybeLogPromoImpression({ promoImpressed, logPromoEvent }) {

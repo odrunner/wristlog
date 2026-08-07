@@ -48,7 +48,7 @@ const VERBATIM = [
   'fillCampaignTokens', 'unresolvedCampaignTokens',
   'shouldShowFactModal', 'pickFactModalWatch', 'shouldAttachFactOnEdit', 'showsFunFact',
   'npIdentifyWait', 'syncedIds', 'promoAudienceMatches', 'eligiblePromoSlots',
-  'promoSlotPositions', 'PROMO_AUDIENCES',
+  'promoSlotPositions', 'PROMO_AUDIENCES', 'monthRecap', 'promoSlotEpoch',
 ];
 
 const ADAPTED = [
@@ -56,6 +56,10 @@ const ADAPTED = [
   // them, so the byte-identical check can't run. tests/campaign-groups.test.js
   // asserts the two copies match instead.
   'CAMPAIGN_GROUP_LABELS', 'CAMPAIGN_FUNFACT_DRIP', 'CAMPAIGN_WINBACK_FUNFACT',
+  // Plain numbers, not {...} bodies — extractBody can't read them, so the
+  // byte-identical check can't run. tests/promo-recap.test.js asserts the two
+  // copies carry the same values instead.
+  'RECAP_WINDOW_DAYS', 'RECAP_MIN_WEARS', 'RECAP_MIN_WATCHES',
   'MSR_CARD_MIN_DOTS', 'checkContent', 'computeFriendships', 'computeRobustRate', 'computeWatchRec',
   'fmtMoney', 'formatCommentTime', 'formatFeedDate', 'getMentionQuery', 'incrSettle', 'initials',
   'isBase64', 'logToRow', 'markDirty', 'monthRevNav', 'profileInitials',

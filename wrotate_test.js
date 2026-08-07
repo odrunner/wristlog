@@ -2657,19 +2657,104 @@ export function promoAudienceMatches(key, ctx) {
 
 // Pure: `now` is injected rather than read from Date.now() so the tests are
 // deterministic and the caller controls the clock.
+// ── "Your month in review" (variant: 'recap') ────────────────────────────────
+// Spec: docs/superpowers/specs/2026-08-07-month-in-review-promo-design.md
+export const RECAP_WINDOW_DAYS = 7;
+export const RECAP_MIN_WEARS   = 5;
+export const RECAP_MIN_WATCHES = 2;
+
+export function promoSlotEpoch(slot, recap) {
+  if (slot && slot.variant === 'recap') return (recap && recap.period) || null;
+  return (slot && slot.updated_at) || null;
+}
+
+export function monthRecap({ now, logs, watches }) {
+  const d = new Date(now);
+  if (!(d.getDate() >= 1 && d.getDate() <= RECAP_WINDOW_DAYS)) return null;
+
+  let year = d.getFullYear(), month = d.getMonth() - 1;
+  if (month < 0) { month = 11; year--; }
+  const period = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const windowStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+
+  const byId = {};
+  for (const w of (watches || [])) if (w && w.id) byId[w.id] = w;
+  const mLogs = [];
+  for (const l of (logs || [])) {
+    if (!isWearEntry(l)) continue;
+    if (!l.date || String(l.date).slice(0, 7) !== period) continue;
+    if (!byId[l.watchId]) continue;
+    mLogs.push(l);
+  }
+  if (!mLogs.length) return null;
+
+  const perWatch = {};
+  const days = new Set();
+  const seen = new Set();
+  for (const l of mLogs) {
+    days.add(l.date);
+    const k = l.watchId + '|' + l.date;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    perWatch[l.watchId] = (perWatch[l.watchId] || 0) + 1;
+  }
+  const totalWears  = seen.size;
+  const uniqueCount = Object.keys(perWatch).length;
+  if (totalWears < RECAP_MIN_WEARS || uniqueCount < RECAP_MIN_WATCHES) return null;
+
+  const top = Object.keys(perWatch)
+    .sort((a, b) => perWatch[b] - perWatch[a] || (a < b ? -1 : a > b ? 1 : 0))
+    .slice(0, 3)
+    .map((watchId) => ({ watchId, count: perWatch[watchId] }));
+
+  const ucm = {};
+  for (const l of mLogs) if (l.useCase) ucm[l.useCase] = (ucm[l.useCase] || 0) + 1;
+  const topUC = Object.keys(ucm).sort((a, b) => ucm[b] - ucm[a] || (a < b ? -1 : 1))[0] || null;
+
+  const dowm = {};
+  for (const l of mLogs) {
+    const dow = new Date(l.date + 'T12:00:00').getDay();
+    dowm[dow] = (dowm[dow] || 0) + 1;
+  }
+  const topDowKey = Object.keys(dowm).sort((a, b) => dowm[b] - dowm[a] || a - b)[0];
+  const topDow = topDowKey === undefined ? null : Number(topDowKey);
+
+  return {
+    period, year, month, windowStart,
+    totalWears, wearDays: days.size, uniqueCount, top,
+    topUC, topUCWears: topUC ? ucm[topUC] : 0,
+    topDow, topDowWears: topDow === null ? 0 : dowm[topDow],
+  };
+}
+
 export function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown, localCounts }) {
   const cfg = config || {};
   if (!cfg.enabled) return [];
   if (cfg.suppress_after_modal && modalShown) return [];
 
-  const seen = {};
+  // Two counts, one pass. `seen` is the all-time count every normal slot is
+  // capped against; `seenWindow` counts only impressions inside the CURRENT
+  // recap window, which is what re-arms a recap card each month (mirrors the
+  // app — see index.html for the full rationale).
+  const recap = (ctx && ctx.recap) || null;
+  const seen = {}, seenWindow = {};
   for (const e of (events || [])) {
-    if (e.event === 'impression') seen[e.slot_id] = (seen[e.slot_id] || 0) + 1;
+    if (e.event !== 'impression') continue;
+    seen[e.slot_id] = (seen[e.slot_id] || 0) + 1;
+    const at = Date.parse(e.created_at || '');
+    if (!recap || isNaN(at) || at >= recap.windowStart) {
+      seenWindow[e.slot_id] = (seenWindow[e.slot_id] || 0) + 1;
+    }
   }
   const local = localCounts || {};
 
   return (slots || []).filter((s) => {
     if (!s) return false;
+    // A recap slot's content IS the viewer's month, so it exists only while
+    // there is one. Both the window and the volume thresholds live in
+    // monthRecap(); this stays one line, and this function stays pure.
+    const isRecap = s.variant === 'recap';
+    if (isRecap && !recap) return false;
     // Never trust RLS to have filtered status. The admin's own account matches
     // BOTH the user policy and the is_admin "for all" policy, and policies OR
     // together — so select('*') hands the owner drafts and archives too. Without
@@ -2687,13 +2772,13 @@ export function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown
     const localEpoch = (entry && typeof entry === 'object') ? (entry.e ?? null) : null;
     const localN     = (entry && typeof entry === 'object') ? (entry.n || 0)
                       : (typeof entry === 'number' ? entry : 0);
-    const slotEpoch = s.updated_at || null;
+    const slotEpoch = promoSlotEpoch(s, recap);
     const effectiveLocal = (localEpoch === slotEpoch) ? localN : 0;
     // The GREATER of the server-derived and local counts: a promo_events
     // insert that failed (and was discarded before this guardrail existed)
     // must not let the cap silently reset every new session — the local
     // mirror stays bounded even when every write this session failed.
-    const count = Math.max(seen[s.id] || 0, effectiveLocal);
+    const count = Math.max((isRecap ? seenWindow : seen)[s.id] || 0, effectiveLocal);
     return count < cap;
   }).sort((a, b) =>
     (b.priority || 0) - (a.priority || 0) ||

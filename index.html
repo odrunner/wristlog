@@ -1937,7 +1937,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
        no web fonts at all (system stack only, see body), so --promo-mono is
        the platform mono face rather than a network request on every feed
        render — same signal, no added dependency. */
-    .promo-tag, .promo-band {
+    .promo-tag, .promo-band, .promo-recap {
       --promo-gold: #8A6D1B;
       --promo-gold-deep: #6E5514;
       --promo-gold-bright: #9A7B22;
@@ -1952,13 +1952,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       --promo-cta-fg: #fff;
       --promo-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
     }
-    /* Only the tag needs a dark-theme pass: it is the one variant painted on
-       the app surface, so a fixed white card + parchment strip would be a
-       flashbang in dark mode. The band carries its own dark ground in both
+    /* The tag and the recap deck need a dark-theme pass: they are the variants
+       painted on the app surface, so a fixed white card + parchment strip would
+       be a flashbang in dark mode. The band carries its own dark ground in both
        themes and is left alone. Gold flips to the theme's lighter gold (the
        #8A6D1B ink-on-dark direction fails contrast), which in turn means the
        CTA's fill is light and its label has to become ink. */
-    [data-theme="dark"] .promo-tag {
+    [data-theme="dark"] .promo-tag, [data-theme="dark"] .promo-recap {
       --promo-gold: #C9A84C;
       --promo-gold-deep: #DBBE72;
       --promo-parchment: #1D1A12;
@@ -2120,6 +2120,125 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       font-size: 14px; font-weight: 700;
     }
     .promo-band--nudge .promo-cta:hover { background: var(--promo-gold-light); color: var(--promo-ink); }
+
+    /* ── Month in review (promo_slots.variant = 'recap') ──────────────────
+       Spec: docs/superpowers/specs/2026-08-07-month-in-review-promo-design.md
+       A swipe deck, not a document: the slides live in a scroll-snap track and
+       the only JS is syncRecapDots(). Shares the tag/band gold tokens — this
+       is the same house voice, just personalised. */
+    .promo-card.promo-recap {
+      background: var(--surface);
+      border: 1.5px solid var(--promo-line);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: none;
+    }
+    .promo-recap-head {
+      display: flex; align-items: baseline; justify-content: space-between; gap: .75rem;
+      padding: 11px 18px;
+      background: var(--promo-parchment);
+      border-bottom: 1.5px dashed var(--promo-line);
+    }
+    .promo-recap-eyebrow {
+      font-family: var(--promo-mono); font-size: 11px; font-weight: 600;
+      letter-spacing: .16em; text-transform: uppercase; color: var(--promo-gold);
+    }
+    .promo-recap-period { font-size: 13px; font-weight: 700; color: var(--promo-gold-deep); }
+
+    /* scroll-snap does the paging; no carousel JS, no gesture handler.
+       scrollbar-width/::-webkit-scrollbar hide the bar on the platforms that
+       would otherwise paint one over the last row of every slide. */
+    .promo-recap-track {
+      display: flex; overflow-x: auto; overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .promo-recap-track::-webkit-scrollbar { display: none; }
+    .promo-recap-track:focus-visible { outline: 2px solid var(--promo-gold); outline-offset: -2px; }
+    .promo-recap-slide {
+      flex: 0 0 100%; min-width: 100%; scroll-snap-align: center;
+      box-sizing: border-box; padding: 22px 18px 18px;
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+      gap: 10px; min-height: 236px; justify-content: center;
+    }
+    .promo-recap-slide-lbl {
+      font-family: var(--promo-mono); font-size: 10px; font-weight: 600;
+      letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+    }
+
+    /* Cover: the month name is the hero, so it gets the size the numbers would
+       normally take. line-height 1 keeps month and year as one block. */
+    .promo-recap-month {
+      font-size: 40px; font-weight: 800; letter-spacing: -.02em; line-height: 1;
+      color: var(--promo-gold-deep);
+    }
+    .promo-recap-year {
+      font-family: var(--promo-mono); font-size: 15px; font-weight: 600;
+      letter-spacing: .22em; color: var(--muted); margin-top: -2px;
+    }
+    .promo-recap-cover-line {
+      font-size: 15px; font-weight: 600; color: var(--text); margin-top: 6px;
+    }
+
+    .promo-recap-thumb {
+      border-radius: 50%; overflow: hidden; flex-shrink: 0;
+      background: var(--surface2);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700;
+    }
+    .promo-recap-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .promo-recap-thumb--hero   { width: 96px; height: 96px; font-size: 1.5rem; }
+    .promo-recap-thumb--podium { width: 54px; height: 54px; font-size: .82rem; }
+
+    .promo-recap-hero-name { font-size: 19px; font-weight: 800; letter-spacing: -.01em; color: var(--text); }
+    .promo-recap-hero-sub  { font-size: 13px; color: var(--muted); margin-top: -4px; }
+
+    .promo-recap-podium {
+      display: flex; align-items: flex-start; justify-content: center;
+      gap: 14px; width: 100%; margin-top: 4px;
+    }
+    .promo-recap-podium-item {
+      flex: 1 1 0; min-width: 0;
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+    }
+    .promo-recap-rank {
+      font-family: var(--promo-mono); font-size: 11px; font-weight: 600;
+      color: var(--promo-gold);
+    }
+    /* One line, ellipsised: a long model name must not make one tile twice the
+       height of its neighbours. */
+    .promo-recap-podium-name {
+      font-size: 12px; font-weight: 700; color: var(--text);
+      max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .promo-recap-podium-count { font-size: 11px; color: var(--muted); }
+
+    .promo-recap-rows { width: 100%; max-width: 260px; display: flex; flex-direction: column; gap: 2px; }
+    .promo-recap-row {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
+      padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+    }
+    .promo-recap-row:last-child { border-bottom: none; }
+    .promo-recap-row span { color: var(--muted); }
+    .promo-recap-row b { font-weight: 700; color: var(--text); }
+
+    .promo-recap-dots { display: flex; justify-content: center; gap: 6px; padding: 0 0 14px; }
+    .promo-recap-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--promo-line); transition: background .15s, transform .15s;
+    }
+    .promo-recap-dot.is-on { background: var(--promo-gold); transform: scale(1.25); }
+
+    .promo-recap-foot { padding: 0 18px 18px; }
+    .promo-recap .promo-cta {
+      width: 100%; margin: 0; background: var(--promo-gold); color: var(--promo-cta-fg);
+      border: none; border-radius: 9px; padding: 13px;
+      font-size: 15px; font-weight: 800; cursor: pointer;
+    }
+    .promo-recap .promo-cta:hover { background: var(--promo-gold-deep); }
+    /* Composer-only state (see renderRecapCard) — never reached in a feed. */
+    .promo-recap-note { padding: 16px 18px; font-size: 13px; line-height: 1.5; color: var(--muted); }
 
     /* Admin composer preview. --page-gutter: 0 keeps a band inside the preview
        box instead of bleeding out of it (the preview is inside main, which
@@ -3533,6 +3652,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div class="draft-form-row">
           <label for="promo-size">Size</label>
           <select id="promo-size" onchange="updatePromoPreview()"></select>
+        </div>
+        <!-- Month in review builds its slides from each VIEWER's own wear log,
+             so the copy fields below do nothing for it. Eyebrow and the CTA are
+             the only two it reads. -->
+        <div style="font-size:.72rem;color:var(--muted);line-height:1.45;margin:-.2rem 0 .6rem;">
+          <b>Month in review</b> ignores Heading, Body and images — it writes itself from each viewer's own wear log, and only shows on the 1st–7th of a month. It uses the Eyebrow and the CTA. Pair it with <b>Open Stats</b>.
         </div>
         <div class="draft-form-row">
           <label for="promo-eyebrow">Eyebrow (tag/band: the mono brand label — "WRotate HQ", "WRotate asks")</label>
@@ -7544,7 +7669,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.13.27';
+const APP_VERSION = '07.16.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11661,6 +11786,103 @@ function promoAudienceMatches(key, ctx) {
   return typeof fn === 'function' ? !!fn(ctx || {}) : false;
 }
 
+// ── "Your month in review" (variant: 'recap') ────────────────────────────────
+// Spec: docs/superpowers/specs/2026-08-07-month-in-review-promo-design.md
+//
+// A recap slot is an ordinary promo row whose CONTENT is the viewer's own wear
+// log rather than anything an admin typed. monthRecap() is the whole feature
+// gate: it answers "is there a month worth showing this person right now?", and
+// returning null is what keeps the card out of the feed — eligiblePromoSlots()
+// only has to ask.
+const RECAP_WINDOW_DAYS = 7;    // shown on the 1st–7th; the card can never go stale
+const RECAP_MIN_WEARS   = 5;    // below this a "review" is embarrassing, not delightful
+const RECAP_MIN_WATCHES = 2;    // one watch all month is a slide, not a story
+
+// The epoch a local impression count is recorded under. For a normal slot that
+// is updated_at, which is what makes the admin's "Reset impressions" re-arm the
+// card on every device. A recap slot re-arms itself every month instead, so its
+// epoch is the recap PERIOD — last month's count must not bound this month's
+// card, and no admin action should be required to make that true.
+function promoSlotEpoch(slot, recap) {
+  if (slot && slot.variant === 'recap') return (recap && recap.period) || null;
+  return (slot && slot.updated_at) || null;
+}
+
+// Pure: `now` is injected, same reason as eligiblePromoSlots() below.
+// Returns null when there is no recap to show — out of window, or too thin a
+// month. Callers treat null as "this card does not exist".
+function monthRecap({ now, logs, watches }) {
+  const d = new Date(now);
+  if (!(d.getDate() >= 1 && d.getDate() <= RECAP_WINDOW_DAYS)) return null;
+
+  // The month that just ENDED, and the start of the window we are in. Both
+  // read in local time: "the first week of the month" is a wall-clock idea, and
+  // windowStart is compared against promo_events timestamps to scope the cap.
+  let year = d.getFullYear(), month = d.getMonth() - 1;
+  if (month < 0) { month = 11; year--; }
+  const period = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const windowStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+
+  // Same three rules as renderMonthlyReview(): a measurement share is not a
+  // wear, a log for a watch no longer in the collection does not count, and a
+  // watch worn twice in one day counts once.
+  const byId = {};
+  for (const w of (watches || [])) if (w && w.id) byId[w.id] = w;
+  const mLogs = [];
+  for (const l of (logs || [])) {
+    if (!isWearEntry(l)) continue;
+    if (!l.date || String(l.date).slice(0, 7) !== period) continue;
+    if (!byId[l.watchId]) continue;
+    mLogs.push(l);
+  }
+  if (!mLogs.length) return null;
+
+  const perWatch = {};
+  const days = new Set();
+  const seen = new Set();
+  for (const l of mLogs) {
+    days.add(l.date);
+    const k = l.watchId + '|' + l.date;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    perWatch[l.watchId] = (perWatch[l.watchId] || 0) + 1;
+  }
+  const totalWears  = seen.size;
+  const uniqueCount = Object.keys(perWatch).length;
+  if (totalWears < RECAP_MIN_WEARS || uniqueCount < RECAP_MIN_WATCHES) return null;
+
+  // Count desc, then watchId asc. The Stats card's tie-break is Object.keys()
+  // insertion order — i.e. arbitrary; a pure function under test needs one that
+  // isn't.
+  const top = Object.keys(perWatch)
+    .sort((a, b) => perWatch[b] - perWatch[a] || (a < b ? -1 : a > b ? 1 : 0))
+    .slice(0, 3)
+    .map((watchId) => ({ watchId, count: perWatch[watchId] }));
+
+  // Use case and day-of-week read RAW rows, NOT the deduped set — matching
+  // renderMonthlyReview()'s own asymmetry on purpose. The recap and the Stats
+  // card sit one tap apart and get compared; agreeing with the shipped card
+  // matters more than internal tidiness.
+  const ucm = {};
+  for (const l of mLogs) if (l.useCase) ucm[l.useCase] = (ucm[l.useCase] || 0) + 1;
+  const topUC = Object.keys(ucm).sort((a, b) => ucm[b] - ucm[a] || (a < b ? -1 : 1))[0] || null;
+
+  const dowm = {};
+  for (const l of mLogs) {
+    const dow = new Date(l.date + 'T12:00:00').getDay();
+    dowm[dow] = (dowm[dow] || 0) + 1;
+  }
+  const topDowKey = Object.keys(dowm).sort((a, b) => dowm[b] - dowm[a] || a - b)[0];
+  const topDow = topDowKey === undefined ? null : Number(topDowKey);
+
+  return {
+    period, year, month, windowStart,
+    totalWears, wearDays: days.size, uniqueCount, top,
+    topUC, topUCWears: topUC ? ucm[topUC] : 0,
+    topDow, topDowWears: topDow === null ? 0 : dowm[topDow],
+  };
+}
+
 // Pure: `now` is injected rather than read from Date.now() so the tests are
 // deterministic and the caller controls the clock.
 function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown, localCounts }) {
@@ -11668,14 +11890,33 @@ function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown, local
   if (!cfg.enabled) return [];
   if (cfg.suppress_after_modal && modalShown) return [];
 
-  const seen = {};
+  // Two counts, one pass. `seen` is the all-time count every normal slot is
+  // capped against. `seenWindow` counts only impressions inside the CURRENT
+  // recap window, which is what lets a recap card re-arm itself on the 1st of
+  // every month: an all-time count would retire it permanently after the first
+  // month, and nothing would ever bring it back without an admin reset.
+  const recap = (ctx && ctx.recap) || null;
+  const seen = {}, seenWindow = {};
   for (const e of (events || [])) {
-    if (e.event === 'impression') seen[e.slot_id] = (seen[e.slot_id] || 0) + 1;
+    if (e.event !== 'impression') continue;
+    seen[e.slot_id] = (seen[e.slot_id] || 0) + 1;
+    // An event with no parsable created_at counts as INSIDE the window. Failing
+    // open the other way would uncap the card for anyone whose rows predate the
+    // column being selected.
+    const at = Date.parse(e.created_at || '');
+    if (!recap || isNaN(at) || at >= recap.windowStart) {
+      seenWindow[e.slot_id] = (seenWindow[e.slot_id] || 0) + 1;
+    }
   }
   const local = localCounts || {};
 
   return (slots || []).filter((s) => {
     if (!s) return false;
+    // A recap slot's content IS the viewer's month, so it exists only while
+    // there is one. Both the first-week window and the volume thresholds live
+    // in monthRecap(); this stays one line, and this function stays pure.
+    const isRecap = s.variant === 'recap';
+    if (isRecap && !recap) return false;
     // Never trust RLS to have filtered status. The admin's own account matches
     // BOTH the user policy and the is_admin "for all" policy, and policies OR
     // together — so select('*') hands the owner drafts and archives too. Without
@@ -11699,13 +11940,13 @@ function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown, local
     const localEpoch = (entry && typeof entry === 'object') ? (entry.e ?? null) : null;
     const localN     = (entry && typeof entry === 'object') ? (entry.n || 0)
                       : (typeof entry === 'number' ? entry : 0);
-    const slotEpoch = s.updated_at || null;
+    const slotEpoch = promoSlotEpoch(s, recap);
     const effectiveLocal = (localEpoch === slotEpoch) ? localN : 0;
     // The GREATER of the server-derived and local counts: a promo_events
     // insert that failed (and was discarded before this guardrail existed)
     // must not let the cap silently reset every new session — the local
     // mirror stays bounded even when every write this session failed.
-    const count = Math.max(seen[s.id] || 0, effectiveLocal);
+    const count = Math.max((isRecap ? seenWindow : seen)[s.id] || 0, effectiveLocal);
     return count < cap;
   }).sort((a, b) =>
     (b.priority || 0) - (a.priority || 0) ||
@@ -11819,6 +12060,7 @@ const PROMO_ACTIONS = {
   open_wishlist:      () => nav(document.querySelector('nav button[data-page="wishlist"]')),
   open_collection:    () => nav(document.querySelector('nav button[data-page="collection"]')),
   open_track:         () => nav(document.querySelector('nav button[data-page="track"]')),
+  open_stats:         () => nav(document.querySelector('nav button[data-page="stats"]')),
   open_measure:       () => nav(document.getElementById('nav-measure-btn')),
   open_clubs:         () => showClubsPage(),
   open_discover:      () => openDiscover(),
@@ -11908,6 +12150,7 @@ const PROMO_VARIANT_LABELS = {
   classic: 'Classic card — hero image, rich body',
   tag:     'Caseback tag — nudges, tips, small announcements',
   band:    'Full-bleed band — surveys, big announcements',
+  recap:   'Month in review — automated, personal (copy fields ignored)',
 };
 const PROMO_SIZE_LABELS = {
   prompt: 'Prompt — headline, body and a full-width CTA',
@@ -11926,6 +12169,141 @@ function promoSizeOf(slot) {
   const s = slot && slot.size;
   return (typeof s === 'string' && Object.prototype.hasOwnProperty.call(PROMO_SIZE_LABELS, s))
     ? s : 'prompt';
+}
+
+// ── The 'recap' variant's markup ─────────────────────────────────────────────
+// Everything here reads the VIEWER's own collection, so the slot row only
+// contributes its id, eyebrow and CTA. Split out of renderPromoCard() because
+// it is the one variant with real content logic rather than a template.
+
+// Same thumbnail rule as the By Day of Week card: the watch's own picture, or
+// the initials-on-colour avatar. A collection with no photos still reads.
+function recapThumb(w, cls) {
+  if (!w) return `<div class="promo-recap-thumb ${cls}" aria-hidden="true"></div>`;
+  if (w.image) {
+    return `<div class="promo-recap-thumb ${cls}"><img loading="lazy" src="${escAttr(w.image)}" alt="" onerror="this.style.display='none'"></div>`;
+  }
+  const bg = w.color || '#c9a84c';
+  return `<div class="promo-recap-thumb ${cls} promo-recap-thumb--initials" style="background:${escAttr(bg)};color:${escAttr(initialsTextColor(bg))}">${escHtml(initials(w.brand || '', w.name || ''))}</div>`;
+}
+
+function renderRecapCard(slot, idAttrs, hasCta, ctaText) {
+  installPromoRecapScrollSync();
+  const recap = currentMonthRecap();
+  const label = escHtml(slot.eyebrow || 'Your month in review');
+  const cta = hasCta
+    ? `<button type="button" class="promo-cta" data-promo-cta>${ctaText}</button>` : '';
+
+  // Only the admin composer's live preview can land here — eligiblePromoSlots()
+  // drops a recap slot for the whole of the rest of the year, so the feed never
+  // renders one without data. A note explaining WHY beats an empty preview box,
+  // and returning '' would be worse still: injectPromoCards() would spend the
+  // session budget on a card with no DOM.
+  if (!recap) {
+    return `<div class="promo-card promo-recap promo-recap--empty" ${idAttrs}>
+      <div class="promo-recap-head"><span class="promo-recap-eyebrow">${label}</span></div>
+      <div class="promo-recap-note">Nothing to show right now. This card appears on the 1st–${RECAP_WINDOW_DAYS}th of a month, recapping the month just gone, and only once that month has ${RECAP_MIN_WEARS}+ wears across ${RECAP_MIN_WATCHES}+ watches.</div>
+    </div>`;
+  }
+
+  const DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const monthName = new Date(recap.year, recap.month, 1)
+    .toLocaleDateString('en-US', { month: 'long' });
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : (many || one + 's')}`;
+  const wOf = (id) => (watches || []).find((w) => w && w.id === id) || null;
+  const top = recap.top.map((t) => ({ ...t, w: wOf(t.watchId) }));
+  const hero = top[0];
+
+  const slides = [];
+
+  slides.push(`<div class="promo-recap-slide promo-recap-cover">
+    <div class="promo-recap-month">${escHtml(monthName)}</div>
+    <div class="promo-recap-year">${recap.year}</div>
+    <div class="promo-recap-cover-line">${plural(recap.totalWears, 'wear')} · ${plural(recap.uniqueCount, 'watch', 'watches')} · ${plural(recap.wearDays, 'day')}</div>
+  </div>`);
+
+  if (hero && hero.w) {
+    slides.push(`<div class="promo-recap-slide">
+      <div class="promo-recap-slide-lbl">Most worn</div>
+      ${recapThumb(hero.w, 'promo-recap-thumb--hero')}
+      <div class="promo-recap-hero-name">${escHtml(hero.w.name || '')}</div>
+      <div class="promo-recap-hero-sub">${escHtml(hero.w.brand || '')}${hero.w.brand ? ' · ' : ''}${plural(hero.count, 'wear')}</div>
+    </div>`);
+  }
+
+  // The ≥2-watches gate guarantees a second tile; the third is there or it
+  // isn't, and the row simply renders shorter rather than showing a blank.
+  const podium = top.filter((t) => t.w);
+  if (podium.length >= 2) {
+    slides.push(`<div class="promo-recap-slide">
+      <div class="promo-recap-slide-lbl">Your top ${podium.length === 2 ? 'two' : 'three'}</div>
+      <div class="promo-recap-podium">${podium.map((t, i) => `
+        <div class="promo-recap-podium-item">
+          <div class="promo-recap-rank">${i + 1}</div>
+          ${recapThumb(t.w, 'promo-recap-thumb--podium')}
+          <div class="promo-recap-podium-name">${escHtml(t.w.name || '')}</div>
+          <div class="promo-recap-podium-count">${plural(t.count, 'wear')}</div>
+        </div>`).join('')}</div>
+    </div>`);
+  }
+
+  const rows = [`<div class="promo-recap-row"><span>Days logged</span><b>${recap.wearDays}</b></div>`];
+  if (recap.topDow !== null) {
+    rows.push(`<div class="promo-recap-row"><span>Busiest day</span><b>${DOW[recap.topDow]}</b></div>`);
+  }
+  if (recap.topUC) {
+    const uc = recap.topUC.charAt(0).toUpperCase() + recap.topUC.slice(1);
+    rows.push(`<div class="promo-recap-row"><span>Top use case</span><b>${escHtml(uc)}</b></div>`);
+  }
+  slides.push(`<div class="promo-recap-slide">
+    <div class="promo-recap-slide-lbl">Your rhythm</div>
+    <div class="promo-recap-rows">${rows.join('')}</div>
+  </div>`);
+
+  // aria-label is applied here rather than inline above so "n of N" knows the
+  // final count — slides 2 and 3 are conditional.
+  const track = slides.map((html, i) =>
+    html.replace('<div class="promo-recap-slide',
+      `<div role="group" aria-label="${i + 1} of ${slides.length}" class="promo-recap-slide`)
+  ).join('');
+  const dots = slides.map((_, i) =>
+    `<span class="promo-recap-dot${i === 0 ? ' is-on' : ''}" data-recap-dot aria-hidden="true"></span>`).join('');
+
+  return `<div class="promo-card promo-recap" ${idAttrs}>
+    <div class="promo-recap-head">
+      <span class="promo-recap-eyebrow">${label}</span>
+      <span class="promo-recap-period">${escHtml(monthName)} ${recap.year}</span>
+    </div>
+    <div class="promo-recap-track" data-recap-track tabindex="0">${track}</div>
+    <div class="promo-recap-dots">${dots}</div>
+    ${cta ? `<div class="promo-recap-foot">${cta}</div>` : ''}
+  </div>`;
+}
+
+// Lights the dot for whichever slide is snapped. Installed once, in the CAPTURE
+// phase, because scroll events do not bubble — same one-listener-for-every-card
+// approach as installPromoClickDelegation(), and it survives the innerHTML
+// re-renders that would drop a directly-bound handler.
+let _promoRecapScrollBound = false;
+function installPromoRecapScrollSync() {
+  if (_promoRecapScrollBound) return;
+  _promoRecapScrollBound = true;
+  document.addEventListener('scroll', (e) => {
+    const t = e.target;
+    if (!t || typeof t.closest !== 'function') return;   // document/window scrolls
+    const track = t.closest('[data-recap-track]');
+    if (track) syncRecapDots(track);
+  }, true);
+}
+
+function syncRecapDots(track) {
+  const card = track.closest('.promo-recap');
+  if (!card) return;
+  const dots = card.querySelectorAll('[data-recap-dot]');
+  const w = track.clientWidth;
+  if (!dots.length || !w) return;
+  const i = Math.min(dots.length - 1, Math.max(0, Math.round(track.scrollLeft / w)));
+  dots.forEach((d, n) => d.classList.toggle('is-on', n === i));
 }
 
 function renderPromoCard(slot) {
@@ -11949,6 +12327,8 @@ function renderPromoCard(slot) {
   // tracking, the click handler and injectPromoCards()'s DOM bookkeeping are
   // identical no matter which treatment an admin picked.
   const idAttrs = `id="promocard-${escAttr(slot.id)}" data-promo-id="${escAttr(slot.id)}"`;
+
+  if (variant === 'recap') return renderRecapCard(slot, idAttrs, hasCta, ctaText);
 
   if (variant === 'tag') {
     // The eyebrow field doubles as the mono brand label here; it is the
@@ -12133,7 +12513,32 @@ function promoCtx() {
       ? Math.floor((Date.now() - Date.parse(myProfile.created_at)) / 86400000) : 0,
     isIos:          !!window._iosAppVersion,
     isInternal:     _promoIsInternal,
+    // Null except in the first week of a month with a month worth showing —
+    // eligiblePromoSlots() reads it as the whole existence gate for a recap
+    // slot, and renderPromoCard() reads it for the slides.
+    recap:          currentMonthRecap(),
   };
+}
+
+// monthRecap() over the in-memory log array, memoised for the caller's sake:
+// promoCtx() runs on every injectPromoCards() pass (a feed re-render, an
+// appended page, a block/report reload) and the scan is O(logs), which is
+// thousands of rows for a long-standing account.
+//
+// The key is the calendar day plus the log count, so the memo drops at midnight
+// (the window and the period both move) and after any wear is logged or
+// deleted. A backdated edit that leaves the count unchanged can serve a stale
+// recap for the rest of the session — one render of a slightly-off number,
+// against re-scanning the whole array on every pass. Cleared on account switch
+// with the rest of the promo state; two accounts must never share one.
+let _promoRecapMemo = null;
+function currentMonthRecap() {
+  const now = Date.now();
+  const key = new Date(now).toDateString() + '|' + (logs || []).length;
+  if (_promoRecapMemo && _promoRecapMemo.key === key) return _promoRecapMemo.value;
+  const value = monthRecap({ now, logs, watches });
+  _promoRecapMemo = { key, value };
+  return value;
 }
 
 // Non-fatal by design: a broken promo fetch must never degrade the feed.
@@ -12145,7 +12550,10 @@ async function loadPromoSlots() {
       // Belt and braces alongside the status check in eligiblePromoSlots():
       // for the admin's own account RLS returns drafts and archives too.
       db.from('promo_slots').select('*').eq('status', 'active'),
-      db.from('promo_events').select('slot_id,event').eq('user_id', currentUser.id),
+      // created_at is what scopes a recap slot's impression cap to the current
+      // month (see eligiblePromoSlots) — without it every recap impression ever
+      // logged counts, and the card retires after its first month.
+      db.from('promo_events').select('slot_id,event,created_at').eq('user_id', currentUser.id),
       // internal_accounts is the single source of truth (CLAUDE.md — never
       // hardcode account ids). A membership check, not a full-table fetch;
       // promoCtx() is synchronous so this can't run there.
@@ -12202,7 +12610,7 @@ function _incrementLocalPromoImpression(slotId) {
   try {
     const counts = _readLocalPromoImpressions();
     const slot = (_promoSlots || []).find((s) => s && s.id === slotId);
-    const epoch = slot ? (slot.updated_at || null) : null;
+    const epoch = promoSlotEpoch(slot, currentMonthRecap());
     const prev = counts[slotId];
     const prevEpoch = (prev && typeof prev === 'object') ? (prev.e ?? null) : null;
     const prevN     = (prev && typeof prev === 'object') ? (prev.n || 0)
@@ -12227,7 +12635,9 @@ function logPromoEvent(slotId, event) {
       if (error) console.warn('[promo] event insert failed:', slotId, event, error.message);
     })
     .catch((e) => console.warn('[promo] event insert failed:', slotId, event, e && e.message));
-  _promoEvents.push({ slot_id: slotId, event });
+  // created_at mirrors what the row will carry server-side, so the optimistic
+  // entry lands inside the current recap window like the real one does.
+  _promoEvents.push({ slot_id: slotId, event, created_at: new Date().toISOString() });
   // Only impressions count against max_impressions — clicks cap nothing.
   if (event === 'impression') _incrementLocalPromoImpression(slotId);
 }
@@ -19029,7 +19439,7 @@ const PROMO_AUDIENCE_LABELS = {
 };
 const PROMO_ACTION_LABELS = {
   '': 'No button', open_wishlist: 'Open Wishlist', open_collection: 'Open Collection',
-  open_track: 'Open Track', open_measure: 'Open Measure', open_clubs: 'Open Clubs',
+  open_track: 'Open Track', open_stats: 'Open Stats', open_measure: 'Open Measure', open_clubs: 'Open Clubs',
   open_discover: 'Open Discover', open_ranking_game: 'Start the ranking game',
   'url:': 'Custom URL (https only)',
   'feedback:': 'Open feedback form',
@@ -27437,6 +27847,7 @@ function clearUserState() {
   _promoSlotPositionMemo = {};   // stale positions must not survive an account switch
   _promoSlots = []; _promoEvents = []; _promoConfig = null;
   _promoIsInternal = false;      // re-evaluated for whoever signs in next
+  _promoRecapMemo = null;        // A's month must never render in B's feed
   if (_promoObserver) { _promoObserver.disconnect(); _promoObserver = null; } // disconnect, not just drop — A's nodes stay registered otherwise
   window._modalShownThisSession = false;
   feedLoading = false; _feedLoadStartedAt = 0; feedError = false; feedLoadedAt = 0; _clubsLoaded = false; _frLoadedAt = 0;
