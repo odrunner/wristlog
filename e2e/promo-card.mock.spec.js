@@ -184,3 +184,156 @@ test.describe('renderPromoCard', () => {
     expect(noThrow).toBe(true);
   });
 });
+
+// ── Variants ─────────────────────────────────────────────────────────────
+// promo_slots.variant + .size pick the treatment. The contract that matters
+// beyond looks: EVERY variant keeps the same id + delegation hooks (so
+// impression tracking, the click handler and injectPromoCards()'s bookkeeping
+// are variant-blind), escapes the heading, and falls back to the classic card
+// for anything unrecognized — which is what every row written before these
+// columns existed is.
+test.describe('renderPromoCard variants', () => {
+  const dom = (page, slot) => page.evaluate((s) => {
+    const host = document.createElement('div');
+    host.innerHTML = window.renderPromoCard(s);
+    const card = host.firstElementChild;
+    return {
+      classes: card.className,
+      hasHero: !!card.querySelector('.promo-card-hero'),
+      hasClassicHeader: !!card.querySelector('.promo-card-header'),
+      hasStrip: !!card.querySelector('.promo-tag-strip'),
+      hasDot: !!card.querySelector('.promo-tag-dot'),
+      notches: card.querySelectorAll('.promo-tag-notch').length,
+      hasWatermark: !!card.querySelector('.promo-band-mark'),
+      hasRule: !!card.querySelector('.promo-band-rule'),
+      eyebrow: (card.querySelector('.promo-tag-eyebrow, .promo-band-eyebrow, .promo-eyebrow') || {}).textContent || '',
+      heading: (card.querySelector('.promo-heading') || {}).textContent || '',
+      headingChildren: (card.querySelector('.promo-heading') || { children: [] }).children.length,
+      promoId: card.dataset.promoId,
+      ctaClasses: (card.querySelector('[data-promo-cta]') || {}).className ?? null,
+    };
+  }, slot);
+
+  test('no variant renders the classic card — every pre-existing row', async ({ page }) => {
+    await page.goto('/');
+    const out = await dom(page, SLOT);
+    expect(out.classes).toBe('promo-card');
+    expect(out.hasClassicHeader).toBe(true);
+    expect(out.hasHero).toBe(true);
+    expect(out.hasStrip).toBe(false);
+  });
+
+  test('an unrecognized or prototype-shaped variant falls back to classic', async ({ page }) => {
+    await page.goto('/');
+    for (const variant of ['not_a_variant', '__proto__', 'constructor', 'hasOwnProperty', '', null]) {
+      const out = await dom(page, { ...SLOT, variant });
+      expect(out.classes, `variant ${variant}`).toBe('promo-card');
+      expect(out.hasClassicHeader, `variant ${variant}`).toBe(true);
+    }
+    // Same guard on size: an unknown size renders the prompt layout, and the
+    // tag's nudge-only bits (no brand dot) must not leak in.
+    const out = await dom(page, { ...SLOT, variant: 'tag', size: '__proto__' });
+    expect(out.classes).toContain('promo-tag--prompt');
+    expect(out.hasDot).toBe(true);
+  });
+
+  test('tag/prompt renders the perforated strip, both notches and the hero', async ({ page }) => {
+    await page.goto('/');
+    const out = await dom(page, { ...SLOT, variant: 'tag', size: 'prompt' });
+    expect(out.classes).toContain('promo-tag');
+    expect(out.classes).toContain('promo-tag--prompt');
+    expect(out.hasStrip).toBe(true);
+    expect(out.hasDot).toBe(true);
+    expect(out.notches).toBe(2);
+    expect(out.hasClassicHeader).toBe(false);
+    expect(out.hasHero).toBe(true);
+    expect(out.heading).toBe('Rank your collection');
+  });
+
+  test('tag/nudge drops the brand dot and keeps the strip', async ({ page }) => {
+    await page.goto('/');
+    const out = await dom(page, { ...SLOT, variant: 'tag', size: 'nudge' });
+    expect(out.classes).toContain('promo-tag--nudge');
+    expect(out.hasStrip).toBe(true);
+    expect(out.hasDot).toBe(false);
+    expect(out.notches).toBe(2);
+  });
+
+  test('band/prompt renders the tick rule and watermark, and never a hero', async ({ page }) => {
+    await page.goto('/');
+    const out = await dom(page, { ...SLOT, variant: 'band', size: 'prompt' });
+    expect(out.classes).toContain('promo-band--prompt');
+    expect(out.hasRule).toBe(true);
+    expect(out.hasWatermark).toBe(true);
+    // SLOT carries a valid https image_url — the band still shows no hero.
+    expect(out.hasHero).toBe(false);
+  });
+
+  test('band/nudge is the compact bar — no gradient furniture', async ({ page }) => {
+    await page.goto('/');
+    const out = await dom(page, { ...SLOT, variant: 'band', size: 'nudge' });
+    expect(out.classes).toContain('promo-band--nudge');
+    expect(out.hasWatermark).toBe(false);
+    expect(out.hasRule).toBe(false);
+  });
+
+  test('an empty eyebrow falls back to the house label, a set one wins', async ({ page }) => {
+    await page.goto('/');
+    expect((await dom(page, { ...SLOT, variant: 'tag', eyebrow: '' })).eyebrow).toBe('WRotate HQ');
+    expect((await dom(page, { ...SLOT, variant: 'band', eyebrow: '' })).eyebrow).toBe('WRotate');
+    expect((await dom(page, { ...SLOT, variant: 'band', eyebrow: 'WRotate asks' })).eyebrow).toBe('WRotate asks');
+  });
+
+  test('every variant escapes the heading and keeps the delegation hooks', async ({ page }) => {
+    await page.goto('/');
+    for (const variant of ['classic', 'tag', 'band']) {
+      for (const size of ['prompt', 'nudge']) {
+        const out = await dom(page, {
+          ...SLOT, variant, size, id: 'p1', heading: '<img src=x onerror=alert(1)>',
+        });
+        expect(out.heading, `${variant}/${size}`).toBe('<img src=x onerror=alert(1)>');
+        expect(out.headingChildren, `${variant}/${size}`).toBe(0);
+        expect(out.promoId, `${variant}/${size}`).toBe('p1');
+        expect(out.ctaClasses, `${variant}/${size}`).toContain('promo-cta');
+      }
+    }
+  });
+
+  test('a CTA click runs the action in every variant', async ({ page }) => {
+    await page.goto('/');
+    for (const variant of ['classic', 'tag', 'band']) {
+      const opened = await page.evaluate(([s, v]) => {
+        window.logPromoEvent = () => {};
+        let url = null;
+        window.open = (u) => { url = u; };
+        _promoSlots = [{ ...s, id: 'cta-' + v, variant: v, cta_action: 'url:https://wrotate.com/open' }];
+        document.body.insertAdjacentHTML('afterbegin', window.renderPromoCard(_promoSlots[0]));
+        document.querySelector('[data-promo-cta]').click();
+        document.querySelector('[data-promo-id]').remove();
+        return url;
+      }, [SLOT, variant]);
+      expect(opened, variant).toBe('https://wrotate.com/open');
+    }
+  });
+
+  test('the band cancels the page gutter; the tag keeps the card inset', async ({ page }) => {
+    await page.goto('/');
+    const margins = await page.evaluate((s) => {
+      const feed = document.getElementById('feed-list');
+      const read = (variant) => {
+        feed.insertAdjacentHTML('beforeend', window.renderPromoCard({ ...s, id: 'm-' + variant, variant }));
+        const el = document.getElementById('promocard-m-' + variant);
+        const cs = getComputedStyle(el);
+        const out = { left: parseFloat(cs.marginLeft), radius: cs.borderTopLeftRadius };
+        el.remove();
+        return out;
+      };
+      return { band: read('band'), tag: read('tag') };
+    }, SLOT);
+    // Negative margin = full-bleed: it eats main's horizontal padding.
+    expect(margins.band.left).toBeLessThan(0);
+    expect(margins.band.radius).toBe('0px');
+    expect(margins.tag.left).toBe(0);
+    expect(margins.tag.radius).toBe('14px');
+  });
+});

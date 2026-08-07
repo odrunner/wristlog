@@ -354,7 +354,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .username-status.invalid { color: var(--danger); }
 
     /* ── LAYOUT ── */
-    main { max-width: 1160px; margin: 0 auto; padding: 1.75rem 1.25rem; }
+    /* --page-gutter mirrors main's horizontal padding so a full-bleed child
+       (.promo-band) can cancel exactly that much with a negative margin
+       instead of hardcoding a value that drifts when this padding changes.
+       Kept in sync in the mobile override below. */
+    main { max-width: 1160px; margin: 0 auto; padding: 1.75rem 1.25rem; --page-gutter: 1.25rem; }
     .page { display: none; }
     .page.active { display: block; }
 
@@ -1593,7 +1597,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       .nav-icon svg { width: 22px; height: 22px; }
 
       /* Main: pad bottom for tab bar */
-      main { padding: 1.1rem .85rem 92px; }
+      main { padding: 1.1rem .85rem 92px; --page-gutter: .85rem; }
 
       /* Modals: centered on mobile with side margins */
       .overlay { align-items: center; padding: 1rem; overflow-x: hidden; }
@@ -1915,6 +1919,216 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .promo-body img { max-width: 100%; height: auto; border-radius: var(--radius-sm); margin: .5rem 0; }
     .promo-body a { color: var(--badge-accent); }
     .promo-cta { width: 100%; margin-top: .85rem; }
+
+    /* ── Promo card variants (promo_slots.variant + .size) ────────────────
+       Spec: docs/superpowers/specs/2026-08-07-promo-card-variants-design.md
+       Two author-selected treatments that sit ALONGSIDE the classic card
+       above, which stays the default — a slot with no variant (every row that
+       existed before this feature) renders exactly as it did.
+         tag  — caseback tag: its silhouette (14px radius, hairline gold
+                border, perforated header, notched edges, no shadow) is the
+                differentiator from a user post's soft rounded rect.
+         band — full-bleed gold band: cancels the page gutter so it breaks the
+                card grid entirely. For surveys and big announcements.
+       Each comes in a `prompt` (headline + body + CTA) and a `nudge`
+       (one line + inline CTA) size.
+
+       The mock specifies IBM Plex Mono for the brand eyebrow. This app loads
+       no web fonts at all (system stack only, see body), so --promo-mono is
+       the platform mono face rather than a network request on every feed
+       render — same signal, no added dependency. */
+    .promo-tag, .promo-band {
+      --promo-gold: #8A6D1B;
+      --promo-gold-deep: #6E5514;
+      --promo-gold-bright: #9A7B22;
+      --promo-gold-light: #C8A33A;
+      --promo-parchment: #F3EFE1;
+      --promo-line: #D9C48A;
+      --promo-sand: #F0E2B4;
+      --promo-band-body: #EEE3C6;
+      --promo-ink: #1B1712;
+      --promo-ink-2: #A9A196;
+      --promo-quiet: #6B6478;
+      --promo-cta-fg: #fff;
+      --promo-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+    }
+    /* Only the tag needs a dark-theme pass: it is the one variant painted on
+       the app surface, so a fixed white card + parchment strip would be a
+       flashbang in dark mode. The band carries its own dark ground in both
+       themes and is left alone. Gold flips to the theme's lighter gold (the
+       #8A6D1B ink-on-dark direction fails contrast), which in turn means the
+       CTA's fill is light and its label has to become ink. */
+    [data-theme="dark"] .promo-tag {
+      --promo-gold: #C9A84C;
+      --promo-gold-deep: #DBBE72;
+      --promo-parchment: #1D1A12;
+      --promo-line: rgba(201,168,76,.34);
+      --promo-quiet: var(--muted);
+      --promo-cta-fg: #1B1712;
+    }
+
+    /* ── Variant A — caseback tag ── */
+    .promo-card.promo-tag {
+      background: var(--surface);
+      border: 1.5px solid var(--promo-line);
+      border-radius: 14px;                 /* user posts are 16px+ */
+      box-shadow: none;                    /* the shadow is a post's cue */
+    }
+    .promo-tag-strip {
+      display: flex; align-items: center; gap: 9px;
+      padding: 11px 18px;
+      background: var(--promo-parchment);
+      border-bottom: 1.5px dashed var(--promo-line);
+    }
+    .promo-tag-dot {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 2px solid var(--promo-gold);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; box-sizing: border-box;
+    }
+    .promo-tag-dot::after {
+      content: ''; width: 4px; height: 4px; border-radius: 50%;
+      background: var(--promo-gold);
+    }
+    .promo-tag-eyebrow {
+      font-family: var(--promo-mono);
+      font-size: 11px; font-weight: 600; line-height: 18px;
+      letter-spacing: .16em; text-transform: uppercase;
+      color: var(--promo-gold);
+    }
+    /* The notches must read as a bite out of the card edge, centred on the
+       perforation. Strip height is 11 + 18 + 11 = 40px (the eyebrow's
+       line-height is pinned to the dot's 18px precisely so the strip cannot
+       grow with the font), so a 14px circle centres at top: 33px. Change the
+       strip padding and this offset has to move with it — see the nudge
+       override below. The fill must equal the FEED background, not the card's,
+       or the bite looks like a sticker. */
+    .promo-tag-notch {
+      position: absolute; top: 33px; width: 14px; height: 14px;
+      border-radius: 50%; box-sizing: border-box;
+      background: var(--bg);
+      border: 1.5px solid var(--promo-line);
+    }
+    .promo-tag-notch--l { left: -8px; }
+    .promo-tag-notch--r { right: -8px; }
+    .promo-tag-body { padding: 20px 18px; display: flex; flex-direction: column; gap: 13px; }
+    /* Gap owns the spacing in both variants, so the classic .promo-heading
+       margin is zeroed rather than doubling up with it. */
+    .promo-tag .promo-heading {
+      font-size: 21px; font-weight: 800; letter-spacing: -.01em;
+      color: var(--text); margin: 0;
+    }
+    .promo-tag .promo-body {
+      font-size: 15px; line-height: 1.5; color: var(--promo-quiet);
+      text-wrap: pretty;
+    }
+    .promo-tag .promo-cta, .promo-band .promo-cta {
+      font-family: inherit; border: 0; cursor: pointer;
+      width: auto; margin: 0; transition: background .15s, color .15s;
+    }
+    .promo-tag--prompt .promo-cta {
+      width: 100%; display: block; padding: 13px; border-radius: 9px;
+      background: var(--promo-gold); color: var(--promo-cta-fg);
+      font-size: 15px; font-weight: 800;
+    }
+    .promo-tag--prompt .promo-cta:hover { background: var(--promo-gold-deep); }
+
+    /* tag · nudge — one line, inline CTA. Strip is 8 + 12 + 8 = 28px here, so
+       the notch centre moves to 21px. */
+    .promo-tag--nudge .promo-tag-strip { padding: 8px 16px; }
+    .promo-tag--nudge .promo-tag-eyebrow { font-size: 10px; line-height: 12px; }
+    .promo-tag--nudge .promo-tag-notch { top: 21px; }
+    .promo-tag--nudge .promo-tag-body {
+      flex-direction: row; align-items: center; gap: 14px; padding: 14px 16px;
+    }
+    .promo-tag--nudge .promo-heading { font-size: 16px; font-weight: 700; }
+    .promo-tag--nudge .promo-body { font-size: 13px; }
+    .promo-tag--nudge .promo-cta {
+      padding: 9px 15px; border-radius: 8px; flex-shrink: 0;
+      background: var(--promo-gold); color: var(--promo-cta-fg);
+      font-size: 14px; font-weight: 700;
+    }
+    .promo-tag--nudge .promo-cta:hover { background: var(--promo-gold-deep); }
+    .promo-nudge-copy { flex: 1; min-width: 0; }
+
+    /* ── Variant B — full-bleed band ── */
+    .promo-card.promo-band {
+      border: 0; border-radius: 0; box-shadow: none;
+      /* Cancels main's gutter for this item only. Falls back to 0 (an ordinary
+         full-width card) anywhere --page-gutter isn't defined, e.g. the admin
+         preview box. */
+      margin-inline: calc(-1 * var(--page-gutter, 0px));
+    }
+    /* The watermark is absolutely positioned and later in paint order than
+       static content, so every content row is lifted above it. */
+    .promo-band > *:not(.promo-band-mark):not(.promo-band-rule) { position: relative; }
+    .promo-band--prompt {
+      background: linear-gradient(160deg, var(--promo-gold-bright) 0%, var(--promo-gold-deep) 100%);
+      padding: 22px 20px 20px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .promo-band-rule {
+      position: absolute; top: 0; left: 0; right: 0; height: 9px;
+      background: repeating-linear-gradient(90deg, rgba(255,255,255,.28) 0 1.5px, transparent 1.5px 16px);
+    }
+    .promo-band-mark {
+      position: absolute; right: -14px; bottom: -30px;
+      font-size: 96px; font-weight: 800; line-height: 1; letter-spacing: -.05em;
+      color: #fff; opacity: .09; pointer-events: none; user-select: none;
+    }
+    .promo-band-eyebrow {
+      font-family: var(--promo-mono);
+      font-size: 11px; font-weight: 600; letter-spacing: .18em;
+      text-transform: uppercase; color: var(--promo-sand);
+    }
+    .promo-band--prompt .promo-heading {
+      font-size: 23px; font-weight: 800; letter-spacing: -.015em;
+      line-height: 1.15; color: #fff; margin: 0;
+    }
+    .promo-band--prompt .promo-body {
+      font-size: 15px; line-height: 1.5; color: var(--promo-band-body);
+      text-wrap: pretty;
+    }
+    .promo-band .promo-body a { color: #fff; text-decoration: underline; }
+    .promo-band--prompt .promo-cta {
+      align-self: flex-start; background: #fff; color: var(--promo-gold-deep);
+      font-size: 15px; font-weight: 800; padding: 12px 26px; border-radius: 999px;
+    }
+    .promo-band--prompt .promo-cta:hover { background: var(--promo-sand); }
+
+    /* band · nudge — the family's compact form: a solid ink bar that stacks
+       directly under a band prompt. No gradient, no watermark. */
+    .promo-band--nudge {
+      background: var(--promo-ink);
+      padding: 15px 20px;
+      display: flex; align-items: center; gap: 14px;
+    }
+    /* On the dark theme this bar is nearly the page ground, so it gets
+       hairlines to keep an edge. Inset shadow rather than a border: a border
+       would change the bar's height and shift the layout between themes. */
+    [data-theme="dark"] .promo-band--nudge {
+      box-shadow: inset 0 1px 0 rgba(200,163,58,.25), inset 0 -1px 0 rgba(200,163,58,.25);
+    }
+    .promo-band--nudge .promo-band-eyebrow { font-size: 10px; color: var(--promo-gold-light); }
+    .promo-band--nudge .promo-heading {
+      font-size: 16px; font-weight: 700; color: #FBFAF7; margin: 0;
+    }
+    .promo-band--nudge .promo-body { font-size: 13px; color: var(--promo-ink-2); }
+    .promo-band--nudge .promo-cta {
+      flex-shrink: 0; background: transparent; border: 1px solid var(--promo-gold-light);
+      color: var(--promo-gold-light); border-radius: 999px; padding: 9px 16px;
+      font-size: 14px; font-weight: 700;
+    }
+    .promo-band--nudge .promo-cta:hover { background: var(--promo-gold-light); color: var(--promo-ink); }
+
+    /* Admin composer preview. --page-gutter: 0 keeps a band inside the preview
+       box instead of bleeding out of it (the preview is inside main, which
+       defines the gutter the band cancels), and the feed background makes the
+       tag's notches — which are painted in var(--bg) — read correctly. */
+    #promo-preview {
+      --page-gutter: 0px;
+      background: var(--bg); border-radius: 8px; padding: .75rem;
+    }
 
     /* The watch chip sits on its own row; the fun-fact footnote drops below it. */
     .feed-chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0 1rem .75rem; }
@@ -3293,7 +3507,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div style="margin-bottom:.5rem;"><div class="eyebrow">Design — this slot's content</div></div>
       <div style="background:var(--surface2);border-radius:var(--radius);padding:.85rem;margin-bottom:1rem;">
         <div class="draft-form-row">
-          <label for="promo-eyebrow">Eyebrow</label>
+          <label for="promo-variant">Style</label>
+          <select id="promo-variant" onchange="updatePromoPreview()"></select>
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-size">Size</label>
+          <select id="promo-size" onchange="updatePromoPreview()"></select>
+        </div>
+        <div class="draft-form-row">
+          <label for="promo-eyebrow">Eyebrow (tag/band: the mono brand label — "WRotate HQ", "WRotate asks")</label>
           <input type="text" id="promo-eyebrow" placeholder="New" oninput="updatePromoPreview()">
         </div>
         <div class="draft-form-row">
@@ -3305,7 +3527,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <textarea id="promo-body" rows="6" oninput="updatePromoPreview()"></textarea>
         </div>
         <div class="draft-form-row">
-          <label for="promo-image-url">Hero image URL (16:9)</label>
+          <label for="promo-image-url">Hero image URL (16:9 — classic and tag only; the band has no hero)</label>
           <input type="text" id="promo-image-url" oninput="updatePromoPreview()">
         </div>
         <div class="draft-form-row">
@@ -7302,7 +7524,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.09.02';
+const APP_VERSION = '07.12.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11654,12 +11876,45 @@ function installPromoClickDelegation() {
   });
 }
 
+// Author-selected card treatments, chosen per slot in the admin composer.
+// Keys are exactly what promo_slots.variant / .size store; the labels are the
+// dropdown copy, so registry and UI can't drift (same pattern as
+// PROMO_AUDIENCE_LABELS / PROMO_ACTION_LABELS).
+//
+// 'classic' is the default and the fallback for anything unrecognized —
+// including every row written before these columns existed, which is why
+// adding this feature changed nothing already live in a feed.
+const PROMO_VARIANT_LABELS = {
+  classic: 'Classic card — hero image, rich body',
+  tag:     'Caseback tag — nudges, tips, small announcements',
+  band:    'Full-bleed band — surveys, big announcements',
+};
+const PROMO_SIZE_LABELS = {
+  prompt: 'Prompt — headline, body and a full-width CTA',
+  nudge:  'Nudge — one line with an inline CTA',
+};
+// hasOwnProperty, not a bare lookup, for the same reason promoActionFor() uses
+// it: an admin typo (or a hand-edited row) of 'constructor' or '__proto__'
+// reads as truthy off Object.prototype and would select a nonexistent
+// treatment. Anything unknown falls back to the classic card.
+function promoVariantOf(slot) {
+  const v = slot && slot.variant;
+  return (typeof v === 'string' && Object.prototype.hasOwnProperty.call(PROMO_VARIANT_LABELS, v))
+    ? v : 'classic';
+}
+function promoSizeOf(slot) {
+  const s = slot && slot.size;
+  return (typeof s === 'string' && Object.prototype.hasOwnProperty.call(PROMO_SIZE_LABELS, s))
+    ? s : 'prompt';
+}
+
 function renderPromoCard(slot) {
   installPromoClickDelegation();
-  const action = promoActionFor(slot.cta_action);
-  const cta = (action && slot.cta_label)
-    ? `<button type="button" class="btn btn-primary promo-cta" data-promo-cta>${escHtml(slot.cta_label)}</button>`
-    : '';
+  const variant = promoVariantOf(slot);
+  const size    = promoSizeOf(slot);
+  const action  = promoActionFor(slot.cta_action);
+  const hasCta  = !!(action && slot.cta_label);
+  const ctaText = hasCta ? escHtml(slot.cta_label) : '';
   // Same https-or-site-relative allowlist as body images ([imgN] tokens) —
   // image_url is admin-entered and rendered into every viewer's feed, so it
   // gets the same scheme check rather than a bare escAttr passthrough.
@@ -11667,12 +11922,83 @@ function renderPromoCard(slot) {
   const hero = heroUrl
     ? `<div class="promo-card-hero"><img src="${escAttr(heroUrl)}" alt=""></div>`
     : '';
-  const eyebrow = slot.eyebrow
-    ? `<div class="promo-eyebrow">${escHtml(slot.eyebrow)}</div>` : '';
+  const heading = escHtml(slot.heading || '');
   const body = slot.body
     ? `<div class="promo-body">${sanitizePromoHtml(expandPromoImages(slot.body, slot.images))}</div>` : '';
+  // Every variant carries the same id + delegation hooks, so impression
+  // tracking, the click handler and injectPromoCards()'s DOM bookkeeping are
+  // identical no matter which treatment an admin picked.
+  const idAttrs = `id="promocard-${escAttr(slot.id)}" data-promo-id="${escAttr(slot.id)}"`;
 
-  return `<div class="promo-card" id="promocard-${escAttr(slot.id)}" data-promo-id="${escAttr(slot.id)}">
+  if (variant === 'tag') {
+    // The eyebrow field doubles as the mono brand label here; it is the
+    // treatment's signature, so an empty field falls back to the house label
+    // rather than rendering a strip with a bare dot in it.
+    const label = escHtml(slot.eyebrow || 'WRotate HQ');
+    const cta = hasCta
+      ? `<button type="button" class="promo-cta" data-promo-cta>${ctaText}</button>` : '';
+    const strip = `<div class="promo-tag-strip">
+        ${size === 'nudge' ? '' : '<span class="promo-tag-dot" aria-hidden="true"></span>'}
+        <span class="promo-tag-eyebrow">${label}</span>
+      </div>
+      <span class="promo-tag-notch promo-tag-notch--l" aria-hidden="true"></span>
+      <span class="promo-tag-notch promo-tag-notch--r" aria-hidden="true"></span>`;
+    if (size === 'nudge') {
+      return `<div class="promo-card promo-tag promo-tag--nudge" ${idAttrs}>
+        ${strip}
+        <div class="promo-tag-body">
+          <div class="promo-nudge-copy">
+            <div class="promo-heading">${heading}</div>
+            ${body}
+          </div>
+          ${cta}
+        </div>
+      </div>`;
+    }
+    return `<div class="promo-card promo-tag promo-tag--prompt" ${idAttrs}>
+      ${strip}
+      ${hero}
+      <div class="promo-tag-body">
+        <div class="promo-heading">${heading}</div>
+        ${body}
+        ${cta}
+      </div>
+    </div>`;
+  }
+
+  if (variant === 'band') {
+    // No hero: the gradient band already owns its surface, and an image on top
+    // of the watermark and tick rule leaves nothing of the treatment. The
+    // composer says so next to the field — a slot needing a hero picks classic.
+    const label = escHtml(slot.eyebrow || 'WRotate');
+    const cta = hasCta
+      ? `<button type="button" class="promo-cta" data-promo-cta>${ctaText}</button>` : '';
+    if (size === 'nudge') {
+      return `<div class="promo-card promo-band promo-band--nudge" ${idAttrs}>
+        <div class="promo-nudge-copy">
+          <div class="promo-band-eyebrow">${label}</div>
+          <div class="promo-heading">${heading}</div>
+          ${body}
+        </div>
+        ${cta}
+      </div>`;
+    }
+    return `<div class="promo-card promo-band promo-band--prompt" ${idAttrs}>
+      <span class="promo-band-rule" aria-hidden="true"></span>
+      <span class="promo-band-mark" aria-hidden="true">WR</span>
+      <div class="promo-band-eyebrow">${label}</div>
+      <div class="promo-heading">${heading}</div>
+      ${body}
+      ${cta}
+    </div>`;
+  }
+
+  const eyebrow = slot.eyebrow
+    ? `<div class="promo-eyebrow">${escHtml(slot.eyebrow)}</div>` : '';
+  const cta = hasCta
+    ? `<button type="button" class="btn btn-primary promo-cta" data-promo-cta>${ctaText}</button>`
+    : '';
+  return `<div class="promo-card" ${idAttrs}>
     <div class="promo-card-header">
       <div class="promo-mark" aria-hidden="true">
         <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
@@ -11685,7 +12011,7 @@ function renderPromoCard(slot) {
     </div>
     ${hero}
     <div class="promo-card-body">
-      <div class="promo-heading">${escHtml(slot.heading || '')}</div>
+      <div class="promo-heading">${heading}</div>
       ${body}
       ${cta}
     </div>
@@ -18690,6 +19016,13 @@ function renderPromoAdminOptions() {
     .map((k) => `<option value="${escAttr(k)}">${escHtml(PROMO_AUDIENCE_LABELS[k] || k)}</option>`).join('');
   act.innerHTML = ['', ...Object.keys(PROMO_ACTIONS), 'url:', 'feedback:']
     .map((k) => `<option value="${escAttr(k)}">${escHtml(PROMO_ACTION_LABELS[k] || k)}</option>`).join('');
+  // Same generated-from-the-registry treatment for the two treatment pickers.
+  const opts = (labels) => Object.keys(labels)
+    .map((k) => `<option value="${escAttr(k)}">${escHtml(labels[k])}</option>`).join('');
+  const variant = document.getElementById('promo-variant');
+  const size    = document.getElementById('promo-size');
+  if (variant) variant.innerHTML = opts(PROMO_VARIANT_LABELS);
+  if (size)    size.innerHTML    = opts(PROMO_SIZE_LABELS);
 }
 
 // Promo admin composer state. Non-null while an existing row is loaded for
@@ -18720,6 +19053,10 @@ function promoFormSlot() {
   const action = val('promo-cta-action');
   return {
     id: 'preview',
+    // Falls back to the column defaults rather than '' if the select is
+    // somehow missing: '' would fail the CHECK constraint on save.
+    variant: val('promo-variant') || 'classic',
+    size: val('promo-size') || 'prompt',
     eyebrow: val('promo-eyebrow'),
     heading: val('promo-heading'),
     body: val('promo-body'),
@@ -18765,6 +19102,12 @@ function loadPromoIntoForm(slot) {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   if (!slot) return;
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  // promoVariantOf/promoSizeOf, not the raw column: a row predating these
+  // columns (or carrying an unrecognized value) has to land on the same
+  // treatment the feed actually renders it as, or an unrelated copy edit
+  // silently rewrites its look on save.
+  set('promo-variant', promoVariantOf(slot));
+  set('promo-size', promoSizeOf(slot));
   set('promo-eyebrow', slot.eyebrow || '');
   set('promo-heading', slot.heading || '');
   set('promo-body', slot.body || '');
@@ -18822,6 +19165,13 @@ function newPromoSlot() {
 // action even when nothing was being edited.
 function clearPromoForm() {
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  // The composer starts on 'tag' — the spec's default treatment for a
+  // house-authored item. That is deliberately NOT the column default
+  // ('classic'), which exists only so rows written without these fields (every
+  // slot predating the feature, and the SQL seeds) keep the look they shipped
+  // with. New slots authored here start from the new default instead.
+  set('promo-variant', 'tag');
+  set('promo-size', 'prompt');
   set('promo-eyebrow', '');
   set('promo-heading', '');
   set('promo-body', '');
@@ -19039,7 +19389,7 @@ async function loadPromoAdmin() {
         return `<div class="admin-card">
           <div style="font-weight:600;">${escHtml(s.heading)}</div>
           <div style="font-size:.78rem;color:var(--muted);">
-            ${escHtml(statusLabel)} · ${escHtml(PROMO_AUDIENCE_LABELS[s.audience] || s.audience)} · ${escHtml(posLabel)} ·
+            ${escHtml(statusLabel)} · ${escHtml(promoVariantOf(s))}/${escHtml(promoSizeOf(s))} · ${escHtml(PROMO_AUDIENCE_LABELS[s.audience] || s.audience)} · ${escHtml(posLabel)} ·
             ${st.impressions || 0} impressions · ${st.clicks || 0} clicks ·
             ${st.submissions || 0} submissions · ${st.distinct_users || 0} users
           </div>

@@ -39,6 +39,86 @@ test.describe('admin Promos tab (mocked)', () => {
     expect(out).toContain('ok');
   });
 
+  // ── Variant pickers ───────────────────────────────────────────────────
+  test('style and size dropdowns are generated from the registries', async ({ page }) => {
+    await page.goto('/');
+    const out = await page.evaluate(() => {
+      window.renderPromoAdminOptions();
+      const opts = (id) => [...document.getElementById(id).options].map((o) => o.value);
+      return {
+        variants: opts('promo-variant'), sizes: opts('promo-size'),
+        variantKeys: Object.keys(PROMO_VARIANT_LABELS), sizeKeys: Object.keys(PROMO_SIZE_LABELS),
+      };
+    });
+    expect(out.variants).toEqual(out.variantKeys);
+    expect(out.sizes).toEqual(out.sizeKeys);
+  });
+
+  test('the composer starts on tag/prompt and the preview follows the pickers', async ({ page }) => {
+    await page.goto('/');
+    const out = await page.evaluate(() => {
+      window.renderPromoAdminOptions();
+      window.clearPromoForm();
+      const started = {
+        variant: document.getElementById('promo-variant').value,
+        size: document.getElementById('promo-size').value,
+        preview: document.getElementById('promo-preview').innerHTML,
+      };
+      document.getElementById('promo-variant').value = 'band';
+      document.getElementById('promo-size').value = 'nudge';
+      window.updatePromoPreview();
+      return { ...started, after: document.getElementById('promo-preview').innerHTML };
+    });
+    expect(out.variant).toBe('tag');
+    expect(out.size).toBe('prompt');
+    expect(out.preview).toContain('promo-tag--prompt');
+    expect(out.after).toContain('promo-band--nudge');
+  });
+
+  test('the saved row carries the picked variant and size', async ({ page }) => {
+    await page.goto('/');
+    const row = await page.evaluate(async () => {
+      currentUser = { id: 'd70b1a85-4f31-4431-b3b7-db76543daaf5' };
+      window.renderPromoAdminOptions();
+      let captured = null;
+      db.from = () => ({ insert: async (r) => { captured = r; return { data: [r], error: null }; } });
+      document.getElementById('promo-heading').value = 'Survey';
+      document.getElementById('promo-variant').value = 'band';
+      document.getElementById('promo-size').value = 'prompt';
+      await window.savePromoSlot();
+      return captured;
+    });
+    expect(row.variant).toBe('band');
+    expect(row.size).toBe('prompt');
+  });
+
+  // A row predating these columns must load as the treatment the FEED renders
+  // it as (classic), not as the composer's new-slot default — otherwise an
+  // unrelated copy edit silently restyles a live slot on save.
+  test('a slot with no variant loads as classic, not the composer default', async ({ page }) => {
+    await page.goto('/');
+    const out = await page.evaluate(() => {
+      currentUser = { id: 'd70b1a85-4f31-4431-b3b7-db76543daaf5' };
+      window.renderPromoAdminOptions();
+      window.clearPromoForm();                       // leaves the pickers on tag/prompt
+      window.loadPromoIntoForm({ id: 'old-1', heading: 'Legacy', images: [] });
+      const legacy = {
+        variant: document.getElementById('promo-variant').value,
+        size: document.getElementById('promo-size').value,
+      };
+      window.loadPromoIntoForm({ id: 'b-1', heading: 'Band', images: [], variant: 'band', size: 'nudge' });
+      return {
+        legacy,
+        picked: {
+          variant: document.getElementById('promo-variant').value,
+          size: document.getElementById('promo-size').value,
+        },
+      };
+    });
+    expect(out.legacy).toEqual({ variant: 'classic', size: 'prompt' });
+    expect(out.picked).toEqual({ variant: 'band', size: 'nudge' });
+  });
+
   test('a new slot is saved as a draft, never active', async ({ page }) => {
     await page.goto('/');
     const row = await page.evaluate(async () => {
