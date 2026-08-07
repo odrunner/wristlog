@@ -3472,6 +3472,26 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </select>
         </div>
 
+        <!-- Staged send. On the form, not buried in the confirm step: a control
+             that only exists after you commit to sending is a control you
+             cannot find when deciding whether to. -->
+        <div class="draft-form-row" style="margin-bottom:.5rem;">
+          <label for="broadcast-first-batch">Send in stages</label>
+          <div style="display:flex;flex-direction:column;gap:.3rem;">
+            <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;">
+              <input type="radio" name="bc-stage" value="batch" checked onchange="syncBroadcastStageUI()">
+              First batch of
+              <input type="number" id="broadcast-first-batch" value="50" min="1" step="1"
+                     style="width:4.5rem;padding:.15rem .3rem;font-size:.82rem;">
+              then hold the rest for review
+            </label>
+            <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;">
+              <input type="radio" name="bc-stage" value="all" onchange="syncBroadcastStageUI()">
+              Send to everyone at once
+            </label>
+          </div>
+        </div>
+
         <!-- Actions -->
         <div style="display:flex;gap:.5rem;">
           <button class="btn btn-ghost" id="broadcast-test-btn" onclick="sendBroadcastTest()" style="flex:1;">Send Test to Me</button>
@@ -7524,7 +7544,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.13.11';
+const APP_VERSION = '07.13.18';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18445,28 +18465,21 @@ async function sendBroadcastAll() {
     ? 'ALL users'
     : (segEl?.selectedOptions?.[0]?.textContent?.trim() || segment);
   const statusEl = document.getElementById('broadcast-status');
-  // Staged send is the default choice, not the exotic one: reading a first
-  // batch's opens and unsubscribes before committing the rest is the whole
-  // point of the queue. "Send to everyone" stays one radio click away.
+  // The staging choice lives on the form above; this step only reports back
+  // what that choice means, so there is exactly one place to set it and no
+  // second set of radios to disagree with the first.
+  const n = selectedFirstBatch();
+  const plan = n
+    ? `First batch of ${n}, rest held for your review.`
+    : 'Everyone at once — no review step.';
   statusEl.innerHTML = `<div style="padding:.5rem;background:var(--surface2);border-radius:8px;" role="alertdialog" aria-label="Confirm broadcast">
-    <div style="color:var(--danger);font-weight:600;margin-bottom:.4rem;">Send to ${escHtml(segmentLabel)}?</div>
-    <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;margin-bottom:.3rem;">
-      <input type="radio" name="bc-stage" value="batch" checked onchange="syncBroadcastStageUI()">
-      Send a first batch of
-      <input type="number" id="broadcast-first-batch" value="50" min="1" step="1"
-             style="width:4.5rem;padding:.15rem .3rem;font-size:.82rem;">
-      then hold the rest for review
-    </label>
-    <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;margin-bottom:.5rem;">
-      <input type="radio" name="bc-stage" value="all" onchange="syncBroadcastStageUI()">
-      Send to everyone now
-    </label>
+    <div style="color:var(--danger);font-weight:600;margin-bottom:.2rem;">Send to ${escHtml(segmentLabel)}?</div>
+    <div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem;">${escHtml(plan)}</div>
     <div style="display:flex;gap:.5rem;">
       <button class="btn btn-primary btn-sm" id="broadcast-confirm-yes" onclick="confirmBroadcastAll()">Yes, queue it</button>
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('broadcast-status').innerHTML='';document.getElementById('broadcast-send-btn').focus()">Cancel</button>
     </div>
   </div>`;
-  syncBroadcastStageUI();
   // Move focus to the confirm button
   setTimeout(() => document.getElementById('broadcast-confirm-yes')?.focus(), 50);
 }

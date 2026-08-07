@@ -40,6 +40,55 @@ async function renderQueue(page, breakdown, totals = {}) {
 }
 
 test.describe('staged broadcast — send dialog', () => {
+  // Regression: these controls first shipped INSIDE the confirm step, so
+  // nothing appeared until you had already committed to sending and there was
+  // no way to find the batch size while deciding. They belong on the form.
+  test('the batch controls are on the form before any send is started', async ({ page }) => {
+    await asAdmin(page);
+    const out = await page.evaluate(() => ({
+      box: !!document.getElementById('broadcast-first-batch'),
+      radios: document.querySelectorAll('input[name="bc-stage"]').length,
+      inStatus: document.getElementById('broadcast-status').innerHTML.trim(),
+    }));
+    expect(out.box).toBe(true);
+    expect(out.radios).toBe(2);
+    // Present without the confirm step having run at all.
+    expect(out.inStatus).toBe('');
+  });
+
+  test('the confirm step reports the plan and adds no second set of radios', async ({ page }) => {
+    await asAdmin(page);
+    const out = await page.evaluate(async () => {
+      document.getElementById('broadcast-subject').value = 'S';
+      document.getElementById('broadcast-body').value = 'B';
+      document.getElementById('broadcast-first-batch').value = '25';
+      await window.sendBroadcastAll();
+      return {
+        status: document.getElementById('broadcast-status').innerHTML,
+        // Two radios total, i.e. only the ones on the form.
+        radios: document.querySelectorAll('input[name="bc-stage"]').length,
+        boxes: document.querySelectorAll('#broadcast-first-batch').length,
+      };
+    });
+    expect(out.status).toContain('First batch of 25');
+    expect(out.radios).toBe(2);
+    expect(out.boxes).toBe(1);
+  });
+
+  test('the confirm step says so when there is no review step', async ({ page }) => {
+    await asAdmin(page);
+    const status = await page.evaluate(async () => {
+      document.getElementById('broadcast-subject').value = 'S';
+      document.getElementById('broadcast-body').value = 'B';
+      const all = document.querySelector('input[name="bc-stage"][value="all"]');
+      all.checked = true;
+      all.dispatchEvent(new Event('change'));
+      await window.sendBroadcastAll();
+      return document.getElementById('broadcast-status').innerHTML;
+    });
+    expect(status).toContain('Everyone at once');
+  });
+
   test('offers a staged first batch by default, with "everyone" one click away', async ({ page }) => {
     await asAdmin(page);
     const out = await page.evaluate(async () => {
