@@ -198,8 +198,29 @@ serve(async (req) => {
         tSubject = personalizeSubject(subject, null, v);
         tHtml = personalizeBody(safeHtml, null, v);
       }
-      const result = await sendEmail(test_email, tSubject, tHtml);
-      return jsonResponse({ sent: 1, test: true, result });
+      // A test send must be byte-for-byte what a recipient gets, footer
+      // included — this path skipped unsubFooter() and the List-Unsubscribe
+      // headers that BOTH real paths add (the bulk send below and the drain),
+      // so the one send used to check the email was the one send that didn't
+      // show the unsubscribe link.
+      //
+      // Signed for the ADMIN's own uid: the test needs a working link, and
+      // there is no recipient row to sign for when test_email is an arbitrary
+      // address. Clicking it therefore unsubscribes the admin, not the
+      // test_email address — the honest trade for a link that can be verified
+      // rather than a decorative one that can't.
+      let testHeaders: Record<string, string> | undefined;
+      if (adminUserId) {
+        const sig = await hmacSign(adminUserId, "updates", supabaseServiceKey);
+        const url = unsubUrl(supabaseUrl, adminUserId, sig, "updates");
+        tHtml += unsubFooter(url);
+        testHeaders = {
+          "List-Unsubscribe": `<${url}>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        };
+      }
+      const result = await sendEmail(test_email, tSubject, tHtml, testHeaders);
+      return jsonResponse({ sent: 1, test: true, unsub_footer: !!testHeaders, result });
     }
 
     // Production mode: send to all users
@@ -635,8 +656,8 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
   return jsonResponse({ drained: sent, failed, deferred, used_today: usedToday, daily_limit: dailyLimit, budget, errors: errors.slice(0, 3) });
 }
 
-async function sendEmail(to: string, subject: string, html: string) {
-  const result = await sendProviderEmail({ from: FROM_EMAIL, to: [to], subject, html });
+async function sendEmail(to: string, subject: string, html: string, headers?: Record<string, string>) {
+  const result = await sendProviderEmail({ from: FROM_EMAIL, to: [to], subject, html, headers });
   if (!result.ok) {
     throw new Error(`Email send error (${currentProvider}): ${result.error}`);
   }
