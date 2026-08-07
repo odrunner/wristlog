@@ -156,6 +156,71 @@ test.describe('month-in-review card — nothing to show', () => {
   });
 });
 
+// The renderer tests above prove the card is built correctly; these prove it
+// actually reaches a feed. The two halves fail independently — a recap that
+// renders beautifully and is never injected is still a card nobody sees.
+test.describe('month-in-review card — injection into the feed', () => {
+  async function feed(page, { day = 3, logs = LOGS } = {}) {
+    await page.goto('/');
+    await page.evaluate((a) => {
+      const fixed = new Date(2026, 7, a.day, 12).getTime();
+      Date.now = () => fixed;
+      watches = a.watches;
+      logs = a.logs;
+      _promoRecapMemo = null;
+      currentUser = { id: 'u1' };
+      document.getElementById('auth-screen').style.display = 'none';
+      _promoConfig = { enabled: true, first_position: 2, repeat_every: 0,
+                       max_per_session: 1, default_max_impressions: 1,
+                       suppress_after_modal: true };
+      _promoSlots = [{
+        id: 'r1', variant: 'recap', size: 'prompt', eyebrow: '', heading: '',
+        audience: 'all', status: 'active', priority: 50, images: [],
+        starts_at: null, ends_at: null, max_impressions: null,
+        cta_label: 'See the full month', cta_action: 'open_stats',
+        created_at: '2026-01-01T00:00:00Z',
+      }];
+      _promoEvents = [];
+      _promoPlaced = new Set();
+      _modalShownThisSession = false;
+      db.from = () => ({ insert: async () => ({ error: null }) });
+
+      const el = document.getElementById('feed-list');
+      el.innerHTML = Array.from({ length: 6 },
+        (_, i) => `<div class="feed-card" id="feedcard-${i}">post ${i}</div>`).join('');
+      window.injectPromoCards();
+    }, { watches: WATCHES, logs, day });
+  }
+
+  test('lands in the feed at the configured position', async ({ page }) => {
+    await feed(page);
+    const order = await page.evaluate(() =>
+      [...document.getElementById('feed-list').children].map((n) =>
+        n.classList.contains('promo-card') ? 'PROMO' : 'post'));
+    expect(order).toEqual(['post', 'post', 'PROMO', 'post', 'post', 'post', 'post']);
+    await expect(page.locator('#feed-list .promo-recap-month')).toHaveText('July');
+  });
+
+  // The existence gate, exercised through the real injection path rather than
+  // through eligiblePromoSlots() in isolation.
+  test('never reaches the feed outside the window', async ({ page }) => {
+    await feed(page, { day: 20 });
+    await expect(page.locator('#feed-list .promo-card')).toHaveCount(0);
+  });
+
+  test('never reaches the feed for a month below the threshold', async ({ page }) => {
+    await feed(page, { logs: LOGS.slice(0, 4) });
+    await expect(page.locator('#feed-list .promo-card')).toHaveCount(0);
+  });
+
+  // The empty-state note is a composer affordance; it must never be what a user
+  // gets served.
+  test('the feed never shows the composer explainer', async ({ page }) => {
+    await feed(page, { day: 20 });
+    await expect(page.locator('#feed-list .promo-recap-note')).toHaveCount(0);
+  });
+});
+
 test.describe('month-in-review card — dot sync', () => {
   test('paging the track one slide over lights the second dot', async ({ page }) => {
     await mount(page);
