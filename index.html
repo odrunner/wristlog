@@ -7302,7 +7302,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.21.02';
+const APP_VERSION = '07.08.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -26452,6 +26452,48 @@ function requestBrand(name) {
   document.getElementById('feedback-modal').classList.remove('hidden');
 }
 
+// Opens the prompted feedback modal from a ?feedback= link, so an email CTA can
+// ask the same question a promo card asks. Runs once, at the end of bootApp() —
+// the modal needs a signed-in app behind it, not the auth screen.
+//
+// The parameter is read here rather than at page load because a signed-out
+// arrival sits on the auth screen first; the URL survives that wait, so the
+// question still lands once they sign in.
+//
+//   ?feedback=1                  → the default question
+//   ?feedback=Any%20question     → that question
+//
+// The value is admin-authored in practice but arrives over an untrusted link,
+// so it is capped and only ever reaches .textContent — never innerHTML, and
+// never a promo slot, so no 'submit' event is attributed to a campaign that
+// didn't earn it. Answers still group in the admin Feedback tab by title, so
+// an email using the same wording as a live promo merges with it.
+const FEEDBACK_LINK_DEFAULT = 'What would make WRotate better for you?';
+function maybeOpenFeedbackFromLink() {
+  let raw;
+  try { raw = new URLSearchParams(window.location.search).get('feedback'); } catch (_) { return; }
+  if (raw === null) return;
+
+  // Strip it immediately: a refresh (or the iOS foreground reload) must not
+  // reopen the modal after the user has already answered or dismissed it.
+  try {
+    const clean = new URL(window.location.href);
+    clean.searchParams.delete('feedback');
+    window.history.replaceState({}, '', clean.pathname + clean.search + clean.hash);
+  } catch (_) {}
+
+  const asked = raw.trim();
+  const question = (!asked || asked === '1') ? FEEDBACK_LINK_DEFAULT : asked.slice(0, 120);
+  // Deferred so the feed has painted — the modal should land on the app, not on
+  // a blank screen. notePromoModalShown() then retracts any promo card the user
+  // hasn't seen yet: a campaign card asking this same question would be a second
+  // ask in the same session, which is exactly what suppress_after_modal prevents.
+  setTimeout(() => {
+    openPromoFeedback(null, question);
+    notePromoModalShown();
+  }, 600);
+}
+
 function closeFeedback() {
   document.getElementById('feedback-modal').classList.add('hidden');
   // Cancelling out of a promo-opened modal must not leave the campaign question
@@ -30133,6 +30175,9 @@ async function bootApp(user) {
       if (data) OFFICIAL_USER_ID = data.id;
     });
   }
+  // Last, and after loadPromoSlots(): an email CTA asking for feedback should
+  // take precedence over a promo card asking the same thing.
+  maybeOpenFeedbackFromLink();
 }
 
 // ── PRIMARY: explicit getSession() on every page load ─────────────────────

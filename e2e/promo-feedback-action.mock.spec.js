@@ -146,6 +146,77 @@ test.describe('promo cta_action: feedback:', () => {
     expect(r.stillOpen).toBe(true);
   });
 
+  // An email CTA reaches the same modal through ?feedback=. bootApp() calls
+  // this, but bootApp needs a real session — the handler is driven directly.
+  const fromLink = async (page, query) => {
+    await page.goto('/' + query);
+    return page.evaluate(async () => {
+      window.maybeOpenFeedbackFromLink();
+      await new Promise((r) => setTimeout(r, 900));
+      return {
+        hidden: document.getElementById('feedback-modal').classList.contains('hidden'),
+        title:  document.getElementById('fb-modal-title-text').textContent,
+        search: window.location.search,
+        modalShown: !!window._modalShownThisSession,
+      };
+    });
+  };
+
+  test('?feedback= with a question opens the modal asking it', async ({ page }) => {
+    const r = await fromLink(page, '?feedback=What%20should%20we%20build%20next%3F');
+    expect(r.hidden).toBe(false);
+    expect(r.title).toBe('What should we build next?');
+  });
+
+  test('?feedback=1 falls back to the default question', async ({ page }) => {
+    const r = await fromLink(page, '?feedback=1');
+    expect(r.title).toBe('What would make WRotate better for you?');
+  });
+
+  test('the parameter is stripped, so a refresh does not re-ask', async ({ page }) => {
+    // `c` rather than a utm_* key: the visit tracker strips those on load, so a
+    // utm param would be gone before this handler ever ran and the assertion
+    // would pass for the wrong reason.
+    const r = await fromLink(page, '?feedback=1&c=spring');
+    expect(r.search).not.toContain('feedback');
+    // Only the feedback key is removed — other params are left alone.
+    expect(r.search).toContain('c=spring');
+  });
+
+  test('an over-long question is capped rather than filling the modal chrome', async ({ page }) => {
+    const r = await fromLink(page, '?feedback=' + 'x'.repeat(400));
+    expect(r.title).toHaveLength(120);
+  });
+
+  test('no ?feedback= param opens nothing', async ({ page }) => {
+    const r = await fromLink(page, '?utm_source=email');
+    expect(r.hidden).toBe(true);
+  });
+
+  test('suppresses a promo card so the same question is not asked twice', async ({ page }) => {
+    const r = await fromLink(page, '?feedback=1');
+    expect(r.modalShown).toBe(true);
+  });
+
+  test('a link answer is attributed to no slot — campaigns keep an honest count', async ({ page }) => {
+    const rows = await routeFeedback(page);
+    await page.goto('/?feedback=Anything%20to%20add%3F');
+    const events = await page.evaluate(async () => {
+      window.__events = [];
+      logPromoEvent = (slotId, event) => window.__events.push({ slotId, event });
+      demoGuard = () => false;
+      toast = () => {};
+      window.maybeOpenFeedbackFromLink();
+      await new Promise((r) => setTimeout(r, 900));
+      document.getElementById('fb-desc').value = 'more watch brands please';
+      await window.submitFeedback();
+      return window.__events;
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].title).toBe('Anything to add?');
+    expect(events).toEqual([]);
+  });
+
   test('a plain Send Feedback after a promo open is not still the campaign', async ({ page }) => {
     const rows = await routeFeedback(page);
     await page.goto('/');

@@ -11,7 +11,11 @@
   if (isIOS) {
     window.location.replace('https://apps.apple.com/us/app/wrotate/id6760091102');
   } else {
-    window.location.replace('https://wrotate.com');
+    // Forward the query string. Email CTAs must point at /open (the AASA file
+    // excludes / and /index.html), so this stub is the ONLY way a campaign
+    // parameter like ?feedback= reaches the app — dropping it here silently
+    // turned every parameterised email link into a plain "open the app" link.
+    window.location.replace('https://wrotate.com/' + (window.location.search || ''));
   }
 </script>
 </head>
