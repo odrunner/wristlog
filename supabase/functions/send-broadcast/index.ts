@@ -34,8 +34,8 @@ import {
   segmentUserId,
   shouldTripBreaker,
   splitFirstBatch,
-  unsubFooter,
   unsubUrl,
+  withUnsubFooter,
   utcDayStart,
   validateBroadcastInput,
 } from "./lib.ts";
@@ -213,7 +213,7 @@ serve(async (req) => {
       if (adminUserId) {
         const sig = await hmacSign(adminUserId, "updates", supabaseServiceKey);
         const url = unsubUrl(supabaseUrl, adminUserId, sig, "updates");
-        tHtml += unsubFooter(url);
+        tHtml = withUnsubFooter(tHtml, url);
         testHeaders = {
           "List-Unsubscribe": `<${url}>`,
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
@@ -446,7 +446,7 @@ serve(async (req) => {
           from: FROM_EMAIL,
           to: [r.email],
           subject: personalizeSubject(subject, null, v),
-          html: personalizeBody(safeHtml, null, v) + unsubFooter(url),
+          html: withUnsubFooter(personalizeBody(safeHtml, null, v), url),
           headers: {
             "List-Unsubscribe": `<${url}>`,
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
@@ -574,7 +574,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
         from: FROM_EMAIL,
         to: [r.email],
         subject: r.subject,
-        html: r.html + unsubFooter(url),
+        html: withUnsubFooter(r.html, url),
         headers: {
           "List-Unsubscribe": `<${url}>`,
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",

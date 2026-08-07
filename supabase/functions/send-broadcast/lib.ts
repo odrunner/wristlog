@@ -191,8 +191,37 @@ export function batchSegment<T>(recipients: T[], segment: string): T[] {
 // Standard footer across ALL WRotate emails: "Unsubscribe · Manage preferences".
 // Unsubscribe = one-click signed opt-out; Manage preferences = open the app
 // (Profile → Notifications). Keep in sync with run-campaign + the admin preview.
+// A bare <div> here rendered full-bleed and flush-left, outside the white card,
+// because withUnsubFooter() used to append it AFTER </html> and mail clients
+// hoist stray trailing content straight into the body with no layout around it.
+// (Its old `border-top:1px solid #eee` and `padding:16px 28px` were written to
+// match the card's own padding — it was always meant to be part of that column,
+// and never once rendered that way in a real send.)
+//
+// So the footer now carries its own layout: the same page background, the same
+// 20px gutter and the same max-width:480px as the card above it, centred. That
+// makes it correct wherever it lands, which matters because the campaign mailer
+// builds its HTML from a different template than the broadcast composer — a fix
+// that depended on either template's exact closing markup would fix only one.
 export function unsubFooter(unsubUrl: string): string {
-  return `<div style="padding:16px 28px;border-top:1px solid #eee;font-size:11px;color:#999;line-height:1.5;"><a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">Manage preferences</a></div>`;
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">` +
+    `<tr><td align="center" style="padding:0 20px 40px;">` +
+    `<table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">` +
+    `<tr><td align="center" style="font-size:11px;color:#999;line-height:1.5;">` +
+    `<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · ` +
+    `<a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">Manage preferences</a>` +
+    `</td></tr></table></td></tr></table>`;
+}
+
+// Put the footer INSIDE the document, immediately before </body>, so it sits in
+// the same layout flow as the card instead of trailing after </html> as stray
+// content. Falls back to appending when there is no </body> — a partial
+// template must still carry an unsubscribe link, which is a legal requirement,
+// not a cosmetic one.
+export function withUnsubFooter(html: string, unsubscribeUrl: string): string {
+  const footer = unsubFooter(unsubscribeUrl);
+  const at = html.lastIndexOf("</body>");
+  return at === -1 ? html + footer : html.slice(0, at) + footer + html.slice(at);
 }
 
 // Build the unsubscribe URL for a recipient.

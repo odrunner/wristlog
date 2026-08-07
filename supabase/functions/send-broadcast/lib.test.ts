@@ -23,6 +23,7 @@ import {
   shouldTripBreaker,
   splitFirstBatch,
   unsubFooter,
+  withUnsubFooter,
   unsubUrl,
   validateBroadcastInput,
 } from "./lib.ts";
@@ -559,4 +560,52 @@ Deno.test("splitFirstBatch — an empty audience is not a staged send", () => {
   const { pending, held } = splitFirstBatch([], 50);
   assertEquals(pending, []);
   assertEquals(held, []);
+});
+
+// ── withUnsubFooter ──────────────────────────────────────────────────────────
+// Regression: the footer used to be appended AFTER </html>. Mail clients hoist
+// trailing content into the body with no surrounding layout, so it rendered
+// full-bleed and flush-left below the card in every broadcast ever sent.
+const DOC = `<!DOCTYPE html><html><head></head><body style="background:#f4f4f4;">` +
+  `<table><tr><td>card</td></tr></table>` +
+  `</body></html>`;
+
+Deno.test("withUnsubFooter — lands inside <body>, never after </html>", () => {
+  const out = withUnsubFooter(DOC, "https://u/x");
+  assertEquals(out.endsWith("</body></html>"), true);
+  assertEquals(out.indexOf("Unsubscribe") < out.indexOf("</body>"), true);
+  // Nothing at all may trail the document.
+  assertEquals(out.slice(out.indexOf("</html>") + "</html>".length), "");
+});
+
+Deno.test("withUnsubFooter — the footer follows the card, not precedes it", () => {
+  const out = withUnsubFooter(DOC, "https://u/x");
+  assertEquals(out.indexOf("card") < out.indexOf("Unsubscribe"), true);
+});
+
+Deno.test("withUnsubFooter — carries its own centred, card-width layout", () => {
+  // Whatever template it lands in, it must bring the page background, the
+  // gutter and the card's 480px so it lines up instead of going full-bleed.
+  const out = unsubFooter("https://u/x");
+  assertEquals(out.includes("max-width:480px"), true);
+  assertEquals(out.includes("background:#f4f4f4"), true);
+  assertEquals(out.includes('align="center"'), true);
+  // The old bare div is what broke the layout; it must not come back.
+  assertEquals(out.startsWith("<table"), true);
+});
+
+Deno.test("withUnsubFooter — a template with no </body> still gets a link", () => {
+  // An unsubscribe link is a legal requirement, so a partial template appends
+  // rather than silently dropping it.
+  const out = withUnsubFooter("<div>fragment</div>", "https://u/x");
+  assertEquals(out.includes('href="https://u/x"'), true);
+  assertEquals(out.startsWith("<div>fragment</div>"), true);
+});
+
+Deno.test("withUnsubFooter — targets the LAST </body>, not one inside the copy", () => {
+  // Body copy quoting markup must not capture the footer into the middle.
+  const html = `<html><body><p>write &lt;/body&gt; like this</p></body></html>`;
+  const out = withUnsubFooter(html, "https://u/x");
+  assertEquals(out.endsWith("</body></html>"), true);
+  assertEquals(out.indexOf("Unsubscribe") > out.indexOf("write"), true);
 });
