@@ -132,6 +132,53 @@ test.describe('admin Promos tab — load/edit (mocked)', () => {
     expect(out.maxImpressions).toBe('3');
   });
 
+  // The feedback: payload round-trips through the composer the same way url:
+  // does. An EMPTY payload is meaningful — it means "ask the card heading" — so
+  // it has to survive edit → save unchanged rather than collapsing to a bare
+  // 'feedback' or losing the prefix.
+  test('the feedback: action round-trips through the composer, empty payload included', async ({ page }) => {
+    await page.goto('/');
+    const out = await page.evaluate(() => {
+      currentUser = { id: 'd70b1a85-4f31-4431-b3b7-db76543daaf5' };
+      window.renderPromoAdminOptions();
+      document.getElementById('promo-cta-url').value = 'https://leftover.example.com';
+
+      window.loadPromoIntoForm({
+        id: 's1', heading: 'H', images: [],
+        cta_action: 'feedback:What should we build next?',
+      });
+      const withPrompt = {
+        action: document.getElementById('promo-cta-action').value,
+        prompt: document.getElementById('promo-feedback-prompt').value,
+        url:    document.getElementById('promo-cta-url').value,
+        saved:  window.promoFormSlot().cta_action,
+      };
+
+      window.loadPromoIntoForm({ id: 's2', heading: 'H', images: [], cta_action: 'feedback:' });
+      const blank = {
+        prompt: document.getElementById('promo-feedback-prompt').value,
+        saved:  window.promoFormSlot().cta_action,
+      };
+
+      // A registry key must clear the prompt field, or a stale question rides
+      // along invisibly the next time feedback: is selected.
+      window.loadPromoIntoForm({ id: 's3', heading: 'H', images: [], cta_action: 'open_wishlist' });
+      const cleared = document.getElementById('promo-feedback-prompt').value;
+
+      return { withPrompt, blank, cleared,
+               actions: [...document.getElementById('promo-cta-action').options].map((o) => o.value) };
+    });
+
+    expect(out.actions).toContain('feedback:');
+    expect(out.withPrompt.action).toBe('feedback:');
+    expect(out.withPrompt.prompt).toBe('What should we build next?');
+    expect(out.withPrompt.url).toBe('');
+    expect(out.withPrompt.saved).toBe('feedback:What should we build next?');
+    expect(out.blank.prompt).toBe('');
+    expect(out.blank.saved).toBe('feedback:');
+    expect(out.cleared).toBe('');
+  });
+
   test('update targets the existing row via .eq(id), never inserts, and never sends status', async ({ page }) => {
     await page.goto('/');
     const result = await page.evaluate(async (id) => {

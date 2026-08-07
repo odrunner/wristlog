@@ -3324,6 +3324,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <label for="promo-cta-url">…or an https URL (used when action is "Custom URL")</label>
           <input type="text" id="promo-cta-url" placeholder="https://wrotate.com/open" oninput="updatePromoPreview()">
         </div>
+        <div class="draft-form-row">
+          <label for="promo-feedback-prompt">…or the question to ask (used when action is "Open feedback form" — blank uses the heading)</label>
+          <input type="text" id="promo-feedback-prompt" placeholder="What one thing would make WRotate better for you?" oninput="updatePromoPreview()">
+        </div>
 
         <div class="draft-form-row">
           <label id="promo-preview-label">Card preview</label>
@@ -7298,7 +7302,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '06.16.58';
+const APP_VERSION = '06.21.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11586,12 +11590,25 @@ const PROMO_ACTIONS = {
 // valueOf, hasOwnProperty, __proto__ — which read as truthy under a bare
 // lookup. An admin typo of cta_action: '__proto__' must still render no
 // button, not a live CTA that throws TypeError on click.
+//
+// Two prefixes carry a payload rather than naming a registry entry:
+//   url:https://…  → open that URL (https only; anything else renders no button)
+//   feedback:…     → open the feedback modal asking the trailing question. An
+//                    empty payload is valid and falls back to the card heading,
+//                    which is NOT NULL in promo_slots, so there is always a
+//                    question to ask.
+// The returned callable takes the slot so an action can read the row it came
+// from; every registry entry ignores the argument.
 function promoActionFor(key) {
   if (!key) return null;
   if (Object.prototype.hasOwnProperty.call(PROMO_ACTIONS, key)) return PROMO_ACTIONS[key];
   if (key.startsWith('url:')) {
     const url = key.slice(4);
     if (/^https:\/\//i.test(url)) return () => window.open(url, '_blank', 'noopener');
+  }
+  if (key.startsWith('feedback:')) {
+    const prompt = key.slice(9).trim();
+    return (slot) => openPromoFeedback(slot, prompt);
   }
   return null;
 }
@@ -11601,7 +11618,7 @@ function runPromoAction(slotId) {
   if (!slot) return;
   logPromoEvent(slotId, 'click');
   const fn = promoActionFor(slot.cta_action);
-  if (fn) fn();
+  if (fn) fn(slot);
 }
 
 // Mirrors the Broadcast composer's [imgN] convention so the authoring muscle
@@ -18519,6 +18536,7 @@ const PROMO_ACTION_LABELS = {
   open_track: 'Open Track', open_measure: 'Open Measure', open_clubs: 'Open Clubs',
   open_discover: 'Open Discover', open_ranking_game: 'Start the ranking game',
   'url:': 'Custom URL (https only)',
+  'feedback:': 'Open feedback form',
 };
 
 function renderPromoAdminOptions() {
@@ -18527,7 +18545,7 @@ function renderPromoAdminOptions() {
   if (!aud || !act) return;
   aud.innerHTML = Object.keys(PROMO_AUDIENCES)
     .map((k) => `<option value="${escAttr(k)}">${escHtml(PROMO_AUDIENCE_LABELS[k] || k)}</option>`).join('');
-  act.innerHTML = ['', ...Object.keys(PROMO_ACTIONS), 'url:']
+  act.innerHTML = ['', ...Object.keys(PROMO_ACTIONS), 'url:', 'feedback:']
     .map((k) => `<option value="${escAttr(k)}">${escHtml(PROMO_ACTION_LABELS[k] || k)}</option>`).join('');
 }
 
@@ -18565,7 +18583,9 @@ function promoFormSlot() {
     image_url: val('promo-image-url'),
     images: val('promo-images').split('\n').map((s) => s.trim()).filter(Boolean),
     cta_label: val('promo-cta-label'),
-    cta_action: action === 'url:' ? 'url:' + val('promo-cta-url') : action,
+    cta_action: action === 'url:'      ? 'url:' + val('promo-cta-url')
+              : action === 'feedback:' ? 'feedback:' + val('promo-feedback-prompt')
+              : action,
     audience: val('promo-audience') || 'all',
     priority: parseInt(val('promo-priority') || '0'),
     max_impressions: val('promo-max-impressions') ? parseInt(val('promo-max-impressions')) : null,
@@ -18589,8 +18609,10 @@ function updatePromoFormMode() {
 // can be resubmitted as an update. Every field here is a round-trip of what
 // promoFormSlot()/savePromoSlot() wrote, done deliberately rather than
 // assuming the raw column value drops straight into the input:
-//   - cta_action: 'url:https://…' → select 'url:' + the url field; a plain
-//     registry key selects that key and clears the url field.
+//   - cta_action: 'url:https://…' → select 'url:' + the url field;
+//     'feedback:…' → select 'feedback:' + the question field (an empty payload
+//     round-trips as an empty field, which is a valid "use the heading"); a
+//     plain registry key selects that key and clears both payload fields.
 //   - images: jsonb array → newline-joined textarea text.
 //   - max_impressions / first_position: null loads as an EMPTY field, not 0
 //     or "null" — same treatment for both nullable per-slot overrides.
@@ -18611,9 +18633,15 @@ function loadPromoIntoForm(slot) {
   if (action.startsWith('url:')) {
     set('promo-cta-action', 'url:');
     set('promo-cta-url', action.slice(4));
+    set('promo-feedback-prompt', '');
+  } else if (action.startsWith('feedback:')) {
+    set('promo-cta-action', 'feedback:');
+    set('promo-cta-url', '');
+    set('promo-feedback-prompt', action.slice(9));
   } else {
     set('promo-cta-action', action);
     set('promo-cta-url', '');
+    set('promo-feedback-prompt', '');
   }
 
   set('promo-audience', slot.audience || 'all');
@@ -18659,6 +18687,7 @@ function clearPromoForm() {
   set('promo-cta-label', '');
   set('promo-cta-action', '');
   set('promo-cta-url', '');
+  set('promo-feedback-prompt', '');
   set('promo-audience', 'all');
   set('promo-starts', '');
   set('promo-ends', '');
@@ -18869,7 +18898,7 @@ async function loadPromoAdmin() {
           <div style="font-size:.78rem;color:var(--muted);">
             ${escHtml(statusLabel)} · ${escHtml(PROMO_AUDIENCE_LABELS[s.audience] || s.audience)} · ${escHtml(posLabel)} ·
             ${st.impressions || 0} impressions · ${st.clicks || 0} clicks ·
-            ${st.distinct_users || 0} users
+            ${st.submissions || 0} submissions · ${st.distinct_users || 0} users
           </div>
           <div style="display:flex;gap:.4rem;margin-top:.4rem;">
             <button class="btn btn-ghost" style="font-size:.78rem;" data-promo-edit="${escAttr(s.id)}">Edit</button>
@@ -26334,6 +26363,15 @@ function dismissReminder() {
 
 let feedbackType = 'bug'; // 'bug' | 'feature'
 
+// Set only by openPromoFeedback(), cleared by every other entry point into this
+// modal. While set, the submitted row's title is the campaign question rather
+// than the first 80 chars of the answer, so every answer to one campaign shares
+// a title and groups in the admin Feedback tab — and the answer is attributed
+// back to the slot as a 'submit' promo event.
+let _feedbackPrompt = null;
+let _feedbackPromoSlotId = null;
+const FB_DEFAULT_PLACEHOLDER = 'Describe the issue or idea…';
+
 function setFeedbackType(type) {
   feedbackType = type;
   document.querySelectorAll('#fb-type-picker .chip').forEach(c =>
@@ -26341,18 +26379,52 @@ function setFeedbackType(type) {
   );
 }
 
-function openFeedback() {
-  // requestBrand() retitles this modal and shows a hint; reset both so the
-  // generic entry point doesn't inherit them.
-  const _t = document.getElementById('fb-modal-title-text');
-  if (_t) _t.textContent = 'Send Feedback';
-  const _h = document.getElementById('fb-request-hint');
-  if (_h) _h.style.display = 'none';
-  document.getElementById('fb-desc').value = '';
-  document.getElementById('fb-submit-btn').disabled = false;
-  document.getElementById('fb-submit-btn').textContent = 'Submit Feedback';
-  document.getElementById('fb-type-picker').style.display = 'flex';
+// Undoes every variant-mode mutation the two specialised openers below make, so
+// whichever opener runs next starts from the generic modal. Each opener calls
+// this FIRST and then applies only its own changes — without it, a promo open
+// followed by a plain "Send Feedback" tap kept the campaign question as the
+// stored title and left the answer placeholder in the textarea.
+function resetFeedbackModalMode() {
+  const t = document.getElementById('fb-modal-title-text');
+  if (t) t.textContent = 'Send Feedback';
+  const h = document.getElementById('fb-request-hint');
+  if (h) h.style.display = 'none';
+  const d = document.getElementById('fb-desc');
+  if (d) { d.value = ''; d.placeholder = FB_DEFAULT_PLACEHOLDER; }
+  const b = document.getElementById('fb-submit-btn');
+  if (b) { b.disabled = false; b.textContent = 'Submit Feedback'; }
+  const p = document.getElementById('fb-type-picker');
+  if (p) p.style.display = 'flex';
+  _feedbackPrompt = null;
+  _feedbackPromoSlotId = null;
   setFeedbackType('bug');
+}
+
+function openFeedback() {
+  resetFeedbackModalMode();
+  document.getElementById('feedback-modal').classList.remove('hidden');
+}
+
+// A promo slot with cta_action 'feedback:…' lands here. The card already asked
+// the question; the modal repeats it and takes the answer, so the bug/feature
+// chips would be noise — the row is stored as 'feature' (the `feedback` table's
+// CHECK constraint allows only bug|feature, and a suggestion is nearer feature).
+// `override` is the trailing payload of the action key; blank means use the
+// card's own heading.
+function openPromoFeedback(slot, override) {
+  resetFeedbackModalMode();
+  const question = String(override || slot?.heading || '').trim();
+  if (!question) return;
+  _feedbackPrompt = question;
+  _feedbackPromoSlotId = slot?.id || null;
+  // .textContent / .placeholder, never innerHTML — the question is admin-entered
+  // and neither sink re-enters the HTML parser, so there is nothing to escape.
+  const t = document.getElementById('fb-modal-title-text');
+  if (t) t.textContent = question;
+  document.getElementById('fb-desc').placeholder = 'Type your answer…';
+  document.getElementById('fb-submit-btn').textContent = 'Send';
+  document.getElementById('fb-type-picker').style.display = 'none';
+  setFeedbackType('feature');
   document.getElementById('feedback-modal').classList.remove('hidden');
 }
 
@@ -26369,13 +26441,12 @@ function brandRequestTitle(name) {
 function requestBrand(name) {
   hideBrandAC();
   hideWlBrandAC();
+  resetFeedbackModalMode();
   const _t = document.getElementById('fb-modal-title-text');
   if (_t) _t.textContent = 'Request a brand';
   const _h = document.getElementById('fb-request-hint');
   if (_h) _h.style.display = '';
   document.getElementById('fb-desc').value = brandRequestTitle(name);
-  document.getElementById('fb-submit-btn').disabled = false;
-  document.getElementById('fb-submit-btn').textContent = 'Submit Feedback';
   document.getElementById('fb-type-picker').style.display = 'none';
   setFeedbackType('feature');
   document.getElementById('feedback-modal').classList.remove('hidden');
@@ -26383,6 +26454,11 @@ function requestBrand(name) {
 
 function closeFeedback() {
   document.getElementById('feedback-modal').classList.add('hidden');
+  // Cancelling out of a promo-opened modal must not leave the campaign question
+  // attached to whatever the user sends next. submitFeedback() reads both of
+  // these before it calls this.
+  _feedbackPrompt = null;
+  _feedbackPromoSlotId = null;
 }
 
 function scrollToPost(postId) {
@@ -26462,10 +26538,18 @@ async function submitFeedback() {
   if (!details) { showFieldError('fb-desc', 'Please describe your feedback'); return; }
 
   const btn = document.getElementById('fb-submit-btn');
+  // Captured rather than hardcoded on the error path below: a promo-opened modal
+  // labels this button "Send", and restoring "Submit Feedback" would silently
+  // relabel it mid-flight after a failed insert.
+  const prevLabel = btn.textContent;
   btn.disabled = true;
   btn.textContent = 'Sending…';
 
-  const title   = details.slice(0, 80) + (details.length > 80 ? '…' : '');
+  // A campaign answer is titled with the QUESTION, not with its own first line,
+  // so every answer to one campaign sorts together in the admin Feedback tab.
+  const title   = _feedbackPrompt
+    ? _feedbackPrompt.slice(0, 80) + (_feedbackPrompt.length > 80 ? '…' : '')
+    : details.slice(0, 80) + (details.length > 80 ? '…' : '');
   const browser = navigator.userAgent.match(/(Chrome|Safari|Firefox|Edge)\/[\d.]+/)?.[0] ?? 'unknown';
 
   const { error } = await db.from('feedback').insert({
@@ -26480,9 +26564,14 @@ async function submitFeedback() {
   if (error) {
     toast('Could not send feedback — please try again', 'error');
     btn.disabled = false;
-    btn.textContent = 'Submit Feedback';
+    btn.textContent = prevLabel;
     return;
   }
+
+  // Completes the promo funnel (impression → click → submit). Logged only after
+  // the insert succeeds, so the count never claims an answer that wasn't stored.
+  // Read before closeFeedback(), which clears the variant state.
+  if (_feedbackPromoSlotId) logPromoEvent(_feedbackPromoSlotId, 'submit');
 
   closeFeedback();
   toast('Thanks! Your feedback has been submitted.');
