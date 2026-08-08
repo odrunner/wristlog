@@ -9,7 +9,7 @@ import { test, expect } from '@playwright/test';
 //
 // Top-level let/const in index.html are NOT window properties, so app state is
 // set here as bare identifiers (same approach as promo-feed.mock.spec.js).
-// Date.now is stubbed so the first-week gate resolves identically whatever day
+// Date.now is stubbed so the window gate resolves identically whatever day
 // the suite runs on — 3 August 2026, recapping July.
 
 const SLOT = {
@@ -42,7 +42,7 @@ async function mount(page, opts = {}) {
   const arg = { watches: WATCHES, logs: LOGS, day: 3, slot: SLOT, likes: null, ...opts };
   await page.goto('/');
   await page.evaluate((a) => {
-    // Local-time construction: "the first week of the month" is a wall-clock
+    // Local-time construction: "the opening days of the month" is a wall-clock
     // idea, so a UTC literal would move the gate with the runner's timezone.
     const fixed = new Date(2026, 7, a.day, 12).getTime();
     Date.now = () => fixed;
@@ -244,7 +244,7 @@ test.describe('month-in-review card — nothing to show', () => {
     await mount(page, { day: 20 });
     await expect(q(page, '.promo-recap-track')).toHaveCount(0);
     await expect(q(page, '[data-recap-dot]')).toHaveCount(0);
-    await expect(q(page, '.promo-recap-note')).toContainText('1st–7th');
+    await expect(q(page, '.promo-recap-note')).toContainText('1st–10th');
   });
 
   test('shows the explainer for a month below the wear threshold', async ({ page }) => {

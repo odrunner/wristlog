@@ -3682,7 +3682,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
              so the copy fields below do nothing for it. Eyebrow and the CTA are
              the only two it reads. -->
         <div style="font-size:.72rem;color:var(--muted);line-height:1.45;margin:-.2rem 0 .6rem;">
-          <b>Month in review</b> ignores Heading, Body and images — it writes itself from each viewer's own wear log, and only shows on the 1st–7th of a month. Only the Eyebrow and the CTA apply, and the CTA is best left empty: the card is the content, and a button that only lands on Stats is a step nobody needs.
+          <b>Month in review</b> ignores Heading, Body and images — it writes itself from each viewer's own wear log, and only shows on the first 10 days of a month. Only the Eyebrow and the CTA apply, and the CTA is best left empty: the card is the content, and a button that only lands on Stats is a step nobody needs.
         </div>
         <div class="draft-form-row">
           <label for="promo-eyebrow">Eyebrow (tag/band: the mono brand label — "WRotate HQ", "WRotate asks")</label>
@@ -7694,7 +7694,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.18.57';
+const APP_VERSION = '08.07.29';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11819,7 +11819,7 @@ function promoAudienceMatches(key, ctx) {
 // gate: it answers "is there a month worth showing this person right now?", and
 // returning null is what keeps the card out of the feed — eligiblePromoSlots()
 // only has to ask.
-const RECAP_WINDOW_DAYS = 7;    // shown on the 1st–7th; the card can never go stale
+const RECAP_WINDOW_DAYS = 10;   // shown on the 1st–10th; the card can never go stale
 const RECAP_MIN_WEARS   = 5;    // below this a "review" is embarrassing, not delightful
 const RECAP_MIN_WATCHES = 2;    // one watch all month is a slide, not a story
 const RECAP_MIN_STREAK  = 3;    // below this a "streak" slide reads as a rebuke

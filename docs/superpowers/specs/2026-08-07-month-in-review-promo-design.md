@@ -4,7 +4,7 @@ A personalised, swipeable recap of the month that just ended, delivered through
 the existing feed promo system as a fourth card variant.
 
 Where the Stats page's Monthly Review is a report you go and look at, this is
-the same month pushed to you once, in the first week, as a story you swipe.
+the same month pushed to you once, in its opening days, as a story you swipe.
 
 ---
 
@@ -37,13 +37,15 @@ Returns `null` — the card does not exist — unless **all** of:
 
 | Gate | Value |
 | --- | --- |
-| Window | `now` falls on day 1–`RECAP_WINDOW_DAYS` (7) of the month |
+| Window | `now` falls on day 1–`RECAP_WINDOW_DAYS` (10) of the month |
 | Volume | `RECAP_MIN_WEARS` (5) wears in the month that ended |
 | Variety | `RECAP_MIN_WATCHES` (2) distinct watches |
 
 Below the thresholds the recap is embarrassing rather than delightful, so it
 simply doesn't appear. The window makes the card self-limiting: it cannot go
 stale in the feed, and it re-arms on the 1st without anyone touching the row.
+It started at 7 days and was widened to 10 on 2026-08-08 — a week is a narrow
+miss for anyone who doesn't open the app in it.
 
 The returned object:
 

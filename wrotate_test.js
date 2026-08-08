@@ -2659,7 +2659,7 @@ export function promoAudienceMatches(key, ctx) {
 // deterministic and the caller controls the clock.
 // ── "Your month in review" (variant: 'recap') ────────────────────────────────
 // Spec: docs/superpowers/specs/2026-08-07-month-in-review-promo-design.md
-export const RECAP_WINDOW_DAYS = 7;
+export const RECAP_WINDOW_DAYS = 10;
 export const RECAP_MIN_WEARS   = 5;
 export const RECAP_MIN_WATCHES = 2;
 export const RECAP_MIN_STREAK  = 3;
