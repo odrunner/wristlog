@@ -96,6 +96,13 @@ async function run() {
     return { ...r, ok: r.status === 400 };
   });
 
+  // A share token is the capability that lets a followers-only or private
+  // profile share its own month, so an unknown one must resolve to nothing.
+  await check('share-recap (bad token → 400)', async () => {
+    const r = await callFn('share-recap?t=definitely-not-a-real-token');
+    return { ...r, ok: r.status === 400 };
+  });
+
   // A link preview whose image 404s renders as a grey box, so image mode
   // answers with an SVG even for a request that has no recap behind it.
   await check('share-recap (og image is always an SVG)', async () => {

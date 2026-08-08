@@ -323,15 +323,16 @@ test.describe('month-in-review card — injection into the feed', () => {
 // card. What matters on this side is that the right URL is built, and that a
 // profile whose page would 404 is stopped before the share sheet opens.
 test.describe('month-in-review card — sharing', () => {
-  async function armShare(page, profile) {
-    await page.evaluate((p) => {
-      myProfile = p;
+  async function armShare(page, { profile = { username: 'od' }, token = 'tok123' } = {}) {
+    await page.evaluate((a) => {
+      myProfile = a.profile;
+      _promoRecapShare = a.token ? { period: '2026-07', token: a.token } : null;
       window.__shared = [];
       window.__toasts = [];
       navigator.share = async (payload) => { window.__shared.push(payload); };
       window.toast = (msg, kind) => { window.__toasts.push([msg, kind]); };
       toast = window.toast;
-    }, profile);
+    }, { profile, token });
     await page.locator('#recap-host [data-recap-share]').click();
     return page.evaluate(() => ({ shared: window.__shared, toasts: window.__toasts }));
   }
@@ -341,41 +342,144 @@ test.describe('month-in-review card — sharing', () => {
     await expect(q(page, '[data-recap-share]')).toHaveText(/Share July/);
   });
 
-  test('shares a share-recap link for the viewer and the recap month', async ({ page }) => {
+  // The link carries the token and nothing else — not the username, not the
+  // month. The token resolves both server-side.
+  test('shares a token link, with no username or month in the URL', async ({ page }) => {
     await mount(page);
-    const { shared } = await armShare(page, { username: 'od', profile_privacy: 'public' });
+    const { shared } = await armShare(page);
     expect(shared).toHaveLength(1);
-    expect(shared[0].url).toBe('https://api.wrotate.com/functions/v1/share-recap?u=od&m=2026-07');
+    expect(shared[0].url).toBe('https://api.wrotate.com/functions/v1/share-recap?t=tok123');
+    expect(shared[0].url).not.toContain('u=');
+    expect(shared[0].url).not.toContain('m=');
     expect(shared[0].title).toBe('My July on WRotate');
     expect(shared[0].text).toBe('6 wears across 3 watches in July.');
   });
 
-  test('percent-encodes an awkward username', async ({ page }) => {
-    await mount(page);
-    const { shared } = await armShare(page, { username: 'a b&c', profile_privacy: 'public' });
-    expect(shared[0].url).toContain('u=a%20b%26c');
-  });
-
-  // The page would serve a padlock, so the share is stopped here rather than
-  // letting someone send a dead link and hear about it from a friend.
-  test('refuses to share from a private profile', async ({ page }) => {
-    await mount(page);
-    const { shared, toasts } = await armShare(page, { username: 'od', profile_privacy: 'private' });
-    expect(shared).toHaveLength(0);
-    expect(toasts[0][0]).toContain('private');
-  });
-
-  test('refuses to share when the collection is hidden', async ({ page }) => {
+  // Possession of the token is the authorisation, so the sharer's own profile
+  // privacy is beside the point — they are sharing their own month with people
+  // they picked, which is a different act from a stranger finding it.
+  test('shares from a followers-only profile', async ({ page }) => {
     await mount(page);
     const { shared } = await armShare(page, {
-      username: 'od', profile_privacy: 'public', collection_visibility: 'private',
+      profile: { username: 'od', profile_privacy: 'followers', collection_visibility: 'followers' },
     });
+    expect(shared).toHaveLength(1);
+    expect(shared[0].url).toContain('t=tok123');
+  });
+
+  test('shares from a fully private profile too', async ({ page }) => {
+    await mount(page);
+    const { shared } = await armShare(page, {
+      profile: { username: 'od', profile_privacy: 'private', collection_visibility: 'private' },
+    });
+    expect(shared).toHaveLength(1);
+  });
+
+  test('percent-encodes an awkward token', async ({ page }) => {
+    await mount(page);
+    const { shared } = await armShare(page, { token: 'a b&c' });
+    expect(shared[0].url).toContain('t=a%20b%26c');
+  });
+
+  // The token is minted during boot. If that hasn't landed, sending a link that
+  // resolves to nothing is worse than asking for another tap.
+  test('says so rather than sharing a link with no token', async ({ page }) => {
+    await mount(page);
+    const { shared, toasts } = await armShare(page, { token: null });
     expect(shared).toHaveLength(0);
+    expect(toasts[0][0]).toContain('not ready');
   });
 
   test('the composer explainer has no share button', async ({ page }) => {
     await mount(page, { day: 20 });
     await expect(q(page, '[data-recap-share]')).toHaveCount(0);
+  });
+});
+
+// One tap, no form: the cheapest signal that anyone will actually give on a
+// brand-new feature. A vote is a promo_event, so the admin's per-slot stats
+// aggregate it with no new plumbing.
+test.describe('month-in-review card — thumbs up/down', () => {
+  async function armVote(page, existingEvents = []) {
+    await page.evaluate((ev) => {
+      currentUser = { id: 'u1' };
+      _promoEvents = ev;
+      window.__inserted = [];
+      db.from = (t) => ({
+        insert: async (row) => { window.__inserted.push({ t, row }); return { error: null }; },
+      });
+      // Re-render so a seeded vote is reflected in the markup.
+      document.getElementById('recap-host').innerHTML =
+        window.renderPromoCard({ id: 'r1', variant: 'recap', images: [] });
+    }, existingEvents);
+  }
+
+  test('asks for a verdict, bottom right of the card', async ({ page }) => {
+    await mount(page);
+    await armVote(page);
+    await expect(q(page, '.promo-recap-vote-q')).toHaveText('Worth having?');
+    await expect(q(page, '[data-recap-vote]')).toHaveCount(2);
+  });
+
+  test('records a thumbs up and thanks the voter', async ({ page }) => {
+    await mount(page);
+    await armVote(page);
+    await q(page, '[data-recap-vote="thumbs_up"]').click();
+    const rows = await page.evaluate(() => window.__inserted);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].t).toBe('promo_events');
+    expect(rows[0].row).toMatchObject({ slot_id: 'r1', event: 'thumbs_up' });
+    await expect(q(page, '.promo-recap-vote--done')).toContainText('Glad you liked it');
+    await expect(q(page, '[data-recap-vote]')).toHaveCount(0);
+  });
+
+  test('records a thumbs down without a cheerful reply', async ({ page }) => {
+    await mount(page);
+    await armVote(page);
+    await q(page, '[data-recap-vote="thumbs_down"]').click();
+    const rows = await page.evaluate(() => window.__inserted);
+    expect(rows[0].row).toMatchObject({ event: 'thumbs_down' });
+    await expect(q(page, '.promo-recap-vote--done')).toContainText('noted');
+  });
+
+  // The answer replaces the question, so there is nothing left to tap — but the
+  // guard is in voteOnRecap() too, because a stale card in the DOM could still
+  // carry the buttons.
+  test('takes one vote per person, not two', async ({ page }) => {
+    await mount(page);
+    await armVote(page);
+    await q(page, '[data-recap-vote="thumbs_up"]').click();
+    await page.evaluate(() => voteOnRecap('r1', 'thumbs_down'));
+    const rows = await page.evaluate(() => window.__inserted);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].row.event).toBe('thumbs_up');
+  });
+
+  test('remembers a vote cast in an earlier session', async ({ page }) => {
+    await mount(page);
+    await armVote(page, [{ slot_id: 'r1', event: 'thumbs_up' }]);
+    await expect(q(page, '[data-recap-vote]')).toHaveCount(0);
+    await expect(q(page, '.promo-recap-vote--done')).toBeVisible();
+  });
+
+  test('ignores a vote on a different slot', async ({ page }) => {
+    await mount(page);
+    await armVote(page, [{ slot_id: 'other', event: 'thumbs_up' }]);
+    await expect(q(page, '[data-recap-vote]')).toHaveCount(2);
+  });
+
+  // A vote must never retire the card — only impressions count against the cap.
+  test('a vote is not logged as an impression', async ({ page }) => {
+    await mount(page);
+    await armVote(page);
+    await q(page, '[data-recap-vote="thumbs_down"]').click();
+    const rows = await page.evaluate(() => window.__inserted);
+    expect(rows.filter((r) => r.row.event === 'impression')).toHaveLength(0);
+  });
+
+  test('the composer explainer has no vote control', async ({ page }) => {
+    await mount(page, { day: 20 });
+    await expect(q(page, '.promo-recap-vote')).toHaveCount(0);
   });
 });
 

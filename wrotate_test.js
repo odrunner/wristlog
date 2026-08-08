@@ -2808,7 +2808,6 @@ export function monthRecap({ now, logs, watches, likes }) {
 export function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown, localCounts }) {
   const cfg = config || {};
   if (!cfg.enabled) return [];
-  if (cfg.suppress_after_modal && modalShown) return [];
 
   // Two counts, one pass. `seen` is the all-time count every normal slot is
   // capped against; `seenWindow` counts only impressions inside the CURRENT
@@ -2833,6 +2832,11 @@ export function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown
     // monthRecap(); this stays one line, and this function stays pure.
     const isRecap = s.variant === 'recap';
     if (isRecap && !recap) return false;
+    // suppress_after_modal stands every card down once a modal has taken the
+    // screen this session. The recap is exempt (mirrors the app — see
+    // index.html for the full rationale): the fun-fact modal is daily and the
+    // recap comes round twelve times a year.
+    if (cfg.suppress_after_modal && modalShown && !isRecap) return false;
     // Never trust RLS to have filtered status. The admin's own account matches
     // BOTH the user policy and the is_admin "for all" policy, and policies OR
     // together — so select('*') hands the owner drafts and archives too. Without

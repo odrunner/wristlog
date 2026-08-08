@@ -463,6 +463,39 @@ describe('eligiblePromoSlots — recap slots', () => {
     const localCounts = { s1: { n: 5, e: '2026-07' } };
     expect(run({ localCounts })).toEqual([]);
   });
+
+  // The fun-fact modal fires daily at login and sets modalShown, which used to
+  // stand every card down for the session. For a card that comes round twelve
+  // times a year that meant the recap depended on beating the modal to the
+  // feed — a race it often lost, and the reason it looked like it had
+  // "disappeared" on 2026-08-08.
+  // CFG above has suppression OFF, so these must turn it on explicitly or they
+  // assert nothing at all.
+  const SUPPRESSING = { ...CFG, suppress_after_modal: true };
+
+  it('survives a modal that already took the screen', () => {
+    expect(run({ config: SUPPRESSING, modalShown: true }).map((s) => s.id)).toEqual(['s1']);
+  });
+
+  it('still stands a non-recap slot down after a modal', () => {
+    expect(run({
+      slots: [slot({ variant: 'tag' })], config: SUPPRESSING, modalShown: true,
+    })).toEqual([]);
+  });
+
+  // The exemption is about the modal, not a licence to ignore everything else.
+  it('is not exempt from the config being disabled', () => {
+    expect(run({ config: { ...SUPPRESSING, enabled: false }, modalShown: true })).toEqual([]);
+  });
+
+  it('is not exempt from the existence gate', () => {
+    expect(run({ config: SUPPRESSING, ctx: { recap: null }, modalShown: true })).toEqual([]);
+  });
+
+  it('is not exempt from its own impression cap', () => {
+    const events = [{ slot_id: 's1', event: 'impression', created_at: '2026-08-01T09:00:00Z' }];
+    expect(run({ config: SUPPRESSING, events, modalShown: true })).toEqual([]);
+  });
 });
 
 // The three thresholds are plain numbers, so the mirror-drift guard can only

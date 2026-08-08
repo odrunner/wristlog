@@ -2256,6 +2256,27 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     .promo-recap-foot { padding: 0 18px 18px; display: flex; flex-direction: column; gap: 8px; }
     .promo-recap-share { display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+    /* The ask sits under the share button, right-aligned — present enough to
+       answer, quiet enough not to compete with the card it is asking about. */
+    .promo-recap-vote {
+      display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+      min-height: 26px; margin-top: 2px;
+    }
+    .promo-recap-vote-q { font-size: 12px; color: var(--muted); }
+    .promo-recap-vote-btns { display: flex; gap: 4px; }
+    .promo-recap-vote-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 30px; height: 26px; padding: 0; cursor: pointer;
+      background: transparent; border: 1px solid var(--promo-line);
+      border-radius: 7px; color: var(--muted);
+      transition: color .15s, border-color .15s, background .15s;
+    }
+    .promo-recap-vote-btn:hover {
+      color: var(--promo-gold); border-color: var(--promo-gold);
+      background: color-mix(in srgb, var(--promo-gold) 8%, transparent);
+    }
+    .promo-recap-vote--done { font-size: 12px; color: var(--muted); font-style: italic; }
     .promo-recap .promo-cta {
       width: 100%; margin: 0; background: var(--promo-gold); color: var(--promo-cta-fg);
       border: none; border-radius: 9px; padding: 13px;
@@ -7694,7 +7715,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '08.07.29';
+const APP_VERSION = '08.07.55';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11978,7 +11999,6 @@ function monthRecap({ now, logs, watches, likes }) {
 function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown, localCounts }) {
   const cfg = config || {};
   if (!cfg.enabled) return [];
-  if (cfg.suppress_after_modal && modalShown) return [];
 
   // Two counts, one pass. `seen` is the all-time count every normal slot is
   // capped against. `seenWindow` counts only impressions inside the CURRENT
@@ -12007,6 +12027,14 @@ function eligiblePromoSlots({ slots, config, ctx, events, now, modalShown, local
     // in monthRecap(); this stays one line, and this function stays pure.
     const isRecap = s.variant === 'recap';
     if (isRecap && !recap) return false;
+    // suppress_after_modal stands every card down once a modal has taken the
+    // screen this session. The recap is exempt, and deliberately so: the rule
+    // exists to stop a user getting a modal AND a card in one sitting, which is
+    // the right trade for a card they can see any day and the wrong one for a
+    // card that comes round twelve times a year. The fun-fact modal fires daily
+    // at login, so without this exemption it wins nearly every time and the
+    // recap depends on beating it to the feed — a race it often loses.
+    if (cfg.suppress_after_modal && modalShown && !isRecap) return false;
     // Never trust RLS to have filtered status. The admin's own account matches
     // BOTH the user policy and the is_admin "for all" policy, and policies OR
     // together — so select('*') hands the owner drafts and archives too. Without
@@ -12230,6 +12258,11 @@ function installPromoClickDelegation() {
       shareMonthRecap();
       return;
     }
+    const vote = event.target.closest('[data-recap-vote]');
+    if (vote) {
+      voteOnRecap(card.dataset.promoId, vote.dataset.recapVote);
+      return;
+    }
     if (!event.target.closest('[data-promo-cta]')) return;
     runPromoAction(card.dataset.promoId);
   });
@@ -12241,21 +12274,21 @@ function installPromoClickDelegation() {
 // only form that brings anyone back to WRotate.
 async function shareMonthRecap() {
   const recap = currentMonthRecap();
-  const uname = (myProfile && myProfile.username) || '';
-  if (!recap || !uname) { toast('Nothing to share yet', 'error'); return; }
+  if (!recap) { toast('Nothing to share yet', 'error'); return; }
 
-  // share-recap serves nothing for a private profile or a hidden collection —
-  // the recipient would get a padlock. Better to say so here than to let them
-  // send a dead link and find out from a friend.
-  if ((myProfile.profile_privacy || 'public') !== 'public' ||
-      (myProfile.collection_visibility || 'public') === 'private') {
-    toast('Your profile is private — the link would show nothing', 'error');
-    return;
-  }
+  // The token, not the username, is what the link carries. It works whatever
+  // the sharer's profile privacy is — they are sharing their own month with
+  // people they chose, which is a different act from someone else finding it —
+  // and it keeps the username out of the URL. Minted during boot
+  // (ensureRecapShareToken), so this is a cache read, not a round trip: an
+  // await here would lose the user gesture navigator.share needs on iOS.
+  const token = (_promoRecapShare && _promoRecapShare.period === recap.period)
+    ? _promoRecapShare.token : null;
+  if (!token) { toast('Share link not ready — try again in a moment', 'error'); return; }
 
   const monthName = new Date(recap.year, recap.month, 1)
     .toLocaleDateString('en-US', { month: 'long' });
-  const url = `https://api.wrotate.com/functions/v1/share-recap?u=${encodeURIComponent(uname)}&m=${encodeURIComponent(recap.period)}`;
+  const url = `https://api.wrotate.com/functions/v1/share-recap?t=${encodeURIComponent(token)}`;
   const title = `My ${monthName} on WRotate`;
   const text = `${recap.totalWears} wear${recap.totalWears !== 1 ? 's' : ''} across ${recap.uniqueCount} watch${recap.uniqueCount !== 1 ? 'es' : ''} in ${monthName}.`;
 
@@ -12320,6 +12353,53 @@ function recapThumb(w, cls) {
   }
   const bg = w.color || '#c9a84c';
   return `<div class="promo-recap-thumb ${cls} promo-recap-thumb--initials" style="background:${escAttr(bg)};color:${escAttr(initialsTextColor(bg))}">${escHtml(initials(w.brand || '', w.name || ''))}</div>`;
+}
+
+// Thumbs up/down, bottom-right of the card. This is a brand-new feature with no
+// prior art in the app, so the cheapest possible signal — one tap, no form —
+// is worth more than a survey nobody fills in.
+//
+// A vote is a promo_event like any other, so the admin's per-slot stats already
+// aggregate it and nothing new has to be built to read it. Votes never count
+// against max_impressions (logPromoEvent only counts impressions), so nobody
+// retires their own card by having an opinion about it.
+function recapVoteOf(slotId) {
+  for (const e of (_promoEvents || [])) {
+    if (e.slot_id === slotId && (e.event === 'thumbs_up' || e.event === 'thumbs_down')) return e.event;
+  }
+  return null;
+}
+
+function recapVoteHtml(slotId) {
+  // Already voted — the answer replaces the question rather than inviting a
+  // second, contradictory tap.
+  const voted = recapVoteOf(slotId);
+  if (voted) {
+    return `<div class="promo-recap-vote promo-recap-vote--done">
+      <span>${voted === 'thumbs_up' ? 'Glad you liked it — thanks.' : 'Thanks — noted.'}</span>
+    </div>`;
+  }
+  const btn = (kind, label, path) =>
+    `<button type="button" class="promo-recap-vote-btn" data-recap-vote="${kind}" aria-label="${label}" title="${label}">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>
+    </button>`;
+  const up = '<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>';
+  const down = '<path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>';
+  return `<div class="promo-recap-vote">
+    <span class="promo-recap-vote-q">Worth having?</span>
+    <div class="promo-recap-vote-btns">${btn('thumbs_up', 'Yes, useful', up)}${btn('thumbs_down', 'Not for me', down)}</div>
+  </div>`;
+}
+
+// Records the vote and swaps the control for its acknowledgement in place — no
+// re-render of the deck, which would reset the swipe position mid-read.
+function voteOnRecap(slotId, kind) {
+  if (kind !== 'thumbs_up' && kind !== 'thumbs_down') return;
+  if (recapVoteOf(slotId)) return;                  // one vote per person per card
+  logPromoEvent(slotId, kind);                      // pushes into _promoEvents too
+  const card = document.getElementById('promocard-' + slotId);
+  const box  = card && card.querySelector('.promo-recap-vote');
+  if (box) box.outerHTML = recapVoteHtml(slotId);
 }
 
 function renderRecapCard(slot, idAttrs, hasCta, ctaText) {
@@ -12476,6 +12556,7 @@ function renderRecapCard(slot, idAttrs, hasCta, ctaText) {
         Share ${escHtml(monthName)}
       </button>
       ${cta}
+      ${recapVoteHtml(slot.id)}
     </div>
   </div>`;
 }
@@ -12758,6 +12839,10 @@ async function loadRecapLikes() {
   if (!currentUser) return;
   const provisional = monthRecap({ now: Date.now(), logs, watches });
   if (!provisional) return;
+  // Minted here, not on the Share tap: navigator.share must be called from the
+  // user's gesture, and an await in between loses that gesture on iOS Safari.
+  // By the time the button exists the token is already in hand.
+  ensureRecapShareToken(provisional.period);
   const ids = (logs || [])
     .filter((l) => isWearEntry(l) && l.date && String(l.date).slice(0, 7) === provisional.period)
     .map((l) => l.id)
@@ -12772,6 +12857,46 @@ async function loadRecapLikes() {
     _promoRecapMemo = null;       // the key changed; drop the likes-less result
   } catch (e) {
     console.warn('[promo] recap likes fetch failed:', e && e.message);
+  }
+}
+
+// The capability that makes a recap link work for a sharer whose profile is
+// followers-only or private. They are sharing their OWN month, deliberately,
+// with people they picked — but `?u=<username>&m=<month>` is guessable, so
+// honouring that for a non-public profile would publish everyone's months to
+// anyone who tries a URL. Possessing the token is the authorisation instead.
+//
+// One token per (user, month), reused forever: re-sharing the same month must
+// not invalidate the link already sitting in someone's thread.
+let _promoRecapShare = null;      // { period, token }
+async function ensureRecapShareToken(period) {
+  if (!currentUser || !period) return null;
+  if (_promoRecapShare && _promoRecapShare.period === period) return _promoRecapShare.token;
+  try {
+    const { data: existing } = await db.from('recap_shares')
+      .select('token').eq('user_id', currentUser.id).eq('period', period).maybeSingle();
+    if (existing && existing.token) {
+      _promoRecapShare = { period, token: existing.token };
+      return existing.token;
+    }
+    const token = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2))
+      .replace(/-/g, '');
+    const { error } = await db.from('recap_shares')
+      .insert({ token, user_id: currentUser.id, period });
+    if (error) {
+      // Almost certainly the unique (user_id, period) — two tabs minting at
+      // once. Whoever won has the token; take theirs rather than a second one.
+      const { data: won } = await db.from('recap_shares')
+        .select('token').eq('user_id', currentUser.id).eq('period', period).maybeSingle();
+      if (!won || !won.token) throw error;
+      _promoRecapShare = { period, token: won.token };
+      return won.token;
+    }
+    _promoRecapShare = { period, token };
+    return token;
+  } catch (e) {
+    console.warn('[promo] recap share token failed:', e && e.message);
+    return null;
   }
 }
 

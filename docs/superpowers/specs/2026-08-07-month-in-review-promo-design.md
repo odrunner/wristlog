@@ -82,13 +82,22 @@ test; the Stats card's tie-break is insertion order, i.e. arbitrary.
 re-render doesn't re-scan the log array, and cleared on account switch
 alongside the other promo state.
 
-`eligiblePromoSlots()` gains two variant-aware behaviours, and nothing else:
+`eligiblePromoSlots()` gains three variant-aware behaviours, and nothing else:
 
 1. **Existence gate** — `if (s.variant === 'recap' && !ctx.recap) return false`.
    Both the window and the data thresholds already live in `monthRecap()`, so
    this is one line and the function stays pure.
 
-2. **Windowed impression cap.** `max_impressions` counts for all time, so
+2. **Exempt from `suppress_after_modal`.** That config stands every card down
+   once a modal has taken the screen this session. The recap is exempt: the
+   rule exists so a user doesn't get a modal *and* a card in one sitting, which
+   is the right trade for a card they can see any day and the wrong one for a
+   card that comes round twelve times a year. The fun-fact modal fires daily at
+   login, so without the exemption the recap depended on beating it to the feed
+   — a race it often lost, which is what made the card look like it had
+   vanished on 2026-08-08. Every other gate still applies.
+
+3. **Windowed impression cap.** `max_impressions` counts for all time, so
    without a change the card would show once, ever. For recap slots only, the
    cap counts impressions logged since `recap.windowStart`. That needs
    `created_at` on the events (added to the `promo_events` select, and to the
@@ -173,16 +182,33 @@ reaches any date filter. Image mode **always** answers with an SVG, even for a
 bad or private request — a link preview whose image 404s renders as a grey box
 in the thread.
 
-**Privacy has two layers.** The page is served only for a public profile with a
-non-private collection — the same gate `share-collection` uses. Within that, a
-watch marked private still *counts* toward the totals (so the numbers match
-what the sharer saw in the app) but is never *named or pictured*: the podium is
-drawn only from public watches. The consequence is that the podium can be
-shorter than the unique count implies, which is correct.
+**The link carries a token, not a username.** `?t=<token>` resolves to the
+(user, month) it was minted for. Possession IS the authorisation — the owner
+generated it and sent it — so a token link is honoured whatever the sharer's
+profile privacy is. That is the point: sharing your own month with people you
+picked is a different act from a stranger finding it, and requiring a fully
+public profile blocked the feature for exactly the people most likely to use it.
 
-The client refuses to open the share sheet at all when the viewer's own profile
-would fail that gate — better than letting someone send a dead link and hear
-about it from a friend.
+`?u=<username>&m=<month>` still works, and still *only* for a public profile.
+It has to stay gated because it is guessable: honouring it for a private
+account would publish everyone's months to anyone who tries a URL.
+
+The token cannot live on `profiles` — every SELECT policy there applies to
+PUBLIC including `anon`, so it would be readable by anyone holding the
+publishable key, which is to say not a secret. It lives in `recap_shares`,
+readable only by its owner; the edge function resolves it with the service role.
+One token per (user, month), reused forever: re-sharing a month must not
+invalidate the link already sitting in someone's thread.
+
+**Watch privacy is a separate layer and still applies.** A watch marked private
+still *counts* toward the totals (so the numbers match what the sharer saw) but
+is never *named or pictured* — that setting is about the watch, not about who
+the profile is shared with. The podium can therefore be shorter than the unique
+count implies, which is correct.
+
+The token is minted during boot, not on the Share tap: `navigator.share` must be
+called from the user's gesture, and an `await` in between loses that gesture on
+iOS Safari.
 
 The page carries `noindex`. The counting rules in `computeRecap()` mirror
 `monthRecap()` exactly; a sharer who sends their July and then sees different
@@ -207,7 +233,19 @@ takes `tabindex="0"` so it is keyboard-scrollable.
 Deliberately **out of scope**: per-slide impression tracking, share-to-image,
 and a fullscreen expand. Each is a clean follow-up on top of this.
 
-## 6. Admin
+## 6. Thumbs up/down
+
+The card asks "Worth having?" bottom-right, under the share button. One tap, no
+form — on a brand-new feature the cheapest possible signal beats a survey nobody
+fills in. The answer replaces the question rather than inviting a second,
+contradictory tap, and a vote from a previous session is remembered.
+
+A vote is a `promo_events` row (`thumbs_up` / `thumbs_down`, added to that
+table's CHECK), so the admin's per-slot stats aggregate it with no new plumbing.
+Only `impression` counts against `max_impressions`, so nobody retires their own
+card by having an opinion about it.
+
+## 7. Admin
 
 `recap` joins the Style dropdown from the registry, as the other variants do. A
 note under the picker says the copy fields are ignored for this style. The live
@@ -216,7 +254,7 @@ of season, an explicit "no recap in this window" placeholder rather than an
 empty box. The placeholder is the only thing a `recap` slot can render without
 data, and eligibility guarantees the feed never reaches it.
 
-## 7. Tests
+## 8. Tests
 
 Unit (`tests/promo-recap.test.js`):
 - window boundaries — day 7 in, day 8 out, day 1 of January recapping December
@@ -233,9 +271,10 @@ Unit (`tests/promo-eligible.test.js`, extended):
 E2E (`e2e/promo-recap.mock.spec.js`): slide count, dot count, the avatar
 fallback, the collapse to two tiles, and the CTA firing `open_stats`.
 
-## 8. Where it lives
+## 9. Where it lives
 
-- Schema: `sql/2026-08-07-promo-recap-variant.sql`
+- Schema: `sql/2026-08-07-promo-recap-variant.sql`,
+  `sql/2026-08-08-recap-shares-and-feedback.sql` (`recap_shares`, thumbs events)
 - Sharing: `supabase/functions/share-recap/` (index.ts, lib.ts, lib.test.ts) +
   `shareMonthRecap()` in `index.html`; smoke cases in
   `scripts/smoke-test-functions.js`

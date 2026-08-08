@@ -30,15 +30,43 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "GET, OPTIONS",
 };
 
+// Resolves a share token to the (user, month) it was minted for. Possession of
+// the token IS the authorisation — the owner generated it and sent it — so this
+// path deliberately skips the profile-privacy gate that the ?u= path applies.
+// Guessing a token is the only way in, and it is a UUID's worth of entropy.
 // deno-lint-ignore no-explicit-any
-async function fetchRecapData(db: any, username: string, period: string) {
-  const { data: profile, error: profErr } = await db
-    .from("profiles")
-    .select("id, username, display_name, avatar_url, is_official, profile_privacy, collection_visibility")
-    .eq("username", username)
+async function resolveToken(db: any, token: string) {
+  const { data, error } = await db
+    .from("recap_shares")
+    .select("user_id, period")
+    .eq("token", token)
     .maybeSingle();
+  if (error || !data || !isValidPeriod(data.period)) return null;
+  return data as { user_id: string; period: string };
+}
 
-  if (!isRecapViewable(profile, profErr)) return null;
+// `by` is either a username (public profiles only) or a resolved user id from a
+// share token (any profile). Everything after the lookup is identical.
+// deno-lint-ignore no-explicit-any
+async function fetchRecapData(
+  db: any,
+  by: { username: string } | { userId: string },
+  period: string,
+) {
+  const cols = "id, username, display_name, avatar_url, is_official, profile_privacy, collection_visibility";
+  const q = db.from("profiles").select(cols);
+  const { data: profile, error: profErr } = await ("userId" in by
+    ? q.eq("id", by.userId)
+    : q.eq("username", by.username)).maybeSingle();
+
+  // The gate applies to the guessable ?u= URL only. A token-borne link is the
+  // owner's own act of sharing, so a followers-only or private profile is
+  // honoured rather than refused.
+  if ("username" in by) {
+    if (!isRecapViewable(profile, profErr)) return null;
+  } else if (profErr || !profile) {
+    return null;
+  }
 
   const { data: watchRows } = await db
     .from("watches")
@@ -95,16 +123,25 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
 
   const url = new URL(req.url);
+  const token = url.searchParams.get("t");
   const username = url.searchParams.get("u");
-  const period = url.searchParams.get("m");
   const imgMode = url.searchParams.get("img") === "1";
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const db = createClient(supabaseUrl, supabaseKey);
 
-  const ok = !!username && isValidPeriod(period);
-  const data = ok ? await fetchRecapData(db, username as string, period as string) : null;
+  // A token carries its own month, so ?t= needs no ?m=. The ?u= form still
+  // takes one, and still only works for a public profile.
+  const share = token ? await resolveToken(db, token) : null;
+  let period = share ? share.period : url.searchParams.get("m");
+  const ok = token ? !!share : (!!username && isValidPeriod(period));
+  const data = !ok
+    ? null
+    : share
+    ? await fetchRecapData(db, { userId: share.user_id }, share.period)
+    : await fetchRecapData(db, { username: username as string }, period as string);
+  if (!isValidPeriod(period)) period = null;
 
   // --- Image mode ---
   // Always answers with an image, even on a bad or private request: a link
@@ -144,7 +181,12 @@ serve(async (req) => {
   const topName = topWatch ? `${topWatch.brand || ""} ${topWatch.name || ""}`.trim() : null;
   const { ogTitle, ogDescription } = buildRecapOg(displayName, recap, topName);
 
-  const q = `u=${encodeURIComponent(username as string)}&m=${encodeURIComponent(period as string)}`;
+  // The og:image URL has to be fetchable by a crawler with no session, so it
+  // repeats whichever credential the page itself was opened with — the token
+  // for a shared link, the username for a public one.
+  const q = token
+    ? `t=${encodeURIComponent(token)}`
+    : `u=${encodeURIComponent(username as string)}&m=${encodeURIComponent(recap.period)}`;
   const ogImage = `${supabaseUrl}/functions/v1/share-recap?img=1&${q}`;
   const canonicalUrl = `${supabaseUrl}/functions/v1/share-recap?${q}`;
 
