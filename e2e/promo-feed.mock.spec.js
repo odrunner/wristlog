@@ -160,9 +160,17 @@ test.describe('promo feed injection (mocked)', () => {
     // really saw it. It must come back — the SAME slot — without logging a
     // second impression (_promoImpressed still guards that).
     await setup(page);
+    // Wait for the REAL impression rather than simulating one with a manual
+    // _promoImpressed.add + logPromoEvent. The observer fires asynchronously,
+    // so a simulated impression races it: under load the real one lands too and
+    // the count is 2, failing a test that is actually about the wipe. Waiting
+    // for the genuine article removes the race and exercises the real path.
+    const impressionCount = () => page.evaluate(() =>
+      window.__events.filter((e) =>
+        e.t === 'promo_events' && e.row.event === 'impression' && e.row.slot_id === 'p1').length);
+    await expect.poll(impressionCount).toBe(1);
+
     await page.evaluate(() => {
-      _promoImpressed.add('p1');
-      logPromoEvent('p1', 'impression');
       const el = document.getElementById('feed-list');
       el.innerHTML = Array.from({ length: 6 }, (_, i) =>
         `<div class="feed-card" id="feedcard-${i}">post ${i}</div>`).join('');
@@ -171,9 +179,11 @@ test.describe('promo feed injection (mocked)', () => {
     const ids = await page.evaluate(() =>
       [...document.querySelectorAll('.promo-card')].map((c) => c.dataset.promoId));
     expect(ids).toEqual(['p1']);
-    const impressions = await page.evaluate(() =>
-      window.__events.filter((e) => e.t === 'promo_events' && e.row.event === 'impression' && e.row.slot_id === 'p1'));
-    expect(impressions).toHaveLength(1);
+    // The re-placed card re-enters the viewport and re-fires the observer, so
+    // give it room to do so — asserting immediately would pass even if the
+    // dedup guard were broken.
+    await page.waitForTimeout(300);
+    expect(await impressionCount()).toBe(1);
   });
 
   test('re-placing a returning card spends no new budget — a second slot still does not appear', async ({ page }) => {
