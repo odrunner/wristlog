@@ -59,7 +59,7 @@ const ADAPTED = [
   // Plain numbers, not {...} bodies — extractBody can't read them, so the
   // byte-identical check can't run. tests/promo-recap.test.js asserts the two
   // copies carry the same values instead.
-  'RECAP_WINDOW_DAYS', 'RECAP_MIN_WEARS', 'RECAP_MIN_WATCHES',
+  'RECAP_WINDOW_DAYS', 'RECAP_MIN_WEARS', 'RECAP_MIN_WATCHES', 'RECAP_MIN_STREAK',
   'MSR_CARD_MIN_DOTS', 'checkContent', 'computeFriendships', 'computeRobustRate', 'computeWatchRec',
   'fmtMoney', 'formatCommentTime', 'formatFeedDate', 'getMentionQuery', 'incrSettle', 'initials',
   'isBase64', 'logToRow', 'markDirty', 'monthRevNav', 'profileInitials',

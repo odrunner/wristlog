@@ -2214,6 +2214,30 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .promo-recap-podium-count { font-size: 11px; color: var(--muted); }
 
+    /* vs. last month. Green/red would read as good/bad, and a month spent on
+       fewer watches is not a failure — so the arrow carries the direction and
+       the colour stays in the house palette. */
+    .promo-recap-trend { display: flex; align-items: baseline; gap: 8px; }
+    .promo-recap-delta {
+      font-size: 30px; font-weight: 800; letter-spacing: -.02em;
+      color: var(--promo-gold-deep);
+    }
+    .promo-recap-flat { font-size: 24px; font-weight: 800; color: var(--promo-gold-deep); }
+    .promo-recap-trend-sub { font-size: 14px; color: var(--muted); }
+
+    /* Top post: the photo is the point, so it gets a rectangle rather than the
+       circular treatment the watch thumbnails use. */
+    .promo-recap-shot {
+      width: 148px; height: 148px; border-radius: 12px; overflow: hidden;
+      background: var(--surface2); flex-shrink: 0;
+    }
+    .promo-recap-shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .promo-recap-streak {
+      font-size: 52px; font-weight: 800; letter-spacing: -.03em; line-height: 1;
+      color: var(--promo-gold-deep);
+    }
+
     .promo-recap-rows { width: 100%; max-width: 260px; display: flex; flex-direction: column; gap: 2px; }
     .promo-recap-row {
       display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
@@ -2230,7 +2254,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     }
     .promo-recap-dot.is-on { background: var(--promo-gold); transform: scale(1.25); }
 
-    .promo-recap-foot { padding: 0 18px 18px; }
+    .promo-recap-foot { padding: 0 18px 18px; display: flex; flex-direction: column; gap: 8px; }
+    .promo-recap-share { display: flex; align-items: center; justify-content: center; gap: 8px; }
     .promo-recap .promo-cta {
       width: 100%; margin: 0; background: var(--promo-gold); color: var(--promo-cta-fg);
       border: none; border-radius: 9px; padding: 13px;
@@ -3657,7 +3682,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
              so the copy fields below do nothing for it. Eyebrow and the CTA are
              the only two it reads. -->
         <div style="font-size:.72rem;color:var(--muted);line-height:1.45;margin:-.2rem 0 .6rem;">
-          <b>Month in review</b> ignores Heading, Body and images — it writes itself from each viewer's own wear log, and only shows on the 1st–7th of a month. It uses the Eyebrow and the CTA. Pair it with <b>Open Stats</b>.
+          <b>Month in review</b> ignores Heading, Body and images — it writes itself from each viewer's own wear log, and only shows on the 1st–7th of a month. Only the Eyebrow and the CTA apply, and the CTA is best left empty: the card is the content, and a button that only lands on Stats is a step nobody needs.
         </div>
         <div class="draft-form-row">
           <label for="promo-eyebrow">Eyebrow (tag/band: the mono brand label — "WRotate HQ", "WRotate asks")</label>
@@ -7669,7 +7694,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '07.16.57';
+const APP_VERSION = '07.18.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11797,6 +11822,7 @@ function promoAudienceMatches(key, ctx) {
 const RECAP_WINDOW_DAYS = 7;    // shown on the 1st–7th; the card can never go stale
 const RECAP_MIN_WEARS   = 5;    // below this a "review" is embarrassing, not delightful
 const RECAP_MIN_WATCHES = 2;    // one watch all month is a slide, not a story
+const RECAP_MIN_STREAK  = 3;    // below this a "streak" slide reads as a rebuke
 
 // The epoch a local impression count is recorded under. For a normal slot that
 // is updated_at, which is what makes the admin's "Reset impressions" re-arm the
@@ -11811,7 +11837,7 @@ function promoSlotEpoch(slot, recap) {
 // Pure: `now` is injected, same reason as eligiblePromoSlots() below.
 // Returns null when there is no recap to show — out of window, or too thin a
 // month. Callers treat null as "this card does not exist".
-function monthRecap({ now, logs, watches }) {
+function monthRecap({ now, logs, watches, likes }) {
   const d = new Date(now);
   if (!(d.getDate() >= 1 && d.getDate() <= RECAP_WINDOW_DAYS)) return null;
 
@@ -11822,33 +11848,42 @@ function monthRecap({ now, logs, watches }) {
   if (month < 0) { month = 11; year--; }
   const period = `${year}-${String(month + 1).padStart(2, '0')}`;
   const windowStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+  // The month before THAT — the comparison the "vs. last month" slide makes.
+  let pYear = year, pMonth = month - 1;
+  if (pMonth < 0) { pMonth = 11; pYear--; }
+  const prevPeriod = `${pYear}-${String(pMonth + 1).padStart(2, '0')}`;
 
   // Same three rules as renderMonthlyReview(): a measurement share is not a
   // wear, a log for a watch no longer in the collection does not count, and a
   // watch worn twice in one day counts once.
   const byId = {};
   for (const w of (watches || [])) if (w && w.id) byId[w.id] = w;
-  const mLogs = [];
-  for (const l of (logs || [])) {
-    if (!isWearEntry(l)) continue;
-    if (!l.date || String(l.date).slice(0, 7) !== period) continue;
-    if (!byId[l.watchId]) continue;
-    mLogs.push(l);
-  }
-  if (!mLogs.length) return null;
+  const monthLogs = (p) => {
+    const out = [];
+    for (const l of (logs || [])) {
+      if (!isWearEntry(l)) continue;
+      if (!l.date || String(l.date).slice(0, 7) !== p) continue;
+      if (!byId[l.watchId]) continue;
+      out.push(l);
+    }
+    return out;
+  };
+  // Wear totals dedupe on watch+date; the caller decides what else it needs.
+  const tally = (rows) => {
+    const perWatch = {}, days = new Set(), seen = new Set();
+    for (const l of rows) {
+      days.add(l.date);
+      const k = l.watchId + '|' + l.date;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      perWatch[l.watchId] = (perWatch[l.watchId] || 0) + 1;
+    }
+    return { perWatch, days, totalWears: seen.size, uniqueCount: Object.keys(perWatch).length };
+  };
 
-  const perWatch = {};
-  const days = new Set();
-  const seen = new Set();
-  for (const l of mLogs) {
-    days.add(l.date);
-    const k = l.watchId + '|' + l.date;
-    if (seen.has(k)) continue;
-    seen.add(k);
-    perWatch[l.watchId] = (perWatch[l.watchId] || 0) + 1;
-  }
-  const totalWears  = seen.size;
-  const uniqueCount = Object.keys(perWatch).length;
+  const mLogs = monthLogs(period);
+  if (!mLogs.length) return null;
+  const { perWatch, days, totalWears, uniqueCount } = tally(mLogs);
   if (totalWears < RECAP_MIN_WEARS || uniqueCount < RECAP_MIN_WATCHES) return null;
 
   // Count desc, then watchId asc. The Stats card's tie-break is Object.keys()
@@ -11875,11 +11910,66 @@ function monthRecap({ now, logs, watches }) {
   const topDowKey = Object.keys(dowm).sort((a, b) => dowm[b] - dowm[a] || a - b)[0];
   const topDow = topDowKey === undefined ? null : Number(topDowKey);
 
+  // ── vs. last month ──
+  // Null when the previous month has nothing at all: "up 37 wears on a month
+  // you weren't here for" is not a comparison, it's a first month.
+  const pLogs = monthLogs(prevPeriod);
+  const prev = pLogs.length ? (() => {
+    const t = tally(pLogs);
+    return { period: prevPeriod, totalWears: t.totalWears, uniqueCount: t.uniqueCount };
+  })() : null;
+
+  // ── longest streak ──
+  // The longest run of consecutive calendar days with any wear, WITHIN the
+  // month — a run that spans the month boundary is still cut at it, because
+  // this slide is about that month. Under RECAP_MIN_STREAK it reads as a
+  // rebuke rather than an achievement, so it is dropped instead.
+  const sortedDays = [...days].sort();
+  let best = 0, run = 0, bestEnd = null;
+  for (let i = 0; i < sortedDays.length; i++) {
+    run = (i > 0 && addDaysStr(sortedDays[i - 1], 1) === sortedDays[i]) ? run + 1 : 1;
+    if (run > best) { best = run; bestEnd = sortedDays[i]; }
+  }
+  const streak = best >= RECAP_MIN_STREAK
+    ? { days: best, start: addDaysStr(bestEnd, -(best - 1)), end: bestEnd } : null;
+
+  // ── new arrivals ──
+  // createdAt is when the watch was added to WRotate, which is the "joined the
+  // rotation" moment; purchaseDate is often blank or historical. It is a UTC
+  // timestamp, so a watch added late on the last night of the month can land in
+  // the next one — acceptable for a celebration slide, and never wrong enough
+  // to be worth a timezone round-trip.
+  const arrivals = (watches || [])
+    .filter((w) => w && w.id && w.createdAt && String(w.createdAt).slice(0, 7) === period)
+    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+    .slice(0, 3)
+    .map((w) => w.id);
+
+  // ── top post ──
+  // `likes` is a { [logId]: count } map the caller fetches (promoCtx() and the
+  // renderer are both synchronous, so it cannot be fetched here). Absent map =
+  // no slide, which is also what happens out of window: the fetch never runs.
+  // Zero likes is not a highlight, so the slide needs at least one.
+  let topPost = null;
+  if (likes) {
+    for (const l of mLogs) {
+      const n = likes[l.id] || 0;
+      if (n < 1) continue;
+      // Most likes, then the most recent, then the id — deterministic.
+      if (!topPost || n > topPost.likes ||
+          (n === topPost.likes && (l.date > topPost.date ||
+            (l.date === topPost.date && String(l.id) < String(topPost.logId))))) {
+        topPost = { logId: l.id, watchId: l.watchId, likes: n, date: l.date, photoUrl: l.photoUrl || null };
+      }
+    }
+  }
+
   return {
     period, year, month, windowStart,
     totalWears, wearDays: days.size, uniqueCount, top,
     topUC, topUCWears: topUC ? ucm[topUC] : 0,
     topDow, topDowWears: topDow === null ? 0 : dowm[topDow],
+    prev, streak, arrivals, topPost,
   };
 }
 
@@ -12130,12 +12220,57 @@ function installPromoClickDelegation() {
   if (_promoClickDelegated) return;
   _promoClickDelegated = true;
   document.addEventListener('click', (event) => {
-    const cta = event.target.closest('[data-promo-cta]');
-    if (!cta) return;
     const card = event.target.closest('[data-promo-id]');
     if (!card) return;
+    // Share is the recap card's own action rather than an admin-chosen
+    // cta_action, but it is still a click on the card — logged the same way, so
+    // the admin's click-through numbers count it like any other.
+    if (event.target.closest('[data-recap-share]')) {
+      logPromoEvent(card.dataset.promoId, 'click');
+      shareMonthRecap();
+      return;
+    }
+    if (!event.target.closest('[data-promo-cta]')) return;
     runPromoAction(card.dataset.promoId);
   });
+}
+
+// Shares the viewer's own recap as a link the recipient's messaging app can
+// render as a card — the share-recap edge function serves the page and its
+// og:image. A link rather than an image: it survives forwarding, and it is the
+// only form that brings anyone back to WRotate.
+async function shareMonthRecap() {
+  const recap = currentMonthRecap();
+  const uname = (myProfile && myProfile.username) || '';
+  if (!recap || !uname) { toast('Nothing to share yet', 'error'); return; }
+
+  // share-recap serves nothing for a private profile or a hidden collection —
+  // the recipient would get a padlock. Better to say so here than to let them
+  // send a dead link and find out from a friend.
+  if ((myProfile.profile_privacy || 'public') !== 'public' ||
+      (myProfile.collection_visibility || 'public') === 'private') {
+    toast('Your profile is private — the link would show nothing', 'error');
+    return;
+  }
+
+  const monthName = new Date(recap.year, recap.month, 1)
+    .toLocaleDateString('en-US', { month: 'long' });
+  const url = `https://api.wrotate.com/functions/v1/share-recap?u=${encodeURIComponent(uname)}&m=${encodeURIComponent(recap.period)}`;
+  const title = `My ${monthName} on WRotate`;
+  const text = `${recap.totalWears} wear${recap.totalWears !== 1 ? 's' : ''} across ${recap.uniqueCount} watch${recap.uniqueCount !== 1 ? 'es' : ''} in ${monthName}.`;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title, text, url });
+    } catch (e) {
+      if (e.name !== 'AbortError') toast('Could not open share sheet', 'error');
+    }
+  } else if (navigator.clipboard) {
+    await navigator.clipboard.writeText(url);
+    toast('Recap link copied!');
+  } else {
+    _fallbackCopyText(url);
+  }
 }
 
 // Author-selected card treatments, chosen per slot in the admin composer.
@@ -12247,6 +12382,65 @@ function renderRecapCard(slot, idAttrs, hasCta, ctaText) {
     </div>`);
   }
 
+  // ── vs. last month ──
+  // Flat is its own result, and saying so beats forcing an arrow onto it.
+  if (recap.prev) {
+    const dw = recap.totalWears - recap.prev.totalWears;
+    const dv = recap.uniqueCount - recap.prev.uniqueCount;
+    const prevName = new Date(recap.prev.period + '-15T12:00:00')
+      .toLocaleDateString('en-US', { month: 'long' });
+    const trend = (n, one, many) => n === 0
+      ? `<span class="promo-recap-flat">Level with ${escHtml(prevName)}</span>`
+      : `<span class="promo-recap-delta ${n > 0 ? 'is-up' : 'is-down'}">${n > 0 ? '▲' : '▼'} ${Math.abs(n)} ${Math.abs(n) === 1 ? one : many}</span>`;
+    slides.push(`<div class="promo-recap-slide">
+      <div class="promo-recap-slide-lbl">vs. ${escHtml(prevName)}</div>
+      <div class="promo-recap-trend">${trend(dw, 'wear', 'wears')}</div>
+      <div class="promo-recap-trend-sub">${dv === 0
+        ? `across the same ${plural(recap.uniqueCount, 'watch', 'watches')}`
+        : `across ${Math.abs(dv)} ${dv > 0 ? 'more' : 'fewer'} ${Math.abs(dv) === 1 ? 'watch' : 'watches'}`}</div>
+    </div>`);
+  }
+
+  // ── top post ──
+  if (recap.topPost) {
+    const w = wOf(recap.topPost.watchId);
+    const art = recap.topPost.photoUrl
+      ? `<div class="promo-recap-shot"><img loading="lazy" src="${escAttr(recap.topPost.photoUrl)}" alt="" onerror="this.style.display='none'"></div>`
+      : recapThumb(w, 'promo-recap-thumb--hero');
+    slides.push(`<div class="promo-recap-slide">
+      <div class="promo-recap-slide-lbl">Your top post</div>
+      ${art}
+      <div class="promo-recap-hero-name">${escHtml((w && w.name) || '')}</div>
+      <div class="promo-recap-hero-sub">${plural(recap.topPost.likes, 'like')}</div>
+    </div>`);
+  }
+
+  // ── new arrivals ──
+  const arrivals = recap.arrivals.map(wOf).filter(Boolean);
+  if (arrivals.length) {
+    slides.push(`<div class="promo-recap-slide">
+      <div class="promo-recap-slide-lbl">New this month</div>
+      <div class="promo-recap-podium">${arrivals.map((w) => `
+        <div class="promo-recap-podium-item">
+          ${recapThumb(w, 'promo-recap-thumb--podium')}
+          <div class="promo-recap-podium-name">${escHtml(w.name || '')}</div>
+          <div class="promo-recap-podium-count">${escHtml(w.brand || '')}</div>
+        </div>`).join('')}</div>
+      <div class="promo-recap-hero-sub">joined the rotation</div>
+    </div>`);
+  }
+
+  // ── longest streak ──
+  if (recap.streak) {
+    const span = (s) => new Date(s + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    slides.push(`<div class="promo-recap-slide">
+      <div class="promo-recap-slide-lbl">Longest streak</div>
+      <div class="promo-recap-streak">${recap.streak.days}</div>
+      <div class="promo-recap-cover-line">days in a row</div>
+      <div class="promo-recap-hero-sub">${escHtml(span(recap.streak.start))} – ${escHtml(span(recap.streak.end))}</div>
+    </div>`);
+  }
+
   const rows = [`<div class="promo-recap-row"><span>Days logged</span><b>${recap.wearDays}</b></div>`];
   if (recap.topDow !== null) {
     rows.push(`<div class="promo-recap-row"><span>Busiest day</span><b>${DOW[recap.topDow]}</b></div>`);
@@ -12276,7 +12470,13 @@ function renderRecapCard(slot, idAttrs, hasCta, ctaText) {
     </div>
     <div class="promo-recap-track" data-recap-track tabindex="0">${track}</div>
     <div class="promo-recap-dots">${dots}</div>
-    ${cta ? `<div class="promo-recap-foot">${cta}</div>` : ''}
+    <div class="promo-recap-foot">
+      <button type="button" class="promo-cta promo-recap-share" data-recap-share>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        Share ${escHtml(monthName)}
+      </button>
+      ${cta}
+    </div>
   </div>`;
 }
 
@@ -12534,11 +12734,45 @@ function promoCtx() {
 let _promoRecapMemo = null;
 function currentMonthRecap() {
   const now = Date.now();
-  const key = new Date(now).toDateString() + '|' + (logs || []).length;
+  // The likes map arrives asynchronously (loadRecapLikes below), so its period
+  // is part of the key — otherwise the first, likes-less recap is cached and
+  // the top-post slide never appears no matter when the fetch lands.
+  const key = new Date(now).toDateString() + '|' + (logs || []).length +
+              '|' + ((_promoRecapLikes && _promoRecapLikes.period) || '');
   if (_promoRecapMemo && _promoRecapMemo.key === key) return _promoRecapMemo.value;
-  const value = monthRecap({ now, logs, watches });
+  const value = monthRecap({ now, logs, watches, likes: _promoRecapLikes && _promoRecapLikes.counts });
   _promoRecapMemo = { key, value };
   return value;
+}
+
+// Like counts for the viewer's OWN posts in the recap month — the one input
+// monthRecap() cannot compute from memory. Fetched here rather than in the
+// renderer because promoCtx() and renderPromoCard() are both synchronous.
+//
+// Costs nothing out of season: the provisional recap is computed first, and
+// outside the first week (or under the thresholds) it is null and the query
+// never runs. Failure is non-fatal — the top-post slide is simply absent, the
+// rest of the card is unaffected.
+let _promoRecapLikes = null;      // { period, counts: { [logId]: n } }
+async function loadRecapLikes() {
+  if (!currentUser) return;
+  const provisional = monthRecap({ now: Date.now(), logs, watches });
+  if (!provisional) return;
+  const ids = (logs || [])
+    .filter((l) => isWearEntry(l) && l.date && String(l.date).slice(0, 7) === provisional.period)
+    .map((l) => l.id)
+    .filter(Boolean);
+  if (!ids.length) return;
+  try {
+    const { data, error } = await db.from('likes').select('log_id').in('log_id', ids);
+    if (error) throw error;
+    const counts = {};
+    for (const r of (data || [])) counts[r.log_id] = (counts[r.log_id] || 0) + 1;
+    _promoRecapLikes = { period: provisional.period, counts };
+    _promoRecapMemo = null;       // the key changed; drop the likes-less result
+  } catch (e) {
+    console.warn('[promo] recap likes fetch failed:', e && e.message);
+  }
 }
 
 // Non-fatal by design: a broken promo fetch must never degrade the feed.
@@ -27848,6 +28082,7 @@ function clearUserState() {
   _promoSlots = []; _promoEvents = []; _promoConfig = null;
   _promoIsInternal = false;      // re-evaluated for whoever signs in next
   _promoRecapMemo = null;        // A's month must never render in B's feed
+  _promoRecapLikes = null;       // ...nor A's like counts
   if (_promoObserver) { _promoObserver.disconnect(); _promoObserver = null; } // disconnect, not just drop — A's nodes stay registered otherwise
   window._modalShownThisSession = false;
   feedLoading = false; _feedLoadStartedAt = 0; feedError = false; feedLoadedAt = 0; _clubsLoaded = false; _frLoadedAt = 0;
@@ -31083,7 +31318,15 @@ async function bootApp(user) {
   } catch(e) {
     console.error('[WristLog] bootApp loadUserData error:', e.message, e);
   }
-  await loadPromoSlots();   // audience predicates need the counts loadUserData() fills
+  // Both need loadUserData()'s counts and neither needs the other, so they share
+  // one round-trip instead of queueing. Concurrency is not a nicety here: the
+  // dirty-state retry and cloudSync() are the very next lines, and an extra
+  // SERIAL request at this point delays every boot-time sync behind it — which
+  // is exactly what a second await here did to e2e/dirty-sync-race.
+  await Promise.all([
+    loadPromoSlots(),
+    loadRecapLikes(),       // no-op out of the recap window; see its comment
+  ]);
   // Retry any dirty state persisted from a previous session
   const _hasPersisted = _dirty.watches.size || _dirty.logs.size || _dirty.wishlist.size || _dirty.elo.size || _pendingDeletes.length;
   if (_hasPersisted) { console.log('[WRotate] Retrying persisted dirty state'); cloudSync(); }

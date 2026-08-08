@@ -2662,51 +2662,74 @@ export function promoAudienceMatches(key, ctx) {
 export const RECAP_WINDOW_DAYS = 7;
 export const RECAP_MIN_WEARS   = 5;
 export const RECAP_MIN_WATCHES = 2;
+export const RECAP_MIN_STREAK  = 3;
 
 export function promoSlotEpoch(slot, recap) {
   if (slot && slot.variant === 'recap') return (recap && recap.period) || null;
   return (slot && slot.updated_at) || null;
 }
 
-export function monthRecap({ now, logs, watches }) {
+export function monthRecap({ now, logs, watches, likes }) {
   const d = new Date(now);
   if (!(d.getDate() >= 1 && d.getDate() <= RECAP_WINDOW_DAYS)) return null;
 
+  // The month that just ENDED, and the start of the window we are in. Both
+  // read in local time: "the first week of the month" is a wall-clock idea, and
+  // windowStart is compared against promo_events timestamps to scope the cap.
   let year = d.getFullYear(), month = d.getMonth() - 1;
   if (month < 0) { month = 11; year--; }
   const period = `${year}-${String(month + 1).padStart(2, '0')}`;
   const windowStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+  // The month before THAT — the comparison the "vs. last month" slide makes.
+  let pYear = year, pMonth = month - 1;
+  if (pMonth < 0) { pMonth = 11; pYear--; }
+  const prevPeriod = `${pYear}-${String(pMonth + 1).padStart(2, '0')}`;
 
+  // Same three rules as renderMonthlyReview(): a measurement share is not a
+  // wear, a log for a watch no longer in the collection does not count, and a
+  // watch worn twice in one day counts once.
   const byId = {};
   for (const w of (watches || [])) if (w && w.id) byId[w.id] = w;
-  const mLogs = [];
-  for (const l of (logs || [])) {
-    if (!isWearEntry(l)) continue;
-    if (!l.date || String(l.date).slice(0, 7) !== period) continue;
-    if (!byId[l.watchId]) continue;
-    mLogs.push(l);
-  }
-  if (!mLogs.length) return null;
+  const monthLogs = (p) => {
+    const out = [];
+    for (const l of (logs || [])) {
+      if (!isWearEntry(l)) continue;
+      if (!l.date || String(l.date).slice(0, 7) !== p) continue;
+      if (!byId[l.watchId]) continue;
+      out.push(l);
+    }
+    return out;
+  };
+  // Wear totals dedupe on watch+date; the caller decides what else it needs.
+  const tally = (rows) => {
+    const perWatch = {}, days = new Set(), seen = new Set();
+    for (const l of rows) {
+      days.add(l.date);
+      const k = l.watchId + '|' + l.date;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      perWatch[l.watchId] = (perWatch[l.watchId] || 0) + 1;
+    }
+    return { perWatch, days, totalWears: seen.size, uniqueCount: Object.keys(perWatch).length };
+  };
 
-  const perWatch = {};
-  const days = new Set();
-  const seen = new Set();
-  for (const l of mLogs) {
-    days.add(l.date);
-    const k = l.watchId + '|' + l.date;
-    if (seen.has(k)) continue;
-    seen.add(k);
-    perWatch[l.watchId] = (perWatch[l.watchId] || 0) + 1;
-  }
-  const totalWears  = seen.size;
-  const uniqueCount = Object.keys(perWatch).length;
+  const mLogs = monthLogs(period);
+  if (!mLogs.length) return null;
+  const { perWatch, days, totalWears, uniqueCount } = tally(mLogs);
   if (totalWears < RECAP_MIN_WEARS || uniqueCount < RECAP_MIN_WATCHES) return null;
 
+  // Count desc, then watchId asc. The Stats card's tie-break is Object.keys()
+  // insertion order — i.e. arbitrary; a pure function under test needs one that
+  // isn't.
   const top = Object.keys(perWatch)
     .sort((a, b) => perWatch[b] - perWatch[a] || (a < b ? -1 : a > b ? 1 : 0))
     .slice(0, 3)
     .map((watchId) => ({ watchId, count: perWatch[watchId] }));
 
+  // Use case and day-of-week read RAW rows, NOT the deduped set — matching
+  // renderMonthlyReview()'s own asymmetry on purpose. The recap and the Stats
+  // card sit one tap apart and get compared; agreeing with the shipped card
+  // matters more than internal tidiness.
   const ucm = {};
   for (const l of mLogs) if (l.useCase) ucm[l.useCase] = (ucm[l.useCase] || 0) + 1;
   const topUC = Object.keys(ucm).sort((a, b) => ucm[b] - ucm[a] || (a < b ? -1 : 1))[0] || null;
@@ -2719,11 +2742,66 @@ export function monthRecap({ now, logs, watches }) {
   const topDowKey = Object.keys(dowm).sort((a, b) => dowm[b] - dowm[a] || a - b)[0];
   const topDow = topDowKey === undefined ? null : Number(topDowKey);
 
+  // ── vs. last month ──
+  // Null when the previous month has nothing at all: "up 37 wears on a month
+  // you weren't here for" is not a comparison, it's a first month.
+  const pLogs = monthLogs(prevPeriod);
+  const prev = pLogs.length ? (() => {
+    const t = tally(pLogs);
+    return { period: prevPeriod, totalWears: t.totalWears, uniqueCount: t.uniqueCount };
+  })() : null;
+
+  // ── longest streak ──
+  // The longest run of consecutive calendar days with any wear, WITHIN the
+  // month — a run that spans the month boundary is still cut at it, because
+  // this slide is about that month. Under RECAP_MIN_STREAK it reads as a
+  // rebuke rather than an achievement, so it is dropped instead.
+  const sortedDays = [...days].sort();
+  let best = 0, run = 0, bestEnd = null;
+  for (let i = 0; i < sortedDays.length; i++) {
+    run = (i > 0 && addDaysStr(sortedDays[i - 1], 1) === sortedDays[i]) ? run + 1 : 1;
+    if (run > best) { best = run; bestEnd = sortedDays[i]; }
+  }
+  const streak = best >= RECAP_MIN_STREAK
+    ? { days: best, start: addDaysStr(bestEnd, -(best - 1)), end: bestEnd } : null;
+
+  // ── new arrivals ──
+  // createdAt is when the watch was added to WRotate, which is the "joined the
+  // rotation" moment; purchaseDate is often blank or historical. It is a UTC
+  // timestamp, so a watch added late on the last night of the month can land in
+  // the next one — acceptable for a celebration slide, and never wrong enough
+  // to be worth a timezone round-trip.
+  const arrivals = (watches || [])
+    .filter((w) => w && w.id && w.createdAt && String(w.createdAt).slice(0, 7) === period)
+    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+    .slice(0, 3)
+    .map((w) => w.id);
+
+  // ── top post ──
+  // `likes` is a { [logId]: count } map the caller fetches (promoCtx() and the
+  // renderer are both synchronous, so it cannot be fetched here). Absent map =
+  // no slide, which is also what happens out of window: the fetch never runs.
+  // Zero likes is not a highlight, so the slide needs at least one.
+  let topPost = null;
+  if (likes) {
+    for (const l of mLogs) {
+      const n = likes[l.id] || 0;
+      if (n < 1) continue;
+      // Most likes, then the most recent, then the id — deterministic.
+      if (!topPost || n > topPost.likes ||
+          (n === topPost.likes && (l.date > topPost.date ||
+            (l.date === topPost.date && String(l.id) < String(topPost.logId))))) {
+        topPost = { logId: l.id, watchId: l.watchId, likes: n, date: l.date, photoUrl: l.photoUrl || null };
+      }
+    }
+  }
+
   return {
     period, year, month, windowStart,
     totalWears, wearDays: days.size, uniqueCount, top,
     topUC, topUCWears: topUC ? ucm[topUC] : 0,
     topDow, topDowWears: topDow === null ? 0 : dowm[topDow],
+    prev, streak, arrivals, topPost,
   };
 }
 

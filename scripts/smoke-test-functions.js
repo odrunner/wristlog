@@ -85,6 +85,24 @@ async function run() {
     return { ...r, ok: r.status === 400 };
   });
 
+  await check('share-recap (public)', () =>
+    callFn('share-recap?u=testuser2&m=2026-07')
+  );
+
+  // The month comes from a URL anyone can edit, so a malformed one must be
+  // refused rather than reaching the date filters.
+  await check('share-recap (bad month → 400)', async () => {
+    const r = await callFn('share-recap?u=testuser2&m=nope');
+    return { ...r, ok: r.status === 400 };
+  });
+
+  // A link preview whose image 404s renders as a grey box, so image mode
+  // answers with an SVG even for a request that has no recap behind it.
+  await check('share-recap (og image is always an SVG)', async () => {
+    const r = await callFn('share-recap?u=nosuchuser&m=2026-07&img=1');
+    return { ...r, ok: r.status === 200 && r.body.trimStart().startsWith('<svg') };
+  });
+
   // --- Authenticated functions ---
 
   await check('identify-watch (auth + tiny image)', () =>

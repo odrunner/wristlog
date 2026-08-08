@@ -24,19 +24,22 @@ const WATCHES = [
   { id: 'b', name: 'Speedmaster', brand: 'Omega', color: '#38bdf8' },
   { id: 'c', name: 'Explorer', brand: 'Rolex', color: '#94a3b8' },
 ];
+// Dates are deliberately spaced: consecutive days would trip the streak slide
+// into every test, and each conditional slide should be exercised by its own
+// fixture rather than by accident.
 const LOGS = [
-  { watchId: 'a', date: '2026-07-01', useCase: 'work' },
-  { watchId: 'a', date: '2026-07-02', useCase: 'work' },
-  { watchId: 'a', date: '2026-07-03', useCase: 'work' },
-  { watchId: 'b', date: '2026-07-04', useCase: 'work' },
-  { watchId: 'b', date: '2026-07-05', useCase: 'casual' },
-  { watchId: 'c', date: '2026-07-06', useCase: 'casual' },
+  { watchId: 'a', date: '2026-07-01', useCase: 'work',   id: 'p1' },
+  { watchId: 'a', date: '2026-07-05', useCase: 'work',   id: 'p2' },
+  { watchId: 'a', date: '2026-07-09', useCase: 'work',   id: 'p3' },
+  { watchId: 'b', date: '2026-07-13', useCase: 'work',   id: 'p4' },
+  { watchId: 'b', date: '2026-07-17', useCase: 'casual', id: 'p5', photoUrl: 'https://x.test/shot.jpg' },
+  { watchId: 'c', date: '2026-07-21', useCase: 'casual', id: 'p6' },
 ];
 
 // Renders into a fixed-width host attached to the document, so the scroll-snap
 // track has a real clientWidth to page against.
 async function mount(page, opts = {}) {
-  const arg = { watches: WATCHES, logs: LOGS, day: 3, slot: SLOT, ...opts };
+  const arg = { watches: WATCHES, logs: LOGS, day: 3, slot: SLOT, likes: null, ...opts };
   await page.goto('/');
   await page.evaluate((a) => {
     // Local-time construction: "the first week of the month" is a wall-clock
@@ -46,6 +49,11 @@ async function mount(page, opts = {}) {
     watches = a.watches;
     logs = a.logs;
     _promoRecapMemo = null;
+    _promoRecapLikes = a.likes ? { period: '2026-07', counts: a.likes } : null;
+    // The signed-out auth screen covers the viewport and would swallow every
+    // click aimed at the card below it.
+    const auth = document.getElementById('auth-screen');
+    if (auth) auth.style.display = 'none';
     const host = document.createElement('div');
     host.id = 'recap-host';
     host.style.width = '320px';
@@ -53,6 +61,8 @@ async function mount(page, opts = {}) {
     host.innerHTML = window.renderPromoCard(a.slot);
   }, arg);
 }
+
+const labels = (page) => page.locator('#recap-host .promo-recap-slide-lbl');
 
 const q = (page, sel) => page.locator(`#recap-host ${sel}`);
 
@@ -115,11 +125,11 @@ test.describe('month-in-review card', () => {
   // single watch — it just renders shorter.
   test('collapses to two tiles when only two watches were worn', async ({ page }) => {
     const logs = LOGS.filter((l) => l.watchId !== 'c')
-      .concat([{ watchId: 'b', date: '2026-07-07', useCase: 'work' }]);
+      .concat([{ watchId: 'b', date: '2026-07-25', useCase: 'work', id: 'p7' }]);
     await mount(page, { logs });
     await expect(q(page, '.promo-recap-slide')).toHaveCount(4);
     await expect(q(page, '.promo-recap-podium-item')).toHaveCount(2);
-    await expect(q(page, '.promo-recap-slide-lbl').nth(1)).toHaveText('Your top two');
+    await expect(labels(page).nth(1)).toHaveText('Your top two');
   });
 
   test('carries the CTA and the promo click hooks', async ({ page }) => {
@@ -135,6 +145,94 @@ test.describe('month-in-review card', () => {
     for (const s of ['togglelike', 'comment-input', 'sharepost', 'feed-card-actions']) {
       expect(out, `recap card must not contain ${s}`).not.toContain(s);
     }
+  });
+});
+
+// Each of the four extra slides appears only when its data exists, and the deck
+// is built in one pass — so the thing worth asserting is that adding one slide
+// leaves the others, and the ordering, alone.
+test.describe('month-in-review card — the conditional slides', () => {
+  const JUNE = [
+    { watchId: 'a', date: '2026-06-02', useCase: 'work', id: 'j1' },
+    { watchId: 'b', date: '2026-06-06', useCase: 'work', id: 'j2' },
+  ];
+  const STREAK = [
+    { watchId: 'a', date: '2026-07-01', useCase: 'work', id: 's1' },
+    { watchId: 'a', date: '2026-07-02', useCase: 'work', id: 's2' },
+    { watchId: 'b', date: '2026-07-03', useCase: 'work', id: 's3' },
+    { watchId: 'b', date: '2026-07-04', useCase: 'work', id: 's4' },
+    { watchId: 'c', date: '2026-07-10', useCase: 'work', id: 's5' },
+    { watchId: 'c', date: '2026-07-20', useCase: 'work', id: 's6' },
+  ];
+  const ARRIVED = WATCHES.map((w, i) =>
+    i === 1 ? { ...w, createdAt: '2026-07-04T10:00:00Z' } : w);
+
+  test('the bare month shows only the four unconditional slides', async ({ page }) => {
+    await mount(page);
+    await expect(q(page, '.promo-recap-slide')).toHaveCount(4);
+    await expect(labels(page)).toHaveText(['Most worn', 'Your top three', 'Your rhythm']);
+  });
+
+  test('vs. last month appears when the previous month has wears', async ({ page }) => {
+    await mount(page, { logs: [...LOGS, ...JUNE] });
+    await expect(labels(page)).toHaveText(['Most worn', 'Your top three', 'vs. June', 'Your rhythm']);
+    await expect(q(page, '.promo-recap-delta')).toHaveText('▲ 4 wears');
+    await expect(q(page, '.promo-recap-trend-sub')).toHaveText('across 1 more watch');
+  });
+
+  // A month spent on fewer watches is not a failure, so "level" says so rather
+  // than forcing an arrow onto it.
+  test('vs. last month says level when the counts match', async ({ page }) => {
+    const june = LOGS.map((l, i) => ({ ...l, id: 'j' + i, date: l.date.replace('2026-07', '2026-06') }));
+    await mount(page, { logs: [...LOGS, ...june] });
+    await expect(q(page, '.promo-recap-flat')).toHaveText('Level with June');
+    await expect(q(page, '.promo-recap-delta')).toHaveCount(0);
+    await expect(q(page, '.promo-recap-trend-sub')).toHaveText('across the same 3 watches');
+  });
+
+  test('the streak slide appears and names its span', async ({ page }) => {
+    await mount(page, { logs: STREAK });
+    await expect(labels(page)).toHaveText(['Most worn', 'Your top three', 'Longest streak', 'Your rhythm']);
+    await expect(q(page, '.promo-recap-streak')).toHaveText('4');
+    await expect(q(page, '.promo-recap-slide').nth(3)).toContainText('Jul 1 – Jul 4');
+  });
+
+  test('the top-post slide appears once a post has a like, with its photo', async ({ page }) => {
+    await mount(page, { likes: { p5: 7, p1: 2 } });
+    await expect(labels(page)).toHaveText(['Most worn', 'Your top three', 'Your top post', 'Your rhythm']);
+    await expect(q(page, '.promo-recap-shot img')).toHaveAttribute('src', 'https://x.test/shot.jpg');
+    await expect(q(page, '.promo-recap-slide').nth(3)).toContainText('7 likes');
+  });
+
+  // A post with no photo still earns the slide — it falls back to the watch.
+  test('the top-post slide falls back to the watch when there is no photo', async ({ page }) => {
+    await mount(page, { likes: { p1: 4 } });
+    await expect(q(page, '.promo-recap-shot')).toHaveCount(0);
+    await expect(q(page, '.promo-recap-thumb--hero')).toHaveCount(2);   // most-worn + top-post
+  });
+
+  test('no top-post slide when nothing was liked', async ({ page }) => {
+    await mount(page, { likes: {} });
+    await expect(labels(page)).toHaveText(['Most worn', 'Your top three', 'Your rhythm']);
+  });
+
+  test('the new-arrivals slide lists what joined that month', async ({ page }) => {
+    await mount(page, { watches: ARRIVED });
+    await expect(labels(page)).toHaveText(['Most worn', 'Your top three', 'New this month', 'Your rhythm']);
+    const tile = q(page, '.promo-recap-slide').nth(3);
+    await expect(tile).toContainText('Speedmaster');
+    await expect(tile).toContainText('joined the rotation');
+  });
+
+  // All four at once — the ordering is a deliberate narrative, so it is pinned.
+  test('all four extras render in order, after the podium and before the rhythm', async ({ page }) => {
+    await mount(page, { logs: [...STREAK, ...JUNE], watches: ARRIVED, likes: { s5: 3 } });
+    await expect(labels(page)).toHaveText([
+      'Most worn', 'Your top three', 'vs. June', 'Your top post',
+      'New this month', 'Longest streak', 'Your rhythm',
+    ]);
+    await expect(q(page, '.promo-recap-slide')).toHaveCount(8);
+    await expect(q(page, '[data-recap-dot]')).toHaveCount(8);
   });
 });
 
@@ -218,6 +316,66 @@ test.describe('month-in-review card — injection into the feed', () => {
   test('the feed never shows the composer explainer', async ({ page }) => {
     await feed(page, { day: 20 });
     await expect(page.locator('#feed-list .promo-recap-note')).toHaveCount(0);
+  });
+});
+
+// Sharing hands the recipient a link the share-recap edge function renders as a
+// card. What matters on this side is that the right URL is built, and that a
+// profile whose page would 404 is stopped before the share sheet opens.
+test.describe('month-in-review card — sharing', () => {
+  async function armShare(page, profile) {
+    await page.evaluate((p) => {
+      myProfile = p;
+      window.__shared = [];
+      window.__toasts = [];
+      navigator.share = async (payload) => { window.__shared.push(payload); };
+      window.toast = (msg, kind) => { window.__toasts.push([msg, kind]); };
+      toast = window.toast;
+    }, profile);
+    await page.locator('#recap-host [data-recap-share]').click();
+    return page.evaluate(() => ({ shared: window.__shared, toasts: window.__toasts }));
+  }
+
+  test('the footer offers a share button naming the month', async ({ page }) => {
+    await mount(page);
+    await expect(q(page, '[data-recap-share]')).toHaveText(/Share July/);
+  });
+
+  test('shares a share-recap link for the viewer and the recap month', async ({ page }) => {
+    await mount(page);
+    const { shared } = await armShare(page, { username: 'od', profile_privacy: 'public' });
+    expect(shared).toHaveLength(1);
+    expect(shared[0].url).toBe('https://api.wrotate.com/functions/v1/share-recap?u=od&m=2026-07');
+    expect(shared[0].title).toBe('My July on WRotate');
+    expect(shared[0].text).toBe('6 wears across 3 watches in July.');
+  });
+
+  test('percent-encodes an awkward username', async ({ page }) => {
+    await mount(page);
+    const { shared } = await armShare(page, { username: 'a b&c', profile_privacy: 'public' });
+    expect(shared[0].url).toContain('u=a%20b%26c');
+  });
+
+  // The page would serve a padlock, so the share is stopped here rather than
+  // letting someone send a dead link and hear about it from a friend.
+  test('refuses to share from a private profile', async ({ page }) => {
+    await mount(page);
+    const { shared, toasts } = await armShare(page, { username: 'od', profile_privacy: 'private' });
+    expect(shared).toHaveLength(0);
+    expect(toasts[0][0]).toContain('private');
+  });
+
+  test('refuses to share when the collection is hidden', async ({ page }) => {
+    await mount(page);
+    const { shared } = await armShare(page, {
+      username: 'od', profile_privacy: 'public', collection_visibility: 'private',
+    });
+    expect(shared).toHaveLength(0);
+  });
+
+  test('the composer explainer has no share button', async ({ page }) => {
+    await mount(page, { day: 20 });
+    await expect(q(page, '[data-recap-share]')).toHaveCount(0);
   });
 });
 

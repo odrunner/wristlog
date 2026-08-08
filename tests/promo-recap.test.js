@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import {
   monthRecap, promoSlotEpoch, eligiblePromoSlots,
-  RECAP_WINDOW_DAYS, RECAP_MIN_WEARS, RECAP_MIN_WATCHES,
+  RECAP_WINDOW_DAYS, RECAP_MIN_WEARS, RECAP_MIN_WATCHES, RECAP_MIN_STREAK,
 } from '../wrotate_test.js';
 
 // "Your month in review" — the automated promo card.
@@ -188,6 +188,195 @@ describe('monthRecap — the numbers on the slides', () => {
   });
 });
 
+// ── The four conditional slides ──────────────────────────────────────────────
+// Each one drops itself rather than rendering an empty or dispiriting panel, so
+// what matters most in each block is the case where the slide is ABSENT.
+
+describe('monthRecap — vs. last month', () => {
+  const JUNE = [
+    L('a', '2026-06-01'), L('a', '2026-06-02'),
+    L('b', '2026-06-03'), L('b', '2026-06-04'),
+  ];
+
+  it('compares against the month before the recap month', () => {
+    const r = july({ logs: [...JULY_LOGS, ...JUNE] });
+    expect(r.prev).toEqual({ period: '2026-06', totalWears: 4, uniqueCount: 2 });
+  });
+
+  // "Up 37 wears on a month you weren't here for" isn't a comparison.
+  it('is null when the previous month is empty', () => {
+    expect(july().prev).toBeNull();
+  });
+
+  it('rolls the year back for a January recap comparing to December', () => {
+    const logs = [
+      L('a', '2025-12-01'), L('a', '2025-12-02'), L('a', '2025-12-03'),
+      L('b', '2025-12-04'), L('b', '2025-12-05'),
+      L('a', '2025-11-01'), L('b', '2025-11-02'),
+    ];
+    const r = monthRecap({ now: at(2026, 0, 2), logs, watches: JULY_WATCHES });
+    expect(r.period).toBe('2025-12');
+    expect(r.prev.period).toBe('2025-11');
+    expect(r.prev.totalWears).toBe(2);
+  });
+
+  it('applies the same wear rules to the previous month', () => {
+    const june = [...JUNE, L('a', '2026-06-05', { useCase: 'measurement' }), L('gone', '2026-06-06')];
+    const r = july({ logs: [...JULY_LOGS, ...june] });
+    expect(r.prev.totalWears).toBe(4);
+  });
+});
+
+describe('monthRecap — longest streak', () => {
+  it('finds the longest consecutive run of logged days', () => {
+    const logs = [
+      L('a', '2026-07-01'), L('a', '2026-07-02'), L('b', '2026-07-03'), L('b', '2026-07-04'),
+      L('c', '2026-07-10'), L('a', '2026-07-20'),
+    ];
+    const r = monthRecap({ now: at(2026, 7, 3), logs, watches: JULY_WATCHES });
+    expect(r.streak).toEqual({ days: 4, start: '2026-07-01', end: '2026-07-04' });
+  });
+
+  it('picks the longest run, not the first or the last', () => {
+    const logs = [
+      L('a', '2026-07-01'), L('a', '2026-07-02'),
+      L('b', '2026-07-10'), L('b', '2026-07-11'), L('b', '2026-07-12'), L('c', '2026-07-13'),
+      L('a', '2026-07-20'), L('a', '2026-07-21'),
+    ];
+    const r = monthRecap({ now: at(2026, 7, 3), logs, watches: JULY_WATCHES });
+    expect(r.streak).toEqual({ days: 4, start: '2026-07-10', end: '2026-07-13' });
+  });
+
+  it('counts a day once however many watches were worn on it', () => {
+    const logs = [
+      L('a', '2026-07-01'), L('b', '2026-07-01'), L('c', '2026-07-01'),
+      L('a', '2026-07-02'), L('b', '2026-07-03'), L('c', '2026-07-04'),
+    ];
+    const r = monthRecap({ now: at(2026, 7, 3), logs, watches: JULY_WATCHES });
+    expect(r.streak.days).toBe(4);
+  });
+
+  // Below the floor it reads as a rebuke rather than an achievement.
+  it(`is null below ${RECAP_MIN_STREAK} days`, () => {
+    const logs = [
+      L('a', '2026-07-01'), L('a', '2026-07-02'),   // a run of 2, the longest here
+      L('b', '2026-07-06'), L('b', '2026-07-10'),
+      L('c', '2026-07-14'), L('c', '2026-07-19'),
+    ];
+    const r = monthRecap({ now: at(2026, 7, 3), logs, watches: JULY_WATCHES });
+    expect(r.streak).toBeNull();
+  });
+
+  // The default fixture happens to be six consecutive days — worth pinning, so
+  // a later edit to it can't silently gut the streak tests above.
+  it('reports the whole month when every day is consecutive', () => {
+    expect(july().streak).toEqual({ days: 6, start: '2026-07-01', end: '2026-07-06' });
+  });
+
+  it(`shows at exactly ${RECAP_MIN_STREAK} days`, () => {
+    const logs = [
+      L('a', '2026-07-01'), L('a', '2026-07-02'), L('a', '2026-07-03'),
+      L('b', '2026-07-10'), L('c', '2026-07-20'),
+    ];
+    const r = monthRecap({ now: at(2026, 7, 3), logs, watches: JULY_WATCHES });
+    expect(r.streak.days).toBe(RECAP_MIN_STREAK);
+  });
+
+  // The slide is about that month, so a run continuing from June is cut at the
+  // boundary rather than counting days outside the period.
+  it('does not count days outside the month', () => {
+    const logs = [
+      L('a', '2026-06-28'), L('a', '2026-06-29'), L('a', '2026-06-30'),
+      L('a', '2026-07-01'), L('a', '2026-07-02'), L('b', '2026-07-03'),
+      L('b', '2026-07-10'), L('c', '2026-07-11'),
+    ];
+    const r = monthRecap({ now: at(2026, 7, 3), logs, watches: JULY_WATCHES });
+    expect(r.streak).toEqual({ days: 3, start: '2026-07-01', end: '2026-07-03' });
+  });
+});
+
+describe('monthRecap — new arrivals', () => {
+  it('lists watches added during the recap month, oldest first', () => {
+    const watches = [
+      W('a', { createdAt: '2026-07-20T10:00:00Z' }),
+      W('b', { createdAt: '2026-07-05T10:00:00Z' }),
+      W('c', { createdAt: '2026-03-01T10:00:00Z' }),
+    ];
+    expect(july({ watches }).arrivals).toEqual(['b', 'a']);
+  });
+
+  it('is empty in a month with no additions', () => {
+    expect(july().arrivals).toEqual([]);
+  });
+
+  it('caps at three', () => {
+    const watches = ['a', 'b', 'c'].map((id, i) =>
+      W(id, { createdAt: `2026-07-0${i + 1}T10:00:00Z` }));
+    const extra = ['d', 'e'].map((id, i) => W(id, { createdAt: `2026-07-1${i}T10:00:00Z` }));
+    const r = monthRecap({ now: at(2026, 7, 3), logs: JULY_LOGS, watches: [...watches, ...extra] });
+    expect(r.arrivals).toHaveLength(3);
+  });
+
+  it('ignores a watch with no createdAt', () => {
+    expect(july({ watches: [W('a'), W('b'), W('c')] }).arrivals).toEqual([]);
+  });
+});
+
+describe('monthRecap — top post', () => {
+  const withIds = [
+    L('a', '2026-07-01', { id: 'p1', photoUrl: 'https://x/1.jpg' }),
+    L('a', '2026-07-02', { id: 'p2' }),
+    L('a', '2026-07-03', { id: 'p3' }),
+    L('b', '2026-07-04', { id: 'p4' }),
+    L('b', '2026-07-05', { id: 'p5' }),
+    L('c', '2026-07-06', { id: 'p6' }),
+  ];
+  const run = (likes) => monthRecap({
+    now: at(2026, 7, 3), logs: withIds, watches: JULY_WATCHES, likes,
+  });
+
+  it('picks the most-liked post of the month', () => {
+    const r = run({ p1: 2, p4: 9, p6: 5 });
+    expect(r.topPost).toMatchObject({ logId: 'p4', watchId: 'b', likes: 9 });
+  });
+
+  it('carries the photo through when the post has one', () => {
+    expect(run({ p1: 3 }).topPost.photoUrl).toBe('https://x/1.jpg');
+  });
+
+  it('still works for a post with no photo', () => {
+    expect(run({ p4: 3 }).topPost).toMatchObject({ logId: 'p4', photoUrl: null });
+  });
+
+  // Zero likes is not a highlight.
+  it('is null when nothing was liked', () => {
+    expect(run({}).topPost).toBeNull();
+  });
+
+  // No map = the fetch never ran (out of window, or it failed). The rest of the
+  // card must be unaffected.
+  it('is null when no likes map was supplied', () => {
+    expect(run(undefined).topPost).toBeNull();
+    expect(run(undefined).totalWears).toBe(6);
+  });
+
+  it('breaks a tie on the more recent post', () => {
+    expect(run({ p1: 4, p5: 4 }).topPost.logId).toBe('p5');
+  });
+
+  it('ignores likes on posts outside the month', () => {
+    const logs = [...withIds, L('a', '2026-06-01', { id: 'old' })];
+    const r = monthRecap({ now: at(2026, 7, 3), logs, watches: JULY_WATCHES, likes: { old: 99, p1: 2 } });
+    expect(r.topPost.logId).toBe('p1');
+  });
+
+  it('ignores likes on a measurement share', () => {
+    const logs = [...withIds, L('a', '2026-07-09', { id: 'm1', useCase: 'measurement' })];
+    const r = monthRecap({ now: at(2026, 7, 3), logs, watches: JULY_WATCHES, likes: { m1: 99, p1: 2 } });
+    expect(r.topPost.logId).toBe('p1');
+  });
+});
+
 describe('promoSlotEpoch', () => {
   it('is updated_at for a normal slot — what makes "Reset impressions" work', () => {
     const slot = { variant: 'tag', updated_at: '2026-08-01T00:00:00Z' };
@@ -292,6 +481,7 @@ describe('recap constants match between index.html and the test mirror', () => {
     ['RECAP_WINDOW_DAYS', RECAP_WINDOW_DAYS],
     ['RECAP_MIN_WEARS',   RECAP_MIN_WEARS],
     ['RECAP_MIN_WATCHES', RECAP_MIN_WATCHES],
+    ['RECAP_MIN_STREAK',  RECAP_MIN_STREAK],
   ])('%s', (name, mirrored) => {
     expect(appValue(name)).toBe(mirrored);
   });

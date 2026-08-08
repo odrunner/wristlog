@@ -30,7 +30,7 @@ columns, no new tables, no server-side computation.
 Pure, `now` injected, mirrored into `wrotate_test.js` as VERBATIM.
 
 ```
-monthRecap({ now, logs, watches }) -> recap | null
+monthRecap({ now, logs, watches, likes }) -> recap | null
 ```
 
 Returns `null` — the card does not exist — unless **all** of:
@@ -55,6 +55,12 @@ The returned object:
   top: [{ watchId, count }, …],                 // up to 3, count desc then watchId asc
   topUC, topUCWears,
   topDow, topDowWears,                          // 0-6, Sun-first
+
+  // Each of these is null/empty when its slide has nothing to say:
+  prev:     { period, totalWears, uniqueCount } | null,
+  streak:   { days, start, end } | null,
+  arrivals: [watchId, …],                       // added that month, up to 3
+  topPost:  { logId, watchId, likes, date, photoUrl } | null,
 }
 ```
 
@@ -103,31 +109,87 @@ alongside the other promo state.
 │ │   37    │                           │
 │ │  wears  │                           │
 │ └─────────┘                           │
-│            ● ○ ○ ○                    │
-│ [        See the full month        ]  │
+│          ● ○ ○ ○ ○ ○                  │
+│ [        ⬆ Share July              ]  │
 └───────────────────────────────────────┘
 ```
 
-Four slides in a horizontal `scroll-snap` track:
+Up to eight slides in a horizontal `scroll-snap` track. Four always render;
+four appear only when there is something to say, so a typical month is five or
+six. The order is a deliberate narrative — broad, then the collection, then the
+social proof, then habit — and it is pinned by a test.
 
-| # | Slide | Content |
-| --- | --- | --- |
-| 1 | Cover | month name huge, `37 wears · 14 watches · 28 days` |
-| 2 | Most worn | large watch photo, name, brand, `8 wears` |
-| 3 | Top three | three ranked photo tiles with counts |
-| 4 | Rhythm | days logged, busiest weekday, top use case |
+| # | Slide | Always? | Content |
+| --- | --- | --- | --- |
+| 1 | Cover | yes | month name huge, `37 wears · 14 watches · 28 days` |
+| 2 | Most worn | yes | large watch photo, name, brand, `8 wears` |
+| 3 | Top three | yes | three ranked photo tiles with counts |
+| 4 | vs. last month | if the previous month has wears | `▲ 8 wears`, `across 1 more watch`, or `Level with June` |
+| 5 | Top post | if a post that month has ≥1 like | the photo, the watch, `12 likes` |
+| 6 | New this month | if watches were added | photo tiles, `joined the rotation` |
+| 7 | Longest streak | if ≥ `RECAP_MIN_STREAK` (3) days | `19` / `days in a row` / the span |
+| 8 | Rhythm | yes | days logged, busiest weekday, top use case |
+
+Each conditional slide drops itself rather than rendering an empty panel. The
+streak has a floor because a two-day "streak" reads as a rebuke, and the
+comparison is skipped entirely when the previous month is empty — "up 37 wears
+on a month you weren't here for" is not a comparison, it's a first month.
+
+**The top post is the one input `monthRecap()` cannot compute from memory.**
+Like counts come from a `likes` query in `loadRecapLikes()`, run concurrently
+with `loadPromoSlots()` and passed in as a `{ [logId]: count }` map. It costs
+nothing out of season: the provisional recap is computed first, and outside the
+window it is null and the query never runs. Concurrency is not a nicety —
+boot's dirty-state retry and `cloudSync()` are the next lines, and an extra
+*serial* request there delays every boot-time sync behind it.
 
 Slide 3 renders however many of the top three exist — the `≥2 watches` gate
 guarantees at least two tiles. Photos fall back to the initials-on-colour
 avatar exactly as the By Day of Week card does, so a collection with no
 pictures still reads.
 
-**The CTA is a footer button, not a fifth slide.** The design review called for
-a wrap slide whose only job was to carry the CTA; a persistent button does that
-better and does not make anyone swipe four times to act. `cta_label` and
-`cta_action` come from the row like any other slot — the seed uses
-`open_stats`, a new action (there wasn't one) that navigates to the Stats tab
-where the full Monthly Review lives.
+**The footer is Share.** An earlier revision carried an admin-chosen CTA there,
+seeded as "See the full month" → Stats; it was removed because the card *is*
+the content and a button that only lands on Stats is a step nobody needs. The
+renderer still honours a slot's `cta_label`/`cta_action` beneath the share
+button, so a future campaign can add one, but the recap row ships with both
+fields empty.
+
+## 5. Sharing
+
+The share button hands the recipient a **link**, not text and not an image: a
+link survives forwarding, renders as a card in a message thread, and is the
+only form that brings anyone back to WRotate.
+
+`supabase/functions/share-recap`, modelled on `share-collection`:
+
+- `GET /share-recap?u=<username>&m=YYYY-MM` → a page with OG tags
+- `…&img=1` → a 1200×630 SVG `og:image`
+
+`m` is validated against `^\d{4}-(0[1-9]|1[0-2])$` with a year range before it
+reaches any date filter. Image mode **always** answers with an SVG, even for a
+bad or private request — a link preview whose image 404s renders as a grey box
+in the thread.
+
+**Privacy has two layers.** The page is served only for a public profile with a
+non-private collection — the same gate `share-collection` uses. Within that, a
+watch marked private still *counts* toward the totals (so the numbers match
+what the sharer saw in the app) but is never *named or pictured*: the podium is
+drawn only from public watches. The consequence is that the podium can be
+shorter than the unique count implies, which is correct.
+
+The client refuses to open the share sheet at all when the viewer's own profile
+would fail that gate — better than letting someone send a dead link and hear
+about it from a friend.
+
+The page carries `noindex`. The counting rules in `computeRecap()` mirror
+`monthRecap()` exactly; a sharer who sends their July and then sees different
+numbers has caught us contradicting ourselves.
+
+**Not shared:** the top post, new arrivals, and the use-case/weekday detail.
+The link is a highlight card — month, three numbers, podium, streak — not a
+mirror of all eight slides. The top post in particular would need a
+post-visibility decision that the aggregate slides avoid entirely.
 
 **Interaction is CSS.** `overflow-x:auto`, `scroll-snap-type: x mandatory`,
 each slide `flex:0 0 100%; scroll-snap-align:center`. The only JS is a dot
@@ -143,7 +205,7 @@ takes `tabindex="0"` so it is keyboard-scrollable.
 Deliberately **out of scope**: per-slide impression tracking, share-to-image,
 and a fullscreen expand. Each is a clean follow-up on top of this.
 
-## 5. Admin
+## 6. Admin
 
 `recap` joins the Style dropdown from the registry, as the other variants do. A
 note under the picker says the copy fields are ignored for this style. The live
@@ -152,7 +214,7 @@ of season, an explicit "no recap in this window" placeholder rather than an
 empty box. The placeholder is the only thing a `recap` slot can render without
 data, and eligibility guarantees the feed never reaches it.
 
-## 6. Tests
+## 7. Tests
 
 Unit (`tests/promo-recap.test.js`):
 - window boundaries — day 7 in, day 8 out, day 1 of January recapping December
@@ -169,9 +231,12 @@ Unit (`tests/promo-eligible.test.js`, extended):
 E2E (`e2e/promo-recap.mock.spec.js`): slide count, dot count, the avatar
 fallback, the collapse to two tiles, and the CTA firing `open_stats`.
 
-## 7. Where it lives
+## 8. Where it lives
 
 - Schema: `sql/2026-08-07-promo-recap-variant.sql`
+- Sharing: `supabase/functions/share-recap/` (index.ts, lib.ts, lib.test.ts) +
+  `shareMonthRecap()` in `index.html`; smoke cases in
+  `scripts/smoke-test-functions.js`
 - Logic: `monthRecap()`, `promoSlotEpoch()`, `RECAP_*` constants in
   `index.html`, mirrored VERBATIM in `wrotate_test.js`
 - Renderer: the `variant === 'recap'` branch of `renderPromoCard()`, plus
