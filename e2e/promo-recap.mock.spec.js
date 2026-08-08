@@ -417,7 +417,7 @@ test.describe('month-in-review card — thumbs up/down', () => {
   test('asks for a verdict, bottom right of the card', async ({ page }) => {
     await mount(page);
     await armVote(page);
-    await expect(q(page, '.promo-recap-vote-q')).toHaveText('Worth having?');
+    await expect(q(page, '.promo-recap-vote-q')).toHaveText('What do you think of this feature?');
     await expect(q(page, '[data-recap-vote]')).toHaveCount(2);
   });
 

@@ -235,7 +235,8 @@ and a fullscreen expand. Each is a clean follow-up on top of this.
 
 ## 6. Thumbs up/down
 
-The card asks "Worth having?" bottom-right, under the share button. One tap, no
+The card asks "What do you think of this feature?" bottom-right, under the
+share button. One tap, no
 form — on a brand-new feature the cheapest possible signal beats a survey nobody
 fills in. The answer replaces the question rather than inviting a second,
 contradictory tap, and a vote from a previous session is remembered.
