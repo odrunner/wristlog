@@ -84,11 +84,16 @@ function blockFor(src, selector) {
   return src.slice(open + 1, close);
 }
 
-// Custom properties declared in a chunk of CSS or HTML. Block comments are
-// stripped first: a declaration preceded by a /* comment */ is still a
-// declaration, and a commented-out one is not.
+// CSS custom properties declared in a stylesheet, or in an HTML file's <style>
+// blocks. HTML is narrowed to <style> content first: a CSP meta tag contains
+// "https://*.supabase.co", whose "/*" would otherwise open a bogus comment that
+// swallows the real declarations. Block comments are then stripped, so a
+// declaration preceded by a /* comment */ still counts and a commented-out one
+// does not.
 export function declaredIn(src) {
-  const withoutComments = src.replace(/\/\*[\s\S]*?\*\//g, '');
+  const styles = [...src.matchAll(/<style>([\s\S]*?)<\/style>/g)].map(m => m[1]);
+  const css = styles.length ? styles.join('\n') : src;
+  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
   const out = new Set();
   for (const m of withoutComments.matchAll(/(?:^|[;{])\s*(--[A-Za-z0-9_-]+)\s*:/g)) out.add(m[1]);
   return out;
@@ -162,5 +167,32 @@ describe('index.html', () => {
     const orphans = [...referencedIn(indexHtml)]
       .filter(t => !(t in SHARED_LIGHT) && !declared.has(t) && !KNOWN_UNDECLARED.includes(t));
     expect(orphans).toEqual([]);
+  });
+});
+
+describe.each([
+  ['p/index.html'],
+  ['profile/index.html'],
+])('%s', (relPath) => {
+  const src = readFileSync(join(root, relPath), 'utf8');
+
+  it('links design-system.css before its inline style block', () => {
+    const link = src.indexOf('<link rel="stylesheet" href="/design-system.css">');
+    expect(link).toBeGreaterThan(-1);
+    expect(link).toBeLessThan(src.indexOf('<style>'));
+  });
+
+  it('declares no custom properties of its own', () => {
+    expect([...declaredIn(src)]).toEqual([]);
+  });
+
+  it('references only tokens that design-system.css owns', () => {
+    const unowned = [...referencedIn(src)].filter(t => !(t in SHARED_LIGHT));
+    expect(unowned).toEqual([]);
+  });
+
+  it('would notice a re-added token declaration', () => {
+    const withToken = src.replace('<style>', '<style>\n    :root { --bg: #fff; }');
+    expect([...declaredIn(withToken)]).toEqual(['--bg']);
   });
 });
