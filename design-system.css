@@ -1,0 +1,47 @@
+/* WRotate design system — the single source of truth for design tokens.
+   Loaded by index.html, p/index.html and profile/index.html. Do not
+   re-declare any of these in a page; tests/design-system-tokens.test.js
+   fails the build if you do.
+
+   [data-theme="light"] is paired with :root so the landing screen, which
+   carries that attribute, can force light regardless of the app theme. */
+
+:root, [data-theme="light"] {
+  --bg: #f5f5f8;
+  --surface: #ffffff;
+  --surface2: #eeeff5;
+  --border: #d8d9e8;
+  --gold: #9a7628;
+  --gold-lt: #c9a84c;
+  --gold-dim: rgba(154,118,40,.12);
+  --text: #16161e;
+  --muted: #70708a;
+  --danger: #e05555;
+  --success: #4caf7d;
+  --radius: 10px;
+  --overlay-bg: rgba(245,245,248,.96);
+
+  /* ── Scale tokens (theme-independent) ── */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px;
+  --radius-sm: 6px; --radius-btn: 8px; --radius-pill: 999px;
+  --fs-2xs: .62rem; --fs-xs: .68rem; --fs-sm: .75rem; --fs-base: .82rem;
+  --fs-md: .95rem; --fs-lg: 1.1rem; --fs-xl: 1.3rem; --fs-2xl: 1.6rem; --fs-3xl: 2.5rem;
+  --fw-normal: 400; --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700;
+  --lh-tight: 1.2; --lh-snug: 1.4; --lh-body: 1.55;
+  --icon-sm: 14px; --icon-md: 16px; --icon-lg: 20px; --icon-xl: 24px;
+  --ls-eyebrow: .08em;
+}
+
+[data-theme="dark"] {
+  --bg: #0b0b10;
+  --surface: #141419;
+  --surface2: #1c1c25;
+  --border: #272734;
+  --gold: #c9a84c;
+  --gold-lt: #dbbe72;
+  --gold-dim: color-mix(in srgb, var(--gold) 12%, transparent);
+  --text: #e6e6f0;
+  --muted: #7a7a95;
+  --overlay-bg: rgba(11,11,16,.94);
+}
