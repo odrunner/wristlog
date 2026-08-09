@@ -18,7 +18,7 @@
 - **Token values are copied verbatim.** Never retype a hex by hand — copy the exact string from the source file.
 - **Only these tokens move:** the 44 light-theme tokens and 10 dark overrides listed in Task 1. `--vis-friends`, `--warn`, `--badge-*`, and `--promo-*` stay in `index.html`.
 - **`r.html` is out of scope.** Do not touch it.
-- **Bump the SW cache version** (`sw.js` → `wristlog-v1040`) as part of Task 5.
+- **Bump the SW cache version** (`sw.js` → `wristlog-v1042`) as part of Task 4.
 - **No "What's New" or Help entry.** This change is invisible to users; there is nothing to announce.
 
 ---
@@ -124,10 +124,19 @@ function blockFor(src, selector) {
   return src.slice(open + 1, close);
 }
 
-// Custom properties declared in a chunk of CSS or HTML.
+// CSS custom properties declared in a stylesheet, or in an HTML file's <style>
+// blocks. HTML is narrowed to <style> content first: a CSP meta tag contains
+// "https://*.supabase.co", whose "/*" would otherwise open a bogus comment that
+// swallows the real declarations. Block comments are then stripped, so a
+// declaration preceded by a /* comment */ still counts (index.html puts one
+// above --vis-friends, --badge-text and --badge-ink) and a commented-out one
+// does not.
 export function declaredIn(src) {
+  const styles = [...src.matchAll(/<style>([\s\S]*?)<\/style>/g)].map(m => m[1]);
+  const css = styles.length ? styles.join('\n') : src;
+  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
   const out = new Set();
-  for (const m of src.matchAll(/(?:^|[;{])\s*(--[A-Za-z0-9_-]+)\s*:/g)) out.add(m[1]);
+  for (const m of withoutComments.matchAll(/(?:^|[;{])\s*(--[A-Za-z0-9_-]+)\s*:/g)) out.add(m[1]);
   return out;
 }
 
@@ -553,9 +562,11 @@ describe('sw.js', () => {
     expect(precache).toContain("'/design-system.css'");
   });
 
-  it('has had its cache version bumped past v1039', () => {
+  // The branch started at v1041. A bump is what makes activate() purge the old
+  // cache, so clients fetch the new design-system.css instead of a stale copy.
+  it('has had its cache version bumped past the branch base', () => {
     const version = Number(sw.match(/const CACHE = 'wristlog-v(\d+)';/)[1]);
-    expect(version).toBeGreaterThan(1039);
+    expect(version).toBeGreaterThan(1041);
   });
 });
 ```
@@ -570,14 +581,14 @@ Expected: FAIL — `expected "'/', '/index.html', …" to contain "'/design-syst
 Replace lines 4-5:
 
 ```js
-const CACHE = 'wristlog-v1039';
+const CACHE = 'wristlog-v1041';
 const PRECACHE = ['/', '/index.html', '/manifest.json', '/icon.svg', '/profile/', '/p/'];
 ```
 
 with:
 
 ```js
-const CACHE = 'wristlog-v1040';
+const CACHE = 'wristlog-v1042';
 const PRECACHE = ['/', '/index.html', '/design-system.css', '/manifest.json', '/icon.svg', '/profile/', '/p/'];
 ```
 
