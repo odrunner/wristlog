@@ -11,6 +11,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { excludeBounced, fetchBouncedEmails } from "../_shared/bounced.ts";
 import {
   batchSegment,
   capRecipients,
@@ -330,15 +331,23 @@ serve(async (req) => {
       recipients.push({ uid: profile.id, email: user.email });
     }
 
+    // Drop permanently-bounced addresses. Applied BEFORE the cap so a dead
+    // address can't consume a slot in a limited test slice, and before the
+    // dry-run return so the preview count matches what actually sends.
+    const bounced = await fetchBouncedEmails(supabase);
+    const liveRecipients = excludeBounced(recipients, bounced);
+    const bouncedSkipped = recipients.length - liveRecipients.length;
+
     // Optional limit (e.g. test slice of 20 before sending to whole cohort)
     const effectiveLimit = computeEffectiveLimit(limit);
-    const cappedRecipients = capRecipients(recipients, effectiveLimit);
+    const cappedRecipients = capRecipients(liveRecipients, effectiveLimit);
 
     // Dry run: just return the count without sending
     if (dry_run) {
       return jsonResponse({
-        eligible: recipients.length,
+        eligible: liveRecipients.length,
         will_send: cappedRecipients.length,
+        skipped_bounced: bouncedSkipped,
         cohort,
         campaign_id,
         limit: effectiveLimit,
@@ -545,10 +554,35 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
     return jsonResponse({ drained: 0, used_today: usedToday, budget, queue_empty: true });
   }
 
+  // Rows queued before an address bounced (or before this filter existed) still
+  // point at dead mailboxes. Retire them as 'failed' instead of just skipping:
+  // a skipped row stays 'pending' and would be re-selected by every future
+  // drain, blocking the same budget slot forever. 'failed' is the correct
+  // terminal state here — the address is permanently undeliverable, so there is
+  // nothing to retry.
+  const drainBounced = await fetchBouncedEmails(supabase);
+  const liveRows = excludeBounced(rows, drainBounced);
+  const bouncedRows = rows.filter((r) => !liveRows.includes(r));
+  if (bouncedRows.length > 0) {
+    await supabase.from("broadcast_queue")
+      .update({ status: "failed", error: "suppressed: permanent bounce on record" })
+      .in("id", bouncedRows.map((r) => r.id));
+    console.log(`[send-broadcast] Drain: retired ${bouncedRows.length} row(s) to permanently-bounced addresses`);
+  }
+  if (liveRows.length === 0) {
+    return jsonResponse({
+      drained: 0,
+      used_today: usedToday,
+      budget,
+      queue_empty: true,
+      skipped_bounced: bouncedRows.length,
+    });
+  }
+
   // Claim: move the selected rows to 'sending' first, and work only on the
   // ones the claim actually won — protects against a concurrent drain
   // claiming the same rows between this read and the claim update.
-  const ids = rows.map((r) => r.id);
+  const ids = liveRows.map((r) => r.id);
   const { data: claimed, error: claimErr } = await supabase
     .from("broadcast_queue")
     .update({ status: "sending", claimed_at: new Date().toISOString() })

@@ -11,6 +11,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { excludeBounced, fetchBouncedEmails } from "../_shared/bounced.ts";
 import {
   buildHtmlEmail,
   dropDone,
@@ -98,7 +99,9 @@ async function fetchAllRows<T>(
   return { data: all, error: null };
 }
 
-// Resolve profile rows to email recipients via auth.users.
+// Resolve profile rows to email recipients via auth.users, minus any address
+// that has permanently bounced (SES suppresses those account-wide; re-sending
+// only mints another bounce against the sending reputation).
 async function resolveRecipients(supabase: Db, users: ProfileRow[]): Promise<Recipient[]> {
   const recipients: Recipient[] = [];
   for (const u of users) {
@@ -107,7 +110,7 @@ async function resolveRecipients(supabase: Db, users: ProfileRow[]): Promise<Rec
       recipients.push({ uid: u.id, email: authUser.user.email, displayName: u.display_name || "" });
     }
   }
-  return recipients;
+  return excludeBounced(recipients, await fetchBouncedEmails(supabase));
 }
 
 // A fact to headline the email, plus the pool coordinates needed to advance the
@@ -714,9 +717,14 @@ async function enqueueStreakBroadcast(supabase: Db, limit: number) {
     });
   }
 
+  // Never queue an address that has permanently bounced — SES suppresses it
+  // account-wide and each re-send mints a fresh bounce against our reputation.
+  const liveRows = excludeBounced(rows, await fetchBouncedEmails(supabase));
+  const bouncedSkipped = rows.length - liveRows.length;
+
   let queued = 0;
-  for (let i = 0; i < rows.length; i += 500) {
-    const slice = rows.slice(i, i + 500);
+  for (let i = 0; i < liveRows.length; i += 500) {
+    const slice = liveRows.slice(i, i + 500);
     const { error } = await supabase.from("broadcast_queue").insert(slice);
     if (error) throw new Error(`queue insert failed after ${queued}: ${error.message}`);
     queued += slice.length;
@@ -728,7 +736,7 @@ async function enqueueStreakBroadcast(supabase: Db, limit: number) {
   // streak_broadcast_audience() excludes anyone already in broadcast_queue
   // under this label, so re-running here is still idempotent.
 
-  return { audience: audience.length, queued, personalized, fallback, no_email: noEmail };
+  return { audience: audience.length, queued, personalized, fallback, no_email: noEmail, skipped_bounced: bouncedSkipped };
 }
 
 Deno.serve(async (req: Request) => {

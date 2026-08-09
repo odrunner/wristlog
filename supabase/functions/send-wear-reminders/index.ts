@@ -9,6 +9,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // Transport: ../_shared/mailer.ts — provider chosen at runtime by the
 // EMAIL_PROVIDER secret (defaults to Resend).
 import { sendEmail } from "../_shared/mailer.ts";
+import { fetchBouncedEmails } from "../_shared/bounced.ts";
 import {
   apnsHost, buildHtmlEmail, buildReminderEmail, buildReminderPush,
   createAPNsJWT, hmacSign, sendPush, timingSafeEqual, unsubUrl,
@@ -37,8 +38,19 @@ serve(async (req) => {
       console.error("[send-wear-reminders] target query failed:", error);
       return new Response(JSON.stringify({ error: String(error.message) }), { status: 500 });
     }
-    const rows = (targets ?? []) as { user_id: string; email: string; channel: string; local_today: string }[];
-    if (!rows.length) return new Response(JSON.stringify({ sent: 0 }), { status: 200 });
+    const allRows = (targets ?? []) as { user_id: string; email: string; channel: string; local_today: string }[];
+    if (!allRows.length) return new Response(JSON.stringify({ sent: 0 }), { status: 200 });
+
+    // Skip addresses that have permanently bounced. This runs hourly, so a dead
+    // mailbox left in the target list re-bounces on every throttle window and
+    // keeps charging the SES reputation that gates the whole account.
+    // Push-channel targets have no email and are never filtered out.
+    // Checked only when there are targets — most hourly runs match nobody
+    // (the RPC selects users whose LOCAL hour is 5pm), and paying for a
+    // suppression lookup on every empty run is 20+ wasted queries a day.
+    const bounced = await fetchBouncedEmails(supabase);
+    const rows = allRows.filter((t) => t.channel === "push" || !bounced.has((t.email ?? "").trim().toLowerCase()));
+    if (!rows.length) return new Response(JSON.stringify({ sent: 0, skipped_bounced: allRows.length }), { status: 200 });
 
     let pushed = 0, emailed = 0, failed = 0;
     let jwt: string | null = null;
@@ -85,7 +97,7 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ pushed, emailed, failed, candidates: rows.length }), { status: 200 });
+    return new Response(JSON.stringify({ pushed, emailed, failed, candidates: rows.length, skipped_bounced: allRows.length - rows.length }), { status: 200 });
   } catch (err) {
     console.error("[send-wear-reminders] Error:", err);
     return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
