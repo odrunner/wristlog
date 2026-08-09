@@ -90,6 +90,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     })();
   </script>
+  <link rel="stylesheet" href="/design-system.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 4px; }
@@ -109,29 +110,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .pill { display: inline-flex; align-items: center; gap: .25rem; font-size: .68rem; font-weight: 600; padding: .15rem .5rem; border-radius: var(--radius-pill); }
     .pill-muted { color: var(--muted); background: var(--surface2); }
     :root {
-      --bg:         #f5f5f8;
-      --surface:    #ffffff;
-      --surface2:   #eeeff5;
-      --border:     #d8d9e8;
-      --gold:       #9a7628;
-      --gold-lt:    #c9a84c;
-      --gold-dim:   rgba(154,118,40,.12);
-      --text:       #16161e;
-      --muted:      #70708a;
-      --danger:     #e05555;
-      --success:    #4caf7d;
-      --radius:     10px;
-      --overlay-bg: rgba(245,245,248,.96);
-      /* ── Design-system scale tokens (theme-independent) ── */
-      --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
-      --space-5: 20px; --space-6: 24px; --space-8: 32px;
-      --radius-sm: 6px; --radius-btn: 8px; --radius-pill: 999px;
-      --fs-2xs: .62rem; --fs-xs: .68rem; --fs-sm: .75rem; --fs-base: .82rem;
-      --fs-md: .95rem; --fs-lg: 1.1rem; --fs-xl: 1.3rem; --fs-2xl: 1.6rem; --fs-3xl: 2.5rem;
-      --fw-normal: 400; --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700;
-      --lh-tight: 1.2; --lh-snug: 1.4; --lh-body: 1.55;
-      --icon-sm: 14px; --icon-md: 16px; --icon-lg: 20px; --icon-xl: 24px;
-      --ls-eyebrow: .08em;
       /* visibility-state semantic colors (one hue per state, all surfaces) */
       --vis-friends: #a78bfa;
       --warn: #d9a441;
@@ -144,16 +122,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       --badge-ink: #3D2A14;
     }
     [data-theme="dark"] {
-      --bg:           #0b0b10;
-      --surface:      #141419;
-      --surface2:     #1c1c25;
-      --border:       #272734;
-      --gold:         #c9a84c;
-      --gold-lt:      #dbbe72;
-      --gold-dim:     color-mix(in srgb, var(--gold) 12%, transparent);
-      --text:         #e6e6f0;
-      --muted:        #7a7a95;
-      --overlay-bg:   rgba(11,11,16,.94);
       /* badge/achievement warm theme — dark variants (readable on dark) */
       --badge-text: #e7d9bd; --badge-accent: #dbbe72; --badge-bg: #221a0e;
       --badge-bg2: #1c160d; --badge-border: rgba(219,190,114,.35); --badge-close: #c9a84c;
@@ -242,19 +210,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .app-ver { font-size: .6rem; color: var(--muted); opacity: .5; letter-spacing: .06em; white-space: nowrap; user-select: none; }
 
     /* ── AUTH / LANDING SCREEN ── */
+    /* The element carries data-theme="light", so design-system.css supplies
+       the light palette here regardless of the app theme. */
     #auth-screen {
       position: fixed; inset: 0; z-index: 500;
-      background: #f5f5f8;
-      color: #16161e;
+      background: var(--bg);
+      color: var(--text);
       display: none;
       align-items: flex-start; justify-content: center;
       overflow-y: auto;
       padding: calc(1rem + env(safe-area-inset-top, 0px)) 1.25rem 1rem;
-      /* Force light palette on landing page regardless of theme */
-      --bg: #f5f5f8; --surface: #ffffff; --surface2: #eeeff5;
-      --border: #d8d9e8; --gold: #9a7628; --gold-lt: #c9a84c;
-      --gold-dim: rgba(154,118,40,.12); --text: #16161e; --muted: #70708a;
-      --overlay-bg: rgba(245,245,248,.96);
     }
     /* ── Landing Page ── */
     #auth-screen { overflow-y:auto; }
@@ -7729,7 +7694,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '08.19.50';
+const APP_VERSION = '08.20.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments

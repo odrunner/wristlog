@@ -84,10 +84,13 @@ function blockFor(src, selector) {
   return src.slice(open + 1, close);
 }
 
-// Custom properties declared in a chunk of CSS or HTML.
+// Custom properties declared in a chunk of CSS or HTML. Block comments are
+// stripped first: a declaration preceded by a /* comment */ is still a
+// declaration, and a commented-out one is not.
 export function declaredIn(src) {
+  const withoutComments = src.replace(/\/\*[\s\S]*?\*\//g, '');
   const out = new Set();
-  for (const m of src.matchAll(/(?:^|[;{])\s*(--[A-Za-z0-9_-]+)\s*:/g)) out.add(m[1]);
+  for (const m of withoutComments.matchAll(/(?:^|[;{])\s*(--[A-Za-z0-9_-]+)\s*:/g)) out.add(m[1]);
   return out;
 }
 
@@ -122,5 +125,42 @@ describe('design-system.css', () => {
 
   it('pairs :root with [data-theme="light"] so the forced-light landing screen works', () => {
     expect(css).toContain(':root, [data-theme="light"]');
+  });
+});
+
+const indexHtml = readFileSync(join(root, 'index.html'), 'utf8');
+
+// Referenced in index.html but declared nowhere — pre-existing as of 2026-08-08,
+// unrelated to the token extraction. --bg-secondary, --bg2 and --tertiary carry
+// var() fallbacks; these five do not and currently resolve to the initial value.
+// Documented rather than fixed, because fixing them changes appearance.
+const KNOWN_UNDECLARED = ['--accent', '--error', '--fg', '--hover', '--surface1',
+                          '--bg-secondary', '--bg2', '--tertiary'];
+
+describe('index.html', () => {
+  it('links design-system.css before its inline style block', () => {
+    const link = indexHtml.indexOf('<link rel="stylesheet" href="/design-system.css">');
+    const style = indexHtml.indexOf('<style>');
+    expect(link).toBeGreaterThan(-1);
+    expect(link).toBeLessThan(style);
+  });
+
+  it('re-declares none of the tokens design-system.css owns', () => {
+    const dupes = [...declaredIn(indexHtml)].filter(t => t in SHARED_LIGHT);
+    expect(dupes).toEqual([]);
+  });
+
+  it('still declares its page-local tokens', () => {
+    const declared = declaredIn(indexHtml);
+    for (const t of ['--vis-friends', '--warn', '--badge-text', '--badge-ink', '--promo-gold']) {
+      expect(declared.has(t), `${t} should stay in index.html`).toBe(true);
+    }
+  });
+
+  it('references no token that nothing declares', () => {
+    const declared = declaredIn(indexHtml);
+    const orphans = [...referencedIn(indexHtml)]
+      .filter(t => !(t in SHARED_LIGHT) && !declared.has(t) && !KNOWN_UNDECLARED.includes(t));
+    expect(orphans).toEqual([]);
   });
 });
