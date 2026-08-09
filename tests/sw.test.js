@@ -88,7 +88,7 @@ describe('sw.js install', () => {
 
     expect(event.waitUntil).toHaveBeenCalled();
     expect(globalThis.caches.open).toHaveBeenCalledWith(CURRENT_CACHE);
-    expect(mockCache.addAll).toHaveBeenCalledWith(['/', '/index.html', '/manifest.json', '/icon.svg', '/profile/', '/p/']);
+    expect(mockCache.addAll).toHaveBeenCalledWith(['/', '/index.html', '/design-system.css', '/manifest.json', '/icon.svg', '/profile/', '/p/']);
   });
 
   it('calls skipWaiting after precaching', async () => {
