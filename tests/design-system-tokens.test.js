@@ -196,3 +196,22 @@ describe.each([
     expect([...declaredIn(withToken)]).toEqual(['--bg']);
   });
 });
+
+describe('sw.js', () => {
+  const sw = readFileSync(join(root, 'sw.js'), 'utf8');
+
+  // Assets are served stale-while-revalidate, so without a precache entry a
+  // token change would land one page-load late, and an offline launch would
+  // render untokenized.
+  it('precaches design-system.css', () => {
+    const precache = sw.match(/const PRECACHE = \[(.*?)\];/s)[1];
+    expect(precache).toContain("'/design-system.css'");
+  });
+
+  // The branch started at v1041. A bump is what makes activate() purge the old
+  // cache, so clients fetch the new design-system.css instead of a stale copy.
+  it('has had its cache version bumped past the branch base', () => {
+    const version = Number(sw.match(/const CACHE = 'wristlog-v(\d+)';/)[1]);
+    expect(version).toBeGreaterThan(1041);
+  });
+});
