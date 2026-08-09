@@ -13,6 +13,7 @@ import {
   extractJson,
   isCacheFresh,
   roundEstimate,
+  salvageJson,
   utcDayStartIso,
 } from "./lib.ts";
 
@@ -165,7 +166,21 @@ Rules:
             parsed = null;
           }
           if (parsed && !parsed.estimated_value_usd) parsed = null;
-          console.log(`[watch-value] DIAG gemini finish=${finishReason} textLen=${text.length} ok=${!!parsed} usage=${JSON.stringify(geminiResult.usageMetadata ?? {})}`);
+          // A MAX_TOKENS response still carries a complete estimate up front —
+          // both 2026-08-08 fallbacks did. Recover it rather than pay for a
+          // Claude re-run of a lookup Gemini had already answered.
+          // Require a usable mid: the UI keys off it entirely, so salvaging a
+          // range with only `low` would render "N/A" — worse than the Claude
+          // re-run this is replacing.
+          if (!parsed) {
+            const salvaged = salvageJson(text);
+            const est = salvaged?.estimated_value_usd as Record<string, unknown> | undefined;
+            if (est && roundEstimate(est.mid) !== null) {
+              salvaged!._salvaged = true;
+              parsed = salvaged;
+            }
+          }
+          console.log(`[watch-value] DIAG gemini finish=${finishReason} textLen=${text.length} ok=${!!parsed} salvaged=${!!parsed?._salvaged} usage=${JSON.stringify(geminiResult.usageMetadata ?? {})}`);
           if (parsed) {
             parsed._engine = "gemini";
           } else {
@@ -240,7 +255,7 @@ Rules:
     parsed.query = { brand, model, reference, condition, year };
     parsed.looked_up_at = new Date().toISOString();
 
-    console.log(`[watch-value] ${watchDesc} → $${parsed.estimated_value_usd?.low}-${parsed.estimated_value_usd?.high} (${parsed.confidence}) engine=${parsed._engine}`);
+    console.log(`[watch-value] ${watchDesc} → $${parsed.estimated_value_usd?.low}-${parsed.estimated_value_usd?.high} (${parsed.confidence}) engine=${parsed._engine}${parsed._salvaged ? " salvaged=1" : ""}`);
 
     // NOTE: no server-side save. Prices are only written by the client after the
     // user explicitly approves them (Save/Apply in the UI). watch_id is still

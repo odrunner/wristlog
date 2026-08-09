@@ -6,6 +6,7 @@ import {
   isInRateWindow,
   mergePriceHistory,
   roundEstimate,
+  salvageJson,
   utcDayStartIso,
 } from "./lib.ts";
 
@@ -31,6 +32,123 @@ Deno.test("extractJson — throws on truncated JSON rather than returning null",
     () => extractJson('```json\n{"estimated_value_usd":{"low":200},"data_points":[{"source":"eBay"}'),
     SyntaxError,
   );
+});
+
+// Both fixtures below reproduce the two ways Gemini hit MAX_TOKENS on
+// 2026-08-08 (2 of 22 lookups, each costing a Claude re-run). The head and tail
+// are the real logged text; the middle is reconstructed, since the log only
+// captured the first 200 and last 300 characters.
+//
+// Shape 1: thinking consumed 16,073 of the 16,384-token budget, so the answer
+// was cut mid-string inside a data_points URL.
+const TRUNCATED_MID_STRING = `\`\`\`json
+{
+  "estimated_value_usd": {
+    "low": 31700,
+    "mid": 36500,
+    "high": 40990
+  },
+  "retail_price_usd": null,
+  "currency_note": "all values in USD",
+  "data_points": [
+    {
+      "source": "eBay",
+      "price_usd": 40990,
+      "condition": "New and Unused, 2025",
+      "url": "https://www.ebay.com/itm/2026-Vacheron-Constantin-Overseas-Automatic-Boutique-Exclusive-4520V-210A-B128-/204680126471"
+    },
+    {
+      "source": "eBay",
+      "price_usd": 31700,
+      "condition": "Pre-Owned, Stainless Steel Blue Dial",
+      "url": "https://www.`;
+
+// Shape 2: the answer degenerated into a repetition loop and burned 22,055
+// output tokens emitting "0" until the cap.
+const RUNAWAY_REPETITION = `\`\`\`json
+{
+  "estimated_value_usd": {
+    "low": 9300,
+    "mid": 9900,
+    "high": 10500
+  },
+  "retail_price_usd": 8350,
+  "currency_note": "all values in USD",
+  "data_points": [
+    {
+      "source": "Chrono24",
+      "price_usd": 9950,
+      "condition": "Pre-owned, box and papers",
+      "url": "https://www.chrono24.com/listing/1234567"
+    },
+    {
+      "source": "eBay",
+      "price_usd": 93${"0".repeat(5000)}`;
+
+Deno.test("salvageJson — recovers the estimate from output cut mid-string", () => {
+  const out = salvageJson(TRUNCATED_MID_STRING);
+  assertEquals(out?.estimated_value_usd, { low: 31700, mid: 36500, high: 40990 });
+  assertEquals(out?.retail_price_usd, null);
+});
+
+Deno.test("salvageJson — recovers the estimate from a repetition-loop tail", () => {
+  const out = salvageJson(RUNAWAY_REPETITION);
+  assertEquals(out?.estimated_value_usd, { low: 9300, mid: 9900, high: 10500 });
+  assertEquals(out?.retail_price_usd, 8350);
+  // The runaway number and the object holding it are dropped; the complete
+  // data point before it survives.
+  const points = out?.data_points as { source: string }[];
+  assertEquals(points[0].source, "Chrono24");
+});
+
+Deno.test("salvageJson — keeps data points that were already complete", () => {
+  const out = salvageJson(TRUNCATED_MID_STRING);
+  const points = out?.data_points as { source: string; price_usd: number; url?: string }[];
+  assertEquals(points[0].price_usd, 40990);
+  assertEquals(points[0].url?.startsWith("https://www.ebay.com/"), true);
+});
+
+Deno.test("salvageJson — null when the estimate itself never completed", () => {
+  // Truncated before estimated_value_usd closes: nothing worth serving.
+  assertEquals(salvageJson('```json\n{\n  "estimated_value_usd": {\n    "low": 31'), null);
+});
+
+// index.ts gates salvage on roundEstimate(mid) — a range with no mid renders
+// "N/A" in the UI, so it must fall through to Claude instead of being served.
+Deno.test("salvageJson — a mid-less range is rejected by the roundEstimate gate", () => {
+  const out = salvageJson('{"estimated_value_usd":{"low":31700,');
+  assertEquals(out?.estimated_value_usd, { low: 31700 });
+  const est = out?.estimated_value_usd as Record<string, unknown>;
+  assertEquals(roundEstimate(est.mid), null);
+});
+
+Deno.test("salvageJson — both real 2026-08-08 failures clear the roundEstimate gate", () => {
+  for (const raw of [TRUNCATED_MID_STRING, RUNAWAY_REPETITION]) {
+    const est = salvageJson(raw)?.estimated_value_usd as Record<string, unknown>;
+    assertEquals(roundEstimate(est.mid) !== null, true);
+  }
+});
+
+Deno.test("salvageJson — null when there is no object at all", () => {
+  assertEquals(salvageJson("I could not find pricing for this watch."), null);
+  assertEquals(salvageJson(""), null);
+});
+
+Deno.test("salvageJson — commas and braces inside strings are not cut points", () => {
+  const out = salvageJson('{"notes":"Prices vary, {a lot}, by dealer","confidence":"lo');
+  assertEquals(out?.notes, "Prices vary, {a lot}, by dealer");
+});
+
+Deno.test("salvageJson — escaped quotes inside strings do not end the string early", () => {
+  const out = salvageJson('{"notes":"the \\"Hulk\\" ref, sold out","confidence":"me');
+  assertEquals(out?.notes, 'the "Hulk" ref, sold out');
+});
+
+Deno.test("salvageJson — complete object followed by trailing garbage still parses", () => {
+  // extractJson's greedy {...} match swallows the trailing brace and throws;
+  // salvage should return the first complete object.
+  const out = salvageJson('```json\n{"estimated_value_usd":{"mid":500}}\n```\nextra {');
+  assertEquals(out, { estimated_value_usd: { mid: 500 } });
 });
 
 Deno.test("buildWatchDesc — full set joins in order", () => {
