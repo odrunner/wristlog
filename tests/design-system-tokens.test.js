@@ -75,7 +75,10 @@ export const SHARED_DARK = {
   '--overlay-bg': 'rgba(11,11,16,.94)',
 };
 
-// Returns the text between a selector's braces.
+// Returns the text between a selector's braces. Takes the first '}' after the
+// selector's '{', so this assumes the block isn't nested inside an @media or
+// @supports wrapper — if it ever is, this silently returns a truncated block
+// instead of the real one.
 function blockFor(src, selector) {
   const at = src.indexOf(selector);
   if (at === -1) return null;
@@ -103,6 +106,21 @@ export function declaredIn(src) {
 export function referencedIn(src) {
   const out = new Set();
   for (const m of src.matchAll(/var\(\s*(--[A-Za-z0-9_-]+)/g)) out.add(m[1]);
+  return out;
+}
+
+// href of every <link rel="stylesheet"> tag, regardless of attribute order.
+// A page that links a second stylesheet — e.g. one that redeclares a token
+// like --gold under a different file — would pass every other test in this
+// suite; this is the one check that would catch it.
+export function stylesheetHrefs(src) {
+  const out = [];
+  for (const m of src.matchAll(/<link\b[^>]*>/g)) {
+    const tag = m[0];
+    if (!/rel=["']stylesheet["']/.test(tag)) continue;
+    const href = tag.match(/href=["']([^"']+)["']/);
+    if (href) out.push(href[1]);
+  }
   return out;
 }
 
@@ -137,8 +155,12 @@ const indexHtml = readFileSync(join(root, 'index.html'), 'utf8');
 
 // Referenced in index.html but declared nowhere — pre-existing as of 2026-08-08,
 // unrelated to the token extraction. --bg-secondary, --bg2 and --tertiary carry
-// var() fallbacks; these five do not and currently resolve to the initial value.
-// Documented rather than fixed, because fixing them changes appearance.
+// var() fallbacks everywhere they're used. Of the other five, --accent has both
+// forms (var(--accent) at :1712/:1716/:1719/:4316, var(--accent,#4f46e5) at
+// :29481); --error, --fg, --hover and --surface1 never carry one. Every
+// fallback-less use resolves to the initial value. Documented rather than
+// fixed, because fixing them changes appearance. See
+// audit-results/2026-08-08-design-system-tokens-review.md for the live effects.
 const KNOWN_UNDECLARED = ['--accent', '--error', '--fg', '--hover', '--surface1',
                           '--bg-secondary', '--bg2', '--tertiary'];
 
@@ -153,6 +175,11 @@ describe('index.html', () => {
   it('re-declares none of the tokens design-system.css owns', () => {
     const dupes = [...declaredIn(indexHtml)].filter(t => t in SHARED_LIGHT);
     expect(dupes).toEqual([]);
+  });
+
+  it('links only design-system.css as a stylesheet', () => {
+    const hrefs = [...new Set(stylesheetHrefs(indexHtml))];
+    expect(hrefs, `unexpected stylesheet link(s): ${hrefs.join(', ') || '(none)'}`).toEqual(['/design-system.css']);
   });
 
   it('still declares its page-local tokens', () => {
@@ -186,6 +213,11 @@ describe.each([
     expect([...declaredIn(src)]).toEqual([]);
   });
 
+  it('links only design-system.css as a stylesheet', () => {
+    const hrefs = [...new Set(stylesheetHrefs(src))];
+    expect(hrefs, `unexpected stylesheet link(s): ${hrefs.join(', ') || '(none)'}`).toEqual(['/design-system.css']);
+  });
+
   it('references only tokens that design-system.css owns', () => {
     const unowned = [...referencedIn(src)].filter(t => !(t in SHARED_LIGHT));
     expect(unowned).toEqual([]);
@@ -204,14 +236,16 @@ describe('sw.js', () => {
   // token change would land one page-load late, and an offline launch would
   // render untokenized.
   it('precaches design-system.css', () => {
-    const precache = sw.match(/const PRECACHE = \[(.*?)\];/s)[1];
-    expect(precache).toContain("'/design-system.css'");
+    const match = sw.match(/const PRECACHE = \[(.*?)\];/s);
+    expect(match, "couldn't find 'const PRECACHE = [...]' in sw.js").not.toBeNull();
+    expect(match[1]).toContain("'/design-system.css'");
   });
 
   // The branch started at v1041. A bump is what makes activate() purge the old
   // cache, so clients fetch the new design-system.css instead of a stale copy.
   it('has had its cache version bumped past the branch base', () => {
-    const version = Number(sw.match(/const CACHE = 'wristlog-v(\d+)';/)[1]);
-    expect(version).toBeGreaterThan(1041);
+    const match = sw.match(/const CACHE = 'wristlog-v(\d+)';/);
+    expect(match, "couldn't find \"const CACHE = 'wristlog-vNN'\" in sw.js").not.toBeNull();
+    expect(Number(match[1])).toBeGreaterThan(1041);
   });
 });
