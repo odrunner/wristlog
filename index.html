@@ -7697,7 +7697,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '08.21.54';
+const APP_VERSION = '09.07.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18248,12 +18248,26 @@ async function loadAdminFeedback() {
     title: 'Review prompt feedback',
     details: a.feedback || '',
     trigger_source: a.trigger_source || null,
+    user_id: a.user_id || null,
     app_version: null,
     browser: null,
     status: (!a.status || a.status === 'new') ? 'pending' : a.status,
     created_at: a.created_at,
   }));
   _adminFeedbackData = (data || []).map(f => ({ ...f, _source: 'feedback', status: (!f.status || f.status === 'new') ? 'pending' : f.status })).concat(appFeedback);
+  // Attach the submitter's handle. The rows only carry user_id, so resolve the
+  // usernames in one lookup (profiles are world-readable). Anonymous rows keep
+  // user_id null and simply render without a handle.
+  const fbUserIds = [...new Set(_adminFeedbackData.map(f => f.user_id).filter(Boolean))];
+  if (fbUserIds.length) {
+    try {
+      const { data: profs } = await withTimeout(db.from('profiles').select('id,username').in('id', fbUserIds), 10000);
+      const byId = new Map((profs || []).map(p => [p.id, p.username]));
+      for (const f of _adminFeedbackData) f._username = f.user_id ? byId.get(f.user_id) || null : null;
+    } catch (e) {
+      console.error('[WRotate] feedback username lookup failed:', e.message); // the list still renders, just without handles
+    }
+  }
   // Sort: pending first (oldest first), then rest by newest first
   const order = { pending: 0, resolved: 1, reviewed: 2, ignored: 3 };
   _adminFeedbackData.sort((a, b) => {
@@ -18284,6 +18298,7 @@ function renderFeedbackCard(f) {
       <div class="fb-details">${escHtml(f.details || '')}</div>
       <div class="fb-footer">
         <div class="fb-meta">
+          ${f._username ? `<span style="color:var(--text);font-weight:600;">@${escHtml(f._username)}</span>` : `<span>${f.user_id ? 'deleted user' : 'anonymous'}</span>`}
           <span>${date}</span>
           ${isRating && f.trigger_source ? `<span>via ${escHtml(f.trigger_source)}</span>` : ''}
           ${f.app_version ? `<span>v${escHtml(f.app_version)}</span>` : ''}
