@@ -7729,7 +7729,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '08.08.12';
+const APP_VERSION = '08.17.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11865,7 +11865,15 @@ const RECAP_MIN_STREAK  = 3;    // below this a "streak" slide reads as a rebuke
 // epoch is the recap PERIOD — last month's count must not bound this month's
 // card, and no admin action should be required to make that true.
 function promoSlotEpoch(slot, recap) {
-  if (slot && slot.variant === 'recap') return (recap && recap.period) || null;
+  if (slot && slot.variant === 'recap') {
+    // The period AND updated_at, not just the period. The period is what
+    // re-arms the card on the 1st with nobody touching the row. updated_at is
+    // what makes the admin's "Reset impressions" work here too — with the
+    // period alone, bumping updated_at changed nothing, so a device that had
+    // already recorded impressions kept the card retired for the rest of the
+    // month and the button silently did half its job.
+    return ((recap && recap.period) || '') + '|' + ((slot.updated_at) || '');
+  }
   return (slot && slot.updated_at) || null;
 }
 
@@ -20201,7 +20209,11 @@ async function loadPromoAdmin() {
           <div style="font-size:.78rem;color:var(--muted);">
             ${escHtml(statusLabel)} · ${escHtml(promoVariantOf(s))}/${escHtml(promoSizeOf(s))} · ${escHtml(PROMO_AUDIENCE_LABELS[s.audience] || s.audience)} · ${escHtml(posLabel)} ·
             ${st.impressions || 0} impressions · ${st.clicks || 0} clicks ·
-            ${st.submissions || 0} submissions · ${st.distinct_users || 0} users
+            ${st.submissions || 0} submissions · ${st.distinct_users || 0} users${
+              // Only the recap card asks for a verdict, so the votes are noise
+              // on every other slot until one actually arrives.
+              (st.thumbs_up || st.thumbs_down)
+                ? ` · <strong>👍 ${st.thumbs_up || 0} / 👎 ${st.thumbs_down || 0}</strong>` : ''}
           </div>
           <div style="display:flex;gap:.4rem;margin-top:.4rem;">
             <button class="btn btn-ghost" style="font-size:.78rem;" data-promo-edit="${escAttr(s.id)}">Edit</button>

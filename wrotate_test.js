@@ -2665,7 +2665,15 @@ export const RECAP_MIN_WATCHES = 2;
 export const RECAP_MIN_STREAK  = 3;
 
 export function promoSlotEpoch(slot, recap) {
-  if (slot && slot.variant === 'recap') return (recap && recap.period) || null;
+  if (slot && slot.variant === 'recap') {
+    // The period AND updated_at, not just the period. The period is what
+    // re-arms the card on the 1st with nobody touching the row. updated_at is
+    // what makes the admin's "Reset impressions" work here too — with the
+    // period alone, bumping updated_at changed nothing, so a device that had
+    // already recorded impressions kept the card retired for the rest of the
+    // month and the button silently did half its job.
+    return ((recap && recap.period) || '') + '|' + ((slot.updated_at) || '');
+  }
   return (slot && slot.updated_at) || null;
 }
 

@@ -383,15 +383,31 @@ describe('promoSlotEpoch', () => {
     expect(promoSlotEpoch(slot, null)).toBe('2026-08-01T00:00:00Z');
   });
 
-  // The recap re-arms itself every month, so its local count must be filed
-  // under the period rather than a row timestamp nobody is going to bump.
-  it('is the recap period for a recap slot, not updated_at', () => {
+  // The recap re-arms itself every month, so the period has to be in its
+  // epoch — but updated_at has to be too, or "Reset impressions" silently does
+  // half its job on this one slot type.
+  it('combines the period and updated_at for a recap slot', () => {
     const slot = { variant: 'recap', updated_at: '2026-01-01T00:00:00Z' };
-    expect(promoSlotEpoch(slot, { period: '2026-07' })).toBe('2026-07');
+    expect(promoSlotEpoch(slot, { period: '2026-07' })).toBe('2026-07|2026-01-01T00:00:00Z');
   });
 
-  it('is null for a recap slot with no recap in hand', () => {
-    expect(promoSlotEpoch({ variant: 'recap' }, null)).toBeNull();
+  it('changes when the month rolls over, re-arming the card', () => {
+    const slot = { variant: 'recap', updated_at: 'X' };
+    expect(promoSlotEpoch(slot, { period: '2026-07' }))
+      .not.toBe(promoSlotEpoch(slot, { period: '2026-08' }));
+  });
+
+  // This is the one the old period-only epoch got wrong: the admin bumps
+  // updated_at, every device's stored count should stop counting, and it didn't.
+  it('changes when the admin resets, within the same month', () => {
+    const before = { variant: 'recap', updated_at: '2026-08-01T00:00:00Z' };
+    const after  = { variant: 'recap', updated_at: '2026-08-08T12:00:00Z' };
+    const recap = { period: '2026-07' };
+    expect(promoSlotEpoch(before, recap)).not.toBe(promoSlotEpoch(after, recap));
+  });
+
+  it('survives a recap slot with no recap in hand', () => {
+    expect(promoSlotEpoch({ variant: 'recap' }, null)).toBe('|');
   });
 
   it('survives a null slot', () => {
@@ -452,16 +468,25 @@ describe('eligiblePromoSlots — recap slots', () => {
     expect(run({ slots: [slot({ variant: 'tag' })], events })).toEqual([]);
   });
 
-  // The local mirror is filed under the period, so last month's count is not
-  // honoured against this month's card either.
+  // The local mirror is filed under period|updated_at, so neither last month's
+  // count nor one from before an admin reset is honoured against this card.
   it('ignores a local count recorded under a previous period', () => {
-    const localCounts = { s1: { n: 5, e: '2026-06' } };
+    const localCounts = { s1: { n: 5, e: '2026-06|' } };
     expect(run({ localCounts }).map((s) => s.id)).toEqual(['s1']);
   });
 
-  it('honours a local count recorded under the CURRENT period', () => {
-    const localCounts = { s1: { n: 5, e: '2026-07' } };
+  it('honours a local count recorded under the CURRENT epoch', () => {
+    const localCounts = { s1: { n: 5, e: '2026-07|' } };
     expect(run({ localCounts })).toEqual([]);
+  });
+
+  // "Reset impressions" bumps updated_at. Without it in the epoch the stored
+  // count kept applying and the button did nothing on a recap slot.
+  it('ignores a local count recorded before an admin reset', () => {
+    const localCounts = { s1: { n: 5, e: '2026-07|' } };
+    expect(run({
+      slots: [slot({ updated_at: '2026-08-08T12:00:00Z' })], localCounts,
+    }).map((s) => s.id)).toEqual(['s1']);
   });
 
   // The fun-fact modal fires daily at login and sets modalShown, which used to
