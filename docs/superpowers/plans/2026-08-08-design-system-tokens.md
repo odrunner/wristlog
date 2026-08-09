@@ -440,8 +440,18 @@ describe.each([
     const unowned = [...referencedIn(src)].filter(t => !(t in SHARED_LIGHT));
     expect(unowned).toEqual([]);
   });
+
+  it('would notice a re-added token declaration', () => {
+    const withToken = src.replace('<style>', '<style>\n    :root { --bg: #fff; }');
+    expect([...declaredIn(withToken)]).toEqual(['--bg']);
+  });
 });
 ```
+
+The fourth `it()` is an anti-vacuity check added mid-execution: without it, "declares no
+custom properties of its own" would still pass on a page that never linked
+`design-system.css` at all, since an empty page also declares nothing. This proves
+`declaredIn()` actually notices a declaration when one is there.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
@@ -526,7 +536,8 @@ Leave `[data-theme="dark"] .cta-banner { border-color: rgba(201,168,76,.2); }` a
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/design-system-tokens.test.js`
-Expected: PASS, 14 tests
+Expected: PASS, 16 tests (the `describe.each` block's 4 `it()`s each run once per
+page, so they contribute 8, not 4, to the total)
 
 - [ ] **Step 6: Commit**
 
@@ -595,7 +606,7 @@ const PRECACHE = ['/', '/index.html', '/design-system.css', '/manifest.json', '/
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/design-system-tokens.test.js`
-Expected: PASS, 16 tests
+Expected: PASS, 18 tests
 
 - [ ] **Step 5: Commit**
 
@@ -614,20 +625,25 @@ git commit -m "design system: precache design-system.css and bump the SW version
 - [ ] **Step 1: Run the unit suite**
 
 Run: `npm test`
-Expected: PASS — 1571 existing tests plus the 16 new ones.
+Expected: PASS — 1571 existing tests plus the 18 new ones.
+
+If `tests/sw.test.js` fails an install assertion, that's `tests/sw.test.js` hardcoding
+its own expected `PRECACHE` array separately from `design-system-tokens.test.js` — it
+was never updated when Task 4 added `/design-system.css` to `sw.js`'s `PRECACHE`.
+Update the hardcoded array in `tests/sw.test.js` to match; don't revert the `sw.js`
+change.
 
 - [ ] **Step 2: Run the mocked E2E suite**
 
 Run: `npm run test:e2e`
-Expected: PASS, 179 tests.
-
-If a Playwright test fails on a missing stylesheet, its route mock is intercepting `/design-system.css`. Fix by letting same-origin CSS through in `e2e/helpers.js`, not by reverting the link tag.
+Expected: PASS, 179 tests. `e2e/helpers.js` only intercepts Supabase REST/auth/realtime
+paths, so `/design-system.css` was never mocked and this suite needs no route-mock fix.
 
 - [ ] **Step 3: Commit any test fixes**
 
 ```bash
 git add -A
-git commit -m "design system: keep the E2E route mocks serving the token file"
+git commit -m "design system: update the stale precache assertion in sw.test.js"
 ```
 
 Skip this step if steps 1 and 2 were green.
