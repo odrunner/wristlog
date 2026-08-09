@@ -211,6 +211,36 @@ test.describe('month-in-review card — the conditional slides', () => {
     await expect(q(page, '.promo-recap-thumb--hero')).toHaveCount(2);   // most-worn + top-post
   });
 
+  // Reported by a user, 2026-08-08: their top post was a multi-photo one, so
+  // photo_url is a JSON ARRAY string. Feeding that to <img src> loads nothing,
+  // onerror hides the image, and the slide rendered as an empty grey box.
+  test('uses the hero photo of a multi-photo post, not the raw column', async ({ page }) => {
+    const logs = LOGS.map((l) => l.id === 'p5'
+      ? { ...l, photoUrl: '["https://x.test/one.jpg?v=1","https://x.test/two.jpg?v=2"]' } : l);
+    await mount(page, { logs, likes: { p5: 6 } });
+    await expect(q(page, '.promo-recap-shot img')).toHaveAttribute('src', 'https://x.test/one.jpg?v=1');
+  });
+
+  test('shows a video post as its poster frame, not the video file', async ({ page }) => {
+    const logs = LOGS.map((l) => l.id === 'p5'
+      ? { ...l, photoUrl: '["https://x.test/clip.mp4?v=9"]' } : l);
+    await mount(page, { logs, likes: { p5: 6 } });
+    await expect(q(page, '.promo-recap-shot img'))
+      .toHaveAttribute('src', 'https://x.test/clip_poster.jpg?v=9');
+  });
+
+  // Belt and braces for the same defect: even if the URL is right and the
+  // image still fails, the box must never be empty.
+  test('keeps the watch initials behind the photo so a broken image is not a blank box', async ({ page }) => {
+    await mount(page, { likes: { p5: 6 } });
+    await expect(q(page, '.promo-recap-shot-fallback')).toHaveText('OS');
+    await page.evaluate(() => {
+      const img = document.querySelector('#recap-host .promo-recap-shot img');
+      img.dispatchEvent(new Event('error'));
+    });
+    await expect(q(page, '.promo-recap-shot-fallback')).toBeVisible();
+  });
+
   test('no top-post slide when nothing was liked', async ({ page }) => {
     await mount(page, { likes: {} });
     await expect(labels(page)).toHaveText(['Most worn', 'Your top three', 'Your rhythm']);
