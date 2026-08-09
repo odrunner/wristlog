@@ -14,16 +14,16 @@ describe("wishlistViewFromStore — 'folders' view", () => {
 describe('groupWishlistByBrand', () => {
   const w = (id, brand, name) => ({ id, brand, name });
 
-  it('puts brands with 2+ watches into folders, singles stay standalone', () => {
+  it('puts every named brand into a folder, one-watch brands included', () => {
     const { folders, singles } = groupWishlistByBrand([
       w('1', 'Patek Philippe', 'Nautilus 5711'),
       w('2', 'Omega', 'Speedmaster'),
       w('3', 'Patek Philippe', 'Aquanaut 5167'),
     ]);
-    expect(folders).toHaveLength(1);
-    expect(folders[0].brand).toBe('Patek Philippe');
-    expect(folders[0].items.map(x => x.id)).toEqual(['3', '1']); // Aquanaut < Nautilus
-    expect(singles.map(x => x.id)).toEqual(['2']);
+    expect(folders.map(f => f.brand)).toEqual(['Omega', 'Patek Philippe']);
+    expect(folders[0].items.map(x => x.id)).toEqual(['2']);
+    expect(folders[1].items.map(x => x.id)).toEqual(['3', '1']); // Aquanaut < Nautilus
+    expect(singles).toHaveLength(0);
   });
 
   it('merges brands case-insensitively and trimmed, keeping first casing seen', () => {
@@ -55,9 +55,10 @@ describe('groupWishlistByBrand', () => {
       w('4', 'Grand Seiko', 'Snowflake'),
       w('5', 'A. Lange & Söhne', 'Lange 1'),
       w('6', 'a. lange & söhne', 'Saxonia'),
+      w('7', '', 'Mystery'),
     ]);
-    expect(folders.map(f => f.brand)).toEqual(['A. Lange & Söhne', 'Rolex']);
-    expect(singles.map(x => x.id)).toEqual(['4', '2']);
+    expect(folders.map(f => f.brand)).toEqual(['A. Lange & Söhne', 'Grand Seiko', 'Rolex', 'Zenith']);
+    expect(singles.map(x => x.id)).toEqual(['7']);
   });
 
   it('folder key is stable (lowercased trimmed brand)', () => {

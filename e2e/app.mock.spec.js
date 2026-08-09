@@ -299,7 +299,7 @@ test.describe('Wishlist page (mocked)', () => {
     await expect(page.locator('#wishlist-modal')).toBeVisible();
   });
 
-  test('folders view: groups 2+ same-brand watches, singles stay cards, expand/collapse persists', async ({ page }) => {
+  test('folders view: every brand gets a folder, one-watch brands included, expand/collapse persists', async ({ page }) => {
     const WL = [
       { id: 'wl1', brand: 'Patek Philippe', name: 'Nautilus 5711', sort_order: 0 },
       { id: 'wl2', brand: 'Omega', name: 'Speedmaster', sort_order: 1 },
@@ -316,25 +316,32 @@ test.describe('Wishlist page (mocked)', () => {
     await page.click('.wl-view-btn[data-view="folders"]');
     expect(await page.evaluate(() => localStorage.getItem('wr_wishlist_view'))).toBe('folders');
 
-    // One folder (Patek ×2, collapsed) + one standalone card (Omega)
-    await expect(page.locator('.wl-folder')).toHaveCount(1);
-    await expect(page.locator('.wl-folder-name')).toHaveText('Patek Philippe');
-    await expect(page.locator('.wl-folder-count')).toHaveText('2');
+    // Two folders, A→Z: Omega (×1) then Patek (×2). Nothing loose beside them.
+    await expect(page.locator('.wl-folder')).toHaveCount(2);
+    await expect(page.locator('.wl-folder-name')).toHaveText(['Omega', 'Patek Philippe']);
+    await expect(page.locator('.wl-folder-count')).toHaveText(['1', '2']);
     await expect(page.locator('.wl-folder .wl-card').first()).not.toBeVisible();
-    await expect(page.locator('#wishlist-grid > .wl-card')).toHaveCount(1);
+    await expect(page.locator('#wishlist-grid > .wl-card')).toHaveCount(0);
     // No drag handles in folders view
     await expect(page.locator('#wishlist-grid .drag-handle')).toHaveCount(0);
 
-    // Expand: both Patek watches appear, alphabetical (Aquanaut first)
-    await page.click('.wl-folder-header');
-    await expect(page.locator('.wl-folder .wl-card').first()).toBeVisible();
-    await expect(page.locator('.wl-folder .wl-card').nth(1)).toBeVisible();
-    await expect(page.locator('.wl-folder .wl-card .wl-name').first()).toHaveText('Aquanaut 5167');
+    // The one-watch brand opens like any other folder
+    const omega = page.locator('.wl-folder[data-folder="omega"]');
+    await omega.locator('.wl-folder-header').click();
+    await expect(omega.locator('.wl-card')).toHaveCount(1);
+    await expect(omega.locator('.wl-card .wl-name')).toHaveText('Speedmaster');
+
+    // Expand Patek: both watches appear, alphabetical (Aquanaut first)
+    const patek = page.locator('.wl-folder[data-folder="patek philippe"]');
+    await patek.locator('.wl-folder-header').click();
+    await expect(patek.locator('.wl-card').first()).toBeVisible();
+    await expect(patek.locator('.wl-card').nth(1)).toBeVisible();
+    await expect(patek.locator('.wl-card .wl-name').first()).toHaveText('Aquanaut 5167');
 
     // Expanded state persists across re-render
     await page.click('.wl-view-btn[data-view="list"]');
     await page.click('.wl-view-btn[data-view="folders"]');
-    await expect(page.locator('.wl-folder.open')).toHaveCount(1);
+    await expect(page.locator('.wl-folder.open')).toHaveCount(2);
 
     // Card inside folder still opens the edit modal
     await page.locator('.wl-folder .wl-card .wl-info').first().click();

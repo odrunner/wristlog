@@ -416,14 +416,13 @@ export function groupWishlistByBrand(items) {
     byKey.get(key).items.push(it);
   }
   const cmp = (a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: 'base' });
+  // Every named brand gets a folder, even a one-watch one — a lone card sitting
+  // between folders read as a different kind of thing. Only blank brands, which
+  // have no name to put on a folder, stay loose.
   const folders = [];
   for (const g of byKey.values()) {
-    if (g.items.length >= 2) {
-      g.items.sort((a, b) => cmp(a.name || '', b.name || ''));
-      folders.push(g);
-    } else {
-      singles.push(g.items[0]);
-    }
+    g.items.sort((a, b) => cmp(a.name || '', b.name || ''));
+    folders.push(g);
   }
   folders.sort((a, b) => cmp(a.brand, b.brand));
   singles.sort((a, b) => cmp(a.brand || '', b.brand || '') || cmp(a.name || '', b.name || ''));

@@ -2766,7 +2766,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Wishlist Brand Folders</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Big wishlist? The new folder view groups watches from the same brand into collapsible folders &#8212; tap the folder icon at the top of your Wishlist to try it. Brands with a single watch stay as regular cards.</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Big wishlist? The new folder view groups watches from the same brand into collapsible folders &#8212; tap the folder icon at the top of your Wishlist to try it. Every brand gets a folder, so the list reads the same top to bottom.</div>
       </div>
       <div style="margin:.75rem 0;border-top:1px solid var(--border);padding-top:.75rem;">
         <span class="eyebrow eyebrow-muted">June 2026</span>
@@ -3995,7 +3995,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">4</div>
             <div class="help-step-body">
               <div class="help-step-title">Switch views: list, brand folders, or gallery</div>
-              <div class="help-step-desc">Use the view buttons at the top. The <strong>folder view</strong> groups watches from the same brand into collapsible folders (brands with a single watch stay as regular cards) — handy when several grails share a maker. The <strong>gallery view</strong> shows a photo-first grid.</div>
+              <div class="help-step-desc">Use the view buttons at the top. The <strong>folder view</strong> groups watches from the same brand into collapsible folders — every brand gets one, even if you only have a single watch from it — handy when several grails share a maker. The <strong>gallery view</strong> shows a photo-first grid.</div>
             </div>
           </div>
           <div class="help-step">
@@ -7697,7 +7697,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '09.07.58';
+const APP_VERSION = '09.08.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -26463,14 +26463,13 @@ function groupWishlistByBrand(items) {
     byKey.get(key).items.push(it);
   }
   const cmp = (a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: 'base' });
+  // Every named brand gets a folder, even a one-watch one — a lone card sitting
+  // between folders read as a different kind of thing. Only blank brands, which
+  // have no name to put on a folder, stay loose.
   const folders = [];
   for (const g of byKey.values()) {
-    if (g.items.length >= 2) {
-      g.items.sort((a, b) => cmp(a.name || '', b.name || ''));
-      folders.push(g);
-    } else {
-      singles.push(g.items[0]);
-    }
+    g.items.sort((a, b) => cmp(a.name || '', b.name || ''));
+    folders.push(g);
   }
   folders.sort((a, b) => cmp(a.brand, b.brand));
   singles.sort((a, b) => cmp(a.brand || '', b.brand || '') || cmp(a.name || '', b.name || ''));
