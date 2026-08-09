@@ -2564,6 +2564,30 @@ export function dedupeNewFeedLogs(existingIds, incoming) {
   return out;
 }
 
+// ── Feed ordering: clamp a wear date to the viewer's own "today" ─────────────
+// The feed's primary sort key is `logs.date` — the POSTER's local calendar wear
+// date — with created_at only breaking ties. Someone in a timezone ahead of the
+// viewer stamps a date the viewer hasn't reached yet (Sydney is +17h from
+// Vancouver), so their post sat above everything on the viewer's feed all day,
+// including posts made hours later. Clamping the sort key to the viewer's today
+// collapses those into normal created_at order. A BACKDATED post is untouched
+// and still sinks — which is the reason the feed keys on `date` at all.
+//
+// This cannot shrink the fetched page: the queries page by raw date desc, and
+// clamping maps future dates onto today, the largest non-future date, so the
+// ">= today" group — and therefore the top-N set — is identical either way.
+export function feedSortDate(date, today) {
+  if (!date) return '';
+  return (today && date > today) ? today : date;
+}
+
+// Feed comparator: clamped date desc, then created_at desc. Pass one `today`
+// for a whole sort pass so the ordering can't shift mid-sort across midnight.
+export function compareFeedLogs(a, b, today) {
+  const d = feedSortDate(b && b.date, today).localeCompare(feedSortDate(a && a.date, today));
+  return d !== 0 ? d : ((b && b.created_at) || '').localeCompare((a && a.created_at) || '');
+}
+
 // Pick readable initials text color (#000/#fff) for a given avatar background
 // via YIQ perceived brightness. Used for watch-color avatars (dark dials vs light).
 export function initialsTextColor(bg) {

@@ -7729,7 +7729,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '08.17.49';
+const APP_VERSION = '08.18.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11159,6 +11159,30 @@ function dedupeNewFeedLogs(existingIds, incoming) {
   return out;
 }
 
+// ── Feed ordering: clamp a wear date to the viewer's own "today" ─────────────
+// The feed's primary sort key is `logs.date` — the POSTER's local calendar wear
+// date — with created_at only breaking ties. Someone in a timezone ahead of the
+// viewer stamps a date the viewer hasn't reached yet (Sydney is +17h from
+// Vancouver), so their post sat above everything on the viewer's feed all day,
+// including posts made hours later. Clamping the sort key to the viewer's today
+// collapses those into normal created_at order. A BACKDATED post is untouched
+// and still sinks — which is the reason the feed keys on `date` at all.
+//
+// This cannot shrink the fetched page: the queries page by raw date desc, and
+// clamping maps future dates onto today, the largest non-future date, so the
+// ">= today" group — and therefore the top-N set — is identical either way.
+function feedSortDate(date, today) {
+  if (!date) return '';
+  return (today && date > today) ? today : date;
+}
+
+// Feed comparator: clamped date desc, then created_at desc. Pass one `today`
+// for a whole sort pass so the ordering can't shift mid-sort across midnight.
+function compareFeedLogs(a, b, today) {
+  const d = feedSortDate(b && b.date, today).localeCompare(feedSortDate(a && a.date, today));
+  return d !== 0 ? d : ((b && b.created_at) || '').localeCompare((a && a.created_at) || '');
+}
+
 async function loadFeed() {
   if (!currentUser) return;
   // If feedLoading is stuck true for >8s, treat it as dead and allow re-entry
@@ -11192,6 +11216,9 @@ async function loadFeed() {
     // PHASE 1: Fetch logs and render immediately (kill skeletons fast)
     // ═══════════════════════════════════════════════════════════════════════
     const followingArr = [...following];
+    // One `today` for every sort in this load, so a pass that straddles midnight
+    // can't clamp two posts against different days and produce an unstable order.
+    const feedToday = todayStr();
 
     let rawLogs, logsErr;
     try {
@@ -11236,12 +11263,18 @@ async function loadFeed() {
       const firstError = results.find(r => r.error);
       if (firstError) throw firstError.error;
 
-      // Merge, deduplicate by id, re-sort date desc → created_at desc, cap at 50
+      // Merge, deduplicate by id, cap at 50, then order for display.
+      // The 50-row window is cut on the RAW (date, created_at) order — the same
+      // order the queries and the load-more keyset use. Cutting it on the clamped
+      // order instead would discard a fetched future-dated row that the cursor
+      // then skips past (its raw date is newer than the cursor's), losing it for
+      // good. Clamping is a display concern, so it applies after the slice.
       const seen = new Set();
       rawLogs = results.flatMap(r => r.data || [])
         .filter(l => { if (seen.has(l.id)) return false; seen.add(l.id); return true; })
-        .sort((a, b) => b.date.localeCompare(a.date) || new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 50);
+        .sort((a, b) => compareFeedLogs(a, b, null))
+        .slice(0, 50)
+        .sort((a, b) => compareFeedLogs(a, b, feedToday));
       logsErr = null;
     } catch {
       // Fallback: own posts only (safe when visibility column is unavailable)
@@ -11264,10 +11297,10 @@ async function loadFeed() {
       if (clubLogData && clubLogData.length) {
         const merged = new Map();
         [...rawLogs, ...clubLogData].forEach(l => merged.set(l.id, l));
-        rawLogs = [...merged.values()].sort((a, b) => {
-          const d = (b.date || '').localeCompare(a.date || '');
-          return d !== 0 ? d : (b.created_at || '').localeCompare(a.created_at || '');
-        }).slice(0, 80);
+        rawLogs = [...merged.values()]
+          .sort((a, b) => compareFeedLogs(a, b, null))
+          .slice(0, 80)
+          .sort((a, b) => compareFeedLogs(a, b, feedToday));
       }
     }
 
@@ -11428,6 +11461,7 @@ async function loadMoreFeed() {
   try {
     const followingArr = [...following];
     const myClubIds = myClubs.map(c => c.id);
+    const feedToday = todayStr();
 
     // A page can filter down to nothing — e.g. 50 consecutive public posts from a
     // blocked user. Treating that as "end of feed" dead-ended infinite scroll with
@@ -11470,9 +11504,11 @@ async function loadMoreFeed() {
 
     // Merge → dedupe vs already-shown ids AND within batch → sort → cap.
     const shownIds = new Set(feedItems.map(i => i.id));
+    // RAW order here, not clamped — pageOldest below becomes the keyset cursor,
+    // so the window has to be cut on the same key the cursor is expressed in.
+    // The clamped display sort is applied to the surviving batch further down.
     const page = dedupeNewFeedLogs(shownIds, results.flatMap(r => r.data || []))
-      .sort((a, b) => (b.date || '').localeCompare(a.date || '') ||
-                      (b.created_at || '').localeCompare(a.created_at || ''))
+      .sort((a, b) => compareFeedLogs(a, b, null))
       .slice(0, 50);
 
     // Oldest row we have now considered. Sorted desc, so it's the last one.
@@ -11504,6 +11540,10 @@ async function loadMoreFeed() {
     keyset = feedKeysetFilter(_feedSkipCursor);
     if (!keyset) { feedHasMore = false; mountFeedLoadMoreSentinel(); return; }
     }
+
+    // Display order: a page whose rows are all dated today-or-later can still
+    // carry a future-dated post, which would otherwise head the appended block.
+    batch.sort((a, b) => compareFeedLogs(a, b, feedToday));
 
     // ── Enrich the new batch and merge into the global feed maps ──────────────
     const logIds = batch.map(l => l.id);
