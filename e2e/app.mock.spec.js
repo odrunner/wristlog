@@ -21,8 +21,6 @@ test.describe('App boot (mocked)', () => {
     );
     await page.route('**/realtime/**', route => route.abort());
 
-    // Prevent A/B test redirect to r.html
-    await page.addInitScript(() => { localStorage.setItem('ab_landing', 'a'); });
 
     await page.goto('/');
     const authScreen = page.locator('#auth-screen');

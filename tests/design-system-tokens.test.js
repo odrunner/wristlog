@@ -259,6 +259,6 @@ describe('sw.js', () => {
   it('has had its cache version bumped past the branch base', () => {
     const match = sw.match(/const CACHE = 'wristlog-v(\d+)';/);
     expect(match, "couldn't find \"const CACHE = 'wristlog-vNN'\" in sw.js").not.toBeNull();
-    expect(Number(match[1])).toBeGreaterThan(1042);
+    expect(Number(match[1])).toBeGreaterThan(1043);
   });
 });

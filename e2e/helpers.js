@@ -173,8 +173,6 @@ export async function injectSession(page, user = FAKE_USER) {
   };
   await page.addInitScript((args) => {
     localStorage.setItem(args.key, JSON.stringify(args.session));
-    // Prevent A/B test redirect to r.html
-    localStorage.setItem('ab_landing', 'a');
 
     // Suppress the anniversary popover. checkAnniversary() shows a blocking
     // overlay when a sample watch's purchase_date matches today's month/day

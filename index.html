@@ -7019,12 +7019,6 @@ function storedAuthUserId() {
 
 (function trackVisit() {
   try {
-    // Skip tracking if user will be redirected to r.html (avoid double-counting)
-    const abVal = localStorage.getItem('ab_landing');
-    const hasAuth = authTokenRaw();
-    const isOAuthReturn = location.search.indexOf('code=') !== -1 || location.hash.indexOf('access_token') !== -1;
-    if (abVal === 'b' && !hasAuth && !isOAuthReturn) return;
-
     const params = new URLSearchParams(window.location.search);
     const utm_source = params.get('utm_source');
     const utm_medium = params.get('utm_medium');
@@ -7049,7 +7043,6 @@ function storedAuthUserId() {
       referrer: externalRef,
       path: window.location.pathname,
       user_agent: navigator.userAgent || null,
-      ab_variant: localStorage.getItem('ab_landing') || null,
       user_id: _uid,
     }).then(() => {}).catch(() => {});
     // Clean UTM params from URL without reload
@@ -7179,7 +7172,7 @@ function exitDemoMode() {
 
 async function signInWithGoogle() {
   if (window.posthog) posthog.capture('signup_clicked', { provider: 'google' });
-  trackVisit({ utm_source: 'signin_google', utm_medium: 'funnel', path: '/signin', ab_variant: localStorage.getItem('ab_landing') || null });
+  trackVisit({ utm_source: 'signin_google', utm_medium: 'funnel', path: '/signin' });
   const { error } = await db.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -7192,7 +7185,7 @@ async function signInWithGoogle() {
 
 async function signInWithApple() {
   if (window.posthog) posthog.capture('signup_clicked', { provider: 'apple' });
-  trackVisit({ utm_source: 'signin_apple', utm_medium: 'funnel', path: '/signin', ab_variant: localStorage.getItem('ab_landing') || null });
+  trackVisit({ utm_source: 'signin_apple', utm_medium: 'funnel', path: '/signin' });
   const { error } = await db.auth.signInWithOAuth({
     provider: 'apple',
     options: {
@@ -7704,7 +7697,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '08.21.40';
+const APP_VERSION = '08.21.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8017,11 +8010,10 @@ async function loadMyProfile() {
     }
     // Usernames must start with a letter — prefix digit-leading names with 'u'
     if (!/^[a-z]/.test(username)) username = 'u' + username;
-    const abVariant = localStorage.getItem('ab_landing') || null;
     // insert, never upsert: if the row exists after all (race with another tab
     // or the auth trigger), this must fail instead of overwriting it.
     const { data: created, error: createErr } = await db.from('profiles').insert(
-      { id: currentUser.id, username, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'public', collection_visibility: 'public', wishlist_visibility: 'public', ab_variant: abVariant }
+      { id: currentUser.id, username, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'public', collection_visibility: 'public', wishlist_visibility: 'public' }
     ).select().single();
     if (createErr) {
       console.error('[WristLog] Profile create error:', createErr.message, createErr);
@@ -8034,7 +8026,7 @@ async function loadMyProfile() {
         // Retry with a guaranteed-unique username (e.g. username conflict)
         const fallback = 'user' + Math.random().toString(36).slice(2, 8);
         const { data: retry, error: retryErr } = await db.from('profiles').insert(
-          { id: currentUser.id, username: fallback, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'public', collection_visibility: 'public', wishlist_visibility: 'public', ab_variant: abVariant }
+          { id: currentUser.id, username: fallback, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'public', collection_visibility: 'public', wishlist_visibility: 'public' }
         ).select().single();
         if (retryErr) console.error('[WristLog] Profile create retry error:', retryErr.message, retryErr);
         data = retry;
@@ -8061,15 +8053,6 @@ async function loadMyProfile() {
         .then(() => { if (window.myProfile) window.myProfile.timezone = _tz; });
     }
   } catch (e) { /* ignore */ }
-  // Backfill ab_variant if missing (e.g. profile created by auth trigger before JS ran)
-  if (data && !data.ab_variant) {
-    const ab = localStorage.getItem('ab_landing');
-    if (ab) {
-      db.from('profiles').update({ ab_variant: ab }).eq('id', currentUser.id).then(() => {
-        if (myProfile) myProfile.ab_variant = ab;
-      }).catch(() => {});
-    }
-  }
   const theme = isNewUser ? 'light' : (data.theme_preference || 'light');
   try { localStorage.setItem(STORE_THEME, theme); } catch(e) {}
   applyTheme(theme);
