@@ -125,9 +125,11 @@ test.describe('Collection page (mocked)', () => {
 
   test('shows watch count', async ({ page }) => {
     await navigateTo(page, 'collection');
-    // The collection page should indicate 2 watches
-    const pageContent = await page.locator('#page-collection').textContent();
-    expect(pageContent).toContain('2');
+    // The collection page should indicate 2 watches. waitForAppBoot only waits
+    // for the shell, not the data, so this has to poll — a one-shot textContent()
+    // read caught the "No watches yet" empty state whenever the mocked fetch
+    // hadn't landed yet, which is what made this fail under full-suite load.
+    await expect(page.locator('#page-collection')).toContainText('2');
   });
 
   test('opens add-watch modal', async ({ page }) => {

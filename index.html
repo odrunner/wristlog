@@ -7729,7 +7729,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '08.18.56';
+const APP_VERSION = '08.19.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -26534,6 +26534,20 @@ function wlCardHtml(w, draggable) {
   </div>`;
 }
 
+// Swap a wishlist gallery image that failed to load for the initials avatar the
+// no-image case already uses, so the tile keeps its box — and its tap target.
+// Reads the fallback's colours/initials off the <img>'s data-* so nothing has to
+// be escaped into an inline handler.
+function wlTileImgFallback(img) {
+  if (!img || !img.parentNode) return;
+  const div = document.createElement('div');
+  div.className = 'wl-tile-avatar';
+  div.style.background = img.dataset.color || '#c9a84c';
+  div.style.color = img.dataset.textColor || '#000';
+  div.textContent = img.dataset.initials || '';
+  img.replaceWith(div);
+}
+
 function renderWishlist(force) {
   if (!force && _lastRenderedGen.wishlist === _dataGen) return;
   _lastRenderedGen.wishlist = _dataGen;
@@ -26560,9 +26574,14 @@ function renderWishlist(force) {
   if (_wishlistView === 'gallery') {
     el.className = 'wl-gallery';
     el.innerHTML = visible.map(w => {
+      // A failed image is REPLACED by the same avatar the no-image case renders,
+      // not just hidden. .wl-tile-imglink has no size of its own and is the tap
+      // target that opens Edit, so hiding the <img> collapsed it to zero height
+      // and the tile silently stopped being tappable.
+      const _wc = w.color || '#c9a84c';
       const imgInner = w.image
-        ? `<img loading="lazy" src="${escHtml(w.image)}" class="wl-tile-img" alt="" onerror="this.style.display='none'">`
-        : `<div class="wl-tile-avatar" style="background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`;
+        ? `<img loading="lazy" src="${escHtml(w.image)}" class="wl-tile-img" alt="" onerror="wlTileImgFallback(this)" data-color="${escAttr(_wc)}" data-text-color="${escAttr(initialsTextColor(_wc))}" data-initials="${escAttr(initials(w.brand,w.name))}">`
+        : `<div class="wl-tile-avatar" style="background:${escHtml(_wc)};color:${initialsTextColor(_wc)}">${initials(w.brand,w.name)}</div>`;
       const imgLink = `<div class="wl-tile-imglink" onclick="openEditWishlist('${w.id}')">${imgInner}</div>`;
       const urlLine = w.url
         ? `<a href="${escHtml(w.url)}" target="_blank" rel="noopener noreferrer" class="wl-tile-url">${escHtml(urlDomain(w.url))} ↗</a>`
