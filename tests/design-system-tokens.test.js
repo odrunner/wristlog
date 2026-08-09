@@ -60,6 +60,14 @@ export const SHARED_LIGHT = {
   '--icon-lg': '20px',
   '--icon-xl': '24px',
   '--ls-eyebrow': '.08em',
+  // Aliases of the tokens above. Declared 2026-08-08 after index.html was found
+  // referencing them without ever declaring them. The indirection is deliberate:
+  // it carries the dark values without a second declaration.
+  '--hover': 'var(--surface2)',
+  '--surface1': 'var(--surface2)',
+  '--error': 'var(--danger)',
+  '--fg': 'var(--text)',
+  '--accent': 'var(--gold)',
 };
 
 export const SHARED_DARK = {
@@ -73,6 +81,15 @@ export const SHARED_DARK = {
   '--text': '#e6e6f0',
   '--muted': '#7a7a95',
   '--overlay-bg': 'rgba(11,11,16,.94)',
+  // The aliases are repeated here on purpose, not duplicated by accident: a
+  // var() inside a custom property is substituted where it is DECLARED, so an
+  // alias written only in :root freezes the light value and inherits it into
+  // dark. Each theme must resolve its own.
+  '--hover': 'var(--surface2)',
+  '--surface1': 'var(--surface2)',
+  '--error': 'var(--danger)',
+  '--fg': 'var(--text)',
+  '--accent': 'var(--gold)',
 };
 
 // Returns the text between a selector's braces. Takes the first '}' after the
@@ -141,7 +158,7 @@ describe('design-system.css', () => {
     }
   });
 
-  it('overrides only the tokens that actually differ between themes', () => {
+  it('declares in dark exactly the overrides plus the re-resolved aliases', () => {
     const dark = declaredIn(blockFor(css, '[data-theme="dark"]'));
     expect([...dark].sort()).toEqual(Object.keys(SHARED_DARK).sort());
   });
@@ -153,16 +170,12 @@ describe('design-system.css', () => {
 
 const indexHtml = readFileSync(join(root, 'index.html'), 'utf8');
 
-// Referenced in index.html but declared nowhere — pre-existing as of 2026-08-08,
-// unrelated to the token extraction. --bg-secondary, --bg2 and --tertiary carry
-// var() fallbacks everywhere they're used. Of the other five, --accent has both
-// forms (var(--accent) at :1712/:1716/:1719/:4316, var(--accent,#4f46e5) at
-// :29481); --error, --fg, --hover and --surface1 never carry one. Every
-// fallback-less use resolves to the initial value. Documented rather than
-// fixed, because fixing them changes appearance. See
-// audit-results/2026-08-08-design-system-tokens-review.md for the live effects.
-const KNOWN_UNDECLARED = ['--accent', '--error', '--fg', '--hover', '--surface1',
-                          '--bg-secondary', '--bg2', '--tertiary'];
+// Referenced in index.html but declared nowhere. These three always carry a
+// var() fallback, so they resolve to something sensible rather than resetting
+// the property — which is why they were left alone when --accent, --error,
+// --fg, --hover and --surface1 were declared as aliases on 2026-08-08.
+// See audit-results/2026-08-08-design-system-tokens-review.md.
+const KNOWN_UNDECLARED = ['--bg-secondary', '--bg2', '--tertiary'];
 
 describe('index.html', () => {
   it('links design-system.css before its inline style block', () => {
@@ -241,11 +254,11 @@ describe('sw.js', () => {
     expect(match[1]).toContain("'/design-system.css'");
   });
 
-  // The branch started at v1041. A bump is what makes activate() purge the old
+  // The branch started at v1042. A bump is what makes activate() purge the old
   // cache, so clients fetch the new design-system.css instead of a stale copy.
   it('has had its cache version bumped past the branch base', () => {
     const match = sw.match(/const CACHE = 'wristlog-v(\d+)';/);
     expect(match, "couldn't find \"const CACHE = 'wristlog-vNN'\" in sw.js").not.toBeNull();
-    expect(Number(match[1])).toBeGreaterThan(1041);
+    expect(Number(match[1])).toBeGreaterThan(1042);
   });
 });

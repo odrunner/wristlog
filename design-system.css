@@ -21,6 +21,19 @@
   --radius: 10px;
   --overlay-bg: rgba(245,245,248,.96);
 
+  /* ── Aliases ──
+     index.html referenced these five for months without ever declaring them,
+     so each rule was thrown away and the property reset: backgrounds painted
+     transparent, colours fell back to the parent. Declared here as aliases of
+     tokens that already exist, so nothing new enters the palette.
+     These are repeated verbatim in the dark block below — see the note there
+     before you think about deduplicating them. */
+  --hover: var(--surface2);
+  --surface1: var(--surface2);
+  --error: var(--danger);
+  --fg: var(--text);
+  --accent: var(--gold);
+
   /* ── Scale tokens (theme-independent) ── */
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
   --space-5: 20px; --space-6: 24px; --space-8: 32px;
@@ -44,4 +57,17 @@
   --text: #e6e6f0;
   --muted: #7a7a95;
   --overlay-bg: rgba(11,11,16,.94);
+
+  /* ── Aliases, repeated on purpose ──
+     Do NOT delete these as duplicates of the light block. A var() inside a
+     custom property is substituted on the element that DECLARES it, not on the
+     element that uses it. An alias written only in :root therefore resolves
+     against :root's light values and inherits that frozen result into dark —
+     measured: --hover came out #eeeff5 on a dark surface. Each theme has to
+     resolve its own aliases. */
+  --hover: var(--surface2);
+  --surface1: var(--surface2);
+  --error: var(--danger);
+  --fg: var(--text);
+  --accent: var(--gold);
 }
