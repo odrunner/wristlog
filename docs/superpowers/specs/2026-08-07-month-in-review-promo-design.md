@@ -242,7 +242,14 @@ fills in. The answer replaces the question rather than inviting a second,
 contradictory tap, and a vote from a previous session is remembered.
 
 A vote is a `promo_events` row (`thumbs_up` / `thumbs_down`, added to that
-table's CHECK), so the admin's per-slot stats aggregate it with no new plumbing.
+table's CHECK). Reusing that table meant no new storage — but it did NOT mean
+no new plumbing, which an earlier draft of this spec claimed:
+`promo_slot_stats()` counted only impression/click/dismiss/submit, so the one
+signal this control exists to collect was invisible in the admin list until the
+RPC and the list line were both extended
+(`sql/2026-08-08-promo-stats-thumbs.sql`). The counts print only once a slot
+has some, so every other card isn't carrying two permanent zeros.
+
 Only `impression` counts against `max_impressions`, so nobody retires their own
 card by having an opinion about it.
 
