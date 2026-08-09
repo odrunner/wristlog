@@ -9,7 +9,7 @@ vitest drift-guard suite (`tests/design-system-tokens.test.js`).
 
 ---
 
-## 1. Five tokens referenced in `index.html` are declared nowhere — **Low** — carried forward, not fixed
+## 1. Five tokens referenced in `index.html` are declared nowhere — **Low** — **FIXED 2026-08-08** (`40579de`)
 
 `index.html`
 
@@ -34,14 +34,33 @@ Confirmed live effects (line numbers as of `64c1b51`):
 | `var(--surface1)` | `.draft-thumb` (`:1790`) | Background paints transparent |
 | `var(--accent)` | `.np-thumb.hero` (`:1712`), Terms/Privacy links (`:4316`) | No fallback at these two sites, so border-color/link colour paint transparent. Note: line `:29481` uses `var(--accent,#4f46e5)` — a fallback exists there, so `--accent` is inconsistent across the file rather than uniformly fallback-less |
 
-**Fix (deferred, own change):** either declare `--accent`, `--error`, `--fg`,
-`--hover`, `--surface1` in `index.html`'s local `:root` block with the colour each
-call site currently silently falls back to visually (transparent/inherited), or trace
-each to the token it was probably meant to alias (e.g. `--hover` → `--surface2`,
-`--fg` → `--text`) and repoint the `var()` calls — whichever is confirmed to be zero
-visual change, since both "declare it" and "repoint it" are appearance changes
-relative to what's rendering today only if the resolved value differs from what's
-currently showing.
+### Fixed — 2026-08-08, commit `40579de`
+
+Declared in `design-system.css` as aliases of tokens that already existed, so nothing
+new entered the palette:
+
+| Token | Now declared as | Effect of the fix |
+|---|---|---|
+| `--hover` | `var(--surface2)` | Hover highlights appear on feed menus, action buttons and the @mention list; the comment box and bio editor gain the resting fill they always specified |
+| `--surface1` | `var(--surface2)` | Draft photo placeholder is a filled tile instead of a transparent hole |
+| `--error` | `var(--danger)` | Admin broadcast failures and spam-complaint counts read red |
+| `--fg` | `var(--text)` | No visual change — it already resolved here by inheritance |
+| `--accent` | `var(--gold)` | Matches WRotate's accent rather than the stray `#4f46e5` indigo fallback |
+
+**This was a deliberate visual change**, unlike the extraction branch that preceded it.
+The two inputs (`.comment-input`, `.profile-bio-edit`) gained a fill they had never
+rendered, and that was reviewed and approved before shipping.
+
+**Gotcha worth keeping:** the five aliases are declared in **both** theme blocks, and
+the duplication is load-bearing. A `var()` inside a custom property is substituted on
+the element that *declares* it, not the one that uses it — so an alias written only in
+`:root` resolves against the light palette and inherits that frozen value into dark.
+Measured before the fix landed: `--hover` came out `#eeeff5` on a dark surface. Do not
+"deduplicate" the dark block.
+
+Remaining undeclared, deliberately left: `--bg-secondary`, `--bg2`, `--tertiary`. All
+three carry a `var()` fallback at every call site, so they resolve to a real value
+rather than resetting the property.
 
 ---
 
