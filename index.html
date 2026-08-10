@@ -2559,6 +2559,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     @media (min-width: 641px) {
       #feed-post-fab { right: max(1rem, calc(50vw - 235px - 3.75rem)); }
     }
+    /* "You're all caught up" divider — hairline rules either side of a label,
+       marking the point below which nothing is new since the last visit. */
+    .feed-caught-up { display:flex; align-items:center; gap:.7rem; margin:.4rem .15rem 1.1rem; }
+    .feed-caught-up::before, .feed-caught-up::after { content:''; flex:1; height:1px; background:var(--border); }
+    .feed-caught-up-label { display:inline-flex; align-items:center; gap:.35rem; white-space:nowrap;
+      color:var(--muted); font-size:.78rem; font-weight:600; letter-spacing:.01em; }
+    .feed-caught-up-label svg { flex-shrink:0; color:var(--gold); }
     .streak-chip { display:inline-flex; align-items:center; gap:.22rem; height:34px; padding:0 .4rem; font-size:.85rem; font-weight:600; color:var(--muted); background:none; border:none; border-radius:var(--radius-pill); cursor:pointer; line-height:1; transition:box-shadow .15s, color .15s; }
     .streak-chip:hover { box-shadow:0 0 0 1px var(--gold); color:var(--text); }
     .streak-chip .streak-count { font-variant-numeric:tabular-nums; }
@@ -7719,7 +7726,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '09.21.39';
+const APP_VERSION = '10.16.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11163,6 +11170,61 @@ function compareFeedLogs(a, b, today) {
   return d !== 0 ? d : ((b && b.created_at) || '').localeCompare((a && a.created_at) || '');
 }
 
+// ── "You're all caught up" divider ───────────────────────────────────────────
+// Index in `items` to insert the divider at, or null for no divider.
+// The line's only promise is that NOTHING BELOW IT IS NEW, so it goes after the
+// LAST new post rather than after a count of them: the feed sorts by wear date
+// (see compareFeedLogs), not created_at, so a backdated new post can sit below
+// older ones and a count would strand it underneath the line.
+// Own posts never count as new — you just wrote them.
+function feedCaughtUpIndex({ items, cutoff, myUserId }) {
+  if (!cutoff || !Array.isArray(items) || !items.length) return null;
+  let lastNew = -1;
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i] || {};
+    if (myUserId && it.user_id === myUserId) continue;
+    if ((it.created_at || '') > cutoff) lastNew = i;
+  }
+  const idx = lastNew + 1;
+  // A line pinned to the very bottom says nothing: everything loaded is new,
+  // and load-more will drop older posts underneath it anyway.
+  return idx >= items.length ? null : idx;
+}
+
+// Newest created_at in the feed — the watermark stored as "seen up to here".
+function feedMaxCreatedAt(items) {
+  let max = '';
+  for (const it of (items || [])) {
+    const c = (it && it.created_at) || '';
+    if (c > max) max = c;
+  }
+  return max || null;
+}
+
+// Divider position for the current feed load; null = no divider.
+let _feedCaughtUpIdx = null;
+
+function _feedSeenKey() {
+  return currentUser ? 'wrotate_feed_seen_' + currentUser.id : null;
+}
+
+// Read the watermark the previous visit left, fix the divider position for this
+// load, then advance the watermark so the NEXT visit compares against what is
+// on screen now. Called once per load, before the first render.
+function syncFeedCaughtUp() {
+  const key = _feedSeenKey();
+  if (!key) { _feedCaughtUpIdx = null; return; }
+  let cutoff = null;
+  try { cutoff = localStorage.getItem(key); } catch {}
+  _feedCaughtUpIdx = feedCaughtUpIndex({ items: feedItems, cutoff, myUserId: currentUser && currentUser.id });
+  const max = feedMaxCreatedAt(feedItems);
+  if (max) { try { localStorage.setItem(key, max); } catch {} }
+}
+
+function feedCaughtUpHtml() {
+  return `<div class="feed-caught-up" role="separator" aria-label="You're all caught up"><span class="feed-caught-up-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>You&#39;re all caught up</span></div>`;
+}
+
 async function loadFeed() {
   if (!currentUser) return;
   // If feedLoading is stuck true for >8s, treat it as dead and allow re-entry
@@ -11317,6 +11379,9 @@ async function loadFeed() {
     // Kills skeletons ASAP. Avatars, likes, comments fill in during Phase 2.
     const logIds = rawLogs.map(l => l.id);
     feedItems = rawLogs.map(l => ({ ...l, profile: null, watch: null }));
+    // Fix the divider position once per load, before anything renders, so it
+    // can't shift under the user as likes/comments/promos trigger re-renders.
+    syncFeedCaughtUp();
     feedLikes = {};
     logIds.forEach(id => feedLikes[id] = { count: 0, liked: false });
     feedCommentCounts = {};
@@ -13416,7 +13481,11 @@ function renderFeed() {
     injectPromoCards();
     return;
   }
-  el.innerHTML = feedItems.map(item => renderFeedCard(item)).join('');
+  const cards = feedItems.map(item => renderFeedCard(item));
+  if (_feedCaughtUpIdx !== null && _feedCaughtUpIdx <= cards.length) {
+    cards.splice(_feedCaughtUpIdx, 0, feedCaughtUpHtml());
+  }
+  el.innerHTML = cards.join('');
 
   // Restore any comment drafts that survived re-render
   Object.entries(_savedCommentDrafts).forEach(([id, val]) => {

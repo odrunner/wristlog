@@ -2587,6 +2587,37 @@ export function compareFeedLogs(a, b, today) {
   return d !== 0 ? d : ((b && b.created_at) || '').localeCompare((a && a.created_at) || '');
 }
 
+// ── "You're all caught up" divider ───────────────────────────────────────────
+// Index in `items` to insert the divider at, or null for no divider.
+// The line's only promise is that NOTHING BELOW IT IS NEW, so it goes after the
+// LAST new post rather than after a count of them: the feed sorts by wear date
+// (see compareFeedLogs), not created_at, so a backdated new post can sit below
+// older ones and a count would strand it underneath the line.
+// Own posts never count as new — you just wrote them.
+export function feedCaughtUpIndex({ items, cutoff, myUserId }) {
+  if (!cutoff || !Array.isArray(items) || !items.length) return null;
+  let lastNew = -1;
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i] || {};
+    if (myUserId && it.user_id === myUserId) continue;
+    if ((it.created_at || '') > cutoff) lastNew = i;
+  }
+  const idx = lastNew + 1;
+  // A line pinned to the very bottom says nothing: everything loaded is new,
+  // and load-more will drop older posts underneath it anyway.
+  return idx >= items.length ? null : idx;
+}
+
+// Newest created_at in the feed — the watermark stored as "seen up to here".
+export function feedMaxCreatedAt(items) {
+  let max = '';
+  for (const it of (items || [])) {
+    const c = (it && it.created_at) || '';
+    if (c > max) max = c;
+  }
+  return max || null;
+}
+
 // Pick readable initials text color (#000/#fff) for a given avatar background
 // via YIQ perceived brightness. Used for watch-color avatars (dark dials vs light).
 export function initialsTextColor(bg) {
