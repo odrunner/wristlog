@@ -120,6 +120,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       /* badge medallion glyph ink — fixed dark (disc is always cream #FEFCF6,
          both themes), so NOT overridden in dark like --badge-text is. */
       --badge-ink: #3D2A14;
+      /* Sticky header height. Seed value only — syncHeaderHeightVar() measures
+         the real header on load/resize, since it varies by breakpoint and by
+         the iOS safe-area inset. Used to park the floating Post button below it. */
+      --header-h: 60px;
     }
     [data-theme="dark"] {
       /* badge/achievement warm theme — dark variants (readable on dark) */
@@ -2540,6 +2544,21 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .bell-btn { position:relative; width:34px; height:34px; border-radius:50%; background:none; border:none; cursor:pointer; color:var(--muted);
       display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:box-shadow .15s, color .15s; }
     .bell-btn:hover { box-shadow:0 0 0 1px var(--gold); color:var(--text); }
+    /* Floating Post button — sits over the feed at top right, appearing only
+       once the feed's own Post button has scrolled out of view, so there are
+       never two Post buttons on screen. --header-h is measured in JS so it
+       clears the sticky header at every breakpoint (and the iOS safe area). */
+    #feed-post-fab { position:fixed; top:calc(var(--header-h, 60px) + .6rem); right:1rem; z-index:90;
+      width:46px; height:46px; border-radius:50%; background:var(--gold); color:#0a0a0e;
+      border:none; cursor:pointer; display:none; align-items:center; justify-content:center;
+      box-shadow:0 4px 14px rgba(0,0,0,.20); transition:background .15s, box-shadow .15s, transform .15s; }
+    #feed-post-fab.show { display:flex; animation:fadeIn .18s ease-out; }
+    #feed-post-fab:hover { background:var(--gold-lt); box-shadow:0 6px 18px rgba(0,0,0,.26); transform:translateY(-1px); }
+    /* On wide screens the feed is a 470px centred column — hug its right edge
+       rather than the far side of the viewport. */
+    @media (min-width: 641px) {
+      #feed-post-fab { right: max(1rem, calc(50vw - 235px - 3.75rem)); }
+    }
     .streak-chip { display:inline-flex; align-items:center; gap:.22rem; height:34px; padding:0 .4rem; font-size:.85rem; font-weight:600; color:var(--muted); background:none; border:none; border-radius:var(--radius-pill); cursor:pointer; line-height:1; transition:box-shadow .15s, color .15s; }
     .streak-chip:hover { box-shadow:0 0 0 1px var(--gold); color:var(--text); }
     .streak-chip .streak-count { font-variant-numeric:tabular-nums; }
@@ -3283,6 +3302,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </header>
 <div id="offline-banner" class="offline-banner hidden" role="status" aria-live="polite">Offline — changes will sync when back online</div>
 
+<!-- Floating Post button: fixed top-right over the feed, shown on scroll. -->
+<button id="feed-post-fab" onclick="openNewPost()" title="New Post" aria-label="New Post"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+
 <main>
 
   <!-- ════ DEMO MODE BANNER ════ -->
@@ -3368,7 +3390,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="page-header">
       <h1 class="page-title">Feed</h1>
       <div style="display:flex;gap:.5rem;margin-left:auto;">
-        <button class="btn btn-primary btn-sm" onclick="openNewPost()" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Post</button>
+        <button id="feed-post-btn" class="btn btn-primary btn-sm" onclick="openNewPost()" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Post</button>
         <button class="btn btn-ghost btn-sm" onclick="openDiscover()" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> People</button>
         <button class="btn btn-ghost btn-sm" onclick="showClubsPage()" style="display:inline-flex;align-items:center;gap:.4rem;" title="Clubs"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clubs</button>
       </div>
@@ -7697,7 +7719,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '09.14.38';
+const APP_VERSION = '09.21.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13446,6 +13468,44 @@ function showFeedLoadMoreButton() {
   s.innerHTML = '<button class="btn btn-ghost" style="font-size:.82rem;padding:.5rem 1.1rem;" onclick="loadMoreFeed()">Load more</button>';
 }
 
+// ── Floating "Post" button ────────────────────────────────────────────────
+// The feed's own Post button scrolls away with the page header, so once it
+// leaves the viewport we float a Post button at the top right of the feed.
+// Feedback from Steve: "so I can post after scrolling thru latest posts".
+let _headerPostObserver = null;
+let _feedPostOffscreen  = false;
+
+// The FAB is position:fixed, so it needs to know how tall the sticky header
+// is to sit just below it — that varies by breakpoint and by the iOS safe
+// area, so measure rather than hardcode.
+function syncHeaderHeightVar() {
+  const h = document.querySelector('header')?.getBoundingClientRect().height;
+  if (h) document.documentElement.style.setProperty('--header-h', h + 'px');
+}
+
+// Inactive pages are display:none, so the observer reports "not intersecting"
+// on every other tab too — the .active check is what keeps the button scoped
+// to the feed.
+function updateHeaderPostBtn() {
+  const btn = document.getElementById('feed-post-fab');
+  if (!btn) return;
+  const onFeed = !!document.getElementById('page-feed')?.classList.contains('active');
+  btn.classList.toggle('show', onFeed && _feedPostOffscreen);
+}
+
+function initHeaderPostBtn() {
+  syncHeaderHeightVar();
+  window.addEventListener('resize', syncHeaderHeightVar);
+  if (_headerPostObserver || !('IntersectionObserver' in window)) return;
+  const target = document.getElementById('feed-post-btn');
+  if (!target) return;
+  _headerPostObserver = new IntersectionObserver(entries => {
+    _feedPostOffscreen = !entries[entries.length - 1].isIntersecting;
+    updateHeaderPostBtn();
+  });
+  _headerPostObserver.observe(target);
+}
+
 function renderFeedCard(item) {
   const isMe     = item.user_id === currentUser?.id;
 
@@ -18374,6 +18434,7 @@ function nav(btn) {
     }
   }
   updateStreakChip();
+  updateHeaderPostBtn();
 }
 
 function showClubsPage() {
@@ -28195,6 +28256,7 @@ function initApp() {
   initOEMStraps();
   fetchWeather();
   initReminder();
+  initHeaderPostBtn();
   // ── Two-track social loading for sub-2s feed ──────────────────────────────
   // Track A (feed-critical): following + blocked + friends → then loadFeed
   // Track B (background): profile + pending requests → then EULA/notifications
