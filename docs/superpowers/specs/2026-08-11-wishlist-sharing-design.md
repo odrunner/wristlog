@@ -189,9 +189,10 @@ creation date when unlabelled) · item count · view count · Copy · Revoke.
 Revoke sets `revoked_at` and the link 404s immediately.
 
 The same list is reachable without starting a new share: the selection bar
-carries a **Shared links (N)** text button, shown only when the user has at least
-one unrevoked link, which opens the modal straight to the manager with the
-selection controls hidden.
+carries a **Shared links** text button that opens the modal straight to the
+manager with the compose controls hidden. It is always present in the bar rather
+than conditional on having links — a count would mean querying on every visit to
+the Wishlist tab, and the manager reads fine empty.
 
 ## Admin metrics
 
@@ -227,7 +228,7 @@ CLAUDE.md this is an admin-only surface and ships without a separate go-ahead.
 | Token unknown or revoked | 404 state page: "This wishlist link is no longer available" + Open WRotate CTA |
 | Shared item deleted since minting | Silently absent from the page; the count reflects what remains |
 | All shared items deleted | Empty-state page rather than a broken grid |
-| Image URL 404s | Falls back to the initials avatar, as `wlTileImgFallback()` already does in-app |
+| Image URL 404s | In-app, the initials avatar replaces it, as `wlTileImgFallback()` already does. On the public page the card keeps a neutral placeholder square (a background colour behind the `<img>`) rather than a torn-page icon |
 | View-counter update fails | Swallowed; the page still renders |
 | Revoke fails | Toast; the row stays in the list unmarked, so the user knows it is still live |
 
