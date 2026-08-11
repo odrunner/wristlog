@@ -2768,6 +2768,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="eyebrow eyebrow-muted">August 2026</span>
       </div>
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Posting mid-scroll, and where you left off</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Two small things to make the Feed easier to live in. Once you&#8217;ve scrolled past the top, a <strong>Post button</strong> now floats in the top-right corner &#8212; so when a post gives you an idea, you can share your own without scrolling all the way back up. And a <strong>You&#8217;re all caught up</strong> line now marks the point you reached last time: everything below it you&#8217;ve already seen, so you know when you&#8217;ve reached the end of what&#8217;s new.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Your Month in Review</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">In the first ten days of each month, a card appears in your feed with the month just gone &#8212; <strong>swipe it left to right</strong>. Your total wears, the watch you reached for most, your top three, how you compared with the month before, your most-liked post, anything new that joined the rotation, and your longest run of logged days. Slides only show up when there&#8217;s something to say, so no month looks the same. <strong>Tap Share</strong> to send it to someone &#8212; they&#8217;ll get a card they can open without an account. It needs at least 5 wears across 2 watches in the month, and it writes itself &#8212; there&#8217;s nothing to set up.</div>
       </div>
@@ -4067,6 +4071,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-body">
               <div class="help-step-title">Notifications</div>
               <div class="help-step-desc">Tap the bell in the top-right corner to see likes, comments, and follow requests. Tapping a like or comment notification opens the Feed. Tapping a follow request notification lets you accept or decline.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">5</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Keeping your place in the Feed</div>
+              <div class="help-step-desc">Once you scroll past the top, a <strong>Post button</strong> floats in the top-right corner so you can post without scrolling back up. Keep scrolling and a <strong>You&#8217;re all caught up</strong> line marks where you got to last time &#8212; everything below it was already there on your previous visit. Your own posts don&#8217;t count as new, so they never push the line down.</div>
             </div>
           </div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Pull down on the Feed to refresh. Swipe left or right anywhere to switch between tabs — works across the whole app on mobile.</span></div>
@@ -7726,7 +7737,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '10.16.58';
+const APP_VERSION = '10.17.25';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments

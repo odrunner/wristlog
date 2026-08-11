@@ -41,6 +41,19 @@ async function visit(page, logs) {
   await expect(page.locator('.feed-card').first()).toBeVisible();
 }
 
+// Posts and the divider, top to bottom. Scoped to those two classes on
+// purpose: mountFeedLoadMoreSentinel() also appends #feed-load-sentinel to
+// #feed-list, and a bare `> *` picks it up or not depending on when the read
+// lands. Read through expect.poll below rather than once, since the feed
+// renders twice (phase 1 placeholders, then phase 2 enrichment).
+function feedOrder(page) {
+  return page.evaluate(() => {
+    const sel = '#feed-list > .feed-card, #feed-list > .feed-caught-up';
+    return [...document.querySelectorAll(sel)].map(k =>
+      k.classList.contains('feed-caught-up') ? 'DIVIDER' : (k.id || '').replace('feedcard-', ''));
+  });
+}
+
 test('divider appears between the new posts and the ones already seen', async ({ page }) => {
   await injectSession(page);
 
@@ -55,15 +68,8 @@ test('divider appears between the new posts and the ones already seen', async ({
   await expect(divider).toContainText("You're all caught up");
 
   // It must sit below both new posts and above the first seen one.
-  const order = await page.evaluate(() => {
-    const kids = [...document.querySelectorAll('#feed-list > *')];
-    return kids.map(k => k.classList.contains('feed-caught-up')
-      ? 'DIVIDER'
-      : (k.id || '').replace('feedcard-', '')).filter(Boolean);
-  });
-  const line = order.indexOf('DIVIDER');
-  expect(line).toBeGreaterThan(order.indexOf('new-2'));
-  expect(line).toBeLessThan(order.indexOf('seen-1'));
+  await expect.poll(() => feedOrder(page))
+    .toEqual(['new-1', 'new-2', 'DIVIDER', 'seen-1', 'seen-2', 'seen-3']);
 });
 
 test('nothing new since last visit → divider sits at the very top', async ({ page }) => {
@@ -72,13 +78,8 @@ test('nothing new since last visit → divider sits at the very top', async ({ p
   await visit(page, SEEN);
   await visit(page, SEEN);   // identical feed, so nothing is new
 
-  const order = await page.evaluate(() => {
-    const kids = [...document.querySelectorAll('#feed-list > *')];
-    return kids.map(k => k.classList.contains('feed-caught-up')
-      ? 'DIVIDER'
-      : (k.id || '').replace('feedcard-', '')).filter(Boolean);
-  });
-  expect(order[0]).toBe('DIVIDER');
+  await expect.poll(() => feedOrder(page))
+    .toEqual(['DIVIDER', 'seen-1', 'seen-2', 'seen-3']);
 });
 
 test('your own new post does not push the divider down', async ({ page }) => {
@@ -88,12 +89,7 @@ test('your own new post does not push the divider down', async ({ page }) => {
   const mine = log({ id: 'mine-1', day: 9, createdAt: '2026-08-09T12:00:00Z', user: FAKE_USER.id });
   await visit(page, [mine, ...SEEN]);
 
-  const order = await page.evaluate(() => {
-    const kids = [...document.querySelectorAll('#feed-list > *')];
-    return kids.map(k => k.classList.contains('feed-caught-up')
-      ? 'DIVIDER'
-      : (k.id || '').replace('feedcard-', '')).filter(Boolean);
-  });
   // Own post is not "new to you", so the line stays above everything.
-  expect(order[0]).toBe('DIVIDER');
+  await expect.poll(() => feedOrder(page))
+    .toEqual(['DIVIDER', 'mine-1', 'seen-1', 'seen-2', 'seen-3']);
 });
