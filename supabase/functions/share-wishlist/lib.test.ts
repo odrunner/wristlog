@@ -7,6 +7,8 @@ import {
   htmlPage,
   initials,
   isShareUsable,
+  linkDomain,
+  safeLinkUrl,
   SHARE_SELECT,
   wishlistCardsHtml,
 } from "./lib.ts";
@@ -21,8 +23,8 @@ const W = (id: string, brand: string, name: string, ref = "", image: string | nu
 // price, notes and market value without failing anything else in the repo.
 const SHARE_SELECT_COLUMNS = SHARE_SELECT.split(",").map((c) => c.trim());
 
-Deno.test("SHARE_SELECT admits exactly the four published columns plus sort_order", () => {
-  assertEquals(SHARE_SELECT_COLUMNS, ["id", "brand", "name", "ref", "image", "sort_order"]);
+Deno.test("SHARE_SELECT admits exactly the five published columns plus sort_order", () => {
+  assertEquals(SHARE_SELECT_COLUMNS, ["id", "brand", "name", "ref", "image", "url", "sort_order"]);
 });
 
 Deno.test("SHARE_SELECT is never a wildcard", () => {
@@ -41,7 +43,6 @@ Deno.test("SHARE_SELECT excludes every suppressed wishlist column", () => {
       "watch_charts_url",
       "notes",
       "tags",
-      "url",
       "added_date",
       "wish_privacy",
     ]
@@ -74,9 +75,10 @@ Deno.test("wishlistCardsHtml renders brand, model and reference", () => {
 
 // The whole point of the feature's privacy promise: a dealer link must never
 // carry what the owner is willing to pay, what the market says, or their notes.
-// The function takes only the four whitelisted fields, so extra keys on the
-// input object can never reach the markup.
-Deno.test("wishlistCardsHtml never emits price, market value, notes, tags or the saved URL", () => {
+// The function takes only the five whitelisted fields, so extra keys on the
+// input object can never reach the markup. (The saved url IS published, on
+// purpose — see the url tests below.)
+Deno.test("wishlistCardsHtml never emits price, market value, notes or tags", () => {
   const html = wishlistCardsHtml([
     // deno-lint-ignore no-explicit-any
     ({
@@ -89,7 +91,6 @@ Deno.test("wishlistCardsHtml never emits price, market value, notes, tags or the
   assertNotMatch(html, /51000/);
   assertNotMatch(html, /birthday present/);
   assertNotMatch(html, /grail/);
-  assertNotMatch(html, /chrono24/);
   assertNotMatch(html, /private/);
 });
 
@@ -173,4 +174,57 @@ Deno.test("initials takes two letters and copes with blanks", () => {
 Deno.test("avatarInnerHtml uses the photo when present, initials otherwise", () => {
   assertStringIncludes(avatarInnerHtml("https://x/a.jpg", "Ozgur Dogan"), "<img");
   assertEquals(avatarInnerHtml(null, "Ozgur Dogan"), "OD");
+});
+
+// The saved listing link is published deliberately (2026-08-12) — it is the page
+// the owner had in mind, and the point of sending the list to a dealer.
+Deno.test("wishlistCardsHtml links out to the saved url, labelled by domain", () => {
+  const html = wishlistCardsHtml([
+    { id: "1", brand: "Rolex", name: "Daytona", ref: "", image: null, url: "https://www.chrono24.com/rolex/daytona.htm" },
+  ]);
+  assertStringIncludes(html, 'href="https://www.chrono24.com/rolex/daytona.htm"');
+  assertStringIncludes(html, "chrono24.com");
+  assertStringIncludes(html, 'rel="noopener noreferrer nofollow"');
+});
+
+Deno.test("wishlistCardsHtml omits the link entirely when no url was saved", () => {
+  const html = wishlistCardsHtml([W("1", "Rolex", "Daytona")]);
+  assertNotMatch(html, /wl-card-url/);
+});
+
+// A wishlist url is user-supplied text, so it is the one attacker-controlled value
+// that becomes an href. Anything but http(s) must not survive.
+Deno.test("safeLinkUrl passes http and https and nothing else", () => {
+  assertEquals(safeLinkUrl("https://chrono24.com/x"), "https://chrono24.com/x");
+  assertEquals(safeLinkUrl("http://example.com/"), "http://example.com/");
+  for (
+    const bad of [
+      "javascript:alert(1)",
+      "JavaScript:alert(1)",
+      "data:text/html,<script>alert(1)</script>",
+      "vbscript:msgbox(1)",
+      "file:///etc/passwd",
+      "not a url",
+      "",
+      null,
+      undefined,
+    ]
+  ) {
+    assertEquals(safeLinkUrl(bad), "", `safeLinkUrl must refuse ${String(bad)}`);
+  }
+});
+
+Deno.test("wishlistCardsHtml refuses to render a javascript: url as a link", () => {
+  const html = wishlistCardsHtml([
+    { id: "1", brand: "Rolex", name: "Daytona", ref: "", image: null, url: "javascript:alert(1)" },
+  ]);
+  assertNotMatch(html, /javascript:/);
+  assertNotMatch(html, /wl-card-url/);
+});
+
+Deno.test("linkDomain strips www and refuses an unsafe scheme", () => {
+  assertEquals(linkDomain("https://www.chrono24.com/a/b"), "chrono24.com");
+  assertEquals(linkDomain("https://watchbox.com"), "watchbox.com");
+  assertEquals(linkDomain("javascript:alert(1)"), "");
+  assertEquals(linkDomain(null), "");
 });

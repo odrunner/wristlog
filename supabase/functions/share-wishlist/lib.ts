@@ -12,7 +12,34 @@ export type ShareWatch = {
   name?: string | null;
   ref?: string | null;
   image?: string | null;
+  url?: string | null;
 };
+
+// The saved link is the ONE user-supplied URL the page publishes, so it is the one
+// place an attacker-controlled scheme could reach an href. Only http(s) survives:
+// a `javascript:` or `data:` URL saved on a wishlist item would otherwise run in
+// the recipient's browser when they tapped through.
+export function safeLinkUrl(raw: string | null | undefined): string {
+  const s = String(raw || "").trim();
+  if (!s) return "";
+  try {
+    const u = new URL(s);
+    return (u.protocol === "http:" || u.protocol === "https:") ? u.href : "";
+  } catch (_e) {
+    return "";
+  }
+}
+
+// "chrono24.com" out of "https://www.chrono24.com/rolex/...", for the link's label.
+export function linkDomain(raw: string | null | undefined): string {
+  const safe = safeLinkUrl(raw);
+  if (!safe) return "";
+  try {
+    return new URL(safe).hostname.replace(/^www\./, "");
+  } catch (_e) {
+    return "";
+  }
+}
 
 // The decisive privacy boundary of this whole feature: the columns the public
 // page is allowed to read out of `wishlist`. It lives here, rather than inline in
@@ -21,9 +48,11 @@ export type ShareWatch = {
 // the ~2900 tests in this repo.
 //
 // sort_order is fetched only to order the grid and is stripped before render.
+// `url` is the owner's saved listing link, published deliberately (2026-08-12) and
+// scheme-checked by safeLinkUrl before it becomes an href.
 // NEVER add: price, market_price, market_price_date, market_price_src,
-// watch_charts_url, notes, tags, url, added_date, wish_privacy.
-export const SHARE_SELECT = "id, brand, name, ref, image, sort_order";
+// watch_charts_url, notes, tags, added_date, wish_privacy.
+export const SHARE_SELECT = "id, brand, name, ref, image, url, sort_order";
 
 export function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -50,10 +79,10 @@ export function isShareUsable(
   return !row.revoked_at;
 }
 
-// THE PRIVACY BOUNDARY. Exactly four fields are read off each item; anything
-// else the caller happens to pass — price, market value, notes, tags, the saved
-// URL, wish_privacy — is not read, so it cannot reach the markup. Keep it that
-// way: never widen this to spread the input object.
+// THE PRIVACY BOUNDARY. Exactly five fields are read off each item — brand, name,
+// ref, image and the saved url; anything else the caller happens to pass (price,
+// market value, notes, tags, wish_privacy) is not read, so it cannot reach the
+// markup. Keep it that way: never widen this to spread the input object.
 export function wishlistCardsHtml(items: ShareWatch[]): string {
   return (items || []).map((w) => {
     const brand = String(w.brand || "");
@@ -62,12 +91,21 @@ export function wishlistCardsHtml(items: ShareWatch[]): string {
     const img = w.image
       ? `<img class="wl-card-img" src="${esc(String(w.image))}" alt="" loading="lazy">`
       : `<div class="wl-card-ph">${esc(initials(brand, name))}</div>`;
+    // The owner's saved link, when they kept one — the listing or product page they
+    // had in mind. noopener/noreferrer so the destination gets neither a handle on
+    // this window nor the share token in a Referer header.
+    const href = safeLinkUrl(w.url);
+    const domain = linkDomain(w.url);
+    const link = href
+      ? `<a class="wl-card-url" href="${esc(href)}" target="_blank" rel="noopener noreferrer nofollow">${esc(domain)} ↗</a>`
+      : "";
     return `<div class="wl-card">
       ${img}
       <div class="wl-card-body">
         <div class="wl-card-brand">${esc(brand)}</div>
         <div class="wl-card-name">${esc(name)}</div>
         ${ref ? `<div class="wl-card-ref">Ref. ${esc(ref)}</div>` : ""}
+        ${link}
       </div>
     </div>`;
   }).join("");
@@ -197,7 +235,7 @@ export function htmlPage(
     .col-avatar img { width: 100%; height: 100%; object-fit: cover; }
     .col-name { font-size: 1.2rem; font-weight: 800; margin-bottom: .15rem; }
     .col-uname { font-size: .82rem; color: var(--muted); margin-bottom: .4rem; }
-    .col-label { font-size: .88rem; color: var(--muted); line-height: 1.5; }
+    .col-label { font-size: .88rem; color: var(--muted); line-height: 1.5; white-space: pre-wrap; text-align: left; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .7rem .85rem; margin-top: .6rem; }
     .wl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
     .wl-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
     /* The surface2 background is the broken-image fallback: an image URL that
@@ -208,6 +246,7 @@ export function htmlPage(
     .wl-card-brand { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
     .wl-card-name { font-size: .85rem; font-weight: 700; margin: .1rem 0; }
     .wl-card-ref { font-size: .72rem; color: var(--muted); }
+    .wl-card-url { display: inline-block; font-size: .72rem; margin-top: .3rem; word-break: break-all; }
     .state-wrap { text-align: center; padding: 3rem 1rem; }
     .state-icon { font-size: 2.5rem; margin-bottom: .5rem; }
     .state-title { font-size: 1.1rem; font-weight: 700; margin-bottom: .3rem; }

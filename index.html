@@ -2781,7 +2781,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Wishlist Share Links</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Share part of your wishlist by link. Tap <strong>Share</strong> on the Wishlist tab, tick the watches you want &#8212; or a whole brand folder in one tap &#8212; and send a link that shows the photo, brand, model and reference. Your prices, notes and tags stay private, the recipient needs no account, and you can revoke any link you've sent.</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Share part of your wishlist by link. Tap <strong>Share</strong> on the Wishlist tab, tick the watches you want &#8212; or a whole brand folder in one tap &#8212; and send a link that shows the photo, brand, model, reference and any link you saved. Your prices, notes and tags stay private, the recipient needs no account, and you can revoke any link you've sent.</div>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Posting mid-scroll, and where you left off</div>
@@ -4058,7 +4058,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">6</div>
             <div class="help-step-body">
               <div class="help-step-title">Send part of your wishlist to a dealer</div>
-              <div class="help-step-desc">On the Wishlist tab, tap <strong>Share</strong>. Tick individual watches, or a brand folder to take all of them at once, then <strong>Create link</strong>. The page you send shows each watch's photo, brand, model and reference number — never your price, notes or tags — and works for anyone, with or without a WRotate account. Tap <strong>Shared links</strong> any time to see what you've sent, how many times it was opened, and to revoke a link.</div>
+              <div class="help-step-desc">On the Wishlist tab, tap <strong>Share</strong>. Tick individual watches, or a brand folder to take all of them at once, then <strong>Create link</strong>. The page you send shows each watch's photo, brand, model, reference and any link you saved number — never your price, notes or tags — and works for anyone, with or without a WRotate account. Tap <strong>Shared links</strong> any time to see what you've sent, how many times it was opened, and to revoke a link.</div>
             </div>
           </div>
         </div>
@@ -4718,7 +4718,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="page-header">
       <h1 class="page-title">Wishlist</h1>
       <div class="wl-actions">
-        <button id="wl-share-btn" class="btn btn-ghost btn-sm" onclick="enterWishlistSelect()" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share</button>
         <div id="wishlist-view-toggle" class="wl-view-toggle" style="display:none;">
           <button type="button" class="wl-view-btn active" data-view="list" onclick="setWishlistView('list')" title="List view" aria-label="List view">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
@@ -4732,6 +4731,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
         <button class="btn btn-primary btn-sm" onclick="openWishlistPhoto()" aria-label="Add from Photo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="wl-actions-text">Add from Photo</span></button>
         <button class="btn btn-ghost btn-sm" onclick="openAddWishlist()">+ Add to Wishlist</button>
+        <button id="wl-share-btn" class="btn btn-ghost btn-sm" onclick="enterWishlistSelect()" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share</button>
       </div>
     </div>
     <div id="wl-select-bar" style="display:none;align-items:center;gap:.5rem;flex-wrap:wrap;padding:.5rem .75rem;margin-bottom:.75rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);">
@@ -7782,7 +7782,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '12.05.30';
+const APP_VERSION = '12.06.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -26796,10 +26796,10 @@ function openWishlistShareSheet() {
   const compose = document.getElementById('wl-share-compose');
   compose.style.display = '';
   compose.innerHTML = `
-    <div style="font-size:.86rem;margin-bottom:.75rem;">Sharing <strong>${n} watch${n !== 1 ? 'es' : ''}</strong>. The page shows the photo, brand, model and reference — never your price, notes or tags.</div>
+    <div style="font-size:.86rem;margin-bottom:.75rem;">Sharing <strong>${n} watch${n !== 1 ? 'es' : ''}</strong>. The page shows the photo, brand, model, reference and any link you saved — never your price, notes or tags.</div>
     ${priv ? `<div id="wl-share-private-note" style="font-size:.76rem;color:var(--muted);margin-bottom:.75rem;">${priv} private item${priv !== 1 ? 's' : ''} included.</div>` : ''}
-    <label style="display:block;font-size:.76rem;color:var(--muted);margin-bottom:.25rem;">Who's this for? (optional)</label>
-    <input type="text" id="wl-share-label" maxlength="60" placeholder="e.g. Watches of Switzerland">
+    <label style="display:block;font-size:.76rem;color:var(--muted);margin-bottom:.25rem;">Add a note (optional)</label>
+    <textarea id="wl-share-label" maxlength="280" rows="3" placeholder="Anything you want to say — who it's for, sizes, budget, questions." style="width:100%;resize:vertical;"></textarea>
     <button class="btn btn-primary" id="wl-share-create" style="margin-top:.75rem;width:100%;" onclick="mintWishlistShare()">Create link</button>`;
   document.getElementById('wl-share-modal').classList.remove('hidden');
   loadWishlistShareLinks();

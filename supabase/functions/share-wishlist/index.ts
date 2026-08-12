@@ -67,7 +67,7 @@ async function fetchShareData(db: any, token: string) {
     .order("sort_order", { ascending: true });
 
   const items = (itemRows || []).map((w: ShareWatch & { sort_order?: number }) => ({
-    id: w.id, brand: w.brand, name: w.name, ref: w.ref, image: w.image,
+    id: w.id, brand: w.brand, name: w.name, ref: w.ref, image: w.image, url: w.url,
   })) as ShareWatch[];
 
   return { profile, items, label: row.label };

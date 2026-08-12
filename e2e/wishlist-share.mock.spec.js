@@ -215,3 +215,26 @@ test('a folder whose brand contains an apostrophe still selects and expands', as
 
   expect(errors).toEqual([]);
 });
+
+// The note replaced the old "Who's this for?" field: free text, multi-line, and
+// carried on the link as-is.
+test('the share note is free text and travels with the link', async ({ page }) => {
+  await openWishlist(page);
+  let posted = null;
+  await page.route('**/rest/v1/wishlist_shares*', route => {
+    if (route.request().method() === 'POST') {
+      posted = JSON.parse(route.request().postData() || '{}');
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify([posted]) });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+  await page.click('#wl-share-btn');
+  await page.locator('.wl-select-box').first().click();
+  await page.click('#wl-share-go');
+
+  await expect(page.locator('#wl-share-label')).toHaveAttribute('placeholder', /Anything you want to say/);
+  await page.fill('#wl-share-label', 'For Steve — 40mm please,\nbudget is flexible.');
+  await page.click('#wl-share-create');
+  await expect(page.locator('#wl-share-done')).toBeVisible();
+  expect(posted.label).toBe('For Steve — 40mm please,\nbudget is flexible.');
+});
