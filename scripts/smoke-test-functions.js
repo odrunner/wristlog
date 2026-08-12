@@ -110,6 +110,25 @@ async function run() {
     return { ...r, ok: r.status === 200 && r.body.trimStart().startsWith('<svg') };
   });
 
+  // A wishlist link is the capability itself, so an unknown or revoked token
+  // must resolve to nothing rather than to somebody's list.
+  await check('share-wishlist (bad token → 404)', async () => {
+    const r = await callFn('share-wishlist?t=definitely-not-a-real-token');
+    return { ...r, ok: r.status === 404 };
+  });
+
+  await check('share-wishlist (no token → 400)', async () => {
+    const r = await callFn('share-wishlist?t=');
+    return { ...r, ok: r.status === 400 };
+  });
+
+  // A link preview whose image 404s renders as a grey box, so image mode
+  // answers with an SVG even for a token with nothing behind it.
+  await check('share-wishlist (og image is always an SVG)', async () => {
+    const r = await callFn('share-wishlist?t=nope&img=1');
+    return { ...r, ok: r.status === 200 && r.body.trimStart().startsWith('<svg') };
+  });
+
   // --- Authenticated functions ---
 
   await check('identify-watch (auth + tiny image)', () =>

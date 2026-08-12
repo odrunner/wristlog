@@ -50,3 +50,20 @@ create policy wishlist_shares_delete_own on public.wishlist_shares
   for delete to authenticated using (user_id = auth.uid());
 
 notify pgrst, 'reload schema';
+
+-- Atomic view counter, called by the share-wishlist edge function on the
+-- service-role key. SECURITY DEFINER so the increment does not depend on RLS,
+-- and granted only to service_role — nobody else may inflate a counter.
+create or replace function public.bump_wishlist_share_view(p_token text)
+returns void
+language sql security definer set search_path = 'pg_catalog','public'
+as $function$
+  update public.wishlist_shares
+     set views = views + 1, last_viewed_at = now()
+   where token = p_token and revoked_at is null;
+$function$;
+
+revoke execute on function public.bump_wishlist_share_view(text) from public, anon, authenticated;
+grant execute on function public.bump_wishlist_share_view(text) to service_role;
+
+notify pgrst, 'reload schema';
