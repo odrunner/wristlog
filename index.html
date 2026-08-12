@@ -4724,6 +4724,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button id="wl-select-all" class="btn btn-ghost btn-sm" onclick="wlSelectAll()">Select all</button>
       <button id="wl-select-none" class="btn btn-ghost btn-sm" onclick="wlSelectNone()">Clear</button>
       <span style="flex:1;"></span>
+      <button id="wl-share-links" class="btn btn-ghost btn-sm" onclick="openWishlistShareLinks()">Shared links</button>
       <button id="wl-select-cancel" class="btn btn-ghost btn-sm" onclick="exitWishlistSelect()">Cancel</button>
       <button id="wl-share-go" class="btn btn-primary btn-sm" onclick="openWishlistShareSheet()" disabled>Share</button>
     </div>
@@ -5356,6 +5357,18 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button id="wl-delete-btn" class="btn btn-danger" onclick="wlDeleteFromEdit()" style="display:none;" aria-label="Delete">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
       </button>
+    </div>
+  </div>
+</div>
+
+<div id="wl-share-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="wl-share-modal-title">
+  <div class="modal">
+    <div class="modal-title" id="wl-share-modal-title">Share wishlist</div>
+    <div id="wl-share-compose"></div>
+    <div id="wl-share-done" style="display:none;"></div>
+    <div id="wl-share-manage" style="margin-top:1rem;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeWishlistShareSheet()">Close</button>
     </div>
   </div>
 </div>
@@ -7754,7 +7767,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '11.21.09';
+const APP_VERSION = '11.21.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -26740,8 +26753,147 @@ function wlSelectNone() {
   renderWishlist(true);
 }
 
-// Replaced in full by the real share sheet in the next task.
-function openWishlistShareSheet() { toast('Coming soon'); }
+function wlShareUrl(token) {
+  return `https://api.wrotate.com/functions/v1/share-wishlist?t=${encodeURIComponent(token)}`;
+}
+
+let _wlShareLinks = [];      // rows from wishlist_shares, newest first
+
+function closeWishlistShareSheet() {
+  document.getElementById('wl-share-modal').classList.add('hidden');
+}
+
+function openWishlistShareSheet() {
+  if (!_wlSelect || _wlSelect.size === 0) return;
+  const items = wishShareItems(wishlist, _wlSelect);
+  const priv = wishSharePrivateCount(wishlist, _wlSelect);
+  const n = items.length;
+  document.getElementById('wl-share-done').style.display = 'none';
+  const compose = document.getElementById('wl-share-compose');
+  compose.style.display = '';
+  compose.innerHTML = `
+    <div style="font-size:.86rem;margin-bottom:.75rem;">Sharing <strong>${n} watch${n !== 1 ? 'es' : ''}</strong>. The page shows the photo, brand, model and reference — never your price, notes or tags.</div>
+    ${priv ? `<div id="wl-share-private-note" style="font-size:.76rem;color:var(--muted);margin-bottom:.75rem;">${priv} private item${priv !== 1 ? 's' : ''} included.</div>` : ''}
+    <label style="display:block;font-size:.76rem;color:var(--muted);margin-bottom:.25rem;">Who's this for? (optional)</label>
+    <input type="text" id="wl-share-label" maxlength="60" placeholder="e.g. Watches of Switzerland">
+    <button class="btn btn-primary" id="wl-share-create" style="margin-top:.75rem;width:100%;" onclick="mintWishlistShare()">Create link</button>`;
+  document.getElementById('wl-share-modal').classList.remove('hidden');
+  loadWishlistShareLinks();
+}
+
+function openWishlistShareLinks() {
+  document.getElementById('wl-share-compose').style.display = 'none';
+  document.getElementById('wl-share-done').style.display = 'none';
+  document.getElementById('wl-share-modal').classList.remove('hidden');
+  loadWishlistShareLinks();
+}
+
+async function loadWishlistShareLinks() {
+  if (!currentUser) return;
+  try {
+    const { data, error } = await db.from('wishlist_shares')
+      .select('token, label, item_ids, views, created_at, revoked_at')
+      .eq('user_id', currentUser.id)
+      .is('revoked_at', null)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    _wlShareLinks = data || [];
+  } catch (e) {
+    console.warn('[wishlist] share links load failed:', e && e.message);
+    _wlShareLinks = [];
+  }
+  renderWishlistShareLinks();
+}
+
+function renderWishlistShareLinks() {
+  const el = document.getElementById('wl-share-manage');
+  if (!el) return;
+  if (!_wlShareLinks.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <div class="eyebrow" style="margin-bottom:.4rem;">Your shared links</div>
+    ${_wlShareLinks.map(s => `
+      <div style="display:flex;align-items:center;gap:.5rem;padding:.4rem 0;border-bottom:1px solid var(--border);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(wishShareLinkLabel(s))}</div>
+          <div style="font-size:.68rem;color:var(--muted);">${(s.item_ids || []).length} watch${(s.item_ids || []).length !== 1 ? 'es' : ''} · ${s.views || 0} view${(s.views || 0) !== 1 ? 's' : ''}</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="copyWishlistShareUrl('${escAttr(s.token)}')">Copy</button>
+        <button class="btn btn-ghost btn-sm" data-revoke="${escAttr(s.token)}" onclick="revokeWishlistShare('${escAttr(s.token)}')">Revoke</button>
+      </div>`).join('')}`;
+}
+
+async function mintWishlistShare() {
+  if (!currentUser || !_wlSelect || _wlSelect.size === 0) return;
+  const btn = document.getElementById('wl-share-create');
+  if (btn) btn.disabled = true;
+  const label = (document.getElementById('wl-share-label')?.value || '').trim();
+  const ids = wishShareItems(wishlist, _wlSelect).map(i => i.id);
+  const token = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)).replace(/-/g, '');
+  try {
+    const { error } = await db.from('wishlist_shares')
+      .insert({ token, user_id: currentUser.id, label: label || null, item_ids: ids });
+    if (error) throw error;
+  } catch (e) {
+    console.warn('[wishlist] mint failed:', e && e.message);
+    if (btn) btn.disabled = false;
+    toast('Could not create link', 'error');
+    return;                                  // selection and modal stay put, so retry is one tap
+  }
+  const url = wlShareUrl(token);
+  document.getElementById('wl-share-compose').style.display = 'none';
+  const done = document.getElementById('wl-share-done');
+  done.style.display = '';
+  // navigator.share() must be called from a user gesture, and the insert above
+  // is an await — the gesture is gone by here. So the URL is presented and the
+  // NEXT tap does the sharing. Do not try to share directly from Create link.
+  done.innerHTML = `
+    <div style="font-size:.86rem;margin-bottom:.5rem;">Your link is ready.</div>
+    <div id="wl-share-url" style="font-size:.72rem;color:var(--muted);word-break:break-all;background:var(--surface2);border-radius:8px;padding:.5rem;margin-bottom:.75rem;">${escHtml(url)}</div>
+    <div style="display:flex;gap:.5rem;">
+      <button class="btn btn-primary" style="flex:1;" onclick="shareWishlistUrl('${escAttr(token)}')">Share</button>
+      <button class="btn btn-ghost" style="flex:1;" onclick="copyWishlistShareUrl('${escAttr(token)}')">Copy</button>
+    </div>`;
+  exitWishlistSelect();
+  loadWishlistShareLinks();
+}
+
+async function shareWishlistUrl(token) {
+  const url = wlShareUrl(token);
+  const title = `${myProfile?.display_name || myProfile?.username || 'My'} wishlist — WRotate`;
+  if (navigator.share) {
+    try { await navigator.share({ title, url }); }
+    catch (e) { if (e.name !== 'AbortError') toast('Could not open share sheet', 'error'); }
+  } else {
+    copyWishlistShareUrl(token);
+  }
+}
+
+function copyWishlistShareUrl(token) {
+  const url = wlShareUrl(token);
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url)
+      .then(() => toast('Wishlist link copied!'))
+      .catch(() => _fallbackCopyText(url, 'Wishlist link copied!'));
+  } else {
+    _fallbackCopyText(url, 'Wishlist link copied!');
+  }
+}
+
+async function revokeWishlistShare(token) {
+  try {
+    const { error } = await db.from('wishlist_shares')
+      .update({ revoked_at: new Date().toISOString() })
+      .eq('token', token).eq('user_id', currentUser.id);
+    if (error) throw error;
+  } catch (e) {
+    console.warn('[wishlist] revoke failed:', e && e.message);
+    toast('Could not revoke that link', 'error');
+    return;                                  // row stays listed, so the user knows it is still live
+  }
+  _wlShareLinks = _wlShareLinks.filter(s => s.token !== token);
+  renderWishlistShareLinks();
+  toast('Link revoked');
+}
 
 function urlDomain(url) {
   if (!url) return '';

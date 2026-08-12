@@ -129,11 +129,23 @@ export async function mockSupabase(page, opts = {}) {
   );
 
   // ── Social: friends, follows, likes, comments, notifications, badges ──
-  for (const table of ['friend_requests', 'follows', 'likes', 'comments', 'notifications', 'clubs', 'club_members', 'page_visits', 'feed_posts', 'earned_badges', 'review_prompt_events', 'internal_accounts', 'rate_limits', 'promo_config', 'promo_slots', 'promo_events', 'wishlist_shares']) {
+  for (const table of ['friend_requests', 'follows', 'likes', 'comments', 'notifications', 'clubs', 'club_members', 'page_visits', 'feed_posts', 'earned_badges', 'review_prompt_events', 'internal_accounts', 'rate_limits', 'promo_config', 'promo_slots', 'promo_events']) {
     await page.route(`**/rest/v1/${table}*`, route =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
     );
   }
+
+  // ── Wishlist shares — POST echoes the inserted row back, as PostgREST does ──
+  await page.route('**/rest/v1/wishlist_shares*', route => {
+    if (route.request().method() === 'POST') {
+      try {
+        const body = JSON.parse(route.request().postData() || '{}');
+        const created = { views: 0, created_at: new Date().toISOString(), revoked_at: null, ...body };
+        return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify([created]) });
+      } catch { /* fall through */ }
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+  });
 
   // ── Featured post RPC: return the configured active featured log id (or null) ──
   await page.route('**/rest/v1/rpc/featured_current*', route =>

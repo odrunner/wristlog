@@ -101,3 +101,83 @@ test('selection bar hides when wishlist empties while in selection mode', async 
   await expect(page.locator('#wl-select-bar')).toBeHidden();
   await expect(page.locator('#wl-share-btn')).toBeHidden();
 });
+
+// The mocked POST echoes the inserted row back, as PostgREST does.
+async function mockMint(page) {
+  await page.route('**/rest/v1/wishlist_shares*', route => {
+    const method = route.request().method();
+    if (method === 'POST') {
+      const body = JSON.parse(route.request().postData() || '{}');
+      return route.fulfill({
+        status: 201, contentType: 'application/json',
+        body: JSON.stringify([{ ...body, views: 0, created_at: '2026-08-11T09:00:00Z', revoked_at: null }]),
+      });
+    }
+    if (method === 'GET') {
+      return route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify([{
+          token: 'existingtoken000000000000000001', label: 'Watches of Switzerland',
+          item_ids: ['wl1'], views: 4, created_at: '2026-08-10T09:00:00Z', revoked_at: null,
+        }]),
+      });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+}
+
+test('the share sheet reports the count and flags private items', async ({ page }) => {
+  await openWishlist(page);
+  await mockMint(page);
+  await page.click('#wl-share-btn');
+  await page.click('#wl-select-all');
+  await page.click('#wl-share-go');
+  await expect(page.locator('#wl-share-modal')).toBeVisible();
+  await expect(page.locator('#wl-share-compose')).toContainText('3 watches');
+  await expect(page.locator('#wl-share-private-note')).toContainText('1 private item');
+});
+
+test('creating a link shows a copyable URL rather than sharing straight away', async ({ page }) => {
+  await openWishlist(page);
+  await mockMint(page);
+  await page.click('#wl-share-btn');
+  await page.locator('.wl-select-box').first().click();
+  await page.click('#wl-share-go');
+  await page.fill('#wl-share-label', 'Watches of Switzerland');
+  await page.click('#wl-share-create');
+  await expect(page.locator('#wl-share-done')).toBeVisible();
+  const url = await page.locator('#wl-share-url').textContent();
+  expect(url).toContain('/functions/v1/share-wishlist?t=');
+});
+
+test('the minted row carries only the ticked ids and the label', async ({ page }) => {
+  await openWishlist(page);
+  let posted = null;
+  await page.route('**/rest/v1/wishlist_shares*', route => {
+    if (route.request().method() === 'POST') {
+      posted = JSON.parse(route.request().postData() || '{}');
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify([posted]) });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+  await page.click('#wl-share-btn');
+  await page.locator('.wl-select-box').nth(2).click();   // Omega only
+  await page.click('#wl-share-go');
+  await page.fill('#wl-share-label', 'Dealer');
+  await page.click('#wl-share-create');
+  await expect(page.locator('#wl-share-done')).toBeVisible();
+  expect(posted.item_ids).toEqual(['wl3']);
+  expect(posted.label).toBe('Dealer');
+  expect(posted.token).toMatch(/^[0-9a-f]{32}$/);
+});
+
+test('existing links are listed and can be revoked', async ({ page }) => {
+  await openWishlist(page);
+  await mockMint(page);
+  await page.click('#wl-share-btn');
+  await page.click('#wl-share-links');
+  await expect(page.locator('#wl-share-modal')).toContainText('Watches of Switzerland');
+  await expect(page.locator('#wl-share-modal')).toContainText('4 views');
+  await page.click('[data-revoke="existingtoken000000000000000001"]');
+  await expect(page.locator('#wl-share-modal')).not.toContainText('Watches of Switzerland');
+});
