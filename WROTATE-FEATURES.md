@@ -257,6 +257,7 @@ Three ways to add:
 - **Price tracking:** compare asking price vs. current market price.
 - **Move to Collection:** graduate a wishlist item once purchased.
 - **Visibility:** Public / Followers / Close Friends / Private (private by default). Followers can browse your wishlist — handy for gift ideas.
+- **Share by link:** tap **Share** to enter selection mode — checkboxes appear in List, brand Folders, and Gallery views; a folder checkbox is tri-state and takes/drops every watch of that brand in one tap. **Create link** mints a public, revocable link to a WRotate-branded page listing only each selected watch's **photo, brand, model and reference number** — no account needed to view, and price/market value/notes/tags/saved URL are never fetched or sent. Item-level privacy doesn't restrict selection (ticking is explicit and overrides it); the create sheet just flags how many private items are included. Links are live for individually-picked watches (edits show up), but a folder selection freezes the watch list at creation time. **Shared links** lists every link sent with its label, item count, and view count, with one-tap **Revoke**.
 
 ---
 
