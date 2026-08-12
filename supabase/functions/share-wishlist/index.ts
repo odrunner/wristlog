@@ -150,7 +150,12 @@ serve(async (req) => {
       : `<div class="wl-grid">${wishlistCardsHtml(items)}</div>`}
     <div class="foot">Shared from WRotate · <a href="https://wrotate.com/open">Start your own wishlist</a></div>`;
 
-  bumpViews(db, token);
+  // The counter must outlive the response without delaying it: the runtime may
+  // tear the isolate down the moment the body is flushed, dropping the update.
+  // deno-lint-ignore no-explicit-any
+  const _rt = (globalThis as any).EdgeRuntime;
+  const _bump = bumpViews(db, token);
+  if (_rt && typeof _rt.waitUntil === "function") _rt.waitUntil(_bump);
 
   return new Response(htmlPage(ogTitle, ogDescription, ogImage, canonicalUrl, body), {
     headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8" },
