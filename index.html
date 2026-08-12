@@ -1603,12 +1603,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
          toolbar squeezed beside the "Wishlist" title (263px of 363px) — it
          only fits next to the title if allowed to wrap internally, which is
          exactly what we are trying to avoid. */
-      .page-header .wl-actions { flex: 0 0 100%; gap: .25rem; }
+      .page-header .wl-actions { flex: 0 0 100%; gap: .2rem; }
       .wl-view-toggle { gap: .2rem; }
       /* Horizontal padding only — vertical is unchanged so the tap target
          keeps its height while the row gets ~15px narrower (fits 375px). */
       .wl-view-btn { padding: .35rem .3rem; }
-      .wl-actions .btn-sm { padding: .38rem .5rem; font-size: .74rem; }
+      .wl-actions .btn-sm { padding: .32rem .4rem; font-size: .68rem; gap: .3rem; }
+      /* "Add from Photo" drops to icon-only on the phone toolbar — its text
+         was the single biggest contributor to overflow once Share (Task 6)
+         joined the row. aria-label on the button keeps the accessible name. */
+      .wl-actions .wl-actions-text { display: none; }
       #wishlist-modal .modal-actions { gap: .3rem; }
       #wishlist-modal .modal-actions .btn { padding: .6rem .55rem; font-size: .78rem; }
       .feed-edit-btn, .btn-icon { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; }
@@ -4715,7 +4719,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
           </button>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="openWishlistPhoto()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
+        <button class="btn btn-primary btn-sm" onclick="openWishlistPhoto()" aria-label="Add from Photo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="wl-actions-text">Add from Photo</span></button>
         <button class="btn btn-ghost btn-sm" onclick="openAddWishlist()">+ Add to Wishlist</button>
       </div>
     </div>
@@ -7767,7 +7771,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '11.21.20';
+const APP_VERSION = '11.21.26';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
