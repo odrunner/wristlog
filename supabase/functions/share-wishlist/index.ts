@@ -20,6 +20,7 @@ import {
   generateWishlistOgSvg,
   htmlPage,
   isShareUsable,
+  SHARE_SELECT,
   type ShareWatch,
   wishlistCardsHtml,
 } from "./lib.ts";
@@ -60,7 +61,7 @@ async function fetchShareData(db: any, token: string) {
   // array happens to contain.
   const { data: itemRows } = await db
     .from("wishlist")
-    .select("id, brand, name, ref, image, sort_order")
+    .select(SHARE_SELECT)
     .eq("user_id", row.user_id)
     .in("id", row.item_ids.length ? row.item_ids : ["__none__"])
     .order("sort_order", { ascending: true });
@@ -110,7 +111,10 @@ serve(async (req) => {
     const displayName = data?.profile?.display_name || data?.profile?.username || "WRotate";
     const svg = generateWishlistOgSvg(displayName, data?.items || []);
     return new Response(svg, {
-      headers: { ...CORS_HEADERS, "Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=300" },
+      // Short on purpose: a chat service's cached preview outlives a revocation by
+      // exactly this long, so it is the window in which a revoked link still shows
+      // its watches in a thread.
+      headers: { ...CORS_HEADERS, "Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=60" },
     });
   }
 

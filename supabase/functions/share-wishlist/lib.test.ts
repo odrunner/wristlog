@@ -7,11 +7,52 @@ import {
   htmlPage,
   initials,
   isShareUsable,
+  SHARE_SELECT,
   wishlistCardsHtml,
 } from "./lib.ts";
 
 const W = (id: string, brand: string, name: string, ref = "", image: string | null = null) =>
   ({ id, brand, name, ref, image });
+
+// SHARE_SELECT is what actually decides which columns leave the database. Every
+// other privacy guard in this feature operates on rows that this list already
+// admitted, so it is the one place where a widening slips past all of them:
+// index.ts has no test of its own, and changing its query to "*" would publish
+// price, notes and market value without failing anything else in the repo.
+const SHARE_SELECT_COLUMNS = SHARE_SELECT.split(",").map((c) => c.trim());
+
+Deno.test("SHARE_SELECT admits exactly the four published columns plus sort_order", () => {
+  assertEquals(SHARE_SELECT_COLUMNS, ["id", "brand", "name", "ref", "image", "sort_order"]);
+});
+
+Deno.test("SHARE_SELECT is never a wildcard", () => {
+  assertNotMatch(SHARE_SELECT, /\*/);
+});
+
+// Named one by one rather than as a loop over a blob, so a failure says which
+// field would have shipped.
+Deno.test("SHARE_SELECT excludes every suppressed wishlist column", () => {
+  for (
+    const forbidden of [
+      "price",
+      "market_price",
+      "market_price_date",
+      "market_price_src",
+      "watch_charts_url",
+      "notes",
+      "tags",
+      "url",
+      "added_date",
+      "wish_privacy",
+    ]
+  ) {
+    assertEquals(
+      SHARE_SELECT_COLUMNS.includes(forbidden),
+      false,
+      `SHARE_SELECT must not fetch "${forbidden}" — it would reach a share recipient`,
+    );
+  }
+});
 
 Deno.test("isShareUsable accepts a live row", () => {
   assertEquals(isShareUsable({ revoked_at: null }, null), true);

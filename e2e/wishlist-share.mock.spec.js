@@ -181,3 +181,37 @@ test('existing links are listed and can be revoked', async ({ page }) => {
   await page.click('[data-revoke="existingtoken000000000000000001"]');
   await expect(page.locator('#wl-share-modal')).not.toContainText('Watches of Switzerland');
 });
+
+// A brand is user text, and an apostrophe in it used to close the string literal
+// inside the folder checkbox's inline onclick — the parser decodes &#39; back to '
+// before the JS is parsed, so escAttr alone could not save it. The result was a
+// dead select-all checkbox (SyntaxError) for anyone with a brand like this one.
+const WL_APOSTROPHE = [
+  { id: 'wa1', brand: "Dad's Rolex", name: 'Datejust', ref: '126234', wish_privacy: 'public', sort_order: 0 },
+  { id: 'wa2', brand: "Dad's Rolex", name: 'Explorer', ref: '124270', wish_privacy: 'public', sort_order: 1 },
+];
+
+test('a folder whose brand contains an apostrophe still selects and expands', async ({ page }) => {
+  await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS, wishlist: WL_APOSTROPHE });
+  await injectSession(page);
+  await page.goto('/');
+  await waitForAppBoot(page);
+  await navigateTo(page, 'wishlist');
+  await expect(page.locator('#page-wishlist')).toBeVisible();
+
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+
+  await page.click('.wl-view-btn[data-view="folders"]');
+  await page.click('#wl-share-btn');
+
+  // The folder checkbox must take both watches of that brand.
+  await page.locator('.wl-folder-select').first().click();
+  await expect(page.locator('#wl-select-count')).toHaveText('2 selected');
+
+  // And the header itself must still expand — same interpolation bug, same element.
+  await page.locator('.wl-folder-header').first().click();
+  await expect(page.locator('.wl-folder').first()).toHaveClass(/open/);
+
+  expect(errors).toEqual([]);
+});

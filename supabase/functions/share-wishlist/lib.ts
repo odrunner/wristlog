@@ -14,6 +14,17 @@ export type ShareWatch = {
   image?: string | null;
 };
 
+// The decisive privacy boundary of this whole feature: the columns the public
+// page is allowed to read out of `wishlist`. It lives here, rather than inline in
+// index.ts, so lib.test.ts can assert on it — index.ts has no test, and widening
+// its select list to "*" would ship every suppressed field without failing one of
+// the ~2900 tests in this repo.
+//
+// sort_order is fetched only to order the grid and is stripped before render.
+// NEVER add: price, market_price, market_price_date, market_price_src,
+// watch_charts_url, notes, tags, url, added_date, wish_privacy.
+export const SHARE_SELECT = "id, brand, name, ref, image, sort_order";
+
 export function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }

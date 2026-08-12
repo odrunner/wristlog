@@ -7782,7 +7782,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '11.21.42';
+const APP_VERSION = '12.05.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -26851,8 +26851,19 @@ async function mintWishlistShare() {
   const btn = document.getElementById('wl-share-create');
   if (btn) btn.disabled = true;
   const label = (document.getElementById('wl-share-label')?.value || '').trim();
+  // Gate on the RESOLVED items, not the tick count: wishShareItems drops ids that
+  // are no longer in the wishlist, so a sync that empties the list mid-selection
+  // would otherwise mint a link carrying item_ids: [].
   const ids = wishShareItems(wishlist, _wlSelect).map(i => i.id);
-  const token = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)).replace(/-/g, '');
+  if (!ids.length) {
+    if (btn) btn.disabled = false;
+    toast('Nothing left to share', 'error');
+    return;
+  }
+  // uid() carries a getRandomValues fallback; String(Math.random()) does not, and
+  // on the non-HTTPS dev origin (where crypto.randomUUID is undefined) it can
+  // stringify exponentially into a 1-2 character token.
+  const token = uid().replace(/-/g, '');
   try {
     const { error } = await db.from('wishlist_shares')
       .insert({ token, user_id: currentUser.id, label: label || null, item_ids: ids });
@@ -27070,8 +27081,13 @@ function renderWishlist(force) {
         : `<div class="wl-folder-thumb-avatar" style="background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand,w.name)}</div>`
       ).join('');
       return `<div class="wl-folder${open ? ' open' : ''}" data-folder="${escAttr(f.key)}">
-        <div class="wl-folder-header" onclick="toggleWishlistFolder('${escAttr(f.key)}')" role="button" tabindex="0" aria-expanded="${open}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
-          ${_wlSelect ? `<input type="checkbox" class="wl-select-box wl-folder-select${folderSelectionState(_wlSelect, f.items) === 'some' ? ' partial' : ''}" ${folderSelectionState(_wlSelect, f.items) === 'all' ? 'checked' : ''} onclick="event.stopPropagation();toggleWlFolderSelect('${escAttr(f.key)}')" aria-label="Select all ${escAttr(f.brand)}">` : ''}
+        <!-- The folder key is a lowercased BRAND, so it is user text: an apostrophe
+             ("Dad's Rolex") closes an inline handler's string literal early, because
+             the parser decodes &#39; back to ' before the JS is parsed. escAttr is
+             enough for a plain attribute and not enough here — so the key travels in
+             a data-* attribute and the handler reads it off the element. -->
+        <div class="wl-folder-header" data-folder-key="${escAttr(f.key)}" onclick="toggleWishlistFolder(this.dataset.folderKey)" role="button" tabindex="0" aria-expanded="${open}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+          ${_wlSelect ? `<input type="checkbox" class="wl-select-box wl-folder-select${folderSelectionState(_wlSelect, f.items) === 'some' ? ' partial' : ''}" ${folderSelectionState(_wlSelect, f.items) === 'all' ? 'checked' : ''} data-folder-key="${escAttr(f.key)}" onclick="event.stopPropagation();toggleWlFolderSelect(this.dataset.folderKey)" aria-label="Select all ${escAttr(f.brand)}">` : ''}
           <span class="wl-folder-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
           <span class="wl-folder-name">${escHtml(f.brand)}</span>
           <span class="wl-folder-count">${f.items.length}</span>
