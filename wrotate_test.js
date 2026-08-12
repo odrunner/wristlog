@@ -428,6 +428,73 @@ export function groupWishlistByBrand(items) {
   singles.sort((a, b) => cmp(a.brand || '', b.brand || '') || cmp(a.name || '', b.name || ''));
   return { folders, singles };
 }
+
+// ══════════════════════════════════════════
+//  WISHLIST SHARING — selection model
+// ══════════════════════════════════════════
+// Selection is a Set of wishlist ids. Every helper returns a NEW Set: renders
+// compare identities to decide whether to redraw, and a mutated Set would look
+// unchanged.
+
+export function toggleWishSelection(selected, id) {
+  const next = new Set(selected);
+  if (next.has(id)) next.delete(id); else next.add(id);
+  return next;
+}
+
+// A brand folder's checkbox is tri-state, so it needs the whole folder's answer
+// rather than any one item's.
+export function folderSelectionState(selected, items) {
+  const list = items || [];
+  if (!list.length) return 'none';
+  const n = list.filter(i => selected.has(i.id)).length;
+  if (n === 0) return 'none';
+  return n === list.length ? 'all' : 'some';
+}
+
+// Half-selected means "the user wants this folder" — completing it is the
+// useful move, so only a fully-selected folder empties.
+export function toggleWishFolderSelection(selected, items) {
+  const list = items || [];
+  const next = new Set(selected);
+  const state = folderSelectionState(selected, list);
+  for (const it of list) {
+    if (state === 'all') next.delete(it.id); else next.add(it.id);
+  }
+  return next;
+}
+
+// THE PRIVACY BOUNDARY on the client. Five fields go into a share link and
+// nothing else — price, market value, notes, tags and the saved URL never
+// leave the device. Never widen this to spread the source object.
+export function wishShareItems(wishlist, selected) {
+  return (wishlist || [])
+    .filter(w => selected.has(w.id))
+    .map(w => ({
+      id: w.id,
+      brand: w.brand || '',
+      name: w.name || '',
+      ref: w.ref || '',
+      image: w.image || null,
+    }));
+}
+
+// Informational only: the share sheet says how many non-public items are in the
+// selection. It never blocks — an explicit tick outranks a passive setting.
+export function wishSharePrivateCount(wishlist, selected) {
+  return (wishlist || []).filter(w =>
+    selected.has(w.id) && w.wishPrivacy && w.wishPrivacy !== 'public'
+  ).length;
+}
+
+// How a minted link is named in the shared-links list.
+export function wishShareLinkLabel(share) {
+  const raw = ((share && share.label) || '').trim();
+  if (raw) return raw;
+  const d = share && share.created_at ? String(share.created_at).slice(0, 10) : '';
+  return d ? `Link from ${fmtDate(d)}` : 'Untitled link';
+}
+
 export function urlDomain(url) {
   if (!url) return '';
   try { return new URL(url).hostname.replace(/^www\./, ''); }
