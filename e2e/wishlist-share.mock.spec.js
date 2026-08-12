@@ -87,3 +87,17 @@ test('Cancel leaves selection mode and restores the header', async ({ page }) =>
   await expect(page.locator('.wl-select-box')).toHaveCount(0);
   await expect(page.locator('#wl-share-btn')).toBeVisible();
 });
+
+test('selection bar hides when wishlist empties while in selection mode', async ({ page }) => {
+  await openWishlist(page);
+  await page.click('#wl-share-btn');
+  await expect(page.locator('#wl-select-bar')).toBeVisible();
+  // Empty the wishlist the way a sync would, by evaluating in the page
+  await page.evaluate(() => {
+    wishlist.length = 0;
+    renderWishlist(true);
+  });
+  // Bar and Share button should both be hidden
+  await expect(page.locator('#wl-select-bar')).toBeHidden();
+  await expect(page.locator('#wl-share-btn')).toBeHidden();
+});

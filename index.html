@@ -7754,7 +7754,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '11.21.05';
+const APP_VERSION = '11.21.09';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -26834,7 +26834,7 @@ function renderWishlist(force) {
   const bar = document.getElementById('wl-select-bar');
   if (shareBtn) shareBtn.style.display = (visible.length && !_wlSelect) ? '' : 'none';
   if (bar) {
-    bar.style.display = _wlSelect ? 'flex' : 'none';
+    bar.style.display = (_wlSelect && visible.length) ? 'flex' : 'none';
     if (_wlSelect) {
       const n = _wlSelect.size;
       document.getElementById('wl-select-count').textContent = `${n} selected`;
