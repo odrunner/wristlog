@@ -1302,6 +1302,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wl-brand { font-size: .78rem; color: var(--muted); margin-top: .1rem; }
     .wl-meta  { font-size: .75rem; color: var(--muted); margin-top: .25rem; }
 
+    .wl-select-box { appearance:none; -webkit-appearance:none; width:20px; height:20px; flex-shrink:0; border:2px solid var(--border); border-radius:5px; background:var(--surface); cursor:pointer; position:relative; }
+    .wl-select-box:checked { background:var(--gold); border-color:var(--gold); }
+    .wl-select-box:checked::after { content:''; position:absolute; left:6px; top:2px; width:5px; height:10px; border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg); }
+    .wl-select-box.partial { background:color-mix(in srgb, var(--gold) 30%, transparent); border-color:var(--gold); }
+    .wl-select-box.partial::after { content:''; position:absolute; left:3px; top:7px; width:10px; height:2px; background:var(--gold); }
+    .wl-tile .wl-select-box { position:absolute; top:.4rem; left:.4rem; z-index:2; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+    .wl-tile { position:relative; }
+
     /* Wishlist view toggle */
     /* Wishlist header actions: view toggle + add buttons all on one row */
     /* wrap, not nowrap: with nowrap the row grew past the viewport on phones
@@ -4695,6 +4703,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="page-header">
       <h1 class="page-title">Wishlist</h1>
       <div class="wl-actions">
+        <button id="wl-share-btn" class="btn btn-ghost btn-sm" onclick="enterWishlistSelect()" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share</button>
         <div id="wishlist-view-toggle" class="wl-view-toggle" style="display:none;">
           <button type="button" class="wl-view-btn active" data-view="list" onclick="setWishlistView('list')" title="List view" aria-label="List view">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
@@ -4709,6 +4718,14 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="btn btn-primary btn-sm" onclick="openWishlistPhoto()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
         <button class="btn btn-ghost btn-sm" onclick="openAddWishlist()">+ Add to Wishlist</button>
       </div>
+    </div>
+    <div id="wl-select-bar" style="display:none;align-items:center;gap:.5rem;flex-wrap:wrap;padding:.5rem .75rem;margin-bottom:.75rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);">
+      <span id="wl-select-count" style="font-size:.82rem;font-weight:600;">0 selected</span>
+      <button id="wl-select-all" class="btn btn-ghost btn-sm" onclick="wlSelectAll()">Select all</button>
+      <button id="wl-select-none" class="btn btn-ghost btn-sm" onclick="wlSelectNone()">Clear</button>
+      <span style="flex:1;"></span>
+      <button id="wl-select-cancel" class="btn btn-ghost btn-sm" onclick="exitWishlistSelect()">Cancel</button>
+      <button id="wl-share-go" class="btn btn-primary btn-sm" onclick="openWishlistShareSheet()" disabled>Share</button>
     </div>
     <div id="wishlist-grid"></div>
   </div>
@@ -7737,7 +7754,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '11.20.47';
+const APP_VERSION = '11.21.05';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -26616,6 +26633,116 @@ function groupWishlistByBrand(items) {
   singles.sort((a, b) => cmp(a.brand || '', b.brand || '') || cmp(a.name || '', b.name || ''));
   return { folders, singles };
 }
+
+// Mirrored from wrotate_test.js (see tests/wishlist-share.test.js). Both copies
+// must stay identical — the tests only see the module copy.
+
+// ══════════════════════════════════════════
+//  WISHLIST SHARING — selection model
+// ══════════════════════════════════════════
+// Selection is a Set of wishlist ids. Every helper returns a NEW Set: renders
+// compare identities to decide whether to redraw, and a mutated Set would look
+// unchanged.
+
+function toggleWishSelection(selected, id) {
+  const next = new Set(selected);
+  if (next.has(id)) next.delete(id); else next.add(id);
+  return next;
+}
+
+// A brand folder's checkbox is tri-state, so it needs the whole folder's answer
+// rather than any one item's.
+function folderSelectionState(selected, items) {
+  const list = items || [];
+  if (!list.length) return 'none';
+  const n = list.filter(i => selected.has(i.id)).length;
+  if (n === 0) return 'none';
+  return n === list.length ? 'all' : 'some';
+}
+
+// Half-selected means "the user wants this folder" — completing it is the
+// useful move, so only a fully-selected folder empties.
+function toggleWishFolderSelection(selected, items) {
+  const list = items || [];
+  const next = new Set(selected);
+  const state = folderSelectionState(selected, list);
+  for (const it of list) {
+    if (state === 'all') next.delete(it.id); else next.add(it.id);
+  }
+  return next;
+}
+
+// THE PRIVACY BOUNDARY on the client. Five fields go into a share link and
+// nothing else — price, market value, notes, tags and the saved URL never
+// leave the device. Never widen this to spread the source object.
+function wishShareItems(wishlist, selected) {
+  return (wishlist || [])
+    .filter(w => selected.has(w.id))
+    .map(w => ({
+      id: w.id,
+      brand: w.brand || '',
+      name: w.name || '',
+      ref: w.ref || '',
+      image: w.image || null,
+    }));
+}
+
+// Informational only: the share sheet says how many non-public items are in the
+// selection. It never blocks — an explicit tick outranks a passive setting.
+function wishSharePrivateCount(wishlist, selected) {
+  return (wishlist || []).filter(w =>
+    selected.has(w.id) && w.wishPrivacy && w.wishPrivacy !== 'public'
+  ).length;
+}
+
+// How a minted link is named in the shared-links list.
+function wishShareLinkLabel(share) {
+  const raw = ((share && share.label) || '').trim();
+  if (raw) return raw;
+  const d = share && share.created_at ? String(share.created_at).slice(0, 10) : '';
+  return d ? `Link from ${fmtDate(d)}` : 'Untitled link';
+}
+
+// null = selection mode off. A Set = on, holding the ticked wishlist ids.
+// Deliberately in-memory only: a stale selection restored days later would be
+// a trap, and a share is a single deliberate act.
+let _wlSelect = null;
+
+function enterWishlistSelect() {
+  _wlSelect = new Set();
+  renderWishlist(true);
+}
+function exitWishlistSelect() {
+  _wlSelect = null;
+  renderWishlist(true);
+}
+function toggleWlSelect(id) {
+  if (!_wlSelect) return;
+  _wlSelect = toggleWishSelection(_wlSelect, id);
+  renderWishlist(true);
+}
+function toggleWlFolderSelect(brandKey) {
+  if (!_wlSelect) return;
+  const { folders } = groupWishlistByBrand(wishlist);
+  const folder = folders.find(f => f.key === brandKey);
+  if (!folder) return;
+  _wlSelect = toggleWishFolderSelection(_wlSelect, folder.items);
+  renderWishlist(true);
+}
+function wlSelectAll() {
+  if (!_wlSelect) return;
+  _wlSelect = new Set(wishlist.map(w => w.id));
+  renderWishlist(true);
+}
+function wlSelectNone() {
+  if (!_wlSelect) return;
+  _wlSelect = new Set();
+  renderWishlist(true);
+}
+
+// Replaced in full by the real share sheet in the next task.
+function openWishlistShareSheet() { toast('Coming soon'); }
+
 function urlDomain(url) {
   if (!url) return '';
   try { return new URL(url).hostname.replace(/^www\./, ''); }
@@ -26643,6 +26770,8 @@ function toggleWishlistFolder(key) {
 }
 
 function wlCardHtml(w, draggable) {
+  const selecting = !!_wlSelect;
+  const checked = selecting && _wlSelect.has(w.id);
   const thumb = w.image
     ? `<img loading="lazy" src="${escHtml(w.image)}" class="wl-card-img" alt="" onerror="this.style.display='none'">`
     : `<div class="wl-card-avatar" style="background:${escHtml(w.color||"#c9a84c")};color:${initialsTextColor(w.color||"#c9a84c")}">${initials(w.brand,w.name)}</div>`;
@@ -26651,16 +26780,25 @@ function wlCardHtml(w, draggable) {
     w.ref   ? w.ref : '',
     w.addedDate ? fmtDate(w.addedDate) : ''
   ].filter(Boolean).join(' · ');
-  const dragAttrs = draggable ? ` draggable="true"
+  // Dragging and selecting are different gestures on the same card, so
+  // reordering is suspended while a share selection is in progress.
+  const dragAttrs = (draggable && !selecting) ? ` draggable="true"
     ondragstart="wlDragStart(event,'${w.id}')"
     ondragover="wlDragOver(event)"
     ondrop="wlDrop(event,'${w.id}')"
     ondragend="wlDragEnd(event)"` : '';
-  const handle = draggable ? `<span class="drag-handle" title="Drag to reorder" ontouchstart="wlTouchStart(event,'${w.id}')">⠿</span>` : '';
+  const handle = (draggable && !selecting) ? `<span class="drag-handle" title="Drag to reorder" ontouchstart="wlTouchStart(event,'${w.id}')">⠿</span>` : '';
+  const box = selecting
+    ? `<input type="checkbox" class="wl-select-box" ${checked ? 'checked' : ''} onclick="event.stopPropagation();toggleWlSelect('${w.id}')" aria-label="Select ${escAttr(w.brand + ' ' + w.name)}">`
+    : '';
+  // In selection mode the whole card is a toggle: a tap that opened the editor
+  // would make picking watches impossible.
+  const infoClick = selecting ? `toggleWlSelect('${w.id}')` : `openEditWishlist('${w.id}')`;
   return `<div class="wl-card" data-id="${w.id}"${dragAttrs}>
+    ${box}
     ${handle}
     ${thumb}
-    <div class="wl-info" onclick="openEditWishlist('${w.id}')" style="cursor:pointer">
+    <div class="wl-info" onclick="${infoClick}" style="cursor:pointer">
       <div class="wl-name"><span class="inline-val"><span>${escHtml(w.name)}</span></span></div>
       <div class="wl-brand">${escHtml(w.brand)}</div>
       ${meta ? `<div class="wl-meta">${meta}</div>` : ''}
@@ -26692,6 +26830,17 @@ function renderWishlist(force) {
     toggle.style.display = visible.length ? 'flex' : 'none';
     toggle.querySelectorAll('.wl-view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === _wishlistView));
   }
+  const shareBtn = document.getElementById('wl-share-btn');
+  const bar = document.getElementById('wl-select-bar');
+  if (shareBtn) shareBtn.style.display = (visible.length && !_wlSelect) ? '' : 'none';
+  if (bar) {
+    bar.style.display = _wlSelect ? 'flex' : 'none';
+    if (_wlSelect) {
+      const n = _wlSelect.size;
+      document.getElementById('wl-select-count').textContent = `${n} selected`;
+      document.getElementById('wl-share-go').disabled = n === 0;
+    }
+  }
   if (visible.length === 0) {
     el.className = '';
     el.innerHTML = `<div class="empty">
@@ -26716,13 +26865,20 @@ function renderWishlist(force) {
       const imgInner = w.image
         ? `<img loading="lazy" src="${escHtml(w.image)}" class="wl-tile-img" alt="" onerror="wlTileImgFallback(this)" data-color="${escAttr(_wc)}" data-text-color="${escAttr(initialsTextColor(_wc))}" data-initials="${escAttr(initials(w.brand,w.name))}">`
         : `<div class="wl-tile-avatar" style="background:${escHtml(_wc)};color:${initialsTextColor(_wc)}">${initials(w.brand,w.name)}</div>`;
-      const imgLink = `<div class="wl-tile-imglink" onclick="openEditWishlist('${w.id}')">${imgInner}</div>`;
+      const selecting = !!_wlSelect;
+      const checked = selecting && _wlSelect.has(w.id);
+      const tileClick = selecting ? `toggleWlSelect('${w.id}')` : `openEditWishlist('${w.id}')`;
+      const box = selecting
+        ? `<input type="checkbox" class="wl-select-box" ${checked ? 'checked' : ''} onclick="event.stopPropagation();toggleWlSelect('${w.id}')" aria-label="Select ${escAttr((w.brand||'') + ' ' + (w.name||''))}">`
+        : '';
+      const imgLink = `<div class="wl-tile-imglink" onclick="${tileClick}">${imgInner}</div>`;
       const urlLine = w.url
         ? `<a href="${escHtml(w.url)}" target="_blank" rel="noopener noreferrer" class="wl-tile-url">${escHtml(urlDomain(w.url))} ↗</a>`
         : '';
       return `<div class="wl-tile" data-priv="${escHtml(w.wishPrivacy||'')}">
+        ${box}
         ${imgLink}
-        <div class="wl-tile-name" onclick="openEditWishlist('${w.id}')">${escHtml(w.name)}</div>
+        <div class="wl-tile-name" onclick="${tileClick}">${escHtml(w.name)}</div>
         ${urlLine}
       </div>`;
     }).join('');
@@ -26739,6 +26895,7 @@ function renderWishlist(force) {
       ).join('');
       return `<div class="wl-folder${open ? ' open' : ''}" data-folder="${escAttr(f.key)}">
         <div class="wl-folder-header" onclick="toggleWishlistFolder('${escAttr(f.key)}')" role="button" tabindex="0" aria-expanded="${open}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+          ${_wlSelect ? `<input type="checkbox" class="wl-select-box wl-folder-select${folderSelectionState(_wlSelect, f.items) === 'some' ? ' partial' : ''}" ${folderSelectionState(_wlSelect, f.items) === 'all' ? 'checked' : ''} onclick="event.stopPropagation();toggleWlFolderSelect('${escAttr(f.key)}')" aria-label="Select all ${escAttr(f.brand)}">` : ''}
           <span class="wl-folder-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
           <span class="wl-folder-name">${escHtml(f.brand)}</span>
           <span class="wl-folder-count">${f.items.length}</span>

@@ -50,6 +50,8 @@ const VERBATIM = [
   'shouldShowFactModal', 'pickFactModalWatch', 'shouldAttachFactOnEdit', 'showsFunFact',
   'npIdentifyWait', 'syncedIds', 'promoAudienceMatches', 'eligiblePromoSlots',
   'promoSlotPositions', 'PROMO_AUDIENCES', 'monthRecap', 'promoSlotEpoch',
+  'toggleWishSelection', 'folderSelectionState', 'toggleWishFolderSelection',
+  'wishShareItems', 'wishSharePrivateCount', 'wishShareLinkLabel',
 ];
 
 const ADAPTED = [
