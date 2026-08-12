@@ -7771,7 +7771,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '11.21.26';
+const APP_VERSION = '11.21.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17580,12 +17580,14 @@ async function loadAdminStats() {
     const dauRes = await withTimeout(db.rpc('admin_active_dau'), 10000);
     const dauDod = dauRes.data || {};
     // Email unsubscribes + measurement volume split by detection engine + push approvals
-    const [unsubRes, engineRes, pushRes] = await withTimeout(Promise.all([
+    const [unsubRes, engineRes, pushRes, wlShareRes] = await withTimeout(Promise.all([
       db.rpc('admin_unsub_stats'), db.rpc('admin_engine_stats'), db.rpc('admin_push_stats'),
+      db.rpc('admin_wishlist_share_stats'),
     ]), 10000);
     const unsub = unsubRes.data || {};
     const eng = engineRes.data || {};
     const push = pushRes.data || {};
+    const wls = wlShareRes.data || {};
 
     // Per-user breakdowns via SECURITY DEFINER RPCs (bypass RLS)
     const d1ago = new Date(Date.now() - 24 * 3600000).toISOString();
@@ -17833,6 +17835,13 @@ async function loadAdminStats() {
         ${statRow('Fun fact expand rate', (Number(fc.impressions_total) > 0 ? Math.round(Number(fc.clicks_total) / Number(fc.impressions_total) * 100) : 0) + '%', null, 'clicks / impressions')}
         ${statRow('Fun facts generated', Number(fc.generated_total) || 0, Number(fc.generated_24h) || 0)}
         ${statRow('Watches with facts', Number(fc.watches_total) || 0, Number(fc.watches_24h) || 0)}
+        ${statRow('Wishlist links', Number(wls.links_total) || 0, Number(wls.links_24h) || 0)}
+        ${statRow('Wishlist sharers', Number(wls.sharers_total) || 0, Number(wls.sharers_24h) || 0)}
+        ${statRow('Watches shared', Number(wls.items_total) || 0, null,
+          (Number(wls.links_total) > 0 ? (Number(wls.items_total) / Number(wls.links_total)).toFixed(1) : '0') + ' per link')}
+        ${statRow('Wishlist link opens', Number(wls.opens_total) || 0, null,
+          (Number(wls.links_total) > 0 ? Math.round(Number(wls.links_opened) / Number(wls.links_total) * 100) : 0) + '% of links opened')}
+        ${statRow('Active links', Number(wls.links_active) || 0, null, (Number(wls.links_revoked) || 0) + ' revoked')}
         ${statRow('Advanced mode (24h)', advSessions24h, advDelta, advUsers24h > 0 ? advUsers24h + ' user' + (advUsers24h === 1 ? '' : 's') : '')}
         ${statRow('Measurements', extMsr, null, msr24h + ' (24h)' + inlineDelta(msr24h - msrPrev24h, false))}
         ${engineRow('Measurements — Pro V2', eng.prov2_sessions, eng.prov2_users, eng.prov2_sessions_24h, eng.prov2_sessions_prev24h)}
