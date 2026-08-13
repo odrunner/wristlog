@@ -944,3 +944,55 @@ test.describe('admin Promos tab — slot list rendering (mocked)', () => {
     expect(info.label).toBe('Delete this slot');
   });
 });
+
+// The action row wrapped Delete onto a second line, making every card taller than
+// its content. It must stay one line at the widths the admin panel actually gets.
+test.describe('admin Promos tab — action row fits one line (mocked)', () => {
+  const ADMIN_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
+  const SIZES = [
+    { label: '1280px', width: 1280 },
+    { label: '820px', width: 820 },
+    { label: '430px', width: 430 },
+    { label: '390px', width: 390 },
+    { label: '375px', width: 375 },
+  ];
+
+  for (const { label, width } of SIZES) {
+    test(`one row, no overflow at ${label}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+      const report = await page.evaluate(async (id) => {
+        currentUser = { id };
+        // Geometry needs the row actually laid out: both the admin PAGE and the
+        // Promos SUB-TAB must be on, or .admin-tab stays display:none and every
+        // rect comes back zero.
+        document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
+        document.getElementById('page-admin').classList.add('active');
+        window.switchAdminTab('promos');
+        // 'active' gives the widest lifecycle set: Edit + Pause + Archive.
+        const slots = [{ id: 's1', heading: 'What should we build next?', eyebrow: 'Help us improve', variant: 'band', size: 'prompt', status: 'active', audience: 'all' }];
+        const slotsChain = { order: async () => ({ data: slots, error: null }) };
+        const emptyChain = { limit: () => emptyChain, order: async () => ({ data: [], error: null }), maybeSingle: async () => ({ data: null, error: null }) };
+        db.from = (table) => ({ select: () => (table === 'promo_slots' ? slotsChain : emptyChain) });
+        db.rpc = async () => ({ data: [], error: null });
+        await window.loadPromoAdmin();
+        const row = document.querySelector('.promo-slot-actions');
+        const kids = [...row.children].filter((c) => c.getClientRects().length && c.tagName === 'BUTTON');
+        // Cluster by vertical centre: buttons of differing heights on the same
+        // visual row legitimately differ by a few px.
+        const centers = kids.map((c) => { const b = c.getBoundingClientRect(); return b.top + b.height / 2; }).sort((a, b) => a - b);
+        const rows = centers.reduce((acc, y) => {
+          if (!acc.length || y - acc[acc.length - 1] > 8) acc.push(y);
+          return acc;
+        }, []).length;
+        const rb = row.getBoundingClientRect();
+        const spills = kids.filter((c) => c.getBoundingClientRect().right > rb.right + 1).length;
+        return { rows, spills, buttons: kids.length };
+      }, ADMIN_ID);
+
+      expect(report.buttons).toBe(5);   // Edit, Pause, Archive, Reset, Delete
+      expect(report.rows).toBe(1);
+      expect(report.spills).toBe(0);
+    });
+  }
+});
