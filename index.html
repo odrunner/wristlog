@@ -7792,7 +7792,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '12.21.17';
+const APP_VERSION = '12.21.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17354,16 +17354,21 @@ function seedCollectionExtrasDraft() {
 // — including an authorised dealer, which is the case that made us build it.
 // Seeded as a DRAFT only: nothing sends until it is queued and the drain runs.
 function seedWishlistShareDraft() {
-  const FLAG = 'wr_seed_wishlist_share_draft_v1';
+  // v2 re-seeds over v1 for anyone who already opened the Promos tab: the angle
+  // changed from "here is a feature" to "we rebuilt it". Both subjects are
+  // filtered out below so the older draft does not linger beside this one.
+  const FLAG = 'wr_seed_wishlist_share_draft_v2';
   if (localStorage.getItem(FLAG)) return;
   localStorage.setItem(FLAG, '1');
-  const SUBJECT = 'The watch you keep thinking about';
-  const drafts = getBroadcastDrafts().filter(d => d.subject !== SUBJECT);
+  const SUBJECT = 'We rebuilt the wishlist';
+  const OLD_SUBJECTS = ['The watch you keep thinking about'];
+  const drafts = getBroadcastDrafts()
+    .filter(d => d.subject !== SUBJECT && !OLD_SUBJECTS.includes(d.subject));
   drafts.unshift({
     id: Date.now() + 6,
     subject: SUBJECT,
-    heading: 'Your wishlist, one snap away',
-    body: `Most wishlists live in screenshots you never open again. This one is built to be looked at — and to be sent.
+    heading: 'Your wishlist, rebuilt',
+    body: `The wishlist was the quietest corner of WRotate — somewhere watches went in and rarely came out again. We have rebuilt it around the two things you actually want from a list like that: getting a watch onto it in seconds, and getting it in front of someone who can help you find one.
 
 <b>Add one in a snap.</b> Take a photo of a watch, or share a screenshot straight from Photos, and we identify it and fill the details in for you. No typing out reference numbers.
 
@@ -17371,7 +17376,7 @@ function seedWishlistShareDraft() {
 
 <b>Or just look at it.</b> Gallery view drops the text entirely and gives you the photographs, full width. It’s the closest thing to laying the watches out on a table.
 
-<b>Send it to anyone.</b> Tick the watches you want — or a whole brand folder in one tap — and share a link. Your partner hunting for a gift. An authorised dealer sourcing your next piece. They need no account, and your prices and notes never leave your phone. Revoke the link whenever you like.
+<b>And now you can send it. </b>This is the new part. Tick the watches you want — or a whole brand folder in one tap — and share a link. Your partner hunting for a gift. An authorised dealer sourcing your next piece. They need no account, and your prices and notes never leave your phone. Revoke the link whenever you like.
 
 <a href="https://wrotate.com/open">Open your wishlist →</a>
 
@@ -17381,7 +17386,6 @@ The WRotate team`,
   });
   localStorage.setItem(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 10)));
 }
-
 function renderDevFlags() {
   const el = document.getElementById('admin-dev-flags');
   if (!el) return;
