@@ -896,3 +896,51 @@ test.describe('admin Promos tab — delete slot (mocked)', () => {
     expect(msg).toContain('Events deleted');
   });
 });
+
+// Two list-rendering rules: the delete control is an icon so the action row fits
+// on one line, and a slot with no heading of its own still lists identifiably.
+test.describe('admin Promos tab — slot list rendering (mocked)', () => {
+  const ADMIN_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
+
+  test('a headingless recap slot falls back to its eyebrow', async ({ page }) => {
+    await page.goto('/');
+    const titles = await page.evaluate(async (id) => {
+      currentUser = { id };
+      const slots = [
+        { id: 's1', heading: 'Authored card', eyebrow: 'New', variant: 'classic', size: 'prompt', status: 'active', audience: 'all' },
+        { id: 's2', heading: '', eyebrow: 'Your month in review', variant: 'recap', size: 'prompt', status: 'active', audience: 'all' },
+        { id: 's3', heading: '', eyebrow: '', variant: 'band', size: 'prompt', status: 'active', audience: 'all' },
+      ];
+      const slotsChain = { order: async () => ({ data: slots, error: null }) };
+      const emptyChain = { limit: () => emptyChain, order: async () => ({ data: [], error: null }), maybeSingle: async () => ({ data: null, error: null }) };
+      db.from = (table) => ({ select: () => (table === 'promo_slots' ? slotsChain : emptyChain) });
+      db.rpc = async () => ({ data: [], error: null });
+      await window.loadPromoAdmin();
+      return [...document.querySelectorAll('#promo-list .admin-card > div:first-child')].map((d) => d.textContent.trim());
+    }, ADMIN_ID);
+
+    expect(titles[0]).toBe('Authored card');
+    expect(titles[1]).toBe('Your month in review');   // eyebrow stands in
+    expect(titles[2]).toBe('band card');              // nothing else to show
+    expect(titles.every((t) => t.length > 0)).toBe(true);
+  });
+
+  test('delete is an icon button that keeps its accessible name', async ({ page }) => {
+    await page.goto('/');
+    const info = await page.evaluate(async (id) => {
+      currentUser = { id };
+      const slots = [{ id: 's1', heading: 'Authored card', eyebrow: 'New', variant: 'classic', size: 'prompt', status: 'active', audience: 'all' }];
+      const slotsChain = { order: async () => ({ data: slots, error: null }) };
+      const emptyChain = { limit: () => emptyChain, order: async () => ({ data: [], error: null }), maybeSingle: async () => ({ data: null, error: null }) };
+      db.from = (table) => ({ select: () => (table === 'promo_slots' ? slotsChain : emptyChain) });
+      db.rpc = async () => ({ data: [], error: null });
+      await window.loadPromoAdmin();
+      const btn = document.querySelector('[data-promo-delete]');
+      return { text: btn.textContent.trim(), label: btn.getAttribute('aria-label'), svgs: btn.querySelectorAll('svg').length };
+    }, ADMIN_ID);
+
+    expect(info.text).toBe('');            // no word, so the row stays one line
+    expect(info.svgs).toBe(1);
+    expect(info.label).toBe('Delete this slot');
+  });
+});
