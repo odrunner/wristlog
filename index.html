@@ -7782,7 +7782,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '12.06.55';
+const APP_VERSION = '12.20.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16963,6 +16963,7 @@ function showAdminPage() {
   seedWinbackFunFactDraft();
   seedWishlistPhotoDraft();
   seedCollectionExtrasDraft();
+  seedWishlistShareDraft();
   renderBroadcastDrafts();
   renderBroadcastQueueStatus();
   renderDevFlags();
@@ -17332,6 +17333,39 @@ function seedCollectionExtrasDraft() {
 <b>And what it’s all worth.</b> Inside a watch, <b>Check price</b> gives an AI market estimate. The <b>$</b> button in the collection header prices your whole collection at once. Values are kept over time, so you can see which way your collection is moving.
 
 <a href="https://wrotate.com/open">Open WRotate →</a>`,
+    imageUrls: [],
+    savedAt: Date.now(),
+  });
+  localStorage.setItem(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 10)));
+}
+
+// Wishlist sharing shipped 2026-08-12. The four beats the promo makes: adding by
+// photo, the three views, the gallery, and sending a slice of the list to anyone
+// — including an authorised dealer, which is the case that made us build it.
+// Seeded as a DRAFT only: nothing sends until it is queued and the drain runs.
+function seedWishlistShareDraft() {
+  const FLAG = 'wr_seed_wishlist_share_draft_v1';
+  if (localStorage.getItem(FLAG)) return;
+  localStorage.setItem(FLAG, '1');
+  const SUBJECT = 'The watch you keep thinking about';
+  const drafts = getBroadcastDrafts().filter(d => d.subject !== SUBJECT);
+  drafts.unshift({
+    id: Date.now() + 6,
+    subject: SUBJECT,
+    heading: 'Your wishlist, one snap away',
+    body: `Most wishlists live in screenshots you never open again. This one is built to be looked at — and to be sent.
+
+<b>Add one in a snap.</b> Take a photo of a watch, or share a screenshot straight from Photos, and we identify it and fill the details in for you. No typing out reference numbers.
+
+<b>See it the way you think about it.</b> A clean list when you want the facts. Brand folders when you’d rather see every Rolex in one place. Both are one tap apart.
+
+<b>Or just look at it.</b> Gallery view drops the text entirely and gives you the photographs, full width. It’s the closest thing to laying the watches out on a table.
+
+<b>Send it to anyone.</b> Tick the watches you want — or a whole brand folder in one tap — and share a link. Your partner hunting for a gift. An authorised dealer sourcing your next piece. They need no account, and your prices and notes never leave your phone. Revoke the link whenever you like.
+
+<a href="https://wrotate.com/open">Open your wishlist →</a>
+
+The WRotate team`,
     imageUrls: [],
     savedAt: Date.now(),
   });
