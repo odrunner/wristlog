@@ -811,3 +811,88 @@ test.describe('admin preview is inert (mocked)', () => {
     expect(observed).toEqual(['promocard-p1']);
   });
 });
+
+// Archive keeps a slot and its numbers; Delete is the lever for the ones that
+// should never have existed. It must clear promo_events first — those rows carry
+// the only record of who saw the card, and orphaning them would keep inflating
+// the promo tallies for a slot no longer in the list.
+test.describe('admin Promos tab — delete slot (mocked)', () => {
+  const ADMIN_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
+  const NON_ADMIN_ID = '11111111-1111-1111-1111-111111111111';
+
+  test('deletes the events first, then the slot', async ({ page }) => {
+    await page.goto('/');
+    const calls = await page.evaluate(async (id) => {
+      currentUser = { id };
+      window.showConfirm = async () => true;
+      const calls = [];
+      db.from = (table) => ({
+        delete: () => ({ eq: async (col, val) => { calls.push({ table, col, val }); return { data: null, error: null }; } }),
+      });
+      db.rpc = async () => ({ data: [], error: null });
+      _promoAdminSlots = [{ id: 'slot-1', heading: 'Test slot' }];
+      window.loadPromoAdmin = async () => {};
+      await window.deletePromoSlot('slot-1');
+      return calls;
+    }, ADMIN_ID);
+
+    expect(calls.map((c) => c.table)).toEqual(['promo_events', 'promo_slots']);
+    expect(calls[0].col).toBe('slot_id');
+    expect(calls[1].col).toBe('id');
+    expect(calls.every((c) => c.val === 'slot-1')).toBe(true);
+  });
+
+  test('declining the confirmation deletes nothing', async ({ page }) => {
+    await page.goto('/');
+    const calls = await page.evaluate(async (id) => {
+      currentUser = { id };
+      window.showConfirm = async () => false;
+      const calls = [];
+      db.from = (table) => ({ delete: () => ({ eq: async () => { calls.push(table); return { data: null, error: null }; } }) });
+      _promoAdminSlots = [{ id: 'slot-1', heading: 'Test slot' }];
+      window.loadPromoAdmin = async () => {};
+      await window.deletePromoSlot('slot-1');
+      return calls;
+    }, ADMIN_ID);
+    expect(calls).toEqual([]);
+  });
+
+  test('a non-admin deletes nothing', async ({ page }) => {
+    await page.goto('/');
+    const calls = await page.evaluate(async (id) => {
+      currentUser = { id };
+      window.showConfirm = async () => true;
+      const calls = [];
+      db.from = (table) => ({ delete: () => ({ eq: async () => { calls.push(table); return { data: null, error: null }; } }) });
+      _promoAdminSlots = [{ id: 'slot-1', heading: 'Test slot' }];
+      window.loadPromoAdmin = async () => {};
+      await window.deletePromoSlot('slot-1');
+      return calls;
+    }, NON_ADMIN_ID);
+    expect(calls).toEqual([]);
+  });
+
+  // If the slot delete fails after the events are gone, the admin must be told the
+  // history is already cleared rather than shown a bare "could not delete".
+  test('a failed slot delete still reports that the events went', async ({ page }) => {
+    await page.goto('/');
+    const msg = await page.evaluate(async (id) => {
+      currentUser = { id };
+      window.showConfirm = async () => true;
+      let seen = '';
+      window.toast = (m) => { seen = m; };
+      db.from = (table) => ({
+        delete: () => ({
+          eq: async () => (table === 'promo_slots'
+            ? { data: null, error: { message: 'nope' } }
+            : { data: null, error: null }),
+        }),
+      });
+      _promoAdminSlots = [{ id: 'slot-1', heading: 'Test slot' }];
+      window.loadPromoAdmin = async () => {};
+      await window.deletePromoSlot('slot-1');
+      return seen;
+    }, ADMIN_ID);
+    expect(msg).toContain('Events deleted');
+  });
+});

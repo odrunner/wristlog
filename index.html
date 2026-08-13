@@ -7782,7 +7782,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '12.20.52';
+const APP_VERSION = '12.20.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -20112,6 +20112,9 @@ function renderPromoAdminOptions() {
 // so the Edit button can hand the full row to the form without a re-fetch.
 let _editingPromoId = null;
 let _promoAdminSlots = [];
+// Per-slot engagement, keyed by slot id — kept alongside the slots so the delete
+// confirmation can say what is about to be destroyed.
+let _promoAdminStats = {};
 
 // Inverse of `new Date(val).toISOString()` below. A bare datetime-local value
 // ("2026-08-03T14:30", no offset) is parsed by `new Date()` as LOCAL wall-clock
@@ -20397,6 +20400,38 @@ async function resetPromoImpressions(id) {
   loadPromoAdmin();
 }
 
+// Removes the slot outright. Archive keeps a card around with its numbers; this is
+// for the ones that should never have existed — a duplicate, a typo, a seeded draft
+// that missed. The events go first: they carry the only record of who saw it, and
+// leaving them orphaned would keep inflating the promo tallies for a slot the list
+// no longer shows.
+async function deletePromoSlot(id) {
+  if (currentUser?.id !== ADMIN_USER_ID) return;
+  const slot = _promoAdminSlots.find((s) => s.id === id);
+  const label = slot?.heading || 'this slot';
+  const st = _promoAdminStats?.[id] || {};
+  const seen = (st.impressions || 0) + (st.clicks || 0);
+  if (!await showConfirm(
+    `This permanently removes "${label}"${seen ? ` along with its ${st.impressions || 0} impressions and ${st.clicks || 0} clicks` : ''}. Archive keeps a slot and its numbers; this does not. This cannot be undone.`,
+    { title: 'Delete this slot?', confirmLabel: 'Delete' }
+  )) return;
+
+  const { error: evError } = await db.from('promo_events').delete().eq('slot_id', id);
+  if (evError) { toast('Could not delete its events: ' + evError.message, 'error'); return; }
+
+  const { error: slotError } = await db.from('promo_slots').delete().eq('id', id);
+  if (slotError) {
+    // The events are already gone, so say so rather than letting the slot sit in
+    // the list looking untouched while its history has actually been cleared.
+    toast('Events deleted, but the slot itself could not be removed: ' + slotError.message, 'error');
+    loadPromoAdmin();
+    return;
+  }
+
+  toast('Slot deleted.', 'success');
+  loadPromoAdmin();
+}
+
 let _promoAdminListDelegated = false;
 function installPromoAdminListDelegation() {
   if (_promoAdminListDelegated) return;
@@ -20413,6 +20448,11 @@ function installPromoAdminListDelegation() {
     const resetBtn = event.target.closest('[data-promo-reset]');
     if (resetBtn) {
       resetPromoImpressions(resetBtn.dataset.promoReset);
+      return;
+    }
+    const deleteBtn = event.target.closest('[data-promo-delete]');
+    if (deleteBtn) {
+      deletePromoSlot(deleteBtn.dataset.promoDelete);
       return;
     }
     const toggleBtn = event.target.closest('[data-promo-toggle]');
@@ -20446,6 +20486,7 @@ async function loadPromoAdmin() {
   _promoAdminSlots = slots || [];
   const byId = {};
   (stats || []).forEach((s) => { byId[s.slot_id] = s; });
+  _promoAdminStats = byId;
   if (!listEl) return;
   listEl.innerHTML = _promoAdminSlots.length === 0
     ? '<div style="color:var(--muted);font-size:.82rem;">No slots yet.</div>'
@@ -20478,12 +20519,14 @@ async function loadPromoAdmin() {
               (st.thumbs_up || st.thumbs_down)
                 ? ` · <strong>👍 ${st.thumbs_up || 0} / 👎 ${st.thumbs_down || 0}</strong>` : ''}
           </div>
-          <div style="display:flex;gap:.4rem;margin-top:.4rem;">
+          <!-- One row: lifecycle actions left, destructive ones pushed right by the
+               spacer, so a mis-tap on Delete cannot land where Edit used to be. -->
+          <div style="display:flex;gap:.4rem;margin-top:.4rem;flex-wrap:wrap;align-items:center;">
             <button class="btn btn-ghost" style="font-size:.78rem;" data-promo-edit="${escAttr(s.id)}">Edit</button>
             ${actionsHtml}
-          </div>
-          <div style="display:flex;gap:.4rem;margin-top:.4rem;padding-top:.4rem;border-top:1px dashed var(--border,rgba(128,128,128,.25));">
+            <span style="flex:1;min-width:.5rem;"></span>
             <button class="btn btn-danger" style="font-size:.78rem;" data-promo-reset="${escAttr(s.id)}" title="Deletes recorded impressions/clicks and re-arms this slot on every device — separate from Pause/Archive">Reset impressions</button>
+            <button class="btn btn-danger" style="font-size:.78rem;" data-promo-delete="${escAttr(s.id)}" title="Removes the slot and its recorded events for good">Delete</button>
           </div>
         </div>`;
       }).join('');
