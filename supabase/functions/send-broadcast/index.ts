@@ -540,7 +540,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
 
   const { data: rows, error: qErr } = await supabase
     .from("broadcast_queue")
-    .select("id, uid, email, subject, html")
+    .select("id, uid, email, subject, html, attempts")
     .eq("status", "pending")
     // priority first (admin_move_broadcast reorders it), id as tie-breaker.
     // With every priority at its 0 default this is the original FIFO.
@@ -588,7 +588,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
     .update({ status: "sending", claimed_at: new Date().toISOString() })
     .in("id", ids)
     .eq("status", "pending")
-    .select("id, uid, email, subject, html");
+    .select("id, uid, email, subject, html, attempts");
   if (claimErr) {
     return jsonResponse({ error: "Queue claim failed", details: claimErr.message }, 500);
   }
@@ -622,14 +622,21 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
     // Transient failures (throttling, 5xx, network) stay `pending` so a later
     // drain retries them. Marking them `failed` dropped those recipients for
     // good — the drain only ever re-selects `pending`.
-    const rawDeferredRows: { id: number; error: string }[] = [];
+    const rawDeferredRows: { id: number; error: string; attempts?: number }[] = [];
     for (let idx = 0; idx < results.length; idx++) {
       const r = results[idx];
       if (r.ok) okIds.push(batch[idx].id);
       else if (r.retryable || isCredentialFailure(r.status)) {
         rawDeferredRows.push({ id: batch[idx].id, error: r.error });
       } else {
-        rawFailedRows.push({ id: batch[idx].id, error: r.error });
+        // attempts = this row's prior permanent verdicts + this one. Only
+        // individually-permanent verdicts count; a transient failure or a row
+        // folded by someone else's bad batch must never push it toward retirement.
+        rawFailedRows.push({
+          id: batch[idx].id,
+          error: r.error,
+          attempts: ((batch[idx] as { attempts?: number }).attempts ?? 0) + 1,
+        });
       }
     }
 
@@ -652,13 +659,30 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
     // Failures are rare; one update per row keeps each row's own Resend error.
     for (const fr of failedRows) {
       await supabase.from("broadcast_queue")
-        .update({ status: "failed", error: fr.error.slice(0, 500), claimed_at: null }).in("id", [fr.id]);
+        .update({
+          status: "failed",
+          error: fr.error.slice(0, 500),
+          claimed_at: null,
+          attempts: fr.attempts ?? 1,
+        }).in("id", [fr.id]);
+      // Name the recipient in the log. A row reaching `failed` is someone who
+      // will never receive this send, and that must not be silent.
+      console.warn(`[send-broadcast] Retiring row ${fr.id} after ${fr.attempts ?? 1} permanent verdict(s): ${fr.error.slice(0, 200)}`);
     }
     // Rows are 'sending' now (claimed above), so a retryable failure MUST be
     // reset to pending — otherwise it strands in 'sending' until the reaper.
     for (const dr of deferredRows) {
-      await supabase.from("broadcast_queue")
-        .update({ status: "pending", claimed_at: null, error: `retrying: ${dr.error.slice(0, 480)}` }).in("id", [dr.id]);
+      // Carry the incremented count back to `pending`. Without this the fold
+      // discards it every drain and the row retries forever — the exact failure
+      // the counter exists to stop. Rows deferred for a transient reason have no
+      // attempts field, so their count is left untouched.
+      const upd: Record<string, unknown> = {
+        status: "pending",
+        claimed_at: null,
+        error: `retrying: ${dr.error.slice(0, 480)}`,
+      };
+      if (typeof dr.attempts === "number") upd.attempts = dr.attempts;
+      await supabase.from("broadcast_queue").update(upd).in("id", [dr.id]);
     }
 
     // Circuit breaker. shouldTripBreaker() uses the same predicate

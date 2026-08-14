@@ -49,7 +49,8 @@ CREATE TABLE IF NOT EXISTS public.broadcast_queue (
     sent_at timestamp with time zone,
     claimed_at timestamp with time zone,
     label text,
-    priority integer DEFAULT 0 NOT NULL
+    priority integer DEFAULT 0 NOT NULL,
+    attempts integer DEFAULT 0 NOT NULL
 );
 CREATE TABLE IF NOT EXISTS public.club_invites (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -4740,6 +4741,8 @@ GRANT INSERT (amplitude) ON public.timegrapher_results TO anon;
 GRANT INSERT (amplitude) ON public.timegrapher_results TO authenticated;
 GRANT INSERT (app_version) ON public.feedback TO anon;
 GRANT INSERT (app_version) ON public.feedback TO authenticated;
+GRANT INSERT (attempts) ON public.broadcast_queue TO anon;
+GRANT INSERT (attempts) ON public.broadcast_queue TO authenticated;
 GRANT INSERT (audience) ON public.promo_slots TO authenticated;
 GRANT INSERT (avatar_url) ON public.profiles TO anon;
 GRANT INSERT (avatar_url) ON public.profiles TO authenticated;
@@ -5680,6 +5683,8 @@ GRANT REFERENCES (amplitude) ON public.timegrapher_results TO anon;
 GRANT REFERENCES (amplitude) ON public.timegrapher_results TO authenticated;
 GRANT REFERENCES (app_version) ON public.feedback TO anon;
 GRANT REFERENCES (app_version) ON public.feedback TO authenticated;
+GRANT REFERENCES (attempts) ON public.broadcast_queue TO anon;
+GRANT REFERENCES (attempts) ON public.broadcast_queue TO authenticated;
 GRANT REFERENCES (audience) ON public.promo_slots TO authenticated;
 GRANT REFERENCES (avatar_url) ON public.profiles TO anon;
 GRANT REFERENCES (avatar_url) ON public.profiles TO authenticated;
@@ -6620,6 +6625,8 @@ GRANT SELECT (amplitude) ON public.timegrapher_results TO anon;
 GRANT SELECT (amplitude) ON public.timegrapher_results TO authenticated;
 GRANT SELECT (app_version) ON public.feedback TO anon;
 GRANT SELECT (app_version) ON public.feedback TO authenticated;
+GRANT SELECT (attempts) ON public.broadcast_queue TO anon;
+GRANT SELECT (attempts) ON public.broadcast_queue TO authenticated;
 GRANT SELECT (audience) ON public.promo_slots TO authenticated;
 GRANT SELECT (avatar_url) ON public.profiles TO anon;
 GRANT SELECT (avatar_url) ON public.profiles TO authenticated;
@@ -7560,6 +7567,8 @@ GRANT UPDATE (amplitude) ON public.timegrapher_results TO anon;
 GRANT UPDATE (amplitude) ON public.timegrapher_results TO authenticated;
 GRANT UPDATE (app_version) ON public.feedback TO anon;
 GRANT UPDATE (app_version) ON public.feedback TO authenticated;
+GRANT UPDATE (attempts) ON public.broadcast_queue TO anon;
+GRANT UPDATE (attempts) ON public.broadcast_queue TO authenticated;
 GRANT UPDATE (audience) ON public.promo_slots TO authenticated;
 GRANT UPDATE (avatar_url) ON public.profiles TO anon;
 GRANT UPDATE (avatar_url) ON public.profiles TO authenticated;

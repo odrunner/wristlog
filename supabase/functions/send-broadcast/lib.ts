@@ -300,18 +300,35 @@ export function shouldTripBreaker(permanentFailureCount: number, batchSize: numb
 // because a successful send can't be undone. Delegates the trip decision to
 // shouldTripBreaker() itself (rather than re-deriving it, e.g. checking
 // okIds.length === 0) so the two can never disagree.
+//
+// One exception to "nothing from a tripped batch may end up `failed`": a row that
+// has now been judged permanently undeliverable on MAX_DELIVERY_ATTEMPTS separate
+// drains. Folding it back to `pending` forever means it re-trips this batch on
+// every future drain and holds a budget slot indefinitely, and after that many
+// independent verdicts the evidence is about the address rather than the
+// transport. Rows below the threshold still fold, so a single bad night (wrong
+// key, paused provider) never retires anyone.
+export const MAX_DELIVERY_ATTEMPTS = 3;
+
 export function resolveBatchOutcome(
   okIds: number[],
-  failedRows: { id: number; error: string }[],
-  deferredRows: { id: number; error: string }[],
+  failedRows: { id: number; error: string; attempts?: number }[],
+  deferredRows: { id: number; error: string; attempts?: number }[],
   batchSize: number,
+  maxAttempts: number = MAX_DELIVERY_ATTEMPTS,
 ): {
   sentIds: number[];
-  failedRows: { id: number; error: string }[];
-  deferredRows: { id: number; error: string }[];
+  failedRows: { id: number; error: string; attempts?: number }[];
+  deferredRows: { id: number; error: string; attempts?: number }[];
 } {
   if (shouldTripBreaker(failedRows.length, batchSize)) {
-    return { sentIds: okIds, failedRows: [], deferredRows: [...deferredRows, ...failedRows] };
+    const exhausted = failedRows.filter((r) => (r.attempts ?? 0) >= maxAttempts);
+    const foldable = failedRows.filter((r) => (r.attempts ?? 0) < maxAttempts);
+    return {
+      sentIds: okIds,
+      failedRows: exhausted,
+      deferredRows: [...deferredRows, ...foldable],
+    };
   }
   return { sentIds: okIds, failedRows, deferredRows };
 }

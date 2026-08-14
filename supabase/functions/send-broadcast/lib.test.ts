@@ -508,6 +508,75 @@ Deno.test("resolveBatchOutcome — an empty batch is untouched (not treated as a
   assertEquals(result.deferredRows, []);
 });
 
+// ── Attempt counter (audit R4) ────────────────────────────────────────────────
+// Folding a permanent verdict back to `pending` is right when the transport is
+// suspect, but a genuinely dead address then retries forever, re-tripping its
+// batch on every drain and holding a budget slot. The counter retires a row only
+// after MAX_DELIVERY_ATTEMPTS *separate* drains each judged it permanently bad.
+
+Deno.test("attempts — a first permanent verdict still folds, never retires", () => {
+  const result = resolveBatchOutcome(
+    [1],
+    [{ id: 2, error: "550 mailbox unavailable", attempts: 1 }],
+    [],
+    2,
+  );
+  assertEquals(result.failedRows, []);
+  assertEquals(result.deferredRows.map((r) => r.id), [2]);
+});
+
+Deno.test("attempts — the increment survives the fold, or the count never grows", () => {
+  const result = resolveBatchOutcome(
+    [],
+    [{ id: 2, error: "550", attempts: 2 }],
+    [],
+    1,
+  );
+  // Written back to `pending` carrying 2, so the next drain sees 3 and retires it.
+  assertEquals(result.deferredRows[0].attempts, 2);
+});
+
+Deno.test("attempts — at the threshold the row retires even though the batch tripped", () => {
+  const result = resolveBatchOutcome(
+    [1],
+    [{ id: 2, error: "550 mailbox unavailable", attempts: 3 }],
+    [{ id: 3, error: "429 throttled" }],
+    3,
+  );
+  assertEquals(result.failedRows.map((r) => r.id), [2]);
+  // The transient row is untouched by the threshold and still retries.
+  assertEquals(result.deferredRows.map((r) => r.id), [3]);
+});
+
+Deno.test("attempts — a bad night does not retire healthy recipients alongside a dead one", () => {
+  // The scenario the breaker exists for: wrong key or paused provider makes every
+  // row look permanent. Only the row with a real history retires; the rest retry.
+  const result = resolveBatchOutcome(
+    [],
+    [
+      { id: 10, error: "550", attempts: 3 },  // dead address, third strike
+      { id: 11, error: "550", attempts: 1 },  // healthy, first time
+      { id: 12, error: "550", attempts: 1 },
+    ],
+    [],
+    3,
+  );
+  assertEquals(result.failedRows.map((r) => r.id), [10]);
+  assertEquals(result.deferredRows.map((r) => r.id).sort(), [11, 12]);
+});
+
+Deno.test("attempts — rows with no counter behave exactly as before", () => {
+  // Backwards compatibility for rows queued before the column existed.
+  const result = resolveBatchOutcome(
+    [1],
+    [{ id: 2, error: "400 MailFromDomainNotVerified" }],
+    [{ id: 3, error: "429 throttled" }],
+    5,
+  );
+  assertEquals(result.failedRows, []);
+  assertEquals(result.deferredRows.map((r) => r.id).sort(), [2, 3]);
+});
+
 // ── splitFirstBatch ──────────────────────────────────────────────────────────
 const TEN = Array.from({ length: 10 }, (_, i) => i + 1);
 
