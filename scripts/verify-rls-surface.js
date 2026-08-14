@@ -84,8 +84,28 @@ if (process.env.TEST_PW) {
   if (!tok) {
     record('auth', false, 'could not obtain a token');
   } else {
+    // select('*') on the TABLE must now be refused — the private columns are
+    // revoked from `authenticated` (audit S1b). Own-profile reads go through the
+    // my_profile() RPC instead, which must still return the private columns.
     const own = await get('profiles?select=*&limit=1', tok);
-    record('own profile select=*', own.status === 200, `HTTP ${own.status}`);
+    record('profiles select=* is refused', own.status === 403 || own.status === 401, `HTTP ${own.status}`);
+
+    const res = await fetch(`${API}/rest/v1/rpc/my_profile`, {
+      method: 'POST',
+      headers: { apikey: ANON, Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    const rows = await res.json().catch(() => null);
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    record('my_profile() returns own row', res.status === 200 && !!row?.id, `HTTP ${res.status}`);
+    record('my_profile() carries private columns', !!row && 'email_prefs' in row && 'is_admin' in row && 'timezone' in row,
+           row ? Object.keys(row).length + ' columns' : 'no row');
+
+    // And a logged-in user must NOT be able to read them on anyone else.
+    for (const col of ['is_admin', 'email_prefs', 'timezone']) {
+      const r = await get(`profiles?select=${col}&limit=1`, tok);
+      record(`other users' ${col} refused`, r.status === 403 || r.status === 401, `HTTP ${r.status}`);
+    }
     for (const [table, cols] of ANON_READS.slice(0, 4)) {
       const r = await get(`${table}?select=${cols}&limit=1`, tok);
       record(`${table} (auth)`, r.status === 200, `HTTP ${r.status}`);

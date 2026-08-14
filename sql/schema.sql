@@ -2439,6 +2439,14 @@ AS $function$
     SELECT 1 FROM club_members WHERE club_id = p_club_id AND user_id = auth.uid()
   );
 $function$;
+CREATE OR REPLACE FUNCTION public.my_profile()
+ RETURNS SETOF profiles
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  SELECT * FROM public.profiles WHERE id = auth.uid();
+$function$;
 CREATE OR REPLACE FUNCTION public.never_logged_users(p_min_age_days integer DEFAULT 4)
  RETURNS TABLE(user_id uuid)
  LANGUAGE sql
@@ -4113,7 +4121,6 @@ GRANT SELECT ON public.piezo_raw_captures TO service_role;
 GRANT SELECT ON public.post_cta_events TO anon;
 GRANT SELECT ON public.post_cta_events TO authenticated;
 GRANT SELECT ON public.post_cta_events TO service_role;
-GRANT SELECT ON public.profiles TO authenticated;
 GRANT SELECT ON public.profiles TO service_role;
 GRANT SELECT ON public.promo_config TO authenticated;
 GRANT SELECT ON public.promo_config TO service_role;
@@ -6564,7 +6571,6 @@ GRANT SELECT ("position") ON public.watch_facts TO anon;
 GRANT SELECT ("position") ON public.watch_facts TO authenticated;
 GRANT SELECT (ab_variant) ON public.page_visits TO anon;
 GRANT SELECT (ab_variant) ON public.page_visits TO authenticated;
-GRANT SELECT (ab_variant) ON public.profiles TO authenticated;
 GRANT SELECT (accepted_at) ON public.eula_acceptances TO anon;
 GRANT SELECT (accepted_at) ON public.eula_acceptances TO authenticated;
 GRANT SELECT (action) ON public.valuation_events TO anon;
@@ -6792,7 +6798,6 @@ GRANT SELECT (date) ON public.logs TO authenticated;
 GRANT SELECT (deep_test_id) ON public.deep_test_chunks TO anon;
 GRANT SELECT (deep_test_id) ON public.deep_test_chunks TO authenticated;
 GRANT SELECT (default_max_impressions) ON public.promo_config TO authenticated;
-GRANT SELECT (default_post_visibility) ON public.profiles TO authenticated;
 GRANT SELECT (delay_days) ON public.email_campaigns TO anon;
 GRANT SELECT (delay_days) ON public.email_campaigns TO authenticated;
 GRANT SELECT (description) ON public.clubs TO anon;
@@ -6825,7 +6830,6 @@ GRANT SELECT (email) ON public.feedback TO anon;
 GRANT SELECT (email) ON public.feedback TO authenticated;
 GRANT SELECT (email_id) ON public.email_events TO anon;
 GRANT SELECT (email_id) ON public.email_events TO authenticated;
-GRANT SELECT (email_prefs) ON public.profiles TO authenticated;
 GRANT SELECT (email_to) ON public.email_events TO anon;
 GRANT SELECT (email_to) ON public.email_events TO authenticated;
 GRANT SELECT (enabled) ON public.promo_config TO authenticated;
@@ -6840,7 +6844,6 @@ GRANT SELECT (error) ON public.identify_attempts TO anon;
 GRANT SELECT (error) ON public.identify_attempts TO authenticated;
 GRANT SELECT (error) ON public.valuation_events TO anon;
 GRANT SELECT (error) ON public.valuation_events TO authenticated;
-GRANT SELECT (eula_accepted_at) ON public.profiles TO authenticated;
 GRANT SELECT (event) ON public.post_cta_events TO anon;
 GRANT SELECT (event) ON public.post_cta_events TO authenticated;
 GRANT SELECT (event) ON public.promo_events TO authenticated;
@@ -6997,7 +7000,6 @@ GRANT SELECT (ip_hash) ON public.demo_views TO anon;
 GRANT SELECT (ip_hash) ON public.demo_views TO authenticated;
 GRANT SELECT (is_active) ON public.email_campaigns TO anon;
 GRANT SELECT (is_active) ON public.email_campaigns TO authenticated;
-GRANT SELECT (is_admin) ON public.profiles TO authenticated;
 GRANT SELECT (is_archived) ON public.email_campaigns TO anon;
 GRANT SELECT (is_archived) ON public.email_campaigns TO authenticated;
 GRANT SELECT (is_canonical) ON public.brands TO anon;
@@ -7175,7 +7177,6 @@ GRANT SELECT (raw) ON public.email_events TO anon;
 GRANT SELECT (raw) ON public.email_events TO authenticated;
 GRANT SELECT (reason) ON public.content_reports TO anon;
 GRANT SELECT (reason) ON public.content_reports TO authenticated;
-GRANT SELECT (rec_settings) ON public.profiles TO authenticated;
 GRANT SELECT (receipts) ON public.watches TO anon;
 GRANT SELECT (receipts) ON public.watches TO authenticated;
 GRANT SELECT (ref) ON public.watches TO anon;
@@ -7232,7 +7233,6 @@ GRANT SELECT (session_id) ON public.timegrapher_debug_logs TO anon;
 GRANT SELECT (session_id) ON public.timegrapher_debug_logs TO authenticated;
 GRANT SELECT (session_id) ON public.timegrapher_tick_logs TO anon;
 GRANT SELECT (session_id) ON public.timegrapher_tick_logs TO authenticated;
-GRANT SELECT (share_achievements) ON public.profiles TO authenticated;
 GRANT SELECT (size) ON public.promo_slots TO authenticated;
 GRANT SELECT (skip_if_done) ON public.email_campaigns TO anon;
 GRANT SELECT (skip_if_done) ON public.email_campaigns TO authenticated;
@@ -7276,7 +7276,6 @@ GRANT SELECT (subject) ON public.email_campaigns TO authenticated;
 GRANT SELECT (subject) ON public.email_events TO anon;
 GRANT SELECT (subject) ON public.email_events TO authenticated;
 GRANT SELECT (suppress_after_modal) ON public.promo_config TO authenticated;
-GRANT SELECT (suspended_at) ON public.profiles TO authenticated;
 GRANT SELECT (sweep_knob) ON public.timegrapher_tuning TO anon;
 GRANT SELECT (sweep_knob) ON public.timegrapher_tuning TO authenticated;
 GRANT SELECT (sweep_param) ON public.measurement_batch_runs TO anon;
@@ -7301,8 +7300,6 @@ GRANT SELECT (target_id) ON public.follow_requests TO anon;
 GRANT SELECT (target_id) ON public.follow_requests TO authenticated;
 GRANT SELECT (target_id) ON public.friend_requests TO anon;
 GRANT SELECT (target_id) ON public.friend_requests TO authenticated;
-GRANT SELECT (tg_debug) ON public.profiles TO authenticated;
-GRANT SELECT (theme_preference) ON public.profiles TO authenticated;
 GRANT SELECT (threshold) ON public.timegrapher_debug_logs TO anon;
 GRANT SELECT (threshold) ON public.timegrapher_debug_logs TO authenticated;
 GRANT SELECT (tick_count) ON public.timegrapher_results TO anon;
@@ -7315,7 +7312,6 @@ GRANT SELECT (tick_detect_mult) ON public.timegrapher_tuning TO anon;
 GRANT SELECT (tick_detect_mult) ON public.timegrapher_tuning TO authenticated;
 GRANT SELECT (tick_stream) ON public.measurement_batch_runs TO anon;
 GRANT SELECT (tick_stream) ON public.measurement_batch_runs TO authenticated;
-GRANT SELECT (timezone) ON public.profiles TO authenticated;
 GRANT SELECT (title) ON public.feedback TO anon;
 GRANT SELECT (title) ON public.feedback TO authenticated;
 GRANT SELECT (token) ON public.device_tokens TO anon;
@@ -7424,7 +7420,6 @@ GRANT SELECT (user_id) ON public.wishlist_shares TO anon;
 GRANT SELECT (user_id) ON public.wishlist_shares TO authenticated;
 GRANT SELECT (username) ON public.profiles TO anon;
 GRANT SELECT (username) ON public.profiles TO authenticated;
-GRANT SELECT (username_set) ON public.profiles TO authenticated;
 GRANT SELECT (utm_campaign) ON public.page_visits TO anon;
 GRANT SELECT (utm_campaign) ON public.page_visits TO authenticated;
 GRANT SELECT (utm_content) ON public.page_visits TO anon;
