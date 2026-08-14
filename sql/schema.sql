@@ -2325,6 +2325,28 @@ BEGIN
   END IF;
 END;
 $function$;
+CREATE OR REPLACE FUNCTION public.feed_watch_display(ids text[])
+ RETURNS TABLE(id text, brand text, name text, color text, image text, ref text, url text, description text, background text, functions text[])
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  SELECT w.id, w.brand, w.name, w.color, w.image,
+         w.ref, w.url, w.description, w.background, w.functions
+  FROM watches w
+  WHERE w.id = ANY(ids)
+    AND (
+      -- the owner always resolves their own watches (covers own private posts)
+      w.user_id = auth.uid()
+      -- otherwise: mirrors the dropped watches_feed_read condition exactly, so
+      -- feed rendering is byte-for-byte unchanged
+      OR EXISTS (
+        SELECT 1 FROM logs l
+        WHERE l.watch_id = w.id
+          AND l.visibility IS DISTINCT FROM 'private'
+      )
+    );
+$function$;
 CREATE OR REPLACE FUNCTION public.fun_fact_vars(p_uids uuid[])
  RETURNS TABLE(user_id uuid, brand text, name text, model_key text, fact text)
  LANGUAGE sql
@@ -3482,10 +3504,6 @@ CREATE POLICY demo_readonly_watches_insert ON public.watches AS RESTRICTIVE FOR 
   WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_watches_update ON public.watches AS RESTRICTIVE FOR UPDATE TO public
   USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
-CREATE POLICY watches_feed_read ON public.watches AS PERMISSIVE FOR SELECT TO authenticated
-  USING ((id IN ( SELECT logs.watch_id
-   FROM logs
-  WHERE (logs.visibility IS DISTINCT FROM 'private'::text))));
 CREATE POLICY watches_own ON public.watches AS PERMISSIVE FOR ALL TO authenticated
   USING ((user_id = auth.uid()))
   WITH CHECK ((user_id = auth.uid()));
