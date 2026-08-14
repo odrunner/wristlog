@@ -119,13 +119,13 @@ describe('brand rebuild sentinel', () => {
     const i = html.indexOf('buildBrandList([], watches, wishlist)');
     expect(i).toBeGreaterThan(-1);
     // Nothing may set the sentinel in the ~10 lines of the purge block.
-    expect(html.slice(i, i + 400)).not.toContain("setItem('wristlog_brands_rebuilt_v1'");
+    expect(html.slice(i, i + 400)).not.toContain("safeLS.set('wristlog_brands_rebuilt_v1'");
   });
 
   it('is set only after the canonical list arrives', () => {
     const i = html.indexOf('brands = buildBrandList(brRes.data.map');
     expect(i).toBeGreaterThan(-1);
-    expect(html.slice(i, i + 400)).toContain("setItem('wristlog_brands_rebuilt_v1'");
+    expect(html.slice(i, i + 400)).toContain("safeLS.set('wristlog_brands_rebuilt_v1'");
   });
 });
 

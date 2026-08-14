@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { describe, it, expect, beforeEach } from 'vitest';
+import { makeSafeLS } from './helpers/safe-ls.js';
 
 // Coverage for the 2026-07-31 measurement audit fixes. These assert against the real
 // index.html rather than a copy of the logic, because every one of them is a "the number
@@ -94,16 +95,14 @@ describe('Pro V2 precision presets reach the window they claim', () => {
 // OLD balanced wallMin=8, because that value was already in storage.
 describe('preset changes reach users who already picked one', () => {
   const store = {};
-  const localStorage = {
-    getItem: k => (k in store ? store[k] : null),
-    setItem: (k, v) => { store[k] = String(v); },
-  };
+  // App code goes through safeLS, not localStorage directly (audit R1).
+  const safeLS = makeSafeLS(store);
   const P = presets();
-  const migrate = new Function('localStorage', 'PROV2_PRECISION', 'PROV2_DEFAULTS', `
+  const migrate = new Function('safeLS', 'PROV2_PRECISION', 'PROV2_DEFAULTS', `
     const PROV2_PRECISION_V = ${/const PROV2_PRECISION_V = (\d+);/.exec(html)[1]};
     ${fnBody('_migrateProV2Precision')}\n}
     return _migrateProV2Precision;
-  `)(localStorage, P, P.balanced);
+  `)(safeLS, P, P.balanced);
 
   beforeEach(() => { for (const k of Object.keys(store)) delete store[k]; });
 
@@ -148,7 +147,7 @@ describe('preset changes reach users who already picked one', () => {
   });
 
   it('stamps the version when a card is tapped', () => {
-    expect(fnBody('onProV2Precision')).toContain("localStorage.setItem('tg_precision_v'");
+    expect(fnBody('onProV2Precision')).toContain("safeLS.set('tg_precision_v'");
   });
 });
 
@@ -156,12 +155,12 @@ describe('preset changes reach users who already picked one', () => {
 // on the older engine forever. Before 2026-08-02 the pick lived in localStorage and did.
 describe('engine choice resets to Pro V2 each app session', () => {
   it('does not persist the choice to localStorage', () => {
-    expect(html).not.toContain("localStorage.setItem('tg_algo_sel'");
-    expect(html).not.toContain("localStorage.getItem('tg_algo_sel')");
+    expect(html).not.toContain("safeLS.set('tg_algo_sel'");
+    expect(html).not.toContain("safeLS.get('tg_algo_sel')");
   });
 
   it('clears the retired key so an old pick cannot resurface', () => {
-    expect(fnBody('initTgSourceSelector')).toContain("localStorage.removeItem('tg_algo_sel')");
+    expect(fnBody('initTgSourceSelector')).toContain("safeLS.remove('tg_algo_sel')");
   });
 
   it('defaults to Pro V2, honours an in-session pick, and forgets it on reload', () => {

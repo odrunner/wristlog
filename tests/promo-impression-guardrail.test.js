@@ -50,6 +50,14 @@ function constSrc(name) {
 // null — the no-recap-in-window case, which is every one of these tests bar the
 // recap-specific ones.
 function buildLocalCounters({ currentUser, localStorage, promoSlots, recap }) {
+  // App code goes through safeLS, not localStorage directly (audit R1). Wrap the
+  // existing stub so the tests keep exercising the same backing store.
+  const safeLS = {
+    available: true,
+    get: (k) => localStorage.getItem(k),
+    set: (k, v) => { localStorage.setItem(k, v); return true; },
+    remove: (k) => { localStorage.removeItem && localStorage.removeItem(k); },
+  };
   const src = [
     constSrc('PROMO_IMPRESSIONS_KEY'),
     fnSrc('_promoImpressionsKey'),
@@ -57,11 +65,11 @@ function buildLocalCounters({ currentUser, localStorage, promoSlots, recap }) {
     fnSrc('promoSlotEpoch'),
     fnSrc('_incrementLocalPromoImpression'),
   ].join('\n');
-  const factory = new Function('currentUser', 'localStorage', '_promoSlots', 'currentMonthRecap', `
+  const factory = new Function('currentUser', 'safeLS', '_promoSlots', 'currentMonthRecap', `
     ${src}
     return { _promoImpressionsKey, _readLocalPromoImpressions, _incrementLocalPromoImpression };
   `);
-  return factory(currentUser, localStorage, promoSlots || [], () => recap || null);
+  return factory(currentUser, safeLS, promoSlots || [], () => recap || null);
 }
 
 function buildMaybeLogPromoImpression({ promoImpressed, logPromoEvent }) {

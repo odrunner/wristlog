@@ -1,6 +1,25 @@
 // WristLog — Extracted pure-logic functions for testability
 // These are the core business logic functions extracted from app.html.
 
+// Mirrors window.safeLS in index.html (audit finding R1): storage access can THROW
+// rather than return null in locked-down browsers, so every read/write is guarded.
+// Resolves globalThis.localStorage lazily on each call so tests can install their
+// stub after this module is imported.
+export const safeLS = {
+  get available() {
+    try { globalThis.localStorage.getItem('__probe__'); return true; } catch (e) { return false; }
+  },
+  get(k) {
+    try { return globalThis.localStorage.getItem(k); } catch (e) { return null; }
+  },
+  set(k, v) {
+    try { globalThis.localStorage.setItem(k, v); return true; } catch (e) { return false; }
+  },
+  remove(k) {
+    try { globalThis.localStorage.removeItem(k); } catch (e) { /* ignore */ }
+  },
+};
+
 // ══════════════════════════════════════════
 //  UTILITIES
 // ══════════════════════════════════════════
@@ -2475,18 +2494,18 @@ export function tgMapSliderToEngine(values) {
 }
 
 export function tgSaveSettings(preset, values) {
-  localStorage.setItem('tg_advanced_settings', JSON.stringify({
+  safeLS.set('tg_advanced_settings', JSON.stringify({
     algVersion: TG_ALG_VERSION, preset: preset, values: values
   }));
 }
 
 export function tgLoadSettings() {
   try {
-    const raw = localStorage.getItem('tg_advanced_settings');
+    const raw = safeLS.get('tg_advanced_settings');
     if (!raw) return { preset: 'default', values: { ...TG_PRESETS.default }, wasReset: false };
     const parsed = JSON.parse(raw);
     if (!parsed.algVersion || parsed.algVersion < TG_ALG_VERSION) {
-      localStorage.removeItem('tg_advanced_settings');
+      safeLS.remove('tg_advanced_settings');
       return { preset: 'default', values: { ...TG_PRESETS.default }, wasReset: true };
     }
     return { preset: parsed.preset || 'default', values: parsed.values || { ...TG_PRESETS.default }, wasReset: false };

@@ -225,8 +225,8 @@ describe('Advanced Settings — Phase 1 trim', () => {
 
   it('keeps the tg_advanced_settings localStorage key (stores chosen tuning)', () => {
     // The localStorage key is unrelated to the removed feature flag and must remain.
-    expect(html).toContain("localStorage.setItem('tg_advanced_settings'");
-    expect(html).toContain("localStorage.getItem('tg_advanced_settings')");
+    expect(html).toContain("safeLS.set('tg_advanced_settings'");
+    expect(html).toContain("safeLS.get('tg_advanced_settings')");
   });
 
   it('places the gear icon next to Help (title takes flex:1 to push both right)', () => {
