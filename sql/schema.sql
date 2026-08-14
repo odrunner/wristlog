@@ -2948,187 +2948,187 @@ CREATE POLICY "Admin can read all app_feedback" ON public.app_feedback AS PERMIS
 CREATE POLICY "Admin can update app_feedback" ON public.app_feedback AS PERMISSIVE FOR UPDATE TO public
   USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Users can insert own feedback" ON public.app_feedback AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = user_id));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can read own feedback" ON public.app_feedback AS PERMISSIVE FOR SELECT TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Anyone can read brands" ON public.brands AS PERMISSIVE FOR SELECT TO public
   USING (true);
 CREATE POLICY "Members can create invites" ON public.club_invites AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = invited_by));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = invited_by));
 CREATE POLICY "Relevant users can read invites" ON public.club_invites AS PERMISSIVE FOR SELECT TO public
-  USING (((auth.uid() = invitee_id) OR (auth.uid() = invited_by)));
+  USING (((( SELECT auth.uid() AS uid) = invitee_id) OR (( SELECT auth.uid() AS uid) = invited_by)));
 CREATE POLICY "Users can delete own invites" ON public.club_invites AS PERMISSIVE FOR DELETE TO public
-  USING (((auth.uid() = invitee_id) OR (auth.uid() = invited_by)));
+  USING (((( SELECT auth.uid() AS uid) = invitee_id) OR (( SELECT auth.uid() AS uid) = invited_by)));
 CREATE POLICY ci_delete ON public.club_invites AS PERMISSIVE FOR DELETE TO public
-  USING (((auth.uid() = invitee_id) OR is_club_member(club_id)));
+  USING (((( SELECT auth.uid() AS uid) = invitee_id) OR is_club_member(club_id)));
 CREATE POLICY ci_insert ON public.club_invites AS PERMISSIVE FOR INSERT TO public
   WITH CHECK (is_club_member(club_id));
 CREATE POLICY ci_select ON public.club_invites AS PERMISSIVE FOR SELECT TO public
-  USING (((auth.uid() = invitee_id) OR is_club_member(club_id)));
+  USING (((( SELECT auth.uid() AS uid) = invitee_id) OR is_club_member(club_id)));
 CREATE POLICY demo_readonly_club_invites_delete ON public.club_invites AS RESTRICTIVE FOR DELETE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_club_invites_insert ON public.club_invites AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY "Relevant users can read join requests" ON public.club_join_requests AS PERMISSIVE FOR SELECT TO public
-  USING (((auth.uid() = user_id) OR (auth.uid() IN ( SELECT cm.user_id
+  USING (((( SELECT auth.uid() AS uid) = user_id) OR (( SELECT auth.uid() AS uid) IN ( SELECT cm.user_id
    FROM club_members cm
   WHERE ((cm.club_id = club_join_requests.club_id) AND (cm.role = 'owner'::text))))));
 CREATE POLICY "Suspended users cannot join clubs" ON public.club_join_requests AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK (((auth.uid() = user_id) AND (NOT (EXISTS ( SELECT 1
+  WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) AND (NOT (EXISTS ( SELECT 1
    FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_suspended = true)))))));
+  WHERE ((profiles.id = ( SELECT auth.uid() AS uid)) AND (profiles.is_suspended = true)))))));
 CREATE POLICY "Users can create join requests" ON public.club_join_requests AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = user_id));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users or owners can delete join requests" ON public.club_join_requests AS PERMISSIVE FOR DELETE TO public
-  USING (((auth.uid() = user_id) OR (auth.uid() IN ( SELECT cm.user_id
+  USING (((( SELECT auth.uid() AS uid) = user_id) OR (( SELECT auth.uid() AS uid) IN ( SELECT cm.user_id
    FROM club_members cm
   WHERE ((cm.club_id = club_join_requests.club_id) AND (cm.role = 'owner'::text))))));
 CREATE POLICY cjr_delete ON public.club_join_requests AS PERMISSIVE FOR DELETE TO public
-  USING (((auth.uid() = user_id) OR is_club_member(club_id)));
+  USING (((( SELECT auth.uid() AS uid) = user_id) OR is_club_member(club_id)));
 CREATE POLICY cjr_insert ON public.club_join_requests AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = user_id));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY cjr_select ON public.club_join_requests AS PERMISSIVE FOR SELECT TO public
-  USING (((auth.uid() = user_id) OR is_club_member(club_id)));
+  USING (((( SELECT auth.uid() AS uid) = user_id) OR is_club_member(club_id)));
 CREATE POLICY demo_readonly_club_join_requests_delete ON public.club_join_requests AS RESTRICTIVE FOR DELETE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_club_join_requests_insert ON public.club_join_requests AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY "Anyone can read club members" ON public.club_members AS PERMISSIVE FOR SELECT TO public
   USING (true);
 CREATE POLICY "Users can join clubs" ON public.club_members AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK (((auth.uid() = user_id) OR (auth.uid() IN ( SELECT c.created_by
+  WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) OR (( SELECT auth.uid() AS uid) IN ( SELECT c.created_by
    FROM clubs c
   WHERE (c.id = club_members.club_id)))));
 CREATE POLICY "Users can leave clubs or owners can remove" ON public.club_members AS PERMISSIVE FOR DELETE TO public
-  USING (((auth.uid() = user_id) OR (auth.uid() IN ( SELECT c.created_by
+  USING (((( SELECT auth.uid() AS uid) = user_id) OR (( SELECT auth.uid() AS uid) IN ( SELECT c.created_by
    FROM clubs c
   WHERE (c.id = club_members.club_id)))));
 CREATE POLICY cm_delete ON public.club_members AS PERMISSIVE FOR DELETE TO public
-  USING (((auth.uid() = user_id) OR is_club_member(club_id)));
+  USING (((( SELECT auth.uid() AS uid) = user_id) OR is_club_member(club_id)));
 CREATE POLICY cm_insert ON public.club_members AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK (((auth.uid() = user_id) OR is_club_member(club_id)));
+  WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) OR is_club_member(club_id)));
 CREATE POLICY cm_select ON public.club_members AS PERMISSIVE FOR SELECT TO public
-  USING (((auth.uid() = user_id) OR (EXISTS ( SELECT 1
+  USING (((( SELECT auth.uid() AS uid) = user_id) OR (EXISTS ( SELECT 1
    FROM clubs
   WHERE ((clubs.id = club_members.club_id) AND (clubs.privacy = 'public'::text)))) OR is_club_member(club_id)));
 CREATE POLICY cm_update ON public.club_members AS PERMISSIVE FOR UPDATE TO public
   USING ((EXISTS ( SELECT 1
    FROM club_members club_members_1
-  WHERE ((club_members_1.club_id = club_members_1.club_id) AND (club_members_1.user_id = auth.uid()) AND (club_members_1.role = 'owner'::text)))))
+  WHERE ((club_members_1.club_id = club_members_1.club_id) AND (club_members_1.user_id = ( SELECT auth.uid() AS uid)) AND (club_members_1.role = 'owner'::text)))))
   WITH CHECK ((EXISTS ( SELECT 1
    FROM club_members club_members_1
-  WHERE ((club_members_1.club_id = club_members_1.club_id) AND (club_members_1.user_id = auth.uid()) AND (club_members_1.role = 'owner'::text)))));
+  WHERE ((club_members_1.club_id = club_members_1.club_id) AND (club_members_1.user_id = ( SELECT auth.uid() AS uid)) AND (club_members_1.role = 'owner'::text)))));
 CREATE POLICY demo_readonly_club_members_delete ON public.club_members AS RESTRICTIVE FOR DELETE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_club_members_insert ON public.club_members AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY "Anyone can read clubs" ON public.clubs AS PERMISSIVE FOR SELECT TO public
   USING (true);
 CREATE POLICY "Authenticated users can create clubs" ON public.clubs AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = created_by));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = created_by));
 CREATE POLICY "Club owners can delete clubs" ON public.clubs AS PERMISSIVE FOR DELETE TO public
-  USING ((auth.uid() = created_by));
+  USING ((( SELECT auth.uid() AS uid) = created_by));
 CREATE POLICY "Club owners can update clubs" ON public.clubs AS PERMISSIVE FOR UPDATE TO public
-  USING ((auth.uid() = created_by));
+  USING ((( SELECT auth.uid() AS uid) = created_by));
 CREATE POLICY "Suspended users cannot create clubs" ON public.clubs AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK (((auth.uid() = created_by) AND (NOT (EXISTS ( SELECT 1
+  WITH CHECK (((( SELECT auth.uid() AS uid) = created_by) AND (NOT (EXISTS ( SELECT 1
    FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_suspended = true)))))));
+  WHERE ((profiles.id = ( SELECT auth.uid() AS uid)) AND (profiles.is_suspended = true)))))));
 CREATE POLICY clubs_delete ON public.clubs AS PERMISSIVE FOR DELETE TO public
-  USING ((auth.uid() = created_by));
+  USING ((( SELECT auth.uid() AS uid) = created_by));
 CREATE POLICY clubs_insert ON public.clubs AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = created_by));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = created_by));
 CREATE POLICY clubs_select ON public.clubs AS PERMISSIVE FOR SELECT TO public
-  USING ((auth.uid() IS NOT NULL));
+  USING ((( SELECT auth.uid() AS uid) IS NOT NULL));
 CREATE POLICY clubs_update ON public.clubs AS PERMISSIVE FOR UPDATE TO public
   USING (is_club_member(id));
 CREATE POLICY demo_readonly_clubs_delete ON public.clubs AS RESTRICTIVE FOR DELETE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_clubs_insert ON public.clubs AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_clubs_update ON public.clubs AS RESTRICTIVE FOR UPDATE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY "Anyone can read comment likes" ON public.comment_likes AS PERMISSIVE FOR SELECT TO public
   USING (true);
 CREATE POLICY "Suspended users cannot insert comment_likes" ON public.comment_likes AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK (((auth.uid() = user_id) AND (NOT (EXISTS ( SELECT 1
+  WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) AND (NOT (EXISTS ( SELECT 1
    FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_suspended = true)))))));
+  WHERE ((profiles.id = ( SELECT auth.uid() AS uid)) AND (profiles.is_suspended = true)))))));
 CREATE POLICY "Users can delete own comment likes" ON public.comment_likes AS PERMISSIVE FOR DELETE TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can insert own comment likes" ON public.comment_likes AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK (((auth.uid() = user_id) AND (NOT (EXISTS ( SELECT 1
+  WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) AND (NOT (EXISTS ( SELECT 1
    FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_suspended = true)))))));
+  WHERE ((profiles.id = ( SELECT auth.uid() AS uid)) AND (profiles.is_suspended = true)))))));
 CREATE POLICY "Users can read all comment likes" ON public.comment_likes AS PERMISSIVE FOR SELECT TO public
   USING (true);
 CREATE POLICY demo_readonly_comment_likes_delete ON public.comment_likes AS RESTRICTIVE FOR DELETE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_comment_likes_insert ON public.comment_likes AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY "Admin can read all comments" ON public.comments AS PERMISSIVE FOR SELECT TO public
   USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Admin can update comment moderation" ON public.comments AS PERMISSIVE FOR UPDATE TO public
   USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Anyone can read comments" ON public.comments AS PERMISSIVE FOR SELECT TO public
-  USING (((auth.uid() = user_id) OR (moderation_status IS NULL)));
+  USING (((( SELECT auth.uid() AS uid) = user_id) OR (moderation_status IS NULL)));
 CREATE POLICY "Owner or post author can delete comments" ON public.comments AS PERMISSIVE FOR DELETE TO public
-  USING (((auth.uid() = user_id) OR (auth.uid() = ( SELECT logs.user_id
+  USING (((( SELECT auth.uid() AS uid) = user_id) OR (( SELECT auth.uid() AS uid) = ( SELECT logs.user_id
    FROM logs
   WHERE (logs.id = comments.log_id)))));
 CREATE POLICY "Reporter can flag comments" ON public.comments AS PERMISSIVE FOR UPDATE TO public
-  USING (((auth.uid() IS NOT NULL) AND (auth.uid() <> user_id)))
+  USING (((( SELECT auth.uid() AS uid) IS NOT NULL) AND (( SELECT auth.uid() AS uid) <> user_id)))
   WITH CHECK ((moderation_status = 'flagged'::text));
 CREATE POLICY "Suspended users cannot insert comments" ON public.comments AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK (((auth.uid() = user_id) AND (NOT (EXISTS ( SELECT 1
+  WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) AND (NOT (EXISTS ( SELECT 1
    FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_suspended = true)))))));
+  WHERE ((profiles.id = ( SELECT auth.uid() AS uid)) AND (profiles.is_suspended = true)))))));
 CREATE POLICY "Users can delete own comments" ON public.comments AS PERMISSIVE FOR DELETE TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can update own comments" ON public.comments AS PERMISSIVE FOR UPDATE TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY comments_delete ON public.comments AS PERMISSIVE FOR DELETE TO authenticated
-  USING ((user_id = auth.uid()));
+  USING ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY demo_readonly_comments_delete ON public.comments AS RESTRICTIVE FOR DELETE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_comments_insert ON public.comments AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY "Admin reads all reports" ON public.content_reports AS PERMISSIVE FOR SELECT TO public
   USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Admin updates reports" ON public.content_reports AS PERMISSIVE FOR UPDATE TO public
   USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Users can read own reports" ON public.content_reports AS PERMISSIVE FOR SELECT TO public
-  USING ((auth.uid() = reporter_id));
+  USING ((( SELECT auth.uid() AS uid) = reporter_id));
 CREATE POLICY "Users can report content" ON public.content_reports AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = reporter_id));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = reporter_id));
 CREATE POLICY demo_readonly_content_reports_insert ON public.content_reports AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY dtc_owner ON public.deep_test_chunks AS PERMISSIVE FOR ALL TO authenticated
-  USING ((auth.uid() = user_id))
-  WITH CHECK ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id))
+  WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can manage own tokens" ON public.device_tokens AS PERMISSIVE FOR ALL TO public
-  USING ((auth.uid() = user_id))
-  WITH CHECK ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id))
+  WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY demo_readonly_device_tokens_insert ON public.device_tokens AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_device_tokens_update ON public.device_tokens AS RESTRICTIVE FOR UPDATE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY "Admin full access" ON public.email_campaign_sends AS PERMISSIVE FOR ALL TO public
-  USING ((auth.uid() = 'd70b1a85-4f31-4431-b3b7-db76543daaf5'::uuid));
+  USING ((( SELECT auth.uid() AS uid) = 'd70b1a85-4f31-4431-b3b7-db76543daaf5'::uuid));
 CREATE POLICY "Admin full access" ON public.email_campaigns AS PERMISSIVE FOR ALL TO public
-  USING ((auth.uid() = 'd70b1a85-4f31-4431-b3b7-db76543daaf5'::uuid));
+  USING ((( SELECT auth.uid() AS uid) = 'd70b1a85-4f31-4431-b3b7-db76543daaf5'::uuid));
 CREATE POLICY "Admin can read email events" ON public.email_events AS PERMISSIVE FOR SELECT TO public
   USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Users can insert own eula" ON public.eula_acceptances AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = user_id));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can read own eula" ON public.eula_acceptances AS PERMISSIVE FOR SELECT TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY demo_readonly_eula_insert ON public.eula_acceptances AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY fact_clicks_insert_own ON public.fact_clicks AS PERMISSIVE FOR INSERT TO authenticated
-  WITH CHECK ((user_id = auth.uid()));
+  WITH CHECK ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY fact_impressions_insert_own ON public.fact_impressions AS PERMISSIVE FOR INSERT TO authenticated
-  WITH CHECK ((user_id = auth.uid()));
+  WITH CHECK ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY "Admin can read all feedback" ON public.feedback AS PERMISSIVE FOR SELECT TO public
   USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Admin can update feedback" ON public.feedback AS PERMISSIVE FOR UPDATE TO public
@@ -3136,109 +3136,109 @@ CREATE POLICY "Admin can update feedback" ON public.feedback AS PERMISSIVE FOR U
 CREATE POLICY "Anon can insert feedback" ON public.feedback AS PERMISSIVE FOR INSERT TO anon
   WITH CHECK ((user_id IS NULL));
 CREATE POLICY "Users can delete own feedback" ON public.feedback AS PERMISSIVE FOR DELETE TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can insert feedback" ON public.feedback AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() IS NOT NULL));
+  WITH CHECK ((( SELECT auth.uid() AS uid) IS NOT NULL));
 CREATE POLICY admin_read_feedback ON public.feedback AS PERMISSIVE FOR SELECT TO public
-  USING ((auth.uid() = 'd70b1a85-4f31-4431-b3b7-db76543daaf5'::uuid));
+  USING ((( SELECT auth.uid() AS uid) = 'd70b1a85-4f31-4431-b3b7-db76543daaf5'::uuid));
 CREATE POLICY admin_update_feedback ON public.feedback AS PERMISSIVE FOR UPDATE TO public
-  USING ((auth.uid() = 'd70b1a85-4f31-4431-b3b7-db76543daaf5'::uuid));
+  USING ((( SELECT auth.uid() AS uid) = 'd70b1a85-4f31-4431-b3b7-db76543daaf5'::uuid));
 CREATE POLICY demo_readonly_feedback_insert ON public.feedback AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY "Suspended users cannot insert follow_requests" ON public.follow_requests AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK (((auth.uid() = requester_id) AND (NOT (EXISTS ( SELECT 1
+  WITH CHECK (((( SELECT auth.uid() AS uid) = requester_id) AND (NOT (EXISTS ( SELECT 1
    FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_suspended = true)))))));
+  WHERE ((profiles.id = ( SELECT auth.uid() AS uid)) AND (profiles.is_suspended = true)))))));
 CREATE POLICY "Users can create follow requests" ON public.follow_requests AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK (((auth.uid() = requester_id) AND (NOT (EXISTS ( SELECT 1
+  WITH CHECK (((( SELECT auth.uid() AS uid) = requester_id) AND (NOT (EXISTS ( SELECT 1
    FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_suspended = true)))))));
+  WHERE ((profiles.id = ( SELECT auth.uid() AS uid)) AND (profiles.is_suspended = true)))))));
 CREATE POLICY "Users can delete own follow requests" ON public.follow_requests AS PERMISSIVE FOR DELETE TO public
-  USING (((auth.uid() = requester_id) OR (auth.uid() = target_id)));
+  USING (((( SELECT auth.uid() AS uid) = requester_id) OR (( SELECT auth.uid() AS uid) = target_id)));
 CREATE POLICY "Users can see own follow requests" ON public.follow_requests AS PERMISSIVE FOR SELECT TO public
-  USING (((auth.uid() = requester_id) OR (auth.uid() = target_id)));
+  USING (((( SELECT auth.uid() AS uid) = requester_id) OR (( SELECT auth.uid() AS uid) = target_id)));
 CREATE POLICY delete_own_requests ON public.follow_requests AS PERMISSIVE FOR DELETE TO public
-  USING (((auth.uid() = requester_id) OR (auth.uid() = target_id)));
+  USING (((( SELECT auth.uid() AS uid) = requester_id) OR (( SELECT auth.uid() AS uid) = target_id)));
 CREATE POLICY demo_readonly_follow_requests_delete ON public.follow_requests AS RESTRICTIVE FOR DELETE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_follow_requests_insert ON public.follow_requests AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY view_own_requests ON public.follow_requests AS PERMISSIVE FOR SELECT TO public
-  USING (((auth.uid() = requester_id) OR (auth.uid() = target_id)));
+  USING (((( SELECT auth.uid() AS uid) = requester_id) OR (( SELECT auth.uid() AS uid) = target_id)));
 CREATE POLICY "Anyone can read follows" ON public.follows AS PERMISSIVE FOR SELECT TO public
   USING (true);
 CREATE POLICY "Suspended users cannot insert follows" ON public.follows AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK (((auth.uid() = follower_id) AND (NOT (EXISTS ( SELECT 1
+  WITH CHECK (((( SELECT auth.uid() AS uid) = follower_id) AND (NOT (EXISTS ( SELECT 1
    FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_suspended = true)))))));
+  WHERE ((profiles.id = ( SELECT auth.uid() AS uid)) AND (profiles.is_suspended = true)))))));
 CREATE POLICY "Users can follow others" ON public.follows AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((((auth.uid() = follower_id) OR (auth.uid() = following_id)) AND (NOT (EXISTS ( SELECT 1
+  WITH CHECK ((((( SELECT auth.uid() AS uid) = follower_id) OR (( SELECT auth.uid() AS uid) = following_id)) AND (NOT (EXISTS ( SELECT 1
    FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_suspended = true)))))));
+  WHERE ((profiles.id = ( SELECT auth.uid() AS uid)) AND (profiles.is_suspended = true)))))));
 CREATE POLICY "Users can unfollow" ON public.follows AS PERMISSIVE FOR DELETE TO public
-  USING ((auth.uid() = follower_id));
+  USING ((( SELECT auth.uid() AS uid) = follower_id));
 CREATE POLICY demo_readonly_follows_delete ON public.follows AS RESTRICTIVE FOR DELETE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_follows_insert ON public.follows AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY follows_delete ON public.follows AS PERMISSIVE FOR DELETE TO public
-  USING (((follower_id = auth.uid()) OR (following_id = auth.uid())));
+  USING (((follower_id = ( SELECT auth.uid() AS uid)) OR (following_id = ( SELECT auth.uid() AS uid))));
 CREATE POLICY follows_read ON public.follows AS PERMISSIVE FOR SELECT TO public
   USING (true);
 CREATE POLICY follows_select ON public.follows AS PERMISSIVE FOR SELECT TO authenticated
   USING (true);
 CREATE POLICY users_can_view_own_followers ON public.follows AS PERMISSIVE FOR SELECT TO public
-  USING (((following_id = auth.uid()) OR (follower_id = auth.uid())));
+  USING (((following_id = ( SELECT auth.uid() AS uid)) OR (follower_id = ( SELECT auth.uid() AS uid))));
 CREATE POLICY "Suspended users cannot insert friend_requests" ON public.friend_requests AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK (((auth.uid() = initiator_id) AND (NOT (EXISTS ( SELECT 1
+  WITH CHECK (((( SELECT auth.uid() AS uid) = initiator_id) AND (NOT (EXISTS ( SELECT 1
    FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_suspended = true)))))));
+  WHERE ((profiles.id = ( SELECT auth.uid() AS uid)) AND (profiles.is_suspended = true)))))));
 CREATE POLICY "Users can create friend requests" ON public.friend_requests AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = initiator_id));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = initiator_id));
 CREATE POLICY "Users can delete own friend requests" ON public.friend_requests AS PERMISSIVE FOR DELETE TO public
-  USING (((auth.uid() = initiator_id) OR (auth.uid() = target_id)));
+  USING (((( SELECT auth.uid() AS uid) = initiator_id) OR (( SELECT auth.uid() AS uid) = target_id)));
 CREATE POLICY "Users can see own friend requests" ON public.friend_requests AS PERMISSIVE FOR SELECT TO public
-  USING (((auth.uid() = initiator_id) OR (auth.uid() = target_id)));
+  USING (((( SELECT auth.uid() AS uid) = initiator_id) OR (( SELECT auth.uid() AS uid) = target_id)));
 CREATE POLICY "Users can update own friend requests" ON public.friend_requests AS PERMISSIVE FOR UPDATE TO public
-  USING (((auth.uid() = initiator_id) OR (auth.uid() = target_id)));
+  USING (((( SELECT auth.uid() AS uid) = initiator_id) OR (( SELECT auth.uid() AS uid) = target_id)));
 CREATE POLICY demo_readonly_friend_requests_delete ON public.friend_requests AS RESTRICTIVE FOR DELETE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_friend_requests_insert ON public.friend_requests AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_friend_requests_update ON public.friend_requests AS RESTRICTIVE FOR UPDATE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY fr_delete ON public.friend_requests AS PERMISSIVE FOR DELETE TO public
-  USING (((auth.uid() = initiator_id) OR (auth.uid() = target_id)));
+  USING (((( SELECT auth.uid() AS uid) = initiator_id) OR (( SELECT auth.uid() AS uid) = target_id)));
 CREATE POLICY fr_insert ON public.friend_requests AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = initiator_id));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = initiator_id));
 CREATE POLICY fr_select ON public.friend_requests AS PERMISSIVE FOR SELECT TO public
-  USING (((auth.uid() = initiator_id) OR (auth.uid() = target_id)));
+  USING (((( SELECT auth.uid() AS uid) = initiator_id) OR (( SELECT auth.uid() AS uid) = target_id)));
 CREATE POLICY fr_update ON public.friend_requests AS PERMISSIVE FOR UPDATE TO public
-  USING (((auth.uid() = initiator_id) OR (auth.uid() = target_id)));
+  USING (((( SELECT auth.uid() AS uid) = initiator_id) OR (( SELECT auth.uid() AS uid) = target_id)));
 CREATE POLICY "Admin can read all identify_attempts" ON public.identify_attempts AS PERMISSIVE FOR SELECT TO public
   USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Users can read their own identify attempts" ON public.identify_attempts AS PERMISSIVE FOR SELECT TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Authenticated users can read internal_accounts" ON public.internal_accounts AS PERMISSIVE FOR SELECT TO authenticated
   USING (true);
 CREATE POLICY "Anyone can read likes" ON public.likes AS PERMISSIVE FOR SELECT TO public
   USING (true);
 CREATE POLICY "Suspended users cannot insert likes" ON public.likes AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK (((auth.uid() = user_id) AND (NOT (EXISTS ( SELECT 1
+  WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) AND (NOT (EXISTS ( SELECT 1
    FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_suspended = true)))))));
+  WHERE ((profiles.id = ( SELECT auth.uid() AS uid)) AND (profiles.is_suspended = true)))))));
 CREATE POLICY "Users can delete own likes" ON public.likes AS PERMISSIVE FOR DELETE TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can insert own likes" ON public.likes AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK (((auth.uid() = user_id) AND (NOT (EXISTS ( SELECT 1
+  WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) AND (NOT (EXISTS ( SELECT 1
    FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_suspended = true)))))));
+  WHERE ((profiles.id = ( SELECT auth.uid() AS uid)) AND (profiles.is_suspended = true)))))));
 CREATE POLICY demo_readonly_likes_delete ON public.likes AS RESTRICTIVE FOR DELETE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_likes_insert ON public.likes AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY likes_delete ON public.likes AS PERMISSIVE FOR DELETE TO authenticated
-  USING ((user_id = auth.uid()));
+  USING ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY likes_read ON public.likes AS PERMISSIVE FOR SELECT TO public
   USING (true);
 CREATE POLICY likes_select ON public.likes AS PERMISSIVE FOR SELECT TO authenticated
@@ -3252,104 +3252,104 @@ CREATE POLICY "Admin can update log moderation" ON public.logs AS PERMISSIVE FOR
 CREATE POLICY "Others can read shared logs" ON public.logs AS PERMISSIVE FOR SELECT TO public
   USING (((moderation_status IS NULL) AND ((visibility = 'public'::text) OR ((visibility = 'followers'::text) AND (EXISTS ( SELECT 1
    FROM follows
-  WHERE ((follows.follower_id = auth.uid()) AND (follows.following_id = logs.user_id))))) OR ((visibility = 'friends'::text) AND (EXISTS ( SELECT 1
+  WHERE ((follows.follower_id = ( SELECT auth.uid() AS uid)) AND (follows.following_id = logs.user_id))))) OR ((visibility = 'friends'::text) AND (EXISTS ( SELECT 1
    FROM friend_requests
-  WHERE ((friend_requests.status = 'accepted'::text) AND (((friend_requests.initiator_id = auth.uid()) AND (friend_requests.target_id = logs.user_id)) OR ((friend_requests.target_id = auth.uid()) AND (friend_requests.initiator_id = logs.user_id))))))) OR ((visibility IS NULL) AND (EXISTS ( SELECT 1
+  WHERE ((friend_requests.status = 'accepted'::text) AND (((friend_requests.initiator_id = ( SELECT auth.uid() AS uid)) AND (friend_requests.target_id = logs.user_id)) OR ((friend_requests.target_id = ( SELECT auth.uid() AS uid)) AND (friend_requests.initiator_id = logs.user_id))))))) OR ((visibility IS NULL) AND (EXISTS ( SELECT 1
    FROM follows
-  WHERE ((follows.follower_id = auth.uid()) AND (follows.following_id = logs.user_id))))) OR ((club_id IS NOT NULL) AND (visibility IS DISTINCT FROM 'private'::text) AND (EXISTS ( SELECT 1
+  WHERE ((follows.follower_id = ( SELECT auth.uid() AS uid)) AND (follows.following_id = logs.user_id))))) OR ((club_id IS NOT NULL) AND (visibility IS DISTINCT FROM 'private'::text) AND (EXISTS ( SELECT 1
    FROM club_members
-  WHERE ((club_members.club_id = logs.club_id) AND (club_members.user_id = auth.uid()))))))));
+  WHERE ((club_members.club_id = logs.club_id) AND (club_members.user_id = ( SELECT auth.uid() AS uid)))))))));
 CREATE POLICY "Reporter can flag logs" ON public.logs AS PERMISSIVE FOR UPDATE TO public
-  USING (((auth.uid() IS NOT NULL) AND (auth.uid() <> user_id)))
+  USING (((( SELECT auth.uid() AS uid) IS NOT NULL) AND (( SELECT auth.uid() AS uid) <> user_id)))
   WITH CHECK ((moderation_status = 'flagged'::text));
 CREATE POLICY "Suspended users cannot insert logs" ON public.logs AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK (((auth.uid() = user_id) AND (NOT (EXISTS ( SELECT 1
+  WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) AND (NOT (EXISTS ( SELECT 1
    FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_suspended = true)))))));
+  WHERE ((profiles.id = ( SELECT auth.uid() AS uid)) AND (profiles.is_suspended = true)))))));
 CREATE POLICY "Users can delete own logs" ON public.logs AS PERMISSIVE FOR DELETE TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can read own logs" ON public.logs AS PERMISSIVE FOR SELECT TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can update own logs" ON public.logs AS PERMISSIVE FOR UPDATE TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY demo_readonly_logs_delete ON public.logs AS RESTRICTIVE FOR DELETE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_logs_insert ON public.logs AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_logs_update ON public.logs AS RESTRICTIVE FOR UPDATE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY logs_delete ON public.logs AS PERMISSIVE FOR DELETE TO public
-  USING ((user_id = auth.uid()));
+  USING ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY logs_own ON public.logs AS PERMISSIVE FOR SELECT TO public
-  USING ((user_id = auth.uid()));
+  USING ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY logs_public_club_browse ON public.logs AS PERMISSIVE FOR SELECT TO public
   USING (((moderation_status IS NULL) AND (club_id IS NOT NULL) AND (visibility = 'public'::text) AND (EXISTS ( SELECT 1
    FROM clubs
   WHERE ((clubs.id = logs.club_id) AND (clubs.privacy = 'public'::text))))));
 CREATE POLICY logs_update ON public.logs AS PERMISSIVE FOR UPDATE TO public
-  USING ((user_id = auth.uid()));
+  USING ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY mbr_admin_all ON public.measurement_batch_runs AS PERMISSIVE FOR ALL TO authenticated
-  USING ((auth.uid() = 'd70b1a85-4f31-4431-b3b7-db76543daaf5'::uuid))
-  WITH CHECK ((auth.uid() = 'd70b1a85-4f31-4431-b3b7-db76543daaf5'::uuid));
+  USING ((( SELECT auth.uid() AS uid) = 'd70b1a85-4f31-4431-b3b7-db76543daaf5'::uuid))
+  WITH CHECK ((( SELECT auth.uid() AS uid) = 'd70b1a85-4f31-4431-b3b7-db76543daaf5'::uuid));
 CREATE POLICY "Authenticated users can insert notifications" ON public.notifications AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() IS NOT NULL));
+  WITH CHECK ((( SELECT auth.uid() AS uid) IS NOT NULL));
 CREATE POLICY "Suspended users cannot insert notifications" ON public.notifications AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK (((auth.uid() = actor_id) AND (NOT (EXISTS ( SELECT 1
+  WITH CHECK (((( SELECT auth.uid() AS uid) = actor_id) AND (NOT (EXISTS ( SELECT 1
    FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_suspended = true)))))));
+  WHERE ((profiles.id = ( SELECT auth.uid() AS uid)) AND (profiles.is_suspended = true)))))));
 CREATE POLICY "Users can delete own notifications" ON public.notifications AS PERMISSIVE FOR DELETE TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can insert notifications they send" ON public.notifications AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((actor_id = auth.uid()));
+  WITH CHECK ((actor_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY "Users can read own notifications" ON public.notifications AS PERMISSIVE FOR SELECT TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can update own notifications" ON public.notifications AS PERMISSIVE FOR UPDATE TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY demo_readonly_notifications_insert ON public.notifications AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_notifications_update ON public.notifications AS RESTRICTIVE FOR UPDATE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY notif_delete ON public.notifications AS PERMISSIVE FOR DELETE TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY notif_select ON public.notifications AS PERMISSIVE FOR SELECT TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY notif_update ON public.notifications AS PERMISSIVE FOR UPDATE TO public
-  USING ((auth.uid() = user_id))
-  WITH CHECK ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id))
+  WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY notifications_delete ON public.notifications AS PERMISSIVE FOR DELETE TO public
-  USING (((user_id = auth.uid()) OR (actor_id = auth.uid())));
+  USING (((user_id = ( SELECT auth.uid() AS uid)) OR (actor_id = ( SELECT auth.uid() AS uid))));
 CREATE POLICY "Admin full access on official_drafts" ON public.official_drafts AS PERMISSIVE FOR ALL TO public
   USING (( SELECT is_admin() AS is_admin))
   WITH CHECK (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Admin can read page visits" ON public.page_visits AS PERMISSIVE FOR SELECT TO public
-  USING ((auth.uid() = 'd70b1a85-4f31-4431-b3b7-db76543daaf5'::uuid));
+  USING ((( SELECT auth.uid() AS uid) = 'd70b1a85-4f31-4431-b3b7-db76543daaf5'::uuid));
 CREATE POLICY "Anyone can insert page visits" ON public.page_visits AS PERMISSIVE FOR INSERT TO public
   WITH CHECK ((path IS NOT NULL));
 CREATE POLICY "Users can backfill own visit" ON public.page_visits AS PERMISSIVE FOR UPDATE TO public
   USING ((user_id IS NULL))
-  WITH CHECK ((user_id = auth.uid()));
+  WITH CHECK ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY pz_cap_insert ON public.piezo_raw_captures AS PERMISSIVE FOR INSERT TO authenticated
   WITH CHECK (true);
 CREATE POLICY "admin reads post_cta_events" ON public.post_cta_events AS PERMISSIVE FOR SELECT TO authenticated
-  USING ((auth.uid() = 'd70b1a85-4f31-4431-b3b7-db76543daaf5'::uuid));
+  USING ((( SELECT auth.uid() AS uid) = 'd70b1a85-4f31-4431-b3b7-db76543daaf5'::uuid));
 CREATE POLICY "users insert own post_cta_events" ON public.post_cta_events AS PERMISSIVE FOR INSERT TO authenticated
-  WITH CHECK ((auth.uid() = user_id));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Admin can update profiles" ON public.profiles AS PERMISSIVE FOR UPDATE TO public
   USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles AS PERMISSIVE FOR SELECT TO public
   USING (true);
 CREATE POLICY "Users can insert own profile" ON public.profiles AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = id));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = id));
 CREATE POLICY "Users can update own profile" ON public.profiles AS PERMISSIVE FOR UPDATE TO public
-  USING ((auth.uid() = id));
+  USING ((( SELECT auth.uid() AS uid) = id));
 CREATE POLICY demo_readonly_profiles_update ON public.profiles AS RESTRICTIVE FOR UPDATE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY profiles_delete ON public.profiles AS PERMISSIVE FOR DELETE TO public
-  USING ((id = auth.uid()));
+  USING ((id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY profiles_insert ON public.profiles AS PERMISSIVE FOR INSERT TO authenticated
-  WITH CHECK ((id = auth.uid()));
+  WITH CHECK ((id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY profiles_insert_own ON public.profiles AS PERMISSIVE FOR INSERT TO authenticated
-  WITH CHECK ((id = auth.uid()));
+  WITH CHECK ((id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY profiles_read ON public.profiles AS PERMISSIVE FOR SELECT TO public
   USING (true);
 CREATE POLICY profiles_readable_by_authenticated ON public.profiles AS PERMISSIVE FOR SELECT TO authenticated
@@ -3357,10 +3357,10 @@ CREATE POLICY profiles_readable_by_authenticated ON public.profiles AS PERMISSIV
 CREATE POLICY profiles_select ON public.profiles AS PERMISSIVE FOR SELECT TO authenticated
   USING (true);
 CREATE POLICY profiles_update ON public.profiles AS PERMISSIVE FOR UPDATE TO authenticated
-  USING ((id = auth.uid()));
+  USING ((id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY profiles_update_own ON public.profiles AS PERMISSIVE FOR UPDATE TO authenticated
-  USING ((id = auth.uid()))
-  WITH CHECK ((id = auth.uid()));
+  USING ((id = ( SELECT auth.uid() AS uid)))
+  WITH CHECK ((id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY promo_config_admin_update ON public.promo_config AS PERMISSIVE FOR UPDATE TO authenticated
   USING (( SELECT is_admin() AS is_admin))
   WITH CHECK (( SELECT is_admin() AS is_admin));
@@ -3369,44 +3369,44 @@ CREATE POLICY promo_config_select_all ON public.promo_config AS PERMISSIVE FOR S
 CREATE POLICY promo_events_admin_delete ON public.promo_events AS PERMISSIVE FOR DELETE TO authenticated
   USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY promo_events_insert_own ON public.promo_events AS PERMISSIVE FOR INSERT TO authenticated
-  WITH CHECK ((user_id = auth.uid()));
+  WITH CHECK ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY promo_events_select_own ON public.promo_events AS PERMISSIVE FOR SELECT TO authenticated
-  USING ((user_id = auth.uid()));
+  USING ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY promo_slots_admin_all ON public.promo_slots AS PERMISSIVE FOR ALL TO authenticated
   USING (( SELECT is_admin() AS is_admin))
   WITH CHECK (( SELECT is_admin() AS is_admin));
 CREATE POLICY promo_slots_select_live ON public.promo_slots AS PERMISSIVE FOR SELECT TO authenticated
   USING (((status = 'active'::text) AND ((starts_at IS NULL) OR (starts_at <= now())) AND ((ends_at IS NULL) OR (ends_at > now()))));
 CREATE POLICY recap_shares_delete_own ON public.recap_shares AS PERMISSIVE FOR DELETE TO authenticated
-  USING ((user_id = auth.uid()));
+  USING ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY recap_shares_insert_own ON public.recap_shares AS PERMISSIVE FOR INSERT TO authenticated
-  WITH CHECK ((user_id = auth.uid()));
+  WITH CHECK ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY recap_shares_select_own ON public.recap_shares AS PERMISSIVE FOR SELECT TO authenticated
-  USING ((user_id = auth.uid()));
+  USING ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY "Users insert their own prompt events" ON public.review_prompt_events AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = user_id));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users read their own prompt events" ON public.review_prompt_events AS PERMISSIVE FOR SELECT TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can insert own logs" ON public.timegrapher_debug_logs AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = user_id));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can read own logs" ON public.timegrapher_debug_logs AS PERMISSIVE FOR SELECT TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Admin can read all timegrapher_results" ON public.timegrapher_results AS PERMISSIVE FOR SELECT TO public
   USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Users can delete own results" ON public.timegrapher_results AS PERMISSIVE FOR DELETE TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can insert own results" ON public.timegrapher_results AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = user_id));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can read own results" ON public.timegrapher_results AS PERMISSIVE FOR SELECT TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can update own results" ON public.timegrapher_results AS PERMISSIVE FOR UPDATE TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY demo_readonly_tg_delete ON public.timegrapher_results AS RESTRICTIVE FOR DELETE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_tg_insert ON public.timegrapher_results AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_tg_update ON public.timegrapher_results AS RESTRICTIVE FOR UPDATE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY "Anyone can insert tick logs" ON public.timegrapher_tick_logs AS PERMISSIVE FOR INSERT TO public
   WITH CHECK (true);
 CREATE POLICY "Anyone can read tick logs" ON public.timegrapher_tick_logs AS PERMISSIVE FOR SELECT TO public
@@ -3416,101 +3416,101 @@ CREATE POLICY "Anyone can read tuning" ON public.timegrapher_tuning AS PERMISSIV
 CREATE POLICY tuning_update_internal ON public.timegrapher_tuning AS PERMISSIVE FOR UPDATE TO authenticated
   USING ((EXISTS ( SELECT 1
    FROM internal_accounts ia
-  WHERE (ia.user_id = auth.uid()))))
+  WHERE (ia.user_id = ( SELECT auth.uid() AS uid)))))
   WITH CHECK ((EXISTS ( SELECT 1
    FROM internal_accounts ia
-  WHERE (ia.user_id = auth.uid()))));
+  WHERE (ia.user_id = ( SELECT auth.uid() AS uid)))));
 CREATE POLICY "Users can insert own badges" ON public.user_badges AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = user_id));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can read own badges" ON public.user_badges AS PERMISSIVE FOR SELECT TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can update own badges" ON public.user_badges AS PERMISSIVE FOR UPDATE TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Admin reads all blocks" ON public.user_blocks AS PERMISSIVE FOR SELECT TO public
   USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Users can block others" ON public.user_blocks AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = blocker_id));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = blocker_id));
 CREATE POLICY "Users can read own blocks" ON public.user_blocks AS PERMISSIVE FOR SELECT TO public
-  USING ((auth.uid() = blocker_id));
+  USING ((( SELECT auth.uid() AS uid) = blocker_id));
 CREATE POLICY "Users can unblock" ON public.user_blocks AS PERMISSIVE FOR DELETE TO public
-  USING ((auth.uid() = blocker_id));
+  USING ((( SELECT auth.uid() AS uid) = blocker_id));
 CREATE POLICY demo_readonly_user_blocks_delete ON public.user_blocks AS RESTRICTIVE FOR DELETE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_user_blocks_insert ON public.user_blocks AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY "Admin can read all valuation_events" ON public.valuation_events AS PERMISSIVE FOR SELECT TO public
   USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Users can insert own valuation events" ON public.valuation_events AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = user_id));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can read own valuation events" ON public.valuation_events AS PERMISSIVE FOR SELECT TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY watch_fact_days_own ON public.watch_fact_days AS PERMISSIVE FOR ALL TO authenticated
-  USING ((user_id = auth.uid()))
-  WITH CHECK ((user_id = auth.uid()));
+  USING ((user_id = ( SELECT auth.uid() AS uid)))
+  WITH CHECK ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY watch_fact_progress_own ON public.watch_fact_progress AS PERMISSIVE FOR ALL TO authenticated
-  USING ((user_id = auth.uid()))
-  WITH CHECK ((user_id = auth.uid()));
+  USING ((user_id = ( SELECT auth.uid() AS uid)))
+  WITH CHECK ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY watch_facts_select ON public.watch_facts AS PERMISSIVE FOR SELECT TO authenticated
   USING (true);
 CREATE POLICY "Others can read shared watches" ON public.watches AS PERMISSIVE FOR SELECT TO public
   USING (((watch_privacy = 'public'::text) OR (watch_privacy IS NULL) OR ((watch_privacy = 'followers'::text) AND (EXISTS ( SELECT 1
    FROM follows
-  WHERE ((follows.follower_id = auth.uid()) AND (follows.following_id = watches.user_id))))) OR ((watch_privacy = 'friends'::text) AND (EXISTS ( SELECT 1
+  WHERE ((follows.follower_id = ( SELECT auth.uid() AS uid)) AND (follows.following_id = watches.user_id))))) OR ((watch_privacy = 'friends'::text) AND (EXISTS ( SELECT 1
    FROM friend_requests
-  WHERE ((friend_requests.status = 'accepted'::text) AND (((friend_requests.initiator_id = auth.uid()) AND (friend_requests.target_id = watches.user_id)) OR ((friend_requests.target_id = auth.uid()) AND (friend_requests.initiator_id = watches.user_id)))))))));
+  WHERE ((friend_requests.status = 'accepted'::text) AND (((friend_requests.initiator_id = ( SELECT auth.uid() AS uid)) AND (friend_requests.target_id = watches.user_id)) OR ((friend_requests.target_id = ( SELECT auth.uid() AS uid)) AND (friend_requests.initiator_id = watches.user_id)))))))));
 CREATE POLICY "Users can delete own watches" ON public.watches AS PERMISSIVE FOR DELETE TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can insert own watches" ON public.watches AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = user_id));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can read own watches" ON public.watches AS PERMISSIVE FOR SELECT TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can update own watches" ON public.watches AS PERMISSIVE FOR UPDATE TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY demo_readonly_watches_delete ON public.watches AS RESTRICTIVE FOR DELETE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_watches_insert ON public.watches AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_watches_update ON public.watches AS RESTRICTIVE FOR UPDATE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY watches_own ON public.watches AS PERMISSIVE FOR ALL TO authenticated
-  USING ((user_id = auth.uid()))
-  WITH CHECK ((user_id = auth.uid()));
+  USING ((user_id = ( SELECT auth.uid() AS uid)))
+  WITH CHECK ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY "Others can read shared wishlist" ON public.wishlist AS PERMISSIVE FOR SELECT TO public
   USING (((wish_privacy = 'public'::text) OR (wish_privacy IS NULL) OR ((wish_privacy = 'followers'::text) AND (EXISTS ( SELECT 1
    FROM follows
-  WHERE ((follows.follower_id = auth.uid()) AND (follows.following_id = wishlist.user_id))))) OR ((wish_privacy = 'friends'::text) AND (EXISTS ( SELECT 1
+  WHERE ((follows.follower_id = ( SELECT auth.uid() AS uid)) AND (follows.following_id = wishlist.user_id))))) OR ((wish_privacy = 'friends'::text) AND (EXISTS ( SELECT 1
    FROM friend_requests
-  WHERE ((friend_requests.status = 'accepted'::text) AND (((friend_requests.initiator_id = auth.uid()) AND (friend_requests.target_id = wishlist.user_id)) OR ((friend_requests.target_id = auth.uid()) AND (friend_requests.initiator_id = wishlist.user_id)))))))));
+  WHERE ((friend_requests.status = 'accepted'::text) AND (((friend_requests.initiator_id = ( SELECT auth.uid() AS uid)) AND (friend_requests.target_id = wishlist.user_id)) OR ((friend_requests.target_id = ( SELECT auth.uid() AS uid)) AND (friend_requests.initiator_id = wishlist.user_id)))))))));
 CREATE POLICY "Read public and friends wishlists" ON public.wishlist AS PERMISSIVE FOR SELECT TO public
-  USING (((user_id = auth.uid()) OR (EXISTS ( SELECT 1
+  USING (((user_id = ( SELECT auth.uid() AS uid)) OR (EXISTS ( SELECT 1
    FROM profiles p
   WHERE ((p.id = wishlist.user_id) AND (p.wishlist_visibility = ANY (ARRAY['public'::text, 'friends_only'::text])))))));
 CREATE POLICY "Users can delete own wishlist" ON public.wishlist AS PERMISSIVE FOR DELETE TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can insert own wishlist" ON public.wishlist AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() = user_id));
+  WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can read own wishlist" ON public.wishlist AS PERMISSIVE FOR SELECT TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY "Users can update own wishlist" ON public.wishlist AS PERMISSIVE FOR UPDATE TO public
-  USING ((auth.uid() = user_id));
+  USING ((( SELECT auth.uid() AS uid) = user_id));
 CREATE POLICY demo_readonly_wishlist_delete ON public.wishlist AS RESTRICTIVE FOR DELETE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_wishlist_insert ON public.wishlist AS RESTRICTIVE FOR INSERT TO public
-  WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  WITH CHECK ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY demo_readonly_wishlist_update ON public.wishlist AS RESTRICTIVE FOR UPDATE TO public
-  USING ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
+  USING ((( SELECT auth.uid() AS uid) <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY wishlist_own ON public.wishlist AS PERMISSIVE FOR ALL TO authenticated
-  USING ((user_id = auth.uid()))
-  WITH CHECK ((user_id = auth.uid()));
+  USING ((user_id = ( SELECT auth.uid() AS uid)))
+  WITH CHECK ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY wishlist_shares_delete_own ON public.wishlist_shares AS PERMISSIVE FOR DELETE TO authenticated
-  USING ((user_id = auth.uid()));
+  USING ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY wishlist_shares_insert_own ON public.wishlist_shares AS PERMISSIVE FOR INSERT TO authenticated
-  WITH CHECK ((user_id = auth.uid()));
+  WITH CHECK ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY wishlist_shares_select_own ON public.wishlist_shares AS PERMISSIVE FOR SELECT TO authenticated
-  USING ((user_id = auth.uid()));
+  USING ((user_id = ( SELECT auth.uid() AS uid)));
 CREATE POLICY wishlist_shares_update_own ON public.wishlist_shares AS PERMISSIVE FOR UPDATE TO authenticated
-  USING ((user_id = auth.uid()))
-  WITH CHECK ((user_id = auth.uid()));
+  USING ((user_id = ( SELECT auth.uid() AS uid)))
+  WITH CHECK ((user_id = ( SELECT auth.uid() AS uid)));
 
 --
 -- Grants
