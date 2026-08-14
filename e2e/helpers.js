@@ -53,6 +53,20 @@ export async function mockSupabase(page, opts = {}) {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(user) })
   );
 
+  // Feed cards resolve their watch through the feed_watch_display RPC rather than
+  // reading the watches table, so the row never carries price/insured_value/receipts
+  // (see sql/2026-08-13-feed-watch-display.sql). Mirror that here by serving the same
+  // fixtures trimmed to the display columns the RPC actually returns.
+  await page.route('**/rest/v1/rpc/feed_watch_display*', route => {
+    const DISPLAY_COLS = ['id', 'brand', 'name', 'color', 'image', 'ref', 'url',
+                          'description', 'background', 'functions'];
+    let ids = null;
+    try { ids = JSON.parse(route.request().postData() || '{}').ids; } catch { /* return all */ }
+    const rows = (Array.isArray(ids) ? watches.filter(w => ids.includes(w.id)) : watches)
+      .map(w => Object.fromEntries(DISPLAY_COLS.filter(c => c in w).map(c => [c, w[c]])));
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(rows) });
+  });
+
   // ── REST API: watches, logs, wishlist ──
   await page.route('**/rest/v1/watches*', route => {
     if (route.request().method() === 'GET') {
