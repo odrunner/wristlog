@@ -115,7 +115,7 @@ describe('Email metrics day-over-day', () => {
   // figure, summed from the per-row *_24h fields admin_email_engagement returns.
   // Spec: sql/2026-08-04-email-engagement-dod.sql.
   it('sums the 24h fields alongside the all-time totals', () => {
-    expect(html).toMatch(/let delivered24 = 0, opened24 = 0, clicked24 = 0, bounced24 = 0;/);
+    expect(html).toMatch(/let delivered24 = 0, opened24 = 0, openedHuman24 = 0, clicked24 = 0, bounced24 = 0;/);
     for (const f of ['delivered_24h', 'opened_24h', 'clicked_24h', 'bounced_24h']) {
       expect(html).toContain(`r.${f}`);
     }
@@ -127,7 +127,9 @@ describe('Email metrics day-over-day', () => {
 
   it('headline card shows a delta on delivered, opened, clicked and bounced', () => {
     expect(html).toContain("statRow('Delivered', delivered, null, dodDelta(delivered24))");
-    expect(html).toContain("statRow('Opened', opened, pct(opened, delivered), dodDelta(opened24))");
+    // Opened reports HUMAN opens; prefetch is shown beside it, not folded in.
+    expect(html).toContain("statRow('Opened', openedHuman, pct(openedHuman, delivered)");
+    expect(html).toContain('dodDelta(openedHuman24)');
     expect(html).toContain("statRow('Clicked', clicked, pct(clicked, delivered), dodDelta(clicked24))");
     // bounces invert: a rise is not a green number
     expect(html).toContain("dodDelta(bounced24, true)");
@@ -135,7 +137,7 @@ describe('Email metrics day-over-day', () => {
 
   it('per-campaign rows carry their own 24h deltas', () => {
     expect(html).toContain('Delivered: ${s.delivered}${dodDelta(s.delivered24)}');
-    expect(html).toContain('dodDelta(s.opened24)');
+    expect(html).toContain('dodDelta(s.openedHuman24)');
     expect(html).toContain('dodDelta(s.clicked24)');
   });
 
@@ -145,5 +147,43 @@ describe('Email metrics day-over-day', () => {
     expect(html).toContain('s.delivered24 += +b.delivered_24h || 0;');
     expect(html).toContain('s.opened24 += +b.opened_24h || 0;');
     expect(html).toContain('s.clicked24 += +b.clicked_24h || 0;');
+  });
+});
+
+describe('Machine vs human opens', () => {
+  // Apple Mail Privacy Protection and Gmail's image proxy fetch the tracking
+  // pixel the moment a message is delivered, so a raw open count measures mail
+  // clients, not readers: a 50-recipient broadcast logged 11 opens inside 90
+  // seconds, 10 of them under 5s. admin_email_engagement now returns
+  // opened_human (>= 30s after delivery) alongside opened, and the admin UI
+  // leads with the human figure. Spec: sql/2026-08-13-open-split-prefetch.sql.
+  it('accumulates opened_human from both by_subject rows and broadcast labels', () => {
+    expect(html).toContain('openedHuman += +r.opened_human || 0;');
+    expect(html).toContain('s.openedHuman += +r.opened_human || 0;');
+    expect(html).toContain('s.openedHuman += +b.opened_human || 0;');
+    expect(html).toContain('openedHuman24 += +r.opened_human_24h || 0;');
+    expect(html).toContain('s.openedHuman24 += +b.opened_human_24h || 0;');
+  });
+
+  it('derives the prefetch count as opened minus human, never negative', () => {
+    expect(html).toContain('const prefetch = (total, human) => Math.max(0, (+total || 0) - (+human || 0));');
+  });
+
+  it('per-campaign rows show the human open rate, with prefetch beside it', () => {
+    expect(html).toContain('Opened: ${s.openedHuman} (${pct(s.openedHuman, base)})');
+    expect(html).toContain('prefetch(s.opened, s.openedHuman)');
+  });
+
+  it('marks prefetch rows in the recent opens list instead of hiding them', () => {
+    // Filtering them out would make a live broadcast read as zero engagement.
+    expect(html).toContain("e.machine ? '⟳' : '👁'");
+    expect(html).toContain("const dim = e.machine ? 'opacity:.5;' : '';");
+  });
+
+  it('zero-initialises the new fields on every campaign accumulator', () => {
+    // A missing key would make the row render "undefined" the first time a
+    // campaign is seen; both accumulators (subject and label) seed it.
+    const seeds = html.match(/\{ sent: 0, delivered: 0, opened: 0, openedHuman: 0, clicked: 0, delivered24: 0, opened24: 0, openedHuman24: 0, clicked24: 0 \}/g) || [];
+    expect(seeds.length).toBe(2);
   });
 });
