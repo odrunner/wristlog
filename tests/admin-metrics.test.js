@@ -101,6 +101,28 @@ describe('Totals card day-over-day deltas', () => {
     expect(html).toMatch(/pushDevices\s*=\s*Number\(push\.push_devices\)\s*\|\|\s*0/);
   });
 
+  // Regression: extUsers was the length of a profiles fetch capped at .limit(500),
+  // so once there were more than 500 profiles the user total froze — it read 498
+  // (500 newest, 2 of them internal) while the real external count was 508, and a
+  // new signup only pushed an older row out of the window. Counting an array that
+  // has a LIMIT on it is the bug; the count has to come over the wire.
+  it('the user total comes from an exact count, not the length of a capped fetch', () => {
+    expect(html).toContain("db.from('profiles').select('id', { count: 'exact', head: true })");
+    expect(html).toContain('const extUsers = Math.max(0, (profileCountR.count || 0) - internalProfiles.length);');
+    expect(html).not.toContain("const extUsers = allProfiles.filter(p => !INTERNAL_IDS.has(p.id)).length;");
+  });
+
+  it('internal accounts are fetched by id, not filtered out of the capped page', () => {
+    // 4 of the 6 internal accounts are older than the 500 newest profiles, so
+    // filtering the capped page showed an Internal Accounts table of 2.
+    expect(html).toContain(".in('id', [...INTERNAL_IDS])");
+    expect(html).toContain('const internalList = internalProfiles.map(toProfileItem);');
+  });
+
+  it('the users table says so when it is showing only the newest page', () => {
+    expect(html).toMatch(/usersTitle = extUsers > profileList\.length\s*\?\s*`Users \(\$\{profileList\.length\} newest of \$\{extUsers\}\)`/);
+  });
+
   it('inlineDelta colors an embedded change and inverts when a rise is bad', () => {
     expect(html).toMatch(/const inlineDelta = \(delta, invert\) => \{[\s\S]*?const good = invert \? delta < 0 : delta > 0;/);
   });

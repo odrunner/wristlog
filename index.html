@@ -7807,7 +7807,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.19.17';
+const APP_VERSION = '13.19.38';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17673,8 +17673,19 @@ async function loadAdminStats() {
     // Per-user breakdowns via SECURITY DEFINER RPCs (bypass RLS)
     const d1ago = new Date(Date.now() - 24 * 3600000).toISOString();
     const d2ago = new Date(Date.now() - 48 * 3600000).toISOString();
-    const [profilesR, msrR, userStatsR, newWatchesR, newWearsR, newMsrR, prevMsrR, newValR, newEnhR, lastActiveR] = await withTimeout(Promise.all([
+    const [profilesR, profileCountR, internalProfilesR, msrR, userStatsR, newWatchesR, newWearsR, newMsrR, prevMsrR, newValR, newEnhR, lastActiveR] = await withTimeout(Promise.all([
       db.from('profiles').select('id, username, display_name, avatar_url, created_at').order('created_at', { ascending: false }).limit(500),
+      // The row fetch above is capped at 500 for the table, so it CANNOT be
+      // counted to get the user total: past 500 profiles the count freezes and
+      // every new signup just pushes an older row out of the window. It sat at
+      // 498 (500 newest, 2 of them internal) while the real figure was 508.
+      // head:true — a count over the wire, no rows.
+      db.from('profiles').select('id', { count: 'exact', head: true }),
+      // Internal accounts explicitly, not filtered out of the capped page: the
+      // oldest 4 of the 6 had already fallen outside it, so the Internal
+      // Accounts table was showing 2. This is the table the external numbers
+      // get cross-referenced against, so it has to be complete.
+      db.from('profiles').select('id, username, display_name, avatar_url, created_at').in('id', [...INTERNAL_IDS]),
       db.rpc('admin_measurement_counts'),
       db.rpc('admin_user_stats'),
       db.from('watches').select('user_id').gte('created_at', d1ago),
@@ -17750,7 +17761,9 @@ async function loadAdminStats() {
     const extVal = Object.entries(valByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0);
     const extEnh = Object.entries(enhByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0);
     const extMsr = Object.entries(msrByUser).filter(([uid]) => !INTERNAL_IDS.has(uid)).reduce((s, [, c]) => s + c, 0);
-    const extUsers = allProfiles.filter(p => !INTERNAL_IDS.has(p.id)).length;
+    // Exact counts, not array lengths — see the note on the queries above.
+    const internalProfiles = internalProfilesR.data || [];
+    const extUsers = Math.max(0, (profileCountR.count || 0) - internalProfiles.length);
     // In-app (push) notification approvals — distinct external users with at least one
     // registered device token, which the iOS app only stores after the OS grants
     // permission. Share is of ALL users, web included, so it reads low by design:
@@ -17800,7 +17813,12 @@ async function loadAdminStats() {
       _newMsr: newMsrByUser[p.id] || 0,
     });
     const profileList = allProfiles.filter(p => !INTERNAL_IDS.has(p.id)).map(toProfileItem);
-    const internalList = allProfiles.filter(p => INTERNAL_IDS.has(p.id)).map(toProfileItem);
+    const internalList = internalProfiles.map(toProfileItem);
+    // The table shows the newest 500 profiles; the heading says so once there
+    // are more, rather than letting "Users (498)" contradict the total above it.
+    const usersTitle = extUsers > profileList.length
+      ? `Users (${profileList.length} newest of ${extUsers})`
+      : `Users (${extUsers})`;
 
     const statRow = (label, value, delta, sub, invert) => {
       // delta (number): green day-over-day change; when `invert`, a rise is bad so
@@ -17835,7 +17853,7 @@ async function loadAdminStats() {
       if (prev && prev.col === col) window._adminTableSort[tableId] = { col, asc: !prev.asc };
       else window._adminTableSort[tableId] = { col, asc: false };
       const list = window._adminUserLists[tableId];
-      if (list) window._renderAdminUserTable(tableId, list, tableId === 'admin-users' ? 'Users (' + list.length + ')' : 'Internal Accounts (' + list.length + ')');
+      if (list) window._renderAdminUserTable(tableId, list, tableId === 'admin-users' ? usersTitle : 'Internal Accounts (' + list.length + ')');
     };
 
     const renderAdminUserTable = (tableId, list, title) => {
@@ -17945,7 +17963,7 @@ async function loadAdminStats() {
         ${statRow('Measurements / User', avg(extMsr, extUsers))}
         ${statRow('Follows / User', avg(follows, extUsers))}
       </div>
-      ${renderAdminUserTable('admin-users', profileList, 'Users (' + profileList.length + ')')}
+      ${renderAdminUserTable('admin-users', profileList, usersTitle)}
       ${renderAdminUserTable('admin-internal', internalList, 'Internal Accounts (' + internalList.length + ')')}`;
   } catch(e) {
     el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;">
