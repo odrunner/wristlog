@@ -173,6 +173,8 @@ Deno.test("skipTable maps known keys to tables", () => {
   assertEquals(skipTable("has_watch"), "watches");
   assertEquals(skipTable("has_log"), "logs");
   assertEquals(skipTable("has_measurement"), "timegrapher_results");
+  // Onboarding 5 (day 21) skips anyone who already keeps a wishlist.
+  assertEquals(skipTable("has_wishlist"), "wishlist");
 });
 
 Deno.test("skipTable returns null for null/empty/unknown (never drops everyone)", () => {

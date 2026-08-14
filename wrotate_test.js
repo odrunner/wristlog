@@ -93,16 +93,17 @@ export function campaignSubject(subj) {
   return subj;
 }
 
-// The four live onboarding drips, in send order. Slot 2 is the fun-fact drip
-// (email_campaigns "Onboarding 2 — Start your streak", subject
-// "A fun fact about {{watchPhrase}}"), which replaced "Start tracking your
-// wears" — that one is retired now and belongs in "Older campaigns" with its
-// history, not in slot 2 pretending to be current.
+// The five live onboarding drips, in send order (days 1, 3, 7, 14, 21). Slot 2
+// is the fun-fact drip (email_campaigns "Onboarding 2 — Start your streak",
+// subject "A fun fact about {{watchPhrase}}"), which replaced "Start tracking
+// your wears" — that one is retired now and belongs in "Older campaigns" with
+// its history, not in slot 2 pretending to be current.
 const CAMPAIGN_ONBOARDING = [
   'Add your first watch',
   CAMPAIGN_FUNFACT_DRIP,
   'How accurate is your watch?',
   'Which watch is really your favorite?',
+  'Which watch is next?',
 ];
 // Connections / Comments / Mentions — the recurring social notifications. Their
 // own section: they are ongoing and comparable to each other, unlike finished sends.

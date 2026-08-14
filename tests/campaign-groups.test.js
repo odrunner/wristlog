@@ -222,6 +222,19 @@ describe('index.html mirrors the campaign constants', () => {
     expect(arrayIn('CAMPAIGN_ONBOARDING')[1]).toBe('CAMPAIGN_FUNFACT_DRIP');
   });
 
+  it('onboarding lists all five drips in send order', () => {
+    // Order is the display order in the admin Onboarding group — the numbering
+    // ("5. Which watch is next?") comes from this array's index, so a drip added
+    // to email_campaigns but not here renders as an unnumbered "Older campaign".
+    expect(arrayIn('CAMPAIGN_ONBOARDING')).toEqual([
+      'Add your first watch',
+      'CAMPAIGN_FUNFACT_DRIP',
+      'How accurate is your watch?',
+      'Which watch is really your favorite?',
+      'Which watch is next?',
+    ]);
+  });
+
   it('no hardcoded in-flight broadcast list survives', () => {
     // A finished broadcast should drop out on its own (pending hits zero), with
     // nobody editing an array.

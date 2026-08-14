@@ -106,6 +106,7 @@ export const KNOWN_SKIPS: Record<string, string> = {
   has_watch: "watches",
   has_log: "logs",
   has_measurement: "timegrapher_results",
+  has_wishlist: "wishlist",
 };
 
 export function skipTable(skipKey: string | null | undefined): string | null {
