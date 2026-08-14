@@ -142,7 +142,7 @@ export function buildHtmlEmail(subject: string, body: string, unsubUrl: string):
                EXCLUDES "/" and "/index.html", so a root link opens Safari instead
                of the installed iOS app. The utm_* params are kept — they do not
                affect Universal Link matching, which is path-based. -->
-          <a href="https://wrotate.com/open?utm_source=email&utm_medium=campaign&utm_campaign=welcome" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
+          <a href="https://wrotate.com/open?utm_source=email&utm_medium=campaign&utm_campaign=wear-reminder" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
         </td></tr>
         <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
           <div style="font-size:11px;color:#999;line-height:1.5;">${unsubLine}</div>

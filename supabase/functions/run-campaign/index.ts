@@ -311,7 +311,10 @@ async function deliver(
         : {};
       const subject = personalizeSubject(campaign.subject, r.displayName, vars);
       const personalizedBody = personalizeBody(campaign.body_html, r.displayName, vars);
-      const html = buildHtmlEmail(subject, personalizedBody, url);
+      // Tag by campaign NAME, not the rendered subject: a personalized subject
+      // ("A fun fact about {{watchPhrase}}") differs per recipient and would
+      // scatter one drip across hundreds of utm_campaign buckets.
+      const html = buildHtmlEmail(subject, personalizedBody, url, campaign.name);
       return {
         from: FROM_EMAIL,
         to: [r.email],
@@ -712,7 +715,7 @@ async function enqueueStreakBroadcast(supabase: Db, limit: number) {
       email,
       subject: personalizeSubject(campaign.subject, r.display_name, vars),
       // Footer-less: the drain appends unsubFooter() with a freshly signed URL.
-      html: buildHtmlEmail("", personalizeBody(campaign.body_html, r.display_name, vars), ""),
+      html: buildHtmlEmail("", personalizeBody(campaign.body_html, r.display_name, vars), "", STREAK_BROADCAST_LABEL),
       label: STREAK_BROADCAST_LABEL,
     });
   }

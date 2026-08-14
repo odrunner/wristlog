@@ -23,6 +23,7 @@ import {
   watchLabel,
   watchPhrase,
 } from "./lib.ts";
+import { campaignSlug } from "../_shared/campaign-slug.ts";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -422,4 +423,34 @@ Deno.test("looksLikeRealWatchLabel — rejects names that would embarrass in a s
 Deno.test("looksLikeRealWatchLabel — 'test' matches as a word, not inside another", () => {
   assertEquals(looksLikeRealWatchLabel("Protest Diver"), true);
   assertEquals(looksLikeRealWatchLabel("Seiko Test"), false);
+});
+
+// ---- per-campaign utm tagging ----
+// Every drip shared utm_campaign=welcome, so page_visits could not tell an
+// "Add your first watch" click from a wishlist one. SES click tracking has been
+// off since 2026-07-31, which makes these tags the only click measurement there
+// is. Spec: sql/2026-08-14-email-clickthrough.sql.
+Deno.test("buildHtmlEmail tags the CTA with the campaign's own slug", () => {
+  const out = buildHtmlEmail("Subj", "<p>b</p>", "https://u/x", "Onboarding 5 — Wishlist");
+  assertEquals(out.includes("utm_campaign=onboarding-5-wishlist"), true);
+  assertEquals(out.includes("utm_source=email"), true);
+  assertEquals(out.includes("utm_campaign=welcome"), false);
+});
+
+Deno.test("buildHtmlEmail CTA still points at /open, never the bare root", () => {
+  // The AASA file excludes "/" and "/index.html": a root link opens Safari
+  // rather than the installed app, so the utm params must ride on /open.
+  const out = buildHtmlEmail("Subj", "<p>b</p>", "https://u/x", "Whatever");
+  assertEquals(out.includes("https://wrotate.com/open?utm_source=email"), true);
+  assertEquals(/href="https:\/\/wrotate\.com"/.test(out), false);
+});
+
+Deno.test("campaignSlug collapses punctuation and never yields an empty tag", () => {
+  assertEquals(campaignSlug("Onboarding 2 — Start your streak"), "onboarding-2-start-your-streak");
+  assertEquals(campaignSlug("  We rebuilt the wishlist!  "), "we-rebuilt-the-wishlist");
+  assertEquals(campaignSlug("—"), "email");
+  assertEquals(campaignSlug(""), "email");
+  assertEquals(campaignSlug(null), "email");
+  // Bounded so a long subject cannot blow up the query string.
+  assertEquals(campaignSlug("x".repeat(200)).length, 48);
 });

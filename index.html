@@ -7807,7 +7807,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.19.38';
+const APP_VERSION = '13.20.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18124,13 +18124,16 @@ async function renderAdminTraffic() {
   if (!el) return;
   el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Loading traffic…</div>';
   try {
-    const [trafficR, emailEventsR, demoR] = await withTimeout(Promise.all([
+    const [trafficR, emailEventsR, demoR, clickR] = await withTimeout(Promise.all([
       db.rpc('admin_traffic_stats'),
       // All-time per-subject aggregates + recent opens, computed server-side.
       // (Was a raw 500-row fetch, which only covered the last ~week and
       //  undercounted cumulative campaign delivery/open/click totals.)
       db.rpc('admin_email_engagement'),
       db.rpc('admin_demo_views'),
+      // Click-through measured from our own page_visits utm tags, because SES
+      // click tracking is off. Spec: sql/2026-08-14-email-clickthrough.sql.
+      db.rpc('admin_email_clickthrough'),
     ]), 15000);
     if (trafficR.error) throw trafficR.error;
     const t = trafficR.data;
@@ -18197,6 +18200,7 @@ async function renderAdminTraffic() {
         <div class="eyebrow" style="margin-bottom:.5rem;">Signups by Source</div>
         ${signupSourceRows}
       </div>` : ''}
+      ${renderEmailClickthrough((clickR && !clickR.error) ? clickR.data : null)}
       ${renderEmailEngagement(emailEventsR.data || {})}`;
   } catch(e) {
     el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;">
@@ -18231,6 +18235,43 @@ function renderEmailHealth(data) {
     ${row('Bounce', bounce7.toFixed(2) + '%', 'limit 5%', tone(bounce7, 2.5, 5))}
     ${row('Complaint', complaint7.toFixed(3) + '%', 'limit 0.1%', tone(complaint7, 0.05, 0.1))}
     ${row('Sent', (+health.sent_7d).toLocaleString(), '', 'var(--gold)', true)}
+  </div>`;
+}
+
+// Email click-through, from page_visits utm tags rather than SES.
+//
+// The "Clicked" figures elsewhere on this tab have read 0 for every send since
+// 2026-07-31, when SES click tracking was turned off (it rewrites hrefs to a
+// redirect host, which breaks the iOS Universal Link on the CTA). That 0 means
+// "not measured", so this card is the one that actually answers "did anyone
+// open the app from this email".
+//
+// Only campaigns sent AFTER the tagging shipped can appear. Older sends either
+// carried no utm at all (every broadcast) or shared one hardcoded
+// utm_campaign=welcome (all five drips plus the wear reminder), so the two
+// legacy rows are not comparable to anything and are labelled as such.
+function renderEmailClickthrough(rows) {
+  if (!rows || !rows.length) return '';
+  const ago = (ts) => {
+    const mins = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
+    if (mins < 60) return mins + 'm ago';
+    if (mins < 1440) return Math.floor(mins / 60) + 'h ago';
+    return Math.floor(mins / 1440) + 'd ago';
+  };
+  const body = rows.map(r => {
+    const legacy = r.campaign === 'welcome' || r.campaign === 'april-winback';
+    return `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:.78rem;padding:.35rem 0;border-bottom:1px solid var(--border);gap:.5rem;">
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.campaign)}${legacy ? '<span style="color:var(--muted);font-size:.66rem;margin-left:.35rem;">untagged era</span>' : ''}</span>
+      <span style="font-variant-numeric:tabular-nums;white-space:nowrap;">
+        <span style="color:var(--muted);font-size:.68rem;margin-right:.5rem;">${ago(r.last_visit)}</span>
+        <span style="color:var(--gold);font-weight:600;">${r.visits}</span>${Number(r.visits_24h) ? `<span style="color:var(--success);font-size:.68rem;font-weight:600;margin-left:.3rem;">+${r.visits_24h}</span>` : ''}
+      </span>
+    </div>`;
+  }).join('');
+  return `<div class="admin-card">
+    <div class="eyebrow" style="margin-bottom:.2rem;">Email Click-throughs</div>
+    <div style="font-size:.68rem;color:var(--muted);margin-bottom:.5rem;">app opens from a tagged email link · SES click tracking is off, so this replaces "Clicked"</div>
+    ${body}
   </div>`;
 }
 
@@ -19261,19 +19302,19 @@ function getBroadcastImages() {
 }
 
 // Build inline image HTML snippet for email
-function imgSnippet(img) {
+function imgSnippet(img, link) {
   return `</div></td></tr><tr><td style="padding:8px 28px;">
-    <a href="https://wrotate.com" style="text-decoration:none;display:block;"><img src="${escHtml(img.src)}" alt="" style="max-width:100%;border-radius:8px;display:block;border:0;"></a>
+    <a href="${link}" style="text-decoration:none;display:block;"><img src="${escHtml(img.src)}" alt="" style="max-width:100%;border-radius:8px;display:block;border:0;"></a>
     ${img.caption ? `<div style="font-size:12px;color:#888;margin-top:4px;text-align:center;">${escHtml(img.caption)}</div>` : ''}
   </td></tr><tr><td style="padding:0 28px;"><div style="font-size:14px;color:#555;line-height:1.6;">`;
 }
 
 // Replace [img1], [img2], [img3] markers in body HTML with inline images
-function inlineImages(bodyHtml, images) {
+function inlineImages(bodyHtml, images, link) {
   for (let i = 0; i < images.length; i++) {
     const marker = `[img${i + 1}]`;
     if (bodyHtml.includes(marker) && images[i]) {
-      bodyHtml = bodyHtml.replace(marker, imgSnippet(images[i]));
+      bodyHtml = bodyHtml.replace(marker, imgSnippet(images[i], link));
     }
   }
   return bodyHtml;
@@ -19284,8 +19325,31 @@ function inlineImages(bodyHtml, images) {
 // server-side by send-broadcast (unsubFooter). Keep in sync with that footer.
 const BROADCAST_PREVIEW_FOOTER = '<a href="https://wrotate.com/open" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> &middot; <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">Manage preferences</a>';
 
-function buildBroadcastEmailHtml(heading, bodyHtml, images, footerHtml = '') {
-  bodyHtml = inlineImages(bodyHtml, images);
+// utm_campaign value for an email. Mirrored in supabase/functions/_shared/
+// campaign-slug.ts so a drip and a broadcast bucket the same way — the admin
+// "Email click-throughs" card groups on exactly this string.
+function campaignSlug(text) {
+  return String(text || 'broadcast').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'broadcast';
+}
+
+// Every link out of a broadcast, tagged and pointed at /open.
+//
+// /open, never the bare root: .well-known/apple-app-site-association EXCLUDES
+// "/" and "/index.html", so a root link hands the tap to Safari instead of the
+// installed iOS app. The logo and every trailing image were bare roots.
+//
+// The utm_* trio is the ONLY click measurement there is: SES click tracking has
+// been off since 2026-07-31 (it rewrites hrefs to a redirect host, which breaks
+// Universal Link matching), so a tagged /open link landing in page_visits is
+// what a "click" means now.
+function broadcastLink(slug) {
+  return `https://wrotate.com/open?utm_source=email&utm_medium=broadcast&utm_campaign=${encodeURIComponent(slug)}`;
+}
+
+function buildBroadcastEmailHtml(heading, bodyHtml, images, footerHtml = '', slug = 'broadcast') {
+  const link = broadcastLink(slug);
+  bodyHtml = inlineImages(bodyHtml, images, link);
 
   // Any images NOT referenced by markers go at the bottom
   const usedMarkers = new Set();
@@ -19297,7 +19361,7 @@ function buildBroadcastEmailHtml(heading, bodyHtml, images, footerHtml = '') {
   images.forEach((img, i) => {
     if (!usedMarkers.has(i)) {
       trailingImagesHtml += `<tr><td style="padding:8px 28px;">
-        <a href="https://wrotate.com" style="text-decoration:none;display:block;"><img src="${escHtml(img.src)}" alt="" style="max-width:100%;border-radius:8px;display:block;border:0;"></a>
+        <a href="${link}" style="text-decoration:none;display:block;"><img src="${escHtml(img.src)}" alt="" style="max-width:100%;border-radius:8px;display:block;border:0;"></a>
         ${img.caption ? `<div style="font-size:12px;color:#888;margin-top:4px;text-align:center;">${escHtml(img.caption)}</div>` : ''}
       </td></tr>`;
     }
@@ -19311,7 +19375,7 @@ function buildBroadcastEmailHtml(heading, bodyHtml, images, footerHtml = '') {
     <tr><td align="center">
       <table width="100%" style="max-width:480px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
         <tr><td style="padding:28px 28px 20px;text-align:center;border-bottom:1px solid #eee;">
-          <a href="https://wrotate.com" style="text-decoration:none;color:inherit;display:inline-block;">
+          <a href="${link}" style="text-decoration:none;color:inherit;display:inline-block;">
             <img src="https://wrotate.com/icon.svg" alt="WRotate" width="40" height="40" style="display:inline-block;border-radius:9px;margin-bottom:8px;border:0;">
             <div style="font-size:18px;font-weight:700;color:#b8941f;letter-spacing:.03em;">WRotate</div>
           </a>
@@ -19322,7 +19386,7 @@ function buildBroadcastEmailHtml(heading, bodyHtml, images, footerHtml = '') {
         </td></tr>
         ${trailingImagesHtml}
         <tr><td style="padding:16px 28px 28px;text-align:center;">
-          <a href="https://wrotate.com/open" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
+          <a href="${link}" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
           <br><br>
           <a href="https://apps.apple.com/us/app/wrotate/id6760091102" style="display:inline-block;">
             <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" width="120" style="display:inline-block;">
@@ -19344,6 +19408,7 @@ function buildBroadcastEmailHtml(heading, bodyHtml, images, footerHtml = '') {
 function buildBroadcastHtml() {
   const heading = document.getElementById('broadcast-heading')?.value?.trim() || '';
   const body = document.getElementById('broadcast-body')?.value?.trim() || '';
+  const subject = document.getElementById('broadcast-subject')?.value?.trim() || '';
   const images = getBroadcastImages();
 
   let bodyHtml = body;
@@ -19352,7 +19417,7 @@ function buildBroadcastHtml() {
   }
 
   // Preview shows a representative footer; the real one is appended server-side.
-  return buildBroadcastEmailHtml(heading, bodyHtml, images, BROADCAST_PREVIEW_FOOTER);
+  return buildBroadcastEmailHtml(heading, bodyHtml, images, BROADCAST_PREVIEW_FOOTER, campaignSlug(subject));
 }
 
 function updateBroadcastPreview() {
@@ -19395,13 +19460,17 @@ async function uploadBroadcastImages() {
 function buildFinalBroadcastHtml(images) {
   const heading = document.getElementById('broadcast-heading')?.value?.trim() || '';
   const body = document.getElementById('broadcast-body')?.value?.trim() || '';
+  // send-broadcast defaults the queue label to the subject, so slugging the
+  // subject here is what makes the utm_campaign match the label the admin
+  // reports engagement under.
+  const subject = document.getElementById('broadcast-subject')?.value?.trim() || '';
 
   let bodyHtml = body;
   if (body) {
     bodyHtml = body.replace(/\n\n+/g, '</div><div style="font-size:14px;color:#555;line-height:1.6;margin-top:12px;">').replace(/\n/g, '<br>');
   }
 
-  return buildBroadcastEmailHtml(heading, bodyHtml, images);
+  return buildBroadcastEmailHtml(heading, bodyHtml, images, '', campaignSlug(subject));
 }
 
 const BROADCAST_DRAFTS_KEY = 'wrotate_broadcast_drafts';
@@ -20722,11 +20791,14 @@ function updateCampaignPreview(id) {
     el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:1rem;">Start typing to see preview</div>';
     return;
   }
-  const html = buildCampaignEmailHtml(subject, body);
+  const html = buildCampaignEmailHtml(subject, body, document.getElementById('camp-name-' + id)?.value?.trim() || '');
   el.innerHTML = `<iframe srcdoc="${html.replace(/"/g, '&quot;')}" style="width:100%;min-height:400px;border:none;border-radius:6px;background:#fff;" sandbox></iframe>`;
 }
 
-function buildCampaignEmailHtml(subject, body) {
+// Mirrors run-campaign/lib.ts buildHtmlEmail(). The utm_campaign is the
+// campaign NAME slug, matching what the real send emits, so the preview shows
+// the link the recipient actually gets.
+function buildCampaignEmailHtml(subject, body, campaign) {
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -20742,7 +20814,7 @@ function buildCampaignEmailHtml(subject, body) {
           <div style="font-size:14px;color:#555;line-height:1.6;">${body}</div>
         </td></tr>
         <tr><td style="padding:4px 28px 28px;">
-          <a href="https://wrotate.com/open?utm_source=email&utm_medium=campaign&utm_campaign=welcome" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
+          <a href="https://wrotate.com/open?utm_source=email&utm_medium=campaign&utm_campaign=${campaignSlug(campaign)}" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
         </td></tr>
         <tr><td style="padding:16px 28px;border-top:1px solid #eee;">
           <div style="font-size:11px;color:#999;line-height:1.5;">
@@ -20816,8 +20888,8 @@ async function testCampaign(id) {
   }
 }
 
-function buildCampaignPreviewHtml(subject, body) {
-  return buildCampaignEmailHtml(subject, body);
+function buildCampaignPreviewHtml(subject, body, campaign) {
+  return buildCampaignEmailHtml(subject, body, campaign);
 }
 
 async function runCampaignNow() {

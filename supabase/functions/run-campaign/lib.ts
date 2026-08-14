@@ -34,6 +34,8 @@ export function splitAlreadySent<T extends { id: string }>(
   return { pending, skipped };
 }
 
+import { campaignLink, campaignSlug } from "../_shared/campaign-slug.ts";
+
 // Personalization + fun-fact helpers live in _shared/email-personalize.ts so
 // send-broadcast renders identical copy. Re-exported here because this module
 // is run-campaign's public surface (index.ts and lib.test.ts import from it).
@@ -58,7 +60,10 @@ export {
 // Pass an empty unsubUrl to omit the footer row: broadcast_queue rows are
 // stored footer-less because send-broadcast's drain appends its own
 // unsubFooter() (with a freshly signed URL) at send time.
-export function buildHtmlEmail(subject: string, body: string, unsubUrl: string): string {
+export function buildHtmlEmail(subject: string, body: string, unsubUrl: string, campaign = "email"): string {
+  // Per-campaign utm tag. Defaulted rather than required so the broadcast
+  // preview path (which passes no campaign) still renders a valid link.
+  const ctaHref = campaignLink(campaignSlug(campaign));
   const unsubLine = `<a href="${unsubUrl}" style="color:#b8941f;text-decoration:underline;">Unsubscribe</a> · <a href="https://wrotate.com/open" style="color:#999;text-decoration:underline;">Manage preferences</a>`;
   const footerRow = unsubUrl
     ? `
@@ -85,7 +90,7 @@ export function buildHtmlEmail(subject: string, body: string, unsubUrl: string):
                EXCLUDES "/" and "/index.html", so a root link opens Safari instead
                of the installed iOS app. The utm_* params are kept — they do not
                affect Universal Link matching, which is path-based. -->
-          <a href="https://wrotate.com/open?utm_source=email&utm_medium=campaign&utm_campaign=welcome" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
+          <a href="${ctaHref}" style="display:inline-block;background:#b8941f;color:#fff;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">Open WRotate</a>
         </td></tr>
 ${footerRow}
       </table>

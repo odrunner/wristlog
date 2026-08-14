@@ -2317,19 +2317,19 @@ export function filterWatchChartsUrls(html, brandKey) {
 // ══════════════════════════════════════════
 
 // Build inline image HTML snippet for email
-export function imgSnippet(img) {
+export function imgSnippet(img, link) {
   return `</div></td></tr><tr><td style="padding:8px 28px;">
-    <a href="https://wrotate.com" style="text-decoration:none;display:block;"><img src="${escHtml(img.src)}" alt="" style="max-width:100%;border-radius:8px;display:block;border:0;"></a>
+    <a href="${link}" style="text-decoration:none;display:block;"><img src="${escHtml(img.src)}" alt="" style="max-width:100%;border-radius:8px;display:block;border:0;"></a>
     ${img.caption ? `<div style="font-size:12px;color:#888;margin-top:4px;text-align:center;">${escHtml(img.caption)}</div>` : ''}
   </td></tr><tr><td style="padding:0 28px;"><div style="font-size:14px;color:#555;line-height:1.6;">`;
 }
 
 // Replace [img1], [img2] etc. markers in body HTML with inline images
-export function inlineImages(bodyHtml, images) {
+export function inlineImages(bodyHtml, images, link) {
   for (let i = 0; i < images.length; i++) {
     const marker = `[img${i + 1}]`;
     if (bodyHtml.includes(marker) && images[i]) {
-      bodyHtml = bodyHtml.replace(marker, imgSnippet(images[i]));
+      bodyHtml = bodyHtml.replace(marker, imgSnippet(images[i], link));
     }
   }
   return bodyHtml;
