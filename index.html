@@ -7855,7 +7855,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '14.09.13';
+const APP_VERSION = '14.09.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9929,7 +9929,7 @@ async function renderClubDetail(clubId) {
   const membersHtml = members.map(m => {
     const initStr = ((m.display_name || m.username || '?')[0]).toUpperCase();
     const avatarHtml = m.avatar_url
-      ? `<div class="club-member-chip-avatar"><img src="${escHtml(m.avatar_url)}" onerror="this.style.display='none'"></div>`
+      ? `<div class="club-member-chip-avatar"><img src="${escHtml(m.avatar_url)}" alt="${escAttr(m.display_name || m.username || '')}" onerror="this.style.display='none'"></div>`
       : `<div class="club-member-chip-avatar">${initStr}</div>`;
     const ownerBadge = m.role === 'owner' ? ' \u{1F451}' : '';
     const ownerMenu = isOwner && m.id !== currentUser.id && m.role !== 'owner' ? `
@@ -9961,8 +9961,8 @@ async function renderClubDetail(clubId) {
         <label for="club-edit-photo-input" class="form-label" style="font-size:.78rem;">Club Photo</label>
         <div id="club-edit-photo-area" class="log-photo-area" style="height:64px;" onclick="document.getElementById('club-edit-photo-input').click()">
           ${club.image_url
-            ? `<img id="club-edit-photo-preview" src="${escHtml(club.image_url)}" class="log-photo-preview" style="display:block;max-height:56px;border-radius:8px;">`
-            : `<div id="club-edit-photo-placeholder" class="log-photo-placeholder" style="font-size:.78rem;">Upload photo</div><img id="club-edit-photo-preview" class="log-photo-preview" style="display:none;">`}
+            ? `<img id="club-edit-photo-preview" src="${escHtml(club.image_url)}" alt="" class="log-photo-preview" style="display:block;max-height:56px;border-radius:8px;">`
+            : `<div id="club-edit-photo-placeholder" class="log-photo-placeholder" style="font-size:.78rem;">Upload photo</div><img id="club-edit-photo-preview" alt="" class="log-photo-preview" style="display:none;">`}
         </div>
         <input type="file" id="club-edit-photo-input" accept="image/*" style="display:none" onchange="handleClubImageUpload(this,'${clubId}')">
       </div>
@@ -9984,7 +9984,7 @@ async function renderClubDetail(clubId) {
 
   el.innerHTML = `
     <div class="club-detail-header">
-      <div class="club-detail-avatar" id="club-detail-avatar-${clubId}">${club.image_url ? `<img src="${escHtml(club.image_url)}" onerror="this.style.display='none'">` : clubInitials}</div>
+      <div class="club-detail-avatar" id="club-detail-avatar-${clubId}">${club.image_url ? `<img src="${escHtml(club.image_url)}" alt="${escAttr(club.name || '')}" onerror="this.style.display='none'">` : clubInitials}</div>
       <div style="font-size:1.25rem;font-weight:700;">${escHtml(club.name)}</div>
       <div style="font-size:.8rem;color:var(--muted);">${privacyLabel} · ${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
       ${club.description ? `<div style="font-size:.82rem;color:var(--muted);max-width:340px;margin-top:.25rem;">${escHtml(club.description)}</div>` : ''}
@@ -10160,7 +10160,7 @@ async function searchInviteUsers(query, clubId) {
   el.innerHTML = profiles.map(p => {
     const initStr   = ((p.display_name || p.username || '?')[0]).toUpperCase();
     const avatarHtml = p.avatar_url
-      ? `<img src="${escHtml(p.avatar_url)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
+      ? `<img src="${escHtml(p.avatar_url)}" alt="${escAttr(p.display_name || p.username || '')}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
       : `<div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;">${initStr}</div>`;
     const name = escAttr(p.display_name || p.username || 'User');
     let btn = '';
@@ -10226,7 +10226,7 @@ async function renderPendingInvites(clubId) {
       const name = escAttr(p.display_name || p.username || 'User');
       const initStr = (name[0] || '?').toUpperCase();
       const avatarHtml = p.avatar_url
-        ? `<img src="${escHtml(p.avatar_url)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
+        ? `<img src="${escHtml(p.avatar_url)}" alt="${escAttr(p.display_name || p.username || '')}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
         : `<div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;">${initStr}</div>`;
       return `<div style="display:flex;align-items:center;gap:.55rem;padding:.35rem 0;">
         ${avatarHtml}
@@ -10295,7 +10295,7 @@ async function renderClubsPage() {
         const initStr = (c.name || '?').slice(0, 2).toUpperCase();
         const count = myClubCountMap[c.id] || 0;
         return `<div class="club-card" onclick="openClubDetail('${c.id}')">
-          <div class="club-card-avatar">${c.image_url ? `<img src="${escHtml(c.image_url)}" onerror="this.replaceWith(document.createTextNode('${escAttr(initStr)}'))">` : escHtml(initStr)}</div>
+          <div class="club-card-avatar">${c.image_url ? `<img src="${escHtml(c.image_url)}" alt="${escAttr(c.name || '')}" onerror="this.replaceWith(document.createTextNode('${escAttr(initStr)}'))">` : escHtml(initStr)}</div>
           <div>
             <div class="club-card-name">${escHtml(c.name)}</div>
             <div class="club-card-meta">${c.privacy === 'private' ? '\u{1F512} Private' : '\u{1F310} Public'}${c.role === 'owner' ? ' · owner' : ''} · ${count} member${count !== 1 ? 's' : ''}</div>
@@ -13773,7 +13773,7 @@ function renderFeedCard(item) {
     const isAccuracyCard = isMeasurementCardImage(item.use_case, _urls, 0);
     const heroInner = heroIsVideo
       ? `<video id="feed-hero-${item.id}" muted autoplay loop playsinline webkit-playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;display:block;"><source src="${escHtml(heroUrl)}" type="${videoSourceType(heroUrl)}"></video>`
-      : `<img id="feed-hero-${item.id}" src="${escHtml(heroUrl)}" loading="lazy" onerror="this.parentElement.style.display='none'">`;
+      : `<img id="feed-hero-${item.id}" src="${escHtml(heroUrl)}" alt="Photo from this post" loading="lazy" onerror="this.parentElement.style.display='none'">`;
     heroIsPhoto = true;
     heroHtml = `<div class="feed-card-photo${isAccuracyCard ? ' feed-card-photo--accuracy' : ''}" data-usecase="${escAttr(item.use_case || '')}" data-idx="0" onclick="openImageViewer(${escAttr(JSON.stringify(_urls))}, +(this.dataset.idx||0))">
       ${heroInner}
@@ -13956,7 +13956,7 @@ function renderFeedCard(item) {
   let headerBody;
   if (compactWear) {
     const wThumb = w.image
-      ? `<img class="feed-wearing-watch-thumb" src="${escHtml(w.image)}" onerror="this.style.display='none'">`
+      ? `<img class="feed-wearing-watch-thumb" src="${escHtml(w.image)}" alt="${escAttr(((w.brand||'') + ' ' + (w.name||'')).trim())}" onerror="this.style.display='none'">`
       : `<div class="feed-wearing-watch-avatar" style="background:${escHtml(w.color||'#c9a84c')};color:${initialsTextColor(w.color||'#c9a84c')}">${initials(w.brand||'',w.name||'')}</div>`;
     const wLabel = [w.brand, w.name].filter(Boolean).join(' ');
     headerBody = `
@@ -14242,7 +14242,7 @@ function feedThumbTap(logId, idx, urls) {
     innerHtml = `<video id="feed-hero-${logId}" muted autoplay loop playsinline webkit-playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;display:block;"><source src="${escHtml(url)}" type="${videoSourceType(url)}"></video>`
       + `<button class="feed-vid-mute" onclick="toggleFeedVideoSound(event,'${logId}')" aria-label="Toggle sound">${MUTE_ICON_OFF}</button>`;
   } else {
-    innerHtml = `<img id="feed-hero-${logId}" src="${escHtml(url)}" loading="lazy" onerror="this.parentElement.style.display='none'">`;
+    innerHtml = `<img id="feed-hero-${logId}" src="${escHtml(url)}" alt="Photo from this post" loading="lazy" onerror="this.parentElement.style.display='none'">`;
   }
   if (urls.length > 1) {
     innerHtml += `<span class="feed-card-photo-count${visHtml ? ' feed-card-photo-count--left' : ''}">${idx + 1}/${urls.length}</span>`;
@@ -17022,7 +17022,7 @@ function closeReviewPrompt() {
 let INTERNAL_IDS = new Set();
 async function loadInternalIds() {
   if (INTERNAL_IDS.size > 0) return;
-  const { data } = await db.from('internal_accounts').select('user_id');
+  const { data } = await db.from('internal_accounts').select('user_id').limit(1000);
   INTERNAL_IDS = new Set((data || []).map(r => r.user_id));
 }
 
@@ -17539,7 +17539,8 @@ async function loadAdminReports() {
   el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">Loading…</div>';
   const { data, error } = await withTimeout(db.from('content_reports')
     .select('*')
-    .order('created_at', { ascending: false }), 10000);
+    .order('created_at', { ascending: false })
+    .limit(1000), 10000);
   if (error) { el.innerHTML = `<div style="text-align:center;padding:1.5rem 0;"><div style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;">Error: ${escHtml(error.message)}</div><button class="btn btn-ghost" onclick="loadAdminReports()" style="font-size:.78rem;">↻ Retry</button></div>`; return; }
   _adminReportsData = data || [];
 
@@ -17600,7 +17601,7 @@ function renderReportCard(r) {
   let contentPreview = '';
   if (r._content) {
     if (r.content_type === 'log') {
-      const photoThumb = r._content.photo_url ? `<img src="${escHtml(r._content.photo_url)}" style="width:40px;height:40px;border-radius:4px;object-fit:cover;margin-right:.5rem;">` : '';
+      const photoThumb = r._content.photo_url ? `<img src="${escHtml(r._content.photo_url)}" alt="Reported photo" style="width:40px;height:40px;border-radius:4px;object-fit:cover;margin-right:.5rem;">` : '';
       contentPreview = `<div style="display:flex;align-items:center;margin:.4rem 0;padding:.4rem;background:var(--hover);border-radius:6px;font-size:.78rem;">
         ${photoThumb}<span style="color:var(--text);">${escHtml((r._content.notes || '').slice(0, 80))}${(r._content.notes||'').length > 80 ? '…' : ''}</span>
       </div>`;
@@ -17935,7 +17936,7 @@ async function loadAdminStats() {
       const userThStyle = 'text-align:left;padding:.35rem .25rem;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);cursor:pointer;user-select:none;';
       const rows = sorted.map(u => {
         const initHTML = u.avatar
-          ? `<img src="${escHtml(u.avatar)}" style="width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+          ? `<img src="${escHtml(u.avatar)}" alt="${escAttr(u.username || '')}" style="width:22px;height:22px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
           : `<div style="width:22px;height:22px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:700;flex-shrink:0;">${(u.name[0]||'?').toUpperCase()}</div>`;
         return `<tr>
           <td style="padding:.4rem .25rem;border-bottom:1px solid var(--border);max-width:0;"><div style="display:flex;align-items:center;gap:.4rem;min-width:0;">
@@ -18086,7 +18087,7 @@ async function openAdminUserDetail(userId) {
     const isRepeat = d.active_days > 1;
 
     const initHTML = p.avatar_url
-      ? `<img src="${escHtml(p.avatar_url)}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">`
+      ? `<img src="${escHtml(p.avatar_url)}" alt="${escAttr(p.display_name || p.username || '')}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">`
       : `<div style="width:48px;height:48px;border-radius:50%;background:var(--gold);color:#000;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;">${(name[0]||'?').toUpperCase()}</div>`;
 
     const row = (label, value) => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted);">${label}</span><span style="color:var(--text);font-weight:600;">${value}</span></div>`;
@@ -18633,7 +18634,7 @@ async function loadAdminFeedback() {
   if (!el) return;
   el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">Loading…</div>';
   const [fbRes, appFbRes] = await Promise.all([
-    withTimeout(db.from('feedback').select('*').order('created_at', { ascending: false }), 10000),
+    withTimeout(db.from('feedback').select('*').order('created_at', { ascending: false }).limit(1000), 10000),
     withTimeout(db.from('app_feedback').select('*').order('created_at', { ascending: false }), 10000),
   ]);
   const { data, error } = fbRes;
@@ -18957,7 +18958,8 @@ async function loadOfficialDrafts() {
   el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">Loading…</div>';
   const { data, error } = await db.from('official_drafts')
     .select('*')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(1000);
   if (error) { el.innerHTML = `<div style="color:var(--danger);">Error: ${escHtml(error.message)}</div>`; return; }
   _officialDrafts = data || [];
   renderOfficialDrafts();
@@ -20755,7 +20757,7 @@ async function loadCampaigns() {
   const container = document.getElementById('campaigns-list');
   if (!container) return;
   // Drip-sequence order (day 1 → 14), not newest-first — reads as campaign 1, 2, 3, 4.
-  const { data, error } = await db.from('email_campaigns').select('*').order('delay_days', { ascending: true }).order('created_at', { ascending: true });
+  const { data, error } = await db.from('email_campaigns').select('*').order('delay_days', { ascending: true }).order('created_at', { ascending: true }).limit(1000);
   if (error) { container.innerHTML = `<div style="color:var(--error);font-size:.82rem;">Error: ${error.message}</div>`; return; }
   _campaignsData = data || [];
 
@@ -27673,7 +27675,7 @@ function previewWatch(w) {
 
   const thumbEl = document.getElementById('wpm-thumb');
   if (w.image) {
-    thumbEl.innerHTML = `<img src="${escHtml(w.image)}" style="width:96px;height:96px;object-fit:contain;border-radius:8px;flex-shrink:0;" onerror="this.parentElement.innerHTML=''">`;
+    thumbEl.innerHTML = `<img src="${escHtml(w.image)}" alt="${escAttr(((w.brand||'') + ' ' + (w.name||'')).trim())}" style="width:96px;height:96px;object-fit:contain;border-radius:8px;flex-shrink:0;" onerror="this.parentElement.innerHTML=''">`;
   } else {
     thumbEl.innerHTML = '';
   }
@@ -32512,8 +32514,27 @@ window.addEventListener('unhandledrejection', function(ev) {
   const r = ev.reason;
   const msg = r?.message || r?.toString?.() || 'unknown';
   const stack = r?.stack?.split?.('\n')?.[1]?.trim() || '';
+  // Full detail to the console, always — that is where it is useful.
   console.error('[WristLog] Unhandled promise rejection:', r, stack);
-  if (typeof toast === 'function') toast('BG fail: ' + msg + (stack ? ' @ ' + stack.slice(0, 60) : ''), 'error');
+  if (typeof toast !== 'function') return;
+  // Users used to be shown the raw message plus 60 chars of stack ("BG fail:
+  // Failed to fetch @ at loadFeed (https://wrotate.com/index…"), which named no
+  // action and leaked internal paths. Say something they can act on instead, and
+  // keep the verbose form behind the existing debug flag.
+  if (typeof featureFlag === 'function' && featureFlag('tg_debug')) {
+    toast('BG fail: ' + msg + (stack ? ' @ ' + stack.slice(0, 60) : ''), 'error');
+    return;
+  }
+  // A dropped network request is the common case on mobile and is worth naming,
+  // because "check your connection" is actionable where a stack trace is not.
+  const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+  const networky = /fetch|network|load failed|timeout|abort/i.test(msg);
+  toast(
+    offline || networky
+      ? 'Connection problem — some things may not have loaded.'
+      : "Something didn't load properly.",
+    'error'
+  );
 });
 
 // ── PWA: register service worker ────────────────────────────────────────────
