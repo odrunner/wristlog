@@ -7855,7 +7855,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '14.08.42';
+const APP_VERSION = '14.08.50';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8400,8 +8400,12 @@ async function loadAndRenderProfile(userId) {
   el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Loading…</div>';
   const isOwn = userId === currentUser?.id;
 
+  // email_prefs is only ever rendered on your OWN profile (the notification
+  // toggles), but this one query serves both views — so viewing anyone else used
+  // to fetch their notification settings too. Ask for it only when it's ours.
+  const PROFILE_COLS = 'id, username, display_name, bio, avatar_url, collection_visibility, profile_privacy, wishlist_visibility';
   const { data: profile } = await withTimeout(db.from('profiles')
-    .select('id, username, display_name, bio, avatar_url, collection_visibility, profile_privacy, wishlist_visibility, email_prefs')
+    .select(isOwn ? PROFILE_COLS + ', email_prefs' : PROFILE_COLS)
     .eq('id', userId).single());
   if (!profile) {
     el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">This account no longer exists.</div>';
