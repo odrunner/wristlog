@@ -7818,7 +7818,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.21.27';
+const APP_VERSION = '13.21.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17660,7 +17660,11 @@ async function loadAdminStats() {
     const likes     = Number(adminTotals.likes_count)   || 0;
     const comments  = commentsRes.count || 0;
 
-    const avg = (n, d) => d > 0 ? (n / d).toFixed(1) : '0';
+    // 3 decimals, not 1: with ~500 users a single new watch moves the average by
+    // 0.002, so one decimal rounds every day's actual movement away and the card
+    // reads as frozen. Zero renders as '0.000' too, so the column never jumps
+    // between formats.
+    const avg = (n, d) => d > 0 ? (n / d).toFixed(3) : '0.000';
 
     // Day-over-day: single RPC (SECURITY DEFINER, excludes internal accounts)
     const dodRes = await withTimeout(db.rpc('admin_dod_counts'), 10000);
