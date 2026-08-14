@@ -1158,7 +1158,7 @@ test.describe('Admin chips (mocked)', () => {
 
   test('admin tab chips have correct labels', async ({ page }) => {
     const labels = await page.locator('#admin-tabs button.chip').allTextContents();
-    expect(labels).toEqual(['Usage', 'Traffic', 'Feedback', 'Reports', 'Featured', 'Official', 'Broadcast', 'Campaigns', 'Promos', 'Dev']);
+    expect(labels).toEqual(['Usage', 'Traffic', 'Promos', 'Broadcast', 'Campaigns', 'Feedback', 'Featured', 'Official', 'Reports', 'Dev']);
   });
 
   test('admin tab chips are keyboard focusable', async ({ page }) => {
