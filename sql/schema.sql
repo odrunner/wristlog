@@ -2419,6 +2419,16 @@ BEGIN
   RETURN OLD;
 END;
 $function$;
+CREATE OR REPLACE FUNCTION public.is_admin()
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  SELECT EXISTS (
+    SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true
+  );
+$function$;
 CREATE OR REPLACE FUNCTION public.is_club_member(p_club_id uuid)
  RETURNS boolean
  LANGUAGE sql
@@ -2934,13 +2944,9 @@ ALTER TABLE public.wishlist_shares ENABLE ROW LEVEL SECURITY;
 ----------------------------------------------------------------------------
 
 CREATE POLICY "Admin can read all app_feedback" ON public.app_feedback AS PERMISSIVE FOR SELECT TO public
-  USING ((EXISTS ( SELECT 1
-   FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true)))));
+  USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Admin can update app_feedback" ON public.app_feedback AS PERMISSIVE FOR UPDATE TO public
-  USING ((EXISTS ( SELECT 1
-   FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true)))));
+  USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Users can insert own feedback" ON public.app_feedback AS PERMISSIVE FOR INSERT TO public
   WITH CHECK ((auth.uid() = user_id));
 CREATE POLICY "Users can read own feedback" ON public.app_feedback AS PERMISSIVE FOR SELECT TO public
@@ -3061,13 +3067,9 @@ CREATE POLICY demo_readonly_comment_likes_delete ON public.comment_likes AS REST
 CREATE POLICY demo_readonly_comment_likes_insert ON public.comment_likes AS RESTRICTIVE FOR INSERT TO public
   WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY "Admin can read all comments" ON public.comments AS PERMISSIVE FOR SELECT TO public
-  USING ((EXISTS ( SELECT 1
-   FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true)))));
+  USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Admin can update comment moderation" ON public.comments AS PERMISSIVE FOR UPDATE TO public
-  USING ((EXISTS ( SELECT 1
-   FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true)))));
+  USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Anyone can read comments" ON public.comments AS PERMISSIVE FOR SELECT TO public
   USING (((auth.uid() = user_id) OR (moderation_status IS NULL)));
 CREATE POLICY "Owner or post author can delete comments" ON public.comments AS PERMISSIVE FOR DELETE TO public
@@ -3092,13 +3094,9 @@ CREATE POLICY demo_readonly_comments_delete ON public.comments AS RESTRICTIVE FO
 CREATE POLICY demo_readonly_comments_insert ON public.comments AS RESTRICTIVE FOR INSERT TO public
   WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY "Admin reads all reports" ON public.content_reports AS PERMISSIVE FOR SELECT TO public
-  USING ((EXISTS ( SELECT 1
-   FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true)))));
+  USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Admin updates reports" ON public.content_reports AS PERMISSIVE FOR UPDATE TO public
-  USING ((EXISTS ( SELECT 1
-   FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true)))));
+  USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Users can read own reports" ON public.content_reports AS PERMISSIVE FOR SELECT TO public
   USING ((auth.uid() = reporter_id));
 CREATE POLICY "Users can report content" ON public.content_reports AS PERMISSIVE FOR INSERT TO public
@@ -3120,9 +3118,7 @@ CREATE POLICY "Admin full access" ON public.email_campaign_sends AS PERMISSIVE F
 CREATE POLICY "Admin full access" ON public.email_campaigns AS PERMISSIVE FOR ALL TO public
   USING ((auth.uid() = 'd70b1a85-4f31-4431-b3b7-db76543daaf5'::uuid));
 CREATE POLICY "Admin can read email events" ON public.email_events AS PERMISSIVE FOR SELECT TO public
-  USING ((EXISTS ( SELECT 1
-   FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true)))));
+  USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Users can insert own eula" ON public.eula_acceptances AS PERMISSIVE FOR INSERT TO public
   WITH CHECK ((auth.uid() = user_id));
 CREATE POLICY "Users can read own eula" ON public.eula_acceptances AS PERMISSIVE FOR SELECT TO public
@@ -3134,13 +3130,9 @@ CREATE POLICY fact_clicks_insert_own ON public.fact_clicks AS PERMISSIVE FOR INS
 CREATE POLICY fact_impressions_insert_own ON public.fact_impressions AS PERMISSIVE FOR INSERT TO authenticated
   WITH CHECK ((user_id = auth.uid()));
 CREATE POLICY "Admin can read all feedback" ON public.feedback AS PERMISSIVE FOR SELECT TO public
-  USING ((EXISTS ( SELECT 1
-   FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true)))));
+  USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Admin can update feedback" ON public.feedback AS PERMISSIVE FOR UPDATE TO public
-  USING ((EXISTS ( SELECT 1
-   FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true)))));
+  USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Anon can insert feedback" ON public.feedback AS PERMISSIVE FOR INSERT TO anon
   WITH CHECK ((user_id IS NULL));
 CREATE POLICY "Users can delete own feedback" ON public.feedback AS PERMISSIVE FOR DELETE TO public
@@ -3224,9 +3216,7 @@ CREATE POLICY fr_select ON public.friend_requests AS PERMISSIVE FOR SELECT TO pu
 CREATE POLICY fr_update ON public.friend_requests AS PERMISSIVE FOR UPDATE TO public
   USING (((auth.uid() = initiator_id) OR (auth.uid() = target_id)));
 CREATE POLICY "Admin can read all identify_attempts" ON public.identify_attempts AS PERMISSIVE FOR SELECT TO public
-  USING ((EXISTS ( SELECT 1
-   FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true)))));
+  USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Users can read their own identify attempts" ON public.identify_attempts AS PERMISSIVE FOR SELECT TO public
   USING ((auth.uid() = user_id));
 CREATE POLICY "Authenticated users can read internal_accounts" ON public.internal_accounts AS PERMISSIVE FOR SELECT TO authenticated
@@ -3254,17 +3244,11 @@ CREATE POLICY likes_read ON public.likes AS PERMISSIVE FOR SELECT TO public
 CREATE POLICY likes_select ON public.likes AS PERMISSIVE FOR SELECT TO authenticated
   USING (true);
 CREATE POLICY "Admin can insert wrotate official logs" ON public.logs AS PERMISSIVE FOR INSERT TO public
-  WITH CHECK (((EXISTS ( SELECT 1
-   FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true)))) AND (user_id = '3aa24417-214c-467d-b3aa-e76d63d73476'::uuid)));
+  WITH CHECK ((( SELECT is_admin() AS is_admin) AND (user_id = '3aa24417-214c-467d-b3aa-e76d63d73476'::uuid)));
 CREATE POLICY "Admin can read all logs" ON public.logs AS PERMISSIVE FOR SELECT TO public
-  USING ((EXISTS ( SELECT 1
-   FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true)))));
+  USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Admin can update log moderation" ON public.logs AS PERMISSIVE FOR UPDATE TO public
-  USING ((EXISTS ( SELECT 1
-   FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true)))));
+  USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Others can read shared logs" ON public.logs AS PERMISSIVE FOR SELECT TO public
   USING (((moderation_status IS NULL) AND ((visibility = 'public'::text) OR ((visibility = 'followers'::text) AND (EXISTS ( SELECT 1
    FROM follows
@@ -3335,12 +3319,8 @@ CREATE POLICY notif_update ON public.notifications AS PERMISSIVE FOR UPDATE TO p
 CREATE POLICY notifications_delete ON public.notifications AS PERMISSIVE FOR DELETE TO public
   USING (((user_id = auth.uid()) OR (actor_id = auth.uid())));
 CREATE POLICY "Admin full access on official_drafts" ON public.official_drafts AS PERMISSIVE FOR ALL TO public
-  USING ((EXISTS ( SELECT 1
-   FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true)))))
-  WITH CHECK ((EXISTS ( SELECT 1
-   FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true)))));
+  USING (( SELECT is_admin() AS is_admin))
+  WITH CHECK (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Admin can read page visits" ON public.page_visits AS PERMISSIVE FOR SELECT TO public
   USING ((auth.uid() = 'd70b1a85-4f31-4431-b3b7-db76543daaf5'::uuid));
 CREATE POLICY "Anyone can insert page visits" ON public.page_visits AS PERMISSIVE FOR INSERT TO public
@@ -3355,9 +3335,7 @@ CREATE POLICY "admin reads post_cta_events" ON public.post_cta_events AS PERMISS
 CREATE POLICY "users insert own post_cta_events" ON public.post_cta_events AS PERMISSIVE FOR INSERT TO authenticated
   WITH CHECK ((auth.uid() = user_id));
 CREATE POLICY "Admin can update profiles" ON public.profiles AS PERMISSIVE FOR UPDATE TO public
-  USING ((EXISTS ( SELECT 1
-   FROM profiles profiles_1
-  WHERE ((profiles_1.id = auth.uid()) AND (profiles_1.is_admin = true)))));
+  USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles AS PERMISSIVE FOR SELECT TO public
   USING (true);
 CREATE POLICY "Users can insert own profile" ON public.profiles AS PERMISSIVE FOR INSERT TO public
@@ -3384,29 +3362,19 @@ CREATE POLICY profiles_update_own ON public.profiles AS PERMISSIVE FOR UPDATE TO
   USING ((id = auth.uid()))
   WITH CHECK ((id = auth.uid()));
 CREATE POLICY promo_config_admin_update ON public.promo_config AS PERMISSIVE FOR UPDATE TO authenticated
-  USING ((EXISTS ( SELECT 1
-   FROM profiles p
-  WHERE ((p.id = auth.uid()) AND p.is_admin))))
-  WITH CHECK ((EXISTS ( SELECT 1
-   FROM profiles p
-  WHERE ((p.id = auth.uid()) AND p.is_admin))));
+  USING (( SELECT is_admin() AS is_admin))
+  WITH CHECK (( SELECT is_admin() AS is_admin));
 CREATE POLICY promo_config_select_all ON public.promo_config AS PERMISSIVE FOR SELECT TO authenticated
   USING (true);
 CREATE POLICY promo_events_admin_delete ON public.promo_events AS PERMISSIVE FOR DELETE TO authenticated
-  USING ((EXISTS ( SELECT 1
-   FROM profiles p
-  WHERE ((p.id = auth.uid()) AND p.is_admin))));
+  USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY promo_events_insert_own ON public.promo_events AS PERMISSIVE FOR INSERT TO authenticated
   WITH CHECK ((user_id = auth.uid()));
 CREATE POLICY promo_events_select_own ON public.promo_events AS PERMISSIVE FOR SELECT TO authenticated
   USING ((user_id = auth.uid()));
 CREATE POLICY promo_slots_admin_all ON public.promo_slots AS PERMISSIVE FOR ALL TO authenticated
-  USING ((EXISTS ( SELECT 1
-   FROM profiles p
-  WHERE ((p.id = auth.uid()) AND p.is_admin))))
-  WITH CHECK ((EXISTS ( SELECT 1
-   FROM profiles p
-  WHERE ((p.id = auth.uid()) AND p.is_admin))));
+  USING (( SELECT is_admin() AS is_admin))
+  WITH CHECK (( SELECT is_admin() AS is_admin));
 CREATE POLICY promo_slots_select_live ON public.promo_slots AS PERMISSIVE FOR SELECT TO authenticated
   USING (((status = 'active'::text) AND ((starts_at IS NULL) OR (starts_at <= now())) AND ((ends_at IS NULL) OR (ends_at > now()))));
 CREATE POLICY recap_shares_delete_own ON public.recap_shares AS PERMISSIVE FOR DELETE TO authenticated
@@ -3424,9 +3392,7 @@ CREATE POLICY "Users can insert own logs" ON public.timegrapher_debug_logs AS PE
 CREATE POLICY "Users can read own logs" ON public.timegrapher_debug_logs AS PERMISSIVE FOR SELECT TO public
   USING ((auth.uid() = user_id));
 CREATE POLICY "Admin can read all timegrapher_results" ON public.timegrapher_results AS PERMISSIVE FOR SELECT TO public
-  USING ((EXISTS ( SELECT 1
-   FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true)))));
+  USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Users can delete own results" ON public.timegrapher_results AS PERMISSIVE FOR DELETE TO public
   USING ((auth.uid() = user_id));
 CREATE POLICY "Users can insert own results" ON public.timegrapher_results AS PERMISSIVE FOR INSERT TO public
@@ -3461,9 +3427,7 @@ CREATE POLICY "Users can read own badges" ON public.user_badges AS PERMISSIVE FO
 CREATE POLICY "Users can update own badges" ON public.user_badges AS PERMISSIVE FOR UPDATE TO public
   USING ((auth.uid() = user_id));
 CREATE POLICY "Admin reads all blocks" ON public.user_blocks AS PERMISSIVE FOR SELECT TO public
-  USING ((EXISTS ( SELECT 1
-   FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true)))));
+  USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Users can block others" ON public.user_blocks AS PERMISSIVE FOR INSERT TO public
   WITH CHECK ((auth.uid() = blocker_id));
 CREATE POLICY "Users can read own blocks" ON public.user_blocks AS PERMISSIVE FOR SELECT TO public
@@ -3475,9 +3439,7 @@ CREATE POLICY demo_readonly_user_blocks_delete ON public.user_blocks AS RESTRICT
 CREATE POLICY demo_readonly_user_blocks_insert ON public.user_blocks AS RESTRICTIVE FOR INSERT TO public
   WITH CHECK ((auth.uid() <> '73e4e48e-dbca-4b2e-82d2-35d5b39716d2'::uuid));
 CREATE POLICY "Admin can read all valuation_events" ON public.valuation_events AS PERMISSIVE FOR SELECT TO public
-  USING ((EXISTS ( SELECT 1
-   FROM profiles
-  WHERE ((profiles.id = auth.uid()) AND (profiles.is_admin = true)))));
+  USING (( SELECT is_admin() AS is_admin));
 CREATE POLICY "Users can insert own valuation events" ON public.valuation_events AS PERMISSIVE FOR INSERT TO public
   WITH CHECK ((auth.uid() = user_id));
 CREATE POLICY "Users can read own valuation events" ON public.valuation_events AS PERMISSIVE FOR SELECT TO public
@@ -4151,7 +4113,6 @@ GRANT SELECT ON public.piezo_raw_captures TO service_role;
 GRANT SELECT ON public.post_cta_events TO anon;
 GRANT SELECT ON public.post_cta_events TO authenticated;
 GRANT SELECT ON public.post_cta_events TO service_role;
-GRANT SELECT ON public.profiles TO anon;
 GRANT SELECT ON public.profiles TO authenticated;
 GRANT SELECT ON public.profiles TO service_role;
 GRANT SELECT ON public.promo_config TO authenticated;
@@ -6603,7 +6564,6 @@ GRANT SELECT ("position") ON public.watch_facts TO anon;
 GRANT SELECT ("position") ON public.watch_facts TO authenticated;
 GRANT SELECT (ab_variant) ON public.page_visits TO anon;
 GRANT SELECT (ab_variant) ON public.page_visits TO authenticated;
-GRANT SELECT (ab_variant) ON public.profiles TO anon;
 GRANT SELECT (ab_variant) ON public.profiles TO authenticated;
 GRANT SELECT (accepted_at) ON public.eula_acceptances TO anon;
 GRANT SELECT (accepted_at) ON public.eula_acceptances TO authenticated;
@@ -6789,7 +6749,6 @@ GRANT SELECT (created_at) ON public.piezo_raw_captures TO anon;
 GRANT SELECT (created_at) ON public.piezo_raw_captures TO authenticated;
 GRANT SELECT (created_at) ON public.post_cta_events TO anon;
 GRANT SELECT (created_at) ON public.post_cta_events TO authenticated;
-GRANT SELECT (created_at) ON public.profiles TO anon;
 GRANT SELECT (created_at) ON public.profiles TO authenticated;
 GRANT SELECT (created_at) ON public.promo_events TO authenticated;
 GRANT SELECT (created_at) ON public.promo_slots TO authenticated;
@@ -6833,7 +6792,6 @@ GRANT SELECT (date) ON public.logs TO authenticated;
 GRANT SELECT (deep_test_id) ON public.deep_test_chunks TO anon;
 GRANT SELECT (deep_test_id) ON public.deep_test_chunks TO authenticated;
 GRANT SELECT (default_max_impressions) ON public.promo_config TO authenticated;
-GRANT SELECT (default_post_visibility) ON public.profiles TO anon;
 GRANT SELECT (default_post_visibility) ON public.profiles TO authenticated;
 GRANT SELECT (delay_days) ON public.email_campaigns TO anon;
 GRANT SELECT (delay_days) ON public.email_campaigns TO authenticated;
@@ -6867,7 +6825,6 @@ GRANT SELECT (email) ON public.feedback TO anon;
 GRANT SELECT (email) ON public.feedback TO authenticated;
 GRANT SELECT (email_id) ON public.email_events TO anon;
 GRANT SELECT (email_id) ON public.email_events TO authenticated;
-GRANT SELECT (email_prefs) ON public.profiles TO anon;
 GRANT SELECT (email_prefs) ON public.profiles TO authenticated;
 GRANT SELECT (email_to) ON public.email_events TO anon;
 GRANT SELECT (email_to) ON public.email_events TO authenticated;
@@ -6883,7 +6840,6 @@ GRANT SELECT (error) ON public.identify_attempts TO anon;
 GRANT SELECT (error) ON public.identify_attempts TO authenticated;
 GRANT SELECT (error) ON public.valuation_events TO anon;
 GRANT SELECT (error) ON public.valuation_events TO authenticated;
-GRANT SELECT (eula_accepted_at) ON public.profiles TO anon;
 GRANT SELECT (eula_accepted_at) ON public.profiles TO authenticated;
 GRANT SELECT (event) ON public.post_cta_events TO anon;
 GRANT SELECT (event) ON public.post_cta_events TO authenticated;
@@ -7041,7 +6997,6 @@ GRANT SELECT (ip_hash) ON public.demo_views TO anon;
 GRANT SELECT (ip_hash) ON public.demo_views TO authenticated;
 GRANT SELECT (is_active) ON public.email_campaigns TO anon;
 GRANT SELECT (is_active) ON public.email_campaigns TO authenticated;
-GRANT SELECT (is_admin) ON public.profiles TO anon;
 GRANT SELECT (is_admin) ON public.profiles TO authenticated;
 GRANT SELECT (is_archived) ON public.email_campaigns TO anon;
 GRANT SELECT (is_archived) ON public.email_campaigns TO authenticated;
@@ -7051,7 +7006,6 @@ GRANT SELECT (is_official) ON public.profiles TO anon;
 GRANT SELECT (is_official) ON public.profiles TO authenticated;
 GRANT SELECT (is_read) ON public.notifications TO anon;
 GRANT SELECT (is_read) ON public.notifications TO authenticated;
-GRANT SELECT (is_suspended) ON public.profiles TO anon;
 GRANT SELECT (is_suspended) ON public.profiles TO authenticated;
 GRANT SELECT (item_ids) ON public.wishlist_shares TO anon;
 GRANT SELECT (item_ids) ON public.wishlist_shares TO authenticated;
@@ -7221,7 +7175,6 @@ GRANT SELECT (raw) ON public.email_events TO anon;
 GRANT SELECT (raw) ON public.email_events TO authenticated;
 GRANT SELECT (reason) ON public.content_reports TO anon;
 GRANT SELECT (reason) ON public.content_reports TO authenticated;
-GRANT SELECT (rec_settings) ON public.profiles TO anon;
 GRANT SELECT (rec_settings) ON public.profiles TO authenticated;
 GRANT SELECT (receipts) ON public.watches TO anon;
 GRANT SELECT (receipts) ON public.watches TO authenticated;
@@ -7279,7 +7232,6 @@ GRANT SELECT (session_id) ON public.timegrapher_debug_logs TO anon;
 GRANT SELECT (session_id) ON public.timegrapher_debug_logs TO authenticated;
 GRANT SELECT (session_id) ON public.timegrapher_tick_logs TO anon;
 GRANT SELECT (session_id) ON public.timegrapher_tick_logs TO authenticated;
-GRANT SELECT (share_achievements) ON public.profiles TO anon;
 GRANT SELECT (share_achievements) ON public.profiles TO authenticated;
 GRANT SELECT (size) ON public.promo_slots TO authenticated;
 GRANT SELECT (skip_if_done) ON public.email_campaigns TO anon;
@@ -7324,7 +7276,6 @@ GRANT SELECT (subject) ON public.email_campaigns TO authenticated;
 GRANT SELECT (subject) ON public.email_events TO anon;
 GRANT SELECT (subject) ON public.email_events TO authenticated;
 GRANT SELECT (suppress_after_modal) ON public.promo_config TO authenticated;
-GRANT SELECT (suspended_at) ON public.profiles TO anon;
 GRANT SELECT (suspended_at) ON public.profiles TO authenticated;
 GRANT SELECT (sweep_knob) ON public.timegrapher_tuning TO anon;
 GRANT SELECT (sweep_knob) ON public.timegrapher_tuning TO authenticated;
@@ -7350,9 +7301,7 @@ GRANT SELECT (target_id) ON public.follow_requests TO anon;
 GRANT SELECT (target_id) ON public.follow_requests TO authenticated;
 GRANT SELECT (target_id) ON public.friend_requests TO anon;
 GRANT SELECT (target_id) ON public.friend_requests TO authenticated;
-GRANT SELECT (tg_debug) ON public.profiles TO anon;
 GRANT SELECT (tg_debug) ON public.profiles TO authenticated;
-GRANT SELECT (theme_preference) ON public.profiles TO anon;
 GRANT SELECT (theme_preference) ON public.profiles TO authenticated;
 GRANT SELECT (threshold) ON public.timegrapher_debug_logs TO anon;
 GRANT SELECT (threshold) ON public.timegrapher_debug_logs TO authenticated;
@@ -7366,7 +7315,6 @@ GRANT SELECT (tick_detect_mult) ON public.timegrapher_tuning TO anon;
 GRANT SELECT (tick_detect_mult) ON public.timegrapher_tuning TO authenticated;
 GRANT SELECT (tick_stream) ON public.measurement_batch_runs TO anon;
 GRANT SELECT (tick_stream) ON public.measurement_batch_runs TO authenticated;
-GRANT SELECT (timezone) ON public.profiles TO anon;
 GRANT SELECT (timezone) ON public.profiles TO authenticated;
 GRANT SELECT (title) ON public.feedback TO anon;
 GRANT SELECT (title) ON public.feedback TO authenticated;
@@ -7476,7 +7424,6 @@ GRANT SELECT (user_id) ON public.wishlist_shares TO anon;
 GRANT SELECT (user_id) ON public.wishlist_shares TO authenticated;
 GRANT SELECT (username) ON public.profiles TO anon;
 GRANT SELECT (username) ON public.profiles TO authenticated;
-GRANT SELECT (username_set) ON public.profiles TO anon;
 GRANT SELECT (username_set) ON public.profiles TO authenticated;
 GRANT SELECT (utm_campaign) ON public.page_visits TO anon;
 GRANT SELECT (utm_campaign) ON public.page_visits TO authenticated;
