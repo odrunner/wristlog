@@ -1819,8 +1819,23 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .draft-meta .draft-info { font-size:.72rem; color:var(--muted); }
     .draft-actions { display:flex; gap:.4rem; margin-top:.5rem; }
     .draft-form-row { margin-bottom:.6rem; }
-    .draft-form-row label { display:block; font-size:.72rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.2rem; }
-    .draft-form-row input, .draft-form-row textarea { width:100%; box-sizing:border-box; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:.45rem .6rem; font-size:.84rem; color:var(--text); font-family:inherit; }
+    /* Direct child only. A nested <label> wrapping a radio is an option, not a
+       field heading — uppercasing and letter-spacing it turned "First batch of
+       50 then hold the rest for review" into three columns of shouting caps. */
+    .draft-form-row > label { display:block; font-size:.72rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.2rem; }
+    /* width:100% is for text fields. Applied to a radio or checkbox it stretches
+       the control across the row and pushes its own label into a narrow column. */
+    .draft-form-row input:not([type="radio"]):not([type="checkbox"]), .draft-form-row textarea { width:100%; box-sizing:border-box; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:.45rem .6rem; font-size:.84rem; color:var(--text); font-family:inherit; }
+    /* An option label is a sentence you read, not a field heading. It has to opt
+       out of the global `label` rule (line ~362) that uppercases and letter-
+       spaces every label in the app — left on, it turned "First batch of 50 then
+       hold the rest for review" into three columns of shouting caps. One flex
+       line per option, wrapping as a unit rather than letting each text run
+       between the inputs shrink into a column of its own. */
+    .radio-option { display:flex; align-items:center; flex-wrap:wrap; gap:.35rem; margin-bottom:0;
+                    font-size:.82rem; font-weight:400; color:var(--text);
+                    text-transform:none; letter-spacing:normal; cursor:pointer; }
+    .radio-option input[type="radio"] { flex:none; margin:0; }
     .draft-form-row textarea { resize:vertical; min-height:3rem; }
     .draft-extract-preview { background:var(--surface1); border-radius:8px; padding:.75rem; margin-top:.6rem; }
     .draft-extract-preview img { max-width:200px; max-height:200px; border-radius:6px; margin-bottom:.5rem; }
@@ -3683,17 +3698,17 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
              cannot find when deciding whether to. -->
         <div class="draft-form-row" style="margin-bottom:.5rem;">
           <label for="broadcast-first-batch">Send in stages</label>
-          <div style="display:flex;flex-direction:column;gap:.3rem;">
-            <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;">
+          <div style="display:flex;flex-direction:column;gap:.4rem;">
+            <label class="radio-option">
               <input type="radio" name="bc-stage" value="batch" checked onchange="syncBroadcastStageUI()">
-              First batch of
+              <span>First batch of</span>
               <input type="number" id="broadcast-first-batch" value="50" min="1" step="1"
-                     style="width:4.5rem;padding:.15rem .3rem;font-size:.82rem;">
-              then hold the rest for review
+                     style="width:4rem;padding:.15rem .3rem;font-size:.82rem;">
+              <span>then hold the rest for review</span>
             </label>
-            <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;">
+            <label class="radio-option">
               <input type="radio" name="bc-stage" value="all" onchange="syncBroadcastStageUI()">
-              Send to everyone at once
+              <span>Send to everyone at once</span>
             </label>
           </div>
         </div>
@@ -7792,7 +7807,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.19.03';
+const APP_VERSION = '13.19.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments

@@ -56,6 +56,38 @@ test.describe('staged broadcast — send dialog', () => {
     expect(out.inStatus).toBe('');
   });
 
+  // Regression: the option labels inherited the app-wide `label` rule
+  // (uppercase + letter-spacing) and the radios inherited .draft-form-row's
+  // width:100%. The row rendered as a stretched radio in its own column with
+  // "FIRST BATCH / OF ... THEN HOLD THE / REST FOR / REVIEW" shouting beside it.
+  test('the stage options read as sentences and the radios are radio-sized', async ({ page }) => {
+    await asAdmin(page);
+    const out = await page.evaluate(() => {
+      // A layout assertion needs layout: the other tests here read innerHTML,
+      // so they never needed the admin page on screen. Hidden, every
+      // getBoundingClientRect is 0 and the test passes for the wrong reason.
+      document.getElementById('auth-screen').style.display = 'none';
+      document.querySelectorAll('.page').forEach((p) => p.classList.remove('active'));
+      document.getElementById('page-admin').classList.add('active');
+      document.querySelectorAll('.admin-tab').forEach((t) => { t.style.display = 'none'; });
+      document.getElementById('admin-tab-broadcast').style.display = '';
+      const label = document.querySelector('label.radio-option');
+      const radio = label.querySelector('input[type="radio"]');
+      const cs = getComputedStyle(label);
+      return {
+        transform: cs.textTransform,
+        spacing: cs.letterSpacing,
+        radioW: radio.getBoundingClientRect().width,
+        labelW: label.getBoundingClientRect().width,
+      };
+    });
+    expect(out.transform).toBe('none');
+    expect(out.spacing).toBe('normal');
+    // The stretched radio is what forced the text into narrow columns.
+    expect(out.radioW).toBeLessThan(40);
+    expect(out.radioW).toBeLessThan(out.labelW / 4);
+  });
+
   test('the confirm step reports the plan and adds no second set of radios', async ({ page }) => {
     await asAdmin(page);
     const out = await page.evaluate(async () => {
