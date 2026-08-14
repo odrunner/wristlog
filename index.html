@@ -7792,7 +7792,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.18.55';
+const APP_VERSION = '13.19.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17123,9 +17123,15 @@ async function showBroadcastBatchMetrics(label, btn) {
   // Rates are over rows actually SENT, not over the whole audience — the held
   // remainder hasn't had a chance to open anything.
   const warn = (Number(m.unsubscribed) || 0) > 0 || (Number(m.bounced) || 0) > 0 || (Number(m.complained) || 0) > 0;
+  // Opens are the human ones — an open at least 30s after delivery. Apple Mail
+  // and Gmail fetch the pixel on delivery, and releasing 400+ emails on the back
+  // of a prefetch rate is deciding on noise. The machine count is still shown,
+  // so the figure reconciles against SES.
+  const human = Number(m.opened_human) || 0;
+  const machine = Math.max(0, (Number(m.opened) || 0) - human);
   gate.innerHTML = `
     <div style="font-size:.74rem;color:var(--muted);margin-bottom:.3rem;">
-      batch of ${sent}: ${m.delivered || 0} delivered · ${m.opened || 0} opened (${pct(m.opened)}%)
+      batch of ${sent}: ${m.delivered || 0} delivered · ${human} opened (${pct(human)}%)${machine ? `<span style="opacity:.55;"> +${machine} prefetch</span>` : ''}
       · <span style="${warn ? 'color:var(--gold);' : ''}">${m.unsubscribed || 0} unsubscribed</span>
       · ${m.bounced || 0} bounced${(Number(m.complained) || 0) ? ` · <span style="color:var(--error);">${m.complained} spam complaints</span>` : ''}
     </div>

@@ -215,10 +215,12 @@ test.describe('staged broadcast — the review gate', () => {
   test('shows delivered, opens and unsubscribes — and no click rate', async ({ page }) => {
     await asAdmin(page);
     const { gate, calls } = await openGate(page, {
-      sent: 50, delivered: 48, opened: 22, unsubscribed: 1, bounced: 0, complained: 0,
+      sent: 50, delivered: 48, opened: 22, opened_human: 12, unsubscribed: 1, bounced: 0, complained: 0,
     });
     expect(gate).toContain('48 delivered');
-    expect(gate).toContain('22 opened (44%)');
+    // Human opens lead; the prefetch remainder is shown but does not drive the rate.
+    expect(gate).toContain('12 opened (24%)');
+    expect(gate).toContain('+10 prefetch');
     expect(gate).toContain('1 unsubscribed');
     // Click tracking is off; a 0% click rate would read as failure, not absence.
     expect(gate.toLowerCase()).not.toContain('click');
@@ -229,7 +231,7 @@ test.describe('staged broadcast — the review gate', () => {
 
   test('offers both ways out of the gate', async ({ page }) => {
     await asAdmin(page);
-    const { gate } = await openGate(page, { sent: 50, delivered: 48, opened: 22, unsubscribed: 0, bounced: 0, complained: 0 });
+    const { gate } = await openGate(page, { sent: 50, delivered: 48, opened: 22, opened_human: 12, unsubscribed: 0, bounced: 0, complained: 0 });
     expect(gate).toContain('data-bc-release');
     expect(gate).toContain('data-bc-cancel');
   });
@@ -237,14 +239,14 @@ test.describe('staged broadcast — the review gate', () => {
   test('surfaces spam complaints, which are the real stop signal', async ({ page }) => {
     await asAdmin(page);
     const { gate } = await openGate(page, {
-      sent: 50, delivered: 50, opened: 30, unsubscribed: 3, bounced: 1, complained: 2,
+      sent: 50, delivered: 50, opened: 30, opened_human: 18, unsubscribed: 3, bounced: 1, complained: 2,
     });
     expect(gate).toContain('2 spam complaints');
   });
 
   test('a zero-sent batch reports 0% rather than dividing by zero', async ({ page }) => {
     await asAdmin(page);
-    const { gate } = await openGate(page, { sent: 0, delivered: 0, opened: 0, unsubscribed: 0, bounced: 0, complained: 0 });
+    const { gate } = await openGate(page, { sent: 0, delivered: 0, opened: 0, opened_human: 0, unsubscribed: 0, bounced: 0, complained: 0 });
     expect(gate).toContain('batch of 0');
     expect(gate).toContain('0 opened (0%)');
     expect(gate).not.toContain('NaN');
