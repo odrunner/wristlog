@@ -11,6 +11,8 @@ much load they take *off* that instance.
 
 ## P1 — HIGH (NEW): The query planner has no statistics. Estimates are wrong by 100x.
 
+> **FIXED 2026-08-13** (639be17) — `ANALYZE` run; 53 tables had never been analysed. Every estimate now exact (`logs` 20 → 2,897 actual). `autovacuum_analyze_scale_factor` lowered to 0.02 on the seven busiest tables.
+
 `ANALYZE` has never run on this database. `last_analyze` **and** `last_autoanalyze`
 are `NULL` for every table in `public`, while the scan counters are large — so this
 is not a recently-reset stats file, autoanalyze genuinely is not keeping up.
@@ -52,6 +54,8 @@ Re-check `last_autoanalyze` in a few days to confirm it is actually firing.
 
 ## P2 — HIGH (NEW): 215 of 244 RLS policies re-evaluate `auth.uid()` on every row.
 
+> **FIXED 2026-08-13** (677b155) — 192 policies across 41 tables rewritten to `( SELECT auth.uid() )`; 0 bare calls remain. Applied one transaction per table to avoid holding 41 exclusive locks at once. No behaviour change — verified via the privacy regression tests and admin/non-admin spot checks. **Speedup not measured** (no before/after timings captured).
+
 ```sql
 SELECT count(*) FILTER (WHERE … ~ 'auth\.uid\(\)' AND … !~ 'SELECT auth\.uid\(\)')
 FROM pg_policies WHERE schemaname='public';
@@ -77,6 +81,8 @@ about to drop.
 ---
 
 ## P3 — MEDIUM (NEW): Missing indexes on foreign keys that RLS depends on.
+
+> **FIXED 2026-08-13** (639be17) — five indexes created CONCURRENTLY on `follows.following_id`, `logs.watch_id`, `wishlist.user_id`, `notifications.actor_id`, `user_blocks.blocked_id`. 0 unindexed FKs remain on those tables.
 
 Foreign keys with no index having them as leading column:
 
@@ -108,6 +114,8 @@ this instance that is a user-visible stall.
 ---
 
 ## P4 — MEDIUM (CARRIED FORWARD, now quantified): the single-file 1.9 MB app shell.
+
+> **OPEN.**
 
 `index.html` is **1,911,946 bytes**: 1.49 MB of inline JavaScript across 10 blocks,
 157 KB of inline CSS, 32,601 lines. Production serves it gzipped at **~484 KB** in
@@ -141,6 +149,8 @@ production rather than trusting the localhost figures above.
 
 ## P5 — LOW (NEW): 54 unused indexes.
 
+> **OPEN** — now 56 indexes / 4.7 MB.
+
 54 indexes in `public` have `idx_scan = 0`, totalling 4,688 kB. They cost write
 throughput and disk but return nothing on reads. The disk figure is small enough that
 this is housekeeping, not urgency.
@@ -152,6 +162,8 @@ against `pg_constraint` and drop only the genuinely orphaned ones.
 ---
 
 ## P6 — NOTE: unbounded client-side reads.
+
+> **FIXED 2026-08-13** (ac97017) — five admin queries capped at `.limit(1000)`. All small today (largest: feedback at 162), so nothing truncates; this guards the growth case.
 
 A scan for `.select()` with no `.limit()`/`.range()` and no filter found 9 sites. Most
 are admin-only and bounded in practice (`content_reports`, `email_campaigns`,

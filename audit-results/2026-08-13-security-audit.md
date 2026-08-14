@@ -16,6 +16,8 @@ none of the 60+ prior audit files flagged it.
 
 ## S1 — CRITICAL (NEW): Profile privacy is not enforced. 128 users affected.
 
+> **PARTIALLY FIXED 2026-08-13** — anonymous half closed (9e625ec): anon column access 23 → 9; `is_admin`, `timezone`, `email_prefs`, `rec_settings`, `eula_accepted_at` now 401 over REST. Required an `is_admin()` SECURITY DEFINER helper + rewriting 21 policies first. **STILL OPEN as S1b:** any logged-in user can still read all 23 columns of anyone — needs the private columns split into their own table.
+
 The app offers Public / Followers / Private for a profile (`index.html:8715-8717`).
 55 users chose Private and 73 chose Followers-only — 25% of the user base. **All 128
 are fully readable by an anonymous, logged-out stranger.**
@@ -161,6 +163,8 @@ That is a smaller exposure than anonymous scraping, but it is not closed until s
 
 ## S2 — HIGH (NEW): Watch and wishlist privacy bypassed by a looser sibling policy.
 
+> **FIXED 2026-08-13** (eee6662, cf4c468, 166c642) — dropped `watches_public_read` and the wishlist twin, then replaced `watches_feed_read` with a display-only accessor so public posts still show their watch while price/insured_value stay in the DB. Restricted watches readable by a stranger: 56 → **0**. Regression tests: `e2e/watch-privacy-uat.int.spec.js`, `e2e/feed-watch-display.int.spec.js`.
+
 Postgres ORs permissive policies together, so the **most permissive one wins**.
 `watches` has a carefully written policy and a careless one:
 
@@ -213,6 +217,8 @@ correctly `RESTRICTIVE` (checked, no exceptions).
 ---
 
 ## S3 — MEDIUM (NEW): Stored XSS via `display_name` in `onclick` handlers.
+
+> **FIXED 2026-08-13** (ec5bfe6) — all three sinks now pass values via `data-` attributes read back through `dataset`, so user text never enters a JS string. Mention link converted too. Regression tests in `e2e/xss-handler-attrs.mock.spec.js`, including a control asserting the OLD pattern really executed.
 
 `escAttr()` escapes `'` to `&#39;`, which is correct for an HTML attribute but
 **not** for a JavaScript string inside one. The HTML parser decodes the entity back
@@ -267,6 +273,8 @@ Also add a `CHECK` on `display_name` length as defence in depth.
 
 ## S4 — LOW (NEW): Unsubscribe links are HMAC'd with the service-role key.
 
+> **OPEN.**
+
 `email-unsubscribe/index.ts:32` uses `SUPABASE_SERVICE_ROLE_KEY` as the HMAC signing
 key. The crypto itself is sound (SHA-256, constant-time compare in `lib.ts:32-43`),
 but reusing the highest-value credential in the project as a signing key means
@@ -280,6 +288,8 @@ transition window so links already in inboxes keep working.
 ---
 
 ## S5 — LOW (NEW): User-supplied URLs are proxied through third parties.
+
+> **OPEN.**
 
 `index.html:24199, 24340, 28100, 28240` route watch URLs through `corsproxy.io` and
 `api.allorigins.win` (both allowlisted in the CSP `connect-src`). Every product URL a

@@ -20,6 +20,8 @@ The findings below are the gaps.
 
 ## U1 — MEDIUM (NEW): 15 images have no `alt`, mostly avatars.
 
+> **FIXED 2026-08-13** (ac97017) — 14 images given `alt`; avatars and club images carry the name, upload previews use `alt=""`. (A 15th match is prose inside a comment, not markup.)
+
 73 `<img>` tags, 58 with `alt`. The unlabelled ones are concentrated in the places a
 screen reader user most needs orientation — user and club avatars in member lists,
 follower lists and popovers:
@@ -44,6 +46,8 @@ Note the interaction with security finding S3: `escAttr` is correct here, becaus
 
 ## U2 — MEDIUM (NEW): Escape closes only some modals.
 
+> **OPEN** — still 13 Escape references and 15 focus calls for 43 dialogs.
+
 13 `Escape` references cover 43 `role="dialog"` modals. Escape-to-dismiss is a
 learned reflex, and a modal that ignores it reads as frozen — particularly on desktop,
 and particularly for keyboard-only users who may have no other reachable way out if
@@ -61,6 +65,8 @@ share `role="dialog"`, a generic implementation can find them without touching a
 ---
 
 ## U3 — MEDIUM (NEW): The error toast shows users a stack trace.
+
+> **FIXED 2026-08-13** (ac97017) — same fix as R2.
 
 Cross-referenced from reliability finding R2. Every unhandled rejection produces:
 
@@ -81,6 +87,8 @@ common case on mobile.
 
 ## U4 — LOW (NEW): Touch-target sizing is not systematic.
 
+> **OPEN.**
+
 Only 3 references to a 44px minimum across the whole stylesheet, against 477 buttons.
 Several inline-styled controls are visibly below the 44x44px guidance — for example
 the valuation row's `font-size:.78rem;padding:.35rem .7rem` buttons, which compute to
@@ -95,6 +103,8 @@ tables afterwards — they may want an explicit compact opt-out.
 ---
 
 ## U5 — LOW: Inline styles undercut the design system.
+
+> **OPEN.**
 
 `design-system.css` exists and is correctly linked from `index.html`, `p/index.html`
 and `profile/index.html` without re-declaring tokens. But `index.html` carries 157 KB
@@ -112,6 +122,8 @@ break dark mode.
 ---
 
 ## U6 — NOTE: what a private-profile user currently experiences.
+
+> **PARTIALLY ADDRESSED** — see S1. Anonymous scraping is closed; a private profile is still fully readable by any logged-in user until S1b lands.
 
 Cross-referenced from security finding S1. 128 users have set their profile to
 Followers-only or Private. The app honours that setting in its own UI, so from inside
