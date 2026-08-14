@@ -7129,6 +7129,17 @@ function storedAuthUserId() {
 
 (function trackVisit() {
   try {
+    // Never record automated page loads. The mocked Playwright suite serves the
+    // real index.html but keeps the production Supabase URL and anon key baked
+    // into it, so every page.goto('/') in a spec that doesn't intercept the
+    // route wrote a real row: ~400 per suite run, and 96% of the last week's
+    // page_visits. Nothing displayed was wrong — admin_traffic_stats and
+    // admin_email_clickthrough both filter the user agent — but anyone reading
+    // the raw table was reading test traffic, which is how 0 email
+    // click-throughs once got reported as 9. navigator.webdriver is set by
+    // every automation driver and false in a real browser, so this also keeps
+    // headless scrapers out.
+    if (navigator.webdriver) return;
     const params = new URLSearchParams(window.location.search);
     const utm_source = params.get('utm_source');
     const utm_medium = params.get('utm_medium');
@@ -7807,7 +7818,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '13.20.45';
+const APP_VERSION = '13.21.27';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
