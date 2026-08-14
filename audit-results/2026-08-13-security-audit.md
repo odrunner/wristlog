@@ -87,9 +87,7 @@ single query serves both the own-profile and other-profile views.
 **Step 1 — client (one line).** Select `email_prefs` only when `isOwn`, so another
 user's notification preferences are never fetched.
 
-**Step 2 — revoke the sensitive columns from `anon`.** Safe because anon has no own
-profile and every anon-reachable path uses an explicit safe column list
-(`p/index.html:261`, `profile/index.html:368`, and the logged-out public feed).
+**Step 2 — revoke the sensitive columns from `anon`. ATTEMPTED 2026-08-13, REVERTED.**
 
 ```sql
 REVOKE SELECT ON public.profiles FROM anon;
@@ -98,10 +96,55 @@ GRANT SELECT (id, username, display_name, avatar_url, bio, is_official,
   ON public.profiles TO anon;
 ```
 
-Rollback is a single statement: `GRANT SELECT ON public.profiles TO anon;`
+The column list itself is correct — every anon-reachable path selects columns
+explicitly and all of them fall inside those nine (`p/index.html:261`,
+`profile/index.html:368`, `loadPublicFeed` in `index.html`). Step 1 was deployed
+first so `email_prefs` was no longer needed by anon.
 
-This closes anonymous enumeration of all 516 users, including which account is
-`is_admin` and the 250 stored timezones.
+**It still broke the logged-out site, and here is why — this is the part to
+understand before trying again.** RLS policies are evaluated with the *caller's*
+column privileges. The `logs` table carries:
+
+```sql
+CREATE POLICY "Admin can read all logs" ON logs TO public
+  USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin));
+```
+
+Granted `TO public`, so **anon evaluates it too**. With `SELECT (is_admin)` revoked,
+evaluating the policy raises `42501 permission denied for table profiles`, and the
+entire `logs` query returns **401** — not "fewer columns", the whole request fails.
+Logged-out visitors lost the public feed silently (`loadPublicFeed` swallows the
+error and returns early, so there is no visible error to notice).
+
+Measured blast radius of the pattern:
+
+- **21 policies across 15 tables** read `profiles.is_admin`
+- **18 of them are granted to `public`**, so anon must evaluate every one
+
+Reverted with `GRANT SELECT ON public.profiles TO anon;`
+(`sql/2026-08-13-profiles-anon-revert.sql`). Production verified healthy afterwards:
+logs API 200, landing page 0 errors, 0 failed requests.
+
+**The prerequisite this exposed:** the admin check has to stop being a direct column
+read before any column-level restriction on `profiles` is possible.
+
+```sql
+CREATE OR REPLACE FUNCTION public.is_admin() RETURNS boolean
+  LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+    SELECT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin);
+  $$;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO anon, authenticated;
+```
+
+Then rewrite all 21 policies to call `is_admin()` instead of reading the column, and
+only then re-apply the grant. `SECURITY DEFINER` means the caller never needs
+privileges on `is_admin` themselves. This also fixes P2 for those policies if the
+call is written as `(SELECT is_admin())`.
+
+Sequence for the next attempt: create the helper → rewrite 21 policies → verify anon
+can still read `logs`, `watches`, `comments`, `likes` over the REST API → apply the
+grant → re-verify. Do the REST verification with an actual anon-key HTTP request, not
+just `SET LOCAL ROLE anon` in SQL: the failure mode is a 401 at the API layer.
 
 **Step 3 — the `authenticated` half (follow-up, larger).** Column privileges are
 granted per *role*, not per row, so the same revoke cannot be applied to

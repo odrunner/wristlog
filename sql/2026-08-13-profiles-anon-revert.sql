@@ -1,0 +1,11 @@
+-- EMERGENCY REVERT of the S1 anon column grant.
+--
+-- Restricting anon's column access on `profiles` broke the logged-out landing feed:
+-- the RLS policy "Admin can read all logs" on `logs` evaluates
+--   EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin)
+-- and that policy is granted TO public, so anon evaluates it too. With SELECT on
+-- is_admin revoked, policy evaluation raises 42501 and the whole logs query 401s.
+--
+-- Restores the previous (working) state. The column-level approach needs the
+-- is_admin checks moved behind a SECURITY DEFINER helper first.
+GRANT SELECT ON public.profiles TO anon;
