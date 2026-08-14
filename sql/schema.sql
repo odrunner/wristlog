@@ -804,14 +804,17 @@ CREATE UNIQUE INDEX uq_email_events_sns_message_id ON public.email_events USING 
 CREATE INDEX fact_clicks_created_idx ON public.fact_clicks USING btree (created_at);
 CREATE INDEX fact_impressions_created_at_idx ON public.fact_impressions USING btree (created_at);
 CREATE UNIQUE INDEX featured_posts_one_per_log ON public.featured_posts USING btree (log_id) WHERE (status = ANY (ARRAY['queued'::text, 'active'::text]));
+CREATE INDEX idx_follows_following ON public.follows USING btree (following_id);
 CREATE INDEX idx_identify_attempts_created ON public.identify_attempts USING btree (created_at DESC);
 CREATE INDEX idx_identify_attempts_user_created ON public.identify_attempts USING btree (user_id, created_at DESC);
 CREATE INDEX idx_likes_log ON public.likes USING btree (log_id);
 CREATE INDEX idx_logs_club_date ON public.logs USING btree (club_id, date DESC, created_at DESC) WHERE (club_id IS NOT NULL);
 CREATE INDEX idx_logs_user_date ON public.logs USING btree (user_id, date DESC, created_at DESC);
 CREATE INDEX idx_logs_visibility_date ON public.logs USING btree (visibility, date DESC, created_at DESC);
+CREATE INDEX idx_logs_watch ON public.logs USING btree (watch_id);
 CREATE INDEX logs_fact_id_idx ON public.logs USING btree (fact_id) WHERE (fact_id IS NOT NULL);
 CREATE INDEX idx_notif_user ON public.notifications USING btree (user_id, is_read, created_at DESC);
+CREATE INDEX idx_notifications_actor ON public.notifications USING btree (actor_id);
 CREATE UNIQUE INDEX uniq_like_notif ON public.notifications USING btree (user_id, actor_id, ref_id, type) WHERE (type = ANY (ARRAY['like'::text, 'comment_like'::text]));
 CREATE INDEX idx_official_drafts_status ON public.official_drafts USING btree (status);
 CREATE INDEX idx_page_visits_created_at ON public.page_visits USING btree (created_at DESC);
@@ -829,10 +832,12 @@ CREATE INDEX idx_tick_logs_session ON public.timegrapher_tick_logs USING btree (
 CREATE INDEX idx_ttl_summary_user ON public.timegrapher_tick_logs USING btree (((((messages)::jsonb ->> 'user_id'::text))::uuid)) WHERE (messages ~~ '{"type":"session_summary"%'::text);
 CREATE INDEX idx_user_badges_badge_ref ON public.user_badges USING btree (badge_ref);
 CREATE INDEX idx_user_badges_user_id ON public.user_badges USING btree (user_id);
+CREATE INDEX idx_user_blocks_blocked ON public.user_blocks USING btree (blocked_id);
 CREATE INDEX idx_user_blocks_blocker ON public.user_blocks USING btree (blocker_id);
 CREATE INDEX watch_facts_model_key_idx ON public.watch_facts USING btree (model_key);
 CREATE INDEX idx_watches_user ON public.watches USING btree (user_id);
 CREATE INDEX wear_reminder_sends_email_idx ON public.wear_reminder_sends USING btree (user_id, sent_on) WHERE (channel = 'email'::text);
+CREATE INDEX idx_wishlist_user ON public.wishlist USING btree (user_id);
 CREATE INDEX wishlist_shares_created_idx ON public.wishlist_shares USING btree (created_at);
 CREATE INDEX wishlist_shares_user_idx ON public.wishlist_shares USING btree (user_id, created_at DESC);
 
