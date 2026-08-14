@@ -16,7 +16,7 @@ none of the 60+ prior audit files flagged it.
 
 ## S1 — CRITICAL (NEW): Profile privacy is not enforced. 128 users affected.
 
-> **PARTIALLY FIXED 2026-08-13** — anonymous half closed (9e625ec): anon column access 23 → 9; `is_admin`, `timezone`, `email_prefs`, `rec_settings`, `eula_accepted_at` now 401 over REST. Required an `is_admin()` SECURITY DEFINER helper + rewriting 21 policies first. **STILL OPEN as S1b:** any logged-in user can still read all 23 columns of anyone — needs the private columns split into their own table.
+> **FIXED 2026-08-13** — both halves. Anonymous (9e625ec): 23 → 9 columns. Logged-in (a38e81a): 23 → 11 columns, `is_admin`/`email_prefs`/`timezone`/`rec_settings` now 403 for any authenticated user reading someone else. Required an `is_admin()` helper + rewriting 21 policies, then a `my_profile()` SECURITY DEFINER RPC for own-row reads. `created_at` and `is_suspended` are deliberately kept for `authenticated` — the admin user list renders them. Verified over HTTP with real tokens + 49 integration tests. Splitting the columns into a `profile_private` table was rejected: `is_admin` appears in 42 server-side files.
 
 The app offers Public / Followers / Private for a profile (`index.html:8715-8717`).
 55 users chose Private and 73 chose Followers-only — 25% of the user base. **All 128

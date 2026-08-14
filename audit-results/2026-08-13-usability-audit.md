@@ -123,7 +123,7 @@ break dark mode.
 
 ## U6 — NOTE: what a private-profile user currently experiences.
 
-> **PARTIALLY ADDRESSED** — see S1. Anonymous scraping is closed; a private profile is still fully readable by any logged-in user until S1b lands.
+> **RESOLVED 2026-08-13** — see S1. Profile data is no longer readable by strangers, logged-out or logged-in. The setting still governs UI visibility only, but the columns behind it are now protected at the database layer.
 
 Cross-referenced from security finding S1. 128 users have set their profile to
 Followers-only or Private. The app honours that setting in its own UI, so from inside
