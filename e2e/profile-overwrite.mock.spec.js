@@ -26,6 +26,22 @@ const PRIVATE_PROFILE = {
 // a transient auth/network error does.
 async function trackWrites(page, { failProfileGet }) {
   const writes = [];
+  // loadMyProfile reads YOUR OWN row through the my_profile() RPC, not the table —
+  // the private columns are revoked from `authenticated` on profiles (audit S1b).
+  // Same success/failure behaviour as the table GET so these tests still drive the
+  // exact incident condition.
+  await page.route('**/rest/v1/rpc/my_profile*', (route) => {
+    if (failProfileGet) {
+      return route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 'PGRST301', message: 'JWT expired' }),
+      });
+    }
+    const accept = route.request().headers()['accept'] || '';
+    const body = accept.includes('vnd.pgrst.object') ? PRIVATE_PROFILE : [PRIVATE_PROFILE];
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+  });
   await page.route('**/rest/v1/profiles*', (route) => {
     const req = route.request();
     const method = req.method();

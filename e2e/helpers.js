@@ -113,6 +113,15 @@ export async function mockSupabase(page, opts = {}) {
   });
 
   // ── Profiles ──
+  // Your OWN profile is read through the my_profile() RPC, not the table — the
+  // private columns are revoked from `authenticated` on profiles (audit S1b).
+  // Must be routed here or the call escapes the mock and hits production.
+  await page.route('**/rest/v1/rpc/my_profile*', route => {
+    const accept = route.request().headers()['accept'] || '';
+    const body = accept.includes('vnd.pgrst.object') ? profile : [profile];
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+  });
+
   await page.route('**/rest/v1/profiles*', route => {
     if (route.request().method() === 'GET') {
       // Return single object if Accept header requests it (.single() calls)

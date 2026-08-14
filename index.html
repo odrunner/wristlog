@@ -7855,7 +7855,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '14.10.27';
+const APP_VERSION = '14.10.37';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8141,13 +8141,23 @@ function classifyProfileLoad(data, error) {
   return 'error';
 }
 
+// Your OWN profile comes from the my_profile() RPC rather than a table read. The
+// private columns (email_prefs, timezone, is_admin, rec_settings, …) are revoked
+// from `authenticated` on the profiles table so they cannot be read on OTHER users,
+// and column privileges are per-role — so a plain select('*') would break for your
+// own row too. The RPC is SECURITY DEFINER and hard-scoped to auth.uid().
+// See audit-results/2026-08-13-security-audit.md S1b.
+function fetchMyProfile() {
+  return db.rpc('my_profile').single();
+}
+
 async function loadMyProfile() {
   if (!currentUser) return;
-  let { data, error } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
+  let { data, error } = await fetchMyProfile();
   if (classifyProfileLoad(data, error) === 'error') {
     // Transient failure — retry once, then bail. Falling through to auto-create
     // here has overwritten a real user's profile with OAuth-metadata defaults.
-    ({ data, error } = await db.from('profiles').select('*').eq('id', currentUser.id).single());
+    ({ data, error } = await fetchMyProfile());
     if (classifyProfileLoad(data, error) === 'error') {
       console.error('[WristLog] Profile load failed, skipping:', error && error.message);
       return;
@@ -8173,12 +8183,12 @@ async function loadMyProfile() {
     // or the auth trigger), this must fail instead of overwriting it.
     const { data: created, error: createErr } = await db.from('profiles').insert(
       { id: currentUser.id, username, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'public', collection_visibility: 'public', wishlist_visibility: 'public' }
-    ).select().single();
+    ).select('id').single();
     if (createErr) {
       console.error('[WristLog] Profile create error:', createErr.message, createErr);
       // The row may exist after all (duplicate id) — re-select before assuming
       // a username conflict.
-      const { data: existing } = await db.from('profiles').select('*').eq('id', currentUser.id).single();
+      const { data: existing } = await fetchMyProfile();
       if (existing) {
         data = existing;
       } else {
@@ -8186,14 +8196,16 @@ async function loadMyProfile() {
         const fallback = 'user' + Math.random().toString(36).slice(2, 8);
         const { data: retry, error: retryErr } = await db.from('profiles').insert(
           { id: currentUser.id, username: fallback, display_name: googleName, theme_preference: 'light', profile_privacy: 'public', default_post_visibility: 'public', collection_visibility: 'public', wishlist_visibility: 'public' }
-        ).select().single();
+        ).select('id').single();
         if (retryErr) console.error('[WristLog] Profile create retry error:', retryErr.message, retryErr);
-        data = retry;
-        isNewUser = !!retry;
+        // insert returned the id only — read the full row (defaults included) back.
+        data = retry ? (await fetchMyProfile()).data : null;
+        isNewUser = !!data;
       }
     } else {
-      data = created;
-      isNewUser = true;
+      // insert returned the id only — read the full row (defaults included) back.
+      data = (await fetchMyProfile()).data;
+      isNewUser = !!data;
     }
   }
   if (!data) {
@@ -8405,8 +8417,11 @@ async function loadAndRenderProfile(userId) {
   // to fetch their notification settings too. Ask for it only when it's ours.
   const PROFILE_COLS = 'id, username, display_name, bio, avatar_url, collection_visibility, profile_privacy, wishlist_visibility';
   const { data: profile } = await withTimeout(db.from('profiles')
-    .select(isOwn ? PROFILE_COLS + ', email_prefs' : PROFILE_COLS)
+    .select(PROFILE_COLS)
     .eq('id', userId).single());
+  // Notification toggles render from your own prefs, which live on myProfile (loaded
+  // via the my_profile() RPC) — email_prefs is not readable from the table.
+  if (profile && isOwn) profile.email_prefs = myProfile?.email_prefs;
   if (!profile) {
     el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">This account no longer exists.</div>';
     return;
