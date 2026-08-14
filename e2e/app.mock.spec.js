@@ -1983,45 +1983,12 @@ test.describe('Badge system (mocked)', () => {
 
 // ── Feed shows username (mocked) ───────────────────────────────────────
 
-test.describe('Feed username display (mocked)', () => {
-  test('landing feed cards show username instead of display_name', async ({ page }) => {
-    await page.route('**/auth/v1/**', route =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) })
-    );
-    await page.route('**/rest/v1/logs*order=created_at*', route =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
-        { id: 'p1', user_id: 'u1', watch_id: 'w1', photo_url: null, notes: 'Great day', use_case: 'casual', date: '2026-05-15', created_at: '2026-05-15T10:00:00Z', visibility: 'public', moderation_status: null },
-      ]) })
-    );
-    await page.route('**/rest/v1/profiles*', route =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
-        { id: 'u1', username: 'watchfan42', display_name: 'John Smith', avatar_url: null, is_official: false },
-      ]) })
-    );
-    await page.route('**/rest/v1/watches*', route =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
-        { id: 'w1', user_id: 'u1', brand: 'Seiko', name: 'SKX009' },
-      ]) })
-    );
-    await page.route('**/rest/v1/likes*', route =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
-    );
-    await page.route('**/rest/v1/comments*', route =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
-    );
-    await page.route('**/realtime/**', route => route.abort());
-
-    await page.goto('/');
-    await page.waitForTimeout(3000);
-
-    // The feed card should show 'watchfan42' (username), not 'John Smith' (display_name)
-    const feedList = page.locator('#landing-feed-list');
-    if (await feedList.count() > 0) {
-      const text = await feedList.textContent();
-      expect(text).toContain('watchfan42');
-    }
-  });
-});
+// The 'Feed username display (mocked)' block lived here. It asserted that landing
+// feed cards show username rather than display_name — but it was written as
+// `if (await feedList.count() > 0) { ... }`, so once 5b9cc8c removed
+// #landing-feed-list from the markup it passed while asserting nothing. The landing
+// feed itself is gone (see loadPublicFeed in index.html), so the test is removed
+// rather than repaired: there is no longer a surface for it to cover.
 
 // ── Comment deletion (mocked) ──────────────────────────────────────────────
 

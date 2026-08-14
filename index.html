@@ -7855,7 +7855,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '14.09.39';
+const APP_VERSION = '14.09.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11084,137 +11084,22 @@ document.addEventListener('click', e => {
   }, { passive: true });
 })();
 
-// ── Public Feed (Landing Page — no auth required) ────────────────────────
-let publicFeedItems = [];
-let publicFeedLikes = {};
-let publicFeedComments = {};
-let publicFeedLoading = false;
-
-async function loadPublicFeed() {
-  if (publicFeedLoading) return;
-  publicFeedLoading = true;
-  try {
-    const { data: rawLogs, error } = await db.from('logs')
-      .select('id, user_id, watch_id, photo_url, notes, use_case, date, created_at, location')
-      .eq('visibility', 'public')
-      .is('moderation_status', null)
-      .order('date', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(20);
-    if (error || !rawLogs?.length) { publicFeedLoading = false; return; }
-    const logIds = rawLogs.map(l => l.id);
-    const userIds = [...new Set(rawLogs.map(l => l.user_id))];
-    const watchIds = [...new Set(rawLogs.filter(l => l.watch_id).map(l => l.watch_id))];
-    const [profRes, watchRes, likesRes, commRes] = await Promise.all([
-      db.from('profiles').select('id, username, display_name, avatar_url, is_official').in('id', userIds),
-      watchIds.length ? db.from('watches').select('id, brand, name, image').in('id', watchIds) : { data: [] },
-      db.from('likes').select('log_id').in('log_id', logIds),
-      db.from('comments').select('id, log_id, user_id, body, created_at').in('log_id', logIds).is('moderation_status', null).order('created_at', { ascending: true }).limit(200),
-    ]);
-    const profMap = {}; (profRes.data || []).forEach(p => profMap[p.id] = p);
-    const watchMap = {}; (watchRes.data || []).forEach(w => watchMap[w.id] = w);
-    publicFeedLikes = {};
-    logIds.forEach(id => publicFeedLikes[id] = 0);
-    (likesRes.data || []).forEach(l => publicFeedLikes[l.log_id] = (publicFeedLikes[l.log_id] || 0) + 1);
-    // Comments + commenter profiles
-    const commentData = commRes.data || [];
-    const commenterIds = [...new Set(commentData.map(c => c.user_id))];
-    let commenterMap = {};
-    if (commenterIds.length) {
-      const { data: cp } = await db.from('profiles').select('id, username, display_name, avatar_url, is_official').in('id', commenterIds);
-      (cp || []).forEach(p => commenterMap[p.id] = p);
-    }
-    publicFeedComments = {};
-    commentData.forEach(c => {
-      if (!publicFeedComments[c.log_id]) publicFeedComments[c.log_id] = [];
-      publicFeedComments[c.log_id].push({ ...c, profile: commenterMap[c.user_id] || null });
-    });
-    publicFeedItems = rawLogs.map(l => ({
-      ...l,
-      profile: profMap[l.user_id] || null,
-      watch: l.watch_id ? (watchMap[l.watch_id] || null) : null,
-    }));
-    renderPublicFeed();
-    if (window.posthog) posthog.capture('landing_page_viewed');
-  } catch(e) { console.warn('Public feed error:', e?.message); }
-  finally { publicFeedLoading = false; }
-}
-
-function renderPublicFeed() {
-  const el = document.getElementById('landing-feed-list');
-  if (!el || !publicFeedItems.length) return;
-  el.innerHTML = publicFeedItems.map(item => {
-    const p = item.profile;
-    const w = item.watch;
-    const likeCount = publicFeedLikes[item.id] || 0;
-    const comments = publicFeedComments[item.id] || [];
-    const displayName = escHtml(p?.username || p?.display_name || 'User') + officialBadgeHtml(p);
-    const metaStr = formatFeedDate(item.date, item.created_at);
-    // Hero
-    let heroHtml = '';
-    if (item.photo_url) {
-      const _isAcc = /_accuracy\.jpg(\?|$)/.test(item.photo_url);
-      heroHtml = `<div class="feed-card-photo${_isAcc ? ' feed-card-photo--accuracy' : ''}"><img src="${escHtml(item.photo_url)}" alt="" loading="lazy"></div>`;
-    } else if (item.notes && !w) {
-      heroHtml = `<div class="feed-text-hero"><p class="feed-text-hero-body">${escHtml(item.notes)}</p></div>`;
-    }
-    // Caption
-    let captionHtml = '';
-    if (item.notes && (item.photo_url || w)) {
-      captionHtml = `<div class="feed-caption"><span class="feed-caption-user">${displayName}</span> ${escHtml(item.notes)}</div>`;
-    }
-    // Watch chip
-    const watchChip = w ? `<div class="feed-watch-chip" onclick="requireLogin()" style="cursor:pointer;">${escHtml(((w.brand||'')+ ' ' +(w.name||'')).trim())}</div>` : '';
-    // Use case badge
-    const useCaseHtml = item.use_case ? `<span style="font-size:.7rem;color:var(--muted);margin-left:.5rem;text-transform:capitalize;">${escHtml(item.use_case)}</span>` : '';
-    // Comments preview (last 2)
-    let commentsHtml = '';
-    if (comments.length > 0) {
-      const preview = comments.slice(-2);
-      const remaining = comments.length - preview.length;
-      commentsHtml = `<div class="feed-comments-section">
-        ${remaining > 0 ? `<div class="comments-view-more" onclick="requireLogin()" style="cursor:pointer;">View all ${comments.length} comments</div>` : ''}
-        ${preview.map(c => `<div class="comment-item">
-          <div class="comment-avatar" onclick="requireLogin()" style="cursor:pointer;">${profileInitials(c.profile)}</div>
-          <div class="comment-content"><div class="comment-body">
-            <span class="comment-username" onclick="requireLogin()" style="cursor:pointer;">${escHtml(c.profile?.username || c.profile?.display_name || 'User')}${officialBadgeHtml(c.profile)}</span>
-            ${escHtml(c.body)}
-            <span class="comment-time">${formatCommentTime(c.created_at)}</span>
-          </div></div>
-        </div>`).join('')}
-        <div class="comments-add-prompt" onclick="requireLogin()" style="cursor:pointer;font-size:.78rem;color:var(--muted);padding:.4rem 0;">Add a comment...</div>
-      </div>`;
-    } else {
-      commentsHtml = `<div style="padding:.25rem .75rem .5rem;"><span class="comments-add-prompt" onclick="requireLogin()" style="cursor:pointer;font-size:.78rem;color:var(--muted);">Add a comment...</span></div>`;
-    }
-    return `<div class="feed-card">
-      <div class="feed-card-header">
-        <div class="feed-user-avatar" onclick="requireLogin()" style="cursor:pointer;">${profileInitials(p)}</div>
-        <div style="flex:1;min-width:0;">
-          <div class="feed-user-name" onclick="requireLogin()" style="cursor:pointer;">${displayName}</div>
-          <div class="feed-meta">${metaStr}${useCaseHtml}${renderPostLocationHtml(item.location)}</div>
-        </div>
-      </div>
-      ${heroHtml}
-      <div class="feed-actions">
-        <button class="feed-action-btn" onclick="requireLogin()">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          <span>${likeCount || ''}</span>
-        </button>
-        <button class="feed-action-btn" onclick="requireLogin()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          <span>${comments.length || ''}</span>
-        </button>
-      </div>
-      ${captionHtml}
-      ${watchChip}
-      ${commentsHtml}
-    </div>`;
-  }).join('');
-  const preview = document.querySelector('.landing-feed-preview');
-  if (preview) preview.classList.add('loaded');
-  const fakeNav = document.getElementById('landing-fake-nav');
-  if (fakeNav) fakeNav.style.display = 'flex';
+// ── Landing page (logged out) ───────────────────────────────────────────────
+// This used to build a live public feed. The container it rendered into
+// (#landing-feed-list, plus .landing-feed-preview and #landing-fake-nav) was
+// removed by 5b9cc8c "Redesign landing page", so renderPublicFeed() hit its own
+// `if (!el) return` guard and every logged-out visit spent SIX PostgREST reads
+// (logs, profiles x2, watches, likes, comments) building state nothing consumed.
+//
+// The one live effect was the landing_page_viewed analytics event, which is a
+// tracked event (WROTATE-FEATURES.md) — so that is kept and the fetching is gone.
+// Restoring the feed is a landing-page design decision, not a cleanup, so it is
+// deliberately not attempted here.
+//
+// Name and call sites are unchanged: it is still invoked from the five places
+// that detect a logged-out visitor.
+function loadPublicFeed() {
+  if (window.posthog) posthog.capture('landing_page_viewed');
 }
 
 function requireLogin() {
