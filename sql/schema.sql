@@ -3489,10 +3489,6 @@ CREATE POLICY watches_feed_read ON public.watches AS PERMISSIVE FOR SELECT TO au
 CREATE POLICY watches_own ON public.watches AS PERMISSIVE FOR ALL TO authenticated
   USING ((user_id = auth.uid()))
   WITH CHECK ((user_id = auth.uid()));
-CREATE POLICY watches_public_read ON public.watches AS PERMISSIVE FOR SELECT TO authenticated
-  USING (((user_id = auth.uid()) OR (watch_privacy IS DISTINCT FROM 'private'::text)));
-CREATE POLICY "Non-private wishlist items readable by authenticated users" ON public.wishlist AS PERMISSIVE FOR SELECT TO authenticated
-  USING (((user_id = auth.uid()) OR (wish_privacy IS DISTINCT FROM 'private'::text)));
 CREATE POLICY "Others can read shared wishlist" ON public.wishlist AS PERMISSIVE FOR SELECT TO public
   USING (((wish_privacy = 'public'::text) OR (wish_privacy IS NULL) OR ((wish_privacy = 'followers'::text) AND (EXISTS ( SELECT 1
    FROM follows

@@ -47,30 +47,72 @@ avatar_url, `timezone` (coarse location for 250 users), `email_prefs`, and
 `profile_privacy` is read by the client (`index.html:8374`) and drives what the UI
 renders. That is the only place it is enforced.
 
-**Fix:** drop the three redundant policies and replace with one that reads the
-column:
+### Fix — REVISED 2026-08-13 after read-only simulation
+
+**A row-level policy is the wrong instrument here. Do not use it.** The original
+proposal in this report was:
 
 ```sql
-DROP POLICY "Public profiles are viewable by everyone" ON profiles;
-DROP POLICY "profiles_read" ON profiles;
-DROP POLICY "profiles_readable_by_authenticated" ON profiles;
-DROP POLICY "profiles_select" ON profiles;
-
+-- REJECTED — would break the app. Kept for the record.
 CREATE POLICY profiles_select_respecting_privacy ON profiles FOR SELECT USING (
-  id = auth.uid()
-  OR profile_privacy = 'public'
-  OR profile_privacy IS NULL
+  id = auth.uid() OR profile_privacy = 'public' OR profile_privacy IS NULL
   OR (profile_privacy = 'followers' AND EXISTS (
-        SELECT 1 FROM follows f
-        WHERE f.follower_id = auth.uid() AND f.following_id = profiles.id))
-);
+        SELECT 1 FROM follows f WHERE f.follower_id = auth.uid() AND f.following_id = profiles.id)));
 ```
 
-Caveat before shipping: a discovery surface (search, feed author names, follower
-lists) may legitimately need a private user's username/avatar. Prefer exposing that
-minimum through a `SECURITY DEFINER` RPC returning only `id, username, avatar_url`,
-rather than widening the table policy back out. Test the feed, search, followers
-modal and mention autocomplete after the change.
+Simulating it against the client showed the app reads *other users'* profile rows in
+~20 places for identity, not merely to render the profile page:
+
+| surface | columns read | effect if the row is hidden |
+|---|---|---|
+| Follow button (`friendActionBtn`, `index.html:16224`) | `profile_privacy` | cannot distinguish "Follow" from "Request to Follow" |
+| Search / discover | `id, username, display_name, avatar_url` | private users become unfindable — **nobody could ever request access** |
+| Feed authors | `+ is_official` | blank author on public posts by private users |
+| Follower/following lists, mention autocomplete, club member lists, notification actors | same identity set | rows disappear |
+
+Hiding the row breaks the mechanism by which a stranger asks a private user for
+access. That is a worse bug than the leak.
+
+**The leak is column-scoped, not row-scoped.** The sensitive columns — `is_admin`,
+`email_prefs`, `timezone`, `rec_settings`, `eula_accepted_at`, `is_suspended`,
+`suspended_at`, `ab_variant`, `tg_debug`, `username_set`, `share_achievements`,
+`theme_preference` — are read by the client **only through own-profile
+`select('*')`**, and all three of those call sites are `.eq('id', currentUser.id)`
+(`index.html:8109, 8113, 8144`). Every other-user read uses an explicit safe column
+list.
+
+One exception: `index.html:8367` selects `email_prefs` for *any* profile, because a
+single query serves both the own-profile and other-profile views.
+
+**Step 1 — client (one line).** Select `email_prefs` only when `isOwn`, so another
+user's notification preferences are never fetched.
+
+**Step 2 — revoke the sensitive columns from `anon`.** Safe because anon has no own
+profile and every anon-reachable path uses an explicit safe column list
+(`p/index.html:261`, `profile/index.html:368`, and the logged-out public feed).
+
+```sql
+REVOKE SELECT ON public.profiles FROM anon;
+GRANT SELECT (id, username, display_name, avatar_url, bio, is_official,
+              profile_privacy, collection_visibility, wishlist_visibility)
+  ON public.profiles TO anon;
+```
+
+Rollback is a single statement: `GRANT SELECT ON public.profiles TO anon;`
+
+This closes anonymous enumeration of all 516 users, including which account is
+`is_admin` and the 250 stored timezones.
+
+**Step 3 — the `authenticated` half (follow-up, larger).** Column privileges are
+granted per *role*, not per row, so the same revoke cannot be applied to
+`authenticated` without breaking own-profile `select('*')`. Closing it properly means
+moving the sensitive columns to a `profile_private` table keyed on `user_id` with an
+own-row-only policy. Note `is_admin` is referenced inside other RLS policies
+(`EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin)`), so those
+policies must move with it. Schema change plus client refactor — scope separately.
+
+**Residual after steps 1-2:** any logged-in user can still read every profile column.
+That is a smaller exposure than anonymous scraping, but it is not closed until step 3.
 
 ---
 
