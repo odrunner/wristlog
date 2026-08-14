@@ -10,7 +10,8 @@ import {
   categoryLabel,
   hmacSign,
   renderPage,
-  verifyHmac,
+  unsubscribeKeys,
+  verifyHmacAny,
 } from "./lib.ts";
 
 function htmlPage(title: string, body: string): Response {
@@ -30,14 +31,19 @@ serve(async (req) => {
     return htmlPage("Invalid link", "<h1>Invalid unsubscribe link</h1><p>This link appears to be incomplete. Open WRotate to manage your notification preferences.</p><a href='https://wrotate.com/open' class='btn'>Open WRotate</a>");
   }
 
-  const hmacKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  const valid = await verifyHmac(uid, cat, sig, hmacKey);
+  // Accept links signed with either key so setting UNSUBSCRIBE_HMAC_SECRET does not
+  // invalidate anything already sitting in an inbox. keys[0] is what we sign with.
+  const keys = unsubscribeKeys((k) => Deno.env.get(k));
+  const hmacKey = keys[0] ?? "";
+  const valid = await verifyHmacAny(uid, cat, sig, keys);
   if (!valid) {
     return htmlPage("Invalid link", "<h1>Invalid unsubscribe link</h1><p>This link has expired or is invalid. Open WRotate to manage your notification preferences.</p><a href='https://wrotate.com/open' class='btn'>Open WRotate</a>");
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const supabase = createClient(supabaseUrl, hmacKey);
+  // DB access needs the service-role key specifically — not the signing key, which
+  // may now be a dedicated secret with no database privileges.
+  const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 
   const { data: profile, error: profileErr } = await supabase
     .from("profiles")

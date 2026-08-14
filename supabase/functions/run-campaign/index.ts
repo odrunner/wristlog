@@ -43,6 +43,11 @@ import type { MailMessage } from "../_shared/mailer.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+// Unsubscribe links are signed with a dedicated secret when one is set, falling
+// back to the service-role key so nothing changes until it is. The verifier
+// (email-unsubscribe) accepts both, so rotating the service-role key no longer
+// invalidates links already sitting in inboxes. See audit S4.
+const UNSUB_KEY = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") || SUPABASE_SERVICE_ROLE_KEY;
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
 const FROM_EMAIL = "WRotate <hello@wrotate.com>";
 const ADMIN_USER_ID = "d70b1a85-4f31-4431-b3b7-db76543daaf5";
@@ -303,7 +308,7 @@ async function deliver(
     }
 
     const messages: MailMessage[] = await Promise.all(batch.map(async (r) => {
-      const sig = await hmacSign(r.uid, "updates", SUPABASE_SERVICE_ROLE_KEY);
+      const sig = await hmacSign(r.uid, "updates", UNSUB_KEY);
       const url = unsubUrl(SUPABASE_URL, r.uid, sig, "updates");
       const f = facts.get(r.uid);
       const vars: Record<string, string> = f

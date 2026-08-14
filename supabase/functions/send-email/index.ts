@@ -50,6 +50,10 @@ serve(async (req) => {
     // arbitrary user about an arbitrary actor/type.
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    // Unsubscribe links use a dedicated secret when set, else the service-role
+    // key. The verifier accepts both, so rotating the service-role key does not
+    // invalidate links already delivered. See audit S4.
+    const unsubKey = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") || supabaseKey;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { data: dbRecord, error: verifyError } = await supabase
@@ -151,7 +155,7 @@ serve(async (req) => {
     }
 
     // Generate signed unsubscribe URL
-    const sig = await hmacSign(user_id, category, supabaseKey);
+    const sig = await hmacSign(user_id, category, unsubKey);
     const unsubUrl = buildUnsubUrl(supabaseUrl, user_id, category, sig);
 
     const html = buildHtmlEmail(content.subject, content.body, unsubUrl);

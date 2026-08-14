@@ -139,6 +139,10 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization") ?? "";
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    // Unsubscribe links use a dedicated secret when set, else the service-role
+    // key. The verifier accepts both, so rotating the service-role key does not
+    // invalidate links already delivered. See audit S4.
+    const unsubKey = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") || supabaseServiceKey;
 
     const body = await req.json();
     const { subject, html, test_email, segment = "all", campaign_id, cohort, dry_run, limit, enqueue, drain, priority, first_batch } = body;
@@ -212,7 +216,7 @@ serve(async (req) => {
       // rather than a decorative one that can't.
       let testHeaders: Record<string, string> | undefined;
       if (adminUserId) {
-        const sig = await hmacSign(adminUserId, "updates", supabaseServiceKey);
+        const sig = await hmacSign(adminUserId, "updates", unsubKey);
         const url = unsubUrl(supabaseUrl, adminUserId, sig, "updates");
         tHtml = withUnsubFooter(tHtml, url);
         testHeaders = {
@@ -448,7 +452,7 @@ serve(async (req) => {
     for (let i = 0; i < filteredRecipients.length; i += batchSize) {
       const batch = filteredRecipients.slice(i, i + batchSize);
       const messages: MailMessage[] = await Promise.all(batch.map(async (r) => {
-        const sig = await hmacSign(r.uid, "updates", supabaseServiceKey);
+        const sig = await hmacSign(r.uid, "updates", unsubKey);
         const url = unsubUrl(supabaseUrl, r.uid, sig, "updates");
         const v = directWantsFact ? (directVars.get(r.uid) ?? { ...FALLBACK_FACT }) : {};
         return {
@@ -498,6 +502,10 @@ serve(async (req) => {
 // used_today comes from email_events (the Resend webhook logs every send from every
 // function), so transactional + campaign email automatically takes priority.
 async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl: string, serviceKey: string, quotaOnly = false) {
+  // Unsubscribe links use a dedicated secret when set, else the service-role key.
+  // The verifier accepts both, so rotating the service-role key does not invalidate
+  // links already delivered. See audit S4.
+  const drainUnsubKey = Deno.env.get("UNSUBSCRIBE_HMAC_SECRET") || serviceKey;
   // Reap claims from crashed drains: anything 'sending' for >15 min goes back
   // to pending. A healthy drain finishes a wave in well under a minute.
   await supabase.from("broadcast_queue")
@@ -602,7 +610,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
   for (let i = 0; i < claimed.length; i += batchSize) {
     const batch = claimed.slice(i, i + batchSize);
     const messages: MailMessage[] = await Promise.all(batch.map(async (r) => {
-      const sig = await hmacSign(r.uid, "updates", serviceKey);
+      const sig = await hmacSign(r.uid, "updates", drainUnsubKey);
       const url = unsubUrl(supabaseUrl, r.uid, sig, "updates");
       return {
         from: FROM_EMAIL,

@@ -1638,8 +1638,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       input[type=url], input[type=email], textarea, select,
       .feed-caption-textarea { font-size: 16px !important; }
 
-      /* Touch-friendly tap targets */
-      .btn { min-height: 40px; }
+      /* Touch-friendly tap targets. .btn raised 40 -> 44px on 2026-08-13 (audit U4)
+         to meet the 44px guidance for a phone-first app. .btn-sm deliberately stays
+         at 34: the toolbars noted below were measured to fit on one line at that
+         size, and raising it re-breaks them. */
+      .btn { min-height: 44px; }
       .btn-sm { min-height: 34px; padding: .38rem .7rem; }
 
       /* Wishlist toolbar + edit-modal footer: size down so each stays on ONE
@@ -7855,7 +7858,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '14.10.53';
+const APP_VERSION = '14.11.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -28746,6 +28749,14 @@ const _overlayCloseMap = {
   'admin-user-modal':    closeAdminUserModal,
   'update-prices-modal': closeUpdatePrices,
   'username-prompt-modal': () => document.getElementById('username-prompt-modal').classList.add('hidden'),
+  // Added 2026-08-13 (audit U2). These four carry role="dialog" but were missing
+  // from this map, so Escape and overlay-click did nothing on them — the dialog
+  // read as frozen to a keyboard user.
+  'badge-reveal-modal':  closeBadgeReveal,
+  'msr-share-popup':     dismissMsrSharePopup,
+  'wl-share-modal':      closeWishlistShareSheet,
+  // Escape counts as a decline here, same as pressing "Not now".
+  'push-primer-modal':   pushPrimerDismiss,
 };
 
 // Click overlay background to close
