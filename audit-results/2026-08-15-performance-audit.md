@@ -41,6 +41,8 @@ experiences: `admin_active_dau` min 419 ms / mean 2,084 ms / max 7,183 ms.
 
 ## DB-1 — HIGH: the admin dashboard is 57 % of database time
 
+> **FIXED 2026-08-15** (52dcbc0, `sql/2026-08-15-admin-stats-cache.sql`) — 10 heavy RPCs wrapped over a 10-min `admin_stats_cache` (bodies cloned verbatim to `_compute()`, wrappers verified byte-equal forced and cached); dashboard stages flattened into one `Promise.all`; ↻ Refresh passes `p_force`. Warm: the five heaviest RPCs answer together in 6.6 ms (was ~6 s). Counts (fix 3) left as-is — RLS-scoped numbers would change if moved to SECURITY DEFINER.
+
 `SELECT sum(total_exec_time) … WHERE query LIKE '%admin\_%'` → **876 s of 1,655 s total**
 (1,527 of 210,871 statements — 0.7 % of calls, 57 % of time).
 
@@ -105,6 +107,8 @@ index-friendly. Saves ~24 s of DB time/day; low urgency, five-minute change.
 ---
 
 ## CLIENT-1 — HIGH: 4.9 MB of the 6.9 MB boot payload is full-size photos shown at 22–48 px
+
+> **FIXED 2026-08-15** (118f88b) — self-hosted `<name>_thumb.jpg` (240 px) siblings instead of paid transforms: written on upload, backfilled for 861 files by `scripts/backfill-thumbs.py` (146 MB → 9.65 MB, avg 11.5 KB); 29 small render sites + `p/`/`profile/` use them with a document-level `error` fallback to the original. UAT: 25/25 feed chips render the thumb, 0 fallbacks.
 
 Measured logged-in boot (test account, SW-served HTML, warm cache): 77 requests, 6.86 MB.
 Supabase REST/RPC: 35 requests, **81 KB**. Supabase Storage: 28 images, **6.47 MB**.
