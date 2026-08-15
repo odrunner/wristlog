@@ -181,8 +181,12 @@ def failure_mode(a):
         r = v2.get("tg_final")
         if not v2.get("conv"):
             return "tg_no_converge"        # tg didn't settle on a stable period
-        if r is not None and abs(r) > 40:
-            return "gross_wild"            # tg harmonic lock
+        if r is not None and abs(r) > GOOD_MAX_RATE:
+            # Shipped to the user AS CONVERGED with a wild rate — a confidently-wrong
+            # lock (2026-08-15 deep dive: 229 sessions / 33 users in the 2.4 era;
+            # b2b shows these are bad locks, not vintage watches). The single most
+            # trust-damaging mode; target of docs/spec-tg-lock-validation.md T1/T2.
+            return "tg_wild_converged"
         if a["bph"] and int(a["bph"]) <= 21600:
             return "low_bph"               # tg low-beat harmonic regime (see #2 native guard)
         return "moderate_wild"             # 15–40 s/day off
@@ -204,7 +208,60 @@ MODE_FIX = {
     "gross_wild":   ("native", "Harmonic-lock guard: reject candidate rates implying 2×/0.5× the selected period"),
     "moderate_wild":("native", "Convergence/outlier tightening for mid-range drift"),
     "tg_no_converge":("native", "Pro V2 (tg) convergence: settle-rule / low-BPH lock tuning so it reaches a stable period"),
+    "tg_wild_converged":("native", "TG lock validation (docs/spec-tg-lock-validation.md T1/T2): disjoint-segment confirm; harmonic guard refuses instead of median-shipping"),
 }
+
+
+def _parse_ts(s):
+    """Tolerant ISO parse (Supabase timestamps carry variable-length fractions)."""
+    s = (s or "").replace("Z", "").replace("+00:00", "")
+    if "." in s:
+        head, frac = s.split(".", 1)
+        s = f"{head}.{(frac + '000000')[:6]}"
+    try:
+        return datetime.fromisoformat(s)
+    except ValueError:
+        return None
+
+
+def _session_rate(a):
+    """The rate the user saw: tg's own final for algo=tg sessions, legacy otherwise."""
+    v2 = a.get("v2")
+    if v2 and v2.get("algo") == "tg":
+        return v2.get("tg_final")
+    return a.get("final")
+
+
+def b2b_repeatability(sessions):
+    """Back-to-back |Δrate| for same user+watch pairs measured < 10 min apart.
+
+    Same position, same temperature — physics excluded, so this is pure
+    algorithm/acquisition variance: the direct field metric for the tg
+    lock-validation work (2026-08-15 deep dive: p50 8.1 s/d overall, 2.5 when
+    both locks are sane, 18.7 when one is wild). Returns dict or None.
+    """
+    per = defaultdict(list)
+    for a in sessions:
+        r = _session_rate(a)
+        t = _parse_ts(a.get("t"))
+        if a.get("uid") and a.get("wid") and t and r is not None and abs(r) < 200:
+            per[(a["uid"], a["wid"])].append((t, r))
+    all_d, sane_d, wild_d = [], [], []
+    for xs in per.values():
+        xs.sort()
+        for i in range(len(xs) - 1):
+            if (xs[i+1][0] - xs[i][0]).total_seconds() >= 600: continue
+            d = abs(xs[i+1][1] - xs[i][1])
+            all_d.append(d)
+            (sane_d if abs(xs[i][1]) <= GOOD_MAX_RATE and abs(xs[i+1][1]) <= GOOD_MAX_RATE
+             else wild_d).append(d)
+    if not all_d:
+        return None
+    def q(v, p):
+        return round(sorted(v)[min(len(v)-1, int(p*len(v)))], 1) if v else None
+    return dict(n=len(all_d), p50=q(all_d, .5), p75=q(all_d, .75),
+                sane_n=len(sane_d), sane_p50=q(sane_d, .5),
+                wild_n=len(wild_d), wild_p50=q(wild_d, .5))
 
 
 def summarize(sessions):
@@ -333,6 +390,7 @@ def main():
         a = analyze(blob)
         if not a["uid"] or a["uid"] in internal: continue
         a["v2"] = prov2_stats(blob)
+        a["t"] = s["t"]
         cum.append(a)
         if s["t"] and s["t"] >= wk_cut: week.append(a)
 
@@ -356,6 +414,19 @@ def main():
     L.append("\n## Good% by BPH (cumulative)")
     for bph, (tot, g) in sorted(C["by_bph"].items(), key=lambda x: -x[1][0]):
         L.append(f"- {bph} bph: {g}/{tot} ({pct(g,tot)})")
+
+    # Back-to-back repeatability: same user+watch < 10 min apart = same position &
+    # temperature, so physics is excluded — pure algorithm variance. Direct field
+    # metric for the tg lock-validation work (target: p50 <= 3 s/d, see
+    # docs/spec-tg-lock-validation.md). sane/wild split shows the bimodal locks.
+    L.append("\n## Back-to-back repeatability (same watch, <10 min apart)")
+    for label, xs in (("cumulative", cum), ("last 7d", week)):
+        b = b2b_repeatability(xs)
+        if b:
+            L.append(f"- {label}: |Δrate| p50 {b['p50']} / p75 {b['p75']} s/d over {b['n']} pairs"
+                     f" — both-sane p50 {b['sane_p50']} ({b['sane_n']}), any-wild p50 {b['wild_p50']} ({b['wild_n']})")
+        else:
+            L.append(f"- {label}: no back-to-back pairs")
 
     # Pro V2 (tg core): shadow A/B from every 2.1 session + beta segment vs the flip gate
     v2 = [a for a in cum if a.get("v2")]
@@ -416,9 +487,12 @@ def main():
             L.append("- Note: native — queues for the next App Store build (not same-day).")
 
     # week-over-week snapshot (auto before/after)
+    b2b_cum = b2b_repeatability(cum)
     snap = {"date": date_str, "cum_good_pct": round(100*C["good"]/C["n"]) if C["n"] else 0,
             "cum_sessions": C["n"], "cum_users": C["users"],
-            "wk_good_pct": round(100*W["good"]/W["n"]) if W["n"] else 0, "wk_sessions": W["n"]}
+            "wk_good_pct": round(100*W["good"]/W["n"]) if W["n"] else 0, "wk_sessions": W["n"],
+            "b2b_p50": b2b_cum["p50"] if b2b_cum else None,
+            "b2b_n": b2b_cum["n"] if b2b_cum else 0}
     # Prior snapshot = most recent line from a DIFFERENT date (dedup same-day re-runs)
     hist = []
     try:
@@ -431,6 +505,8 @@ def main():
         d_good = snap["cum_good_pct"] - prev["cum_good_pct"]
         L.append(f"- Cumulative good%: {prev['cum_good_pct']}% → {snap['cum_good_pct']}% ({d_good:+d} pts) [vs {prev['date']}]")
         L.append(f"- Sessions added since last review: {snap['cum_sessions'] - prev['cum_sessions']}")
+        if prev.get("b2b_p50") is not None and snap["b2b_p50"] is not None:
+            L.append(f"- b2b repeatability p50: {prev['b2b_p50']} → {snap['b2b_p50']} s/d")
     else:
         L.append("- First run — baseline established. Deltas start next Sunday.")
     hist = [s for s in hist if s.get("date") != date_str] + [snap]   # replace today's
