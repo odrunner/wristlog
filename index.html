@@ -7858,7 +7858,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.08.09';
+const APP_VERSION = '15.08.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -31477,7 +31477,13 @@ function sendMsrTuning() {
     // 2.4 engine changes, each individually A/B-able from here without a rebuild.
     tgPeriodFit: Number(safeLS.get('tg_periodfit') ?? 2),   // 0 legacy mean, 1 median, 2 weighted
     tgHoldOnLock: safeLS.get('tg_holdonlock') !== '0',      // keep a locked session alive through detector starvation
-    tgAmpMin: _tgKnob('tg_ampmin', 90)     // lowest amplitude the plausibility gate reports (was 135)
+    tgAmpMin: _tgKnob('tg_ampmin', 90),    // lowest amplitude the plausibility gate reports (was 135)
+    // 2.5 lock-validation knobs (docs/spec-tg-lock-validation.md) — DARK: these defaults
+    // reproduce 2.4 behaviour exactly; flip via localStorage (personal stage) first.
+    tgConfirmBand: _tgKnob('tg_confirmband', 999), // T1 disjoint-segment confirm band (s/d); 999 = off, staged target 6
+    tgGuardMode: Number(safeLS.get('tg_guardmode') ?? 0),   // T2: 0 = median fallback (2.4), 1 = refuse
+    tgGateMaxRej: _tgKnob('tg_gatemaxrej', 1),     // T3 convergence block above this σ-reject fraction; 1 = off, staged target 0.5
+    tgAcquireMax: _tgKnob('tg_acquiremax', 15)     // T4 pre-lock runway seconds; 15 = off, staged target 45
   });
 }
 function _tgKnob(k, d) { const v = Number(safeLS.get(k)); return Number.isFinite(v) && v > 0 ? v : d; }

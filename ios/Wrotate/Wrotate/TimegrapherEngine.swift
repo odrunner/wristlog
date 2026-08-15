@@ -33,6 +33,8 @@ class TimegrapherEngine {
         let elapsedSec: Double
         let method: String
         let rateStable: Bool      // true when rate has converged (±2 s/day for 15s)
+        let tgSignalQuality: String?  // T3: "good"/"fair"/"poor" from the σ-gate reject fraction (tg path; nil otherwise)
+        let tgAcquiring: Bool     // T4: tg is evaluating windows, no rate yet, within the acquire runway — JS should not declare no-signal while true
         let newTicks: [TickDot]   // new tick dots since last update
         let debugMessages: [String] // debug log lines for Supabase
     }
@@ -367,10 +369,18 @@ class TimegrapherEngine {
                     liftAngle: Double? = nil,
                     tgSigma: Double? = nil, tgStabWin: Double? = nil, tgWallMin: Double? = nil, tgStabTh: Double? = nil,
                     tgMaxWin: Double? = nil, tgAgree: Double? = nil,
-                    tgPeriodFit: Int? = nil, tgHoldOnLock: Bool? = nil, tgAmpMin: Double? = nil) {
+                    tgPeriodFit: Int? = nil, tgHoldOnLock: Bool? = nil, tgAmpMin: Double? = nil,
+                    tgConfirmBand: Double? = nil, tgGuardMode: Int? = nil,
+                    tgGateMaxRej: Double? = nil, tgAcquireMax: Double? = nil) {
         if let v = tgPeriodFit, v >= 0, v <= 2 { self.tgPeriodFit = v }
         if let v = tgHoldOnLock { self.tgHoldOnLock = v }
         if let v = tgAmpMin, v >= 40, v <= 200 { tgAmpMinDeg = v }
+        // Lock-validation knobs (spec T1-T4); validation ranges keep a fat-fingered admin
+        // value from bricking measurement. See the knob declarations for ship defaults.
+        if let v = tgConfirmBand, v >= 1 { self.tgConfirmBand = v }
+        if let v = tgGuardMode, v >= 0, v <= 1 { self.tgGuardMode = v }
+        if let v = tgGateMaxRej, v > 0, v <= 1 { self.tgGateMaxRej = v }
+        if let v = tgAcquireMax, v >= 10, v <= 120 { self.tgAcquireMaxSec = v }
         if let v = liftAngle, v >= 20, v <= 80 { liftAngleDeg = v }
         if let v = tgSigma, v > 0 { tgSigmaGate = v }
         if let v = tgStabWin, v >= 2 { tgStabWindowSec = v }
@@ -409,7 +419,7 @@ class TimegrapherEngine {
         if let v = phaseLock { self.phaseLockEnabled = v }
         if let v = phaseLockWindow { self.phaseLockWindow = v }
         if let v = phaseLockMaxMiss { self.phaseLockMaxMiss = v }
-        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections) noiseFloor=\(self.noiseFloorMult) peakGate=\(self.peakDetectGate) phaseLock=\(self.phaseLockEnabled)/\(self.phaseLockWindow) tgKnobs=\(tgSigmaGate)/\(tgStabWindowSec)/\(tgWallMinSec)/\(tgStabThresh) maxWin=\(tgMaxWindowSec) agreeBand=\(tgAgreeBand) lift=\(liftAngleDeg) periodFit=\(self.tgPeriodFit) holdOnLock=\(self.tgHoldOnLock) ampMin=\(tgAmpMinDeg)")
+        debugLog("[TGTUNE] regSkip=\(regressionSkipPairs) regMinN=\(regNMinimum) wallMin=\(wallElapsedMinimum) stabWin=\(stabilityWindow) stabThresh=\(stabilityThreshold) stabLose=\(stabilityLoseThreshold) maxPairTh=\(maxAdaptiveThreshold) minPairTh=\(minAdaptiveThreshold) coldStart=\(coldStartThreshold) madMult=\(adaptiveMultiplier) maxTickDev=\(maxTickDev) calibDur=\(calibrationDuration) ringTarget=\(self.ringTargetRate) outlier=\(self.outlierMargin)/\(self.outlierMarginLowBph) calibP=\(self.calibPercentile) calibM=\(self.calibMultiplier)/\(self.calibMultiplierRecal) maxRecal=\(self.maxRecalibrations) recalTrig=\(self.recalTriggerSec) decay=\(self.tickThresholdDecay)/\(self.tickThresholdDecayNoTicks) detectM=\(self.tickDetectMult) minSpace=\(self.minSpacingMult) maxBphCorr=\(self.maxBphCorrections) noiseFloor=\(self.noiseFloorMult) peakGate=\(self.peakDetectGate) phaseLock=\(self.phaseLockEnabled)/\(self.phaseLockWindow) tgKnobs=\(tgSigmaGate)/\(tgStabWindowSec)/\(tgWallMinSec)/\(tgStabThresh) maxWin=\(tgMaxWindowSec) agreeBand=\(tgAgreeBand) lift=\(liftAngleDeg) periodFit=\(self.tgPeriodFit) holdOnLock=\(self.tgHoldOnLock) ampMin=\(tgAmpMinDeg) confirmBand=\(self.tgConfirmBand) guardMode=\(self.tgGuardMode) gateMaxRej=\(self.tgGateMaxRej) acquireMax=\(self.tgAcquireMaxSec)")
     }
 
     // MARK: - Biquad HP filter
@@ -499,6 +509,8 @@ class TimegrapherEngine {
         }
         tgRateCached = nil; tgBeCached = nil; tgAmpCached = nil; tgFoldCached = nil; lastTgComputeSec = -1; lastTgLogSec = -1
         tgLastLockAbs = -1; tgLastWindowSec = 0; tgGateRejects = 0; tgBeOnsetCached = nil; tgRecalSuppressed = false
+        tgPendingLockRate = nil; tgPendingLockAbs = -1; tgLockConfirmed = false; tgLockRejects = 0
+        tgGateEvents.removeAll(keepingCapacity: true); tgGateAttempts = 0
         clkHaveFirst = false; clkFirstHost = 0; clkFirstFrames = 0; clkFrames = 0; clkLastLogSec = -1; clkPpm = nil
         clkN = 0; clkSh = 0; clkSf = 0; clkShh = 0; clkShf = 0
         debugLog("[TGSTART] bph=\(bph) autoBph=\(autoBph) targetBph=\(targetBph) detectedBph=\(String(describing: detectedBph)) useTg=\(useTgAlgo)")
@@ -689,7 +701,15 @@ class TimegrapherEngine {
                                 debugLog("[TGRECALIBRATE SKIP] tg core holds a lock (win=\(String(format: "%.0f", tgLastWindowSec))s) — not resetting the detector")
                             }
                         } else if tickCount == 0 && elDbg > recalTriggerSec && recalibrationsDone < maxRecalibrations {
-                            recalibrationsDone += 1
+                            // T4 pre-lock runway (dark unless tgAcquireMaxSec is raised past 15):
+                            // while the tg core is actively evaluating windows, a zero-tick recal
+                            // still reruns calibration but doesn't consume a teardown attempt —
+                            // the tick detector must not exhaust its retries under a session the
+                            // σ-gate is still working (deep dive 2026-08-15: 347/379 sessions
+                            // dead at ~15 s had the gate counter climbing).
+                            let tgRunway = useTgAlgo && tgAcquireMaxSec > 15.0
+                                && elDbg < tgAcquireMaxSec && tgActivelyEvaluating()
+                            if !tgRunway { recalibrationsDone += 1 }
                             tickCalibrating = true
                             plHaveCand = false; plBestDist = Int.max; plMissCount = 0; plApplyCarry = false; plPendingCarry = 0
                             calibrationSamples = 0
@@ -697,7 +717,7 @@ class TimegrapherEngine {
                             tickThreshold = 0
                             tickStartSample = sampleCounter
                             pendingTickCross = false
-                            debugLog("[TGRECALIBRATE] no ticks after \(String(format: "%.1f", elDbg))s — restarting calibration (attempt \(recalibrationsDone)/\(maxRecalibrations))")
+                            debugLog("[TGRECALIBRATE] no ticks after \(String(format: "%.1f", elDbg))s — restarting calibration (attempt \(recalibrationsDone)/\(maxRecalibrations))\(tgRunway ? " [tg-runway: not counted]" : "")")
                         }
                     }
 
@@ -1153,7 +1173,7 @@ class TimegrapherEngine {
             // win= is the analysis window the headline rate came from and gate= the running
             // sigma-gate rejection count: without them a bad reading could not be attributed
             // to a short window after the fact (audit 2026-07-31).
-            debugLog("[TGALGO @ \(String(format: "%.0f", wallElapsed))s] useTg=\(useTgAlgo) reg=\(regRateLog.map { String(format: "%+.1f", $0) } ?? "nil") tg=\(tgRateCached.map { String(format: "%+.1f", $0) } ?? "nil") amp=\(tgAmpCached.map { String(format: "%.0f", $0) } ?? "nil") be=\(tgBeCached.map { String(format: "%.2f", $0) } ?? "nil") beOn=\(tgBeOnsetCached.map { String(format: "%.2f", $0) } ?? "nil") win=\(String(format: "%.0f", tgLastWindowSec))s gate=\(tgGateRejects) fit=\(tgPeriodFit) ppm=\(clkPpm.map { String(format: "%+.2f", $0) } ?? "nil")")
+            debugLog("[TGALGO @ \(String(format: "%.0f", wallElapsed))s] useTg=\(useTgAlgo) reg=\(regRateLog.map { String(format: "%+.1f", $0) } ?? "nil") tg=\(tgRateCached.map { String(format: "%+.1f", $0) } ?? "nil") amp=\(tgAmpCached.map { String(format: "%.0f", $0) } ?? "nil") be=\(tgBeCached.map { String(format: "%.2f", $0) } ?? "nil") beOn=\(tgBeOnsetCached.map { String(format: "%.2f", $0) } ?? "nil") win=\(String(format: "%.0f", tgLastWindowSec))s gate=\(tgGateRejects) ga=\(tgGateAttempts) fit=\(tgPeriodFit) lc=\(tgLockConfirmed ? 1 : 0) lr=\(tgLockRejects) ppm=\(clkPpm.map { String(format: "%+.2f", $0) } ?? "nil")")
         }
 
         // Stability: rate has stayed within ±threshold for the full stability window
@@ -1177,6 +1197,15 @@ class TimegrapherEngine {
                 }
             }
         }
+        // T1/T3 (dark at ship defaults): a tg session cannot GAIN stability on an
+        // unconfirmed lock, nor while the σ-gate is rejecting most windows. The rate
+        // series is built from overlapping reads of one ring, so its "stability" cannot
+        // distinguish a right lock from a confident wrong one — the disjoint-segment
+        // confirmation can. Losing stability is unaffected.
+        if useTgAlgo && isStable && !wasStable {
+            if tgConfirmBand < 900 && !tgLockConfirmed { isStable = false }
+            if tgGateMaxRej < 1.0, let rf = tgGateRejFraction(), rf > tgGateMaxRej { isStable = false }
+        }
         wasStable = isStable
 
         // Confidence based on pair count
@@ -1192,6 +1221,18 @@ class TimegrapherEngine {
         let dbgMsgs = debugMessages
         debugMessages = []
 
+        // T3/T4 surface state (inert until the knobs are flipped; JS ignores unknown keys)
+        var sigQuality: String? = nil
+        if useTgAlgo {
+            if let rf = tgGateRejFraction() {
+                sigQuality = rf > 0.5 ? "poor" : (rf > 0.2 ? "fair" : "good")
+            } else if tgRateCached != nil {
+                sigQuality = "good"
+            }
+        }
+        let acquiring = useTgAlgo && tgRateCached == nil
+            && wallElapsed < tgAcquireMaxSec && tgActivelyEvaluating()
+
         let update = Update(
             rate: rateForUpdate, beatError: useTgAlgo ? tgBeCached : currentBeatError,   // tg path: fold-based BE; legacy folded estimate: stable in the field. phaseSepBeatError rides per-tick devs that phase-walk (climb+flip) when watch rate != nominal BPH — kept for logging only (psBE= in TGTICK).
             tickCount: tickCount,
@@ -1206,6 +1247,8 @@ class TimegrapherEngine {
             elapsedSec: wallElapsed,
             method: regN >= regNMinimum ? "Ticks" : "",
             rateStable: isStable,
+            tgSignalQuality: sigQuality,
+            tgAcquiring: acquiring,
             newTicks: ticks,
             debugMessages: dbgMsgs)
         DispatchQueue.main.async { [weak self] in self?.onUpdate?(update) }
@@ -1521,6 +1564,79 @@ class TimegrapherEngine {
     private var tgBeOnsetCached: Double? = nil  // shadow onset-based beat error (logged, not displayed)
     private var tgRecalSuppressed = false // logged once per session when tgHoldOnLock first blocks a recalibration
 
+    // Lock-validation knobs (docs/spec-tg-lock-validation.md, 2026-08-15). ALL ship defaults
+    // reproduce 2.4 behaviour exactly — the bundle rides DARK in the 2.5 binary and each knob
+    // is flipped server-side, one per weekly cycle. Evidence for the defaults being inert:
+    // confirmBand >= 900 marks every lock confirmed; guardMode 0 is the 2.4 median fallback
+    // bit for bit; gateMaxRej 1.0 can never exceed a fraction; acquireMax 15 matches the
+    // teardown timing the recal loop already produces.
+    private var tgConfirmBand = 999.0   // T1: disjoint-segment confirm band (s/day); >= 900 = off. Staged target: 6.0
+    private var tgGuardMode = 0         // T2: harmonic-guard disagreement: 0 = median fallback (2.4), 1 = refuse (nil)
+    private var tgGateMaxRej = 1.0      // T3: block convergence-GAIN while σ-gate reject fraction (last 10 s) exceeds this; >= 1 = off. Staged target: 0.5
+    private var tgAcquireMaxSec = 15.0  // T4: pre-lock runway — zero-tick recals don't consume teardown attempts while tg is evaluating, until this wall time; 15 = off. Staged target: 45
+
+    // T1 state: a lock is CONFIRMED only when a rate measured over audio that shares zero
+    // samples with the locking segment agrees within tgConfirmBand. Overlapping windows
+    // self-confirm (field: within-session movement 0.3 s/d even on wild locks, while the
+    // same watch re-measured minutes later moves 8-50 s/d), so this is the only in-session
+    // signal that separates a right lock from a confident wrong one.
+    private var tgPendingLockRate: Double? = nil
+    private var tgPendingLockAbs = -1     // energyRingAbs when the pending lock was taken
+    private var tgLockConfirmed = false
+    private var tgLockRejects = 0         // logged as lr= in TGALGO
+    // T3/T4 state: rolling σ-gate window attempts (ring-abs stamped, pruned past 10 s)
+    private var tgGateEvents: [(abs: Int, rejected: Bool)] = []
+    private var tgGateAttempts = 0        // cumulative, logged as ga= in TGALGO
+
+    private func tgRecordGateEvent(_ rejected: Bool) {
+        tgGateAttempts += 1
+        tgGateEvents.append((energyRingAbs, rejected))
+        let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
+        let cutoff = energyRingAbs - Int(ringSampleRate * 10)
+        while let f = tgGateEvents.first, f.abs < cutoff { tgGateEvents.removeFirst() }
+    }
+
+    /// σ-gate reject fraction over the last 10 s; nil until there are enough attempts to mean anything.
+    private func tgGateRejFraction() -> Double? {
+        guard tgGateEvents.count >= 3 else { return nil }
+        return Double(tgGateEvents.filter { $0.rejected }.count) / Double(tgGateEvents.count)
+    }
+
+    /// True while the tg core evaluated at least one window in the last 5 s (passed OR
+    /// σ-rejected) — i.e. the envelope has candidate periodicity worth waiting on.
+    private func tgActivelyEvaluating() -> Bool {
+        guard let last = tgGateEvents.last else { return false }
+        let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
+        return Double(energyRingAbs - last.abs) < ringSampleRate * 5.0
+    }
+
+    /// T1: advance the pending-lock / confirmed-lock state machine. `rates` is this pass's
+    /// per-window estimates; the 8 s window is the confirmation instrument because once
+    /// `energyRingAbs - tgPendingLockAbs >= 8 s` every sample in it postdates the pending
+    /// lock — zero overlap, so agreement is evidence rather than self-confirmation.
+    private func tgUpdateLockConfirmation(chosen: Double, rates: [(secs: Double, rate: Double)],
+                                          ringSampleRate: Double) {
+        guard tgConfirmBand < 900 else { tgLockConfirmed = true; return }   // knob off = 2.4 behaviour
+        if tgLockConfirmed { return }
+        let confirmWin = 8.0
+        guard tgPendingLockRate != nil, tgPendingLockAbs >= 0 else {
+            tgPendingLockRate = chosen; tgPendingLockAbs = energyRingAbs
+            return
+        }
+        guard Double(energyRingAbs - tgPendingLockAbs) >= confirmWin * ringSampleRate else { return }
+        // The 8 s window may have σ-gate-failed this pass — then just try again next pass.
+        guard let r1 = rates.first(where: { $0.secs == confirmWin })?.rate else { return }
+        let r0 = tgPendingLockRate!
+        if abs(r1 - r0) <= tgConfirmBand {
+            tgLockConfirmed = true
+            debugLog(String(format: "[TGALGO lock-confirm] r0=%+.1f r1=%+.1f band=%.0f", r0, r1, tgConfirmBand))
+        } else {
+            tgLockRejects += 1
+            debugLog(String(format: "[TGALGO lock-reject] r0=%+.1f r1=%+.1f band=%.0f n=%d", r0, r1, tgConfirmBand, tgLockRejects))
+            tgPendingLockRate = r1; tgPendingLockAbs = energyRingAbs
+        }
+    }
+
     /// Most-recent `n` samples of the active envelope ring, linearized oldest→newest.
     private func recentEnvelope(_ n: Int) -> [Float] {
         let count = min(n, energyRingCount)
@@ -1585,8 +1701,13 @@ class TimegrapherEngine {
             let ests = lags.map { $0.lag / $0.cyc }
             let mean = ests.reduce(0, +) / Double(ests.count)
             let varr = ests.map { ($0 - mean) * ($0 - mean) }.reduce(0, +) / Double(ests.count)
-            if mean > 0, sqrt(varr) / mean > tgSigmaGate { tgGateRejects += 1; return nil }
+            if mean > 0, sqrt(varr) / mean > tgSigmaGate {
+                tgGateRejects += 1
+                tgRecordGateEvent(true)     // T3/T4: an attempt that σ-rejected
+                return nil
+            }
         }
+        tgRecordGateEvent(false)            // T3/T4: an attempt that produced a period
         return period
     }
 
@@ -1646,11 +1767,25 @@ class TimegrapherEngine {
         // a recalibration rewinds wallElapsed.
         tgLastLockAbs = energyRingAbs
         tgLastWindowSec = longestEntry.secs
-        if rates.count >= 3 && abs(longest - median) > tgAgreeBand {
-            debugLog(String(format: "[TGALGO harmonic-guard] longest=%.1f median=%.1f band=%.0f n=%d -> median", longest, median, tgAgreeBand, rates.count))
-            return median
+        let disagree = abs(longest - median) > tgAgreeBand
+        // T2 (guardMode 1): windows that disagree beyond the band mean NO number is
+        // trustworthy — refuse and keep acquiring, instead of shipping the median
+        // (2.4 once shipped median=109.5 over longest=41.4). n==2 also refuses: with two
+        // windows "median" is just max(), a coin flip documented below. A refusal clears
+        // an UNCONFIRMED pending T1 lock; a confirmed lock survives one noisy pass
+        // (starvation-hold semantics unchanged).
+        if tgGuardMode >= 1, rates.count >= 2, disagree {
+            debugLog(String(format: "[TGALGO harmonic-guard] longest=%.1f median=%.1f band=%.0f n=%d -> nil", longest, median, tgAgreeBand, rates.count))
+            if !tgLockConfirmed { tgPendingLockRate = nil; tgPendingLockAbs = -1 }
+            return nil
         }
-        return longest
+        var chosen = longest
+        if rates.count >= 3 && disagree {
+            debugLog(String(format: "[TGALGO harmonic-guard] longest=%.1f median=%.1f band=%.0f n=%d -> median", longest, median, tgAgreeBand, rates.count))
+            chosen = median
+        }
+        tgUpdateLockConfirmation(chosen: chosen, rates: rates, ringSampleRate: ringSampleRate)
+        return chosen
     }
 
     /// True when the tg period core produced a rate in the last ~3 s. The tg path reads the

@@ -119,7 +119,11 @@ class TimegrapherBridge {
                              tgMaxWin: body["tgMaxWin"] as? Double, tgAgree: body["tgAgree"] as? Double,
                              tgPeriodFit: body["tgPeriodFit"] as? Int,
                              tgHoldOnLock: body["tgHoldOnLock"] as? Bool,
-                             tgAmpMin: body["tgAmpMin"] as? Double)
+                             tgAmpMin: body["tgAmpMin"] as? Double,
+                             tgConfirmBand: body["tgConfirmBand"] as? Double,
+                             tgGuardMode: body["tgGuardMode"] as? Int,
+                             tgGateMaxRej: body["tgGateMaxRej"] as? Double,
+                             tgAcquireMax: body["tgAcquireMax"] as? Double)
 
         case "tuningPiezo":
             piezo.setTuning(
@@ -162,7 +166,9 @@ class TimegrapherBridge {
                         "cumulativeOffset": update.cumulativeOffset,
                         "elapsedSec": update.elapsedSec,
                         "method": update.method,
-                        "rateStable": update.rateStable
+                        "rateStable": update.rateStable,
+                        "tgSignalQuality": update.tgSignalQuality as Any,
+                        "tgAcquiring": update.tgAcquiring
                     ]
                     if !update.newTicks.isEmpty {
                         payload["newTicks"] = update.newTicks.map {
