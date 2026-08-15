@@ -24,7 +24,9 @@ export const SHARED_LIGHT = {
   '--gold-lt': '#c9a84c',
   '--gold-dim': 'rgba(154,118,40,.12)',
   '--text': '#16161e',
-  '--muted': '#70708a',
+  // Darkened from #70708a on 2026-08-14 (audit U5): the old value measured 4.41:1
+  // on --bg and 4.18:1 on --surface2, under the 4.5:1 WCAG AA floor for body text.
+  '--muted': '#6a6a84',
   '--danger': '#e05555',
   '--success': '#4caf7d',
   '--radius': '10px',
