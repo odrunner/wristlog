@@ -152,6 +152,14 @@ class TimegrapherBridge {
                     return
                 }
 
+                // Audio-interruption lifecycle (call/Siri/alarm/route change). "began" →
+                // JS should show "measurement interrupted" instead of a frozen spinner;
+                // "resumed" → engine rebuilt the tap on fresh audio; "failed" → session
+                // could not be reactivated, JS should end the measurement honestly.
+                self.engine.onInterruption = { [weak self] state in
+                    self?.sendToJS(["event": "audioInterruption", "state": state])
+                }
+
                 self.engine.onUpdate = { [weak self] update in
                     var payload: [String: Any] = [
                         "event": "update",

@@ -61,9 +61,19 @@ class TimegrapherEngine {
     }
 
     var onUpdate: ((Update) -> Void)?
+    /// Audio-interruption lifecycle: "began" (system killed the tap: call/Siri/alarm),
+    /// "resumed" (tap rebuilt, measurement continuing on fresh audio), "failed" (session
+    /// could not be reactivated — JS should stop pretending to listen). Before 2.5 there
+    /// was NO handling at all: the tap died, isRunning stayed true, and the UI showed a
+    /// frozen "listening" forever (field: ~4% of sessions have the audio clock >= 20 s
+    /// behind wall clock; one froze at 80 s of audio across 41 real minutes).
+    var onInterruption: ((String) -> Void)?
 
     private var audioEngine: AVAudioEngine?
     private var isRunning = false
+    private var interruptionObserver: NSObjectProtocol?
+    private var routeObserver: NSObjectProtocol?
+    private var configObserver: NSObjectProtocol?
 
     private var actualSampleRate: Double = 48000
     private var sampleCounter: Int64 = 0
@@ -545,6 +555,7 @@ class TimegrapherEngine {
 
             try engine.start()
             isRunning = true
+            installAudioObservers()
 
             // If BPH is user-selected, start tick detection immediately
             if !autoBph {
@@ -556,8 +567,129 @@ class TimegrapherEngine {
         }
     }
 
+    /// Interruption/route/config observers. Without these, iOS killing the tap (call,
+    /// Siri, alarm, AirPods connecting) leaves the session in a silent freeze: the
+    /// [TGDEBUG] heartbeat is buffer-driven so it just stops, while the UI keeps showing
+    /// "listening". PiezoEngine has had a route observer since day one; this engine —
+    /// the one every mic session uses — never did.
+    private func installAudioObservers() {
+        removeAudioObservers()
+        let nc = NotificationCenter.default
+        interruptionObserver = nc.addObserver(
+            forName: AVAudioSession.interruptionNotification, object: nil, queue: .main
+        ) { [weak self] note in self?.handleAudioInterruption(note) }
+        routeObserver = nc.addObserver(
+            forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main
+        ) { [weak self] note in self?.handleRouteChange(note) }
+        // The engine object is replaced on every rebuild, so observe with object: nil
+        // and let the handler consult current state.
+        configObserver = nc.addObserver(
+            forName: .AVAudioEngineConfigurationChange, object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let self, self.isRunning else { return }
+            // No debugLog before the tap is down: debugMessages is unsynchronised with
+            // the audio thread, which may still be firing on a config change. The
+            // [TGAUDIO RESUME] line inside the rebuild carries the reason.
+            self.rebuildAudioAfterInterruption(reason: "config-change")
+        }
+    }
+
+    private func removeAudioObservers() {
+        let nc = NotificationCenter.default
+        if let o = interruptionObserver { nc.removeObserver(o); interruptionObserver = nil }
+        if let o = routeObserver { nc.removeObserver(o); routeObserver = nil }
+        if let o = configObserver { nc.removeObserver(o); configObserver = nil }
+    }
+
+    private func handleAudioInterruption(_ note: Notification) {
+        guard isRunning,
+              let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
+        switch type {
+        case .began:
+            debugLog("[TGAUDIO INTERRUPT began]")
+            onInterruption?("began")
+        case .ended:
+            // Attempt resume regardless of .shouldResume — worst case reactivation
+            // throws and JS gets "failed" instead of an eternal frozen spinner.
+            let opts = (note.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt)
+                .map { AVAudioSession.InterruptionOptions(rawValue: $0) } ?? []
+            debugLog("[TGAUDIO INTERRUPT ended] shouldResume=\(opts.contains(.shouldResume))")
+            rebuildAudioAfterInterruption(reason: "interruption-ended")
+        @unknown default:
+            break
+        }
+    }
+
+    private func handleRouteChange(_ note: Notification) {
+        guard isRunning,
+              let raw = note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
+              let reason = AVAudioSession.RouteChangeReason(rawValue: raw) else { return }
+        switch reason {
+        case .oldDeviceUnavailable, .newDeviceAvailable, .categoryChange:
+            // No debugLog here — the tap may still be firing (see config observer note).
+            rebuildAudioAfterInterruption(reason: "route-change-\(raw)")
+        default:
+            break
+        }
+    }
+
+    /// Tear the dead tap down and rebuild on the current session/route. Pre-gap audio is
+    /// discarded (energyRingCount = 0) so no analysis window ever spans the seam — the
+    /// tg windows refill from fresh audio within seconds; the tick detector recalibrates.
+    /// A confirmed T1 lock survives (the watch didn't change); an unconfirmed pending one
+    /// is cleared rather than confirmed across a gap of unknown length.
+    private func rebuildAudioAfterInterruption(reason: String) {
+        guard isRunning else { return }
+        audioEngine?.inputNode.removeTap(onBus: 0)
+        audioEngine?.stop()
+        audioEngine = nil
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setActive(true)
+            audioEngine = AVAudioEngine()
+            guard let engine = audioEngine else { return }
+            let inputNode = engine.inputNode
+            let format = inputNode.outputFormat(forBus: 0)
+            let rateChanged = abs(format.sampleRate - actualSampleRate) > actualSampleRate * 0.01
+            if rateChanged {
+                // New input hardware (e.g. AirPods mic) — re-derive everything that
+                // hangs off the sample rate, exactly as start() does.
+                actualSampleRate = format.sampleRate
+                hpFilters = hpCutoffs.map { makeBiquadHP(cutoff: $0, sampleRate: actualSampleRate) }
+                ringSubsampleTarget = max(1, Int(actualSampleRate / ringTargetRate))
+                let rsr = actualSampleRate / Double(ringSubsampleTarget)
+                energyRingCapacity = Int(rsr * Double(bufferDurationSec))
+                energyRings = (0..<3).map { _ in [Float](repeating: 0, count: energyRingCapacity) }
+                energyRingWritePos = 0
+            }
+            energyRingCount = 0                     // discard pre-gap audio; abs counter stays monotonic
+            tgRateCached = nil; tgBeCached = nil; tgAmpCached = nil; tgFoldCached = nil
+            if !tgLockConfirmed { tgPendingLockRate = nil; tgPendingLockAbs = -1 }
+            // Audio-clock ppm estimator anchors are pre-gap — restart it.
+            clkHaveFirst = false; clkFirstHost = 0; clkFirstFrames = 0; clkFrames = 0; clkLastLogSec = -1; clkPpm = nil
+            clkN = 0; clkSh = 0; clkSf = 0; clkShh = 0; clkShf = 0
+            let ringSampleRate = actualSampleRate / Double(ringSubsampleTarget)
+            inputNode.installTap(onBus: 0, bufferSize: 4096, format: format) { [weak self] buffer, time in
+                self?.noteAudioClock(time, frames: Int(buffer.frameLength))
+                self?.processAudioBuffer(buffer)
+            }
+            try engine.start()
+            if tickDetectionActive || !autoBph {
+                tickDetectionActive = false          // force a fresh calibration pass
+                activateTickDetection(ringSampleRate: ringSampleRate)
+            }
+            debugLog("[TGAUDIO RESUME] \(reason) rate=\(String(format: "%.0f", actualSampleRate)) rateChanged=\(rateChanged)")
+            onInterruption?("resumed")
+        } catch {
+            debugLog("[TGAUDIO RESUME FAILED] \(reason): \(error.localizedDescription)")
+            onInterruption?("failed")
+        }
+    }
+
     func stop() -> Result {
         isRunning = false
+        removeAudioObservers()
         audioEngine?.inputNode.removeTap(onBus: 0)
         audioEngine?.stop()
         audioEngine = nil
@@ -565,6 +697,8 @@ class TimegrapherEngine {
         return Result(rate: currentRate, beatError: currentBeatError,   // folded estimate: stable in the field. phaseSepBeatError rides per-tick devs that phase-walk (climb+flip) when watch rate != nominal BPH — kept for logging only (psBE= in TGTICK).
                       tickCount: peakCount, ticks: [])
     }
+
+    deinit { removeAudioObservers() }
 
     /// Compare captured frames against the host clock. Runs on the audio thread, same as
     /// processAudioBuffer, so it shares debugMessages without extra synchronisation.
