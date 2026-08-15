@@ -7858,7 +7858,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '14.22.07';
+const APP_VERSION = '14.22.18';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17647,13 +17647,28 @@ async function loadAdminStats() {
     // Per-user breakdowns via SECURITY DEFINER RPCs (bypass RLS)
     const d1ago = new Date(Date.now() - 24 * 3600000).toISOString();
     const d2ago = new Date(Date.now() - 48 * 3600000).toISOString();
+    // Every profile, paged. This used to be a flat .limit(500), which meant the
+    // users table only ever showed the newest page — so a user with real activity
+    // who signed up before that window was invisible, and clicking a column header
+    // ranked the newest 500 rather than the whole base. Paged instead of one large
+    // .limit() so it can't silently truncate again as the base grows.
+    const fetchAllProfiles = async () => {
+      const PAGE = 1000, out = [];
+      for (let from = 0; from < 50000; from += PAGE) {
+        const r = await db.from('profiles').select('id, username, display_name, avatar_url, created_at')
+          .order('created_at', { ascending: false }).range(from, from + PAGE - 1);
+        if (r.error) return r;
+        out.push(...(r.data || []));
+        if ((r.data || []).length < PAGE) break;
+      }
+      return { data: out, error: null };
+    };
     const [profilesR, profileCountR, internalProfilesR, msrR, userStatsR, newWatchesR, newWearsR, newMsrR, prevMsrR, newValR, newEnhR, lastActiveR] = await withTimeout(Promise.all([
-      db.from('profiles').select('id, username, display_name, avatar_url, created_at').order('created_at', { ascending: false }).limit(500),
-      // The row fetch above is capped at 500 for the table, so it CANNOT be
-      // counted to get the user total: past 500 profiles the count freezes and
-      // every new signup just pushes an older row out of the window. It sat at
-      // 498 (500 newest, 2 of them internal) while the real figure was 508.
-      // head:true — a count over the wire, no rows.
+      fetchAllProfiles(),
+      // The user total still comes from an exact count, not from the length of the
+      // fetch above: the rows are filtered down to users with a record before they
+      // are rendered, so counting them would undercount every signup with no
+      // activity yet. head:true — a count over the wire, no rows.
       db.from('profiles').select('id', { count: 'exact', head: true }),
       // Internal accounts explicitly, not filtered out of the capped page: the
       // oldest 4 of the 6 had already fallen outside it, so the Internal
@@ -17671,10 +17686,13 @@ async function loadAdminStats() {
       db.rpc('admin_last_active'),
     ]), 10000);
 
-    const watchByUser = {}, wearByUser = {}, valByUser = {}, enhByUser = {}, activeDaysByUser = {};
+    const watchByUser = {}, wearByUser = {}, postByUser = {}, valByUser = {}, enhByUser = {}, activeDaysByUser = {};
     (userStatsR.data || []).forEach(r => {
       watchByUser[r.user_id] = Number(r.watches) || 0;
       wearByUser[r.user_id] = Number(r.wears) || 0;
+      // Standalone posts (logs with no watch attached). Not a column — it only
+      // feeds the has-a-record filter, since `wears` counts watch-linked logs only.
+      postByUser[r.user_id] = Number(r.posts) || 0;
       valByUser[r.user_id] = Number(r.price_checks) || 0;
       enhByUser[r.user_id] = Number(r.enhances) || 0;
       activeDaysByUser[r.user_id] = Number(r.recent_active_days) || 0;
@@ -17771,6 +17789,7 @@ async function loadAdminStats() {
       joinedAt: p.created_at ? new Date(p.created_at).getTime() : 0,
       watches: watchByUser[p.id] || 0,
       wears: wearByUser[p.id] || 0,
+      posts: postByUser[p.id] || 0,
       priceChecks: valByUser[p.id] || 0,
       enhances: enhByUser[p.id] || 0,
       measurements: msrByUser[p.id] || 0,
@@ -17786,13 +17805,16 @@ async function loadAdminStats() {
       _newEnh: newEnhByUser[p.id] || 0,
       _newMsr: newMsrByUser[p.id] || 0,
     });
-    const profileList = allProfiles.filter(p => !INTERNAL_IDS.has(p.id)).map(toProfileItem);
+    // Only users who have actually done something: a watch, a wear, a standalone
+    // post, a price check, an enhance or a measurement. Signups with nothing
+    // recorded are all-zero rows that push everyone else off the screen and make
+    // the sortable columns useless. Internal accounts keep their own table, unfiltered.
+    const hasRecord = (u) => (u.watches + u.wears + u.posts + u.priceChecks + u.enhances + u.measurements) > 0;
+    const profileList = allProfiles.filter(p => !INTERNAL_IDS.has(p.id)).map(toProfileItem).filter(hasRecord);
     const internalList = internalProfiles.map(toProfileItem);
-    // The table shows the newest 500 profiles; the heading says so once there
-    // are more, rather than letting "Users (498)" contradict the total above it.
-    const usersTitle = extUsers > profileList.length
-      ? `Users (${profileList.length} newest of ${extUsers})`
-      : `Users (${extUsers})`;
+    // The heading names both figures so the filtered row count can't be mistaken
+    // for the user total on the card above it.
+    const usersTitle = `Users with a record (${profileList.length} of ${extUsers})`;
 
     const statRow = (label, value, delta, sub, invert) => {
       // delta (number): green day-over-day change; when `invert`, a rise is bad so

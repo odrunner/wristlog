@@ -119,8 +119,34 @@ describe('Totals card day-over-day deltas', () => {
     expect(html).toContain('const internalList = internalProfiles.map(toProfileItem);');
   });
 
-  it('the users table says so when it is showing only the newest page', () => {
-    expect(html).toMatch(/usersTitle = extUsers > profileList\.length\s*\?\s*`Users \(\$\{profileList\.length\} newest of \$\{extUsers\}\)`/);
+  // The users table used to render the newest 500 profiles, so the sortable
+  // columns ranked that page instead of the whole user base, and ~95 all-zero
+  // signups crowded out everyone with actual activity. Now every profile is
+  // fetched (paged) and the table keeps only users with a record.
+  it('fetches every profile by paging, not a flat .limit(500)', () => {
+    expect(html).toContain('const fetchAllProfiles = async () => {');
+    expect(html).toMatch(/\.range\(from, from \+ PAGE - 1\)/);
+    expect(html).not.toContain("db.from('profiles').select('id, username, display_name, avatar_url, created_at').order('created_at', { ascending: false }).limit(500)");
+  });
+
+  it('keeps only users with at least one record, posts included', () => {
+    expect(html).toMatch(/const hasRecord = \(u\) => \(u\.watches \+ u\.wears \+ u\.posts \+ u\.priceChecks \+ u\.enhances \+ u\.measurements\) > 0;/);
+    expect(html).toContain('.map(toProfileItem).filter(hasRecord);');
+  });
+
+  it('counts standalone posts per user from admin_user_stats', () => {
+    // wears counts watch-linked logs only, so without r.posts the users whose
+    // only activity is a standalone post would be filtered out of the table.
+    expect(html).toMatch(/postByUser\[r\.user_id\] = Number\(r\.posts\) \|\| 0;/);
+    expect(html).toMatch(/posts: postByUser\[p\.id\] \|\| 0,/);
+  });
+
+  it('the users table heading shows the filtered count against the user total', () => {
+    expect(html).toMatch(/usersTitle = `Users with a record \(\$\{profileList\.length\} of \$\{extUsers\}\)`/);
+  });
+
+  it('internal accounts keep their own unfiltered table', () => {
+    expect(html).toContain('const internalList = internalProfiles.map(toProfileItem);');
   });
 
   it('inlineDelta colors an embedded change and inverts when a rise is bad', () => {
