@@ -235,3 +235,30 @@ describe('Machine vs human opens', () => {
     expect(seeds.length).toBe(2);
   });
 });
+
+describe('Per-User Averages w/w + m/m', () => {
+  // Each average row carries its change vs 7d and 30d ago, computed from
+  // admin_per_user_trend snapshots (now/week/month, external only) so both sides
+  // of every delta share one definition. Spec: sql/2026-08-15-admin-per-user-trend.sql.
+  const keys = ['watches', 'wears', 'price_checks', 'enhances', 'measurements', 'follows'];
+
+  it('fetches the snapshots from the admin_per_user_trend RPC', () => {
+    expect(html).toContain("db.rpc('admin_per_user_trend')");
+  });
+
+  it.each(keys)('the %s row passes trendSub into its sub slot', (key) => {
+    expect(html).toContain(`null, trendSub('${key}'))`);
+  });
+
+  it('trendSub computes avg_now − avg_then at 3 decimals for both windows', () => {
+    const fn = html.match(/const trendSub = \(key\) => \{[\s\S]*?\n    \};/)[0];
+    const trend = { now: { users: 514, watches: 1139 }, week: { users: 487, watches: 1087 }, month: { users: 415, watches: 892 } };
+    const trendSub = new Function('trend', fn + ' return trendSub;')(trend);
+    const out = trendSub('watches');
+    expect(out).toContain('w/w');
+    expect(out).toContain('m/m');
+    expect(out).toContain('-0.016'); // 2.216 - 2.232
+    expect(out).toContain('+0.067'); // 2.2160 - 2.1494
+    expect(new Function('trend', fn + ' return trendSub;')({})('watches')).toBe('');
+  });
+});

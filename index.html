@@ -7878,7 +7878,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.10.04';
+const APP_VERSION = '15.10.23';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17655,14 +17655,18 @@ async function loadAdminStats() {
     const dauRes = await withTimeout(db.rpc('admin_active_dau'), 10000);
     const dauDod = dauRes.data || {};
     // Email unsubscribes + measurement volume split by detection engine + push approvals
-    const [unsubRes, engineRes, pushRes, wlShareRes] = await withTimeout(Promise.all([
+    const [unsubRes, engineRes, pushRes, wlShareRes, trendRes] = await withTimeout(Promise.all([
       db.rpc('admin_unsub_stats'), db.rpc('admin_engine_stats'), db.rpc('admin_push_stats'),
-      db.rpc('admin_wishlist_share_stats'),
+      db.rpc('admin_wishlist_share_stats'), db.rpc('admin_per_user_trend'),
     ]), 10000);
     const unsub = unsubRes.data || {};
     const eng = engineRes.data || {};
     const push = pushRes.data || {};
     const wls = wlShareRes.data || {};
+    // Per-user averages w/w + m/m: numerator/denominator snapshots as of now, 7d
+    // and 30d ago (external only) from one RPC, so each delta is avg_now − avg_then
+    // under identical definitions. Spec: sql/2026-08-15-admin-per-user-trend.sql.
+    const trend = trendRes.data || {};
 
     // Per-user breakdowns via SECURITY DEFINER RPCs (bypass RLS)
     const d1ago = new Date(Date.now() - 24 * 3600000).toISOString();
@@ -17836,6 +17840,22 @@ async function loadAdminStats() {
     // for the user total on the card above it.
     const usersTitle = `Users with a record (${profileList.length} of ${extUsers})`;
 
+    // "w/w +0.012 · m/m +0.067" for a per-user average: change in (metric / users)
+    // vs 7d and 30d ago, 3 decimals to match the value. Empty when the RPC failed.
+    const trendSub = (key) => {
+      const ratio = (snap) => snap && Number(snap.users) > 0 ? Number(snap[key]) / Number(snap.users) : null;
+      const cur = ratio(trend.now);
+      if (cur == null) return '';
+      const part = (lbl, snap) => {
+        const prev = ratio(snap);
+        if (prev == null) return '';
+        const d = cur - prev;
+        const color = d > 0.0005 ? 'var(--success)' : 'var(--muted)';
+        return lbl + ' <span style="color:' + color + ';font-weight:600;">' + (d > 0 ? '+' : '') + d.toFixed(3) + '</span>';
+      };
+      return [part('w/w', trend.week), part('m/m', trend.month)].filter(Boolean).join(' · ');
+    };
+
     const statRow = (label, value, delta, sub, invert) => {
       // delta (number): green day-over-day change; when `invert`, a rise is bad so
       // only a drop shows green. sub (string): muted context shown after the delta.
@@ -17972,12 +17992,12 @@ async function loadAdminStats() {
       </div>
       <div class="admin-card">
         <div class="eyebrow" style="margin-bottom:.5rem;">Per-User Averages (external)</div>
-        ${statRow('Watches / User', avg(extWatches, extUsers))}
-        ${statRow('Wears / User', avg(extWears, extUsers))}
-        ${statRow('Price Checks / User', avg(extVal, extUsers))}
-        ${statRow('Enhances / User', avg(extEnh, extUsers))}
-        ${statRow('Measurements / User', avg(extMsr, extUsers))}
-        ${statRow('Follows / User', avg(follows, extUsers))}
+        ${statRow('Watches / User', avg(extWatches, extUsers), null, trendSub('watches'))}
+        ${statRow('Wears / User', avg(extWears, extUsers), null, trendSub('wears'))}
+        ${statRow('Price Checks / User', avg(extVal, extUsers), null, trendSub('price_checks'))}
+        ${statRow('Enhances / User', avg(extEnh, extUsers), null, trendSub('enhances'))}
+        ${statRow('Measurements / User', avg(extMsr, extUsers), null, trendSub('measurements'))}
+        ${statRow('Follows / User', avg(follows, extUsers), null, trendSub('follows'))}
       </div>
       ${renderAdminUserTable('admin-users', profileList, usersTitle)}
       ${renderAdminUserTable('admin-internal', internalList, 'Internal Accounts (' + internalList.length + ')')}`;
