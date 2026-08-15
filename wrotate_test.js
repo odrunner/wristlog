@@ -2140,6 +2140,50 @@ export function storagePathFrom(url) {
   return qIdx >= 0 ? path.slice(0, qIdx) : path;
 }
 
+// ── Thumbnails ───────────────────────────────────────────────────────────────
+// Folders whose images are rendered as small chips/avatars and therefore get a
+// `_thumb.jpg` sibling on upload (and via scripts/backfill-thumbs.py for older
+// files). Log/post photos are hero-sized and deliberately excluded.
+export const THUMB_FOLDERS = ['watches/', 'avatars/', 'wishlist/', 'clubs/'];
+export const THUMB_MAX = 240;       // px, longest side — 72 px CSS at 3x stays sharp
+export const THUMB_QUALITY = 0.82;
+export const THUMB_SUFFIX = '_thumb';
+
+// Storage path of the thumbnail for a media path, or null when that folder has
+// no thumbs / the path is already a thumb / it has no extension.
+export function thumbPathFor(path) {
+  if (!path || !THUMB_FOLDERS.some(f => path.startsWith(f))) return null;
+  const dot = path.lastIndexOf('.');
+  const slash = path.lastIndexOf('/');
+  if (dot < 0 || dot < slash) return null;
+  const stem = path.slice(0, dot);
+  if (stem.endsWith(THUMB_SUFFIX)) return null;
+  return stem + THUMB_SUFFIX + path.slice(dot);
+}
+
+// Public URL of the thumbnail for a media URL (query string such as the ?v=
+// cache-bust is preserved), or null when the URL is not one of our storage
+// files with a thumb (external image URLs, data: URLs, log photos).
+export function thumbUrlFor(url) {
+  const path = storagePathFrom(url);
+  const tp = thumbPathFor(path);
+  if (!tp) return null;
+  const marker = '/storage/v1/object/public/media/';
+  const idx = url.indexOf(marker);
+  const qIdx = url.indexOf('?', idx);
+  const query = qIdx >= 0 ? url.slice(qIdx) : '';
+  return url.slice(0, idx + marker.length) + tp + query;
+}
+
+// `src="…" data-full="…"` attributes for a small <img>. When the thumb 404s
+// (not yet backfilled, generation failed) the document-level capture listener
+// in initThumbFallback swaps in data-full and stops the event, so the tag's
+// own onerror only runs if the original fails too.
+export function thumbSrcAttrs(url) {
+  const t = thumbUrlFor(url);
+  return t ? `src="${escHtml(t)}" data-full="${escHtml(url)}"` : `src="${escHtml(url)}"`;
+}
+
 export function parsePhotoUrl(photoUrl) {
   if (!photoUrl) return [];
   if (photoUrl.startsWith('[')) {

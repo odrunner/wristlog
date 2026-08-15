@@ -224,6 +224,34 @@
       } catch(e) {}
     })();
 
+    // Thumbnail siblings (`<name>_thumb.jpg`, 240 px) exist for watches/, avatars/,
+    // wishlist/ and clubs/ media — mirrors thumbUrlFor() in index.html. On a 404
+    // the capture listener swaps back to the original.
+    function thumbUrlFor(url) {
+      const marker = '/storage/v1/object/public/media/';
+      const idx = (url || '').indexOf(marker);
+      if (idx < 0) return null;
+      const qIdx = url.indexOf('?', idx);
+      const path = url.slice(idx + marker.length, qIdx >= 0 ? qIdx : undefined);
+      if (!['watches/', 'avatars/', 'wishlist/', 'clubs/'].some(f => path.startsWith(f))) return null;
+      const dot = path.lastIndexOf('.');
+      if (dot < 0 || dot < path.lastIndexOf('/') || path.slice(0, dot).endsWith('_thumb')) return null;
+      return url.slice(0, idx + marker.length) + path.slice(0, dot) + '_thumb' + path.slice(dot) + (qIdx >= 0 ? url.slice(qIdx) : '');
+    }
+    function thumbSrcAttrs(url, escFn) {
+      const t = thumbUrlFor(url);
+      return t ? `src="${escFn(t)}" data-full="${escFn(url)}"` : `src="${escFn(url)}"`;
+    }
+    document.addEventListener('error', e => {
+      const el = e.target;
+      if (!el || el.tagName !== 'IMG') return;
+      const full = el.getAttribute('data-full');
+      if (!full || el.getAttribute('src') === full) return;
+      el.removeAttribute('data-full');
+      el.src = full;
+      e.stopPropagation();
+    }, true);
+
     function escHtml(s) {
       return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
@@ -235,7 +263,7 @@
     function renderAvatar(profile) {
       if (profile.avatar_url) {
         const fb = escHtml(initials(profile.display_name || profile.username));
-        return `<img src="${escHtml(profile.avatar_url)}" alt="" onerror="this.replaceWith(document.createTextNode('${fb}'))">`;
+        return `<img ${thumbSrcAttrs(profile.avatar_url, escHtml)} alt="" onerror="this.replaceWith(document.createTextNode('${fb}'))">`;
       }
       return escHtml(initials(profile.display_name || profile.username));
     }
