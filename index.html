@@ -7858,7 +7858,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '14.11.03';
+const APP_VERSION = '14.17.45';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15901,6 +15901,13 @@ function renderCommentBody(body) {
   );
 }
 
+// Comments in flight, keyed by post id. Posts don't need this — saveNewPost upserts
+// on a client-generated id, so a double-tap writes the same row twice harmlessly.
+// A comment is a plain insert whose input is cleared only AFTER the round-trip, so a
+// second tap on a slow connection posts it twice. Audit R3: one such duplicate pair
+// exists in production, which is why this is a targeted guard rather than a sweep.
+const _commentInFlight = new Set();
+
 async function postComment(logId) {
   if (demoGuard()) return;
   if (!(await checkEulaAcceptance())) return;
@@ -15910,7 +15917,14 @@ async function postComment(logId) {
   if (!text) return;
   const { clean } = checkContent(text);
   if (!clean) { toast('Your comment contains inappropriate content. Please revise.', 'error'); return; }
-  const { error } = await db.from('comments').insert({ log_id: logId, user_id: currentUser.id, body: text });
+  if (_commentInFlight.has(logId)) return;
+  _commentInFlight.add(logId);
+  let error;
+  try {
+    ({ error } = await db.from('comments').insert({ log_id: logId, user_id: currentUser.id, body: text }));
+  } finally {
+    _commentInFlight.delete(logId);
+  }
   if (!error) {
     input.value = '';
     await fetchComments(logId);
