@@ -626,8 +626,14 @@ class TimegrapherEngine {
               let raw = note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
               let reason = AVAudioSession.RouteChangeReason(rawValue: raw) else { return }
         switch reason {
-        case .oldDeviceUnavailable, .newDeviceAvailable, .categoryChange:
+        case .oldDeviceUnavailable, .newDeviceAvailable:
             // No debugLog here — the tap may still be firing (see config observer note).
+            // .categoryChange is deliberately NOT here: our own setCategory at start()
+            // posts it, and main-queue delivery lands right after the observers install —
+            // so it triggered one spurious rebuild per session (route-change-3 in every
+            // 2026-08-15 TestFlight session, ~1-2s of re-calibration each). A genuine
+            // mid-session category theft also interrupts or config-changes, so those
+            // observers still cover it.
             rebuildAudioAfterInterruption(reason: "route-change-\(raw)")
         default:
             break

@@ -62,10 +62,16 @@ describe('interruption lifecycle', () => {
     expect(began).toContain('rebuildAudioAfterInterruption(reason: "interruption-ended")');
   });
 
-  it('route changes that swap the mic rebuild the tap', () => {
+  it('route changes that swap the mic rebuild the tap — but NOT .categoryChange', () => {
     const fn = swiftFn(engine, 'private func handleRouteChange(');
-    expect(fn).toContain('.oldDeviceUnavailable, .newDeviceAvailable, .categoryChange');
+    expect(fn).toContain('.oldDeviceUnavailable, .newDeviceAvailable');
     expect(fn).toContain('rebuildAudioAfterInterruption(');
+    // Our own setCategory at start() posts .categoryChange, and main-queue delivery
+    // lands after the observers install — reacting to it caused one spurious rebuild
+    // (~1-2s re-calibration) per session in the 2026-08-15 TestFlight UAT
+    // (route-change-3 in every session log).
+    expect(fn).not.toContain('.categoryChange:');
+    expect(fn).not.toMatch(/case[^\n]*\.categoryChange/);
   });
 });
 
