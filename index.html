@@ -3551,7 +3551,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="admin-tab-traffic" class="admin-tab" role="tabpanel" style="display:none;">
       <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
         <div class="eyebrow">Traffic</div>
-        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="renderAdminTraffic()">↻ Refresh</button>
+        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="renderAdminTraffic(true)">↻ Refresh</button>
       </div>
       <div id="admin-traffic" style="color:var(--muted);font-size:.9rem;">Loading…</div>
     </div>
@@ -3560,7 +3560,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="admin-tab-usage" class="admin-tab" role="tabpanel">
       <div style="margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;">
         <div class="eyebrow">Site Usage</div>
-        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadAdminStats()">↻ Refresh</button>
+        <button class="btn btn-ghost" style="font-size:.78rem;padding:.3rem .7rem;" onclick="loadAdminStats(true)">↻ Refresh</button>
       </div>
       <div id="admin-stats" style="color:var(--muted);font-size:.9rem;">Loading…</div>
     </div>
@@ -7878,7 +7878,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.16.32';
+const APP_VERSION = '15.16.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17606,10 +17606,15 @@ async function adminSuspendUser(userId, name) {
   toast(`${name} suspended`);
 }
 
-async function loadAdminStats() {
+// `force` (the ↻ Refresh button) passes p_force to the cached admin RPCs so they
+// recompute instead of serving the 10-minute server-side cache
+// (sql/2026-08-15-admin-stats-cache.sql). A normal open reads the cache — the
+// heavy RPCs (active_dau, user_stats, last_active…) were 57 % of all DB time.
+async function loadAdminStats(force = false) {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const el = document.getElementById('admin-stats');
   if (!el) return;
+  const cacheArgs = { p_force: force === true };
   await loadInternalIds();
   el.innerHTML = '<div style="color:var(--muted);font-size:.9rem;">Loading…</div>';
   try {
@@ -17645,20 +17650,23 @@ async function loadAdminStats() {
     // between formats.
     const avg = (n, d) => d > 0 ? (n / d).toFixed(3) : '0.000';
 
-    // Day-over-day: single RPC (SECURITY DEFINER, excludes internal accounts)
-    const dodRes = await withTimeout(db.rpc('admin_dod_counts'), 10000);
+    // One parallel batch (was four sequential awaits — the three slowest RPCs
+    // each cost a full round-trip before the next started). 20 s, not 10: on a
+    // cold cache these recompute concurrently on a 2-vCPU instance.
+    const [dodRes, factRes, dauRes, unsubRes, engineRes, pushRes, wlShareRes, trendRes] = await withTimeout(Promise.all([
+      // Day-over-day: single RPC (SECURITY DEFINER, excludes internal accounts)
+      db.rpc('admin_dod_counts', cacheArgs),
+      // Fun-fact engagement + generation (totals + last-24h deltas)
+      db.rpc('admin_fact_counts'),
+      // Active-user D/D: distinct DAU last 24h vs the prior 24h (24–48h ago)
+      db.rpc('admin_active_dau', cacheArgs),
+      // Email unsubscribes + measurement volume split by detection engine + push approvals
+      db.rpc('admin_unsub_stats'), db.rpc('admin_engine_stats', cacheArgs), db.rpc('admin_push_stats'),
+      db.rpc('admin_wishlist_share_stats'), db.rpc('admin_per_user_trend', cacheArgs),
+    ]), 20000);
     const dod = dodRes.data || {};
-    // Fun-fact engagement + generation (totals + last-24h deltas)
-    const factRes = await withTimeout(db.rpc('admin_fact_counts'), 10000);
     const fc = factRes.data || {};
-    // Active-user D/D: distinct DAU last 24h vs the prior 24h (24–48h ago)
-    const dauRes = await withTimeout(db.rpc('admin_active_dau'), 10000);
     const dauDod = dauRes.data || {};
-    // Email unsubscribes + measurement volume split by detection engine + push approvals
-    const [unsubRes, engineRes, pushRes, wlShareRes, trendRes] = await withTimeout(Promise.all([
-      db.rpc('admin_unsub_stats'), db.rpc('admin_engine_stats'), db.rpc('admin_push_stats'),
-      db.rpc('admin_wishlist_share_stats'), db.rpc('admin_per_user_trend'),
-    ]), 10000);
     const unsub = unsubRes.data || {};
     const eng = engineRes.data || {};
     const push = pushRes.data || {};
@@ -17699,16 +17707,16 @@ async function loadAdminStats() {
       // Accounts table was showing 2. This is the table the external numbers
       // get cross-referenced against, so it has to be complete.
       db.from('profiles').select('id, username, display_name, avatar_url, created_at').in('id', [...INTERNAL_IDS]),
-      db.rpc('admin_measurement_counts'),
-      db.rpc('admin_user_stats'),
+      db.rpc('admin_measurement_counts', cacheArgs),
+      db.rpc('admin_user_stats', cacheArgs),
       db.from('watches').select('user_id').gte('created_at', d1ago),
       db.from('logs').select('user_id').neq('use_case', 'measurement').gte('created_at', d1ago),
       db.from('timegrapher_tick_logs').select('messages').like('messages', '%session_summary%').gte('created_at', d1ago),
       db.from('timegrapher_tick_logs').select('messages').like('messages', '%session_summary%').gte('created_at', d2ago).lt('created_at', d1ago),
       db.from('valuation_events').select('user_id').gte('created_at', d1ago),
       db.from('identify_attempts').select('user_id').eq('mode', 'enhance').gte('created_at', d1ago),
-      db.rpc('admin_last_active'),
-    ]), 10000);
+      db.rpc('admin_last_active', cacheArgs),
+    ]), 20000);
 
     const watchByUser = {}, wearByUser = {}, postByUser = {}, valByUser = {}, enhByUser = {}, activeDaysByUser = {};
     (userStatsR.data || []).forEach(r => {
@@ -18154,23 +18162,24 @@ function classifyDevice(ua) {
   return 'desktop';
 }
 
-async function renderAdminTraffic() {
+async function renderAdminTraffic(force = false) {
   if (currentUser?.id !== ADMIN_USER_ID) return;
   const el = document.getElementById('admin-traffic');
   if (!el) return;
   el.innerHTML = '<div style="color:var(--muted);font-size:.85rem;">Loading traffic…</div>';
+  const cacheArgs = { p_force: force === true };   // see loadAdminStats
   try {
     const [trafficR, emailEventsR, demoR, clickR] = await withTimeout(Promise.all([
-      db.rpc('admin_traffic_stats'),
+      db.rpc('admin_traffic_stats', cacheArgs),
       // All-time per-subject aggregates + recent opens, computed server-side.
       // (Was a raw 500-row fetch, which only covered the last ~week and
       //  undercounted cumulative campaign delivery/open/click totals.)
-      db.rpc('admin_email_engagement'),
+      db.rpc('admin_email_engagement', cacheArgs),
       db.rpc('admin_demo_views'),
       // Click-through measured from our own page_visits utm tags, because SES
       // click tracking is off. Spec: sql/2026-08-14-email-clickthrough.sql.
-      db.rpc('admin_email_clickthrough'),
-    ]), 15000);
+      db.rpc('admin_email_clickthrough', cacheArgs),
+    ]), 20000);
     if (trafficR.error) throw trafficR.error;
     const t = trafficR.data;
     const dv = (demoR && !demoR.error) ? demoR.data : null;
