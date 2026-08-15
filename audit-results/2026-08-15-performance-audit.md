@@ -160,6 +160,8 @@ videos, so this did not show in the trace; the path is unconditional.
 
 ## CLIENT-3 — HIGH: boot waterfall — 38 REST requests over ~7 sequential stages; two of them are avoidable before first feed paint
 
+> **PARTLY FIXED 2026-08-15** — (a) mention-profiles fetch no longer awaited inside `loadFollowing`; (b) `featured_current` requested in parallel with the Phase-1 log queries and awaited only at the pin step. Trace after: featured fires in the same wave as the logs (159 ms), first card 327 ms (was 424). (c) the notification top-up merge was deliberately **left alone** — the badge top-up query is what keeps buried `badge_earned` rows visible/counted; if ever touched it goes in as its own step gated by the badge tests.
+
 Trace (55 ms RTT): waves at 122 → 210 → 254 → 328 → 374 → 421 → 518 → 597 ms; **first feed
 card at 424 ms** (1× CPU) / **1,246 ms** (4× CPU throttle). Zero duplicate URLs — each wave
 is well parallelised; the cost is the *number* of waves.

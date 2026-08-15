@@ -7878,7 +7878,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.16.49';
+const APP_VERSION = '15.16.58';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9302,12 +9302,22 @@ async function loadFollowing() {
   }
   following = new Set((data || []).map(r => r.following_id));
   myFollowers = new Set((fData || []).map(r => r.follower_id));
-  // Also load profiles for @mention autocomplete
+  // Also load profiles for @mention autocomplete. NOT awaited: initApp's Track A
+  // gates the first feed render on loadFollowing (the feed needs `following`),
+  // and this fetch only feeds the @-mention picker and the profile page's
+  // close-friends names — one avoidable round-trip before the feed (audit
+  // 2026-08-15 CLIENT-3a). Guarded so a late response can't repopulate after
+  // sign-out (nav('signout') clears followingProfiles).
   if (following.size > 0) {
     const ids = [...following];
-    const { data: profs } = await db.from('profiles').select('id, username, display_name').in('id', ids);
-    followingProfiles = (profs || []).sort((a, b) =>
-      (a.display_name || a.username || '').localeCompare(b.display_name || b.username || ''));
+    const uid = currentUser.id;
+    db.from('profiles').select('id, username, display_name').in('id', ids)
+      .then(({ data: profs }) => {
+        if (currentUser?.id !== uid) return;
+        followingProfiles = (profs || []).sort((a, b) =>
+          (a.display_name || a.username || '').localeCompare(b.display_name || b.username || ''));
+      })
+      .catch(e => console.warn('[WRotate] mention profiles load failed:', e?.message));
   } else {
     followingProfiles = [];
   }
@@ -11320,6 +11330,11 @@ async function loadFeed() {
     const feedToday = todayStr();
 
     let rawLogs, logsErr;
+    // Featured-post id, requested in parallel with the log queries below and
+    // awaited only at the pin step (was a sequential RPC before the first
+    // render — audit 2026-08-15 CLIENT-3b). Same 4 s cap; failures resolve to
+    // null so the feed renders normally without a featured pin.
+    const featuredP = withTimeout(db.rpc('featured_current'), 4000).catch(() => null);
     try {
       // Q1: public posts — no user restriction, global discovery feed
       const q1 = db.from('logs').select(FEED_LOG_COLS)
@@ -11418,7 +11433,7 @@ async function loadFeed() {
 
     // ── Featured post: pin the active featured log to the top (admin spotlight) ──
     try {
-      const fc = await withTimeout(db.rpc('featured_current'), 4000);
+      const fc = await featuredP;
       const featuredId = fc?.data || null;
       if (featuredId) {
         let featuredLog = rawLogs.find(l => l.id === featuredId) || null;
