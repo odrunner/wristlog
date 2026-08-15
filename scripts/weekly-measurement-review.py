@@ -138,6 +138,9 @@ def prov2_stats(blob):
     pairs = re.findall(r'\[TGALGO @ \d+s\] useTg=\w+ reg=([+\-\d.]+|nil) tg=([+\-\d.]+|nil)(?: amp=([\d.]+|nil))?', blob)
     if not pairs:
         return None
+    # 2.5 lock-validation shadow verdicts (lc=1 confirmed / lr>0 rejected) + harmonic-guard
+    # fires ('-> median' sessions are the ones guard mode 1 would have refused).
+    lock = re.findall(r'\blc=(\d+) lr=(\d+)', blob)
     both = [(float(r), float(t)) for r, t, _ in pairs if r != "nil" and t != "nil"]
     tgs = [float(t) for _, t, _ in pairs if t != "nil"]
     regs = [float(r) for r, _, _ in pairs if r != "nil"]
@@ -152,7 +155,10 @@ def prov2_stats(blob):
         amp=amps[-1] if amps else None,
         amp_ok=(135 <= amps[-1] <= 360) if amps else None,
         algo=algo or "original", conv=conv,
-        dur=int(dur) if dur else None)
+        dur=int(dur) if dur else None,
+        lc=int(lock[-1][0]) if lock else None,
+        lr=int(lock[-1][1]) if lock else None,
+        guard_fires=blob.count("harmonic-guard"))
 
 
 FLIP_GATE = dict(users=20, sessions=100, conv_pct=80, ttc_median=15, delta_median=3.0)
@@ -262,6 +268,62 @@ def b2b_repeatability(sessions):
     return dict(n=len(all_d), p50=q(all_d, .5), p75=q(all_d, .75),
                 sane_n=len(sane_d), sane_p50=q(sane_d, .5),
                 wild_n=len(wild_d), wild_p50=q(wild_d, .5))
+
+
+def lock_shadow_section(cum):
+    """T1/T2 silent field A/B from 2.5 sessions — nothing is enforced; the engine logs
+    what the lock-validation gate WOULD have decided (lc=/lr= in TGALGO, staged 6 s/d
+    band) on every live measurement.
+
+    'Working' = the gate's rejects concentrate the wild finals: shadow-rejected sessions
+    should be several times wilder than shadow-confirmed ones, and confirmed-only b2b
+    should approach the 2.5 s/d sane-pair baseline from the 2026-08-15 deep dive. When
+    the verdict line says SIGNAL, flipping tg_confirmband to 6 is evidence-backed.
+    """
+    pop = [a for a in cum if a.get("v2") and a["v2"].get("lc") is not None]
+    L = ["\n## Lock-validation shadow A/B (2.5 sessions; nothing enforced)"]
+    if not pop:
+        L.append("- No 2.5 sessions in the field yet — this section fills in automatically after the App Store release.")
+        return L
+
+    def verdict(a):
+        if a["v2"]["lc"] == 1:
+            return "confirmed"
+        return "rejected" if (a["v2"]["lr"] or 0) > 0 else "undecided"
+
+    def wild_share(xs):
+        r = [_session_rate(a) for a in xs]
+        r = [x for x in r if x is not None]
+        return (sum(1 for x in r if abs(x) > GOOD_MAX_RATE) / len(r)) if r else None
+
+    groups = defaultdict(list)
+    for a in pop:
+        groups[verdict(a)].append(a)
+    for g in ("confirmed", "rejected", "undecided"):
+        xs = groups.get(g, [])
+        if not xs:
+            continue
+        ws = wild_share(xs)
+        b = b2b_repeatability(xs)
+        L.append(f"- {g}: {len(xs)} sessions, {len({a['uid'] for a in xs})} users"
+                 + (f", wild-final {round(100 * ws)}%" if ws is not None else "")
+                 + (f", b2b p50 {b['p50']} s/d ({b['n']} pairs)" if b else ""))
+    wc, wr = wild_share(groups.get("confirmed", [])), wild_share(groups.get("rejected", []))
+    if wc is not None and wr is not None and len(groups["rejected"]) >= 10:
+        ratio = (wr / wc) if wc > 0 else float("inf")
+        rtxt = "∞" if ratio == float("inf") else f"{ratio:.1f}"
+        L.append(f"- Verdict: rejected sessions are {rtxt}x wilder than confirmed "
+                 + ("→ the gate is finding the bad locks [SIGNAL — tg_confirmband=6 is evidence-backed]"
+                    if ratio >= 3 else "→ separation weak so far [keep shadowing]"))
+    else:
+        L.append("- Verdict: not enough shadow-rejected sessions for a read yet (need >= 10).")
+    # T2 shadow: every harmonic-guard fire under mode 0 is a session mode 1 would refuse.
+    gm = [a for a in pop if (a["v2"].get("guard_fires") or 0) > 0]
+    if gm:
+        ws = wild_share(gm)
+        L.append(f"- Guard-fired sessions (mode 1 would refuse these): {len(gm)} ({len({a['uid'] for a in gm})} users)"
+                 + (f", wild-final {round(100 * ws)}%" if ws is not None else ""))
+    return L
 
 
 def summarize(sessions):
@@ -459,6 +521,8 @@ def main():
                  f" · conv {convp if convp is not None else '–'}%/{g['conv_pct']}% [{_chk(convp, g['conv_pct'])}]"
                  f" · TTC {ttc if ttc is not None else '–'}s ≤{g['ttc_median']}s [{_chk(ttc, g['ttc_median'], le=True)}]"
                  f" · |tg−reg| {f'{med:.1f}' if med is not None else '–'} ≤{g['delta_median']} [{_chk(med, g['delta_median'], le=True)}]")
+
+    L += lock_shadow_section(cum)
 
     L.append("\n## Failure modes — ranked by DISTINCT USERS affected (anti-recency)")
     L.append(f"{'mode':<14} {'users(cum)':>10} {'watches':>8} {'sess(cum)':>9} {'users(7d)':>9} {'fix':>7}")

@@ -39,10 +39,19 @@ const swiftFn = (src, signaturePrefix) => {
 };
 
 describe('dark-ship defaults reproduce 2.4 behaviour exactly', () => {
-  it('T1 confirm band ships OFF (>= 900 marks every lock confirmed)', () => {
+  it('T1 confirm band ships OFF for ENFORCEMENT, but the shadow always runs', () => {
     expect(engine).toMatch(/private var tgConfirmBand = 999\.0/);
     const fn = swiftFn(engine, 'private func tgUpdateLockConfirmation(');
-    expect(fn).toContain('guard tgConfirmBand < 900 else { tgLockConfirmed = true; return }');
+    // No knob short-circuit: the state machine must produce lc=/lr= verdicts on every
+    // live session (the silent field A/B). Enforcement is gated at the convergence
+    // check instead — see the next assertion.
+    expect(fn).not.toContain('guard tgConfirmBand < 900');
+    // The shadow judges with the staged band, never the raw knob (999 would confirm
+    // everything and make the shadow data-free); a LOWERED knob tightens both.
+    expect(fn).toContain('let shadowBand = min(tgConfirmBand, 6.0)');
+    expect(fn).toContain('abs(r1 - r0) <= shadowBand');
+    // The only behavioural consumer of tgLockConfirmed at dark defaults is knob-gated:
+    expect(engine).toContain('if tgConfirmBand < 900 && !tgLockConfirmed { isStable = false }');
   });
 
   it('T2 guard mode ships 0 = median fallback (2.4 bit for bit)', () => {
@@ -77,7 +86,7 @@ describe('T1 — disjoint-segment lock confirmation', () => {
   });
 
   it('confirms within band; on disagreement re-pends on the NEWER estimate', () => {
-    expect(fn).toContain('if abs(r1 - r0) <= tgConfirmBand');
+    expect(fn).toContain('if abs(r1 - r0) <= shadowBand');
     expect(fn).toContain('tgLockConfirmed = true');
     // the failed lock must not survive as the pending candidate
     expect(fn).toContain('tgPendingLockRate = r1; tgPendingLockAbs = energyRingAbs');

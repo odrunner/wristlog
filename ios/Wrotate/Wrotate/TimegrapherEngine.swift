@@ -1748,10 +1748,17 @@ class TimegrapherEngine {
     /// per-window estimates; the 8 s window is the confirmation instrument because once
     /// `energyRingAbs - tgPendingLockAbs >= 8 s` every sample in it postdates the pending
     /// lock — zero overlap, so agreement is evidence rather than self-confirmation.
+    ///
+    /// SHADOW-ALWAYS-ON: this machine runs on every session regardless of tgConfirmBand,
+    /// so lc=/lr= in the TGALGO line carry a live-population A/B of the gate's verdicts
+    /// while enforcement stays knob-gated at the convergence check (same playbook as the
+    /// 2.1 reg-vs-tg shadow). At the dark default the ONLY effect is logging. The shadow
+    /// judges with the staged band (6 s/d), not the enforcement knob — otherwise 999
+    /// would confirm everything and the shadow would be data-free.
     private func tgUpdateLockConfirmation(chosen: Double, rates: [(secs: Double, rate: Double)],
                                           ringSampleRate: Double) {
-        guard tgConfirmBand < 900 else { tgLockConfirmed = true; return }   // knob off = 2.4 behaviour
         if tgLockConfirmed { return }
+        let shadowBand = min(tgConfirmBand, 6.0)   // staged target; a LOWERED knob tightens the shadow too
         let confirmWin = 8.0
         guard tgPendingLockRate != nil, tgPendingLockAbs >= 0 else {
             tgPendingLockRate = chosen; tgPendingLockAbs = energyRingAbs
@@ -1761,12 +1768,12 @@ class TimegrapherEngine {
         // The 8 s window may have σ-gate-failed this pass — then just try again next pass.
         guard let r1 = rates.first(where: { $0.secs == confirmWin })?.rate else { return }
         let r0 = tgPendingLockRate!
-        if abs(r1 - r0) <= tgConfirmBand {
+        if abs(r1 - r0) <= shadowBand {
             tgLockConfirmed = true
-            debugLog(String(format: "[TGALGO lock-confirm] r0=%+.1f r1=%+.1f band=%.0f", r0, r1, tgConfirmBand))
+            debugLog(String(format: "[TGALGO lock-confirm] r0=%+.1f r1=%+.1f band=%.0f", r0, r1, shadowBand))
         } else {
             tgLockRejects += 1
-            debugLog(String(format: "[TGALGO lock-reject] r0=%+.1f r1=%+.1f band=%.0f n=%d", r0, r1, tgConfirmBand, tgLockRejects))
+            debugLog(String(format: "[TGALGO lock-reject] r0=%+.1f r1=%+.1f band=%.0f n=%d", r0, r1, shadowBand, tgLockRejects))
             tgPendingLockRate = r1; tgPendingLockAbs = energyRingAbs
         }
     }
