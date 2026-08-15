@@ -9,7 +9,21 @@ Diagnosis being addressed: good tg locks already repeat at 2.5 s/d back-to-back;
 cannot tell a good lock from a bad one (b2b p50 18.7 when a wild lock is involved; 226 wild
 "converged" results shipped), and 387 sessions died before tg finished acquiring.
 
-Changes T1–T4 are native (one build); T5 is script-only and ships immediately.
+**Ship vehicle (decided 2026-08-15): rides in the 2.5 build, DARK.** T1–T4 compile in alongside
+the queued push/share changes, but every knob defaults to exact 2.4 behaviour, so the submitted
+binary's engine is behaviourally identical to today's. Staging happens server-side after release
+(user's device → each flip for all, one at a time), the same playbook as the pro_v2 flip — no
+second review cycle, no second adoption wave, per-flip rollback without a build. T5 is script-only
+and already shipped.
+
+**Dark-ship requirements (non-negotiable):**
+- Per-fix knobs with 2.4-identical defaults: `TG_CONFIRM_BAND=999` (T1 off), `tgGuardMode=0`
+  (T2 off — median fallback exactly as today; `tgAgreeBand=999` is NOT a substitute, that would
+  disable the guard entirely, which is not today's behaviour), `TG_GATE_MAXREJ=1.0` (T3 off),
+  `TG_ACQUIRE_MAX=15` (T4 off ≈ current teardown timing).
+- The `[TGTUNE]` line echoes every new knob, so the weekly review can segment sessions by the
+  flips they ran under — attribution survives staged rollout.
+- Flip order after adoption: confirm band → guard refuse → runway/UX. One knob per weekly cycle.
 
 ---
 
@@ -30,8 +44,8 @@ agree. Implementation sketch:
   that produced `r0`, min 8 s), compute a confirmation rate `r1` over the envelope slice that
   **ends now and does not extend past `p0`** — i.e. `recentEnvelope` bounded to samples newer than
   `p0`. Zero shared samples with the segment that produced `r0`.
-- `|r1 − r0| <= TG_CONFIRM_BAND` (default **6.0 s/d**, JS-tunable) → lock confirmed;
-  the displayed rate continues from the normal estimator.
+- `|r1 − r0| <= TG_CONFIRM_BAND` (ship default **999** = off; staged flip target **6.0 s/d**,
+  JS-tunable) → lock confirmed; the displayed rate continues from the normal estimator.
 - Disagreement → discard the pending lock, log
   `[TGALGO lock-reject] r0=… r1=… gap=…`, and re-enter acquisition with the newer segment's
   estimate as the new pending lock. Count rejects in a new `lockRejects` counter (logged in
@@ -54,13 +68,15 @@ windows — observed shipping `median=109.5` over `longest=41.4`. Fired in 91 of
 and the session still shipped a wild final. The n=2 coin-flip defect is already documented in the
 code comment.
 
-**Change:** when `rates.count >= 3` and `|longest − median| > tgAgreeBand`: return **nil** (no rate
-this pass — acquisition continues), log as today plus `-> nil`. When `rates.count == 2` and the two
-disagree by > tgAgreeBand: also nil. A nil here also clears any *unconfirmed* pending T1 lock
-(confirmed locks are not torn down by one noisy pass — starvation-hold semantics unchanged).
+**Change:** new knob `tgGuardMode` (0 = median fallback, today's behaviour, **ship default**;
+1 = refuse). In mode 1: when `rates.count >= 3` and `|longest − median| > tgAgreeBand`, return
+**nil** (no rate this pass — acquisition continues), log as today plus `-> nil`. When
+`rates.count == 2` and the two disagree by > tgAgreeBand: also nil. A nil here also clears any
+*unconfirmed* pending T1 lock (confirmed locks are not torn down by one noisy pass —
+starvation-hold semantics unchanged).
 
 Risk: sessions in genuinely ambiguous audio never converge — correct behaviour; they surface
-through T3's quality state instead of shipping garbage. Rollback: `tgAgreeBand = 999` (existing knob).
+through T3's quality state instead of shipping garbage. Rollback: `tgGuardMode = 0`.
 
 ## T3 — σ-gate health drives convergence eligibility + UX state
 
@@ -114,15 +130,17 @@ analysis). What was missing, now shipped in `weekly-measurement-review.py` + dep
 
 ## Sequencing & validation
 
-1. **T5 now** (scripts, admin-only surface — no build, no user impact).
-2. **T1+T2+T3+T4 in one native build** (they form one acquisition state machine; T1's confirm
-   band and T2's refuse path interact by design). All knobs JS-tunable so the flip is stageable
-   like pro_v2 was (silent → personal → default), and each has a knob-level rollback.
-3. Bench UAT on the test watches: healthy watch (converges ~16–18 s, rate unchanged vs 2.4);
-   noisy room + weak placement (must show acquiring/poor-quality, not a wild number); a
-   deliberately mis-locked start (tap table rhythmically during calibration, then stop — session
-   must lock-reject and recover the true rate).
-4. Field success gates (weekly review, 4 weeks):
+1. **T5** — DONE (scripts, 2026-08-15).
+2. **T1+T2+T3+T4 compiled dark into the 2.5 build** (see ship-vehicle note above). Pre-submission
+   verification is limited because everything defaults off: `swiftc -parse` on this Mac, real
+   compile + on-device smoke on the MacBook, and one session on the user's device with the knobs
+   flipped ON locally (localStorage tuning path) to prove the new paths execute.
+3. Bench UAT on the test watches — after release, during the personal-device stage (knobs flipped
+   for the user only): healthy watch (converges ~16–18 s, rate unchanged vs 2.4); noisy room +
+   weak placement (must show acquiring/poor-quality, not a wild number); a deliberately mis-locked
+   start (tap table rhythmically during calibration, then stop — session must lock-reject and
+   recover the true rate).
+4. Field success gates (weekly review, 4 weeks after each flip):
 
 | Metric | Now (2.4 era) | Target |
 |---|---|---|
