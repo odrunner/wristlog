@@ -181,6 +181,17 @@ describe('surface + attribution plumbing', () => {
     expect(html).toContain("tgAcquireMax: _tgKnob('tg_acquiremax', 15)");
   });
 
+  it('the admin knob panel exposes all four (personal-stage flip UI)', () => {
+    const html = read('index.html');
+    for (const id of ['tg-knob-confirmband', 'tg-knob-guardmode', 'tg-knob-gatemaxrej', 'tg-knob-acquiremax']) {
+      expect(html).toContain(`id="${id}"`);       // input exists
+      expect(html).toContain(`set('${id}'`);      // and is populated from localStorage
+    }
+    // guardmode 0 (= back to 2.4 behaviour) must be settable: onTgKnob rejects 0
+    expect(html).toContain("onTgKnob0('tg_guardmode'");
+    expect(html).toContain('function onTgKnob0(k, v) { if (v !== \'\' && Number(v) >= 0)');
+  });
+
   it('applyTuning validates knob ranges (a bad admin value cannot brick measurement)', () => {
     expect(engine).toContain('if let v = tgConfirmBand, v >= 1 { self.tgConfirmBand = v }');
     expect(engine).toContain('if let v = tgGuardMode, v >= 0, v <= 1 { self.tgGuardMode = v }');

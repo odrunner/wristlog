@@ -4517,6 +4517,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <label>Lift °<input type="number" step="1" id="tg-knob-lift" oninput="onTgKnob('tg_lift',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
         <label>Max win s<input type="number" step="8" id="tg-knob-maxwin" oninput="onTgKnob('tg_maxwin',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
         <label>Agree band s/d (999=off)<input type="number" step="2" id="tg-knob-agreeband" oninput="onTgKnob('tg_agreeband',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <!-- 2.5 lock-validation knobs (docs/spec-tg-lock-validation.md). Dark defaults; needs a 2.5 binary to have any effect. -->
+        <label>Confirm band s/d (999=off)<input type="number" step="1" id="tg-knob-confirmband" oninput="onTgKnob('tg_confirmband',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Guard<select id="tg-knob-guardmode" onchange="onTgKnob0('tg_guardmode',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"><option value="0">median (2.4)</option><option value="1">refuse</option></select></label>
+        <label>Gate max rej (1=off)<input type="number" step="0.1" id="tg-knob-gatemaxrej" oninput="onTgKnob('tg_gatemaxrej',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
+        <label>Acquire max s (15=off)<input type="number" step="5" id="tg-knob-acquiremax" oninput="onTgKnob('tg_acquiremax',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
       </div>
       <!-- Piezo live tuning (admin, gated by tg_piezo). Most apply live on change; BP low/high need stop/start. -->
       <div id="pz-tune-panel" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.75rem;font-size:.66rem;color:var(--muted);">
@@ -7858,7 +7863,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.09.19';
+const APP_VERSION = '15.09.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -29068,6 +29073,10 @@ function initTgSourceSelector() {
       set('tg-knob-lift', _tgKnob('tg_lift', 52));
       set('tg-knob-maxwin', _tgConvKnob('tg_maxwin'));
       set('tg-knob-agreeband', _tgKnob('tg_agreeband', 12));
+      set('tg-knob-confirmband', _tgKnob('tg_confirmband', 999));
+      set('tg-knob-guardmode', String(Number(safeLS.get('tg_guardmode') ?? 0)));
+      set('tg-knob-gatemaxrej', _tgKnob('tg_gatemaxrej', 1));
+      set('tg-knob-acquiremax', _tgKnob('tg_acquiremax', 15));
     } else knobPanel.style.display = 'none';
   }
   initPzTunePanel();
@@ -31502,6 +31511,9 @@ function _proV2MaxDuration() {
   return Math.max(std, Math.ceil(_tgConvKnob('tg_wallmin') + _tgConvKnob('tg_stabwin') + 10));
 }
 function onTgKnob(k, v) { if (v !== '' && Number(v) > 0) { safeLS.set(k, v); sendMsrTuning(); } }
+// Zero is a legitimate value here (tg_guardmode 0 = the 2.4 median fallback) — onTgKnob's
+// > 0 guard would make "switch back to 2.4 behaviour" silently un-settable.
+function onTgKnob0(k, v) { if (v !== '' && Number(v) >= 0) { safeLS.set(k, v); sendMsrTuning(); } }
 var _remotePeakRatioThreshold = 2.5;
 var _remoteBufferSeconds = 30.0;
 
