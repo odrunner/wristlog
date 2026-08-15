@@ -79,7 +79,11 @@ export const SHARED_DARK = {
   '--gold-lt': '#dbbe72',
   '--gold-dim': 'color-mix(in srgb, var(--gold) 12%, transparent)',
   '--text': '#e6e6f0',
-  '--muted': '#7a7a95',
+  // Raised from #7a7a95 on 2026-08-14 (audit U5). The old value measured 4.41:1
+  // on --surface and 4.06:1 on --surface2, under the 4.5:1 WCAG AA floor for body
+  // text; 25 muted labels in the feed failed it. #82829d clears 4.5 on --bg,
+  // --surface and --surface2. Light --muted already passed and is unchanged.
+  '--muted': '#82829d',
   '--overlay-bg': 'rgba(11,11,16,.94)',
   // The aliases are repeated here on purpose, not duplicated by accident: a
   // var() inside a custom property is substituted where it is DECLARED, so an
