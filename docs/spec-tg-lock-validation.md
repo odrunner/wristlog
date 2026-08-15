@@ -16,6 +16,14 @@ binary's engine is behaviourally identical to today's. Staging happens server-si
 second review cycle, no second adoption wave, per-flip rollback without a build. T5 is script-only
 and already shipped.
 
+**Silent field A/B (added 2026-08-15, `46b9f4e`):** the T1 state machine runs in SHADOW on every
+session regardless of the knob — verdicts logged as `lc=`/`lr=` in TGALGO, judged with the staged
+6 s/d band — while enforcement stays knob-gated. T2's shadow is free: every mode-0 `-> median`
+line is a session mode 1 would refuse. The weekly review's "Lock-validation shadow A/B" section
+segments live 2.5 sessions by shadow verdict and prints a flip recommendation
+(rejected ≥ 3× wilder than confirmed, n ≥ 10 → SIGNAL). So the flip decision is made on the whole
+population's data, not just the personal-stage device.
+
 **Dark-ship requirements (non-negotiable):**
 - Per-fix knobs with 2.4-identical defaults: `TG_CONFIRM_BAND=999` (T1 off), `tgGuardMode=0`
   (T2 off — median fallback exactly as today; `tgAgreeBand=999` is NOT a substitute, that would
