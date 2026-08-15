@@ -201,6 +201,18 @@ describe('surface + attribution plumbing', () => {
     expect(html).toContain('function onTgKnob0(k, v) { if (v !== \'\' && Number(v) >= 0)');
   });
 
+  it('one-control preset sets ALL FOUR keys together (no accidental partial flips)', () => {
+    const html = read('index.html');
+    expect(html).toContain('id="tg-lock-preset"');
+    const fn = html.slice(html.indexOf('function onTgLockPreset'), html.indexOf('sendMsrTuning();', html.indexOf('function onTgLockPreset')));
+    for (const [k, on, off] of [["tg_confirmband", '6 : 999'], ["tg_guardmode", '1 : 0'], ["tg_gatemaxrej", '0.5 : 1'], ["tg_acquiremax", '45 : 15']]) {
+      expect(fn).toContain(`safeLS.set('${k}', on ? ${on})`);
+    }
+    // OFF must restore exact 2.4 behaviour, and the raw knobs stay reachable
+    expect(html).toContain('OFF — 2.4 behaviour (shadow logs only)');
+    expect(html).toContain('id="tg-knob-raw"');
+  });
+
   it('applyTuning validates knob ranges (a bad admin value cannot brick measurement)', () => {
     expect(engine).toContain('if let v = tgConfirmBand, v >= 1 { self.tgConfirmBand = v }');
     expect(engine).toContain('if let v = tgGuardMode, v >= 0, v <= 1 { self.tgGuardMode = v }');

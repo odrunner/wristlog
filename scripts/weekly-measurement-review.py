@@ -158,6 +158,11 @@ def prov2_stats(blob):
         dur=int(dur) if dur else None,
         lc=int(lock[-1][0]) if lock else None,
         lr=int(lock[-1][1]) if lock else None,
+        # The event lines are the verdict truth: TGALGO logs every ~2s, so the final lc=
+        # can lag a confirm that landed just before convergence (seen in the 2026-08-15
+        # TestFlight UAT — sessions confirmed+converged with the last line still lc=0).
+        lconf=blob.count("[TGALGO lock-confirm]"),
+        lrej=blob.count("[TGALGO lock-reject]"),
         guard_fires=blob.count("harmonic-guard"))
 
 
@@ -287,9 +292,10 @@ def lock_shadow_section(cum):
         return L
 
     def verdict(a):
-        if a["v2"]["lc"] == 1:
+        v2 = a["v2"]
+        if v2["lc"] == 1 or (v2.get("lconf") or 0) > 0:
             return "confirmed"
-        return "rejected" if (a["v2"]["lr"] or 0) > 0 else "undecided"
+        return "rejected" if ((v2["lr"] or 0) > 0 or (v2.get("lrej") or 0) > 0) else "undecided"
 
     def wild_share(xs):
         r = [_session_rate(a) for a in xs]

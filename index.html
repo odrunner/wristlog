@@ -4508,6 +4508,20 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <option value="original">Engine: Standard</option>
       </select>
       <div id="tg-algo-hint" style="display:none;font-size:.68rem;color:var(--muted);margin:-.1rem 0 .65rem .1rem;line-height:1.4;">Pro V2 converges in ~10s and measures amplitude (°). Switch to Standard anytime.</div>
+      <!-- Lock validation (2.5): ONE control instead of four knobs. Sets tg_confirmband/
+           tg_guardmode/tg_gatemaxrej/tg_acquiremax together so a partial flip (e.g. confirm
+           on but guard still median) can't happen by accident. Raw knobs below for emergencies. -->
+      <div id="tg-lock-row" style="display:none;margin-bottom:.5rem;font-size:.72rem;color:var(--muted);">
+        <label>Lock validation (needs 2.5 build)
+          <select id="tg-lock-preset" onchange="onTgLockPreset(this.value)" style="width:100%;padding:.45rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.8rem;">
+            <option value="0">OFF — 2.4 behaviour (shadow logs only)</option>
+            <option value="1">ON — staged targets (confirm 6 · refuse · gate 0.5 · acquire 45)</option>
+            <option value="custom" disabled hidden>custom (raw knobs)</option>
+          </select>
+        </label>
+      </div>
+      <details id="tg-knob-raw" style="display:none;margin-bottom:.75rem;">
+      <summary style="font-size:.68rem;color:var(--muted);cursor:pointer;margin-bottom:.4rem;">Raw engine knobs</summary>
       <!-- tg convergence knobs (admin, gated by tg_algo). Applied live via the tuning message. -->
       <div id="tg-knob-panel" style="display:none;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:.4rem;margin-bottom:.75rem;font-size:.62rem;color:var(--muted);">
         <label>σ-gate ×1e-4<input type="number" step="0.5" id="tg-knob-sigma4" oninput="onTgKnob('tg_sigma', this.value/10000)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
@@ -4523,6 +4537,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <label>Gate max rej (1=off)<input type="number" step="0.1" id="tg-knob-gatemaxrej" oninput="onTgKnob('tg_gatemaxrej',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
         <label>Acquire max s (15=off)<input type="number" step="5" id="tg-knob-acquiremax" oninput="onTgKnob('tg_acquiremax',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
       </div>
+      </details>
       <!-- Piezo live tuning (admin, gated by tg_piezo). Most apply live on change; BP low/high need stop/start. -->
       <div id="pz-tune-panel" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.75rem;font-size:.66rem;color:var(--muted);">
         <label>BP low Hz<input type="number" step="10" id="pz-tune-bplow" oninput="onPzTune('pz_bp_low',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
@@ -7863,7 +7878,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.09.31';
+const APP_VERSION = '15.09.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -29061,6 +29076,20 @@ function initTgSourceSelector() {
       if (hint) hint.style.display = 'none';   // hint must never outlive the selector
     }
   }
+  const lockRow = document.getElementById('tg-lock-row');
+  const rawWrap = document.getElementById('tg-knob-raw');
+  if (lockRow) lockRow.style.display = featureFlag('tg_algo') ? 'block' : 'none';
+  if (rawWrap) rawWrap.style.display = featureFlag('tg_algo') ? 'block' : 'none';
+  const lockSel = document.getElementById('tg-lock-preset');
+  if (lockSel && featureFlag('tg_algo')) {
+    const cb = _tgKnob('tg_confirmband', 999), gm = Number(safeLS.get('tg_guardmode') ?? 0),
+          gr = _tgKnob('tg_gatemaxrej', 1), am = _tgKnob('tg_acquiremax', 15);
+    const isOff = cb >= 900 && gm === 0 && gr >= 1 && am <= 15;
+    const isOn  = cb === 6 && gm === 1 && gr === 0.5 && am === 45;
+    const custom = lockSel.querySelector('option[value="custom"]');
+    if (isOff || isOn) { if (custom) { custom.disabled = true; custom.hidden = true; } lockSel.value = isOn ? '1' : '0'; }
+    else { if (custom) { custom.disabled = false; custom.hidden = false; } lockSel.value = 'custom'; }
+  }
   const knobPanel = document.getElementById('tg-knob-panel');
   if (knobPanel) {
     if (featureFlag('tg_algo')) {
@@ -31514,6 +31543,21 @@ function onTgKnob(k, v) { if (v !== '' && Number(v) > 0) { safeLS.set(k, v); sen
 // Zero is a legitimate value here (tg_guardmode 0 = the 2.4 median fallback) — onTgKnob's
 // > 0 guard would make "switch back to 2.4 behaviour" silently un-settable.
 function onTgKnob0(k, v) { if (v !== '' && Number(v) >= 0) { safeLS.set(k, v); sendMsrTuning(); } }
+// One-control flip for the 2.5 lock-validation bundle: sets all four keys together so a
+// partial flip (confirm on, guard still median — happened in the 2026-08-15 TestFlight
+// UAT) can't happen by accident. '0' = exact 2.4 behaviour (shadow keeps logging).
+function onTgLockPreset(v) {
+  if (v !== '0' && v !== '1') return;      // 'custom' is display-only
+  const on = v === '1';
+  safeLS.set('tg_confirmband', on ? 6 : 999);
+  safeLS.set('tg_guardmode', on ? 1 : 0);
+  safeLS.set('tg_gatemaxrej', on ? 0.5 : 1);
+  safeLS.set('tg_acquiremax', on ? 45 : 15);
+  const set = (id, val) => { const e = document.getElementById(id); if (e) e.value = val; };
+  set('tg-knob-confirmband', on ? 6 : 999); set('tg-knob-guardmode', on ? '1' : '0');
+  set('tg-knob-gatemaxrej', on ? 0.5 : 1); set('tg-knob-acquiremax', on ? 45 : 15);
+  sendMsrTuning();
+}
 var _remotePeakRatioThreshold = 2.5;
 var _remoteBufferSeconds = 30.0;
 
