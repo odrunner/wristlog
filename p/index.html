@@ -27,10 +27,10 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; min-height: 100vh; font-size: 15px; }
-    a { color: var(--gold); text-decoration: none; }
+    a { color: var(--gold-text); text-decoration: none; }
 
     .topbar { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: .75rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); }
-    .topbar-logo { display: inline-flex; align-items: center; gap: .4rem; font-size: 1.1rem; font-weight: 800; letter-spacing: -.02em; color: var(--gold); text-decoration: none; }
+    .topbar-logo { display: inline-flex; align-items: center; gap: .4rem; font-size: 1.1rem; font-weight: 800; letter-spacing: -.02em; color: var(--gold-text); text-decoration: none; }
     .topbar-logo img { width: 24px; height: 24px; border-radius: 5px; }
     .topbar-logo:hover { color: var(--gold-lt); }
 
@@ -151,7 +151,7 @@
           <div class="state-icon">🔒</div>
           <div class="state-title">Post not found</div>
           <div class="state-sub">${esc(msg)}</div>
-          <div class="cta-wrap" style="margin-top:1rem;"><a href="https://wrotate.com/" style="color:var(--gold);font-weight:600;">Open WRotate</a></div>
+          <div class="cta-wrap" style="margin-top:1rem;"><a href="https://wrotate.com/" style="color:var(--gold-text);font-weight:600;">Open WRotate</a></div>
         </div>`;
     }
 

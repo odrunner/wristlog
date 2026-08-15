@@ -21,6 +21,11 @@ export const SHARED_LIGHT = {
   '--surface2': '#eeeff5',
   '--border': '#d8d9e8',
   '--gold': '#9a7628',
+  // Gold as TEXT needs to be darker than gold as a surface: #9a7628 measures 3.66
+  // on --surface2, below the 4.5:1 AA floor. Darkening --gold itself would have
+  // fixed 113 text rules and broken 47 background ones (buttons 4.70 -> 3.81),
+  // so the two uses carry two values. Audit U5.
+  '--gold-text': '#8b6719',
   '--gold-lt': '#c9a84c',
   '--gold-dim': 'rgba(154,118,40,.12)',
   '--text': '#16161e',
@@ -78,6 +83,10 @@ export const SHARED_DARK = {
   '--surface2': '#1c1c25',
   '--border': '#272734',
   '--gold': '#c9a84c',
+  // Dark gold measures 7.40–8.65 on every dark surface, so text and surface share
+  // one value. Declared, not inherited — an alias written only in :root resolves
+  // against the light value (see the aliases note below).
+  '--gold-text': 'var(--gold)',
   '--gold-lt': '#dbbe72',
   '--gold-dim': 'color-mix(in srgb, var(--gold) 12%, transparent)',
   '--text': '#e6e6f0',
