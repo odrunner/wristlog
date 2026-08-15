@@ -262,16 +262,27 @@ def onboarding4_section(H):
     return L
 
 
-def _already_ran_this_week():
-    """True if a snapshot line for the current ISO week already exists.
+def _week_anchor(d):
+    """The Sunday that starts d's review week (d itself when d is a Sunday).
 
-    The LaunchAgent now has RunAtLoad=true so a Mac that is asleep or off at
+    NOT isocalendar(): ISO weeks start Monday, but this job runs Sunday — the
+    LAST day of an ISO week — so the scheduled run and any RunAtLoad firing on
+    the following Mon-Sat land in different ISO weeks and both send a report.
+    That duplicated the review on 2026-07-19/20 and 2026-08-09/10.
+    """
+    return d - timedelta(days=(d.weekday() + 1) % 7)   # Mon=0 .. Sun=6
+
+
+def _already_ran_this_week():
+    """True if a snapshot line for the current review week already exists.
+
+    The LaunchAgent has RunAtLoad=true so a Mac that is asleep or off at
     Sunday 08:00 still produces the week's review on next login. That means the
     job can fire more than once in a week, so guard on the snapshot file the way
     rollout-check guards on its per-day history line.
     """
     try:
-        wk = datetime.now().date().isocalendar()[:2]      # (year, week)
+        wk = _week_anchor(datetime.now().date())
         with open(SNAP_FILE) as f:
             for line in f:
                 line = line.strip()
@@ -279,7 +290,7 @@ def _already_ran_this_week():
                     continue
                 try:
                     d = json.loads(line).get("date", "")
-                    if datetime.fromisoformat(d).date().isocalendar()[:2] == wk:
+                    if _week_anchor(datetime.fromisoformat(d).date()) == wk:
                         return True
                 except (ValueError, json.JSONDecodeError, AttributeError):
                     continue
@@ -290,7 +301,7 @@ def _already_ran_this_week():
 
 def main():
     if _already_ran_this_week() and "--force" not in sys.argv:
-        print("[weekly-review] Already ran this ISO week — skipping (use --force to override).")
+        print("[weekly-review] Already ran this review week — skipping (use --force to override).")
         return
 
     auth = curl(f"{BASE_URL}/auth/v1/token?grant_type=password",
