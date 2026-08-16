@@ -4935,6 +4935,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <div class="stats-row" id="stats-row"></div>
 
+    <div class="card" id="collection-value-card" style="margin-bottom:1.25rem;display:none;"></div>
+
     <div class="card" id="wear-leaderboard" style="margin-bottom:1.25rem;"></div>
 
     <div class="card" style="margin-bottom:1.25rem;">
@@ -7966,7 +7968,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '16.11.32';
+const APP_VERSION = '16.11.41';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13548,6 +13550,28 @@ function accuracyTrendSvg(days, { width = 320, height = 120, pad = 10, labels = 
     s += `<circle class="acc-dot${latest ? ' acc-dot-latest' : ''}" data-day="${d.date}" cx="${cx}" cy="${y(d.median).toFixed(1)}" r="${latest ? 5 : 3.5}"/>`;
   });
   return s + '</svg>';
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function collectionValueSummary(watches, today, staleDays = 60) {
+  const list = (watches || []).filter(Boolean);
+  const num = (v) => (v == null || v === '' ? null : (Number.isFinite(Number(v)) ? Number(v) : null));
+  let total = 0, pricedCount = 0, gain = 0, paidOfGain = 0, gainN = 0, lastChecked = null, staleCount = 0;
+  const cutoff = new Date(today + 'T00:00:00'); cutoff.setDate(cutoff.getDate() - staleDays);
+  const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`;
+  list.forEach(w => {
+    const mp = num(w.marketPrice);
+    if (mp == null) return;
+    pricedCount++; total += mp;
+    const paid = num(w.price);
+    if (paid != null && paid > 0) { gain += mp - paid; paidOfGain += paid; gainN++; }
+    const d = w.marketPriceDate || null;
+    if (d) { if (!lastChecked || d > lastChecked) lastChecked = d; if (d < cutoffStr) staleCount++; }
+    else staleCount++;
+  });
+  const daysSinceChecked = lastChecked ? Math.round((new Date(today + 'T00:00:00') - new Date(lastChecked + 'T00:00:00')) / 86400000) : null;
+  return { watchCount: list.length, pricedCount, unpricedCount: list.length - pricedCount, total, gain, gainN,
+    gainPct: paidOfGain > 0 ? gain / paidOfGain * 100 : null, lastChecked, daysSinceChecked, staleCount };
 }
 
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
@@ -23919,6 +23943,7 @@ function renderStats(force) {
   const fl = filteredLogs();
   renderStatsRow(fl);
   renderWearLeaderboard(fl);
+  renderCollectionValueCard();
   renderCollectionReport(fl);
   renderDowReport(fl);
   renderChUsecase(fl);
@@ -24246,6 +24271,35 @@ function renderChCollectionValue() {
       }
     }
   });
+}
+
+// Collection value — sums SAVED market values (no refresh, no invented movement). The
+// monthly digest email uses the same definition server-side (value_digest_targets).
+function renderCollectionValueCard() {
+  const el = document.getElementById('collection-value-card');
+  if (!el) return;
+  if (!watches.length) { el.style.display = 'none'; return; }
+  const s = collectionValueSummary(watches, todayStr());
+  el.style.display = '';
+  if (!s.pricedCount) {
+    el.innerHTML = `<div class="section-title">Collection value</div>
+      <div style="font-size:.85rem;color:var(--muted);margin:.3rem 0 .6rem;">Know what your ${s.watchCount} watch${s.watchCount === 1 ? ' is' : 'es are'} worth — estimates come from recent market listings.</div>
+      <button class="btn btn-primary btn-sm" onclick="openUpdatePrices()">Check values</button>`;
+    return;
+  }
+  const gainHtml = s.gainN > 0 ? `<div style="font-size:.82rem;margin-top:.15rem;color:${s.gain >= 0 ? 'var(--success)' : 'var(--danger)'};">${s.gain >= 0 ? '+' : '−'}${fmtMoney(Math.abs(s.gain))}${s.gainPct != null ? ` (${s.gain >= 0 ? '+' : '−'}${Math.abs(s.gainPct).toFixed(0)}%)` : ''} <span style="color:var(--muted);">vs paid, ${s.gainN} watch${s.gainN === 1 ? '' : 'es'}</span></div>` : '';
+  const checked = s.daysSinceChecked == null ? '' : s.daysSinceChecked === 0 ? 'checked today' : s.daysSinceChecked === 1 ? 'checked yesterday' : `last checked ${s.daysSinceChecked} days ago`;
+  const stale = [];
+  if (s.staleCount) stale.push(`${s.staleCount} not checked in 60+ days`);
+  if (s.unpricedCount) stale.push(`${s.unpricedCount} without a value`);
+  el.innerHTML = `<div class="section-title" style="display:flex;justify-content:space-between;align-items:baseline;">Collection value<span style="font-size:.7rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">${checked}</span></div>
+    <div style="font-size:1.5rem;font-weight:700;letter-spacing:-.01em;margin-top:.15rem;">${fmtMoney(s.total)}</div>
+    <div style="font-size:.78rem;color:var(--muted);">${s.pricedCount} of ${s.watchCount} watch${s.watchCount === 1 ? '' : 'es'} priced</div>
+    ${gainHtml}
+    ${stale.length ? `<div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-top:.6rem;padding-top:.6rem;border-top:1px solid var(--border);">
+      <div style="font-size:.78rem;color:var(--muted);">${stale.join(' · ')}</div>
+      <button class="btn btn-ghost btn-sm" style="white-space:nowrap;" onclick="openUpdatePrices()">Update prices</button>
+    </div>` : ''}`;
 }
 
 function renderCollectionReport(fl) {

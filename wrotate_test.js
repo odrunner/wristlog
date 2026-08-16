@@ -1816,6 +1816,28 @@ export function accuracyTrendSvg(days, { width = 320, height = 120, pad = 10, la
   return s + '</svg>';
 }
 
+// Collection value summary (Stats card + monthly digest): sums SAVED market values only.
+export function collectionValueSummary(watches, today, staleDays = 60) {
+  const list = (watches || []).filter(Boolean);
+  const num = (v) => (v == null || v === '' ? null : (Number.isFinite(Number(v)) ? Number(v) : null));
+  let total = 0, pricedCount = 0, gain = 0, paidOfGain = 0, gainN = 0, lastChecked = null, staleCount = 0;
+  const cutoff = new Date(today + 'T00:00:00'); cutoff.setDate(cutoff.getDate() - staleDays);
+  const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`;
+  list.forEach(w => {
+    const mp = num(w.marketPrice);
+    if (mp == null) return;
+    pricedCount++; total += mp;
+    const paid = num(w.price);
+    if (paid != null && paid > 0) { gain += mp - paid; paidOfGain += paid; gainN++; }
+    const d = w.marketPriceDate || null;
+    if (d) { if (!lastChecked || d > lastChecked) lastChecked = d; if (d < cutoffStr) staleCount++; }
+    else staleCount++;
+  });
+  const daysSinceChecked = lastChecked ? Math.round((new Date(today + 'T00:00:00') - new Date(lastChecked + 'T00:00:00')) / 86400000) : null;
+  return { watchCount: list.length, pricedCount, unpricedCount: list.length - pricedCount, total, gain, gainN,
+    gainPct: paidOfGain > 0 ? gain / paidOfGain * 100 : null, lastChecked, daysSinceChecked, staleCount };
+}
+
 // Whether to pop the badge-reveal modal on app open: only when there are unseen
 // earned badges AND the earned count has grown since the last reveal (a localStorage
 // high-water mark), so it fires once per new-badge batch and never re-nags a user
