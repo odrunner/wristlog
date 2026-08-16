@@ -2845,6 +2845,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="eyebrow eyebrow-muted">August 2026</span>
       </div>
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Readings Are Kept Automatically</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Like a smart scale: every measurement that converges cleanly now lands in the watch&#8217;s accuracy history by itself &#8212; no Save tap. Don&#8217;t want one? <strong>Discard this reading</strong> right there. Readings that didn&#8217;t converge still offer Save, so nothing questionable sneaks in.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Unsaved Readings</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Measured a watch and didn&#8217;t save? Every reading that converged now waits under <strong>Unsaved readings</strong> in that watch&#8217;s Accuracy section for 30 days. Tap <strong>Keep</strong> to add it to the history, or &#10005; to let it go.</div>
       </div>
@@ -4009,8 +4013,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <div class="help-step">
             <div class="help-step-num">4</div>
             <div class="help-step-body">
-              <div class="help-step-title">Save or enter manually</div>
-              <div class="help-step-desc">Once converged, tap Save to record the reading. You can also enter a rate manually in the Accuracy section of the watch edit form if you measured with an external tool.</div>
+              <div class="help-step-title">Readings are kept automatically</div>
+              <div class="help-step-desc">Once a measurement converges cleanly it goes straight into that watch&#8217;s accuracy history &#8212; no Save tap. Tap <strong>Discard this reading</strong> if you don&#8217;t want it. Readings that didn&#8217;t converge (or look implausible) still show <strong>Save</strong>, so you decide. You can also enter a rate manually in the Accuracy section of the watch edit form if you measured with an external tool.</div>
             </div>
           </div>
           <div class="help-step">
@@ -4736,6 +4740,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div style="display:flex;gap:.4rem;">
           <button id="msr-share-btn" class="btn btn-ghost btn-sm" style="flex:1;">Share result</button>
           <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--muted);" onclick="dismissMsrShareCta()">Done</button>
+        </div>
+        <div id="msr-cta-discard" style="display:none;text-align:center;margin-top:.45rem;">
+          <button onclick="discardKeptReading()" style="background:none;border:none;color:var(--muted);font-size:.74rem;cursor:pointer;font-family:inherit;text-decoration:underline;padding:.2rem;min-height:32px;">Discard this reading</button>
         </div>
       </div>
     </div>
@@ -7914,7 +7921,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '16.08.40';
+const APP_VERSION = '16.09.04';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13427,6 +13434,18 @@ function logAgainCandidate({ logs, watches, today, hour, minHour = 17, lookbackD
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   if (!recent.length) return null;
   return (watches || []).find(w => w.id === recent[0].watchId) || null;
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function shouldAutoKeepReading({ converged, rate, ticks, watchId, loggedIn, demo, runnerActive, lastKept, nowMs, maxAbsRate = 60, minTicks = 40, dupWindowMs = 600000, dupDelta = 0.5 }) {
+  if (!loggedIn || demo || runnerActive || !watchId) return false;
+  if (!converged) return false;
+  if (rate == null) return false;
+  const r = Number(rate);
+  if (!Number.isFinite(r) || Math.abs(r) > maxAbsRate) return false;
+  if (!(Number(ticks) >= minTicks)) return false;
+  if (lastKept && lastKept.watchId === watchId && (nowMs - lastKept.atMs) < dupWindowMs && Math.abs(Number(lastKept.rate) - r) <= dupDelta) return false;
+  return true;
 }
 
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
@@ -31575,6 +31594,7 @@ function openMeasureModal() {
 function openMeasureInline() {
   flushMeasureWrites(); // drain any measurement writes that failed to upload earlier
   _tgDebugSessionId = null;
+  _msrKeptReading = null;
   _tgLastDebugLogTime = 0;
   _msrListening = false;
   _msrLastRate = null;
@@ -31838,6 +31858,7 @@ function toggleMsrListen() {
   console.log('[TG JS] toggleMsrListen called, _msrListening:', _msrListening, 'hasNative:', _tgHasNative());
   if (_msrListening) { console.log('[TG JS] Stop button pressed'); stopMsrListen('user_stopped'); return; }
   markMeasurementTried(); // onboarding: completing "Measure accuracy" on try, not save
+  _msrKeptReading = null;   // new session — the next converged reading is a new history row
   try {
   // Use native bridge if available
   if (_tgHasNative()) {
@@ -32156,6 +32177,11 @@ function stopMsrListen(reason) {
         completeMsg.style.color = 'rgba(234,179,8,.7)';
       }
     }
+    // Auto-keep (Wi-Fi-scale model): a converged, plausible reading goes straight into the
+    // watch's history — no Save tap — and the completion row offers Discard instead.
+    // Anything the gate rejects keeps the old Save / Share / Discard row (and lands in the
+    // "Unsaved readings" tray via measurement_sessions).
+    autoKeepMsrReading(wasConverged);
     // Auto-prompt to share a high-confidence result, at most once per watch.
     // "High confidence" = converged AND a tight error bar (± ≤ 2.0 s/day).
     // Skip in demo mode / when not signed in (no feed to post to).
@@ -32169,7 +32195,39 @@ function stopMsrListen(reason) {
   }
 }
 
+async function autoKeepMsrReading(wasConverged) {
+  const watchId = document.getElementById('msr-watch-select')?.value || '';
+  const ok = shouldAutoKeepReading({
+    converged: !!wasConverged, rate: _msrLastRate,
+    ticks: _msrLastNativeTicks || _msrScatterData.length,
+    watchId, loggedIn: !!currentUser, demo: !!_isDemoMode, runnerActive: _tgRunnerActive(),
+    lastKept: _msrLastKeptReading, nowMs: Date.now(),
+  });
+  if (!ok) return;
+  const res = await persistMsrReading({ silent: true, from: 'auto_keep' });
+  if (!res.ok || res.kept) return;
+  const sign = res.rate >= 0 ? '+' : '';
+  toast(`Reading kept · ${sign}${Number(res.rate).toFixed(1)} s/d`);
+  showMsrShareCta(res.watchId, res.rate, { kept: true });
+}
+// Discard a reading that was auto-kept this session: delete the history row, put the
+// session back into "unsaved" (dismissed, so it does not resurface in the tray either).
+async function discardKeptReading() {
+  const kept = _msrKeptReading;
+  _msrKeptReading = null;
+  if (kept?.id && currentUser) {
+    const { error } = await db.from('timegrapher_results').delete().eq('id', kept.id).eq('user_id', currentUser.id);
+    if (error) { toast('Could not discard — ' + error.message, 'error'); _msrKeptReading = kept; return; }
+    db.from('measurement_sessions').update({ saved_result_id: null, dismissed_at: new Date().toISOString() }).eq('saved_result_id', kept.id).then(() => {});
+    if (_msrLastKeptReading && _msrLastKeptReading.id === kept.id) _msrLastKeptReading = null;
+    if (window.posthog) posthog.capture('accuracy_reading_discarded', { from: 'auto_keep' });
+    toast('Reading discarded');
+  }
+  discardMsrReading();
+}
+
 function discardMsrReading() {
+  _msrKeptReading = null;
   _msrLastRate = null;
   _msrLastBe = null; _msrFoldedBE = null;
   _msrLastBph = null;
@@ -32199,13 +32257,19 @@ function discardMsrReading() {
 // Returns { ok: true, watchId, rate } on success, or { ok: false } after showing
 // the appropriate toast/guard. Does NOT change any UI beyond the save toast.
 let _msrSaveInFlight = false;
-async function persistMsrReading() {
+// The reading auto-kept (or saved) for the CURRENT session: { id, watchId, rate, atMs }.
+// Makes persistMsrReading idempotent — Share / the share popup / Save after an auto-keep
+// must not insert a second row. Cleared when a new measurement starts or on discard.
+let _msrKeptReading = null;
+let _msrLastKeptReading = null;   // survives across sessions — the auto-keep dedupe window
+async function persistMsrReading(opts = {}) {
   if (demoGuard()) return { ok: false };
   if (!currentUser) return { ok: false };
   const watchId = document.getElementById('msr-watch-select').value;
   if (!watchId) { toast('Select a watch', 'error'); return { ok: false }; }
   const rate = parseFloat(document.getElementById('msr-rate-input').value);
   if (isNaN(rate)) { toast('No measurement data', 'error'); return { ok: false }; }
+  if (_msrKeptReading && _msrKeptReading.watchId === watchId) return { ok: true, watchId, rate: _msrKeptReading.rate, kept: true };
   // Guard against a fast double-tap on Save/Share (or Save then auto-share
   // popup) firing two inserts before the first resolves — that wrote duplicate
   // timegrapher_results rows. All Save/Share paths funnel through here.
@@ -32247,8 +32311,10 @@ async function persistMsrReading() {
     if (_tgDebugSessionId && data?.id) {
       db.from('measurement_sessions').update({ saved_result_id: data.id }).eq('session_id', _tgDebugSessionId).then(() => {});
     }
-    toast('Reading saved!');
-    if (window.posthog) posthog.capture('accuracy_reading_saved', { source: 'auto', from: 'measure_modal' });
+    _msrKeptReading = { id: data?.id || null, watchId, rate, atMs: Date.now() };
+    _msrLastKeptReading = _msrKeptReading;
+    if (!opts.silent) toast('Reading saved!');
+    if (window.posthog) posthog.capture('accuracy_reading_saved', { source: 'auto', from: opts.from || 'measure_modal' });
     return { ok: true, watchId, rate };
   } finally {
     _msrSaveInFlight = false;
@@ -32276,11 +32342,14 @@ async function shareMsrFromComplete() {
 // Show a "Share to feed?" CTA after a successful measurement save.
 // Hides the save section, reveals a sibling CTA block. Non-intrusive:
 // user can tap Share or Done. Both outcomes logged for funnel analysis.
-function showMsrShareCta(watchId, rate) {
+function showMsrShareCta(watchId, rate, opts = {}) {
   const saveSection = document.getElementById('msr-save-section');
   const cta = document.getElementById('msr-share-cta');
   if (!cta) { closeMeasureModal(); return; }
   if (saveSection) saveSection.style.display = 'none';
+  const discardRow = document.getElementById('msr-cta-discard');
+  if (discardRow) discardRow.style.display = opts.kept ? '' : 'none';
+  const savedWord = opts.kept ? 'Kept' : 'Saved';
   const btn = document.getElementById('msr-share-btn');
   if (btn) btn.onclick = () => shareMsrToFeed(watchId, Number(rate));
   // Primary CTA: log a wear (the core action) — the watch is literally in hand.
@@ -32291,11 +32360,11 @@ function showMsrShareCta(watchId, rate) {
   if (logBtn) {
     if (hasWornToday(logs, watchId, todayStr())) {
       logBtn.style.display = 'none';
-      if (title) title.textContent = 'Saved — share result to feed?';
+      if (title) title.textContent = `${savedWord} — share result to feed?`;
     } else {
       logBtn.style.display = '';
       logBtn.onclick = () => logWearFromMeasure(watchId);
-      if (title) title.textContent = 'Saved — log your wear?';
+      if (title) title.textContent = `${savedWord} — log your wear?`;
       _logPostCtaEvent('shown', 'measurement_log_wear');
     }
   }

@@ -1746,6 +1746,21 @@ export function logAgainCandidate({ logs, watches, today, hour, minHour = 17, lo
   return (watches || []).find(w => w.id === recent[0].watchId) || null;
 }
 
+// Auto-keep gate: write a converged, plausible measurement to history without a Save tap.
+// Rejected sessions stay in the "Unsaved readings" tray. `ticks` = accepted ticks (the weekly
+// review's 'good' proxy is >= 40); |rate| > 60 s/d is a mis-lock; a near-identical retry on the
+// same watch inside 10 minutes adds nothing.
+export function shouldAutoKeepReading({ converged, rate, ticks, watchId, loggedIn, demo, runnerActive, lastKept, nowMs, maxAbsRate = 60, minTicks = 40, dupWindowMs = 600000, dupDelta = 0.5 }) {
+  if (!loggedIn || demo || runnerActive || !watchId) return false;
+  if (!converged) return false;
+  if (rate == null) return false;
+  const r = Number(rate);
+  if (!Number.isFinite(r) || Math.abs(r) > maxAbsRate) return false;
+  if (!(Number(ticks) >= minTicks)) return false;
+  if (lastKept && lastKept.watchId === watchId && (nowMs - lastKept.atMs) < dupWindowMs && Math.abs(Number(lastKept.rate) - r) <= dupDelta) return false;
+  return true;
+}
+
 // Whether to pop the badge-reveal modal on app open: only when there are unseen
 // earned badges AND the earned count has grown since the last reveal (a localStorage
 // high-water mark), so it fires once per new-badge batch and never re-nags a user

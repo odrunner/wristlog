@@ -207,7 +207,7 @@ describe('the tg core is not torn down by the tick detector', () => {
 describe('a saved reading carries its quality metadata', () => {
   // Until this change a timegrapher_results row held only rate + beat_error + bph: 0 of 122
   // saved rows had amplitude, position, duration, tick count or rate spread.
-  const body = html.slice(html.indexOf('async function persistMsrReading()'),
+  const body = html.slice(html.indexOf('async function persistMsrReading(opts = {})'),
                           html.indexOf('async function saveMsrReading()'));
 
   it('writes every column the run already computed', () => {
