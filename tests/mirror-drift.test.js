@@ -32,7 +32,7 @@ const VERBATIM = [
   'canDeleteComment', 'classifyDevice', 'computeMedianRate', 'decodeAuthUserId', 'eloExpected',
   'badgeRevealNames', 'escAttr', 'escHtml', 'fmtDate', 'fmtMonYear', 'guessOEMStrap', 'imgSnippet', 'iosAtLeast',
   'inlineImages', 'isVideoUrl', 'isVideoPostLog', 'marketPriceRowHTML', 'matchIdentifiedToCollection',
-  'msrCardHasEnoughData', 'unsavedReadingLabel', 'logAgainCandidate', 'shouldAutoKeepReading', 'groupReadingsByDay', 'filterDaysByRange', 'accuracyTrendSvg', 'collectionValueSummary', 'msrCardResultText', 'msrCardShowScope', 'msrCardAmpText', 'normalizeLocation', 'onboardingChecklistState', 'parsePhotoUrl', '_q2Ls',
+  'msrCardHasEnoughData', 'unsavedReadingLabel', 'logAgainCandidate', 'shouldAutoKeepReading', 'groupReadingsByDay', 'filterDaysByRange', 'accuracyTrendSvg', 'collectionValueSummary', 'neglectedWatches', 'msrCardResultText', 'msrCardShowScope', 'msrCardAmpText', 'normalizeLocation', 'onboardingChecklistState', 'parsePhotoUrl', '_q2Ls',
   'posterUrlFor', 'renderPostLocationHtml', 'rowToLog', 'rowToWatch', 'rowToWish',
   'sanitizeImageUrl', 'sanitizeSearch', 'storagePathFrom', 'tgAdvancedSummaryFields',
   'thumbPathFor', 'thumbUrlFor', 'thumbSrcAttrs',

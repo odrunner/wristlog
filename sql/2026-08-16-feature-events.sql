@@ -15,7 +15,8 @@ DROP POLICY IF EXISTS feature_events_insert_own ON feature_events;
 CREATE POLICY feature_events_insert_own ON feature_events FOR INSERT WITH CHECK (user_id = (SELECT auth.uid()));
 
 -- Admin: totals + 24h for one event, external accounts only (mirrors admin_fact_counts).
-CREATE OR REPLACE FUNCTION admin_feature_event_stats(p_event text)
+DROP FUNCTION IF EXISTS admin_feature_event_stats(text);
+CREATE OR REPLACE FUNCTION admin_feature_event_stats(p_event text, p_key text DEFAULT 'source')
 RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'pg_catalog', 'public' AS $$
 declare
   d24h timestamptz := now() - interval '24 hours';
@@ -30,8 +31,9 @@ begin
     'events_24h',   (select count(*) from feature_events where event = p_event and created_at >= d24h and user_id <> all(internal_ids)),
     'users_total',  (select count(distinct user_id) from feature_events where event = p_event and user_id <> all(internal_ids)),
     'users_24h',    (select count(distinct user_id) from feature_events where event = p_event and created_at >= d24h and user_id <> all(internal_ids)),
+    -- breakdown by one meta key (default 'source'; identify_outcome uses 'outcome')
     'by_source',    (select coalesce(json_object_agg(src, n), '{}'::json) from (
-                       select coalesce(meta->>'source', 'unknown') src, count(*) n
+                       select coalesce(meta->>p_key, 'unknown') src, count(*) n
                        from feature_events where event = p_event and user_id <> all(internal_ids) group by 1) s)
   ) into result;
   return result;

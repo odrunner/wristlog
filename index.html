@@ -2867,6 +2867,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Every measurement that converges cleanly is now kept automatically &#8212; no Save tap; use <strong>Discard this reading</strong> if you don&#8217;t want one. And your history lives where you measure: an <strong>Accuracy history</strong> card under the chart shows the selected watch&#8217;s latest reading and trend, and the trend icon in the header (or the card) opens the full view &#8212; one dot per day, &plusmn;5 / &plusmn;15 s/d bands, 1M / 3M / 1Y / All, every reading listed by day. Your earlier measurements have been brought in, so most watches start with a trend already.</div>
       </div>
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Not Worn in a While</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Under Today&#8217;s Pick, Track now shows the watches that haven&#8217;t been on your wrist for 30+ days (or never, since you added them), longest first. Tap one to log it.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Follow From the Bell</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">When someone likes or comments on your post and you don&#8217;t follow them yet, the notification now carries a one-tap <strong>Follow</strong> (or <strong>Request</strong> for private profiles) &#8212; no detour through their profile. New sign-ups with Google also start with their Google photo as avatar (change or remove it any time in your profile).</div>
       </div>
@@ -3464,6 +3468,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <!-- ════ TRACK PAGE ════ -->
   <div id="page-track" class="page">
     <div id="rec-container"></div>
+    <div id="neglected-strip" style="display:none;margin:-.5rem 0 1.25rem;">
+      <div style="font-size:.7rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem;">Not worn in a while</div>
+      <div id="neglected-chips" style="display:flex;gap:.45rem;overflow-x:auto;padding-bottom:.2rem;-webkit-overflow-scrolling:touch;"></div>
+    </div>
     <div class="card" id="snap-to-track-card" style="margin-bottom:1.25rem;">
       <h2 class="card-label">Snap to Track</h2>
       <button id="snap-to-track-btn" class="snap-btn" onclick="snapToTrack()">
@@ -4108,6 +4116,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
               <div class="help-step-title">Log it again (after 5 pm)</div>
               <div class="help-step-desc">If you logged a wear in the last two weeks and nothing today, a banner appears after 5 pm offering yesterday&#8217;s watch as a one-tap log. <strong>Log it</strong> records it with your default visibility; <strong>Different watch</strong> takes you to Track. The daily reminder names the same watch.</div>
             </div>
+          <div class="help-step">
+            <div class="help-step-num">6</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Not worn in a while</div>
+              <div class="help-step-desc">A row of chips under Today&#8217;s Pick lists up to five watches you haven&#8217;t worn for 30+ days (never-worn ones count from the day you added them), longest first. Tap a chip to open the log sheet for that watch.</div>
+            </div>
+          </div>
           </div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span>Logged the wrong watch or use case? Tap the <strong>pencil icon</strong> on any feed card or in the Wear History table to edit it.</span></div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span>Every wear surfaces a <strong>fun fact</strong> about that watch &#8212; a fresh bit of trivia each day you wear it. It shows when you log, and rides along on your post so others can read it too &#8212; tap it to read the whole thing.</span></div>
@@ -7991,7 +8006,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '16.14.49';
+const APP_VERSION = '16.16.21';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13643,6 +13658,23 @@ function collectionValueSummary(watches, today, staleDays = 60) {
 }
 
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function neglectedWatches({ watches, logs, today, minDays = 30, limit = 5, excluded = null }) {
+  const day = (s) => new Date(String(s).slice(0, 10) + 'T00:00:00').getTime();
+  const t0 = day(today);
+  const last = {};
+  (logs || []).forEach(l => { if (isWearEntry(l) && l.date && (!last[l.watchId] || l.date > last[l.watchId])) last[l.watchId] = l.date; });
+  const out = [];
+  (watches || []).forEach(w => {
+    if (!w || (excluded && excluded.has(w.id))) return;
+    const since = last[w.id] || (w.createdAt ? String(w.createdAt).slice(0, 10) : null);
+    if (!since) return;
+    const days = Math.round((t0 - day(since)) / 86400000);
+    if (days >= minDays) out.push({ w, days, neverWorn: !last[w.id] });
+  });
+  return out.sort((a, b) => b.days - a.days).slice(0, limit);
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
 function shouldRevealBadges({ earnedCount, unseenCount, lastRevealedCount }) {
   return unseenCount > 0 && earnedCount > (lastRevealedCount || 0);
 }
@@ -17941,7 +17973,7 @@ async function loadAdminStats(force = false) {
     // One parallel batch (was four sequential awaits — the three slowest RPCs
     // each cost a full round-trip before the next started). 20 s, not 10: on a
     // cold cache these recompute concurrently on a 2-vCPU instance.
-    const [dodRes, factRes, dauRes, unsubRes, engineRes, pushRes, wlShareRes, trendRes, histRes] = await withTimeout(Promise.all([
+    const [dodRes, factRes, dauRes, unsubRes, engineRes, pushRes, wlShareRes, trendRes, histRes, idoRes] = await withTimeout(Promise.all([
       // Day-over-day: single RPC (SECURITY DEFINER, excludes internal accounts)
       db.rpc('admin_dod_counts', cacheArgs),
       // Fun-fact engagement + generation (totals + last-24h deltas)
@@ -17952,6 +17984,7 @@ async function loadAdminStats(force = false) {
       db.rpc('admin_unsub_stats'), db.rpc('admin_engine_stats', cacheArgs), db.rpc('admin_push_stats'),
       db.rpc('admin_wishlist_share_stats'), db.rpc('admin_per_user_trend', cacheArgs),
       db.rpc('admin_feature_event_stats', { p_event: 'accuracy_history_viewed' }),
+      db.rpc('admin_feature_event_stats', { p_event: 'identify_outcome', p_key: 'outcome' }),
     ]), 20000);
     const dod = dodRes.data || {};
     const fc = factRes.data || {};
@@ -17961,6 +17994,9 @@ async function loadAdminStats(force = false) {
     const push = pushRes.data || {};
     const wls = wlShareRes.data || {};
     const hist = histRes.data || {};
+    const ido = idoRes.data || {};
+    const idoBy = ido.by_source || {};
+    const idoDecided = (Number(idoBy.accepted) || 0) + (Number(idoBy.edited) || 0) + (Number(idoBy.rejected) || 0);
     // Per-user averages w/w + m/m: numerator/denominator snapshots as of now, 7d
     // and 30d ago (external only) from one RPC, so each delta is avg_now − avg_then
     // under identical definitions. Spec: sql/2026-08-15-admin-per-user-trend.sql.
@@ -18281,6 +18317,9 @@ async function loadAdminStats(force = false) {
         ${statRow('Accuracy history views', Number(hist.events_total) || 0, Number(hist.events_24h) || 0,
           Object.entries(hist.by_source || {}).map(([k, v]) => k + ' ' + v).join(' · '))}
         ${statRow('Accuracy history viewers', Number(hist.users_total) || 0, Number(hist.users_24h) || 0)}
+        ${statRow('Identify outcomes', Number(ido.events_total) || 0, Number(ido.events_24h) || 0,
+          ['accepted', 'edited', 'rejected', 'failed'].filter(k => idoBy[k]).map(k => k + ' ' + idoBy[k]).join(' · '))}
+        ${statRow('Identify accept rate', idoDecided ? Math.round((Number(idoBy.accepted) || 0) / idoDecided * 100) + '%' : '—', null, 'accepted / (accepted + edited + rejected)')}
         ${engineRow('Measurements — Pro V2', eng.prov2_sessions, eng.prov2_users, eng.prov2_sessions_24h, eng.prov2_sessions_prev24h)}
         ${engineRow('Measurements — Original', eng.orig_sessions, eng.orig_users, eng.orig_sessions_24h, eng.orig_sessions_prev24h)}
         ${statRow('Email Unsubs (total)', Number(unsub.unsub_total) || 0, null, (Number(unsub.unsub_24h) || 0) + ' (24h)' + inlineDelta((Number(unsub.unsub_24h) || 0) - (Number(unsub.unsub_prev24h) || 0), true))}
@@ -20152,6 +20191,7 @@ function renderTrack(force) {
   if (!force && _lastRenderedGen.track === _dataGen) return;
   _lastRenderedGen.track = _dataGen;
   renderWatchRecommendation();
+  renderNeglectedStrip();
   renderWatchSelector();
   renderTrackHistory();
   maybeShowLogAgainBanner();
@@ -24030,6 +24070,27 @@ function recCardHTML(rec) {
   </div>`;
 }
 
+// "Not worn in a while": up to 5 watches unworn ≥30 days (never-worn counted from the day
+// they were added), longest first, excluding today's pick. Tap → the log sheet for that
+// watch. 22% of active loggers' watches had never been logged on 2026-08-15.
+function renderNeglectedStrip() {
+  const wrap = document.getElementById('neglected-strip');
+  const el = document.getElementById('neglected-chips');
+  if (!wrap || !el) return;
+  if (!currentUser || _isDemoMode || watches.length < 2) { wrap.style.display = 'none'; return; }
+  const excluded = new Set(_currentRecWatchId ? [_currentRecWatchId] : []);
+  const list = neglectedWatches({ watches, logs, today: todayStr(), minDays: 30, limit: 5, excluded });
+  if (!list.length) { wrap.style.display = 'none'; return; }
+  el.innerHTML = list.map(({ w, days, neverWorn }) => `
+    <button onclick="openTrackModal('${escAttr(w.id)}'); if (window.posthog) posthog.capture('neglected_chip_tapped', { days: ${days} });"
+      style="flex:0 0 auto;display:flex;align-items:center;gap:.4rem;max-width:230px;padding:.35rem .6rem .35rem .4rem;border:1px solid var(--border);background:var(--surface);border-radius:999px;cursor:pointer;font-family:inherit;color:var(--text);min-height:36px;">
+      <span style="width:24px;height:24px;border-radius:50%;background:${escAttr(w.color || '#94a3b8')};flex-shrink:0;display:inline-block;overflow:hidden;">${w.image ? `<img ${thumbSrcAttrs(w.image)} alt="" style="width:100%;height:100%;object-fit:cover;display:block;">` : ''}</span>
+      <span style="font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml([w.brand, w.name].filter(Boolean).join(' '))}</span>
+      <span style="font-size:.7rem;color:var(--muted);white-space:nowrap;">${neverWorn ? 'never' : days + 'd'}</span>
+    </button>`).join('');
+  wrap.style.display = '';
+}
+
 function renderWatchRecommendation() {
   const el = document.getElementById('rec-container');
   if (!el) return;
@@ -26115,6 +26176,7 @@ async function af2RunDetectAndIdentify(base64) {
             caliber: id.caliber || '', caseMaterial: id.caseMaterial || '',
             caseDiameter: id.caseDiameter || '',
           });
+          w._af2Identified = { brand: w.brand, model: w.model, reference: w.reference, confidence: w.confidence };
           w._af2Duplicate = watches.some(ew =>
             ew.brand && w.brand && ew.brand.toLowerCase() === w.brand.toLowerCase()
             && ew.name && w.model && ew.name.toLowerCase() === w.model.toLowerCase()
@@ -26247,6 +26309,7 @@ async function af2Confirm(idx) {
     }
     if (window.posthog) posthog.capture('watch_added', { brand: watchData.brand, source: 'photo_v2' });
     w._af2WatchId = newId;
+    logIdentifyOutcome(w, 'accepted');
   } catch (e) {
     console.error('[WRotate] af2 add error:', e);
     toast('Failed to add watch: ' + (e?.message || e), 'error');
@@ -26396,6 +26459,22 @@ async function af2RunPrice(idx) {
 function af2ConfirmAll() {
   _af2Watches.forEach((w, i) => { if (w._af2State === 'identified') af2Confirm(i); });
 }
+// P7 step 1 — did the user accept what the AI identified? Written to feature_events (admin
+// Usage tab) and PostHog. 'accepted' = added with brand/model/ref as identified; 'edited' =
+// added after changing one of them (meta.changed lists which); 'rejected' = skipped an
+// identified result; 'failed' = the AI returned nothing.
+function logIdentifyOutcome(w, outcome) {
+  if (!currentUser || _isDemoMode || w._af2OutcomeLogged) return;
+  w._af2OutcomeLogged = true;
+  const id = w._af2Identified || {};
+  const norm = (v) => String(v || '').trim().toLowerCase();
+  const changed = ['brand', 'model', 'reference'].filter(k => id[k] !== undefined && norm(id[k]) !== norm(w[k]));
+  const finalOutcome = outcome === 'accepted' && changed.length ? 'edited' : outcome;
+  const meta = { outcome: finalOutcome, changed, confidence: id.confidence || null };
+  db.from('feature_events').insert({ user_id: currentUser.id, event: 'identify_outcome', meta }).then(() => {});
+  if (window.posthog) posthog.capture('identify_outcome', meta);
+}
+
 function af2SkipAll() {
   _af2Watches.forEach((w, i) => { if (w._af2State === 'identified') af2Skip(i); });
 }
@@ -26403,6 +26482,8 @@ function af2SkipAll() {
 function af2Skip(idx) {
   const w = _af2Watches[idx];
   if (!w || !['identified', 'failed', 'waiting', 'identifying'].includes(w._af2State)) return;
+  if (w._af2State === 'identified') logIdentifyOutcome(w, 'rejected');
+  else if (w._af2State === 'failed') logIdentifyOutcome(w, 'failed');
   if (w._af2SkipResolve) { w._af2SkipResolve(); w._af2SkipResolve = null; }
   w._af2State = 'skipped';
   w._af2UndoTimer = true;

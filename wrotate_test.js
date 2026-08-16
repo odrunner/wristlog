@@ -1843,6 +1843,23 @@ export function collectionValueSummary(watches, today, staleDays = 60) {
     gainPct: paidOfGain > 0 ? gain / paidOfGain * 100 : null, lastChecked, daysSinceChecked, staleCount };
 }
 
+// Watches not worn in a while (Track strip): days since last wear, or since added if never worn.
+export function neglectedWatches({ watches, logs, today, minDays = 30, limit = 5, excluded = null }) {
+  const day = (s) => new Date(String(s).slice(0, 10) + 'T00:00:00').getTime();
+  const t0 = day(today);
+  const last = {};
+  (logs || []).forEach(l => { if (isWearEntry(l) && l.date && (!last[l.watchId] || l.date > last[l.watchId])) last[l.watchId] = l.date; });
+  const out = [];
+  (watches || []).forEach(w => {
+    if (!w || (excluded && excluded.has(w.id))) return;
+    const since = last[w.id] || (w.createdAt ? String(w.createdAt).slice(0, 10) : null);
+    if (!since) return;
+    const days = Math.round((t0 - day(since)) / 86400000);
+    if (days >= minDays) out.push({ w, days, neverWorn: !last[w.id] });
+  });
+  return out.sort((a, b) => b.days - a.days).slice(0, limit);
+}
+
 // Whether to pop the badge-reveal modal on app open: only when there are unseen
 // earned badges AND the earned count has grown since the last reveal (a localStorage
 // high-water mark), so it fires once per new-badge batch and never re-nags a user
