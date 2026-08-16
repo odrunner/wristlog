@@ -1720,6 +1720,19 @@ export function hasWornToday(logs, watchId, today) {
   return (logs || []).some(l => l && l.watchId === watchId && l.date === today && isWearEntry(l));
 }
 
+// Label for one unsaved measurement session row (measurement_sessions) shown in the
+// watch accuracy panel's "Unsaved readings" block.
+export function unsavedReadingLabel(row, now = new Date()) {
+  const r = Number(row.rate);
+  const rateStr = (r > 0 ? '+' : r < 0 ? '-' : '') + Math.abs(r).toFixed(1) + ' s/d';
+  const ampStr = row.amplitude ? 'Amp: ' + row.amplitude + '°' : '';
+  const d = new Date(row.created_at);
+  const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day(now) - day(d)) / 86400000);
+  const dateStr = diff <= 0 ? 'Today' : diff === 1 ? 'Yesterday' : diff + ' days ago';
+  return { rateStr, dateStr, ampStr };
+}
+
 // Whether to pop the badge-reveal modal on app open: only when there are unseen
 // earned badges AND the earned count has grown since the last reveal (a localStorage
 // high-water mark), so it fires once per new-badge batch and never re-nags a user

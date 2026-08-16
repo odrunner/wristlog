@@ -2845,6 +2845,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="eyebrow eyebrow-muted">August 2026</span>
       </div>
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Unsaved Readings</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Measured a watch and didn&#8217;t save? Every reading that converged now waits under <strong>Unsaved readings</strong> in that watch&#8217;s Accuracy section for 30 days. Tap <strong>Keep</strong> to add it to the history, or &#10005; to let it go.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Wishlist Share Links</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Share part of your wishlist by link. Tap <strong>Share</strong> on the Wishlist tab, tick the watches you want &#8212; or a whole brand folder in one tap &#8212; and send a link that shows the photo, brand, model, reference and any link you saved. Add a note to go with it &#8212; who it&#8217;s for, sizes, budget, anything you want to say. Your prices, notes and tags stay private, the recipient needs no account, and you can revoke any link you&#8217;ve sent.</div>
       </div>
@@ -4010,6 +4014,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-body">
               <div class="help-step-title">The Pro V2 engine &#9889; (default)</div>
               <div class="help-step-desc">On app version 2.1+, <strong>Pro V2</strong> is the engine that runs by default &#8212; a rebuilt detection core that holds steadier between runs and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing (healthy watches typically read 220&#8211;300&deg;). It also shows the averaged tick/tock waveform under the chart; sharp spikes mean a clean signal. Amplitude appears only when the signal is clean enough to trust. With Pro V2 running, the gear offers its own settings: a <strong>Precision</strong> preset &#8212; Quick (~10s), Balanced (~17s, recommended) or Strict (~33s, tightest) &#8212; and the movement&#8217;s lift angle (52&deg; fits most modern movements). Longer settings listen to more of the watch before answering, so they repeat more closely; measuring twice and comparing is the quickest way to know a reading is trustworthy. Prefer the previous engine? Pick <strong>Standard</strong> from the engine selector anytime.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">7</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Unsaved readings</div>
+              <div class="help-step-desc">Measured a watch but didn&#8217;t tap Save? For 30 days those readings appear under <strong>Unsaved readings</strong> at the top of that watch&#8217;s Accuracy section (open the watch, expand <strong>Accuracy</strong>). Tap <strong>Keep</strong> to add one to the history, or &#10005; to let it go.</div>
             </div>
           </div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Measure in a quiet environment for best results. Watches with display casebacks (transparent backs) produce a stronger signal than solid steel cases.</span></div>
@@ -7878,7 +7889,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '16.08.23';
+const APP_VERSION = '16.08.30';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13367,6 +13378,18 @@ function shouldPromptFirstWear(state) {
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
 function hasWornToday(logs, watchId, today) {
   return (logs || []).some(l => l && l.watchId === watchId && l.date === today && isWearEntry(l));
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function unsavedReadingLabel(row, now = new Date()) {
+  const r = Number(row.rate);
+  const rateStr = (r > 0 ? '+' : r < 0 ? '-' : '') + Math.abs(r).toFixed(1) + ' s/d';
+  const ampStr = row.amplitude ? 'Amp: ' + row.amplitude + '°' : '';
+  const d = new Date(row.created_at);
+  const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day(now) - day(d)) / 86400000);
+  const dateStr = diff <= 0 ? 'Today' : diff === 1 ? 'Yesterday' : diff + ' days ago';
+  return { rateStr, dateStr, ampStr };
 }
 
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
@@ -30385,7 +30408,7 @@ async function loadTgHistory() {
   const { data, error } = await db.from('timegrapher_results').select('*')
     .eq('user_id', currentUser.id).eq('watch_id', _tgWatchId)
     .order('created_at', { ascending: false }).limit(20);
-  if (error || !data || data.length === 0) { listEl.innerHTML = '<div style="color:var(--muted);font-size:.82rem;">No readings yet.</div>'; updateAccuracySummary(); return; }
+  if (error || !data || data.length === 0) { listEl.innerHTML = '<div style="color:var(--muted);font-size:.82rem;">No readings yet.</div>'; updateAccuracySummary(); loadUnsavedReadings(); return; }
   // Demo mode: hide all readings, prompt sign-up
   if (_isDemoMode) {
     listEl.innerHTML = `<div style="text-align:center;padding:1rem 0;">
@@ -30421,6 +30444,7 @@ async function loadTgHistory() {
   // Store data for edit lookups
   listEl._tgData = data;
   updateAccuracySummary();
+  loadUnsavedReadings();
 }
 
 function editTgResult(id) {
@@ -30442,6 +30466,56 @@ async function deleteTgResult(id) {
   if (error) { toast('Delete failed', 'error'); return; }
   toast('Deleted');
   loadTgHistory();
+}
+
+// ── Unsaved readings ────────────────────────────────────────────────────────
+// Converged measurement sessions the user never saved (measurement_sessions, filled by a
+// DB trigger from every session_summary). 75% of converged sessions were never saved, so
+// the accuracy panel offers them back for 30 days: Keep writes a timegrapher_results row
+// and links it; ✕ hides the session for good. Rendered above the saved history.
+async function loadUnsavedReadings() {
+  const listEl = document.getElementById('tg-history-list');
+  let box = document.getElementById('tg-unsaved-box');
+  if (!box && listEl && listEl.parentNode) {
+    box = document.createElement('div'); box.id = 'tg-unsaved-box';
+    listEl.parentNode.insertBefore(box, listEl);
+  }
+  if (!box) return;
+  if (!currentUser || _isDemoMode || !_tgWatchId) { box.innerHTML = ''; return; }
+  const { data, error } = await db.rpc('unsaved_measurement_sessions', { p_watch: _tgWatchId });
+  if (error || !data || !data.length) { box.innerHTML = ''; box._rows = []; return; }
+  box._rows = data;
+  box.innerHTML = `<div style="margin:.35rem 0 .6rem;padding:.55rem .7rem;border:1px dashed var(--border);border-radius:var(--radius-sm);">
+    <div style="font-size:.72rem;font-weight:600;color:var(--gold-text);letter-spacing:.04em;text-transform:uppercase;margin-bottom:.3rem;">Unsaved readings (${data.length})</div>
+    ${data.map(r => { const l = unsavedReadingLabel(r); return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem 0;font-size:.8rem;">
+      <div><span style="font-weight:600;">${l.rateStr}</span>${l.ampStr ? `<span style="color:var(--muted);margin-left:.4rem;">${l.ampStr}</span>` : ''}<span style="color:var(--muted);margin-left:.4rem;font-size:.72rem;">${l.dateStr}</span></div>
+      <div style="display:flex;gap:.6rem;align-items:center;">
+        <button onclick="keepUnsavedReading(${Number(r.id)})" style="background:var(--gold);color:#fff;border:none;border-radius:6px;padding:.25rem .6rem;font-size:.72rem;font-weight:600;cursor:pointer;min-height:32px;font-family:inherit;">Keep</button>
+        <button onclick="dismissUnsavedReading(${Number(r.id)})" aria-label="Dismiss reading" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;min-height:32px;min-width:32px;">✕</button>
+      </div></div>`; }).join('')}
+  </div>`;
+}
+async function keepUnsavedReading(rowId) {
+  if (demoGuard()) return;
+  const box = document.getElementById('tg-unsaved-box');
+  const r = box?._rows?.find(x => Number(x.id) === Number(rowId));
+  if (!r) return;
+  const { data: ins, error } = await db.from('timegrapher_results').insert({
+    user_id: currentUser.id, watch_id: r.watch_id, rate: Number(r.rate), beat_error: null,
+    bph: r.bph || 28800, source: 'auto', notes: null,
+    amplitude: r.amplitude ?? null, duration_seconds: r.duration_sec ?? null,
+    tick_count: null, rate_std: null, position: null, tick_data: null,
+  }).select('id').single();
+  if (error) { toast('Could not save — ' + error.message, 'error'); return; }
+  await db.from('measurement_sessions').update({ saved_result_id: ins.id }).eq('id', rowId);
+  toast('Reading saved!');
+  if (window.posthog) posthog.capture('accuracy_reading_saved', { source: 'auto', from: 'unsaved_readings' });
+  loadTgHistory();
+}
+async function dismissUnsavedReading(rowId) {
+  if (demoGuard()) return;
+  await db.from('measurement_sessions').update({ dismissed_at: new Date().toISOString() }).eq('id', rowId);
+  loadUnsavedReadings();
 }
 
 // ── Standalone Measure Modal ──
@@ -32148,7 +32222,7 @@ async function persistMsrReading() {
     // No user-facing position picker exists yet; this reads the admin batch-runner field
     // so unattended runs are at least labelled. A real picker is a separate change.
     const position = (document.getElementById('mic-batch-position')?.value || '').trim() || null;
-    const { error } = await db.from('timegrapher_results').insert({
+    const { data, error } = await db.from('timegrapher_results').insert({
       user_id: currentUser.id, watch_id: watchId,
       rate, beat_error: beatError, bph, source: 'auto', notes,
       amplitude: _msrLastAmp != null ? Math.round(_msrLastAmp) : null,
@@ -32157,8 +32231,12 @@ async function persistMsrReading() {
       rate_std: _msrLastRateStd,
       position,
       tick_data: tickData
-    });
+    }).select('id').single();
     if (error) { toast('Could not save — ' + error.message, 'error'); return { ok: false }; }
+    // Link the saved row to its measurement session so it drops out of "Unsaved readings".
+    if (_tgDebugSessionId && data?.id) {
+      db.from('measurement_sessions').update({ saved_result_id: data.id }).eq('session_id', _tgDebugSessionId).then(() => {});
+    }
     toast('Reading saved!');
     if (window.posthog) posthog.capture('accuracy_reading_saved', { source: 'auto', from: 'measure_modal' });
     return { ok: true, watchId, rate };
