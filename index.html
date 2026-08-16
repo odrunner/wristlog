@@ -2861,6 +2861,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Every measurement that converges cleanly is now kept automatically &#8212; no Save tap; use <strong>Discard this reading</strong> if you don&#8217;t want one. And your history lives where you measure: an <strong>Accuracy history</strong> card under the chart shows the selected watch&#8217;s latest reading and trend, and the trend icon in the header (or the card) opens the full view &#8212; one dot per day, &plusmn;5 / &plusmn;15 s/d bands, 1M / 3M / 1Y / All, every reading listed by day. Your earlier measurements have been brought in, so most watches start with a trend already.</div>
       </div>
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Follow From the Bell</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">When someone likes or comments on your post and you don&#8217;t follow them yet, the notification now carries a one-tap <strong>Follow</strong> (or <strong>Request</strong> for private profiles) &#8212; no detour through their profile. New sign-ups with Google also start with their Google photo as avatar (change or remove it any time in your profile).</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Collection Value on Stats</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">The <strong>Collection Value</strong> tile on Stats now says when your values were last checked and how many are stale or missing &#8212; and tapping it runs <strong>Update prices</strong> for the whole collection.</div>
       </div>
@@ -7977,13 +7981,34 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '16.12.13';
+const APP_VERSION = '16.12.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
 // ══════════════════════════════════════════
 
 // ── Helpers ───────────────────────────────────────────────────────────────
+// Google sign-in hands us a profile picture (user_metadata.avatar_url / picture); Apple
+// doesn't. 8 avatars in 515 profiles made every bell row and feed card a grey initial.
+// Called ONCE, right after a brand-new profile is created (new signups only — existing
+// profiles are never touched). The user can replace or remove it like any avatar.
+async function maybeImportProviderAvatar() {
+  try {
+    if (!currentUser || !myProfile || _isDemoMode) return;
+    if (myProfile.avatar_url) return;
+    const meta = currentUser.user_metadata || {};
+    const pic = meta.avatar_url || meta.picture || '';
+    if (!/^https:\/\//.test(pic)) return;
+    const { error } = await db.from('profiles').update({ avatar_url: pic }).eq('id', currentUser.id).is('avatar_url', null);
+    if (error) return;
+    myProfile = { ...myProfile, avatar_url: pic };
+    delete _profileCache[currentUser.id];
+    const btn = document.getElementById('profile-btn');
+    if (btn) btn.innerHTML = `<img ${thumbSrcAttrs(pic)} alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    if (window.posthog) posthog.capture('avatar_imported', { provider: meta.iss && String(meta.iss).includes('apple') ? 'apple' : 'google' });
+  } catch (_) { /* best effort */ }
+}
+
 function profileInitials(p) {
   if (!p) return '';
   if (p.avatar_url) {
@@ -8338,6 +8363,7 @@ async function loadMyProfile() {
     return;
   }
   myProfile = data;
+  if (isNewUser) maybeImportProviderAvatar();   // new signups only — no import for existing profiles
   // Capture IANA timezone for server-side daily reminders (writes only when it changes).
   try {
     const _tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -10650,7 +10676,7 @@ async function loadNotifications() {
   try {
     const actorIds = [...new Set(rows.map(n => n.actor_id).filter(Boolean))];
     if (actorIds.length) {
-      const { data: ps } = await db.from('profiles').select('id, username, display_name, avatar_url, is_official').in('id', actorIds);
+      const { data: ps } = await db.from('profiles').select('id, username, display_name, avatar_url, is_official, profile_privacy').in('id', actorIds);
       (ps || []).forEach(p => pMap[p.id] = p);
     }
     const clubNotifTypes = ['club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted'];
@@ -10808,6 +10834,22 @@ async function declineFollowRequest(requesterId, notifId) {
   updateBellBadge();
   renderNotificationPanel();
 }
+const ENGAGE_NOTIF_TYPES = ['like', 'comment', 'comment_also', 'comment_like', 'mention'];
+// Follow (or Request, for a private profile) the person behind a like/comment row.
+async function followFromNotif(userId, notifId) {
+  if (demoGuard()) return;
+  if (!currentUser || userId === currentUser.id || following.has(userId)) return;
+  const notif = userNotifs.find(n => n.id === notifId);
+  const isPrivate = notif?.actor?.profile_privacy === 'private';
+  if (window.posthog) posthog.capture('follow_from_notif', { type: notif?.type || null, request: isPrivate });
+  if (isPrivate) {
+    await sendFollowRequest(userId, null);
+    if (pendingRequests.has(userId)) userNotifs.forEach(n => { if (n.actor_id === userId) n._requested = true; });
+    renderNotificationPanel();
+    return;
+  }
+  await followBackFromNotif(userId, notifId);
+}
 async function followBackFromNotif(userId, notifId) {
   if (!currentUser || following.has(userId)) return;
   const { error } = await db.from('follows').insert({ follower_id: currentUser.id, following_id: userId });
@@ -10816,10 +10858,10 @@ async function followBackFromNotif(userId, notifId) {
   db.from('notifications').insert({ user_id: userId, type: 'follow', actor_id: currentUser.id, is_read: false })
     .then(({ error }) => { if (error) console.error('[WristLog] follow-back notif:', error.message); })
     .catch(e => console.error('[WristLog] follow-back notif network error:', e));
-  const notif = userNotifs.find(n => n.id === notifId);
-  if (notif) notif._followedBack = true;
+  userNotifs.forEach(n => { if (n.actor_id === userId) n._followedBack = true; });
   renderNotificationPanel();
   toast('Following!');
+  loadFeed();
 }
 function confirmUnfollow(userId, btn) {
   if (_followInFlight.has(userId)) return;
@@ -11049,6 +11091,13 @@ function renderNotificationPanel() {
       <div class="notif-follow-actions">
         <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
           onclick="event.stopPropagation();followBackFromNotif('${n.actor_id}','${n.id}')">Follow Back</button>
+      </div>`
+      // Someone engaged with your post and you don't follow them: one tap to reciprocate
+      // (Request for private profiles). 239 of 289 such pairs were unfollowed on 2026-08-16.
+      : ENGAGE_NOTIF_TYPES.includes(n.type) && n.actor && n.actor_id !== currentUser?.id && !following.has(n.actor_id) && !n._followedBack && !pendingRequests.has(n.actor_id) && !n._requested ? `
+      <div class="notif-follow-actions">
+        <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .7rem;border-color:var(--gold);color:var(--gold-text);"
+          onclick="event.stopPropagation();followFromNotif('${n.actor_id}','${n.id}')">${n.actor.profile_privacy === 'private' ? 'Request' : 'Follow'}</button>
       </div>`
       : n.type === 'club_join_request' ? `
       <div class="notif-follow-actions">
