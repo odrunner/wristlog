@@ -355,14 +355,20 @@ struct WebView: UIViewRepresentable {
                             }
                         }
                     } else if action == "requestPushPermission" {
-                        // Warm ask, driven by the in-app primer — report the result back to JS.
+                        // The one-shot FULL ask (sign-in only asks provisionally). JS fires
+                        // this after the user acted on a quiet notification, or from the
+                        // settings row's "Deliver prominently". Report the result back.
                         let wv = message.webView ?? self.webView
-                        PushManager.shared.requestPermissionAndRegister { status in
+                        PushManager.shared.requestPermissionAndRegister(full: true) { status in
                             DispatchQueue.main.async { self.reportPushStatus(status, to: wv) }
                         }
                     } else if action == "openAppSettings" {
                         DispatchQueue.main.async {
-                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                            // Land on WRotate's own Notifications pane where iOS allows it,
+                            // not the Settings root — the only recovery path for "denied".
+                            var str = UIApplication.openSettingsURLString
+                            if #available(iOS 15.4, *) { str = UIApplication.openNotificationSettingsURLString }
+                            if let url = URL(string: str) {
                                 UIApplication.shared.open(url)
                             }
                         }

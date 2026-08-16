@@ -176,11 +176,14 @@ struct ContentView: View {
         case "badges":
             js = "if(typeof openBadgeWall==='function') openBadgeWall();"
         default:
-            // "bell", or a route whose target didn't survive — open the panel so
-            // the tap always lands somewhere the notification is visible.
-            js = "if(typeof openNotifPanel==='function') openNotifPanel();"
+            // Unknown / new routes ("track", "measure", …) are resolved in JS, so a new
+            // notification type never needs an App Store build. JS falls back to the
+            // bell itself when it doesn't recognise the route either.
+            js = "if(typeof openPushRoute==='function') openPushRoute('\(pending.route)','\(id)'); else if(typeof openNotifPanel==='function') openNotifPanel();"
         }
-        webViewRef?.evaluateJavaScript(js, completionHandler: nil)
+        // _openedFromPush lets JS spend the one-shot full permission dialog only after
+        // the user acted on a quiet (provisional) notification — see shouldDeferredPushAsk.
+        webViewRef?.evaluateJavaScript("window._openedFromPush=true;" + js, completionHandler: nil)
     }
 
     private func dispatchPendingQuickAction() {
