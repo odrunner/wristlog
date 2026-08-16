@@ -357,7 +357,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Wrotate/Wrotate.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = JSNK92LRFD;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -374,7 +374,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.5;
+				MARKETING_VERSION = 2.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.wrotate.Wrotate;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -394,7 +394,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Wrotate/Wrotate.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = JSNK92LRFD;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -411,7 +411,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.5;
+				MARKETING_VERSION = 2.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.wrotate.Wrotate;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -429,7 +429,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = WRotateShare/WRotateShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = JSNK92LRFD;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WRotateShare/Info.plist;
@@ -440,7 +440,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.5;
+				MARKETING_VERSION = 2.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.wrotate.Wrotate.WRotateShare;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -457,7 +457,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = WRotateShare/WRotateShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = JSNK92LRFD;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WRotateShare/Info.plist;
@@ -468,7 +468,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.5;
+				MARKETING_VERSION = 2.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.wrotate.Wrotate.WRotateShare;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

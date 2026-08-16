@@ -136,7 +136,7 @@ struct WebView: UIViewRepresentable {
                 // NOT the bundle version — hand-maintained, so it must be bumped in the same
                 // commit as MARKETING_VERSION or it silently ships stale (2.4 build 1 did).
                 // 2.1+ gates the Pro V2 beta toggle; 2.3+ gates Pro V2 BE display.
-                window._iosAppVersion = '2.5';   // 2.5 = shared-image hand-off survives the foreground reload
+                window._iosAppVersion = '2.6';   // 2.6 = provisional push + JS push-route fallback
 
                 // Wait for Supabase client to be ready
                 var checkInterval = setInterval(function() {
