@@ -7878,7 +7878,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '15.16.58';
+const APP_VERSION = '15.21.18';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17863,18 +17863,19 @@ async function loadAdminStats(force = false) {
     // for the user total on the card above it.
     const usersTitle = `Users with a record (${profileList.length} of ${extUsers})`;
 
-    // "w/w +0.012 · m/m +0.067" for a per-user average: change in (metric / users)
-    // vs 7d and 30d ago, 3 decimals to match the value. Empty when the RPC failed.
+    // "w/w +1.2% · m/m +6.7%" for a per-user average: relative change in
+    // (metric / users) vs 7d and 30d ago, 1 decimal. Empty when the RPC failed
+    // or the earlier average was 0 (no meaningful % from zero).
     const trendSub = (key) => {
       const ratio = (snap) => snap && Number(snap.users) > 0 ? Number(snap[key]) / Number(snap.users) : null;
       const cur = ratio(trend.now);
       if (cur == null) return '';
       const part = (lbl, snap) => {
         const prev = ratio(snap);
-        if (prev == null) return '';
-        const d = cur - prev;
-        const color = d > 0.0005 ? 'var(--success)' : 'var(--muted)';
-        return lbl + ' <span style="color:' + color + ';font-weight:600;">' + (d > 0 ? '+' : '') + d.toFixed(3) + '</span>';
+        if (prev == null || prev === 0) return '';
+        const d = (cur - prev) / prev * 100;
+        const color = d > 0.05 ? 'var(--success)' : 'var(--muted)';
+        return lbl + ' <span style="color:' + color + ';font-weight:600;">' + (d > 0 ? '+' : '') + d.toFixed(1) + '%</span>';
       };
       return [part('w/w', trend.week), part('m/m', trend.month)].filter(Boolean).join(' · ');
     };

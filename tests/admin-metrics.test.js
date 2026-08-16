@@ -250,15 +250,15 @@ describe('Per-User Averages w/w + m/m', () => {
     expect(html).toContain(`null, trendSub('${key}'))`);
   });
 
-  it('trendSub computes avg_now − avg_then at 3 decimals for both windows', () => {
+  it('trendSub computes the % change in the average at 1 decimal for both windows', () => {
     const fn = html.match(/const trendSub = \(key\) => \{[\s\S]*?\n    \};/)[0];
     const trend = { now: { users: 514, watches: 1139 }, week: { users: 487, watches: 1087 }, month: { users: 415, watches: 892 } };
     const trendSub = new Function('trend', fn + ' return trendSub;')(trend);
     const out = trendSub('watches');
     expect(out).toContain('w/w');
     expect(out).toContain('m/m');
-    expect(out).toContain('-0.016'); // 2.216 - 2.232
-    expect(out).toContain('+0.067'); // 2.2160 - 2.1494
+    expect(out).toContain('-0.7%'); // 2.2160 / 2.2320 - 1
+    expect(out).toContain('+3.1%'); // 2.2160 / 2.1494 - 1
     expect(new Function('trend', fn + ' return trendSub;')({})('watches')).toBe('');
   });
 });
