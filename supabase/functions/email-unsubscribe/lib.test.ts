@@ -75,7 +75,7 @@ Deno.test("applyUnsubscribe — single category adds key if absent", () => {
 
 Deno.test("applyUnsubscribe — 'all' disables every category", () => {
   const out = applyUnsubscribe({ comments: true, mentions: true, friends: true, clubs: true, updates: true, reminders: true }, "all");
-  assertEquals(out, { comments: false, mentions: false, friends: false, clubs: false, updates: false, reminders: false });
+  assertEquals(out, { comments: false, mentions: false, friends: false, clubs: false, updates: false, reminders: false, digest: false });
 });
 
 Deno.test("applyUnsubscribe — mutates and returns the same object", () => {

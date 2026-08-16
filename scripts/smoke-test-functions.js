@@ -228,6 +228,24 @@ async function run() {
     );
   }
 
+  if (cronSecret) {
+    await check('send-value-digest (dry_run → candidate count)', async () => {
+      const r = await callFn('send-value-digest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-campaign-secret': cronSecret },
+        body: JSON.stringify({ dry_run: true }),
+      });
+      if (!r.ok) return r;
+      let n = null;
+      try { n = JSON.parse(r.body).candidates; } catch { /* fall through */ }
+      return { ...r, ok: Number.isInteger(n), body: `candidates=${n}` };
+    });
+  } else {
+    await check('send-value-digest (no secret → 401)', () =>
+      callFn('send-value-digest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dry_run: true }) }, 401)
+    );
+  }
+
   // --- Summary ---
   console.log(`\n  ${passed} passed, ${failed} failed\n`);
   process.exit(failed > 0 ? 1 : 0);
