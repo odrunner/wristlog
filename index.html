@@ -2862,7 +2862,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Collection Value on Stats</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Stats now opens with what your collection is worth: the total of your saved market values, how many watches are priced, gain vs paid where we know both, and which watches haven&#8217;t been checked in a while &#8212; with <strong>Update prices</strong> right there.</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">The <strong>Collection Value</strong> tile on Stats now says when your values were last checked and how many are stale or missing &#8212; and tapping it runs <strong>Update prices</strong> for the whole collection.</div>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Wishlist Share Links</div>
@@ -4372,7 +4372,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">—</div>
             <div class="help-step-body">
               <div class="help-step-title">Collection value</div>
-              <div class="help-step-desc">The <strong>Collection value</strong> card totals the market values you have saved (nothing is refreshed behind your back), shows how many watches are priced, gain vs paid where both numbers are known, and how many values are older than 60 days or missing. <strong>Update prices</strong> runs the market check for the whole collection.</div>
+              <div class="help-step-desc">The <strong>Collection Value</strong> tile totals the market values you have saved (nothing is refreshed behind your back) against what you paid, and says when they were last checked and how many are older than 60 days or missing. Tap the tile to run <strong>Update prices</strong> for the whole collection.</div>
             </div>
           </div>
           </div>
@@ -4945,8 +4945,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
 
     <div class="stats-row" id="stats-row"></div>
-
-    <div class="card" id="collection-value-card" style="margin-bottom:1.25rem;display:none;"></div>
 
     <div class="card" id="wear-leaderboard" style="margin-bottom:1.25rem;"></div>
 
@@ -7979,7 +7977,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '16.11.47';
+const APP_VERSION = '16.11.50';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23954,7 +23952,6 @@ function renderStats(force) {
   const fl = filteredLogs();
   renderStatsRow(fl);
   renderWearLeaderboard(fl);
-  renderCollectionValueCard();
   renderCollectionReport(fl);
   renderDowReport(fl);
   renderChUsecase(fl);
@@ -24069,6 +24066,20 @@ function renderStatsRow(fl) {
   } else {
     valHtml = '<div class="stat-sub">—</div>';
   }
+  // Freshness line + tap-to-refresh (folded in from the retired Collection value card):
+  // values only change when the user re-checks, so the tile says when that last was.
+  const cvs = collectionValueSummary(watches, todayStr());
+  const valTap = !!(currentUser && !_isDemoMode && watches.length);
+  let valFresh = '';
+  if (cvs.pricedCount) {
+    const bits = [];
+    bits.push(cvs.daysSinceChecked == null ? 'never checked' : cvs.daysSinceChecked === 0 ? 'checked today' : cvs.daysSinceChecked === 1 ? 'checked yesterday' : `checked ${cvs.daysSinceChecked}d ago`);
+    if (cvs.staleCount) bits.push(`${cvs.staleCount} stale`);
+    if (cvs.unpricedCount) bits.push(`${cvs.unpricedCount} unpriced`);
+    valFresh = `<div style="font-size:.66rem;color:var(--muted);margin-top:.35rem;">${bits.join(' · ')}${valTap ? ' · <span style="color:var(--gold-text);font-weight:600;">Update</span>' : ''}</div>`;
+  } else if (valTap) {
+    valFresh = `<div style="font-size:.66rem;color:var(--gold-text);font-weight:600;margin-top:.35rem;">Check values</div>`;
+  }
 
   // Watches with no wears in the selected period. The tile previously repeated
   // "Most Worn", which the leaderboard directly below already shows as row #1.
@@ -24087,9 +24098,10 @@ function renderStatsRow(fl) {
       <div class="stat-lbl" style="margin-bottom:.3rem">Not Worn</div>
       <div class="stat-sub">${unwornLbl}</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" ${valTap ? 'onclick="openUpdatePrices()" role="button" tabindex="0" style="cursor:pointer;" title="Update prices"' : ''}>
       <div class="stat-lbl" style="margin-bottom:.3rem">Collection Value</div>
       ${valHtml}
+      ${valFresh}
     </div>`;
 }
 
@@ -24282,35 +24294,6 @@ function renderChCollectionValue() {
       }
     }
   });
-}
-
-// Collection value — sums SAVED market values (no refresh, no invented movement). The
-// monthly digest email uses the same definition server-side (value_digest_targets).
-function renderCollectionValueCard() {
-  const el = document.getElementById('collection-value-card');
-  if (!el) return;
-  if (!watches.length) { el.style.display = 'none'; return; }
-  const s = collectionValueSummary(watches, todayStr());
-  el.style.display = '';
-  if (!s.pricedCount) {
-    el.innerHTML = `<div class="section-title">Collection value</div>
-      <div style="font-size:.85rem;color:var(--muted);margin:.3rem 0 .6rem;">Know what your ${s.watchCount} watch${s.watchCount === 1 ? ' is' : 'es are'} worth — estimates come from recent market listings.</div>
-      <button class="btn btn-primary btn-sm" onclick="openUpdatePrices()">Check values</button>`;
-    return;
-  }
-  const gainHtml = s.gainN > 0 ? `<div style="font-size:.82rem;margin-top:.15rem;color:${s.gain >= 0 ? 'var(--success)' : 'var(--danger)'};">${s.gain >= 0 ? '+' : '−'}${fmtMoney(Math.abs(s.gain))}${s.gainPct != null ? ` (${s.gain >= 0 ? '+' : '−'}${Math.abs(s.gainPct).toFixed(0)}%)` : ''} <span style="color:var(--muted);">vs paid, ${s.gainN} watch${s.gainN === 1 ? '' : 'es'}</span></div>` : '';
-  const checked = s.daysSinceChecked == null ? '' : s.daysSinceChecked === 0 ? 'checked today' : s.daysSinceChecked === 1 ? 'checked yesterday' : `last checked ${s.daysSinceChecked} days ago`;
-  const stale = [];
-  if (s.staleCount) stale.push(`${s.staleCount} not checked in 60+ days`);
-  if (s.unpricedCount) stale.push(`${s.unpricedCount} without a value`);
-  el.innerHTML = `<div class="section-title" style="display:flex;justify-content:space-between;align-items:baseline;">Collection value<span style="font-size:.7rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">${checked}</span></div>
-    <div style="font-size:1.5rem;font-weight:700;letter-spacing:-.01em;margin-top:.15rem;">${fmtMoney(s.total)}</div>
-    <div style="font-size:.78rem;color:var(--muted);">${s.pricedCount} of ${s.watchCount} watch${s.watchCount === 1 ? '' : 'es'} priced</div>
-    ${gainHtml}
-    ${stale.length ? `<div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-top:.6rem;padding-top:.6rem;border-top:1px solid var(--border);">
-      <div style="font-size:.78rem;color:var(--muted);">${stale.join(' · ')}</div>
-      <button class="btn btn-ghost btn-sm" style="white-space:nowrap;" onclick="openUpdatePrices()">Update prices</button>
-    </div>` : ''}`;
 }
 
 function renderCollectionReport(fl) {
