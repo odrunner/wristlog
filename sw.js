@@ -1,13 +1,18 @@
 // WristLog — Service Worker
 // Enables "Add to Home Screen" (PWA) and offline fallback
 
-const CACHE = 'wristlog-v1095';
-const PRECACHE = ['/', '/index.html', '/design-system.css', '/manifest.json', '/icon.svg', '/profile/', '/p/'];
+const CACHE = 'wristlog-v1096';
+// '/' and '/index.html' are the same ~494 KB (gzip) document — fetch it once and
+// store it under both keys, so a navigation to either URL still hits the cache
+// offline without downloading the shell twice on every release.
+const PRECACHE = ['/', '/design-system.css', '/manifest.json', '/icon.svg', '/profile/', '/p/'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE)
-      .then(c => c.addAll(PRECACHE))
+      .then(c => c.addAll(PRECACHE)
+        .then(() => c.match('/'))
+        .then(res => res ? c.put('/index.html', res.clone()) : undefined))
       .then(() => self.skipWaiting())
   );
 });

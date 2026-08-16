@@ -40,7 +40,9 @@ beforeEach(() => {
   cacheStore = {};
 
   mockCache = {
-    addAll: vi.fn(() => Promise.resolve()),
+    // addAll "downloads" each URL into the store, like the real Cache does
+    addAll: vi.fn(urls => { urls.forEach(u => { cacheStore[u] = makeResponse(); }); return Promise.resolve(); }),
+    match: vi.fn(req => Promise.resolve(cacheStore[typeof req === 'string' ? req : req.url])),
     put: vi.fn((req, res) => { cacheStore[typeof req === 'string' ? req : req.url] = res; return Promise.resolve(); }),
   };
 
@@ -88,7 +90,16 @@ describe('sw.js install', () => {
 
     expect(event.waitUntil).toHaveBeenCalled();
     expect(globalThis.caches.open).toHaveBeenCalledWith(CURRENT_CACHE);
-    expect(mockCache.addAll).toHaveBeenCalledWith(['/', '/index.html', '/design-system.css', '/manifest.json', '/icon.svg', '/profile/', '/p/']);
+    expect(mockCache.addAll).toHaveBeenCalledWith(['/', '/design-system.css', '/manifest.json', '/icon.svg', '/profile/', '/p/']);
+  });
+
+  it('stores the fetched shell under /index.html too instead of downloading it twice', async () => {
+    await loadSW();
+    await fireEvent('install');
+    expect(mockCache.addAll.mock.calls[0][0]).not.toContain('/index.html');
+    expect(mockCache.match).toHaveBeenCalledWith('/');
+    expect(mockCache.put).toHaveBeenCalledWith('/index.html', expect.anything());
+    expect(cacheStore['/index.html']).toBeTruthy();   // offline navigation to /index.html still served
   });
 
   it('calls skipWaiting after precaching', async () => {

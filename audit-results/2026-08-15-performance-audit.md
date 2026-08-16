@@ -228,6 +228,8 @@ supabase-js and CSS into SW-cached files.
 
 ## CLIENT-7 — MEDIUM: service worker precaches the shell twice and races navigations for 5 s
 
+> **PARTLY FIXED 2026-08-15** — precache fetches the shell once and stores it under both `/` and `/index.html` (verified: `/index.html` no longer downloaded on install; offline navigation to it still served). The 5 s race is **deliberately left**: it was tuned 3 s → 1.5 s → 5 s (2ee7143, then 2026-04-19) to keep returning users on fresh HTML after deploys; shortening it trades freshness for speed on slow links and was already tried the other way.
+
 `sw.js:5` `PRECACHE = ['/', '/index.html', …]` — two URLs, one 494 KB body, fetched twice on
 every SW bump (and the SW is bumped on every HTML/JS/CSS change). `sw.js:35-49` navigation is
 network-first with a `Promise.race` against **5 s** (comment says 3 s); the race resolves on
