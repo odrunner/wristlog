@@ -4531,7 +4531,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="page-header">
       <h1 class="page-title" style="flex:1;">Measure Accuracy</h1>
       <button id="msr-mode-chip" onclick="openMsrSettings()" style="display:none;align-items:center;gap:5px;background:var(--gold-dim);border:1px solid var(--gold);color:var(--gold-text);border-radius:999px;padding:3px 10px;font-size:.7rem;font-weight:600;line-height:1;cursor:pointer;white-space:nowrap;" aria-label="Active measurement mode — tap to change"></button>
-      <button id="msr-history-btn" onclick="openMsrHistory()" style="display:none;background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="Accuracy history" title="Accuracy history">
+      <button id="msr-history-btn" onclick="openMsrHistory('header')" style="display:none;background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="Accuracy history" title="Accuracy history">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>
       </button>
       <button id="msr-settings-gear" onclick="openMsrSettings()" style="display:none;background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="Advanced settings">
@@ -4772,7 +4772,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
       </div>
       <!-- Accuracy history hint for the selected watch: last reading + trend, tap for the History page -->
-      <div id="msr-history-hint" class="card" style="display:none;margin-top:1rem;padding:.8rem .95rem;cursor:pointer;" onclick="openMsrHistory()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openMsrHistory();}">
+      <div id="msr-history-hint" class="card" style="display:none;margin-top:1rem;padding:.8rem .95rem;cursor:pointer;" onclick="openMsrHistory('hint_card')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openMsrHistory('hint_card');}">
         <div style="display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;">
           <div style="font-size:.7rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Accuracy history</div>
           <div style="font-size:.75rem;color:var(--gold-text);font-weight:600;white-space:nowrap;">See all &rarr;</div>
@@ -7981,7 +7981,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '16.09.40';
+const APP_VERSION = '16.09.42';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -30900,8 +30900,9 @@ async function refreshMsrHistoryHint() {
   if (chart) chart.innerHTML = days.length >= 2 ? accuracyTrendSvg(filterDaysByRange(days, '3M'), { width: chart.clientWidth || 320, height: 64, pad: 8 }) : `<div style="font-size:.74rem;color:var(--muted);">Measure again on another day to see the trend.</div>`;
   card.style.display = '';
 }
-function openMsrHistory() {
+function openMsrHistory(source = 'header') {
   if (demoGuard()) return;
+  if (window.posthog) posthog.capture('accuracy_history_viewed', { source });
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-msr-history').classList.add('active');
   window.scrollTo(0, 0);
@@ -30920,6 +30921,7 @@ function closeMsrHistory() {
 }
 function setMsrHistRange(r) {
   _msrHistRange = r;
+  if (window.posthog) posthog.capture('accuracy_history_range', { range: r });
   document.querySelectorAll('#msr-hist-range .acc-chip').forEach(b => b.classList.toggle('active', b.dataset.range === r));
   _msrHistSelectedDay = null;
   renderMsrHistoryView();
@@ -30929,6 +30931,7 @@ async function renderMsrHistory() {
   _msrHistRows = await fetchAccuracyRows(watchId);
   _msrHistSelectedDay = null;
   renderMsrHistoryView();
+  if (window.posthog) posthog.capture('accuracy_history_watch_shown', { readings: _msrHistRows.length, days: groupReadingsByDay(_msrHistRows).length });
 }
 function renderMsrHistoryView() {
   const allDays = groupReadingsByDay(_msrHistRows);
@@ -30977,6 +30980,7 @@ function renderMsrHistoryView() {
 }
 function msrHistorySelectDay(date) {
   _msrHistSelectedDay = _msrHistSelectedDay === date ? null : date;
+  if (_msrHistSelectedDay && window.posthog) posthog.capture('accuracy_history_day_opened');
   renderMsrHistoryView();
 }
 async function discardHistoryReading(id) {
