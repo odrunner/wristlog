@@ -33,6 +33,11 @@ describe('filterDaysByRange', () => {
     { rate: 1, created_at: '2026-08-01T09:00' }, { rate: 1, created_at: '2026-08-15T09:00' },
   ]);
   const now = new Date('2026-08-16T12:00:00');
+  it('null / unknown range', () => {
+    expect(filterDaysByRange(null, '1M', now)).toEqual([]);
+    expect(filterDaysByRange(null, 'ALL', now)).toEqual([]);
+    expect(filterDaysByRange(days, 'bogus', now).length).toBe(4);
+  });
   it('1M / 3M / 1Y / ALL', () => {
     expect(filterDaysByRange(days, '1M', now).map(d => d.date)).toEqual(['2026-08-01', '2026-08-15']);
     expect(filterDaysByRange(days, '3M', now).map(d => d.date)).toEqual(['2026-06-01', '2026-08-01', '2026-08-15']);

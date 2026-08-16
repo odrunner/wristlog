@@ -37,4 +37,19 @@ describe('collectionValueSummary', () => {
     const s = collectionValueSummary([{ id: 'a', price: '100', marketPrice: '150', marketPriceDate: '2026-08-01' }], today);
     expect(s.total).toBe(150); expect(s.gain).toBe(50);
   });
+  it('null input, blank / non-numeric strings, priced watch without a date, equal dates', () => {
+    expect(collectionValueSummary(null, today).watchCount).toBe(0);
+    const s = collectionValueSummary([
+      null,
+      { id: 'a', price: '', marketPrice: 'abc', marketPriceDate: '2026-08-01' },      // not priced (NaN)
+      { id: 'b', price: 0, marketPrice: 100, marketPriceDate: null },                 // priced, no date → stale, no gain (paid 0)
+      { id: 'c', price: 50, marketPrice: 100, marketPriceDate: '2026-08-10' },
+      { id: 'd', price: 50, marketPrice: 100, marketPriceDate: '2026-08-10' },        // same date as c
+    ], today);
+    expect(s.watchCount).toBe(4);
+    expect(s.pricedCount).toBe(3);
+    expect(s.staleCount).toBe(1);
+    expect(s.gainN).toBe(2);
+    expect(s.lastChecked).toBe('2026-08-10');
+  });
 });

@@ -23,4 +23,7 @@ describe('unsavedReadingLabel', () => {
     expect(unsavedReadingLabel({ rate: 1, created_at: '2026-08-15T08:00:00' }, now).dateStr).toBe('Yesterday');
     expect(unsavedReadingLabel({ rate: 1, created_at: '2026-08-10T08:00:00' }, now).dateStr).toBe('6 days ago');
   });
+  it('zero rate has no sign', () => {
+    expect(unsavedReadingLabel({ rate: 0, created_at: '2026-08-14T09:00:00Z' }, now).rateStr).toBe('0.0 s/d');
+  });
 });

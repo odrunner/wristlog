@@ -31,4 +31,10 @@ describe('logAgainCandidate', () => {
     expect(logAgainCandidate({ ...base, logs: [] })).toBeNull();
     expect(logAgainCandidate({ ...base, logs: [{ watchId: 'w1', date: '2026-08-20' }] })).toBeNull();
   });
+  it('tolerates null logs / watches / malformed entries and same-date ties', () => {
+    expect(logAgainCandidate({ ...base, logs: null })).toBeNull();
+    expect(logAgainCandidate({ ...base, logs: [null, { watchId: 'w1' }, { watchId: 'w1', date: '2026-08-15' }], watches: null })).toBeNull();
+    const tie = [{ watchId: 'w2', date: '2026-08-15' }, { watchId: 'w1', date: '2026-08-15' }, { watchId: 'w2', date: '2026-08-14' }];
+    expect(['w1', 'w2']).toContain(logAgainCandidate({ ...base, logs: tie }).id);
+  });
 });
