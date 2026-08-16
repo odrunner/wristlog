@@ -1,16 +1,23 @@
 import { assertEquals, assertStringIncludes } from "jsr:@std/assert";
 import { buildReminderEmail, buildReminderPush, buildHtmlEmail, unsubUrl } from "./lib.ts";
 
-Deno.test("buildReminderPush — fixed nudge with WRotate title", () => {
-  const m = buildReminderPush();
+Deno.test("buildReminderPush — names the last-worn watch when known", () => {
+  const m = buildReminderPush({ brand: "Omega", name: "Seamaster" });
   assertEquals(m.title, "WRotate");
-  assertStringIncludes(m.body, "What did you wear today");
+  assertEquals(m.body, "Wearing the Omega Seamaster again today? Tap to log it — or pick another watch.");
 });
 
-Deno.test("buildReminderEmail — subject + body", () => {
-  const e = buildReminderEmail();
+Deno.test("buildReminderPush — generic nudge when no watch is known", () => {
+  assertStringIncludes(buildReminderPush(null).body, "What did you wear today");
+  assertStringIncludes(buildReminderPush().body, "What did you wear today");
+  assertStringIncludes(buildReminderPush({ brand: "", name: "" }).body, "What did you wear today");
+});
+
+Deno.test("buildReminderEmail — names the watch, keeps the generic subject", () => {
+  const e = buildReminderEmail({ brand: "Omega", name: "Seamaster" });
   assertStringIncludes(e.subject, "wrist");
-  assertStringIncludes(e.body, "Log");
+  assertStringIncludes(e.body, "Omega Seamaster");
+  assertStringIncludes(buildReminderEmail(null).body, "Log");
 });
 
 Deno.test("unsubUrl — carries uid + cat=reminders", () => {

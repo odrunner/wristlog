@@ -5,14 +5,24 @@
 // Reminder message builders
 // ---------------------------------------------------------------------------
 
-export function buildReminderPush(): { title: string; body: string } {
+export type LastWatch = { brand: string; name: string } | null | undefined;
+const watchLabel = (w: LastWatch) => w ? [w.brand, w.name].filter(Boolean).join(" ").trim() : "";
+
+// Names the last-worn watch when the target RPC supplies one (2026-08-16). Push is
+// plain text; the email body is HTML — the caller escapes brand/name before passing.
+export function buildReminderPush(w?: LastWatch): { title: string; body: string } {
+  const label = watchLabel(w);
+  if (label) return { title: "WRotate", body: `Wearing the ${label} again today? Tap to log it — or pick another watch.` };
   return { title: "WRotate", body: "What did you wear today? 🕰️ Log it before the day's out." };
 }
 
-export function buildReminderEmail(): { subject: string; body: string } {
+export function buildReminderEmail(w?: LastWatch): { subject: string; body: string } {
+  const label = watchLabel(w);
   return {
     subject: "What's on your wrist today?",
-    body: "Wearing something today? Log it in WRotate before the day's out — it keeps your collection's wear history complete and your streak alive.",
+    body: label
+      ? `Wearing the ${label} again today? Log it in WRotate before the day's out — or whatever's on your wrist. It keeps your wear history complete and your streak alive.`
+      : "Wearing something today? Log it in WRotate before the day's out — it keeps your collection's wear history complete and your streak alive.",
   };
 }
 

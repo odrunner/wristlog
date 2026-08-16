@@ -43,7 +43,7 @@ serve(async (req) => {
       console.error("[send-wear-reminders] target query failed:", error);
       return new Response(JSON.stringify({ error: String(error.message) }), { status: 500 });
     }
-    const allRows = (targets ?? []) as { user_id: string; email: string; channel: string; local_today: string }[];
+    const allRows = (targets ?? []) as { user_id: string; email: string; channel: string; local_today: string; last_watch_id?: string | null; last_brand?: string | null; last_name?: string | null }[];
     if (!allRows.length) return new Response(JSON.stringify({ sent: 0 }), { status: 200 });
 
     // Skip addresses that have permanently bounced. This runs hourly, so a dead
@@ -59,11 +59,14 @@ serve(async (req) => {
 
     let pushed = 0, emailed = 0, failed = 0;
     let jwt: string | null = null;
-    const push = buildReminderPush();
-    const mail = buildReminderEmail();
+    // Brand/name reach the email as HTML; push is plain text.
+    const esc = (x: string) => x.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] ?? c));
 
     for (const t of rows) {
       try {
+        const lw = (t.last_brand || t.last_name) ? { brand: t.last_brand ?? "", name: t.last_name ?? "" } : null;
+        const push = buildReminderPush(lw);
+        const mail = buildReminderEmail(lw ? { brand: esc(lw.brand), name: esc(lw.name) } : null);
         if (t.channel === "push") {
           const { data: toks } = await supabase.from("device_tokens")
             .select("token").eq("user_id", t.user_id).eq("platform", "ios");
