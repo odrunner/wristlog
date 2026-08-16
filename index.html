@@ -637,6 +637,18 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       transition: color .15s; flex-shrink: 0; line-height: 1;
     }
     .reminder-banner-close:hover { color: var(--text); }
+    /* Accuracy history chart (Measure hint card + History page) */
+    .acc-band-15 { fill: color-mix(in srgb, #eab308 9%, transparent); }
+    .acc-band-5  { fill: color-mix(in srgb, #22c55e 12%, transparent); }
+    .acc-zero    { stroke: var(--border); stroke-width: 1; }
+    .acc-line    { stroke: color-mix(in srgb, var(--gold) 55%, transparent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+    .acc-range   { stroke: color-mix(in srgb, var(--gold) 45%, transparent); stroke-width: 2; vector-effect: non-scaling-stroke; }
+    .acc-dot     { fill: var(--gold); cursor: pointer; }
+    .acc-dot-latest { stroke: var(--surface); stroke-width: 2; }
+    .acc-dot.selected { fill: var(--text); }
+    .acc-label { fill: var(--muted); font-size: 9px; }
+    .acc-chip { border: 1px solid var(--border); background: var(--surface); color: var(--muted); border-radius: 999px; padding: .2rem .65rem; font-size: .72rem; cursor: pointer; font-family: inherit; min-height: 30px; }
+    .acc-chip.active { border-color: var(--gold); color: var(--gold-text); background: var(--gold-dim); }
     @keyframes pulse-gold {
       0%, 100% { border-color: color-mix(in srgb, var(--gold) 35%, transparent); }
       50%       { border-color: color-mix(in srgb, var(--gold) 80%, transparent);  }
@@ -2845,6 +2857,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="eyebrow eyebrow-muted">August 2026</span>
       </div>
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Accuracy History on the Measure Screen</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Your watch&#8217;s accuracy over time, right where you measure: a small <strong>Accuracy history</strong> card under the chart shows the latest reading and trend for the selected watch, and tapping it opens the full history &#8212; one dot per day, &plusmn;5 / &plusmn;15 s/d bands, 1M / 3M / 1Y / All, and every reading listed by day.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Readings Are Kept Automatically</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Like a smart scale: every measurement that converges cleanly now lands in the watch&#8217;s accuracy history by itself &#8212; no Save tap. Don&#8217;t want one? <strong>Discard this reading</strong> right there. Readings that didn&#8217;t converge still offer Save, so nothing questionable sneaks in.</div>
       </div>
@@ -4044,6 +4060,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
               <div class="help-step-title">Re-measure reminders (iOS, with notifications on)</div>
               <div class="help-step-desc">A few weeks after you measure a watch, we send one notification suggesting you check it again &#8212; and once there are two readings, how it has drifted since. At most one a month. It uses every measurement you ran, saved or not. Turn it off with the <strong>Daily reminders</strong> toggle in your profile settings.</div>
             </div>
+          <div class="help-step">
+            <div class="help-step-num">9</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Accuracy history and trend</div>
+              <div class="help-step-desc">Under the chart on the Measure screen, an <strong>Accuracy history</strong> card shows the selected watch&#8217;s latest reading and a small trend line. Tap it for the full history: one dot per day (that day&#8217;s median, with a bar for the spread when you measured more than once), green and amber bands at &plusmn;5 and &plusmn;15 s/d, 1M / 3M / 1Y / All ranges, and a per-day list &#8212; tap a day to see each reading and discard any you don&#8217;t want.</div>
+            </div>
+          </div>
           </div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> Measure in a quiet environment for best results. Watches with display casebacks (transparent backs) produce a stronger signal than solid steel cases.</span></div>
         </div>
@@ -4745,6 +4768,40 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           <button onclick="discardKeptReading()" style="background:none;border:none;color:var(--muted);font-size:.74rem;cursor:pointer;font-family:inherit;text-decoration:underline;padding:.2rem;min-height:32px;">Discard this reading</button>
         </div>
       </div>
+      <!-- Accuracy history hint for the selected watch: last reading + trend, tap for the History page -->
+      <div id="msr-history-hint" class="card" style="display:none;margin-top:1rem;padding:.8rem .95rem;cursor:pointer;" onclick="openMsrHistory()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openMsrHistory();}">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;">
+          <div style="font-size:.7rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">Accuracy history</div>
+          <div style="font-size:.75rem;color:var(--gold-text);font-weight:600;white-space:nowrap;">See all &rarr;</div>
+        </div>
+        <div id="msr-history-hint-line" style="font-size:.85rem;margin:.25rem 0 .35rem;"></div>
+        <div id="msr-history-hint-chart"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ ACCURACY HISTORY PAGE ════ -->
+  <div id="page-msr-history" class="page">
+    <div class="page-header">
+      <button onclick="closeMsrHistory()" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="Back to Measure">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <h1 class="page-title" style="flex:1;">Accuracy History</h1>
+    </div>
+    <div style="padding:0 .5rem;">
+      <select id="msr-hist-watch-select" onchange="renderMsrHistory()" style="width:100%;padding:.45rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;margin-bottom:.7rem;"></select>
+      <div id="msr-hist-range" style="display:flex;gap:.4rem;margin-bottom:.6rem;">
+        <button class="acc-chip" data-range="1M" onclick="setMsrHistRange('1M')">1M</button>
+        <button class="acc-chip active" data-range="3M" onclick="setMsrHistRange('3M')">3M</button>
+        <button class="acc-chip" data-range="1Y" onclick="setMsrHistRange('1Y')">1Y</button>
+        <button class="acc-chip" data-range="ALL" onclick="setMsrHistRange('ALL')">All</button>
+      </div>
+      <div class="card" style="padding:.8rem .95rem;margin-bottom:.8rem;">
+        <div id="msr-hist-summary" style="font-size:.85rem;margin-bottom:.4rem;"></div>
+        <div id="msr-hist-chart"></div>
+        <div style="display:flex;justify-content:space-between;font-size:.68rem;color:var(--muted);margin-top:.2rem;"><span id="msr-hist-x0"></span><span id="msr-hist-x1"></span></div>
+      </div>
+      <div id="msr-hist-days"></div>
     </div>
   </div>
 
@@ -7921,7 +7978,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '16.09.04';
+const APP_VERSION = '16.09.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13446,6 +13503,63 @@ function shouldAutoKeepReading({ converged, rate, ticks, watchId, loggedIn, demo
   if (!(Number(ticks) >= minTicks)) return false;
   if (lastKept && lastKept.watchId === watchId && (nowMs - lastKept.atMs) < dupWindowMs && Math.abs(Number(lastKept.rate) - r) <= dupDelta) return false;
   return true;
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function groupReadingsByDay(rows) {
+  const byDay = new Map();
+  (rows || []).forEach(r => {
+    if (!r || r.rate == null || !Number.isFinite(Number(r.rate))) return;
+    const d = new Date(r.created_at);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (!byDay.has(key)) byDay.set(key, []);
+    byDay.get(key).push(r);
+  });
+  return [...byDay.keys()].sort().map(date => {
+    const list = byDay.get(date).slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const rates = list.map(r => Number(r.rate)).sort((a, b) => a - b);
+    const mid = Math.floor(rates.length / 2);
+    const median = rates.length % 2 ? rates[mid] : (rates[mid - 1] + rates[mid]) / 2;
+    return { date, median, min: rates[0], max: rates[rates.length - 1], n: rates.length, rows: list };
+  });
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function filterDaysByRange(days, range, now = new Date()) {
+  const months = { '1M': 1, '3M': 3, '1Y': 12 }[range];
+  if (!months) return days || [];
+  const cutoff = new Date(now.getFullYear(), now.getMonth() - months, now.getDate());
+  const c = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`;
+  return (days || []).filter(d => d.date >= c);
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+// Rate-over-time SVG: one dot per day (that day's median), a thin min–max bar when n>1,
+// guide bands at ±5 (green) and ±15 (amber), zero line, newest dot emphasised. Time-
+// proportional x axis; a single day sits in the middle. Pure string, no DOM.
+function accuracyTrendSvg(days, { width = 320, height = 120, pad = 10, labels = false } = {}) {
+  if (!days || !days.length) return '';
+  const t = days.map(d => new Date(d.date + 'T12:00:00').getTime());
+  const t0 = Math.min(...t), t1 = Math.max(...t);
+  const lo = Math.max(-60, Math.min(-6, ...days.map(d => d.min)) - 1);
+  const hi = Math.min(60, Math.max(6, ...days.map(d => d.max)) + 1);
+  const x = (ms) => t1 === t0 ? width / 2 : pad + (ms - t0) / (t1 - t0) * (width - 2 * pad);
+  const y = (v) => pad + (hi - Math.max(lo, Math.min(hi, v))) / (hi - lo) * (height - 2 * pad);
+  const band = (a, b, cls) => `<rect class="${cls}" x="0" y="${y(b).toFixed(1)}" width="${width}" height="${(y(a) - y(b)).toFixed(1)}"/>`;
+  let s = `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Accuracy over time" style="display:block;max-width:100%;">`;
+  s += band(-15, 15, 'acc-band-15') + band(-5, 5, 'acc-band-5');
+  s += `<line class="acc-zero" x1="0" x2="${width}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}"/>`;
+  if (labels) [15, 5, 0, -5, -15].filter(v => v > lo && v < hi).forEach(v => { s += `<text class="acc-label" x="${width - 2}" y="${(y(v) - 2).toFixed(1)}" text-anchor="end">${v > 0 ? '+' : ''}${v}</text>`; });
+  if (days.length > 1) {
+    s += `<polyline class="acc-line" fill="none" points="${days.map((d, i) => `${x(t[i]).toFixed(1)},${y(d.median).toFixed(1)}`).join(' ')}"/>`;
+  }
+  days.forEach((d, i) => {
+    const cx = x(t[i]).toFixed(1);
+    if (d.n > 1) s += `<line class="acc-range" data-day="${d.date}" x1="${cx}" x2="${cx}" y1="${y(d.max).toFixed(1)}" y2="${y(d.min).toFixed(1)}"/>`;
+    const latest = i === days.length - 1;
+    s += `<circle class="acc-dot${latest ? ' acc-dot-latest' : ''}" data-day="${d.date}" cx="${cx}" cy="${y(d.median).toFixed(1)}" r="${latest ? 5 : 3.5}"/>`;
+  });
+  return s + '</svg>';
 }
 
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
@@ -30745,6 +30859,130 @@ function closeMsrSettings() {
   updateMsrModeIndicator();
 }
 
+// ── Accuracy history: Measure-page hint card + History sub-page ────────────────
+// Readings are kept automatically now, so history is the product of measuring; this
+// surfaces it where measuring happens instead of Collection → watch → Accuracy.
+let _msrHistRange = '3M';
+let _msrHistRows = [];          // timegrapher_results rows for the watch shown on the History page
+let _msrHistSelectedDay = null;
+async function fetchAccuracyRows(watchId, limit = 500) {
+  if (!currentUser || !watchId) return [];
+  const { data, error } = await db.from('timegrapher_results').select('id, rate, beat_error, amplitude, created_at, notes, source')
+    .eq('user_id', currentUser.id).eq('watch_id', watchId).order('created_at', { ascending: false }).limit(limit);
+  return error ? [] : (data || []);
+}
+function _fmtRateSigned(r) { const v = Number(r); return (v > 0 ? '+' : v < 0 ? '-' : '') + Math.abs(v).toFixed(1) + ' s/d'; }
+function _fmtDayLabel(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + (d.getFullYear() !== new Date().getFullYear() ? ' ' + d.getFullYear() : '');
+}
+async function refreshMsrHistoryHint() {
+  const card = document.getElementById('msr-history-hint');
+  if (!card) return;
+  const watchId = document.getElementById('msr-watch-select')?.value || '';
+  if (!currentUser || _isDemoMode || !watchId) { card.style.display = 'none'; return; }
+  const rows = await fetchAccuracyRows(watchId, 200);
+  // The dropdown may have moved on while we were fetching.
+  if ((document.getElementById('msr-watch-select')?.value || '') !== watchId) return;
+  if (!rows.length) { card.style.display = 'none'; return; }
+  const days = groupReadingsByDay(rows);
+  const last = rows[0];
+  const l = unsavedReadingLabel(last);
+  const line = document.getElementById('msr-history-hint-line');
+  if (line) line.innerHTML = `<strong>${_fmtRateSigned(last.rate)}</strong> <span style="color:var(--muted);">· ${l.dateStr} · ${rows.length} reading${rows.length === 1 ? '' : 's'} on ${days.length} day${days.length === 1 ? '' : 's'}</span>`;
+  const chart = document.getElementById('msr-history-hint-chart');
+  if (chart) chart.innerHTML = days.length >= 2 ? accuracyTrendSvg(filterDaysByRange(days, '3M'), { width: chart.clientWidth || 320, height: 64, pad: 8 }) : `<div style="font-size:.74rem;color:var(--muted);">Measure again on another day to see the trend.</div>`;
+  card.style.display = '';
+}
+function openMsrHistory() {
+  if (demoGuard()) return;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-msr-history').classList.add('active');
+  window.scrollTo(0, 0);
+  const sel = document.getElementById('msr-hist-watch-select');
+  const cur = document.getElementById('msr-watch-select')?.value || '';
+  sel.innerHTML = watches.map(w => `<option value="${escAttr(w.id)}">${escHtml(w.brand + ' ' + w.name)}</option>`).join('');
+  if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+  _msrHistSelectedDay = null;
+  renderMsrHistory();
+}
+function closeMsrHistory() {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-measure').classList.add('active');
+  window.scrollTo(0, 0);
+  refreshMsrHistoryHint();
+}
+function setMsrHistRange(r) {
+  _msrHistRange = r;
+  document.querySelectorAll('#msr-hist-range .acc-chip').forEach(b => b.classList.toggle('active', b.dataset.range === r));
+  _msrHistSelectedDay = null;
+  renderMsrHistoryView();
+}
+async function renderMsrHistory() {
+  const watchId = document.getElementById('msr-hist-watch-select')?.value || '';
+  _msrHistRows = await fetchAccuracyRows(watchId);
+  _msrHistSelectedDay = null;
+  renderMsrHistoryView();
+}
+function renderMsrHistoryView() {
+  const allDays = groupReadingsByDay(_msrHistRows);
+  const days = filterDaysByRange(allDays, _msrHistRange);
+  const sum = document.getElementById('msr-hist-summary');
+  const chart = document.getElementById('msr-hist-chart');
+  const list = document.getElementById('msr-hist-days');
+  const x0 = document.getElementById('msr-hist-x0'), x1 = document.getElementById('msr-hist-x1');
+  if (!days.length) {
+    if (sum) sum.innerHTML = allDays.length ? `<span style="color:var(--muted);">No readings in this range.</span>` : `<span style="color:var(--muted);">No readings yet — measure this watch and they will collect here.</span>`;
+    if (chart) chart.innerHTML = '';
+    if (x0) x0.textContent = ''; if (x1) x1.textContent = '';
+    if (list) list.innerHTML = '';
+    return;
+  }
+  const latest = days[days.length - 1];
+  const medians = days.map(d => d.median);
+  const avg = medians.reduce((a, b) => a + b, 0) / medians.length;
+  const nRead = days.reduce((a, d) => a + d.n, 0);
+  if (sum) sum.innerHTML = `<strong>${_fmtRateSigned(latest.median)}</strong> <span style="color:var(--muted);">latest (${_fmtDayLabel(latest.date)}) · avg ${_fmtRateSigned(avg)} over ${days.length} day${days.length === 1 ? '' : 's'}, ${nRead} reading${nRead === 1 ? '' : 's'}</span>`;
+  if (chart) {
+    chart.innerHTML = accuracyTrendSvg(days, { width: chart.clientWidth || 320, height: 180, pad: 12, labels: true });
+    chart.querySelectorAll('.acc-dot').forEach(c => { c.addEventListener('click', (e) => { e.stopPropagation(); msrHistorySelectDay(c.dataset.day); }); if (c.dataset.day === _msrHistSelectedDay) c.classList.add('selected'); });
+  }
+  if (x0) x0.textContent = _fmtDayLabel(days[0].date);
+  if (x1) x1.textContent = days.length > 1 ? _fmtDayLabel(latest.date) : '';
+  if (list) {
+    const shown = days.slice().reverse();
+    list.innerHTML = shown.map(d => {
+      const open = d.date === _msrHistSelectedDay;
+      const spread = d.n > 1 ? `<span style="color:var(--muted);margin-left:.4rem;">${_fmtRateSigned(d.min)} … ${_fmtRateSigned(d.max)}</span>` : '';
+      const rowsHtml = open ? d.rows.map(r => {
+        const t = new Date(r.created_at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+        const extra = [r.amplitude ? 'Amp ' + r.amplitude + '°' : '', r.beat_error != null ? 'BE ' + Number(r.beat_error).toFixed(2) + 'ms' : ''].filter(Boolean).join(' · ');
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem 0 .3rem 1rem;font-size:.78rem;border-top:1px dashed var(--border);">
+          <div><span style="font-weight:600;">${_fmtRateSigned(r.rate)}</span>${extra ? `<span style="color:var(--muted);margin-left:.4rem;">${extra}</span>` : ''}<span style="color:var(--muted);margin-left:.4rem;font-size:.7rem;">${t}</span></div>
+          <button onclick="event.stopPropagation(); discardHistoryReading('${escAttr(r.id)}')" aria-label="Discard reading" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:.8rem;min-height:32px;min-width:32px;">✕</button>
+        </div>`; }).join('') : '';
+      return `<div class="card" style="padding:.55rem .85rem;margin-bottom:.45rem;cursor:pointer;" onclick="msrHistorySelectDay('${d.date}')">
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:.82rem;">
+          <div><span style="font-weight:600;">${_fmtRateSigned(d.median)}</span>${spread}</div>
+          <div style="color:var(--muted);font-size:.74rem;">${_fmtDayLabel(d.date)}${d.n > 1 ? ` · ×${d.n}` : ''} <span style="margin-left:.3rem;">${open ? '▾' : '▸'}</span></div>
+        </div>${rowsHtml}</div>`;
+    }).join('');
+  }
+}
+function msrHistorySelectDay(date) {
+  _msrHistSelectedDay = _msrHistSelectedDay === date ? null : date;
+  renderMsrHistoryView();
+}
+async function discardHistoryReading(id) {
+  if (demoGuard()) return;
+  const { error } = await db.from('timegrapher_results').delete().eq('id', id).eq('user_id', currentUser.id);
+  if (error) { toast('Could not discard', 'error'); return; }
+  db.from('measurement_sessions').update({ saved_result_id: null, dismissed_at: new Date().toISOString() }).eq('saved_result_id', id).then(() => {});
+  _msrHistRows = _msrHistRows.filter(r => r.id !== id);
+  toast('Reading discarded');
+  renderMsrHistoryView();
+}
+
 function tgLoadSettingsToUI() {
   const s = tgLoadSettings();
   const v = s.values;
@@ -31630,6 +31868,7 @@ function openMeasureInline() {
 
 async function onMsrWatchChange() {
   const watchId = document.getElementById('msr-watch-select').value;
+  refreshMsrHistoryHint();
   if (!watchId || !currentUser) return;
   // Look up last BPH used for this watch
   try {
@@ -32209,6 +32448,7 @@ async function autoKeepMsrReading(wasConverged) {
   const sign = res.rate >= 0 ? '+' : '';
   toast(`Reading kept · ${sign}${Number(res.rate).toFixed(1)} s/d`);
   showMsrShareCta(res.watchId, res.rate, { kept: true });
+  refreshMsrHistoryHint();
 }
 // Discard a reading that was auto-kept this session: delete the history row, put the
 // session back into "unsaved" (dismissed, so it does not resurface in the tray either).
@@ -32224,6 +32464,7 @@ async function discardKeptReading() {
     toast('Reading discarded');
   }
   discardMsrReading();
+  refreshMsrHistoryHint();
 }
 
 function discardMsrReading() {
@@ -32327,6 +32568,7 @@ async function saveMsrReading() {
   const res = await persistMsrReading();
   if (!res.ok) return;
   showMsrShareCta(res.watchId, res.rate);
+  refreshMsrHistoryHint();
 }
 
 // Share button shown next to Save at completion. Saves the reading first (a

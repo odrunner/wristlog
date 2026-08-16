@@ -1761,6 +1761,61 @@ export function shouldAutoKeepReading({ converged, rate, ticks, watchId, loggedI
   return true;
 }
 
+// Accuracy history — per-day grouping and the trend chart (Measure hint card + History page).
+export function groupReadingsByDay(rows) {
+  const byDay = new Map();
+  (rows || []).forEach(r => {
+    if (!r || r.rate == null || !Number.isFinite(Number(r.rate))) return;
+    const d = new Date(r.created_at);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (!byDay.has(key)) byDay.set(key, []);
+    byDay.get(key).push(r);
+  });
+  return [...byDay.keys()].sort().map(date => {
+    const list = byDay.get(date).slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const rates = list.map(r => Number(r.rate)).sort((a, b) => a - b);
+    const mid = Math.floor(rates.length / 2);
+    const median = rates.length % 2 ? rates[mid] : (rates[mid - 1] + rates[mid]) / 2;
+    return { date, median, min: rates[0], max: rates[rates.length - 1], n: rates.length, rows: list };
+  });
+}
+
+export function filterDaysByRange(days, range, now = new Date()) {
+  const months = { '1M': 1, '3M': 3, '1Y': 12 }[range];
+  if (!months) return days || [];
+  const cutoff = new Date(now.getFullYear(), now.getMonth() - months, now.getDate());
+  const c = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`;
+  return (days || []).filter(d => d.date >= c);
+}
+
+// Rate-over-time SVG: one dot per day (that day's median), a thin min–max bar when n>1,
+// guide bands at ±5 (green) and ±15 (amber), zero line, newest dot emphasised. Time-
+// proportional x axis; a single day sits in the middle. Pure string, no DOM.
+export function accuracyTrendSvg(days, { width = 320, height = 120, pad = 10, labels = false } = {}) {
+  if (!days || !days.length) return '';
+  const t = days.map(d => new Date(d.date + 'T12:00:00').getTime());
+  const t0 = Math.min(...t), t1 = Math.max(...t);
+  const lo = Math.max(-60, Math.min(-6, ...days.map(d => d.min)) - 1);
+  const hi = Math.min(60, Math.max(6, ...days.map(d => d.max)) + 1);
+  const x = (ms) => t1 === t0 ? width / 2 : pad + (ms - t0) / (t1 - t0) * (width - 2 * pad);
+  const y = (v) => pad + (hi - Math.max(lo, Math.min(hi, v))) / (hi - lo) * (height - 2 * pad);
+  const band = (a, b, cls) => `<rect class="${cls}" x="0" y="${y(b).toFixed(1)}" width="${width}" height="${(y(a) - y(b)).toFixed(1)}"/>`;
+  let s = `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Accuracy over time" style="display:block;max-width:100%;">`;
+  s += band(-15, 15, 'acc-band-15') + band(-5, 5, 'acc-band-5');
+  s += `<line class="acc-zero" x1="0" x2="${width}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}"/>`;
+  if (labels) [15, 5, 0, -5, -15].filter(v => v > lo && v < hi).forEach(v => { s += `<text class="acc-label" x="${width - 2}" y="${(y(v) - 2).toFixed(1)}" text-anchor="end">${v > 0 ? '+' : ''}${v}</text>`; });
+  if (days.length > 1) {
+    s += `<polyline class="acc-line" fill="none" points="${days.map((d, i) => `${x(t[i]).toFixed(1)},${y(d.median).toFixed(1)}`).join(' ')}"/>`;
+  }
+  days.forEach((d, i) => {
+    const cx = x(t[i]).toFixed(1);
+    if (d.n > 1) s += `<line class="acc-range" data-day="${d.date}" x1="${cx}" x2="${cx}" y1="${y(d.max).toFixed(1)}" y2="${y(d.min).toFixed(1)}"/>`;
+    const latest = i === days.length - 1;
+    s += `<circle class="acc-dot${latest ? ' acc-dot-latest' : ''}" data-day="${d.date}" cx="${cx}" cy="${y(d.median).toFixed(1)}" r="${latest ? 5 : 3.5}"/>`;
+  });
+  return s + '</svg>';
+}
+
 // Whether to pop the badge-reveal modal on app open: only when there are unseen
 // earned badges AND the earned count has grown since the last reveal (a localStorage
 // high-water mark), so it fires once per new-badge batch and never re-nags a user
