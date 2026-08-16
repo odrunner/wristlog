@@ -2849,6 +2849,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Measured a watch and didn&#8217;t save? Every reading that converged now waits under <strong>Unsaved readings</strong> in that watch&#8217;s Accuracy section for 30 days. Tap <strong>Keep</strong> to add it to the history, or &#10005; to let it go.</div>
       </div>
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Log It Again</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">After 5 pm, if you haven&#8217;t logged today, a banner offers yesterday&#8217;s watch as a one-tap log &#8212; <strong>Log it</strong> or <strong>Different watch</strong>. The daily reminder now names that watch too, and tapping it lands you right on the banner.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Wishlist Share Links</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Share part of your wishlist by link. Tap <strong>Share</strong> on the Wishlist tab, tick the watches you want &#8212; or a whole brand folder in one tap &#8212; and send a link that shows the photo, brand, model, reference and any link you saved. Add a note to go with it &#8212; who it&#8217;s for, sizes, budget, anything you want to say. Your prices, notes and tags stay private, the recipient needs no account, and you can revoke any link you&#8217;ve sent.</div>
       </div>
@@ -3413,13 +3417,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   </div>
 
   <!-- ════ GLOBAL REMINDER BANNER ════ -->
-  <div id="reminder-banner" class="reminder-banner hidden">
+  <div id="reminder-banner" class="reminder-banner hidden" role="status">
     <div class="reminder-banner-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
-    <div class="reminder-banner-body" onclick="nav(document.querySelector('nav button[data-page=\'track\']'))" style="cursor:pointer;">
-      <div class="reminder-banner-title">Don't forget to log your watch today! →</div>
-      <div class="reminder-banner-sub">It's past 5 PM and no wear has been recorded yet.</div>
+    <div class="reminder-banner-body">
+      <div class="reminder-banner-title" id="logagain-title">Wearing it again today?</div>
+      <div style="display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="logagain-yes" style="min-height:36px;padding:.3rem .9rem;font-size:.8rem;">Log it</button>
+        <button class="btn" id="logagain-other" style="min-height:36px;padding:.3rem .9rem;font-size:.8rem;" onclick="dismissReminder(); nav(document.querySelector('nav button[data-page=\'track\']'));">Different watch</button>
+      </div>
     </div>
-    <button class="reminder-banner-close" onclick="dismissReminder()" title="Dismiss">✕</button>
+    <button class="reminder-banner-close" onclick="dismissReminder()" title="Dismiss" aria-label="Dismiss">✕</button>
   </div>
 
   <!-- ════ WARRANTY REMINDER BANNER ════ -->
@@ -4057,6 +4064,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-body">
               <div class="help-step-title">Add a photo and set visibility, then tap "Log This Wear"</div>
               <div class="help-step-desc">Each log can be Public (visible to everyone), Followers (only your followers see it), Close Friends (only your close friends), or Private (only you). The default is set in your Privacy settings.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">5</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Log it again (after 5 pm)</div>
+              <div class="help-step-desc">If you logged a wear in the last two weeks and nothing today, a banner appears after 5 pm offering yesterday&#8217;s watch as a one-tap log. <strong>Log it</strong> records it with your default visibility; <strong>Different watch</strong> takes you to Track. The daily reminder names the same watch.</div>
             </div>
           </div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span>Logged the wrong watch or use case? Tap the <strong>pencil icon</strong> on any feed card or in the Wear History table to edit it.</span></div>
@@ -7889,7 +7903,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '16.08.32';
+const APP_VERSION = '16.08.38';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13390,6 +13404,18 @@ function unsavedReadingLabel(row, now = new Date()) {
   const diff = Math.round((day(now) - day(d)) / 86400000);
   const dateStr = diff <= 0 ? 'Today' : diff === 1 ? 'Yesterday' : diff + ' days ago';
   return { rateStr, dateStr, ampStr };
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function logAgainCandidate({ logs, watches, today, hour, minHour = 17, lookbackDays = 14 }) {
+  if (hour < minHour) return null;
+  if ((logs || []).some(l => l && l.date === today)) return null;
+  const cutoff = new Date(today + 'T00:00:00'); cutoff.setDate(cutoff.getDate() - lookbackDays);
+  const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`;
+  const recent = (logs || []).filter(l => l && l.date && l.date >= cutoffStr && l.date < today)
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  if (!recent.length) return null;
+  return (watches || []).find(w => w.id === recent[0].watchId) || null;
 }
 
 // VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
@@ -19896,6 +19922,7 @@ function renderTrack(force) {
   renderWatchRecommendation();
   renderWatchSelector();
   renderTrackHistory();
+  maybeShowLogAgainBanner();
 }
 
 function renderWornNotice() {
@@ -22763,7 +22790,8 @@ function quickLog(watchId) {
   const alreadyWorn = logsForWatch(watchId).some(l => l.date === today);
   if (alreadyWorn) return;
   const qId = uid();
-  const qEntry = { id: qId, watchId, date: today, useCase: 'unspecified', notes: '' };
+  // Honour the user's default post visibility — without it logToRow() syncs the wear as public.
+  const qEntry = { id: qId, watchId, date: today, useCase: 'unspecified', notes: '', visibility: getDefaultVis() };
   logs.push(qEntry);
   markDirty('logs', qId);
   save();
@@ -28483,8 +28511,6 @@ function initReminder() {
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission();
   }
-  // checkReminderNow() moved to bootApp() after loadUserData() to avoid flash
-  scheduleReminderAt5PM();
   checkWarrantyAlerts();
 }
 
@@ -28512,73 +28538,46 @@ function dismissWarrantyBanner() {
   document.getElementById('warranty-banner').classList.add('hidden');
 }
 
-async function checkReminderNow() {
-  // 5 PM reminder disabled 2026-04-15 — keep code for future re-enable.
-  // To restore: remove this early return.
-  return;
-  // eslint-disable-next-line no-unreachable
-  if (safeSS.get('wl_reminder_dismissed')) return;
-  const now = new Date();
-  if (now.getHours() >= 17) {
-    const today = todayStr();
-    let logged = logs.some(l => l.date === today)
-              || feedItems.some(f => f.user_id === currentUser?.id && f.date === today);
-    if (!logged && currentUser) {
-      try {
-        const { count } = await db.from('logs').select('id', { count: 'exact', head: true })
-          .eq('user_id', currentUser.id).eq('date', today);
-        logged = count > 0;
-      } catch (_) { /* ignore */ }
-    }
-    if (logged) {
-      document.getElementById('reminder-banner').classList.add('hidden');
-    } else {
-      showReminderBanner();
-    }
-  }
-}
-
-let _reminderTimer;
-function scheduleReminderAt5PM() {
-  // 5 PM reminder disabled 2026-04-15 — keep code for future re-enable.
-  // To restore: remove this early return.
-  return;
-  // eslint-disable-next-line no-unreachable
-  clearTimeout(_reminderTimer);
-  const now   = new Date();
-  const fivePM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 0, 0);
-  if (now >= fivePM) return; // already past 5 PM
-  _reminderTimer = setTimeout(async () => {
-    // Check local logs first (fast); if stale, also check DB for today's wear
-    const today = todayStr();
-    let logged = logs.some(l => l.date === today)
-              || feedItems.some(f => f.user_id === currentUser?.id && f.date === today);
-    if (!logged && currentUser) {
-      try {
-        const { count } = await db.from('logs').select('id', { count: 'exact', head: true })
-          .eq('user_id', currentUser.id).eq('date', today);
-        logged = count > 0;
-      } catch (_) { /* ignore — fall through to local check */ }
-    }
-    if (!logged) {
-      showReminderBanner();
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('WRotate', {
-          body: "It's 5 PM — don't forget to log the watch you're wearing today!",
-          tag: 'wristlog-daily'
-        });
-      }
-    }
-  }, fivePM - now);
-}
-
 function showReminderBanner() {
   document.getElementById('reminder-banner').classList.remove('hidden');
 }
 
 function dismissReminder() {
-  safeSS.set('wl_reminder_dismissed', '1');
+  safeSS.set('wl_logagain_dismissed', todayStr());
   document.getElementById('reminder-banner').classList.add('hidden');
+}
+
+// One-tap "wearing it again?" — on Track and on foreground after 5pm local, when the user
+// has a log in the last 14 days and none today (the same audience the 5pm push/email
+// reminder targets, so a reminder tap lands on exactly this). Dismissal lasts the day.
+// `force` + `watchId` come from a push route (openPushRoute('track', watchId)).
+function maybeShowLogAgainBanner(force = false, watchId = null) {
+  if (!currentUser || _isDemoMode) return;
+  const today = todayStr();
+  if (!force && safeSS.get('wl_logagain_dismissed') === today) return;
+  // A push tap (force) skips the 5pm gate — the reminder itself was sent at 5pm local, and
+  // "wearing it again today?" still holds if it's opened the next morning with nothing logged.
+  const hour = force ? 24 : new Date().getHours();
+  const cand = (watchId && watches.find(w => w.id === watchId)) || logAgainCandidate({ logs, watches, today, hour });
+  if (!cand || hasWornToday(logs, cand.id, today)) return;
+  const label = [cand.brand, cand.name].filter(Boolean).join(' ');
+  const title = document.getElementById('logagain-title');
+  const yes = document.getElementById('logagain-yes');
+  if (!title || !yes) return;
+  title.textContent = `Wearing the ${label} again today?`;
+  yes.onclick = () => { dismissReminder(); quickLog(cand.id); };
+  showReminderBanner();
+}
+
+// Push taps: the native layer resolves known routes itself and hands anything else here,
+// so a new notification type never needs an App Store build. Unknown → the bell.
+function openPushRoute(route, id) {
+  if (route === 'track') {
+    nav(document.querySelector('nav button[data-page="track"]'));
+    maybeShowLogAgainBanner(true, id || null);
+    return;
+  }
+  if (typeof openNotifPanel === 'function') openNotifPanel();
 }
 
 
@@ -29181,7 +29180,7 @@ function clearUserState() {
   Object.keys(_profileCache).forEach(k => delete _profileCache[k]);
   if (window._notifPollId) { clearInterval(window._notifPollId); window._notifPollId = null; }
   clearTimeout(_syncRetryTimer); _syncRetryTimer = undefined;
-  clearTimeout(_reminderTimer); _reminderTimer = undefined;
+  document.getElementById('reminder-banner')?.classList.add('hidden');
 }
 
 // ── Timegrapher / Accuracy (inside watch edit modal) ─────────────────────
@@ -32521,8 +32520,8 @@ async function bootApp(user) {
   if (_hasPersisted) { console.log('[WRotate] Retrying persisted dirty state'); cloudSync(); }
   // Retry any measurement writes that failed to upload in a previous session
   if (_pendingMeasureWrites.length) { console.log('[WRotate] Retrying persisted measurement writes:', _pendingMeasureWrites.length); flushMeasureWrites(); }
-  // Re-check reminder now that logs are loaded (initApp ran before data was ready)
-  checkReminderNow();
+  // Logs are loaded now — offer the one-tap "wearing it again?" banner if it's past 5pm
+  maybeShowLogAgainBanner();
   // Show anniversary modal if any watch has an anniversary today
   checkAnniversary();
   // Retroactive badge scan (runs once per session, after data is loaded)
@@ -32650,6 +32649,7 @@ document.addEventListener('visibilitychange', () => {
     loadNotifications();
     window._notifPollId = setInterval(loadNotifications, 30000);
   }
+  if (currentUser) maybeShowLogAgainBanner();
 
   const bgDuration = _lastHiddenAt ? Date.now() - _lastHiddenAt : 0;
 

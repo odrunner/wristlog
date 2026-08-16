@@ -1733,6 +1733,19 @@ export function unsavedReadingLabel(row, now = new Date()) {
   return { rateStr, dateStr, ampStr };
 }
 
+// Which watch to offer as a one-tap "wearing it again?" log. Same audience rule as the
+// server-side wear reminder: a log in the last `lookbackDays`, none today, past `minHour`.
+export function logAgainCandidate({ logs, watches, today, hour, minHour = 17, lookbackDays = 14 }) {
+  if (hour < minHour) return null;
+  if ((logs || []).some(l => l && l.date === today)) return null;
+  const cutoff = new Date(today + 'T00:00:00'); cutoff.setDate(cutoff.getDate() - lookbackDays);
+  const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`;
+  const recent = (logs || []).filter(l => l && l.date && l.date >= cutoffStr && l.date < today)
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  if (!recent.length) return null;
+  return (watches || []).find(w => w.id === recent[0].watchId) || null;
+}
+
 // Whether to pop the badge-reveal modal on app open: only when there are unseen
 // earned badges AND the earned count has grown since the last reveal (a localStorage
 // high-water mark), so it fires once per new-badge batch and never re-nags a user
