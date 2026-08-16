@@ -4064,7 +4064,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">9</div>
             <div class="help-step-body">
               <div class="help-step-title">Accuracy history and trend</div>
-              <div class="help-step-desc">Under the chart on the Measure screen, an <strong>Accuracy history</strong> card shows the selected watch&#8217;s latest reading and a small trend line. Tap it for the full history: one dot per day (that day&#8217;s median, with a bar for the spread when you measured more than once), green and amber bands at &plusmn;5 and &plusmn;15 s/d, 1M / 3M / 1Y / All ranges, and a per-day list &#8212; tap a day to see each reading and discard any you don&#8217;t want.</div>
+              <div class="help-step-desc">Under the chart on the Measure screen, an <strong>Accuracy history</strong> card shows the selected watch&#8217;s latest reading and a small trend line. Tap it &#8212; or the trend icon next to the gear in the header &#8212; for the full history: one dot per day (that day&#8217;s median, with a bar for the spread when you measured more than once), green and amber bands at &plusmn;5 and &plusmn;15 s/d, 1M / 3M / 1Y / All ranges, and a per-day list &#8212; tap a day to see each reading and discard any you don&#8217;t want.</div>
             </div>
           </div>
           </div>
@@ -4531,6 +4531,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="page-header">
       <h1 class="page-title" style="flex:1;">Measure Accuracy</h1>
       <button id="msr-mode-chip" onclick="openMsrSettings()" style="display:none;align-items:center;gap:5px;background:var(--gold-dim);border:1px solid var(--gold);color:var(--gold-text);border-radius:999px;padding:3px 10px;font-size:.7rem;font-weight:600;line-height:1;cursor:pointer;white-space:nowrap;" aria-label="Active measurement mode — tap to change"></button>
+      <button id="msr-history-btn" onclick="openMsrHistory()" style="display:none;background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="Accuracy history" title="Accuracy history">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>
+      </button>
       <button id="msr-settings-gear" onclick="openMsrSettings()" style="display:none;background:none;border:none;cursor:pointer;padding:4px;color:var(--muted);" aria-label="Advanced settings">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
@@ -7978,7 +7981,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '16.09.35';
+const APP_VERSION = '16.09.40';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18958,6 +18961,7 @@ function nav(btn) {
     if (!watches || watches.length === 0) {
       document.getElementById('measure-no-watches').style.display = '';
       document.getElementById('measure-content').style.display = 'none';
+      const histBtn0 = document.getElementById('msr-history-btn'); if (histBtn0) histBtn0.style.display = 'none';
     } else {
       document.getElementById('measure-no-watches').style.display = 'none';
       document.getElementById('measure-content').style.display = '';
@@ -18965,6 +18969,8 @@ function nav(btn) {
       maybeShowMsrHelp();
       const gear = document.getElementById('msr-settings-gear');
       if (gear) gear.style.display = _tgHasNative() ? '' : 'none';
+      const histBtn = document.getElementById('msr-history-btn');
+      if (histBtn) histBtn.style.display = (currentUser && !_isDemoMode) ? '' : 'none';
       updateMsrModeIndicator();
       initTgSourceSelector();
     }
