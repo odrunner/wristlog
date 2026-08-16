@@ -7965,7 +7965,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '16.09.43';
+const APP_VERSION = '16.09.57';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17848,7 +17848,7 @@ async function loadAdminStats(force = false) {
     // One parallel batch (was four sequential awaits — the three slowest RPCs
     // each cost a full round-trip before the next started). 20 s, not 10: on a
     // cold cache these recompute concurrently on a 2-vCPU instance.
-    const [dodRes, factRes, dauRes, unsubRes, engineRes, pushRes, wlShareRes, trendRes] = await withTimeout(Promise.all([
+    const [dodRes, factRes, dauRes, unsubRes, engineRes, pushRes, wlShareRes, trendRes, histRes] = await withTimeout(Promise.all([
       // Day-over-day: single RPC (SECURITY DEFINER, excludes internal accounts)
       db.rpc('admin_dod_counts', cacheArgs),
       // Fun-fact engagement + generation (totals + last-24h deltas)
@@ -17858,6 +17858,7 @@ async function loadAdminStats(force = false) {
       // Email unsubscribes + measurement volume split by detection engine + push approvals
       db.rpc('admin_unsub_stats'), db.rpc('admin_engine_stats', cacheArgs), db.rpc('admin_push_stats'),
       db.rpc('admin_wishlist_share_stats'), db.rpc('admin_per_user_trend', cacheArgs),
+      db.rpc('admin_feature_event_stats', { p_event: 'accuracy_history_viewed' }),
     ]), 20000);
     const dod = dodRes.data || {};
     const fc = factRes.data || {};
@@ -17866,6 +17867,7 @@ async function loadAdminStats(force = false) {
     const eng = engineRes.data || {};
     const push = pushRes.data || {};
     const wls = wlShareRes.data || {};
+    const hist = histRes.data || {};
     // Per-user averages w/w + m/m: numerator/denominator snapshots as of now, 7d
     // and 30d ago (external only) from one RPC, so each delta is avg_now − avg_then
     // under identical definitions. Spec: sql/2026-08-15-admin-per-user-trend.sql.
@@ -18183,6 +18185,9 @@ async function loadAdminStats(force = false) {
         ${statRow('Active links', Number(wls.links_active) || 0, null, (Number(wls.links_revoked) || 0) + ' revoked')}
         ${statRow('Advanced mode (24h)', advSessions24h, advDelta, advUsers24h > 0 ? advUsers24h + ' user' + (advUsers24h === 1 ? '' : 's') : '')}
         ${statRow('Measurements', extMsr, null, msr24h + ' (24h)' + inlineDelta(msr24h - msrPrev24h, false))}
+        ${statRow('Accuracy history views', Number(hist.events_total) || 0, Number(hist.events_24h) || 0,
+          Object.entries(hist.by_source || {}).map(([k, v]) => k + ' ' + v).join(' · '))}
+        ${statRow('Accuracy history viewers', Number(hist.users_total) || 0, Number(hist.users_24h) || 0)}
         ${engineRow('Measurements — Pro V2', eng.prov2_sessions, eng.prov2_users, eng.prov2_sessions_24h, eng.prov2_sessions_prev24h)}
         ${engineRow('Measurements — Original', eng.orig_sessions, eng.orig_users, eng.orig_sessions_24h, eng.orig_sessions_prev24h)}
         ${statRow('Email Unsubs (total)', Number(unsub.unsub_total) || 0, null, (Number(unsub.unsub_24h) || 0) + ' (24h)' + inlineDelta((Number(unsub.unsub_24h) || 0) - (Number(unsub.unsub_prev24h) || 0), true))}
@@ -30887,6 +30892,8 @@ async function refreshMsrHistoryHint() {
 function openMsrHistory(source = 'header') {
   if (demoGuard()) return;
   if (window.posthog) posthog.capture('accuracy_history_viewed', { source });
+  // Also counted in the DB so the admin Usage tab can show it (PostHog is not readable there).
+  if (currentUser) db.from('feature_events').insert({ user_id: currentUser.id, event: 'accuracy_history_viewed', meta: { source } }).then(() => {});
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-msr-history').classList.add('active');
   window.scrollTo(0, 0);
