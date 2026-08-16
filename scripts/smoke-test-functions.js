@@ -204,6 +204,30 @@ async function run() {
     console.log('    ↳ set CAMPAIGN_TRIGGER_SECRET to also assert the live provider');
   }
 
+  // send-measure-reminders: with the secret, a dry run lists candidates without sending;
+  // without it, the auth gate must answer 401.
+  if (cronSecret) {
+    await check('send-measure-reminders (dry_run → candidates list)', async () => {
+      const r = await callFn('send-measure-reminders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-campaign-secret': cronSecret },
+        body: JSON.stringify({ dry_run: true }),
+      });
+      if (!r.ok) return r;
+      let n = null;
+      try { n = JSON.parse(r.body).candidates?.length; } catch { /* fall through */ }
+      return { ...r, ok: Number.isInteger(n), body: `candidates=${n}` };
+    });
+  } else {
+    await check('send-measure-reminders (no secret → 401)', () =>
+      callFn('send-measure-reminders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dry_run: true }),
+      }, 401)
+    );
+  }
+
   // --- Summary ---
   console.log(`\n  ${passed} passed, ${failed} failed\n`);
   process.exit(failed > 0 ? 1 : 0);
