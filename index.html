@@ -963,6 +963,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .coll-sort-chip       { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-size: .72rem; font-weight: 500; padding: .22rem .65rem; border-radius: 12px; cursor: pointer; transition: all .15s; font-family: inherit; white-space: nowrap; }
     .coll-sort-chip:hover { border-color: var(--gold); color: var(--gold-text); }
     .coll-sort-chip.active { background: color-mix(in srgb, var(--gold) 15%, transparent); border-color: var(--gold); color: var(--gold-text); font-weight: 600; }
+    .coll-rank-chip       { display: inline-flex; align-items: center; gap: .3rem; }
+    .coll-rank-chip + .coll-sort-chip { margin-left: .35rem; }
     .coll-photo-toggle { display: flex; align-items: center; gap: .35rem; margin-left: auto; font-size: .72rem; color: var(--muted); white-space: nowrap; cursor: pointer; user-select: none; text-transform: none; letter-spacing: normal; margin-bottom: 0; }
     .coll-photo-toggle input[type="checkbox"] { appearance: none; -webkit-appearance: none; width: 32px; height: 18px; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; position: relative; cursor: pointer; transition: background .2s, border-color .2s; flex-shrink: 0; }
     .coll-photo-toggle input[type="checkbox"]::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--muted); transition: transform .2s, background .2s; }
@@ -2857,6 +2859,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="eyebrow eyebrow-muted">August 2026</span>
       </div>
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Collection Gallery View</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">See your collection as a wall of photos. The new toggle in the Collection header switches between the full cards and an <strong>images-only gallery</strong> &#8212; same tiles as the Wishlist gallery, following your current sort, tag filter and Post Pics setting. Your choice is remembered. The <strong>Ranking Game</strong> now lives as a <strong>Rank</strong> chip in the sort bar, next to the My Ranking order it produces.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Accuracy History</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Every measurement that converges cleanly is now kept automatically &#8212; no Save tap; use <strong>Discard this reading</strong> if you don&#8217;t want one. And your history lives where you measure: an <strong>Accuracy history</strong> card under the chart shows the selected watch&#8217;s latest reading and trend, and the trend icon in the header (or the card) opens the full view &#8212; one dot per day, &plusmn;5 / &plusmn;15 s/d bands, 1M / 3M / 1Y / All, every reading listed by day. Your earlier measurements have been brought in, so most watches start with a trend already.</div>
       </div>
@@ -3492,7 +3498,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="page-header">
       <h1 class="page-title">My Collection</h1>
       <div style="display:flex;gap:.45rem;align-items:center;">
-        <button class="btn btn-ghost" onclick="startGame()" title="Ranking Game" style="padding:.45rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></button>
+        <button id="coll-view-btn" class="btn btn-ghost" onclick="toggleCollView()" title="Gallery view" aria-label="Gallery view" style="padding:.45rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
         <button class="btn btn-ghost" onclick="openAddWatch()" title="Add Manually" style="padding:.45rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
         <button class="btn btn-primary" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;align-items:center;gap:.35rem;white-space:nowrap;padding:.45rem .7rem;font-size:.8rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
         <button id="coll-enhance-all-btn" class="btn btn-ghost" onclick="enhanceAllWatches()" title="Enhance All with AI" style="display:none;padding:.45rem .7rem;font-size:.8rem;align-items:center;gap:.35rem;white-space:nowrap;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg>Enhance</button>
@@ -4113,8 +4119,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div class="help-section-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Collection Features</div>
         <div class="help-grid2">
           <div class="help-mini-card">
+            <div class="help-mini-title" style="display:flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Gallery View</div>
+            <div class="help-mini-desc">The toggle in the Collection header switches between full cards and an <strong>images-only gallery</strong>. The gallery follows your sort, tag filter and Post Pics setting; tap a tile to edit. Your choice is remembered.</div>
+          </div>
+          <div class="help-mini-card">
             <div class="help-mini-title" style="display:flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Ranking Game</div>
-            <div class="help-mini-desc">Tap <strong>Ranking Game</strong> in the Collection header for head-to-head match-ups. Tap the watch you prefer within 3 seconds. Elo scores accumulate over sessions so your ranking gets more accurate over time.</div>
+            <div class="help-mini-desc">Tap <strong>Rank</strong> in the sort bar above your collection for head-to-head match-ups. Tap the watch you prefer within 3 seconds. Elo scores accumulate over sessions so your ranking gets more accurate over time.</div>
           </div>
           <div class="help-mini-card">
             <div class="help-mini-title" style="display:flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> Tag Filtering</div>
@@ -7981,7 +7991,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '16.12.48';
+const APP_VERSION = '16.14.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16797,7 +16807,7 @@ let movingFromWishlistData = null;  // extra fields (watchChartsUrl, market data
 let chUsecase = null, chCollValue = null;
 let _collValueRange = 'max';   // time horizon for the Collection Value chart
 let collSort     = 'wears-desc';  // unified collection report sort: field-dir
-let collView     = 'grid';        // 'grid' | 'list'
+let collView     = collViewFromStore(safeLS.get('wr_coll_view')); // 'grid' | 'gallery' ('list' is legacy, unreachable)
 let collGridSort = 'purchase';    // 'purchase' | 'ranking' | 'wears'
 let collSortedWatches = [];       // current sorted order for drag-and-drop
 let collTagFilter = null;         // active tag filter in Collection page (null = all)
@@ -21748,24 +21758,24 @@ function setCollGridSort(s) {
 function renderCollSortBar() {
   const bar = document.getElementById('coll-sort-bar');
   if (!bar) return;
+  if (!watches.length) { bar.innerHTML = ''; return; }
   const hasRanking = Object.keys(eloRatings).some(id => watches.some(w => w.id === id));
-  // Photo toggle: show if any watch has a post with a photo
-  const anyPostPhoto = collView === 'grid' && _anyLogHasPhoto;
+  // Photo toggle: show if any watch has a post with a photo (cards and gallery tiles)
+  const anyPostPhoto = (collView === 'grid' || collView === 'gallery') && _anyLogHasPhoto;
   const photoToggle = anyPostPhoto
     ? `<label class="coll-photo-toggle" title="Show latest post photo instead of watch photo">
         <input type="checkbox" ${collPhotoMode === 'post' ? 'checked' : ''} onchange="toggleCollPhotoMode(this.checked)">
         <span>Post Pics</span>
       </label>` : '';
-  if (!hasRanking) {
-    bar.innerHTML = anyPostPhoto ? `<div class="coll-sort-bar">${photoToggle}</div>` : '';
-    return;
-  }
-  const opts = [
+  // Ranking Game lives here (next to the "My Ranking" sort it produces) so the
+  // header keeps a single row of icons on phones.
+  const rankChip = `<button class="coll-sort-chip coll-rank-chip" onclick="startGame()" title="Ranking Game"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Rank</button>`;
+  const opts = hasRanking ? [
     { key: 'purchase', label: 'Newest' },
     { key: 'ranking',  label: 'My Ranking' },
     { key: 'wears',    label: 'Most Worn' },
-  ];
-  bar.innerHTML = `<div class="coll-sort-bar">${opts.map(o =>
+  ] : [];
+  bar.innerHTML = `<div class="coll-sort-bar">${rankChip}${opts.map(o =>
     `<button class="coll-sort-chip${collGridSort === o.key ? ' active' : ''}" onclick="setCollGridSort('${o.key}')">${o.label}</button>`
   ).join('')}${photoToggle}</div>`;
 }
@@ -22057,6 +22067,7 @@ function renderCollection(force) {
   if (priceBtn) priceBtn.style.display = currentUser ? '' : 'none';
   const enhAllBtn = document.getElementById('coll-enhance-all-btn');
   if (enhAllBtn) enhAllBtn.style.display = currentUser ? 'inline-flex' : 'none';
+  syncCollViewBtn();
   renderCollSortBar();
   renderTagFilterBar();
   const el = document.getElementById('watches-grid');
@@ -22090,6 +22101,24 @@ function renderCollection(force) {
   if (collView === 'list') {
     el.className = '';
     el.innerHTML = renderCollectionList(visible, today);  // list does its own sort
+  } else if (collView === 'gallery') {
+    // Images only — same tiles as the wishlist gallery. Honours sort, tag
+    // filter and Post Pics; ranking badges / drag-reorder are card-view only.
+    el.className = 'wl-gallery coll-gallery';
+    el.innerHTML = sorted.map(w => {
+      const wLogs = logsForWatch(w.id);
+      const tileImg = collPhotoMode === 'post'
+        ? (wLogs.filter(l => l.photoUrl).sort((a,b) => (b.date||'').localeCompare(a.date||''))[0]?.photoUrl || w.image)
+        : w.image;
+      const _wc = w.color || '#c9a84c';
+      const imgInner = tileImg
+        ? `<img loading="lazy" src="${escHtml(tileImg)}" class="wl-tile-img" alt="" onerror="wlTileImgFallback(this)" data-color="${escAttr(_wc)}" data-text-color="${escAttr(initialsTextColor(_wc))}" data-initials="${escAttr(initials(w.brand,w.name))}">`
+        : `<div class="wl-tile-avatar" style="background:${escHtml(_wc)};color:${initialsTextColor(_wc)}">${initials(w.brand,w.name)}</div>`;
+      return `<div class="wl-tile" data-id="${w.id}">
+        <div class="wl-tile-imglink" onclick="openEditWatch('${w.id}')">${imgInner}</div>
+        <div class="wl-tile-name" onclick="openEditWatch('${w.id}')">${escHtml(w.name)}</div>
+      </div>`;
+    }).join('');
   } else {
     el.className = 'watches-grid';
     const isRanking = collGridSort === 'ranking';
@@ -22266,11 +22295,27 @@ function setCollListSort(field) {
   renderCollection(true);
 }
 
+const COLL_VIEW_ICONS = {
+  // Icon shows the view you'd switch TO — the button is a single-slot toggle.
+  gallery: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+  grid:    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="12" x2="12" y2="21"/></svg>',
+};
+function syncCollViewBtn() {
+  const btn = document.getElementById('coll-view-btn');
+  if (!btn) return;
+  const next = collView === 'gallery' ? 'grid' : 'gallery';
+  btn.innerHTML = COLL_VIEW_ICONS[next];
+  const label = next === 'gallery' ? 'Gallery view' : 'Card view';
+  btn.title = label; btn.setAttribute('aria-label', label);
+  btn.dataset.view = collView;
+}
 function setCollView(mode) {
-  collView = mode;
-  document.getElementById('view-grid-btn')?.classList.toggle('active', mode === 'grid');
-  document.getElementById('view-list-btn')?.classList.toggle('active', mode === 'list');
+  collView = collViewFromStore(mode);
+  safeLS.set('wr_coll_view', collView);
   renderCollection(true);
+}
+function toggleCollView() {
+  setCollView(collView === 'gallery' ? 'grid' : 'gallery');
 }
 
 function buildSwatches() {
@@ -27300,6 +27345,11 @@ function cropWatchFromPhoto(blob, bbox, padding = 0.15) {
 
 function wishlistViewFromStore(raw) {
   return raw === 'gallery' || raw === 'folders' ? raw : 'list';
+}
+// Collection view persisted in localStorage: 'grid' (full cards) or 'gallery'
+// (images only, same tiles as the wishlist gallery). Anything else → 'grid'.
+function collViewFromStore(raw) {
+  return raw === 'gallery' ? 'gallery' : 'grid';
 }
 // Groups wishlist items by brand (trimmed, case-insensitive). Brands with 2+
 // watches become folders; single-watch and blank-brand items stay standalone.

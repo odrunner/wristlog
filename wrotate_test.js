@@ -424,6 +424,11 @@ export function escAttr(s) {
 export function wishlistViewFromStore(raw) {
   return raw === 'gallery' || raw === 'folders' ? raw : 'list';
 }
+// Collection view persisted in localStorage: 'grid' (full cards) or 'gallery'
+// (images only, same tiles as the wishlist gallery). Anything else → 'grid'.
+export function collViewFromStore(raw) {
+  return raw === 'gallery' ? 'gallery' : 'grid';
+}
 // Groups wishlist items by brand (trimmed, case-insensitive). Brands with 2+
 // watches become folders; single-watch and blank-brand items stay standalone.
 export function groupWishlistByBrand(items) {

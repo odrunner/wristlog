@@ -37,7 +37,7 @@ const VERBATIM = [
   'sanitizeImageUrl', 'sanitizeSearch', 'storagePathFrom', 'tgAdvancedSummaryFields',
   'thumbPathFor', 'thumbUrlFor', 'thumbSrcAttrs',
   'tgLoadSettings', 'tgMapSliderToEngine', 'tgSaveSettings', 'uniqueWears',
-  'validateUsername', 'withTimeout', 'wishlistViewFromStore', 'groupWishlistByBrand', 'urlDomain', 'resolveTdm', 'resolveSweepKnob', 'parseSweepValues',
+  'validateUsername', 'withTimeout', 'wishlistViewFromStore', 'collViewFromStore', 'groupWishlistByBrand', 'urlDomain', 'resolveTdm', 'resolveSweepKnob', 'parseSweepValues',
   'extractCleanChunks', 'medianStd', 'buildBadgeNotificationRows', 'notifStaysUnreadOnPanelOpen',
   'mergeBadgeNotifs',
   'addDaysStr', 'computeStreaks', 'streakChipState', 'streakCalendarGrid', 'computeStreaksFrozen',
