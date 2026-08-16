@@ -12,7 +12,7 @@ import { sendEmail } from "../_shared/mailer.ts";
 import { fetchBouncedEmails } from "../_shared/bounced.ts";
 import {
   apnsHost, buildHtmlEmail, buildReminderEmail, buildReminderPush,
-  createAPNsJWT, hmacSign, sendPush, timingSafeEqual, unsubUrl,
+  createAPNsJWT, hmacSign, routeFor, sendPush, timingSafeEqual, unsubUrl,
 } from "./lib.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -69,11 +69,13 @@ serve(async (req) => {
         const mail = buildReminderEmail(lw ? { brand: esc(lw.brand), name: esc(lw.name) } : null);
         if (t.channel === "push") {
           const { data: toks } = await supabase.from("device_tokens")
-            .select("token").eq("user_id", t.user_id).eq("platform", "ios");
+            .select("token, app_version").eq("user_id", t.user_id).eq("platform", "ios");
           if (!toks || !toks.length) continue;
           if (!jwt) jwt = await createAPNsJWT(APNS_KEY_P8, APNS_KEY_ID, APNS_TEAM_ID);
+          // Tap → Track with the one-tap "wearing it again?" banner (2.6+ only, per token).
           const results = await Promise.all(
-            toks.map((x: { token: string }) => sendPush(x.token, push, jwt!, APNS_HOST)),
+            toks.map((x: { token: string; app_version?: string | null }) =>
+              sendPush(x.token, push, jwt!, APNS_HOST, routeFor(x.app_version, "track", t.last_watch_id ?? null, t.user_id))),
           );
           const expired = results.filter((r) => r.status === 410).map((r) => r.token);
           if (expired.length) await supabase.from("device_tokens").delete().in("token", expired);
