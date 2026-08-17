@@ -8015,7 +8015,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '16.17.13';
+const APP_VERSION = '16.17.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11168,8 +11168,8 @@ function renderNotificationPanel() {
         ${avatarHtml}
         <div style="flex:1;min-width:0;">
           <div class="notif-body">${body}</div>
-          ${actionsHtml}
           <div class="notif-time">${time}</div>
+          ${actionsHtml}
         </div>
       </div>`;
   }).join('');
