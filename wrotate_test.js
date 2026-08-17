@@ -1705,7 +1705,13 @@ export function onboardingChecklistState(earnedRefs, opts = {}) {
     { key: 'measure', label: 'Measure accuracy', ref: 2, done: has(2) || !!opts.triedMeasure },
   ];
   const doneCount = steps.filter((s) => s.done).length;
-  return { steps, doneCount, total: steps.length, complete: doneCount === steps.length };
+  const complete = doneCount === steps.length;
+  // `visible` is the render gate. `opts.loaded` says whether the earned-badge
+  // list has actually come back from the DB: before it has (or if the query
+  // failed), an empty list would read as "0/3 — brand-new user" and the card
+  // would flash for everyone on a slow connection. Unknown → hidden.
+  const visible = opts.loaded !== false && !complete;
+  return { steps, doneCount, total: steps.length, complete, visible };
 }
 
 // Whether to auto-open the first-wear-log onboarding compose. Fires once ever,

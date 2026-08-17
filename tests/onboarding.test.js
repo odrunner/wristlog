@@ -47,3 +47,22 @@ describe('onboardingChecklistState', () => {
     expect(onboardingChecklistState(new Set([1, 3])).steps.find(x => x.key === 'measure').done).toBe(false);
   });
 });
+
+// Render gate: the card must never show while the earned-badge list is unknown
+// (still loading, or the query failed) — an empty list would otherwise read as
+// "0/3 new user" and flash for everyone on a slow connection.
+describe('onboardingChecklistState visibility gate', () => {
+  it('hidden while badges are not loaded, even with nothing done', () => {
+    expect(onboardingChecklistState(new Set(), { loaded: false }).visible).toBe(false);
+  });
+  it('visible once loaded and incomplete', () => {
+    expect(onboardingChecklistState(new Set([1]), { loaded: true }).visible).toBe(true);
+  });
+  it('hidden once loaded and complete', () => {
+    expect(onboardingChecklistState(new Set([1, 2, 3]), { loaded: true }).visible).toBe(false);
+  });
+  it('loaded defaults to true when omitted (pure callers / legacy tests)', () => {
+    expect(onboardingChecklistState(new Set()).visible).toBe(true);
+    expect(onboardingChecklistState(new Set([1, 3]), { triedMeasure: true }).visible).toBe(false);
+  });
+});

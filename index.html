@@ -6489,6 +6489,7 @@ const COMPLICATION_KEYWORDS = {
 };
 
 let _earnedBadges = [];
+let _badgesLoaded = false; // true once loadEarnedBadges() has a real answer (gates the onboarding checklist)
 let _badgeScanDone = false;
 
 function badgeMedallionSvg(badge, size, earned) {
@@ -6807,7 +6808,13 @@ function onboardingChecklistState(earnedRefs, opts = {}) {
     { key: 'measure', label: 'Measure accuracy', ref: 2, done: has(2) || !!opts.triedMeasure },
   ];
   const doneCount = steps.filter((s) => s.done).length;
-  return { steps, doneCount, total: steps.length, complete: doneCount === steps.length };
+  const complete = doneCount === steps.length;
+  // `visible` is the render gate. `opts.loaded` says whether the earned-badge
+  // list has actually come back from the DB: before it has (or if the query
+  // failed), an empty list would read as "0/3 — brand-new user" and the card
+  // would flash for everyone on a slow connection. Unknown → hidden.
+  const visible = opts.loaded !== false && !complete;
+  return { steps, doneCount, total: steps.length, complete, visible };
 }
 
 function computeStreaks(logs, today) {
@@ -7239,7 +7246,7 @@ async function loadEarnedBadges() {
   const { data, error } = await db.from('user_badges')
     .select('*')
     .eq('user_id', currentUser.id);
-  if (!error && data) _earnedBadges = data;
+  if (!error && data) { _earnedBadges = data; _badgesLoaded = true; }
 }
 
 async function retroactiveBadgeScan() {
@@ -8015,7 +8022,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '16.17.15';
+const APP_VERSION = '17.07.18';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12000,8 +12007,8 @@ function renderOnboardingChecklist() {
   if (!el) return;
   if (!currentUser) { el.innerHTML = ''; return; }
   const st = onboardingChecklistState(new Set(_earnedBadges.map(e => e.badge_ref)),
-    { triedMeasure: safeLS.get('wrotate_tried_measure') === '1' });
-  if (st.complete) { el.innerHTML = ''; return; }
+    { triedMeasure: safeLS.get('wrotate_tried_measure') === '1', loaded: _badgesLoaded });
+  if (!st.visible) { el.innerHTML = ''; return; }
   const collapsed = safeLS.get('wrotate_onboarding_collapsed') === '1';
   const rows = st.steps.map(s => s.done
     ? `<div class="ob-row ob-done"><span class="ob-check">✓</span><span>${s.label}</span></div>`
@@ -29530,7 +29537,7 @@ function clearUserState() {
   const demoBanner = document.getElementById('demo-banner');
   if (demoBanner) demoBanner.classList.add('hidden');
   watches = []; logs = []; wishlist = []; eloRatings = {};
-  _earnedBadges = []; _badgeScanDone = false;
+  _earnedBadges = []; _badgeScanDone = false; _badgesLoaded = false;
   _dirty.watches.clear(); _dirty.logs.clear(); _dirty.wishlist.clear(); _dirty.elo.clear(); _persistDirty();
   _pendingDeletes = []; savePendingDeletes();
   try { safeLS.remove(STORE_W); safeLS.remove(STORE_L); safeLS.remove(STORE_WL); safeLS.remove(STORE_ELO); safeLS.remove(STORE_THEME); } catch(e) {}
