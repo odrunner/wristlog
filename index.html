@@ -2630,6 +2630,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .notif-follow-actions {
       display: flex; gap: .5rem; margin-top: .45rem;
     }
+    /* Compact inline Follow / Request on like & comment rows: pill, not a full-height
+       button; hover/focus lifts it so it reads as clickable. */
+    .notif-follow-inline {
+      padding: .18rem .7rem; font-size: .7rem; min-height: 0; line-height: 1.4;
+      display: inline-flex; align-items: center;
+    }
+    .notif-follow-inline:hover, .notif-follow-inline:focus-visible {
+      background: var(--gold-lt); box-shadow: 0 1px 4px rgba(0,0,0,.18); transform: translateY(-1px);
+    }
 
     /* ── BELL ICON ──────────────────────────────── */
     .bell-btn { position:relative; width:34px; height:34px; border-radius:50%; background:none; border:none; cursor:pointer; color:var(--muted);
@@ -8006,7 +8015,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '16.16.28';
+const APP_VERSION = '16.17.13';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11121,8 +11130,8 @@ function renderNotificationPanel() {
       // (Request for private profiles). 239 of 289 such pairs were unfollowed on 2026-08-16.
       : ENGAGE_NOTIF_TYPES.includes(n.type) && n.actor && n.actor_id !== currentUser?.id && !following.has(n.actor_id) && !n._followedBack && !pendingRequests.has(n.actor_id) && !n._requested ? `
       <div class="notif-follow-actions">
-        <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .7rem;border-color:var(--gold);color:var(--gold-text);"
-          onclick="event.stopPropagation();followFromNotif('${n.actor_id}','${n.id}')">${n.actor.profile_privacy === 'private' ? 'Request' : 'Follow'}</button>
+        <button class="follow-btn follow notif-follow-inline" title="${n.actor.profile_privacy === 'private' ? 'Send a follow request' : 'Follow'} ${escAttr(n.actor.display_name || n.actor.username || '')}"
+          onclick="event.stopPropagation();followFromNotif('${n.actor_id}','${n.id}')">${n.actor.profile_privacy === 'private' ? 'Request' : '+ Follow'}</button>
       </div>`
       : n.type === 'club_join_request' ? `
       <div class="notif-follow-actions">
