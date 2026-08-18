@@ -1660,9 +1660,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
          only fits next to the title if allowed to wrap internally, which is
          exactly what we are trying to avoid. */
       .page-header .wl-actions { flex: 0 0 100%; gap: .3rem; }
-      /* Icon-only buttons (view / photo / rank / share) drop to a square .45rem
-         pad; "+ Add to Wishlist" keeps its label. Everything stays 44px tall
-         like the Collection header. Measured to fit one line at 375px. */
+      /* View / Rank / Share drop to icon-only and "+ Add to Wishlist" shortens
+         to "+ Add"; "Add from Photo" keeps its label like the Collection header.
+         Everything stays 44px tall like the Collection header. Measured to fit
+         one line at 375px (~312 of 348px; e2e/wishlist-layout.mock.spec.js). */
       .wl-actions .btn { padding: .45rem .55rem !important; }
       .wl-actions .wl-actions-text { display: none; }
       #wishlist-modal .modal-actions { gap: .3rem; }
@@ -4933,8 +4934,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <!-- One icon cycles list → folders → gallery → list; like the Collection
              toggle, the icon shows the view you GET on tap (see updateWishlistViewBtn). -->
         <button id="wl-view-btn" class="btn btn-ghost" data-view="list" onclick="cycleWishlistView()" title="Brand folders" aria-label="Brand folders" style="display:none;padding:.45rem;"></button>
-        <button class="btn btn-primary" onclick="openWishlistPhoto()" aria-label="Add from Photo" style="padding:.45rem .7rem;font-size:.8rem;gap:.35rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="wl-actions-text">Add from Photo</span></button>
-        <button class="btn btn-ghost" onclick="openAddWishlist()" style="padding:.45rem .7rem;font-size:.8rem;">+ Add to Wishlist</button>
+        <button class="btn btn-primary" onclick="openWishlistPhoto()" aria-label="Add from Photo" style="padding:.45rem .7rem;font-size:.8rem;gap:.35rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
+        <button class="btn btn-ghost" onclick="openAddWishlist()" style="padding:.45rem .7rem;font-size:.8rem;">+ Add<span class="wl-actions-text"> to Wishlist</span></button>
         <button id="wl-rank-btn" class="btn btn-ghost" onclick="startGame('wishlist')" title="Ranking Game" aria-label="Ranking Game" style="display:none;padding:.45rem .7rem;font-size:.8rem;gap:.35rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="wl-actions-text">Rank</span></button>
         <button id="wl-share-btn" class="btn btn-ghost" onclick="enterWishlistSelect()" title="Share" aria-label="Share" style="display:none;padding:.45rem .7rem;font-size:.8rem;gap:.35rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
       </div>
@@ -8008,7 +8009,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.19.02';
+const APP_VERSION = '17.19.11';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
