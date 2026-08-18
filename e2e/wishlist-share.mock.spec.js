@@ -40,7 +40,7 @@ test('ticking an item enables Share and counts it', async ({ page }) => {
 
 test('a folder checkbox takes every watch of that brand', async ({ page }) => {
   await openWishlist(page);
-  await page.click('.wl-view-btn[data-view="folders"]');
+  await page.evaluate(() => setWishlistView('folders'));
   await page.click('#wl-share-btn');
   await page.locator('.wl-folder-select').first().click();   // Omega folder — 1 watch
   await expect(page.locator('#wl-select-count')).toHaveText('1 selected');
@@ -54,7 +54,7 @@ test('the selection survives a view switch', async ({ page }) => {
   await openWishlist(page);
   await page.click('#wl-share-btn');
   await page.locator('.wl-select-box').first().click();
-  await page.click('.wl-view-btn[data-view="gallery"]');
+  await page.evaluate(() => setWishlistView('gallery'));
   await expect(page.locator('#wl-select-count')).toHaveText('1 selected');
   await expect(page.locator('.wl-select-box')).toHaveCount(3);
 });
@@ -202,7 +202,7 @@ test('a folder whose brand contains an apostrophe still selects and expands', as
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
 
-  await page.click('.wl-view-btn[data-view="folders"]');
+  await page.evaluate(() => setWishlistView('folders'));
   await page.click('#wl-share-btn');
 
   // The folder checkbox must take both watches of that brand.

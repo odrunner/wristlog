@@ -279,9 +279,19 @@ test.describe('Wishlist page (mocked)', () => {
     await navigateTo(page, 'wishlist');
     await expect(page.locator('#page-wishlist')).toBeVisible();
 
-    // Toggle bar visible; switch to Gallery
-    await expect(page.locator('#wishlist-view-toggle')).toBeVisible();
-    await page.click('.wl-view-btn[data-view="gallery"]');
+    // Single view button cycles list → folders → gallery → list; the icon/label
+    // names the NEXT view (what a tap gives you), data-view the current one.
+    const vb = page.locator('#wl-view-btn');
+    await expect(vb).toBeVisible();
+    await expect(vb).toHaveAttribute('data-view', 'list');
+    await expect(vb).toHaveAttribute('aria-label', 'Brand folders');
+    await vb.click();
+    await expect(page.locator('.wl-folder')).toHaveCount(2);   // every named brand gets a folder
+    await expect(vb).toHaveAttribute('data-view', 'folders');
+    await expect(vb).toHaveAttribute('aria-label', 'Gallery view');
+    await vb.click();
+    await expect(vb).toHaveAttribute('data-view', 'gallery');
+    await expect(vb).toHaveAttribute('aria-label', 'List view');
 
     // Two photo tiles with names + domain URLs
     await expect(page.locator('.wl-gallery .wl-tile')).toHaveCount(2);
@@ -313,7 +323,7 @@ test.describe('Wishlist page (mocked)', () => {
     await expect(page.locator('#page-wishlist')).toBeVisible();
 
     // Switch to folders view
-    await page.click('.wl-view-btn[data-view="folders"]');
+    await page.evaluate(() => setWishlistView('folders'));
     expect(await page.evaluate(() => localStorage.getItem('wr_wishlist_view'))).toBe('folders');
 
     // Two folders, A→Z: Omega (×1) then Patek (×2). Nothing loose beside them.
@@ -339,8 +349,8 @@ test.describe('Wishlist page (mocked)', () => {
     await expect(patek.locator('.wl-card .wl-name').first()).toHaveText('Aquanaut 5167');
 
     // Expanded state persists across re-render
-    await page.click('.wl-view-btn[data-view="list"]');
-    await page.click('.wl-view-btn[data-view="folders"]');
+    await page.evaluate(() => setWishlistView('list'));
+    await page.evaluate(() => setWishlistView('folders'));
     await expect(page.locator('.wl-folder.open')).toHaveCount(2);
 
     // Card inside folder still opens the edit modal

@@ -28,7 +28,7 @@ test.describe('Wishlist gallery with a broken image (mocked)', () => {
     await page.goto('/');
     await waitForAppBoot(page);
     await navigateTo(page, 'wishlist');
-    await page.click('.wl-view-btn[data-view="gallery"]');
+    await page.evaluate(() => setWishlistView('gallery'));
     await expect(page.locator('.wl-gallery .wl-tile')).toHaveCount(1);
 
     // The broken <img> is replaced by the same avatar the no-image case uses.

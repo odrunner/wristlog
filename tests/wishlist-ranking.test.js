@@ -41,3 +41,16 @@ describe('wishlist elo round-trips through the row mappers', () => {
     expect(wishToRow({ id: 'x' }, 'u', 0).elo_rating).toBeNull();
   });
 });
+
+import { nextWishlistView } from '../wrotate_test.js';
+describe('nextWishlistView — single view button ring', () => {
+  it('cycles list → folders → gallery → list', () => {
+    expect(nextWishlistView('list')).toBe('folders');
+    expect(nextWishlistView('folders')).toBe('gallery');
+    expect(nextWishlistView('gallery')).toBe('list');
+  });
+  it('unknown/legacy values fall back to list', () => {
+    expect(nextWishlistView(undefined)).toBe('list');
+    expect(nextWishlistView('grid')).toBe('list');
+  });
+});

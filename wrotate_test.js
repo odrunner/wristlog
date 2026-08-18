@@ -424,6 +424,10 @@ export function escAttr(s) {
 export function wishlistViewFromStore(raw) {
   return raw === 'gallery' || raw === 'folders' ? raw : 'list';
 }
+// Ring order for the single view button: list → folders → gallery → list
+export function nextWishlistView(v) {
+  return v === 'list' ? 'folders' : v === 'folders' ? 'gallery' : 'list';
+}
 // Collection view persisted in localStorage: 'grid' (full cards) or 'gallery'
 // (images only, same tiles as the wishlist gallery). Anything else → 'grid'.
 export function collViewFromStore(raw) {

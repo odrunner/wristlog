@@ -2868,8 +2868,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="eyebrow eyebrow-muted">August 2026</span>
       </div>
       <div style="margin-bottom:.75rem;">
-        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Wishlist Ranking Game</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">The Ranking Game now works on your wishlist too. Tap <strong>Rank</strong> at the top of the Wishlist tab for head-to-head match-ups between the watches you&#8217;re dreaming about &#8212; tap the one you want more, 3 seconds per round. <strong>Save Ranking</strong> reorders your wishlist by preference (you can still drag items afterwards), and scores accumulate across sessions, separately from your collection.</div>
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Wishlist: One View Icon + Ranking Game</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">The three view buttons at the top of the Wishlist are now <strong>one icon</strong> that cycles list → brand folders → gallery, just like the Collection toggle. And the Ranking Game now works on your wishlist too. Tap <strong>Rank</strong> at the top of the Wishlist tab for head-to-head match-ups between the watches you&#8217;re dreaming about &#8212; tap the one you want more, 3 seconds per round. <strong>Save Ranking</strong> reorders your wishlist by preference (you can still drag items afterwards), and scores accumulate across sessions, separately from your collection.</div>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Collection Gallery View</div>
@@ -4202,7 +4202,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">4</div>
             <div class="help-step-body">
               <div class="help-step-title">Switch views: list, brand folders, or gallery</div>
-              <div class="help-step-desc">Use the view buttons at the top. The <strong>folder view</strong> groups watches from the same brand into collapsible folders — every brand gets one, even if you only have a single watch from it — handy when several grails share a maker. The <strong>gallery view</strong> shows a photo-first grid.</div>
+              <div class="help-step-desc">Tap the view icon at the top to cycle <strong>list → brand folders → gallery</strong> — like the Collection toggle, the icon shows the view you'll get next. The <strong>folder view</strong> groups watches from the same brand into collapsible folders — every brand gets one, even if you only have a single watch from it — handy when several grails share a maker. The <strong>gallery view</strong> shows a photo-first grid.</div>
             </div>
           </div>
           <div class="help-step">
@@ -4943,17 +4943,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div class="page-header">
       <h1 class="page-title">Wishlist</h1>
       <div class="wl-actions">
-        <div id="wishlist-view-toggle" class="wl-view-toggle" style="display:none;">
-          <button type="button" class="wl-view-btn active" data-view="list" onclick="setWishlistView('list')" title="List view" aria-label="List view">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-          </button>
-          <button type="button" class="wl-view-btn" data-view="folders" onclick="setWishlistView('folders')" title="Brand folders" aria-label="Brand folders view">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-          </button>
-          <button type="button" class="wl-view-btn" data-view="gallery" onclick="setWishlistView('gallery')" title="Gallery view" aria-label="Gallery view">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-          </button>
-        </div>
+        <!-- One icon cycles list → folders → gallery → list; like the Collection
+             toggle, the icon shows the view you GET on tap (see updateWishlistViewBtn). -->
+        <button id="wl-view-btn" class="wl-view-btn" data-view="list" onclick="cycleWishlistView()" title="Brand folders" aria-label="Brand folders" style="display:none;"></button>
         <button class="btn btn-primary btn-sm" onclick="openWishlistPhoto()" aria-label="Add from Photo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="wl-actions-text">Add from Photo</span></button>
         <button class="btn btn-ghost btn-sm" onclick="openAddWishlist()">+ Add to Wishlist</button>
         <button id="wl-rank-btn" class="btn btn-ghost btn-sm" onclick="startGame('wishlist')" title="Ranking Game" aria-label="Ranking Game" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="wl-actions-text">Rank</span></button>
@@ -8029,7 +8021,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.18.44';
+const APP_VERSION = '17.18.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -27801,6 +27793,25 @@ function setWishlistView(v) {
   try { safeLS.set('wr_wishlist_view', _wishlistView); } catch (e) {}
   renderWishlist(true);
 }
+// Ring order for the single view button: list → folders → gallery → list
+function nextWishlistView(v) {
+  return v === 'list' ? 'folders' : v === 'folders' ? 'gallery' : 'list';
+}
+function cycleWishlistView() { setWishlistView(nextWishlistView(_wishlistView)); }
+const WL_VIEW_ICONS = {
+  list:    { label: 'List view',     svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>' },
+  folders: { label: 'Brand folders', svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' },
+  gallery: { label: 'Gallery view',  svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' },
+};
+// The button shows the NEXT view (what a tap gives you), same convention as the
+// Collection toggle; data-view records the CURRENT view for tests/CSS.
+function updateWishlistViewBtn(btn) {
+  const next = nextWishlistView(_wishlistView);
+  const ic = WL_VIEW_ICONS[next];
+  btn.innerHTML = ic.svg;
+  btn.title = ic.label; btn.setAttribute('aria-label', ic.label);
+  btn.dataset.view = _wishlistView;
+}
 
 // Expanded brand folders in the folders view (persisted; new folders start collapsed)
 let _wlFoldersOpen = (() => {
@@ -27869,11 +27880,11 @@ function renderWishlist(force) {
   if (!force && _lastRenderedGen.wishlist === _dataGen) return;
   _lastRenderedGen.wishlist = _dataGen;
   const el = document.getElementById('wishlist-grid');
-  const toggle = document.getElementById('wishlist-view-toggle');
+  const viewBtn = document.getElementById('wl-view-btn');
   const visible = wishlist;
-  if (toggle) {
-    toggle.style.display = visible.length ? 'flex' : 'none';
-    toggle.querySelectorAll('.wl-view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === _wishlistView));
+  if (viewBtn) {
+    viewBtn.style.display = visible.length ? '' : 'none';
+    updateWishlistViewBtn(viewBtn);
   }
   const shareBtn = document.getElementById('wl-share-btn');
   const rankBtn = document.getElementById('wl-rank-btn');
