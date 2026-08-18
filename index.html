@@ -2868,6 +2868,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="eyebrow eyebrow-muted">August 2026</span>
       </div>
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Wishlist Ranking Game</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">The Ranking Game now works on your wishlist too. Tap <strong>Rank</strong> at the top of the Wishlist tab for head-to-head match-ups between the watches you&#8217;re dreaming about &#8212; tap the one you want more, 3 seconds per round. <strong>Save Ranking</strong> reorders your wishlist by preference (you can still drag items afterwards), and scores accumulate across sessions, separately from your collection.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Collection Gallery View</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">See your collection as a wall of photos. The new toggle in the Collection header switches between the full cards and an <strong>images-only gallery</strong> &#8212; same tiles as the Wishlist gallery, following your current sort, tag filter and Post Pics setting. Your choice is remembered. The <strong>Ranking Game</strong> now lives as a <strong>Rank</strong> chip in the sort bar, next to the My Ranking order it produces.</div>
       </div>
@@ -4148,7 +4152,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
           </div>
           <div class="help-mini-card">
             <div class="help-mini-title" style="display:flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Ranking Game</div>
-            <div class="help-mini-desc">Tap <strong>Rank</strong> in the sort bar above your collection for head-to-head match-ups. Tap the watch you prefer within 3 seconds. Elo scores accumulate over sessions so your ranking gets more accurate over time.</div>
+            <div class="help-mini-desc">Tap <strong>Rank</strong> in the sort bar above your collection (or at the top of your Wishlist) for head-to-head match-ups. Tap the watch you prefer within 3 seconds. Elo scores accumulate over sessions so your ranking gets more accurate over time. On the Wishlist, saving reorders the list by preference &#8212; you can still drag items afterwards.</div>
           </div>
           <div class="help-mini-card">
             <div class="help-mini-title" style="display:flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg> Tag Filtering</div>
@@ -4952,6 +4956,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         </div>
         <button class="btn btn-primary btn-sm" onclick="openWishlistPhoto()" aria-label="Add from Photo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="wl-actions-text">Add from Photo</span></button>
         <button class="btn btn-ghost btn-sm" onclick="openAddWishlist()">+ Add to Wishlist</button>
+        <button id="wl-rank-btn" class="btn btn-ghost btn-sm" onclick="startGame('wishlist')" title="Ranking Game" aria-label="Ranking Game" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="wl-actions-text">Rank</span></button>
         <button id="wl-share-btn" class="btn btn-ghost btn-sm" onclick="enterWishlistSelect()" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share</button>
       </div>
     </div>
@@ -5648,7 +5653,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
   <!-- Intro screen -->
   <div id="game-intro-screen" style="display:flex;flex-direction:column;align-items:center;width:100%;max-width:420px;text-align:center;">
     <div style="font-size:1.25rem;font-weight:800;letter-spacing:.02em;margin-bottom:1rem;">Ranking Game</div>
-    <p style="font-size:.88rem;color:var(--muted);line-height:1.65;margin-bottom:1.5rem;">
+    <p id="game-intro-copy" style="font-size:.88rem;color:var(--muted);line-height:1.65;margin-bottom:1.5rem;">
       Head-to-head match-ups between your watches. Tap the one you prefer — you have 3 seconds per round.
       Elo scores accumulate over sessions so your ranking gets more accurate over time.
     </p>
@@ -5690,7 +5695,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="game-result-list" class="game-result-list"></div>
     <div style="display:flex;gap:.65rem;margin-top:1.25rem;flex-wrap:wrap;justify-content:center;">
       <button class="btn btn-primary" onclick="saveRanking()">Save Ranking</button>
-      <button class="btn btn-ghost" onclick="startGame()">Play Again</button>
+      <button class="btn btn-ghost" onclick="startGame(gameMode)">Play Again</button>
       <button class="btn btn-ghost" onclick="closeGame()">✕ Close</button>
     </div>
   </div>
@@ -7724,6 +7729,7 @@ function wishToRow(w, idx) {
     wish_privacy: w.wishPrivacy||null,
     added_date: w.addedDate||null,
     sort_order: typeof idx === 'number' ? idx : (w._rank ?? 0),
+    elo_rating: w.elo ?? null,
   };
 }
 function rowToWish(r) {
@@ -7736,6 +7742,7 @@ function rowToWish(r) {
     wishPrivacy: r.wish_privacy||null,
     addedDate: r.added_date||null,
     _rank: r.sort_order ?? 0,
+    elo: r.elo_rating ?? null,
   };
 }
 
@@ -7767,7 +7774,7 @@ async function loadUserData() {
     // truncated log set would quietly re-rank the Most Worn leaderboard rather
     // than fail, so ask for a bound well above the current max (422/user).
     _q(db.from('logs').select('id,watch_id,date,use_case,notes,strap_id,photo_url,visibility,club_id').eq('user_id', uid).range(0, 9999)),
-    _q(db.from('wishlist').select('id,brand,name,ref,price,url,image,notes,color,tags,market_price,market_price_date,market_price_src,watch_charts_url,wish_privacy,added_date,sort_order').eq('user_id', uid)),
+    _q(db.from('wishlist').select('id,brand,name,ref,price,url,image,notes,color,tags,market_price,market_price_date,market_price_src,watch_charts_url,wish_privacy,added_date,sort_order,elo_rating').eq('user_id', uid)),
     _q(db.from('brands').select('name').eq('is_canonical', true).range(0, 9999)),
   ]), 15000);
   // Only overwrite each table if the query succeeded — keep localStorage cache on failure
@@ -8022,7 +8029,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.07.18';
+const APP_VERSION = '17.18.44';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -12550,7 +12557,7 @@ const PROMO_ACTIONS = {
   open_measure:       () => nav(document.getElementById('nav-measure-btn')),
   open_clubs:         () => showClubsPage(),
   open_discover:      () => openDiscover(),
-  open_ranking_game:  () => beginRankingGame(),
+  open_ranking_game:  () => { gameMode = 'collection'; beginRankingGame(); },
 };
 
 // Returns a callable for a slot's cta_action, or null. Null means "render no
@@ -16862,7 +16869,8 @@ let collTagFilter = null;         // active tag filter in Collection page (null 
 let collPhotoMode = safeLS.get('collPhotoMode') || 'watch'; // 'watch' | 'post'
 let collListSort = 'wears-desc';  // list-view sort: field-dir
 
-// Collection ranking game state
+// Ranking game state (shared by Collection and Wishlist — see gameMode)
+let gameMode       = 'collection'; // 'collection' | 'wishlist'
 let gameQueue      = [];    // [{aId, bId}] remaining pairs
 let gamePair       = null;  // {aId, bId} currently shown
 let gameMatchNum   = 0;
@@ -21607,6 +21615,15 @@ function eloExpected(a, b) {
   return 1 / (1 + Math.pow(10, (b - a) / 400));
 }
 
+// Wishlist "Save Ranking": highest Elo first (unrated = 1000, ties keep the
+// current order), and _rank rewritten so sort_order persists the new order.
+function rankWishlistByElo(list) {
+  return (list || [])
+    .map((w, i) => ({ w, i }))
+    .sort((a, b) => ((b.w.elo ?? ELO_DEFAULT) - (a.w.elo ?? ELO_DEFAULT)) || (a.i - b.i))
+    .map(({ w }, i) => ({ ...w, _rank: i }));
+}
+
 function buildGameQueue(watchList) {
   const n = watchList.length;
   const totalPairs = n * (n - 1) / 2;
@@ -21639,11 +21656,31 @@ function buildGameQueue(watchList) {
   return pairs;
 }
 
-function startGame() {
-  const pool = watches;
+// The game runs over one of two pools. Collection scores live in eloRatings
+// (watches.elo_rating); wishlist scores live on each wishlist item as w.elo
+// (wishlist.elo_rating) — the two never mix.
+function gamePool() { return gameMode === 'wishlist' ? wishlist : watches; }
+function gameElo(id) {
+  if (gameMode === 'wishlist') return wishlist.find(w => w.id === id)?.elo ?? ELO_DEFAULT;
+  return eloRatings[id] ?? ELO_DEFAULT;
+}
+function setGameElo(id, v) {
+  if (gameMode === 'wishlist') { const w = wishlist.find(x => x.id === id); if (w) w.elo = v; }
+  else eloRatings[id] = v;
+}
+// Snapshot of wishlist Elo at game start so Exit/dismiss can undo unsaved rounds
+let _wishEloSnap = null;
+
+function startGame(mode) {
+  gameMode = mode === 'wishlist' ? 'wishlist' : 'collection';
+  const pool = gamePool();
   if (pool.length < 2) { toast('Need at least 2 watches to play!', 'error'); return; }
+  if (gameMode === 'wishlist' && !_wishEloSnap) _wishEloSnap = Object.fromEntries(wishlist.map(w => [w.id, w.elo ?? null]));
   const overlay = document.getElementById('game-overlay');
   overlay.style.display = 'flex';
+  document.getElementById('game-intro-copy').textContent = gameMode === 'wishlist'
+    ? 'Head-to-head match-ups between the watches on your wishlist. Tap the one you want more \u2014 you have 3 seconds per round. Elo scores accumulate over sessions so your ranking gets more accurate over time.'
+    : 'Head-to-head match-ups between your watches. Tap the one you prefer \u2014 you have 3 seconds per round. Elo scores accumulate over sessions so your ranking gets more accurate over time.';
   document.getElementById('game-result-screen').style.display = 'none';
   if (safeLS.get('rankingGameSkipIntro') === '1') {
     document.getElementById('game-intro-screen').style.display = 'none';
@@ -21658,12 +21695,13 @@ function beginRankingGame() {
   if (document.getElementById('game-skip-intro-chk')?.checked) {
     try { safeLS.set('rankingGameSkipIntro', '1'); } catch(e) {}
   }
-  const pool = watches;
-  pool.forEach(w => { if (!(w.id in eloRatings)) { eloRatings[w.id] = ELO_DEFAULT; markDirty('elo', w.id); } });
+  const pool = gamePool();
+  if (gameMode === 'collection')
+    pool.forEach(w => { if (!(w.id in eloRatings)) { eloRatings[w.id] = ELO_DEFAULT; markDirty('elo', w.id); } });
   gameQueue    = buildGameQueue(pool);
   gameTotal    = gameQueue.length;
   gameMatchNum = 0;
-  if (window.posthog) posthog.capture('ranking_game_started', { watch_count: pool.length });
+  if (window.posthog) posthog.capture('ranking_game_started', { watch_count: pool.length, mode: gameMode });
   document.getElementById('game-intro-screen').style.display = 'none';
   document.getElementById('game-play-screen').style.display  = 'flex';
   nextMatch();
@@ -21679,8 +21717,9 @@ function nextMatch() {
 }
 
 function renderGamePair() {
-  const wa = watches.find(x => x.id === gamePair.aId);
-  const wb = watches.find(x => x.id === gamePair.bId);
+  const pool = gamePool();
+  const wa = pool.find(x => x.id === gamePair.aId);
+  const wb = pool.find(x => x.id === gamePair.bId);
   if (!wa || !wb) { nextMatch(); return; }
   const remaining = gameQueue.length + 1; // including current
   document.getElementById('game-match-label').textContent =
@@ -21709,12 +21748,12 @@ function pickWatch(winnerId, loserId) {
   document.getElementById('game-card-a').classList.add(isA ? 'winner' : 'loser');
   document.getElementById('game-card-b').classList.add(isA ? 'loser'  : 'winner');
   // Elo update
-  const wElo = eloRatings[winnerId] ?? ELO_DEFAULT;
-  const lElo = eloRatings[loserId]  ?? ELO_DEFAULT;
+  const wElo = gameElo(winnerId);
+  const lElo = gameElo(loserId);
   const exp   = eloExpected(wElo, lElo);
-  eloRatings[winnerId] = Math.round(wElo + ELO_K * (1 - exp));
-  eloRatings[loserId]  = Math.round(lElo + ELO_K * (0 - (1 - exp)));
-  markDirty('elo', [winnerId, loserId]);
+  setGameElo(winnerId, Math.round(wElo + ELO_K * (1 - exp)));
+  setGameElo(loserId,  Math.round(lElo + ELO_K * (0 - (1 - exp))));
+  if (gameMode === 'collection') markDirty('elo', [winnerId, loserId]);
   setTimeout(nextMatch, 480);
 }
 
@@ -21759,12 +21798,10 @@ function showGameResults() {
   clearGameTimer();
   document.getElementById('game-play-screen').style.display   = 'none';
   document.getElementById('game-result-screen').style.display = 'flex';
-  const ranked = [...watches].sort((a, b) =>
-    (eloRatings[b.id] ?? ELO_DEFAULT) - (eloRatings[a.id] ?? ELO_DEFAULT)
-  );
+  const ranked = [...gamePool()].sort((a, b) => gameElo(b.id) - gameElo(a.id));
   const medals = ['1.','2.','3.'];
   document.getElementById('game-result-list').innerHTML = ranked.map((w, i) => {
-    const elo  = eloRatings[w.id] ?? ELO_DEFAULT;
+    const elo  = gameElo(w.id);
     const rank = medals[i] || `#${i + 1}`;
     const img  = w.image
       ? `<img ${thumbSrcAttrs(w.image)} alt="" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display='none'">`
@@ -21781,6 +21818,19 @@ function showGameResults() {
 }
 
 function saveRanking() {
+  if (gameMode === 'wishlist') {
+    // The wishlist has one order — the manual drag order — so "sorted by your
+    // preference" means the list itself reorders. Drag still works afterwards.
+    wishlist = rankWishlistByElo(wishlist);
+    safeSetJSON(STORE_WL, wishlist);
+    markDirty('wishlist', wishlist.map(w => w.id));
+    _wishEloSnap = null;
+    cloudSync();
+    closeGame();
+    renderWishlist(true);
+    toast('Ranking saved! Wishlist sorted by your preference.');
+    return;
+  }
   safeSetJSON(STORE_ELO, eloRatings);
   cloudSync();
   collGridSort = 'ranking';
@@ -21795,9 +21845,15 @@ function closeGame() {
   document.getElementById('game-skip-intro-chk').checked = false;
   gameQueue = [];
   gamePair  = null;
+  // Unsaved wishlist rounds: put the pre-game scores back
+  if (_wishEloSnap) {
+    wishlist.forEach(w => { if (w.id in _wishEloSnap) w.elo = _wishEloSnap[w.id]; });
+    _wishEloSnap = null;
+  }
 }
 
 function dismissGame() {
+  if (gameMode === 'wishlist') { closeGame(); return; }
   // Restore ELO ratings from saved state so no in-memory changes leak out
   const saved = safeLS.get(STORE_ELO);
   let parsed = {};
@@ -27820,8 +27876,10 @@ function renderWishlist(force) {
     toggle.querySelectorAll('.wl-view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === _wishlistView));
   }
   const shareBtn = document.getElementById('wl-share-btn');
+  const rankBtn = document.getElementById('wl-rank-btn');
   const bar = document.getElementById('wl-select-bar');
   if (shareBtn) shareBtn.style.display = (visible.length && !_wlSelect) ? '' : 'none';
+  if (rankBtn) rankBtn.style.display = (visible.length >= 2 && !_wlSelect) ? '' : 'none';
   if (bar) {
     bar.style.display = (_wlSelect && visible.length) ? 'flex' : 'none';
     if (_wlSelect) {

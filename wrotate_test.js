@@ -698,6 +698,7 @@ export function wishToRow(w, userId, idx) {
     wish_privacy: w.wishPrivacy || null,
     added_date: w.addedDate || null,
     sort_order: typeof idx === 'number' ? idx : (w._rank ?? 0),
+    elo_rating: w.elo ?? null,
   };
 }
 
@@ -711,6 +712,7 @@ export function rowToWish(r) {
     wishPrivacy: r.wish_privacy || null,
     addedDate: r.added_date || null,
     _rank: r.sort_order ?? 0,
+    elo: r.elo_rating ?? null,
   };
 }
 
@@ -777,6 +779,15 @@ export function buildGameQueue(watchList) {
     pairs.push({ aId: watchList[a].id, bId: watchList[b].id });
   }
   return pairs;
+}
+
+// Wishlist "Save Ranking": highest Elo first (unrated = 1000, ties keep the
+// current order), and _rank rewritten so sort_order persists the new order.
+export function rankWishlistByElo(list) {
+  return (list || [])
+    .map((w, i) => ({ w, i }))
+    .sort((a, b) => ((b.w.elo ?? ELO_DEFAULT) - (a.w.elo ?? ELO_DEFAULT)) || (a.i - b.i))
+    .map(({ w }, i) => ({ ...w, _rank: i }));
 }
 
 export function computeEloUpdate(winnerId, loserId, ratings) {
