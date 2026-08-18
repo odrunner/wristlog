@@ -1375,18 +1375,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     /* Wishlist header actions: view toggle + add buttons all on one row */
     /* wrap, not nowrap: with nowrap the row grew past the viewport on phones
        and "+ Add to Wishlist" was clipped off the right edge. */
-    .wl-actions { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; justify-content: flex-start; }
-    .wl-view-toggle { display: flex; gap: .3rem; flex-shrink: 0; }
-    .wl-view-btn {
-      display: inline-flex; align-items: center; justify-content: center;
-      color: var(--muted);
-      background: none; border: 1px solid var(--border); border-radius: var(--radius-pill);
-      padding: .35rem .5rem; cursor: pointer;
-      transition: background .15s, color .15s, border-color .15s;
-    }
-    .wl-view-btn:hover { color: var(--text); border-color: var(--gold); }
-    .wl-view-btn.active { background: var(--gold); color: #1c1c28; border-color: var(--gold); }
-    .wl-actions .btn { white-space: nowrap; }
+    .wl-actions { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; justify-content: flex-start; }
+    /* Buttons are sized like the Collection header's (same .btn, .45rem padding,
+       16px icons, .8rem text) so the two pages read as one. */
+    .wl-actions .btn { white-space: nowrap; display: inline-flex; align-items: center; }
 
     /* Wishlist brand folders */
     .wl-folder-header {
@@ -1667,15 +1659,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
          toolbar squeezed beside the "Wishlist" title (263px of 363px) — it
          only fits next to the title if allowed to wrap internally, which is
          exactly what we are trying to avoid. */
-      .page-header .wl-actions { flex: 0 0 100%; gap: .2rem; }
-      .wl-view-toggle { gap: .2rem; }
-      /* Horizontal padding only — vertical is unchanged so the tap target
-         keeps its height while the row gets ~15px narrower (fits 375px). */
-      .wl-view-btn { padding: .35rem .3rem; }
-      .wl-actions .btn-sm { padding: .32rem .4rem; font-size: .68rem; gap: .3rem; }
-      /* "Add from Photo" drops to icon-only on the phone toolbar — its text
-         was the single biggest contributor to overflow once Share (Task 6)
-         joined the row. aria-label on the button keeps the accessible name. */
+      .page-header .wl-actions { flex: 0 0 100%; gap: .3rem; }
+      /* Icon-only buttons (view / photo / rank / share) drop to a square .45rem
+         pad; "+ Add to Wishlist" keeps its label. Everything stays 44px tall
+         like the Collection header. Measured to fit one line at 375px. */
+      .wl-actions .btn { padding: .45rem .55rem !important; }
       .wl-actions .wl-actions-text { display: none; }
       #wishlist-modal .modal-actions { gap: .3rem; }
       #wishlist-modal .modal-actions .btn { padding: .6rem .55rem; font-size: .78rem; }
@@ -1691,7 +1679,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
          126px and push the toolbar to 379px against 348px available at 375px,
          breaking the one-line layout. 27x28 -> 27x40 is the improvement that
          costs no horizontal space. */
-      .wl-view-btn { min-height: 40px; }
 
       /* Stats: 2 cols */
       .stats-row { grid-template-columns: repeat(2, 1fr); }
@@ -4945,11 +4932,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div class="wl-actions">
         <!-- One icon cycles list → folders → gallery → list; like the Collection
              toggle, the icon shows the view you GET on tap (see updateWishlistViewBtn). -->
-        <button id="wl-view-btn" class="wl-view-btn" data-view="list" onclick="cycleWishlistView()" title="Brand folders" aria-label="Brand folders" style="display:none;"></button>
-        <button class="btn btn-primary btn-sm" onclick="openWishlistPhoto()" aria-label="Add from Photo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="wl-actions-text">Add from Photo</span></button>
-        <button class="btn btn-ghost btn-sm" onclick="openAddWishlist()">+ Add to Wishlist</button>
-        <button id="wl-rank-btn" class="btn btn-ghost btn-sm" onclick="startGame('wishlist')" title="Ranking Game" aria-label="Ranking Game" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="wl-actions-text">Rank</span></button>
-        <button id="wl-share-btn" class="btn btn-ghost btn-sm" onclick="enterWishlistSelect()" style="display:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share</button>
+        <button id="wl-view-btn" class="btn btn-ghost" data-view="list" onclick="cycleWishlistView()" title="Brand folders" aria-label="Brand folders" style="display:none;padding:.45rem;"></button>
+        <button class="btn btn-primary" onclick="openWishlistPhoto()" aria-label="Add from Photo" style="padding:.45rem .7rem;font-size:.8rem;gap:.35rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="wl-actions-text">Add from Photo</span></button>
+        <button class="btn btn-ghost" onclick="openAddWishlist()" style="padding:.45rem .7rem;font-size:.8rem;">+ Add to Wishlist</button>
+        <button id="wl-rank-btn" class="btn btn-ghost" onclick="startGame('wishlist')" title="Ranking Game" aria-label="Ranking Game" style="display:none;padding:.45rem .7rem;font-size:.8rem;gap:.35rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="wl-actions-text">Rank</span></button>
+        <button id="wl-share-btn" class="btn btn-ghost" onclick="enterWishlistSelect()" title="Share" aria-label="Share" style="display:none;padding:.45rem .7rem;font-size:.8rem;gap:.35rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
       </div>
     </div>
     <div id="wl-select-bar" style="display:none;align-items:center;gap:.5rem;flex-wrap:wrap;padding:.5rem .75rem;margin-bottom:.75rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);">
@@ -8021,7 +8008,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.18.54';
+const APP_VERSION = '17.19.02';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -27799,9 +27786,9 @@ function nextWishlistView(v) {
 }
 function cycleWishlistView() { setWishlistView(nextWishlistView(_wishlistView)); }
 const WL_VIEW_ICONS = {
-  list:    { label: 'List view',     svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>' },
-  folders: { label: 'Brand folders', svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' },
-  gallery: { label: 'Gallery view',  svg: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' },
+  list:    { label: 'List view',     svg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>' },
+  folders: { label: 'Brand folders', svg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' },
+  gallery: { label: 'Gallery view',  svg: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' },
 };
 // The button shows the NEXT view (what a tap gives you), same convention as the
 // Collection toggle; data-view records the CURRENT view for tests/CSS.
