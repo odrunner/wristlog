@@ -1350,6 +1350,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wl-card:hover { border-color: color-mix(in srgb, var(--gold) 35%, transparent); }
     .wl-card.drag-over { border-color: var(--gold); background: var(--gold-dim); }
     .wl-card.dragging  { opacity: .4; }
+    /* Gallery tiles reorder the same way; the ⠿ handle sits over the photo's
+       top-left corner (like the Collection ranking handle) for touch drags. */
+    .wl-tile.drag-over { border-color: var(--gold) !important; background: var(--gold-dim); }
+    .wl-tile.dragging  { opacity: .4; }
+    .wl-tile-handle { position: absolute; top: .45rem; left: .5rem; z-index: 2; padding: .1rem .3rem; border-radius: 6px; background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--muted); touch-action: none; line-height: 1; }
     .wl-card-img    { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
     .wl-card-avatar { width: 72px; height: 72px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #000; flex-shrink: 0; font-size: 1.15rem; }
     .drag-handle { color: var(--border); cursor: grab; font-size: 1.1rem; padding: 0 .2rem; user-select: none; flex-shrink: 0; }
@@ -2857,7 +2862,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Wishlist: One View Icon + Ranking Game</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">The three view buttons at the top of the Wishlist are now <strong>one icon</strong> that cycles list → brand folders → gallery, just like the Collection toggle. And the Ranking Game now works on your wishlist too. Tap <strong>Rank</strong> at the top of the Wishlist tab for head-to-head match-ups between the watches you&#8217;re dreaming about &#8212; tap the one you want more, 3 seconds per round. <strong>Save Ranking</strong> reorders your wishlist by preference (you can still drag items afterwards), and scores accumulate across sessions, separately from your collection.</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">The three view buttons at the top of the Wishlist are now <strong>one icon</strong> that cycles list → brand folders → gallery, just like the Collection toggle. Gallery tiles can be <strong>dragged to reorder</strong> like list cards. And the Ranking Game now works on your wishlist too. Tap <strong>Rank</strong> at the top of the Wishlist tab for head-to-head match-ups between the watches you&#8217;re dreaming about &#8212; tap the one you want more, 3 seconds per round. <strong>Save Ranking</strong> reorders your wishlist by preference (you can still drag items afterwards), and scores accumulate across sessions, separately from your collection.</div>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Collection Gallery View</div>
@@ -4183,7 +4188,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">3</div>
             <div class="help-step-body">
               <div class="help-step-title">Drag to reorder your priority ranking</div>
-              <div class="help-step-desc">Grab the drag handle and drag items up or down. The #1 spot is highlighted in gold.</div>
+              <div class="help-step-desc">Grab the drag handle and drag items up or down &#8212; in the list view or, via the small handle in each photo&#8217;s corner, in the gallery view too. The #1 spot is highlighted in gold.</div>
             </div>
           </div>
           <div class="help-step">
@@ -8009,7 +8014,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.19.17';
+const APP_VERSION = '17.20.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -27921,8 +27926,17 @@ function renderWishlist(force) {
       const urlLine = w.url
         ? `<a href="${escHtml(w.url)}" target="_blank" rel="noopener noreferrer" class="wl-tile-url">${escHtml(urlDomain(w.url))} ↗</a>`
         : '';
-      return `<div class="wl-tile" data-priv="${escHtml(w.wishPrivacy||'')}">
+      // Same drag-to-reorder as the list view (mouse via draggable, touch via
+      // the ⠿ handle); suspended while share-selecting, like the list.
+      const dragAttrs = selecting ? '' : ` draggable="true"
+        ondragstart="wlDragStart(event,'${w.id}')"
+        ondragover="wlDragOver(event)"
+        ondrop="wlDrop(event,'${w.id}')"
+        ondragend="wlDragEnd(event)"`;
+      const handle = selecting ? '' : `<span class="drag-handle wl-tile-handle" title="Drag to reorder" ontouchstart="wlTouchStart(event,'${w.id}')">⠿</span>`;
+      return `<div class="wl-tile" data-id="${w.id}" data-priv="${escHtml(w.wishPrivacy||'')}"${dragAttrs}>
         ${box}
+        ${handle}
         ${imgLink}
         <div class="wl-tile-name" onclick="${tileClick}">${escHtml(w.name)}</div>
         ${urlLine}
@@ -27985,8 +27999,8 @@ function wlDragOver(e) {
   e.preventDefault();
   e.dataTransfer.dropEffect = 'move';
   // Highlight only the card under the cursor
-  document.querySelectorAll('.wl-card.drag-over').forEach(c => c.classList.remove('drag-over'));
-  const card = e.currentTarget.closest('.wl-card');
+  document.querySelectorAll('.wl-card.drag-over, .wl-tile.drag-over').forEach(c => c.classList.remove('drag-over'));
+  const card = e.currentTarget.closest('.wl-card, .wl-tile');
   if (card && card.dataset.id !== wlDraggingId) card.classList.add('drag-over');
 }
 
@@ -28006,7 +28020,7 @@ function wlDrop(e, targetId) {
 
 function wlDragEnd(e) {
   wlDraggingId = null;
-  document.querySelectorAll('.wl-card').forEach(c => {
+  document.querySelectorAll('.wl-card, .wl-tile').forEach(c => {
     c.classList.remove('drag-over');
     c.classList.remove('dragging');
   });
@@ -28016,9 +28030,10 @@ function wlDragEnd(e) {
 let wlTouchId     = null;
 let wlTouchGhost  = null;
 let wlTouchOffset = 0;   // finger Y offset from card top, keeps grab point stable
+let wlTouchOffsetX = 0;  // X offset too — gallery tiles move in two dimensions
 
 function wlTouchStart(e, id) {
-  const card = e.currentTarget.closest('.wl-card');
+  const card = e.currentTarget.closest('.wl-card, .wl-tile');
   if (!card) return;
   e.preventDefault();              // prevent page scroll while dragging
   wlTouchId = id;
@@ -28027,6 +28042,7 @@ function wlTouchStart(e, id) {
   const touch = e.touches[0];
   const rect  = card.getBoundingClientRect();
   wlTouchOffset = touch.clientY - rect.top;
+  wlTouchOffsetX = touch.clientX - rect.left;
 
   // Clone the card as a floating ghost that follows the finger
   wlTouchGhost = card.cloneNode(true);
@@ -28057,12 +28073,13 @@ function wlTouchMove(e) {
 
   const touch = e.touches[0];
   wlTouchGhost.style.top = (touch.clientY - wlTouchOffset) + 'px';
+  if (wlTouchGhost.classList.contains('wl-tile')) wlTouchGhost.style.left = (touch.clientX - wlTouchOffsetX) + 'px';
 
   wlTouchGhost.style.visibility = 'hidden';
   const under = document.elementFromPoint(touch.clientX, touch.clientY);
   wlTouchGhost.style.visibility = '';
 
-  const targetCard = under?.closest('.wl-card');
+  const targetCard = under?.closest('.wl-card, .wl-tile');
   const validTarget = (targetCard && targetCard.dataset.id !== wlTouchId) ? targetCard : null;
   if (_wlDragOverCard !== validTarget) {
     if (_wlDragOverCard) _wlDragOverCard.classList.remove('drag-over');
@@ -28079,7 +28096,7 @@ function wlTouchEnd() {
 
   // Clean up visual state
   if (_wlDragOverCard) { _wlDragOverCard.classList.remove('drag-over'); _wlDragOverCard = null; }
-  document.querySelectorAll('.wl-card.dragging').forEach(c => c.classList.remove('dragging'));
+  document.querySelectorAll('.wl-card.dragging, .wl-tile.dragging').forEach(c => c.classList.remove('dragging'));
   wlTouchGhost?.remove();
   wlTouchGhost = null;
 
