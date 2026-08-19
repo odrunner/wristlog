@@ -27,9 +27,11 @@ test ran on the merged row, ONE search relabelled the entire day's Sonnet spend
 as watch-value. It fired a false "Gemini is broken" alert on every day a brand
 was auto-added. Do not reintroduce a tracer here — the data cannot support it.
 
-The Gemini-fallback alert now reads the real signal instead: watch-value logs
-`engine=gemini` / `engine=claude` on every lookup, so we count those directly
-from the Supabase function logs (see watch_value_engines).
+The Gemini-fallback alert now reads the real signal instead: watch-value AND
+identify-watch both log `engine=gemini` / `engine=claude` on every call, so we
+count those directly from the Supabase function logs (see engine_stats). Both
+run Gemini-first with a Claude fallback, and both fallbacks land invisibly in
+the merged Sonnet bucket, so both are tracked.
 
 The script makes no LLM calls — one HTTPS request plus local reads — so running
 it daily is free. Read the latest with:
@@ -238,17 +240,17 @@ def supabase_access_token():
     return None
 
 
-def watch_value_engines(day):
-    """Which engine actually served each watch-value lookup on `day` (UTC).
+def engine_stats(day, tag):
+    """Which engine served each `tag` call on `day` (UTC), from the function logs.
 
-    Reads the Supabase function logs rather than inferring from Anthropic
-    billing. watch-value logs `engine=gemini` or `engine=claude` on every
-    successful lookup, and logs a reason line whenever Gemini is skipped, so
-    this is the ground truth the old web_search tracer only approximated.
+    Both watch-value and identify-watch run Gemini first and fall back to Claude,
+    and both log `engine=gemini` / `engine=claude` on success plus a reason line
+    when Gemini is skipped. Reading those is ground truth; the web_search tracer
+    this replaced was a proxy that broke the moment a second function used search.
 
     Returns {"gemini": int, "claude": int, "reasons": [str]}, or None when the
-    logs could not be read. None must never be rendered as a healthy zero —
-    an unread log means unknown, not "no fallbacks".
+    logs could not be read. None must never render as a healthy zero — an unread
+    log means unknown, not "no fallbacks".
     """
     token = supabase_access_token()
     if not token:
@@ -256,7 +258,7 @@ def watch_value_engines(day):
     params = {
         "sql": (
             "select event_message from function_logs "
-            "where event_message like '%[watch-value]%' "
+            f"where event_message like '%[{tag}]%' "
             f"order by timestamp desc limit {LOG_ROW_CAP}"
         ),
         "iso_timestamp_start": f"{day}T00:00:00Z",
@@ -269,11 +271,11 @@ def watch_value_engines(day):
     try:
         d = curl_json(url, headers=[f"Authorization: Bearer {token}"], retries=3)
     except Exception as e:
-        print(f"[watch_value_engines] log read failed — {type(e).__name__}: {e}")
+        print(f"[engine_stats:{tag}] log read failed — {type(e).__name__}: {e}")
         return None
     rows = d.get("result")
     if rows is None:
-        print(f"[watch_value_engines] unexpected response: {str(d)[:200]}")
+        print(f"[engine_stats:{tag}] unexpected response: {str(d)[:200]}")
         return None
     stats = {"gemini": 0, "claude": 0, "reasons": []}
     for row in rows:
@@ -285,6 +287,24 @@ def watch_value_engines(day):
         if any(m in msg for m in ("Gemini error", "Gemini parse failed", "Gemini exception")):
             stats["reasons"].append(msg.replace("\n", " ")[:300])
     return stats
+
+
+def engine_line(label, st):
+    """One '<label>: N Gemini, M Claude fallback' line, honest about unknowns."""
+    if st is None:
+        return f'<span style="color:#d29922">{label}: <b>unknown</b> &mdash; logs unreadable this run.</span>'
+    if st["gemini"] + st["claude"] == 0:
+        # identify-watch only started logging `engine=` on 2026-08-19, so older
+        # days have failure lines but no success lines. Reporting a bare "no
+        # calls" next to a red fallback alert would read as a contradiction.
+        if st["reasons"]:
+            n = len(st["reasons"])
+            return (f'<span style="color:#d29922">{label}: {n} Gemini failure'
+                    f'{"s" if n != 1 else ""} logged, but no success counts '
+                    "(this day predates the <code>engine=</code> log).</span>")
+        return f"{label}: no calls this day."
+    return (f"{label}: <b>{st['gemini']}</b> Gemini, "
+            f"<b>{st['claude']}</b> Claude fallback.")
 
 
 def open_autofix_prs():
@@ -346,6 +366,27 @@ def autofix_html(prs):
     )
 
 
+def search_origin(n, wv_engines):
+    """Plain-English account of where the day's web_search calls came from.
+
+    Only two callers use the tool: watch-value's Claude fallback (max_uses 5) and
+    auto-add-brand (max_uses 3). The old caption said "mostly auto-add-brand"
+    unconditionally, which was exactly backwards on 2026-08-17 — auto-add-brand
+    ran zero times and all 4 searches came from a single watch-value fallback.
+    Never claim an origin the fallback count contradicts.
+    """
+    if n == 0:
+        return "none"
+    if wv_engines is None:
+        return "origin unknown — engine logs unreadable this run"
+    fb = wv_engines["claude"]
+    if fb:
+        return (f"{fb} watch-value Claude fallback"
+                f"{'s' if fb != 1 else ''} ran (up to 5 searches each); "
+                "any remainder is auto-add-brand")
+    return "no watch-value fallback, so these are auto-add-brand verifying a brand"
+
+
 def anthropic_get(path, params, key):
     url = f"https://api.anthropic.com/v1/organizations/{path}?" + urllib.parse.urlencode(params, doseq=True)
     return curl_json(url, headers=[f"x-api-key: {key}", "anthropic-version: 2023-06-01"])
@@ -379,7 +420,7 @@ def wrotate_attribution(key, since):
 
     The search count is reported as-is (it is mostly auto-add-brand, sometimes a
     watch-value Claude fallback) and is NOT used to attribute cost or to decide
-    whether Gemini is healthy. watch_value_engines answers that.
+    whether Gemini is healthy. engine_stats answers that.
     """
     attr = defaultdict(lambda: defaultdict(float))
     searches = defaultdict(int)
@@ -490,7 +531,11 @@ def main():
     y_searches = searches.get(yday, 0)
     total_14 = sum(daily.values())
     post_switch = yday >= GEMINI_SWITCH_DATE
-    engines = watch_value_engines(yday) if post_switch else None
+    engines = engine_stats(yday, "watch-value") if post_switch else None
+    # identify-watch runs the same gemini-first/claude-fallback shape and was
+    # invisible here until 2026-08-19 — its fallbacks land in the merged Sonnet
+    # bucket looking like ordinary traffic.
+    id_engines = engine_stats(yday, "identify-watch") if post_switch else None
 
     print(f"=== WRotate API cost — {yday} ===")
     print(f"Billed yesterday: ${y_total:.2f}   ({DAYS}-day total ${total_14:.2f})")
@@ -498,13 +543,15 @@ def main():
         print(f"   {k}: ${v:.2f}")
     if not post_switch:
         print(f"watch-value engine: Claude (pre-{GEMINI_SWITCH_DATE}, before the Gemini switch)")
-    elif engines is None:
-        print("watch-value engine: UNKNOWN — could not read the function logs")
     else:
-        print(f"watch-value engine: {engines['gemini']} gemini, {engines['claude']} claude fallback")
-        for r in engines["reasons"][:5]:
-            print(f"   ! {r}")
-    print(f"web searches (auto-add-brand + any Claude fallback): {y_searches}")
+        for lbl, st in (("watch-value", engines), ("identify-watch", id_engines)):
+            if st is None:
+                print(f"{lbl} engine: UNKNOWN — could not read the function logs")
+            else:
+                print(f"{lbl} engine: {st['gemini']} gemini, {st['claude']} claude fallback")
+                for r in st["reasons"][:5]:
+                    print(f"   ! {r}")
+    print(f"web searches: {y_searches}  ({search_origin(y_searches, engines)})")
     prs = open_autofix_prs()
     if prs is None:
         print("auto-fix PRs waiting: UNKNOWN — could not read the PR list")
@@ -531,23 +578,30 @@ def main():
     if not post_switch:
         engine_html = (f"watch-value ran on Claude this day &mdash; it predates the "
                        f"{GEMINI_SWITCH_DATE} switch to Gemini.")
-    elif engines is None:
-        engine_html = ('<span style="color:#d29922">watch-value engine: <b>unknown</b> '
-                       "&mdash; could not read the function logs this run.</span>")
-    elif engines["gemini"] + engines["claude"] == 0:
-        engine_html = "watch-value: no lookups this day."
     else:
-        engine_html = (f"watch-value engine: <b>{engines['gemini']}</b> Gemini, "
-                       f"<b>{engines['claude']}</b> Claude fallback.")
+        engine_html = ("<br>".join([engine_line("watch-value", engines),
+                                    engine_line("identify-watch", id_engines)]))
 
     alerts = ""
-    if post_switch and engines and engines["claude"] > 0:
-        why = "".join(f"<li><code>{r}</code></li>" for r in engines["reasons"][:5])
-        alerts += (f"<p style='background:#f8d7da;border-left:4px solid #c00;padding:10px;'>"
-                   f"<b>watch-value fell back to Claude on {engines['claude']} of "
-                   f"{engines['gemini'] + engines['claude']} lookups.</b> "
-                   f"Gemini should serve every one.</p>"
-                   + (f"<ul style='font-size:12px;'>{why}</ul>" if why else ""))
+    if post_switch:
+        for lbl, st in (("watch-value", engines), ("identify-watch", id_engines)):
+            # Alert on a counted fallback OR on a logged Gemini failure. The
+            # second case covers a day whose success logs are missing — a
+            # failure we can see is still a failure worth surfacing.
+            if not st or (st["claude"] == 0 and not st["reasons"]):
+                continue
+            if st["claude"]:
+                headline = (f"<b>{lbl} fell back to Claude on {st['claude']} of "
+                            f"{st['gemini'] + st['claude']} calls.</b> "
+                            "Gemini should serve every one.")
+            else:
+                n = len(st["reasons"])
+                headline = (f"<b>{lbl}: {n} Gemini failure{'s' if n != 1 else ''} "
+                            "fell back to Claude.</b>")
+            why = "".join(f"<li><code>{r}</code></li>" for r in st["reasons"][:5])
+            alerts += (f"<p style='background:#f8d7da;border-left:4px solid #c00;padding:10px;'>"
+                       f"{headline}</p>"
+                       + (f"<ul style='font-size:12px;'>{why}</ul>" if why else ""))
     if y_total >= SPIKE_USD:
         alerts += (f"<p style='background:#fff3cd;border-left:4px solid #e0a800;padding:10px;'>"
                    f"<b>Spend spike: ${y_total:.2f}.</b> See the split above for the driver.</p>")
@@ -560,7 +614,7 @@ def main():
     <h3>What drove it</h3><ul>{split_html}</ul>
     <p style="color:#666;font-size:13px;">{engine_html}</p>
     <p style="color:#888;font-size:12px;">Web searches: <b>{y_searches}</b>
-    &mdash; mostly auto-add-brand verifying a new brand; not a Gemini health signal.</p>
+    &mdash; {search_origin(y_searches, engines)}.</p>
     <h3>Last {DAYS} days</h3>
     <table style="border-collapse:collapse;font-family:monospace;font-size:13px;">
       <tr style="border-bottom:1px solid #ccc;">

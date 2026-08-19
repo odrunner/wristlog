@@ -133,7 +133,14 @@ Rules:
     if (GEMINI_API_KEY) {
       try {
         const geminiAbort = new AbortController();
-        const geminiTimer = setTimeout(() => geminiAbort.abort(), 60000);
+        // 35s, not 60s. Measured over 80 live lookups (2026-08-13..19): median 15s,
+        // p90 23s, slowest healthy call 33s — a request still running at 35s has
+        // hung, not slowed down. The old 60s cap made the user wait the full minute
+        // BEFORE the Claude fallback even started, so the one hang on 2026-08-17
+        // took 95s end to end and the user gave up and retried at 89s. Raise this
+        // only if the p90 above moves; a too-generous timeout costs a real wait on
+        // every hang and buys nothing, because Gemini never recovers after ~35s.
+        const geminiTimer = setTimeout(() => geminiAbort.abort(), 35000);
         const geminiResponse = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
           {

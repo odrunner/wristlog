@@ -475,6 +475,11 @@ Deno.serve(async (req: Request) => {
           const parsed = extractJson(textParts);
           if (parsed && Array.isArray(parsed.watches)) {
             parsed._engine = "gemini";
+            // Mirrors watch-value's `engine=` line so the daily cost report can count
+            // gemini vs claude cold identifications. Without a success log there is no
+            // denominator, and three Claude fallbacks in a week look the same whether
+            // they came out of 5 lookups or 500.
+            console.log(`[identify-watch] cold identify → ${parsed.watches.length} watch(es) engine=gemini`);
             await logAttempt(parsed.watches.length, null);
             return new Response(JSON.stringify(parsed), {
               headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
@@ -528,6 +533,7 @@ Deno.serve(async (req: Request) => {
     }
 
     parsed._engine = "claude";
+    console.log(`[identify-watch] cold identify → ${Array.isArray(parsed.watches) ? parsed.watches.length : 0} watch(es) engine=claude`);
     await logAttempt(Array.isArray(parsed.watches) ? parsed.watches.length : 0, null);
     return new Response(JSON.stringify(parsed), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
