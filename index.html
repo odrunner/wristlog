@@ -2623,6 +2623,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .notif-follow-actions {
       display: flex; gap: .5rem; margin-top: .45rem;
     }
+    /* Accept / Decline / Follow Back / Join Club: same compact pill as the inline
+       Follow below — the phone .btn 44px min-height made them tower over the row. */
+    .notif-follow-actions .btn {
+      min-height: 0; padding: .18rem .7rem; font-size: .7rem; line-height: 1.4;
+      display: inline-flex; align-items: center;
+    }
     /* Compact inline Follow / Request on like & comment rows: pill, not a full-height
        button; hover/focus lifts it so it reads as clickable. */
     .notif-follow-inline {
@@ -8014,7 +8020,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '17.20.56';
+const APP_VERSION = '18.17.09';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11115,14 +11121,14 @@ function renderNotificationPanel() {
                : n.type === 'badge_earned'         ? (BADGE_BY_REF[Number(n.ref_id)]?.name ? `You earned the ${BADGE_BY_REF[Number(n.ref_id)].name} badge 🏅` : 'You earned a new badge 🏅') : '';
     const actionsHtml = (n.type === 'follow_request' && !n._declined && !frAccepted) ? `
       <div class="notif-follow-actions">
-        <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
+        <button class="btn btn-primary"
           onclick="event.stopPropagation();acceptFollowRequest('${n.actor_id}','${n.id}')">Accept</button>
-        <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem;"
+        <button class="btn btn-ghost"
           onclick="event.stopPropagation();declineFollowRequest('${n.actor_id}','${n.id}')">Decline</button>
       </div>`
       : ((n.type === 'follow_request' && frAccepted) || n.type === 'follow') && !following.has(n.actor_id) && !n._followedBack && !pendingRequests.has(n.actor_id) ? `
       <div class="notif-follow-actions">
-        <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
+        <button class="btn btn-primary"
           onclick="event.stopPropagation();followBackFromNotif('${n.actor_id}','${n.id}')">Follow Back</button>
       </div>`
       // Someone engaged with your post and you don't follow them: one tap to reciprocate
@@ -11134,23 +11140,23 @@ function renderNotificationPanel() {
       </div>`
       : n.type === 'club_join_request' ? `
       <div class="notif-follow-actions">
-        <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
+        <button class="btn btn-primary"
           onclick="event.stopPropagation();acceptClubJoinRequest('${n.actor_id}','${n.ref_id}','${n.id}')">Accept</button>
-        <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem;"
+        <button class="btn btn-ghost"
           onclick="event.stopPropagation();declineClubJoinRequest('${n.actor_id}','${n.ref_id}','${n.id}')">Decline</button>
       </div>`
       : n.type === 'club_invite' ? `
       <div class="notif-follow-actions">
-        <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
+        <button class="btn btn-primary"
           onclick="event.stopPropagation();acceptClubInvite('${n.ref_id}','${n.id}')">Join Club</button>
-        <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem;"
+        <button class="btn btn-ghost"
           onclick="event.stopPropagation();declineClubInvite('${n.ref_id}','${n.id}')">Decline</button>
       </div>`
       : (n.type === 'friend_request' && !n._declined && !n._accepted && !friendships.has(n.actor_id) && friendRequests.some(r => r.initiator_id === n.actor_id && r.status === 'pending')) ? `
       <div class="notif-follow-actions">
-        <button class="btn btn-primary" style="font-size:.75rem;padding:.25rem .7rem;"
+        <button class="btn btn-primary"
           onclick="event.stopPropagation();acceptFriendRequest('${n.actor_id}','${n.id}')">Accept</button>
-        <button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem;"
+        <button class="btn btn-ghost"
           onclick="event.stopPropagation();declineFriendRequest('${n.actor_id}','${n.id}')">Decline</button>
       </div>` : '';
     const notifClick = (n.type === 'like' || n.type === 'comment' || n.type === 'comment_also' || n.type === 'comment_like' || n.type === 'mention')
