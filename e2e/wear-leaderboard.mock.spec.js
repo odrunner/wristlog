@@ -27,6 +27,13 @@ const LOGS = [
 ];
 
 async function openStats(page) {
+  // The LOGS fixture uses absolute dates around 2026-07-19 (February wears must
+  // be >30d old yet inside YTD — impossible to express relative to a moving
+  // "today", e.g. every date >30d back is last year each January). Pin the
+  // clock to the date the fixture was written against; the header comment
+  // always promised this stub, but it was never actually installed, so the
+  // whole file started failing 30 days after it was written (2026-08-17).
+  await page.clock.setFixedTime(new Date('2026-07-19T12:00:00'));
   await mockSupabase(page, { watches: WATCHES, logs: LOGS, wishlist: [] });
   await injectSession(page);
   await page.goto('/');
