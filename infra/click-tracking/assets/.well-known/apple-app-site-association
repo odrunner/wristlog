@@ -1,0 +1,14 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["JSNK92LRFD.com.wrotate.Wrotate"],
+        "components": [
+          { "/": "/L0/*" },
+          { "/": "/CL0/*" },
+          { "/": "/CL1/*" }
+        ]
+      }
+    ]
+  }
+}
