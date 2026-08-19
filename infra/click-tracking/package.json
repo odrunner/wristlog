@@ -1,0 +1,21 @@
+{
+  "name": "wrotate-click-tracking-infra",
+  "private": true,
+  "description": "click.wrotate.com — HTTPS SES click-tracking redirect domain (CloudFront -> awstrack.me) + AASA for iOS Universal Links",
+  "scripts": {
+    "synth": "cdk synth --strict",
+    "diff": "cdk diff",
+    "deploy": "cdk deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "aws-cdk": "^2.1020.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.170.0",
+    "constructs": "^10.5.0"
+  }
+}
