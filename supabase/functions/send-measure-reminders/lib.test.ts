@@ -1,5 +1,6 @@
 import { assertEquals, assertStringIncludes } from "jsr:@std/assert";
 import { buildMeasurePush, fmtRate } from "./lib.ts";
+import { buildAlertPayload, routeFor, versionAtLeast } from "./lib.ts";
 
 Deno.test("fmtRate — sign and one decimal", () => {
   assertEquals(fmtRate(6.24), "+6.2 s/d");
@@ -25,4 +26,21 @@ Deno.test("buildMeasurePush — slower / unchanged wording; numeric strings from
 
 Deno.test("buildMeasurePush — missing brand/name degrade to 'watch'", () => {
   assertStringIncludes(buildMeasurePush({ brand: "", name: "", rate: 1, measured_at: "2026-07-20T10:00:00Z", prior_rate: null, prior_at: null }).body, "your watch at +1.0 s/d");
+});
+
+Deno.test("versionAtLeast / routeFor — routes only for 2.6+ tokens", () => {
+  assertEquals(versionAtLeast("2.6", "2.6"), true);
+  assertEquals(versionAtLeast("2.10", "2.6"), true);
+  assertEquals(versionAtLeast("2.5", "2.6"), false);
+  assertEquals(versionAtLeast("", "2.6"), false);
+  assertEquals(versionAtLeast(null, "2.6"), false);
+  assertEquals(routeFor("2.5", "track", "w1", "u1"), undefined);
+  assertEquals(routeFor("2.6", "track", "w1", "u1"), { w: { route: "track", id: "w1", uid: "u1" } });
+});
+
+Deno.test("buildAlertPayload — extra merges into the root, aps untouched", () => {
+  const p = buildAlertPayload({ title: "T", body: "B" }, { w: { route: "measure", id: "x", uid: "u" } }) as Record<string, unknown>;
+  assertEquals((p.aps as Record<string, unknown>).badge, 1);
+  assertEquals((p.w as Record<string, unknown>).route, "measure");
+  assertEquals("w" in (buildAlertPayload({ title: "T", body: "B" }) as Record<string, unknown>), false);
 });

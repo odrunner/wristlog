@@ -1898,17 +1898,13 @@ export function badgeRevealNames(names, shown = 8) {
   return list.slice(0, shown).join(' · ') + ' · and ' + (list.length - shown) + ' more';
 }
 
-// Whether to show the push-notifications primer. Only on a native build that can
-// request permission (available), only when the OS status is still notDetermined
-// (never asked — iOS lets us ask once), and not while a decline cooldown/cap is in
-// effect (so a "Not now" isn't nagged). Pure — caller passes explicit state.
-export function shouldShowPushPrimer(s) {
-  const { available, authStatus, declineCount, lastDeclinedMs, nowMs, cooldownDays = 7, cap = 3 } = s;
-  if (!available) return false;
-  if (authStatus !== 'notDetermined') return false;
-  if ((declineCount || 0) >= cap) return false;
-  if (lastDeclinedMs && (nowMs - lastDeclinedMs) < cooldownDays * 86400000) return false;
-  return true;
+// The one-shot OS dialog is spent only after the user has ACTED on a quiet (provisional)
+// notification — tapped one, then logged a wear or finished a measurement. Never at sign-in.
+export function shouldDeferredPushAsk({ authStatus, openedFromPush, iosVersion, asked }) {
+  if (asked) return false;
+  if (authStatus !== 'provisional') return false;
+  if (!openedFromPush) return false;
+  return iosAtLeast(iosVersion, '2.6');
 }
 
 // ══════════════════════════════════════════

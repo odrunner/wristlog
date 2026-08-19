@@ -33,14 +33,35 @@ export function buildReminderEmail(w?: LastWatch): { subject: string; body: stri
 
 const BUNDLE_ID = "com.wrotate.Wrotate";
 
-export function buildAlertPayload(message: { title: string; body: string }) {
+// `extra` is merged into the payload ROOT (APNs custom keys), e.g. { w: { route, id, uid } }.
+export function buildAlertPayload(message: { title: string; body: string }, extra?: Record<string, unknown>) {
   return {
     aps: {
       alert: { title: message.title, body: message.body },
       sound: "default",
       badge: 1,
     },
+    ...(extra ?? {}),
   };
+}
+
+// "2.10" >= "2.6", "2.6" >= "2.6", "2.5" < "2.6", "" < "2.6". Mirrors iosAtLeast in index.html.
+export function versionAtLeast(v: string | null | undefined, min: string): boolean {
+  if (!v) return false;
+  const a = String(v).split(".").map((x) => parseInt(x, 10) || 0);
+  const b = min.split(".").map((x) => parseInt(x, 10) || 0);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i] ?? 0, y = b[i] ?? 0;
+    if (x !== y) return x > y;
+  }
+  return true;
+}
+
+// Only builds >= 2.6 route unknown `w.route` values through JS (openPushRoute); older
+// builds open the bell for anything but post/profile/club/badges. So a route object is
+// attached per token, never blanket.
+export function routeFor(appVersion: string | null | undefined, route: string, id: string | null, uid: string): Record<string, unknown> | undefined {
+  return versionAtLeast(appVersion, "2.6") ? { w: { route, id, uid } } : undefined;
 }
 
 export function apnsHost(useSandbox: boolean): string {
@@ -105,6 +126,7 @@ export async function sendPush(
   message: { title: string; body: string },
   jwt: string,
   host: string,
+  extra?: Record<string, unknown>,
 ): Promise<{ token: string; success: boolean; status: number }> {
   const url = apnsDeviceUrl(host, token);
   try {
@@ -117,7 +139,7 @@ export async function sendPush(
         "apns-priority": "10",
         "content-type": "application/json",
       },
-      body: JSON.stringify(buildAlertPayload(message)),
+      body: JSON.stringify(buildAlertPayload(message, extra)),
     });
     return { token, success: response.ok, status: response.status };
   } catch (_err) {

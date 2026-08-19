@@ -54,7 +54,11 @@ struct ContentView: View {
             // Email click tracking wraps the real destination, so unwrap before
             // routing — otherwise a tracked deep link to /p/123 falls through to a
             // plain WebView load instead of scrolling to the post.
-            let target = unwrapTrackedLink(url) ?? url
+            let unwrapped = unwrapTrackedLink(url)
+            // A Universal Link reaches us WITHOUT any network request, so SES never
+            // sees the tap. Fire the wrapper ourselves so the click is recorded.
+            if unwrapped != nil { recordTrackedClick(url) }
+            let target = unwrapped ?? url
             guard let host = target.host, host.hasSuffix("wrotate.com") else { return }
             // /open — app is already open, nothing to do
             if target.path == "/open" || target.path == "/open.html" { return }
@@ -96,8 +100,11 @@ struct ContentView: View {
 
     /// Unwrap an email click-tracking link back to its real destination.
     ///
-    /// SES rewrites every href in outgoing mail as
-    /// `https://<redirect-host>/L0/<percent-encoded destination>/<n>/<message id>/<hash>`.
+    /// SES rewrites every href in outgoing mail to one of three wrapper shapes
+    /// (awstrack default / custom redirect domain / `ses:custom-path`):
+    ///   `https://<host>/L0/<percent-encoded destination>/<n>/<message id>/<hash>`
+    ///   `https://<host>/CL0/<percent-encoded destination>/<n>/<message id>/<hash>`
+    ///   `https://<host>/CL1/<custom path>/<percent-encoded destination>/<n>/<message id>/<hash>`
     /// iOS hands us that WRAPPER, not the destination, so routing must unwrap it
     /// first or every tracked link degrades to a plain WebView load.
     ///
@@ -111,13 +118,45 @@ struct ContentView: View {
         guard let encodedPath = URLComponents(url: url, resolvingAgainstBaseURL: false)?.percentEncodedPath
         else { return nil }
         let segments = encodedPath.split(separator: "/", omittingEmptySubsequences: true).map(String.init)
-        guard segments.count >= 2, segments[0] == "L0",
-              let decoded = segments[1].removingPercentEncoding,
+        guard let marker = segments.first else { return nil }
+        let destinationIndex: Int
+        switch marker {
+        case "L0", "CL0": destinationIndex = 1
+        case "CL1": destinationIndex = 2
+        default: return nil
+        }
+        guard segments.count > destinationIndex,
+              let decoded = segments[destinationIndex].removingPercentEncoding,
               let destination = URL(string: decoded),
               destination.scheme == "https" || destination.scheme == "http"
         else { return nil }
         return destination
     }
+
+    /// Record an email click that iOS delivered as a Universal Link.
+    ///
+    /// A Universal Link is handed to the app straight from the tap — no HTTP
+    /// request is ever made — so SES has no idea the link was used. We GET the
+    /// wrapper ourselves; SES logs the click and answers with a 302 to the real
+    /// destination, which we discard because routing already used the unwrapped
+    /// URL. Fire-and-forget: failure here must never affect navigation.
+    private func recordTrackedClick(_ url: URL) {
+        // Only our own tracking host — never replay arbitrary wrappers.
+        guard url.host == "click.wrotate.com" else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 10
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        Self.clickSession.dataTask(with: request).resume()
+    }
+
+    /// Ephemeral session that refuses redirects — we only want the tracking
+    /// server to see the request, not to follow it to wrotate.com.
+    private static let clickSession: URLSession = URLSession(
+        configuration: .ephemeral,
+        delegate: NoRedirectDelegate(),
+        delegateQueue: nil
+    )
 
     /// Hand every pending item to the web layer. Called after each completed load,
     /// and on foreground when no reload was started. Each drain is a no-op when
@@ -176,11 +215,14 @@ struct ContentView: View {
         case "badges":
             js = "if(typeof openBadgeWall==='function') openBadgeWall();"
         default:
-            // "bell", or a route whose target didn't survive — open the panel so
-            // the tap always lands somewhere the notification is visible.
-            js = "if(typeof openNotifPanel==='function') openNotifPanel();"
+            // Unknown / new routes ("track", "measure", …) are resolved in JS, so a new
+            // notification type never needs an App Store build. JS falls back to the
+            // bell itself when it doesn't recognise the route either.
+            js = "if(typeof openPushRoute==='function') openPushRoute('\(pending.route)','\(id)'); else if(typeof openNotifPanel==='function') openNotifPanel();"
         }
-        webViewRef?.evaluateJavaScript(js, completionHandler: nil)
+        // _openedFromPush lets JS spend the one-shot full permission dialog only after
+        // the user acted on a quiet (provisional) notification — see shouldDeferredPushAsk.
+        webViewRef?.evaluateJavaScript("window._openedFromPush=true;" + js, completionHandler: nil)
     }
 
     private func dispatchPendingQuickAction() {
@@ -271,4 +313,14 @@ struct OfflineView: View {
 #Preview {
     ContentView()
         .environment(NetworkMonitor())
+}
+
+/// URLSession delegate that stops at the first redirect response.
+private final class NoRedirectDelegate: NSObject, URLSessionTaskDelegate {
+    func urlSession(_ session: URLSession, task: URLSessionTask,
+                    willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest,
+                    completionHandler: @escaping (URLRequest?) -> Void) {
+        completionHandler(nil)
+    }
 }

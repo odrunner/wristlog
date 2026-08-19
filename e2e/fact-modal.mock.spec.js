@@ -50,7 +50,7 @@ async function setup(page, { logs = [], alreadyShown = false, needsGeneration = 
     // though it plays no part in the gating logic under test.
     document.getElementById('auth-screen').style.display = 'none';
 
-    if (overlayOpen) document.getElementById('push-primer-modal').classList.remove('hidden');
+    if (overlayOpen) document.getElementById('whats-new-modal').classList.remove('hidden');
   }, { logs, alreadyShown, needsGeneration, overlayOpen });
 }
 

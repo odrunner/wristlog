@@ -73,3 +73,22 @@ describe('push route agrees with the in-app panel', () => {
     expect(buildRoute('some_new_type', 'ref', 'actor')).toEqual({ route: 'bell', id: null });
   });
 });
+
+// 2.6: routes the native switch does not know are handed to JS openPushRoute(route, id).
+// The two server-side reminder types route here; anything else must still land on the bell.
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+describe('openPushRoute (JS fallback for new routes)', () => {
+  const html = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'index.html'), 'utf8');
+  const fn = html.slice(html.indexOf('function openPushRoute(route, id) {'), html.indexOf('\n}\n', html.indexOf('function openPushRoute(route, id) {')));
+  it("handles 'track' (log-again banner) and 'measure' (timegrapher, watch preselected)", () => {
+    expect(fn).toContain("route === 'track'");
+    expect(fn).toContain('maybeShowLogAgainBanner(true, id || null)');
+    expect(fn).toContain("route === 'measure'");
+    expect(fn).toContain('openMeasureModal()');
+  });
+  it('falls back to the bell', () => {
+    expect(fn).toContain('openNotifPanel()');
+  });
+});

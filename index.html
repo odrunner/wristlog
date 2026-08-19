@@ -6191,15 +6191,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
   </div>
 </div>
-<div id="push-primer-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="push-primer-title">
-  <div class="modal" style="max-width:340px;text-align:center;">
-    <div style="font-size:2rem;margin-bottom:.2rem;">🔔</div>
-    <div class="modal-title" id="push-primer-title" style="justify-content:center;">Don’t miss out on updates</div>
-    <div style="font-size:.85rem;color:var(--muted);margin:.4rem 0 1.1rem;line-height:1.5;">Turn on notifications to stay in the loop — reactions to your posts, wear reminders, and badges you earn.</div>
-    <button class="btn btn-primary" style="width:100%;margin-bottom:.5rem;" onclick="pushPrimerEnable()">Turn on notifications</button>
-    <button class="btn btn-ghost" style="width:100%;color:var(--muted);" onclick="pushPrimerDismiss()">Not now</button>
-  </div>
-</div>
 
 <div id="fact-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="fact-modal-title">
   <div class="modal" style="max-width:360px;">
@@ -8020,7 +8011,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '18.17.09';
+const APP_VERSION = '19.08.47';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -13702,73 +13693,57 @@ function badgeRevealNames(names, shown = 8) {
   return list.slice(0, shown).join(' · ') + ' · and ' + (list.length - shown) + ' more';
 }
 
-// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
-function shouldShowPushPrimer(s) {
-  const { available, authStatus, declineCount, lastDeclinedMs, nowMs, cooldownDays = 7, cap = 3 } = s;
-  if (!available) return false;
-  if (authStatus !== 'notDetermined') return false;
-  if ((declineCount || 0) >= cap) return false;
-  if (lastDeclinedMs && (nowMs - lastDeclinedMs) < cooldownDays * 86400000) return false;
-  return true;
-}
 
-// ── Push-notifications primer ────────────────────────────────────────────────
-// The native app used to fire the OS permission dialog cold at sign-in — a one-shot
-// ask before the user saw any value, so most declined. Instead, after an early
-// engagement moment (first wear-log / first measurement) we show a warm in-app
-// primer; only tapping "Turn on" triggers the real OS dialog. Gated on the 2.3
-// native build (which defers the cold ask + reports OS status as window._pushAuthStatus).
-const PUSH_PRIMER_STATE = 'wr_push_primer';   // { declineCount, lastDeclinedMs }
+// ── Push permission (2.6: provisional at sign-in, one-shot dialog deferred) ─────
+// The native build asks provisionally at sign-in — iOS grants silently and delivers
+// quietly with its own Keep / Turn Off buttons. The one-shot FULL dialog is spent only
+// here, after the user has ACTED on a quiet notification (opened the app from one, then
+// logged a wear or completed a measurement). History: the 2.3 in-app primer modal was
+// shown 52 times and tapped twice; it is gone. 2.3–2.5 builds keep the bridge action.
 function _pushBridge() { return window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.appAction; }
-function _pushPrimerAvailable() {
+function _pushBridgeAvailable() {
   return !!_pushBridge() && iosAtLeast(window._iosAppVersion, '2.3');
 }
-function _pushPrimerState() {
-  try { return JSON.parse(safeLS.get(PUSH_PRIMER_STATE) || '{}') || {}; } catch (_) { return {}; }
+// Native calls this when it evaluates the OS notification status; the latest status is
+// recorded server-side so quiet → prominent / off can be measured over time.
+function onPushAuthStatus(status) {
+  window._pushAuthStatus = status;
+  renderPushSettingRow();
+  if (currentUser && !_isDemoMode) {
+    db.rpc('record_push_auth_status', { p_status: status, p_app_version: window._iosAppVersion || null }).then(() => {});
+  }
 }
-// Native calls this when it evaluates the OS notification status.
-function onPushAuthStatus(status) { window._pushAuthStatus = status; renderPushSettingRow(); }
-
-function maybeShowPushPrimer() {
-  if (!currentUser || _isDemoMode) return;
-  const st = _pushPrimerState();
-  const ok = shouldShowPushPrimer({
-    available: _pushPrimerAvailable(),
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function shouldDeferredPushAsk({ authStatus, openedFromPush, iosVersion, asked }) {
+  if (asked) return false;
+  if (authStatus !== 'provisional') return false;
+  if (!openedFromPush) return false;
+  return iosAtLeast(iosVersion, '2.6');
+}
+const PUSH_HARD_ASKED = 'wr_push_hard_asked';
+function maybeDeferredPushAsk() {
+  if (!_pushBridge()) return;
+  const ok = shouldDeferredPushAsk({
     authStatus: window._pushAuthStatus || 'notDetermined',
-    declineCount: st.declineCount || 0,
-    lastDeclinedMs: st.lastDeclinedMs || 0,
-    nowMs: Date.now(),
+    openedFromPush: !!window._openedFromPush,
+    iosVersion: window._iosAppVersion,
+    asked: safeLS.get(PUSH_HARD_ASKED) === '1',
   });
   if (!ok) return;
-  setTimeout(() => {
-    if (document.querySelector('.overlay:not(.hidden)')) return;   // don't stack — retry next trigger
-    const m = document.getElementById('push-primer-modal');
-    if (m) { m.classList.remove('hidden'); notePromoModalShown(); _logPostCtaEvent('shown', 'push_primer'); }
-  }, 900);
-}
-function pushPrimerEnable() {
-  document.getElementById('push-primer-modal')?.classList.add('hidden');
-  _logPostCtaEvent('clicked', 'push_primer');
+  safeLS.set(PUSH_HARD_ASKED, '1');
   try { _pushBridge().postMessage({ action: 'requestPushPermission' }); } catch (_) {}
-}
-function pushPrimerDismiss() {
-  document.getElementById('push-primer-modal')?.classList.add('hidden');
-  const st = _pushPrimerState();
-  st.declineCount = (st.declineCount || 0) + 1;
-  st.lastDeclinedMs = Date.now();
-  try { safeLS.set(PUSH_PRIMER_STATE, JSON.stringify(st)); } catch (_) {}
-  _logPostCtaEvent('dismissed', 'push_primer');
 }
 // Settings row: reflects OS status, lets the user enable / manage.
 function renderPushSettingRow() {
   const row = document.getElementById('push-setting-row');
   if (!row) return;
-  if (!_pushPrimerAvailable()) { row.style.display = 'none'; return; }
+  if (!_pushBridgeAvailable()) { row.style.display = 'none'; return; }
   row.style.display = '';
   const status = window._pushAuthStatus || 'notDetermined';
   const label = document.getElementById('push-setting-state');
   const btn = document.getElementById('push-setting-btn');
   if (status === 'authorized') { if (label) label.textContent = 'On'; if (btn) btn.style.display = 'none'; }
+  else if (status === 'provisional') { if (label) label.textContent = 'On (quiet)'; if (btn) { btn.style.display = ''; btn.textContent = 'Deliver prominently'; btn.onclick = () => { try { safeLS.set(PUSH_HARD_ASKED, '1'); _pushBridge().postMessage({ action: 'requestPushPermission' }); } catch (_) {} }; } }
   else if (status === 'denied') { if (label) label.textContent = 'Off'; if (btn) { btn.style.display = ''; btn.textContent = 'Open Settings'; btn.onclick = () => { try { _pushBridge().postMessage({ action: 'openAppSettings' }); } catch (_) {} }; } }
   else { if (label) label.textContent = 'Off'; if (btn) { btn.style.display = ''; btn.textContent = 'Turn on'; btn.onclick = () => { try { _pushBridge().postMessage({ action: 'requestPushPermission' }); } catch (_) {} }; } }
 }
@@ -20504,7 +20479,7 @@ async function saveLog() {
   toast(isUpdate ? 'Wear log updated!' : 'Wear logged!');
   haptic('success');
   if (!isUpdate) maybeShowReviewPrompt('wear_log');
-  if (!isUpdate) maybeShowPushPrimer();   // engagement moment — prime notifications (overlay-guarded, won't stack)
+  if (!isUpdate) maybeDeferredPushAsk();   // acted on a quiet notification? spend the one-shot dialog now
   checkAndAwardBadges('wear', logEntry.id).then(() => foldBadgeCardsIntoPost(logEntry.id));
   } finally { if (_slBtn) { _slBtn.disabled = false; _slBtn.textContent = 'Log This Wear'; } }
 }
@@ -23169,6 +23144,7 @@ function quickLog(watchId) {
   dismissReminder();
   toast('Wear logged!');
   haptic('success');
+  maybeDeferredPushAsk();
   // Fire-and-forget fun fact (mirrors saveLog / saveNewPost) — never blocks logging.
   attachFunFact(qEntry, watches.find(x => x.id === watchId) || null).then(factText => { if (factText) toast('💡 ' + factText); });
 }
@@ -29042,6 +29018,14 @@ function openPushRoute(route, id) {
     maybeShowLogAgainBanner(true, id || null);
     return;
   }
+  if (route === 'measure') {
+    // Re-measure / drift push → the timegrapher with that watch preselected.
+    // nav('measure') runs openMeasureInline() synchronously, which fills the select.
+    openMeasureModal();
+    const sel = document.getElementById('msr-watch-select');
+    if (id && sel && [...sel.options].some(o => o.value === id)) { sel.value = id; onMsrWatchChange(); }
+    return;
+  }
   if (typeof openNotifPanel === 'function') openNotifPanel();
 }
 
@@ -29420,7 +29404,6 @@ const _overlayCloseMap = {
   'msr-share-popup':     dismissMsrSharePopup,
   'wl-share-modal':      closeWishlistShareSheet,
   // Escape counts as a decline here, same as pressing "Not now".
-  'push-primer-modal':   pushPrimerDismiss,
 };
 
 // Click overlay background to close
@@ -32953,11 +32936,9 @@ function dismissMsrShareCta() {
   const cta = document.getElementById('msr-share-cta');
   if (cta) cta.style.display = 'none';
   closeMeasureModal();
-  // Engagement moment, on the success side: the reading is saved and the user is
-  // done with it. Deliberately not in showMsrShareCta — that reveals "Saved —
-  // log your wear?", the core-loop CTA, and a modal over it would just trade one
-  // funnel for another. Users who take that CTA instead get primed by saveLog().
-  maybeShowPushPrimer();
+  // Acted on a quiet notification and just finished a measurement → the one-shot
+  // full permission dialog is worth spending now (no-op unless provisional + 2.6).
+  maybeDeferredPushAsk();
 }
 
 // ── Measurement share-to-feed auto-popup ────────────────────────────────────

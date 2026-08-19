@@ -9,7 +9,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { apnsHost, buildMeasurePush, createAPNsJWT, sendPush, timingSafeEqual } from "./lib.ts";
+import { apnsHost, buildMeasurePush, createAPNsJWT, routeFor, sendPush, timingSafeEqual } from "./lib.ts";
 import type { MeasureTarget } from "./lib.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -52,12 +52,14 @@ serve(async (req) => {
     for (const t of rows) {
       try {
         const { data: toks } = await supabase.from("device_tokens")
-          .select("token").eq("user_id", t.user_id).eq("platform", "ios");
+          .select("token, app_version").eq("user_id", t.user_id).eq("platform", "ios");
         if (!toks || !toks.length) continue;
         if (!jwt) jwt = await createAPNsJWT(APNS_KEY_P8, APNS_KEY_ID, APNS_TEAM_ID);
         const msg = buildMeasurePush(t);
+        // Tap → timegrapher with this watch preselected (2.6+ only, per token).
         const results = await Promise.all(
-          toks.map((x: { token: string }) => sendPush(x.token, msg, jwt!, APNS_HOST)),
+          toks.map((x: { token: string; app_version?: string | null }) =>
+            sendPush(x.token, msg, jwt!, APNS_HOST, routeFor(x.app_version, "measure", t.watch_id, t.user_id))),
         );
         const expired = results.filter((r) => r.status === 410).map((r) => r.token);
         if (expired.length) await supabase.from("device_tokens").delete().in("token", expired);
