@@ -8070,7 +8070,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.13.54';
+const APP_VERSION = '22.16.17';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8836,7 +8836,9 @@ function profilePostCellHTML(l, isOwn) {
   if (l.photo_url) {
     inner = `<img src="${escHtml(l.photo_url)}" alt="" loading="lazy" onerror="this.style.display='none'">`;
   } else if (w?.image) {
-    inner = `<img src="${escHtml(w.image)}" alt="" loading="lazy" onerror="this.style.display='none'">`;
+    // 240 px thumb with data-full fallback (initThumbFallback): an 87-watch
+    // profile requested ~80 full-size images at once and Storage answered 429.
+    inner = `<img ${thumbSrcAttrs(w.image)} alt="" loading="lazy" onerror="this.style.display='none'">`;
   } else {
     const bg = w?.color || '#c9a84c';
     inner = `<div class="pp-fallback" style="background:${escHtml(bg)};color:${initialsTextColor(bg)}">${initials(w?.brand || '', w?.name || '')}</div>`;
