@@ -41,6 +41,8 @@ experiences: `admin_active_dau` min 419 ms / mean 2,084 ms / max 7,183 ms.
 
 ## DB-1 — HIGH: the admin dashboard is 57 % of database time
 
+> **2026-08-22 follow-up — pre-warm shipped:** the 10-min cache still recomputed on a COLD dashboard open (five heavy RPCs at once under the 8 s `authenticated` timeout) and `admin_active_dau` / `admin_per_user_trend` / `admin_engine_stats` 500'd ~5×/day (statement timeout; the failed txn left their cache rows stale). `sql/2026-08-22-admin-stats-prewarm.sql`: pg_cron `refresh-admin-stats-cache` (`*/10`) runs `admin_stats_refresh()` as postgres (all 10 keys, ~8–13 s sequential, one failure can't block the rest), wrapper TTL 10 → 15 min. Measured read path as admin after warm-up: 0.5–2.1 ms per RPC.
+
 > **FIXED 2026-08-15** (52dcbc0, `sql/2026-08-15-admin-stats-cache.sql`) — 10 heavy RPCs wrapped over a 10-min `admin_stats_cache` (bodies cloned verbatim to `_compute()`, wrappers verified byte-equal forced and cached); dashboard stages flattened into one `Promise.all`; ↻ Refresh passes `p_force`. Warm: the five heaviest RPCs answer together in 6.6 ms (was ~6 s). Counts (fix 3) left as-is — RLS-scoped numbers would change if moved to SECURITY DEFINER.
 
 `SELECT sum(total_exec_time) … WHERE query LIKE '%admin\_%'` → **876 s of 1,655 s total**
@@ -107,6 +109,8 @@ index-friendly. Saves ~24 s of DB time/day; low urgency, five-minute change.
 ---
 
 ## CLIENT-1 — HIGH: 4.9 MB of the 6.9 MB boot payload is full-size photos shown at 22–48 px
+
+> **2026-08-22 follow-up:** the profile post grid (`profilePostCellHTML`) still used full-size `w.image`; an 87-watch profile opened on a Mac requested ~80 full-size watch images in one second and Storage returned 429 on 39 of them (+5 log photos). Switched to `thumbSrcAttrs(w.image)` (240 px thumb, data-full fallback). Log photos have no thumb variant and stay full-size.
 
 > **FIXED 2026-08-15** (118f88b) — self-hosted `<name>_thumb.jpg` (240 px) siblings instead of paid transforms: written on upload, backfilled for 861 files by `scripts/backfill-thumbs.py` (146 MB → 9.65 MB, avg 11.5 KB); 29 small render sites + `p/`/`profile/` use them with a document-level `error` fallback to the original. UAT: 25/25 feed chips render the thumb, 0 fallbacks.
 
