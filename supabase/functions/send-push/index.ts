@@ -170,6 +170,15 @@ serve(async (req) => {
     }
 
     // Build message
+    // Share-link comments have no actor row — the typed name lives on the comment.
+    if (type === "share_comment" && ref_id) {
+      const { data: c } = await supabase
+        .from("share_comments")
+        .select("name")
+        .eq("id", ref_id)
+        .maybeSingle();
+      if (c?.name) actorName = c.name;
+    }
     const message = buildMessage(type, actorName, ref_id);
     if (!message) {
       return new Response(JSON.stringify({ skipped: "unknown type" }), {

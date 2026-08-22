@@ -229,3 +229,8 @@ Deno.test("stripPemArmor — bare base64 passes through unchanged", () => {
 Deno.test("buildMessage returns null for badge_earned (webhook must not push badges)", () => {
   assertEquals(buildMessage("badge_earned", "Anyone"), null);
 });
+
+Deno.test("share_comment pushes the commenter's name and routes to the bell", () => {
+  assertEquals(buildMessage("share_comment", "Sarah", "c1"), { title: "WRotate", body: "Sarah commented on a link you shared" });
+  assertEquals(buildRoute("share_comment", "c1", null), { route: "bell", id: null });
+});

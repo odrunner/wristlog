@@ -1657,6 +1657,13 @@ export function notificationOpensProfile(type) {
 }
 
 /**
+ * Returns true for types that tap-open the Shared-links modal (share-link comments).
+ */
+export function notificationOpensShareLinks(type) {
+  return type === 'share_comment';
+}
+
+/**
  * Returns true for types that tap-navigate to the badge wall.
  */
 export function notificationOpensBadgeWall(type) {

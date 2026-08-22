@@ -5,6 +5,7 @@ import {
   notificationOpensClub,
   notificationOpensProfile,
   notificationOpensBadgeWall,
+  notificationOpensShareLinks,
 } from '../wrotate_test.js';
 
 // Tapping a push must land in the same place as tapping the equivalent row in
@@ -18,7 +19,7 @@ const ALL_TYPES = [
   'like', 'comment', 'comment_also', 'comment_like', 'mention',
   'club_join_request', 'club_join_accepted', 'club_invite', 'club_promoted',
   'friend_request', 'friend_accepted',
-  'badge_earned', 'system',
+  'badge_earned', 'system', 'share_comment',
 ];
 
 describe('push route agrees with the in-app panel', () => {
@@ -90,5 +91,13 @@ describe('openPushRoute (JS fallback for new routes)', () => {
   });
   it('falls back to the bell', () => {
     expect(fn).toContain('openNotifPanel()');
+  });
+
+  // A share-link comment opens the Shared-links modal in the panel (not a post,
+  // profile or club), so the push can only usefully land on the bell.
+  it('share_comment opens the Shared-links modal in the panel and goes to the bell on push', () => {
+    expect(notificationOpensShareLinks('share_comment')).toBe(true);
+    expect(notificationOpensShareLinks('comment')).toBe(false);
+    expect(buildRoute('share_comment', 'c1', null)).toEqual({ route: 'bell', id: null });
   });
 });

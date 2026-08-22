@@ -63,6 +63,10 @@ export function buildMessage(
       return { title, body: `${actorName} mentioned you` };
     case "comment_like":
       return { title, body: `${actorName} liked your comment` };
+    // A comment left on a share link by someone with (usually) no account. The
+    // webhook resolves actorName from share_comments.name; no actor row exists.
+    case "share_comment":
+      return { title, body: `${actorName} commented on a link you shared` };
     // The auto-add-brand confirmation: actor-less, brand name in ref_id. It used
     // to push "Someone sent you a notification" (or a bystander's name, for the
     // six rows that carry an actor) — no hint that a brand request came through.
@@ -113,6 +117,10 @@ export function buildRoute(
       return to("club", refId);
     case "badge_earned":
       return { route: "badges", id: null };
+    // share_comment opens the Shared-links modal in the panel — not a post,
+    // profile or club — so the push lands on the bell like the request types.
+    case "share_comment":
+      return { route: "bell", id: null };
     // follow_request, friend_request, club_invite, club_join_request and system
     // deliberately fall through to the bell. Those rows carry Accept/Decline
     // buttons and have NO click target in the panel — the bell is where the user
