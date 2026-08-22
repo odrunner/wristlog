@@ -146,6 +146,15 @@ async function run() {
     return { ...r, ok: r.status === 200 && r.body.trimStart().startsWith('<svg') };
   });
 
+  // Comment POSTs on the share pages: an unknown token must resolve to nothing
+  // (no comment box for a revoked/guessed link), on both pages.
+  for (const fn of ['share-wishlist', 'share-watches']) {
+    await check(`${fn} (comment POST bad token → 404)`, async () => {
+      const r = await callFn(`${fn}?t=nope`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t: 'nope', name: 'A', body: 'b' }) });
+      return { ...r, ok: r.status === 404 };
+    });
+  }
+
   // --- Authenticated functions ---
 
   await check('identify-watch (auth + tiny image)', () =>

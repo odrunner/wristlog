@@ -13,6 +13,8 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { handleCommentPost, loadComments } from "../_shared/share-comments.ts";
+import { commentsSectionHtml } from "../_shared/share-comments-lib.ts";
 import {
   avatarInnerHtml,
   buildWishlistOg,
@@ -28,7 +30,7 @@ import {
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
 type ShareRow = {
@@ -93,6 +95,13 @@ function statePage(supabaseUrl: string, title: string, icon: string, heading: st
   );
 }
 
+// Light resolver for the comment POST: the owning user + label of a LIVE share.
+// deno-lint-ignore no-explicit-any
+async function resolveShareOwner(db: any, token: string) {
+  const { data, error } = await db.from("wishlist_shares").select("user_id, label, revoked_at").eq("token", token).maybeSingle();
+  return isShareUsable(data, error) ? { user_id: data.user_id as string, label: (data.label ?? null) as string | null } : null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
 
@@ -103,6 +112,14 @@ serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const db = createClient(supabaseUrl, supabaseKey);
+
+  // A comment from the page: validated, rate-limited, stored, then the owner is
+  // told (bell/push via the notifications webhook, email from here).
+  if (req.method === "POST") {
+    return handleCommentPost(req, db, "wishlist", {
+      supabaseUrl, corsHeaders: CORS_HEADERS, resolveShare: (t) => resolveShareOwner(db, t),
+    });
+  }
 
   // Image mode answers with an SVG even when there is nothing behind the token:
   // a preview whose image 404s renders as a grey box in the thread.
@@ -141,6 +158,7 @@ serve(async (req) => {
   const canonicalUrl = `${supabaseUrl}/functions/v1/share-wishlist?t=${encodeURIComponent(token)}`;
 
   const n = items.length;
+  const comments = await loadComments(db, "wishlist", token);
   const body = `
     <div class="col-hero">
       <div class="col-avatar">${avatarInnerHtml(profile.avatar_url, displayName)}</div>
@@ -152,6 +170,7 @@ serve(async (req) => {
       ? `<div class="state-wrap"><div class="state-icon">⌚</div><div class="state-title">Nothing left in this list</div>
          <div class="state-sub">The watches on this link are no longer on the owner's wishlist.</div></div>`
       : `<div class="wl-grid">${wishlistCardsHtml(items)}</div>`}
+    ${commentsSectionHtml("wishlist", token, comments, Date.now())}
     <div class="foot">Shared from WRotate · <a href="https://wrotate.com/open">Start your own wishlist</a></div>`;
 
   // The counter must outlive the response without delaying it: the runtime may
