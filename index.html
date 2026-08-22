@@ -2888,6 +2888,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="eyebrow eyebrow-muted">August 2026</span>
       </div>
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Comments on Shared Links</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">People you send a wishlist or collection link to can now leave a comment with their name &#8212; no account needed. Comments show on the link page for everyone who has it, and you see them under <strong>Shared links</strong> on the Wishlist and Collection tabs, in the bell, as a push, and by email (at most one per link every half hour; switch the email off under Notifications). You can remove any comment, or revoke the link.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Collection Share Links</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">The wishlist&#8217;s share links now work for your collection too. Tap <strong>Share</strong> on the Collection tab, tick the watches you want to show &#8212; a few for a dealer, the lot for an insurer &#8212; and send a link with the photo, brand, model, reference and any link you saved. Add a note to go with it. What you paid, market values, wears, notes and tags stay private, the recipient needs no account, and you can revoke any link you&#8217;ve sent.</div>
       </div>
@@ -4054,7 +4058,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">6</div>
             <div class="help-step-body">
               <div class="help-step-title">Share some of your watches by link</div>
-              <div class="help-step-desc">On the Collection tab, tap <strong>Share</strong>, tick the watches you want to show, then <strong>Create link</strong>. Add a note first if you like &#8212; who it&#8217;s for, what you&#8217;re asking &#8212; and it appears at the top of the page they open. The page shows each watch&#8217;s photo, brand, model, reference number and any link you saved &#8212; never what you paid, its market value, wears, notes or tags &#8212; and works for anyone, with or without a WRotate account. Tap <strong>Shared links</strong> any time to see what you&#8217;ve sent, how often it was opened, and to revoke a link.</div>
+              <div class="help-step-desc">On the Collection tab, tap <strong>Share</strong>, tick the watches you want to show, then <strong>Create link</strong>. Add a note first if you like &#8212; who it&#8217;s for, what you&#8217;re asking &#8212; and it appears at the top of the page they open. The page shows each watch&#8217;s photo, brand, model, reference number and any link you saved &#8212; never what you paid, its market value, wears, notes or tags &#8212; and works for anyone, with or without a WRotate account. Tap <strong>Shared links</strong> any time to see what you&#8217;ve sent, how often it was opened, and to revoke a link. Anyone with the link can also leave a <strong>comment</strong> with their name &#8212; you&#8217;ll see it under <strong>Shared links</strong> and in the bell (and by email, unless you turn that off under Notifications).</div>
             </div>
           </div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> "From Photo" works great for a quick start — snap your watch box and add everything in one go. For the most accurate data, use brand website URLs (rolex.com, omegawatches.com…) with the Fetch button.</span></div>
@@ -4257,7 +4261,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">6</div>
             <div class="help-step-body">
               <div class="help-step-title">Send part of your wishlist to a dealer</div>
-              <div class="help-step-desc">On the Wishlist tab, tap <strong>Share</strong>. Tick individual watches, or a brand folder to take all of them at once, then <strong>Create link</strong>. Add a note first if you want &#8212; who it&#8217;s for, sizes, budget, anything &#8212; and it appears at the top of the page they open. The page shows each watch&#8217;s photo, brand, model, reference number and any link you saved &#8212; never your price, notes or tags &#8212; and works for anyone, with or without a WRotate account. Tap <strong>Shared links</strong> any time to see what you&#8217;ve sent, how many times it was opened, and to revoke a link.</div>
+              <div class="help-step-desc">On the Wishlist tab, tap <strong>Share</strong>. Tick individual watches, or a brand folder to take all of them at once, then <strong>Create link</strong>. Add a note first if you want &#8212; who it&#8217;s for, sizes, budget, anything &#8212; and it appears at the top of the page they open. The page shows each watch&#8217;s photo, brand, model, reference number and any link you saved &#8212; never your price, notes or tags &#8212; and works for anyone, with or without a WRotate account. Tap <strong>Shared links</strong> any time to see what you&#8217;ve sent, how many times it was opened, and to revoke a link. Anyone with the link can also leave a <strong>comment</strong> with their name &#8212; you&#8217;ll see it under <strong>Shared links</strong> and in the bell (and by email, unless you turn that off under Notifications).</div>
             </div>
           </div>
         </div>
@@ -8066,7 +8070,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.12.41';
+const APP_VERSION = '22.12.43';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -9045,7 +9049,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
 
   // Notifications section (own profile only) — collapsible, default collapsed
   const notifHtml = isOwn ? (() => {
-    const ep = (profile.email_prefs || {comments:true,mentions:true,clubs:false,friends:true,updates:true});
+    const ep = (profile.email_prefs || {comments:true,mentions:true,clubs:false,friends:true,updates:true,share_comments:true});
     const notifOpen = safeLS.get('notif-collapse') === '0';
     const tog = (key, label) => `
       <div class="toggle-row">
@@ -9068,6 +9072,13 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
           ${tog('mentions','Mentions me')}
           ${tog('friends','Follows & friend requests')}
           ${tog('clubs','Club activity')}
+          <div class="toggle-row">
+            <span class="toggle-label">Comments on links I shared</span>
+            <label class="toggle-switch">
+              <input type="checkbox" ${ep.share_comments !== false ? 'checked' : ''} onchange="saveEmailPref('share_comments',this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
           <div style="font-size:.75rem;color:var(--muted);margin:.8rem 0 .6rem;border-top:1px solid var(--border);padding-top:.8rem;">General</div>
           ${tog('updates','WRotate updates & new features')}
           <div class="toggle-row">
@@ -16801,7 +16812,7 @@ function toggleProfSection(sectionId, storageKey) {
 async function saveEmailPref(category, enabled) {
   if (demoGuard()) return;
   if (!currentUser) return;
-  const prefs = (myProfile && myProfile.email_prefs) ? { ...myProfile.email_prefs } : { comments: true, mentions: true, clubs: false, friends: true, updates: true, reminders: true };
+  const prefs = (myProfile && myProfile.email_prefs) ? { ...myProfile.email_prefs } : { comments: true, mentions: true, clubs: false, friends: true, updates: true, reminders: true, share_comments: true };
   prefs[category] = enabled;
   const { error } = await db.from('profiles').update({ email_prefs: prefs }).eq('id', currentUser.id);
   if (!error && window.myProfile) window.myProfile.email_prefs = prefs;
@@ -27857,6 +27868,7 @@ async function loadWishlistShareLinks() {
     console.warn('[wishlist] share links load failed:', e && e.message);
     _wlShareLinks = [];
   }
+  await loadShareComments('wishlist');
   renderWishlistShareLinks();
 }
 
@@ -27867,13 +27879,16 @@ function renderWishlistShareLinks() {
   el.innerHTML = `
     <div class="eyebrow" style="margin-bottom:.4rem;">Your shared links</div>
     ${_wlShareLinks.map(s => `
-      <div style="display:flex;align-items:center;gap:.5rem;padding:.4rem 0;border-bottom:1px solid var(--border);">
+      <div style="border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:.5rem;padding:.4rem 0;">
         <div style="flex:1;min-width:0;">
           <div style="font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(wishShareLinkLabel(s))}</div>
-          <div style="font-size:.68rem;color:var(--muted);">${(s.item_ids || []).length} watch${(s.item_ids || []).length !== 1 ? 'es' : ''} · ${s.views || 0} view${(s.views || 0) !== 1 ? 's' : ''}</div>
+          <div style="font-size:.68rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">${(s.item_ids || []).length} watch${(s.item_ids || []).length !== 1 ? 'es' : ''} · ${s.views || 0} view${(s.views || 0) !== 1 ? 's' : ''} ${shareCommentChipHtml('wishlist', s.token)}</div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="copyWishlistShareUrl('${escAttr(s.token)}')">Copy</button>
         <button class="btn btn-ghost btn-sm" data-revoke="${escAttr(s.token)}" onclick="revokeWishlistShare('${escAttr(s.token)}')">Revoke</button>
+      </div>
+      ${shareThreadHtml('wishlist', s.token)}
       </div>`).join('')}`;
 }
 
@@ -27992,6 +28007,18 @@ function collSharePrivateCount(watches, selected) {
   ).length;
 }
 
+// Comments on share links, grouped per link for the Shared-links list. Soft-
+// deleted rows are dropped here so every caller sees the same thread.
+function groupCommentsByToken(rows) {
+  const map = new Map();
+  for (const r of (rows || [])) {
+    if (!r || r.deleted_at) continue;
+    if (!map.has(r.token)) map.set(r.token, []);
+    map.get(r.token).push(r);
+  }
+  return map;
+}
+
 // null = selection mode off. A Set = on, holding the ticked watch ids.
 // In-memory only, like _wlSelect.
 let _collSelect = null;
@@ -28028,6 +28055,68 @@ function collShareUrl(token) {
 let _collShareLinks = [];      // rows from collection_shares, newest first
 // Token whose comment thread is expanded in a Shared-links modal (null = none).
 let _shareThreadOpen = null;
+// Comments on my share links, per kind (owner-only RLS), loaded with the
+// Shared-links list so each row can show its count and thread.
+let _shareComments = { wishlist: [], collection: [] };
+
+async function loadShareComments(kind) {
+  if (!currentUser) return;
+  try {
+    const { data, error } = await db.from('share_comments')
+      .select('id, token, name, body, created_at, deleted_at')
+      .eq('kind', kind).eq('owner_id', currentUser.id).is('deleted_at', null)
+      .order('created_at', { ascending: true }).limit(500);
+    if (error) throw error;
+    _shareComments[kind] = data || [];
+  } catch (e) {
+    console.warn('[share] comments load failed:', e && e.message);
+    _shareComments[kind] = [];
+  }
+}
+
+// The "N comments" chip for one link row, or '' when there are none.
+function shareCommentChipHtml(kind, token) {
+  const th = groupCommentsByToken(_shareComments[kind]).get(token) || [];
+  if (!th.length) return '';
+  return `<button class="btn btn-ghost btn-sm" style="padding:.1rem .45rem;font-size:.68rem;" data-thread="${escAttr(token)}" onclick="toggleShareThread('${kind}','${escAttr(token)}')">${th.length} comment${th.length !== 1 ? 's' : ''}${_shareThreadOpen === token ? ' ▴' : ' ▾'}</button>`;
+}
+
+// The expanded thread under a link row (only when _shareThreadOpen === token).
+function shareThreadHtml(kind, token) {
+  if (_shareThreadOpen !== token) return '';
+  const comments = groupCommentsByToken(_shareComments[kind]).get(token) || [];
+  if (!comments.length) return '';
+  return `<div class="share-thread" data-token="${escAttr(token)}">${comments.map(c => `
+    <div style="display:flex;gap:.5rem;align-items:flex-start;padding:.4rem 0;border-top:1px dashed var(--border);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:.72rem;color:var(--muted);"><strong style="color:var(--text);">${escHtml(c.name)}</strong> · ${escHtml(formatFeedDate(c.created_at || ''))}</div>
+        <div style="font-size:.82rem;white-space:pre-wrap;word-break:break-word;">${escHtml(c.body)}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" data-delete-comment="${escAttr(c.id)}" onclick="deleteShareComment('${kind}','${escAttr(c.id)}')">Delete</button>
+    </div>`).join('')}</div>`;
+}
+
+function toggleShareThread(kind, token) {
+  _shareThreadOpen = _shareThreadOpen === token ? null : token;
+  if (kind === 'collection') renderCollectionShareLinks(); else renderWishlistShareLinks();
+}
+
+// Soft delete: the row stays (admin data), the thread and the page stop showing it.
+async function deleteShareComment(kind, id) {
+  try {
+    const { error } = await db.from('share_comments')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id).eq('owner_id', currentUser.id);
+    if (error) throw error;
+  } catch (e) {
+    console.warn('[share] comment delete failed:', e && e.message);
+    toast('Could not delete that comment', 'error');
+    return;
+  }
+  _shareComments[kind] = _shareComments[kind].filter(c => c.id !== id);
+  if (kind === 'collection') renderCollectionShareLinks(); else renderWishlistShareLinks();
+  toast('Comment removed');
+}
 
 // A bell row for a share-link comment opens the matching Shared-links modal
 // with that link's thread expanded. Kind/token come from the enriched row.
@@ -28082,6 +28171,7 @@ async function loadCollectionShareLinks() {
     console.warn('[collection] share links load failed:', e && e.message);
     _collShareLinks = [];
   }
+  await loadShareComments('collection');
   renderCollectionShareLinks();
 }
 
@@ -28092,13 +28182,16 @@ function renderCollectionShareLinks() {
   el.innerHTML = `
     <div class="eyebrow" style="margin-bottom:.4rem;">Your shared links</div>
     ${_collShareLinks.map(s => `
-      <div style="display:flex;align-items:center;gap:.5rem;padding:.4rem 0;border-bottom:1px solid var(--border);">
+      <div style="border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:.5rem;padding:.4rem 0;">
         <div style="flex:1;min-width:0;">
           <div style="font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(wishShareLinkLabel(s))}</div>
-          <div style="font-size:.68rem;color:var(--muted);">${(s.item_ids || []).length} watch${(s.item_ids || []).length !== 1 ? 'es' : ''} · ${s.views || 0} view${(s.views || 0) !== 1 ? 's' : ''}</div>
+          <div style="font-size:.68rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">${(s.item_ids || []).length} watch${(s.item_ids || []).length !== 1 ? 'es' : ''} · ${s.views || 0} view${(s.views || 0) !== 1 ? 's' : ''} ${shareCommentChipHtml('collection', s.token)}</div>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="copyCollectionShareUrl('${escAttr(s.token)}')">Copy</button>
         <button class="btn btn-ghost btn-sm" data-revoke="${escAttr(s.token)}" onclick="revokeCollectionShare('${escAttr(s.token)}')">Revoke</button>
+      </div>
+      ${shareThreadHtml('collection', s.token)}
       </div>`).join('')}`;
 }
 

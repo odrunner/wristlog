@@ -238,3 +238,23 @@ test('the share note is free text and travels with the link', async ({ page }) =
   await expect(page.locator('#wl-share-done')).toBeVisible();
   expect(posted.label).toBe('For Steve — 40mm please,\nbudget is flexible.');
 });
+
+test('Shared links shows comment counts, expands the thread, and deletes a comment', async ({ page }) => {
+  await openWishlist(page);
+  await mockMint(page);
+  await page.route('**/rest/v1/share_comments*', route => {
+    if (route.request().method() === 'PATCH') return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+      { id: 'c1', token: 'existingtoken000000000000000001', name: 'Sarah', body: 'I can source the Daytona', created_at: '2026-08-22T10:00:00Z', deleted_at: null },
+      { id: 'c2', token: 'existingtoken000000000000000001', name: 'Tom', body: 'Nice list', created_at: '2026-08-22T11:00:00Z', deleted_at: null },
+    ]) });
+  });
+  await page.click('#wl-share-btn');
+  await page.click('#wl-share-links');
+  await expect(page.locator('[data-thread="existingtoken000000000000000001"]')).toContainText('2 comments');
+  await page.click('[data-thread="existingtoken000000000000000001"]');
+  await expect(page.locator('.share-thread')).toContainText('I can source the Daytona');
+  await page.click('[data-delete-comment="c1"]');
+  await expect(page.locator('.share-thread')).not.toContainText('I can source the Daytona');
+  await expect(page.locator('[data-thread="existingtoken000000000000000001"]')).toContainText('1 comment');
+});

@@ -199,3 +199,23 @@ test('at 390px the select bar is one row and the sort bar does not spill', async
   expect(report.sort.spills, JSON.stringify(report.sort)).toBe(0);
   expect(report.sort.rows, JSON.stringify(report.sort)).toBe(1);
 });
+
+test('Shared links shows comment counts, expands the thread, and deletes a comment', async ({ page }) => {
+  await openCollection(page);
+  await mockMint(page);
+  await page.route('**/rest/v1/share_comments*', route => {
+    if (route.request().method() === 'PATCH') return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+      { id: 'c1', token: 'existingtoken000000000000000002', name: 'Sarah', body: 'Is the GMT available?', created_at: '2026-08-22T10:00:00Z', deleted_at: null },
+      { id: 'c2', token: 'existingtoken000000000000000002', name: 'Tom', body: 'Lovely set', created_at: '2026-08-22T11:00:00Z', deleted_at: null },
+    ]) });
+  });
+  await page.click('#coll-share-btn');
+  await page.click('#coll-share-links');
+  await expect(page.locator('[data-thread="existingtoken000000000000000002"]')).toContainText('2 comments');
+  await page.click('[data-thread="existingtoken000000000000000002"]');
+  await expect(page.locator('.share-thread')).toContainText('Is the GMT available?');
+  await page.click('[data-delete-comment="c1"]');
+  await expect(page.locator('.share-thread')).not.toContainText('Is the GMT available?');
+  await expect(page.locator('[data-thread="existingtoken000000000000000002"]')).toContainText('1 comment');
+});

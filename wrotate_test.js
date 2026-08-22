@@ -554,6 +554,18 @@ export function collSharePrivateCount(watches, selected) {
   ).length;
 }
 
+// Comments on share links, grouped per link for the Shared-links list. Soft-
+// deleted rows are dropped here so every caller sees the same thread.
+export function groupCommentsByToken(rows) {
+  const map = new Map();
+  for (const r of (rows || [])) {
+    if (!r || r.deleted_at) continue;
+    if (!map.has(r.token)) map.set(r.token, []);
+    map.get(r.token).push(r);
+  }
+  return map;
+}
+
 export function urlDomain(url) {
   if (!url) return '';
   try { return new URL(url).hostname.replace(/^www\./, ''); }
