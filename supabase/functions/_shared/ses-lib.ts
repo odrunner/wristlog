@@ -7,6 +7,9 @@ export interface SesMessage {
   subject: string;
   html: string;
   headers?: Record<string, string>;
+  // Overrides the isolate-wide config set for this one message. Used to pick
+  // the click-tracked set per recipient (see _shared/tracked-lib.ts).
+  configSet?: string;
 }
 
 export function sesEndpoint(region: string): string {
@@ -33,7 +36,7 @@ export function buildSesPayload(
     FromEmailAddress: msg.from,
     Destination: { ToAddresses: msg.to },
     Content: { Simple: simple },
-    ConfigurationSetName: configSet,
+    ConfigurationSetName: msg.configSet ?? configSet,
   };
 }
 

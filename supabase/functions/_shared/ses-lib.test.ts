@@ -44,3 +44,11 @@ Deno.test("chunk splits arrays and preserves order", () => {
   assertEquals(chunk([], 2), []);
   assertEquals(chunk([1], 10), [[1]]);
 });
+
+Deno.test("buildSesPayload honours a per-message configSet override", () => {
+  const p = buildSesPayload(
+    { from: "f@x.com", to: ["a@b.com"], subject: "s", html: "h", configSet: "wrotate-events-tracked" },
+    "wrotate-events",
+  ) as Record<string, any>;
+  assertEquals(p.ConfigurationSetName, "wrotate-events-tracked");
+});

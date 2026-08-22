@@ -11,6 +11,9 @@ export interface MailMessage {
   subject: string;
   html: string;
   headers?: Record<string, string>;
+  // Per-message SES configuration set override (click-tracked sends). Resend
+  // has no equivalent and ignores it — safe under the provider switch.
+  configSet?: string;
 }
 
 export type MailResult =

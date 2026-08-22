@@ -55,6 +55,7 @@ import {
 // Transport: ../_shared/mailer.ts — provider chosen at runtime by the
 // EMAIL_PROVIDER secret (defaults to Resend).
 import { currentProvider, sendBatch, sendEmail as sendProviderEmail } from "../_shared/mailer.ts";
+import { TRACKED_CONFIG_SET, trackedUidSet } from "../_shared/tracked-lib.ts";
 import type { MailMessage } from "../_shared/mailer.ts";
 
 const ADMIN_USER_ID = "d70b1a85-4f31-4431-b3b7-db76543daaf5";
@@ -108,6 +109,24 @@ async function fetchAllRows<T>(
 // watch, no complete pool fact, or a free-text name that would embarrass in a
 // subject line ("Omega Fake Omega - Likely ETA 2824-2") get the curated
 // fallback — never a broken email, never a dropped recipient.
+// Which of these users get the click-tracked config set (iOS 2.6+ install on
+// record). Fails open to UNTRACKED: on a query error every message keeps the
+// default set, so a DB blip can never route a CTA through the tracking host
+// for someone whose build would mishandle it.
+async function fetchTrackedUids(
+  supabase: ReturnType<typeof createClient>,
+  uids: string[],
+): Promise<Set<string>> {
+  if (uids.length === 0) return new Set();
+  const { data, error } = await supabase
+    .from("device_tokens")
+    .select("user_id, app_version")
+    .in("user_id", uids)
+    .not("app_version", "is", null);
+  if (error) return new Set();
+  return trackedUidSet(data as Array<{ user_id: string; app_version: string | null }>);
+}
+
 async function factVarsFor(
   // deno-lint-ignore no-explicit-any
   supabase: any,
@@ -451,6 +470,7 @@ serve(async (req) => {
 
     for (let i = 0; i < filteredRecipients.length; i += batchSize) {
       const batch = filteredRecipients.slice(i, i + batchSize);
+      const tracked = await fetchTrackedUids(supabase, batch.map((r) => r.uid));
       const messages: MailMessage[] = await Promise.all(batch.map(async (r) => {
         const sig = await hmacSign(r.uid, "updates", unsubKey);
         const url = unsubUrl(supabaseUrl, r.uid, sig, "updates");
@@ -464,6 +484,7 @@ serve(async (req) => {
             "List-Unsubscribe": `<${url}>`,
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
           },
+          ...(tracked.has(r.uid) ? { configSet: TRACKED_CONFIG_SET } : {}),
         };
       }));
 
@@ -609,6 +630,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
   const batchSize = 100;
   for (let i = 0; i < claimed.length; i += batchSize) {
     const batch = claimed.slice(i, i + batchSize);
+    const tracked = await fetchTrackedUids(supabase, batch.map((r) => r.uid));
     const messages: MailMessage[] = await Promise.all(batch.map(async (r) => {
       const sig = await hmacSign(r.uid, "updates", drainUnsubKey);
       const url = unsubUrl(supabaseUrl, r.uid, sig, "updates");
@@ -621,6 +643,7 @@ async function drainQueue(supabase: ReturnType<typeof createClient>, supabaseUrl
           "List-Unsubscribe": `<${url}>`,
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         },
+        ...(tracked.has(r.uid) ? { configSet: TRACKED_CONFIG_SET } : {}),
       };
     }));
 
