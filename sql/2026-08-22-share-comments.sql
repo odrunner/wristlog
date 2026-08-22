@@ -30,3 +30,16 @@ create policy share_comments_update_own on public.share_comments
   for update to authenticated using (owner_id = auth.uid()) with check (owner_id = auth.uid());
 
 notify pgrst, 'reload schema';
+
+-- notifications.type is a CHECK list; the share-comment bell row needs its own
+-- type so the panel, push webhook and routing can tell it apart. Applied
+-- 2026-08-22 after the first live POST silently failed the insert (23514).
+alter table public.notifications drop constraint if exists notifications_type_check;
+alter table public.notifications add constraint notifications_type_check
+  check (type = any (array[
+    'like','comment','comment_also','comment_like','mention',
+    'follow','follow_request','follow_accepted',
+    'friend_request','friend_accepted','friend_code_entered','friends_now','friend_invite',
+    'club_join_request','club_join_accepted','club_invite','club_promoted',
+    'system','badge_earned','share_comment'
+  ]::text[]));
