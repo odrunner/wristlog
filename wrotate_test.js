@@ -524,6 +524,36 @@ export function wishShareLinkLabel(share) {
   return d ? `Link from ${fmtDate(d)}` : 'Untitled link';
 }
 
+// ══════════════════════════════════════════
+//  COLLECTION SHARING — same model as the wishlist (selection helpers above
+//  are reused as-is; only the item mapping differs, because a watch carries
+//  far more private data than a wishlist entry)
+// ══════════════════════════════════════════
+
+// THE PRIVACY BOUNDARY on the client. Five fields go into a collection share
+// link and nothing else — paid price, market value, wears, notes, tags, straps,
+// box/papers, insurance and the saved URL never leave the device. Never widen
+// this to spread the source object.
+export function collShareItems(watches, selected) {
+  return (watches || [])
+    .filter(w => selected.has(w.id))
+    .map(w => ({
+      id: w.id,
+      brand: w.brand || '',
+      name: w.name || '',
+      ref: w.ref || '',
+      image: w.image || null,
+    }));
+}
+
+// Informational only, like wishSharePrivateCount: an explicit tick outranks a
+// passive per-watch privacy setting.
+export function collSharePrivateCount(watches, selected) {
+  return (watches || []).filter(w =>
+    selected.has(w.id) && w.watchPrivacy && w.watchPrivacy !== 'public'
+  ).length;
+}
+
 export function urlDomain(url) {
   if (!url) return '';
   try { return new URL(url).hostname.replace(/^www\./, ''); }

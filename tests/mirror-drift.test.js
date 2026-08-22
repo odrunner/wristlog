@@ -54,6 +54,7 @@ const VERBATIM = [
   'promoSlotPositions', 'PROMO_AUDIENCES', 'monthRecap', 'promoSlotEpoch',
   'toggleWishSelection', 'folderSelectionState', 'toggleWishFolderSelection',
   'wishShareItems', 'wishSharePrivateCount', 'wishShareLinkLabel',
+  'collShareItems', 'collSharePrivateCount',
 ];
 
 const ADAPTED = [

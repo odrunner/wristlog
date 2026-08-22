@@ -1374,6 +1374,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wl-select-box.partial { background:color-mix(in srgb, var(--gold) 30%, transparent); border-color:var(--gold); }
     .wl-select-box.partial::after { content:''; position:absolute; left:3px; top:7px; width:10px; height:2px; background:var(--gold); }
     .wl-tile .wl-select-box { position:absolute; top:.4rem; left:.4rem; z-index:2; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+    .watch-card .coll-select-box { position:absolute; top:.5rem; left:.5rem; z-index:3; box-shadow:0 1px 4px rgba(0,0,0,.3); }
     .wl-tile { position:relative; }
 
     /* Wishlist view toggle */
@@ -1671,6 +1672,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
          (e2e/wishlist-layout.mock.spec.js). */
       .wl-actions .btn { padding: .45rem .55rem !important; }
       .wl-actions .wl-actions-text { display: none; }
+      /* Collection header: Share and Enhance drop to icon-only too, so the row
+         still fits at 390px (e2e/collection-gallery.mock.spec.js) — with both
+         labels the six buttons needed 406px. */
+      #coll-share-btn, #coll-enhance-all-btn { padding: .45rem .55rem !important; }
+      #coll-share-btn .wl-actions-text, #coll-enhance-all-btn .wl-actions-text { display: none; }
       #wishlist-modal .modal-actions { gap: .3rem; }
       #wishlist-modal .modal-actions .btn { padding: .6rem .55rem; font-size: .78rem; }
       .feed-edit-btn, .btn-icon { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; }
@@ -2867,6 +2873,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="eyebrow eyebrow-muted">August 2026</span>
       </div>
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Collection Share Links</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">The wishlist&#8217;s share links now work for your collection too. Tap <strong>Share</strong> on the Collection tab, tick the watches you want to show &#8212; a few for a dealer, the lot for an insurer &#8212; and send a link with the photo, brand, model, reference and any link you saved. Add a note to go with it. What you paid, market values, wears, notes and tags stay private, the recipient needs no account, and you can revoke any link you&#8217;ve sent.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Wishlist: One View Icon + Ranking Game</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">The three view buttons at the top of the Wishlist are now <strong>one icon</strong> that cycles list → brand folders → gallery, just like the Collection toggle. Gallery tiles can be <strong>dragged to reorder</strong> like list cards. And the Ranking Game now works on your wishlist too. Tap <strong>Rank</strong> at the top of the Wishlist tab for head-to-head match-ups between the watches you&#8217;re dreaming about &#8212; tap the one you want more, 3 seconds per round. <strong>Save Ranking</strong> reorders your wishlist by preference (you can still drag items afterwards), and scores accumulate across sessions, separately from your collection.</div>
       </div>
@@ -3521,9 +3531,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button id="coll-view-btn" class="btn btn-ghost" onclick="toggleCollView()" title="Gallery view" aria-label="Gallery view" style="padding:.45rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
         <button class="btn btn-ghost" onclick="openAddWatch()" title="Add Manually" style="padding:.45rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
         <button class="btn btn-primary" onclick="openPhotoIdentify()" title="Add from Photo" style="display:inline-flex;align-items:center;gap:.35rem;white-space:nowrap;padding:.45rem .7rem;font-size:.8rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add from Photo</button>
-        <button id="coll-enhance-all-btn" class="btn btn-ghost" onclick="enhanceAllWatches()" title="Enhance All with AI" style="display:none;padding:.45rem .7rem;font-size:.8rem;align-items:center;gap:.35rem;white-space:nowrap;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg>Enhance</button>
+        <button id="coll-enhance-all-btn" class="btn btn-ghost" onclick="enhanceAllWatches()" title="Enhance All with AI" style="display:none;padding:.45rem .7rem;font-size:.8rem;align-items:center;gap:.35rem;white-space:nowrap;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg><span class="wl-actions-text">Enhance</span></button>
         <button id="coll-update-prices-btn" class="btn btn-ghost" onclick="openUpdatePrices()" title="Update Market Prices" style="display:none;padding:.45rem .75rem;font-size:.9rem;">$</button>
+        <button id="coll-share-btn" class="btn btn-ghost" onclick="enterCollectionSelect()" title="Share" aria-label="Share" style="display:none;padding:.45rem .7rem;font-size:.8rem;gap:.35rem;align-items:center;white-space:nowrap;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="wl-actions-text">Share</span></button>
       </div>
+    </div>
+    <div id="coll-select-bar" style="display:none;align-items:center;gap:.5rem;flex-wrap:wrap;padding:.5rem .75rem;margin-bottom:.75rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);">
+      <span id="coll-select-count" style="font-size:.82rem;font-weight:600;">0 selected</span>
+      <button id="coll-select-all" class="btn btn-ghost btn-sm" onclick="collSelectAll()">Select all</button>
+      <button id="coll-select-none" class="btn btn-ghost btn-sm" onclick="collSelectNone()">Clear</button>
+      <span style="flex:1;"></span>
+      <button id="coll-share-links" class="btn btn-ghost btn-sm" onclick="openCollectionShareLinks()">Shared links</button>
+      <button id="coll-select-cancel" class="btn btn-ghost btn-sm" onclick="exitCollectionSelect()">Cancel</button>
+      <button id="coll-share-go" class="btn btn-primary btn-sm" onclick="openCollectionShareSheet()" disabled>Share</button>
     </div>
     <div id="coll-sort-bar"></div>
     <div id="coll-tag-filter-bar"></div>
@@ -4013,6 +4033,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-body">
               <div class="help-step-title">Add straps if the watch has more than one</div>
               <div class="help-step-desc">Expand the <strong>Straps</strong> section. Add each strap (e.g. "NATO Black", "Oyster Bracelet") and toggle which is currently on the watch — the app will ask which strap you wore each time you log.</div>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-num">6</div>
+            <div class="help-step-body">
+              <div class="help-step-title">Share some of your watches by link</div>
+              <div class="help-step-desc">On the Collection tab, tap <strong>Share</strong>, tick the watches you want to show, then <strong>Create link</strong>. Add a note first if you like &#8212; who it&#8217;s for, what you&#8217;re asking &#8212; and it appears at the top of the page they open. The page shows each watch&#8217;s photo, brand, model, reference number and any link you saved &#8212; never what you paid, its market value, wears, notes or tags &#8212; and works for anyone, with or without a WRotate account. Tap <strong>Shared links</strong> any time to see what you&#8217;ve sent, how often it was opened, and to revoke a link.</div>
             </div>
           </div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> "From Photo" works great for a quick start — snap your watch box and add everything in one go. For the most accurate data, use brand website URLs (rolex.com, omegawatches.com…) with the Fetch button.</span></div>
@@ -5601,6 +5628,18 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="wl-share-manage" style="margin-top:1rem;"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeWishlistShareSheet()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="coll-share-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="coll-share-modal-title">
+  <div class="modal">
+    <div class="modal-title" id="coll-share-modal-title">Share watches</div>
+    <div id="coll-share-compose"></div>
+    <div id="coll-share-done" style="display:none;"></div>
+    <div id="coll-share-manage" style="margin-top:1rem;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeCollectionShareSheet()">Close</button>
     </div>
   </div>
 </div>
@@ -8012,7 +8051,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '21.19.15';
+const APP_VERSION = '22.08.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18069,7 +18108,7 @@ async function loadAdminStats(force = false) {
     // One parallel batch (was four sequential awaits — the three slowest RPCs
     // each cost a full round-trip before the next started). 20 s, not 10: on a
     // cold cache these recompute concurrently on a 2-vCPU instance.
-    const [dodRes, factRes, dauRes, unsubRes, engineRes, pushRes, wlShareRes, trendRes, histRes, idoRes] = await withTimeout(Promise.all([
+    const [dodRes, factRes, dauRes, unsubRes, engineRes, pushRes, wlShareRes, trendRes, histRes, idoRes, collShareRes] = await withTimeout(Promise.all([
       // Day-over-day: single RPC (SECURITY DEFINER, excludes internal accounts)
       db.rpc('admin_dod_counts', cacheArgs),
       // Fun-fact engagement + generation (totals + last-24h deltas)
@@ -18081,6 +18120,7 @@ async function loadAdminStats(force = false) {
       db.rpc('admin_wishlist_share_stats'), db.rpc('admin_per_user_trend', cacheArgs),
       db.rpc('admin_feature_event_stats', { p_event: 'accuracy_history_viewed' }),
       db.rpc('admin_feature_event_stats', { p_event: 'identify_outcome', p_key: 'outcome' }),
+      db.rpc('admin_collection_share_stats'),
     ]), 20000);
     const dod = dodRes.data || {};
     const fc = factRes.data || {};
@@ -18089,6 +18129,7 @@ async function loadAdminStats(force = false) {
     const eng = engineRes.data || {};
     const push = pushRes.data || {};
     const wls = wlShareRes.data || {};
+    const cls = (collShareRes && collShareRes.data) || {};
     const hist = histRes.data || {};
     const ido = idoRes.data || {};
     const idoBy = ido.by_source || {};
@@ -18408,6 +18449,10 @@ async function loadAdminStats(force = false) {
         ${statRow('Wishlist link opens', Number(wls.opens_total) || 0, null,
           (Number(wls.links_total) > 0 ? Math.round(Number(wls.links_opened) / Number(wls.links_total) * 100) : 0) + '% of links opened')}
         ${statRow('Active links', Number(wls.links_active) || 0, null, (Number(wls.links_revoked) || 0) + ' revoked')}
+        ${statRow('Collection links', Number(cls.links_total) || 0, Number(cls.links_24h) || 0,
+          (Number(cls.sharers_total) || 0) + ' sharer' + (Number(cls.sharers_total) === 1 ? '' : 's') + ' · ' + (Number(cls.items_total) || 0) + ' watches')}
+        ${statRow('Collection link opens', Number(cls.opens_total) || 0, null,
+          (Number(cls.links_total) > 0 ? Math.round(Number(cls.links_opened) / Number(cls.links_total) * 100) : 0) + '% of links opened · ' + (Number(cls.links_active) || 0) + ' active')}
         ${statRow('Advanced mode (24h)', advSessions24h, advDelta, advUsers24h > 0 ? advUsers24h + ' user' + (advUsers24h === 1 ? '' : 's') : '')}
         ${statRow('Measurements', extMsr, null, msr24h + ' (24h)' + inlineDelta(msr24h - msrPrev24h, false))}
         ${statRow('Accuracy history views', Number(hist.events_total) || 0, Number(hist.events_24h) || 0,
@@ -22256,6 +22301,21 @@ function renderCollection(force) {
   renderTagFilterBar();
   const el = document.getElementById('watches-grid');
   const visible = collTagFilter ? watches.filter(w => (w.tags || []).includes(collTagFilter)) : watches;
+  // Share selection (mirrors the Wishlist tab). The list view has no card to
+  // tick, so it is not a selection surface: the button hides there and an
+  // in-progress selection is simply parked.
+  const selecting = !!_collSelect && collView !== 'list';
+  const collShareBtn = document.getElementById('coll-share-btn');
+  const collBar = document.getElementById('coll-select-bar');
+  if (collShareBtn) collShareBtn.style.display = (currentUser && visible.length && !_collSelect && collView !== 'list') ? 'inline-flex' : 'none';
+  if (collBar) {
+    collBar.style.display = (selecting && visible.length) ? 'flex' : 'none';
+    if (_collSelect) {
+      const n = _collSelect.size;
+      document.getElementById('coll-select-count').textContent = `${n} selected`;
+      document.getElementById('coll-share-go').disabled = n === 0;
+    }
+  }
   if (visible.length === 0) {
     el.className = 'watches-grid';
     el.innerHTML = `<div style="grid-column:1/-1"><div class="empty">
@@ -22298,14 +22358,21 @@ function renderCollection(force) {
       const imgInner = tileImg
         ? `<img loading="lazy" src="${escHtml(tileImg)}" class="wl-tile-img" alt="" onerror="wlTileImgFallback(this)" data-color="${escAttr(_wc)}" data-text-color="${escAttr(initialsTextColor(_wc))}" data-initials="${escAttr(initials(w.brand,w.name))}">`
         : `<div class="wl-tile-avatar" style="background:${escHtml(_wc)};color:${initialsTextColor(_wc)}">${initials(w.brand,w.name)}</div>`;
+      const tileClick = selecting ? `toggleCollSelect('${w.id}')` : `openEditWatch('${w.id}')`;
+      const tileBox = selecting
+        ? `<input type="checkbox" class="wl-select-box coll-select-box" ${_collSelect.has(w.id) ? 'checked' : ''} onclick="event.stopPropagation();toggleCollSelect('${w.id}')" aria-label="Select ${escAttr((w.brand||'') + ' ' + (w.name||''))}">`
+        : '';
       return `<div class="wl-tile" data-id="${w.id}">
-        <div class="wl-tile-imglink" onclick="openEditWatch('${w.id}')">${imgInner}</div>
-        <div class="wl-tile-name" onclick="openEditWatch('${w.id}')">${escHtml(w.name)}</div>
+        ${tileBox}
+        <div class="wl-tile-imglink" onclick="${tileClick}">${imgInner}</div>
+        <div class="wl-tile-name" onclick="${tileClick}">${escHtml(w.name)}</div>
       </div>`;
     }).join('');
   } else {
     el.className = 'watches-grid';
-    const isRanking = collGridSort === 'ranking';
+    // Dragging and selecting are different gestures on the same card, so
+    // reordering is suspended while a share selection is in progress.
+    const isRanking = collGridSort === 'ranking' && !selecting;
     if (isRanking) collSortedWatches = sorted;
     // Only add market-price placeholder when collection is mixed (some have it, some don't)
     const anyHasMarket = sorted.some(w => w.marketPrice);
@@ -22323,12 +22390,19 @@ function renderCollection(force) {
       const mpHTML = w.marketPrice
         ? marketPriceRowHTML(w)
         : (anyHasMarket ? '<div class="market-price-row" style="visibility:hidden" aria-hidden="true"><span class="mp-label">—</span></div>' : '');
+      // In selection mode the name/brand taps toggle: a tap that opened the
+      // editor would make picking watches impossible.
+      const cardTap = selecting ? `toggleCollSelect('${w.id}')` : `openEditWatch('${w.id}')`;
+      const selectBox = selecting
+        ? `<input type="checkbox" class="wl-select-box coll-select-box" ${_collSelect.has(w.id) ? 'checked' : ''} onclick="event.stopPropagation();toggleCollSelect('${w.id}')" aria-label="Select ${escAttr((w.brand||'') + ' ' + (w.name||''))}">`
+        : '';
       return `<div class="watch-card" data-id="${w.id}"
         ${isRanking ? `draggable="true"
         ondragstart="collDragStart(event,'${w.id}')"
         ondragover="collDragOver(event)"
         ondrop="collDrop(event,'${w.id}')"
         ondragend="collDragEnd(event)"` : ''}>
+        ${selectBox}
         ${dragHandle}
         ${rankBadge}
         ${(() => {
@@ -22351,8 +22425,8 @@ function renderCollection(force) {
         <div class="watch-card-top">
           ${noImgAvatar}
           <div style="flex:1;min-width:0;">
-            <div class="watch-card-name" style="cursor:pointer" onclick="openEditWatch('${w.id}')">${escHtml(w.name)}</div>
-            <div class="watch-card-brand" style="cursor:pointer" onclick="openEditWatch('${w.id}')">${escHtml(w.brand)}${w.ref ? ' · '+escHtml(w.ref) : ''}</div>
+            <div class="watch-card-name" style="cursor:pointer" onclick="${cardTap}">${escHtml(w.name)}</div>
+            <div class="watch-card-brand" style="cursor:pointer" onclick="${cardTap}">${escHtml(w.brand)}${w.ref ? ' · '+escHtml(w.ref) : ''}</div>
             ${watchCardTagsHTML(w, wLogs)}
           </div>
           ${noImgBtns}`;
@@ -27861,6 +27935,213 @@ async function revokeWishlistShare(token) {
   toast('Link revoked');
 }
 
+// ══════════════════════════════════════════
+//  COLLECTION SHARING — same model as the wishlist (selection helpers above
+//  are reused as-is; only the item mapping differs, because a watch carries
+//  far more private data than a wishlist entry)
+// ══════════════════════════════════════════
+// Mirrored from wrotate_test.js (see tests/collection-share.test.js).
+
+// THE PRIVACY BOUNDARY on the client. Five fields go into a collection share
+// link and nothing else — paid price, market value, wears, notes, tags, straps,
+// box/papers, insurance and the saved URL never leave the device. Never widen
+// this to spread the source object.
+function collShareItems(watches, selected) {
+  return (watches || [])
+    .filter(w => selected.has(w.id))
+    .map(w => ({
+      id: w.id,
+      brand: w.brand || '',
+      name: w.name || '',
+      ref: w.ref || '',
+      image: w.image || null,
+    }));
+}
+
+// Informational only, like wishSharePrivateCount: an explicit tick outranks a
+// passive per-watch privacy setting.
+function collSharePrivateCount(watches, selected) {
+  return (watches || []).filter(w =>
+    selected.has(w.id) && w.watchPrivacy && w.watchPrivacy !== 'public'
+  ).length;
+}
+
+// null = selection mode off. A Set = on, holding the ticked watch ids.
+// In-memory only, like _wlSelect.
+let _collSelect = null;
+
+function enterCollectionSelect() {
+  _collSelect = new Set();
+  renderCollection(true);
+}
+function exitCollectionSelect() {
+  _collSelect = null;
+  renderCollection(true);
+}
+function toggleCollSelect(id) {
+  if (!_collSelect) return;
+  _collSelect = toggleWishSelection(_collSelect, id);
+  renderCollection(true);
+}
+function collSelectAll() {
+  if (!_collSelect) return;
+  const visible = collTagFilter ? watches.filter(w => (w.tags || []).includes(collTagFilter)) : watches;
+  _collSelect = new Set(visible.map(w => w.id));
+  renderCollection(true);
+}
+function collSelectNone() {
+  if (!_collSelect) return;
+  _collSelect = new Set();
+  renderCollection(true);
+}
+
+function collShareUrl(token) {
+  return `https://api.wrotate.com/functions/v1/share-watches?t=${encodeURIComponent(token)}`;
+}
+
+let _collShareLinks = [];      // rows from collection_shares, newest first
+
+function closeCollectionShareSheet() {
+  document.getElementById('coll-share-modal').classList.add('hidden');
+}
+
+function openCollectionShareSheet() {
+  if (!_collSelect || _collSelect.size === 0) return;
+  const items = collShareItems(watches, _collSelect);
+  const priv = collSharePrivateCount(watches, _collSelect);
+  const n = items.length;
+  document.getElementById('coll-share-done').style.display = 'none';
+  const compose = document.getElementById('coll-share-compose');
+  compose.style.display = '';
+  compose.innerHTML = `
+    <div style="font-size:.86rem;margin-bottom:.75rem;">Sharing <strong>${n} watch${n !== 1 ? 'es' : ''}</strong>. The page shows the photo, brand, model, reference and any link you saved — never what you paid, market value, wears, notes or tags.</div>
+    ${priv ? `<div id="coll-share-private-note" style="font-size:.76rem;color:var(--muted);margin-bottom:.75rem;">${priv} private item${priv !== 1 ? 's' : ''} included.</div>` : ''}
+    <label style="display:block;font-size:.76rem;color:var(--muted);margin-bottom:.25rem;">Add a note (optional)</label>
+    <textarea id="coll-share-label" maxlength="280" rows="3" placeholder="Anything you want to say — who it's for, what you're asking, questions." style="width:100%;resize:vertical;"></textarea>
+    <button class="btn btn-primary" id="coll-share-create" style="margin-top:.75rem;width:100%;" onclick="mintCollectionShare()">Create link</button>`;
+  document.getElementById('coll-share-modal').classList.remove('hidden');
+  loadCollectionShareLinks();
+}
+
+function openCollectionShareLinks() {
+  document.getElementById('coll-share-compose').style.display = 'none';
+  document.getElementById('coll-share-done').style.display = 'none';
+  document.getElementById('coll-share-modal').classList.remove('hidden');
+  loadCollectionShareLinks();
+}
+
+async function loadCollectionShareLinks() {
+  if (!currentUser) return;
+  try {
+    const { data, error } = await db.from('collection_shares')
+      .select('token, label, item_ids, views, created_at, revoked_at')
+      .eq('user_id', currentUser.id)
+      .is('revoked_at', null)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    _collShareLinks = data || [];
+  } catch (e) {
+    console.warn('[collection] share links load failed:', e && e.message);
+    _collShareLinks = [];
+  }
+  renderCollectionShareLinks();
+}
+
+function renderCollectionShareLinks() {
+  const el = document.getElementById('coll-share-manage');
+  if (!el) return;
+  if (!_collShareLinks.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <div class="eyebrow" style="margin-bottom:.4rem;">Your shared links</div>
+    ${_collShareLinks.map(s => `
+      <div style="display:flex;align-items:center;gap:.5rem;padding:.4rem 0;border-bottom:1px solid var(--border);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(wishShareLinkLabel(s))}</div>
+          <div style="font-size:.68rem;color:var(--muted);">${(s.item_ids || []).length} watch${(s.item_ids || []).length !== 1 ? 'es' : ''} · ${s.views || 0} view${(s.views || 0) !== 1 ? 's' : ''}</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="copyCollectionShareUrl('${escAttr(s.token)}')">Copy</button>
+        <button class="btn btn-ghost btn-sm" data-revoke="${escAttr(s.token)}" onclick="revokeCollectionShare('${escAttr(s.token)}')">Revoke</button>
+      </div>`).join('')}`;
+}
+
+async function mintCollectionShare() {
+  if (!currentUser || !_collSelect || _collSelect.size === 0) return;
+  const btn = document.getElementById('coll-share-create');
+  if (btn) btn.disabled = true;
+  const label = (document.getElementById('coll-share-label')?.value || '').trim();
+  // Gate on the RESOLVED items, not the tick count (see mintWishlistShare).
+  const ids = collShareItems(watches, _collSelect).map(i => i.id);
+  if (!ids.length) {
+    if (btn) btn.disabled = false;
+    toast('Nothing left to share', 'error');
+    return;
+  }
+  const token = uid().replace(/-/g, '');
+  try {
+    const { error } = await db.from('collection_shares')
+      .insert({ token, user_id: currentUser.id, label: label || null, item_ids: ids });
+    if (error) throw error;
+  } catch (e) {
+    console.warn('[collection] mint failed:', e && e.message);
+    if (btn) btn.disabled = false;
+    toast('Could not create link', 'error');
+    return;                                  // selection and modal stay put, so retry is one tap
+  }
+  const url = collShareUrl(token);
+  document.getElementById('coll-share-compose').style.display = 'none';
+  const done = document.getElementById('coll-share-done');
+  done.style.display = '';
+  // navigator.share() needs a user gesture and the insert above is an await, so
+  // the URL is presented and the NEXT tap does the sharing.
+  done.innerHTML = `
+    <div style="font-size:.86rem;margin-bottom:.5rem;">Your link is ready.</div>
+    <div id="coll-share-url" style="font-size:.72rem;color:var(--muted);word-break:break-all;background:var(--surface2);border-radius:8px;padding:.5rem;margin-bottom:.75rem;">${escHtml(url)}</div>
+    <div style="display:flex;gap:.5rem;">
+      <button class="btn btn-primary" style="flex:1;" onclick="shareCollectionUrl('${escAttr(token)}')">Share</button>
+      <button class="btn btn-ghost" style="flex:1;" onclick="copyCollectionShareUrl('${escAttr(token)}')">Copy</button>
+    </div>`;
+  exitCollectionSelect();
+  loadCollectionShareLinks();
+}
+
+async function shareCollectionUrl(token) {
+  const url = collShareUrl(token);
+  const title = `${myProfile?.display_name || myProfile?.username || 'My'} watches — WRotate`;
+  if (navigator.share) {
+    try { await navigator.share({ title, url }); }
+    catch (e) { if (e.name !== 'AbortError') toast('Could not open share sheet', 'error'); }
+  } else {
+    copyCollectionShareUrl(token);
+  }
+}
+
+function copyCollectionShareUrl(token) {
+  const url = collShareUrl(token);
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url)
+      .then(() => toast('Link copied!'))
+      .catch(() => _fallbackCopyText(url, 'Link copied!'));
+  } else {
+    _fallbackCopyText(url, 'Link copied!');
+  }
+}
+
+async function revokeCollectionShare(token) {
+  try {
+    const { error } = await db.from('collection_shares')
+      .update({ revoked_at: new Date().toISOString() })
+      .eq('token', token).eq('user_id', currentUser.id);
+    if (error) throw error;
+  } catch (e) {
+    console.warn('[collection] revoke failed:', e && e.message);
+    toast('Could not revoke that link', 'error');
+    return;                                  // row stays listed, so the user knows it is still live
+  }
+  _collShareLinks = _collShareLinks.filter(s => s.token !== token);
+  renderCollectionShareLinks();
+  toast('Link revoked');
+}
+
 function urlDomain(url) {
   if (!url) return '';
   try { return new URL(url).hostname.replace(/^www\./, ''); }
@@ -29509,6 +29790,7 @@ const _overlayCloseMap = {
   'badge-reveal-modal':  closeBadgeReveal,
   'msr-share-popup':     dismissMsrSharePopup,
   'wl-share-modal':      closeWishlistShareSheet,
+  'coll-share-modal':    closeCollectionShareSheet,
   // Escape counts as a decline here, same as pressing "Not now".
 };
 

@@ -129,6 +129,23 @@ async function run() {
     return { ...r, ok: r.status === 200 && r.body.trimStart().startsWith('<svg') };
   });
 
+  // share-watches is the collection twin of share-wishlist: same token model,
+  // same failure contract.
+  await check('share-watches (bad token → 404)', async () => {
+    const r = await callFn('share-watches?t=definitely-not-a-real-token');
+    return { ...r, ok: r.status === 404 };
+  });
+
+  await check('share-watches (no token → 400)', async () => {
+    const r = await callFn('share-watches?t=');
+    return { ...r, ok: r.status === 400 };
+  });
+
+  await check('share-watches (og image is always an SVG)', async () => {
+    const r = await callFn('share-watches?t=nope&img=1');
+    return { ...r, ok: r.status === 200 && r.body.trimStart().startsWith('<svg') };
+  });
+
   // --- Authenticated functions ---
 
   await check('identify-watch (auth + tiny image)', () =>

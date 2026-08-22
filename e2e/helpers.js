@@ -170,6 +170,18 @@ export async function mockSupabase(page, opts = {}) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
   });
 
+  // ── Collection shares — same contract as wishlist_shares ──
+  await page.route('**/rest/v1/collection_shares*', route => {
+    if (route.request().method() === 'POST') {
+      try {
+        const body = JSON.parse(route.request().postData() || '{}');
+        const created = { views: 0, created_at: new Date().toISOString(), revoked_at: null, ...body };
+        return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify([created]) });
+      } catch { /* fall through */ }
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+  });
+
   // ── Featured post RPC: return the configured active featured log id (or null) ──
   await page.route('**/rest/v1/rpc/featured_current*', route =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(featuredId) })

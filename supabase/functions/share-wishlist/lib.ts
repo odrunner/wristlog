@@ -130,7 +130,13 @@ export function buildWishlistOg(
 }
 
 // 1200x630, the same geometry share-collection uses, so previews match.
-export function generateWishlistOgSvg(displayName: string, items: ShareWatch[]): string {
+// `heading` lets share-watches reuse this image with its own title line; the
+// default keeps every existing share-wishlist preview byte-identical.
+export function generateWishlistOgSvg(
+  displayName: string,
+  items: ShareWatch[],
+  heading: (name: string) => string = (name) => `${name}'s Wishlist`,
+): string {
   const W = 1200, H = 630;
   const bg = "#f5f5f8", surface = "#ffffff", ph = "#e8e9f2";
   const gold = "#9a7628", text = "#16161e", muted = "#70708a", border = "#d8d9e8";
@@ -174,7 +180,7 @@ export function generateWishlistOgSvg(displayName: string, items: ShareWatch[]):
       <text x="${x + CELL_W / 2}" y="${y + imgH + 42}" text-anchor="middle" font-size="12" fill="${muted}" font-family="Arial, Helvetica, sans-serif">${esc(brandLabel)}</text>`;
   }).join("");
 
-  const nameLabel = (displayName.length > 28 ? displayName.slice(0, 27) + "…" : displayName) + "'s Wishlist";
+  const nameLabel = heading(displayName.length > 28 ? displayName.slice(0, 27) + "…" : displayName);
 
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <defs>${clips}</defs>
