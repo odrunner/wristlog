@@ -1375,6 +1375,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .wl-select-box.partial::after { content:''; position:absolute; left:3px; top:7px; width:10px; height:2px; background:var(--gold); }
     .wl-tile .wl-select-box { position:absolute; top:.4rem; left:.4rem; z-index:2; box-shadow:0 1px 4px rgba(0,0,0,.3); }
     .watch-card .coll-select-box { position:absolute; top:.5rem; left:.5rem; z-index:3; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+    .sel-bar-btn { display:inline-flex; align-items:center; gap:.3rem; white-space:nowrap; }
     .wl-tile { position:relative; }
 
     /* Wishlist view toggle */
@@ -1677,6 +1678,20 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
          labels the six buttons needed 406px. */
       #coll-share-btn, #coll-enhance-all-btn { padding: .45rem .55rem !important; }
       #coll-share-btn .wl-actions-text, #coll-enhance-all-btn .wl-actions-text { display: none; }
+      /* Share-selection bars (Collection + Wishlist): Select all / Clear /
+         Shared links / Cancel drop to icons so the six controls stay on ONE
+         row at 390px (e2e/collection-share.mock.spec.js). With labels the row
+         needed ~490px. */
+      #coll-select-bar, #wl-select-bar { gap: .35rem; padding: .45rem .55rem; }
+      .sel-bar-btn { padding: .4rem .5rem; }
+      .sel-bar-btn .sel-bar-text { display: none; }
+      /* Collection sort bar: Rank + three sorts + Post Pics needed 421px in
+         363px. Smaller chips, icon-only Rank, and wrap as the safety net for
+         narrower phones. */
+      .coll-sort-bar { flex-wrap: wrap; gap: .25rem; }
+      .coll-sort-chip { font-size: .66rem; padding: .2rem .45rem; }
+      .coll-rank-chip .coll-rank-text { display: none; }
+      .coll-rank-chip + .coll-sort-chip { margin-left: .1rem; }
       #wishlist-modal .modal-actions { gap: .3rem; }
       #wishlist-modal .modal-actions .btn { padding: .6rem .55rem; font-size: .78rem; }
       .feed-edit-btn, .btn-icon { min-height: 40px; min-width: 40px; display: inline-flex; align-items: center; justify-content: center; }
@@ -3538,11 +3553,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div id="coll-select-bar" style="display:none;align-items:center;gap:.5rem;flex-wrap:wrap;padding:.5rem .75rem;margin-bottom:.75rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);">
       <span id="coll-select-count" style="font-size:.82rem;font-weight:600;">0 selected</span>
-      <button id="coll-select-all" class="btn btn-ghost btn-sm" onclick="collSelectAll()">Select all</button>
-      <button id="coll-select-none" class="btn btn-ghost btn-sm" onclick="collSelectNone()">Clear</button>
+      <button id="coll-select-all" class="btn btn-ghost btn-sm sel-bar-btn" onclick="collSelectAll()" title="Select all" aria-label="Select all"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="sel-bar-text">Select all</span></button>
+      <button id="coll-select-none" class="btn btn-ghost btn-sm sel-bar-btn" onclick="collSelectNone()" title="Clear selection" aria-label="Clear selection"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><span class="sel-bar-text">Clear</span></button>
       <span style="flex:1;"></span>
-      <button id="coll-share-links" class="btn btn-ghost btn-sm" onclick="openCollectionShareLinks()">Shared links</button>
-      <button id="coll-select-cancel" class="btn btn-ghost btn-sm" onclick="exitCollectionSelect()">Cancel</button>
+      <button id="coll-share-links" class="btn btn-ghost btn-sm sel-bar-btn" onclick="openCollectionShareLinks()" title="Shared links" aria-label="Shared links"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span class="sel-bar-text">Shared links</span></button>
+      <button id="coll-select-cancel" class="btn btn-ghost btn-sm sel-bar-btn" onclick="exitCollectionSelect()" title="Cancel" aria-label="Cancel"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span class="sel-bar-text">Cancel</span></button>
       <button id="coll-share-go" class="btn btn-primary btn-sm" onclick="openCollectionShareSheet()" disabled>Share</button>
     </div>
     <div id="coll-sort-bar"></div>
@@ -4980,11 +4995,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div id="wl-select-bar" style="display:none;align-items:center;gap:.5rem;flex-wrap:wrap;padding:.5rem .75rem;margin-bottom:.75rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);">
       <span id="wl-select-count" style="font-size:.82rem;font-weight:600;">0 selected</span>
-      <button id="wl-select-all" class="btn btn-ghost btn-sm" onclick="wlSelectAll()">Select all</button>
-      <button id="wl-select-none" class="btn btn-ghost btn-sm" onclick="wlSelectNone()">Clear</button>
+      <button id="wl-select-all" class="btn btn-ghost btn-sm sel-bar-btn" onclick="wlSelectAll()" title="Select all" aria-label="Select all"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="sel-bar-text">Select all</span></button>
+      <button id="wl-select-none" class="btn btn-ghost btn-sm sel-bar-btn" onclick="wlSelectNone()" title="Clear selection" aria-label="Clear selection"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg><span class="sel-bar-text">Clear</span></button>
       <span style="flex:1;"></span>
-      <button id="wl-share-links" class="btn btn-ghost btn-sm" onclick="openWishlistShareLinks()">Shared links</button>
-      <button id="wl-select-cancel" class="btn btn-ghost btn-sm" onclick="exitWishlistSelect()">Cancel</button>
+      <button id="wl-share-links" class="btn btn-ghost btn-sm sel-bar-btn" onclick="openWishlistShareLinks()" title="Shared links" aria-label="Shared links"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span class="sel-bar-text">Shared links</span></button>
+      <button id="wl-select-cancel" class="btn btn-ghost btn-sm sel-bar-btn" onclick="exitWishlistSelect()" title="Cancel" aria-label="Cancel"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span class="sel-bar-text">Cancel</span></button>
       <button id="wl-share-go" class="btn btn-primary btn-sm" onclick="openWishlistShareSheet()" disabled>Share</button>
     </div>
     <div id="wishlist-grid"></div>
@@ -8051,7 +8066,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.08.52';
+const APP_VERSION = '22.09.13';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -21998,7 +22013,7 @@ function renderCollSortBar() {
       </label>` : '';
   // Ranking Game lives here (next to the "My Ranking" sort it produces) so the
   // header keeps a single row of icons on phones.
-  const rankChip = `<button class="coll-sort-chip coll-rank-chip" onclick="startGame()" title="Ranking Game"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Rank</button>`;
+  const rankChip = `<button class="coll-sort-chip coll-rank-chip" onclick="startGame()" title="Ranking Game"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="coll-rank-text">Rank</span></button>`;
   const opts = hasRanking ? [
     { key: 'purchase', label: 'Newest' },
     { key: 'ranking',  label: 'My Ranking' },

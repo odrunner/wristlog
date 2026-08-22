@@ -168,3 +168,34 @@ test('existing links are listed and can be revoked', async ({ page }) => {
   await page.click('[data-revoke="existingtoken000000000000000002"]');
   await expect(page.locator('#coll-share-modal')).not.toContainText('For the insurer');
 });
+
+// Phone layout: the select bar keeps all six controls on one row, and the sort
+// bar (Rank + three sorts + Post Pics) never pushes the toggle past the edge.
+test('at 390px the select bar is one row and the sort bar does not spill', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const logs = SAMPLE_LOGS.map((l, i) => i === 0 ? { ...l, photo_url: 'https://example.com/p.jpg' } : l);
+  await mockSupabase(page, { watches: WATCHES, logs });
+  await injectSession(page);
+  await page.goto('/');
+  await waitForAppBoot(page);
+  await page.evaluate(() => setCollView('grid'));
+  await navigateTo(page, 'collection');
+  await page.evaluate(() => { eloRatings[watches[0].id] = 1500; renderCollection(true); });
+  await expect(page.locator('.coll-photo-toggle')).toHaveCount(1);
+  await page.click('#coll-share-btn');
+  const report = await page.evaluate(() => {
+    const rowsOf = sel => {
+      const kids = [...document.querySelectorAll(sel)].filter(c => c.getClientRects().length);
+      const centers = kids.map(c => { const b = c.getBoundingClientRect(); return b.top + b.height / 2; }).sort((a, b) => a - b);
+      const rows = centers.reduce((acc, y) => { if (!acc.length || y - acc[acc.length - 1] > 12) acc.push(y); return acc; }, []);
+      const spills = kids.filter(c => c.getBoundingClientRect().right > window.innerWidth + 1).length;
+      return { rows: rows.length, spills, count: kids.length };
+    };
+    return { select: rowsOf('#coll-select-bar > *'), sort: rowsOf('.coll-sort-bar > *') };
+  });
+  expect(report.select.count).toBe(7);            // count, all, none, spacer, links, cancel, share
+  expect(report.select.rows, JSON.stringify(report.select)).toBe(1);
+  expect(report.select.spills).toBe(0);
+  expect(report.sort.spills, JSON.stringify(report.sort)).toBe(0);
+  expect(report.sort.rows, JSON.stringify(report.sort)).toBe(1);
+});
