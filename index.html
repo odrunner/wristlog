@@ -7598,6 +7598,7 @@ let _manualSignOut = false;
 async function signOut() {
   _manualSignOut = true;
   try { await db.auth.signOut(); } catch(e) { console.warn('[WristLog] signOut error (ignored):', e.message); }
+  clearFeedCache(currentUser && currentUser.id);
   currentUser = null;
   clearUserState();
   // Switch to feed page so auth screen background shows feed, not profile
@@ -8011,7 +8012,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '19.12.56';
+const APP_VERSION = '21.19.15';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11446,6 +11447,102 @@ function feedMaxCreatedAt(items) {
   return max || null;
 }
 
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function feedCacheKey(userId) {
+  return userId ? 'wrotate_feed_cache_' + userId : null;
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function serializeFeedCache({ userId, items, likes, comments, commentCounts, commentLikes, caughtUpIdx, savedAt }) {
+  if (!userId || !Array.isArray(items) || !items.length) return null;
+  const kept = items.slice(0, 30);
+  const ids = new Set(kept.map(i => i.id));
+  const pick = (m) => Object.fromEntries(Object.entries(m || {}).filter(([id]) => ids.has(id)));
+  const cm = pick(comments);
+  const commentIds = new Set(Object.values(cm).flat().map(c => c && c.id));
+  const cl = Object.fromEntries(Object.entries(commentLikes || {}).filter(([id]) => commentIds.has(id)));
+  return JSON.stringify({
+    v: 1, userId, savedAt, caughtUpIdx: caughtUpIdx == null ? null : caughtUpIdx,
+    items: kept, likes: pick(likes), comments: cm, commentCounts: pick(commentCounts), commentLikes: cl,
+  });
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function parseFeedCache(raw, { userId, now, maxAgeMs = 86400000 }) {
+  if (!raw || !userId) return null;
+  let c;
+  try { c = JSON.parse(raw); } catch (e) { return null; }
+  if (!c || typeof c !== 'object' || Array.isArray(c)) return null;
+  if (c.userId !== userId) return null;
+  if (typeof c.savedAt !== 'number' || !(now - c.savedAt < maxAgeMs)) return null;
+  if (!Array.isArray(c.items) || !c.items.length) return null;
+  if (!c.items.every(i => i && typeof i === 'object' && i.id)) return null;
+  const obj = (m) => (m && typeof m === 'object' && !Array.isArray(m)) ? m : {};
+  return {
+    items: c.items,
+    likes: obj(c.likes), comments: obj(c.comments), commentCounts: obj(c.commentCounts), commentLikes: obj(c.commentLikes),
+    caughtUpIdx: (typeof c.caughtUpIdx === 'number') ? c.caughtUpIdx : null,
+  };
+}
+
+// VERBATIM mirror of wrotate_test.js — keep byte-identical (see mirror-drift.test.js).
+function carryFeedEnrichment({ prevItems, prevLikes, prevComments, prevCommentCounts, rawLogs }) {
+  const profiles = {}, watches = {}, facts = {};
+  for (const it of (prevItems || [])) {
+    if (!it) continue;
+    if (it.profile && it.user_id) profiles[it.user_id] = it.profile;
+    if (it.watch && it.watch_id) watches[it.watch_id] = it.watch;
+    if (it.fact && it.fact_id) facts[it.fact_id] = it.fact;
+  }
+  const likes = {}, comments = {}, commentCounts = {};
+  const items = (rawLogs || []).map(l => {
+    likes[l.id] = (prevLikes && prevLikes[l.id]) || { count: 0, liked: false };
+    if (prevComments && prevComments[l.id]) comments[l.id] = prevComments[l.id];
+    commentCounts[l.id] = (prevCommentCounts && prevCommentCounts[l.id]) || 0;
+    return {
+      ...l,
+      profile: profiles[l.user_id] || null,
+      watch: l.watch_id ? (watches[l.watch_id] || null) : null,
+      fact: l.fact_id ? (facts[l.fact_id] || '') : '',
+    };
+  });
+  return { items, likes, comments, commentCounts };
+}
+
+// ── Feed cache wiring ────────────────────────────────────────────────────────
+// "Show what you saw last time, then quietly refresh." The last fully-rendered
+// feed is written after every Phase-2 render and drawn again on the next boot
+// BEFORE any network, so a returning user's top of page is content, not a
+// skeleton. loadFeed() then runs unchanged and replaces it in place.
+function saveFeedCache() {
+  const key = feedCacheKey(currentUser && currentUser.id);
+  if (!key) return;
+  const json = serializeFeedCache({
+    userId: currentUser.id, items: feedItems, likes: feedLikes, comments: feedComments,
+    commentCounts: feedCommentCounts, commentLikes: commentLikes, caughtUpIdx: _feedCaughtUpIdx, savedAt: Date.now(),
+  });
+  if (json) { try { safeLS.set(key, json); } catch (e) {} }
+}
+function clearFeedCache(userId) {
+  const key = feedCacheKey(userId);
+  if (key) { try { safeLS.remove(key); } catch (e) {} }
+}
+// Returns true when a cached feed was drawn.
+function restoreFeedCache() {
+  const key = feedCacheKey(currentUser && currentUser.id);
+  if (!key || feedItems.length) return false;
+  let raw = null;
+  try { raw = safeLS.get(key); } catch (e) {}
+  const c = parseFeedCache(raw, { userId: currentUser.id, now: Date.now() });
+  if (!c) return false;
+  feedItems = c.items; feedLikes = c.likes; feedComments = c.comments;
+  feedCommentCounts = c.commentCounts; commentLikes = c.commentLikes;
+  _feedCaughtUpIdx = c.caughtUpIdx;
+  feedHasMore = true; feedError = false;
+  renderFeed();
+  return true;
+}
+
 // Divider position for the current feed load; null = no divider.
 let _feedCaughtUpIdx = null;
 
@@ -11496,8 +11593,11 @@ async function loadFeed() {
       feedLoading = false; feedError = true; renderFeed();
     }
   }, 8000);
+  // Skeletons only when there is nothing to show: a refresh over content on
+  // screen (cached feed at boot, foreground re-pull) keeps the cards and swaps
+  // them in place when Phase 1 returns.
   const listEl = document.getElementById('feed-list');
-  if (listEl) listEl.innerHTML = '<div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:40%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:90%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:70%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:35%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:80%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:60%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:45%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:85%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:65%;height:.7rem;"></div></div>';
+  if (listEl && feedItems.length === 0) listEl.innerHTML = '<div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:40%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:90%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:70%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:35%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:80%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:60%;height:.7rem;"></div></div><div class="feed-skeleton-item"><div class="feed-skeleton-bar" style="width:45%;height:.9rem;margin-bottom:.7rem;"></div><div class="feed-skeleton-bar" style="width:85%;height:.7rem;margin-bottom:.5rem;"></div><div class="feed-skeleton-bar" style="width:65%;height:.7rem;"></div></div>';
   try {
     // ═══════════════════════════════════════════════════════════════════════
     // PHASE 1: Fetch logs and render immediately (kill skeletons fast)
@@ -11628,15 +11728,20 @@ async function loadFeed() {
     // ── PHASE 1 RENDER: show posts immediately with placeholders ──────────
     // Kills skeletons ASAP. Avatars, likes, comments fill in during Phase 2.
     const logIds = rawLogs.map(l => l.id);
-    feedItems = rawLogs.map(l => ({ ...l, profile: null, watch: null }));
+    // Carry what the previous render already knew (cached feed, foreground
+    // re-pull) so known cards don't flash back to placeholders / zero counts
+    // while Phase 2 is in flight; a cold boot gets the plain placeholder shape.
+    const carried = carryFeedEnrichment({
+      prevItems: feedItems, prevLikes: feedLikes, prevComments: feedComments,
+      prevCommentCounts: feedCommentCounts, rawLogs,
+    });
+    feedItems = carried.items;
     // Fix the divider position once per load, before anything renders, so it
     // can't shift under the user as likes/comments/promos trigger re-renders.
     syncFeedCaughtUp();
-    feedLikes = {};
-    logIds.forEach(id => feedLikes[id] = { count: 0, liked: false });
-    feedCommentCounts = {};
-    logIds.forEach(id => feedCommentCounts[id] = 0);
-    feedComments = {};
+    feedLikes = carried.likes;
+    feedCommentCounts = carried.commentCounts;
+    feedComments = carried.comments;
     renderFeed();
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -11711,6 +11816,7 @@ async function loadFeed() {
       fact: l.fact_id ? (factMap[l.fact_id] || '') : '',
     }));
     renderFeed();
+    saveFeedCache();
   } catch(e) { console.warn('Feed error:', e?.message); feedError = true; }
   finally { clearTimeout(_feedSafety); feedLoading = false; }
   if (!feedError) feedLoadedAt = Date.now();
@@ -33124,6 +33230,9 @@ async function bootApp(user) {
   // Show Measure tab only when native timegrapher bridge is available (iOS app)
   const navMeasure = document.getElementById('nav-measure-btn');
   if (navMeasure && _tgHasNative()) navMeasure.style.display = '';
+  // Draw last visit's feed before any network — loadFeed() (via initApp's
+  // Track A) refreshes it in place. No-op when there is no usable cache.
+  try { restoreFeedCache(); } catch(e) { console.warn('[WRotate] feed cache restore failed:', e?.message); }
   // Start feed/social loading immediately — don't block on user data
   try {
     initApp();
@@ -33242,6 +33351,7 @@ db.auth.onAuthStateChange((event, session) => {
     bootApp(session.user); // guard prevents double-boot if getSession already ran
   } else if (event === 'SIGNED_OUT') {
     const wasLoggedIn = !!currentUser; // distinguish manual vs expired
+    clearFeedCache(currentUser && currentUser.id);
     currentUser = null;
     clearUserState();
     document.getElementById('auth-screen').style.display = 'flex';

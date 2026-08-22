@@ -2906,6 +2906,80 @@ export function feedMaxCreatedAt(items) {
   return max || null;
 }
 
+// ── Feed cache: "show what you saw last time, then quietly refresh" ──────────
+// The last fully-rendered feed (items with profile/watch/fact merged, plus the
+// like / comment state behind the cards) is persisted per user so a returning
+// user sees content at DOM-ready instead of after the boot waterfall. These are
+// the pure parts; the read/write wiring lives in restoreFeedCache/saveFeedCache.
+
+export function feedCacheKey(userId) {
+  return userId ? 'wrotate_feed_cache_' + userId : null;
+}
+
+// JSON for localStorage, or null when there is nothing worth storing. Only the
+// first screenful is kept (load-more pages are cheap to refetch and would bloat
+// the write), and the side maps are trimmed to the logs that survive the cap.
+export function serializeFeedCache({ userId, items, likes, comments, commentCounts, commentLikes, caughtUpIdx, savedAt }) {
+  if (!userId || !Array.isArray(items) || !items.length) return null;
+  const kept = items.slice(0, 30);
+  const ids = new Set(kept.map(i => i.id));
+  const pick = (m) => Object.fromEntries(Object.entries(m || {}).filter(([id]) => ids.has(id)));
+  const cm = pick(comments);
+  const commentIds = new Set(Object.values(cm).flat().map(c => c && c.id));
+  const cl = Object.fromEntries(Object.entries(commentLikes || {}).filter(([id]) => commentIds.has(id)));
+  return JSON.stringify({
+    v: 1, userId, savedAt, caughtUpIdx: caughtUpIdx == null ? null : caughtUpIdx,
+    items: kept, likes: pick(likes), comments: cm, commentCounts: pick(commentCounts), commentLikes: cl,
+  });
+}
+
+// Trust a stored cache only for the same user, within maxAgeMs, with a sane
+// shape; anything else → null (boot falls through to the normal skeleton path).
+export function parseFeedCache(raw, { userId, now, maxAgeMs = 86400000 }) {
+  if (!raw || !userId) return null;
+  let c;
+  try { c = JSON.parse(raw); } catch (e) { return null; }
+  if (!c || typeof c !== 'object' || Array.isArray(c)) return null;
+  if (c.userId !== userId) return null;
+  if (typeof c.savedAt !== 'number' || !(now - c.savedAt < maxAgeMs)) return null;
+  if (!Array.isArray(c.items) || !c.items.length) return null;
+  if (!c.items.every(i => i && typeof i === 'object' && i.id)) return null;
+  const obj = (m) => (m && typeof m === 'object' && !Array.isArray(m)) ? m : {};
+  return {
+    items: c.items,
+    likes: obj(c.likes), comments: obj(c.comments), commentCounts: obj(c.commentCounts), commentLikes: obj(c.commentLikes),
+    caughtUpIdx: (typeof c.caughtUpIdx === 'number') ? c.caughtUpIdx : null,
+  };
+}
+
+// Phase-1 state for a refresh: the fresh raw logs, enriched with whatever the
+// previous render already knew (author profile, watch display, fun fact, like
+// and comment state) so cards do not flash back to placeholders and zero
+// counts while Phase 2 is in flight. Unknown authors/watches/logs get the
+// same null / zero defaults a cold Phase 1 uses.
+export function carryFeedEnrichment({ prevItems, prevLikes, prevComments, prevCommentCounts, rawLogs }) {
+  const profiles = {}, watches = {}, facts = {};
+  for (const it of (prevItems || [])) {
+    if (!it) continue;
+    if (it.profile && it.user_id) profiles[it.user_id] = it.profile;
+    if (it.watch && it.watch_id) watches[it.watch_id] = it.watch;
+    if (it.fact && it.fact_id) facts[it.fact_id] = it.fact;
+  }
+  const likes = {}, comments = {}, commentCounts = {};
+  const items = (rawLogs || []).map(l => {
+    likes[l.id] = (prevLikes && prevLikes[l.id]) || { count: 0, liked: false };
+    if (prevComments && prevComments[l.id]) comments[l.id] = prevComments[l.id];
+    commentCounts[l.id] = (prevCommentCounts && prevCommentCounts[l.id]) || 0;
+    return {
+      ...l,
+      profile: profiles[l.user_id] || null,
+      watch: l.watch_id ? (watches[l.watch_id] || null) : null,
+      fact: l.fact_id ? (facts[l.fact_id] || '') : '',
+    };
+  });
+  return { items, likes, comments, commentCounts };
+}
+
 // Pick readable initials text color (#000/#fff) for a given avatar background
 // via YIQ perceived brightness. Used for watch-color avatars (dark dials vs light).
 export function initialsTextColor(bg) {
