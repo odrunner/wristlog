@@ -1620,6 +1620,8 @@ export function notificationBody(type, actorName, opts = {}) {
       return opts.badgeName
         ? `You earned the ${opts.badgeName} badge 🏅`
         : 'You earned a new badge 🏅';
+    case 'share_comment':
+      return `${nm} commented on your shared ${opts.shareKind === 'collection' ? 'collection' : 'wishlist'} link`;
     default:                     return '';
   }
 }

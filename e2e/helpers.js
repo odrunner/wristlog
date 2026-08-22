@@ -182,6 +182,11 @@ export async function mockSupabase(page, opts = {}) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
   });
 
+  // ── Share-link comments (owner reads; PATCH = soft delete) ──
+  await page.route('**/rest/v1/share_comments*', route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
+  );
+
   // ── Featured post RPC: return the configured active featured log id (or null) ──
   await page.route('**/rest/v1/rpc/featured_current*', route =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(featuredId) })

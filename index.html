@@ -8066,7 +8066,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.12.39';
+const APP_VERSION = '22.12.41';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10757,7 +10757,7 @@ async function loadNotifications() {
       .order('created_at', { ascending: false }).limit(20));
     rows = mergeBadgeNotifs(data, badgeRows);
   } catch (_) { /* top-up failed — fall back to the recency window alone */ }
-  let pMap = {}, clubMap = {};
+  let pMap = {}, clubMap = {}, scMap = {};
   try {
     const actorIds = [...new Set(rows.map(n => n.actor_id).filter(Boolean))];
     if (actorIds.length) {
@@ -10770,8 +10770,15 @@ async function loadNotifications() {
       const { data: clubs } = await db.from('clubs').select('id, name').in('id', clubIds);
       (clubs || []).forEach(c => clubMap[c.id] = c);
     }
+    // Share-link comments: the commenter has no profile row — name/kind/token
+    // live on the comment (owner-only RLS lets us read our own).
+    const scIds = [...new Set(rows.filter(n => n.type === 'share_comment' && n.ref_id).map(n => n.ref_id))];
+    if (scIds.length) {
+      const { data: scs } = await db.from('share_comments').select('id, kind, token, name, body').in('id', scIds);
+      (scs || []).forEach(c => scMap[c.id] = c);
+    }
   } catch (_) { /* enrichment failed — render with fallback names */ }
-  userNotifs = rows.map(n => ({ ...n, actor: pMap[n.actor_id] || null, club: clubMap[n.ref_id] || null }));
+  userNotifs = rows.map(n => ({ ...n, actor: pMap[n.actor_id] || null, club: clubMap[n.ref_id] || null, shareComment: scMap[n.ref_id] || null }));
   unreadNotifCount = userNotifs.filter(n => !n.is_read).length;
   updateBellBadge();
 }
@@ -11146,7 +11153,7 @@ function renderNotificationPanel() {
     return;
   }
   el.innerHTML = userNotifs.map(n => {
-    const nm   = escHtml(n.actor?.display_name || n.actor?.username || 'Someone');
+    const nm   = escHtml(n.type === 'share_comment' ? (n.shareComment?.name || 'Someone') : (n.actor?.display_name || n.actor?.username || 'Someone'));
     const time = formatFeedDate(n.created_at || '');
     const frAccepted = n._accepted || myFollowers.has(n.actor_id);
     const body = n.type === 'follow_request'  ? (n._declined ? `Follow request from ${nm} declined` : frAccepted ? `Follow request from ${nm} accepted` : `${nm} wants to follow you`)
@@ -11156,6 +11163,7 @@ function renderNotificationPanel() {
                : n.type === 'comment'         ? `${nm} commented on your post`
                : n.type === 'comment_also'    ? `${nm} also commented on a post you liked or commented on`
                : n.type === 'comment_like'   ? `${nm} liked your comment`
+               : n.type === 'share_comment'  ? `${nm} commented on your shared ${n.shareComment?.kind === 'collection' ? 'collection' : 'wishlist'} link`
                : n.type === 'mention'        ? `${nm} mentioned you`
                : n.type === 'club_join_request'  ? `${nm} wants to join ${n.club?.name ? escHtml(n.club.name) : 'your club'}`
                : n.type === 'club_join_accepted' ? `${nm} approved your request to join ${n.club?.name ? escHtml(n.club.name) : 'a club'}`
@@ -11210,9 +11218,12 @@ function renderNotificationPanel() {
       : (n.type === 'follow_request' || n.type === 'club_join_request' || n.type === 'club_invite' || n.type === 'friend_request' || n.type === 'system') ? ''
       : (n.type === 'club_join_accepted' || n.type === 'club_promoted') ? `toggleNotifPanel();openClubDetail('${n.ref_id}')`
       : n.type === 'badge_earned' ? `toggleNotifPanel();openBadgeWall()`
+      : n.type === 'share_comment' ? `toggleNotifPanel();openShareCommentsFromNotif('${escAttr(n.ref_id || '')}')`
       : `viewUserProfile('${n.actor_id}')`;
     const avatarHtml = n.type === 'badge_earned'
       ? `<div class="feed-user-avatar" style="width:36px;height:36px;font-size:1.1rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;">🏅</div>`
+      : n.type === 'share_comment'
+      ? `<div class="feed-user-avatar" style="width:36px;height:36px;font-size:1.1rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;">💬</div>`
       : `<div class="feed-user-avatar" style="width:36px;height:36px;font-size:.76rem;flex-shrink:0;cursor:pointer;" onclick="event.stopPropagation();toggleNotifPanel();viewUserProfile('${n.actor_id}')">${profileInitials(n.actor)}</div>`;
     return `
       <div class="notif-item ${n.is_read ? '' : 'notif-unread'}" id="notif-${n.id}" onclick="${notifClick}">
@@ -28015,6 +28026,18 @@ function collShareUrl(token) {
 }
 
 let _collShareLinks = [];      // rows from collection_shares, newest first
+// Token whose comment thread is expanded in a Shared-links modal (null = none).
+let _shareThreadOpen = null;
+
+// A bell row for a share-link comment opens the matching Shared-links modal
+// with that link's thread expanded. Kind/token come from the enriched row.
+function openShareCommentsFromNotif(refId) {
+  const n = (userNotifs || []).find(x => x.ref_id === refId && x.type === 'share_comment');
+  const sc = n && n.shareComment;
+  if (!sc) { toast('That comment is no longer available'); return; }
+  _shareThreadOpen = sc.token;
+  if (sc.kind === 'collection') openCollectionShareLinks(); else openWishlistShareLinks();
+}
 
 function closeCollectionShareSheet() {
   document.getElementById('coll-share-modal').classList.add('hidden');

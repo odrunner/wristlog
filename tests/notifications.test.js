@@ -652,3 +652,11 @@ describe('mergeBadgeNotifs', () => {
     expect(mergeBadgeNotifs(undefined, [])).toEqual([]);
   });
 });
+
+describe('share_comment body', () => {
+  it('names the commenter and the link kind', () => {
+    expect(notificationBody('share_comment', 'Sarah', { shareKind: 'wishlist' })).toBe('Sarah commented on your shared wishlist link');
+    expect(notificationBody('share_comment', 'Sarah', { shareKind: 'collection' })).toBe('Sarah commented on your shared collection link');
+    expect(notificationBody('share_comment', '', {})).toBe('Someone commented on your shared wishlist link');
+  });
+});
