@@ -10,6 +10,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   clubs: "Clubs",
   updates: "Updates & new features",
   reminders: "Daily reminders",
+  share_comments: "Comments on your shared links",
   all: "All emails",
 };
 
@@ -86,6 +87,7 @@ export function applyUnsubscribe(prefs: EmailPrefs, cat: string): EmailPrefs {
     prefs.clubs = false;
     prefs.updates = false;
     prefs.reminders = false;
+    prefs.share_comments = false;
   } else {
     prefs[cat] = false;
   }

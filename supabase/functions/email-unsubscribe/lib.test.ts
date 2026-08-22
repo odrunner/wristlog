@@ -75,7 +75,7 @@ Deno.test("applyUnsubscribe — single category adds key if absent", () => {
 
 Deno.test("applyUnsubscribe — 'all' disables every category", () => {
   const out = applyUnsubscribe({ comments: true, mentions: true, friends: true, clubs: true, updates: true, reminders: true }, "all");
-  assertEquals(out, { comments: false, mentions: false, friends: false, clubs: false, updates: false, reminders: false });
+  assertEquals(out, { comments: false, mentions: false, friends: false, clubs: false, updates: false, reminders: false, share_comments: false });
 });
 
 Deno.test("applyUnsubscribe — mutates and returns the same object", () => {
@@ -154,4 +154,11 @@ Deno.test("verifyHmacAny — a signature for a DIFFERENT category is rejected", 
 Deno.test("verifyHmacAny — a signature for a DIFFERENT user is rejected", async () => {
   const sig = await hmacSign("u2", "updates", "dedicated");
   assertEquals(await verifyHmacAny("u1", "updates", sig, ["dedicated", "service"]), false);
+});
+
+Deno.test("share_comments is a labelled category and is included in 'all'", () => {
+  assertEquals(categoryLabel("share_comments"), "Comments on your shared links");
+  const prefs = applyUnsubscribe({}, "all");
+  assertEquals(prefs.share_comments, false);
+  assertEquals(applyUnsubscribe({}, "share_comments").share_comments, false);
 });
