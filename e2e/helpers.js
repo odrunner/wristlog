@@ -45,6 +45,25 @@ export async function mockSupabase(page, opts = {}) {
   ].join('.');
   fakeSession.access_token = fakeJwt;
 
+  // ── Safety net: nothing under /rest/v1/ may escape to production ──
+  // Playwright matches routes newest-first, so this is registered BEFORE every
+  // specific route below and only answers what none of them claim. Without it,
+  // unrouted calls (user_badges, brands, user_blocks, follow_requests,
+  // touch_presence, peek_watch_fact, fact_impressions, the admin_* RPCs …) went
+  // to the REAL API with the fake JWT — ~5,000 401s per full mocked run hit
+  // production on 2026-08-22. GET/HEAD → [], POST → 201 [], others → 204.
+  await page.route('**/rest/v1/**', route => {
+    const m = route.request().method();
+    if (m === 'GET' || m === 'HEAD') return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    if (m === 'POST') return route.fulfill({ status: 201, contentType: 'application/json', body: '[]' });
+    return route.fulfill({ status: 204, body: '' });
+  });
+  await page.route('**/auth/v1/logout*', route => route.fulfill({ status: 204, body: '' }));
+  // Edge functions too: retroactiveBadgeScan() fired send-badge-push 127× per
+  // run against production. Specs that need a real shape (identify-watch) route
+  // it themselves and take precedence.
+  await page.route('**/functions/v1/**', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
+
   await page.route('**/auth/v1/token*', route =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fakeSession) })
   );
@@ -237,6 +256,14 @@ export async function injectSession(page, user = FAKE_USER) {
     for (const _wid of ['watch-001', 'watch-002']) {
       localStorage.setItem(`wristlog_anniv_${_annivYear}_${_wid}`, '1');
     }
+
+    // Suppress the "🎉 N badges unlocked" reveal modal. The mocked boot has no
+    // earned badges on record (user_badges → []), so retroactiveBadgeScan()
+    // awards the starter badges on EVERY run and maybeRevealBadges() pops a
+    // blocking overlay a moment later. It only raced ahead of the nav clicks
+    // once unrouted calls stopped leaving the process (a real 401 round trip to
+    // production used to delay it). lastRevealedCount ≥ earnedCount → no reveal.
+    localStorage.setItem('wr_badge_reveal_count', '999');
 
     // The Supabase JS client's getSession() rejects fake JWTs even when
     // stored in localStorage. Override createClient to patch getSession()

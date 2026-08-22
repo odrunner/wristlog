@@ -151,6 +151,8 @@ also write a `_thumb.jpg` (128 px) in `uploadImage()` and reference it.
 
 ## CLIENT-2 — HIGH: feed videos are `preload="auto" autoplay` and re-`load()`ed on every page
 
+> **FIXED 2026-08-22** — feed hero videos are `preload="none"` with no `autoplay` attribute (observeFeedVideo's IntersectionObserver plays/pauses by visibility, so only on-screen clips download); the three feed wire-up sites no longer call `v.load()`; `renderFeed` carries an existing same-source `<video>` node across the innerHTML replace (`carryFeedVideos`) so a refresh — every boot now re-renders over the cached feed — does not restart the download. Evidence that day: one 8 MB looping clip in the top-50 public posts was pulled by every boot, and a Mac session streamed 13–24 range chunks/min for 8 minutes while it looped. (HEAD on Storage reports `cache-control: no-cache`, but GET serves `public, max-age=31536000`, CDN HIT — headers were a red herring.)
+
 `index.html:13698`, `:14165` render `<video … autoplay preload="auto">`; `:11541` (after
 `loadFeed`) and `:11728` (after **every** `loadMoreFeed`) run
 `querySelectorAll('.feed-card-photo > video').forEach(v => { v.load(); v.play(); observeFeedVideo(v); })`
@@ -349,3 +351,7 @@ served-asset problems: `sounds/` is gitignored, `screenshots/` is not on any loa
 
 CLIENT-1 and DB-1 together are under half a day and remove most of the measured waste on
 both ends of the wire. Do them first.
+
+## TEST-1 — (added 2026-08-22) mocked E2E leaked ~5,000 unauthenticated requests per run to production
+
+`mockSupabase()` routed a fixed list of tables; anything else the app touched at boot (`user_badges`, `brands`, `user_blocks`, `follow_requests`, `touch_presence`, `peek_watch_fact`, `fact_impressions`, the `admin_*` RPCs, `send-badge-push` …) escaped to the REAL API with the fake JWT — ~5,000 × 401 per full run (the 1,900-error spike at 19:30 UTC on 2026-08-22 was a test run, not users) plus 127 real `send-badge-push` invocations. **FIXED 2026-08-22:** a catch-all `**/rest/v1/**` + `**/functions/v1/**` + `auth/v1/logout` route registered first in `mockSupabase()` (specific routes still win). Verified: full run 23:23–23:27 UTC → 0 test-origin 401s.
