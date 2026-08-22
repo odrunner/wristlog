@@ -8070,7 +8070,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.16.17';
+const APP_VERSION = '22.16.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -11915,7 +11915,9 @@ async function loadFeed() {
   if (!feedError && !myProfile && currentUser) {
     loadMyProfile().catch(() => {});
   }
-  document.querySelectorAll('.feed-card-photo > video').forEach(v => { try { v.load(); v.play().catch(() => {}); } catch (_) {} observeFeedVideo(v); });
+  // preload="none" + no autoplay: the IntersectionObserver in observeFeedVideo
+  // starts (and stops) playback by visibility, so only on-screen clips download.
+  document.querySelectorAll('.feed-card-photo > video').forEach(v => observeFeedVideo(v));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -12102,10 +12104,7 @@ async function loadMoreFeed() {
     initFactRows();
 
     // Wire up any newly-inserted feed videos.
-    document.querySelectorAll('.feed-card-photo > video').forEach(v => {
-      try { v.load(); v.play().catch(() => {}); } catch (_) {}
-      observeFeedVideo(v);
-    });
+    document.querySelectorAll('.feed-card-photo > video').forEach(v => observeFeedVideo(v));
 
     // Re-arm the observer on the (still-present) sentinel for the next page.
     mountFeedLoadMoreSentinel();
@@ -13987,6 +13986,23 @@ function onboardingGo(key) {
   if (key === 'profile') return openProfileModal();
 }
 
+// Keep already-mounted feed <video> nodes across a full re-render when the new
+// card points at the same clip, so a refresh (boot over the cached feed, the
+// foreground re-pull) neither restarts playback nor re-downloads it — an 8 MB
+// clip was being fetched again on every loadFeed() before this.
+function carryFeedVideos(el, render) {
+  const kept = {};
+  el.querySelectorAll('.feed-card-photo > video[id]').forEach(v => { kept[v.id] = v; });
+  render();
+  const srcOf = x => (x.querySelector('source')?.getAttribute('src') || x.getAttribute('src') || '');
+  Object.entries(kept).forEach(([id, old]) => {
+    const fresh = document.getElementById(id);
+    if (!fresh || fresh === old || fresh.tagName !== 'VIDEO') return;
+    if (srcOf(fresh) !== srcOf(old)) return;
+    fresh.replaceWith(old);
+  });
+}
+
 function renderFeed() {
   const el = document.getElementById('feed-list');
   if (!el) return;
@@ -14035,7 +14051,7 @@ function renderFeed() {
   if (_feedCaughtUpIdx !== null && _feedCaughtUpIdx <= cards.length) {
     cards.splice(_feedCaughtUpIdx, 0, feedCaughtUpHtml());
   }
-  el.innerHTML = cards.join('');
+  carryFeedVideos(el, () => { el.innerHTML = cards.join(''); });
 
   // Restore any comment drafts that survived re-render
   Object.entries(_savedCommentDrafts).forEach(([id, val]) => {
@@ -14188,7 +14204,7 @@ function renderFeedCard(item) {
     // the fixed 4:5 photo slot, so they aren't cropped.
     const isAccuracyCard = isMeasurementCardImage(item.use_case, _urls, 0);
     const heroInner = heroIsVideo
-      ? `<video id="feed-hero-${item.id}" muted autoplay loop playsinline webkit-playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;display:block;"><source src="${escHtml(heroUrl)}" type="${videoSourceType(heroUrl)}"></video>`
+      ? `<video id="feed-hero-${item.id}" muted loop playsinline webkit-playsinline preload="none" style="width:100%;height:100%;object-fit:cover;display:block;"><source src="${escHtml(heroUrl)}" type="${videoSourceType(heroUrl)}"></video>`
       : `<img id="feed-hero-${item.id}" src="${escHtml(heroUrl)}" alt="Photo from this post" loading="lazy" onerror="this.parentElement.style.display='none'">`;
     heroIsPhoto = true;
     heroHtml = `<div class="feed-card-photo${isAccuracyCard ? ' feed-card-photo--accuracy' : ''}" data-usecase="${escAttr(item.use_case || '')}" data-idx="0" onclick="openImageViewer(${escAttr(JSON.stringify(_urls))}, +(this.dataset.idx||0))">
@@ -14655,7 +14671,7 @@ function feedThumbTap(logId, idx, urls) {
   const visHtml = heroContainer.querySelector('.vis-badge--overlay')?.outerHTML || '';
   let innerHtml = '';
   if (isVid) {
-    innerHtml = `<video id="feed-hero-${logId}" muted autoplay loop playsinline webkit-playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;display:block;"><source src="${escHtml(url)}" type="${videoSourceType(url)}"></video>`
+    innerHtml = `<video id="feed-hero-${logId}" muted loop playsinline webkit-playsinline preload="none" style="width:100%;height:100%;object-fit:cover;display:block;"><source src="${escHtml(url)}" type="${videoSourceType(url)}"></video>`
       + `<button class="feed-vid-mute" onclick="toggleFeedVideoSound(event,'${logId}')" aria-label="Toggle sound">${MUTE_ICON_OFF}</button>`;
   } else {
     innerHtml = `<img id="feed-hero-${logId}" src="${escHtml(url)}" alt="Photo from this post" loading="lazy" onerror="this.parentElement.style.display='none'">`;
@@ -16189,7 +16205,9 @@ function refreshFeedCard(logId) {
   // flag — this is a single-card swap, not a full feed replace, so the shared
   // observer (and every other row still registered on it) must stay intact.
   initFactRows();
-  document.querySelectorAll('.feed-card-photo > video').forEach(v => { try { v.load(); v.play().catch(() => {}); } catch (_) {} observeFeedVideo(v); });
+  // preload="none" + no autoplay: the IntersectionObserver in observeFeedVideo
+  // starts (and stops) playback by visibility, so only on-screen clips download.
+  document.querySelectorAll('.feed-card-photo > video').forEach(v => observeFeedVideo(v));
 }
 
 // ── Comments ──────────────────────────────────────────────────────────────
