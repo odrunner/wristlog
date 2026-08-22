@@ -19,13 +19,28 @@ import type { ShareWatch } from "../share-wishlist/lib.ts";
 // The decisive privacy boundary of this feature: the columns the public page is
 // allowed to read out of `watches`. lib.test.ts asserts on it.
 //
-// created_at is fetched only to order the grid and is stripped before render.
-// `url` is the owner's saved link, scheme-checked by safeLinkUrl before it
-// becomes an href.
-// NEVER add: price, purchase_date, market_price*, price_history, notes, tags,
-// straps, owner, has_box, has_papers, insurance*, receipts, warranty_expiry,
-// watch_privacy, elo_rating.
-export const WATCHES_SHARE_SELECT = "id, brand, name, ref, image, url, created_at";
+// created_at and purchase_date are fetched only to ORDER the grid
+// (sortSharedWatches) and are stripped before render — neither reaches the
+// page. `url` is the owner's saved link, scheme-checked by safeLinkUrl before
+// it becomes an href.
+// NEVER add: price, market_price*, price_history, notes, tags, straps, owner,
+// has_box, has_papers, insurance*, receipts, warranty_expiry, watch_privacy,
+// elo_rating.
+export const WATCHES_SHARE_SELECT = "id, brand, name, ref, image, url, created_at, purchase_date";
+
+// The Collection tab's default order: purchase date, newest first; undated
+// watches after dated ones; ties (and the undated) by when they were added,
+// newest first. A share link that ignored this read as a random shuffle.
+export function sortSharedWatches<T extends { purchase_date?: string | null; created_at?: string | null }>(rows: T[]): T[] {
+  return [...(rows || [])].sort((a, b) => {
+    const pa = a.purchase_date || "", pb = b.purchase_date || "";
+    if (pa && pb && pa !== pb) return pa < pb ? 1 : -1;
+    if (pa && !pb) return -1;
+    if (!pa && pb) return 1;
+    const ca = a.created_at || "", cb = b.created_at || "";
+    return ca === cb ? 0 : (ca < cb ? 1 : -1);
+  });
+}
 
 export function watchesHeading(displayName: string): string {
   return `${displayName}'s watches`;

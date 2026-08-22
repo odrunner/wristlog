@@ -22,6 +22,7 @@ import {
   htmlPage,
   isShareUsable,
   type ShareWatch,
+  sortSharedWatches,
   WATCHES_SHARE_SELECT,
   watchesHeading,
   wishlistCardsHtml,
@@ -65,12 +66,14 @@ async function fetchShareData(db: any, token: string) {
     .from("watches")
     .select(WATCHES_SHARE_SELECT)
     .eq("user_id", row.user_id)
-    .in("id", row.item_ids.length ? row.item_ids : ["__none__"])
-    .order("created_at", { ascending: true });
+    .in("id", row.item_ids.length ? row.item_ids : ["__none__"]);
 
-  const items = (itemRows || []).map((w: ShareWatch & { created_at?: string }) => ({
+  // Ordered like the Collection tab (sortSharedWatches), then stripped to the
+  // five publishable fields — purchase_date/created_at never reach the page.
+  type Row = ShareWatch & { created_at?: string | null; purchase_date?: string | null };
+  const items: ShareWatch[] = sortSharedWatches((itemRows || []) as Row[]).map((w) => ({
     id: w.id, brand: w.brand, name: w.name, ref: w.ref, image: w.image, url: w.url,
-  })) as ShareWatch[];
+  }));
 
   return { profile, items, label: row.label };
 }
