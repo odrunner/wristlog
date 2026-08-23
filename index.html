@@ -8070,7 +8070,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.21.26';
+const APP_VERSION = '22.21.28';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18723,10 +18723,14 @@ async function renderAdminTraffic(force = false) {
       .map(d => `<div style="display:flex;justify-content:space-between;font-size:.82rem;padding:.3rem 0;border-bottom:1px solid var(--border);"><span>${escHtml(d.device)}</span><span style="color:var(--gold-text);font-weight:600;">${d.count}</span></div>`)
       .join('');
 
+    // Bars scale to the busiest day in the window. (Was a fixed 3-visits-per-
+    // block glyph string capped at 20 blocks, so every day >= 60 drew the same
+    // full bar and 82 looked identical to 61.)
+    const dailyMax = Math.max(1, ...(t.daily || []).map(d => Number(d.count) || 0));
     const dailyRows = (t.daily || [])
       .map(d => {
-        const bar = '█'.repeat(Math.min(Math.ceil(d.count / 3), 20));
-        return `<div style="display:flex;justify-content:space-between;font-size:.78rem;padding:.25rem 0;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;"><span style="color:var(--muted);width:5rem;flex-shrink:0;">${String(d.day).slice(5)}</span><span style="color:var(--gold-text);font-size:.65rem;flex:1;overflow:hidden;">${bar}</span><span style="color:var(--gold-text);font-weight:600;width:2rem;text-align:right;">${d.count}</span></div>`;
+        const pct = Math.round(((Number(d.count) || 0) / dailyMax) * 100);
+        return `<div style="display:flex;align-items:center;justify-content:space-between;font-size:.78rem;padding:.25rem 0;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;"><span style="color:var(--muted);width:5rem;flex-shrink:0;">${String(d.day).slice(5)}</span><span style="flex:1;"><span style="display:block;height:.65rem;width:${pct}%;background:var(--gold-text);border-radius:2px;"></span></span><span style="color:var(--gold-text);font-weight:600;width:2rem;text-align:right;">${d.count}</span></div>`;
       }).join('');
 
     const statRow = (label, value, sub) => `<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;padding:.35rem 0;border-bottom:1px solid var(--border);"><span>${label}</span><span style="font-weight:600;"><span style="color:var(--gold-text);">${value}</span>${sub ? `<span style="color:var(--muted);font-size:.72rem;margin-left:.3rem;">${sub}</span>` : ''}</span></div>`;
