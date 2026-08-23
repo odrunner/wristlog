@@ -2889,7 +2889,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">See Who Else Has Your Watch</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Open any watch in your collection and a new <strong>Also owned by</strong> row shows how many other members have the same model &#8212; across every era, so a vintage example counts alongside a brand-new one. Tap it to see the owners who share their collection with you and jump to their profiles. If nobody else has it, you&#8217;ll know your watch is a rare bird.</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Open any watch in your collection and a new <strong>Also owned by</strong> row shows how many other members have the same model &#8212; across every era, so a vintage example counts alongside a brand-new one. Tap it for the <strong>model view</strong>: fun facts about the model, the years members&#8217; examples span, and the owners who share their collection with you &#8212; tap one to visit their profile. If nobody else has it, you&#8217;ll know your watch is a rare bird.</div>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Comments on Shared Links</div>
@@ -4079,7 +4079,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">7</div>
             <div class="help-step-body">
               <div class="help-step-title">See who else has your watch</div>
-              <div class="help-step-desc">Open any watch in your collection and the <strong>Also owned by</strong> row shows how many other members have the same model &#8212; every era counts, so a vintage example sits alongside a brand-new one. Tap the row to see the owners who share their collection with you and visit their profiles. Members whose collection or watch is private are counted but never named. If nobody else has it, you&#8217;ve got a rare bird.</div>
+              <div class="help-step-desc">Open any watch in your collection and the <strong>Also owned by</strong> row shows how many other members have the same model &#8212; every era counts, so a vintage example sits alongside a brand-new one. Tap the row for the model view: fun facts, the years members&#8217; examples span, and the owners who share their collection with you &#8212; tap one to visit their profile. Members whose collection or watch is private are counted but never named. If nobody else has it, you&#8217;ve got a rare bird.</div>
             </div>
           </div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> "From Photo" works great for a quick start — snap your watch box and add everything in one go. For the most accurate data, use brand website URLs (rolex.com, omegawatches.com…) with the Fetch button.</span></div>
@@ -5081,6 +5081,22 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 </main>
 
 <!-- ════ ADD / EDIT WATCH MODAL ════ -->
+<div id="model-sheet-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="ms-title" style="z-index:1001;">
+  <div class="modal" style="max-width:440px;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem;">
+      <div style="min-width:0;">
+        <div id="ms-brand" style="font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);"></div>
+        <div class="modal-title" id="ms-title" style="margin-bottom:0;"></div>
+      </div>
+      <button class="btn-icon" onclick="closeModelSheet()" aria-label="Close" style="font-size:1.3rem;color:var(--muted);padding:.2rem .4rem;line-height:1;flex-shrink:0;">&times;</button>
+    </div>
+    <div id="ms-era" style="display:none;font-size:.78rem;color:var(--gold-text);margin-top:.4rem;"></div>
+    <div id="ms-specs" style="display:none;font-size:.8rem;color:var(--muted);margin-top:.35rem;line-height:1.5;"></div>
+    <div id="ms-facts" style="margin-top:.85rem;"></div>
+    <div id="ms-owners-head" style="font-size:.85rem;font-weight:600;margin-top:1rem;"></div>
+    <div id="ms-owners" style="margin-top:.4rem;max-height:38vh;overflow-y:auto;"></div>
+  </div>
+</div>
 <div id="watch-modal" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="watch-modal-title">
   <div class="modal">
     <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -5099,7 +5115,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div style="border-bottom:0.5px solid var(--border);margin-top:10px;margin-bottom:12px;"></div>
     </div>
     <div id="wm-also-owned" style="display:none;margin:0 0 12px;padding:9px 12px;border:0.5px solid var(--border);border-radius:8px;font-size:.8rem;cursor:pointer;" role="button" tabindex="0"></div>
-    <div id="wm-owners-sheet" style="display:none;margin:0 0 12px;padding:4px 0;"></div>
     <!-- Photo state (hidden) -->
     <div id="w-img-area" style="display:none;">
       <img id="w-img-preview" src="" alt="" style="display:none;">
@@ -8082,7 +8097,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.13.55';
+const APP_VERSION = '23.14.35';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23224,41 +23239,67 @@ function openAddWatch() {
   document.getElementById('watch-modal').classList.remove('hidden');
 }
 
-// ── "Also owned by" — who else has this model (model_owners RPC does all gating) ──
+// ── "Also owned by" + in-app model sheet — who else has this model ──
+// model_owners RPC does all privacy gating; watch_models/watch_facts are
+// readable by any logged-in member.
 async function loadModelOwnersRow(w) {
   const row = document.getElementById('wm-also-owned');
-  const sheet = document.getElementById('wm-owners-sheet');
-  row.style.display = 'none'; row.style.cursor = 'pointer'; row.onclick = null;
-  sheet.style.display = 'none'; sheet.innerHTML = '';
+  row.style.display = 'none'; row.onclick = null;
   if (!w || !w.modelId || !currentUser) return;
   const { data, error } = await db.rpc('model_owners', { p_model_id: w.modelId });
   if (error || !data || editingId !== w.id) return; // modal may have moved on
   const others = (data.total_owners || 0) - 1; // viewer is always one of the owners here
+  const vis = data.visible || [];
   if (others <= 0) {
     row.textContent = "You're the only one on WRotate with this one — rare bird.";
-    row.style.cursor = 'default';
-    row.style.display = '';
-    return;
+  } else {
+    const stack = vis.slice(0, 3).map(o =>
+      `<span class="feed-user-avatar" style="width:22px;height:22px;font-size:.6rem;display:inline-flex;align-items:center;justify-content:center;margin-right:-6px;border:1.5px solid var(--card);">${o.avatar_url ? `<img src="${escAttr(o.avatar_url)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="">` : profileInitials(o)}</span>`).join('');
+    const era = data.era_min && data.era_max && data.era_min !== data.era_max
+      ? ` <span style="color:var(--muted);">· examples from ${escHtml(data.era_min)} to ${escHtml(data.era_max)}</span>` : '';
+    row.innerHTML = `${stack}<span style="margin-left:${vis.length ? '12px' : '0'};">Also owned by <b>${others}</b> other member${others === 1 ? '' : 's'}${era}</span>`;
   }
-  const vis = data.visible || [];
-  const stack = vis.slice(0, 3).map(o =>
-    `<span class="feed-user-avatar" style="width:22px;height:22px;font-size:.6rem;display:inline-flex;align-items:center;justify-content:center;margin-right:-6px;border:1.5px solid var(--card);">${o.avatar_url ? `<img src="${escAttr(o.avatar_url)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="">` : profileInitials(o)}</span>`).join('');
-  const era = data.era_min && data.era_max && data.era_min !== data.era_max
-    ? ` <span style="color:var(--muted);">· examples from ${escHtml(data.era_min)} to ${escHtml(data.era_max)}</span>` : '';
-  row.innerHTML = `${stack}<span style="margin-left:${vis.length ? '12px' : '0'};">Also owned by <b>${others}</b> other member${others === 1 ? '' : 's'}${era}</span>`;
   row.style.display = '';
-  row.onclick = () => {
-    if (!vis.length) { toast(`${others} member${others === 1 ? '' : 's'} own this — none visible to you`); return; }
-    const open = sheet.style.display !== 'none';
-    sheet.style.display = open ? 'none' : '';
-    if (open) return;
-    sheet.innerHTML = vis.map(o => `
-      <div style="display:flex;align-items:center;gap:.6rem;padding:6px 2px;cursor:pointer;" onclick="closeWatchModal();viewUserProfile('${escAttr(o.user_id)}')">
-        ${o.photo ? `<img src="${escAttr(o.photo)}" style="width:34px;height:34px;border-radius:8px;object-fit:cover;" alt="">` : `<span class="feed-user-avatar" style="width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;">${profileInitials(o)}</span>`}
-        <div><div style="font-weight:500;">${escHtml(o.display_name || o.username || '')}</div>
-        <div style="font-size:.7rem;color:var(--muted);">@${escHtml(o.username || '')}${o.year ? ' · ' + escHtml(o.year) : ''}</div></div>
-      </div>`).join('');
-  };
+  row.onclick = () => openModelSheet(w.modelId, data);
+}
+
+async function openModelSheet(modelId, owners) {
+  const set = (id, v) => { const el = document.getElementById(id); el.style.display = v ? '' : 'none'; if (typeof v === 'string') el.textContent = v; };
+  ['ms-brand', 'ms-title', 'ms-era', 'ms-specs'].forEach(id => { document.getElementById(id).textContent = ''; });
+  document.getElementById('ms-facts').innerHTML = '';
+  document.getElementById('ms-owners-head').textContent = '';
+  document.getElementById('ms-owners').innerHTML = '';
+  document.getElementById('model-sheet-modal').classList.remove('hidden');
+  const [mRes, oRes] = await Promise.all([
+    db.from('watch_models').select('brand,name,specs,facts_key').eq('id', modelId).maybeSingle(),
+    owners ? Promise.resolve({ data: owners }) : db.rpc('model_owners', { p_model_id: modelId }),
+  ]);
+  const m = mRes.data, o = oRes.data || { total_owners: 0, visible: [] };
+  if (!m) { closeModelSheet(); return; }
+  document.getElementById('ms-brand').textContent = m.brand;
+  document.getElementById('ms-title').textContent = m.name;
+  if (o.era_min && o.era_max && o.era_min !== o.era_max) set('ms-era', `Members own examples from ${o.era_min} to ${o.era_max}`);
+  const specs = Object.values(m.specs || {}).filter(Boolean);
+  if (specs.length) set('ms-specs', specs.join(' · '));
+  if (m.facts_key) {
+    const { data: facts } = await db.from('watch_facts').select('fact,position').eq('model_key', m.facts_key).order('position').limit(3);
+    document.getElementById('ms-facts').innerHTML = (facts || []).map(f => funFactCardHTML({ fact: f.fact })).join('');
+  }
+  const others = (o.total_owners || 0) - 1;
+  const vis = o.visible || [];
+  document.getElementById('ms-owners-head').textContent = others <= 0
+    ? "You're the only one on WRotate with this one — rare bird."
+    : `${others} other member${others === 1 ? '' : 's'} have this watch`;
+  document.getElementById('ms-owners').innerHTML = vis.map(o2 => `
+    <div style="display:flex;align-items:center;gap:.6rem;padding:6px 2px;cursor:pointer;" onclick="closeModelSheet();closeWatchModal();viewUserProfile('${escAttr(o2.user_id)}')">
+      ${o2.photo ? `<img src="${escAttr(o2.photo)}" style="width:34px;height:34px;border-radius:8px;object-fit:cover;" alt="">` : `<span class="feed-user-avatar" style="width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;">${profileInitials(o2)}</span>`}
+      <div><div style="font-weight:500;">${escHtml(o2.display_name || o2.username || '')}</div>
+      <div style="font-size:.7rem;color:var(--muted);">@${escHtml(o2.username || '')}${o2.year ? ' · ' + escHtml(o2.year) : ''}</div></div>
+    </div>`).join('') + (others > 0 && vis.length < others
+      ? `<div style="font-size:.72rem;color:var(--muted);padding:6px 2px;">${others - vis.length} more with a private collection</div>` : '');
+}
+function closeModelSheet() {
+  document.getElementById('model-sheet-modal').classList.add('hidden');
 }
 
 function openEditWatch(id) {
@@ -23345,8 +23386,8 @@ function openEditWatch(id) {
 }
 
 function closeWatchModal() {
-  const _wmR = document.getElementById('wm-also-owned'), _wmS = document.getElementById('wm-owners-sheet');
-  if (_wmR) { _wmR.style.display = 'none'; } if (_wmS) { _wmS.style.display = 'none'; _wmS.innerHTML = ''; }
+  const _wmR = document.getElementById('wm-also-owned');
+  if (_wmR) _wmR.style.display = 'none';
   if (_tgListening) stopTgListen();
   clearInlineEdits();
   if (wPendingImage && wPendingImage.startsWith('blob:')) URL.revokeObjectURL(wPendingImage);
@@ -30012,6 +30053,7 @@ const _overlayCloseMap = {
   'followers-modal':     closeFollowersModal,
   'following-modal':     closeFollowingModal,
   // welcome-modal: intentionally excluded — must not close on overlay click or Escape
+  'model-sheet-modal':   closeModelSheet,
   'watch-modal':         closeWatchModal,
   'receipts-modal':      closeReceiptsModal,
   'del-modal':           closeDelModal,
@@ -30135,6 +30177,10 @@ new MutationObserver(mutations => {
     const el = m.target;
     if (!el.classList.contains('overlay') || !_overlayCloseMap[el.id]) continue;
     if (el.id === 'confirm-modal') continue;
+    // model-sheet-modal stacks ON TOP of watch-modal; counting it makes the
+    // history.back() from its close pop the watch-modal underneath (the
+    // popstate handler can only see "some overlay closed", not which).
+    if (el.id === 'model-sheet-modal') continue;
     if (!el.classList.contains('hidden')) opens++;
     else closes++;
   }
