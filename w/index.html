@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https://api.wrotate.com https://*.supabase.co data: blob: https:; connect-src 'self' https://api.wrotate.com https://*.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self';">
+  <title>WRotate Watch Model</title>
+  <meta name="robots" content="index, follow">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="canonical" id="canonical-link" href="https://wrotate.com/">
+  <meta property="og:site_name" content="WRotate">
+  <meta property="og:type" content="website">
+  <meta id="og-title" property="og:title" content="WRotate Watch Model">
+  <meta id="og-description" property="og:description" content="See who wears this watch on WRotate.">
+  <meta id="og-image" property="og:image" content="https://api.wrotate.com/storage/v1/object/public/media/landing/collection.PNG">
+  <script>
+    (function(){
+      try {
+        const stored = localStorage.getItem('wrotate_theme');
+        const prefer = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        if (prefer === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      } catch(e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="/design-system.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--fg); font-family: var(--font-body, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif); min-height: 100vh; }
+    .page { max-width: 560px; margin: 0 auto; padding: 2rem 1.2rem 3rem; }
+    .brandline { display:flex; align-items:center; gap:.5rem; margin-bottom:1.6rem; }
+    .brandline img { width:26px; height:26px; }
+    .brandline span { font-weight:600; letter-spacing:.02em; }
+    .muted { color: var(--muted); }
+    h1 { font-size:1.45rem; margin:.8rem 0 .25rem; }
+    .hero { max-width:180px; border-radius:12px; display:none; margin-top:.4rem; }
+    .specs { color: var(--muted); font-size:.85rem; margin-top:.35rem; line-height:1.5; }
+    .era { font-size:.8rem; margin-top:.5rem; color: var(--gold-text, var(--fg)); }
+    .fact-teaser { background: color-mix(in srgb, var(--gold, #b8941f) 8%, transparent); border:1px solid color-mix(in srgb, var(--gold, #b8941f) 22%, transparent); border-left:3px solid var(--gold, #b8941f); border-radius:8px; padding:.7rem .9rem; font-size:.83rem; line-height:1.5; margin:.6rem 0; }
+    .owners h2 { font-size:1rem; margin:1.4rem 0 .6rem; }
+    .owner-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:.6rem; }
+    .owner-card { display:flex; align-items:center; gap:.55rem; border:0.5px solid var(--border); border-radius:10px; padding:.55rem .7rem; text-decoration:none; color:var(--fg); font-size:.82rem; }
+    .owner-card:hover { border-color: var(--gold, #b8941f); }
+    .owner-card img, .owner-avatar { width:34px; height:34px; border-radius:8px; object-fit:cover; flex-shrink:0; }
+    .owner-avatar { display:flex; align-items:center; justify-content:center; background: color-mix(in srgb, var(--gold, #b8941f) 18%, transparent); border-radius:50%; font-size:.7rem; font-weight:600; }
+    .owner-year { font-size:.68rem; color:var(--muted); }
+    .cta { display:inline-block; margin-top:1.8rem; background: var(--gold, #b8941f); color:#fff; text-decoration:none; padding:.65rem 1.3rem; border-radius:10px; font-size:.85rem; font-weight:600; }
+    #notfound, #loading { color: var(--muted); padding:2rem 0; font-size:.9rem; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <a href="https://wrotate.com" style="text-decoration:none;color:inherit;"><div class="brandline"><img src="/icon.svg" alt=""><span>WRotate</span></div></a>
+    <div id="loading">Loading…</div>
+    <div id="notfound" style="display:none;">This model page doesn&#8217;t exist (yet).</div>
+    <div id="model" style="display:none;">
+      <div class="muted" style="font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;" id="m-brand"></div>
+      <h1 id="m-title"></h1>
+      <img id="m-hero" class="hero" alt="">
+      <div id="m-specs" class="specs"></div>
+      <div id="m-era" class="era"></div>
+      <div id="m-facts" style="margin-top:1.1rem;"></div>
+      <div class="owners">
+        <h2 id="m-owners-title"></h2>
+        <div id="m-owners" class="owner-grid"></div>
+      </div>
+      <a href="https://wrotate.com" class="cta">Track yours on WRotate</a>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.98.0/dist/umd/supabase.js"></script>
+  <script>
+    const SUPABASE_URL = 'https://api.wrotate.com';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuendlZXZ6cm9qbW91emhwd3p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIxNjYwODAsImV4cCI6MjA4Nzc0MjA4MH0.5FR1m_kBNd1MlJGGmpXj30aLOFm8Xq3-34BCEmLH-vs';
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+    function show(id) { for (const x of ['loading', 'notfound', 'model']) document.getElementById(x).style.display = x === id ? '' : 'none'; }
+    function initials(name) { return String(name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase(); }
+
+    async function load() {
+      const params = new URLSearchParams(location.search);
+      const slug = (params.get('m') || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+      if (!slug) return show('notfound');
+      const { data, error } = await db.rpc('model_page', { p_slug: slug });
+      if (error || !data) return show('notfound');
+      const m = data.model, o = data.owners || { total_owners: 0, visible: [] };
+      const full = `${m.brand} ${m.name}`;
+      document.title = `${full} — WRotate`;
+      document.getElementById('canonical-link').href = `https://wrotate.com/w/?m=${encodeURIComponent(m.slug)}`;
+      document.getElementById('og-title').content = `${full} — WRotate`;
+      document.getElementById('m-brand').textContent = m.brand;
+      document.getElementById('m-title').textContent = m.name;
+      if (m.hero_image) { const h = document.getElementById('m-hero'); h.src = m.hero_image; h.style.display = 'block'; }
+      const specs = Object.values(m.specs || {}).filter(Boolean);
+      document.getElementById('m-specs').textContent = specs.join(' · ');
+      if (o.era_min && o.era_max && o.era_min !== o.era_max)
+        document.getElementById('m-era').textContent = `Members own examples from ${o.era_min} to ${o.era_max}`;
+      document.getElementById('m-facts').innerHTML = (data.teasers || []).map(t =>
+        `<div class="fact-teaser">&#128161; ${esc(t)} &hellip;</div>`).join('');
+      const total = o.total_owners || 0;
+      document.getElementById('m-owners-title').textContent =
+        total ? `Owned by ${total} member${total === 1 ? '' : 's'} on WRotate` : 'Be the first to track this watch on WRotate';
+      document.getElementById('m-owners').innerHTML = (o.visible || []).map(u => `
+        <a class="owner-card" href="/profile/?u=${encodeURIComponent(u.username || '')}">
+          ${u.photo ? `<img src="${esc(u.photo)}" alt="">` : `<span class="owner-avatar">${esc(initials(u.display_name || u.username))}</span>`}
+          <span>${esc(u.display_name || u.username || '')}${u.year ? `<div class="owner-year">example from ${esc(u.year)}</div>` : ''}</span>
+        </a>`).join('');
+      show('model');
+    }
+    load();
+  </script>
+</body>
+</html>
