@@ -182,12 +182,17 @@ describe('surface + attribution plumbing', () => {
     expect(engine).toContain('tgGateEvents.removeAll(keepingCapacity: true); tgGateAttempts = 0');
   });
 
-  it('index.html sends all four knobs with DARK defaults (localStorage-overridable)', () => {
+  it('index.html sends all four knobs: guard refuse is the fleet default (2026-08-23), the rest stay dark', () => {
     const html = read('index.html');
+    // T1 confirm band was refuted by the shadow A/B (rejected 30% of bad locks vs 34% of
+    // good) — it must stay 999 so the engine keeps shadow-logging lc=/lr= without enforcing.
     expect(html).toContain("tgConfirmBand: _tgKnob('tg_confirmband', 999)");
-    expect(html).toContain("tgGuardMode: Number(safeLS.get('tg_guardmode') ?? 0)");
+    // T2 is the one evidence-backed flip: guard fired in 19% of bad-lock convergences vs 3% good.
+    expect(html).toContain("tgGuardMode: Number(safeLS.get('tg_guardmode') ?? 1)");
     expect(html).toContain("tgGateMaxRej: _tgKnob('tg_gatemaxrej', 1)");
     expect(html).toContain("tgAcquireMax: _tgKnob('tg_acquiremax', 15)");
+    // the admin panel must show the same default it sends, or a personal override looks like none
+    expect(html).toContain("set('tg-knob-guardmode', String(Number(safeLS.get('tg_guardmode') ?? 1)))");
   });
 
   it('the admin knob panel exposes all four (personal-stage flip UI)', () => {
@@ -201,15 +206,10 @@ describe('surface + attribution plumbing', () => {
     expect(html).toContain('function onTgKnob0(k, v) { if (v !== \'\' && Number(v) >= 0)');
   });
 
-  it('one-control preset sets ALL FOUR keys together (no accidental partial flips)', () => {
+  it('the one-control "staged bundle" preset is gone (T1/T3/T4 refuted; raw knobs remain for A/B)', () => {
     const html = read('index.html');
-    expect(html).toContain('id="tg-lock-preset"');
-    const fn = html.slice(html.indexOf('function onTgLockPreset'), html.indexOf('sendMsrTuning();', html.indexOf('function onTgLockPreset')));
-    for (const [k, on, off] of [["tg_confirmband", '6 : 999'], ["tg_guardmode", '1 : 0'], ["tg_gatemaxrej", '0.5 : 1'], ["tg_acquiremax", '45 : 15']]) {
-      expect(fn).toContain(`safeLS.set('${k}', on ? ${on})`);
-    }
-    // OFF must restore exact 2.4 behaviour, and the raw knobs stay reachable
-    expect(html).toContain('OFF — 2.4 behaviour (shadow logs only)');
+    expect(html).not.toContain('id="tg-lock-preset"');
+    expect(html).not.toContain('function onTgLockPreset');
     expect(html).toContain('id="tg-knob-raw"');
   });
 

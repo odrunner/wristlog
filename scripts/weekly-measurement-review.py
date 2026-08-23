@@ -329,6 +329,8 @@ def wrong_attribution(sessions, refs, per):
 # Candidate convergence gates — each is something the engine already exposes as a JS
 # knob or a shadow verdict, evaluated on CONVERGED sessions against the per-watch truth.
 # (knob, description, predicate over v2 stats)
+# Knobs already at the fleet default are reported but never re-recommended.
+LIVE_KNOBS = {"tg_guardmode=1": "live since 2026-08-23"}
 GATE_CANDIDATES = [
     ("tg_guardmode=1",   "harmonic guard fired: windows disagree → refuse",   lambda v: (v["guard_fires"] or 0) > 0),
     ("tg_stabwin=8",     "rate moved > 3 s/d over the last ~8 s (delay)",    lambda v: v["range8"] is not None and v["range8"] > 3),
@@ -441,9 +443,12 @@ def recommend(rows, n_bad, n_good, W, attribution):
     it; the best ratio wins. Otherwise say plainly that no logged signal clears the bar."""
     L = []
     ok = [r for r in rows if r["pb"] is not None and r["pg"] is not None and r["bb"] >= 10
-          and r["pb"] >= 15 and r["pg"] <= 10 and not r["knob"].startswith("(")]
+          and r["pb"] >= 15 and r["pg"] <= 10 and not r["knob"].startswith("(") and r["knob"] not in LIVE_KNOBS]
     ok.sort(key=lambda r: -(r["ratio"] or 0))
     none_share = (W["oc"]["none"] / W["n"]) if W["n"] else 0
+    live = [r for r in rows if r["knob"] in LIVE_KNOBS]
+    for r in live:
+        L.append(f"- `{r['knob']}` is {LIVE_KNOBS[r['knob']]} — judge it on wrong-of-converged and b2b wild-pair share, this week vs prior, not on its table row.")
     if ok:
         r = ok[0]
         L.append(f"- **Flip `{r['knob']}`** — \"{r['desc']}\" would have blocked {r['bb']}/{r['nb']} bad locks ({round(r['pb'])}%) "
@@ -549,11 +554,14 @@ def main():
     rows_g, n_good, n_bad = gate_candidate_table(cum, refs)
     L.append(f"\n## 3. What would have caught the bad locks at convergence? (tg era, converged sessions: {n_good} good / {n_bad} bad by watch reference)")
     L.append("Each row: had this gate been on, how many bad-lock convergences it would have stopped (or delayed) vs how many good ones it would have held up.")
-    L.append(f"{'knob':<20}{'signal':<50}{'blocks bad':>12}{'blocks good':>13}{'sep':>6}")
+    L.append(f"{'knob':<20}{'signal':<50}{'blocks bad':>12}{'blocks good':>13}{'sep':>11}")
     for r in rows_g:
         sep = "—" if r["ratio"] is None else ("∞" if r["ratio"] == float("inf") else f"{r['ratio']:.1f}×")
+        if r["knob"] in LIVE_KNOBS: sep += " LIVE"
         L.append(f"{r['knob']:<20}{r['desc']:<50}{(str(r['bb'])+' ('+str(round(r['pb']))+'%)') if r['pb'] is not None else '—':>12}"
-                 f"{(str(r['gb'])+' ('+str(round(r['pg']))+'%)') if r['pg'] is not None else '—':>13}{sep:>6}")
+                 f"{(str(r['gb'])+' ('+str(round(r['pg']))+'%)') if r['pg'] is not None else '—':>13}{sep:>11}")
+    if any(r["knob"] in LIVE_KNOBS for r in rows_g):
+        L.append("(a LIVE knob's row is no longer counterfactual: on sessions run under it, a fire means the engine refused and re-acquired)")
     t1 = [r for r in rows_g if r["knob"] == "tg_confirmband=6"]
     if t1 and all(r["ratio"] is not None and r["ratio"] < 1.5 for r in t1):
         L.append("→ T1 lock confirmation (8-s disjoint segment, 6 s/d band) does NOT separate bad locks from good: bad locks are stable "

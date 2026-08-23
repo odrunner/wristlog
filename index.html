@@ -4656,18 +4656,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <option value="original">Engine: Standard</option>
       </select>
       <div id="tg-algo-hint" style="display:none;font-size:.68rem;color:var(--muted);margin:-.1rem 0 .65rem .1rem;line-height:1.4;">Pro V2 converges in ~10s and measures amplitude (°). Switch to Standard anytime.</div>
-      <!-- Lock validation (2.5): ONE control instead of four knobs. Sets tg_confirmband/
-           tg_guardmode/tg_gatemaxrej/tg_acquiremax together so a partial flip (e.g. confirm
-           on but guard still median) can't happen by accident. Raw knobs below for emergencies. -->
-      <div id="tg-lock-row" style="display:none;margin-bottom:.5rem;font-size:.72rem;color:var(--muted);">
-        <label>Lock validation (needs 2.5 build)
-          <select id="tg-lock-preset" onchange="onTgLockPreset(this.value)" style="width:100%;padding:.45rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.8rem;">
-            <option value="0">OFF — 2.4 behaviour (shadow logs only)</option>
-            <option value="1">ON — staged targets (confirm 6 · refuse · gate 0.5 · acquire 45)</option>
-            <option value="custom" disabled hidden>custom (raw knobs)</option>
-          </select>
-        </label>
-      </div>
       <details id="tg-knob-raw" style="display:none;margin-bottom:.75rem;">
       <summary style="font-size:.68rem;color:var(--muted);cursor:pointer;margin-bottom:.4rem;">Raw engine knobs</summary>
       <!-- tg convergence knobs (admin, gated by tg_algo). Applied live via the tuning message. -->
@@ -4679,9 +4667,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <label>Lift °<input type="number" step="1" id="tg-knob-lift" oninput="onTgKnob('tg_lift',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
         <label>Max win s<input type="number" step="8" id="tg-knob-maxwin" oninput="onTgKnob('tg_maxwin',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
         <label>Agree band s/d (999=off)<input type="number" step="2" id="tg-knob-agreeband" oninput="onTgKnob('tg_agreeband',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <!-- 2.5 lock-validation knobs (docs/spec-tg-lock-validation.md). Dark defaults; needs a 2.5 binary to have any effect. -->
+        <!-- 2.5 lock-validation knobs (docs/spec-tg-lock-validation.md); need a 2.5 binary. Fleet: guard=refuse (live 2026-08-23), the rest off. -->
         <label>Confirm band s/d (999=off)<input type="number" step="1" id="tg-knob-confirmband" oninput="onTgKnob('tg_confirmband',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
-        <label>Guard<select id="tg-knob-guardmode" onchange="onTgKnob0('tg_guardmode',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"><option value="0">median (2.4)</option><option value="1">refuse</option></select></label>
+        <label>Guard<select id="tg-knob-guardmode" onchange="onTgKnob0('tg_guardmode',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"><option value="0">median (2.4)</option><option value="1">refuse (fleet)</option></select></label>
         <label>Gate max rej (1=off)<input type="number" step="0.1" id="tg-knob-gatemaxrej" oninput="onTgKnob('tg_gatemaxrej',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
         <label>Acquire max s (15=off)<input type="number" step="5" id="tg-knob-acquiremax" oninput="onTgKnob('tg_acquiremax',this.value)" style="width:100%;padding:.3rem;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);"></label>
       </div>
@@ -8070,7 +8058,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.09.11';
+const APP_VERSION = '23.09.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -30214,20 +30202,8 @@ function initTgSourceSelector() {
       if (hint) hint.style.display = 'none';   // hint must never outlive the selector
     }
   }
-  const lockRow = document.getElementById('tg-lock-row');
   const rawWrap = document.getElementById('tg-knob-raw');
-  if (lockRow) lockRow.style.display = featureFlag('tg_algo') ? 'block' : 'none';
   if (rawWrap) rawWrap.style.display = featureFlag('tg_algo') ? 'block' : 'none';
-  const lockSel = document.getElementById('tg-lock-preset');
-  if (lockSel && featureFlag('tg_algo')) {
-    const cb = _tgKnob('tg_confirmband', 999), gm = Number(safeLS.get('tg_guardmode') ?? 0),
-          gr = _tgKnob('tg_gatemaxrej', 1), am = _tgKnob('tg_acquiremax', 15);
-    const isOff = cb >= 900 && gm === 0 && gr >= 1 && am <= 15;
-    const isOn  = cb === 6 && gm === 1 && gr === 0.5 && am === 45;
-    const custom = lockSel.querySelector('option[value="custom"]');
-    if (isOff || isOn) { if (custom) { custom.disabled = true; custom.hidden = true; } lockSel.value = isOn ? '1' : '0'; }
-    else { if (custom) { custom.disabled = false; custom.hidden = false; } lockSel.value = 'custom'; }
-  }
   const knobPanel = document.getElementById('tg-knob-panel');
   if (knobPanel) {
     if (featureFlag('tg_algo')) {
@@ -30241,7 +30217,7 @@ function initTgSourceSelector() {
       set('tg-knob-maxwin', _tgConvKnob('tg_maxwin'));
       set('tg-knob-agreeband', _tgKnob('tg_agreeband', 12));
       set('tg-knob-confirmband', _tgKnob('tg_confirmband', 999));
-      set('tg-knob-guardmode', String(Number(safeLS.get('tg_guardmode') ?? 0)));
+      set('tg-knob-guardmode', String(Number(safeLS.get('tg_guardmode') ?? 1)));
       set('tg-knob-gatemaxrej', _tgKnob('tg_gatemaxrej', 1));
       set('tg-knob-acquiremax', _tgKnob('tg_acquiremax', 15));
     } else knobPanel.style.display = 'none';
@@ -32837,12 +32813,16 @@ function sendMsrTuning() {
     tgPeriodFit: Number(safeLS.get('tg_periodfit') ?? 2),   // 0 legacy mean, 1 median, 2 weighted
     tgHoldOnLock: safeLS.get('tg_holdonlock') !== '0',      // keep a locked session alive through detector starvation
     tgAmpMin: _tgKnob('tg_ampmin', 90),    // lowest amplitude the plausibility gate reports (was 135)
-    // 2.5 lock-validation knobs (docs/spec-tg-lock-validation.md) — DARK: these defaults
-    // reproduce 2.4 behaviour exactly; flip via localStorage (personal stage) first.
-    tgConfirmBand: _tgKnob('tg_confirmband', 999), // T1 disjoint-segment confirm band (s/d); 999 = off, staged target 6
-    tgGuardMode: Number(safeLS.get('tg_guardmode') ?? 0),   // T2: 0 = median fallback (2.4), 1 = refuse
-    tgGateMaxRej: _tgKnob('tg_gatemaxrej', 1),     // T3 convergence block above this σ-reject fraction; 1 = off, staged target 0.5
-    tgAcquireMax: _tgKnob('tg_acquiremax', 15)     // T4 pre-lock runway seconds; 15 = off, staged target 45
+    // 2.5 lock-validation knobs (docs/spec-tg-lock-validation.md). Fleet defaults below;
+    // localStorage overrides for personal A/B. Only T2 is live: the weekly review's
+    // gate-candidate table (2026-08-23) showed the harmonic guard fired in 19% of bad-lock
+    // convergences vs 3% of good ones (6.3×), while T1 (confirm band) had no separation
+    // (rejected 30% bad vs 34% good — bad locks are stable within a session), T3 at 0.5
+    // catches nothing and T4's runway is contradicted by first-lock timing.
+    tgConfirmBand: _tgKnob('tg_confirmband', 999), // T1 disjoint-segment confirm band (s/d); 999 = off. Refuted 2026-08-23 — shadow keeps logging lc=/lr=
+    tgGuardMode: Number(safeLS.get('tg_guardmode') ?? 1),   // T2: 0 = median fallback (2.4), 1 = refuse — LIVE fleet-wide since 2026-08-23 (2.5+ binaries)
+    tgGateMaxRej: _tgKnob('tg_gatemaxrej', 1),     // T3 convergence block above this σ-reject fraction; 1 = off
+    tgAcquireMax: _tgKnob('tg_acquiremax', 15)     // T4 pre-lock runway seconds; 15 = off
   });
 }
 function _tgKnob(k, d) { const v = Number(safeLS.get(k)); return Number.isFinite(v) && v > 0 ? v : d; }
@@ -32864,21 +32844,6 @@ function onTgKnob(k, v) { if (v !== '' && Number(v) > 0) { safeLS.set(k, v); sen
 // Zero is a legitimate value here (tg_guardmode 0 = the 2.4 median fallback) — onTgKnob's
 // > 0 guard would make "switch back to 2.4 behaviour" silently un-settable.
 function onTgKnob0(k, v) { if (v !== '' && Number(v) >= 0) { safeLS.set(k, v); sendMsrTuning(); } }
-// One-control flip for the 2.5 lock-validation bundle: sets all four keys together so a
-// partial flip (confirm on, guard still median — happened in the 2026-08-15 TestFlight
-// UAT) can't happen by accident. '0' = exact 2.4 behaviour (shadow keeps logging).
-function onTgLockPreset(v) {
-  if (v !== '0' && v !== '1') return;      // 'custom' is display-only
-  const on = v === '1';
-  safeLS.set('tg_confirmband', on ? 6 : 999);
-  safeLS.set('tg_guardmode', on ? 1 : 0);
-  safeLS.set('tg_gatemaxrej', on ? 0.5 : 1);
-  safeLS.set('tg_acquiremax', on ? 45 : 15);
-  const set = (id, val) => { const e = document.getElementById(id); if (e) e.value = val; };
-  set('tg-knob-confirmband', on ? 6 : 999); set('tg-knob-guardmode', on ? '1' : '0');
-  set('tg-knob-gatemaxrej', on ? 0.5 : 1); set('tg-knob-acquiremax', on ? 45 : 15);
-  sendMsrTuning();
-}
 var _remotePeakRatioThreshold = 2.5;
 var _remoteBufferSeconds = 30.0;
 
