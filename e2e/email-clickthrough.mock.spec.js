@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-// Email click-through tagging. SES click tracking has been off since
-// 2026-07-31 (it rewrites hrefs to a redirect host, which breaks the iOS
-// Universal Link on the CTA), so these utm tags are the only click measurement
-// there is. Broadcasts previously carried no utm at all and every drip shared
+// Email click-through tagging. SES click tracking was off 2026-07-31 →
+// 2026-08-21 (it rewrites hrefs to a redirect host, which broke the iOS
+// Universal Link on the CTA) and is now on only for broadcasts to iOS 2.6+
+// recipients, so these utm tags are the click measurement that covers everyone. Broadcasts previously carried no utm at all and every drip shared
 // utm_campaign=welcome. Spec: sql/2026-08-14-email-clickthrough.sql.
 const ADMIN_ID = 'd70b1a85-4f31-4431-b3b7-db76543daaf5';
 

@@ -8070,7 +8070,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '22.21.28';
+const APP_VERSION = '22.21.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18707,8 +18707,9 @@ async function renderAdminTraffic(force = false) {
       //  undercounted cumulative campaign delivery/open/click totals.)
       db.rpc('admin_email_engagement', cacheArgs),
       db.rpc('admin_demo_views'),
-      // Click-through measured from our own page_visits utm tags, because SES
-      // click tracking is off. Spec: sql/2026-08-14-email-clickthrough.sql.
+      // Click-through measured from our own page_visits utm tags. SES click
+      // tracking is live only for broadcasts to iOS 2.6+ recipients (since
+      // 2026-08-21), so this is the fuller count. Spec: sql/2026-08-14-email-clickthrough.sql.
       db.rpc('admin_email_clickthrough', cacheArgs),
     ]), 20000);
     if (trafficR.error) throw trafficR.error;
@@ -18820,11 +18821,13 @@ function renderEmailHealth(data) {
 
 // Email click-through, from page_visits utm tags rather than SES.
 //
-// The "Clicked" figures elsewhere on this tab have read 0 for every send since
-// 2026-07-31, when SES click tracking was turned off (it rewrites hrefs to a
-// redirect host, which breaks the iOS Universal Link on the CTA). That 0 means
-// "not measured", so this card is the one that actually answers "did anyone
-// open the app from this email".
+// The "Clicked" figures elsewhere on this tab come from SES click tracking,
+// which was off 2026-07-31 → 2026-08-21 (it rewrites hrefs to a redirect host,
+// which broke the iOS Universal Link on the CTA) and since 2026-08-21 is on ONLY
+// for send-broadcast recipients with an iOS 2.6+ install (_shared/tracked-lib.ts).
+// Drips, reminders and social notifications stay untracked. So "Clicked" is a
+// narrow, partial count; this card is the one that actually answers "did anyone
+// open the app from this email" across every sender.
 //
 // Only campaigns sent AFTER the tagging shipped can appear. Older sends either
 // carried no utm at all (every broadcast) or shared one hardcoded
@@ -18850,7 +18853,7 @@ function renderEmailClickthrough(rows) {
   }).join('');
   return `<div class="admin-card">
     <div class="eyebrow" style="margin-bottom:.2rem;">Email Click-throughs</div>
-    <div style="font-size:.68rem;color:var(--muted);margin-bottom:.5rem;">app opens from a tagged email link · SES click tracking is off, so this replaces "Clicked"</div>
+    <div style="font-size:.68rem;color:var(--muted);margin-bottom:.5rem;">app opens from a tagged email link · SES "Clicked" only covers broadcasts to iOS 2.6+ (since 08-21), so this is the fuller count</div>
     ${body}
   </div>`;
 }
@@ -19923,10 +19926,11 @@ function campaignSlug(text) {
 // "/" and "/index.html", so a root link hands the tap to Safari instead of the
 // installed iOS app. The logo and every trailing image were bare roots.
 //
-// The utm_* trio is the ONLY click measurement there is: SES click tracking has
-// been off since 2026-07-31 (it rewrites hrefs to a redirect host, which breaks
-// Universal Link matching), so a tagged /open link landing in page_visits is
-// what a "click" means now.
+// The utm_* trio is the click measurement that covers EVERY recipient: SES click
+// tracking was off 2026-07-31 → 2026-08-21 (it rewrites hrefs to a redirect host,
+// which broke Universal Link matching) and is now on only for recipients with an
+// iOS 2.6+ install (_shared/tracked-lib.ts). A tagged /open link landing in
+// page_visits is what a "click" means for everyone else.
 function broadcastLink(slug) {
   return `https://wrotate.com/open?utm_source=email&utm_medium=broadcast&utm_campaign=${encodeURIComponent(slug)}`;
 }
