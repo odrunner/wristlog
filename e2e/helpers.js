@@ -21,6 +21,7 @@ export async function mockSupabase(page, opts = {}) {
     user = FAKE_USER,
     profile = FAKE_PROFILE,
     featuredId = null,
+    badges = [],
   } = opts;
 
   const fakeSession = {
@@ -170,8 +171,35 @@ export async function mockSupabase(page, opts = {}) {
     route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify([{}]) })
   );
 
+  // ── Badges: STATEFUL user_badges ──
+  // The mocked account is a new user, so retroactiveBadgeScan() awards the
+  // starter badges on its first boot; those awards must stay on record for the
+  // rest of the test (a reload must not re-award + re-push them). Seed with
+  // `badges` to model an account that already has them (seen: true → no reveal).
+  const _badgeRows = badges.map(b => ({ ...b }));
+  await page.route('**/rest/v1/user_badges*', route => {
+    const m = route.request().method();
+    if (m === 'GET') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(_badgeRows) });
+    }
+    if (m === 'POST') {
+      let body = {};
+      try { body = JSON.parse(route.request().postData() || '{}'); } catch { /* ignore */ }
+      const created = (Array.isArray(body) ? body : [body]).map((r, i) => ({ id: 'badge-' + (_badgeRows.length + i + 1), ...r }));
+      _badgeRows.push(...created);
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(created) });
+    }
+    if (m === 'PATCH') {           // markBadgesSeen(): update({ seen: true })
+      let body = {};
+      try { body = JSON.parse(route.request().postData() || '{}'); } catch { /* ignore */ }
+      if (body && body.seen === true) _badgeRows.forEach(r => { r.seen = true; });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+
   // ── Social: friends, follows, likes, comments, notifications, badges ──
-  for (const table of ['friend_requests', 'follows', 'likes', 'comments', 'notifications', 'clubs', 'club_members', 'page_visits', 'feed_posts', 'earned_badges', 'review_prompt_events', 'internal_accounts', 'rate_limits', 'promo_config', 'promo_slots', 'promo_events']) {
+  for (const table of ['friend_requests', 'follows', 'likes', 'comments', 'notifications', 'clubs', 'club_members', 'page_visits', 'feed_posts', 'review_prompt_events', 'internal_accounts', 'rate_limits', 'promo_config', 'promo_slots', 'promo_events']) {
     await page.route(`**/rest/v1/${table}*`, route =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
     );

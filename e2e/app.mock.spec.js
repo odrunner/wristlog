@@ -1959,17 +1959,11 @@ test.describe('Watch preview modal structure (mocked)', () => {
 
 test.describe('Badge system (mocked)', () => {
   test.beforeEach(async ({ page }) => {
-    // Mock earned_badges table
-    await page.route('**/rest/v1/earned_badges*', route => {
-      if (route.request().method() === 'GET') {
-        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
-          { badge_ref: 1, earned_at: '2026-01-01T00:00:00Z', seen: true },
-          { badge_ref: 3, earned_at: '2026-01-02T00:00:00Z', seen: true },
-        ]) });
-      }
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
-    });
-    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    // Earned badges on record (user_badges is stateful in mockSupabase).
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS, badges: [
+      { badge_ref: 1, earned_at: '2026-01-01T00:00:00Z', seen: true },
+      { badge_ref: 3, earned_at: '2026-01-02T00:00:00Z', seen: true },
+    ] });
     await injectSession(page);
     await page.goto('/');
     await waitForAppBoot(page);
@@ -2072,7 +2066,9 @@ test.describe('Badge earned notification (mocked)', () => {
   };
 
   test.beforeEach(async ({ page }) => {
-    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS });
+    // One earned, unseen badge on record so openBadgeWall() has data to render.
+    await mockSupabase(page, { watches: SAMPLE_WATCHES, logs: SAMPLE_LOGS,
+      badges: [{ badge_ref: 1, earned_at: '2026-06-22T08:00:00Z', seen: false }] });
     await injectSession(page);
     // Seed the badge_earned notification (registered after mockSupabase so
     // Playwright matches this more-specific handler first, per existing pattern).
@@ -2081,16 +2077,6 @@ test.describe('Badge earned notification (mocked)', () => {
         return route.fulfill({
           status: 200, contentType: 'application/json',
           body: JSON.stringify([BADGE_NOTIF]),
-        });
-      }
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
-    });
-    // Stub earned_badges so openBadgeWall() has data to render.
-    await page.route('**/rest/v1/earned_badges*', (route) => {
-      if (route.request().method() === 'GET') {
-        return route.fulfill({
-          status: 200, contentType: 'application/json',
-          body: JSON.stringify([{ badge_ref: 1, earned_at: '2026-06-22T08:00:00Z', seen: false }]),
         });
       }
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
