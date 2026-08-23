@@ -3442,3 +3442,43 @@ export function promoSlotPositions({ slots, postCount, config, placedCount, reme
   }
   return out;
 }
+
+// ══════════════════════════════════════════
+//  WATCH MODELS — canonical model keys (mirrors SQL normalize_model_key —
+//  keep the two byte-identical; the SQL copy lives in sql/2026-08-23-watch-models.sql)
+// ══════════════════════════════════════════
+
+// Filler tokens dropped from names: marketing prefixes that fragment families.
+// Conservative on purpose — sibling lines (Date, II, Pro) must survive. The
+// alias table, not this list, handles model-specific folding.
+export const MODEL_FILLER_TOKENS = ['oyster perpetual', 'cosmograph', 'co axial', 'master chronometer', 'automatic'];
+
+function cleanModelToken(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+export function normalizeModelKey(brand, name) {
+  const b = cleanModelToken(brand);
+  let n = cleanModelToken(name);
+  if (!b || !n) return '';
+  if (n === b || n.startsWith(b + ' ')) n = n.slice(b.length).trim(); // brand typed into name
+  n = (' ' + n + ' ').replace(/ auto /g, ' automatic ');
+  for (const f of MODEL_FILLER_TOKENS) n = n.split(' ' + f + ' ').join(' ');
+  n = n.replace(/\s+/g, ' ').trim();
+  return n ? b + ' ' + n : b;
+}
+
+export function modelSlug(brand, name) {
+  return normalizeModelKey(brand, name).replace(/ /g, '-');
+}
+
+// First sentence of a fun fact for the public model page — full facts are an in-app perk.
+export function factTeaser(fact, max = 140) {
+  const t = String(fact || '').trim();
+  if (!t) return '';
+  const m = t.match(/^[\s\S]*?[.!?](?=\s|$)/);
+  let s = (m ? m[0] : t).trim();
+  const truncated = s.length < t.length;
+  if (s.length > max) return s.slice(0, max - 2).trimEnd() + ' …';
+  return truncated ? s + ' …' : s;
+}
