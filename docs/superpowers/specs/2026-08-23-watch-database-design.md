@@ -101,12 +101,10 @@ web adds, photo-identify adds, and edits with zero client changes.
   auto model (safe default — admin merge later).
 - Apply: create models + aliases, then
   `UPDATE watches/wishlist SET model_id = resolve_watch_model(...)`.
-- Set `facts_key` where a model's family maps to an existing
-  `watch_facts.model_key` pool (exact key for unmerged; the dominant
-  key for merged families — the other keys' facts stay reachable by
-  storing all fact keys? No: keep it simple, `facts_key` is one key;
-  fact pools for folded aliases are left orphaned and regenerate under
-  the canonical key over time).
+- Set `facts_key` to the model's dominant existing
+  `watch_facts.model_key` (most facts). One key per model, kept simple:
+  fact pools under folded alias keys are left orphaned; the family's
+  pool regenerates under the canonical key through normal wear-logging.
 - Success check: shared-model coverage should rise from 347 watches
   (29%) — report before/after.
 
@@ -126,9 +124,8 @@ web adds, photo-identify adds, and edits with zero client changes.
 
 UI: one row in the existing watch detail — avatar stack + "Also owned
 by 23 members"; tap opens a sheet with the visible owners and photos;
-zero visible → text-only count. If `total_owners` = 1 (just you), show
-nothing (or "You're the only one on WRotate with this — rare bird",
-copy TBD at implementation).
+zero visible → text-only count. If `total_owners` = 1 (just you), the
+row shows "You're the only one on WRotate with this one." — no sheet.
 
 ## Phase 3 — public model page `/w/<slug>`
 
