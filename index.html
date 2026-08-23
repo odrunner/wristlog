@@ -8097,7 +8097,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.14.37';
+const APP_VERSION = '23.16.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10908,15 +10908,41 @@ async function sendFollowRequest(userId, btn) {
         });
         if (notifErr) console.error('follow_request notif failed:', notifErr);
       }
-      if (btn) { btn.className = 'follow-btn requested'; btn.textContent = 'Requested'; btn.onclick = () => cancelFollowRequest(userId); }
+      if (btn) { btn.className = 'follow-btn requested'; btn.textContent = 'Requested'; btn.onclick = function() { confirmCancelRequest(userId, this); }; }
       toast('Follow request sent');
       renderDiscoverUsers();
     } else if (error.code === '23505') {
       pendingRequests.add(userId);
-      if (btn) { btn.className = 'follow-btn requested'; btn.textContent = 'Requested'; btn.onclick = () => cancelFollowRequest(userId); }
+      if (btn) { btn.className = 'follow-btn requested'; btn.textContent = 'Requested'; btn.onclick = function() { confirmCancelRequest(userId, this); }; }
       renderDiscoverUsers();
     } else { toast('Could not send request — please try again', 'error'); }
   } finally { _followInFlight.delete(userId); if (btn) btn.disabled = false; }
+}
+function confirmCancelRequest(userId, btn) {
+  if (btn.dataset.confirming) {
+    delete btn.dataset.confirming;
+    // Optimistically show Follow immediately — request paths only exist for
+    // restricted profiles, so re-follow is always another request.
+    btn.className = 'follow-btn follow';
+    btn.textContent = 'Follow';
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    btn.onclick = function() { sendFollowRequest(userId, this); };
+    cancelFollowRequest(userId);
+  } else {
+    btn.dataset.confirming = '1';
+    btn.textContent = 'Cancel request?';
+    btn.style.borderColor = 'var(--danger)';
+    btn.style.color = 'var(--danger)';
+    setTimeout(() => {
+      if (btn.dataset.confirming) {
+        delete btn.dataset.confirming;
+        btn.textContent = 'Requested';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+      }
+    }, 3000);
+  }
 }
 async function cancelFollowRequest(userId) {
   if (demoGuard()) return;
@@ -16740,7 +16766,7 @@ function friendActionBtn(u) {
   const restricted = u.profile_privacy === 'followers' || u.profile_privacy === 'private' || u.profile_privacy === 'friends_only';
   if (isFrd)     return `<button class="follow-btn friends-pill" onclick="confirmUnfriend('${u.id}',this)">Close Friends</button>`;
   if (isFlw)     return `<button class="follow-btn following" onclick="confirmUnfollow('${u.id}',this)">Following</button>`;
-  if (isPending) return `<button class="follow-btn requested" onclick="cancelFollowRequest('${u.id}')">Requested</button>`;
+  if (isPending) return `<button class="follow-btn requested" onclick="confirmCancelRequest('${u.id}',this)">Requested</button>`;
   const action = restricted ? `sendFollowRequest('${u.id}',this)` : `followUser('${u.id}',this)`;
   return `<button class="follow-btn follow" onclick="${action}">Follow</button>`;
 }
