@@ -698,6 +698,7 @@ export function rowToWatch(r) {
     insurance: r.insurance || null, insuredValue: r.insured_value || null,
     insuranceNotes: r.insurance_notes || null, receipts: r.receipts || [],
     watchPrivacy: r.watch_privacy ?? null,
+    modelId: r.model_id ?? null,
     yearRange: r.year_range||null, movementType: r.movement_type||null,
     caliber: r.caliber||null, caseMaterial: r.case_material||null,
     caseDiameter: r.case_diameter||null, caseLength: r.case_length||null,

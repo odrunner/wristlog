@@ -8097,7 +8097,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.14.35';
+const APP_VERSION = '23.14.37';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23254,7 +23254,7 @@ async function loadModelOwnersRow(w) {
     row.textContent = "You're the only one on WRotate with this one — rare bird.";
   } else {
     const stack = vis.slice(0, 3).map(o =>
-      `<span class="feed-user-avatar" style="width:22px;height:22px;font-size:.6rem;display:inline-flex;align-items:center;justify-content:center;margin-right:-6px;border:1.5px solid var(--card);">${o.avatar_url ? `<img src="${escAttr(o.avatar_url)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="">` : profileInitials(o)}</span>`).join('');
+      `<span class="feed-user-avatar" style="width:22px;height:22px;font-size:.6rem;display:inline-flex;align-items:center;justify-content:center;margin-right:-6px;border:1.5px solid var(--surface);">${o.avatar_url ? `<img src="${escAttr(o.avatar_url)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="">` : profileInitials(o)}</span>`).join('');
     const era = data.era_min && data.era_max && data.era_min !== data.era_max
       ? ` <span style="color:var(--muted);">· examples from ${escHtml(data.era_min)} to ${escHtml(data.era_max)}</span>` : '';
     row.innerHTML = `${stack}<span style="margin-left:${vis.length ? '12px' : '0'};">Also owned by <b>${others}</b> other member${others === 1 ? '' : 's'}${era}</span>`;
