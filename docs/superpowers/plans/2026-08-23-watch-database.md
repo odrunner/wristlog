@@ -417,7 +417,7 @@ insert into watch_model_aliases (alias_key, model_id)
 select {q(a)}, id from watch_models where canonical_key = normalize_model_key({q(brand)}, {q(name)})
 on conflict (alias_key) do update set model_id = excluded.model_id;""")
 
-# Re-resolve every row (idempotent; the no-op update fires the trigger).
+# Re-resolve every row directly (the trigger only fires on brand/name/ref changes).
 stmts.append("update watches  set model_id = resolve_watch_model(brand, name, ref);")
 stmts.append("update wishlist set model_id = resolve_watch_model(brand, name, ref);")
 
@@ -478,7 +478,7 @@ git commit -m "feat: curated watch-model seed + backfill script (applied to prod
 
 **Interfaces:**
 - Consumes: `watch_models`, `watch_model_aliases` (Tasks 2–3).
-- Produces: RPCs `admin_watch_models()`, `admin_merge_watch_models(p_src uuid, p_dst uuid)`, `admin_update_watch_model(p_id uuid, p_name text, p_slug text, p_specs jsonb, p_hero text, p_curated boolean)`. Client fns `loadAdminModels()`, `adminMergeModels()`, `adminSaveModel(id)`.
+- Produces: RPCs `admin_watch_models()`, `admin_merge_watch_models(p_src uuid, p_dst uuid)`, `admin_update_watch_model(p_id uuid, p_name text, p_slug text, p_specs jsonb, p_hero text, p_curated boolean)`. Client fns `loadAdminModels()`, `adminMergeModels()`, `adminEditModel(id)`, `adminSaveModel(id)` (uses existing `escAttr`/`escHtml`/`toast`).
 
 - [ ] **Step 1: Write the admin SQL** — `sql/2026-08-23-watch-models-admin.sql`. Every function starts with the repo's standard admin gate (pattern from `sql/2026-06-27-featured-post.sql:96`):
 
@@ -581,8 +581,26 @@ async function loadAdminModels() {
       <td>${escHtml(m.brand)} ${escHtml(m.name)}${m.is_auto ? ' <span style="color:var(--muted);">(auto)</span>' : ''}</td>
       <td style="color:var(--muted);">${escHtml(m.slug)}</td>
       <td>${m.owners}</td><td>${m.watches}</td>
-      <td>${m.is_auto ? `<button class="chip" onclick="adminCurateModel('${m.id}')">Curate</button>` : ''}</td>
-    </tr>`).join('') + '</table>';
+      <td style="white-space:nowrap;">${m.is_auto ? `<button class="chip" onclick="adminCurateModel('${m.id}')">Curate</button>` : ''}
+        <button class="chip" onclick="adminEditModel('${m.id}')">Edit</button></td>
+    </tr>
+    <tr id="adm-model-edit-${m.id}" style="display:none;"><td colspan="5" style="padding:.4rem 0;">
+      <input id="adm-mn-${m.id}" value="${escAttr(m.name)}" placeholder="name" style="width:30%;">
+      <input id="adm-ms-${m.id}" value="${escAttr(m.slug)}" placeholder="slug" style="width:30%;">
+      <input id="adm-mh-${m.id}" value="${escAttr(m.hero_image || '')}" placeholder="hero image URL" style="width:26%;">
+      <button class="chip" onclick="adminSaveModel('${m.id}')">Save</button>
+    </td></tr>`).join('') + '</table>';
+}
+function adminEditModel(id) {
+  const tr = document.getElementById('adm-model-edit-' + id);
+  tr.style.display = tr.style.display === 'none' ? '' : 'none';
+}
+async function adminSaveModel(id) {
+  const val = k => document.getElementById('adm-' + k + '-' + id).value.trim();
+  const { error } = await db.rpc('admin_update_watch_model', {
+    p_id: id, p_name: val('mn') || null, p_slug: val('ms') || null, p_hero: val('mh') || null });
+  if (error) { toast('Save failed: ' + error.message, 'error'); return; }
+  toast('Saved'); loadAdminModels();
 }
 async function adminMergeModels() {
   const src = _adminModels.find(m => m.slug === document.getElementById('adm-merge-src').value.trim());
@@ -889,9 +907,10 @@ begin
   return json_build_object(
     'model', json_build_object('brand', v_m.brand, 'name', v_m.name, 'slug', v_m.slug,
                                'specs', v_m.specs, 'hero_image', v_m.hero_image),
-    'teasers', coalesce((select json_agg(f.fact order by f.position)
-        from (select fact, position from watch_facts
-              where model_key = v_m.facts_key order by position limit 3) f), '[]'::json),
+    'teasers', coalesce((select json_agg(f.teaser order by f.position)
+        from (select coalesce((regexp_match(fact, '^.*?[.!?](?=\s|$)'))[1], left(fact, 140)) as teaser, position
+              from watch_facts where model_key = v_m.facts_key
+              order by position limit 3) f), '[]'::json),
     'owners', public.model_owners(v_m.id));
 end $$;
 
@@ -899,7 +918,7 @@ grant execute on function public.model_page(text) to anon;
 notify pgrst, 'reload schema';
 ```
 
-Apply with `--file`, then verify anon: `curl -s "https://api.wrotate.com/rest/v1/rpc/model_page" -X POST -H "apikey: <anon key from p/index.html>" -H "Content-Type: application/json" -d '{"p_slug":"rolex-submariner"}'` → JSON with model + 3 teaser strings (full facts are NOT in the payload — the RPC truncation below guards that). **Truncate server-side:** wrap each fact in the RPC with the same first-sentence rule — replace `f.fact` in the json_agg with `(regexp_match(f.fact, '^.*?[.!?](?=\s|$)'))[1]` and fall back to `left(f.fact, 140)` when the regex returns null: `coalesce((regexp_match(f.fact, '^.*?[.!?](?=\s|$)'))[1], left(f.fact, 140))`. The page appends the ellipsis. Full fact text must never leave the server on this endpoint.
+Apply with `--file`, then verify anon: `curl -s "https://api.wrotate.com/rest/v1/rpc/model_page" -X POST -H "apikey: <anon key from p/index.html>" -H "Content-Type: application/json" -d '{"p_slug":"rolex-submariner"}'` → JSON with model + 3 teaser strings. The RPC truncates to the first sentence server-side (regexp above; 140-char fallback) and the page appends the ellipsis — full fact text must never leave the server on this endpoint.
 
 - [ ] **Step 2: Build `w/index.html`** by copying `profile/index.html`'s skeleton (same CSP meta, same `design-system.css` link, same supabase-js CDN + `createClient` block with the anon key and `https://api.wrotate.com`). Body structure:
 
