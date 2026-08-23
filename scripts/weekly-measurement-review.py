@@ -1,22 +1,32 @@
 #!/usr/bin/env python3
 """Weekly measurement review — runs Sundays via launchd.
 
-Goal: drive ONE small, population-weighted improvement per week. It analyses 2.0
-measurement sessions (from tick_logs — timegrapher_results is RLS-blocked to the
-test user), last 7 days AND cumulative since release, classifies every failing
-session into a failure mode, and ranks the modes by DISTINCT USERS AFFECTED — so
-a single heavy user can't steer the roadmap and we fix what helps the most people.
+Goal: drive ONE small, population-weighted improvement per week to the shipped mic
+engine (the Pro V2 "tg" autocorrelation-period core, default since 2.4 / 2026-08-02).
+It reads every external tg session from `timegrapher_tick_logs` (timegrapher_results
+is RLS-blocked to the test user) and answers, for this week vs last week vs the tg era:
 
-Outputs a ranked report + a #1 recommended change, writes a metrics snapshot for
-week-over-week before/after, echoes the change ledger, and emails the report.
+  1. What did users actually get?  sane number / wrong number / no reading, converged%,
+     back-to-back repeatability, first-time-user success, by build.
+  2. Are the wrong numbers slow watches or bad locks?  (per-watch reference: the same
+     watch reads sane elsewhere → the wrong number is a lock failure, not the watch)
+  3. Which logged signal would have caught the bad locks at convergence, and at what
+     cost in good readings?  (the table that decides the next knob flip — every
+     candidate is a live JS-tunable knob or a shadow verdict already in the logs)
+  4. When does the lock happen, and does a late lock ever turn out right?
+  5. Trend table over the last weeks + the change ledger tail.
 
-Anti-recency rules baked into the ranking:
-  - rank by distinct users (each user counts once per mode, regardless of volume)
-  - persistence: a mode is "actionable" only with >= MIN_USERS distinct users
-  - breadth: also require >= MIN_WATCHES distinct watches (no single-watch tuning)
+Rewritten 2026-08-23: the previous report had gone stale — its Pro V2 flip gate was
+long since passed (Pro V2 IS the engine), its failure-mode table was dominated by the
+retired legacy detector (weak_signal = pre-2.4), its ⭐ recommendation repeated a change
+shipped 2026-06-28 every week, and the onboarding-4 email section was a dead campaign.
+
+Anti-recency rules: every per-user figure counts a user once; the recommendation
+follows the gate-candidate table (population-wide), never one watch.
 
 After editing, copy to the deployed path:
   cp scripts/weekly-measurement-review.py ~/.local/bin/wrotate-weekly-review.py
+Flags: --force (ignore the once-per-week guard)  --dry-run (print only: no email, no snapshot)
 """
 import json, re, subprocess, sys, os, traceback
 from datetime import datetime, timedelta, timezone
@@ -46,23 +56,24 @@ def _test_account_password():
 
 AUTH_PASS = _test_account_password()
 REPORT_TO = "ozgurdogan@gmail.com"
-RELEASE_DATE = "2026-06-11"                 # 2.0 release — cumulative window start
+TG_ERA = "2026-08-02"                      # 2.4 release — Pro V2 (tg) became the default engine
+RELEASE_DATE = TG_ERA                      # fetch/cumulative window start
 SNAP_FILE = os.path.expanduser("~/.local/share/wrotate-measurement-history.log")
-# Onboarding 4 email impact: per-user straps/elo state snapshotted 2026-07-13,
-# ~3h after the first 53 sends (see onboarding4_section).
-OB4_BASELINE = os.path.expanduser("~/.local/share/wrotate-logs/onboarding4-baseline.json")
 LEDGER = os.path.expanduser("~/Documents/Claude project/watch tracker/docs/measurement-changelog.md")
 # launchd runs can't read ~/Documents (macOS TCC) — keep a cache the LaunchAgent can reach.
 # Manual runs refresh it from the repo copy.
 LEDGER_CACHE = os.path.expanduser("~/.local/share/wrotate-measurement-changelog.md")
 TMP = "/tmp/wrotate-weekly"
-# Usability proxy (no Weishi ground truth): a "good" session produced a believable,
-# well-supported reading.
+# "sane" = a believable number. No Weishi ground truth in the field; the per-watch
+# reference (below) is the truth proxy for lock quality.
 GOOD_MAX_RATE = 15      # |s/day|
-GOOD_MIN_TICKS = 40
-# Actionability gates for a failure mode to qualify as the weekly change target.
-MIN_USERS = 3
-MIN_WATCHES = 2
+GOOD_MIN_TICKS = 40     # legacy-engine proxy only (pre-2.4 sessions)
+# Per-watch reference truth: a watch with >= REF_MIN_SANE sane readings defines a
+# reference (their median); a reading > REF_BAD_DEV off it is a bad lock, <= REF_GOOD_DEV
+# is a good one. Positional variance of a real watch is well under 10 s/d, so the gap
+# between the two bands keeps ambiguous readings out of both classes.
+REF_MIN_SANE, REF_GOOD_DEV, REF_BAD_DEV = 2, 5.0, 10.0
+TREND_WEEKS = 8
 
 os.makedirs(TMP, exist_ok=True)
 os.makedirs(os.path.dirname(SNAP_FILE), exist_ok=True)
@@ -105,8 +116,8 @@ def fetch_paginated(path, hdrs):
         page = curl(f"{BASE_URL}{path}", hdrs + [f"Range: {off}-{off+PAGE-1}"])
         # A dict here is a PostgREST error object, not a page of rows. Returning
         # the rows collected so far would silently undercount — and the weekly
-        # change is ranked by distinct-users-per-failure-mode, so a truncated
-        # set skews which fix ships. Fail loud; the __main__ guard emails it.
+        # change is ranked on population-wide figures, so a truncated set skews
+        # which fix ships. Fail loud; the __main__ guard emails it.
         if isinstance(page, dict):
             raise RuntimeError(f"Query error on {path} at offset {off}: {page}")
         rows += page
@@ -128,99 +139,88 @@ def analyze(blob):
     auto = (ts.group(2) == "true") if ts else None
     stop = ("plateau" if "plateau" in blob else "cap" if "duration_cap" in blob
             else "stopped" if ("user_stopped" in blob or "user_quit" in blob) else "?")
+    end = (re.search(r'"stop_reason"\s*:\s*"([^"]+)"', blob) or [None, None])[1]
     return dict(uid=uid, wid=wid, bph=bph, final=final, n_acc=n_acc,
-                pair_rej=pair_rej, phase_rej=phase_rej, auto=auto, stop=stop)
+                pair_rej=pair_rej, phase_rej=phase_rej, auto=auto, stop=stop, end=end,
+                build=build_of(blob), precision=(re.search(r'"precision"\s*:\s*"(\w+)"', blob) or [None, None])[1])
+
+
+def build_of(blob):
+    """iOS engine generation from the TGTUNE knob echo (each build added knobs)."""
+    t = re.search(r'\[TGTUNE\][^\n]*', blob)
+    t = t.group(0) if t else ""
+    if "confirmBand" in t: return "2.5+"
+    if "holdOnLock" in t: return "2.4"
+    if "tgKnobs" in t: return "2.1-2.3"
+    return "pre-2.1"
+
+
+_ALGO_RE = re.compile(r'\[TGALGO @ (\d+)s\] useTg=\w+ reg=([+\-\d.]+|nil) tg=([+\-\d.]+|nil)'
+                      r'(?: amp=([\d.]+|nil))?(?: be=([\d.]+|nil))?.*?win=(\d+)s gate=(\d+)(?: ga=(\d+))?')
 
 
 def prov2_stats(blob):
-    """Pro V2 shadow A/B from [TGALGO] lines (2.1 builds log reg vs tg + amp on EVERY
-    run, toggle on or off) + the session_summary algo/converged fields."""
-    pairs = re.findall(r'\[TGALGO @ \d+s\] useTg=\w+ reg=([+\-\d.]+|nil) tg=([+\-\d.]+|nil)(?: amp=([\d.]+|nil))?', blob)
-    if not pairs:
+    """Per-session tg-engine facts from the [TGALGO] lines (logged every ~2 s on every
+    2.1+ session: reg vs tg, amplitude, window, σ-gate counters, T1 shadow verdicts) plus
+    the session_summary algo/converged/duration fields. None for pre-2.1 sessions."""
+    rows = _ALGO_RE.findall(blob)
+    if not rows:
         return None
-    # 2.5 lock-validation shadow verdicts (lc=1 confirmed / lr>0 rejected) + harmonic-guard
-    # fires ('-> median' sessions are the ones guard mode 1 would have refused).
+    def num(x): return None if (x in ("", "nil")) else float(x)
+    ser = [dict(t=int(r[0]), reg=num(r[1]), tg=num(r[2]), amp=num(r[3]), be=num(r[4]),
+                win=int(r[5]), gate=int(r[6]), ga=int(r[7]) if r[7] else None) for r in rows]
+    tgs = [x["tg"] for x in ser if x["tg"] is not None]
+    regs = [x["reg"] for x in ser if x["reg"] is not None]
+    amps = [x["amp"] for x in ser if x["amp"] is not None]
+    bes = [x["be"] for x in ser if x["be"] is not None]
+    both = [(x["reg"], x["tg"]) for x in ser if x["reg"] is not None and x["tg"] is not None]
     lock = re.findall(r'\blc=(\d+) lr=(\d+)', blob)
-    both = [(float(r), float(t)) for r, t, _ in pairs if r != "nil" and t != "nil"]
-    tgs = [float(t) for _, t, _ in pairs if t != "nil"]
-    regs = [float(r) for r, _, _ in pairs if r != "nil"]
-    amps = [float(a) for _, _, a in pairs if a and a != "nil"]
     algo = (re.search(r'"algo"\s*:\s*"(\w+)"', blob) or [None, None])[1]
     conv = '"converged":true' in blob.replace(" ", "")
     dur = (re.search(r'"duration_sec"\s*:\s*(\d+)', blob) or [None, None])[1]
+    last = ser[-1]
+    # Within-session movement of the tg estimate. A good lock sits still (2nd-half range
+    # p50 0.7 s/d); a bad one wanders (p50 6.7) — 2026-08-23. TGALGO logs every ~2 s, so
+    # the last 4 estimates ≈ the last 8 s: what a tg_stabwin=8 stability test would see.
+    half = tgs[len(tgs) // 2:] if len(tgs) >= 4 else []
+    last4 = tgs[-4:] if len(tgs) >= 4 else []
     return dict(
         delta=abs(both[-1][1] - both[-1][0]) if both else None,   # final |tg − reg|
-        tg_final=tgs[-1] if tgs else None,     # tg engine's own final rate (the shipped number in beta)
+        tg_final=tgs[-1] if tgs else None,     # tg engine's own final rate (the shipped number)
         reg_final=regs[-1] if regs else None,
         amp=amps[-1] if amps else None,
         amp_ok=(135 <= amps[-1] <= 360) if amps else None,
+        be=bes[-1] if bes else None,
         algo=algo or "original", conv=conv,
         dur=int(dur) if dur else None,
+        first_tg_t=next((x["t"] for x in ser if x["tg"] is not None), None),
+        drift2h=(max(half) - min(half)) if half else None,
+        range8=(max(last4) - min(last4)) if last4 else None,
+        gate_last=last["gate"], ga_last=last["ga"], win_last=last["win"],
+        gate_frac=(last["gate"] / last["ga"]) if last["ga"] else None,
         lc=int(lock[-1][0]) if lock else None,
         lr=int(lock[-1][1]) if lock else None,
         # The event lines are the verdict truth: TGALGO logs every ~2s, so the final lc=
-        # can lag a confirm that landed just before convergence (seen in the 2026-08-15
-        # TestFlight UAT — sessions confirmed+converged with the last line still lc=0).
+        # can lag a confirm that landed just before convergence.
         lconf=blob.count("[TGALGO lock-confirm]"),
         lrej=blob.count("[TGALGO lock-reject]"),
         guard_fires=blob.count("harmonic-guard"))
 
 
-FLIP_GATE = dict(users=20, sessions=100, conv_pct=80, ttc_median=15, delta_median=3.0)
+def is_tg(a):
+    v2 = a.get("v2")
+    return bool(v2 and v2.get("algo") == "tg")
 
 
 def is_good(a):
     # Pro V2 (tg engine) bypasses the legacy per-tick detector, so it emits few
-    # TGTICK lines (median ~15) and would ALWAYS fail the >=40-tick gate — which
-    # silently mis-scored every beta session as a failure. For a tg session the
-    # good-signal proxy is instead: it converged AND its own tg rate is believable.
+    # TGTICK lines and would ALWAYS fail the >=40-tick gate. For a tg session the
+    # good-signal proxy is: it converged AND its own tg rate is believable.
     v2 = a.get("v2")
     if v2 and v2.get("algo") == "tg":
         r = v2.get("tg_final")
         return r is not None and abs(r) <= GOOD_MAX_RATE and bool(v2.get("conv"))
     return a["final"] is not None and abs(a["final"]) <= GOOD_MAX_RATE and a["n_acc"] >= GOOD_MIN_TICKS
-
-
-def failure_mode(a):
-    """Primary failure mode (priority order → clean partition)."""
-    if is_good(a):
-        return None
-    # Pro V2 (tg) sessions can't be scored with the legacy detector's tick/reject
-    # counts — classify them on the tg engine's own convergence + rate instead.
-    v2 = a.get("v2")
-    if v2 and v2.get("algo") == "tg":
-        r = v2.get("tg_final")
-        if not v2.get("conv"):
-            return "tg_no_converge"        # tg didn't settle on a stable period
-        if r is not None and abs(r) > GOOD_MAX_RATE:
-            # Shipped to the user AS CONVERGED with a wild rate — a confidently-wrong
-            # lock (2026-08-15 deep dive: 229 sessions / 33 users in the 2.4 era;
-            # b2b shows these are bad locks, not vintage watches). The single most
-            # trust-damaging mode; target of docs/spec-tg-lock-validation.md T1/T2.
-            return "tg_wild_converged"
-        if a["bph"] and int(a["bph"]) <= 21600:
-            return "low_bph"               # tg low-beat harmonic regime (see #2 native guard)
-        return "moderate_wild"             # 15–40 s/day off
-    if a["n_acc"] < GOOD_MIN_TICKS:
-        return "weak_signal"          # couldn't hear the watch (coupling / faint)
-    if a["pair_rej"] + a["phase_rej"] > a["n_acc"]:
-        return "reject_storm"          # noise / twin-peak thrash
-    if a["bph"] and int(a["bph"]) <= 21600:
-        return "low_bph"               # low-beat regime (harmonic / drift)
-    if a["final"] is not None and abs(a["final"]) > 40:
-        return "gross_wild"            # likely harmonic lock at any bph
-    return "moderate_wild"             # 15–40 s/day off
-
-
-MODE_FIX = {
-    "weak_signal":  ("JS", "Better 'can't hear the watch — reposition on the mic / quieter spot' guidance + earlier abort instead of grinding to a number"),
-    "reject_storm": ("native", "Noise / twin-peak handling in detection (reject-storm guard)"),
-    "low_bph":      ("native", "Low-BPH harmonic rejection + low-beat detection tuning (18000/21600)"),
-    "gross_wild":   ("native", "Harmonic-lock guard: reject candidate rates implying 2×/0.5× the selected period"),
-    "moderate_wild":("native", "Convergence/outlier tightening for mid-range drift"),
-    "tg_no_converge":("native", "Pro V2 (tg) convergence: settle-rule / low-BPH lock tuning so it reaches a stable period"),
-    "tg_wild_converged":("native", "TG lock validation (docs/spec-tg-lock-validation.md T1/T2): disjoint-segment confirm; harmonic guard refuses instead of median-shipping"),
-}
 
 
 def _parse_ts(s):
@@ -243,13 +243,18 @@ def _session_rate(a):
     return a.get("final")
 
 
+def outcome(a):
+    """What the user walked away with: 'sane' | 'wrong' | 'none'."""
+    r = _session_rate(a)
+    if r is None: return "none"
+    return "sane" if abs(r) <= GOOD_MAX_RATE else "wrong"
+
+
 def b2b_repeatability(sessions):
     """Back-to-back |Δrate| for same user+watch pairs measured < 10 min apart.
 
     Same position, same temperature — physics excluded, so this is pure
-    algorithm/acquisition variance: the direct field metric for the tg
-    lock-validation work (2026-08-15 deep dive: p50 8.1 s/d overall, 2.5 when
-    both locks are sane, 18.7 when one is wild). Returns dict or None.
+    algorithm/acquisition variance. Returns dict or None.
     """
     per = defaultdict(list)
     for a in sessions:
@@ -275,116 +280,122 @@ def b2b_repeatability(sessions):
                 wild_n=len(wild_d), wild_p50=q(wild_d, .5))
 
 
-def lock_shadow_section(cum):
-    """T1/T2 silent field A/B from 2.5 sessions — nothing is enforced; the engine logs
-    what the lock-validation gate WOULD have decided (lc=/lr= in TGALGO, staged 6 s/d
-    band) on every live measurement.
+def watch_refs(sessions):
+    """Per (user, watch): median of its sane readings when it has >= REF_MIN_SANE of them."""
+    per = defaultdict(list)
+    for a in sessions:
+        r = _session_rate(a)
+        if r is not None and a.get("uid") and a.get("wid"):
+            per[(a["uid"], a["wid"])].append(r)
+    refs = {}
+    for k, rs in per.items():
+        sane = [r for r in rs if abs(r) <= GOOD_MAX_RATE]
+        if len(sane) >= REF_MIN_SANE:
+            refs[k] = st.median(sane)
+    return refs, per
 
-    'Working' = the gate's rejects concentrate the wild finals: shadow-rejected sessions
-    should be several times wilder than shadow-confirmed ones, and confirmed-only b2b
-    should approach the 2.5 s/d sane-pair baseline from the 2026-08-15 deep dive. When
-    the verdict line says SIGNAL, flipping tg_confirmband to 6 is evidence-backed.
-    """
-    pop = [a for a in cum if a.get("v2") and a["v2"].get("lc") is not None]
-    L = ["\n## Lock-validation shadow A/B (2.5 sessions; nothing enforced)"]
-    if not pop:
-        L.append("- No 2.5 sessions in the field yet — this section fills in automatically after the App Store release.")
-        return L
 
-    def verdict(a):
-        v2 = a["v2"]
-        if v2["lc"] == 1 or (v2.get("lconf") or 0) > 0:
-            return "confirmed"
-        return "rejected" if ((v2["lr"] or 0) > 0 or (v2.get("lrej") or 0) > 0) else "undecided"
+def lock_label(a, refs):
+    """'good' / 'bad' against the watch's reference, or None when no verdict is possible."""
+    r = _session_rate(a)
+    ref = refs.get((a.get("uid"), a.get("wid")))
+    if r is None or ref is None: return None
+    d = abs(r - ref)
+    return "bad" if d > REF_BAD_DEV else "good" if d <= REF_GOOD_DEV else None
 
-    def wild_share(xs):
-        r = [_session_rate(a) for a in xs]
-        r = [x for x in r if x is not None]
-        return (sum(1 for x in r if abs(x) > GOOD_MAX_RATE) / len(r)) if r else None
 
-    groups = defaultdict(list)
-    for a in pop:
-        groups[verdict(a)].append(a)
-    for g in ("confirmed", "rejected", "undecided"):
-        xs = groups.get(g, [])
-        if not xs:
-            continue
-        ws = wild_share(xs)
-        b = b2b_repeatability(xs)
-        L.append(f"- {g}: {len(xs)} sessions, {len({a['uid'] for a in xs})} users"
-                 + (f", wild-final {round(100 * ws)}%" if ws is not None else "")
-                 + (f", b2b p50 {b['p50']} s/d ({b['n']} pairs)" if b else ""))
-    wc, wr = wild_share(groups.get("confirmed", [])), wild_share(groups.get("rejected", []))
-    if wc is not None and wr is not None and len(groups["rejected"]) >= 10:
-        ratio = (wr / wc) if wc > 0 else float("inf")
-        rtxt = "∞" if ratio == float("inf") else f"{ratio:.1f}"
-        L.append(f"- Verdict: rejected sessions are {rtxt}x wilder than confirmed "
-                 + ("→ the gate is finding the bad locks [SIGNAL — tg_confirmband=6 is evidence-backed]"
-                    if ratio >= 3 else "→ separation weak so far [keep shadowing]"))
-    else:
-        L.append("- Verdict: not enough shadow-rejected sessions for a read yet (need >= 10).")
-    # T2 shadow: every harmonic-guard fire under mode 0 is a session mode 1 would refuse.
-    gm = [a for a in pop if (a["v2"].get("guard_fires") or 0) > 0]
-    if gm:
-        ws = wild_share(gm)
-        L.append(f"- Guard-fired sessions (mode 1 would refuse these): {len(gm)} ({len({a['uid'] for a in gm})} users)"
-                 + (f", wild-final {round(100 * ws)}%" if ws is not None else ""))
-    return L
+def wrong_attribution(sessions, refs, per):
+    """Split the wrong-number sessions: watch reads sane elsewhere (→ bad lock) vs
+    consistently wild (→ either a genuinely out-of-spec watch or a repeatable bad lock;
+    the per-watch spread tells which)."""
+    out = dict(total=0, bad_lock=0, consistent=0, thin=0, consistent_watches=[])
+    seen = set()
+    for a in sessions:
+        if outcome(a) != "wrong": continue
+        out["total"] += 1
+        k = (a.get("uid"), a.get("wid"))
+        rs = per.get(k, [])
+        if k in refs: out["bad_lock"] += 1
+        elif len(rs) >= 3 and all(abs(r) > GOOD_MAX_RATE for r in rs):
+            out["consistent"] += 1
+            if k not in seen:
+                seen.add(k)
+                out["consistent_watches"].append((a.get("bph"), len(rs), round(st.median(rs), 1), round(st.pstdev(rs), 1)))
+        else:
+            out["thin"] += 1
+    return out
+
+
+# Candidate convergence gates — each is something the engine already exposes as a JS
+# knob or a shadow verdict, evaluated on CONVERGED sessions against the per-watch truth.
+# (knob, description, predicate over v2 stats)
+GATE_CANDIDATES = [
+    ("tg_guardmode=1",   "harmonic guard fired: windows disagree → refuse",   lambda v: (v["guard_fires"] or 0) > 0),
+    ("tg_stabwin=8",     "rate moved > 3 s/d over the last ~8 s (delay)",    lambda v: v["range8"] is not None and v["range8"] > 3),
+    ("tg_gatemaxrej=0.5", "σ-gate rejected > 50% of windows",                lambda v: v["gate_frac"] is not None and v["gate_frac"] > 0.5),
+    ("tg_ampmin=135",    "amplitude < 135° or none",                         lambda v: v["amp"] is None or v["amp"] < 135),
+    ("(native, no knob)", "|tg − reg| > 10 s/d at the end",                  lambda v: v["delta"] is not None and v["delta"] > 10),
+    ("(no knob)",        "tg moved > 6 s/d over the 2nd half of the run",     lambda v: v["drift2h"] is not None and v["drift2h"] > 6),
+    # T1 verdicts exist only on 2.5+ logs (lc=/lr=); None → the session is left out of that row.
+    ("tg_confirmband=6", "T1 shadow: lock ever REJECTED (lr>0)",             lambda v: None if v["lc"] is None else ((v["lr"] or 0) > 0 or (v["lrej"] or 0) > 0)),
+    ("tg_confirmband=6", "T1 shadow: lock never CONFIRMED (lc≠1)",           lambda v: None if v["lc"] is None else not (v["lc"] == 1 or (v["lconf"] or 0) > 0)),
+]
+
+
+def gate_candidate_table(sessions, refs):
+    conv = [a for a in sessions if is_tg(a) and a["v2"]["conv"]]
+    good = [a for a in conv if lock_label(a, refs) == "good"]
+    bad = [a for a in conv if lock_label(a, refs) == "bad"]
+    rows = []
+    for knob, desc, pred in GATE_CANDIDATES:
+        vb = [pred(a["v2"]) for a in bad]; vg = [pred(a["v2"]) for a in good]
+        nb = sum(1 for x in vb if x is not None); ng = sum(1 for x in vg if x is not None)
+        bb = sum(1 for x in vb if x); gb = sum(1 for x in vg if x)
+        pb = 100 * bb / nb if nb else None; pg = 100 * gb / ng if ng else None
+        ratio = (pb / pg) if (pb is not None and pg) else (float("inf") if pb else None)
+        rows.append(dict(knob=knob, desc=desc, bb=bb, gb=gb, nb=nb, ng=ng, pb=pb, pg=pg, ratio=ratio))
+    return rows, len(good), len(bad)
+
+
+def first_lock_table(sessions):
+    """Outcome by the time of tg's FIRST rate — does waiting longer ever produce a good lock?"""
+    bands = [("≤3 s", 0, 3), ("4–5 s", 4, 5), ("6–9 s", 6, 9), ("10–15 s", 10, 15), ("> 15 s", 16, 10**6)]
+    out = []
+    for label, lo, hi in bands:
+        xs = [a for a in sessions if is_tg(a) and a["v2"]["first_tg_t"] is not None and lo <= a["v2"]["first_tg_t"] <= hi and _session_rate(a) is not None]
+        sane = sum(1 for a in xs if outcome(a) == "sane")
+        out.append((label, len(xs), sane))
+    return out
 
 
 def summarize(sessions):
-    """Return headline + per-mode (distinct users/watches/sessions) for a session list."""
-    good = sum(1 for a in sessions if is_good(a))
-    n = len(sessions)
-    by_bph = defaultdict(lambda: [0, 0])
-    modes = defaultdict(lambda: {"sessions": 0, "users": set(), "watches": set()})
-    for a in sessions:
-        by_bph[a["bph"]][0] += 1
-        if is_good(a):
-            by_bph[a["bph"]][1] += 1
-        else:
-            m = failure_mode(a)
-            modes[m]["sessions"] += 1
-            if a["uid"]: modes[m]["users"].add(a["uid"])
-            if a["wid"]: modes[m]["watches"].add(a["wid"])
-    return dict(good=good, n=n, by_bph=by_bph, modes=modes,
-                users=len({a["uid"] for a in sessions if a["uid"]}))
+    """Headline counts for a session list (tg sessions only for engine metrics)."""
+    tgs = [a for a in sessions if is_tg(a)]
+    n = len(tgs)
+    oc = {"sane": 0, "wrong": 0, "none": 0}
+    users_by = defaultdict(set)
+    for a in tgs:
+        o = outcome(a); oc[o] += 1
+        if a["uid"]: users_by[o].add(a["uid"])
+    conv = [a for a in tgs if a["v2"]["conv"]]
+    conv_wrong = sum(1 for a in conv if outcome(a) == "wrong")
+    byu = defaultdict(list)
+    for a in tgs: byu[a["uid"]].append(a)
+    casual = [xs for xs in byu.values() if len(xs) <= 3]
+    casual_sess = [a for xs in casual for a in xs]
+    casual_sane = sum(1 for a in casual_sess if outcome(a) == "sane")
+    builds = defaultdict(int)
+    for a in tgs: builds[a["build"]] += 1
+    ends = defaultdict(int)
+    for a in tgs:
+        if outcome(a) == "none": ends[a.get("end") or "?"] += 1
+    return dict(n=n, users=len(byu), oc=oc, users_by={k: len(v) for k, v in users_by.items()},
+                conv=len(conv), conv_wrong=conv_wrong, b2b=b2b_repeatability(tgs),
+                casual_users=len(casual), casual_n=len(casual_sess), casual_sane=casual_sane,
+                builds=dict(builds), none_ends=dict(ends), legacy=len(sessions) - n)
 
 
-def onboarding4_section(H):
-    """Onboarding 4 email (straps + ranking game) impact vs the 2026-07-13
-    baseline. Diffs per-user state from the onboarding4_feature_state RPC
-    (SECURITY DEFINER — watches are RLS-blocked to the test user). has_played =
-    any watch elo_rating <> 1000 default; users absent from the baseline count
-    from zero. Returns report lines; never raises."""
-    L = ["\n## Onboarding 4 email — straps & ranking game impact"]
-    try:
-        base = json.load(open(OB4_BASELINE))
-        cur = curl(f"{BASE_URL}/rest/v1/rpc/onboarding4_feature_state",
-                   H + ["Content-Type: application/json"], "POST", "{}")
-        if isinstance(cur, dict):
-            raise RuntimeError(f"rpc error: {cur}")
-        bu = base.get("per_user", {})
-        bs = base.get("summary", {})
-        recipients = sum(1 for r in cur if r.get("o4_sent_at"))
-        new_players, new_strappers, straps_added = [], [], 0
-        for r in cur:
-            b = bu.get(r["user_id"], {"has_played": False, "strap_ct": 0})
-            if r["has_played"] and not b["has_played"]:
-                new_players.append(r)
-            d = r["strap_ct"] - b["strap_ct"]
-            if d > 0:
-                new_strappers.append(r)
-                straps_added += d
-        emailed = lambda rows: sum(1 for r in rows if r.get("o4_sent_at"))
-        players_now = sum(1 for r in cur if r["has_played"])
-        strappers_now = sum(1 for r in cur if r["strap_ct"] > 0)
-        L.append(f"- Sent so far: {recipients} recipients with watches (50/day backfill + day-14 drip; baseline {base.get('snapshot_at','?')[:10]})")
-        L.append(f"- New ranking-game players since baseline: {len(new_players)} ({emailed(new_players)} of them emailed) — total {bs.get('users_played_ranking','?')} → {players_now}")
-        L.append(f"- Users who added straps since baseline: {len(new_strappers)} ({emailed(new_strappers)} of them emailed), +{straps_added} straps — users with straps {bs.get('users_with_straps','?')} → {strappers_now}")
-    except Exception as e:
-        L.append(f"  (section failed: {e})")
-    return L
+def _pct(a, b): return f"{round(100*a/b)}%" if b else "—"
 
 
 def _week_anchor(d):
@@ -424,8 +435,34 @@ def _already_ran_this_week():
     return False
 
 
+def recommend(rows, n_bad, n_good, W, attribution):
+    """ONE evidence-backed next step. A knob qualifies when it would have blocked >= 15%
+    of this era's bad locks at <= 10% good-lock cost and with >= 10 bad sessions behind
+    it; the best ratio wins. Otherwise say plainly that no logged signal clears the bar."""
+    L = []
+    ok = [r for r in rows if r["pb"] is not None and r["pg"] is not None and r["bb"] >= 10
+          and r["pb"] >= 15 and r["pg"] <= 10 and not r["knob"].startswith("(")]
+    ok.sort(key=lambda r: -(r["ratio"] or 0))
+    none_share = (W["oc"]["none"] / W["n"]) if W["n"] else 0
+    if ok:
+        r = ok[0]
+        L.append(f"- **Flip `{r['knob']}`** — \"{r['desc']}\" would have blocked {r['bb']}/{r['nb']} bad locks ({round(r['pb'])}%) "
+                 f"at a cost of {r['gb']}/{r['ng']} good ones ({round(r['pg'])}%), {r['ratio']:.1f}× separation. One knob; re-check next Sunday "
+                 f"(metric: wrong-of-converged ↓, b2b wild-pair count ↓).")
+    else:
+        L.append(f"- **No JS knob clears the bar** (≥15% of bad locks blocked at ≤10% good cost, n≥10). The bad locks are stable "
+                 f"within a session and only show up between sessions, so a convergence gate built from the logged signals "
+                 f"cannot separate them well enough — the estimator itself has to improve, and that needs raw-audio captures "
+                 f"from field sessions to iterate offline (mic raw-capture build). Do not flip a knob on this week's data.")
+    if none_share >= 0.25:
+        L.append(f"- {round(100*none_share)}% of this week's sessions ended with NO reading; section 4 says late locks are "
+                 f"rarely right, so the win there is honesty, not patience: tell the user to reposition by ~6–8 s instead of grinding to 15 s.")
+    return L
+
+
 def main():
-    if _already_ran_this_week() and "--force" not in sys.argv:
+    dry = "--dry-run" in sys.argv
+    if _already_ran_this_week() and "--force" not in sys.argv and not dry:
         print("[weekly-review] Already ran this review week — skipping (use --force to override).")
         return
 
@@ -448,12 +485,11 @@ def main():
 
     now = datetime.now(timezone.utc)
     wk_cut = (now - timedelta(days=7)).strftime("%Y-%m-%dT%H:%M:%S")
-    cum, week = [], []
+    pw_cut = (now - timedelta(days=14)).strftime("%Y-%m-%dT%H:%M:%S")
+    cum, week, prior = [], [], []
     for sid, s in sess.items():
         blob = "\n".join(s["msgs"])
-        # 2.0+ native sessions carry psBE=; the 2.1 tg build also carries [TGALGO.
-        # Fast-converging Pro V2 runs don't always emit psBE (they bypass the
-        # phase-sep BE path), so accept either marker or ~29% of beta is dropped.
+        # Native sessions carry psBE= and/or [TGALGO (tg core); web-only sessions have neither.
         if "psBE=" not in blob and "[TGALGO" not in blob: continue
         a = analyze(blob)
         if not a["uid"] or a["uid"] in internal: continue
@@ -461,129 +497,112 @@ def main():
         a["t"] = s["t"]
         cum.append(a)
         if s["t"] and s["t"] >= wk_cut: week.append(a)
+        elif s["t"] and s["t"] >= pw_cut: prior.append(a)
 
-    C, W = summarize(cum), summarize(week)
-    names = {}
-    allu = {a["uid"] for a in cum if a["uid"]}
-    if allu:
-        profs = curl(f"{BASE_URL}/rest/v1/profiles?id=in.({','.join(allu)})&select=id,username", H)
-        names = {p["id"]: (p.get("username") or p["id"][:8]) for p in profs if isinstance(p, dict)}
-
-    L = []
+    C, W, P = summarize(cum), summarize(week), summarize(prior)
+    refs, per = watch_refs([a for a in cum if is_tg(a)])
     date_str = now.strftime("%Y-%m-%d")
+    L = []
     L.append(f"# WRotate Weekly Measurement Review — {date_str}\n")
-    L.append(f"Window: cumulative since {RELEASE_DATE}  |  'good' = |rate|<= {GOOD_MAX_RATE} s/d AND >= {GOOD_MIN_TICKS} ticks (usability proxy; no Weishi truth)\n")
+    L.append(f"Engine in the field: Pro V2 tg core (default since 2.4, {TG_ERA}). All figures are external users' "
+             f"native tg sessions; 'sane' = |rate| ≤ {GOOD_MAX_RATE} s/d; no Weishi truth, so lock quality is judged "
+             f"against each watch's own sane readings (≥{REF_MIN_SANE}; good ≤{REF_GOOD_DEV:.0f} s/d off, bad >{REF_BAD_DEV:.0f}).")
+    bl = sorted(W["builds"].items(), key=lambda kv: -kv[1])
+    L.append("Builds this week (sessions): " + " · ".join(f"{b} {_pct(n, W['n'])}" for b, n in bl))
 
-    def pct(g, n): return f"{round(100*g/n)}%" if n else "—"
-    L.append("## Headline")
-    L.append(f"- Cumulative: {C['users']} users, {C['n']} sessions, {C['good']} good ({pct(C['good'],C['n'])})")
-    L.append(f"- Last 7 days: {W['users']} users, {W['n']} sessions, {W['good']} good ({pct(W['good'],W['n'])})")
+    # 1. Outcomes
+    L.append("\n## 1. What users got")
+    L.append(f"{'':<30}{'this week':>14}{'prior week':>14}{'tg era':>14}")
+    def row(label, f):
+        L.append(f"{label:<30}{f(W):>14}{f(P):>14}{f(C):>14}")
+    row("sessions / users", lambda S: f"{S['n']} / {S['users']}")
+    row("✅ sane number", lambda S: f"{_pct(S['oc']['sane'], S['n'])}")
+    row("❌ wrong number (>15 s/d)", lambda S: f"{_pct(S['oc']['wrong'], S['n'])}")
+    row("⬜ no reading", lambda S: f"{_pct(S['oc']['none'], S['n'])}")
+    row("converged", lambda S: f"{_pct(S['conv'], S['n'])}")
+    row("wrong-of-converged", lambda S: f"{_pct(S['conv_wrong'], S['conv'])}")
+    row("users with ≥1 wrong number", lambda S: f"{S['users_by'].get('wrong', 0)} / {S['users']}")
+    row("users with ≥1 no-reading", lambda S: f"{S['users_by'].get('none', 0)} / {S['users']}")
+    row("b2b p50 sane-pairs / wild", lambda S: (f"{S['b2b']['sane_p50']} / {S['b2b']['wild_p50']}" if S['b2b'] else "—"))
+    row("b2b pairs (sane / wild)", lambda S: (f"{S['b2b']['sane_n']} / {S['b2b']['wild_n']}" if S['b2b'] else "—"))
+    row("casual users (≤3 sessions)", lambda S: f"{S['casual_users']}")
+    row("  their sessions sane", lambda S: f"{_pct(S['casual_sane'], S['casual_n'])}")
+    if W["none_ends"]:
+        ne = sorted(W["none_ends"].items(), key=lambda kv: -kv[1])[:4]
+        L.append("No-reading sessions ended by: " + ", ".join(f"{k} {v}" for k, v in ne))
 
-    L.append("\n## Good% by BPH (cumulative)")
-    for bph, (tot, g) in sorted(C["by_bph"].items(), key=lambda x: -x[1][0]):
-        L.append(f"- {bph} bph: {g}/{tot} ({pct(g,tot)})")
+    # 2. Wrong numbers: watch or lock?
+    L.append("\n## 2. Wrong numbers — slow watch or bad lock?")
+    for label, xs in (("this week", week), ("tg era", cum)):
+        at = wrong_attribution([a for a in xs if is_tg(a)], refs, per)
+        if not at["total"]:
+            L.append(f"- {label}: no wrong numbers"); continue
+        L.append(f"- {label}: {at['total']} wrong → {at['bad_lock']} ({_pct(at['bad_lock'], at['total'])}) on watches that read sane elsewhere = bad locks; "
+                 f"{at['consistent']} on consistently-wild watches; {at['thin']} on watches with too few sessions to tell")
+    at = wrong_attribution([a for a in cum if is_tg(a)], refs, per)
+    if at["consistent_watches"]:
+        cw = sorted(at["consistent_watches"], key=lambda x: -x[1])[:6]
+        L.append("- consistently-wild watches (bph, n, median, spread σ): " + "; ".join(f"{b or '?'} n={n} {m:+.0f}±{sd:.0f}" for b, n, m, sd in cw)
+                 + "  ← a real out-of-spec watch repeats within ~5 s/d; a spread ≥15 means the lock is wrong there too")
 
-    # Back-to-back repeatability: same user+watch < 10 min apart = same position &
-    # temperature, so physics is excluded — pure algorithm variance. Direct field
-    # metric for the tg lock-validation work (target: p50 <= 3 s/d, see
-    # docs/spec-tg-lock-validation.md). sane/wild split shows the bimodal locks.
-    L.append("\n## Back-to-back repeatability (same watch, <10 min apart)")
-    for label, xs in (("cumulative", cum), ("last 7d", week)):
-        b = b2b_repeatability(xs)
-        if b:
-            L.append(f"- {label}: |Δrate| p50 {b['p50']} / p75 {b['p75']} s/d over {b['n']} pairs"
-                     f" — both-sane p50 {b['sane_p50']} ({b['sane_n']}), any-wild p50 {b['wild_p50']} ({b['wild_n']})")
-        else:
-            L.append(f"- {label}: no back-to-back pairs")
+    # 3. Gate candidates
+    rows_g, n_good, n_bad = gate_candidate_table(cum, refs)
+    L.append(f"\n## 3. What would have caught the bad locks at convergence? (tg era, converged sessions: {n_good} good / {n_bad} bad by watch reference)")
+    L.append("Each row: had this gate been on, how many bad-lock convergences it would have stopped (or delayed) vs how many good ones it would have held up.")
+    L.append(f"{'knob':<20}{'signal':<50}{'blocks bad':>12}{'blocks good':>13}{'sep':>6}")
+    for r in rows_g:
+        sep = "—" if r["ratio"] is None else ("∞" if r["ratio"] == float("inf") else f"{r['ratio']:.1f}×")
+        L.append(f"{r['knob']:<20}{r['desc']:<50}{(str(r['bb'])+' ('+str(round(r['pb']))+'%)') if r['pb'] is not None else '—':>12}"
+                 f"{(str(r['gb'])+' ('+str(round(r['pg']))+'%)') if r['pg'] is not None else '—':>13}{sep:>6}")
+    t1 = [r for r in rows_g if r["knob"] == "tg_confirmband=6"]
+    if t1 and all(r["ratio"] is not None and r["ratio"] < 1.5 for r in t1):
+        L.append("→ T1 lock confirmation (8-s disjoint segment, 6 s/d band) does NOT separate bad locks from good: bad locks are stable "
+                 "within a session. Flipping tg_confirmband would cost convergence and fix nothing.")
 
-    # Pro V2 (tg core): shadow A/B from every 2.1 session + beta segment vs the flip gate
-    v2 = [a for a in cum if a.get("v2")]
-    L.append("\n## Pro V2 (tg core) — shadow A/B & beta")
-    if not v2:
-        L.append("- No 2.1-build sessions yet (shadow logging starts with the 2.1 release).")
-    else:
-        users21 = {a["uid"] for a in v2}
-        deltas = sorted(a["v2"]["delta"] for a in v2 if a["v2"]["delta"] is not None)
-        med = deltas[len(deltas) // 2] if deltas else None
-        amp_sess = [a for a in v2 if a["v2"]["amp_ok"] is not None]
-        amp_good = sum(1 for a in amp_sess if a["v2"]["amp_ok"])
-        beta = [a for a in v2 if a["v2"]["algo"] == "tg"]
-        busers = {a["uid"] for a in beta}
-        bconv = sum(1 for a in beta if a["v2"]["conv"])
-        bdurs = sorted(a["v2"]["dur"] for a in beta if a["v2"]["conv"] and a["v2"]["dur"])
-        ttc = bdurs[len(bdurs) // 2] if bdurs else None
-        convp = round(100 * bconv / len(beta)) if beta else None
-        L.append(f"- 2.1 adoption: {len(users21)} users, {len(v2)} sessions — every one shadow-logs reg vs tg")
-        L.append("- Shadow agreement: median |tg−reg| = " + (f"{med:.1f} s/d over {len(deltas)} sessions" if med is not None else "n/a"))
-        L.append(f"- Amplitude plausible (135–360°): {amp_good}/{len(amp_sess)} sessions with a reading")
-        L.append(f"- Beta (Pro V2 selected): {len(busers)} users, {len(beta)} sessions, converged {bconv}/{len(beta)}"
-                 + (f", median time-to-converge {ttc}s" if ttc else ""))
-        g = FLIP_GATE
-        def _chk(v, target, le=False):
-            if v is None: return "–"
-            return "PASS" if (v <= target if le else v >= target) else "…"
-        L.append(f"- Flip gate: users {len(busers)}/{g['users']} [{_chk(len(busers), g['users'])}]"
-                 f" · sessions {len(beta)}/{g['sessions']} [{_chk(len(beta), g['sessions'])}]"
-                 f" · conv {convp if convp is not None else '–'}%/{g['conv_pct']}% [{_chk(convp, g['conv_pct'])}]"
-                 f" · TTC {ttc if ttc is not None else '–'}s ≤{g['ttc_median']}s [{_chk(ttc, g['ttc_median'], le=True)}]"
-                 f" · |tg−reg| {f'{med:.1f}' if med is not None else '–'} ≤{g['delta_median']} [{_chk(med, g['delta_median'], le=True)}]")
+    # 4. First-lock timing
+    L.append("\n## 4. When the lock happens vs how it turns out (tg era)")
+    for label, n, sane in first_lock_table(cum):
+        L.append(f"- first tg rate at {label:<8}: {n:>4} sessions → sane {_pct(sane, n)}")
 
-    L += lock_shadow_section(cum)
-
-    L.append("\n## Failure modes — ranked by DISTINCT USERS affected (anti-recency)")
-    L.append(f"{'mode':<14} {'users(cum)':>10} {'watches':>8} {'sess(cum)':>9} {'users(7d)':>9} {'fix':>7}")
-    ranked = sorted(C["modes"].items(), key=lambda kv: (-len(kv[1]["users"]), -kv[1]["sessions"]))
-    for m, d in ranked:
-        wk_users = len(W["modes"].get(m, {"users": set()})["users"])
-        fix = MODE_FIX.get(m, ("?", ""))[0]
-        L.append(f"{m:<14} {len(d['users']):>10} {len(d['watches']):>8} {d['sessions']:>9} {wk_users:>9} {fix:>7}")
-
-    # #1 recommendation: top mode passing the gates, preferring instant (JS) ship
-    L.append("\n## ⭐ Recommended change this week (ONE)")
-    eligible = [(m, d) for m, d in ranked
-                if len(d["users"]) >= MIN_USERS and len(d["watches"]) >= MIN_WATCHES]
-    if not eligible:
-        L.append("- No failure mode clears the gates (>= %d users, >= %d watches). Hold — keep accumulating." % (MIN_USERS, MIN_WATCHES))
-    else:
-        # prefer a JS-shippable mode among the top 2 by impact; else take #1
-        top2 = eligible[:2]
-        pick = next((x for x in top2 if MODE_FIX.get(x[0], ("",))[0] == "JS"), eligible[0])
-        m, d = pick
-        ftype, desc = MODE_FIX.get(m, ("?", "?"))
-        L.append(f"- **Target: {m}** — affects **{len(d['users'])} distinct users** across {len(d['watches'])} watches, {d['sessions']} sessions.")
-        L.append(f"- **Change ({ftype}):** {desc}")
-        L.append(f"- **Metric to move:** good% for this mode's sessions (and overall good%). Re-check next Sunday.")
-        if ftype == "native":
-            L.append("- Note: native — queues for the next App Store build (not same-day).")
-
-    # week-over-week snapshot (auto before/after)
-    b2b_cum = b2b_repeatability(cum)
-    snap = {"date": date_str, "cum_good_pct": round(100*C["good"]/C["n"]) if C["n"] else 0,
+    # 5. Trend
+    b2b_w = W["b2b"]
+    snap = {"date": date_str, "window": "tg-era",
+            "wk_sessions": W["n"], "wk_users": W["users"],
+            "wk_sane_pct": round(100 * W["oc"]["sane"] / W["n"]) if W["n"] else 0,
+            "wk_wrong_pct": round(100 * W["oc"]["wrong"] / W["n"]) if W["n"] else 0,
+            "wk_none_pct": round(100 * W["oc"]["none"] / W["n"]) if W["n"] else 0,
+            "wk_conv_pct": round(100 * W["conv"] / W["n"]) if W["n"] else 0,
+            "wk_b2b_sane": b2b_w["sane_p50"] if b2b_w else None,
+            "wk_b2b_wild": b2b_w["wild_p50"] if b2b_w else None,
+            "wk_builds": W["builds"],
+            # legacy keys (pre-2026-08-23 snapshots) kept so old lines still parse side by side
+            "cum_good_pct": round(100 * C["oc"]["sane"] / C["n"]) if C["n"] else 0,
             "cum_sessions": C["n"], "cum_users": C["users"],
-            "wk_good_pct": round(100*W["good"]/W["n"]) if W["n"] else 0, "wk_sessions": W["n"],
-            "b2b_p50": b2b_cum["p50"] if b2b_cum else None,
-            "b2b_n": b2b_cum["n"] if b2b_cum else 0}
-    # Prior snapshot = most recent line from a DIFFERENT date (dedup same-day re-runs)
+            "wk_good_pct": round(100 * W["oc"]["sane"] / W["n"]) if W["n"] else 0,
+            "b2b_p50": C["b2b"]["p50"] if C["b2b"] else None, "b2b_n": C["b2b"]["n"] if C["b2b"] else 0}
     hist = []
     try:
         hist = [json.loads(l) for l in open(SNAP_FILE).read().splitlines() if l.strip()]
     except FileNotFoundError:
         pass
-    prev = next((s for s in reversed(hist) if s.get("date") != date_str), None)
-    L.append("\n## Week-over-week")
-    if prev:
-        d_good = snap["cum_good_pct"] - prev["cum_good_pct"]
-        L.append(f"- Cumulative good%: {prev['cum_good_pct']}% → {snap['cum_good_pct']}% ({d_good:+d} pts) [vs {prev['date']}]")
-        L.append(f"- Sessions added since last review: {snap['cum_sessions'] - prev['cum_sessions']}")
-        if prev.get("b2b_p50") is not None and snap["b2b_p50"] is not None:
-            L.append(f"- b2b repeatability p50: {prev['b2b_p50']} → {snap['b2b_p50']} s/d")
-    else:
-        L.append("- First run — baseline established. Deltas start next Sunday.")
     hist = [s for s in hist if s.get("date") != date_str] + [snap]   # replace today's
-    with open(SNAP_FILE, "w") as f:
-        f.write("\n".join(json.dumps(s) for s in hist) + "\n")
+    L.append(f"\n## 5. Trend (weekly snapshots, last {TREND_WEEKS})")
+    L.append(f"{'week of':<12}{'sess':>6}{'users':>6}{'sane':>6}{'wrong':>7}{'none':>6}{'conv':>6}{'b2b sane/wild':>16}")
+    for s in hist[-TREND_WEEKS:]:
+        if s.get("window") == "tg-era":
+            L.append(f"{s['date']:<12}{s['wk_sessions']:>6}{s.get('wk_users','—'):>6}{str(s['wk_sane_pct'])+'%':>6}{str(s['wk_wrong_pct'])+'%':>7}"
+                     f"{str(s['wk_none_pct'])+'%':>6}{str(s['wk_conv_pct'])+'%':>6}{str(s.get('wk_b2b_sane','—'))+' / '+str(s.get('wk_b2b_wild','—')):>16}")
+        else:   # pre-rewrite snapshot: only the legacy good% is comparable
+            L.append(f"{s['date']:<12}{s.get('wk_sessions','—'):>6}{'—':>6}{str(s.get('wk_good_pct','—'))+'%':>6}{'—':>7}{'—':>6}{'—':>6}{'(old format)':>16}")
+    if not dry:
+        with open(SNAP_FILE, "w") as f:
+            f.write("\n".join(json.dumps(s) for s in hist) + "\n")
 
-    # echo the change ledger tail (what we shipped last week → did its metric move?)
+    # 6. Recommendation
+    L.append("\n## ⭐ Next step (ONE)")
+    L += recommend(rows_g, n_bad, n_good, W, at)
+
+    # 7. Ledger tail
     L.append("\n## Change ledger (most recent)")
     led = read_ledger_lines()
     if led is None:
@@ -591,15 +610,18 @@ def main():
     else:
         for l in led[-3:]:
             L.append("  " + l)
-
-    L += onboarding4_section(H)
+    if C["legacy"]:
+        L.append(f"\n({C['legacy']} legacy-engine sessions in the window were excluded from engine metrics.)")
 
     report = "\n".join(L)
     print(report)
+    if dry:
+        print("\n(dry run — no email, no snapshot)")
+        return
 
     # email (best-effort)
     try:
-        html = "<pre style='font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5;'>" + \
+        html = "<pre style='font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5;white-space:pre-wrap;'>" + \
                report.replace("&", "&amp;").replace("<", "&lt;") + "</pre>"
         curl(f"{BASE_URL}/functions/v1/send-report", [f"Authorization: Bearer {token}", "Content-Type: application/json"],
              "POST", json.dumps({"to": REPORT_TO, "subject": f"WRotate Weekly Measurement Review — {date_str}", "html": html}))

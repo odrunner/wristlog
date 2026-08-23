@@ -1,6 +1,19 @@
 # Spec — TG Lock Validation (native engine, next iOS build)
 
 Status: DRAFT 2026-08-15 · Evidence: docs/measurement-deepdive-2026-08-15.md
+
+> **Field result 2026-08-23 (shadow A/B, 2.5 sessions, per-watch reference truth):** T1 does NOT
+> separate bad locks from good ones. Among converged sessions judged against the same watch's sane
+> readings, the T1 shadow had rejected the lock at some point in 30% of bad ones vs 34% of good
+> ones (never-confirmed 18% vs 30%). The deep-dive premise — "a bad lock doesn't repeat on a
+> disjoint segment" — is wrong in the field: bad locks are stable within a session (tg moves
+> 0.3 s/d) and only differ *between* sessions. **Do not flip `tg_confirmband`.** What does
+> separate them (weekly review §3): harmonic-guard fires (19% bad / 3% good, 6.3×), |tg−reg| > 10
+> at the end (40% / 8%, no knob — native candidate), and within-run movement > 6 s/d (21% / 3%).
+> T2 (`tg_guardmode=1`) is the next flip; T3 as specified (`tgGateMaxRej` 0.5) catches ~nothing
+> (σ-gate fraction > 0.5 in 0% of converged sessions either way); T4's runway is contradicted by
+> first-lock timing (locks after 10 s are 27%→0% sane) — the UX half of T4 stands, the 45-s wait
+> does not.
 Target: `TimegrapherEngine.swift` tg core (the shipped engine since 2.4). The legacy
 tick-detector/regression path is NOT being improved — it matters here only where it still owns
 session lifecycle before tg's first lock.

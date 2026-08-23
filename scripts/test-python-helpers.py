@@ -30,9 +30,10 @@ class WeeklyReviewGuard(unittest.TestCase):
     it silently never guarded. These lock the real format in."""
 
     def _guard(self, snap_file):
-        ns = {"datetime": datetime, "json": json, "SNAP_FILE": snap_file}
+        ns = {"datetime": datetime, "timedelta": timedelta, "json": json, "SNAP_FILE": snap_file}
+        # _week_anchor (Sunday-anchored weeks, added 2026-08-10) sits just above the guard.
         exec(_extract("weekly-measurement-review.py",
-                      "def _already_ran_this_week", "def main()"), ns)
+                      "def _week_anchor", "def recommend("), ns)
         return ns["_already_ran_this_week"]
 
     def _with_lines(self, lines):
