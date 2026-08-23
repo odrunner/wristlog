@@ -3630,9 +3630,19 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button type="button" class="chip" data-tab="official" role="tab" aria-selected="false" aria-controls="admin-tab-official" onclick="switchAdminTab('official')">Official</button>
       <button type="button" class="chip" data-tab="reports" role="tab" aria-selected="false" aria-controls="admin-tab-reports" onclick="switchAdminTab('reports')">Reports</button>
       <button type="button" class="chip" data-tab="dev" role="tab" aria-selected="false" aria-controls="admin-tab-dev" onclick="switchAdminTab('dev')">Dev</button>
+      <button type="button" class="chip" data-tab="models" role="tab" aria-selected="false" aria-controls="admin-tab-models" onclick="switchAdminTab('models')">Models</button>
     </div>
 
     <!-- Tab: Featured -->
+    <div id="admin-tab-models" class="admin-tab" role="tabpanel" style="display:none;">
+      <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.6rem;flex-wrap:wrap;">
+        <input id="adm-merge-src" placeholder="merge: src slug" style="flex:1;min-width:130px;">
+        <input id="adm-merge-dst" placeholder="into: dst slug" style="flex:1;min-width:130px;">
+        <button class="chip" onclick="adminMergeModels()">Merge</button>
+        <label style="font-size:.75rem;color:var(--muted);"><input type="checkbox" id="adm-models-auto-only" onchange="loadAdminModels()"> auto only</label>
+      </div>
+      <div id="admin-models-list" style="font-size:.8rem;">Loading…</div>
+    </div>
     <div id="admin-tab-featured" class="admin-tab" role="tabpanel" style="display:none;">
       <div class="eyebrow" style="margin-bottom:.75rem;">Featured posts</div>
       <div style="font-size:.78rem;color:var(--muted);margin-bottom:.75rem;">One post is featured at a time (24h), the rest queue up. Feature a post from its ★ menu in the feed.</div>
@@ -8058,7 +8068,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.13.41';
+const APP_VERSION = '23.13.44';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17932,6 +17942,59 @@ function switchAdminTab(tab) {
   if (tab === 'campaigns') loadCampaigns();
   if (tab === 'featured') loadAdminFeatured();
   if (tab === 'promos') loadPromoAdmin();
+  if (tab === 'models') loadAdminModels();
+}
+
+let _adminModels = [];
+async function loadAdminModels() {
+  const el = document.getElementById('admin-models-list');
+  if (!el) return;
+  el.textContent = 'Loading…';
+  const { data, error } = await db.rpc('admin_watch_models');
+  if (error) { el.textContent = 'Failed: ' + error.message; return; }
+  _adminModels = data || [];
+  const autoOnly = document.getElementById('adm-models-auto-only').checked;
+  const rows = _adminModels.filter(m => !autoOnly || m.is_auto);
+  el.innerHTML = `<div style="color:var(--muted);margin-bottom:.4rem;">${_adminModels.length} models · ${_adminModels.filter(m => !m.is_auto).length} curated</div>
+    <table style="width:100%;border-collapse:collapse;">
+    <tr style="color:var(--muted);text-align:left;"><th>Model</th><th>Slug</th><th>Own</th><th>W</th><th></th></tr>` +
+    rows.slice(0, 200).map(m => `<tr style="border-top:0.5px solid var(--border);">
+      <td>${escHtml(m.brand)} ${escHtml(m.name)}${m.is_auto ? ' <span style="color:var(--muted);">(auto)</span>' : ''}</td>
+      <td style="color:var(--muted);">${escHtml(m.slug)}</td>
+      <td>${m.owners}</td><td>${m.watches}</td>
+      <td style="white-space:nowrap;">${m.is_auto ? `<button class="chip" onclick="adminCurateModel('${m.id}')">Curate</button>` : ''}
+        <button class="chip" onclick="adminEditModel('${m.id}')">Edit</button></td>
+    </tr>
+    <tr id="adm-model-edit-${m.id}" style="display:none;"><td colspan="5" style="padding:.4rem 0;">
+      <input id="adm-mn-${m.id}" value="${escAttr(m.name)}" placeholder="name" style="width:30%;">
+      <input id="adm-ms-${m.id}" value="${escAttr(m.slug)}" placeholder="slug" style="width:30%;">
+      <input id="adm-mh-${m.id}" value="${escAttr(m.hero_image || '')}" placeholder="hero image URL" style="width:26%;">
+      <button class="chip" onclick="adminSaveModel('${m.id}')">Save</button>
+    </td></tr>`).join('') + '</table>' + (rows.length > 200 ? `<div style="color:var(--muted);margin-top:.4rem;">Showing 200 of ${rows.length}</div>` : '');
+}
+function adminEditModel(id) {
+  const tr = document.getElementById('adm-model-edit-' + id);
+  tr.style.display = tr.style.display === 'none' ? '' : 'none';
+}
+async function adminSaveModel(id) {
+  const val = k => document.getElementById('adm-' + k + '-' + id).value.trim();
+  const { error } = await db.rpc('admin_update_watch_model', {
+    p_id: id, p_name: val('mn') || null, p_slug: val('ms') || null, p_hero: val('mh') || null });
+  if (error) { toast('Save failed: ' + error.message, 'error'); return; }
+  toast('Saved'); loadAdminModels();
+}
+async function adminMergeModels() {
+  const src = _adminModels.find(m => m.slug === document.getElementById('adm-merge-src').value.trim());
+  const dst = _adminModels.find(m => m.slug === document.getElementById('adm-merge-dst').value.trim());
+  if (!src || !dst) { toast('Unknown slug', 'error'); return; }
+  const { error } = await db.rpc('admin_merge_watch_models', { p_src: src.id, p_dst: dst.id });
+  if (error) { toast('Merge failed: ' + error.message, 'error'); return; }
+  toast(`Merged ${src.slug} → ${dst.slug}`); loadAdminModels();
+}
+async function adminCurateModel(id) {
+  const { error } = await db.rpc('admin_update_watch_model', { p_id: id, p_curated: true });
+  if (error) { toast('Failed: ' + error.message, 'error'); return; }
+  loadAdminModels();
 }
 
 async function loadAdminFeatured() {

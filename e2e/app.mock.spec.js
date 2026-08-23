@@ -1163,12 +1163,12 @@ test.describe('Admin chips (mocked)', () => {
 
   test('admin tab chips are button elements', async ({ page }) => {
     const chips = page.locator('#admin-tabs button.chip');
-    await expect(chips).toHaveCount(10);
+    await expect(chips).toHaveCount(11);
   });
 
   test('admin tab chips have correct labels', async ({ page }) => {
     const labels = await page.locator('#admin-tabs button.chip').allTextContents();
-    expect(labels).toEqual(['Usage', 'Traffic', 'Promos', 'Broadcast', 'Campaigns', 'Feedback', 'Featured', 'Official', 'Reports', 'Dev']);
+    expect(labels).toEqual(['Usage', 'Traffic', 'Promos', 'Broadcast', 'Campaigns', 'Feedback', 'Featured', 'Official', 'Reports', 'Dev', 'Models']);
   });
 
   test('admin tab chips are keyboard focusable', async ({ page }) => {
