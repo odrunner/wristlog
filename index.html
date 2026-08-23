@@ -2888,6 +2888,10 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="eyebrow eyebrow-muted">August 2026</span>
       </div>
       <div style="margin-bottom:.75rem;">
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">See Who Else Has Your Watch</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Open any watch in your collection and a new <strong>Also owned by</strong> row shows how many other members have the same model &#8212; across every era, so a vintage example counts alongside a brand-new one. Tap it to see the owners who share their collection with you and jump to their profiles. If nobody else has it, you&#8217;ll know your watch is a rare bird.</div>
+      </div>
+      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Comments on Shared Links</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">People you send a wishlist or collection link to can now leave a comment with their name &#8212; no account needed. Comments show on the link page for everyone who has it, and you see them under <strong>Shared links</strong> on the Wishlist and Collection tabs, in the bell, as a push, and by email (at most one per link every half hour; switch the email off under Notifications). You can remove any comment, or revoke the link.</div>
       </div>
@@ -4071,6 +4075,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
               <div class="help-step-desc">On the Collection tab, tap <strong>Share</strong>, tick the watches you want to show, then <strong>Create link</strong>. Add a note first if you like &#8212; who it&#8217;s for, what you&#8217;re asking &#8212; and it appears at the top of the page they open. The page shows each watch&#8217;s photo, brand, model, reference number and any link you saved &#8212; never what you paid, its market value, wears, notes or tags &#8212; and works for anyone, with or without a WRotate account. Tap <strong>Shared links</strong> any time to see what you&#8217;ve sent, how often it was opened, and to revoke a link. Anyone with the link can also leave a <strong>comment</strong> with their name &#8212; you&#8217;ll see it under <strong>Shared links</strong> and in the bell (and by email, unless you turn that off under Notifications).</div>
             </div>
           </div>
+          <div class="help-step">
+            <div class="help-step-num">7</div>
+            <div class="help-step-body">
+              <div class="help-step-title">See who else has your watch</div>
+              <div class="help-step-desc">Open any watch in your collection and the <strong>Also owned by</strong> row shows how many other members have the same model &#8212; every era counts, so a vintage example sits alongside a brand-new one. Tap the row to see the owners who share their collection with you and visit their profiles. Members whose collection or watch is private are counted but never named. If nobody else has it, you&#8217;ve got a rare bird.</div>
+            </div>
+          </div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> "From Photo" works great for a quick start — snap your watch box and add everything in one go. For the most accurate data, use brand website URLs (rolex.com, omegawatches.com…) with the Fetch button.</span></div>
         </div>
       </div>
@@ -5087,6 +5098,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button type="button" id="w-change-photo-btn" onclick="pickWatchModalImage()" style="margin-top:6px;background:transparent;border:0.5px solid var(--border);color:var(--muted);font-size:11px;font-family:inherit;padding:4px 10px;border-radius:6px;cursor:pointer;">Add photo</button>
       <div style="border-bottom:0.5px solid var(--border);margin-top:10px;margin-bottom:12px;"></div>
     </div>
+    <div id="wm-also-owned" style="display:none;margin:0 0 12px;padding:9px 12px;border:0.5px solid var(--border);border-radius:8px;font-size:.8rem;cursor:pointer;" role="button" tabindex="0"></div>
+    <div id="wm-owners-sheet" style="display:none;margin:0 0 12px;padding:4px 0;"></div>
     <!-- Photo state (hidden) -->
     <div id="w-img-area" style="display:none;">
       <img id="w-img-preview" src="" alt="" style="display:none;">
@@ -7723,6 +7736,7 @@ function rowToWatch(r) {
     insurance: r.insurance||null, insuredValue: r.insured_value||null,
     insuranceNotes: r.insurance_notes||null, receipts: r.receipts||[],
     watchPrivacy: r.watch_privacy ?? null,
+    modelId: r.model_id ?? null,
     yearRange: r.year_range||null, movementType: r.movement_type||null,
     caliber: r.caliber||null, caseMaterial: r.case_material||null,
     caseDiameter: r.case_diameter||null, caseLength: r.case_length||null,
@@ -7808,7 +7822,7 @@ async function loadUserData() {
   // Promise.resolve() converts the Supabase thenable to a real Promise (thenables lack .catch())
   const _q = query => Promise.resolve(query).catch(e => { console.error('[WristLog] loadUserData query error:', e?.message); return { data: null, error: e }; });
   const [wRes, lRes, wlRes, brRes] = await withTimeout(Promise.all([
-    _q(db.from('watches').select('id,created_at,brand,name,ref,movement,price,purchase_date,color,image,url,tags,straps,owner,market_price,market_price_date,market_price_src,watch_charts_url,price_history,warranty_expiry,has_box,has_papers,insurance,insured_value,insurance_notes,receipts,watch_privacy,elo_rating,year_range,movement_type,caliber,case_material,case_diameter,case_length,case_thickness,weight,water_resistance,crystal_type,gender,origin,description,background,functions,bph').eq('user_id', uid)),
+    _q(db.from('watches').select('id,created_at,brand,name,ref,movement,price,purchase_date,color,image,url,tags,straps,owner,market_price,market_price_date,market_price_src,watch_charts_url,price_history,warranty_expiry,has_box,has_papers,insurance,insured_value,insurance_notes,receipts,watch_privacy,elo_rating,year_range,movement_type,caliber,case_material,case_diameter,case_length,case_thickness,weight,water_resistance,crystal_type,gender,origin,description,background,functions,bph,model_id').eq('user_id', uid)),
     // .range(): PostgREST caps an unbounded select at 1000 rows silently. A
     // truncated log set would quietly re-rank the Most Worn leaderboard rather
     // than fail, so ask for a bound well above the current max (422/user).
@@ -8068,7 +8082,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.13.45';
+const APP_VERSION = '23.13.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23210,6 +23224,43 @@ function openAddWatch() {
   document.getElementById('watch-modal').classList.remove('hidden');
 }
 
+// ── "Also owned by" — who else has this model (model_owners RPC does all gating) ──
+async function loadModelOwnersRow(w) {
+  const row = document.getElementById('wm-also-owned');
+  const sheet = document.getElementById('wm-owners-sheet');
+  row.style.display = 'none'; row.style.cursor = 'pointer'; row.onclick = null;
+  sheet.style.display = 'none'; sheet.innerHTML = '';
+  if (!w || !w.modelId || !currentUser) return;
+  const { data, error } = await db.rpc('model_owners', { p_model_id: w.modelId });
+  if (error || !data || editingId !== w.id) return; // modal may have moved on
+  const others = (data.total_owners || 0) - 1; // viewer is always one of the owners here
+  if (others <= 0) {
+    row.textContent = "You're the only one on WRotate with this one — rare bird.";
+    row.style.cursor = 'default';
+    row.style.display = '';
+    return;
+  }
+  const vis = data.visible || [];
+  const stack = vis.slice(0, 3).map(o =>
+    `<span class="feed-user-avatar" style="width:22px;height:22px;font-size:.6rem;display:inline-flex;align-items:center;justify-content:center;margin-right:-6px;border:1.5px solid var(--card);">${o.avatar_url ? `<img src="${escAttr(o.avatar_url)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="">` : profileInitials(o)}</span>`).join('');
+  const era = data.era_min && data.era_max && data.era_min !== data.era_max
+    ? ` <span style="color:var(--muted);">· examples from ${escHtml(data.era_min)} to ${escHtml(data.era_max)}</span>` : '';
+  row.innerHTML = `${stack}<span style="margin-left:${vis.length ? '12px' : '0'};">Also owned by <b>${others}</b> other member${others === 1 ? '' : 's'}${era}</span>`;
+  row.style.display = '';
+  row.onclick = () => {
+    if (!vis.length) { toast(`${others} member${others === 1 ? '' : 's'} own this — none visible to you`); return; }
+    const open = sheet.style.display !== 'none';
+    sheet.style.display = open ? 'none' : '';
+    if (open) return;
+    sheet.innerHTML = vis.map(o => `
+      <div style="display:flex;align-items:center;gap:.6rem;padding:6px 2px;cursor:pointer;" onclick="closeWatchModal();viewUserProfile('${escAttr(o.user_id)}')">
+        ${o.photo ? `<img src="${escAttr(o.photo)}" style="width:34px;height:34px;border-radius:8px;object-fit:cover;" alt="">` : `<span class="feed-user-avatar" style="width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;">${profileInitials(o)}</span>`}
+        <div><div style="font-weight:500;">${escHtml(o.display_name || o.username || '')}</div>
+        <div style="font-size:.7rem;color:var(--muted);">@${escHtml(o.username || '')}${o.year ? ' · ' + escHtml(o.year) : ''}</div></div>
+      </div>`).join('');
+  };
+}
+
 function openEditWatch(id) {
   const w = watches.find(x => x.id === id);
   if (!w) return;
@@ -23225,6 +23276,7 @@ function openEditWatch(id) {
   // Identity strip
   updateIdentityStrip(w.name, w.brand, w.ref);
   document.getElementById('edit-identity-strip').style.display = '';
+  loadModelOwnersRow(w);
   buildBrandSelect(w.brand);
   document.getElementById('w-name').value               = w.name;
   document.getElementById('w-ref').value                = w.ref || '';
@@ -23293,6 +23345,8 @@ function openEditWatch(id) {
 }
 
 function closeWatchModal() {
+  const _wmR = document.getElementById('wm-also-owned'), _wmS = document.getElementById('wm-owners-sheet');
+  if (_wmR) { _wmR.style.display = 'none'; } if (_wmS) { _wmS.style.display = 'none'; _wmS.innerHTML = ''; }
   if (_tgListening) stopTgListen();
   clearInlineEdits();
   if (wPendingImage && wPendingImage.startsWith('blob:')) URL.revokeObjectURL(wPendingImage);

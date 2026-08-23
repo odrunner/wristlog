@@ -10,7 +10,10 @@ begin
     select w.id, w.user_id, w.image, w.watch_privacy, w.year_range, w.purchase_date
     from watches w
     where w.model_id = p_model_id
-      and not exists (select 1 from internal_accounts ia where ia.user_id = w.user_id)
+      -- internal accounts stay out of counts/lists, EXCEPT the viewer's own row:
+      -- the client shows total-1 as "others", so the viewer must always count themselves.
+      and (w.user_id = v_viewer
+        or not exists (select 1 from internal_accounts ia where ia.user_id = w.user_id))
   ),
   owners as (select distinct user_id from owner_watches),
   rels as (
