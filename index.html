@@ -4162,7 +4162,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">6</div>
             <div class="help-step-body">
               <div class="help-step-title">The Pro V2 engine &#9889; (default)</div>
-              <div class="help-step-desc">On app version 2.1+, <strong>Pro V2</strong> is the engine that runs by default &#8212; a rebuilt detection core that holds steadier between runs and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing (healthy watches typically read 220&#8211;300&deg;). It also shows the averaged tick/tock waveform under the chart; sharp spikes mean a clean signal. Amplitude appears only when the signal is clean enough to trust. With Pro V2 running, the gear offers its own settings: a <strong>Precision</strong> preset &#8212; Quick (~10s), Balanced (~17s, recommended) or Strict (~33s, tightest) &#8212; and the movement&#8217;s lift angle (52&deg; fits most modern movements). Longer settings listen to more of the watch before answering, so they repeat more closely; measuring twice and comparing is the quickest way to know a reading is trustworthy. Prefer the previous engine? Pick <strong>Standard</strong> from the engine selector anytime.</div>
+              <div class="help-step-desc">On app version 2.1+, <strong>Pro V2</strong> is the engine that runs by default &#8212; a rebuilt detection core that holds steadier between runs and measures <strong>amplitude (&deg;)</strong> &#8212; the balance wheel&#8217;s swing (healthy watches typically read 220&#8211;300&deg;). It also shows the averaged tick/tock waveform under the chart; sharp spikes mean a clean signal. Amplitude appears only when the signal is clean enough to trust. With Pro V2 running, the gear offers its own settings: a <strong>Precision</strong> preset &#8212; Quick (~10s), Balanced (~17s, recommended) or Strict (~33s, tightest) &#8212; and the movement&#8217;s lift angle (52&deg; fits most modern movements). Longer settings listen to more of the watch before answering, so they repeat more closely; measuring twice and comparing is the quickest way to know a reading is trustworthy. Prefer the previous engine? Tap the &#9881; gear and pick <strong>Standard</strong> under Engine &#8212; the choice lasts until you next relaunch the app.</div>
             </div>
           </div>
           <div class="help-step">
@@ -4704,12 +4704,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <option value="mic">iPhone mic</option>
         <option value="piezo">Piezo (contact)</option>
       </select>
-      <!-- Detection core selector. Pro V2 is the default; Standard is the opt-out. Applies on next stop/start. -->
-      <select id="tg-algo-sel" onchange="onTgAlgo(this.value)" style="display:none;width:100%;margin-bottom:.35rem;padding:.45rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
-        <option value="tg">Engine: Pro V2 ⚡</option>
-        <option value="original">Engine: Standard</option>
-      </select>
-      <div id="tg-algo-hint" style="display:none;font-size:.68rem;color:var(--muted);margin:-.1rem 0 .65rem .1rem;line-height:1.4;">Pro V2 converges in ~10s and measures amplitude (°). Switch to Standard anytime.</div>
       <details id="tg-knob-raw" style="display:none;margin-bottom:.75rem;">
       <summary style="font-size:.68rem;color:var(--muted);cursor:pointer;margin-bottom:.4rem;">Raw engine knobs</summary>
       <!-- tg convergence knobs (admin, gated by tg_dev_knobs). Applied live via the tuning message. -->
@@ -4941,6 +4935,16 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <h1 class="page-title" style="flex:1;">Advanced Settings</h1>
     </div>
     <div style="padding:0 .5rem;">
+      <!-- Detection core selector. Pro V2 is the default; Standard is the session-only opt-out.
+           Shown only on native 2.1+ builds (both engines live in the native app). -->
+      <div id="msr-engine-section" style="display:none;margin-bottom:1.2rem;">
+        <div style="font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:.5rem;letter-spacing:.03em;">ENGINE</div>
+        <select id="tg-algo-sel" onchange="onTgAlgo(this.value)" style="width:100%;margin-bottom:.35rem;padding:.45rem .5rem;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.85rem;">
+          <option value="tg">Pro V2 ⚡ (recommended)</option>
+          <option value="original">Standard</option>
+        </select>
+        <div id="tg-algo-hint" style="font-size:.68rem;color:var(--muted);margin:-.1rem 0 .65rem .1rem;line-height:1.4;">Pro V2 measures amplitude (°) and holds steadier between runs. Picking Standard lasts until the app is next relaunched.</div>
+      </div>
       <!-- Pro V2 engine settings — shown instead of the Standard sections when Pro V2 is selected -->
       <div id="msr-prov2-settings" style="display:none;margin-bottom:1.2rem;">
         <div style="font-size:.75rem;font-weight:600;color:var(--muted);margin-bottom:.5rem;letter-spacing:.03em;">PRO V2 · PRECISION</div>
@@ -8114,7 +8118,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.20.28';
+const APP_VERSION = '23.21.48';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -30509,19 +30513,6 @@ function initTgSourceSelector() {
   } else {
     el.style.display = 'none';
   }
-  const algoSel = document.getElementById('tg-algo-sel');
-  if (algoSel) {
-    const hint = document.getElementById('tg-algo-hint');
-    // Public when the 2.1 native build is present.
-    if (_proV2Available()) {
-      algoSel.style.display = '';
-      algoSel.value = _tgAlgo();   // mirror the engine that will actually run, not the raw pref
-      if (hint) hint.style.display = algoSel.value === 'tg' ? '' : 'none';
-    } else {
-      algoSel.style.display = 'none';
-      if (hint) hint.style.display = 'none';   // hint must never outlive the selector
-    }
-  }
   const rawWrap = document.getElementById('tg-knob-raw');
   if (rawWrap) rawWrap.style.display = featureFlag('tg_dev_knobs') ? 'block' : 'none';
   const knobPanel = document.getElementById('tg-knob-panel');
@@ -30556,8 +30547,9 @@ function initTgSourceSelector() {
 function onPzTune(key, val) { if (val !== '' && Number(val) > 0) { safeLS.set(key, val); sendPiezoTuning(); } }
 function _pzMode() { return safeLS.get('pz_mode') === 'measurement' ? 'measurement' : 'default'; }
 // Pro V2 (tg core) is the DEFAULT engine on native 2.1+ builds — no server-side stage
-// gate any more. Standard stays selectable on the measure page as the opt-out, and the
-// choice lasts for the current app session only — see _tgAlgoSel.
+// gate any more. Standard stays selectable on the Advanced Settings page (⚙ gear) as the
+// opt-out — moved off the measure page 2026-08-23 as the first step of retiring it — and
+// the choice lasts for the current app session only — see _tgAlgoSel.
 // (There is no web engine — both engines live in the native app, so no flag can
 // force Pro V2 outside a 2.1+ build. The tg_dev_knobs flag only shows the raw knob panel.)
 function _native21() { return _tgHasNative() && iosAtLeast(window._iosAppVersion, '2.1'); }
@@ -30574,8 +30566,7 @@ function _tgAlgo() {
 }
 function onTgAlgo(v) {
   _tgAlgoSel = v;
-  const hint = document.getElementById('tg-algo-hint');
-  if (hint) hint.style.display = v === 'tg' ? '' : 'none';
+  _msrSettingsApplyEngine();   // selector lives on the Advanced Settings page — swap its sections live
 }
 function onPzTuneMode(v) { safeLS.set('pz_mode', v); }  // session mode — applies on next stop/start
 
@@ -31916,7 +31907,17 @@ function openMsrSettings() {
   document.getElementById('page-msr-settings').classList.add('active');
   window.scrollTo(0, 0);
   tgLoadSettingsToUI();
-  // Pro V2: show its own settings (precision + lift angle); Standard-only sections hide.
+  // Engine selector — visible only where both engines exist (native 2.1+).
+  const engSec = document.getElementById('msr-engine-section');
+  if (engSec) engSec.style.display = _proV2Available() ? '' : 'none';
+  const algoSel = document.getElementById('tg-algo-sel');
+  if (algoSel) algoSel.value = _tgAlgo();   // mirror the engine that will actually run, not the raw pref
+  _msrSettingsApplyEngine();
+}
+
+// Pro V2: show its own settings (precision + lift angle); Standard-only sections hide.
+// Re-run whenever the engine changes while the settings page is open.
+function _msrSettingsApplyEngine() {
   const isV2 = _tgAlgo() === 'tg';
   const v2 = document.getElementById('msr-prov2-settings');
   const stdA = document.getElementById('msr-std-preset-section');
