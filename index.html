@@ -841,6 +841,15 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     .watches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: 1rem; }
 
+    .explore-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:.6rem; }
+    .explore-card { border:0.5px solid var(--border); border-radius:12px; overflow:hidden; cursor:pointer; background:var(--surface); }
+    .explore-card:hover { border-color: color-mix(in srgb, var(--gold) 40%, transparent); }
+    .explore-card-img { width:100%; aspect-ratio:1/1; object-fit:cover; display:block; background:var(--surface2); }
+    .explore-card-noimg { width:100%; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; font-size:1.6rem; font-weight:700; color:var(--gold-text); background: color-mix(in srgb, var(--gold) 10%, transparent); }
+    .explore-card-body { padding:.5rem .6rem .6rem; }
+    .explore-card-brand { font-size:.62rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+    .explore-card-name { font-size:.8rem; font-weight:600; line-height:1.25; margin:.1rem 0 .15rem; }
+    .explore-card-owners { font-size:.68rem; color:var(--muted); }
     .watch-card {
       position: relative;
       background: var(--surface);
@@ -3580,6 +3589,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div style="display:flex;gap:.5rem;margin-left:auto;">
         <button id="feed-post-btn" class="btn btn-primary btn-sm" onclick="openNewPost()" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Post</button>
         <button class="btn btn-ghost btn-sm" onclick="openDiscover()" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> People</button>
+        <button class="btn btn-ghost btn-sm" onclick="showExplorePage()" style="display:inline-flex;align-items:center;gap:.4rem;" title="Browse the watch database"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.5 4.5 17 2h-10l.5 2.5"/><path d="M16.5 19.5 17 22h-10l.5-2.5"/></svg> Watches</button>
         <button class="btn btn-ghost btn-sm" onclick="showClubsPage()" style="display:inline-flex;align-items:center;gap:.4rem;" title="Clubs"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clubs</button>
       </div>
     </div>
@@ -3606,6 +3616,20 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div id="model-page-content">
       <div style="text-align:center;padding:3rem;color:var(--muted);">Loading…</div>
     </div>
+  </div>
+
+  <div id="page-explore" class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;">
+      <h1 style="font-size:1.1rem;font-weight:700;">Watches</h1>
+    </div>
+    <input id="explore-search" type="search" placeholder="Search models — Submariner, Speedmaster, SKX…" autocomplete="off"
+           style="width:100%;margin-bottom:.7rem;" oninput="exploreSearchInput()">
+    <div id="explore-brands" style="display:flex;gap:.4rem;overflow-x:auto;padding-bottom:.5rem;margin-bottom:.5rem;-webkit-overflow-scrolling:touch;"></div>
+    <div id="explore-grid" class="explore-grid"></div>
+    <div id="explore-more-wrap" style="text-align:center;margin-top:1rem;display:none;">
+      <button class="btn btn-ghost" onclick="loadExploreModels(false)">Load more</button>
+    </div>
+    <div id="explore-empty" style="display:none;text-align:center;color:var(--muted);padding:2.5rem 0;font-size:.85rem;">No models match that search.</div>
   </div>
 
   <div id="page-clubs" class="page">
@@ -8090,7 +8114,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.18.48';
+const APP_VERSION = '23.18.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19402,6 +19426,71 @@ function nav(btn) {
   }
   updateStreakChip();
   updateHeaderPostBtn();
+}
+
+// ── Explore: browse/search the watch database ──
+let _exploreLoaded = false, _exploreQ = '', _exploreBrand = null, _exploreOffset = 0, _exploreTimer = null;
+const EXPLORE_PAGE_SIZE = 30;
+
+function showExplorePage() {
+  if (demoGuard()) return;
+  if (typeof _tgListening !== 'undefined' && _tgListening) stopTgListen();
+  if (typeof _msrListening !== 'undefined' && _msrListening) stopMsrListen('navigated_away');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-explore').classList.add('active');
+  if (!_exploreLoaded) {
+    _exploreLoaded = true;
+    loadExploreBrands();
+    loadExploreModels(true);
+    if (window.posthog) posthog.capture('explore_viewed');
+  }
+}
+
+async function loadExploreBrands() {
+  const { data } = await db.rpc('model_brands');
+  const el = document.getElementById('explore-brands');
+  if (!data || !el) return;
+  el.innerHTML = `<button class="chip${_exploreBrand === null ? ' selected' : ''}" data-brand="" onclick="exploreSelectBrand(null)">All</button>` +
+    data.map(b => `<button class="chip${_exploreBrand === b.brand ? ' selected' : ''}" data-brand="${escAttr(b.brand)}" onclick="exploreSelectBrand('${escAttr(b.brand)}')" style="white-space:nowrap;">${escHtml(b.brand)}</button>`).join('');
+}
+
+function exploreSelectBrand(brand) {
+  _exploreBrand = brand;
+  document.querySelectorAll('#explore-brands .chip').forEach(c =>
+    c.classList.toggle('selected', (c.dataset.brand || null) === (brand || null) || (!c.dataset.brand && brand === null)));
+  loadExploreModels(true);
+}
+
+function exploreSearchInput() {
+  clearTimeout(_exploreTimer);
+  _exploreTimer = setTimeout(() => {
+    _exploreQ = document.getElementById('explore-search').value.trim();
+    loadExploreModels(true);
+  }, 300);
+}
+
+async function loadExploreModels(reset) {
+  if (reset) _exploreOffset = 0;
+  const grid = document.getElementById('explore-grid');
+  if (reset) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:2rem 0;font-size:.85rem;">Loading…</div>';
+  const { data, error } = await db.rpc('browse_watch_models', {
+    p_q: _exploreQ || null, p_brand: _exploreBrand, p_limit: EXPLORE_PAGE_SIZE, p_offset: _exploreOffset });
+  if (error) { grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:2rem 0;">Couldn\u2019t load — ${escHtml(error.message)}</div>`; return; }
+  const rows = data || [];
+  const cards = rows.map(m => `
+    <div class="explore-card" onclick="openModelPage('${escAttr(m.id)}')">
+      ${m.image ? `<img class="explore-card-img" src="${escAttr(m.image)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=\'explore-card-noimg\'>'+this.alt+'</div>'">` : `<div class="explore-card-noimg">${escHtml((m.brand || '?')[0])}</div>`}
+      <div class="explore-card-body">
+        <div class="explore-card-brand">${escHtml(m.brand)}</div>
+        <div class="explore-card-name">${escHtml(m.name)}</div>
+        <div class="explore-card-owners">${m.owners} member${Number(m.owners) === 1 ? '' : 's'}</div>
+      </div>
+    </div>`).join('');
+  if (reset) grid.innerHTML = cards; else grid.insertAdjacentHTML('beforeend', cards);
+  _exploreOffset += rows.length;
+  document.getElementById('explore-empty').style.display = (reset && !rows.length) ? '' : 'none';
+  document.getElementById('explore-more-wrap').style.display = rows.length === EXPLORE_PAGE_SIZE ? '' : 'none';
 }
 
 function showClubsPage() {
