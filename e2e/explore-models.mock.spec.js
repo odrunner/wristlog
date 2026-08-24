@@ -22,6 +22,7 @@ async function openExplore(page, onBrowse) {
     const body = route.request().postDataJSON() || {};
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(onBrowse(body)) });
   });
+  await page.addInitScript(() => { try { localStorage.setItem('ff_watch_db', 'true'); } catch (e) {} });
   await injectSession(page);
   await page.goto('/');
   await waitForAppBoot(page);
@@ -75,6 +76,7 @@ test('brand chip filters and card tap opens the model page', async ({ page }) =>
 test('feed watch preview links to the model page', async ({ page }) => {
   const MODEL_ID = 'aaaaaaaa-0000-0000-0000-000000000001';
   await mockSupabase(page, {});
+  await page.addInitScript(() => { try { localStorage.setItem('ff_watch_db', 'true'); } catch (e) {} });
   await injectSession(page);
   await page.goto('/');
   await waitForAppBoot(page);

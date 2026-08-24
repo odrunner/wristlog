@@ -2897,10 +2897,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="eyebrow eyebrow-muted">August 2026</span>
       </div>
       <div style="margin-bottom:.75rem;">
-        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">The Watch Database</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">The watch database is here. Tap <strong>Watches</strong> at the top of the Feed to browse and search every model members own &#8212; by brand, by name, sorted by popularity. Every model has its own page: fun facts, the years members&#8217; examples span, and the owners who share their collection with you &#8212; tap one to visit their profile. You&#8217;ll also find it from your own collection (the <strong>Also owned by</strong> row on any watch) and from any watch you tap in the Feed. If nobody else has yours, you&#8217;ll know it&#8217;s a rare bird.</div>
-      </div>
-      <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Comments on Shared Links</div>
         <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">People you send a wishlist or collection link to can now leave a comment with their name &#8212; no account needed. Comments show on the link page for everyone who has it, and you see them under <strong>Shared links</strong> on the Wishlist and Collection tabs, in the bell, as a push, and by email (at most one per link every half hour; switch the email off under Notifications). You can remove any comment, or revoke the link.</div>
       </div>
@@ -3589,7 +3585,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <div style="display:flex;gap:.5rem;margin-left:auto;">
         <button id="feed-post-btn" class="btn btn-primary btn-sm" onclick="openNewPost()" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Post</button>
         <button class="btn btn-ghost btn-sm" onclick="openDiscover()" style="display:inline-flex;align-items:center;gap:.4rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> People</button>
-        <button class="btn btn-ghost btn-sm" onclick="showExplorePage()" style="display:inline-flex;align-items:center;gap:.4rem;" title="Browse the watch database"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.5 4.5 17 2h-10l.5 2.5"/><path d="M16.5 19.5 17 22h-10l.5-2.5"/></svg> Watches</button>
+        <button id="feed-watches-btn" class="btn btn-ghost btn-sm" onclick="showExplorePage()" style="display:none;align-items:center;gap:.4rem;" title="Browse the watch database"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><polyline points="12 9 12 12 13.5 13.5"/><path d="M16.5 4.5 17 2h-10l.5 2.5"/><path d="M16.5 19.5 17 22h-10l.5-2.5"/></svg> Watches</button>
         <button class="btn btn-ghost btn-sm" onclick="showClubsPage()" style="display:inline-flex;align-items:center;gap:.4rem;" title="Clubs"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Clubs</button>
       </div>
     </div>
@@ -4108,12 +4104,6 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
               <div class="help-step-desc">On the Collection tab, tap <strong>Share</strong>, tick the watches you want to show, then <strong>Create link</strong>. Add a note first if you like &#8212; who it&#8217;s for, what you&#8217;re asking &#8212; and it appears at the top of the page they open. The page shows each watch&#8217;s photo, brand, model, reference number and any link you saved &#8212; never what you paid, its market value, wears, notes or tags &#8212; and works for anyone, with or without a WRotate account. Tap <strong>Shared links</strong> any time to see what you&#8217;ve sent, how often it was opened, and to revoke a link. Anyone with the link can also leave a <strong>comment</strong> with their name &#8212; you&#8217;ll see it under <strong>Shared links</strong> and in the bell (and by email, unless you turn that off under Notifications).</div>
             </div>
           </div>
-          <div class="help-step">
-            <div class="help-step-num">7</div>
-            <div class="help-step-body">
-              <div class="help-step-title">See who else has your watch</div>
-              <div class="help-step-desc">Tap <strong>Watches</strong> at the top of the Feed to browse and search every model on WRotate, or open any watch in your collection &#8212; the <strong>Also owned by</strong> row shows how many other members have the same model, every era counted. Each model&#8217;s page has fun facts, the years members&#8217; examples span, and the owners who share their collection with you &#8212; tap one to visit their profile. Members whose collection or watch is private are counted but never named. If nobody else has it, you&#8217;ve got a rare bird.</div>
-            </div>
           </div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> "From Photo" works great for a quick start — snap your watch box and add everything in one go. For the most accurate data, use brand website URLs (rolex.com, omegawatches.com…) with the Fetch button.</span></div>
         </div>
@@ -6369,6 +6359,7 @@ const FEATURE_FLAGS = {
   tg_dev_knobs: { label: 'Timegrapher: raw engine knob panel (admin)', default: false },
   tg_quality_v2: { label: 'Timegrapher: measurement quality v2 (admin)', default: false },
   deep_test: { label: 'Timegrapher: Deep Test (admin)', default: false },
+  watch_db: { label: 'Watch database: Explore, model pages, Also owned by (admin)', default: false },
 };
 function featureFlag(name) {
   const stored = safeLS.get('ff_' + name);
@@ -6377,6 +6368,14 @@ function featureFlag(name) {
 }
 function setFeatureFlag(name, val) {
   safeLS.set('ff_' + name, val ? 'true' : 'false');
+  if (name === 'watch_db') applyWatchDbFlag();
+}
+// Watch database (Explore + model pages + Also owned by) — behind the watch_db
+// dev flag until launch. Hides the only visible entry point; the code paths
+// below also check the flag so nothing is reachable with it off.
+function applyWatchDbFlag() {
+  const btn = document.getElementById('feed-watches-btn');
+  if (btn) btn.style.display = featureFlag('watch_db') ? '' : 'none';
 }
 let OFFICIAL_USER_ID = null; // resolved at init from profiles.is_official
 
@@ -8118,7 +8117,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.21.48';
+const APP_VERSION = '24.07.26';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -19440,6 +19439,7 @@ let _exploreLoaded = false, _exploreQ = '', _exploreBrand = null, _exploreOffset
 const EXPLORE_PAGE_SIZE = 30;
 
 function showExplorePage() {
+  if (!featureFlag('watch_db')) return;
   if (demoGuard()) return;
   if (typeof _tgListening !== 'undefined' && _tgListening) stopTgListen();
   if (typeof _msrListening !== 'undefined' && _msrListening) stopMsrListen('navigated_away');
@@ -23360,7 +23360,7 @@ function openAddWatch() {
 async function loadModelOwnersRow(w) {
   const row = document.getElementById('wm-also-owned');
   row.style.display = 'none'; row.onclick = null;
-  if (!w || !w.modelId || !currentUser) return;
+  if (!w || !w.modelId || !currentUser || !featureFlag('watch_db')) return;
   const { data, error } = await db.rpc('model_owners', { p_model_id: w.modelId });
   if (error || !data || editingId !== w.id) return; // modal may have moved on
   const others = (data.total_owners || 0) - 1; // viewer is always one of the owners here
@@ -23382,6 +23382,7 @@ let modelPagePrev = 'page-collection';
 let modelPagePrevScrollY = 0;
 let modelPageId = null;
 function openModelPage(modelId, owners) {
+  if (!featureFlag('watch_db')) return;
   // Close any open overlays (watch modal, watch preview) so the page is visible
   document.querySelectorAll('.overlay:not(.hidden)').forEach(o => o.classList.add('hidden'));
   const active = document.querySelector('.page.active');
@@ -29143,7 +29144,7 @@ function previewWatch(w) {
 
   const modelRow = document.getElementById('wpm-model-row');
   if (modelRow) {
-    modelRow.innerHTML = w.modelId
+    modelRow.innerHTML = (w.modelId && featureFlag('watch_db'))
       ? `<div role="button" tabindex="0" style="margin-top:.75rem;padding:9px 12px;border:0.5px solid var(--border);border-radius:8px;font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:.5rem;"
              onclick="closeWatchPreview();openModelPage('${escAttr(w.modelId)}')">
            <span>See this model — who else owns it</span><span style="color:var(--muted);">→</span>
@@ -33955,6 +33956,7 @@ async function bootApp(user) {
   if (bellBtn) bellBtn.style.display = '';
   const adminNavBtn = document.getElementById('admin-nav-btn');
   if (adminNavBtn) adminNavBtn.style.display = (user.id === ADMIN_USER_ID) ? '' : 'none';
+  applyWatchDbFlag();
   // Show Measure tab only when native timegrapher bridge is available (iOS app)
   const navMeasure = document.getElementById('nav-measure-btn');
   if (navMeasure && _tgHasNative()) navMeasure.style.display = '';

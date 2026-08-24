@@ -28,6 +28,7 @@ async function openEditModal(page, ownersPayload) {
     status: 200, contentType: 'application/json',
     body: JSON.stringify([{ fact: 'It once dove very deep indeed.', position: 0 }]),
   }));
+  await page.addInitScript(() => { try { localStorage.setItem('ff_watch_db', 'true'); } catch (e) {} });
   await injectSession(page);
   await page.goto('/');
   await waitForAppBoot(page);
@@ -75,6 +76,7 @@ test('sole owner: row shows rare-bird copy, page still opens with facts', async 
 
 test('no model_id -> row stays hidden', async ({ page }) => {
   await mockSupabase(page, { watches: [{ ...WATCH, model_id: null }] });
+  await page.addInitScript(() => { try { localStorage.setItem('ff_watch_db', 'true'); } catch (e) {} });
   await injectSession(page);
   await page.goto('/');
   await waitForAppBoot(page);
