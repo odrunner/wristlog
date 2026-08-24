@@ -8117,7 +8117,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '24.07.26';
+const APP_VERSION = '24.10.03';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -30854,8 +30854,14 @@ function sendPiezoTuning() {
   });
 }
 function haptic(type) { try { window.webkit.messageHandlers.haptic.postMessage({ type: type || 'light' }); } catch(e) {} }
+// Native calls this from didFinish — before the async session restore has run
+// bootApp(), so currentUser is still null on every cold start and every >30min
+// foreground reload. Native treats the call itself as "the web layer took it"
+// and deletes the photo, so bailing here silently ate every such share (2.5 fix
+// moved the loss from the reload to this guard). Hold it and hand over in bootApp.
+let _pendingSharedImageB64 = null;
 function handleSharedImage(base64) {
-  if (!currentUser) return;
+  if (!currentUser) { _pendingSharedImageB64 = base64; return; }
   handleSharedImageV2(base64);
 }
 let _tgWatchId = null;
@@ -33923,6 +33929,11 @@ async function bootApp(user) {
   }
   clearUserState();
   currentUser = user;
+  // A photo shared before the session resolved (see handleSharedImage).
+  if (_pendingSharedImageB64) {
+    const _b64 = _pendingSharedImageB64; _pendingSharedImageB64 = null;
+    setTimeout(() => handleSharedImageV2(_b64), 0);
+  }
   // Backfill user_id on the anonymous page_visit from before auth resolved.
   // Goes through a SECURITY DEFINER RPC: a direct UPDATE is silently dropped for
   // everyone but the admin, because page_visits' only SELECT policy is

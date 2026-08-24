@@ -38,6 +38,24 @@ describe('shared image hand-off — web side of the contract', () => {
     expect(html).not.toMatch(/^async function handleSharedImage\(/m);
   });
 
+  it('holds a photo that arrives before the session resolves, and drains it in bootApp', () => {
+    // 2026-08-24: native drains from didFinish, which runs before the async
+    // session restore calls bootApp() — so currentUser is null on every cold
+    // start and every >30min foreground reload. The old `if (!currentUser)
+    // return;` bailed silently while native still saw its true marker and
+    // deleted the photo. Exactly the "lost unless opened in the last 30 min"
+    // report, now one layer down.
+    const handler = html.match(/^function handleSharedImage\(base64\) \{[\s\S]*?\n\}/m);
+    expect(handler).not.toBeNull();
+    expect(handler[0]).not.toMatch(/if \(!currentUser\) return;/);
+    expect(handler[0]).toMatch(/if \(!currentUser\) \{ _pendingSharedImageB64 = base64; return; \}/);
+
+    const boot = html.match(/async function bootApp\(user\) \{[\s\S]*?currentUser = user;[\s\S]{0,400}/);
+    expect(boot).not.toBeNull();
+    expect(boot[0]).toMatch(/_pendingSharedImageB64 = null;/);
+    expect(boot[0]).toMatch(/handleSharedImageV2\(_b64\)/);
+  });
+
   it('ships the chooser markup handleSharedImageV2 unhides', () => {
     // Missing markup silently falls through to the collection flow — a photo
     // that identifies itself with no question asked, which is the same symptom.
