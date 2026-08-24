@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { mockSupabase, injectSession, waitForAppBoot, navigateTo } from './helpers.js';
 
-// "Also owned by" row in the watch edit modal + the in-app model sheet it
+// "Also owned by" row in the watch edit modal + the in-app model PAGE it
 // opens — fed by the model_owners RPC (count-always, names-gated) plus
 // authed reads of watch_models and watch_facts.
 
@@ -36,7 +36,7 @@ async function openEditModal(page, ownersPayload) {
   await expect(page.locator('#watch-modal')).toBeVisible();
 }
 
-test('row shows count + era, tap opens in-app model sheet with facts and owners', async ({ page }) => {
+test('row shows count + era, tap opens in-app model page with facts and owners', async ({ page }) => {
   await openEditModal(page, {
     total_owners: 4, era_min: '1988', era_max: '2024',
     visible: [
@@ -49,29 +49,28 @@ test('row shows count + era, tap opens in-app model sheet with facts and owners'
   await expect(row).toContainText('Also owned by 3 other members');
   await expect(row).toContainText('examples from 1988 to 2024');
   await row.click();
-  const sheet = page.locator('#model-sheet-modal');
-  await expect(sheet).toBeVisible();
-  await expect(sheet).toContainText('Rolex');
-  await expect(sheet).toContainText('Submariner');
-  await expect(sheet).toContainText('It once dove very deep indeed.');
-  await expect(sheet).toContainText('Steve');
-  await expect(sheet).toContainText('@ana');
-  await expect(sheet).toContainText('3 other members have this watch');
-  await sheet.locator('[aria-label="Close"]').click();
-  await expect(sheet).toBeHidden();
-  await expect(page.locator('#watch-modal')).toBeVisible(); // back to the watch modal
+  const mp = page.locator('#page-model');
+  await expect(mp).toHaveClass(/active/);
+  await expect(mp).toContainText('Rolex');
+  await expect(mp).toContainText('Submariner');
+  await expect(mp).toContainText('It once dove very deep indeed.');
+  await expect(mp).toContainText('Steve');
+  await expect(mp).toContainText('@ana');
+  await expect(mp).toContainText('You and 3 other members have this watch');
+  await mp.getByText('← Back').click();
+  await expect(page.locator('#page-collection')).toHaveClass(/active/); // back where we came from
 });
 
-test('sole owner: row shows rare-bird copy, sheet still opens with facts', async ({ page }) => {
+test('sole owner: row shows rare-bird copy, page still opens with facts', async ({ page }) => {
   await openEditModal(page, { total_owners: 1, era_min: null, era_max: null, visible: [] });
   const row = page.locator('#wm-also-owned');
   await expect(row).toBeVisible();
   await expect(row).toContainText("You're the only one on WRotate with this one");
   await row.click();
-  const sheet = page.locator('#model-sheet-modal');
-  await expect(sheet).toBeVisible();
-  await expect(sheet).toContainText("You're the only one on WRotate with this one");
-  await expect(sheet).toContainText('It once dove very deep indeed.');
+  const mp = page.locator('#page-model');
+  await expect(mp).toHaveClass(/active/);
+  await expect(mp).toContainText("You're the only one on WRotate with this one");
+  await expect(mp).toContainText('It once dove very deep indeed.');
 });
 
 test('no model_id -> row stays hidden', async ({ page }) => {
