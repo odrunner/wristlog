@@ -2897,8 +2897,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <span class="eyebrow eyebrow-muted">August 2026</span>
       </div>
       <div style="margin-bottom:.75rem;">
-        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">See Who Else Has Your Watch</div>
-        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">Open any watch in your collection and a new <strong>Also owned by</strong> row shows how many other members have the same model &#8212; across every era, so a vintage example counts alongside a brand-new one. Tap it for the <strong>model view</strong>: fun facts about the model, the years members&#8217; examples span, and the owners who share their collection with you &#8212; tap one to visit their profile. If nobody else has it, you&#8217;ll know your watch is a rare bird.</div>
+        <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">The Watch Database</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.55;">The watch database is here. Tap <strong>Watches</strong> at the top of the Feed to browse and search every model members own &#8212; by brand, by name, sorted by popularity. Every model has its own page: fun facts, the years members&#8217; examples span, and the owners who share their collection with you &#8212; tap one to visit their profile. You&#8217;ll also find it from your own collection (the <strong>Also owned by</strong> row on any watch) and from any watch you tap in the Feed. If nobody else has yours, you&#8217;ll know it&#8217;s a rare bird.</div>
       </div>
       <div style="margin-bottom:.75rem;">
         <div style="font-size:.85rem;font-weight:600;margin-bottom:.25rem;">Comments on Shared Links</div>
@@ -4112,7 +4112,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
             <div class="help-step-num">7</div>
             <div class="help-step-body">
               <div class="help-step-title">See who else has your watch</div>
-              <div class="help-step-desc">Open any watch in your collection and the <strong>Also owned by</strong> row shows how many other members have the same model &#8212; every era counts, so a vintage example sits alongside a brand-new one. Tap the row for the model view: fun facts, the years members&#8217; examples span, and the owners who share their collection with you &#8212; tap one to visit their profile. Members whose collection or watch is private are counted but never named. If nobody else has it, you&#8217;ve got a rare bird.</div>
+              <div class="help-step-desc">Tap <strong>Watches</strong> at the top of the Feed to browse and search every model on WRotate, or open any watch in your collection &#8212; the <strong>Also owned by</strong> row shows how many other members have the same model, every era counted. Each model&#8217;s page has fun facts, the years members&#8217; examples span, and the owners who share their collection with you &#8212; tap one to visit their profile. Members whose collection or watch is private are counted but never named. If nobody else has it, you&#8217;ve got a rare bird.</div>
             </div>
           </div>
           <div class="help-tip" style="display:flex;align-items:flex-start;gap:.5rem;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg><span><strong>Tip:</strong> "From Photo" works great for a quick start — snap your watch box and add everything in one go. For the most accurate data, use brand website URLs (rolex.com, omegawatches.com…) with the Fetch button.</span></div>
@@ -5718,6 +5718,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     </div>
     <div id="wpm-ref-row"></div>
     <div id="wpm-fields" style="max-height:50vh;overflow-y:auto;"></div>
+    <div id="wpm-model-row"></div>
     <div class="modal-actions wpm-actions" style="flex-direction:row;gap:.5rem;">
       <button class="btn btn-primary" onclick="addPreviewedWatchToWishlist()" style="flex:1;">+ Wishlist</button>
       <button class="btn btn-ghost" onclick="closeWatchPreview()" style="flex:1;">Close</button>
@@ -8114,7 +8115,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.18.49';
+const APP_VERSION = '23.18.52';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -8777,7 +8778,7 @@ async function loadAndRenderProfile(userId) {
   let showcaseGated = false;
   if (isOwn || visibility !== 'none') {
     let q = db.from('watches')
-      .select('id, brand, name, color, image, ref, url, watch_privacy, description, background, functions')
+      .select('id, brand, name, color, image, ref, url, watch_privacy, description, background, functions, model_id')
       .eq('user_id', userId);
     if (!isOwn) {
       const vis = profile.collection_visibility || 'followers';
@@ -9194,6 +9195,7 @@ function renderProfilePageHTML(profile, isOwn, isFollowing, logCount, recentLogs
            data-watch-url="${escHtml(w.url||'')}"
            data-watch-image="${escHtml(w.image||'')}"
            data-watch-color="${escHtml(w.color||'#c9a84c')}"
+           data-watch-model-id="${escHtml(w.model_id||w.modelId||'')}"
            data-watch-desc="${escHtml(w.description||'')}"
            data-watch-bg="${escHtml(w.background||'')}"
            data-watch-func="${escHtml((w.functions||[]).join(', '))}"`;
@@ -14339,6 +14341,7 @@ function renderFeedCard(item) {
            data-watch-url="${escHtml(w.url||'')}"
            data-watch-image="${escHtml(w.image||'')}"
            data-watch-color="${escHtml(w.color||'#c9a84c')}"
+           data-watch-model-id="${escHtml(w.model_id||w.modelId||'')}"
            data-watch-desc="${escHtml(w.description||'')}"
            data-watch-bg="${escHtml(w.background||'')}"
            data-watch-func="${escHtml((w.functions||[]).join(', '))}">${escHtml((w.brand||'') + ' ' + (w.name||''))}</div>`
@@ -14474,6 +14477,7 @@ function renderFeedCard(item) {
            data-watch-url="${escHtml(w.url||'')}"
            data-watch-image="${escHtml(w.image||'')}"
            data-watch-color="${escHtml(w.color||'#c9a84c')}"
+           data-watch-model-id="${escHtml(w.model_id||w.modelId||'')}"
            data-watch-desc="${escHtml(w.description||'')}"
            data-watch-bg="${escHtml(w.background||'')}"
            data-watch-func="${escHtml((w.functions||[]).join(', '))}">
@@ -29062,6 +29066,7 @@ function previewWatchFromEl(el) {
     description: el.dataset.watchDesc || '',
     background: el.dataset.watchBg || '',
     functions: el.dataset.watchFunc || '',
+    modelId: el.dataset.watchModelId || '',
   });
 }
 
@@ -29132,6 +29137,16 @@ function previewWatch(w) {
   }
 
   document.getElementById('wpm-fields').innerHTML = cardHtml;
+
+  const modelRow = document.getElementById('wpm-model-row');
+  if (modelRow) {
+    modelRow.innerHTML = w.modelId
+      ? `<div role="button" tabindex="0" style="margin-top:.75rem;padding:9px 12px;border:0.5px solid var(--border);border-radius:8px;font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:.5rem;"
+             onclick="closeWatchPreview();openModelPage('${escAttr(w.modelId)}')">
+           <span>See this model — who else owns it</span><span style="color:var(--muted);">→</span>
+         </div>`
+      : '';
+  }
 
   document.getElementById('watch-preview-modal').classList.remove('hidden');
 }

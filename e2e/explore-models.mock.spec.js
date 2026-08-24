@@ -71,3 +71,32 @@ test('brand chip filters and card tap opens the model page', async ({ page }) =>
   await mp.getByText('← Back').click();
   await expect(page.locator('#page-explore')).toHaveClass(/active/); // back to Explore
 });
+
+test('feed watch preview links to the model page', async ({ page }) => {
+  const MODEL_ID = 'aaaaaaaa-0000-0000-0000-000000000001';
+  await mockSupabase(page, {});
+  await injectSession(page);
+  await page.goto('/');
+  await waitForAppBoot(page);
+  // Drive the preview modal directly with a model-linked watch — the same
+  // object shape feed_watch_display now returns (model_id threaded through).
+  await page.evaluate(id => previewWatch({
+    id: 'w9', brand: 'Rolex', name: 'Submariner', ref: '', url: '', image: '',
+    color: '#c9a84c', description: '', background: '', functions: '', modelId: id,
+  }), MODEL_ID);
+  await expect(page.locator('#watch-preview-modal')).toBeVisible();
+  await page.route('**/rest/v1/rpc/model_owners*', route => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ total_owners: 23, era_min: '1962', era_max: '2026', visible: [] }),
+  }));
+  await page.route('**/rest/v1/watch_models*', route => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ id: MODEL_ID, brand: 'Rolex', name: 'Submariner', specs: {}, facts_key: null }),
+  }));
+  await page.getByText('See this model — who else owns it').click();
+  await expect(page.locator('#watch-preview-modal')).toBeHidden();
+  const mp = page.locator('#page-model');
+  await expect(mp).toHaveClass(/active/);
+  await expect(mp).toContainText('Owned by 23 members on WRotate');
+  await expect(mp).toContainText('Members own examples from 1962 to 2026');
+});
