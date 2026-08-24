@@ -6364,7 +6364,6 @@ const FEATURE_FLAGS = {
   tg_piezo: { label: 'Timegrapher: piezo input source (admin)', default: false },
   tg_algo: { label: 'Timegrapher: tg detection core toggle (admin)', default: false },
   tg_quality_v2: { label: 'Timegrapher: measurement quality v2 (admin)', default: false },
-  logagain_anytime: { label: 'Track: show the "wearing it again?" banner at any hour (admin UAT)', default: false },
   deep_test: { label: 'Timegrapher: Deep Test (admin)', default: false },
 };
 function featureFlag(name) {
@@ -8115,7 +8114,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '23.18.52';
+const APP_VERSION = '23.20.12';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -29853,8 +29852,7 @@ function maybeShowLogAgainBanner(force = false, watchId = null) {
   if (!force && safeSS.get('wl_logagain_dismissed') === today) return;
   // A push tap (force) skips the 5pm gate — the reminder itself was sent at 5pm local, and
   // "wearing it again today?" still holds if it's opened the next morning with nothing logged.
-  // Dev flag (admin portal → Dev): ignore the 5pm gate so the banner can be UAT'd in daytime.
-  const hour = (force || featureFlag('logagain_anytime')) ? 24 : new Date().getHours();
+  const hour = force ? 24 : new Date().getHours();
   const cand = (watchId && watches.find(w => w.id === watchId)) || logAgainCandidate({ logs, watches, today, hour });
   if (!cand || hasWornToday(logs, cand.id, today)) return;
   const label = [cand.brand, cand.name].filter(Boolean).join(' ');
