@@ -149,6 +149,16 @@ Deno.test("COLD_PROMPT — instructs verification via search", () => {
   assertStringIncludes(COLD_PROMPT, "use search to verify");
 });
 
+// Cold identify runs on an image the client has ALREADY cropped to one watch,
+// so "where is the watch" has no meaningful answer — and boundingBox was the
+// only field in the schema with no "or empty string" escape. Gemini responded
+// by emitting `"boundingBox":` with no value, which is invalid JSON and cost a
+// Claude Opus re-run (recurring 2026-07-29..08-25). Nothing reads the cold
+// response's box; the crop boxes come from the separate detect call.
+Deno.test("COLD_PROMPT — does not ask for a bounding box", () => {
+  assertEquals(COLD_PROMPT.includes("boundingBox"), false);
+});
+
 Deno.test("buildClaudeFallbackPrompt — embeds the BRAND_CUES block", () => {
   const p = buildClaudeFallbackPrompt();
   assertStringIncludes(p, BRAND_CUES);
