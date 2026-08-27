@@ -8117,7 +8117,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '25.14.25';
+const APP_VERSION = '26.19.56';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -10212,11 +10212,7 @@ async function renderClubDetail(clubId) {
         if (!clubComments[c.log_id]) clubComments[c.log_id] = [];
         clubComments[c.log_id].push({ ...c, profile: cpm[c.user_id] || null });
       });
-      (clResult.data || []).forEach(cl => {
-        if (!commentLikes[cl.comment_id]) commentLikes[cl.comment_id] = { count: 0, liked: false };
-        commentLikes[cl.comment_id].count++;
-        if (cl.user_id === currentUser.id) commentLikes[cl.comment_id].liked = true;
-      });
+      applyCommentLikes(commentLikes, clubCommentIds, clResult.data, currentUser.id);
     }
     logIds.forEach(id => clubCommentCounts[id] = (clubComments[id] || []).length);
     // Temporarily override feed globals for renderFeedCard
@@ -11510,6 +11506,19 @@ function pinFeatured(rawLogs, featuredId, featuredLog) {
   return [{ ...pin, __featured: true }, ...rest];
 }
 
+// Rebuild commentLikes entries for exactly these comment ids from fresh comment_likes rows.
+// Resets each id first: every loader used to `count++` onto the existing entry, and
+// fetchComments() re-runs on each card expansion, so 2 real likes displayed as 8.
+function applyCommentLikes(map, commentIds, rows, uid) {
+  const wanted = new Set(commentIds);
+  commentIds.forEach(id => map[id] = { count: 0, liked: false });
+  (rows || []).forEach(cl => {
+    if (!wanted.has(cl.comment_id)) return;
+    map[cl.comment_id].count++;
+    if (uid && cl.user_id === uid) map[cl.comment_id].liked = true;
+  });
+  return map;
+}
 // ── Feed pagination helpers (mirrored in wrotate_test.js for unit tests) ──────
 // Composite (date, created_at) keyset: fetch posts strictly older than cursor.
 function feedKeysetFilter(cursor) {
@@ -11952,11 +11961,7 @@ async function loadFeed() {
         feedComments[c.log_id].push({ ...c, profile: cpm[c.user_id] || null });
       });
       commentLikes = {};
-      (clResult.data || []).forEach(cl => {
-        if (!commentLikes[cl.comment_id]) commentLikes[cl.comment_id] = { count: 0, liked: false };
-        commentLikes[cl.comment_id].count++;
-        if (cl.user_id === currentUser.id) commentLikes[cl.comment_id].liked = true;
-      });
+      applyCommentLikes(commentLikes, allCommentIds, clResult.data, currentUser.id);
     }
     logIds.forEach(id => feedCommentCounts[id] = (feedComments[id] || []).length);
 
@@ -12148,11 +12153,7 @@ async function loadMoreFeed() {
         if (!feedComments[c.log_id]) feedComments[c.log_id] = [];
         feedComments[c.log_id].push({ ...c, profile: cpm[c.user_id] || null });
       });
-      (clResult.data || []).forEach(cl => {
-        if (!commentLikes[cl.comment_id]) commentLikes[cl.comment_id] = { count: 0, liked: false };
-        commentLikes[cl.comment_id].count++;
-        if (cl.user_id === currentUser.id) commentLikes[cl.comment_id].liked = true;
-      });
+      applyCommentLikes(commentLikes, allCommentIds, clResult.data, currentUser.id);
     }
     logIds.forEach(id => feedCommentCounts[id] = (feedComments[id] || []).length);
 
@@ -16319,11 +16320,7 @@ async function fetchComments(logId) {
   const cIds = data.map(c => c.id);
   if (cIds.length) {
     const { data: clData } = await db.from('comment_likes').select('comment_id, user_id').in('comment_id', cIds);
-    (clData || []).forEach(cl => {
-      if (!commentLikes[cl.comment_id]) commentLikes[cl.comment_id] = { count: 0, liked: false };
-      commentLikes[cl.comment_id].count++;
-      if (cl.user_id === currentUser.id) commentLikes[cl.comment_id].liked = true;
-    });
+    applyCommentLikes(commentLikes, cIds, clData, currentUser.id);
   }
 }
 // ── @mention autocomplete ─────────────────────────────────────────────────

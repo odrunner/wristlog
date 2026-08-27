@@ -2892,6 +2892,20 @@ export function feedPageOutcome({ pageLength, visibleLength, attempt, maxAttempt
   return (attempt + 1 >= maxAttempts) ? 'pause' : 'skip';
 }
 
+// Rebuild commentLikes entries for exactly these comment ids from fresh comment_likes rows.
+// Resets each id first: every loader used to `count++` onto the existing entry, and
+// fetchComments() re-runs on each card expansion, so 2 real likes displayed as 8.
+export function applyCommentLikes(map, commentIds, rows, uid) {
+  const wanted = new Set(commentIds);
+  commentIds.forEach(id => map[id] = { count: 0, liked: false });
+  (rows || []).forEach(cl => {
+    if (!wanted.has(cl.comment_id)) return;
+    map[cl.comment_id].count++;
+    if (uid && cl.user_id === uid) map[cl.comment_id].liked = true;
+  });
+  return map;
+}
+
 export function dedupeNewFeedLogs(existingIds, incoming) {
   const seen = existingIds instanceof Set ? new Set(existingIds) : new Set(existingIds || []);
   const out = [];
