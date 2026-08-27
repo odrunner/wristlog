@@ -120,6 +120,45 @@ test.describe('New Post identify race (mocked)', () => {
     }).toBe(1);
   });
 
+  // Silence was the original complaint: recognition failed with no spinner and no
+  // message, so there was no way to tell "we tried and missed" from "we never ran".
+  test('a failed recognition says so, without offering a pointless retry', async ({ page }) => {
+    await page.route('**/functions/v1/identify-watch', route =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ watches: [] }) })
+    );
+    await mockStorage(page);
+    await openComposerWithPhoto(page);
+
+    const sug = page.locator('#np-watch-suggestion');
+    await expect(sug).toContainText("Couldn't recognize this one");
+    // The picker is still the action, and it is still reachable.
+    await expect(sug).toContainText('Tag a watch from your collection');
+    // Retrying a genuine no-match would spend a call to print the same line.
+    await expect(sug.locator('button', { hasText: 'Retry' })).toHaveCount(0);
+  });
+
+  test('a server error offers Retry, and Retry runs identification again', async ({ page }) => {
+    let calls = 0;
+    await page.route('**/functions/v1/identify-watch', (route) => {
+      calls++;
+      // Fail first, succeed on the retry — the case Retry exists for.
+      if (calls === 1) return route.fulfill({ status: 502, contentType: 'application/json', body: '{}' });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        watches: [{ brand: 'Rolex', model: 'Submariner Date', reference: '126610LN', confidence: 'high' }],
+      }) });
+    });
+    await mockStorage(page);
+    await openComposerWithPhoto(page);
+
+    const sug = page.locator('#np-watch-suggestion');
+    await expect(sug).toContainText("Couldn't check right now");
+    await sug.locator('button', { hasText: 'Retry' }).click();
+
+    await expect(sug).toContainText('recognized');
+    expect(calls, 'Retry re-ran the identification').toBe(2);
+    await expect.poll(() => page.evaluate(() => npIdentifiedWatchId)).toBe('watch-001');
+  });
+
   test('an identification that finds nothing does not delay the post', async ({ page }) => {
     await page.route('**/functions/v1/identify-watch', route =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ watches: [] }) })

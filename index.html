@@ -8117,7 +8117,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.10.49';
+const APP_VERSION = '27.14.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15826,7 +15826,16 @@ function logNpIdentifyOutcome(outcome, extra) {
   if (window.posthog) posthog.capture('np_identify_outcome', meta);
 }
 
+// "Couldn't recognize this one" covers both a no-match and the model reporting
+// no watch at all, deliberately. The precise version ("no watch in this photo")
+// would sometimes be a confident lie: on 2026-08-25 Gemini called a photo too
+// blurry to contain a watch and Claude then identified one in it.
+const NP_MSG_UNRECOGNIZED = "Couldn't recognize this one";
+const NP_MSG_UNAVAILABLE = "Couldn't check right now";
+
 async function npIdentifyWatch(file) {
+  _npIdentifyFile = file;
+  _npIdentifyNote = null;
   if (!currentUser) { logNpIdentifyOutcome('no_user'); return; }
   // Do NOT bail on an empty collection here. Sharing from Photos launches the
   // app, native hands the photo over before the session restores, and bootApp
@@ -15837,11 +15846,26 @@ async function npIdentifyWatch(file) {
   let waited = 0;
   if (!watches.length) {
     const t0 = Date.now();
-    await Promise.race([_userDataReady, new Promise(r => setTimeout(r, 8000))]);
+    // Which of these wins tells us whether the collection is genuinely empty or
+    // simply never arrived — opposite situations that need opposite messages.
+    const outcome = await Promise.race([
+      _userDataReady.then(() => 'loaded'),
+      new Promise(r => setTimeout(() => r('timeout'), 8000)),
+    ]);
     waited = Date.now() - t0;
-    // Genuinely empty collection (or a load that never landed): nothing to match
-    // against, so the picker is the right answer — but say so in the telemetry.
-    if (!watches.length) { logNpIdentifyOutcome('no_collection', { waited_ms: waited }); return; }
+    if (!watches.length) {
+      if (outcome === 'timeout') {
+        // Our failure: the collection never landed. Retrying can genuinely fix it.
+        _npIdentifyNote = { text: NP_MSG_UNAVAILABLE, retry: true };
+        logNpIdentifyOutcome('collection_load_failed', { waited_ms: waited });
+        renderNpWatchDisplay();
+      } else {
+        // A new user with no watches yet. The picker below is already empty;
+        // a note on top of an obviously empty state is noise, so say nothing.
+        logNpIdentifyOutcome('no_collection', { waited_ms: waited });
+      }
+      return;
+    }
   }
   const sugEl = document.getElementById('np-watch-suggestion');
   if (!sugEl) { logNpIdentifyOutcome('no_sug_el', { waited_ms: waited }); return; }
@@ -15854,26 +15878,42 @@ async function npIdentifyWatch(file) {
       method: 'POST',
       body: JSON.stringify({ image: base64, collection: watches.map(w => ({ brand: w.brand, name: w.name, ref: w.ref || '' })) }),
     }, 90000);
-    if (!resp.ok) { console.error('[WRotate] NP identify API error:', resp.status); logNpIdentifyOutcome('http_error', { status: resp.status, waited_ms: waited }); npIdentifiedWatchId = null; renderNpWatchDisplay(); return; }
+    if (!resp.ok) { console.error('[WRotate] NP identify API error:', resp.status); logNpIdentifyOutcome('http_error', { status: resp.status, waited_ms: waited }); _npIdentifyNote = { text: NP_MSG_UNAVAILABLE, retry: true }; npIdentifiedWatchId = null; renderNpWatchDisplay(); return; }
     const data = await resp.json();
-    if (!data.watches || data.watches.length === 0) { logNpIdentifyOutcome('no_watches_found', { waited_ms: waited }); npIdentifiedWatchId = null; renderNpWatchDisplay(); return; }
+    if (!data.watches || data.watches.length === 0) { logNpIdentifyOutcome('no_watches_found', { waited_ms: waited }); _npIdentifyNote = { text: NP_MSG_UNRECOGNIZED, retry: false }; npIdentifiedWatchId = null; renderNpWatchDisplay(); return; }
     const matches = matchIdentifiedToCollection(data.watches);
     if (matches.length === 0) {
       // No collection match — show picker so user can tag manually
       logNpIdentifyOutcome('no_match', { waited_ms: waited });
+      _npIdentifyNote = { text: NP_MSG_UNRECOGNIZED, retry: false };
       npIdentifiedWatchId = null;
       renderNpWatchDisplay();
       return;
     }
     logNpIdentifyOutcome('matched', { waited_ms: waited });
     showNpWatchSuggestion(matches[0].watch);
-  } catch (err) { console.error('[WRotate] New post identify error:', err); logNpIdentifyOutcome('error', { msg: String(err && err.message || err).slice(0, 120), waited_ms: waited }); npIdentifiedWatchId = null; renderNpWatchDisplay(); }
+  } catch (err) { console.error('[WRotate] New post identify error:', err); logNpIdentifyOutcome('error', { msg: String(err && err.message || err).slice(0, 120), waited_ms: waited }); _npIdentifyNote = { text: NP_MSG_UNAVAILABLE, retry: true }; npIdentifiedWatchId = null; renderNpWatchDisplay(); }
 }
 
 function showNpWatchSuggestion(w) {
   // Auto-accept: set watchId immediately, user can change if wrong
   npIdentifiedWatchId = w.id;
   renderNpWatchDisplay();
+}
+
+// Why the composer has no watch tagged, when recognition actually ran and
+// failed. Silence was the complaint (2026-08-27): a shared Rolex came back
+// untagged with no spinner and no message, so there was no way to tell
+// identification from indifference. Only set for states the user can act on —
+// a brand-new user with an empty collection gets nothing, because the picker
+// below is already empty and a note on top of that is just noise.
+let _npIdentifyNote = null;   // { text, retry:boolean } or null
+let _npIdentifyFile = null;   // last photo handed to npIdentifyWatch, for Retry
+
+function npRetryIdentify() {
+  if (!_npIdentifyFile) return;
+  _npIdentifyNote = null;
+  npIdentifyWatch(_npIdentifyFile);
 }
 
 function renderNpWatchDisplay() {
@@ -15890,7 +15930,17 @@ function renderNpWatchDisplay() {
       <button class="sug-no" onclick="toggleNpWatchPicker()" style="font-size:.7rem;">Change</button>
     </div><div id="np-watch-picker" style="display:none;"></div>`;
   } else {
-    el.innerHTML = `<div class="watch-suggestion" onclick="toggleNpWatchPicker()" style="cursor:pointer;">
+    // Retry is offered ONLY when a retry could plausibly change the answer (our
+    // error, our timeout). Re-running a genuine no-match just spends another
+    // call to print the same line, and an always-on Retry teaches people to
+    // ignore it.
+    const note = _npIdentifyNote
+      ? `<div style="display:flex;align-items:center;gap:.4rem;color:var(--muted);font-size:.78rem;margin-bottom:.35rem;">
+      <span>${escHtml(_npIdentifyNote.text)}</span>
+      ${_npIdentifyNote.retry ? `<button class="sug-no" onclick="npRetryIdentify()" style="font-size:.7rem;">Retry</button>` : ''}
+    </div>`
+      : '';
+    el.innerHTML = note + `<div class="watch-suggestion" onclick="toggleNpWatchPicker()" style="cursor:pointer;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
       <div style="flex:1;color:var(--muted);font-size:.82rem;">Tag a watch from your collection</div>
     </div><div id="np-watch-picker" style="display:none;"></div>`;
@@ -16000,6 +16050,8 @@ function clearNpWatch() {
 }
 
 function dismissNpWatchSuggestion() {
+  _npIdentifyNote = null;
+  _npIdentifyFile = null;
   npIdentifiedWatchId = null;
   npUseCase = 'unspecified';
   npStrapId = null;
