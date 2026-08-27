@@ -76,6 +76,50 @@ test.describe('New Post identify race (mocked)', () => {
       .toBe('watch-001');
   });
 
+  // Regression (@od, 2026-08-27 17:23 UTC): a Rolex shared from Photos came back
+  // unrecognised with no error and no spinner. Sharing launches the app, native
+  // hands the photo over before the session restores, and bootApp opens this
+  // composer one tick after clearUserState() has emptied `watches` — so
+  // npIdentifyWatch's `if (!watches.length) return` raced the collection
+  // download against the user's tap and lost silently. No request ever reached
+  // the server. It must wait for the load instead of skipping identification.
+  test('a photo shared into a cold start waits for the collection instead of skipping identification', async ({ page }) => {
+    let identifyCalls = 0;
+    await page.route('**/functions/v1/identify-watch', (route) => {
+      identifyCalls++;
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        watches: [{ brand: 'Rolex', model: 'Submariner Date', reference: '126610LN', confidence: 'high' }],
+      }) });
+    });
+    await mockStorage(page);
+    await page.goto('/');
+    await waitForAppBoot(page);
+
+    // Put the app back into the state bootApp hands the share modal: collection
+    // wiped, load still in flight.
+    await page.evaluate((b64) => {
+      window.__savedWatches = watches.slice();
+      watches = [];
+      resetUserDataReady();
+      const bin = atob(b64);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      openNewPost({ prefillFiles: [new File([arr], 'shared.png', { type: 'image/png' })], source: 'share' });
+    }, PNG_1x1.toString('base64'));
+
+    // Nothing to match against yet, so nothing should have been sent.
+    await page.waitForTimeout(400);
+    expect(identifyCalls, 'must not identify against an empty collection').toBe(0);
+
+    // loadUserData() lands, exactly as it would mid-tap on a cold start.
+    await page.evaluate(() => { watches = window.__savedWatches; _markUserDataReady(); });
+
+    await expect.poll(() => identifyCalls, {
+      timeout: 10_000,
+      message: 'identification must run once the collection arrives',
+    }).toBe(1);
+  });
+
   test('an identification that finds nothing does not delay the post', async ({ page }) => {
     await page.route('**/functions/v1/identify-watch', route =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ watches: [] }) })

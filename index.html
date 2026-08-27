@@ -8117,7 +8117,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '27.10.32';
+const APP_VERSION = '27.10.49';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -15815,10 +15815,36 @@ function npIdentifyWait(inFlight, taggedWatchId, capMs, sleep) {
   return Promise.race([Promise.resolve(inFlight).catch(() => {}), sleep(capMs)]).then(() => {});
 }
 
+// Records how a new-post identification ended. The af2 flow has had
+// logIdentifyOutcome since it shipped; this path had nothing, so when a shared
+// Rolex came back unrecognised on 2026-08-27 there was no trace on either side —
+// the server never saw a request and the client never said why.
+function logNpIdentifyOutcome(outcome, extra) {
+  if (!currentUser || _isDemoMode) return;
+  const meta = { outcome, ...(extra || {}) };
+  db.from('feature_events').insert({ user_id: currentUser.id, event: 'np_identify_outcome', meta }).then(() => {});
+  if (window.posthog) posthog.capture('np_identify_outcome', meta);
+}
+
 async function npIdentifyWatch(file) {
-  if (!currentUser || !watches.length) return;
+  if (!currentUser) { logNpIdentifyOutcome('no_user'); return; }
+  // Do NOT bail on an empty collection here. Sharing from Photos launches the
+  // app, native hands the photo over before the session restores, and bootApp
+  // opens this composer one tick after clearUserState() has emptied `watches`.
+  // Returning early raced the collection download against the user's tap and
+  // lost silently — no request, no error, no spinner, straight to the manual
+  // picker (2026-08-27). Wait for the load instead; it is already in flight.
+  let waited = 0;
+  if (!watches.length) {
+    const t0 = Date.now();
+    await Promise.race([_userDataReady, new Promise(r => setTimeout(r, 8000))]);
+    waited = Date.now() - t0;
+    // Genuinely empty collection (or a load that never landed): nothing to match
+    // against, so the picker is the right answer — but say so in the telemetry.
+    if (!watches.length) { logNpIdentifyOutcome('no_collection', { waited_ms: waited }); return; }
+  }
   const sugEl = document.getElementById('np-watch-suggestion');
-  if (!sugEl) return;
+  if (!sugEl) { logNpIdentifyOutcome('no_sug_el', { waited_ms: waited }); return; }
   // Show loading state
   sugEl.innerHTML = `<div class="watch-suggestion"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" class="spin"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><div style="flex:1;color:var(--muted);font-size:.8rem;">Identifying watch…</div></div>`;
   sugEl.style.display = '';
@@ -15828,18 +15854,20 @@ async function npIdentifyWatch(file) {
       method: 'POST',
       body: JSON.stringify({ image: base64, collection: watches.map(w => ({ brand: w.brand, name: w.name, ref: w.ref || '' })) }),
     }, 90000);
-    if (!resp.ok) { console.error('[WRotate] NP identify API error:', resp.status); npIdentifiedWatchId = null; renderNpWatchDisplay(); return; }
+    if (!resp.ok) { console.error('[WRotate] NP identify API error:', resp.status); logNpIdentifyOutcome('http_error', { status: resp.status, waited_ms: waited }); npIdentifiedWatchId = null; renderNpWatchDisplay(); return; }
     const data = await resp.json();
-    if (!data.watches || data.watches.length === 0) { npIdentifiedWatchId = null; renderNpWatchDisplay(); return; }
+    if (!data.watches || data.watches.length === 0) { logNpIdentifyOutcome('no_watches_found', { waited_ms: waited }); npIdentifiedWatchId = null; renderNpWatchDisplay(); return; }
     const matches = matchIdentifiedToCollection(data.watches);
     if (matches.length === 0) {
       // No collection match — show picker so user can tag manually
+      logNpIdentifyOutcome('no_match', { waited_ms: waited });
       npIdentifiedWatchId = null;
       renderNpWatchDisplay();
       return;
     }
+    logNpIdentifyOutcome('matched', { waited_ms: waited });
     showNpWatchSuggestion(matches[0].watch);
-  } catch (err) { console.error('[WRotate] New post identify error:', err); npIdentifiedWatchId = null; renderNpWatchDisplay(); }
+  } catch (err) { console.error('[WRotate] New post identify error:', err); logNpIdentifyOutcome('error', { msg: String(err && err.message || err).slice(0, 120), waited_ms: waited }); npIdentifiedWatchId = null; renderNpWatchDisplay(); }
 }
 
 function showNpWatchSuggestion(w) {
@@ -30452,6 +30480,15 @@ function initApp() {
 }
 
 // Wipe all per-user data from memory and localStorage (called on sign-out and before new sign-in)
+// Resolves once loadUserData() has finished for the current session.
+// clearUserState() empties `watches` AND drops its localStorage copy, and a photo
+// shared into a cold start opens the composer on the tick right after that — long
+// before the collection comes back. Code that needs the collection should await
+// this instead of reading watches.length and giving up. See npIdentifyWatch.
+let _userDataReady = null, _markUserDataReady = null;
+function resetUserDataReady() { _userDataReady = new Promise(res => { _markUserDataReady = res; }); }
+resetUserDataReady();
+
 function clearUserState() {
   _isDemoMode = false;
   const demoBanner = document.getElementById('demo-banner');
@@ -33925,6 +33962,7 @@ async function bootApp(user) {
     }
   }
   clearUserState();
+  resetUserDataReady();
   currentUser = user;
   // A photo shared before the session resolved (see handleSharedImage).
   if (_pendingSharedImageB64) {
@@ -33982,6 +34020,8 @@ async function bootApp(user) {
     await loadUserData();
   } catch(e) {
     console.error('[WristLog] bootApp loadUserData error:', e.message, e);
+  } finally {
+    if (_markUserDataReady) _markUserDataReady();
   }
   // Both need loadUserData()'s counts and neither needs the other, so they share
   // one round-trip instead of queueing. Concurrency is not a nicety here: the
