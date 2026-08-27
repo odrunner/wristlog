@@ -8117,7 +8117,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '26.19.56';
+const APP_VERSION = '27.10.32';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -22399,7 +22399,7 @@ async function openUpdatePrices() {
   status.innerHTML = `<span style="display:inline-flex;align-items:center;gap:.4rem;"><span class="spinner" style="width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;"></span> Searching ${eligible.length} watches — this may take a moment...</span>`;
 
   eligible.forEach(w => {
-    const payload = { brand: w.brand, model: w.name, condition: 'good', watch_id: w.id };
+    const payload = { brand: w.brand, model: w.name, condition: 'good', source: 'update-prices', watch_id: w.id };
     if (w.ref) payload.reference = w.ref;
     authedFetch(SUPABASE_URL + '/functions/v1/watch-value', {
       method: 'POST',
@@ -23865,7 +23865,7 @@ async function checkSingleWatchValue() {
     }
   }, 5000);
   try {
-    const payload = { brand: w.brand, model: w.name, condition: 'good', watch_id: w.id };
+    const payload = { brand: w.brand, model: w.name, condition: 'good', source: 'single', watch_id: w.id };
     if (w.ref) payload.reference = w.ref;
     const r = await authedFetch(SUPABASE_URL + '/functions/v1/watch-value', {
       method: 'POST',
@@ -27007,7 +27007,7 @@ async function af2RunPrice(idx) {
   af2RenderSheet();
 
   try {
-    const payload = { brand: watchObj.brand, model: watchObj.name, condition: 'good' };
+    const payload = { brand: watchObj.brand, model: watchObj.name, condition: 'good', source: 'add-flow' };
     if (watchObj.ref) payload.reference = watchObj.ref;
     const r = await authedFetch(SUPABASE_URL + '/functions/v1/watch-value', {
       method: 'POST',
@@ -27271,7 +27271,7 @@ async function checkBatchWatchValues(ids) {
     const actionsEl = card?.querySelector('.pi-card-actions');
     if (statusEl) { statusEl.textContent = 'Looking up market value…'; statusEl.style.color = 'var(--gold)'; }
     try {
-      const payload = { brand: w.brand, model: w.name, condition: 'good', watch_id: w.id };
+      const payload = { brand: w.brand, model: w.name, condition: 'good', source: 'batch', watch_id: w.id };
       if (w.ref) payload.reference = w.ref;
       const r = await authedFetch(SUPABASE_URL + '/functions/v1/watch-value', {
         method: 'POST',

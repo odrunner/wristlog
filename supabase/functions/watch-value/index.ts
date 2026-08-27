@@ -52,7 +52,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { brand, model, reference, condition, year, watch_id } = await req.json();
+    const { brand, model, reference, condition, year, watch_id, source } = await req.json();
 
     if (!brand) {
       return new Response(JSON.stringify({ error: "brand is required" }), { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
@@ -101,7 +101,11 @@ Deno.serve(async (req: Request) => {
 
     const watchDesc = buildWatchDesc({ brand, model, reference, year, condition });
 
-    console.log(`[watch-value] user=${user.id} Looking up: ${watchDesc}`);
+    // `source` names the calling surface (single / batch / update-prices / add-flow).
+    // Two identical lookups landed 0.59s and 1.07s apart on 2026-08-26 — same user,
+    // same watch, both engines run, both billed. The logs could not say which screen
+    // fired them, so there was nothing to fix. Now they can.
+    console.log(`[watch-value] user=${user.id} src=${source ?? "unknown"} Looking up: ${watchDesc}`);
 
     const prompt = `What is the current market value (in USD) of this watch: ${watchDesc}?
 
