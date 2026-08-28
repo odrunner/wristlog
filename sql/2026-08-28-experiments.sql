@@ -158,6 +158,9 @@ BEGIN
         SELECT count(*) INTO n FROM timegrapher_results WHERE user_id = p_user AND created_at >= p_since;
       WHEN 'table:user_activity_days' THEN
         IF m.key = 'd7_retained' THEN
+          IF p_since > now() - interval '7 days' THEN
+            RETURN NULL;   -- not yet eligible for the 7-day window
+          END IF;
           SELECT count(*) INTO n FROM user_activity_days
            WHERE user_id = p_user AND day >= (p_since + interval '7 days')::date;
         ELSE
@@ -173,14 +176,16 @@ END;
 $$;
 
 -- Two-arm stats for one metric over one experiment's assignments (external users only).
--- Returns json {control:{users,converted,mean,sd}, treatment:{...}, lift_pct, p_value}.
+-- NULL per-user values (e.g. d7_retained before eligibility) drop out of n/mean/sd.
+-- Returns json {control:{users,converted,mean,sd}, treatment:{...}, lift_pct, p_value, p_raw}.
+-- p_value is rounded for display; p_raw is unrounded and is what gates decisions.
 CREATE OR REPLACE FUNCTION experiment_arm_stats(p_key text, p_metric text)
 RETURNS json LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path TO 'pg_catalog', 'public' AS $$
 DECLARE
   internal_ids uuid[] := array(SELECT user_id FROM internal_accounts);
   kind text;
   n1 int; n2 int; m1 numeric; m2 numeric; s1 numeric; s2 numeric; c1 int; c2 int;
-  pooled numeric; se numeric; z numeric; p numeric; lift numeric;
+  pooled numeric; se numeric; z numeric; p numeric; p_raw numeric; lift numeric;
 BEGIN
   SELECT em.kind INTO kind FROM experiment_metrics em WHERE em.key = p_metric;
   WITH vals AS (
@@ -189,7 +194,7 @@ BEGIN
     WHERE a.experiment_key = p_key AND a.user_id <> ALL(internal_ids)
   ),
   agg AS (
-    SELECT variant, count(*) n, avg(v) m, coalesce(stddev_samp(v), 0) s, sum(CASE WHEN v > 0 THEN 1 ELSE 0 END) c
+    SELECT variant, count(v) n, avg(v) m, coalesce(stddev_samp(v), 0) s, sum(CASE WHEN v > 0 THEN 1 ELSE 0 END) c
     FROM vals GROUP BY variant
   )
   SELECT
@@ -210,13 +215,14 @@ BEGIN
     END IF;
     IF se > 0 THEN
       z := (m2 - m1) / se;
-      p := round((2 * (1 - normal_cdf(abs(z)::double precision)))::numeric, 4);
+      p_raw := (2 * (1 - normal_cdf(abs(z)::double precision)))::numeric;
+      p := round(p_raw, 4);
     END IF;
   END IF;
   RETURN json_build_object(
     'control',   json_build_object('users', n1, 'converted', c1, 'mean', round(m1, 4), 'sd', round(s1, 4)),
     'treatment', json_build_object('users', n2, 'converted', c2, 'mean', round(m2, 4), 'sd', round(s2, 4)),
-    'lift_pct', lift, 'p_value', p);
+    'lift_pct', lift, 'p_value', p, 'p_raw', p_raw);
 END;
 $$;
 
@@ -226,11 +232,13 @@ DECLARE
   e experiments;
   tgt json; gr json;
   days int;
-  min_users int; lift numeric; p numeric; g_drop numeric; g_p numeric;
+  min_users int; lift numeric; p numeric; p_raw numeric; g_drop numeric; g_p numeric; g_p_raw numeric;
+  c_mean numeric; t_mean numeric;
   verdict text;
+  result json;
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true)
-     AND current_user <> 'postgres' THEN
+     AND session_user <> 'postgres' THEN
     RAISE EXCEPTION 'Not authorized';
   END IF;
   SELECT * INTO e FROM experiments WHERE key = p_key;
@@ -242,19 +250,24 @@ BEGIN
   min_users := least((tgt->'control'->>'users')::int, (tgt->'treatment'->>'users')::int);
   lift := (tgt->>'lift_pct')::numeric;
   p    := (tgt->>'p_value')::numeric;
+  p_raw := (tgt->>'p_raw')::numeric;
+  c_mean := (tgt->'control'->>'mean')::numeric;
+  t_mean := (tgt->'treatment'->>'mean')::numeric;
   g_drop := CASE WHEN (gr->'control'->>'mean')::numeric > 0
                  THEN round(((gr->'control'->>'mean')::numeric - (gr->'treatment'->>'mean')::numeric)
                             / (gr->'control'->>'mean')::numeric * 100, 1) ELSE 0 END;
   g_p := (gr->>'p_value')::numeric;
+  g_p_raw := (gr->>'p_raw')::numeric;
 
   verdict := CASE
     WHEN min_users < e.min_users_per_arm OR days < e.min_days THEN 'too_early'
-    WHEN g_drop > e.max_guardrail_drop_pct AND g_p IS NOT NULL AND g_p < 0.05 THEN 'guardrail_breach'
-    WHEN lift IS NOT NULL AND lift >= e.min_lift_pct AND p IS NOT NULL AND p < 0.05 THEN 'winning'
-    WHEN lift IS NOT NULL AND lift < 0 AND p IS NOT NULL AND p < 0.05 THEN 'losing'
+    WHEN g_drop > e.max_guardrail_drop_pct AND g_p_raw IS NOT NULL AND g_p_raw < 0.05 THEN 'guardrail_breach'
+    WHEN ((lift IS NOT NULL AND lift >= e.min_lift_pct) OR (c_mean = 0 AND t_mean > 0))
+         AND p_raw IS NOT NULL AND p_raw < 0.05 THEN 'winning'
+    WHEN lift IS NOT NULL AND lift < 0 AND p_raw IS NOT NULL AND p_raw < 0.05 THEN 'losing'
     ELSE 'inconclusive' END;
 
-  RETURN json_build_object(
+  result := json_build_object(
     'key', e.key, 'metric_key', e.metric_key,
     'metric_kind', (SELECT kind FROM experiment_metrics WHERE key = e.metric_key),
     'days_running', days,
@@ -267,6 +280,9 @@ BEGIN
                    'min_lift_pct', e.min_lift_pct, 'max_guardrail_drop_pct', e.max_guardrail_drop_pct),
     'verdict', verdict,
     'evaluated_at', now());
+
+  UPDATE experiments SET last_eval = result::jsonb WHERE key = p_key;
+  RETURN result;
 END;
 $$;
 GRANT EXECUTE ON FUNCTION evaluate_experiment(text) TO authenticated;

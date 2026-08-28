@@ -40,5 +40,7 @@ describe('experiments SQL schema', () => {
     expect(sql).toContain("'winning'");
     expect(sql).toContain("'losing'");
     expect(sql).toContain("'inconclusive'");
+    expect(sql).toContain("session_user <> 'postgres'");
+    expect(sql).toContain("'p_raw', p_raw");
   });
 });
