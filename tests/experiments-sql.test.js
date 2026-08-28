@@ -43,4 +43,11 @@ describe('experiments SQL schema', () => {
     expect(sql).toContain("session_user <> 'postgres'");
     expect(sql).toContain("'p_raw', p_raw");
   });
+  it('defines auto-decide, admin RPCs and schedules the cron', () => {
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION experiments_auto_decide\(\)/);
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION admin_experiments_list\(\)/);
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION admin_experiment_upsert\(p json\)/);
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION admin_experiment_set_status\(/);
+    expect(sql).toContain("cron.schedule('evaluate-experiments', '0 6 * * *'");
+  });
 });

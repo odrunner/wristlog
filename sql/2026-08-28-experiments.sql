@@ -289,3 +289,144 @@ GRANT EXECUTE ON FUNCTION evaluate_experiment(text) TO authenticated;
 REVOKE EXECUTE ON FUNCTION experiment_user_metric(text, uuid, timestamptz) FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION experiment_arm_stats(text, text) FROM PUBLIC, anon, authenticated;
 NOTIFY pgrst, 'reload schema';
+
+-- ── 6. Decisions + admin API + cron ─────────────────────────────────────
+-- evaluate_experiment() already persists its result into experiments.last_eval
+-- before returning, and its admin gate lets session_user = 'postgres' through
+-- (pg_cron runs as postgres), so this can call it directly without an extra
+-- UPDATE here.
+CREATE OR REPLACE FUNCTION experiments_auto_decide()
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'pg_catalog', 'public' AS $$
+DECLARE
+  r record; ev json; v text; out json[] := '{}';
+BEGIN
+  FOR r IN SELECT key FROM experiments WHERE status = 'running' ORDER BY key LOOP
+    BEGIN
+      ev := evaluate_experiment(r.key);
+      v := ev->>'verdict';
+      IF v = 'winning' THEN
+        UPDATE experiments SET status='won', rollout_pct=100, decision='auto', decided_at=now() WHERE key = r.key;
+        INSERT INTO experiment_decisions (experiment_key, verdict, snapshot, actor) VALUES (r.key, v, ev::jsonb, 'cron');
+        out := out || json_build_object('key', r.key, 'verdict', v, 'action', 'won');
+      ELSIF v = 'guardrail_breach' THEN
+        UPDATE experiments SET status='killed', decision='auto', decided_at=now() WHERE key = r.key;
+        INSERT INTO experiment_decisions (experiment_key, verdict, snapshot, actor) VALUES (r.key, v, ev::jsonb, 'cron');
+        out := out || json_build_object('key', r.key, 'verdict', v, 'action', 'killed');
+      ELSE
+        out := out || json_build_object('key', r.key, 'verdict', v, 'action', 'none');
+      END IF;
+    EXCEPTION WHEN OTHERS THEN
+      INSERT INTO experiment_decisions (experiment_key, verdict, snapshot, actor)
+      VALUES (r.key, 'error', json_build_object('message', SQLERRM)::jsonb, 'cron');
+      out := out || json_build_object('key', r.key, 'verdict', 'error', 'action', 'none');
+    END;
+  END LOOP;
+  RETURN to_json(out);
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION experiments_auto_decide() FROM PUBLIC, anon, authenticated;
+
+-- Returns e.last_eval for every status (running included) — no live per-row
+-- evaluate_experiment() call here. A live evaluation on every admin page load
+-- is the pattern that overloaded the admin dashboard before (see
+-- refresh-admin-stats-cache in CLAUDE.md); the nightly cron and an explicit
+-- per-row Refresh button (calling evaluate_experiment(key) directly) keep
+-- last_eval fresh instead.
+CREATE OR REPLACE FUNCTION admin_experiments_list()
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'pg_catalog', 'public' AS $$
+DECLARE result json;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+  SELECT coalesce(json_agg(row_to_json(x) ORDER BY
+           CASE x.status WHEN 'running' THEN 0 WHEN 'won' THEN 1 WHEN 'killed' THEN 2 WHEN 'archived' THEN 3 ELSE 4 END,
+           x.created_at DESC), '[]'::json)
+  INTO result
+  FROM (
+    SELECT e.key, e.name, e.hypothesis, e.status, e.rollout_pct, e.metric_key, e.min_lift_pct,
+           e.min_users_per_arm, e.min_days, e.guardrail_metric_key, e.max_guardrail_drop_pct,
+           e.started_at, e.decided_at, e.decision, e.created_at,
+           e.last_eval::json AS eval,
+           (SELECT coalesce(json_agg(json_build_object('verdict', d.verdict, 'actor', d.actor, 'at', d.created_at, 'snapshot', d.snapshot)
+                    ORDER BY d.created_at DESC), '[]'::json)
+              FROM (SELECT * FROM experiment_decisions WHERE experiment_key = e.key ORDER BY created_at DESC LIMIT 10) d) AS decisions
+    FROM experiments e
+  ) x;
+  RETURN result;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION admin_experiments_list() TO authenticated;
+
+CREATE OR REPLACE FUNCTION admin_experiment_upsert(p json)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'pg_catalog', 'public' AS $$
+DECLARE cur experiments;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+  SELECT * INTO cur FROM experiments WHERE key = p->>'key';
+  IF cur.key IS NULL THEN
+    INSERT INTO experiments (key, name, hypothesis, metric_key, min_lift_pct, rollout_pct,
+                             min_users_per_arm, min_days, guardrail_metric_key, max_guardrail_drop_pct)
+    VALUES (p->>'key', p->>'name', p->>'hypothesis', p->>'metric_key',
+            coalesce((p->>'min_lift_pct')::numeric, 10), coalesce((p->>'rollout_pct')::int, 20),
+            coalesce((p->>'min_users_per_arm')::int, 50), coalesce((p->>'min_days')::int, 7),
+            coalesce(p->>'guardrail_metric_key', 'active_days'), coalesce((p->>'max_guardrail_drop_pct')::numeric, 5));
+  ELSIF cur.status IN ('draft', 'running') THEN
+    UPDATE experiments SET
+      name = coalesce(p->>'name', name), hypothesis = coalesce(p->>'hypothesis', hypothesis),
+      metric_key = CASE WHEN cur.status = 'draft' THEN coalesce(p->>'metric_key', metric_key) ELSE metric_key END,
+      min_lift_pct = coalesce((p->>'min_lift_pct')::numeric, min_lift_pct),
+      min_users_per_arm = coalesce((p->>'min_users_per_arm')::int, min_users_per_arm),
+      min_days = coalesce((p->>'min_days')::int, min_days),
+      max_guardrail_drop_pct = coalesce((p->>'max_guardrail_drop_pct')::numeric, max_guardrail_drop_pct)
+    WHERE key = cur.key;
+  ELSE
+    RAISE EXCEPTION 'experiment % is %, not editable', cur.key, cur.status;
+  END IF;
+  INSERT INTO experiment_decisions (experiment_key, verdict, snapshot, actor)
+  VALUES (p->>'key', 'manual:edit', p::jsonb, auth.uid()::text);
+END;
+$$;
+GRANT EXECUTE ON FUNCTION admin_experiment_upsert(json) TO authenticated;
+
+CREATE OR REPLACE FUNCTION admin_experiment_set_status(p_key text, p_status text, p_rollout_pct int DEFAULT NULL)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'pg_catalog', 'public' AS $$
+DECLARE cur experiments; ev json;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+  SELECT * INTO cur FROM experiments WHERE key = p_key;
+  IF cur.key IS NULL THEN RAISE EXCEPTION 'unknown experiment %', p_key; END IF;
+
+  IF cur.status = 'draft' AND p_status = 'running' THEN
+    UPDATE experiments SET status='running', started_at=now(), rollout_pct=coalesce(p_rollout_pct, rollout_pct) WHERE key=p_key;
+  ELSIF cur.status = 'running' AND p_status = 'running' AND p_rollout_pct IS NOT NULL THEN
+    UPDATE experiments SET rollout_pct=p_rollout_pct WHERE key=p_key;
+  ELSIF cur.status = 'running' AND p_status = 'won' THEN
+    ev := evaluate_experiment(p_key);
+    UPDATE experiments SET status='won', rollout_pct=100, decision='manual', decided_at=now(), last_eval=ev::jsonb WHERE key=p_key;
+  ELSIF cur.status = 'running' AND p_status = 'killed' THEN
+    ev := evaluate_experiment(p_key);
+    UPDATE experiments SET status='killed', decision='manual', decided_at=now(), last_eval=ev::jsonb WHERE key=p_key;
+  ELSIF cur.status IN ('won', 'killed') AND p_status = 'archived' THEN
+    UPDATE experiments SET status='archived' WHERE key=p_key;
+  ELSE
+    RAISE EXCEPTION 'cannot move % from % to %', p_key, cur.status, p_status;
+  END IF;
+  INSERT INTO experiment_decisions (experiment_key, verdict, snapshot, actor)
+  VALUES (p_key, 'manual:' || p_status, json_build_object('rollout_pct', p_rollout_pct, 'eval', ev)::jsonb, auth.uid()::text);
+END;
+$$;
+GRANT EXECUTE ON FUNCTION admin_experiment_set_status(text, text, int) TO authenticated;
+
+-- Nightly decision. Runs as postgres (evaluate_experiment lets current_user='postgres' through).
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'evaluate-experiments') THEN
+    PERFORM cron.unschedule('evaluate-experiments');
+  END IF;
+END $$;
+SELECT cron.schedule('evaluate-experiments', '0 6 * * *', $$SELECT public.experiments_auto_decide()$$);
+NOTIFY pgrst, 'reload schema';
