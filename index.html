@@ -8117,7 +8117,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.07.15';
+const APP_VERSION = '28.07.20';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17644,6 +17644,7 @@ function showAdminPage() {
   seedWishlistPhotoDraft();
   seedCollectionExtrasDraft();
   seedWishlistShareDraft();
+  seedCollectionShareReleaseDraft();
   renderBroadcastDrafts();
   renderBroadcastQueueStatus();
   renderDevFlags();
@@ -18055,6 +18056,37 @@ function seedWishlistShareDraft() {
 <b>And now you can send it. </b>This is the new part. Tick the watches you want — or a whole brand folder in one tap — and share a link. Your partner hunting for a gift. An authorised dealer sourcing your next piece. They need no account, and your prices and notes never leave your phone. Revoke the link whenever you like.
 
 <a href="https://wrotate.com/open">Open your wishlist →</a>
+
+The WRotate team`,
+    imageUrls: [],
+    savedAt: Date.now(),
+  });
+  safeLS.set(BROADCAST_DRAFTS_KEY, JSON.stringify(drafts.slice(0, 10)));
+}
+// Release note: Collection share links + gallery view, plus what changed on the
+// wishlist since "We rebuilt the wishlist" (2026-08-14, 476 recipients): ranking,
+// drag-reorder in gallery, better recognition, comments on shared links.
+function seedCollectionShareReleaseDraft() {
+  const FLAG = 'wr_seed_collection_share_release_draft_v1';
+  if (safeLS.get(FLAG)) return;
+  safeLS.set(FLAG, '1');
+  const SUBJECT = 'Show your collection to anyone, with one link';
+  const drafts = getBroadcastDrafts().filter(d => d.subject !== SUBJECT);
+  drafts.unshift({
+    id: Date.now() + 7,
+    subject: SUBJECT,
+    heading: 'Your collection, ready to show',
+    body: `Until now, the only way to show someone your watches was to hand over your phone. That changes today.
+
+<b>Share your collection with a link.</b> Tap <b>Share</b> on the Collection tab and tick the watches you want to show — a few for a dealer, the whole lot for an insurer, your favourites for a friend. You get a unique link with the photo, brand, model and reference of each watch, plus a note if you want to add one. What you paid, market values, wears, notes and tags stay private. The person you send it to needs no account, and you can revoke any link whenever you like.
+
+<b>See it as a wall of photos.</b> The new toggle in the Collection header switches from the full cards to an <b>images-only gallery</b>. It follows your sort and tag filters, and it’s the closest thing to laying every watch out on a table.
+
+<b>They can talk back.</b> Anyone with one of your links — collection or wishlist — can leave a comment with their name. You’ll see it in the app and in the bell, and you can remove it or pull the link.
+
+<b>The wishlist kept moving too.</b> Add from Photo now runs on a new model with far better image recognition, so brand, model and reference land correctly first time. The gallery view lets you drag watches into order, and the <b>Ranking Game</b> works on the wishlist: tap the one you want more, round after round, and save the result as your order.
+
+<a href="https://wrotate.com/open">Share your collection →</a>
 
 The WRotate team`,
     imageUrls: [],
