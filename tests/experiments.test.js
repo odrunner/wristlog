@@ -38,6 +38,28 @@ describe('experimentVerdict', () => {
   it('null eval → too_early', () => {
     expect(experimentVerdict(null, gates)).toBe('too_early');
   });
+  it('missing guardrail object → still evaluates', () => {
+    const noGuardrail = { ...base };
+    delete noGuardrail.guardrail;
+    expect(experimentVerdict(noGuardrail, gates)).toBe('winning');
+  });
+  it('guardrail p_value: null with drop_pct: 9 → NOT guardrail_breach', () => {
+    expect(experimentVerdict({ ...base, guardrail: { drop_pct: 9, p_value: null } }, gates)).toBe('winning');
+  });
+  it('missing days_running → too_early', () => {
+    const noDays = { ...base };
+    delete noDays.days_running;
+    expect(experimentVerdict(noDays, gates)).toBe('too_early');
+  });
+  it('lift -20 with p 0.3 (non-significant) → inconclusive', () => {
+    expect(experimentVerdict({ ...base, lift_pct: -20, p_value: 0.3 }, gates)).toBe('inconclusive');
+  });
+  it('zero-control clause: control.mean=0, treatment.mean=0.3, p=0.01 → winning', () => {
+    expect(experimentVerdict({ days_running: 10, control: { users: 60, mean: 0 }, treatment: { users: 58, mean: 0.3 }, lift_pct: null, p_value: 0.01, guardrail: { drop_pct: 1, p_value: 0.5 } }, gates)).toBe('winning');
+  });
+  it('zero-control with treatment.mean=0 → inconclusive', () => {
+    expect(experimentVerdict({ days_running: 10, control: { users: 60, mean: 0 }, treatment: { users: 58, mean: 0 }, lift_pct: null, p_value: 0.01, guardrail: { drop_pct: 1, p_value: 0.5 } }, gates)).toBe('inconclusive');
+  });
 });
 
 describe('experimentSortRank', () => {

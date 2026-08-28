@@ -3512,6 +3512,8 @@ export function resolveExperiment(state, overrides, key) {
 
 // JS mirror of the SQL verdict ladder in evaluate_experiment(), so the admin tab can
 // re-derive a verdict from a snapshot. Order matters: too_early → guardrail → win → lose.
+// Note: A win occurs when (1) lift_pct >= gate AND significant, OR (2) control mean = 0
+// AND treatment mean > 0 AND significant (zero-control clause from SQL).
 export function experimentVerdict(ev, gates) {
   if (!ev) return 'too_early';
   const users = Math.min(ev.control?.users ?? 0, ev.treatment?.users ?? 0);
@@ -3519,7 +3521,8 @@ export function experimentVerdict(ev, gates) {
   const g = ev.guardrail || {};
   if ((g.drop_pct ?? 0) > gates.max_guardrail_drop_pct && g.p_value != null && g.p_value < 0.05) return 'guardrail_breach';
   const sig = ev.p_value != null && ev.p_value < 0.05;
-  if (ev.lift_pct != null && ev.lift_pct >= gates.min_lift_pct && sig) return 'winning';
+  const liftOk = (ev.lift_pct != null && ev.lift_pct >= gates.min_lift_pct) || ((ev.control?.mean ?? 0) === 0 && (ev.treatment?.mean ?? 0) > 0);
+  if (liftOk && sig) return 'winning';
   if (ev.lift_pct != null && ev.lift_pct < 0 && sig) return 'losing';
   return 'inconclusive';
 }
