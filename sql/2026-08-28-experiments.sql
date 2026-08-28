@@ -316,8 +316,12 @@ BEGIN
         out := out || json_build_object('key', r.key, 'verdict', v, 'action', 'none');
       END IF;
     EXCEPTION WHEN OTHERS THEN
-      INSERT INTO experiment_decisions (experiment_key, verdict, snapshot, actor)
-      VALUES (r.key, 'error', json_build_object('message', SQLERRM)::jsonb, 'cron');
+      BEGIN
+        INSERT INTO experiment_decisions (experiment_key, verdict, snapshot, actor)
+        VALUES (r.key, 'error', json_build_object('message', SQLERRM)::jsonb, 'cron');
+      EXCEPTION WHEN OTHERS THEN
+        RAISE WARNING 'experiments_auto_decide: could not log error for %: %', r.key, SQLERRM;
+      END;
       out := out || json_build_object('key', r.key, 'verdict', 'error', 'action', 'none');
     END;
   END LOOP;
