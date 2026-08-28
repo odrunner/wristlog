@@ -4042,6 +4042,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <div class="eyebrow">Feature Flags</div>
       </div>
       <div id="admin-dev-flags"></div>
+      <div style="margin:1.25rem 0 .75rem;"><div class="eyebrow">Experiments — force my variant</div></div>
+      <div id="admin-dev-experiments"></div>
     </div>
   </div>
 
@@ -6370,6 +6372,40 @@ function setFeatureFlag(name, val) {
   safeLS.set('ff_' + name, val ? 'true' : 'false');
   if (name === 'watch_db') applyWatchDbFlag();
 }
+// ── A/B experiments ─────────────────────────────────────────────────────
+// Server-assigned sticky variants (get_experiments RPC). Mirrored in wrotate_test.js.
+let EXPERIMENTS = (() => { try { return JSON.parse(safeLS.get('exp_state') || '{}'); } catch (e) { return {}; } })();
+function resolveExperiment(state, overrides, key) {
+  const forced = overrides && overrides[key];
+  if (forced === 'treatment') return true;
+  if (forced === 'control') return false;
+  return !!state && state[key] === 'treatment';
+}
+function _expOverrides() {
+  if (!currentUser || currentUser.id !== ADMIN_USER_ID) return null;
+  const o = {};
+  for (const k of Object.keys(EXPERIMENTS)) { const v = safeLS.get('exp_force_' + k); if (v) o[k] = v; }
+  return o;
+}
+function experiment(key) { return resolveExperiment(EXPERIMENTS, _expOverrides(), key); }
+async function loadExperiments() {
+  if (!currentUser || _isDemoMode) return;
+  try {
+    const { data, error } = await db.rpc('get_experiments');
+    if (error) { console.warn('[WRotate] get_experiments failed:', error.message); return; }
+    const next = {};
+    for (const row of data || []) next[row.key] = row.variant;
+    EXPERIMENTS = next;
+    safeLS.set('exp_state', JSON.stringify(next));
+    document.dispatchEvent(new CustomEvent('experiments:loaded'));
+    renderDevExperiments();
+  } catch (e) { console.warn('[WRotate] loadExperiments:', e.message); }
+}
+function clearExperiments() { EXPERIMENTS = {}; safeLS.remove('exp_state'); }
+function setExperimentOverride(key, variant) {
+  if (variant) safeLS.set('exp_force_' + key, variant); else safeLS.remove('exp_force_' + key);
+  renderDevExperiments();
+}
 // Watch database (Explore + model pages + Also owned by) — behind the watch_db
 // dev flag until launch. Hides the only visible entry point; the code paths
 // below also check the flag so nothing is reachable with it off.
@@ -7705,6 +7741,7 @@ async function signOut() {
   clearFeedCache(currentUser && currentUser.id);
   currentUser = null;
   clearUserState();
+  clearExperiments();
   // Switch to feed page so auth screen background shows feed, not profile
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
@@ -8117,7 +8154,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.11.19';
+const APP_VERSION = '28.11.24';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -17648,6 +17685,7 @@ function showAdminPage() {
   renderBroadcastDrafts();
   renderBroadcastQueueStatus();
   renderDevFlags();
+  renderDevExperiments();
 }
 
 // Must match DAILY_EMAIL_LIMIT and DRAIN_RESERVE in send-broadcast/lib.ts —
@@ -18113,6 +18151,21 @@ function renderDevFlags() {
         <span style="position:absolute;inset:0;background:${on ? 'var(--gold)' : 'var(--border)'};border-radius:11px;transition:background .2s;"></span>
         <span style="position:absolute;top:2px;left:${on ? '20px' : '2px'};width:18px;height:18px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
       </label>
+    </div>`;
+  }).join('');
+}
+function renderDevExperiments() {
+  const el = document.getElementById('admin-dev-experiments');
+  if (!el) return;
+  const keys = Object.keys(EXPERIMENTS);
+  if (!keys.length) { el.innerHTML = '<div style="font-size:.78rem;color:var(--muted);padding:.5rem 0;">No running experiments.</div>'; return; }
+  el.innerHTML = keys.map(k => {
+    const forced = safeLS.get('exp_force_' + k) || '';
+    const opt = (v, label) => `<option value="${v}" ${forced === v ? 'selected' : ''}>${label}</option>`;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem 0;border-bottom:1px solid var(--border);">
+      <div><div style="font-size:.85rem;font-family:monospace;">${escHtml(k)}</div>
+           <div style="font-size:.72rem;color:var(--muted);">assigned: ${escHtml(EXPERIMENTS[k])}</div></div>
+      <select onchange="setExperimentOverride('${escAttr(k)}', this.value)">${opt('', 'as assigned')}${opt('control', 'force control')}${opt('treatment', 'force treatment')}</select>
     </div>`;
   }).join('');
 }
@@ -34087,6 +34140,7 @@ async function bootApp(user) {
   const adminNavBtn = document.getElementById('admin-nav-btn');
   if (adminNavBtn) adminNavBtn.style.display = (user.id === ADMIN_USER_ID) ? '' : 'none';
   applyWatchDbFlag();
+  loadExperiments();
   // Show Measure tab only when native timegrapher bridge is available (iOS app)
   const navMeasure = document.getElementById('nav-measure-btn');
   if (navMeasure && _tgHasNative()) navMeasure.style.display = '';
