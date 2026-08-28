@@ -29,4 +29,16 @@ describe('experiments SQL schema', () => {
     expect(sql).toContain("hashtext(uid::text || '|' || e.key)");
     expect(sql).toContain('INSERT INTO user_activity_days');
   });
+  it('defines the evaluator and the stats helper', () => {
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION normal_cdf\(z double precision\)/);
+    expect(sql).toContain('RETURNS double precision LANGUAGE sql IMMUTABLE');
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION experiment_user_metric\(p_metric text, p_user uuid, p_since timestamptz\)/);
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION experiment_arm_stats\(p_key text, p_metric text\)/);
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION evaluate_experiment\(p_key text\)/);
+    expect(sql).toContain("'too_early'");
+    expect(sql).toContain("'guardrail_breach'");
+    expect(sql).toContain("'winning'");
+    expect(sql).toContain("'losing'");
+    expect(sql).toContain("'inconclusive'");
+  });
 });
