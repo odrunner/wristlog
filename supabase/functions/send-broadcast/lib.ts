@@ -237,10 +237,11 @@ export type { Profile };
 //
 // This is no longer a provider quota — SES allows 50,000/day. It is blast-radius
 // protection: the ceiling a runaway loop cannot exceed before the nightly cap
-// stops it. 500 lets any realistic single broadcast (~400 recipients) finish in
-// one night, which was the whole point of leaving Resend's 100/day cap, while
-// capping a bug at ~1% of the SES quota.
-export const DAILY_EMAIL_LIMIT = 500;
+// stops it. Raised 500 → 2000 on 2026-08-28: the list passed 500 members and a
+// full broadcast plus the day's reminders no longer fit (35 rows stranded to the
+// next night). 2000 covers the whole list plus a second broadcast in one day,
+// while still capping a bug at 4% of the SES quota.
+export const DAILY_EMAIL_LIMIT = 2000;
 export const DRAIN_RESERVE = 10;
 
 // How many queued broadcast emails tonight's drain may send.
