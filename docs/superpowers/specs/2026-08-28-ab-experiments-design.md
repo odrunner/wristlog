@@ -52,8 +52,8 @@ A user's variant never changes once written.
 | source | `table:<name>` for built-ins, or `feature_events:<event>` for zero-SQL metrics |
 | sort | display order |
 
-Seed rows: `post_created` (rate, entries), `watch_added` (rate, watches),
-`accuracy_reading_saved` (rate, timegrapher_results), `wear_logged` (rate, wear log table),
+Seed rows: `log_created` (rate, `logs` — wear logs and posts are the same table), `watch_added` (rate, `watches`),
+`accuracy_reading_saved` (rate, `timegrapher_results`),
 `active_days` (mean, distinct days in `page_visits`/`user_presence` — default guardrail),
 `d7_retained` (rate, seen ≥ 7 days after assignment).
 Adding a metric = INSERT one row (+ one `CASE` branch in `experiment_user_metric()` if it is
