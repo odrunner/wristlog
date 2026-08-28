@@ -76,3 +76,45 @@ ALTER TABLE user_activity_days ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS experiment_metrics_read ON experiment_metrics;
 CREATE POLICY experiment_metrics_read ON experiment_metrics FOR SELECT TO authenticated USING (true);
 -- Every other access goes through SECURITY DEFINER RPCs below; no direct policies.
+
+-- ── 4. get_experiments(): called once after login ───────────────────────
+-- Returns the caller's variant for every running experiment (assigning on
+-- first sight) plus won experiments as treatment. Internal accounts are never
+-- assigned (always control) so they cannot pollute the stats. Also records
+-- today's activity day for the active_days / d7_retained metrics.
+CREATE OR REPLACE FUNCTION get_experiments()
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'pg_catalog', 'public' AS $$
+DECLARE
+  uid uuid := auth.uid();
+  is_internal boolean;
+  result json;
+BEGIN
+  IF uid IS NULL THEN RETURN '[]'::json; END IF;
+  INSERT INTO user_activity_days (user_id, day) VALUES (uid, current_date) ON CONFLICT DO NOTHING;
+  is_internal := EXISTS (SELECT 1 FROM internal_accounts WHERE user_id = uid);
+
+  IF NOT is_internal THEN
+    INSERT INTO experiment_assignments (experiment_key, user_id, variant)
+    SELECT e.key, uid,
+           CASE WHEN (abs(hashtext(auth.uid()::text || '|' || e.key)) % 100) < e.rollout_pct
+                THEN 'treatment' ELSE 'control' END
+    FROM experiments e
+    WHERE e.status = 'running'
+      AND NOT EXISTS (SELECT 1 FROM experiment_assignments a WHERE a.experiment_key = e.key AND a.user_id = uid);
+  END IF;
+
+  SELECT coalesce(json_agg(json_build_object('key', k, 'variant', v)), '[]'::json) INTO result
+  FROM (
+    SELECT e.key AS k,
+           CASE WHEN e.status = 'won' THEN 'treatment'
+                WHEN is_internal THEN 'control'
+                ELSE coalesce(a.variant, 'control') END AS v
+    FROM experiments e
+    LEFT JOIN experiment_assignments a ON a.experiment_key = e.key AND a.user_id = uid
+    WHERE e.status IN ('running', 'won')
+  ) s;
+  RETURN result;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION get_experiments() TO authenticated;
+NOTIFY pgrst, 'reload schema';

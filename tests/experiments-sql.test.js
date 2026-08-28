@@ -24,4 +24,9 @@ describe('experiments SQL schema', () => {
       expect(sql).toContain(`ALTER TABLE ${t} ENABLE ROW LEVEL SECURITY`);
     }
   });
+  it('defines get_experiments with hash-based sticky assignment', () => {
+    expect(sql).toMatch(/CREATE OR REPLACE FUNCTION get_experiments\(\)/);
+    expect(sql).toContain("hashtext(auth.uid()::text || '|' || e.key)");
+    expect(sql).toContain('INSERT INTO user_activity_days');
+  });
 });
