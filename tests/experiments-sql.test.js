@@ -26,7 +26,7 @@ describe('experiments SQL schema', () => {
   });
   it('defines get_experiments with hash-based sticky assignment', () => {
     expect(sql).toMatch(/CREATE OR REPLACE FUNCTION get_experiments\(\)/);
-    expect(sql).toContain("hashtext(auth.uid()::text || '|' || e.key)");
+    expect(sql).toContain("hashtext(uid::text || '|' || e.key)");
     expect(sql).toContain('INSERT INTO user_activity_days');
   });
 });

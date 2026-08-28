@@ -96,11 +96,12 @@ BEGIN
   IF NOT is_internal THEN
     INSERT INTO experiment_assignments (experiment_key, user_id, variant)
     SELECT e.key, uid,
-           CASE WHEN (abs(hashtext(auth.uid()::text || '|' || e.key)) % 100) < e.rollout_pct
+           CASE WHEN (abs(hashtext(uid::text || '|' || e.key)) % 100) < e.rollout_pct
                 THEN 'treatment' ELSE 'control' END
     FROM experiments e
     WHERE e.status = 'running'
-      AND NOT EXISTS (SELECT 1 FROM experiment_assignments a WHERE a.experiment_key = e.key AND a.user_id = uid);
+      AND NOT EXISTS (SELECT 1 FROM experiment_assignments a WHERE a.experiment_key = e.key AND a.user_id = uid)
+    ON CONFLICT (experiment_key, user_id) DO NOTHING;
   END IF;
 
   SELECT coalesce(json_agg(json_build_object('key', k, 'variant', v)), '[]'::json) INTO result
