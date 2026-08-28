@@ -18,4 +18,17 @@ describe('experiments client wiring', () => {
     const fn = src.match(/export (function resolveExperiment[\s\S]*?\n\})/)[1];
     expect(html).toContain(fn);
   });
+  it('has an Experiments admin tab wired to its loader', () => {
+    expect(html).toContain('data-tab="experiments"');
+    expect(html).toContain('id="admin-tab-experiments"');
+    expect(html).toContain("if (tab === 'experiments') loadAdminExperiments();");
+    expect(html).toMatch(/async function loadAdminExperiments\(\)[\s\S]*?db\.rpc\('admin_experiments_list'\)/);
+  });
+  it('mirrors the display helpers verbatim', () => {
+    const src = readFileSync(join(__dirname, '..', 'wrotate_test.js'), 'utf8');
+    for (const name of ['experimentVerdict', 'experimentSortRank', 'fmtExperimentMetric']) {
+      const fn = src.match(new RegExp(`export (function ${name}[\\s\\S]*?\\n\\})`))[1];
+      expect(html).toContain(fn);
+    }
+  });
 });

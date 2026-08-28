@@ -3663,6 +3663,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
       <button type="button" class="chip" data-tab="official" role="tab" aria-selected="false" aria-controls="admin-tab-official" onclick="switchAdminTab('official')">Official</button>
       <button type="button" class="chip" data-tab="reports" role="tab" aria-selected="false" aria-controls="admin-tab-reports" onclick="switchAdminTab('reports')">Reports</button>
       <button type="button" class="chip" data-tab="dev" role="tab" aria-selected="false" aria-controls="admin-tab-dev" onclick="switchAdminTab('dev')">Dev</button>
+      <button type="button" class="chip" data-tab="experiments" role="tab" aria-selected="false" aria-controls="admin-tab-experiments" onclick="switchAdminTab('experiments')">Experiments</button>
       <button type="button" class="chip" data-tab="models" role="tab" aria-selected="false" aria-controls="admin-tab-models" onclick="switchAdminTab('models')">Models</button>
     </div>
 
@@ -4034,6 +4035,24 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <button class="btn btn-ghost" onclick="savePromoConfig()" style="width:100%;">Save Global Defaults</button>
         <div id="promo-cfg-status" aria-live="polite" style="font-size:.82rem;margin-top:.5rem;"></div>
       </div>
+    </div>
+
+    <!-- Tab: Experiments -->
+    <div id="admin-tab-experiments" class="admin-tab" role="tabpanel" style="display:none;">
+      <div class="eyebrow" style="margin-bottom:.6rem;">A/B experiments</div>
+      <details style="margin-bottom:.8rem;">
+        <summary style="cursor:pointer;font-size:.8rem;">New experiment</summary>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-top:.5rem;font-size:.8rem;">
+          <input id="adm-exp-key" placeholder="key (a-z0-9_)">
+          <input id="adm-exp-name" placeholder="name">
+          <input id="adm-exp-hyp" placeholder="hypothesis" style="grid-column:1/3;">
+          <select id="adm-exp-metric"></select>
+          <input id="adm-exp-lift" type="number" value="10" placeholder="min lift %">
+          <input id="adm-exp-pct" type="number" value="20" min="0" max="100" placeholder="rollout %">
+          <button class="chip" onclick="adminExpCreate()">Create draft</button>
+        </div>
+      </details>
+      <div id="admin-experiments-list" style="font-size:.8rem;">Loading…</div>
     </div>
 
     <!-- Tab: Dev -->
@@ -8154,7 +8173,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.11.24';
+const APP_VERSION = '28.11.32';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18183,6 +18202,7 @@ function switchAdminTab(tab) {
   if (tab === 'featured') loadAdminFeatured();
   if (tab === 'promos') loadPromoAdmin();
   if (tab === 'models') loadAdminModels();
+  if (tab === 'experiments') loadAdminExperiments();
 }
 
 let _adminModels = [];
@@ -18235,6 +18255,129 @@ async function adminCurateModel(id) {
   const { error } = await db.rpc('admin_update_watch_model', { p_id: id, p_curated: true });
   if (error) { toast('Failed: ' + error.message, 'error'); return; }
   loadAdminModels();
+}
+
+// JS mirror of the SQL verdict ladder in evaluate_experiment(), so the admin tab can
+// re-derive a verdict from a snapshot. Order matters: too_early → guardrail → win → lose.
+// Note: A win occurs when (1) lift_pct >= gate AND significant, OR (2) control mean = 0
+// AND treatment mean > 0 AND significant (zero-control clause from SQL).
+function experimentVerdict(ev, gates) {
+  if (!ev) return 'too_early';
+  const users = Math.min(ev.control?.users ?? 0, ev.treatment?.users ?? 0);
+  if (users < gates.min_users_per_arm || (ev.days_running ?? 0) < gates.min_days) return 'too_early';
+  const g = ev.guardrail || {};
+  if ((g.drop_pct ?? 0) > gates.max_guardrail_drop_pct && g.p_value != null && g.p_value < 0.05) return 'guardrail_breach';
+  const sig = ev.p_value != null && ev.p_value < 0.05;
+  const liftOk = (ev.lift_pct != null && ev.lift_pct >= gates.min_lift_pct) || ((ev.control?.mean ?? 0) === 0 && (ev.treatment?.mean ?? 0) > 0);
+  if (liftOk && sig) return 'winning';
+  if (ev.lift_pct != null && ev.lift_pct < 0 && sig) return 'losing';
+  return 'inconclusive';
+}
+
+function experimentSortRank(status) {
+  return { running: 0, won: 1, killed: 2, archived: 3 }[status] ?? 4;
+}
+
+function fmtExperimentMetric(ev, arm) {
+  const a = ev && ev[arm];
+  if (!a) return '—';
+  if (ev.metric_kind === 'rate') return `${a.converted}/${a.users} (${(Number(a.mean) * 100).toFixed(1)}%)`;
+  return `${Number(a.mean).toFixed(2)} (n=${a.users})`;
+}
+
+let _adminExps = [];
+const EXP_STATUS_COLOR = { running: 'var(--gold)', won: '#2e9e5b', killed: '#c0392b', archived: 'var(--muted)', draft: 'var(--muted)' };
+async function loadAdminExperiments() {
+  const el = document.getElementById('admin-experiments-list');
+  if (!el) return;
+  el.textContent = 'Loading…';
+  const [{ data, error }, metrics] = await Promise.all([
+    db.rpc('admin_experiments_list'),
+    db.from('experiment_metrics').select('key,label,kind').order('sort'),
+  ]);
+  if (error) { el.textContent = 'Failed: ' + error.message; return; }
+  const sel = document.getElementById('adm-exp-metric');
+  if (sel && metrics.data) sel.innerHTML = metrics.data.map(m => `<option value="${escAttr(m.key)}">${escHtml(m.label)}</option>`).join('');
+  _adminExps = (data || []).slice().sort((a, b) => experimentSortRank(a.status) - experimentSortRank(b.status));
+  if (!_adminExps.length) { el.innerHTML = '<div style="color:var(--muted);">No experiments yet.</div>'; return; }
+  el.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+    <tr style="color:var(--muted);text-align:left;"><th>Experiment</th><th>Status</th><th>%</th><th>Days</th><th>Control</th><th>Treatment</th><th>Lift</th><th>p</th><th>Guard Δ</th><th>Verdict</th><th></th></tr>` +
+    _adminExps.map(x => {
+      const ev = x.eval;
+      const gates = { min_users_per_arm: x.min_users_per_arm, min_days: x.min_days, min_lift_pct: x.min_lift_pct, max_guardrail_drop_pct: x.max_guardrail_drop_pct };
+      const verdict = ev ? (ev.verdict || experimentVerdict(ev, gates)) : 'not evaluated';
+      const evaluatedAt = ev && ev.evaluated_at ? `<div style="color:var(--muted);font-size:.68rem;">${escHtml(new Date(ev.evaluated_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }))}</div>` : '';
+      const pctCell = (x.status === 'draft' || x.status === 'running')
+        ? `<input id="adm-exp-pct-${escAttr(x.key)}" type="number" min="0" max="100" value="${x.rollout_pct}" style="width:3.5rem;">`
+        : x.rollout_pct;
+      const actions = [];
+      if (x.status === 'draft') actions.push(`<button class="chip" onclick="adminExpAction('${escAttr(x.key)}','running')">Start</button>`);
+      if (x.status === 'running') {
+        actions.push(`<button class="chip" onclick="adminExpAction('${escAttr(x.key)}','running')">Change %</button>`);
+        actions.push(`<button class="chip" onclick="adminExpAction('${escAttr(x.key)}','won')">Roll out</button>`);
+        actions.push(`<button class="chip" onclick="adminExpAction('${escAttr(x.key)}','killed')">Kill</button>`);
+        actions.push(`<button class="chip" onclick="adminExpRefresh('${escAttr(x.key)}')">Refresh</button>`);
+      }
+      if (x.status === 'won' || x.status === 'killed') actions.push(`<button class="chip" onclick="adminExpAction('${escAttr(x.key)}','archived')">Archive</button>`);
+      actions.push(`<button class="chip" onclick="adminExpToggleLog('${escAttr(x.key)}')">Log</button>`);
+      return `<tr style="border-top:0.5px solid var(--border);">
+        <td><div>${escHtml(x.name)}</div><div style="color:var(--muted);font-family:monospace;font-size:.7rem;">${escHtml(x.key)} · ${escHtml(x.metric_key)}</div></td>
+        <td style="color:${EXP_STATUS_COLOR[x.status] || 'inherit'};">${escHtml(x.status)}${x.decision ? ` <span style="color:var(--muted);">(${x.decision})</span>` : ''}</td>
+        <td>${pctCell}</td>
+        <td>${ev ? ev.days_running : '—'}</td>
+        <td>${fmtExperimentMetric(ev, 'control')}</td>
+        <td>${fmtExperimentMetric(ev, 'treatment')}</td>
+        <td>${ev && ev.lift_pct != null ? (ev.lift_pct > 0 ? '+' : '') + ev.lift_pct + '%' : '—'}</td>
+        <td>${ev && ev.p_value != null ? ev.p_value : '—'}</td>
+        <td>${ev && ev.guardrail ? (ev.guardrail.drop_pct > 0 ? '−' : '+') + Math.abs(ev.guardrail.drop_pct) + '%' : '—'}</td>
+        <td>${escHtml(verdict)}${evaluatedAt}</td>
+        <td style="white-space:nowrap;">${actions.join(' ')}</td>
+      </tr>
+      <tr id="adm-exp-log-${escAttr(x.key)}" style="display:none;"><td colspan="11" style="padding:.4rem 0;color:var(--muted);">
+        ${(x.decisions || []).map(d => `<div>${escHtml(new Date(d.at).toLocaleString())} · ${escHtml(d.verdict)} · ${escHtml(d.actor === 'cron' ? 'cron' : 'admin')}</div>`).join('') || 'No decisions yet.'}
+      </td></tr>`;
+    }).join('') + '</table>';
+}
+function adminExpToggleLog(key) {
+  const r = document.getElementById('adm-exp-log-' + key);
+  if (r) r.style.display = r.style.display === 'none' ? '' : 'none';
+}
+async function adminExpAction(key, status) {
+  let pct = null;
+  if (status === 'running') {
+    const cur = _adminExps.find(x => x.key === key);
+    pct = Number(document.getElementById('adm-exp-pct-' + key)?.value ?? cur?.rollout_pct ?? 20);
+    if (!Number.isFinite(pct) || pct < 0 || pct > 100) { toast('Rollout % must be 0–100', 'error'); return; }
+  }
+  const labels = { running: `Run "${key}" at ${pct}% treatment?`, won: `Roll "${key}" out to everyone?`, killed: `Kill "${key}"? Treatment users revert to control now.`, archived: `Archive "${key}"? Only do this after the experiment() branch is gone from code.` };
+  const ok = await showConfirm(labels[status], { title: 'Experiment', confirmLabel: status === 'killed' ? 'Kill' : 'Confirm', danger: status === 'killed' });
+  if (!ok) return;
+  const { error } = await db.rpc('admin_experiment_set_status', { p_key: key, p_status: status, p_rollout_pct: pct });
+  if (error) { toast('Failed: ' + error.message, 'error'); return; }
+  toast(`${key}: ${status}`);
+  loadAdminExperiments();
+}
+async function adminExpRefresh(key) {
+  const { error } = await db.rpc('evaluate_experiment', { p_key: key });
+  if (error) { toast('Failed: ' + error.message, 'error'); return; }
+  toast('Evaluated');
+  loadAdminExperiments();
+}
+async function adminExpCreate() {
+  const key = document.getElementById('adm-exp-key').value.trim();
+  if (!/^[a-z0-9_]+$/.test(key)) { toast('Key must be a-z, 0-9, _', 'error'); return; }
+  const p = {
+    key, name: document.getElementById('adm-exp-name').value.trim() || key,
+    hypothesis: document.getElementById('adm-exp-hyp').value.trim(),
+    metric_key: document.getElementById('adm-exp-metric').value,
+    min_lift_pct: Number(document.getElementById('adm-exp-lift').value) || 10,
+    rollout_pct: Number(document.getElementById('adm-exp-pct').value) || 20,
+  };
+  const { error } = await db.rpc('admin_experiment_upsert', { p });
+  if (error) { toast('Failed: ' + error.message, 'error'); return; }
+  toast('Draft created');
+  document.getElementById('adm-exp-key').value = '';
+  loadAdminExperiments();
 }
 
 async function loadAdminFeatured() {

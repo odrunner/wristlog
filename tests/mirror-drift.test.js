@@ -55,7 +55,7 @@ const VERBATIM = [
   'toggleWishSelection', 'folderSelectionState', 'toggleWishFolderSelection',
   'wishShareItems', 'wishSharePrivateCount', 'wishShareLinkLabel',
   'collShareItems', 'collSharePrivateCount', 'groupCommentsByToken',
-  'resolveExperiment',
+  'resolveExperiment', 'experimentVerdict', 'experimentSortRank', 'fmtExperimentMetric',
 ];
 
 const ADAPTED = [
