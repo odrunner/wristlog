@@ -3519,8 +3519,10 @@ export function experimentVerdict(ev, gates) {
   const users = Math.min(ev.control?.users ?? 0, ev.treatment?.users ?? 0);
   if (users < gates.min_users_per_arm || (ev.days_running ?? 0) < gates.min_days) return 'too_early';
   const g = ev.guardrail || {};
-  if ((g.drop_pct ?? 0) > gates.max_guardrail_drop_pct && g.p_value != null && g.p_value < 0.05) return 'guardrail_breach';
-  const sig = ev.p_value != null && ev.p_value < 0.05;
+  const p = ev.p_raw ?? ev.p_value;
+  const gp = g.p_raw ?? g.p_value;
+  if ((g.drop_pct ?? 0) > gates.max_guardrail_drop_pct && gp != null && gp < 0.05) return 'guardrail_breach';
+  const sig = p != null && p < 0.05;
   const liftOk = (ev.lift_pct != null && ev.lift_pct >= gates.min_lift_pct) || ((ev.control?.mean ?? 0) === 0 && (ev.treatment?.mean ?? 0) > 0);
   if (liftOk && sig) return 'winning';
   if (ev.lift_pct != null && ev.lift_pct < 0 && sig) return 'losing';

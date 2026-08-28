@@ -6408,7 +6408,7 @@ function _expOverrides() {
 }
 function experiment(key) { return resolveExperiment(EXPERIMENTS, _expOverrides(), key); }
 async function loadExperiments() {
-  if (!currentUser || _isDemoMode) return;
+  if (!currentUser || _isDemoMode) { if (_isDemoMode) clearExperiments(); return; }
   try {
     const { data, error } = await db.rpc('get_experiments');
     if (error) { console.warn('[WRotate] get_experiments failed:', error.message); return; }
@@ -8173,7 +8173,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.11.47';
+const APP_VERSION = '28.12.06';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18266,8 +18266,10 @@ function experimentVerdict(ev, gates) {
   const users = Math.min(ev.control?.users ?? 0, ev.treatment?.users ?? 0);
   if (users < gates.min_users_per_arm || (ev.days_running ?? 0) < gates.min_days) return 'too_early';
   const g = ev.guardrail || {};
-  if ((g.drop_pct ?? 0) > gates.max_guardrail_drop_pct && g.p_value != null && g.p_value < 0.05) return 'guardrail_breach';
-  const sig = ev.p_value != null && ev.p_value < 0.05;
+  const p = ev.p_raw ?? ev.p_value;
+  const gp = g.p_raw ?? g.p_value;
+  if ((g.drop_pct ?? 0) > gates.max_guardrail_drop_pct && gp != null && gp < 0.05) return 'guardrail_breach';
+  const sig = p != null && p < 0.05;
   const liftOk = (ev.lift_pct != null && ev.lift_pct >= gates.min_lift_pct) || ((ev.control?.mean ?? 0) === 0 && (ev.treatment?.mean ?? 0) > 0);
   if (liftOk && sig) return 'winning';
   if (ev.lift_pct != null && ev.lift_pct < 0 && sig) return 'losing';
@@ -18296,6 +18298,7 @@ async function loadAdminExperiments() {
     db.from('experiment_metrics').select('key,label,kind').order('sort'),
   ]);
   if (error) { el.textContent = 'Failed: ' + error.message; return; }
+  if (metrics.error) toast('Metrics failed: ' + metrics.error.message, 'error');
   const sel = document.getElementById('adm-exp-metric');
   if (sel && metrics.data) sel.innerHTML = metrics.data.map(m => `<option value="${escAttr(m.key)}">${escHtml(m.label)}</option>`).join('');
   _adminExps = (data || []).slice().sort((a, b) => experimentSortRank(a.status) - experimentSortRank(b.status));
@@ -18308,7 +18311,7 @@ async function loadAdminExperiments() {
       const verdict = ev ? (ev.verdict || experimentVerdict(ev, gates)) : 'not evaluated';
       const evaluatedAt = ev && ev.evaluated_at ? `<div style="color:var(--muted);font-size:.68rem;">${escHtml(new Date(ev.evaluated_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }))}</div>` : '';
       const pctCell = (x.status === 'draft' || x.status === 'running')
-        ? `<input id="adm-exp-pct-${escAttr(x.key)}" type="number" min="0" max="100" value="${x.rollout_pct}" style="width:3.5rem;">`
+        ? `<input id="adm-exp-pct-${escAttr(x.key)}" type="number" min="0" max="100" value="${x.rollout_pct}" style="width:4.5rem;">`
         : x.rollout_pct;
       const actions = [];
       if (x.status === 'draft') actions.push(`<button class="chip" onclick="adminExpAction('${escAttr(x.key)}','running')">Start</button>`);
@@ -18322,7 +18325,7 @@ async function loadAdminExperiments() {
       actions.push(`<button class="chip" onclick="adminExpToggleLog('${escAttr(x.key)}')">Log</button>`);
       return `<tr style="border-top:0.5px solid var(--border);">
         <td><div>${escHtml(x.name)}</div><div style="color:var(--muted);font-family:monospace;font-size:.7rem;">${escHtml(x.key)} · ${escHtml(x.metric_key)}</div></td>
-        <td style="color:${EXP_STATUS_COLOR[x.status] || 'inherit'};">${escHtml(x.status)}${x.decision ? ` <span style="color:var(--muted);">(${x.decision})</span>` : ''}</td>
+        <td style="color:${EXP_STATUS_COLOR[x.status] || 'inherit'};">${escHtml(x.status)}${x.decision ? ` <span style="color:var(--muted);">(${escHtml(x.decision)})</span>` : ''}</td>
         <td>${pctCell}</td>
         <td>${ev ? ev.days_running : '—'}</td>
         <td>${fmtExperimentMetric(ev, 'control')}</td>
@@ -18334,7 +18337,7 @@ async function loadAdminExperiments() {
         <td style="white-space:nowrap;">${actions.join(' ')}</td>
       </tr>
       <tr id="adm-exp-log-${escAttr(x.key)}" style="display:none;"><td colspan="11" style="padding:.4rem 0;color:var(--muted);">
-        ${(x.decisions || []).map(d => `<div>${escHtml(new Date(d.at).toLocaleString())} · ${escHtml(d.verdict)} · ${escHtml(d.actor === 'cron' ? 'cron' : 'admin')}</div>`).join('') || 'No decisions yet.'}
+        ${(x.decisions || []).map(d => `<div>${escHtml(d.at ? new Date(d.at).toLocaleString() : '—')} · ${escHtml(d.verdict)} · ${escHtml(d.actor === 'cron' ? 'cron' : 'admin')}</div>`).join('') || 'No decisions yet.'}
       </td></tr>`;
     }).join('') + '</table>';
 }
@@ -18366,12 +18369,19 @@ async function adminExpRefresh(key) {
 async function adminExpCreate() {
   const key = document.getElementById('adm-exp-key').value.trim();
   if (!/^[a-z0-9_]+$/.test(key)) { toast('Key must be a-z, 0-9, _', 'error'); return; }
+  const num = (id, dflt) => {
+    const v = document.getElementById(id).value.trim();
+    const n = Number(v);
+    return v !== '' && Number.isFinite(n) ? n : dflt;
+  };
+  const rollout_pct = num('adm-exp-pct', 20);
+  if (rollout_pct < 0 || rollout_pct > 100) { toast('Rollout % must be 0–100', 'error'); return; }
   const p = {
     key, name: document.getElementById('adm-exp-name').value.trim() || key,
     hypothesis: document.getElementById('adm-exp-hyp').value.trim(),
     metric_key: document.getElementById('adm-exp-metric').value,
-    min_lift_pct: Number(document.getElementById('adm-exp-lift').value) || 10,
-    rollout_pct: Number(document.getElementById('adm-exp-pct').value) || 20,
+    min_lift_pct: num('adm-exp-lift', 10),
+    rollout_pct,
   };
   const { error } = await db.rpc('admin_experiment_upsert', { p });
   if (error) { toast('Failed: ' + error.message, 'error'); return; }

@@ -60,6 +60,12 @@ describe('experimentVerdict', () => {
   it('zero-control with treatment.mean=0 → inconclusive', () => {
     expect(experimentVerdict({ days_running: 10, control: { users: 60, mean: 0 }, treatment: { users: 58, mean: 0 }, lift_pct: null, p_value: 0.01, guardrail: { drop_pct: 1, p_value: 0.5 } }, gates)).toBe('inconclusive');
   });
+  it('p_value 0.05 (rounded, not significant) but p_raw 0.0499 (unrounded, significant) → winning', () => {
+    expect(experimentVerdict({ ...base, p_value: 0.05, p_raw: 0.0499 }, gates)).toBe('winning');
+  });
+  it('p_value 0.05 alone, no p_raw → inconclusive', () => {
+    expect(experimentVerdict({ ...base, p_value: 0.05 }, gates)).toBe('inconclusive');
+  });
 });
 
 describe('experimentSortRank', () => {

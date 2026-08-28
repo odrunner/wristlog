@@ -58,6 +58,11 @@ CREATE TABLE IF NOT EXISTS user_activity_days (
   PRIMARY KEY (user_id, day)
 );
 
+-- feature_events metrics (experiment_user_metric's 'feature_events:<event>' source)
+-- are counted per user since assigned_at; feature_events itself is created in
+-- sql/2026-08-16-feature-events.sql, this just indexes the query shape.
+CREATE INDEX IF NOT EXISTS feature_events_user_event_idx ON feature_events (user_id, event, created_at);
+
 -- ── 2. Registry seed ─────────────────────────────────────────────────────
 INSERT INTO experiment_metrics (key, label, kind, source, sort) VALUES
   ('log_created',            'Logged a wear / post',      'rate', 'table:logs',                10),
@@ -96,7 +101,7 @@ BEGIN
   IF NOT is_internal THEN
     INSERT INTO experiment_assignments (experiment_key, user_id, variant)
     SELECT e.key, uid,
-           CASE WHEN (abs(hashtext(uid::text || '|' || e.key)) % 100) < e.rollout_pct
+           CASE WHEN (abs(hashtext(uid::text || '|' || e.key)::bigint) % 100) < e.rollout_pct
                 THEN 'treatment' ELSE 'control' END
     FROM experiments e
     WHERE e.status = 'running'
@@ -118,6 +123,7 @@ BEGIN
 END;
 $$;
 GRANT EXECUTE ON FUNCTION get_experiments() TO authenticated;
+REVOKE EXECUTE ON FUNCTION get_experiments() FROM PUBLIC, anon;
 NOTIFY pgrst, 'reload schema';
 
 -- ── 5. Evaluator: per-user metric, stats, verdict ───────────────────────
@@ -272,10 +278,10 @@ BEGIN
     'metric_kind', (SELECT kind FROM experiment_metrics WHERE key = e.metric_key),
     'days_running', days,
     'control', tgt->'control', 'treatment', tgt->'treatment',
-    'lift_pct', lift, 'p_value', p,
+    'lift_pct', lift, 'p_value', p, 'p_raw', p_raw,
     'guardrail', json_build_object('metric_key', e.guardrail_metric_key,
                    'control', (gr->'control'->>'mean')::numeric, 'treatment', (gr->'treatment'->>'mean')::numeric,
-                   'drop_pct', g_drop, 'p_value', g_p),
+                   'drop_pct', g_drop, 'p_value', g_p, 'p_raw', g_p_raw),
     'gates', json_build_object('min_users_per_arm', e.min_users_per_arm, 'min_days', e.min_days,
                    'min_lift_pct', e.min_lift_pct, 'max_guardrail_drop_pct', e.max_guardrail_drop_pct),
     'verdict', verdict,
@@ -286,6 +292,7 @@ BEGIN
 END;
 $$;
 GRANT EXECUTE ON FUNCTION evaluate_experiment(text) TO authenticated;
+REVOKE EXECUTE ON FUNCTION evaluate_experiment(text) FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION experiment_user_metric(text, uuid, timestamptz) FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION experiment_arm_stats(text, text) FROM PUBLIC, anon, authenticated;
 NOTIFY pgrst, 'reload schema';
@@ -361,7 +368,13 @@ BEGIN
 END;
 $$;
 GRANT EXECUTE ON FUNCTION admin_experiments_list() TO authenticated;
+REVOKE EXECUTE ON FUNCTION admin_experiments_list() FROM PUBLIC, anon;
 
+-- p->>'key' not existing yet always creates. p->>'key' existing requires
+-- p->>'edit' = true (coalesced false otherwise) or it raises rather than
+-- silently falling through to an edit — the create-tab form never sends
+-- 'edit', so a create submission that collides with an existing key errors
+-- instead of quietly overwriting it.
 CREATE OR REPLACE FUNCTION admin_experiment_upsert(p json)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'pg_catalog', 'public' AS $$
 DECLARE cur experiments;
@@ -377,6 +390,8 @@ BEGIN
             coalesce((p->>'min_lift_pct')::numeric, 10), coalesce((p->>'rollout_pct')::int, 20),
             coalesce((p->>'min_users_per_arm')::int, 50), coalesce((p->>'min_days')::int, 7),
             coalesce(p->>'guardrail_metric_key', 'active_days'), coalesce((p->>'max_guardrail_drop_pct')::numeric, 5));
+  ELSIF NOT coalesce((p->>'edit')::boolean, false) THEN
+    RAISE EXCEPTION 'experiment % already exists', p->>'key';
   ELSIF cur.status IN ('draft', 'running') THEN
     UPDATE experiments SET
       name = coalesce(p->>'name', name), hypothesis = coalesce(p->>'hypothesis', hypothesis),
@@ -394,6 +409,7 @@ BEGIN
 END;
 $$;
 GRANT EXECUTE ON FUNCTION admin_experiment_upsert(json) TO authenticated;
+REVOKE EXECUTE ON FUNCTION admin_experiment_upsert(json) FROM PUBLIC, anon;
 
 CREATE OR REPLACE FUNCTION admin_experiment_set_status(p_key text, p_status text, p_rollout_pct int DEFAULT NULL)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'pg_catalog', 'public' AS $$
@@ -425,6 +441,7 @@ BEGIN
 END;
 $$;
 GRANT EXECUTE ON FUNCTION admin_experiment_set_status(text, text, int) TO authenticated;
+REVOKE EXECUTE ON FUNCTION admin_experiment_set_status(text, text, int) FROM PUBLIC, anon;
 
 -- Nightly decision. Runs as postgres (evaluate_experiment lets current_user='postgres' through).
 DO $$ BEGIN
