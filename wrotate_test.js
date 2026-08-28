@@ -3497,3 +3497,40 @@ export function factTeaser(fact, max = 140) {
   if (s.length > max) return s.slice(0, max - 2).trimEnd() + ' …';
   return truncated ? s + ' …' : s;
 }
+
+// ══════════════════════════════════════════
+//  A/B EXPERIMENTS (mirrored verbatim in index.html)
+// ══════════════════════════════════════════
+// state: {key: 'control'|'treatment'} from get_experiments(); overrides: admin
+// Dev-tab forced variants. Anything unknown is false so a deleted row never throws.
+export function resolveExperiment(state, overrides, key) {
+  const forced = overrides && overrides[key];
+  if (forced === 'treatment') return true;
+  if (forced === 'control') return false;
+  return !!state && state[key] === 'treatment';
+}
+
+// JS mirror of the SQL verdict ladder in evaluate_experiment(), so the admin tab can
+// re-derive a verdict from a snapshot. Order matters: too_early → guardrail → win → lose.
+export function experimentVerdict(ev, gates) {
+  if (!ev) return 'too_early';
+  const users = Math.min(ev.control?.users ?? 0, ev.treatment?.users ?? 0);
+  if (users < gates.min_users_per_arm || (ev.days_running ?? 0) < gates.min_days) return 'too_early';
+  const g = ev.guardrail || {};
+  if ((g.drop_pct ?? 0) > gates.max_guardrail_drop_pct && g.p_value != null && g.p_value < 0.05) return 'guardrail_breach';
+  const sig = ev.p_value != null && ev.p_value < 0.05;
+  if (ev.lift_pct != null && ev.lift_pct >= gates.min_lift_pct && sig) return 'winning';
+  if (ev.lift_pct != null && ev.lift_pct < 0 && sig) return 'losing';
+  return 'inconclusive';
+}
+
+export function experimentSortRank(status) {
+  return { running: 0, won: 1, killed: 2, archived: 3 }[status] ?? 4;
+}
+
+export function fmtExperimentMetric(ev, arm) {
+  const a = ev && ev[arm];
+  if (!a) return '—';
+  if (ev.metric_kind === 'rate') return `${a.converted}/${a.users} (${(Number(a.mean) * 100).toFixed(1)}%)`;
+  return `${Number(a.mean).toFixed(2)} (n=${a.users})`;
+}
