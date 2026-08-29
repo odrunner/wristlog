@@ -87,7 +87,10 @@ test('row shows count + era, tap opens in-app model page with facts and owners',
   await expect(mp).toContainText('by 3 of 4 owners');
   await expect(mp).toContainText('$96');
   // fun-fact band + Data tab
-  await expect(mp.locator('.mp-fact')).toContainText('Fun fact · 1 of 1');
+  await expect(mp.locator('#mp-story')).toContainText('The watch');
+  await expect(mp.locator('#mp-story')).toContainText('Launched in 1953');
+  await expect(mp.locator('.mp-quote')).toContainText('Fun fact · 1 of 1');
+  await expect(mp.locator('.mp-quote')).toContainText('It once dove very deep indeed.');
   await expect(mp).toContainText('2.8×');
   await expect(mp).toContainText('Top 4%');
   await expect(mp).toContainText('of 1,412 models · 340 wears from 14 collections');
@@ -101,7 +104,7 @@ test('row shows count + era, tap opens in-app model page with facts and owners',
   await expect(mp).toContainText('3 watches');
   await expect(mp).toContainText('References by era');
   await expect(mp).toContainText('5513');
-  await mp.locator('.mp-fact').click();
+  await mp.locator('.mp-quote').click();
   await expect(mp.locator('#mp-tab-lore')).toHaveAttribute('aria-selected', 'true');
   await expect(mp).toContainText('It once dove very deep indeed.');
   await mp.locator('#mp-tab-owners').click();
@@ -139,4 +142,33 @@ test('no model_id -> row stays hidden', async ({ page }) => {
   await page.locator('.card-edit-btn, .card-edit-btn-noimg').first().click();
   await expect(page.locator('#watch-modal')).toBeVisible();
   await expect(page.locator('#wm-also-owned')).toBeHidden();
+});
+
+test('story block: long history clamps to 3 lines with an expand toggle; short history has none', async ({ page }) => {
+  const LONG = Array(6).fill('Launched in 1953, it set the template for every diver since, and each generation refined the case, bezel and movement without abandoning the original silhouette.').join(' ');
+  await mockSupabase(page, { watches: [WATCH] });
+  await page.route('**/rest/v1/rpc/model_owners*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ total_owners: 2, era_min: null, era_max: null, visible: [] }) }));
+  await page.route('**/rest/v1/rpc/model_stats*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(STATS) }));
+  await page.route('**/rest/v1/watch_models*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...MODEL_ROW, history: LONG }) }));
+  await page.route('**/rest/v1/watch_facts*', route => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await page.addInitScript(() => { try { localStorage.setItem('ff_watch_db', 'true'); } catch (e) {} });
+  await injectSession(page);
+  await page.goto('/');
+  await waitForAppBoot(page);
+  await navigateTo(page, 'collection');
+  await page.locator('.card-edit-btn, .card-edit-btn-noimg').first().click();
+  await page.locator('#wm-also-owned').click();
+  const mp = page.locator('#page-model');
+  await expect(mp.locator('#mp-story')).toContainText('The watch');
+  await expect(mp.locator('.mp-quote')).toHaveCount(0);            // no facts → no pull-quote
+  const toggle = mp.locator('#mp-history-toggle');
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toHaveText('Read the full history');
+  const hist = mp.locator('#mp-history');
+  const clampedH = await hist.evaluate(e => e.clientHeight);
+  await toggle.click();
+  await expect(toggle).toHaveText('Less');
+  expect(await hist.evaluate(e => e.clientHeight)).toBeGreaterThan(clampedH);
+  await toggle.click();
+  await expect(toggle).toHaveText('Read the full history');
 });

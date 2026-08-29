@@ -8184,7 +8184,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '29.13.09';
+const APP_VERSION = '29.13.14';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23823,7 +23823,7 @@ async function loadAndRenderModel(modelId, owners) {
   const el = document.getElementById('model-page-content');
   el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Loading…</div>';
   const [mRes, oRes, sRes] = await Promise.all([
-    db.from('watch_models').select('brand,name,slug,specs,facts_key,hero_image,hero_credit,description,history,refs_by_era,calibers_by_era').eq('id', modelId).maybeSingle(),
+    db.from('watch_models').select('id,brand,name,slug,specs,facts_key,hero_image,hero_credit,description,history,refs_by_era,calibers_by_era').eq('id', modelId).maybeSingle(),
     owners ? Promise.resolve({ data: owners }) : db.rpc('model_owners', { p_model_id: modelId }),
     db.rpc('model_stats', { p_model_id: modelId }),
   ]);
@@ -23850,6 +23850,7 @@ function renderModelPage() {
     back: goBackFromModel, share: shareModelPage, setTab: mpSwitchTab,
     openModel: id => openModelPage(id), brandExplore: mpBrandExplore, requestEdit: mpRequestEdit,
     openWatch: openEditWatch, addToCollection: addModelToCollection, addToWishlist: addModelToWishlist,
+    track: (ev, props) => { if (window.posthog) posthog.capture(ev, props); },
   });
 }
 

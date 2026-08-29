@@ -82,6 +82,7 @@ function mpBars(counts, h, gap, radius, tone) {
 
 function renderModelPage(el, ctx, h) {
   const { m, o, st, facts } = ctx;
+  if (el._mpHistoryOpenFor && el._mpHistoryOpenFor !== (m.id || m.slug)) el._mpHistoryOpenFor = null;
   let tab = ctx.tab;
   const loggedIn = !!ctx.loggedIn, publicMode = !!ctx.publicMode;
   const sp = m.specs || {};
@@ -105,16 +106,16 @@ function renderModelPage(el, ctx, h) {
   const captionBits = [sp.type ? sp.type.replace(/ watch$/i, '') : '', sp.size, sp.water_resistance,
     (st.specs_agg || {}).movement_type ? st.specs_agg.movement_type.v : '',
     (o.era_min && o.era_max && o.era_min !== o.era_max) ? `${o.era_min}–${o.era_max}` : ''].filter(Boolean);
-  const hero = `<div style="position:relative;height:240px;background:var(--surface2);overflow:hidden;">
+  const hero = `<div style="position:relative;height:180px;background:var(--surface2);overflow:hidden;">
     ${heroImg ? `<img src="${escAttr(heroImg)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">` : ''}
     <div style="position:absolute;inset:0;background:linear-gradient(to right, rgba(8,8,12,.9) 0%, rgba(8,8,12,.35) 55%, rgba(8,8,12,.1) 100%);pointer-events:none;"></div>
     <div style="position:absolute;top:14px;left:16px;right:16px;display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.85);">
       <span role="button" tabindex="0" style="cursor:pointer;" data-mp="back">‹ Back</span>
       <span role="button" tabindex="0" style="cursor:pointer;" data-mp="share">Share</span>
     </div>
-    <div style="position:absolute;left:18px;bottom:16px;right:16px;pointer-events:none;">
+    <div style="position:absolute;left:18px;bottom:14px;right:16px;pointer-events:none;">
       <div style="font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-lt);">${escHtml(m.brand)}${ref ? ` · ref. ${escHtml(ref)}` : ''}</div>
-      <div style="font-size:27px;font-weight:600;letter-spacing:-.01em;color:#fff;margin:4px 0 6px;line-height:1.1;">${escHtml(m.name)}</div>
+      <div style="font-size:25px;font-weight:600;letter-spacing:-.01em;color:#fff;margin:3px 0 5px;line-height:1.1;">${escHtml(m.name)}</div>
       <div style="font-size:11px;color:rgba(255,255,255,.7);">${escHtml(captionBits.join(' · '))}</div>
     </div>
   </div>${m.hero_image && m.hero_credit ? `<div style="font-size:8.5px;color:var(--muted);text-align:right;padding:3px 10px 0;background:var(--bg);">${escHtml(m.hero_credit)}</div>` : ''}`;
@@ -155,13 +156,21 @@ function renderModelPage(el, ctx, h) {
   }
   const grid = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);">${cells.join('')}</div>`;
 
-  // ── Fun-fact band ──
+  // ── Story block (lore above the fold): history + fact pull-quote ──
   const fi = featuredFactIndex(facts.length);
-  const band = fi >= 0 ? `<div class="mp-fact" role="button" tabindex="0" data-mp="tab" data-tab="lore" data-scroll="1">
-      <span style="font-size:13px;line-height:1.35;flex:none;">💡</span>
-      <div style="flex:1;min-width:0;"><div style="font-size:9.5px;font-weight:600;letter-spacing:var(--ls-eyebrow);text-transform:uppercase;color:var(--gold);margin-bottom:3px;">Fun fact · ${fi + 1} of ${facts.length}</div>
-      <div style="font-size:11.5px;line-height:1.4;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${escHtml(facts[fi])}</div></div>
-      <span style="font-size:12px;color:var(--gold);flex:none;padding-top:12px;">›</span></div>` : '';
+  const storyText = (m.history || m.description || '').trim();
+  const histOpen = el._mpHistoryOpenFor === (m.id || m.slug);
+  let band = '';
+  if (storyText || fi >= 0) {
+    band = `<div id="mp-story" style="padding:16px 16px 14px;border-bottom:1px solid var(--border);background:var(--bg);">
+      ${storyText ? `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;"><div class="mp-h" style="color:var(--gold);">The watch</div>${m.history ? '<span class="mp-badge">Exclusive</span>' : ''}</div>
+        <div id="mp-history" style="font-family:Newsreader, Georgia, serif;font-size:14px;line-height:1.5;color:var(--text);text-wrap:pretty;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;-webkit-line-clamp:${histOpen ? 'unset' : '3'};">${escHtml(storyText)}</div>
+        <div id="mp-history-toggle" role="button" tabindex="0" data-mp="history" style="display:none;margin-top:2px;padding:6px 0;font-size:11.5px;font-weight:600;color:var(--gold-lt);cursor:pointer;">${histOpen ? 'Less' : 'Read the full history'}</div>` : ''}
+      ${fi >= 0 ? `<div class="mp-quote" role="button" tabindex="0" data-mp="tab" data-tab="lore" data-scroll="1" data-fact="1" style="margin-top:${storyText ? '14px' : '0'};padding:4px 0 4px 12px;border-left:2px solid var(--gold);cursor:pointer;min-height:36px;">
+        <div style="font-size:9.5px;font-weight:600;letter-spacing:var(--ls-eyebrow);text-transform:uppercase;color:var(--gold);margin-bottom:4px;">Fun fact · ${fi + 1} of ${facts.length}</div>
+        <div style="font-size:12px;line-height:1.45;color:var(--text);text-wrap:pretty;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;-webkit-line-clamp:4;">${escHtml(facts[fi])}${publicMode ? ' …' : ''}</div></div>` : ''}
+    </div>`;
+  }
 
   // ── Tabs ──
   const tabBar = `<div id="mp-tabs" role="tablist" style="display:flex;border-bottom:1px solid var(--border);background:var(--bg);">${tabs.map(([k, label]) =>
@@ -280,7 +289,19 @@ function renderModelPage(el, ctx, h) {
       switch (d.mp) {
         case 'back': H.back && H.back(); break;
         case 'share': H.share && H.share(); break;
-        case 'tab': H.setTab && H.setTab(d.tab, d.scroll === '1'); break;
+        case 'tab':
+          if (d.fact === '1' && H.track) H.track('model_fact_tap', { model: m.slug });
+          H.setTab && H.setTab(d.tab, d.scroll === '1'); break;
+        case 'history': {
+          const hist = el.querySelector('#mp-history');
+          if (!hist) break;
+          const open = el._mpHistoryOpenFor === (m.id || m.slug);
+          el._mpHistoryOpenFor = open ? null : (m.id || m.slug);
+          hist.style.webkitLineClamp = open ? '3' : 'unset';
+          t.textContent = open ? 'Read the full history' : 'Less';
+          if (!open && H.track) H.track('model_history_expand', { model: m.slug, overflowed: true });
+          break;
+        }
         case 'model': H.openModel && H.openModel(d.id, d.slug); break;
         case 'brand': H.brandExplore && H.brandExplore(d.brand); break;
         case 'edit': H.requestEdit && H.requestEdit(d.kind); break;
@@ -292,6 +313,11 @@ function renderModelPage(el, ctx, h) {
     });
   }
   el._mpHandlers = h || {};
+  // Show the expand toggle only when the clamped paragraph actually overflows.
+  requestAnimationFrame(() => {
+    const hist = el.querySelector('#mp-history'), tg = el.querySelector('#mp-history-toggle');
+    if (hist && tg) tg.style.display = (histOpen || hist.scrollHeight > hist.clientHeight + 1) ? '' : 'none';
+  });
   return tab;
 }
 
@@ -309,8 +335,7 @@ function renderModelPage(el, ctx, h) {
     .mp-cell .l { font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
     .mp-cell .v { font-size:24px; font-weight:600; color:var(--text); margin:4px 0 2px; }
     .mp-cell .f { font-size:9.5px; color:var(--muted); margin-top:5px; }
-    .mp-fact { display:flex; align-items:flex-start; gap:10px; padding:12px 16px; background:var(--gold-dim); border-bottom:1px solid var(--border); cursor:pointer; }
-    .mp-fact:hover { filter: brightness(1.15); }
+    .mp-quote:hover { background: var(--hover); }
     .mp-row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--border); font-size:12.5px; cursor:pointer; }
     .mp-row:hover { background: var(--hover); }
     .mp-row:last-child { border-bottom:0; }
