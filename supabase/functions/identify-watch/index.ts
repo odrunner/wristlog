@@ -47,23 +47,34 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // Verify authenticated user
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Missing authorization" }), {
-      status: 401,
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-    });
-  }
+  // Verify authenticated user — or the ops secret (scripts/enrich-models.py),
+  // which runs as the admin account for attribution/rate-limit purposes.
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-  const token = authHeader.replace("Bearer ", "");
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  if (authError || !user) {
-    console.error("[identify-watch] Auth failed:", authError?.message, "tokenLen:", token.length);
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-    });
+  const opsSecret = Deno.env.get("CAMPAIGN_TRIGGER_SECRET") ?? "";
+  const opsProvided = req.headers.get("x-campaign-secret") ?? "";
+  let user: { id: string } | null = null;
+  if (opsSecret && opsProvided === opsSecret) {
+    const { data: admin } = await supabase.from("profiles").select("id").eq("is_admin", true).limit(1).maybeSingle();
+    if (admin?.id) user = { id: admin.id };
+  }
+  if (!user) {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Missing authorization" }), {
+        status: 401,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user: jwtUser }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !jwtUser) {
+      console.error("[identify-watch] Auth failed:", authError?.message, "tokenLen:", token.length);
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
+    user = jwtUser;
   }
 
   // ── Rate limiting: 100 requests per rolling 1-hour window (atomic via RPC) ──
@@ -115,7 +126,7 @@ Deno.serve(async (req: Request) => {
   };
 
   try {
-    const { image, collection, mode, watchInfo, commit, modelInfo } = await req.json();
+    const { image, collection, mode, watchInfo, commit, modelInfo, modelId } = await req.json();
     loggedMode = normalizeMode(mode);
     loggedHasCollection = hasCollectionFn(collection);
 
@@ -124,14 +135,48 @@ Deno.serve(async (req: Request) => {
     // enhance; the caller (admin Models tab) stores the result via
     // admin_set_model_enrichment.
     if (mode === "model") {
+      // Admin JWT, or the cron/ops secret (scripts/enrich-models.py) — same
+      // header the pg_cron jobs use for the other functions.
+      const triggerSecret = Deno.env.get("CAMPAIGN_TRIGGER_SECRET") ?? "";
+      const providedSecret = req.headers.get("x-campaign-secret") ?? "";
+      const bySecret = !!triggerSecret && providedSecret === triggerSecret;
       const { data: prof } = await supabase.from("profiles").select("is_admin").eq("id", user.id).maybeSingle();
-      if (!prof?.is_admin) {
+      if (!prof?.is_admin && !bySecret) {
         await logAttempt(null, "model_forbidden");
         return new Response(JSON.stringify({ error: "forbidden" }), {
           status: 403, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
         });
       }
-      if (!modelInfo?.brand || !modelInfo?.name) {
+      // Server-side grounding + store when a modelId is given (ops script path):
+      // the client path passes modelInfo from admin_model_grounding instead.
+      let info = modelInfo;
+      const storeId: string | null = typeof modelId === "string" && modelId ? modelId : null;
+      if (storeId) {
+        const { data: mrow } = await supabase.from("watch_models")
+          .select("id, brand, name, canonical_key, wiki_extract").eq("id", storeId).maybeSingle();
+        if (!mrow) {
+          return new Response(JSON.stringify({ error: "unknown model" }), {
+            status: 404, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+          });
+        }
+        const [{ data: aliases }, { data: ws }] = await Promise.all([
+          supabase.from("watch_model_aliases").select("alias_key").eq("model_id", storeId),
+          supabase.from("watches").select("ref, caliber, year_range, case_diameter, water_resistance").eq("model_id", storeId),
+        ]);
+        const top = (k: string) => {
+          const c: Record<string, number> = {};
+          for (const w of (ws ?? []) as any[]) { const v = (w[k] ?? "").toString().trim(); if (v) c[v] = (c[v] ?? 0) + 1; }
+          return Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, 6).map(e => e[0]);
+        };
+        info = {
+          brand: mrow.brand, name: mrow.name,
+          aliases: (aliases ?? []).map((a: any) => a.alias_key).filter((k: string) => k !== mrow.canonical_key),
+          refs: [...new Set(((ws ?? []) as any[]).map(w => (w.ref ?? "").toString().trim()).filter(Boolean))],
+          grounding: { calibers: top("caliber"), years: top("year_range"), diameters: top("case_diameter"), water_resistance: top("water_resistance") },
+          wiki_extract: mrow.wiki_extract,
+        };
+      }
+      if (!info?.brand || !info?.name) {
         await logAttempt(null, "model_no_info");
         return new Response(JSON.stringify({ error: "Brand and name required" }), {
           status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
@@ -143,7 +188,7 @@ Deno.serve(async (req: Request) => {
           status: 503, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
         });
       }
-      const modelPrompt = buildModelPrompt(modelInfo);
+      const modelPrompt = buildModelPrompt(info);
       let lastErr = "";
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
@@ -167,6 +212,20 @@ Deno.serve(async (req: Request) => {
             const parsed = extractJson(text);
             if (parsed) {
               parsed._engine = "gemini";
+              if (storeId) {
+                const upd: Record<string, unknown> = { enriched_at: new Date().toISOString() };
+                if (typeof parsed.description === "string" && parsed.description.trim()) upd.description = parsed.description.trim();
+                if (typeof parsed.history === "string" && parsed.history.trim()) upd.history = parsed.history.trim();
+                if (Array.isArray(parsed.refs_by_era)) upd.refs_by_era = parsed.refs_by_era;
+                if (Array.isArray(parsed.calibers_by_era)) upd.calibers_by_era = parsed.calibers_by_era;
+                if (parsed.specs && typeof parsed.specs === "object") {
+                  const { data: cur } = await supabase.from("watch_models").select("specs").eq("id", storeId).maybeSingle();
+                  upd.specs = { ...(cur?.specs ?? {}), ...parsed.specs };
+                }
+                const { error: uErr } = await supabase.from("watch_models").update(upd).eq("id", storeId);
+                if (uErr) console.error("[identify-watch] model store failed:", uErr.message);
+                parsed._stored = !uErr;
+              }
               await logAttempt(1, null);
               return new Response(JSON.stringify(parsed), { headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
             }

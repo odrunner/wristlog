@@ -5,6 +5,8 @@
 
 
 ## Up Next
+**Sold status for watches (from the model-page work, 2026-08-29).** `watches.sold_at` (date, nullable) + "Mark as sold" in the watch modal (with undo). Collection: sold watches greyed and grouped at the bottom (or a Sold filter chip); excluded from Today's Pick, reminders, collection value and the ranking game; wear history stays. Model page: "Still owned: 20 of 22"; sold examples leave the wear-share / cost-per-wear population but stay in ownership-by-era. Public profile/showcase hides sold by default. Scope agreed 2026-08-29; not started.
+
 **Profile privacy — stop anonymous scraping of the user table (audit S1). DEFERRED 2026-08-13, needs doing properly.**
 Anyone logged-out can currently read all 517 profile rows: every column, including `is_admin` (which names the one account worth attacking) and 251 users' `timezone`. 128 users have set their profile to Followers-only or Private; that setting is honoured by the UI only, not by the database.
 
