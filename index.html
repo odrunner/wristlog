@@ -8183,7 +8183,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.17.51';
+const APP_VERSION = '28.17.54';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18190,7 +18190,8 @@ function renderDevExperiments() {
   if (!el) return;
   const keys = Object.keys(EXPERIMENTS);
   if (!keys.length) { el.innerHTML = '<div style="font-size:.78rem;color:var(--muted);padding:.5rem 0;">No running experiments.</div>'; return; }
-  el.innerHTML = keys.map(k => {
+  el.innerHTML = `<div style="padding:.5rem 0 .6rem;"><button class="chip" onclick="resetEnhanceNudgeState()">Reset nudge state</button>
+    <span style="font-size:.72rem;color:var(--muted);margin-left:.4rem;">clears the once-per-watch and once-per-day gates for my account</span></div>` + keys.map(k => {
     const forced = safeLS.get('exp_force_' + k) || '';
     const opt = (v, label) => `<option value="${v}" ${forced === v ? 'selected' : ''}>${label}</option>`;
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem 0;border-bottom:1px solid var(--border);">
@@ -28021,6 +28022,14 @@ function enhanceFromGrid(watchId) { enhanceScoped(watchId, 'grid'); }
 // Slim inline card at the top of whichever page is showing. No-op in control.
 // True when a nudge for this watch would render right now (treatment, gated, slot on the
 // active page). Lets the review prompt yield so the two never compete for the same moment.
+// Admin Dev tab: forget every nudge gate for the signed-in account (UX testing).
+function resetEnhanceNudgeState() {
+  const seenKey = enhNudgeSeenKey(), dayKey = enhNudgeDayKey();
+  if (!seenKey) return;
+  safeLS.remove(seenKey); safeLS.remove(dayKey);
+  removeEnhanceNudge();
+  toast('Nudge state reset');
+}
 function enhanceNudgeWouldShow(watch) {
   if (!watch || !experiment('enhance_nudge')) return false;
   const dayKey = enhNudgeDayKey();

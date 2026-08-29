@@ -63,6 +63,11 @@ describe('enhance_nudge wiring in index.html', () => {
     expect(html).toContain("function enhanceFromGrid(watchId) { enhanceScoped(watchId, 'grid'); }");
   });
 
+  it('exposes an admin Dev-tab reset for the nudge gates', () => {
+    expect(html).toMatch(/function resetEnhanceNudgeState\(\) \{[\s\S]*?safeLS\.remove\(seenKey\); safeLS\.remove\(dayKey\);/);
+    expect(html).toContain('onclick="resetEnhanceNudgeState()"');
+  });
+
   it('never writes the metric in demo mode', () => {
     expect(html).toMatch(/function logEnhanceRun\(surface\) \{\s*(?:\/\/[^\n]*\n\s*)*if \(!currentUser \|\| _isDemoMode\) return;/);
   });
