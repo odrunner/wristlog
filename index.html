@@ -8185,7 +8185,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '29.10.34';
+const APP_VERSION = '29.10.39';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -23886,9 +23886,8 @@ async function loadAndRenderModel(modelId, owners) {
   // About: LLM family write-up (curated) — refs & calibers by era
   const refs = Array.isArray(m.refs_by_era) ? m.refs_by_era : [];
   const cals = Array.isArray(m.calibers_by_era) ? m.calibers_by_era : [];
-  const aboutHtml = (m.history || refs.length || cals.length || m.wiki_url) ? h2('About') + `<div style="${card}">
+  const aboutHtml = (m.history || refs.length || cals.length) ? h2('About') + `<div style="${card}">
       ${m.history ? `<div style="font-size:.85rem;line-height:1.6;">${escHtml(m.history)}</div>` : ''}
-      ${m.wiki_url ? `<a href="${escAttr(m.wiki_url)}" target="_blank" rel="noopener" style="display:inline-block;font-size:.74rem;margin-top:.5rem;">Read more on Wikipedia ↗</a>` : ''}
       ${refs.length ? `<div style="font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;${muted}margin:.9rem 0 .3rem;">References by era</div>
         ${refs.map(r => `<div style="display:flex;gap:.6rem;font-size:.8rem;padding:.22rem 0;border-top:0.5px solid var(--border);">
           <span style="min-width:72px;font-weight:600;">${escHtml(r.reference || '')}</span>
