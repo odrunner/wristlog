@@ -368,6 +368,64 @@ def internal_suffix(st):
     return out
 
 
+# A hung upstream call is not a defect. Gemini stalls on ~1-2% of calls at
+# random; the 35s abort catches it, Claude answers, and the user still gets a
+# price. Every abort investigated 2026-08-24..28 looked the same — on 08-28 the
+# "2 of 15 calls" was ONE stall that a user happened to retry into, and that
+# exact query then ran 8 times without incident. A parse failure or an HTTP
+# error is a different animal: both times those appeared they were real bugs
+# (the boundingBox crash, the MAX_TOKENS truncations), so they still page.
+TRANSIENT_MARKERS = ("has been aborted", "aborted a request", "timed out")
+
+# Thresholds for the transient kind. Under these it is a line in the report, not
+# a red banner — alerting on normal, absorbed behaviour is how three mornings
+# went to investigating a working system.
+TRANSIENT_MIN_USERS = 3        # distinct accounts in one day
+TRANSIENT_MIN_RATE = 0.05      # share of the day's calls
+TRANSIENT_RATE_MIN_CALLS = 20  # ...rate ignored below this volume
+
+
+def classify_failures(reasons):
+    """Split failure lines into {transient, defect, users}.
+
+    `users` counts DISTINCT accounts among the transient lines — what separates
+    "one person retried into a stall" from "everyone is hitting this". Lines
+    from before the user= log carry no id and each count as their own user, so
+    an unattributable failure can never be quietly averaged away.
+    """
+    transient, defect, users = [], [], set()
+    for i, r in enumerate(reasons):
+        if any(m in r for m in TRANSIENT_MARKERS):
+            transient.append(r)
+            m = re.search(r"user=([0-9a-fA-F-]{36})", r)
+            users.add(m.group(1) if m else f"unknown-{i}")
+        else:
+            defect.append(r)
+    return {"transient": transient, "defect": defect, "users": len(users)}
+
+
+def should_alert(st):
+    """"defect", "transient", or None — is this day worth a red banner?
+
+    None still shows the counts in the engine line; it just does not shout.
+    """
+    if not st:
+        return None
+    c = classify_failures(st["reasons"])
+    if c["defect"]:
+        return "defect"
+    if not c["transient"]:
+        # A counted fallback with no failure line logged is unexplained, so treat
+        # it as a defect rather than assuming it was a stall.
+        return "defect" if st["claude"] else None
+    total = st["gemini"] + st["claude"]
+    if c["users"] >= TRANSIENT_MIN_USERS:
+        return "transient"
+    if total >= TRANSIENT_RATE_MIN_CALLS and st["claude"] / total > TRANSIENT_MIN_RATE:
+        return "transient"
+    return None
+
+
 def engine_line(label, st):
     """One '<label>: N Gemini, M Claude fallback' line, honest about unknowns."""
     if st is None:
@@ -665,20 +723,25 @@ def main():
     alerts = ""
     if post_switch:
         for lbl, st in (("watch-value", engines), ("identify-watch", id_engines)):
-            # Alert on a counted fallback OR on a logged Gemini failure. The
-            # second case covers a day whose success logs are missing — a
-            # failure we can see is still a failure worth surfacing.
-            if not st or (st["claude"] == 0 and not st["reasons"]):
+            kind = should_alert(st)
+            if not kind:
                 continue
-            if st["claude"]:
-                headline = (f"<b>{lbl} fell back to Claude on {st['claude']} of "
-                            f"{st['gemini'] + st['claude']} calls.</b> "
-                            "Gemini should serve every one.")
-            else:
-                n = len(st["reasons"])
+            c = classify_failures(st["reasons"])
+            total = st["gemini"] + st["claude"]
+            if kind == "defect":
+                shown = c["defect"]
+                n = len(shown)
                 headline = (f"<b>{lbl}: {n} Gemini failure{'s' if n != 1 else ''} "
-                            "fell back to Claude.</b>")
-            why = "".join(f"<li><code>{r}</code></li>" for r in st["reasons"][:5])
+                            "fell back to Claude.</b> Not a stall &mdash; worth a look."
+                            if n else
+                            f"<b>{lbl} fell back to Claude on {st['claude']} of "
+                            f"{total} calls with no failure logged.</b>")
+            else:
+                shown = c["transient"]
+                headline = (f"<b>{lbl}: {st['claude']} of {total} calls stalled on "
+                            f"Gemini, across {c['users']} accounts.</b> Above the "
+                            "usual ~1-2%, so this is more than random stalls.")
+            why = "".join(f"<li><code>{r}</code></li>" for r in shown[:5])
             alerts += (f"<p style='background:#f8d7da;border-left:4px solid #c00;padding:10px;'>"
                        f"{headline}</p>"
                        + (f"<ul style='font-size:12px;'>{why}</ul>" if why else ""))

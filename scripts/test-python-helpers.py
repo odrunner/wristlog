@@ -151,5 +151,73 @@ class EngineStatsInternalSplit(unittest.TestCase):
         self.assertEqual(ext["claude"], 1)
         self.assertEqual(internal["claude"], 0)
 
+
+class FallbackAlertThreshold(unittest.TestCase):
+    """should_alert — a stall the fallback absorbed is not an incident.
+
+    The report used to shout on any fallback at all, so three mornings in a row
+    it raised a red banner over normal behaviour: 08-27 was this assistant's own
+    test traffic, 08-28 was ONE Gemini stall that a user retried into, counted
+    twice. Gemini stalls on ~1-2% of calls and Claude covers it. Parse failures
+    and HTTP errors still page immediately — both times those showed up they
+    were real bugs.
+    """
+
+    U1 = "user=7337041a-710f-40a3-a02e-98021bd0a230"
+    U2 = "user=c707cfde-1111-2222-3333-444455556666"
+    U3 = "user=787559e2-1111-2222-3333-444455556666"
+    ABORT = "Gemini exception, falling back to Claude: The signal has been aborted"
+
+    def _fn(self, name):
+        ns = {"re": __import__("re")}
+        exec(_extract("cost-report.py", "TRANSIENT_MARKERS =", "def engine_line("), ns)
+        return ns[name]
+
+    def _stall(self, user):
+        return f"[watch-value] {user} {self.ABORT}"
+
+    def test_one_users_stalls_do_not_alert(self):
+        """2026-08-28 exactly: 2 of 15, both the same user, both absorbed."""
+        st = {"gemini": 13, "claude": 2, "reasons": [self._stall(self.U1)] * 2}
+        self.assertIsNone(self._fn("should_alert")(st))
+
+    def test_three_affected_users_alert(self):
+        st = {"gemini": 12, "claude": 3,
+              "reasons": [self._stall(u) for u in (self.U1, self.U2, self.U3)]}
+        self.assertEqual(self._fn("should_alert")(st), "transient")
+
+    def test_rate_over_five_percent_alerts(self):
+        st = {"gemini": 27, "claude": 3,
+              "reasons": [self._stall(self.U1)] * 2 + [self._stall(self.U2)]}
+        self.assertEqual(self._fn("should_alert")(st), "transient")
+
+    def test_low_volume_does_not_trip_the_rate(self):
+        """1 of 3 is 33% but proves nothing — the rate needs volume behind it."""
+        st = {"gemini": 2, "claude": 1, "reasons": [self._stall(self.U1)]}
+        self.assertIsNone(self._fn("should_alert")(st))
+
+    def test_parse_failure_still_alerts_immediately(self):
+        """The boundingBox bug — one occurrence is worth surfacing."""
+        st = {"gemini": 6, "claude": 1, "reasons": [
+            "[identify-watch] Gemini exception: Unexpected token '}', "
+            '..."ndingBox":}]}" is not valid JSON']}
+        self.assertEqual(self._fn("should_alert")(st), "defect")
+
+    def test_unexplained_fallback_is_treated_as_a_defect(self):
+        """A fallback with no failure line: do not assume it was a stall."""
+        st = {"gemini": 9, "claude": 1, "reasons": []}
+        self.assertEqual(self._fn("should_alert")(st), "defect")
+
+    def test_clean_day_is_silent(self):
+        self.assertIsNone(self._fn("should_alert")({"gemini": 15, "claude": 0, "reasons": []}))
+
+    def test_unattributed_stalls_each_count_as_their_own_user(self):
+        """Pre-user= log lines must not collapse into one 'user' and hide a spike."""
+        st = {"gemini": 10, "claude": 3,
+              "reasons": [f"[watch-value] {self.ABORT}"] * 3}
+        self.assertEqual(self._fn("classify_failures")(st["reasons"])["users"], 3)
+        self.assertEqual(self._fn("should_alert")(st), "transient")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
