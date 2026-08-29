@@ -44,7 +44,7 @@ test('treatment renders the nudge card into the active page, and Not now removes
   const card = page.locator('#page-collection .enhance-nudge-slot #enhance-nudge-card');
   await expect(card).toContainText('Rolex Submariner Date is missing its details');
   await expect(card).toContainText('Movement, case size, production years and the story behind it.');
-  await expect(card.getByRole('button', { name: /^Enhance · about 20 s$/ })).toBeVisible();
+  await expect(card.getByRole('button', { name: /^Enhance$/ })).toBeVisible();
 
   await card.getByRole('button', { name: 'Not now' }).click();
   await expect(page.locator('#enhance-nudge-card')).toHaveCount(0);

@@ -8183,7 +8183,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.17.54';
+const APP_VERSION = '28.18.00';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -28049,11 +28049,11 @@ function maybeShowEnhanceNudge(watch, surface) {
   const sfc = escAttr(surface || '');
   slot.innerHTML = `<div id="enhance-nudge-card">
     <div class="enh-nudge-copy">
-      <div class="enh-nudge-title">&#11088; <b>${escHtml(((watch.brand || '') + ' ' + (watch.name || '')).trim())}</b> is missing its details</div>
+      <div class="enh-nudge-title"><b>${escHtml(((watch.brand || '') + ' ' + (watch.name || '')).trim())}</b> is missing its details</div>
       <div class="enh-nudge-body">Movement, case size, production years and the story behind it.</div>
     </div>
     <div style="display:flex;gap:.4rem;align-items:center;">
-      <button type="button" class="btn btn-primary btn-sm" onclick="enhanceFromNudge('${id}','${sfc}')">Enhance &middot; about 20 s</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="enhanceFromNudge('${id}','${sfc}')">Enhance</button>
       <button type="button" class="btn btn-ghost btn-sm" onclick="dismissEnhanceNudge('${id}')">Not now</button>
     </div>
   </div>`;

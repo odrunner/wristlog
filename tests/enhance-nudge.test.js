@@ -95,7 +95,8 @@ describe('enhance_nudge wiring in index.html', () => {
     expect((html.match(/class="enhance-nudge-slot"/g) || []).length).toBe(3); // feed, track, collection
     expect(html).toContain('is missing its details');
     expect(html).toContain('Movement, case size, production years and the story behind it.');
-    expect(html).toContain('Enhance &middot; about 20 s');
+    expect(html).toContain('>Enhance</button>');
+    expect(html).not.toContain('enh-nudge-title">&#11088;'); // no emoji in product copy
     expect(html).toContain('Not now');
   });
 
