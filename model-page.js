@@ -167,12 +167,13 @@ function renderModelPage(el, ctx, h) {
       ${storyText ? `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;"><div class="mp-h" style="color:var(--gold);">The watch</div>${m.history ? '<span class="mp-badge">Exclusive</span>' : ''}</div>
         <div id="mp-history" style="font-size:14px;line-height:1.5;color:var(--text);text-wrap:pretty;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;-webkit-line-clamp:${histOpen ? 'unset' : '3'};">${escHtml(storyText)}</div>
         <div id="mp-history-toggle" role="button" tabindex="0" data-mp="history" style="display:none;margin-top:2px;padding:6px 0;font-size:11.5px;font-weight:600;color:var(--gold-lt);cursor:pointer;">${histOpen ? 'Less' : 'Read the full history'}</div>` : ''}
-      ${fi >= 0 ? `<div class="mp-quote" style="margin-top:${storyText ? '14px' : '0'};display:flex;align-items:stretch;gap:8px;">
+      ${fi >= 0 ? `<div class="mp-quote" style="margin-top:${storyText ? '14px' : '0'};display:flex;align-items:stretch;gap:4px;">
+        ${facts.length > 1 ? `<button type="button" data-mp="fact-prev" aria-label="Previous fact" style="flex:none;width:36px;min-height:44px;display:flex;align-items:center;justify-content:center;background:none;border:0;color:var(--gold);font-size:18px;cursor:pointer;font-family:inherit;">‹</button>` : ''}
         <div style="flex:1;min-width:0;padding:4px 0 4px 12px;border-left:2px solid var(--gold);">
           <div id="mp-fact-kicker" style="font-size:9.5px;font-weight:600;letter-spacing:var(--ls-eyebrow);text-transform:uppercase;color:var(--gold);margin-bottom:4px;">Fun fact · ${fi + 1} of ${facts.length}</div>
           <div id="mp-fact-body" style="font-size:12px;line-height:1.45;color:var(--text);text-wrap:pretty;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;-webkit-line-clamp:4;">${escHtml(facts[fi])}${publicMode ? ' …' : ''}</div>
         </div>
-        ${facts.length > 1 ? `<button type="button" data-mp="fact-next" aria-label="Next fact" style="flex:none;width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;background:none;border:0;color:var(--gold);font-size:18px;cursor:pointer;font-family:inherit;">›</button>` : ''}
+        ${facts.length > 1 ? `<button type="button" data-mp="fact-next" aria-label="Next fact" style="flex:none;width:36px;min-height:44px;display:flex;align-items:center;justify-content:center;background:none;border:0;color:var(--gold);font-size:18px;cursor:pointer;font-family:inherit;">›</button>` : ''}
       </div>` : ''}
     </div>`;
   }
@@ -288,13 +289,15 @@ function renderModelPage(el, ctx, h) {
         case 'back': H.back && H.back(); break;
         case 'share': H.share && H.share(); break;
         case 'tab': H.setTab && H.setTab(d.tab, d.scroll === '1'); break;
+        case 'fact-prev':
         case 'fact-next': {
           if (!facts.length) break;
-          el._mpFactIdx = ((el._mpFactIdx || 0) + 1) % facts.length;
+          const step = d.mp === 'fact-prev' ? -1 : 1;
+          el._mpFactIdx = (((el._mpFactIdx || 0) + step) % facts.length + facts.length) % facts.length;
           const k = el.querySelector('#mp-fact-kicker'), bd = el.querySelector('#mp-fact-body');
           if (k) k.textContent = `Fun fact · ${el._mpFactIdx + 1} of ${facts.length}`;
           if (bd) bd.textContent = facts[el._mpFactIdx] + (publicMode ? ' …' : '');
-          if (H.track) H.track('model_fact_next', { model: m.slug, index: el._mpFactIdx });
+          if (H.track) H.track('model_fact_next', { model: m.slug, index: el._mpFactIdx, dir: step });
           break;
         }
         case 'history': {

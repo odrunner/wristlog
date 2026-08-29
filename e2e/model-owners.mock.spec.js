@@ -98,6 +98,10 @@ test('row shows count + era, tap opens in-app model page with facts and owners',
   expect(await mp.locator('#mp-fact-body').textContent()).not.toBe(bodyBefore);
   await mp.locator('[data-mp=fact-next]').click();
   expect(await kicker.textContent()).toBe(before); // wraps around
+  await mp.locator('[data-mp=fact-prev]').click();
+  expect(await kicker.textContent()).not.toBe(before); // previous wraps back to the other fact
+  await mp.locator('[data-mp=fact-prev]').click();
+  expect(await kicker.textContent()).toBe(before);
   await expect(mp).toContainText('2.8×');
   await expect(mp).toContainText('Top 4%');
   await expect(mp).toContainText('of 1,412 models · 340 wears from 14 collections');
