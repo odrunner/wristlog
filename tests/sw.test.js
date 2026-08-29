@@ -90,7 +90,7 @@ describe('sw.js install', () => {
 
     expect(event.waitUntil).toHaveBeenCalled();
     expect(globalThis.caches.open).toHaveBeenCalledWith(CURRENT_CACHE);
-    expect(mockCache.addAll).toHaveBeenCalledWith(['/', '/design-system.css', '/manifest.json', '/icon.svg', '/profile/', '/p/']);
+    expect(mockCache.addAll).toHaveBeenCalledWith(['/', '/design-system.css', '/model-page.js', '/manifest.json', '/icon.svg', '/profile/', '/p/']);
   });
 
   it('stores the fetched shell under /index.html too instead of downloading it twice', async () => {
