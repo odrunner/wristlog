@@ -202,7 +202,7 @@ begin
                    'series', case when (select count(*) from val_months) >= 2
                                then (select json_agg(json_build_object('ym', ym, 'median', round(med::numeric), 'n', n) order by ym) from val_months)
                                else null end) end from val_now),
-    'cost_per_wear', (select case when n >= 1 then json_build_object('median', round(med::numeric), 'n_owners', n, 'wears', wears) end from cpw_agg),
+    'cost_per_wear', (select case when n >= 1 then json_build_object('median', round(med::numeric, 2), 'n_owners', n, 'wears', wears) end from cpw_agg),
     'wear_share', (select case when n >= 1 then json_build_object(
                    'index', round(idx::numeric, 2), 'share', round(share::numeric * 100), 'fair', round(fair::numeric * 100),
                    'n_owners', n, 'wears', wears,

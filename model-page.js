@@ -117,8 +117,7 @@ function renderModelPage(el, ctx, h) {
       <div style="font-size:27px;font-weight:600;letter-spacing:-.01em;color:#fff;margin:4px 0 6px;line-height:1.1;">${escHtml(m.name)}</div>
       <div style="font-size:11px;color:rgba(255,255,255,.7);">${escHtml(captionBits.join(' · '))}</div>
     </div>
-    ${m.hero_image && m.hero_credit ? `<div style="position:absolute;right:8px;bottom:6px;font-size:8.5px;color:rgba(255,255,255,.55);">${escHtml(m.hero_credit)}</div>` : ''}
-  </div>`;
+  </div>${m.hero_image && m.hero_credit ? `<div style="font-size:8.5px;color:var(--muted);text-align:right;padding:3px 10px 0;background:var(--bg);">${escHtml(m.hero_credit)}</div>` : ''}`;
 
   // ── Stat grid (2×2) ──
   const cells = [];
@@ -147,9 +146,10 @@ function renderModelPage(el, ctx, h) {
     <div class="f">by ${wr.wearers90 || 0} of ${owners} owners</div></div>`);
   if (st.cost_per_wear) {
     const c = st.cost_per_wear;
-    cells.push(`<div class="mp-cell"><div class="l">Cost per wear</div><div class="v" style="color:var(--gold);">$${Number(c.median).toLocaleString()}</div>
+    const cpwTxt = Number(c.median) < 1 ? '<$1' : Number(c.median) < 10 ? `$${Number(c.median).toFixed(1)}` : `$${Math.round(Number(c.median)).toLocaleString()}`;
+    cells.push(`<div class="mp-cell"><div class="l">Cost per wear</div><div class="v" style="color:var(--gold);">${cpwTxt}</div>
       <div style="display:flex;align-items:center;gap:5px;height:16px;margin-top:6px;"><div style="flex:1;height:4px;border-radius:2px;background:var(--surface2);position:relative;overflow:hidden;"><div style="position:absolute;left:0;top:0;bottom:0;width:${Math.min(100, Math.round(100 * c.wears / Math.max(c.wears, 500)))}%;background:var(--gold);"></div></div><span style="font-size:9px;color:var(--muted);">${Number(c.wears).toLocaleString()} wears</span></div>
-      <div class="f">${c.n_owners} owners tracking</div></div>`);
+      <div class="f">${c.n_owners} owner${c.n_owners === 1 ? '' : 's'} tracking</div></div>`);
   } else {
     cells.push(`<div class="mp-cell"><div class="l">${st.accuracy ? 'Owners' : 'Wears all-time'}</div><div class="v">${st.accuracy ? owners : (wr.all_time || 0)}</div><div class="f">${st.accuracy ? (st.wishlisted ? `${st.wishlisted} more want it` : 'on WRotate') : 'logged by members'}</div></div>`);
   }
