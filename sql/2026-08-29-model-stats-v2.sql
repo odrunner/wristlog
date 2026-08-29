@@ -1,8 +1,10 @@
 -- model_stats v2 — everything the reference-page design (2a) renders:
 -- cost per wear, wear share (+brand/type/all benchmarks, retention by tenure,
 -- percentile), rate histogram, weekly wear pattern, 90-day strip, ownership
--- by era, median tenure, private-collection count. Floors: >=3 members for
--- every member-derived figure; individuals never surfaced.
+-- by era, median tenure, private-collection count. No member floors (owners
+-- are never listed, so aggregates carry no identity); every figure shows its
+-- sample size instead. Wear share still needs >=2 watches and >=5 wears per
+-- owner — that is what makes the metric meaningful, not a privacy floor.
 create or replace function public.model_wear_share_rows()
 returns table(model_id uuid, user_id uuid, share numeric, fair numeric, idx numeric, wears bigint, tenure_years numeric)
 language sql stable security definer set search_path to 'public' as $$
@@ -74,7 +76,7 @@ begin
   ),
   val_months as (
     select ym, percentile_cont(0.5) within group (order by price) med, count(*) n
-    from pts group by ym having count(*) >= 3 order by ym
+    from pts group by ym order by ym
   ),
   val_now as (
     select percentile_cont(0.5) within group (order by market_price) med, count(distinct user_id) n
@@ -90,7 +92,7 @@ begin
   ),
   ws_models as (
     select m.id, m.brand, m.specs->>'type' typ, percentile_cont(0.5) within group (order by r.idx) idx
-    from ws_all r join watch_models m on m.id = r.model_id group by m.id having count(*) >= 3
+    from ws_all r join watch_models m on m.id = r.model_id group by m.id
   ),
   ws_bench as (
     select (select percentile_cont(0.5) within group (order by idx) from ws_models where brand = v_brand) brand_idx,
@@ -103,7 +105,7 @@ begin
            min(case when tenure_years < 1 then 1 when tenure_years < 2 then 2 when tenure_years < 3 then 3 else 5 end) ord,
            percentile_cont(0.5) within group (order by idx) idx, count(*) n
     from ws_all where model_id = p_model_id and tenure_years is not null
-    group by 1 having count(*) >= 3
+    group by 1
   ),
   cpw as (   -- cost per wear: purchase price / cumulative wears, per owner
     select ow.user_id, ow.price / nullif(count(l.id), 0) as cpw, count(l.id) wears
@@ -190,18 +192,18 @@ begin
     'wears', (select json_build_object('w90', w90, 'wearers90', wearers90, 'all_time', all_time) from wears),
     'wear_strip', (select json_agg(n order by b) from strip),
     'wear_weeks', (select json_agg(n order by b) from weeks),
-    'accuracy', (select case when n_measurers >= 3 then json_build_object(
+    'accuracy', (select case when n_measurers >= 1 then json_build_object(
                    'n_sessions', n_sessions, 'n_measurers', n_measurers,
                    'med_rate', round(med_rate::numeric, 1), 'med_abs_rate', round(med_abs_rate::numeric, 1),
                    'med_amp', round(med_amp::numeric),
                    'hist', (select json_agg(n order by b) from hist), 'hist_min', -25, 'hist_max', 14) end from acc),
-    'value', (select case when n >= 3 then json_build_object(
+    'value', (select case when n >= 1 then json_build_object(
                    'median_now', round(med::numeric), 'n_contributors', n,
-                   'series', case when (select count(*) from val_months) >= 3 and (select count(distinct user_id) from pts) >= 3
+                   'series', case when (select count(*) from val_months) >= 2
                                then (select json_agg(json_build_object('ym', ym, 'median', round(med::numeric), 'n', n) order by ym) from val_months)
                                else null end) end from val_now),
-    'cost_per_wear', (select case when n >= 3 then json_build_object('median', round(med::numeric), 'n_owners', n, 'wears', wears) end from cpw_agg),
-    'wear_share', (select case when n >= 3 then json_build_object(
+    'cost_per_wear', (select case when n >= 1 then json_build_object('median', round(med::numeric), 'n_owners', n, 'wears', wears) end from cpw_agg),
+    'wear_share', (select case when n >= 1 then json_build_object(
                    'index', round(idx::numeric, 2), 'share', round(share::numeric * 100), 'fair', round(fair::numeric * 100),
                    'n_owners', n, 'wears', wears,
                    'pct_rank', (select round(100.0 * count(*) filter (where m2.idx < ws_model.idx) / nullif(count(*), 0)) from ws_models m2),
@@ -214,9 +216,9 @@ begin
                    'retention', (select case when count(*) >= 2 then json_agg(json_build_object('bucket', bucket, 'share', round(idx * ws_model.fair * 100), 'n', n) order by ord) end from ws_ret)
                  ) end from ws_model),
     'era', (select json_agg(n order by b) from era),
-    'tenure', (select case when n >= 3 then json_build_object('years', round(yrs::numeric, 1), 'n', n) end from tenure),
+    'tenure', (select case when n >= 1 then json_build_object('years', round(yrs::numeric, 1), 'n', n) end from tenure),
     'specs_agg', (select coalesce(json_object_agg(k, json_build_object('v', v, 'n', n)), '{}'::json)
-                    from spec_field where rn = 1 and n >= 2),
+                    from spec_field where rn = 1),
     'photos', (select coalesce(json_agg(url), '[]'::json) from photos),
     'related', (select coalesce(json_agg(row_to_json(related)), '[]'::json) from related),
     'brand_models', (select n from brand_count),
