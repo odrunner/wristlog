@@ -3604,11 +3604,12 @@ export function fmtRate(r) {
 }
 
 // Bar heights for the tiny histograms/strips on the model page: percent of the
-// tallest bar; zero bars get a 6% stub so the axis still reads as a row.
+// tallest bar; zero bars get a 4% stub, any real count at least 12% so a single
+// example never looks like nothing.
 export function barPcts(counts) {
   const arr = (counts || []).map(n => Math.max(0, Number(n) || 0));
   const max = Math.max(0, ...arr);
-  return arr.map(n => (max > 0 && n > 0) ? Math.max(6, Math.round((n / max) * 100)) : 6);
+  return arr.map(n => (max > 0 && n > 0) ? Math.max(12, Math.round((n / max) * 100)) : 4);
 }
 
 // Tone by relative height: the mode is gold, its shoulders gold-dim, the rest flat.

@@ -2,16 +2,17 @@ import { describe, it, expect } from 'vitest';
 import { barPcts, histTone, featuredFactIndex } from '../wrotate_test.js';
 
 describe('barPcts', () => {
-  it('scales to the max with a 6% stub for zeros', () => {
-    expect(barPcts([0, 2, 4])).toEqual([6, 50, 100]);
+  it('scales to the max with a 4% stub for zeros and a 12% floor for real counts', () => {
+    expect(barPcts([1, 11])).toEqual([12, 100]);
+    expect(barPcts([0, 2, 4])).toEqual([4, 50, 100]);
   });
   it('all-zero and empty inputs are stubs / empty', () => {
-    expect(barPcts([0, 0])).toEqual([6, 6]);
+    expect(barPcts([0, 0])).toEqual([4, 4]);
     expect(barPcts([])).toEqual([]);
     expect(barPcts(null)).toEqual([]);
   });
   it('ignores negatives and junk', () => {
-    expect(barPcts([-3, 'x', 1])).toEqual([6, 6, 100]);
+    expect(barPcts([-3, 'x', 1])).toEqual([4, 4, 100]);
   });
 });
 
