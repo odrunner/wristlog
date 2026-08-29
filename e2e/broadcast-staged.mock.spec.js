@@ -206,12 +206,12 @@ test.describe('staged broadcast — In Flight row', () => {
     expect(list).toContain('sending next');
   });
 
-  test('the quota line reports the real 500 limit, not the stale 100', async ({ page }) => {
+  test('the quota line reports the real 2000 limit, not a stale one', async ({ page }) => {
     await asAdmin(page);
     const { status } = await renderQueue(page, [HELD_ROW], { used_today: 40, held: 362, sent: 50 });
-    expect(status).toContain('40/500');
-    // 500 - 40 used - 10 reserve
-    expect(status).toContain('450 emails');
+    expect(status).toContain('40/2000');
+    // 2000 - 40 used - 10 reserve
+    expect(status).toContain('1950 emails');
   });
 });
 
