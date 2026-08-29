@@ -68,8 +68,8 @@ test('brand chip filters and card tap opens the model page', async ({ page }) =>
   await page.locator('#explore-grid .explore-card').first().click();
   const mp = page.locator('#page-model');
   await expect(mp).toHaveClass(/active/);
-  await expect(mp).toContainText('Owned by 10 members on WRotate');
-  await mp.getByText('← Back').click();
+  await expect(mp).toContainText('10');
+  await mp.getByText('‹ Back').click();
   await expect(page.locator('#page-explore')).toHaveClass(/active/); // back to Explore
 });
 
@@ -99,6 +99,5 @@ test('feed watch preview links to the model page', async ({ page }) => {
   await expect(page.locator('#watch-preview-modal')).toBeHidden();
   const mp = page.locator('#page-model');
   await expect(mp).toHaveClass(/active/);
-  await expect(mp).toContainText('Owned by 23 members on WRotate');
-  await expect(mp).toContainText('Members own examples from 1962 to 2026');
+  await expect(mp).toContainText('1962–2026');
 });

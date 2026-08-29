@@ -3602,3 +3602,26 @@ export function fmtRate(r) {
   if (!Number.isFinite(x)) return '—';
   return `${x > 0 ? '+' : ''}${x.toFixed(1)} s/d`;
 }
+
+// Bar heights for the tiny histograms/strips on the model page: percent of the
+// tallest bar; zero bars get a 6% stub so the axis still reads as a row.
+export function barPcts(counts) {
+  const arr = (counts || []).map(n => Math.max(0, Number(n) || 0));
+  const max = Math.max(0, ...arr);
+  return arr.map(n => (max > 0 && n > 0) ? Math.max(6, Math.round((n / max) * 100)) : 6);
+}
+
+// Tone by relative height: the mode is gold, its shoulders gold-dim, the rest flat.
+export function histTone(pct) {
+  const p = Number(pct) || 0;
+  return p >= 75 ? 'gold' : p >= 35 ? 'dim' : 'flat';
+}
+
+// Which fun fact leads the teaser band today — rotates daily, stable within a day.
+export function featuredFactIndex(count, now = new Date()) {
+  const n = Number(count) || 0;
+  if (n <= 0) return -1;
+  const start = new Date(now.getFullYear(), 0, 0);
+  const day = Math.floor((now - start) / 86400000);
+  return day % n;
+}
