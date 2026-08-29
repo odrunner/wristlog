@@ -56,6 +56,7 @@ const VERBATIM = [
   'wishShareItems', 'wishSharePrivateCount', 'wishShareLinkLabel',
   'collShareItems', 'collSharePrivateCount', 'groupCommentsByToken',
   'resolveExperiment', 'experimentVerdict', 'experimentSortRank', 'fmtExperimentMetric',
+  'shouldNudgeEnhance',
 ];
 
 const ADAPTED = [

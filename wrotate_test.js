@@ -3539,3 +3539,13 @@ export function fmtExperimentMetric(ev, arm) {
   if (ev.metric_kind === 'rate') return `${a.converted}/${a.users} (${(Number(a.mean) * 100).toFixed(1)}%)`;
   return `${Number(a.mean).toFixed(2)} (n=${a.users})`;
 }
+
+// ── A/B enhance_nudge ────────────────────────────────────────────────────────
+// Gate for the "this watch is missing its details" inline card. Pure so the
+// caller supplies the seen-map, the last-nudged day and today's date.
+// Mirrored VERBATIM in index.html.
+export function shouldNudgeEnhance(watch, { seen, lastNudgeDay, today } = {}) {
+  if (!watch || watch.caseDiameter || watch.caliber || watch.background) return false;
+  if (seen && seen[watch.id]) return false;
+  return lastNudgeDay !== today;
+}

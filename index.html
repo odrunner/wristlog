@@ -953,6 +953,13 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .card-tag-anniv      { color: var(--gold-text); background: color-mix(in srgb, var(--gold) 12%, transparent); border: 1px solid color-mix(in srgb, var(--gold) 20%, transparent); }
     .card-tag-watch-type { color: #818cf8; background: rgba(129,140,248,.1); border: 1px solid rgba(129,140,248,.15); }
     .card-tag-strap      { color: #94a3b8; font-style: italic; }
+    /* A/B: enhance_nudge — muted "add the missing specs" affordance on a grid card */
+    .enh-chip { font-family: inherit; font-size: .62rem; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: .13rem .4rem; margin-top: .42rem; white-space: nowrap; letter-spacing: .01em; cursor: pointer; line-height: inherit; }
+    .enh-chip:hover { border-color: var(--gold); color: var(--gold-text); }
+    #enhance-nudge-card { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; padding: .6rem .75rem; margin-bottom: .9rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+    #enhance-nudge-card .enh-nudge-copy { flex: 1; min-width: 12rem; }
+    #enhance-nudge-card .enh-nudge-title { font-size: .82rem; }
+    #enhance-nudge-card .enh-nudge-body { font-size: .72rem; color: var(--muted); margin-top: .12rem; }
 
     /* ── WATCH TYPE TAG PICKER (Edit Watch modal) ── */
     .watch-tag-picker      { display: flex; flex-wrap: wrap; gap: .4rem; }
@@ -3517,6 +3524,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
   <!-- ════ TRACK PAGE ════ -->
   <div id="page-track" class="page">
+    <div class="enhance-nudge-slot"></div>
     <div id="rec-container"></div>
     <div id="neglected-strip" style="display:none;margin:-.5rem 0 1.25rem;">
       <div style="font-size:.7rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem;">Not worn in a while</div>
@@ -3553,6 +3561,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
   <!-- ════ COLLECTION PAGE ════ -->
   <div id="page-collection" class="page">
+    <div class="enhance-nudge-slot"></div>
     <div class="page-header">
       <h1 class="page-title">My Collection</h1>
       <div style="display:flex;gap:.45rem;align-items:center;">
@@ -8173,7 +8182,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.14.49';
+const APP_VERSION = '28.17.22';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16257,6 +16266,7 @@ async function saveNewPost() {
   closeNewPost();
   if (window.posthog) posthog.capture('post_created', { has_photo: !!entry.photoUrl, photo_count: parsePhotoUrl(entry.photoUrl).length, has_watch: !!trackWatchId });
   toast(isWear ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : (useCase === 'measurement' ? 'Shared to feed!' : 'Posted!'));
+  if (isWear) setTimeout(() => maybeShowEnhanceNudge(postedWatch, 'wear'), 1500);
   haptic('success');
   maybeShowReviewPrompt('post');
   checkAndAwardBadges('post', entry.id).then(() => foldBadgeCardsIntoPost(entry.id));
@@ -21203,6 +21213,8 @@ async function saveLog() {
   renderTrack();
   updateStreakChip();
   toast(isUpdate ? 'Wear log updated!' : 'Wear logged!');
+  // Delayed so it doesn't land on top of the fun-fact toast.
+  setTimeout(() => maybeShowEnhanceNudge(_factWatch, 'wear'), 1500);
   haptic('success');
   if (!isUpdate) maybeShowReviewPrompt('wear_log');
   if (!isUpdate) maybeDeferredPushAsk();   // acted on a quiet notification? spend the one-shot dialog now
@@ -22870,7 +22882,13 @@ function renderCollection(force) {
   const priceBtn = document.getElementById('coll-update-prices-btn');
   if (priceBtn) priceBtn.style.display = currentUser ? '' : 'none';
   const enhAllBtn = document.getElementById('coll-enhance-all-btn');
-  if (enhAllBtn) enhAllBtn.style.display = currentUser ? 'inline-flex' : 'none';
+  if (enhAllBtn) {
+    enhAllBtn.style.display = currentUser ? 'inline-flex' : 'none';
+    // A/B enhance_nudge: name the number of watches still missing their specs.
+    const enhLbl = enhAllBtn.querySelector('.wl-actions-text');
+    const enhN = experiment('enhance_nudge') ? watches.filter(needsEnhance).length : 0;
+    if (enhLbl) enhLbl.textContent = enhN > 0 ? `Enhance ${enhN}` : 'Enhance';
+  }
   syncCollViewBtn();
   renderCollSortBar();
   renderTagFilterBar();
@@ -23003,6 +23021,7 @@ function renderCollection(force) {
             <div class="watch-card-name" style="cursor:pointer" onclick="${cardTap}">${escHtml(w.name)}</div>
             <div class="watch-card-brand" style="cursor:pointer" onclick="${cardTap}">${escHtml(w.brand)}${w.ref ? ' · '+escHtml(w.ref) : ''}</div>
             ${watchCardTagsHTML(w, wLogs)}
+            ${enhChipHTML(w)}
           </div>
           ${noImgBtns}`;
         })()}
@@ -23945,6 +23964,12 @@ function warrantyStatus(w) {
 const _tagNow = { d: null, ts: 0 }; // cached Date for tags — refreshed every 60s
 function _getTagNow() { const t = Date.now(); if (t - _tagNow.ts > 60000) { _tagNow.d = new Date(); _tagNow.ts = t; } return _tagNow.d; }
 
+// A/B enhance_nudge: muted per-card affordance to fill in the missing specs.
+function enhChipHTML(w) {
+  if (!experiment('enhance_nudge') || !needsEnhance(w)) return '';
+  return `<button type="button" class="enh-chip" title="Add movement, case size and history" onclick="event.stopPropagation();enhanceFromGrid('${escAttr(w.id)}')">&#65291; details</button>`;
+}
+
 function watchCardTagsHTML(w, wLogs) {
   if (!wLogs) wLogs = logsForWatch(w.id); // fallback for any other callers
   const tags = [];
@@ -24006,6 +24031,7 @@ function quickLog(watchId) {
   if (document.getElementById('page-collection').classList.contains('active')) renderCollection();
   dismissReminder();
   toast('Wear logged!');
+  setTimeout(() => maybeShowEnhanceNudge(watches.find(x => x.id === watchId) || null, 'wear'), 1500);
   haptic('success');
   maybeDeferredPushAsk();
   // Fire-and-forget fun fact (mirrors saveLog / saveNewPost) — never blocks logging.
@@ -24243,6 +24269,7 @@ function marketPriceRowHTML(w) {
   </div>`;
 }
 
+let _addedWatchId = null;
 async function saveWatch() {
   if (demoGuard()) return;
   const brand = document.getElementById('w-brand').value;
@@ -24352,11 +24379,14 @@ async function saveWatch() {
     markDirty('watches', newId);
     if (window.posthog) posthog.capture('watch_added', { brand: data.brand, from_wishlist: !!movingFromWishlistId, source: movingFromWishlistId ? 'wishlist' : 'manual' });
     toast(movingFromWishlistId ? 'Moved to collection!' : 'Watch added to collection!');
+    _addedWatchId = newId;
   }
   const pendingWlId = movingFromWishlistId;  // capture before closeWatchModal clears it
   save();
   closeWatchModal();
   renderCollection();
+  // A/B enhance_nudge — after the modal closed and the grid re-rendered.
+  if (_addedWatchId) { maybeShowEnhanceNudge(watches.find(x => x.id === _addedWatchId) || null, 'add'); _addedWatchId = null; }
   checkAndAwardBadges('watch');
 
   // If this was a "Move from Wishlist" flow, delete the source wishlist item
@@ -27233,6 +27263,7 @@ async function af2Confirm(idx) {
 async function af2RunEnhance(idx) {
   const w = _af2Watches[idx];
   if (!w || !w._af2WatchId) return;
+  logEnhanceRun('af2');
   w._af2State = 'enhancing';
   af2StartEnhanceTheater(idx);
   af2RenderSheet();
@@ -27708,6 +27739,7 @@ async function enhanceSingleWatch() {
   if (!editingId) return;
   const w = watches.find(x => x.id === editingId);
   if (!w) return;
+  logEnhanceRun('edit');
   const storyBtn = document.querySelector('#story-content button');
   const footerBtn = document.getElementById('footer-enhance-btn');
   if (storyBtn) { storyBtn.disabled = true; storyBtn.innerHTML = '<span class="spinner-sm"></span> Enhancing…'; }
@@ -27931,6 +27963,68 @@ async function saveAllEnhanceResults() {
   }
 }
 
+// ── Enhance: run logging + the enhance_nudge A/B card ────────────────────────
+// logEnhanceRun() fires in BOTH arms — it is the experiment's target metric
+// (experiment_metrics key 'enhance_run', source feature_events:enhance_run).
+// _enhanceSurface is set by a caller right before a scoped enhanceAllWatches()
+// call; enhanceAllWatches reads it once and clears it.
+let _enhanceSurface = null;
+function logEnhanceRun(surface) {
+  if (!currentUser) return;
+  db.from('feature_events').insert({ user_id: currentUser.id, event: 'enhance_run', meta: { surface } }).then(() => {});
+}
+
+const ENH_NUDGE_SEEN_KEY = 'enhnudge_seen';
+const ENH_NUDGE_DAY_KEY  = 'enhnudge_day';
+// A watch "needs enhance" when it has none of the three AI-filled anchors — the
+// same predicate enhanceAllWatches() uses to pick its default targets.
+function needsEnhance(w) { return !!w && !w.caseDiameter && !w.caliber && !w.background; }
+// Mirrored VERBATIM in wrotate_test.js — keep the two copies identical.
+function shouldNudgeEnhance(watch, { seen, lastNudgeDay, today } = {}) {
+  if (!watch || watch.caseDiameter || watch.caliber || watch.background) return false;
+  if (seen && seen[watch.id]) return false;
+  return lastNudgeDay !== today;
+}
+function enhNudgeSeen() {
+  try { return JSON.parse(safeLS.get(ENH_NUDGE_SEEN_KEY) || '{}') || {}; } catch (e) { return {}; }
+}
+function enhNudgeMarkSeen(watchId) {
+  const seen = enhNudgeSeen();
+  seen[watchId] = 1;
+  safeLS.set(ENH_NUDGE_SEEN_KEY, JSON.stringify(seen));
+}
+function removeEnhanceNudge() { document.getElementById('enhance-nudge-card')?.remove(); }
+function dismissEnhanceNudge(watchId) { enhNudgeMarkSeen(watchId); removeEnhanceNudge(); }
+function enhanceFromNudge(watchId, surface) {
+  enhNudgeMarkSeen(watchId);
+  removeEnhanceNudge();
+  _enhanceSurface = surface || 'nudge';
+  enhanceAllWatches([watchId]);
+}
+function enhanceFromGrid(watchId) { _enhanceSurface = 'grid'; enhanceAllWatches([watchId]); }
+// Slim inline card at the top of whichever page is showing. No-op in control.
+function maybeShowEnhanceNudge(watch, surface) {
+  if (!experiment('enhance_nudge')) return;
+  const today = todayStr();
+  if (!shouldNudgeEnhance(watch, { seen: enhNudgeSeen(), lastNudgeDay: safeLS.get(ENH_NUDGE_DAY_KEY), today })) return;
+  const slot = document.querySelector('.page.active .enhance-nudge-slot');
+  if (!slot) return;
+  removeEnhanceNudge();
+  safeLS.set(ENH_NUDGE_DAY_KEY, today);
+  const id = escAttr(watch.id);
+  const sfc = escAttr(surface || '');
+  slot.innerHTML = `<div id="enhance-nudge-card">
+    <div class="enh-nudge-copy">
+      <div class="enh-nudge-title">&#11088; <b>${escHtml(((watch.brand || '') + ' ' + (watch.name || '')).trim())}</b> is missing its details</div>
+      <div class="enh-nudge-body">Movement, case size, production years and the story behind it.</div>
+    </div>
+    <div style="display:flex;gap:.4rem;align-items:center;">
+      <button type="button" class="btn btn-primary btn-sm" onclick="enhanceFromNudge('${id}','${sfc}')">Enhance &middot; about 20 s</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="dismissEnhanceNudge('${id}')">Not now</button>
+    </div>
+  </div>`;
+}
+
 async function enhanceAllWatches(scopedIds) {
   if (demoGuard()) return;
   if (!watches.length) { toast('No watches to enhance', 'info'); return; }
@@ -27946,6 +28040,8 @@ async function enhanceAllWatches(scopedIds) {
   if (!scopedIds) {
     if (!await showConfirm(`This will look up specs, dimensions, materials, caliber, and history for ${count} watch${count !== 1 ? 'es' : ''}.`, { title: `Enhance ${count} watch${count !== 1 ? 'es' : ''}?`, confirmLabel: 'Enhance', danger: false })) return;
   }
+  logEnhanceRun(_enhanceSurface || 'enhance_all');
+  _enhanceSurface = null;
 
   _enhanceAllTargets = target;
   _enhanceAllResults = target.map(() => ({ _updates: null, _saved: false }));
