@@ -59,8 +59,8 @@ test('a row with no evaluation yet renders "not evaluated", and only running row
   await page.evaluate(async (id) => { currentUser = { id }; await loadAdminExperiments(); }, ADMIN_ID);
 
   const list = page.locator('#admin-experiments-list');
-  const draftRow = list.locator('tr', { hasText: 'Draft Experiment' });
-  const runningRow = list.locator('tr', { hasText: 'Running No Eval' });
+  const draftRow = list.locator('.adm-exp-card', { hasText: 'Draft Experiment' });
+  const runningRow = list.locator('.adm-exp-card', { hasText: 'Running No Eval' });
   await expect(draftRow).toContainText('not evaluated');
   await expect(runningRow).toContainText('not evaluated');
   // The admin page section isn't navigated to (loadAdminExperiments() is called
