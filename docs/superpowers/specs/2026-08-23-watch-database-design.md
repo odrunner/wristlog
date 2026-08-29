@@ -189,3 +189,36 @@ Each phase is its own commit/test/ship cycle (one change at a time).
 Model-level accuracy/wear stats, auto model clubs, market-value caching
 on models, rarity/popularity badges, add-watch autocomplete from
 `watch_models`, wishlist "N want this" counts.
+
+## Addendum 2026-08-29 — Model page v2 ("as good as it gets")
+
+Approved direction: (1) best-possible model page → (2) larger/richer database →
+(3) ingress/egress → (4) promotion. This addendum covers (1).
+
+**Page sections, top to bottom:** hero photo strip (hero image, then public
+owners' photos) · brand / name / family description · era line · **On WRotate**
+tiles · **Your watch(es)** (or Add to wishlist) · **About** (history, references
+by era, calibers by era) · **Specs** (curated family specs + "from N members'
+watches" aggregates) · fun facts · owners · **More from <brand>**.
+
+**Community numbers (`model_stats` RPC, one call):** owners, wishlisted, wears
+in 90 days, community accuracy (median rate, |rate|, amplitude), **Wear Index**,
+**value + trend**, aggregated specs, photos, related models, the viewer's own
+watches with their last measured rate. Every aggregate carries its sample size
+and sits behind a ≥3-member floor; individuals are never surfaced.
+
+- **Wear Index** = per owner, share of their wears going to this model ×
+  their collection size (1.0 = worn exactly its fair share); owners qualify with
+  ≥2 watches and ≥5 wears; model value = median across ≥3 qualifying owners,
+  plus a percentile rank against every other model with ≥3 (`model_wear_index_rows`).
+- **Value trend** = monthly median of *all* owners' valuation points (price
+  history entries + current value); a month counts only with ≥3 points; a
+  series shows with ≥3 such months and ≥3 contributors, else just the current
+  median. Labelled as a population median across references/eras.
+
+**Enrichment (curated models):** `identify-watch` `mode: "model"` (admin-only,
+Gemini + Google Search, same pattern as enhance) writes an era-spanning family
+page — description, history, refs_by_era, calibers_by_era, specs — grounded on
+`admin_model_grounding` (members' real refs/calibers/years/sizes). Stored via
+`admin_set_model_enrichment` on new `watch_models` columns; run from the admin
+Models tab (Enrich / Enrich all curated). Auto models stay aggregate-only.

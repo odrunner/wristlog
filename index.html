@@ -3684,6 +3684,8 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
         <input id="adm-merge-dst" placeholder="into: dst slug" style="flex:1;min-width:130px;">
         <button class="chip" onclick="adminMergeModels()">Merge</button>
         <label style="font-size:.75rem;color:var(--muted);"><input type="checkbox" id="adm-models-auto-only" onchange="loadAdminModels()"> auto only</label>
+        <button class="chip" onclick="adminEnrichAllCurated()" title="Runs Enrich for every curated model without a write-up, one at a time">Enrich all curated</button>
+        <span id="adm-enrich-status" style="font-size:.72rem;color:var(--muted);"></span>
       </div>
       <div id="admin-models-list" style="font-size:.8rem;">Loading…</div>
     </div>
@@ -8183,7 +8185,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '29.08.39';
+const APP_VERSION = '29.09.19';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18236,7 +18238,8 @@ async function loadAdminModels() {
       <td style="color:var(--muted);">${escHtml(m.slug)}</td>
       <td>${m.owners}</td><td>${m.watches}</td>
       <td style="white-space:nowrap;">${m.is_auto ? `<button class="chip" onclick="adminCurateModel('${m.id}')">Curate</button>` : ''}
-        <button class="chip" onclick="adminEditModel('${m.id}')">Edit</button></td>
+        <button class="chip" onclick="adminEditModel('${m.id}')">Edit</button>
+        <button class="chip" id="adm-enrich-${m.id}" onclick="adminEnrichModel('${m.id}')" title="${m.enriched_at ? 'Enriched ' + escAttr(String(m.enriched_at).slice(0, 10)) + ' — re-run' : 'Generate the family write-up'}">${m.enriched_at ? '✓ Enrich' : 'Enrich'}</button></td>
     </tr>
     <tr id="adm-model-edit-${m.id}" style="display:none;"><td colspan="5" style="padding:.4rem 0;">
       <input id="adm-mn-${m.id}" value="${escAttr(m.name)}" placeholder="name" style="width:30%;">
@@ -18263,6 +18266,40 @@ async function adminMergeModels() {
   const { error } = await db.rpc('admin_merge_watch_models', { p_src: src.id, p_dst: dst.id });
   if (error) { toast('Merge failed: ' + error.message, 'error'); return; }
   toast(`Merged ${src.slug} → ${dst.slug}`); loadAdminModels();
+}
+// Enrich = admin_model_grounding → identify-watch mode:model (Gemini+search) → admin_set_model_enrichment
+async function adminEnrichModel(id, quiet) {
+  const btn = document.getElementById('adm-enrich-' + id);
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    const { data: g, error: gErr } = await db.rpc('admin_model_grounding', { p_id: id });
+    if (gErr || !g) throw new Error(gErr?.message || 'no grounding');
+    const resp = await authedFetch(`${SUPABASE_URL}/functions/v1/identify-watch`, {
+      method: 'POST', body: JSON.stringify({ mode: 'model', modelInfo: g }),
+    });
+    const out = await resp.json();
+    if (!resp.ok || !out || out.error) throw new Error(out?.message || out?.error || `HTTP ${resp.status}`);
+    const { error: sErr } = await db.rpc('admin_set_model_enrichment', { p_id: id, p: out });
+    if (sErr) throw new Error(sErr.message);
+    if (!quiet) { toast(`Enriched ${g.brand} ${g.name}`); loadAdminModels(); }
+    return true;
+  } catch (e) {
+    if (!quiet) toast('Enrich failed: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Enrich'; }
+    return false;
+  }
+}
+async function adminEnrichAllCurated() {
+  const todo = _adminModels.filter(m => !m.is_auto && !m.enriched_at);
+  const st = document.getElementById('adm-enrich-status');
+  if (!todo.length) { st.textContent = 'Nothing to enrich.'; return; }
+  let ok = 0, fail = 0;
+  for (const [i, m] of todo.entries()) {
+    st.textContent = `Enriching ${i + 1}/${todo.length}: ${m.brand} ${m.name}…`;
+    (await adminEnrichModel(m.id, true)) ? ok++ : fail++;
+  }
+  st.textContent = `Done — ${ok} enriched, ${fail} failed.`;
+  loadAdminModels();
 }
 async function adminCurateModel(id) {
   const { error } = await db.rpc('admin_update_watch_model', { p_id: id, p_curated: true });
@@ -23697,6 +23734,51 @@ function openAddWatch() {
   document.getElementById('watch-modal').classList.remove('hidden');
 }
 
+// ── Model page helpers — VERBATIM mirrors of wrotate_test.js (mirror-drift guard) ──
+function sparklinePath(series, w = 120, h = 32, pad = 2) {
+  const pts = (series || []).map(p => Number(p.median)).filter(v => Number.isFinite(v));
+  if (pts.length < 2) return '';
+  const min = Math.min(...pts), max = Math.max(...pts);
+  const span = max - min || 1;
+  const stepX = (w - pad * 2) / (pts.length - 1);
+  return pts.map((v, i) => {
+    const x = pad + i * stepX;
+    const y = pad + (h - pad * 2) * (1 - (v - min) / span);
+    return `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+}
+
+function valueTrendSummary(series) {
+  const s = (series || []).filter(p => Number.isFinite(Number(p.median)));
+  if (s.length < 2) return null;
+  const first = Number(s[0].median), last = Number(s[s.length - 1].median);
+  if (!first) return null;
+  const pct = Math.round(((last - first) / first) * 100);
+  const [y, m] = String(s[0].ym || '').split('-');
+  const mon = m ? new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('en-US', { month: 'short' }) : '';
+  const arrow = pct > 0 ? '▲' : pct < 0 ? '▼' : '▶';
+  return { pct, arrow, text: `${arrow} ${Math.abs(pct)}% since ${mon}`.trim(), direction: pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat' };
+}
+
+function wearIndexPhrase(index, pctRank) {
+  const x = Number(index);
+  if (!Number.isFinite(x)) return '';
+  let line;
+  if (x >= 2)        line = `Owners reach for it more than ${x >= 3 ? 'three' : 'twice'}${x >= 3 ? ' times' : ''} its share of their rotation`;
+  else if (x >= 1.3) line = 'Owners wear it well above its share of their rotation';
+  else if (x >= 0.8) line = 'Owners wear it about as much as the rest of their collection';
+  else if (x >= 0.5) line = 'Owners wear it less than its share of their rotation';
+  else               line = 'Mostly a safe queen — rarely leaves the box';
+  const rank = (pctRank != null && Number.isFinite(Number(pctRank))) ? ` · worn more than ${Math.round(Number(pctRank))}% of models on WRotate` : '';
+  return line + rank;
+}
+
+function fmtRate(r) {
+  const x = Number(r);
+  if (!Number.isFinite(x)) return '—';
+  return `${x > 0 ? '+' : ''}${x.toFixed(1)} s/d`;
+}
+
 // ── "Also owned by" + in-app model sheet — who else has this model ──
 // model_owners RPC does all privacy gating; watch_models/watch_facts are
 // readable by any logged-in member.
@@ -23761,18 +23843,90 @@ function goBackFromModel() {
 async function loadAndRenderModel(modelId, owners) {
   const el = document.getElementById('model-page-content');
   el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Loading…</div>';
-  const [mRes, oRes] = await Promise.all([
-    db.from('watch_models').select('brand,name,specs,facts_key').eq('id', modelId).maybeSingle(),
+  const [mRes, oRes, sRes] = await Promise.all([
+    db.from('watch_models').select('brand,name,slug,specs,facts_key,hero_image,description,history,refs_by_era,calibers_by_era').eq('id', modelId).maybeSingle(),
     owners ? Promise.resolve({ data: owners }) : db.rpc('model_owners', { p_model_id: modelId }),
+    db.rpc('model_stats', { p_model_id: modelId }),
   ]);
   if (modelPageId !== modelId) return; // user already navigated away
-  const m = mRes.data, o = oRes.data || { total_owners: 0, visible: [] };
+  const m = mRes.data, o = oRes.data || { total_owners: 0, visible: [] }, st = sRes.data || {};
   if (!m) { el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Model not found.</div>'; return; }
-  const specs = Object.values(m.specs || {}).filter(Boolean);
-  const era = o.era_min && o.era_max && o.era_min !== o.era_max
-    ? `<div style="font-size:.8rem;color:var(--gold-text);margin-top:.5rem;">Members own examples from ${escHtml(o.era_min)} to ${escHtml(o.era_max)}</div>` : '';
+  const muted = 'color:var(--muted);';
+  const card = 'border:0.5px solid var(--border);border-radius:12px;padding:.8rem .9rem;background:var(--surface);';
+  const h2 = t => `<div style="font-size:.7rem;letter-spacing:.07em;text-transform:uppercase;${muted}margin:1.3rem 0 .5rem;">${t}</div>`;
+
+  // Hero photos: hero image first, then public owners' photos
+  const photos = [m.hero_image, ...(st.photos || [])].filter(Boolean).filter((u, i, a) => a.indexOf(u) === i).slice(0, 8);
+  const heroHtml = photos.length ? `<div style="display:flex;gap:.5rem;overflow-x:auto;margin:.7rem -.2rem 0;padding:0 .2rem .4rem;-webkit-overflow-scrolling:touch;">
+      ${photos.map(u => `<img src="${escAttr(u)}" alt="" loading="lazy" style="width:150px;height:150px;object-fit:cover;border-radius:10px;flex-shrink:0;background:var(--surface2);">`).join('')}
+    </div>` : '';
+
+  // About: LLM family write-up (curated) — refs & calibers by era
+  const refs = Array.isArray(m.refs_by_era) ? m.refs_by_era : [];
+  const cals = Array.isArray(m.calibers_by_era) ? m.calibers_by_era : [];
+  const aboutHtml = (m.history || refs.length || cals.length) ? h2('About') + `<div style="${card}">
+      ${m.history ? `<div style="font-size:.85rem;line-height:1.6;">${escHtml(m.history)}</div>` : ''}
+      ${refs.length ? `<div style="font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;${muted}margin:.9rem 0 .3rem;">References by era</div>
+        ${refs.map(r => `<div style="display:flex;gap:.6rem;font-size:.8rem;padding:.22rem 0;border-top:0.5px solid var(--border);">
+          <span style="min-width:72px;font-weight:600;">${escHtml(r.reference || '')}</span>
+          <span style="min-width:86px;${muted}">${escHtml(r.years || '')}</span>
+          <span style="${muted}">${escHtml(r.note || '')}</span></div>`).join('')}` : ''}
+      ${cals.length ? `<div style="font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;${muted}margin:.9rem 0 .3rem;">Calibers by era</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.35rem;">${cals.map(c => `<span class="chip" style="cursor:default;">${escHtml(c.caliber || '')}${c.years ? ` <span style="${muted}">${escHtml(c.years)}</span>` : ''}</span>`).join('')}</div>` : ''}
+    </div>` : '';
+
+  // Specs: curated family specs + what members' watches say
+  const specRows = [];
+  const sp = m.specs || {};
+  [['type', 'Type'], ['size', 'Size'], ['water_resistance', 'Water resistance'], ['movement', 'Movement'], ['materials', 'Materials']]
+    .forEach(([k, label]) => { if (sp[k]) specRows.push([label, sp[k], '']); });
+  const agg = st.specs_agg || {};
+  [['caliber', 'Caliber'], ['case_diameter', 'Case diameter'], ['case_material', 'Case material'], ['movement_type', 'Movement type'], ['water_resistance', 'Water resistance'], ['year_range', 'Production years']]
+    .forEach(([k, label]) => { if (agg[k] && !specRows.some(r => r[0] === label)) specRows.push([label, agg[k].v, `from ${agg[k].n} members' watches`]); });
+  const specsHtml = specRows.length ? h2('Specs') + `<div style="${card}padding:.2rem .9rem;">
+      ${specRows.map(([l, v, src]) => `<div style="display:flex;justify-content:space-between;gap:1rem;font-size:.82rem;padding:.45rem 0;border-top:0.5px solid var(--border);">
+        <span style="${muted}flex-shrink:0;">${escHtml(l)}</span><span style="text-align:right;">${escHtml(String(v))}${src ? `<div style="font-size:.66rem;${muted}">${escHtml(src)}</div>` : ''}</span></div>`).join('').replace('border-top:0.5px solid var(--border);', '')}
+    </div>` : '';
+
+  // The numbers — every stat carries its sample size; nothing below a 3-member floor
+  const tile = (big, label, foot) => `<div style="${card}">
+      <div style="font-size:1.25rem;font-weight:700;line-height:1.1;">${big}</div>
+      <div style="font-size:.74rem;margin-top:.25rem;">${label}</div>
+      ${foot ? `<div style="font-size:.66rem;${muted}margin-top:.3rem;">${foot}</div>` : ''}</div>`;
+  const tiles = [];
+  const wr = st.wears || {};
+  tiles.push(tile(String(st.owners || 0), `owner${st.owners === 1 ? '' : 's'} on WRotate`, st.wishlisted ? `${st.wishlisted} more want it` : ''));
+  if (wr.w90) tiles.push(tile(String(wr.w90), `wear${wr.w90 === 1 ? '' : 's'} in the last 90 days`, `by ${wr.wearers90} member${wr.wearers90 === 1 ? '' : 's'}`));
+  if (st.wear_index) tiles.push(tile(`${Number(st.wear_index.index).toFixed(1)}×`, 'Wear Index', `${escHtml(wearIndexPhrase(st.wear_index.index, st.wear_index.pct_rank))} · ${st.wear_index.n_owners} owners`));
+  if (st.accuracy) tiles.push(tile(escHtml(fmtRate(st.accuracy.med_rate)), 'community median rate', `typical drift ±${st.accuracy.med_abs_rate} s/d${st.accuracy.med_amp ? ` · amplitude ${st.accuracy.med_amp}°` : ''} · ${st.accuracy.n_sessions} measurements from ${st.accuracy.n_measurers} members`));
+  if (st.value) {
+    const trend = valueTrendSummary(st.value.series);
+    const path = sparklinePath(st.value.series, 120, 32);
+    const spark = path ? `<svg width="120" height="32" viewBox="0 0 120 32" aria-label="Value trend" role="img" style="display:block;margin-top:.35rem;">
+        <title>${escHtml((st.value.series || []).map(p => `${p.ym}: $${Number(p.median).toLocaleString()} (${p.n})`).join(' · '))}</title>
+        <path d="${path}" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        ${(() => { const last = path.split(' ').pop().slice(1).split(','); return `<circle cx="${last[0]}" cy="${last[1]}" r="4" fill="var(--gold)" stroke="var(--surface)" stroke-width="2"/>`; })()}
+      </svg>` : '';
+    tiles.push(tile(`$${Number(st.value.median_now).toLocaleString()}`, 'median value among owners',
+      `${trend ? `<span style="color:${trend.direction === 'down' ? 'var(--danger)' : 'var(--gold-text)'};">${escHtml(trend.text)}</span> · ` : ''}${st.value.n_contributors} members' valuations · population median across references`) + spark.replace('<svg', '<svg data-tile-spark'));
+  }
+  const numbersHtml = h2('On WRotate') + `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.55rem;">${tiles.join('')}</div>`;
+
+  // Yours
+  const mine = st.mine || [];
+  let yoursHtml = '';
+  if (mine.length) {
+    yoursHtml = h2(mine.length === 1 ? 'Your watch' : 'Your watches') + mine.map(w => `<div style="${card}display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-bottom:.45rem;cursor:pointer;" onclick="openEditWatch('${escAttr(w.id)}')">
+        <div><div style="font-size:.85rem;font-weight:600;">${escHtml([w.brand, w.name].filter(Boolean).join(' '))}${w.ref ? ` <span style="${muted}font-weight:400;">${escHtml(w.ref)}</span>` : ''}</div>
+        <div style="font-size:.72rem;${muted}margin-top:.15rem;">${w.last_rate != null ? `Yours: <b>${escHtml(fmtRate(w.last_rate))}</b>${st.accuracy ? ` · community ${escHtml(fmtRate(st.accuracy.med_rate))}` : ''}` : 'Not measured yet'}</div></div>
+        <span style="${muted}">→</span></div>`).join('');
+  } else if (currentUser) {
+    yoursHtml = `<div style="margin-top:1.1rem;"><button class="btn btn-ghost" onclick="addModelToWishlist('${escAttr(m.brand)}','${escAttr(m.name)}')">+ Add to wishlist</button></div>`;
+  }
+
+  // Owners (count-always, names-gated)
   const total = o.total_owners || 0;
-  const isOwner = watches.some(w2 => w2.modelId === modelId);
+  const isOwner = mine.length > 0 || watches.some(w2 => w2.modelId === modelId);
   const others = isOwner ? total - 1 : total;
   const vis = o.visible || [];
   let ownersHead;
@@ -23780,26 +23934,41 @@ async function loadAndRenderModel(modelId, owners) {
   else if (isOwner) ownersHead = `You and ${others} other member${others === 1 ? '' : 's'} have this watch`;
   else if (total > 0) ownersHead = `Owned by ${total} member${total === 1 ? '' : 's'} on WRotate`;
   else ownersHead = 'Nobody on WRotate has this one yet.';
-  el.innerHTML = `
-    <div style="font-size:.7rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);">${escHtml(m.brand)}</div>
-    <h1 style="font-size:1.4rem;font-weight:700;margin:.15rem 0 0;">${escHtml(m.name)}</h1>
-    ${specs.length ? `<div style="font-size:.83rem;color:var(--muted);margin-top:.4rem;line-height:1.5;">${escHtml(specs.join(' · '))}</div>` : ''}
-    ${era}
-    <div id="mp-facts" style="margin-top:1rem;"></div>
-    <div style="font-size:.9rem;font-weight:600;margin-top:1.3rem;">${escHtml(ownersHead)}</div>
-    <div id="mp-owners" style="margin-top:.5rem;"></div>`;
-  document.getElementById('mp-owners').innerHTML = vis.map(o2 => `
-    <div style="display:flex;align-items:center;gap:.6rem;padding:7px 2px;cursor:pointer;" onclick="viewUserProfile('${escAttr(o2.user_id)}')">
+  const ownersHtml = h2('Owners') + `<div style="font-size:.85rem;font-weight:600;">${escHtml(ownersHead)}</div><div id="mp-owners" style="margin-top:.4rem;">` +
+    vis.map(o2 => `<div style="display:flex;align-items:center;gap:.6rem;padding:7px 2px;cursor:pointer;" onclick="viewUserProfile('${escAttr(o2.user_id)}')">
       ${o2.photo ? `<img src="${escAttr(o2.photo)}" style="width:38px;height:38px;border-radius:8px;object-fit:cover;" alt="">` : `<span class="feed-user-avatar" style="width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;">${profileInitials(o2)}</span>`}
       <div><div style="font-weight:500;">${escHtml(o2.display_name || o2.username || '')}</div>
-      <div style="font-size:.72rem;color:var(--muted);">@${escHtml(o2.username || '')}${o2.year ? ' · example from ' + escHtml(o2.year) : ''}</div></div>
-    </div>`).join('') + (vis.length < (isOwner ? others : total) && (isOwner ? others : total) > 0
-      ? `<div style="font-size:.74rem;color:var(--muted);padding:7px 2px;">${(isOwner ? others : total) - vis.length} more with a private collection</div>` : '');
+      <div style="font-size:.72rem;${muted}">@${escHtml(o2.username || '')}${o2.year ? ' · example from ' + escHtml(o2.year) : ''}</div></div></div>`).join('') +
+    (vis.length < (isOwner ? others : total) && (isOwner ? others : total) > 0
+      ? `<div style="font-size:.74rem;${muted}padding:7px 2px;">${(isOwner ? others : total) - vis.length} more with a private collection</div>` : '') + '</div>';
+
+  // Related
+  const rel = st.related || [];
+  const relatedHtml = rel.length ? h2(`More from ${escHtml(m.brand)}`) + `<div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+      ${rel.map(r => `<button class="chip" onclick="openModelPage('${escAttr(r.id)}')">${escHtml(r.name)} <span style="${muted}">${r.owners}</span></button>`).join('')}</div>` : '';
+
+  const era = o.era_min && o.era_max && o.era_min !== o.era_max
+    ? `<div style="font-size:.78rem;color:var(--gold-text);margin-top:.4rem;">Members own examples from ${escHtml(o.era_min)} to ${escHtml(o.era_max)}</div>` : '';
+  const fallbackSpecs = !m.description ? Object.values(sp).filter(Boolean).join(' · ') : '';
+  el.innerHTML = `
+    <div style="font-size:.7rem;letter-spacing:.07em;text-transform:uppercase;${muted}">${escHtml(m.brand)}</div>
+    <h1 style="font-size:1.45rem;font-weight:700;margin:.15rem 0 0;">${escHtml(m.name)}</h1>
+    ${m.description ? `<div style="font-size:.86rem;line-height:1.55;margin-top:.4rem;">${escHtml(m.description)}</div>` : (fallbackSpecs ? `<div style="font-size:.83rem;${muted}margin-top:.4rem;">${escHtml(fallbackSpecs)}</div>` : '')}
+    ${era}${heroHtml}${numbersHtml}${yoursHtml}${aboutHtml}${specsHtml}
+    <div id="mp-facts"></div>${ownersHtml}${relatedHtml}`;
   if (m.facts_key) {
     const { data: facts } = await db.from('watch_facts').select('fact,position').eq('model_key', m.facts_key).order('position').limit(3);
     const fEl = document.getElementById('mp-facts');
-    if (fEl && modelPageId === modelId) fEl.innerHTML = (facts || []).map(f => funFactCardHTML({ fact: f.fact })).join('');
+    if (fEl && modelPageId === modelId && facts && facts.length) fEl.innerHTML = h2('Fun facts') + facts.map(f => funFactCardHTML({ fact: f.fact })).join('');
   }
+}
+
+function addModelToWishlist(brand, name) {
+  openAddWishlist();
+  document.getElementById('wl-brand').value = brand;
+  document.getElementById('wl-name').value = name;
+  buildWlBrandSelect();
+  updateWlUrlBtn();
 }
 
 function openEditWatch(id) {

@@ -5,6 +5,7 @@ import {
   buildCollectionPrompt,
   buildEnhancePrompt,
   buildFactsPrompt,
+  buildModelPrompt,
   COLD_PROMPT,
   detectMediaType,
   DETECT_PROMPT,
@@ -195,4 +196,34 @@ Deno.test("ownsFactModel — tolerates null/missing fields without matching", ()
   assertEquals(ownsFactModel([{}], "Rolex", "Submariner"), false);
   // A watch with empty brand/name must not match an empty request either way round.
   assertEquals(ownsFactModel([{ brand: "", name: "" }], "Rolex", "Submariner"), false);
+});
+
+
+// ── buildModelPrompt (watch-database model page) ──
+Deno.test("buildModelPrompt — names the family and lists aliases, refs and grounding", () => {
+  const p = buildModelPrompt({
+    brand: "Rolex", name: "Submariner",
+    aliases: ["rolex submariner no date"], refs: ["5513", "124060"],
+    grounding: { calibers: ["1520", "3230"], years: ["1962-1989"], diameters: ["40mm"], water_resistance: ["300m"] },
+  });
+  assertStringIncludes(p, "Brand: Rolex");
+  assertStringIncludes(p, "Model family: Submariner");
+  assertStringIncludes(p, "Also written as: rolex submariner no date");
+  assertStringIncludes(p, "References owned by our members: 5513, 124060");
+  assertStringIncludes(p, "Calibers members recorded: 1520, 3230");
+  assertStringIncludes(p, "Water resistance members recorded: 300m");
+  assertStringIncludes(p, '"refs_by_era"');
+  assertStringIncludes(p, '"calibers_by_era"');
+});
+
+Deno.test("buildModelPrompt — omits alias/ref/grounding blocks when empty", () => {
+  const p = buildModelPrompt({ brand: "Seiko", name: "5", aliases: [], refs: [], grounding: {} });
+  assertEquals(p.includes("Also written as"), false);
+  assertEquals(p.includes("References owned by our members"), false);
+  assertEquals(p.includes("What our members' examples say"), false);
+  assertStringIncludes(p, "Model family: 5");
+});
+
+Deno.test("normalizeMode — accepts model", () => {
+  assertEquals(normalizeMode("model"), "model");
 });

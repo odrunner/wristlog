@@ -39,7 +39,7 @@ const VERBATIM = [
   'tgLoadSettings', 'tgMapSliderToEngine', 'tgSaveSettings', 'uniqueWears',
   'validateUsername', 'withTimeout', 'wishlistViewFromStore', 'collViewFromStore', 'groupWishlistByBrand', 'urlDomain', 'resolveTdm', 'resolveSweepKnob', 'parseSweepValues',
   'extractCleanChunks', 'medianStd', 'buildBadgeNotificationRows', 'notifStaysUnreadOnPanelOpen',
-  'mergeBadgeNotifs',
+  'mergeBadgeNotifs', 'sparklinePath', 'valueTrendSummary', 'wearIndexPhrase', 'fmtRate',
   'addDaysStr', 'computeStreaks', 'streakChipState', 'streakCalendarGrid', 'computeStreaksFrozen',
   'badgePostPlan', 'pinFeatured', 'initialsTextColor', 'pickIdentifiedWatch',
   'classifyProfileLoad', 'buildBrandList', 'brandRequestTitle',

@@ -3549,3 +3549,56 @@ export function shouldNudgeEnhance(watch, { seen, lastNudgeDay, today } = {}) {
   if (seen && seen[watch.id]) return false;
   return lastNudgeDay !== today;
 }
+
+// ══════════════════════════════════════════
+//  MODEL PAGE — community numbers (model_stats RPC) rendering helpers
+// ══════════════════════════════════════════
+
+// SVG path for a single-series sparkline. Points are {median:number}; the
+// x-axis is evenly spaced. Returns '' for fewer than 2 points.
+export function sparklinePath(series, w = 120, h = 32, pad = 2) {
+  const pts = (series || []).map(p => Number(p.median)).filter(v => Number.isFinite(v));
+  if (pts.length < 2) return '';
+  const min = Math.min(...pts), max = Math.max(...pts);
+  const span = max - min || 1;
+  const stepX = (w - pad * 2) / (pts.length - 1);
+  return pts.map((v, i) => {
+    const x = pad + i * stepX;
+    const y = pad + (h - pad * 2) * (1 - (v - min) / span);
+    return `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+}
+
+// "▲ 12% since Apr" style summary for the value series; null when no trend.
+export function valueTrendSummary(series) {
+  const s = (series || []).filter(p => Number.isFinite(Number(p.median)));
+  if (s.length < 2) return null;
+  const first = Number(s[0].median), last = Number(s[s.length - 1].median);
+  if (!first) return null;
+  const pct = Math.round(((last - first) / first) * 100);
+  const [y, m] = String(s[0].ym || '').split('-');
+  const mon = m ? new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('en-US', { month: 'short' }) : '';
+  const arrow = pct > 0 ? '▲' : pct < 0 ? '▼' : '▶';
+  return { pct, arrow, text: `${arrow} ${Math.abs(pct)}% since ${mon}`.trim(), direction: pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat' };
+}
+
+// Wear Index copy: 1.0 = worn exactly its fair share of the owner's rotation.
+export function wearIndexPhrase(index, pctRank) {
+  const x = Number(index);
+  if (!Number.isFinite(x)) return '';
+  let line;
+  if (x >= 2)        line = `Owners reach for it more than ${x >= 3 ? 'three' : 'twice'}${x >= 3 ? ' times' : ''} its share of their rotation`;
+  else if (x >= 1.3) line = 'Owners wear it well above its share of their rotation';
+  else if (x >= 0.8) line = 'Owners wear it about as much as the rest of their collection';
+  else if (x >= 0.5) line = 'Owners wear it less than its share of their rotation';
+  else               line = 'Mostly a safe queen — rarely leaves the box';
+  const rank = (pctRank != null && Number.isFinite(Number(pctRank))) ? ` · worn more than ${Math.round(Number(pctRank))}% of models on WRotate` : '';
+  return line + rank;
+}
+
+// Rate phrasing shared by the accuracy tile and the "yours vs community" line.
+export function fmtRate(r) {
+  const x = Number(r);
+  if (!Number.isFinite(x)) return '—';
+  return `${x > 0 ? '+' : ''}${x.toFixed(1)} s/d`;
+}

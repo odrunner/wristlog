@@ -11,6 +11,7 @@ import {
   buildCollectionPrompt,
   buildEnhancePrompt,
   buildFactsPrompt,
+  buildModelPrompt,
   COLD_PROMPT,
   detectMediaType,
   DETECT_PROMPT,
@@ -114,9 +115,73 @@ Deno.serve(async (req: Request) => {
   };
 
   try {
-    const { image, collection, mode, watchInfo, commit } = await req.json();
+    const { image, collection, mode, watchInfo, commit, modelInfo } = await req.json();
     loggedMode = normalizeMode(mode);
     loggedHasCollection = hasCollectionFn(collection);
+
+    // ── MODEL MODE (admin only): era-spanning write-up for a watch FAMILY, for
+    // the watch-database model page. Same Gemini + Google Search pattern as
+    // enhance; the caller (admin Models tab) stores the result via
+    // admin_set_model_enrichment.
+    if (mode === "model") {
+      const { data: prof } = await supabase.from("profiles").select("is_admin").eq("id", user.id).maybeSingle();
+      if (!prof?.is_admin) {
+        await logAttempt(null, "model_forbidden");
+        return new Response(JSON.stringify({ error: "forbidden" }), {
+          status: 403, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        });
+      }
+      if (!modelInfo?.brand || !modelInfo?.name) {
+        await logAttempt(null, "model_no_info");
+        return new Response(JSON.stringify({ error: "Brand and name required" }), {
+          status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        });
+      }
+      if (!GEMINI_API_KEY) {
+        await logAttempt(null, "model_no_gemini_key");
+        return new Response(JSON.stringify({ error: "Enrichment not available" }), {
+          status: 503, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        });
+      }
+      const modelPrompt = buildModelPrompt(modelInfo);
+      let lastErr = "";
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const ac = new AbortController();
+          const timer = setTimeout(() => ac.abort(), 60000);
+          const r = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`,
+            { method: "POST", headers: { "Content-Type": "application/json" }, signal: ac.signal,
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: modelPrompt }] }],
+                tools: [{ google_search: {} }],
+                generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
+              }) });
+          clearTimeout(timer);
+          if (r.ok) {
+            const j = await r.json();
+            const cand = j.candidates?.[0];
+            const finish = cand?.finishReason || "unknown";
+            const text = (cand?.content?.parts ?? []).filter((p: any) => p.text).map((p: any) => p.text).join("");
+            if (finish === "RECITATION" || finish === "SAFETY") { lastErr = `blocked_${finish}`; continue; }
+            const parsed = extractJson(text);
+            if (parsed) {
+              parsed._engine = "gemini";
+              await logAttempt(1, null);
+              return new Response(JSON.stringify(parsed), { headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+            }
+            lastErr = `parse_fail(${finish})`;
+          } else {
+            lastErr = `gemini_${r.status}`;
+            if (r.status === 429) await new Promise(res => setTimeout(res, 2000 * (attempt + 1)));
+          }
+        } catch (e: any) { lastErr = `exception:${e.message}`; }
+      }
+      await logAttempt(null, `model_failed:${lastErr.slice(0, 200)}`);
+      return new Response(JSON.stringify({ error: "model_temporary", message: "Enrichment is temporarily unavailable. Please try again in a moment." }), {
+        status: 502, headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      });
+    }
 
     // ── ENHANCE MODE: enrich watch data with specs, history, dimensions ──
     if (mode === "enhance" && watchInfo) {

@@ -8,10 +8,11 @@ export function extractJson(text: string) {
 }
 
 // Normalize the request `mode` to one of the supported modes for logging.
-export function normalizeMode(mode: unknown): "detect" | "enhance" | "identify" | "facts" {
+export function normalizeMode(mode: unknown): "detect" | "enhance" | "identify" | "facts" | "model" {
   return mode === "detect" ? "detect"
     : mode === "enhance" ? "enhance"
     : mode === "facts" ? "facts"
+    : mode === "model" ? "model"
     : "identify";
 }
 
@@ -85,6 +86,50 @@ Rules:
 - For background: focus on what makes this model interesting or significant — history, heritage, notable wearers, records, etc.
 - For functions: list complications and key features (e.g. "date", "chronograph", "GMT", "200m water resistance", "power reserve indicator")
 - If a field like caseDiameter or caseThickness is commonly published for this brand, search harder before returning empty.`;
+}
+
+// ── Model mode: one era-spanning write-up per watch FAMILY (Submariner across
+// 1953–today), for the watch-database model page. Grounded on what members
+// actually own so the references/calibers listed are the ones on the page.
+export interface ModelInfo {
+  brand?: string;
+  name?: string;
+  aliases?: string[];
+  refs?: string[];
+  grounding?: { calibers?: string[]; years?: string[]; diameters?: string[]; water_resistance?: string[] };
+}
+
+export function buildModelPrompt(info: ModelInfo): string {
+  const { brand, name } = info;
+  const aliases = (info.aliases ?? []).filter(Boolean);
+  const refs = (info.refs ?? []).filter(Boolean);
+  const g = info.grounding ?? {};
+  const gLines = [
+    g.calibers?.length ? `- Calibers members recorded: ${g.calibers.join(", ")}` : "",
+    g.years?.length ? `- Production years members recorded: ${g.years.join(", ")}` : "",
+    g.diameters?.length ? `- Case diameters members recorded: ${g.diameters.join(", ")}` : "",
+    g.water_resistance?.length ? `- Water resistance members recorded: ${g.water_resistance.join(", ")}` : "",
+  ].filter(Boolean);
+  return `Write the reference page for a watch MODEL FAMILY — every generation and reference of this line across its whole production history, not one specific reference.
+Brand: ${brand}
+Model family: ${name}
+${aliases.length ? `Also written as: ${aliases.join("; ")}\n` : ""}${refs.length ? `References owned by our members: ${refs.join(", ")}\n` : ""}${gLines.length ? `What our members' examples say about it:\n${gLines.join("\n")}\n` : ""}
+Search the official manufacturer website first, then watch databases and reputable histories (Hodinkee, Fratello, WatchTime, Monochrome, forum reference guides). Cover the family from its first reference to today.
+
+Return a JSON object:
+{
+  "description": "1-2 sentences: what this family is and what defines it (type, purpose, signature design cues)",
+  "history": "3-5 sentences on the family's story across eras — origin, key turning points, what changed between generations, why it matters. Plain language, no marketing tone.",
+  "refs_by_era": [{"reference": "5513", "years": "1962–1989", "note": "no-date; matte dial from the late 1960s"}],
+  "calibers_by_era": [{"caliber": "1520", "years": "1962–1989"}],
+  "specs": {"type": "e.g. Dive watch", "size": "range across eras e.g. 40–41mm", "water_resistance": "e.g. 300m", "movement": "e.g. In-house automatic, various calibers", "materials": "e.g. Oystersteel, two-tone, gold"}
+}
+
+Rules:
+- refs_by_era: 4-10 entries, oldest first, chronologically continuous; prefer references our members own where they fit, and include the current production reference. Use en dashes in year ranges.
+- calibers_by_era: 2-8 entries, oldest first.
+- Only state facts you can verify; if a year or caliber is uncertain, say "c." or omit the entry rather than guess.
+- Do not repeat the brand name at the start of every sentence. Do not mention prices.`;
 }
 
 // Build the facts-mode prompt: one distinct, interesting, verifiable trivia fact.
