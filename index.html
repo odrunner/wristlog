@@ -8205,7 +8205,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '29.12.51';
+const APP_VERSION = '29.12.53';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -24093,18 +24093,15 @@ function renderModelPage() {
     </div>`;
   } else {
     const era = st.era || [0, 0, 0, 0, 0, 0];
-    const priv = Math.max(0, owners - (st.public_owners || 0));
     const cards = [];
     if (st.tenure) cards.push(['Median tenure', `${st.tenure.years} yrs`]);
     if (st.wishlisted) cards.push(['Wishlisted', `${st.wishlisted} member${st.wishlisted === 1 ? '' : 's'}`]);
-    cards.push(['Private', `${priv} collection${priv === 1 ? '' : 's'}`]);
     if (wr.all_time) cards.push(['Wears logged', Number(wr.all_time).toLocaleString()]);
     panel = `<div style="display:flex;flex-direction:column;gap:18px;">
       <div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:34px;font-weight:600;line-height:1;">${owners}</span><span style="font-size:12px;color:var(--muted);">owner${owners === 1 ? '' : 's'}${o.era_min && o.era_max && o.era_min !== o.era_max ? ` · examples from ${escHtml(o.era_min)} to ${escHtml(o.era_max)}` : ''}</span></div>
       ${era.some(n => n > 0) ? sect(H('Ownership by era', `<span style="font-size:10px;color:var(--muted);">year of example</span><span class="mp-badge">Exclusive</span>`) +
         mpBars(era, 56, 4, '2px 2px 0 0') + `<div style="display:flex;gap:4px;margin-top:5px;font-size:9.5px;color:var(--muted);">${['60s', '70s', '80s', '90s', '00s', '10s+'].map(l => `<span style="flex:1;text-align:center;">${l}</span>`).join('')}</div>`) : ''}
       <div style="border-top:1px solid var(--border);padding-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">${cards.map(([l, v]) => `<div class="mp-card" style="padding:11px 12px;"><div class="l">${l}</div><div class="v" style="font-size:17px;">${escHtml(v)}</div></div>`).join('')}</div>
-      <div style="font-size:11px;line-height:var(--lh-body);color:var(--muted);">Individual owners are never listed here. Members choose what their collection shows from their own privacy settings.</div>
     </div>`;
   }
 

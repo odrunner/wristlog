@@ -107,7 +107,6 @@ test('row shows count + era, tap opens in-app model page with facts and owners',
   await mp.locator('#mp-tab-owners').click();
   await expect(mp).toContainText('Ownership by era');
   await expect(mp).toContainText('6.5 yrs');
-  await expect(mp).toContainText('2 collections'); // private = owners - public
   await expect(mp).not.toContainText('@ana');       // no owner identities anywhere
   // more from brand + action bar
   await expect(mp).toContainText('All 14 Rolex models');
