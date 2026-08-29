@@ -58,3 +58,30 @@ test('control never renders the nudge card', async ({ page }) => {
   await page.evaluate(() => maybeShowEnhanceNudge(watches[0], 'add'));
   await expect(page.locator('#enhance-nudge-card')).toHaveCount(0);
 });
+
+test('a chip click on a watch that was enhanced meanwhile toasts instead of running', async ({ page }) => {
+  await boot(page, 'treatment');
+  await expect(page.locator('#watches-grid .enh-chip')).toHaveCount(1);
+  // The chip was rendered before the specs arrived (another device, a sync).
+  await page.evaluate(() => { watches[0].caseDiameter = '41mm'; enhanceFromGrid(watches[0].id); });
+  await expect(page.locator('#toast')).toHaveText('Already enhanced');
+  await expect(page.locator('#enhance-all-modal')).toHaveClass(/hidden/);
+  // The re-render drops the now-stale chip and the header count.
+  await expect(page.locator('#watches-grid .enh-chip')).toHaveCount(0);
+  await expect(page.locator('#coll-enhance-all-btn .wl-actions-text')).toHaveText('Enhance');
+});
+
+test('the gating keys are namespaced to the signed-in user', async ({ page }) => {
+  await boot(page, 'treatment');
+  await page.evaluate(() => maybeShowEnhanceNudge(watches[0], 'add'));
+  await page.locator('#enhance-nudge-card').getByRole('button', { name: 'Not now' }).click();
+  const keys = await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('enhnudge')).sort());
+  expect(keys).toEqual(['enhnudge_day_test-user-id-000', 'enhnudge_seen_test-user-id-000']);
+  // A different account in the same browser is not suppressed.
+  const nudgesOther = await page.evaluate(() => {
+    currentUser = { id: 'other-user-id' };
+    maybeShowEnhanceNudge(watches[0], 'add');
+    return !!document.getElementById('enhance-nudge-card');
+  });
+  expect(nudgesOther).toBe(true);
+});

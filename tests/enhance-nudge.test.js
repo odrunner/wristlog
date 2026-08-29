@@ -59,7 +59,29 @@ describe('enhance_nudge wiring in index.html', () => {
     expect(html).toContain("logEnhanceRun('edit');");
     expect(html).toContain("logEnhanceRun('af2');");
     expect(html).toContain("logEnhanceRun(_enhanceSurface || 'enhance_all');");
-    expect(html).toContain("function enhanceFromGrid(watchId) { _enhanceSurface = 'grid'; enhanceAllWatches([watchId]); }");
+    expect(html).toContain("function enhanceFromGrid(watchId) { enhanceScoped(watchId, 'grid'); }");
+  });
+
+  it('never writes the metric in demo mode', () => {
+    expect(html).toMatch(/function logEnhanceRun\(surface\) \{\s*(?:\/\/[^\n]*\n\s*)*if \(!currentUser \|\| _isDemoMode\) return;/);
+  });
+
+  it('scopes both gating keys to the signed-in user', () => {
+    expect(html).toContain("function enhNudgeSeenKey() { return currentUser ? 'enhnudge_seen_' + currentUser.id : null; }");
+    expect(html).toContain("function enhNudgeDayKey()  { return currentUser ? 'enhnudge_day_'  + currentUser.id : null; }");
+    // No un-scoped key survives anywhere in the app.
+    expect(html).not.toMatch(/'enhnudge_seen'|'enhnudge_day'/);
+  });
+
+  it('re-checks the predicate before spending a scoped Enhance run', () => {
+    expect(html).toMatch(/function enhanceScoped\(watchId, surface\) \{[\s\S]*?if \(!needsEnhance\(w\)\) \{ renderCollection\(true\); toast\('Already enhanced', 'info'\); return; \}[\s\S]*?enhanceAllWatches\(\[watchId\]\);/);
+    expect(html).toContain("function enhanceFromNudge(watchId, surface) { enhNudgeMarkSeen(watchId); enhanceScoped(watchId, surface || 'nudge'); }");
+  });
+
+  it('uses the single needsEnhance() predicate inside enhanceAllWatches', () => {
+    expect(html).toContain('const candidates = watches.filter(needsEnhance);');
+    // The old local shadowed the global predicate.
+    expect(html).not.toContain('const needsEnhance = watches.filter(');
   });
 
   it('renders the nudge card into the active page and wires both buttons', () => {

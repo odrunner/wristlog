@@ -8182,7 +8182,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.17.22';
+const APP_VERSION = '28.17.33';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -27970,12 +27970,16 @@ async function saveAllEnhanceResults() {
 // call; enhanceAllWatches reads it once and clears it.
 let _enhanceSurface = null;
 function logEnhanceRun(surface) {
-  if (!currentUser) return;
+  // Demo visitors must never write to the experiment's target metric.
+  if (!currentUser || _isDemoMode) return;
   db.from('feature_events').insert({ user_id: currentUser.id, event: 'enhance_run', meta: { surface } }).then(() => {});
 }
 
-const ENH_NUDGE_SEEN_KEY = 'enhnudge_seen';
-const ENH_NUDGE_DAY_KEY  = 'enhnudge_day';
+// Per-user storage keys (two test accounts share a browser during UAT and would
+// otherwise suppress each other's nudges). null when signed out → every read is
+// empty and every write is a no-op.
+function enhNudgeSeenKey() { return currentUser ? 'enhnudge_seen_' + currentUser.id : null; }
+function enhNudgeDayKey()  { return currentUser ? 'enhnudge_day_'  + currentUser.id : null; }
 // A watch "needs enhance" when it has none of the three AI-filled anchors — the
 // same predicate enhanceAllWatches() uses to pick its default targets.
 function needsEnhance(w) { return !!w && !w.caseDiameter && !w.caliber && !w.background; }
@@ -27986,31 +27990,43 @@ function shouldNudgeEnhance(watch, { seen, lastNudgeDay, today } = {}) {
   return lastNudgeDay !== today;
 }
 function enhNudgeSeen() {
-  try { return JSON.parse(safeLS.get(ENH_NUDGE_SEEN_KEY) || '{}') || {}; } catch (e) { return {}; }
+  const k = enhNudgeSeenKey();
+  if (!k) return {};
+  try { return JSON.parse(safeLS.get(k) || '{}') || {}; } catch (e) { return {}; }
 }
 function enhNudgeMarkSeen(watchId) {
+  const k = enhNudgeSeenKey();
+  if (!k) return;
   const seen = enhNudgeSeen();
   seen[watchId] = 1;
-  safeLS.set(ENH_NUDGE_SEEN_KEY, JSON.stringify(seen));
+  safeLS.set(k, JSON.stringify(seen));
 }
 function removeEnhanceNudge() { document.getElementById('enhance-nudge-card')?.remove(); }
 function dismissEnhanceNudge(watchId) { enhNudgeMarkSeen(watchId); removeEnhanceNudge(); }
-function enhanceFromNudge(watchId, surface) {
-  enhNudgeMarkSeen(watchId);
+// Shared entry point for the two single-watch Enhance affordances. The watch may
+// have been enhanced (or deleted) since the card/chip was rendered — re-check
+// rather than burning a run on it.
+function enhanceScoped(watchId, surface) {
+  const w = watches.find(x => x.id === watchId);
   removeEnhanceNudge();
-  _enhanceSurface = surface || 'nudge';
+  if (!w) { renderCollection(true); return; }
+  if (!needsEnhance(w)) { renderCollection(true); toast('Already enhanced', 'info'); return; }
+  _enhanceSurface = surface;
   enhanceAllWatches([watchId]);
 }
-function enhanceFromGrid(watchId) { _enhanceSurface = 'grid'; enhanceAllWatches([watchId]); }
+function enhanceFromNudge(watchId, surface) { enhNudgeMarkSeen(watchId); enhanceScoped(watchId, surface || 'nudge'); }
+function enhanceFromGrid(watchId) { enhanceScoped(watchId, 'grid'); }
 // Slim inline card at the top of whichever page is showing. No-op in control.
 function maybeShowEnhanceNudge(watch, surface) {
   if (!experiment('enhance_nudge')) return;
+  const dayKey = enhNudgeDayKey();
+  if (!dayKey) return;
   const today = todayStr();
-  if (!shouldNudgeEnhance(watch, { seen: enhNudgeSeen(), lastNudgeDay: safeLS.get(ENH_NUDGE_DAY_KEY), today })) return;
+  if (!shouldNudgeEnhance(watch, { seen: enhNudgeSeen(), lastNudgeDay: safeLS.get(dayKey), today })) return;
   const slot = document.querySelector('.page.active .enhance-nudge-slot');
   if (!slot) return;
   removeEnhanceNudge();
-  safeLS.set(ENH_NUDGE_DAY_KEY, today);
+  safeLS.set(dayKey, today);
   const id = escAttr(watch.id);
   const sfc = escAttr(surface || '');
   slot.innerHTML = `<div id="enhance-nudge-card">
@@ -28033,8 +28049,8 @@ async function enhanceAllWatches(scopedIds) {
     target = watches.filter(w => scopedIds.includes(w.id));
     if (!target.length) return;
   } else {
-    const needsEnhance = watches.filter(w => !w.caseDiameter && !w.caliber && !w.background);
-    target = needsEnhance.length > 0 ? needsEnhance : watches;
+    const candidates = watches.filter(needsEnhance);
+    target = candidates.length > 0 ? candidates : watches;
   }
   const count = target.length;
   if (!scopedIds) {
