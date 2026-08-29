@@ -95,7 +95,6 @@ function renderModelPage(el, ctx, h) {
   const hasData = !!(st.wear_share || st.accuracy || (st.wear_weeks || []).some(n => n > 0));
   if (hasData) tabs.push(['data', 'Data']);
   tabs.push(['specs', 'Specs']);
-  if (facts.length) tabs.push(['lore', 'Lore']);
   tabs.push(['owners', 'Owners']);
   if (!tabs.some(t => t[0] === tab)) tab = tabs[0][0];
 
@@ -157,18 +156,24 @@ function renderModelPage(el, ctx, h) {
   const grid = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);">${cells.join('')}</div>`;
 
   // ── Story block (lore above the fold): history + fact pull-quote ──
-  const fi = featuredFactIndex(facts.length);
+  const key = m.id || m.slug;
+  if (el._mpFactFor !== key) { el._mpFactFor = key; el._mpFactIdx = featuredFactIndex(facts.length); }
+  const fi = facts.length ? ((el._mpFactIdx || 0) % facts.length) : -1;
   const storyText = (m.history || m.description || '').trim();
-  const histOpen = el._mpHistoryOpenFor === (m.id || m.slug);
+  const histOpen = el._mpHistoryOpenFor === key;
   let band = '';
   if (storyText || fi >= 0) {
     band = `<div id="mp-story" style="padding:16px 16px 14px;border-bottom:1px solid var(--border);background:var(--bg);">
       ${storyText ? `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;"><div class="mp-h" style="color:var(--gold);">The watch</div>${m.history ? '<span class="mp-badge">Exclusive</span>' : ''}</div>
-        <div id="mp-history" style="font-family:Newsreader, Georgia, serif;font-size:14px;line-height:1.5;color:var(--text);text-wrap:pretty;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;-webkit-line-clamp:${histOpen ? 'unset' : '3'};">${escHtml(storyText)}</div>
+        <div id="mp-history" style="font-size:14px;line-height:1.5;color:var(--text);text-wrap:pretty;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;-webkit-line-clamp:${histOpen ? 'unset' : '3'};">${escHtml(storyText)}</div>
         <div id="mp-history-toggle" role="button" tabindex="0" data-mp="history" style="display:none;margin-top:2px;padding:6px 0;font-size:11.5px;font-weight:600;color:var(--gold-lt);cursor:pointer;">${histOpen ? 'Less' : 'Read the full history'}</div>` : ''}
-      ${fi >= 0 ? `<div class="mp-quote" role="button" tabindex="0" data-mp="tab" data-tab="lore" data-scroll="1" data-fact="1" style="margin-top:${storyText ? '14px' : '0'};padding:4px 0 4px 12px;border-left:2px solid var(--gold);cursor:pointer;min-height:36px;">
-        <div style="font-size:9.5px;font-weight:600;letter-spacing:var(--ls-eyebrow);text-transform:uppercase;color:var(--gold);margin-bottom:4px;">Fun fact · ${fi + 1} of ${facts.length}</div>
-        <div style="font-size:12px;line-height:1.45;color:var(--text);text-wrap:pretty;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;-webkit-line-clamp:4;">${escHtml(facts[fi])}${publicMode ? ' …' : ''}</div></div>` : ''}
+      ${fi >= 0 ? `<div class="mp-quote" style="margin-top:${storyText ? '14px' : '0'};display:flex;align-items:stretch;gap:8px;">
+        <div style="flex:1;min-width:0;padding:4px 0 4px 12px;border-left:2px solid var(--gold);">
+          <div id="mp-fact-kicker" style="font-size:9.5px;font-weight:600;letter-spacing:var(--ls-eyebrow);text-transform:uppercase;color:var(--gold);margin-bottom:4px;">Fun fact · ${fi + 1} of ${facts.length}</div>
+          <div id="mp-fact-body" style="font-size:12px;line-height:1.45;color:var(--text);text-wrap:pretty;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;-webkit-line-clamp:4;">${escHtml(facts[fi])}${publicMode ? ' …' : ''}</div>
+        </div>
+        ${facts.length > 1 ? `<button type="button" data-mp="fact-next" aria-label="Next fact" style="flex:none;width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;background:none;border:0;color:var(--gold);font-size:18px;cursor:pointer;font-family:inherit;">›</button>` : ''}
+      </div>` : ''}
     </div>`;
   }
 
@@ -240,13 +245,6 @@ function renderModelPage(el, ctx, h) {
 `, !mv.length) : ''}
       ${!mv.length && !refRows.length ? `<div style="font-size:12px;color:var(--muted);">No specs on file yet.</div>` : ''}
     </div>`;
-  } else if (tab === 'lore') {
-    panel = `<div style="display:flex;flex-direction:column;gap:10px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;"><span class="mp-h" style="color:var(--gold);">${facts.length} fact${facts.length === 1 ? '' : 's'}</span><span class="mp-badge">Exclusive</span></div>
-      ${m.history ? `<div style="font-size:12px;line-height:1.55;color:var(--text);margin-bottom:4px;">${escHtml(m.history)}</div>` : ''}
-      ${facts.map(f => `<div style="background:var(--surface);border:1px solid var(--border);border-left:1px solid var(--gold);border-radius:var(--radius-sm);padding:12px 13px;font-size:12px;line-height:1.5;color:var(--text);">${escHtml(f)}${publicMode ? ' …' : ''}</div>`).join('')}
-      ${publicMode ? `<div style="font-size:11.5px;color:var(--muted);margin-top:4px;">Full facts are in the app.</div>` : ''}
-    </div>`;
   } else {
     const era = st.era || [0, 0, 0, 0, 0, 0];
     const cards = [];
@@ -289,9 +287,16 @@ function renderModelPage(el, ctx, h) {
       switch (d.mp) {
         case 'back': H.back && H.back(); break;
         case 'share': H.share && H.share(); break;
-        case 'tab':
-          if (d.fact === '1' && H.track) H.track('model_fact_tap', { model: m.slug });
-          H.setTab && H.setTab(d.tab, d.scroll === '1'); break;
+        case 'tab': H.setTab && H.setTab(d.tab, d.scroll === '1'); break;
+        case 'fact-next': {
+          if (!facts.length) break;
+          el._mpFactIdx = ((el._mpFactIdx || 0) + 1) % facts.length;
+          const k = el.querySelector('#mp-fact-kicker'), bd = el.querySelector('#mp-fact-body');
+          if (k) k.textContent = `Fun fact · ${el._mpFactIdx + 1} of ${facts.length}`;
+          if (bd) bd.textContent = facts[el._mpFactIdx] + (publicMode ? ' …' : '');
+          if (H.track) H.track('model_fact_next', { model: m.slug, index: el._mpFactIdx });
+          break;
+        }
         case 'history': {
           const hist = el.querySelector('#mp-history');
           if (!hist) break;
@@ -335,7 +340,7 @@ function renderModelPage(el, ctx, h) {
     .mp-cell .l { font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
     .mp-cell .v { font-size:24px; font-weight:600; color:var(--text); margin:4px 0 2px; }
     .mp-cell .f { font-size:9.5px; color:var(--muted); margin-top:5px; }
-    .mp-quote:hover { background: var(--hover); }
+    .mp-quote button:hover { background: var(--hover); border-radius: var(--radius-sm); }
     .mp-row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--border); font-size:12.5px; cursor:pointer; }
     .mp-row:hover { background: var(--hover); }
     .mp-row:last-child { border-bottom:0; }

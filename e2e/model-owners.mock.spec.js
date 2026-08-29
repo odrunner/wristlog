@@ -49,7 +49,7 @@ async function openEditModal(page, ownersPayload) {
   }));
   await page.route('**/rest/v1/watch_facts*', route => route.fulfill({
     status: 200, contentType: 'application/json',
-    body: JSON.stringify([{ fact: 'It once dove very deep indeed.', position: 0 }]),
+    body: JSON.stringify([{ fact: 'It once dove very deep indeed.', position: 0 }, { fact: 'Second fact about the bezel.', position: 1 }]),
   }));
   await page.addInitScript(() => { try { localStorage.setItem('ff_watch_db', 'true'); } catch (e) {} });
   await injectSession(page);
@@ -89,8 +89,15 @@ test('row shows count + era, tap opens in-app model page with facts and owners',
   // fun-fact band + Data tab
   await expect(mp.locator('#mp-story')).toContainText('The watch');
   await expect(mp.locator('#mp-story')).toContainText('Launched in 1953');
-  await expect(mp.locator('.mp-quote')).toContainText('Fun fact · 1 of 1');
-  await expect(mp.locator('.mp-quote')).toContainText('It once dove very deep indeed.');
+  await expect(mp.locator('#mp-tabs')).not.toContainText('Lore');
+  const kicker = mp.locator('#mp-fact-kicker');
+  const before = await kicker.textContent();
+  const bodyBefore = await mp.locator('#mp-fact-body').textContent();
+  await mp.locator('[data-mp=fact-next]').click();
+  expect(await kicker.textContent()).not.toBe(before);
+  expect(await mp.locator('#mp-fact-body').textContent()).not.toBe(bodyBefore);
+  await mp.locator('[data-mp=fact-next]').click();
+  expect(await kicker.textContent()).toBe(before); // wraps around
   await expect(mp).toContainText('2.8×');
   await expect(mp).toContainText('Top 4%');
   await expect(mp).toContainText('of 1,412 models · 340 wears from 14 collections');
@@ -104,9 +111,6 @@ test('row shows count + era, tap opens in-app model page with facts and owners',
   await expect(mp).toContainText('3 watches');
   await expect(mp).toContainText('References by era');
   await expect(mp).toContainText('5513');
-  await mp.locator('.mp-quote').click();
-  await expect(mp.locator('#mp-tab-lore')).toHaveAttribute('aria-selected', 'true');
-  await expect(mp).toContainText('It once dove very deep indeed.');
   await mp.locator('#mp-tab-owners').click();
   await expect(mp).toContainText('Ownership by era');
   await expect(mp).toContainText('6.5 yrs');
@@ -128,8 +132,7 @@ test('sole owner: row shows rare-bird copy, page still opens with facts', async 
   await expect(mp).toHaveClass(/active/);
   await mp.locator('#mp-tab-owners').click();
   await expect(mp).toContainText('1 owner');
-  await mp.locator('#mp-tab-lore').click();
-  await expect(mp).toContainText('It once dove very deep indeed.');
+  await expect(mp.locator('.mp-quote')).toContainText(/It once dove very deep indeed\.|Second fact about the bezel\./); // daily rotation picks either
 });
 
 test('no model_id -> row stays hidden', async ({ page }) => {
