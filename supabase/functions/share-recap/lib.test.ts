@@ -5,6 +5,7 @@ import {
   esc,
   generateRecapSvg,
   htmlPage,
+  isCrawlerUA,
   isRecapViewable,
   isValidPeriod,
   monthLabel,
@@ -207,4 +208,16 @@ Deno.test("htmlPage carries the OG tags and keeps the page out of search", () =>
 
 Deno.test("esc neutralises markup", () => {
   assertEquals(esc(`<script>"&`), "&lt;script&gt;&quot;&amp;");
+});
+
+Deno.test("isCrawlerUA separates link-preview bots from people", () => {
+  assertEquals(isCrawlerUA("facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"), true);
+  assertEquals(isCrawlerUA("WhatsApp/2.23.20.0"), true);
+  assertEquals(isCrawlerUA("Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)"), true);
+  assertEquals(isCrawlerUA("Twitterbot/1.0"), true);
+  assertEquals(isCrawlerUA("curl/8.4.0"), true);
+  assertEquals(isCrawlerUA(null), true);
+  assertEquals(isCrawlerUA(""), true);
+  assertEquals(isCrawlerUA("Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1"), false);
+  assertEquals(isCrawlerUA("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"), false);
 });

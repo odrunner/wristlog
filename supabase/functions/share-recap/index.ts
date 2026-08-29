@@ -19,6 +19,7 @@ import {
   generateRecapSvg,
   htmlPage,
   initials,
+  isCrawlerUA,
   isRecapViewable,
   isValidPeriod,
   monthLabel,
@@ -142,6 +143,18 @@ serve(async (req) => {
     ? await fetchRecapData(db, { userId: share.user_id }, share.period)
     : await fetchRecapData(db, { username: username as string }, period as string);
   if (!isValidPeriod(period)) period = null;
+
+  // Fire-and-forget: a view is worth recording, never worth delaying or
+  // failing the page for. See sql/2026-08-29-recap-share-views.sql.
+  db.from("recap_share_views").insert({
+    user_id: data?.profile?.id ?? null,
+    period: period,
+    via: token ? "token" : username ? "username" : "none",
+    mode: imgMode ? "image" : "page",
+    crawler: isCrawlerUA(req.headers.get("user-agent")),
+    user_agent: (req.headers.get("user-agent") || "").slice(0, 300) || null,
+    referer: (req.headers.get("referer") || "").slice(0, 300) || null,
+  }).then(({ error }: { error: unknown }) => { if (error) console.error("recap_share_views", error); });
 
   // --- Image mode ---
   // Always answers with an image, even on a bad or private request: a link

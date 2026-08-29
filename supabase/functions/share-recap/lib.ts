@@ -22,6 +22,16 @@ export function initials(brand: string, name: string): string {
 
 // "2026-07" and nothing else. The month comes from a URL anyone can edit, and
 // it is interpolated into SQL filters and page copy.
+// Link-preview crawlers fetch the page and og:image the moment a link is
+// pasted, before anyone taps it. They are counted separately so "views" means
+// people, not iMessage.
+const CRAWLER_RE =
+  /bot|crawler|spider|facebookexternalhit|facebookcatalog|whatsapp|telegram|slack|discord|twitter|linkedin|pinterest|skype|snapchat|iframely|embedly|quora|preview|fetch|curl|wget|python|go-http|java\/|okhttp|axios|headless/i;
+export function isCrawlerUA(ua: string | null | undefined): boolean {
+  if (!ua) return true;                 // no UA at all: nothing a real browser sends
+  return CRAWLER_RE.test(ua);
+}
+
 export function isValidPeriod(m: string | null | undefined): boolean {
   if (!m || !/^\d{4}-(0[1-9]|1[0-2])$/.test(m)) return false;
   const y = Number(m.slice(0, 4));
