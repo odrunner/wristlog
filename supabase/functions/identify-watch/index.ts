@@ -53,7 +53,9 @@ Deno.serve(async (req: Request) => {
   const opsSecret = Deno.env.get("CAMPAIGN_TRIGGER_SECRET") ?? "";
   const opsProvided = req.headers.get("x-campaign-secret") ?? "";
   let user: { id: string } | null = null;
+  let viaOpsSecret = false;
   if (opsSecret && opsProvided === opsSecret) {
+    viaOpsSecret = true;
     const { data: admin } = await supabase.from("profiles").select("id").eq("is_admin", true).limit(1).maybeSingle();
     if (admin?.id) user = { id: admin.id };
   }
@@ -84,7 +86,9 @@ Deno.serve(async (req: Request) => {
   const now = new Date();
   const windowFloor = new Date(now.getTime() - WINDOW_MS);
 
-  try {
+  // The ops scripts (enrich-models / gen-facts) run hundreds of sequential
+  // calls under the admin id; the per-user hourly cap is for the app.
+  if (!viaOpsSecret) try {
     const { data: rlCount } = await supabase.rpc("bump_rate_limit", {
       p_user: user.id, p_fn: "identify-watch",
       p_window_floor: windowFloor.toISOString(), p_now: now.toISOString(),
