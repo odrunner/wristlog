@@ -85,6 +85,8 @@ test('row shows count + era, tap opens in-app model page with facts and owners',
   await expect(mp).toContainText('$9,000');
   await expect(mp).toContainText('▲ 6% since Jun');
   await expect(mp.locator('svg[data-tile-spark]')).toHaveCount(1);
+  // the sparkline lives INSIDE the value tile, not as a stray grid cell
+  await expect(mp.locator('svg[data-tile-spark]').locator('xpath=..')).toContainText('median value among owners');
   await expect(mp).toContainText('12 wears in the last 90 days');
   await expect(mp).toContainText('2 more want it');
   await expect(mp).toContainText('Yours: -1.2 s/d');
