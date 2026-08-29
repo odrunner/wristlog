@@ -49,7 +49,8 @@ describe('shouldNudgeEnhance', () => {
 
 describe('enhance_nudge wiring in index.html', () => {
   it('gates every treatment surface behind experiment("enhance_nudge")', () => {
-    expect(html).toContain("if (!experiment('enhance_nudge')) return;");
+    expect(html).toContain("if (!watch || !experiment('enhance_nudge')) return false;");
+    expect(html).toContain("if (!enhanceNudgeWouldShow(watch)) return;");
     expect(html).toContain("if (!experiment('enhance_nudge') || !needsEnhance(w)) return '';");
     expect(html).toContain("const enhN = experiment('enhance_nudge') ? watches.filter(needsEnhance).length : 0;");
   });
@@ -86,7 +87,7 @@ describe('enhance_nudge wiring in index.html', () => {
 
   it('renders the nudge card into the active page and wires both buttons', () => {
     expect(html).toContain("document.querySelector('.page.active .enhance-nudge-slot')");
-    expect((html.match(/class="enhance-nudge-slot"/g) || []).length).toBe(2);
+    expect((html.match(/class="enhance-nudge-slot"/g) || []).length).toBe(3); // feed, track, collection
     expect(html).toContain('is missing its details');
     expect(html).toContain('Movement, case size, production years and the story behind it.');
     expect(html).toContain('Enhance &middot; about 20 s');
@@ -97,7 +98,11 @@ describe('enhance_nudge wiring in index.html', () => {
     expect(html).toContain("maybeShowEnhanceNudge(watches.find(x => x.id === _addedWatchId) || null, 'add')");
     expect(html).toContain("setTimeout(() => maybeShowEnhanceNudge(_factWatch, 'wear'), 1500);");
     expect(html).toContain("setTimeout(() => maybeShowEnhanceNudge(watches.find(x => x.id === watchId) || null, 'wear'), 1500);");
-    expect(html).toContain("if (isWear) setTimeout(() => maybeShowEnhanceNudge(postedWatch, 'wear'), 1500);");
+    expect(html).toContain("const nudging = isWear && enhanceNudgeWouldShow(postedWatch);");
+    expect(html).toContain("if (nudging) setTimeout(() => maybeShowEnhanceNudge(postedWatch, 'wear'), 1500);");
+    // The review prompt yields to a nudge so the two never compete for the same moment.
+    expect(html).toContain("if (!nudging) maybeShowReviewPrompt('post');");
+    expect(html).toContain("if (!isUpdate && !enhanceNudgeWouldShow(_factWatch)) maybeShowReviewPrompt('wear_log');");
   });
 
   it('registers the enhance_run metric in the experiment_metrics seed', () => {

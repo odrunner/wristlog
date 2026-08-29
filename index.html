@@ -3589,6 +3589,7 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
   <!-- ════ FEED PAGE ════ -->
   <div id="page-feed" class="page active">
+    <div class="enhance-nudge-slot"></div>
     <div class="page-header">
       <h1 class="page-title">Feed</h1>
       <div style="display:flex;gap:.5rem;margin-left:auto;">
@@ -8182,7 +8183,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '28.17.33';
+const APP_VERSION = '28.17.51';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -16266,9 +16267,10 @@ async function saveNewPost() {
   closeNewPost();
   if (window.posthog) posthog.capture('post_created', { has_photo: !!entry.photoUrl, photo_count: parsePhotoUrl(entry.photoUrl).length, has_watch: !!trackWatchId });
   toast(isWear ? `Posted! Wear logged for ${postedWatch.brand} ${postedWatch.name}.` : (useCase === 'measurement' ? 'Shared to feed!' : 'Posted!'));
-  if (isWear) setTimeout(() => maybeShowEnhanceNudge(postedWatch, 'wear'), 1500);
+  const nudging = isWear && enhanceNudgeWouldShow(postedWatch);
+  if (nudging) setTimeout(() => maybeShowEnhanceNudge(postedWatch, 'wear'), 1500);
   haptic('success');
-  maybeShowReviewPrompt('post');
+  if (!nudging) maybeShowReviewPrompt('post');
   checkAndAwardBadges('post', entry.id).then(() => foldBadgeCardsIntoPost(entry.id));
   feedLoadedAt = 0; // force feed to re-fetch after posting
   updateStreakChip();
@@ -21216,7 +21218,7 @@ async function saveLog() {
   // Delayed so it doesn't land on top of the fun-fact toast.
   setTimeout(() => maybeShowEnhanceNudge(_factWatch, 'wear'), 1500);
   haptic('success');
-  if (!isUpdate) maybeShowReviewPrompt('wear_log');
+  if (!isUpdate && !enhanceNudgeWouldShow(_factWatch)) maybeShowReviewPrompt('wear_log');
   if (!isUpdate) maybeDeferredPushAsk();   // acted on a quiet notification? spend the one-shot dialog now
   checkAndAwardBadges('wear', logEntry.id).then(() => foldBadgeCardsIntoPost(logEntry.id));
   } finally { if (_slBtn) { _slBtn.disabled = false; _slBtn.textContent = 'Log This Wear'; } }
@@ -28017,12 +28019,19 @@ function enhanceScoped(watchId, surface) {
 function enhanceFromNudge(watchId, surface) { enhNudgeMarkSeen(watchId); enhanceScoped(watchId, surface || 'nudge'); }
 function enhanceFromGrid(watchId) { enhanceScoped(watchId, 'grid'); }
 // Slim inline card at the top of whichever page is showing. No-op in control.
-function maybeShowEnhanceNudge(watch, surface) {
-  if (!experiment('enhance_nudge')) return;
+// True when a nudge for this watch would render right now (treatment, gated, slot on the
+// active page). Lets the review prompt yield so the two never compete for the same moment.
+function enhanceNudgeWouldShow(watch) {
+  if (!watch || !experiment('enhance_nudge')) return false;
   const dayKey = enhNudgeDayKey();
-  if (!dayKey) return;
+  if (!dayKey) return false;
+  if (!shouldNudgeEnhance(watch, { seen: enhNudgeSeen(), lastNudgeDay: safeLS.get(dayKey), today: todayStr() })) return false;
+  return !!document.querySelector('.page.active .enhance-nudge-slot');
+}
+function maybeShowEnhanceNudge(watch, surface) {
+  if (!enhanceNudgeWouldShow(watch)) return;
+  const dayKey = enhNudgeDayKey();
   const today = todayStr();
-  if (!shouldNudgeEnhance(watch, { seen: enhNudgeSeen(), lastNudgeDay: safeLS.get(dayKey), today })) return;
   const slot = document.querySelector('.page.active .enhance-nudge-slot');
   if (!slot) return;
   removeEnhanceNudge();
