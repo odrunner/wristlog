@@ -337,8 +337,21 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── FACTS MODE: one distinct trivia fact about the watch model ──
-    if (mode === "facts" && watchInfo) {
-      const { brand, model, reference } = watchInfo;
+    // Ops path (scripts/gen-facts.py): `{mode:'facts', modelId}` with the cron
+    // secret — grounds on the model row, dedups against its pool, and stores
+    // the new fact under the model's facts_key (no wear/log involved).
+    let factsStoreKey: string | null = null;
+    let factsInfo = watchInfo;
+    if (mode === "facts" && typeof modelId === "string" && modelId && opsSecret && opsProvided === opsSecret) {
+      const { data: mrow } = await supabase.from("watch_models").select("brand, name, facts_key, ref_prefixes").eq("id", modelId).maybeSingle();
+      if (mrow?.facts_key) {
+        const { data: pool } = await supabase.from("watch_facts").select("fact").eq("model_key", mrow.facts_key);
+        factsStoreKey = mrow.facts_key;
+        factsInfo = { brand: mrow.brand, model: mrow.name, reference: "", existingFacts: (pool ?? []).map((f: any) => f.fact) };
+      }
+    }
+    if (mode === "facts" && factsInfo) {
+      const { brand, model, reference } = factsInfo;
       if (!brand || !model) {
         await logAttempt(null, "facts_no_info");
         return new Response(JSON.stringify({ error: "Brand and model required" }), {
@@ -369,7 +382,7 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      const existingFacts: string[] = Array.isArray(watchInfo.existingFacts) ? watchInfo.existingFacts : [];
+      const existingFacts: string[] = Array.isArray(factsInfo.existingFacts) ? factsInfo.existingFacts : [];
       const factsPrompt = buildFactsPrompt({ brand, model, reference }, existingFacts);
       const parts: any[] = [{ text: factsPrompt }];
 
@@ -410,6 +423,13 @@ Deno.serve(async (req: Request) => {
               // Persist server-side (pool + cursor + logs.fact_id) so the fact
               // survives the client disconnecting during this slow generation —
               // the fragile window that previously lost cold-model facts.
+              if (factsStoreKey) {
+                const { data: mx } = await supabase.from("watch_facts").select("position").eq("model_key", factsStoreKey).order("position", { ascending: false }).limit(1).maybeSingle();
+                const { data: ins, error: iErr } = await supabase.from("watch_facts")
+                  .insert({ model_key: factsStoreKey, position: ((mx?.position ?? -1) + 1), fact: factText }).select("id").maybeSingle();
+                if (iErr) console.error("[identify-watch] facts model store failed:", iErr.message);
+                else factId = ins?.id ?? null;
+              }
               if (commit && commit.logId && commit.wearDate && user?.id) {
                 try {
                   const { data: committed, error: cErr } = await supabase.rpc("commit_watch_fact_srv", {
