@@ -374,7 +374,7 @@ Deno.serve(async (req: Request) => {
       // Fail CLOSED on a query error: a DB blip must not reopen the hole.
       const { data: ownedWatches, error: ownErr } = await supabase
         .from("watches").select("brand, name").eq("user_id", user.id);
-      if (ownErr || !ownsFactModel(ownedWatches || [], brand, model)) {
+      if (ownErr || !factsStoreKey && !ownsFactModel(ownedWatches || [], brand, model)) {
         await logAttempt(null, ownErr ? "facts_owner_check_failed" : "facts_not_owned");
         return new Response(JSON.stringify({ error: "Watch not in your collection" }), {
           status: 403,
