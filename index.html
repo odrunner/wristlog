@@ -8185,7 +8185,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '29.10.01';
+const APP_VERSION = '29.10.34';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18246,6 +18246,12 @@ async function loadAdminModels() {
       <input id="adm-ms-${m.id}" value="${escAttr(m.slug)}" placeholder="slug" style="width:30%;">
       <input id="adm-mh-${m.id}" value="${escAttr(m.hero_image || '')}" placeholder="hero image URL" style="width:26%;">
       <button class="chip" onclick="adminSaveModel('${m.id}')">Save</button>
+      <div style="margin-top:.4rem;display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;">
+        <label class="chip" style="cursor:pointer;">Upload hero photo <input type="file" accept="image/*" style="display:none;" onchange="adminUploadModelHero('${m.id}', this)"></label>
+        <input id="adm-mc-${m.id}" value="${escAttr(m.hero_credit || '')}" placeholder="credit (e.g. Photo: Rolex)" style="flex:1;min-width:160px;">
+        ${m.hero_image ? `<img src="${escAttr(m.hero_image)}" alt="" style="width:34px;height:34px;object-fit:cover;border-radius:6px;">` : ''}
+        ${m.wiki_url ? `<a href="${escAttr(m.wiki_url)}" target="_blank" rel="noopener" style="font-size:.7rem;">Wikipedia ↗</a>` : ''}
+      </div>
     </td></tr>`).join('') + '</table>' + (rows.length > 200 ? `<div style="color:var(--muted);margin-top:.4rem;">Showing 200 of ${rows.length}</div>` : '');
 }
 function adminEditModel(id) {
@@ -18255,7 +18261,8 @@ function adminEditModel(id) {
 async function adminSaveModel(id) {
   const val = k => document.getElementById('adm-' + k + '-' + id).value.trim();
   const { error } = await db.rpc('admin_update_watch_model', {
-    p_id: id, p_name: val('mn') || null, p_slug: val('ms') || null, p_hero: val('mh') || null });
+    p_id: id, p_name: val('mn') || null, p_slug: val('ms') || null, p_hero: val('mh') || null,
+    p_hero_credit: val('mc') || null });
   if (error) { toast('Save failed: ' + error.message, 'error'); return; }
   toast('Saved'); loadAdminModels();
 }
@@ -18300,6 +18307,21 @@ async function adminEnrichAllCurated() {
   }
   st.textContent = `Done — ${ok} enriched, ${fail} failed.`;
   loadAdminModels();
+}
+// Manual hero: upload to the admin's own watches/ folder (storage policy already
+// allows it), then point hero_image at the public URL. Credit is optional.
+async function adminUploadModelHero(id, input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (!validateImageFile(file)) { input.value = ''; return; }
+  try {
+    const url = await uploadImage(file, `watches/${currentUser.id}/model-${id}.jpg`);
+    const credit = document.getElementById('adm-mc-' + id)?.value.trim() || null;
+    const { error } = await db.rpc('admin_update_watch_model', { p_id: id, p_hero: url, p_hero_credit: credit });
+    if (error) throw new Error(error.message);
+    toast('Hero photo saved'); loadAdminModels();
+  } catch (e) { toast('Upload failed: ' + e.message, 'error'); }
+  input.value = '';
 }
 async function adminCurateModel(id) {
   const { error } = await db.rpc('admin_update_watch_model', { p_id: id, p_curated: true });
@@ -23844,7 +23866,7 @@ async function loadAndRenderModel(modelId, owners) {
   const el = document.getElementById('model-page-content');
   el.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">Loading…</div>';
   const [mRes, oRes, sRes] = await Promise.all([
-    db.from('watch_models').select('brand,name,slug,specs,facts_key,hero_image,description,history,refs_by_era,calibers_by_era').eq('id', modelId).maybeSingle(),
+    db.from('watch_models').select('brand,name,slug,specs,facts_key,hero_image,hero_credit,wiki_url,description,history,refs_by_era,calibers_by_era').eq('id', modelId).maybeSingle(),
     owners ? Promise.resolve({ data: owners }) : db.rpc('model_owners', { p_model_id: modelId }),
     db.rpc('model_stats', { p_model_id: modelId }),
   ]);
@@ -23859,13 +23881,14 @@ async function loadAndRenderModel(modelId, owners) {
   const photos = [m.hero_image, ...(st.photos || [])].filter(Boolean).filter((u, i, a) => a.indexOf(u) === i).slice(0, 8);
   const heroHtml = photos.length ? `<div style="display:flex;gap:.5rem;overflow-x:auto;margin:.7rem -.2rem 0;padding:0 .2rem .4rem;-webkit-overflow-scrolling:touch;">
       ${photos.map(u => `<img src="${escAttr(u)}" alt="" loading="lazy" style="width:150px;height:150px;object-fit:cover;border-radius:10px;flex-shrink:0;background:var(--surface2);">`).join('')}
-    </div>` : '';
+    </div>${m.hero_image && m.hero_credit ? `<div style="font-size:.62rem;${muted}margin-top:.1rem;">${escHtml(m.hero_credit)}</div>` : ''}` : '';
 
   // About: LLM family write-up (curated) — refs & calibers by era
   const refs = Array.isArray(m.refs_by_era) ? m.refs_by_era : [];
   const cals = Array.isArray(m.calibers_by_era) ? m.calibers_by_era : [];
-  const aboutHtml = (m.history || refs.length || cals.length) ? h2('About') + `<div style="${card}">
+  const aboutHtml = (m.history || refs.length || cals.length || m.wiki_url) ? h2('About') + `<div style="${card}">
       ${m.history ? `<div style="font-size:.85rem;line-height:1.6;">${escHtml(m.history)}</div>` : ''}
+      ${m.wiki_url ? `<a href="${escAttr(m.wiki_url)}" target="_blank" rel="noopener" style="display:inline-block;font-size:.74rem;margin-top:.5rem;">Read more on Wikipedia ↗</a>` : ''}
       ${refs.length ? `<div style="font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;${muted}margin:.9rem 0 .3rem;">References by era</div>
         ${refs.map(r => `<div style="display:flex;gap:.6rem;font-size:.8rem;padding:.22rem 0;border-top:0.5px solid var(--border);">
           <span style="min-width:72px;font-weight:600;">${escHtml(r.reference || '')}</span>

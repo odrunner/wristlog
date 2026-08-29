@@ -227,3 +227,10 @@ Deno.test("buildModelPrompt — omits alias/ref/grounding blocks when empty", ()
 Deno.test("normalizeMode — accepts model", () => {
   assertEquals(normalizeMode("model"), "model");
 });
+
+Deno.test("buildModelPrompt — includes the Wikipedia lead as grounding when present", () => {
+  const p = buildModelPrompt({ brand: "Rolex", name: "Submariner", wiki_extract: "The Rolex Submariner is a line of sports watches." });
+  assertStringIncludes(p, "Wikipedia lead paragraph");
+  assertStringIncludes(p, "line of sports watches");
+  assertEquals(buildModelPrompt({ brand: "Rolex", name: "Submariner" }).includes("Wikipedia lead"), false);
+});

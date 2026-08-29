@@ -8,7 +8,7 @@ begin
     raise exception 'forbidden';
   end if;
   return coalesce((select json_agg(row_to_json(t)) from (
-    select m.id, m.brand, m.name, m.slug, m.is_auto, m.specs, m.hero_image, m.ref_prefixes, m.enriched_at,
+    select m.id, m.brand, m.name, m.slug, m.is_auto, m.specs, m.hero_image, m.hero_credit, m.wiki_url, m.ref_prefixes, m.enriched_at,
            (select count(*) from watch_model_aliases a where a.model_id = m.id) aliases,
            count(distinct w.user_id) owners, count(w.id) watches
     from watch_models m

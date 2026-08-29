@@ -97,6 +97,7 @@ export interface ModelInfo {
   aliases?: string[];
   refs?: string[];
   grounding?: { calibers?: string[]; years?: string[]; diameters?: string[]; water_resistance?: string[] };
+  wiki_extract?: string | null;
 }
 
 export function buildModelPrompt(info: ModelInfo): string {
@@ -113,7 +114,7 @@ export function buildModelPrompt(info: ModelInfo): string {
   return `Write the reference page for a watch MODEL FAMILY — every generation and reference of this line across its whole production history, not one specific reference.
 Brand: ${brand}
 Model family: ${name}
-${aliases.length ? `Also written as: ${aliases.join("; ")}\n` : ""}${refs.length ? `References owned by our members: ${refs.join(", ")}\n` : ""}${gLines.length ? `What our members' examples say about it:\n${gLines.join("\n")}\n` : ""}
+${aliases.length ? `Also written as: ${aliases.join("; ")}\n` : ""}${refs.length ? `References owned by our members: ${refs.join(", ")}\n` : ""}${gLines.length ? `What our members' examples say about it:\n${gLines.join("\n")}\n` : ""}${info.wiki_extract ? `Wikipedia lead paragraph (for grounding — do not copy it):\n${info.wiki_extract.slice(0, 1500)}\n` : ""}
 Search the official manufacturer website first, then watch databases and reputable histories (Hodinkee, Fratello, WatchTime, Monochrome, forum reference guides). Cover the family from its first reference to today.
 
 Return a JSON object:
