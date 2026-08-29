@@ -278,7 +278,7 @@ function renderModelPage(el, ctx, h) {
          : `<button class="mp-act" style="color:var(--text);background:transparent;border:1px solid var(--border);" data-mp="wish">♡ Add to wishlist</button>`}
   </div>` : '';
 
-  el.innerHTML = hero + grid + band + tabBar +
+  el.innerHTML = hero + band + grid + tabBar +
     `<div id="mp-panel" role="tabpanel" style="padding:16px 16px 8px;display:flex;flex-direction:column;gap:18px;min-height:420px;">${panel}${more}${reqEdit}</div>` + actions;
   if (!el._mpBound) {
     el._mpBound = true;
