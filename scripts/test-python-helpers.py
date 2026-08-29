@@ -101,5 +101,55 @@ class TestAccountPassword(unittest.TestCase):
         self.assertEqual(self._fn("/nonexistent/x.env")(), "wrotate-test-2026")
 
 
+
+class EngineStatsInternalSplit(unittest.TestCase):
+    """split_engine_rows — keeps internal-account traffic out of the alert.
+
+    On 2026-08-27 the report cried "watch-value fell back to Claude on 1 of 8
+    calls" when 5 of those 8, including the only fallback, were this assistant's
+    diagnostics from the testuser account — which is in `internal_accounts`, the
+    list every other metric already honours.
+    """
+
+    INT = "e0af1615-b151-4260-b6bd-c23e497efa6d"
+    EXT = "b82f2ea6-1111-2222-3333-444455556666"
+
+    def _split(self):
+        ns = {"re": __import__("re")}
+        exec(_extract("cost-report.py", "def split_engine_rows", "def engine_stats("), ns)
+        return ns["split_engine_rows"]
+
+    def test_internal_traffic_is_bucketed_away_from_the_alert(self):
+        msgs = [
+            f"[watch-value] user={self.EXT} Casio -> $1 engine=gemini",
+            f"[watch-value] user={self.EXT} Omega -> $1 engine=gemini",
+            f"[watch-value] user={self.EXT} Rolex -> $1 engine=gemini",
+            f"[watch-value] user={self.INT} Gemini exception, falling back to Claude: aborted",
+            f"[watch-value] user={self.INT} Seiko -> $1 engine=claude",
+        ]
+        ext, internal = self._split()(msgs, {self.INT})
+        self.assertEqual((ext["gemini"], ext["claude"]), (3, 0))
+        self.assertEqual(ext["reasons"], [], "an internal failure must not reach the alert")
+        self.assertEqual((internal["gemini"], internal["claude"]), (0, 1))
+        self.assertEqual(len(internal["reasons"]), 1)
+
+    def test_unattributed_lines_count_as_external(self):
+        """Logs from before the user= change, or any line we cannot attribute.
+
+        These must stay visible: a missing id silently suppressing a real user's
+        fallback would be worse than the false alarm this whole change fixes.
+        """
+        ext, internal = self._split()(
+            ["[watch-value] Old line -> $1 engine=claude"], {self.INT})
+        self.assertEqual(ext["claude"], 1)
+        self.assertEqual(internal["claude"], 0)
+
+    def test_unknown_internal_list_leaves_everything_external(self):
+        """internal_user_ids() returning None means unknown, not 'nobody'."""
+        ext, internal = self._split()(
+            [f"[watch-value] user={self.INT} Seiko -> $1 engine=claude"], None)
+        self.assertEqual(ext["claude"], 1)
+        self.assertEqual(internal["claude"], 0)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

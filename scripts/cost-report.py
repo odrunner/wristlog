@@ -40,6 +40,7 @@ it daily is free. Read the latest with:
 
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -240,6 +241,58 @@ def supabase_access_token():
     return None
 
 
+def internal_user_ids():
+    """UUIDs from the `internal_accounts` table — the project's canonical list.
+
+    Returns a set, or None when the lookup fails. None means "unknown", and the
+    caller must NOT treat it as "nobody is internal": that would silently move
+    test traffic back into the user-facing counts, which is the bug this exists
+    to fix. Reported as a caveat instead.
+    """
+    url, key = supabase_creds()
+    if not url or not key:
+        return None
+    try:
+        d = curl_json(
+            f"{url}/rest/v1/internal_accounts?select=user_id",
+            headers=[f"apikey: {key}", f"Authorization: Bearer {key}"],
+            retries=3,
+        )
+    except Exception as e:
+        print(f"[internal_user_ids] lookup failed — {type(e).__name__}: {e}")
+        return None
+    if not isinstance(d, list):
+        print(f"[internal_user_ids] unexpected response: {str(d)[:200]}")
+        return None
+    return {row["user_id"] for row in d if row.get("user_id")}
+
+
+def split_engine_rows(messages, internal_ids):
+    """Bucket log lines into (external, internal) engine stats.
+
+    Every counted line carries `user=<uuid>` since 2026-08-28. Lines from before
+    that, and any line whose user cannot be read, count as EXTERNAL — a missing
+    id must never quietly suppress a real user's fallback. Pure, so the bucketing
+    can be tested without touching the network.
+    """
+    def blank():
+        return {"gemini": 0, "claude": 0, "reasons": []}
+
+    ext, internal = blank(), blank()
+    for msg in messages:
+        msg = (msg or "").strip()
+        m = re.search(r"user=([0-9a-fA-F-]{36})", msg)
+        uid = m.group(1) if m else None
+        bucket = internal if (internal_ids and uid in internal_ids) else ext
+        if "engine=gemini" in msg:
+            bucket["gemini"] += 1
+        elif "engine=claude" in msg:
+            bucket["claude"] += 1
+        if any(k in msg for k in ("Gemini error", "Gemini parse failed", "Gemini exception")):
+            bucket["reasons"].append(msg.replace("\n", " ")[:300])
+    return ext, internal
+
+
 def engine_stats(day, tag):
     """Which engine served each `tag` call on `day` (UTC), from the function logs.
 
@@ -277,22 +330,49 @@ def engine_stats(day, tag):
     if rows is None:
         print(f"[engine_stats:{tag}] unexpected response: {str(d)[:200]}")
         return None
-    stats = {"gemini": 0, "claude": 0, "reasons": []}
-    for row in rows:
-        msg = (row.get("event_message") or "").strip()
-        if "engine=gemini" in msg:
-            stats["gemini"] += 1
-        elif "engine=claude" in msg:
-            stats["claude"] += 1
-        if any(m in msg for m in ("Gemini error", "Gemini parse failed", "Gemini exception")):
-            stats["reasons"].append(msg.replace("\n", " ")[:300])
-    return stats
+    internal_ids = internal_user_ids()
+    ext, internal = split_engine_rows(
+        [row.get("event_message") for row in rows], internal_ids
+    )
+    # The user-facing numbers are the external ones. Internal traffic rides along
+    # on its own key so a test-account run shows up as itself instead of firing a
+    # "Gemini is broken" alert — which is exactly what it did on 2026-08-27, when
+    # 5 of 8 calls and the day's only fallback were this assistant's diagnostics.
+    ext["internal"] = internal
+    ext["internal_unknown"] = internal_ids is None
+    return ext
+
+
+def internal_suffix(st):
+    """The '  internal: N calls, M fallbacks' line, or '' when there is none.
+
+    Appended to EVERY engine_line branch, including the zero-call ones — a day
+    whose only traffic was internal must not render as a bare "no calls this
+    day", which would drop a failure we can see.
+    """
+    out = ""
+    if st.get("internal_unknown"):
+        out += ('<br><span style="color:#d29922">&nbsp;&nbsp;internal accounts: '
+                "<b>unknown</b> &mdash; could not read internal_accounts, so any "
+                "test traffic is counted above.</span>")
+    ia = st.get("internal") or {}
+    n = ia.get("gemini", 0) + ia.get("claude", 0)
+    if n:
+        # Shown, not discarded: `od` is an internal account and the app's heaviest
+        # real user, so their failures still matter — they just are not a signal
+        # about everyone else.
+        fb = ia.get("claude", 0)
+        out += (f'<br><span style="color:#8b949e">&nbsp;&nbsp;internal: {n} call'
+                f'{"s" if n != 1 else ""}, {fb} fallback{"s" if fb != 1 else ""} '
+                "(excluded above).</span>")
+    return out
 
 
 def engine_line(label, st):
     """One '<label>: N Gemini, M Claude fallback' line, honest about unknowns."""
     if st is None:
         return f'<span style="color:#d29922">{label}: <b>unknown</b> &mdash; logs unreadable this run.</span>'
+    suffix = internal_suffix(st)
     if st["gemini"] + st["claude"] == 0:
         # identify-watch only started logging `engine=` on 2026-08-19, so older
         # days have failure lines but no success lines. Reporting a bare "no
@@ -301,10 +381,10 @@ def engine_line(label, st):
             n = len(st["reasons"])
             return (f'<span style="color:#d29922">{label}: {n} Gemini failure'
                     f'{"s" if n != 1 else ""} logged, but no success counts '
-                    "(this day predates the <code>engine=</code> log).</span>")
-        return f"{label}: no calls this day."
+                    "(this day predates the <code>engine=</code> log).</span>") + suffix
+        return f"{label}: no external calls this day." + suffix
     return (f"{label}: <b>{st['gemini']}</b> Gemini, "
-            f"<b>{st['claude']}</b> Claude fallback.")
+            f"<b>{st['claude']}</b> Claude fallback.") + suffix
 
 
 def open_autofix_prs():

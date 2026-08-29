@@ -197,15 +197,15 @@ Rules:
           } else {
             const usage = geminiResult.usageMetadata ?? {};
             console.error(
-              `[watch-value] Gemini parse failed, falling back to Claude. finish=${finishReason} len=${text.length} parts=${parts.length} tokens=${JSON.stringify(usage)} HEAD:${text.slice(0, 200)} TAIL:${text.slice(-300)}`,
+              `[watch-value] user=${user.id} Gemini parse failed, falling back to Claude. finish=${finishReason} len=${text.length} parts=${parts.length} tokens=${JSON.stringify(usage)} HEAD:${text.slice(0, 200)} TAIL:${text.slice(-300)}`,
             );
           }
         } else {
           const errText = await geminiResponse.text();
-          console.error("[watch-value] Gemini error, falling back to Claude:", geminiResponse.status, errText.slice(0, 300));
+          console.error(`[watch-value] user=${user.id} Gemini error, falling back to Claude:`, geminiResponse.status, errText.slice(0, 300));
         }
       } catch (geminiErr) {
-        console.error("[watch-value] Gemini exception, falling back to Claude:", (geminiErr as Error).message);
+        console.error(`[watch-value] user=${user.id} Gemini exception, falling back to Claude:`, (geminiErr as Error).message);
       }
     }
 
@@ -266,7 +266,7 @@ Rules:
     parsed.query = { brand, model, reference, condition, year };
     parsed.looked_up_at = new Date().toISOString();
 
-    console.log(`[watch-value] ${watchDesc} → $${parsed.estimated_value_usd?.low}-${parsed.estimated_value_usd?.high} (${parsed.confidence}) engine=${parsed._engine}${parsed._salvaged ? " salvaged=1" : ""}`);
+    console.log(`[watch-value] user=${user.id} ${watchDesc} → $${parsed.estimated_value_usd?.low}-${parsed.estimated_value_usd?.high} (${parsed.confidence}) engine=${parsed._engine}${parsed._salvaged ? " salvaged=1" : ""}`);
 
     // NOTE: no server-side save. Prices are only written by the client after the
     // user explicitly approves them (Save/Apply in the UI). watch_id is still

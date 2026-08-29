@@ -479,19 +479,19 @@ Deno.serve(async (req: Request) => {
             // gemini vs claude cold identifications. Without a success log there is no
             // denominator, and three Claude fallbacks in a week look the same whether
             // they came out of 5 lookups or 500.
-            console.log(`[identify-watch] cold identify → ${parsed.watches.length} watch(es) engine=gemini`);
+            console.log(`[identify-watch] user=${user.id} cold identify → ${parsed.watches.length} watch(es) engine=gemini`);
             await logAttempt(parsed.watches.length, null);
             return new Response(JSON.stringify(parsed), {
               headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
             });
           }
-          console.error("[identify-watch] Gemini parse failed, falling back to Claude. Raw:", textParts.slice(0, 500));
+          console.error(`[identify-watch] user=${user.id} Gemini parse failed, falling back to Claude. Raw:`, textParts.slice(0, 500));
         } else {
           const errText = await geminiResponse.text();
-          console.error("[identify-watch] Gemini error:", geminiResponse.status, errText.slice(0, 300));
+          console.error(`[identify-watch] user=${user.id} Gemini error:`, geminiResponse.status, errText.slice(0, 300));
         }
       } catch (geminiErr) {
-        console.error("[identify-watch] Gemini exception, falling back to Claude:", (geminiErr as Error).message);
+        console.error(`[identify-watch] user=${user.id} Gemini exception, falling back to Claude:`, (geminiErr as Error).message);
       }
     }
 
@@ -533,7 +533,7 @@ Deno.serve(async (req: Request) => {
     }
 
     parsed._engine = "claude";
-    console.log(`[identify-watch] cold identify → ${Array.isArray(parsed.watches) ? parsed.watches.length : 0} watch(es) engine=claude`);
+    console.log(`[identify-watch] user=${user.id} cold identify → ${Array.isArray(parsed.watches) ? parsed.watches.length : 0} watch(es) engine=claude`);
     await logAttempt(Array.isArray(parsed.watches) ? parsed.watches.length : 0, null);
     return new Response(JSON.stringify(parsed), {
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
