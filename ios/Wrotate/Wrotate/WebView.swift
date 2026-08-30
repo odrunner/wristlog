@@ -122,21 +122,36 @@ struct WebView: UIViewRepresentable {
             decisionHandler(.cancel)
         }
 
+        /// Bundle version if it is a plain dotted number (e.g. "2.7"), else the fallback.
+        /// Anything else (nil, "", "2.7 beta") would break every iosAtLeast() gate in JS.
+        static func injectedAppVersion(bundle: String?, fallback: String) -> String {
+            guard let v = bundle, v.range(of: #"^\d+(\.\d+)+$"#, options: .regularExpression) != nil else {
+                return fallback
+            }
+            return v
+        }
+
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             parent.isLoading = false
             parent.hasError = false
             refreshControl?.endRefreshing()
 
-            // Inject JS bridge for auth state → native push registration
+            // Inject JS bridge for auth state → native push registration.
+            // The version comes from the bundle (MARKETING_VERSION) so an Xcode-only bump
+            // can no longer ship a stale string (2.4 build 1 did). The literal below is a
+            // FALLBACK only, used if the bundle value is missing or not "N.N" shaped —
+            // still bump it with MARKETING_VERSION so the fallback is never behind.
+            // 2.1+ gates the Pro V2 beta toggle; 2.3+ BE display; 2.6+ push routing.
+            let fallbackAppVersion = "2.7"
+            let appVersion = Self.injectedAppVersion(
+                bundle: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
+                fallback: fallbackAppVersion)
             let js = """
             (function() {
                 if (window._wrotateNativeBridgeInstalled) return;
                 window._wrotateNativeBridgeInstalled = true;
                 window._wrotateNativeTimegrapher = true;
-                // NOT the bundle version — hand-maintained, so it must be bumped in the same
-                // commit as MARKETING_VERSION or it silently ships stale (2.4 build 1 did).
-                // 2.1+ gates the Pro V2 beta toggle; 2.3+ gates Pro V2 BE display.
-                window._iosAppVersion = '2.6';   // 2.6 = provisional push + JS push-route fallback
+                window._iosAppVersion = '\(appVersion)';
 
                 // Wait for Supabase client to be ready
                 var checkInterval = setInterval(function() {

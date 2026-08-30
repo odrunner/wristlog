@@ -111,8 +111,12 @@ describe('injected version string', () => {
     // 2.4 build 1 was pulled from review because the hand-maintained injected
     // string still said '2.3' after the Xcode-only bump, permanently killing
     // every iosAtLeast gate for that build.
-    const injected = webView.match(/window\._iosAppVersion = '([\d.]+)'/);
+    // Since 2.7 the injected value comes from CFBundleShortVersionString; the
+    // literal is the fallback and must still track MARKETING_VERSION.
+    const injected = webView.match(/let fallbackAppVersion = "([\d.]+)"/);
     expect(injected).not.toBeNull();
+    expect(webView).toMatch(/CFBundleShortVersionString/);
+    expect(webView).toMatch(/window\._iosAppVersion = '\\\(appVersion\)'/);
 
     const marketing = [...pbxproj.matchAll(/MARKETING_VERSION = ([\d.]+);/g)].map(m => m[1]);
     expect(marketing.length).toBeGreaterThan(0);

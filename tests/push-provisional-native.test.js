@@ -83,8 +83,8 @@ describe('web side', () => {
 describe('version stamping for the build carrying this change', () => {
   it('injected _iosAppVersion matches MARKETING_VERSION', () => {
     const marketing = pbxproj.match(/MARKETING_VERSION = ([\d.]+);/)[1];
-    const injected = webView.match(/window\._iosAppVersion = '([\d.]+)'/)[1];
+    const injected = webView.match(/let fallbackAppVersion = "([\d.]+)"/)[1];
     expect(injected).toBe(marketing);
-    expect(marketing).toBe('2.6');
+    expect(marketing).toBe('2.7');
   });
 });
