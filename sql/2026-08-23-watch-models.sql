@@ -72,13 +72,17 @@ begin
 
   select model_id into v_id from public.watch_model_aliases where alias_key = v_key;
 
-  -- Ref routing only when the name found no home: same brand, unique prefix match.
-  if v_id is null and v_ref <> '' then
-    select count(distinct m.id), min(m.id::text)::uuid into v_n, v_id
-      from public.watch_models m
-     where m.merged_into is null and m.brand_key = v_bkey
-       and exists (select 1 from unnest(m.ref_prefixes) rp where v_ref like rp || '%');
-    if v_n <> 1 then v_id := null; end if;
+  -- Ref routing when the name found no home — or only an AUTO model: a typed
+  -- reference that uniquely matches a CURATED family beats an auto-created
+  -- name bucket ("Seamaster 42" + 210.30.42… is the Diver 300M).
+  if v_ref <> '' and (v_id is null or exists (select 1 from public.watch_models a where a.id = v_id and a.is_auto)) then
+    declare v_ref_id uuid; begin
+      select count(distinct m.id), min(m.id::text)::uuid into v_n, v_ref_id
+        from public.watch_models m
+       where m.merged_into is null and m.brand_key = v_bkey and not m.is_auto
+         and exists (select 1 from unnest(m.ref_prefixes) rp where v_ref like rp || '%');
+      if v_n = 1 then v_id := v_ref_id; end if;
+    end;
   end if;
 
   if v_id is null then
