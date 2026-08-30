@@ -111,7 +111,7 @@ test('row shows count + era, tap opens in-app model page with facts and owners',
   await expect(mp).toContainText('Wear pattern');
   // tabs
   await mp.locator('#mp-tab-specs').click();
-  await expect(mp).toContainText('Member-verified');
+  await expect(mp).toContainText("From members' watches");
   await expect(mp).toContainText('3 watches');
   await expect(mp).toContainText('References by era');
   await expect(mp).toContainText('5513');

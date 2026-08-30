@@ -843,15 +843,12 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     .watches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: 1rem; }
 
     #page-model { max-width: 480px; margin: 0 auto; padding: 0; }
-    .explore-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:.6rem; }
-    .explore-card { border:0.5px solid var(--border); border-radius:12px; overflow:hidden; cursor:pointer; background:var(--surface); }
-    .explore-card:hover { border-color: color-mix(in srgb, var(--gold) 40%, transparent); }
-    .explore-card-img { width:100%; aspect-ratio:1/1; object-fit:cover; display:block; background:var(--surface2); }
-    .explore-card-noimg { width:100%; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; font-size:1.6rem; font-weight:700; color:var(--gold-text); background: color-mix(in srgb, var(--gold) 10%, transparent); }
-    .explore-card-body { padding:.5rem .6rem .6rem; }
-    .explore-card-brand { font-size:.62rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
-    .explore-card-name { font-size:.8rem; font-weight:600; line-height:1.25; margin:.1rem 0 .15rem; }
-    .explore-card-owners { font-size:.68rem; color:var(--muted); }
+    #admin-tab-models table { font-size:.8rem; }
+    #admin-tab-models th { font-weight:600; font-size:.7rem; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); padding:.35rem .4rem .35rem 0; }
+    #admin-tab-models td { padding:.45rem .4rem .45rem 0; vertical-align:middle; }
+    #admin-tab-models .chip { font-size:.72rem; padding:.25rem .6rem; }
+    #admin-tab-models input[type=text] { padding:.45rem .65rem; font-size:.82rem; }
+    #admin-tab-models .adm-models-bar input[type=text] { width:auto; }
     .watch-card {
       position: relative;
       background: var(--surface);
@@ -3627,10 +3624,11 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;">
       <h1 style="font-size:1.1rem;font-weight:700;">Watches</h1>
     </div>
-    <input id="explore-search" type="search" placeholder="Search models — Submariner, Speedmaster, SKX…" autocomplete="off"
-           style="width:100%;margin-bottom:.7rem;" oninput="exploreSearchInput()">
+    <div class="form-group" style="margin-bottom:.7rem;">
+      <input type="text" id="explore-search" placeholder="Search models — Submariner, Speedmaster, SKX…" autocomplete="off" oninput="exploreSearchInput()">
+    </div>
     <div id="explore-brands" style="display:flex;gap:.4rem;overflow-x:auto;padding-bottom:.5rem;margin-bottom:.5rem;-webkit-overflow-scrolling:touch;"></div>
-    <div id="explore-grid" class="explore-grid"></div>
+    <div id="explore-grid" class="watches-grid"></div>
     <div id="explore-more-wrap" style="text-align:center;margin-top:1rem;display:none;">
       <button class="btn btn-ghost" onclick="loadExploreModels(false)">Load more</button>
     </div>
@@ -3678,9 +3676,9 @@ var supabase=function(e){function t(e,t){var r={};for(var s in e)Object.prototyp
 
     <!-- Tab: Featured -->
     <div id="admin-tab-models" class="admin-tab" role="tabpanel" style="display:none;">
-      <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.6rem;flex-wrap:wrap;">
-        <input id="adm-merge-src" placeholder="merge: src slug" style="flex:1;min-width:130px;">
-        <input id="adm-merge-dst" placeholder="into: dst slug" style="flex:1;min-width:130px;">
+      <div class="adm-models-bar" style="display:flex;gap:.5rem;align-items:center;margin-bottom:.6rem;flex-wrap:wrap;">
+        <input type="text" id="adm-merge-src" placeholder="merge: src slug" style="flex:1;min-width:130px;">
+        <input type="text" id="adm-merge-dst" placeholder="into: dst slug" style="flex:1;min-width:130px;">
         <button class="chip" onclick="adminMergeModels()">Merge</button>
         <label style="font-size:.75rem;color:var(--muted);"><input type="checkbox" id="adm-models-auto-only" onchange="loadAdminModels()"> auto only</label>
         <button class="chip" onclick="adminEnrichAllCurated()" title="Runs Enrich for every curated model without a write-up, one at a time">Enrich all curated</button>
@@ -8184,7 +8182,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '29.20.57';
+const APP_VERSION = '30.08.59';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18241,13 +18239,15 @@ async function loadAdminModels() {
         <button class="chip" id="adm-enrich-${m.id}" onclick="adminEnrichModel('${m.id}')" title="${m.enriched_at ? 'Enriched ' + escAttr(String(m.enriched_at).slice(0, 10)) + ' — re-run' : 'Generate the family write-up'}">${m.enriched_at ? '✓ Enrich' : 'Enrich'}</button></td>
     </tr>
     <tr id="adm-model-edit-${m.id}" style="display:none;"><td colspan="5" style="padding:.4rem 0;">
-      <input id="adm-mn-${m.id}" value="${escAttr(m.name)}" placeholder="name" style="width:30%;">
-      <input id="adm-ms-${m.id}" value="${escAttr(m.slug)}" placeholder="slug" style="width:30%;">
-      <input id="adm-mh-${m.id}" value="${escAttr(m.hero_image || '')}" placeholder="hero image URL" style="width:26%;">
-      <button class="chip" onclick="adminSaveModel('${m.id}')">Save</button>
+      <div class="adm-model-edit" style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;">
+      <input type="text" id="adm-mn-${m.id}" value="${escAttr(m.name)}" placeholder="name">
+      <input type="text" id="adm-ms-${m.id}" value="${escAttr(m.slug)}" placeholder="slug">
+      <input type="text" id="adm-mh-${m.id}" value="${escAttr(m.hero_image || '')}" placeholder="hero image URL" style="grid-column:1/-1;">
+      </div>
       <div style="margin-top:.4rem;display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;">
+        <button class="chip" onclick="adminSaveModel('${m.id}')">Save</button>
         <label class="chip" style="cursor:pointer;">Upload hero photo <input type="file" accept="image/*" style="display:none;" onchange="adminUploadModelHero('${m.id}', this)"></label>
-        <input id="adm-mc-${m.id}" value="${escAttr(m.hero_credit || '')}" placeholder="credit (e.g. Photo: Rolex)" style="flex:1;min-width:160px;">
+        <input type="text" id="adm-mc-${m.id}" value="${escAttr(m.hero_credit || '')}" placeholder="credit (e.g. Photo: Rolex)" style="flex:1;min-width:160px;width:auto;">
         ${m.hero_image ? `<img src="${escAttr(m.hero_image)}" alt="" style="width:34px;height:34px;object-fit:cover;border-radius:6px;">` : ''}
         ${m.wiki_url ? `<a href="${escAttr(m.wiki_url)}" target="_blank" rel="noopener" style="font-size:.7rem;">Wikipedia ↗</a>` : ''}
       </div>
@@ -19878,12 +19878,14 @@ async function loadExploreModels(reset) {
   if (error) { grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:2rem 0;">Couldn\u2019t load — ${escHtml(error.message)}</div>`; return; }
   const rows = data || [];
   const cards = rows.map(m => `
-    <div class="explore-card" onclick="openModelPage('${escAttr(m.id)}')">
-      ${m.image ? `<img class="explore-card-img" src="${escAttr(m.image)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=\'explore-card-noimg\'>'+this.alt+'</div>'">` : `<div class="explore-card-noimg">${escHtml((m.brand || '?')[0])}</div>`}
-      <div class="explore-card-body">
-        <div class="explore-card-brand">${escHtml(m.brand)}</div>
-        <div class="explore-card-name">${escHtml(m.name)}</div>
-        <div class="explore-card-owners">${m.owners} member${Number(m.owners) === 1 ? '' : 's'}</div>
+    <div class="watch-card explore-card" style="cursor:pointer;" onclick="openModelPage('${escAttr(m.id)}')">
+      ${m.image ? `<div class="watch-card-img-wrap"><img loading="lazy" src="${escAttr(m.image)}" alt="${escAttr(m.brand + ' ' + m.name)}" class="watch-card-img" onerror="this.parentElement.style.display='none'"></div>` : ''}
+      <div class="watch-card-top" style="margin-bottom:0;">
+        ${m.image ? '' : `<div class="avatar" style="width:52px;height:52px;font-size:.95rem;background:#c9a84c;color:#16161e;">${escHtml(initials(m.brand || '', m.name || ''))}</div>`}
+        <div style="flex:1;min-width:0;">
+          <div class="watch-card-name">${escHtml(m.name)}</div>
+          <div class="watch-card-brand">${escHtml(m.brand)} · ${m.owners} member${Number(m.owners) === 1 ? '' : 's'}</div>
+        </div>
       </div>
     </div>`).join('');
   if (reset) grid.innerHTML = cards; else grid.insertAdjacentHTML('beforeend', cards);
