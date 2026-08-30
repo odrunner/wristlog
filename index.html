@@ -8182,7 +8182,7 @@ async function cloudSync() {
 // ══════════════════════════════════════════
 //  APP VERSION  ← bump this on every release
 // ══════════════════════════════════════════
-const APP_VERSION = '30.08.59';
+const APP_VERSION = '30.09.01';
 
 // ══════════════════════════════════════════
 //  SOCIAL — profile · follow · feed · likes · comments
@@ -18249,7 +18249,6 @@ async function loadAdminModels() {
         <label class="chip" style="cursor:pointer;">Upload hero photo <input type="file" accept="image/*" style="display:none;" onchange="adminUploadModelHero('${m.id}', this)"></label>
         <input type="text" id="adm-mc-${m.id}" value="${escAttr(m.hero_credit || '')}" placeholder="credit (e.g. Photo: Rolex)" style="flex:1;min-width:160px;width:auto;">
         ${m.hero_image ? `<img src="${escAttr(m.hero_image)}" alt="" style="width:34px;height:34px;object-fit:cover;border-radius:6px;">` : ''}
-        ${m.wiki_url ? `<a href="${escAttr(m.wiki_url)}" target="_blank" rel="noopener" style="font-size:.7rem;">Wikipedia ↗</a>` : ''}
       </div>
     </td></tr>`).join('') + '</table>' + (rows.length > 200 ? `<div style="color:var(--muted);margin-top:.4rem;">Showing 200 of ${rows.length}</div>` : '');
 }
