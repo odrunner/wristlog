@@ -1,4 +1,5 @@
--- Explore/browse the watch database. SECURITY DEFINER because owner counts and
+-- Explore/browse the watch database — CURATED families only (auto buckets stay
+-- reachable from a member's own watch, never listed). SECURITY DEFINER because owner counts and
 -- representative images aggregate over RLS-protected watches; only models with
 -- at least one non-internal owner surface, and only publicly-visible photos.
 
@@ -20,7 +21,7 @@ returns json language sql stable security definer set search_path to 'public' as
     from watch_models m
     join watches w on w.model_id = m.id
       and not exists (select 1 from internal_accounts ia where ia.user_id = w.user_id)
-    where m.merged_into is null
+    where m.merged_into is null and not m.is_auto   -- Explore lists curated families only
       and (p_brand is null or m.brand = p_brand)
       and (p_q is null or trim(p_q) = ''
            or m.canonical_key ilike '%' || lower(trim(p_q)) || '%'
@@ -39,7 +40,7 @@ returns json language sql stable security definer set search_path to 'public' as
     from watch_models m
     join watches w on w.model_id = m.id
       and not exists (select 1 from internal_accounts ia where ia.user_id = w.user_id)
-    where m.merged_into is null
+    where m.merged_into is null and not m.is_auto
     group by m.brand
     order by count(distinct w.user_id) desc, count(distinct m.id) desc
     limit least(greatest(p_limit, 1), 60)
