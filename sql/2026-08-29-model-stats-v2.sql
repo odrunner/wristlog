@@ -112,7 +112,8 @@ begin
     from ow join logs l on l.watch_id = ow.id and l.use_case is distinct from 'measurement'
     where ow.price >= 100 group by ow.user_id, ow.id, ow.price   -- placeholder prices ($1, $5…) make nonsense cost-per-wear
   ),
-  cpw_agg as (select percentile_cont(0.5) within group (order by cpw) med, count(distinct user_id) n, sum(wears) wears from cpw where cpw is not null),
+  -- an owner counts only with >=10 logged wears: price / 1 wear is not a cost per wear, it is the price
+  cpw_agg as (select percentile_cont(0.5) within group (order by cpw) med, count(distinct user_id) n, sum(wears) wears from cpw where cpw is not null and wears >= 10),
   wl as (   -- wear logs on this model, last 90 days / 12 weeks
     select l.date::date d, l.user_id from logs l join ow on ow.id = l.watch_id
     where l.use_case is distinct from 'measurement' and l.date ~ '^\d{4}-\d{2}-\d{2}'
