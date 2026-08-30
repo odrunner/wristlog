@@ -110,7 +110,7 @@ begin
   cpw as (   -- cost per wear: purchase price / cumulative wears, per owner
     select ow.user_id, ow.price / nullif(count(l.id), 0) as cpw, count(l.id) wears
     from ow join logs l on l.watch_id = ow.id and l.use_case is distinct from 'measurement'
-    where ow.price > 0 group by ow.user_id, ow.id, ow.price
+    where ow.price >= 100 group by ow.user_id, ow.id, ow.price   -- placeholder prices ($1, $5…) make nonsense cost-per-wear
   ),
   cpw_agg as (select percentile_cont(0.5) within group (order by cpw) med, count(distinct user_id) n, sum(wears) wears from cpw where cpw is not null),
   wl as (   -- wear logs on this model, last 90 days / 12 weeks
@@ -143,10 +143,19 @@ begin
     select percentile_cont(0.5) within group (order by extract(epoch from (now() - purchase_date::date)) / 31557600) yrs, count(*) n
     from ow where purchase_date ~ '^\d{4}-\d{2}-\d{2}'
   ),
+  latest_gen as (   -- the most recent production range members recorded, e.g. '2020-present'
+    select year_range from ow
+    where year_range ~ '\d{4}'
+    order by (substring(year_range from '\d{4}'))::int desc, year_range limit 1
+  ),
+  gen_watches as (
+    select ow.* from ow where exists (select 1 from latest_gen g where lower(trim(ow.year_range)) = lower(trim(g.year_range)))
+  ),
+  spec_src as (select * from gen_watches union all select * from ow where not exists (select 1 from gen_watches)),
   spec_field as (
     select f.k, lower(trim(f.v)) v, count(*) n,
            row_number() over (partition by f.k order by count(*) desc, lower(trim(f.v))) rn
-    from ow, lateral (values
+    from spec_src ow, lateral (values
       ('caliber', ow.caliber), ('case_diameter', ow.case_diameter), ('water_resistance', ow.water_resistance),
       ('movement_type', ow.movement_type), ('case_material', ow.case_material), ('year_range', ow.year_range)) f(k, v)
     where f.v is not null and trim(f.v) <> ''
@@ -217,6 +226,7 @@ begin
                  ) end from ws_model),
     'era', (select json_agg(n order by b) from era),
     'tenure', (select case when n >= 1 then json_build_object('years', round(yrs::numeric, 1), 'n', n) end from tenure),
+    'specs_gen', (select year_range from latest_gen),
     'specs_agg', (select coalesce(json_object_agg(k, json_build_object('v', v, 'n', n)), '{}'::json)
                     from spec_field where rn = 1),
     'photos', (select coalesce(json_agg(url), '[]'::json) from photos),
