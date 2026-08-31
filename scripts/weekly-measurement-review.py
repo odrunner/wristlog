@@ -535,7 +535,7 @@ def run_loop(cum, rows_g, now, dry, start_key=None):
         L.append(f"Verdict: **{j['verdict'].upper()}** — {j['reason']}")
         action = j["action"]
         if action == "won":
-            L.append(f"→ Action: PROMOTED. `{run['key']}` set to won / rollout 100% — every user now measures with {knob}={val:g}. Bake it into the code default at the next cleanup and archive the row.")
+            L.append(f"→ Action: PROMOTED. `{run['key']}` set to won / rollout 100% — every user now measures with {knob}={val:g}; it stays served through the experiment row and is the control baseline for the next trial.")
         elif action == "killed":
             L.append(f"→ Action: REVERTED. `{run['key']}` set to killed / rollout 0% — everyone is back on {knob}={ctrl:g}. This key will never be retried.")
         else:

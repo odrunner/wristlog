@@ -105,10 +105,12 @@ decided, verdict). No ⭐ "next step for you" section. Failures still email a tr
 appends a row via the repo copy when it can read it (manual runs) and the DB
 `experiment_decisions` table is the machine-readable source the job actually reads.
 
-### 4. Bake-in
-A `won` knob keeps serving treatment to 100% through the experiment (same as any won
-experiment). Folding it into `PROV2_DEFAULTS` / the code default and archiving the row
-is a normal code change done by hand, listed in the email under "won, awaiting bake-in".
+### 4. No bake-in step
+A `won` knob is served to 100% through the experiment row indefinitely — `get_experiments()`
+returns `treatment` for won rows for everyone, internal accounts included, and
+`effective_defaults()` makes it the next trial's control baseline. Folding it into the code
+default is optional housekeeping, never a to-do in the email (decided 2026-08-30: fully
+automated, no manual step).
 
 ### 5. First trial — decision needed
 `tg_guardmode=1` was promoted 2026-08-23 without an A/B and this week's before/after
